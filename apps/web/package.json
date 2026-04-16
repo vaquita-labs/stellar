@@ -1,0 +1,59 @@
+{
+  "name": "vaquiland",
+  "version": "0.1.2",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 3101",
+    "dev:stellar": "next dev --turbopack -p 3101",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "^1.9.5",
+    "@fontsource/rubik": "^5.2.8",
+    "@heroui/react": "^3.0.0-beta.8",
+    "@heroui/styles": "^3.0.0-beta.8",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@stellar/stellar-sdk": "^14.6.1",
+    "@tanstack/react-query": "^5.90.21",
+    "@types/file-saver": "^2.0.7",
+    "@types/papaparse": "^5.5.2",
+    "@vercel/analytics": "^1.6.1",
+    "@vercel/speed-insights": "^1.3.1",
+    "ably": "^2.19.0",
+    "driver.js": "^1.4.0",
+    "file-saver": "^2.0.5",
+    "framer-motion": "^12.35.1",
+    "next": "16.1.6",
+    "papaparse": "^5.5.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-icons": "^5.6.0",
+    "react-resize-detector": "^12.3.0",
+    "three": "^0.180.0",
+    "viem": "^2.47.0",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^22.19.15",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "16.1.6",
+    "postcss": "^8.5.8",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "ox": "0.9.6",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3"
+  }
+}

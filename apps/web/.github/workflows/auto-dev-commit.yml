@@ -1,0 +1,77 @@
+name: Auto Commit - DEV
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+
+jobs:
+  auto-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (fetch history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get actual branch
+        id: branch
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
+
+      - name: Last commit
+        id: lastmsg
+        run: |
+          BRANCH=${{ steps.branch.outputs.branch }}
+          # Aseguramos traer la referencia remota
+          git fetch origin "$BRANCH" --depth=1 || true
+          LAST_REMOTE_MSG=$(git log -1 --pretty=%B origin/"$BRANCH" 2>/dev/null || git log -1 --pretty=%B)
+          echo "last_remote_msg<<EOF" >> $GITHUB_OUTPUT
+          echo "$LAST_REMOTE_MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check
+        id: check
+        run: |
+          MARKER="[auto-commit]"
+          LAST_MSG="${{ steps.lastmsg.outputs.last_remote_msg }}"
+          echo "Último mensaje remoto: $LAST_MSG"
+          if echo "$LAST_MSG" | grep -F "$MARKER" >/dev/null; then
+            echo "Encontrado marker ($MARKER) en el último commit remoto. Abortando para evitar ciclo."
+            exit 0
+          fi
+          echo "No se encontró marker. Continuando."
+
+      - name: Add commit
+        run: |
+          # --- Aquí tus transformaciones/alteraciones ---
+          # Ejemplo sencillo: registrar fecha
+          echo "Auto update: $(date --utc +%Y-%m-%dT%H:%M:%SZ)" > last_auto_update.txt
+          # -------------------------------------------------
+          # Solo añadir cambios si existen
+          git add -A
+          # Si no hay cambios, salimos
+          if git diff --cached --quiet; then
+            echo "No hay cambios para commitear."
+            exit 0
+          fi
+
+      - name: Commit y push como usuario-bot
+        env:
+          GIT_COMMITTER_NAME: "vaquita-bot"
+          GIT_COMMITTER_EMAIL: "vaquita@blocky-labs.com"
+          GIT_AUTHOR_NAME: "vaquita-bot"
+          GIT_AUTHOR_EMAIL: "vaquita@blocky-labs.com"
+        run: |
+          MARKER="[auto-commit]"
+          git config user.name "$GIT_COMMITTER_NAME"
+          git.config_email() { git config user.email "$GIT_COMMITTER_EMAIL"; } # helper (opcional)
+          # commit con marker en el mensaje
+          git commit -m "Auto update $MARKER: $(date --utc +%Y-%m-%dT%H:%M:%SZ)"
+          # Push usando el token ya configurado por actions/checkout
+          git push origin HEAD

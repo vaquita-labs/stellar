@@ -1,0 +1,30 @@
+[workspace]
+members = [
+    "contracts/vaquita-pool",
+]
+exclude = ["contracts/wasms"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0"
+repository = "https://github.com/vaquita-fi/vaquita-stellar"
+homepage = "https://vaquita.fi"
+
+[workspace.dependencies]
+soroban-sdk = "22.0.3"
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true
+
+[profile.release-with-logs]
+inherits = "release"
+debug-assertions = true
