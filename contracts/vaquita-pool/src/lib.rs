@@ -12,8 +12,6 @@ soroban_sdk::contractimport!(file = "src/external_wasms/blend/pool.wasm");
 pub type BlendPoolClient<'a> = Client<'a>;
 pub const SCALAR_12: i128 = 1_000_000_000_000;
 
-mod test;
-
 // ==================== DATA STRUCTS ====================
 
 #[derive(Clone)]
@@ -307,3 +305,6 @@ impl VaquitaPool {
         env.storage().instance().get(&DataKey::Periods(period))
     }
 }
+
+#[cfg(test)]
+mod test;

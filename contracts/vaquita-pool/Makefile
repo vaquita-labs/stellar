@@ -58,6 +58,10 @@ add-rewards:
 	--period $(LOCK_PERIOD) \
 	--reward_amount $(REWARD_AMOUNT)
 
+cargo-release:
+	cargo build --release --target wasm32v1-none
+	@ls -l ../../target/wasm32v1-none/release/*.wasm
+
 fmt:
 	cargo fmt --all
 
