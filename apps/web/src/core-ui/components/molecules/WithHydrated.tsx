@@ -2,7 +2,6 @@
 
 import { ReactNode } from 'react';
 import { useHasHydrated } from '../../hooks';
-import { T } from '../atoms';
 import { LoaderScreen } from './LoaderScreen';
 
 export function WithHydrated({ children }: { children: ReactNode }) {
@@ -12,9 +11,5 @@ export function WithHydrated({ children }: { children: ReactNode }) {
     return children;
   }
 
-  return (
-    <LoaderScreen withImage>
-      <></>
-    </LoaderScreen>
-  );
+  return <LoaderScreen withImage />;
 }

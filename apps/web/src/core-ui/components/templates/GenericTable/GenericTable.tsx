@@ -4,17 +4,12 @@ import {
   Button,
   Input,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
   Table,
   TableBody,
   TableCell,
   TableColumn,
   TableHeader,
   TableRow,
-  useDisclosure,
 } from '@heroui/react';
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
@@ -36,7 +31,7 @@ const getValue = (value: any) => {
 
 export function GenericTable({ rows, refetch, children }: GenericTableProps) {
   const { network } = useNetworkConfigStore();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [isOpen, setIsOpen] = useState(false);
   const [expandedValue, setExpandedValue] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<{ key: string; value: string } | null>(null);
   const [sort, setSort] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({ key: '', direction: null });
@@ -137,15 +132,14 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
   return (
     <div className="h-full w-full left-0 overflow-auto bg-background">
       <div className="flex items-center gap-4 mb-2 flex-wrap">
-        <Button onPress={onOpen}>Filtros</Button>
-        <Button variant="light" onPress={() => refetch()}>
+        <Button onPress={() => setIsOpen(true)}>Filtros</Button>
+        <Button variant="ghost" onPress={() => refetch()}>
           Refrescar
         </Button>
-        <Button variant="light" onPress={handleExportCSV}>
+        <Button variant="ghost" onPress={handleExportCSV}>
           Exportar CSV
         </Button>
         <Input
-          size="sm"
           placeholder="Buscar en todos los campos..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -155,34 +149,36 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
           {activeFiltersSummary || 'No hay filtros activos'}
         </div>
       </div>
-      <Modal isOpen={isOpen} onClose={onClose} scrollBehavior="inside">
-        <ModalContent>
-          <ModalHeader>Filtros</ModalHeader>
-          <ModalBody
-            className="flex flex-col gap-2"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onClose();
-              }
-            }}
-          >
-            {keys.map((key) => (
-              <Input
-                key={key}
-                label={key}
-                placeholder={`Filtrar por ${key}`}
-                value={filters[key] || ''}
-                onChange={(e) => setFilters((prev) => ({ ...prev, [key]: e.target.value }))}
-                size="sm"
-              />
-            ))}
-          </ModalBody>
-          <ModalFooter>
-            <Button onClick={onClose}>Cerrar</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <Modal.Backdrop isOpen={isOpen} onOpenChange={setIsOpen}>
+        <Modal.Container scroll="inside">
+          <Modal.Dialog>
+            <Modal.Header><Modal.Heading>Filtros</Modal.Heading></Modal.Header>
+            <Modal.Body
+              className="flex flex-col gap-2"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setIsOpen(false);
+                }
+              }}
+            >
+              {keys.map((key) => (
+                <div key={key} className="flex flex-col gap-1">
+                  <label className="text-sm font-medium">{key}</label>
+                  <Input
+                    placeholder={`Filtrar por ${key}`}
+                    value={filters[key] || ''}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button onPress={() => setIsOpen(false)}>Cerrar</Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
 
       <Table aria-label="Tabla" className="w-full" style={{ tableLayout: 'auto' }}>
         <TableHeader>
@@ -190,12 +186,11 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
             <input
               type="checkbox"
               checked={
-                filteredData.length > 0 &&
-                filteredData.every((item, index) => selectedRows.has(item.id?.value as string))
+                filteredData.length > 0 && filteredData.every((item) => selectedRows.has(item.id?.value as string))
               }
               onChange={(e) => {
                 if (e.target.checked) {
-                  const allIds = new Set(filteredData.map((item, index) => item.id?.value as string));
+                  const allIds = new Set(filteredData.map((item) => item.id?.value as string));
                   setSelectedRows(allIds);
                 } else {
                   setSelectedRows(new Set());
@@ -308,17 +303,19 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
         </TableBody>
       </Table>
 
-      <Modal isOpen={!!expandedValue} onClose={() => setExpandedValue(null)} scrollBehavior="inside">
-        <ModalContent>
-          <ModalHeader>Valor completo</ModalHeader>
-          <ModalBody>
-            <pre className="whitespace-pre-wrap break-all text-sm">{expandedValue}</pre>
-          </ModalBody>
-          <ModalFooter>
-            <Button onPress={() => setExpandedValue(null)}>Cerrar</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <Modal.Backdrop isOpen={!!expandedValue} onOpenChange={(o) => { if (!o) setExpandedValue(null); }}>
+        <Modal.Container scroll="inside">
+          <Modal.Dialog>
+            <Modal.Header><Modal.Heading>Valor completo</Modal.Heading></Modal.Header>
+            <Modal.Body>
+              <pre className="whitespace-pre-wrap break-all text-sm">{expandedValue}</pre>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button onPress={() => setExpandedValue(null)}>Cerrar</Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </div>
   );
 }

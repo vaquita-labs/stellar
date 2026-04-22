@@ -9,8 +9,7 @@ export const NetworksProvider = ({ children }: { children: ReactNode }) => {
     data: { networks, types },
     isLoading,
   } = useNetworks();
-  const { setNetwork, setTypes, network, lockPeriod, setLockPeriod, token } =
-    useNetworkConfigStore();
+  const { setNetwork, setTypes, network, lockPeriod, setLockPeriod, token } = useNetworkConfigStore();
 
   useEffect(() => {
     if (!isLoading) {

@@ -29,5 +29,5 @@ export const useVisibility = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [setIsVisible]);
 };

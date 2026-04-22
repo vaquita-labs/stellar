@@ -1,21 +1,44 @@
 'use client';
 
-import { Button as HeroButton } from '@heroui/react';
-import { PressEvents } from '@react-types/shared/src/events';
-import { PropsWithChildren } from 'react';
+import { Button as HeroButton, Spinner } from '@heroui/react';
+import { ButtonProps } from './types';
 
-export const Button = ({
-  onPress,
-  children,
-  secondary,
-  className,
-}: PropsWithChildren<{ onPress: PressEvents['onPress']; secondary?: boolean; className?: string }>) => {
+const BUTTON_TYPES = {
+  primary: 'bg-primary hover:bg-primary/80 text-black border-black',
+  secondary: 'bg-black hover:bg-slate-800 text-white border-black',
+  white: 'bg-white hover:bg-white/80 text-black border-black',
+  danger:
+    'bg-red-50 hover:bg-red-100 text-red-600 border-red-200/70  dark:bg-red-500/10 dark:hover:bg-red-500/20 dark:text-red-300 dark:border-red-500/30',
+};
+
+export const Button = (props: ButtonProps) => {
+  const {
+    onPress,
+    children,
+    className,
+    startContent,
+    endContent,
+    isLoading,
+    isDisabled,
+    type = 'primary',
+    wFull,
+  } = props;
+
   return (
     <HeroButton
       onPress={onPress}
-      className={`px-5 m-2 rounded-md w-full ${secondary ? 'bg-white hover:bg-white/80' : 'bg-primary hover:bg-primary/80'}  border border-black border-b-3 text-black text-sm font-semibold transition shadow-sm ${className}`}
+      className={`px-5 rounded-md ${(BUTTON_TYPES[type] || '') + (wFull ? ' w-full' : '')} border border-b-3 text-sm font-semibold transition shadow-sm hover:-translate-y-0.5 ${className}`}
+      isDisabled={isDisabled || isLoading}
     >
-      {children}
+      {isLoading ? (
+        <Spinner size="sm" color="current" />
+      ) : (
+        <>
+          {startContent}
+          {children}
+          {endContent}
+        </>
+      )}
     </HeroButton>
   );
 };

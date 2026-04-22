@@ -10,3 +10,17 @@ export async function toHexFromAny(input: number, size: number): Promise<string>
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }
+
+export const formatAmount = (amount: number, tokenSymbol: string) => {
+  return `${amount.toFixed(2)} ${tokenSymbol}`;
+};
+
+export const formatDate = (timestamp: number) => {
+  return new Date(timestamp).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};

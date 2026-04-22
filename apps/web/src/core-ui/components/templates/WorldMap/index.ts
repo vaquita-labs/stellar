@@ -1,1 +1,1 @@
-export * from './WorldMap';
+export * from '../../map/WorldMap';

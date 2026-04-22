@@ -1,6 +1,6 @@
 'use client';
 
-import { Avatar, Badge, Button, Pagination, Spinner, Tab, Tabs } from '@heroui/react';
+import { Avatar, Badge, Button, Spinner, Tab, Tabs } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { memo, useEffect, useMemo, useState } from 'react';
@@ -96,13 +96,12 @@ const getDisplayName = (wallet: WalletEntry) => {
 
 const ITEMS_PER_PAGE = 5;
 
-const TAB_KEYS = ['today', 'week', 'month'] as const;
-type TabKey = (typeof TAB_KEYS)[number];
+type TabKey = 'today' | 'week' | 'month';
 
 export const LeaderboardPage = () => {
   const { data: profiles = [], isLoading, error } = useProfilesByAverageDepositsData();
   const { walletAddress: currentUserWallet } = useNetworkConfigStore();
-  const [selectedTab, setSelectedTab] = useState<TabKey>('month');
+  const [selectedTab] = useState<TabKey>('month');
   const [pageByTab, setPageByTab] = useState<Record<TabKey, number>>({
     today: 1,
     week: 1,
@@ -156,14 +155,14 @@ export const LeaderboardPage = () => {
                   <div className="w-full px-2 flex flex-col items-center">
                     <div className="relative ">
                       <Avatar
-                        radius="full"
-                        className={`h-16 w-16 border border-black/10 text-lg font-semibold text-black ${podiumAvatarBackgrounds[index] ?? 'bg-[#F5E0C8]'} ${
+                        className={`rounded-full h-16 w-16 border border-black/10 text-lg font-semibold text-black ${podiumAvatarBackgrounds[index] ?? 'bg-[#F5E0C8]'} ${
                           isCurrentUser
                             ? 'ring-4 ring-primary/50 ring-offset-2 ring-offset-white'
                             : 'ring-2 ring-black/10 ring-offset-2 ring-offset-white'
                         }`}
-                        name={initials}
-                      />
+                      >
+                        <Avatar.Fallback>{initials}</Avatar.Fallback>
+                      </Avatar>
                       <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full border-none bg-transparent text-lg text-black">
                         {emoji}
                       </span>
@@ -218,16 +217,15 @@ export const LeaderboardPage = () => {
                 }`}
                 aria-label={`Ver perfil de ${getDisplayName(wallet)}`}
               >
-                <Badge
-                  content={`#${position}`}
-                  className="mr-2 bg-[#FF9C1C] text-black text-[11px] border-black border-[0.5px]"
-                  color="warning"
-                >
-                  <Avatar
-                    radius="full"
-                    className="h-12 w-12 bg-linear-to-br from-primary/80 to-[#E8934A]/80 text-black text-lg font-semibold"
-                    name={getDisplayName(wallet).replace('@', '').slice(0, 2).toUpperCase()}
-                  />
+                <Badge color="warning">
+                  <Badge.Anchor>
+                    <Avatar className="rounded-full h-12 w-12 bg-linear-to-br from-primary/80 to-[#E8934A]/80 text-black text-lg font-semibold">
+                      <Avatar.Fallback>{getDisplayName(wallet).replace('@', '').slice(0, 2).toUpperCase()}</Avatar.Fallback>
+                    </Avatar>
+                  </Badge.Anchor>
+                  <Badge.Label className="mr-2 bg-[#FF9C1C] text-black text-[11px] border-black border-[0.5px]">
+                    {`#${position}`}
+                  </Badge.Label>
                 </Badge>
 
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -252,8 +250,7 @@ export const LeaderboardPage = () => {
                   <Button
                     isIconOnly
                     size="sm"
-                    color="primary"
-                    className="border-black border-1 text-black border-b-2 rounded-lg"
+                    className="border-black border text-black border-b-2 rounded-lg bg-primary"
                   >
                     <HiArrowSmallRight />
                   </Button>
@@ -263,22 +260,22 @@ export const LeaderboardPage = () => {
           })}
         </div>
         {totalPages > 1 && (
-          <div className="flex justify-center mt-4">
-            <Pagination
-              total={totalPages}
-              page={safePage}
-              onChange={onPageChange}
-              showControls
-              color="primary"
-              classNames={{
-                base: 'rounded-lg backdrop-blur-md',
-                item: '/70 data-[active=true]:bg-primary data-[active=true]: bg-white',
-                cursor: 'bg-primary  shadow-lg shadow-primary/40',
-                prev: '/70 hover: bg-white',
-                next: '/70 hover: bg-white',
-              }}
-              boundaries={0}
-            />
+          <div className="flex justify-center items-center gap-2 mt-4">
+            <button
+              className="px-3 py-1 rounded-lg bg-white/70 text-sm disabled:opacity-40"
+              disabled={safePage <= 1}
+              onClick={() => onPageChange(safePage - 1)}
+            >
+              ‹
+            </button>
+            <span className="text-sm">{safePage} / {totalPages}</span>
+            <button
+              className="px-3 py-1 rounded-lg bg-white/70 text-sm disabled:opacity-40"
+              disabled={safePage >= totalPages}
+              onClick={() => onPageChange(safePage + 1)}
+            >
+              ›
+            </button>
           </div>
         )}
       </div>
@@ -307,7 +304,7 @@ export const LeaderboardPage = () => {
         <section className="rounded-3xl border border-white/10 bg-white/10  backdrop-blur-xl md:pt-2">
           {isLoading && (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center ">
-              <Spinner size="lg" color="primary" />
+              <Spinner size="lg" color="accent" />
               <p className="text-sm font-medium /70">Loading ...</p>
             </div>
           )}
@@ -322,61 +319,44 @@ export const LeaderboardPage = () => {
           {!isLoading && !error && (
             <Tabs
               aria-label="Leaderboard timeframe"
-              variant="solid"
-              // color="primary"
               selectedKey={selectedTab}
               // onSelectionChange={(key) => {
               //   const tabKey = key as TabKey;
               //   setSelectedTab(tabKey);
               //   setPageByTab((prev) => ({ ...prev, [tabKey]: 1 }));
               // }}
-              className="w-full  rounded-lg"
-              classNames={{
-                tabList: 'bg-white rounded-lg p-0 gap-2 w-full',
-                tab: 'rounded-lg px-4 py-1 text-sm font-medium  data-[selected=true]:bg-primary data-[selected=true]: transition-all',
-                cursor: 'rounded-lg',
-              }}
+              className="w-full rounded-lg"
             >
-              <Tab
-                key="today"
-                title={
-                  <Badge
-                    placement="bottom-right"
-                    color="warning"
-                    style={{ zIndex: -1, opacity: 0.6 }}
-                    content={<span className="text-xs px-1">Soon</span>}
-                  >
-                    Today
+              <Tabs.List>
+                <Tab id="today">
+                  <Badge placement="bottom-right" color="warning" style={{ zIndex: -1, opacity: 0.6 }}>
+                    <Badge.Anchor>Today</Badge.Anchor>
+                    <Badge.Label><span className="text-xs px-1">Soon</span></Badge.Label>
                   </Badge>
-                }
-              >
+                </Tab>
+                <Tab id="week" isDisabled>
+                  <Badge placement="bottom-right" color="warning" style={{ zIndex: -1, opacity: 0.6 }}>
+                    <Badge.Anchor>Week</Badge.Anchor>
+                    <Badge.Label><span className="text-xs px-1">Soon</span></Badge.Label>
+                  </Badge>
+                </Tab>
+                <Tab id="month" isDisabled>Month</Tab>
+              </Tabs.List>
+              <Tabs.Panel id="today">
                 {renderLeaderboardContent(walletsWithXP, pageByTab.today, (page) =>
                   setPageByTab((prev) => ({ ...prev, today: page }))
                 )}
-              </Tab>
-              <Tab
-                key="week"
-                title={
-                  <Badge
-                    placement="bottom-right"
-                    color="warning"
-                    style={{ zIndex: -1, opacity: 0.6 }}
-                    content={<span className="text-xs px-1">Soon</span>}
-                  >
-                    Week
-                  </Badge>
-                }
-                disabled
-              >
+              </Tabs.Panel>
+              <Tabs.Panel id="week">
                 {renderLeaderboardContent(walletsWithXP, pageByTab.week, (page) =>
                   setPageByTab((prev) => ({ ...prev, week: page }))
                 )}
-              </Tab>
-              <Tab key="month" title="Month" disabled>
+              </Tabs.Panel>
+              <Tabs.Panel id="month">
                 {renderLeaderboardContent(walletsWithXP, pageByTab.month, (page) =>
                   setPageByTab((prev) => ({ ...prev, month: page }))
                 )}
-              </Tab>
+              </Tabs.Panel>
             </Tabs>
           )}
         </section>

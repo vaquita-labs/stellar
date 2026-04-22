@@ -1,9 +1,8 @@
 'use client';
 
-import { getTileTopY } from '@/core-ui/helpers/map';
-import { WorldType } from '@/core-ui/types/map';
 import { useMemo } from 'react';
 import * as THREE from 'three';
+import { WorldType } from '../../../../types';
 
 interface BushProps {
   position: [number, number, number];
@@ -80,9 +79,8 @@ export default function Bush({ position, styleMap }: BushProps) {
 
     // Nariz
     const nose = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.05), darkMaterial);
-    nose.position.set(0, baseY-0.1, 0.21);
+    nose.position.set(0, baseY - 0.1, 0.21);
     skullGroup.add(nose);
-    
 
     return skullGroup;
   }, [baseY]);

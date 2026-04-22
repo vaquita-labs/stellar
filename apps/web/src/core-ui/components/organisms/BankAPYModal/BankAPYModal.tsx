@@ -1,109 +1,93 @@
 'use client';
 
-import {
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalHeader,
-  Spinner,
-  Card,
-  CardBody,
-  Divider,
-  Chip,
-} from '@heroui/react';
+import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
+import { getDepositsData } from '@/core-ui/helpers/deposits';
+import { Card, Chip, Modal, Spinner } from '@heroui/react';
 import Image from 'next/image';
-import { useApyByLockPeriod, useDeposits } from '../../../hooks';
+import { useApyByLockPeriod, useDepositsComplete } from '../../../hooks';
 import { useNetworkConfigStore } from '../../../stores';
-import { formatTimeDeposit } from '../../../helpers';
-import { DepositWithdrawalState } from '../../../types';
 import { BankAPYModalProps } from './types';
 
 export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
   const { network, lockPeriod, walletAddress, token } = useNetworkConfigStore();
   const { data: dataApy, isLoading: isLoadingApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
-  const { data: depositsData, isLoading: isLoadingDeposits } = useDeposits(walletAddress);
+  const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
 
   const protocolApy = dataApy?.protocolApy ?? 0;
   const vaquitaApy = dataApy?.vaquitaApy ?? 0;
   const APYNetwork = protocolApy.toFixed(2);
   const APYNetworkLabel = dataApy?.lendingMarketName ?? '';
   const APYVaquita = vaquitaApy.toFixed(2);
-  const APYTotal = (+APYNetwork + +APYVaquita).toFixed(2);
-  const rewardPool = dataApy?.rewardPool ?? 0;
 
-  // Calculate total deposits
-  const deposits = (depositsData?.deposits ?? []).filter(
-    (deposit) => deposit.lockPeriod === lockPeriod && deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS
-  );
+  const { deposits, activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
 
-  const totalDeposits = deposits.reduce((acc, deposit) => acc + deposit.amount, 0);
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
   const isLoading = isLoadingApy || isLoadingDeposits;
   const totalDepositsallUsers = dataApy?.totalDeposits ?? 0;
 
   return (
-    <Modal
-      size="2xl"
-      isOpen={open}
-      onOpenChange={onOpenChange}
-      closeButton={<Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />}
-      scrollBehavior="inside"
-      classNames={{
-        base: 'max-h-[90vh]',
-        body: 'overflow-y-auto',
-      }}
-    >
-      <ModalContent className="bg-background border border-black">
-        <ModalHeader className="text-black font-bold text-xl">
-          <div className="flex items-center gap-2">
-            <Image src={'/icons/medal.svg'} alt={'rewards'} width={24} height={24} />
-            <span>Bank Rewards</span>
-          </div>
-        </ModalHeader>
-        <ModalBody className="py-0 max-h-[60vh] overflow-y-auto">
+    <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(); }}>
+      <Modal.Container size="lg" scroll="inside">
+        <Modal.Dialog className="bg-background border border-black max-h-[90vh]">
+          <Modal.CloseTrigger>
+            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+          </Modal.CloseTrigger>
+          <Modal.Header>
+            <Modal.Heading className="text-black font-bold text-xl">
+              <div className="flex items-center gap-2">
+                <Image src={'/icons/medal.svg'} alt={'rewards'} width={24} height={24} />
+                <span>Bank Rewards</span>
+              </div>
+            </Modal.Heading>
+          </Modal.Header>
+          <Modal.Body className="py-0 max-h-[60vh] overflow-y-auto">
           {isLoading ? (
             <div className="flex justify-center items-center py-8">
-              <Spinner size="lg" color="primary" />
+              <Spinner size="lg" color="accent" />
             </div>
           ) : (
             <div className="space-y-2 mb-4">
-              {/* Total Deposits Card */}
               <div className="flex flex-row gap-1 flex-wrap w-full">
-                <Chip radius="sm" color="warning" className="rounded-md w-full">
-                  <span>Lock Period </span>
-                  <b className="text-xs">{formatTimeDeposit(lockPeriod)}</b>
-                </Chip>
-                <Chip radius="sm" className="bg-[#3272B3] text-white rounded-md w-full">
-                  <span>Reward Pool </span>
-                  <b className="text-xs">
-                    {rewardPool.toFixed(2)} {tokenSymbol}
-                  </b>
-                </Chip>
-                <Chip radius="sm" color="primary" className="rounded-md w-full flex flex-row gap-2" >
+                <Chip color="accent" className="rounded-md w-full flex flex-row gap-2">
                   <span>All users deposits </span>
                   <b className="text-xs">
                     {totalDepositsallUsers.toFixed(2)} {tokenSymbol}
                   </b>
                 </Chip>
               </div>
-              <div className="flex gap-2 md:flex-row flex-col ">
-                <Card className="border-primary border-1 bg-primary/10 rounded-md w-full">
-                  <CardBody className="p-6">
+              <div className="flex gap-2 flex-col">
+                <Card className="border-primary border bg-primary/10 rounded-md w-full mb-4">
+                  <Card.Content className="p-6">
                     <div className="text-center flex flex-col gap-2 justify-between">
                       <p className="text-sm text-primary mb-2">Total Deposited</p>
                       <div className="flex items-center justify-center gap-2">
                         <Image src="/icons/bag.svg" alt="medal" width={32} height={32} />
                         <div className="flex gap-0">
-                          <p className="text-2xl font-bold text-primary">{totalDeposits.toFixed(2)}</p>
+                          <p className="text-2xl font-bold text-primary">{activeDepositsTotalAmount.toFixed(2)}</p>
                           <span className="text-sm font-semibold text-primary mt-2.5">{tokenSymbol}</span>
                         </div>
                       </div>
                     </div>
-                  </CardBody>
+                  </Card.Content>
                 </Card>
-
+                <div className="flex items-center gap-2">
+                  <Image src={'/icons/deposits.svg'} alt={'deposits'} width={24} height={24} />
+                  <span>My Vaquitas</span>
+                </div>
+                <div className="gap-3 flex flex-col mb-4 ">
+                  {activeDeposits.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Image src="/no_data.svg" alt="No data" width={100} height={100} />
+                      <p className="text-gray-500 mt-4">No active vaquitas</p>
+                    </div>
+                  ) : (
+                    activeDeposits.map((deposit) => {
+                      return <VaquitaDepositCard key={deposit.id} deposit={deposit} />;
+                    })
+                  )}
+                </div>
                 {/* APY Total Card */}
-                <Card className="border-success border-1 bg-success/10 rounded-md w-full">
+                {/* <Card className="border-success border-1 bg-success/10 rounded-md w-full">
                   <CardBody className="p-6">
                     <div className="text-center flex flex-col gap-2 justify-between">
                       <p className="text-sm text-success mb-2">Total APY</p>
@@ -113,7 +97,7 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
                       </div>
                     </div>
                   </CardBody>
-                </Card>
+                </Card> */}
               </div>
               <div className="flex gap-2 md:flex-row flex-col ">
                 {/* Reward Pool */}
@@ -148,8 +132,8 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
               </div>
 
               {/* APY Breakdown */}
-              <Card className="border-gray-200 rounded-md border-1 border-dashed">
-                <CardBody className="p-4">
+              <Card className="border-gray-200 rounded-md border border-dashed">
+                <Card.Content className="p-4">
                   <h3 className="font-semibold text-lg mb-4 text-black">APY Breakdown</h3>
 
                   <div className="space-y-4">
@@ -170,7 +154,7 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
                     {/* Protocol APY (if available) */}
                     {!!APYNetworkLabel && +APYNetwork >= 0 && (
                       <>
-                        <Divider />
+                        <hr className="border-gray-200" />
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -186,12 +170,12 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
                       </>
                     )}
                   </div>
-                </CardBody>
+                </Card.Content>
               </Card>
 
               {/* How it works */}
-              <Card className="border-primary bg-primary/20 rounded-md border-1">
-                <CardBody className="p-4">
+              <Card className="border-primary bg-primary/20 rounded-md border">
+                <Card.Content className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="mt-1">
                       <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,7 +198,7 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
                       </ul>
                     </div>
                   </div>
-                </CardBody>
+                </Card.Content>
               </Card>
 
               {/* Network info */}
@@ -226,8 +210,9 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
               )}
             </div>
           )}
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+          </Modal.Body>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

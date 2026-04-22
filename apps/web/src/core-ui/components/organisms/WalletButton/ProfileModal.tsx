@@ -1,21 +1,12 @@
-import {
-  Avatar,
-  Badge,
-  Button,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  Tooltip,
-} from '@heroui/react';
+import { useProfileData, useRestProfile } from '@/core-ui/hooks';
+import { Avatar, Modal, Tooltip } from '@heroui/react';
 import Image from 'next/image';
 import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiCopy, FiEdit3, FiLogOut, FiSave, FiUserPlus } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useNetworkConfigStore } from '../../../stores';
-import { useProfileData, useRestProfile } from '@/core-ui/hooks';
+import { Button } from '../../atoms';
+import { Badge } from '../../Badge';
 
 interface ProfileModalProps {
   handleLogout?: () => void;
@@ -79,7 +70,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
     if (!canSave || !network?.name) return;
     setSaving(true);
     try {
-      await saveNickname(network.name, walletAddress, { nickname: trimmedNickname });
+      await saveNickname({ nickname: trimmedNickname });
       await refetch();
       setIsEditing(false);
     } catch (error) {
@@ -92,24 +83,31 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
   const badgeLogo = network?.type ? (LogoByType[network.type] ?? LogoByType.EVM) : LogoByType.EVM;
 
   return (
-    <Modal
+    <Modal.Backdrop
       isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      size="sm"
-      closeButton={<Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />}
-      onClose={() => handleCancelEditing()}
+      onOpenChange={(o) => {
+        onOpenChange(o);
+        if (!o) handleCancelEditing();
+      }}
     >
-      <ModalContent className="bg-background border border-black">
-        <ModalHeader className="text-black font-bold text-lg">Profile</ModalHeader>
-        <ModalBody>
+      <Modal.Container size="sm">
+        <Modal.Dialog className="bg-background border border-black">
+          <Modal.CloseTrigger>
+            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+          </Modal.CloseTrigger>
+          <Modal.Header>
+            <Modal.Heading className="text-black font-bold text-lg">Profile</Modal.Heading>
+          </Modal.Header>
+          <Modal.Body>
           <div className="flex flex-col items-center gap-2 ">
             <Badge placement="bottom-right" isOneChar content={badgeLogo}>
               <Avatar
                 size="lg"
-                src="/vaquita_working.jpg"
-                name={displayName}
                 className="border-2 border-white shadow-lg dark:border-default-100"
-              />
+              >
+                <Avatar.Image src="/vaquita_working.jpg" />
+                <Avatar.Fallback>{displayName.slice(0, 2).toUpperCase()}</Avatar.Fallback>
+              </Avatar>
             </Badge>
 
             <p className="text-md font-semibold text-gray-900 dark:text-gray-50">{displayName}</p>
@@ -117,71 +115,62 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
             {!isEditing && walletAddress && (
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                 <span>{walletDisplay}</span>
-                <Tooltip content={copied ? 'Copiado' : 'Copiar dirección'}>
-                  <button
-                    onClick={() => copyToClipboard(walletAddress)}
-                    className="rounded-full border border-default-200 p-2 transition hover:-translate-y-0.5 hover:bg-gray-100 dark:border-default-100 dark:hover:bg-default-100"
-                    aria-label="Copiar dirección de la wallet"
-                  >
-                    {copied ? <FiCheck className="h-4 w-4 text-emerald-500" /> : <FiCopy className="h-4 w-4" />}
-                  </button>
+                <Tooltip>
+                  <Tooltip.Trigger>
+                    <button
+                      onClick={() => copyToClipboard(walletAddress)}
+                      className="rounded-full border border-default-200 p-2 transition hover:-translate-y-0.5 hover:bg-gray-100 dark:border-default-100 dark:hover:bg-default-100"
+                      aria-label="Copiar dirección de la wallet"
+                    >
+                      {copied ? <FiCheck className="h-4 w-4 text-emerald-500" /> : <FiCopy className="h-4 w-4" />}
+                    </button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>
+                    {copied ? 'Copiado' : 'Copiar dirección'}
+                  </Tooltip.Content>
                 </Tooltip>
               </div>
             )}
           </div>
           {isEditing ? (
             <div className="gap-2 flex flex-col">
-              <Input
-                type="text"
-                label="Nickname"
-                placeholder="@nickname"
-                value={nickname}
-                onChange={(event) => setNickname(event.target.value)}
-                maxLength={32}
-                isDisabled={saving}
-                classNames={{
-                  inputWrapper: 'bg-white border border-black border-b-2 h-14',
-                  label: 'text-black font-normal text-sm',
-                  input: 'text-black font-medium',
-                }}
-              />
-              <Input
-                type="text"
-                label="Wallet"
-                value={walletDisplay}
-                isDisabled
-                classNames={{
-                  inputWrapper: 'bg-white border border-black border-b-2 h-14',
-                  label: 'text-black font-normal text-sm',
-                  input: 'text-black font-medium',
-                }}
-              />
+              <div>
+                <label className="text-black font-normal text-sm block mb-1">Nickname</label>
+                <input
+                  type="text"
+                  placeholder="@nickname"
+                  value={nickname}
+                  onChange={(event) => setNickname(event.target.value)}
+                  maxLength={32}
+                  disabled={saving}
+                  className="w-full bg-white border border-black border-b-2 h-14 px-3 text-black font-medium rounded-sm outline-none disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <label className="text-black font-normal text-sm block mb-1">Wallet</label>
+                <input
+                  type="text"
+                  value={walletDisplay}
+                  readOnly
+                  disabled
+                  className="w-full bg-white border border-black border-b-2 h-14 px-3 text-black font-medium rounded-sm outline-none opacity-50 cursor-not-allowed"
+                />
+              </div>
             </div>
           ) : (
             <div className="flex w-full flex-row gap-3 md:flex-row md:justify-center">
-              <Badge placement="bottom-left" color="warning" content={<span className="text-xs px-1">Soon</span>}>
-                <Button
-                  variant="flat"
-                  className="w-full rounded-lg bg-primary px-5 text-sm  text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 md:w-auto dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                  startContent={<FiUserPlus />}
-                  onPress={() => console.info('Friends feature coming soon')}
-                >
+              <Badge content="Soon">
+                <Button startContent={<FiUserPlus />} isDisabled>
                   Add friends
                 </Button>
               </Badge>
-              <Button
-                variant="flat"
-                startContent={<FiEdit3 />}
-                className="w-full rounded-lg bg-black px-5 text-sm  text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 md:w-auto dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-                onPress={handleStartEditing}
-                isDisabled={isLoading}
-              >
+              <Button startContent={<FiEdit3 />} type="secondary" onPress={handleStartEditing} isDisabled={isLoading}>
                 Edit profile
               </Button>
             </div>
           )}
-        </ModalBody>
-        <ModalFooter>
+          </Modal.Body>
+          <Modal.Footer>
           {isEditing && (
             <div className="flex gap-2">
               <button
@@ -208,21 +197,16 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
                   </>
                 )}
               </button>
-            </div> 
+            </div>
           )}
           {handleLogout && !isEditing && (
-            <Button
-              variant="flat"
-              color="danger"
-              startContent={<FiLogOut className="h-4 w-4" />}
-              onPress={handleLogout}
-              className="w-full max-w-sm rounded-xl border border-red-200/70 bg-red-50 text-sm font-semibold text-red-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
-            >
+            <Button type="danger" startContent={<FiLogOut className="h-4 w-4" />} onPress={handleLogout} wFull>
               Disconnect wallet
             </Button>
           )}
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 };

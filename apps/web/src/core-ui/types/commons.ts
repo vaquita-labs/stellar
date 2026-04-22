@@ -51,7 +51,6 @@ export interface DepositSummaryResponseDTO {
   inLockPeriod: boolean;
   lockPeriod: number;
   vaquitaContractAddress: string;
-  totalDeposits: number;
 }
 
 export type TotalSummaryDepositsResponseDTO = {
@@ -103,11 +102,58 @@ export type TotalDepositsResponseDTO = {
 };
 
 export interface ProfileResponseDTO {
+  networkName: string;
+  walletAddress: string;
   email: string;
   fullName: string;
   nickname: string;
+}
+
+export interface ProfileExperienceResponseDTO {
+  networkName: string;
   walletAddress: string;
   experience: number;
+}
+
+export interface ProfileRewardsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  rewards: {
+    name: string;
+    amount: number;
+  }[];
+}
+
+export interface ProfileStreakResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  yesterdayStreak: number;
+  todayStreak: boolean;
+  days: number[];
+}
+
+export type MapObject = {
+  position: [number, number, number];
+  type: MapObjectType;
+  variant: number;
+  rotation: [number, number, number];
+};
+
+export interface ProfileMapObjectsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  objects: MapObject[];
+}
+
+export interface ProfileMapObjectsAvailableResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  objects: {
+    price: number;
+    itemsAvailable: number;
+    type: MapObjectType;
+    variant: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  }[];
 }
 
 export interface ProfileAverageResponseDTO {
@@ -129,4 +175,29 @@ export interface UserBalanceResponseDTO {
     tokenSymbol: string;
   }[];
   wallet: { walletAddress: string };
+}
+
+export interface RewardResponseDTO {
+  key: Reward;
+  name: string;
+  amountToCollect: number;
+  amount: number;
+}
+
+export enum Reward {
+  SILVER_COIN = 'silver-coin',
+  GOLD_COIN = 'gold-coin',
+}
+
+export enum MapObjectType {
+  GRASS = 'grass',
+  WATER = 'water',
+  BUSH = 'bush',
+  ROCK = 'rock',
+  TREE = 'tree',
+  ROAD = 'road',
+  BANK = 'bank',
+  BARN = 'barn',
+  LEADERBOARD = 'leaderboard',
+  EMPTY = 'empty',
 }

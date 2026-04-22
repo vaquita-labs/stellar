@@ -1,12 +1,10 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useQuery } from '@tanstack/react-query';
 import { DepositResponseDTO } from '../types';
-import { useNetworkConfigStore } from '../stores';
-import { useApyByLockPeriod } from './useApyByLockPeriod';
 
 export const useDeposit = (depositId: number) => {
-  const { network, lockPeriod, token } = useNetworkConfigStore();
-  const { data: dataApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
+  // const { network, lockPeriod, token } = useNetworkConfigStore();
+  // const { data: dataApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
 
   return useQuery<DepositResponseDTO | null>({
     queryKey: ['deposit', depositId],
@@ -16,18 +14,18 @@ export const useDeposit = (depositId: number) => {
 
         const data = await response.json();
 
-        const isStellarTestnet = network?.name === 'Stellar Testnet';
-        const depositAmount = data?.data?.amount;
-        const protocolApy = dataApy?.protocolApy ?? 0;
-        const vaquitaApy = dataApy?.vaquitaApy ?? 0;
-        const protocolApyMultiplier = protocolApy / 100;
-        const vaquitaApyMultiplier = vaquitaApy / 100;
-        const lockPeriodInMilSeconds = lockPeriod;
-        const lockPeriodInYears = lockPeriodInMilSeconds / 12 / 30 / 24 / 60 / 60 / 1000;
-        const aaveInterest = !isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
-        const blendInterest = isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
-        const vaquitaInterest = depositAmount * (vaquitaApyMultiplier * lockPeriodInYears);
-        const vaquitaReward = aaveInterest + vaquitaInterest + blendInterest;
+        // const isStellarTestnet = network?.name === 'Stellar Testnet';
+        // const depositAmount = data?.data?.amount;
+        // const protocolApy = dataApy?.protocolApy ?? 0;
+        // const vaquitaApy = dataApy?.vaquitaApy ?? 0;
+        // const protocolApyMultiplier = protocolApy / 100;
+        // const vaquitaApyMultiplier = vaquitaApy / 100;
+        // const lockPeriodInMilSeconds = lockPeriod;
+        // const lockPeriodInYears = lockPeriodInMilSeconds / 12 / 30 / 24 / 60 / 60 / 1000;
+        // const aaveInterest = !isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
+        // const blendInterest = isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
+        // const vaquitaInterest = depositAmount * (vaquitaApyMultiplier * lockPeriodInYears);
+        // const vaquitaReward = aaveInterest + vaquitaInterest + blendInterest;
 
         const deposit: DepositResponseDTO = {
           transactionHash: data?.data.transactionHash,
@@ -49,7 +47,6 @@ export const useDeposit = (depositId: number) => {
           serverTimestamp: data?.data?.serverTimestamp || 0,
           confirmedTimestamp: data?.data?.confirmedTimestamp || 0,
           inLockPeriod: data?.data?.inLockPeriod || 0,
-          totalDeposits: data?.data?.totalDeposits || 0,
         };
         return deposit;
       } catch (error) {

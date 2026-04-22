@@ -40,7 +40,6 @@ export const useDepositsComplete = (_walletAddress?: string) => {
             serverTimestamp: deposit.serverTimestamp || 0,
             confirmedTimestamp: deposit.confirmedTimestamp || 0,
             inLockPeriod: deposit.inLockPeriod,
-            totalDeposits: deposit.totalDeposits || 0,
           };
           return data;
         });

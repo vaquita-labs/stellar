@@ -13,3 +13,8 @@ export * from './NetworkSelector';
 export * from './BankAPYModal';
 export * from './DummyAuthButtons';
 export * from './TutorialModal';
+export * from './CoinAnimation';
+export * from './StreakModal';
+export * from './ShopModal';
+export * from './SavingsStats';
+export * from './RequireAuth';

@@ -1,7 +1,8 @@
 'use client';
 
-import { Modal, ModalBody, ModalContent, Button } from '@heroui/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useIsMobile } from '@/core-ui/hooks';
+import { Button, Modal } from '@heroui/react';
+import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
@@ -12,18 +13,7 @@ interface TutorialModalProps {
 
 export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Detectar si es mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 640);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const isMobile = useIsMobile();
 
   // Reset step when modal opens
   useEffect(() => {
@@ -36,33 +26,18 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
     setCurrentStep(1);
   };
 
-  const handleBack = () => {
-    setCurrentStep(0);
-  };
-
   const handleClose = () => {
     setCurrentStep(0);
     onClose();
   };
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      size="full"
-      hideCloseButton={false}
-      classNames={{
-        base: "m-0 p-0",
-        backdrop: "bg-black/80 backdrop-blur-sm",
-        wrapper: "inset-0",
-        body: "p-0 overflow-y-auto",
-      }}
-      placement="center"
-      closeButton={
-        <Image src="/icons/close-circle.svg" alt="close" width={52} height={52} className="sm:w-10 sm:h-10" />
-      }
-    >
-      <ModalContent className="bg-transparent">
-        <ModalBody className="p-0 flex items-center justify-center min-h-screen overflow-y-auto">
+    <Modal.Backdrop isOpen={isOpen} className="bg-black/80 backdrop-blur-sm" onOpenChange={(o) => { if (!o) handleClose(); }}>
+      <Modal.Container size="full">
+        <Modal.Dialog className="bg-transparent m-0 p-0">
+          <Modal.CloseTrigger>
+            <Image src="/icons/close-circle.svg" alt="close" width={52} height={52} className="sm:w-10 sm:h-10" />
+          </Modal.CloseTrigger>
+          <Modal.Body className="p-0 flex items-center justify-center min-h-screen overflow-y-auto">
           <AnimatePresence mode="wait">
             {currentStep === 0 ? (
               <motion.div
@@ -71,7 +46,7 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
                 transition={{
-                  type: "spring",
+                  type: 'spring',
                   stiffness: 300,
                   damping: 30,
                 }}
@@ -84,7 +59,7 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
                   transition={{
                     duration: 2,
                     repeat: Infinity,
-                    ease: "easeInOut",
+                    ease: 'easeInOut',
                   }}
                   className="relative"
                 >
@@ -103,9 +78,7 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
                   transition={{ delay: 0.3, duration: 0.6 }}
                   className="text-center space-y-4"
                 >
-                  <h2 className="text-3xl font-bold text-white drop-shadow-lg">
-                    Welcome to Vaquita!
-                  </h2>
+                  <h2 className="text-3xl font-bold text-white drop-shadow-lg">Welcome to Vaquita!</h2>
                   <p className="text-lg text-white/90 drop-shadow-md max-w-md">
                     Discover how to grow your savings in a smart and fun way
                   </p>
@@ -196,8 +169,9 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
               </motion.div>
             )}
           </AnimatePresence>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+          </Modal.Body>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

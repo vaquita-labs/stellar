@@ -22,7 +22,7 @@ export function WalletButton({ handleLogout }: WalletButtonProps) {
 
   return (
     <>
-      <Button onPress={() => setShowLogoutModal(true)}>{truncateMiddle(walletAddress)}</Button>
+      <Button onPress={() => setShowLogoutModal(true)} className="px-5 m-2 rounded-md w-full bg-primary border border-black border-b-3 text-black text-sm font-semibold hover:bg-primary/80 transition shadow-sm">{truncateMiddle(walletAddress)}</Button>
       <ProfileModal
         handleLogout={
           handleLogout

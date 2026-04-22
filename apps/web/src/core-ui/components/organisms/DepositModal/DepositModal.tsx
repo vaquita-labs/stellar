@@ -2,16 +2,14 @@
 
 import { isNewDepositHandled } from '@/networks/helpers';
 import {
-  addToast,
   Button,
+  Description,
+  Label,
+  ListBox,
   Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
   Select,
-  SelectItem,
   Spinner,
+  toast,
 } from '@heroui/react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
@@ -125,12 +123,8 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           lockPeriod,
           network: network?.name,
         });
-
-        addToast({
-          title: <T>Deposit sent successfully</T>,
+        toast.success(<T>Deposit sent successfully</T>, {
           description: <T>If you see a vaquita blinking, it is your deposit that is still being confirmed.</T>,
-          color: 'success',
-          variant: 'solid',
           timeout: 6000,
         });
         onOpenChange();
@@ -142,12 +136,8 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           lockPeriod,
           network: network?.name,
         });
-
-        addToast({
-          title: <T>Unsuccessful deposit</T>,
+        toast.danger(<T>Unsuccessful deposit</T>, {
           description: lastError instanceof Error ? <T>{lastError.message}</T> : undefined,
-          color: 'danger',
-          variant: 'solid',
           timeout: 3000,
         });
       }
@@ -156,53 +146,46 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
   };
 
   return (
-    <Modal
-      size="md"
+    <Modal.Backdrop
       isOpen={open}
-      onOpenChange={isLoading ? undefined : onOpenChange}
-      closeButton={<Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />}
-      scrollBehavior="inside"
-      classNames={{
-        base: 'max-h-[90vh]',
-        body: 'overflow-y-auto',
-      }}
+      onOpenChange={isLoading ? undefined : (o) => { if (!o) onOpenChange(); }}
     >
-      <ModalContent className="bg-background border border-black">
-        <ModalHeader className="text-black font-bold text-xl">Deposit</ModalHeader>
-        <ModalBody className="py-0 max-h-[60vh] overflow-y-auto">
+      <Modal.Container size="md" scroll="inside">
+        <Modal.Dialog className="bg-background border border-black max-h-[90vh]">
+          <Modal.CloseTrigger>
+            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+          </Modal.CloseTrigger>
+          <Modal.Header>
+            <Modal.Heading className="text-black font-bold text-xl">Deposit</Modal.Heading>
+          </Modal.Header>
+          <Modal.Body className="py-0 max-h-[60vh] overflow-y-auto">
           {!!network && !!token && (
             <TestnetUSDCNotice networkName={network.name} tokenContract={token.contractAddress} />
           )}
           <div>
             <Select
-              label="Lock time"
               isRequired
-              selectedKeys={[lockPeriod.toString()]}
-              onSelectionChange={(keys) => {
-                const selectedKey = Array.from(keys)[0] as string;
-                if (selectedKey) {
-                  setLockPeriod(parseInt(selectedKey));
-                }
-              }}
-              classNames={{
-                trigger: 'bg-white border border-black border-b-2 h-14',
-                label: 'text-black font-normal text-sm',
-                value: 'text-black font-medium',
-                popoverContent: 'bg-white border border-black rounded-md shadow-lg',
-                selectorIcon: 'text-black ',
-              }}
-              description="The funds will be lock in the vault during the selected period."
-              disabled={isDepositing}
+              value={lockPeriod.toString()}
+              onChange={(value) => { if (value) setLockPeriod(parseInt(value as string)); }}
+              disabledKeys={lockTimeOptions.filter((o) => !o.available).map((o) => o.key.toString())}
+              isDisabled={isDepositing}
             >
-              {lockTimeOptions?.map((option) => (
-                <SelectItem key={option.key} textValue={option.label} isDisabled={!option.available}>
-                  <div className="flex justify-between items-center w-full">
-                    <div className="flex flex-col">
+              <Label className="text-black font-normal text-sm">Lock time</Label>
+              <Select.Trigger className="bg-white border border-black border-b-2 h-14">
+                <Select.Value className="text-black font-medium" />
+                <Select.Indicator className="text-black" />
+              </Select.Trigger>
+              <Select.Popover className="bg-white border border-black rounded-md shadow-lg">
+                <ListBox>
+                  {lockTimeOptions?.map((option) => (
+                    <ListBox.Item key={option.key.toString()} id={option.key.toString()} textValue={option.label}>
                       <span className="font-semibold text-black">{option.label}</span>
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+              <Description>The funds will be lock in the vault during the selected period.</Description>
             </Select>
           </div>
 
@@ -248,19 +231,18 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
               </Button>
             </div>
           </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button
-            onPress={() => handleDeposit(Number(amount))}
-            className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md"
-            isLoading={isDepositing}
-            spinner={<Spinner size="sm" color="white" />}
-            isDisabled={isDisabled}
-          >
-            {isDepositing ? 'Processing...' : 'Deposit'}
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              onPress={() => handleDeposit(Number(amount))}
+              className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md"
+              isDisabled={isDisabled || isDepositing}
+            >
+              {isDepositing ? <><Spinner size="sm" color="current" /> Processing...</> : 'Deposit'}
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

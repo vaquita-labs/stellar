@@ -17,21 +17,18 @@ export const useDeposits = (_walletAddress?: string) => {
         const response = await fetch(url);
         const data = await response.json();
 
-        const deposits = ((data?.data?.deposits ?? []) as DepositSummaryResponseDTO[]).map(
-          (deposit) => {
-            const data: DepositSummaryResponseDTO = {
-              amount: deposit.amount,
-              state: deposit.state,
-              id: deposit.id,
-              tokenSymbol: deposit.tokenSymbol,
-              inLockPeriod: deposit.inLockPeriod,
-              lockPeriod: deposit.lockPeriod,
-              vaquitaContractAddress: deposit.vaquitaContractAddress ?? '',
-              totalDeposits: deposit.totalDeposits,
-            };
-            return data;
-          }
-        );
+        const deposits = ((data?.data?.deposits ?? []) as DepositSummaryResponseDTO[]).map((deposit) => {
+          const data: DepositSummaryResponseDTO = {
+            amount: deposit.amount,
+            state: deposit.state,
+            id: deposit.id,
+            tokenSymbol: deposit.tokenSymbol,
+            inLockPeriod: deposit.inLockPeriod,
+            lockPeriod: deposit.lockPeriod,
+            vaquitaContractAddress: deposit.vaquitaContractAddress ?? '',
+          };
+          return data;
+        });
         return {
           deposits,
         };

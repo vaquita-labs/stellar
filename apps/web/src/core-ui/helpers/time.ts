@@ -1,3 +1,5 @@
+import { ONE_DAY } from '../config/constants';
+
 export async function withTimeout<T>(p: Promise<T>, ms: number, tag = 'op'): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const t = setTimeout(() => reject(new Error(`[timeout] ${tag} > ${ms}ms`)), ms);
@@ -49,5 +51,8 @@ export const formatTimeDeposit = (milliseconds: number): string => {
   } else {
     return `${remainingSeconds}s`;
   }
+};
 
+export const getCurrentDay = (date: Date) => {
+  return Math.ceil(date.getTime() / ONE_DAY);
 };

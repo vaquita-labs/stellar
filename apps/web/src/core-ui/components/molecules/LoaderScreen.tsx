@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { ReactNode, useEffect, useState } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 
 const frames = [
   '/vaquita-loading/loading1.svg',
@@ -14,7 +14,7 @@ const indexRef = {
   current: 0,
 };
 
-export const LoaderScreen = ({ children, withImage = false }: { children: ReactNode; withImage?: boolean }) => {
+export const LoaderScreen = ({ children, withImage = false }: PropsWithChildren<{ withImage?: boolean }>) => {
   const [index, setIndex] = useState(indexRef.current);
 
   useEffect(() => {

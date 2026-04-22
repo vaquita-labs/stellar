@@ -1,6 +1,6 @@
 'use client';
 
-import { LoaderScreen, T } from '@/core-ui/components';
+import { LoaderScreen } from '@/core-ui/components';
 import { useLoader } from '@/core-ui/stores';
 import React, { useEffect, useState } from 'react';
 
@@ -28,11 +28,7 @@ export const GlobalLoader = () => {
   }, [isLoading]);
 
   if (visible) {
-    return (
-      <LoaderScreen withImage key="loader">
-        <></>
-      </LoaderScreen>
-    );
+    return <LoaderScreen withImage key="loader" />;
   }
 
   return null;

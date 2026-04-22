@@ -10,6 +10,7 @@ interface TreeProps {
   beingWorked: boolean;
   variant: number;
   styleMap: WorldType;
+  rotation?: number;
 }
 
 type Debris = {
@@ -18,7 +19,7 @@ type Debris = {
   velocity: [number, number, number];
 };
 
-export default function Tree({ position, variant, styleMap }: TreeProps) {
+export default function Tree({ position, variant, styleMap, rotation = 1 }: TreeProps) {
   const trunkRef = useRef<THREE.Mesh>(null);
   const leavesRef = useRef<THREE.Mesh>(null);
   const debrisRef = useRef<Debris[]>([]);
@@ -304,16 +305,21 @@ export default function Tree({ position, variant, styleMap }: TreeProps) {
   );
   if (styleMap === WorldType.FOREST) {
     return (
-      <group position={position} rotation={[0, 1, 0]}>
+      <group position={position} rotation={[0, rotation, 0]}>
         {variant === 0 && renderVariant0()}
         {variant === 1 && renderVariant1()}
         {variant === 2 && renderVariant2()}
+        {variant === 3 && renderVariant3()}
+        {variant === 4 && renderVariant4()}
+        {variant === 5 && renderVariant5()}
+        {variant === 6 && renderVariant6()}
+        {variant === 7 && renderVariant7()}
         {renderDebris()}
       </group>
     );
   } else if (styleMap === WorldType.DESERT) {
     return (
-      <group position={position} rotation={[0, 1, 0]}>
+      <group position={position} rotation={[0, rotation, 0]}>
         {variant === 0 && renderVariant3()}
         {variant === 1 && renderVariant4()}
         {variant === 2 && renderVariant5()}
@@ -323,7 +329,7 @@ export default function Tree({ position, variant, styleMap }: TreeProps) {
   }
   if (styleMap === WorldType.VOLCANO) {
     return (
-      <group position={position} rotation={[0, 1, 0]}>
+      <group position={position} rotation={[0, rotation, 0]}>
         {variant === 0 && renderVariant6()}
         {variant === 1 && renderVariant7()}
         {variant === 2 && renderVariant7()}

@@ -28,15 +28,16 @@ export function TestnetUSDCNotice({ networkName, tokenContract }: { networkName:
     <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-yellow-800">Vaquita uses Blend Capital for yield</span>
+          <span className="text-sm font-medium text-yellow-800">Vaquita uses Blend for yield</span>
         </div>
         <span className="text-xs text-yellow-600">Testnet USDC</span>
       </div>
 
       <div className="flex items-center gap-2 mb-2 justify-center">
-        <Image src="/blend.png" alt="Blend Capital" width={32} height={32} className="rounded-sm" />
+        <Image src="/blend.png" alt="blend" width={32} height={32} className="rounded-sm" />
         <span className="text-xs font-mono text-gray-700 bg-gray-200 px-2 py-1 rounded">
-          {truncateAddress(tokenContract)}
+          {/* {truncateAddress(tokenContract)} */}
+          {truncateAddress("CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU")}
         </span>
         <button
           onClick={onCopy}
@@ -51,12 +52,12 @@ export function TestnetUSDCNotice({ networkName, tokenContract }: { networkName:
         <FiInfo className="h-3 w-3" />
         Need Testnet USDC? Go to {' '}
         <Link
-          href="https://testnet.blend.capital/dashboard/?poolId=CDDG7DLOWSHRYQ2HWGZEZ4UTR7LPTKFFHN3QUCSZEXOWOPARMONX6T65"
+          href="https://testnet.blend.capital/dashboard/?poolId=CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF"
           target="_blank"
           rel="noopener noreferrer"
           className="underline hover:text-yellow-800"
         >
-          Blend Capital Testnet
+          Blend Faucet
         </Link>
       </p>
     </div>

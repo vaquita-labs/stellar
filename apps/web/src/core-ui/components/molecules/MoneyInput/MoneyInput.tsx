@@ -14,15 +14,12 @@ const TOKEN_RULES: Record<TokenSymbol, { min?: number; max?: number; maxDecimals
 };
 
 function buildRegex(maxDecimals: number) {
-  // ^(0|[1-9]\d*)(\.\d{0,maxDecimals})?$
   return new RegExp(`^(?:0|[1-9]\\d*)(?:\\.(\\d{0,${maxDecimals}}))?$`);
 }
 
 function sanitizeRaw(raw: string) {
-  // Quita espacios, normaliza coma a punto y elimina ceros a izquierda tipo "0001" -> "1"
   let v = raw.replace(/\s+/g, '').replace(',', '.');
   if (v.startsWith('.')) v = '0' + v;
-  // Permite "0" o "0.xxx"; evita "00..."
   if (/^0+\d/.test(v)) {
     v = v.replace(/^0+/, '');
     if (v === '' || v.startsWith('.')) v = '0' + v;
@@ -49,24 +46,20 @@ export function MoneyInput({
   const [error, setError] = useState<string | null>(null);
 
   const validate = (next: string) => {
-    // TODO: add validation for btc and eth
-    if (next === '') return null; // permitir vacío mientras escribe
+    if (next === '') return null;
     if (!rx.test(next)) return `Max ${rules.maxDecimals} decimals`;
 
     const n = Number(next);
     if (!Number.isFinite(n)) return 'Invalid number';
 
-    // validar mínimo
     if (rules.min !== undefined && n < rules.min) {
       return `Min ${rules.min}`;
     }
 
-    // validar máximo específico del token
     if (rules.max !== undefined && n > rules.max) {
       return `Max ${rules.max.toLocaleString()}`;
     }
 
-    // cap superior general (fallback)
     if (n > cap) return `Max ${cap.toLocaleString()}`;
 
     return null;
@@ -75,21 +68,15 @@ export function MoneyInput({
   const handleChange = (raw: string) => {
     const sanitized = sanitizeRaw(raw);
 
-    // Siempre permitir vacío
     if (sanitized === '') {
       onValueChange(sanitized);
       setError(null);
       return;
     }
-    // Validar formato básico con la regex
     if (!rx.test(sanitized)) {
-      return; // Bloquear si no cumple el formato de decimales
+      return;
     }
-    // Si está escribiendo y termina en punto, permitir (ej: "23.")
-    const isTypingDecimal = sanitized.endsWith('.');
-    // Solo validar máximo si NO está escribiendo el punto (para permitir "23." antes de "23.2")
 
-    // Actualizar valor y validar
     onValueChange(sanitized);
     setError(validate(sanitized));
   };
@@ -98,30 +85,24 @@ export function MoneyInput({
     if (!value) return;
     let v = value;
 
-    // cortar decimales extra si los hubiera
     const [intPart, decPart = ''] = v.split('.');
     const trimmedDec = decPart.slice(0, rules.maxDecimals);
     v = trimmedDec ? `${intPart}.${trimmedDec}` : intPart;
 
     const numValue = Number(v);
 
-    // aplicar mínimo
     if (rules.min !== undefined && numValue < rules.min) {
       v = String(rules.min);
     }
 
-    // aplicar máximo específico del token
     if (rules.max !== undefined && numValue > rules.max) {
       v = String(rules.max);
     } else if (numValue > cap) {
-      // aplicar cap general (fallback)
       v = String(cap);
     }
 
-    // quitar punto final colgante ("12." -> "12")
     if (v.endsWith('.')) v = v.slice(0, -1);
 
-    // quitar ceros decimales de más ("1.230000" -> "1.23")
     if (v.includes('.')) v = v.replace(/\.?0+$/, '');
 
     onValueChange(v);
@@ -129,56 +110,37 @@ export function MoneyInput({
   };
 
   const preventKeys = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Bloquear caracteres no deseados (coma se permite porque sanitizeRaw la convierte a punto)
     if (['e', 'E', '+', '-'].includes(e.key)) {
       e.preventDefault();
     }
   };
 
   return (
-    <Input
-      disabled={loading}
-      label="Amount to deposit"
-      placeholder="0.0"
-      value={value}
-      isInvalid={!!error}
-      errorMessage={error ?? undefined}
-      classNames={{
-        inputWrapper: 'bg-white border border-black border-b-2 h-14',
-        label: 'text-black font-normal text-sm',
-        input: 'text-black font-medium',
-      }}
-      description={
-        <span>
-          Total balance: ${balanceFormatted}{' '}
-          <IoMdSync
-            className={`inline h-4 w-4 cursor-pointer text-gray-500 hover:text-black transition ${
-              balanceIsLoading ? 'animate-spin text-black' : ''
-            }`}
-            onClick={!balanceIsLoading ? onReloadBalance : undefined}
-          />
-        </span>
-      }
-      onChange={(e) => handleChange(e.target.value)}
-      onBlur={normalizeOnBlur}
-      onKeyDown={preventKeys}
-      type="text" // evita problemas del input number (e/E, redondeos, 0.00)
-      inputMode="decimal" // teclado numérico en móviles
-      pattern="[0-9]*[.]?[0-9]*" // pista para navegadores móviles
-      endContent={
+    <div className="flex flex-col gap-1 mb-2">
+      <label className="text-black font-normal text-sm">Amount to deposit</label>
+      <div className={`flex items-center bg-white border border-black border-b-2 h-14 rounded-md px-3 ${error ? 'border-danger' : ''}`}>
+        <Input
+          disabled={loading}
+          placeholder="0.0"
+          value={value}
+          className="flex-1 text-black font-medium bg-transparent border-0 outline-none h-full"
+          onChange={(e) => handleChange(e.target.value)}
+          onBlur={normalizeOnBlur}
+          onKeyDown={preventKeys}
+          type="text"
+          inputMode="decimal"
+          pattern="[0-9]*[.]?[0-9]*"
+        />
         <div className="flex items-center h-full">
-          <label className="sr-only" htmlFor="currency">
-            Currency
-          </label>
+          <label className="sr-only" htmlFor="currency">Currency</label>
           <select
             value={token?.symbol}
             className="outline-solid outline-transparent border-0 bg-transparent text-default-400 text-small"
             id="currency"
             name="currency"
             onChange={(e) => {
-              const token = tokenSymbols.find((t) => t.symbol === e.target.value);
-              if (token) onTokenChange(token);
-              // al cambiar token, revalida con nuevas reglas
+              const tok = tokenSymbols.find((t) => t.symbol === e.target.value);
+              if (tok) onTokenChange(tok);
               setTimeout(() => setError(validate(value)), 0);
             }}
           >
@@ -189,7 +151,17 @@ export function MoneyInput({
             ))}
           </select>
         </div>
-      }
-    />
+      </div>
+      {error && <span className="text-danger text-xs">{error}</span>}
+      <span className="text-xs text-default-400">
+        Total balance: ${balanceFormatted}{' '}
+        <IoMdSync
+          className={`inline h-4 w-4 cursor-pointer text-gray-500 hover:text-black transition ${
+            balanceIsLoading ? 'animate-spin text-black' : ''
+          }`}
+          onClick={!balanceIsLoading ? onReloadBalance : undefined}
+        />
+      </span>
+    </div>
   );
 }

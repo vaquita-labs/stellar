@@ -1,12 +1,7 @@
 'use client';
 
 import * as Ably from 'ably';
-import {
-  AblyProvider as Provider,
-  ChannelProvider,
-  useChannel,
-  useConnectionStateListener,
-} from 'ably/react';
+import { AblyProvider as Provider, ChannelProvider, useChannel, useConnectionStateListener } from 'ably/react';
 import { ReactNode, useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { clientEnv } from '../../config/clientEnv';
@@ -48,6 +43,7 @@ export async function sendLogToAbly(level: 'log' | 'info' | 'error' | 'warn', ar
       timestamp: new Date().toISOString(),
     };
     await logChannel.publish(level, message);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {}
 }
 
