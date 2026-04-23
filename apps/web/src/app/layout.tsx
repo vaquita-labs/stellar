@@ -26,7 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-dvh flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <WithHydrated>
           <Providers>
-            <div className="h-14 shrink-0 flex justify-end">
+            <div className="">
               <AuthButtons />
             </div>
             <main className="flex-1 min-h-0 overflow-auto">{children}</main>
