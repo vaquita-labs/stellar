@@ -30,8 +30,6 @@ use soroban_sdk::{
     Env,
 };
 
-pub use blend_fixture::{create_blend_pool, BlendFixture};
-
 // ---------- Env extension ----------
 
 pub trait EnvTestUtils {

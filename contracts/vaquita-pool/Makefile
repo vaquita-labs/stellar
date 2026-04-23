@@ -1,4 +1,6 @@
--include ../../.env
+-include ../.env
+
+INVOKE_FEE ?= 10000000
 
 default: build
 
@@ -9,25 +11,24 @@ test: build
 
 build:
 	stellar contract build
-	@ls -l ../../target/wasm32v1-none/release/*.wasm
+	@ls -l ../target/wasm32v1-none/release/*.wasm
 
 
 deploy: build
-	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm ../../target/wasm32v1-none/release/vaquita_pool.wasm --alias vaquita_pool
+	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm ../target/wasm32v1-none/release/vaquita_pool.wasm --alias vaquita_pool
 	CONTRACT_ID=$(stellar contract alias show vaquita_pool)
 
 initialize: deploy
-	stellar contract invoke --source $(SOURCE_ACCOUNT) --network $(NETWORK) --id vaquita_pool \
+	stellar contract invoke --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) --id vaquita_pool \
 	-- \
 	initialize \
 	--admin $(USER_ADDRESS) \
 	--blend_token $(BLEND_TOKEN) \
-	--pool_address $(POOL_ADDRESS) \
 	--defindex_vault_address $(DEFINDEX_VAULT_ADDRESS) \
 	--lock_periods "[$(LOCK_PERIODS)]"
 
 deposit:
-	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) \
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	deposit \
 	--caller $(USER_ADDRESS) \
@@ -36,14 +37,14 @@ deposit:
 	--period $(LOCK_PERIOD)
 
 withdraw:
-	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) \
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	withdraw \
 	--caller $(USER_ADDRESS) \
 	--deposit_id $(DEPOSIT_ID)
 
 add-lock-period:
-	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) \
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	add_lock_period \
 	--caller $(USER_ADDRESS) \
@@ -51,7 +52,7 @@ add-lock-period:
 
 
 add-rewards:
-	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) \
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	add_rewards \
 	--caller $(USER_ADDRESS) \
@@ -60,7 +61,7 @@ add-rewards:
 
 cargo-release:
 	cargo build --release --target wasm32v1-none
-	@ls -l ../../target/wasm32v1-none/release/*.wasm
+	@ls -l ../target/wasm32v1-none/release/*.wasm
 
 fmt:
 	cargo fmt --all

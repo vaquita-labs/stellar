@@ -8,10 +8,6 @@ mod defindex_vault;
 mod error;
 use defindex_vault::DeFindexVaultClient;
 
-soroban_sdk::contractimport!(file = "src/external_wasms/blend/pool.wasm");
-pub type BlendPoolClient<'a> = Client<'a>;
-pub const SCALAR_12: i128 = 1_000_000_000_000;
-
 // ==================== DATA STRUCTS ====================
 
 #[derive(Clone)]
@@ -19,9 +15,9 @@ pub const SCALAR_12: i128 = 1_000_000_000_000;
 pub struct Position {
     owner: Address,
     amount: i128,
+    shares: i128,
     finalization_time: u64,
     lock_period: u64,
-    b_rate: i128,
 }
 
 #[derive(Clone)]
@@ -36,7 +32,6 @@ pub struct Period {
 pub enum DataKey {
     Admin,
     BlendToken,
-    PoolAddress,
     DeFindexVaultAddress,
     BasisPoints,
     EarlyWithdrawalFee,
@@ -58,7 +53,6 @@ impl VaquitaPool {
         env: Env,
         admin: Address,
         blend_token: Address,
-        pool_address: Address,
         defindex_vault_address: Address,
         lock_periods: Vec<u64>,
     ) {
@@ -67,7 +61,6 @@ impl VaquitaPool {
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::BlendToken, &blend_token);
-        env.storage().instance().set(&DataKey::PoolAddress, &pool_address);
         env.storage().instance().set(&DataKey::DeFindexVaultAddress, &defindex_vault_address);
         env.storage().instance().set(&DataKey::BasisPoints, &10000i128);
         env.storage().instance().set(&DataKey::EarlyWithdrawalFee, &0i128);
@@ -104,16 +97,20 @@ impl VaquitaPool {
         }
 
         let blend_token: Address = env.storage().instance().get(&DataKey::BlendToken).unwrap();
-        let pool_address: Address = env.storage().instance().get(&DataKey::PoolAddress).unwrap();
         let defindex_vault_address: Address = env.storage().instance().get(&DataKey::DeFindexVaultAddress).unwrap();
         let contract_address = env.current_contract_address();
         let finalization_time = env.ledger().timestamp() + period;
 
-        // Step 1: Pull blend_token from caller to this contract
+        // Step 1: Pull blend_token from caller to this contract.
         let token_client = TokenClient::new(&env, &blend_token);
         token_client.transfer(&caller, &contract_address, &amount);
 
-        // Step 2: Authorize vault to pull blend_token from this contract
+        let defindex_vault_client = DeFindexVaultClient::new(&env, &defindex_vault_address);
+        let shares_before = defindex_vault_client.balance(&contract_address);
+
+        // Step 2: Pre-authorize the vault's internal token.transfer(pool -> vault, amount).
+        // The vault may also invoke strategy sub-calls when `invest=true`, but those are
+        // authorized by the vault itself (source = vault), so we don't need to list them here.
         env.authorize_as_current_contract(vec![
             &env,
             InvokerContractAuthEntry::Contract(SubContractInvocation {
@@ -131,20 +128,32 @@ impl VaquitaPool {
             }),
         ]);
 
-        // Step 3: Deposit into vault
-        let defindex_vault_client = DeFindexVaultClient::new(&env, &defindex_vault_address);
-        defindex_vault_client.deposit(&amount, &contract_address);
-
-        // Step 4: Record b_rate at deposit time
-        let pool_client = BlendPoolClient::new(&env, &pool_address);
-        let b_rate = pool_client.get_reserve(&blend_token).data.b_rate;
+        // Step 3: Deposit into the DeFindex vault. Single-asset vault, so the Vecs
+        // carry a single element. `amounts_min = amounts_desired` disables slippage
+        // tolerance for now; revisit if the vault starts running a swap on entry.
+        let amounts_desired = vec![&env, amount];
+        let amounts_min = vec![&env, amount];
+        let (_actual_amounts, _minted_reported, _allocations) = defindex_vault_client.deposit(
+            &amounts_desired,
+            &amounts_min,
+            &contract_address,
+            &true,
+        );
+        let shares_after = defindex_vault_client.balance(&contract_address);
+        if shares_after < shares_before {
+            panic!("Vault share balance decreased after deposit");
+        }
+        let shares = shares_after - shares_before;
+        if shares <= 0 {
+            panic!("Vault returned zero shares");
+        }
 
         let position = Position {
             owner: caller.clone(),
             amount,
+            shares,
             finalization_time,
             lock_period: period,
-            b_rate,
         };
         env.storage().instance().set(&DataKey::Positions(deposit_id.clone()), &position);
 
@@ -156,7 +165,7 @@ impl VaquitaPool {
 
         env.events().publish(
             (Symbol::new(&env, "deposit"), caller),
-            (deposit_id, blend_token, amount, b_rate),
+            (deposit_id, blend_token, amount, shares),
         );
     }
 
@@ -172,33 +181,31 @@ impl VaquitaPool {
         }
 
         let blend_token: Address = env.storage().instance().get(&DataKey::BlendToken).unwrap();
-        let pool_address: Address = env.storage().instance().get(&DataKey::PoolAddress).unwrap();
+        let defindex_vault_address: Address = env.storage().instance().get(&DataKey::DeFindexVaultAddress).unwrap();
         let contract_address = env.current_contract_address();
 
-        let pool_client = BlendPoolClient::new(&env, &pool_address);
-        let defindex_vault_address: Address = env.storage().instance().get(&DataKey::DeFindexVaultAddress).unwrap();
+        // Redeem every share we hold for this position. The vault returns a Vec with
+        // one element per asset (we only have one), which is the gross asset amount
+        // including any accrued yield the strategies earned.
         let defindex_vault_client = DeFindexVaultClient::new(&env, &defindex_vault_address);
+        let withdrawn_amounts = defindex_vault_client.withdraw(
+            &position.shares,
+            &vec![&env, 0i128],
+            &contract_address,
+        );
+        let gross = withdrawn_amounts.get_unchecked(0);
 
-        let current_b_rate = pool_client.get_reserve(&blend_token).data.b_rate;
-
-        // Calculate amount with accrued interest
-        let b_tokens = (position.amount * SCALAR_12) / position.b_rate;
-        let amount_to_withdraw = (b_tokens * current_b_rate) / SCALAR_12;
-        let interest = if amount_to_withdraw > position.amount {
-            amount_to_withdraw - position.amount
+        // Yield = whatever the vault returned beyond the original principal.
+        // Can be zero (or negative if the strategy lost money); treat losses as zero
+        // so the early-withdrawal accounting stays non-negative.
+        let interest = if gross > position.amount {
+            gross - position.amount
         } else {
             0
         };
 
-        // Withdraw from vault back to this contract
-        defindex_vault_client.withdraw(
-            &amount_to_withdraw,
-            &contract_address,
-            &contract_address,
-        );
-
         let now = env.ledger().timestamp();
-        let mut amount_to_transfer = amount_to_withdraw;
+        let mut amount_to_transfer = gross;
         let mut reward: i128 = 0;
 
         let mut period_data: Period = env.storage().instance()
@@ -206,7 +213,8 @@ impl VaquitaPool {
             .unwrap_or_else(|| panic!("Period data not found"));
 
         if now < position.finalization_time {
-            // Early withdrawal: fee on interest only
+            // Early withdrawal: protocol takes a cut of the interest, the remainder
+            // stays in the reward pool. Principal is always returned.
             let early_fee: i128 = env.storage().instance().get(&DataKey::EarlyWithdrawalFee).unwrap();
             let fee_amount = (interest * early_fee) / 10000;
             let remaining_interest = interest - fee_amount;
@@ -216,7 +224,7 @@ impl VaquitaPool {
             period_data.reward_pool += remaining_interest;
             amount_to_transfer -= interest;
         } else {
-            // On-time: principal + interest + reward pool share
+            // On-time: principal + interest + proportional share of the reward pool.
             reward = Self::calculate_reward(&period_data, position.amount);
             period_data.reward_pool -= reward;
             amount_to_transfer += reward;
