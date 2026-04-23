@@ -1,0 +1,25 @@
+{
+  "name": "@vaquita/deployer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vaquita vault deployer: creates a DeFindex vault via REST API, signs the XDR locally, submits it, and writes VAULT_ID back to Doppler.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "deploy:vault": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^15.0.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
