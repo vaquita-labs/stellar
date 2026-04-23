@@ -9,6 +9,10 @@ all: test
 test: build
 	cargo test
 
+coverage:
+	cargo llvm-cov --manifest-path ../Cargo.toml --workspace --all-features --lcov --output-path ../lcov.info
+	cargo llvm-cov report --manifest-path ../Cargo.toml --html --output-dir ../coverage-html
+
 build:
 	stellar contract build
 	@ls -l ../target/wasm32v1-none/release/*.wasm
