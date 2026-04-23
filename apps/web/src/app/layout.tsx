@@ -1,7 +1,7 @@
 import { AuthButtons, Providers } from '@/components';
 import { WithHydrated } from '@/core-ui/components';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+// import { Analytics } from '@vercel/analytics/react';
+// import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata } from 'next';
 import './globals.css';
 
@@ -32,8 +32,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <main className="flex-1 min-h-0 overflow-auto">{children}</main>
           </Providers>
         </WithHydrated>
-        <Analytics />
-        <SpeedInsights />
+        {/* <Analytics /> */}
+        {/* <SpeedInsights /> */}
       </body>
     </html>
   );
