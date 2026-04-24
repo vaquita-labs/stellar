@@ -3,7 +3,7 @@
 Monorepo for Vaquita on Stellar: Soroban smart contracts, deployment tooling, and related apps.
 
 [![Contracts CI](https://github.com/vaquita-labs/stellar/actions/workflows/contracts-ci.yml/badge.svg?branch=main)](https://github.com/vaquita-labs/stellar/actions/workflows/contracts-ci.yml)
-[![contracts coverage](https://codecov.io/gh/vaquita-labs/stellar/branch/main/graph/badge.svg?flag=contracts&token=CODECOV_BADGE_TOKEN)](https://app.codecov.io/gh/vaquita-labs/stellar)
+[![codecov](https://codecov.io/github/vaquita-labs/stellar/graph/badge.svg?token=O645YJTLJ2)](https://codecov.io/github/vaquita-labs/stellar)
 
 ## Repository layout
 
