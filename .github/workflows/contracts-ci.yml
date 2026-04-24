@@ -108,10 +108,13 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: contracts/lcov.info
-          flags: contracts
-          fail_ci_if_error: false
           use_oidc: true
+          slug: vaquita-labs/stellar
+          files: contracts/lcov.info
+          disable_search: true
+          flags: contracts
+          name: contracts-lcov
+          fail_ci_if_error: true
 
       - name: Upload lcov artifact
         uses: actions/upload-artifact@v4
