@@ -1,0 +1,47 @@
+codecov:
+  require_ci_to_pass: true
+  notify:
+    wait_for_ci: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 1%
+        informational: false
+      contracts:
+        target: 80%
+        threshold: 1%
+        flags:
+          - contracts
+        paths:
+          - contracts/
+    patch:
+      default:
+        target: 80%
+        threshold: 1%
+
+flags:
+  contracts:
+    carryforward: true
+    paths:
+      - contracts/
+
+component_management:
+  individual_components:
+    - component_id: contracts
+      name: Contracts
+      paths:
+        - contracts/
+
+ignore:
+  - "apps/"
+  - "contracts/target/"
+  - "**/test/**"
+  - "contracts/vaquita-pool/src/defindex_vault.rs"
+  - "contracts/vaquita-pool/src/types.rs"

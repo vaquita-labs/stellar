@@ -70,7 +70,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
     defaults:
       run:
         working-directory: contracts
@@ -108,13 +107,14 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          use_oidc: true
-          slug: vaquita-labs/stellar
           files: contracts/lcov.info
           disable_search: true
           flags: contracts
           name: contracts-lcov
           fail_ci_if_error: true
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload lcov artifact
         uses: actions/upload-artifact@v4
