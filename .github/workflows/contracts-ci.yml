@@ -42,8 +42,9 @@ jobs:
           workspaces: |
             contracts
 
+      # Omit --locked: stellar-cli's crates.io lockfile still pins yanked crates (e.g. keccak, slipped10).
       - name: Install Stellar CLI
-        run: cargo install --locked stellar-cli@25.1.0
+        run: cargo install stellar-cli --version 25.1.0
 
       - name: Run contract tests
         run: cargo test --workspace
