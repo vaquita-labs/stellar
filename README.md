@@ -3,6 +3,7 @@
 Monorepo for Vaquita on Stellar: Soroban smart contracts, deployment tooling, and related apps.
 
 [![Contracts CI](https://github.com/vaquita-labs/stellar/actions/workflows/contracts-ci.yml/badge.svg?branch=main)](https://github.com/vaquita-labs/stellar/actions/workflows/contracts-ci.yml)
+[![contracts coverage](https://img.shields.io/codecov/c/github/vaquita-labs/stellar?label=contracts%20coverage)](https://app.codecov.io/gh/vaquita-labs/stellar)
 
 ## Repository layout
 
@@ -59,3 +60,5 @@ See [apps/deployer/README.md](apps/deployer/README.md).
 ## CI
 
 Contract tests, WASM build, and coverage artifacts are run by [`.github/workflows/contracts-ci.yml`](.github/workflows/contracts-ci.yml) when `contracts/**` changes. Download `lcov` and HTML reports from the workflow run’s **Artifacts** section.
+
+The coverage badge reads from [Codecov](https://app.codecov.io/gh/vaquita-labs/stellar) after you add this repository there once (uploads use OIDC from the **Contracts Coverage** job).

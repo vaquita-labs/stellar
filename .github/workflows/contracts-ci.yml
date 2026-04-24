@@ -25,6 +25,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # stellar-cli pulls in libdbus-sys; needs pkg-config + headers on Linux.
+      - name: Install Linux dependencies for Stellar CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdbus-1-dev pkg-config
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -50,6 +56,9 @@ jobs:
   contracts-coverage:
     name: Contracts Coverage (llvm-cov)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: contracts
@@ -83,6 +92,14 @@ jobs:
             --ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
             --fail-under-lines 80 \
             --html --output-dir coverage-html
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: contracts/lcov.info
+          flags: contracts
+          fail_ci_if_error: false
+          use_oidc: true
 
       - name: Upload lcov artifact
         uses: actions/upload-artifact@v4
