@@ -62,3 +62,5 @@ See [apps/deployer/README.md](apps/deployer/README.md).
 Contract tests, WASM build, and coverage artifacts are run by [`.github/workflows/contracts-ci.yml`](.github/workflows/contracts-ci.yml) when `contracts/**` changes. Download `lcov` and HTML reports from the workflow run’s **Artifacts** section.
 
 The coverage badge reads from [Codecov](https://app.codecov.io/gh/vaquita-labs/stellar) after you add this repository there once (uploads use OIDC from the **Contracts Coverage** job).
+
+The **Contracts Build** job installs the Stellar CLI from the official [GitHub release](https://github.com/stellar/stellar-cli/releases) tarball (same version as `STELLAR_CLI_VERSION` in the workflow) instead of compiling with Cargo, so CI stays fast and avoids native `hidapi` / `libudev` / `dbus` build dependencies.

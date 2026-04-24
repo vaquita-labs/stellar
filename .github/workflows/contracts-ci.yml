@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Pin to match local tooling; bump when upgrading. Official binaries avoid cargo build (hidapi/libudev/dbus).
+  STELLAR_CLI_VERSION: "25.1.0"
+
 jobs:
   contracts-build-test:
     name: Contracts Build + Test
@@ -25,11 +29,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # stellar-cli pulls in libdbus-sys; needs pkg-config + headers on Linux.
-      - name: Install Linux dependencies for Stellar CLI
+      - name: Install Stellar CLI (release binary)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libdbus-1-dev pkg-config
+          set -euo pipefail
+          case "$(uname -m)" in
+            x86_64) triple=x86_64-unknown-linux-gnu ;;
+            aarch64) triple=aarch64-unknown-linux-gnu ;;
+            *) echo "unsupported runner architecture: $(uname -m)"; exit 1 ;;
+          esac
+          ver="${STELLAR_CLI_VERSION}"
+          url="https://github.com/stellar/stellar-cli/releases/download/v${ver}/stellar-cli-${ver}-${triple}.tar.gz"
+          curl -fsSL "$url" | tar xz
+          mkdir -p "${HOME}/.local/bin"
+          install -m 755 stellar "${HOME}/.local/bin/stellar"
+          rm -f stellar
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          stellar version
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -41,10 +56,6 @@ jobs:
         with:
           workspaces: |
             contracts
-
-      # Omit --locked: stellar-cli's crates.io lockfile still pins yanked crates (e.g. keccak, slipped10).
-      - name: Install Stellar CLI
-        run: cargo install stellar-cli --version 25.1.0
 
       - name: Run contract tests
         run: cargo test --workspace
