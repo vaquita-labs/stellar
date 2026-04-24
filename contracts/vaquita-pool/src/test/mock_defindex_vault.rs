@@ -21,6 +21,12 @@ const ASSET: Symbol = soroban_sdk::symbol_short!("asset");
 enum DataKey {
     Asset,
     Shares(Address),
+    /// Signed delta applied to every withdraw payout (test hook).
+    WithdrawAdjustment,
+    /// Test: burn this many of `from`'s shares before crediting the deposit.
+    TestStealSharesOnDeposit,
+    /// Test: transfer assets in but do not mint shares (broken vault).
+    TestSkipShareMint,
 }
 
 #[contract]
@@ -30,6 +36,24 @@ pub struct MockDeFindexVault;
 impl MockDeFindexVault {
     pub fn __constructor(env: Env, asset: Address) {
         env.storage().instance().set(&DataKey::Asset, &asset);
+        env.storage().instance().set(&DataKey::WithdrawAdjustment, &0i128);
+        env.storage().instance().set(&DataKey::TestStealSharesOnDeposit, &0i128);
+        env.storage().instance().set(&DataKey::TestSkipShareMint, &false);
+    }
+
+    /// Changes gross asset returned by `withdraw` vs. share burn (default 1:1).
+    pub fn test_set_withdraw_adjustment(env: Env, delta: i128) {
+        env.storage().instance().set(&DataKey::WithdrawAdjustment, &delta);
+    }
+
+    pub fn test_set_steal_shares_on_deposit(env: Env, steal: i128) {
+        env.storage()
+            .instance()
+            .set(&DataKey::TestStealSharesOnDeposit, &steal);
+    }
+
+    pub fn test_set_skip_share_mint(env: Env, skip: bool) {
+        env.storage().instance().set(&DataKey::TestSkipShareMint, &skip);
     }
 
     pub fn asset(env: Env) -> Address {
@@ -47,14 +71,39 @@ impl MockDeFindexVault {
         let asset: Address = env.storage().instance().get(&DataKey::Asset).unwrap();
         let token = TokenClient::new(&env, &asset);
         token.transfer(&from, &env.current_contract_address(), &amount);
-        let current_shares: i128 = env
+        let steal: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TestStealSharesOnDeposit)
+            .unwrap_or(0);
+        let mut current_shares: i128 = env
             .storage()
             .instance()
             .get(&DataKey::Shares(from.clone()))
             .unwrap_or(0);
-        env.storage()
+        if steal != 0 {
+            current_shares = current_shares.saturating_sub(steal);
+            env.storage()
+                .instance()
+                .set(&DataKey::TestStealSharesOnDeposit, &0i128);
+        }
+        let skip_mint: bool = env
+            .storage()
             .instance()
-            .set(&DataKey::Shares(from.clone()), &(current_shares + amount));
+            .get(&DataKey::TestSkipShareMint)
+            .unwrap_or(false);
+        if skip_mint {
+            env.storage()
+                .instance()
+                .set(&DataKey::Shares(from.clone()), &current_shares);
+            env.storage()
+                .instance()
+                .set(&DataKey::TestSkipShareMint, &false);
+        } else {
+            env.storage()
+                .instance()
+                .set(&DataKey::Shares(from.clone()), &(current_shares + amount));
+        }
         env.events()
             .publish((ASSET, Symbol::new(&env, "deposit")), (amount, from));
         (vec![&env, amount], amount, None)
@@ -79,12 +128,21 @@ impl MockDeFindexVault {
             .set(&DataKey::Shares(from.clone()), &(current_shares - withdraw_shares));
         let asset: Address = env.storage().instance().get(&DataKey::Asset).unwrap();
         let token = TokenClient::new(&env, &asset);
-        token.transfer(&env.current_contract_address(), &from, &withdraw_shares);
+        let adjustment: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::WithdrawAdjustment)
+            .unwrap_or(0);
+        let payout = withdraw_shares.saturating_add(adjustment);
+        if payout <= 0 {
+            panic!("Invalid payout");
+        }
+        token.transfer(&env.current_contract_address(), &from, &payout);
         env.events().publish(
             (ASSET, Symbol::new(&env, "withdraw")),
             (withdraw_shares, from),
         );
-        vec![&env, withdraw_shares]
+        vec![&env, payout]
     }
 
     pub fn balance(env: Env, id: Address) -> i128 {

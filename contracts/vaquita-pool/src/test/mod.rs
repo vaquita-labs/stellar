@@ -177,4 +177,5 @@ pub mod mockpool {
 
 pub mod mock_defindex_vault;
 
+mod pool_coverage;
 mod success;

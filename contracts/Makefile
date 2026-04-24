@@ -1,4 +1,7 @@
--include ../.env
+-include .env
+
+POOL_DIR := vaquita-pool
+WASM := $(CURDIR)/target/wasm32v1-none/release/vaquita_pool.wasm
 
 INVOKE_FEE ?= 10000000
 
@@ -7,19 +10,24 @@ default: build
 all: test
 
 test: build
-	cargo test
+	cargo test --workspace
 
+# --remap-path-prefix: avoid HTML mirroring absolute paths (coverage/Users/.../projects/...).
 coverage:
-	cargo llvm-cov --manifest-path ../Cargo.toml --workspace --all-features --lcov --output-path ../lcov.info
-	cargo llvm-cov report --manifest-path ../Cargo.toml --html --output-dir ../coverage-html
+	cargo llvm-cov --workspace --all-features --remap-path-prefix \
+		--ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
+		--lcov --output-path lcov.info
+	cargo llvm-cov report --remap-path-prefix \
+		--ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
+		--fail-under-lines 80 \
+		--html --output-dir coverage-html
 
 build:
-	stellar contract build
-	@ls -l ../target/wasm32v1-none/release/*.wasm
-
+	cd $(POOL_DIR) && stellar contract build
+	@ls -l $(CURDIR)/target/wasm32v1-none/release/*.wasm
 
 deploy: build
-	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm ../target/wasm32v1-none/release/vaquita_pool.wasm --alias vaquita_pool
+	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm $(WASM) --alias vaquita_pool
 	CONTRACT_ID=$(stellar contract alias show vaquita_pool)
 
 initialize: deploy
@@ -54,7 +62,6 @@ add-lock-period:
 	--caller $(USER_ADDRESS) \
 	--new_lock_period $(NEW_LOCK_PERIOD)
 
-
 add-rewards:
 	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
@@ -64,8 +71,8 @@ add-rewards:
 	--reward_amount $(REWARD_AMOUNT)
 
 cargo-release:
-	cargo build --release --target wasm32v1-none
-	@ls -l ../target/wasm32v1-none/release/*.wasm
+	cargo build --release --target wasm32v1-none -p vaquita-pool
+	@ls -l $(CURDIR)/target/wasm32v1-none/release/*.wasm
 
 fmt:
 	cargo fmt --all

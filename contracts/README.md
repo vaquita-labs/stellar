@@ -12,7 +12,7 @@ From `contracts/`:
 cargo test --workspace
 ```
 
-Or from `contracts/vaquita-pool/`:
+Or from `contracts/`:
 
 ```bash
 make test
@@ -28,7 +28,7 @@ Coverage is produced from host-side Rust tests using `cargo-llvm-cov`.
 cargo install cargo-llvm-cov --locked
 ```
 
-2. Run coverage from `contracts/vaquita-pool/`:
+2. Run coverage from `contracts/`:
 
 ```bash
 make coverage
@@ -39,10 +39,10 @@ Generated files:
 - `contracts/lcov.info` (LCOV report)
 - `contracts/coverage-html/` (HTML report)
 
-Open HTML report locally:
+Open HTML report locally (LLVM writes under `coverage-html/html/`):
 
 ```bash
-open contracts/coverage-html/index.html
+open contracts/coverage-html/html/index.html
 ```
 
 ## CI coverage

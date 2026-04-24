@@ -1,45 +1,16 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, vec, contracttype, Address, Env, String, IntoVal, Vec, Symbol, token::Client as TokenClient,
+    contract, contractimpl, vec, Address, Env, String, IntoVal, Vec, Symbol, token::Client as TokenClient,
     auth::{InvokerContractAuthEntry, ContractContext, SubContractInvocation},
 };
 
 mod defindex_vault;
 mod error;
+mod types;
+
+pub use types::{DataKey, Period, Position};
+
 use defindex_vault::DeFindexVaultClient;
-
-// ==================== DATA STRUCTS ====================
-
-#[derive(Clone)]
-#[contracttype]
-pub struct Position {
-    owner: Address,
-    amount: i128,
-    shares: i128,
-    finalization_time: u64,
-    lock_period: u64,
-}
-
-#[derive(Clone)]
-#[contracttype]
-pub struct Period {
-    reward_pool: i128,
-    total_deposits: i128,
-}
-
-#[derive(Clone)]
-#[contracttype]
-pub enum DataKey {
-    Admin,
-    BlendToken,
-    DeFindexVaultAddress,
-    BasisPoints,
-    EarlyWithdrawalFee,
-    ProtocolFees,
-    Positions(String),
-    Periods(u64),
-    SupportedLockPeriod(u64),
-}
 
 // ==================== CONTRACT ====================
 
@@ -311,6 +282,13 @@ impl VaquitaPool {
 
     pub fn get_period_data(env: Env, period: u64) -> Option<Period> {
         env.storage().instance().get(&DataKey::Periods(period))
+    }
+}
+
+#[cfg(test)]
+impl VaquitaPool {
+    pub fn test_calculate_reward(period_data: &Period, amount: i128) -> i128 {
+        Self::calculate_reward(period_data, amount)
     }
 }
 
