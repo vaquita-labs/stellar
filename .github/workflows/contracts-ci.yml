@@ -1,0 +1,97 @@
+name: Contracts CI
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts-ci.yml"
+  pull_request:
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contracts-build-test:
+    name: Contracts Build + Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            contracts
+
+      - name: Install Stellar CLI
+        run: cargo install --locked stellar-cli@25.1.0
+
+      - name: Run contract tests
+        run: cargo test --workspace
+
+      - name: Build contract wasm
+        run: |
+          cd vaquita-pool
+          stellar contract build
+
+  contracts-coverage:
+    name: Contracts Coverage (llvm-cov)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust (with llvm-tools)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            contracts
+
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+
+      - name: Generate lcov report
+        run: |
+          cargo llvm-cov --workspace --all-features --remap-path-prefix \
+            --ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
+            --lcov --output-path lcov.info
+
+      - name: Generate HTML report
+        run: |
+          cargo llvm-cov report --remap-path-prefix \
+            --ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
+            --fail-under-lines 80 \
+            --html --output-dir coverage-html
+
+      - name: Upload lcov artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contracts-lcov
+          path: contracts/lcov.info
+
+      - name: Upload HTML coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contracts-coverage-html
+          path: contracts/coverage-html
