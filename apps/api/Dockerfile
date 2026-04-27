@@ -16,9 +16,11 @@ ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
 
 RUN --mount=type=secret,id=webhook_url \
     --mount=type=secret,id=webhook_token \
-    WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )" \
-    WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )" \
-    ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/api...
+    sh -c '\
+      export WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )"; \
+      export WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )"; \
+      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/api... --network-concurrency 4 \
+    '
 
 FROM base AS runner
 WORKDIR /repo

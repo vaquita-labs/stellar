@@ -23,7 +23,7 @@ RUN --mount=type=secret,id=webhook_url \
       echo "[DEBUG][deps] WEBHOOK_URL length: ${#WEBHOOK_URL}"; \
       echo "[DEBUG][deps] WEBHOOK_TOKEN length: ${#WEBHOOK_TOKEN}"; \
       echo "[DEBUG][deps] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
-      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter vaquiland... \
+      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter vaquiland... --network-concurrency 4 \
     '
 
 FROM base AS builder
@@ -45,6 +45,8 @@ ARG WEBHOOK_SOURCE=apps/web
 ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+ENV NEXT_BUILD_WORKERS=1
 
 RUN --mount=type=secret,id=webhook_url \
     --mount=type=secret,id=webhook_token \
