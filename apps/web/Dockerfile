@@ -15,10 +15,16 @@ ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
 
 RUN --mount=type=secret,id=webhook_url \
     --mount=type=secret,id=webhook_token \
-    WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )" \
-    WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )" \
-    sh -c 'echo "[DEBUG][deps] webhook_url file exists: $( [ -f /run/secrets/webhook_url ] && echo YES || echo NO )"; echo "[DEBUG][deps] webhook_token file exists: $( [ -f /run/secrets/webhook_token ] && echo YES || echo NO )"; echo "[DEBUG][deps] WEBHOOK_URL length: ${#WEBHOOK_URL}"; echo "[DEBUG][deps] WEBHOOK_TOKEN length: ${#WEBHOOK_TOKEN}"; echo "[DEBUG][deps] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"' && \
-    ./notify.sh INSTALL pnpm install --frozen-lockfile --filter vaquiland...
+    sh -c '\
+      echo "[DEBUG][deps] webhook_url file exists: $( [ -f /run/secrets/webhook_url ] && echo YES || echo NO )"; \
+      echo "[DEBUG][deps] webhook_token file exists: $( [ -f /run/secrets/webhook_token ] && echo YES || echo NO )"; \
+      export WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )"; \
+      export WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )"; \
+      echo "[DEBUG][deps] WEBHOOK_URL length: ${#WEBHOOK_URL}"; \
+      echo "[DEBUG][deps] WEBHOOK_TOKEN length: ${#WEBHOOK_TOKEN}"; \
+      echo "[DEBUG][deps] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
+      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter vaquiland... \
+    '
 
 FROM base AS builder
 WORKDIR /repo
@@ -42,10 +48,16 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN --mount=type=secret,id=webhook_url \
     --mount=type=secret,id=webhook_token \
-    WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )" \
-    WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )" \
-    sh -c 'echo "[DEBUG][builder] webhook_url file exists: $( [ -f /run/secrets/webhook_url ] && echo YES || echo NO )"; echo "[DEBUG][builder] webhook_token file exists: $( [ -f /run/secrets/webhook_token ] && echo YES || echo NO )"; echo "[DEBUG][builder] WEBHOOK_URL length: ${#WEBHOOK_URL}"; echo "[DEBUG][builder] WEBHOOK_TOKEN length: ${#WEBHOOK_TOKEN}"; echo "[DEBUG][builder] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"' && \
-    ./notify.sh BUILD pnpm --filter vaquiland build
+    sh -c '\
+      echo "[DEBUG][builder] webhook_url file exists: $( [ -f /run/secrets/webhook_url ] && echo YES || echo NO )"; \
+      echo "[DEBUG][builder] webhook_token file exists: $( [ -f /run/secrets/webhook_token ] && echo YES || echo NO )"; \
+      export WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )"; \
+      export WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )"; \
+      echo "[DEBUG][builder] WEBHOOK_URL length: ${#WEBHOOK_URL}"; \
+      echo "[DEBUG][builder] WEBHOOK_TOKEN length: ${#WEBHOOK_TOKEN}"; \
+      echo "[DEBUG][builder] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
+      ./notify.sh BUILD pnpm --filter vaquiland build \
+    '
 
 FROM base AS runner
 WORKDIR /app
