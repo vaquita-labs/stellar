@@ -1,0 +1,24 @@
+name: Deploy to Droplet
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.DROPLET_SSH_KEY }}
+      - name: Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} "whoami && pwd && ls -la"
+      - name: Run remote script on droplet
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }} "cd ~/vaquita/vaquita-services && bash scripts/restart-docker-compose-dev.sh"

@@ -1,0 +1,500 @@
+import { getCurrentDay } from '../../helpers/date';
+import { supabase } from '../../lib/supabase';
+import { ably } from '../ably';
+import {
+  type DepositResponseDTO,
+  DepositWithdrawalState,
+  type MapObject,
+  MapObjectType,
+  type Network,
+  type Profile,
+  type ProfileExperienceResponseDTO,
+  type ProfileMapObjectsAvailableResponseDTO,
+  type ProfileMapObjectsResponseDTO,
+  type ProfileResponseDTO,
+  type ProfileReward,
+  type ProfileRewardsResponseDTO,
+  type ProfileStreakResponseDTO,
+  Reward,
+  type RewardDocument,
+  type RewardResponseDTO,
+} from '../../types';
+import {
+  dataToDepositResponseDTOTotalDepositsResponseDTO,
+  getCachedDepositsByNetworkIdWalletAddress,
+} from '../deposit';
+import { getNetworkByName } from '../network';
+import { DAILY_SILVER_COINS } from './constants';
+import { friendlyStandardMap } from './map-template';
+
+export const listenProfilesChanges = async (onChange: () => void) => {
+  await supabase.realtime.setAuth();
+  supabase
+    .channel(`table:profiles`, {
+      config: { private: true },
+    })
+    .on('broadcast', { event: '*' }, () => {
+      onChange();
+    })
+    .subscribe((status) => {
+      console.info('Estado canal profiles:', status);
+    });
+};
+
+export const listenProfilesDepositsChanges = async (onChange: () => void) => {
+  await supabase.realtime.setAuth();
+  supabase
+    .channel(`table:profiles_deposits`, {
+      config: { private: true },
+    })
+    .on('broadcast', { event: '*' }, () => {
+      onChange();
+    })
+    .subscribe((status) => {
+      console.info('Estado canal profiles_deposits:', status);
+    });
+};
+
+export const getProfilesByNetworkId = async (networkId: number) => {
+  const { data, ...rest } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('network_id', networkId);
+  
+  return {
+    data: (data || []) as Profile[],
+    ...rest,
+  };
+};
+
+export const getProfiles = async () => {
+  const { data, ...rest } = await supabase
+    .from('profiles')
+    .select('*');
+  
+  return {
+    data: (data || []) as Profile[],
+    ...rest,
+  };
+};
+
+export const profilesCacheRef: { current: any | null } = { current: null };
+
+export const getCachedProfiles = async () => {
+  // if (profilesCacheRef.current) {
+  //   return profilesCacheRef.current;
+  // }
+  
+  profilesCacheRef.current = await getProfiles();
+  return profilesCacheRef.current;
+};
+
+export const profilesDepositsByProfileIdCacheRef: { current: { [key: string]: any } } = { current: {} };
+
+async function getProfilesDepositsByProfileId(profileId: number) {
+  const { error, ...rest } = await supabase
+    .from('profiles_deposits')
+    .select('*')
+    .eq('profile_id', profileId)
+    .select()
+    .maybeSingle();
+  
+  if (error) {
+    console.error('Error on profileIncrement', { profileId }, error);
+  }
+  
+  return {
+    error,
+    ...rest,
+  };
+}
+
+export async function getCachedProfilesDepositsByProfileId(profileId: number) {
+  // const cachedData = profilesDepositsByProfileIdCacheRef.current[profileId];
+  // if (cachedData) {
+  //   return cachedData;
+  // }
+  
+  const data = await getProfilesDepositsByProfileId(profileId);
+  profilesDepositsByProfileIdCacheRef.current[profileId] = data;
+  
+  return data;
+}
+
+export async function createProfilesDepositsByProfileId(profileId: number) {
+  const { error, ...rest } = await supabase
+    .from('profiles_deposits')
+    .insert({
+      total_active_deposits: [],
+      total_active_deposits_count: 0,
+      profile_id: profileId,
+    })
+    .select()
+    .maybeSingle();
+  
+  if (error) {
+    console.error('Error on createProfilesDepositsByProfileId', error);
+  }
+  
+  return {
+    error,
+    ...rest,
+  };
+}
+
+export async function profileIncrement(profileId: number, totalActiveDeposits: number[], totalActiveDepositsCount: number, timestamp: number) {
+  const { error } = await supabase
+    .from('profiles_deposits')
+    .update({
+      total_active_deposits: totalActiveDeposits,
+      total_active_deposits_count: totalActiveDepositsCount,
+      timestamp: new Date(timestamp),
+    })
+    .eq('profile_id', profileId)
+    .select();
+  
+  if (error) {
+    console.error('Error on profileIncrement', error);
+  }
+}
+
+export const getRewardByKey = async (rewardKey: Reward) => {
+  const { data, ...rest } = await supabase
+    .from('rewards')
+    .select(`
+      *
+    `)
+    .eq('key', rewardKey)
+    .maybeSingle();
+  
+  return {
+    data: data as RewardDocument | null,
+    ...rest,
+  };
+};
+
+export const getProfile = async (networkName: string, walletAddress: string) => {
+  
+  const { data: networkData, error: networkError } = await getNetworkByName(networkName);
+  
+  if (networkError || !networkData) {
+    return {
+      success: false,
+      errorMessage: 'Network not found',
+      errors: networkError,
+      networkData: null,
+      profileData: null,
+    };
+  }
+  
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('network_id', networkData.id)
+    .eq('wallet_address', walletAddress)
+    .maybeSingle();
+  
+  if (profileData) {
+    return {
+      success: true,
+      errorMessage: '',
+      errors: [],
+      networkData,
+      profileData: profileData as Profile,
+    };
+  }
+  
+  const newProfile = {
+    network_id: networkData.id,
+    wallet_address: walletAddress,
+  };
+  
+  const result = await supabase
+    .from('profiles')
+    .insert([ newProfile ])
+    .select()
+    .maybeSingle();
+  
+  return {
+    success: true,
+    errorMessage: '',
+    errors: [],
+    networkData,
+    profileData: result.data as Profile,
+  };
+};
+
+export const getRewardsData = async (networkData: Network, profileData: Profile) => {
+  
+  const { data: rewardData, error } = await getRewardByKey(Reward.SILVER_COIN);
+  
+  if (!rewardData) {
+    return {
+      success: false,
+      errorMessage: 'reward not found',
+      errors: error,
+      rewards: [],
+      profileData,
+    };
+  }
+  
+  const { data: profileRewardData } = await supabase
+    .from('profiles_rewards')
+    .select('*, rewards(*)')
+    .eq('profile_id', profileData.id)
+    .eq('reward_id', rewardData.id);
+  
+  let collected = 0;
+  let amount = 0;
+  for (const profileReward of (profileRewardData || []) as ProfileReward[]) {
+    if (profileReward.type === 'collected' && profileReward?.rewards?.key === Reward.SILVER_COIN && getCurrentDay(new Date(profileReward.created_at)) === getCurrentDay(new Date())) {
+      collected += profileReward?.amount || 0;
+    }
+    if (profileReward.type === 'collected' || profileReward.type === 'earned') {
+      amount += profileReward?.amount || 0;
+    }
+  }
+  
+  const rewards: RewardResponseDTO[] = [
+    {
+      key: Reward.SILVER_COIN,
+      name: 'Silver Coin',
+      amountToCollect: Math.max(DAILY_SILVER_COINS - collected, 0),
+      amount,
+    },
+    { key: Reward.GOLD_COIN, name: 'Gold Coin', amountToCollect: 0, amount: 0 },
+  ];
+  
+  return {
+    success: true,
+    errorMessage: '',
+    errors: [],
+    rewards,
+    profileData,
+  };
+};
+
+export const getStreakData = async (networkData: Network, profileData: Profile) => {
+  const { data } = await supabase
+    .from('deposits')
+    .select(`
+      id,confirmed_at
+    `)
+    .eq('wallet_address', profileData.wallet_address)
+    .eq('network_id', networkData.id)
+    .eq('status', 'confirmed');
+  const { data: profileRewardsData, error } = await supabase
+    .from('profiles_rewards')
+    .select(`
+      id,created_at
+    `)
+    .eq('profile_id', profileData.id)
+    .eq('type', 'collected');
+  
+  const daysSet = new Set<number>();
+  
+  for (const deposit of (data || [])) {
+    daysSet.add(getCurrentDay(new Date(deposit.confirmed_at || 0)));
+  }
+  for (const deposit of (profileRewardsData || [])) {
+    daysSet.add(getCurrentDay(new Date(deposit.created_at || 0)));
+  }
+  
+  const todayDay = getCurrentDay(new Date());
+  let streak = 0;
+  let d = todayDay - 1;
+  
+  while (daysSet.has(d)) {
+    streak++;
+    d--;
+  }
+  
+  return {
+    success: true,
+    errorMessage: '',
+    errors: [],
+    yesterdayStreak: streak,
+    todayStreak: daysSet.has(todayDay),
+    days: Array.from(daysSet),
+  };
+};
+
+export const getMapObjectsAvailableData = async (networkData: Network, profileData: Profile) => {
+  
+  const { data } = await supabase
+    .from('map_objects')
+    .select('*');
+  
+  const objects: ProfileMapObjectsAvailableResponseDTO['objects'] = [];
+  for (const { variants, type, prices, free_items } of (data || [])) {
+    const objectVariants = (variants || '').split(',').map(Number);
+    const objectPrices = (prices || '').split(',').map(Number);
+    const objectFreeItems = (free_items || '').split(',').map(Number);
+    for (let i = 0; i < objectVariants.length; i++) {
+      const variant = objectVariants[i];
+      if (variant >= 0 && variant <= 100) {
+        objects.push({
+          type,
+          variant,
+          price: Math.max(objectPrices[i] || 0, 0),
+          itemsAvailable: Math.max(objectFreeItems[i] || 0, 0),
+        });
+      }
+    }
+  }
+  
+  return {
+    success: true,
+    errorMessage: '',
+    errors: [],
+    objects,
+  };
+};
+
+export const toProfileResponseDTO = (networkData: Network, profile: Profile): ProfileResponseDTO => {
+  
+  return {
+    walletAddress: profile?.wallet_address || '',
+    networkName: networkData?.name || '',
+    email: profile.email ?? '',
+    fullName: profile.full_name ?? '',
+    nickname: profile.nickname ?? '',
+  };
+};
+
+export const toProfileExperienceResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileExperienceResponseDTO> => {
+  let deposits: DepositResponseDTO[] = [];
+  try {
+    const { data } = await getCachedDepositsByNetworkIdWalletAddress(networkData.id, profile.wallet_address);
+    const response = await dataToDepositResponseDTOTotalDepositsResponseDTO(
+      networkData,
+      data ?? [],
+      false,
+      true,
+    );
+    deposits = response.deposits as DepositResponseDTO[];
+  } catch (error) {
+    console.warn('error on toProfileResponseDTO', error);
+  }
+  
+  let experience = 0;
+  for (const deposit of deposits) {
+    if (deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS) {
+      const timeElapsed = Math.max(Date.now() - deposit.createdTimestamp, 0);
+      experience += Math.sqrt(deposit.amount || 0) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
+    }
+  }
+  
+  return {
+    walletAddress: profile?.wallet_address || '',
+    networkName: networkData?.name || '',
+    experience,
+  };
+};
+
+export const toProfileRewardsResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileRewardsResponseDTO> => {
+  
+  const { rewards } = await getRewardsData(networkData, profile);
+  
+  return {
+    walletAddress: profile?.wallet_address || '',
+    networkName: networkData?.name || '',
+    rewards: rewards.map(reward => ({ name: reward.name, amount: reward.amount })),
+  };
+};
+
+export const toProfileStreakResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileStreakResponseDTO> => {
+  
+  const { todayStreak, yesterdayStreak, days } = await getStreakData(networkData, profile);
+  
+  return {
+    walletAddress: profile?.wallet_address || '',
+    networkName: networkData?.name || '',
+    todayStreak,
+    yesterdayStreak,
+    days,
+  };
+};
+
+const toMapObjects = (objects: any): MapObject[] => {
+  if (Array.isArray(objects)) {
+    return objects.map(object => ({
+      position: [ object?.position?.[0] || 0, object?.position?.[1] || 0, object?.position?.[2] || 0 ],
+      type: object?.type || MapObjectType.EMPTY,
+      variant: object?.variant || 0,
+      rotation: [ object?.rotation?.[0] || 0, object?.rotation?.[1] || 0, object?.rotation?.[2] || 0 ],
+    }));
+  }
+  return [];
+};
+export const getProfileMapObjects = async (profile: Profile) => {
+  const { data } = await supabase
+    .from('profiles_map_objects')
+    .select('*')
+    .eq('profile_id', profile.id)
+    .maybeSingle();
+  if (data) {
+    return {
+      success: true,
+      errorMessage: '',
+      errors: [],
+      profileMapObjects: {
+        ...data,
+        objects: toMapObjects(data?.objects || []),
+      },
+    };
+  }
+  
+  const newProfile = {
+    profile_id: profile.id,
+    objects: friendlyStandardMap,
+  };
+  
+  const { data: dataNew } = await supabase
+    .from('profiles_map_objects')
+    .insert([ newProfile ])
+    .select()
+    .maybeSingle();
+  
+  return {
+    success: true,
+    errorMessage: '',
+    errors: [],
+    profileMapObjects: {
+      ...dataNew,
+      objects: toMapObjects(dataNew?.objects || []),
+    },
+  };
+};
+
+export const toProfileMapObjectsResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileMapObjectsResponseDTO> => {
+  
+  const { profileMapObjects } = await getProfileMapObjects(profile);
+  
+  return {
+    walletAddress: profile?.wallet_address || '',
+    networkName: networkData?.name || '',
+    objects: profileMapObjects?.objects || [],
+  };
+};
+
+export const toProfileMapObjectsAvailableResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileMapObjectsAvailableResponseDTO> => {
+  
+  const { objects } = await getMapObjectsAvailableData(networkData, profile);
+  
+  return {
+    walletAddress: profile?.wallet_address || '',
+    networkName: networkData?.name || '',
+    objects,
+  };
+};
+
+export const broadcastProfileChange = async (message: string, keys: string[]) => {
+  const channel = ably.channels.get('profiles-changes');
+  console.info('broadcastProfileChange:', message);
+  await channel.publish('change', {
+    message,
+    keys,
+    timestamp: Date.now(),
+  });
+};

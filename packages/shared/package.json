@@ -1,0 +1,34 @@
+{
+  "name": "@vaquita/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@blend-capital/blend-sdk": "^3.2.1",
+    "@stellar/stellar-sdk": "^14.2.0",
+    "@supabase/supabase-js": "^2.55.0",
+    "ably": "^2.14.0",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.15.0",
+    "uuid": "^11.1.0",
+    "viem": "^2.21.0",
+    "zod": "^4.0.17"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.2.1",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.9.2"
+  }
+}

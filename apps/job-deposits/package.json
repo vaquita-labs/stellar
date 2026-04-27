@@ -1,0 +1,20 @@
+{
+  "name": "@vaquita/job-deposits",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/app-job-deposits-history.ts",
+    "start": "tsx src/app-job-deposits-history.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vaquita/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.2"
+  }
+}
