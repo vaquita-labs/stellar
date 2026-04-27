@@ -1,19 +1,23 @@
-#!/bin/bash
+#!/bin/sh
+
+SOURCE="${WEBHOOK_SOURCE:-pipeline}"
 
 send_webhook() {
-    local phase=$1
-    local status=$2
-    local msg=$3
+    phase=$1
+    status=$2
+    msg=$3
 
-    curl -s -X POST "$WEBHOOK_URL" \
+    [ -z "$WEBHOOK_URL" ] && return 0
+
+    curl -s --max-time 5 --retry 2 --retry-delay 1 -X POST "$WEBHOOK_URL" \
         -H "Content-Type: application/json" \
         -H "x-webhook-token: $WEBHOOK_TOKEN" \
         -d "{
             \"event\": \"${phase}_${status}\",
             \"message\": \"[$phase] $msg\",
-            \"source\": \"nixpacks-pipeline\",
+            \"source\": \"$SOURCE\",
             \"group_id\": \"${DEPLOY_ID}\"
-        }"
+        }" > /dev/null 2>&1 || true
 }
 
 PHASE=$1
@@ -22,9 +26,9 @@ shift # Elimina el primer argumento (la fase) para dejar el resto como el comand
 # Deploy group ID: commit SHA si está disponible, sino generamos uno por sesión de build
 DEPLOY_ID_FILE="/tmp/.deploy_group_id"
 if [ -n "$NIXPACKS_GIT_COMMIT" ]; then
-    DEPLOY_ID="${NIXPACKS_GIT_COMMIT:0:8}"
+    DEPLOY_ID=$(printf '%s' "$NIXPACKS_GIT_COMMIT" | cut -c1-8)
 elif [ -n "$GIT_COMMIT" ]; then
-    DEPLOY_ID="${GIT_COMMIT:0:8}"
+    DEPLOY_ID=$(printf '%s' "$GIT_COMMIT" | cut -c1-8)
 elif git rev-parse --short HEAD > /dev/null 2>&1; then
     DEPLOY_ID=$(git rev-parse --short HEAD)
 elif [ -f "$DEPLOY_ID_FILE" ]; then
@@ -40,6 +44,9 @@ send_webhook "$PHASE" "START" "Iniciando fase..."
 if [ "$PHASE" = "RUNTIME" ]; then
     "$@" &
     SERVER_PID=$!
+
+    # Reenvía SIGTERM/SIGINT al hijo para graceful shutdown bajo `docker stop`
+    trap 'kill -TERM "$SERVER_PID" 2>/dev/null' TERM INT
 
     # Polling hasta que el servidor responda (máx 60s)
     PORT=${PORT:-3000}
@@ -60,7 +67,8 @@ if [ "$PHASE" = "RUNTIME" ]; then
     # Mantener el contenedor vivo hasta que el proceso muera
     wait $SERVER_PID
     EXIT_CODE=$?
-    if [ $EXIT_CODE -ne 0 ]; then
+    # 143 = 128 + SIGTERM: shutdown solicitado por docker stop, no es error
+    if [ $EXIT_CODE -ne 0 ] && [ $EXIT_CODE -ne 143 ]; then
         send_webhook "$PHASE" "ERROR" "Servidor terminó inesperadamente. Código: $EXIT_CODE"
     fi
     exit $EXIT_CODE
