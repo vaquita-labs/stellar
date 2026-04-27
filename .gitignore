@@ -1,1 +1,20 @@
 .idea
+.DS_Store
+
+# deps
+node_modules
+
+# build
+dist
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.production
+.env.development
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

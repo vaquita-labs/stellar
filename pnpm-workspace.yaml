@@ -1,0 +1,6 @@
+packages:
+  - 'apps/api'
+  - 'apps/listener'
+  - 'apps/job-deposits'
+  - 'apps/web'
+  - 'packages/*'

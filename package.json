@@ -1,0 +1,18 @@
+{
+  "name": "vaquita-labs-stellar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:api": "pnpm --filter @vaquita/api dev",
+    "dev:listener": "pnpm --filter @vaquita/listener dev",
+    "dev:job": "pnpm --filter @vaquita/job-deposits dev",
+    "dev:all": "pnpm -r --parallel --filter='./apps/*' dev",
+    "build": "pnpm -r --filter='./packages/*' --filter='./apps/*' build",
+    "typecheck": "pnpm -r --filter='./packages/*' --filter='./apps/*' typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.30.3"
+}
