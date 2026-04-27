@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev:api": "pnpm --filter @vaquita/api dev",
+    "dev:web": "pnpm --filter vaquiland dev",
     "dev:listener": "pnpm --filter @vaquita/listener dev",
     "dev:job": "pnpm --filter @vaquita/job-deposits dev",
     "dev:all": "pnpm -r --parallel --filter='./apps/*' dev",

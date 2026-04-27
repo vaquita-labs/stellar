@@ -56,7 +56,7 @@ export const getNetworkById = async (id: number) => {
     `)
     .eq('id', id)
     .maybeSingle();
-  
+
   return {
     data: data as Network | null,
     ...rest,
@@ -75,7 +75,7 @@ export const getNetworkByName = async (networkName: string) => {
     `)
     .eq('name', networkName)
     .maybeSingle();
-  
+
   return {
     data: data as Network | null,
     ...rest,
@@ -100,11 +100,12 @@ export const getNetworks = async () => {
 
 export const getNetworksByOrigin = async (origin: string) => {
   const { data: networks, error } = await getNetworks();
-  
+
   if (error) {
+    console.error(error);
     return [] as NetworkResponseDTO[];
   }
-  
+
   const filteredNetworks = networks.filter(net =>
     net.origins?.split(',').map(h => h.trim()).includes(origin),
   ).sort((a, b) => (a.order || 100) - (b.order || 100));
@@ -117,7 +118,7 @@ export const getTokenBySymbol = async (networkSymbol: string) => {
     .select('*')
     .eq('symbol', networkSymbol)
     .maybeSingle();
-  
+
   return {
     data: data as Token | null,
     ...rest,

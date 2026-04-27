@@ -37,253 +37,281 @@ const asyncHandler = <
   async (req, res, next) => {
     try {
       await fn(req, res, next);
-    } catch (error) {
-      console.error('ERROR!!!', error);
-      next(error);
+    } catch (err) {
+      req.log.error({ err }, 'Unhandled error in deposit route handler');
+      next(err);
     }
   };
 
 router.post('/', asyncHandler(async (req, res) => {
-  
+  req.log.info('POST /deposit');
+
   const { data, success, error } = depositSchema.safeParse(req.body);
-  
+
   if (!success || !data) {
-    return sendError(res, 'Payload inválido', error);
+    req.log.warn({ err: error?.format?.() ?? error }, 'Invalid deposit payload');
+    return sendError(res, 'Payload inválido', error, 400);
   }
-  
+
+  const childLog = req.log.child({
+    walletAddress: data.walletAddress,
+    networkName: data.networkName,
+    tokenSymbol: data.tokenSymbol,
+    amount: data.amount,
+    lockPeriod: data.lockPeriod,
+  });
+
   let result;
   try {
-    result = await createDepositByNames('initial-tx-' + v4(), data.amount, data.walletAddress, data.networkName, data.tokenSymbol, data.lockPeriod, data.vaquitaContract);
-  } catch (error) {
-    return sendError(res, (error as Error)?.message, error);
+    result = await createDepositByNames(
+      'initial-tx-' + v4(),
+      data.amount,
+      data.walletAddress,
+      data.networkName,
+      data.tokenSymbol,
+      data.lockPeriod,
+      data.vaquitaContract,
+    );
+  } catch (err) {
+    childLog.error({ err }, 'createDepositByNames threw');
+    return sendError(res, (err as Error)?.message ?? 'Failed to create deposit', err, 500);
   }
-  
-  console.info('deposit inserted', result);
-  
+
   if (result.error) {
-    return sendError(res, 'Error on inserting deposit:', result.error);
+    childLog.error({ err: result.error }, 'Failed to insert deposit');
+    return sendError(res, 'Error on inserting deposit', result.error, 500);
   }
-  
+
+  childLog.info({ depositId: result.data?.id }, 'Deposit inserted');
   return sendSuccess(res, result.data, 'success inserted');
 }));
 
 router.post('/confirm', asyncHandler(async (req, res) => {
-  
-  const { id, txHash, depositIdHex, transactionRaw } = req.body;
-  
-  const result = await confirmDepositWithTx(id, depositIdHex, txHash, transactionRaw);
-  
-  console.info('deposit confirmed', result);
-  
-  if (result.error) {
-    console.error('Error on confirming deposit:', result.error.message);
-    return sendError(res, 'Error on confirming deposit', result.error);
+  const { id, txHash, depositIdHex, transactionRaw } = req.body ?? {};
+  req.log.info({ id, txHash, depositIdHex }, 'POST /deposit/confirm');
+
+  if (!id || !txHash) {
+    req.log.warn({ id, txHash }, 'Missing id or txHash');
+    return sendError(res, 'Missing id or txHash', null, 400);
   }
-  
+
+  const result = await confirmDepositWithTx(id, depositIdHex, txHash, transactionRaw);
+
+  if (result.error) {
+    req.log.error({ err: result.error, id, txHash }, 'Failed to confirm deposit');
+    return sendError(res, 'Error on confirming deposit', result.error, 500);
+  }
+
+  req.log.info({ id, txHash }, 'Deposit confirmed');
   return sendSuccess(res, true, 'success confirmed');
 }));
 
 router.post('/fail', asyncHandler(async (req, res) => {
-  
-  const { id, txHash, depositIdHex, transactionRaw } = req.body;
-  
-  const result = await failDepositWithTx(id, depositIdHex, txHash, transactionRaw);
-  
-  console.info('deposit failed', result);
-  
-  if (result.error) {
-    console.error('Error on failing deposit:', result.error.message);
-    return sendError(res, 'Error on failing deposit', result.error);
+  const { id, txHash, depositIdHex, transactionRaw } = req.body ?? {};
+  req.log.info({ id, txHash, depositIdHex }, 'POST /deposit/fail');
+
+  if (!id) {
+    req.log.warn({ id }, 'Missing id');
+    return sendError(res, 'Missing id', null, 400);
   }
-  
+
+  const result = await failDepositWithTx(id, depositIdHex, txHash, transactionRaw);
+
+  if (result.error) {
+    req.log.error({ err: result.error, id, txHash }, 'Failed to mark deposit as failed');
+    return sendError(res, 'Error on failing deposit', result.error, 500);
+  }
+
+  req.log.info({ id, txHash }, 'Deposit marked as failed');
   return sendSuccess(res, true, 'success confirmed');
 }));
 
 router.post('/withdraw', asyncHandler(async (req, res) => {
-  
-  const { depositId, txHash, transactionRaw } = req.body;
-  
+  const { depositId, txHash, transactionRaw } = req.body ?? {};
+  req.log.info({ depositId, txHash }, 'POST /deposit/withdraw');
+
+  if (!depositId) {
+    req.log.warn({ depositId }, 'Missing depositId');
+    return sendError(res, 'Missing depositId', null, 400);
+  }
+
   const result = await creteWithdrawal({
     depositId,
     transactionHash: txHash,
     transactionEventRaw: transactionRaw,
   });
-  console.info('withdraw created', result);
-  
+
   if (result.error) {
-    console.error('Error insertando deposit:', result.error.message);
-    return sendError(res, 'Error inserting deposit', result);
+    req.log.error({ err: result.error, depositId, txHash }, 'Failed to create withdrawal');
+    return sendError(res, 'Error inserting withdrawal', result.error, 500);
   }
-  
+
+  req.log.info({ depositId, txHash }, 'Withdrawal created');
   return sendSuccess(res, true, 'success confirmed');
 }));
 
 router.post('/withdraw-confirm', asyncHandler(async (req, res) => {
-  
-  const { depositId, txHash, transactionRaw } = req.body;
-  
+  const { depositId, txHash, transactionRaw } = req.body ?? {};
+  req.log.info({ depositId, txHash }, 'POST /deposit/withdraw-confirm');
+
+  if (!depositId) {
+    req.log.warn({ depositId }, 'Missing depositId');
+    return sendError(res, 'Missing depositId', null, 400);
+  }
+
   const result = await creteConfirmWithdrawal({
     depositId,
     transactionHash: txHash,
     transactionEventRaw: transactionRaw,
   });
-  console.info('withdraw confirmed', result);
-  
+
   if (result.error) {
-    console.error('Error insertando deposit:', result.error.message);
-    return sendError(res, 'Error inserting deposit', result);
+    req.log.error({ err: result.error, depositId, txHash }, 'Failed to confirm withdrawal');
+    return sendError(res, 'Error confirming withdrawal', result.error, 500);
   }
-  
+
+  req.log.info({ depositId, txHash }, 'Withdrawal confirmed');
   return sendSuccess(res, true, 'success confirmed');
 }));
 
 router.get('/network/:networkName/wallet/:walletAddress', asyncHandler(async (req, res) => {
-  
   const { networkName, walletAddress } = req.params;
-  
+  req.log.info({ networkName, walletAddress }, 'GET /deposit/network/:networkName/wallet/:walletAddress');
+
   const { data: networkData, error: networkError } = await getNetworkByName(networkName);
   if (networkError || !networkData) {
-    return sendError(res, 'Network not found', networkError);
+    req.log.error({ err: networkError, networkName }, 'Network not found');
+    return sendError(res, 'Network not found', networkError, 404);
   }
-  
+
   const { data, error } = await getCachedDepositsByNetworkIdWalletAddress(networkData.id, walletAddress);
-  
+
   if (error) {
-    return sendError(res, 'error on get deposits', error);
+    req.log.error({ err: error, networkId: networkData.id, walletAddress }, 'Failed to fetch deposits');
+    return sendError(res, 'error on get deposits', error, 500);
   }
-  
+
   const response = await dataToDepositResponseDTOTotalDepositsResponseDTO(networkData, data, false, false);
-  
-  // const empty = () => ({
-  //   totalCount: 0,
-  //   totalAmount: 0,
-  // });
-  // const totalEmpty = () => ({
-  //   [DepositWithdrawalState.NONE]: empty(),
-  //   [DepositWithdrawalState.DEPOSIT_PROCESSING]: empty(),
-  //   [DepositWithdrawalState.DEPOSIT_SUCCESS]: empty(),
-  //   [DepositWithdrawalState.DEPOSIT_FAILED]: empty(),
-  //   [DepositWithdrawalState.WITHDRAW_PROCESSING]: empty(),
-  //   [DepositWithdrawalState.WITHDRAW_SUCCESS]: empty(),
-  //   [DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY]: empty(),
-  //   [DepositWithdrawalState.WITHDRAW_FAILED]: empty(),
-  // });
-  //
-  // const totals: TotalSummaryDepositsResponseDTO = {};
-  // for (const deposit of newData) {
-  //   if (!totals[deposit.tokenSymbol]) {
-  //     totals[deposit.tokenSymbol] = totalEmpty();
-  //   }
-  //   totals[deposit.tokenSymbol]![deposit.state].totalCount++;
-  //   totals[deposit.tokenSymbol]![deposit.state].totalAmount += deposit.amount;
-  // }
-  sendSuccess(res, response, '');
+  return sendSuccess(res, response, '');
 }));
 
 router.get('/network/:networkName/token/:tokenSymbol/lockPeriod/:lockPeriod/apy', asyncHandler(async (req, res) => {
-  
   const { networkName, tokenSymbol, lockPeriod } = req.params;
+  req.log.info({ networkName, tokenSymbol, lockPeriod }, 'GET /deposit/.../apy');
+
   const { data: networkData, error: networkError } = await getNetworkByName(networkName);
   if (networkError || !networkData) {
-    return sendError(res, 'Network not found', networkError);
+    req.log.error({ err: networkError, networkName }, 'Network not found');
+    return sendError(res, 'Network not found', networkError, 404);
   }
-  
+
   const { data: tokenData, error: tokenError } = await getTokenBySymbol(tokenSymbol);
   if (tokenError || !tokenData) {
-    return sendError(res, 'Token not found', tokenError);
+    req.log.error({ err: tokenError, tokenSymbol }, 'Token not found');
+    return sendError(res, 'Token not found', tokenError, 404);
   }
-  
-  const {
-    data: tokenNetworkData,
-    error: tokenNetworkError,
-  } = await getTokenNetworkByNetworkIdTokenId(networkData.id, tokenData.id);
+
+  const { data: tokenNetworkData, error: tokenNetworkError } =
+    await getTokenNetworkByNetworkIdTokenId(networkData.id, tokenData.id);
   if (tokenNetworkError || !tokenNetworkData) {
-    return sendError(res, 'Token on network not found', tokenNetworkError);
+    req.log.error(
+      { err: tokenNetworkError, networkId: networkData.id, tokenId: tokenData.id },
+      'Token on network not found',
+    );
+    return sendError(res, 'Token on network not found', tokenNetworkError, 404);
   }
-  
-  let poolData = null;
-  let response = {};
+
+  let response: unknown = {};
   if (networkData.name === 'Base' || networkData.name === 'Base Sepolia Testnet') {
     response = await getBaseApyData(networkData, tokenNetworkData, Number(lockPeriod));
   } else if (networkData.name === 'Stellar Testnet') {
-    poolData = await getBlendPoolReserve(networkData);
+    const poolData = await getBlendPoolReserve(networkData);
     response = await getStellarApyData(networkData, Number(lockPeriod), poolData);
   } else if (networkData.name === 'Dummy') {
     response = getDummyApyData(Number(lockPeriod));
+  } else {
+    req.log.warn({ networkName: networkData.name }, 'No APY provider for network');
   }
-  
-  sendSuccess(res, response, '');
+
+  return sendSuccess(res, response, '');
 }));
 
 router.get('/network/:networkName/wallet/:walletAddress/complete', asyncHandler(async (req, res) => {
-  
   const { networkName, walletAddress } = req.params;
-  
+  req.log.info({ networkName, walletAddress }, 'GET /deposit/.../complete');
+
   const { data: networkData, error: networkError } = await getNetworkByName(networkName);
-  
   if (networkError || !networkData) {
-    return sendError(res, 'Network not found', networkError);
+    req.log.error({ err: networkError, networkName }, 'Network not found');
+    return sendError(res, 'Network not found', networkError, 404);
   }
-  
+
   const { data, error } = await getCachedDepositsByNetworkIdWalletAddress(networkData.id, walletAddress);
-  
+
   if (error) {
-    return sendError(res, 'error on get deposits', error);
+    req.log.error({ err: error, networkId: networkData.id, walletAddress }, 'Failed to fetch deposits');
+    return sendError(res, 'error on get deposits', error, 500);
   }
-  
-  const response = await dataToDepositResponseDTOTotalDepositsResponseDTO(
-    networkData,
-    data,
-    false,
-    true,
-  );
-  
-  sendSuccess(res, response, '');
+
+  const response = await dataToDepositResponseDTOTotalDepositsResponseDTO(networkData, data, false, true);
+  return sendSuccess(res, response, '');
 }));
 
 router.get('/:id', asyncHandler(async (req, res) => {
-  
   const { id } = req.params;
-  let tempCache = {};
-  
+  req.log.info({ id }, 'GET /deposit/:id');
+
+  const tempCache = {};
+
   const { data: deposit, error: depositError } = await getDepositsById(+id);
-  
+
   if (depositError || !deposit) {
-    return sendError(res, 'Deposit not found', depositError);
+    req.log.error({ err: depositError, id }, 'Deposit not found');
+    return sendError(res, 'Deposit not found', depositError, 404);
   }
-  
+
   const { data: networkData, error: networkError } = await getNetworkById(deposit.network_id);
-  
+
   if (networkError || !networkData) {
-    return sendError(res, 'Network not found', networkError);
+    req.log.error({ err: networkError, networkId: deposit.network_id }, 'Network not found for deposit');
+    return sendError(res, 'Network not found', networkError, 404);
   }
-  
-  const { data: tokenNetworkData } = await getTokenNetworkByNetworkIdTokenId(deposit.network_id, deposit.token_id);
-  
+
+  const { data: tokenNetworkData, error: tokenNetworkError } =
+    await getTokenNetworkByNetworkIdTokenId(deposit.network_id, deposit.token_id);
+
+  if (tokenNetworkError) {
+    req.log.error(
+      { err: tokenNetworkError, networkId: deposit.network_id, tokenId: deposit.token_id },
+      'Failed to fetch token-network for deposit',
+    );
+    return sendError(res, 'Failed to fetch token-network', tokenNetworkError, 500);
+  }
+
   const depositResponse = await toDepositResponseDTO(deposit, networkData, tokenNetworkData, tempCache);
-  
-  sendSuccess(res, depositResponse, '');
+  return sendSuccess(res, depositResponse, '');
 }));
 
 router.get('/admin/network/:networkName/complete', asyncHandler(async (req, res) => {
-  
   const { networkName } = req.params;
-  
+  req.log.info({ networkName }, 'GET /deposit/admin/network/:networkName/complete');
+
   const { data: networkData, error: networkError } = await getNetworkByName(networkName);
-  
+
   if (networkError || !networkData) {
-    return sendError(res, 'Network not found', networkError);
+    req.log.error({ err: networkError, networkName }, 'Network not found');
+    return sendError(res, 'Network not found', networkError, 404);
   }
-  
+
   const { data, error } = await getDepositsByNetworkId(networkData.id);
-  
+
   if (error) {
-    return sendError(res, 'error on get deposits', error);
+    req.log.error({ err: error, networkId: networkData.id }, 'Failed to fetch deposits');
+    return sendError(res, 'error on get deposits', error, 500);
   }
-  
+
   const response = await dataToDepositResponseDTOTotalDepositsResponseDTO(networkData, data, true, true);
-  
-  sendSuccess(res, response, '');
+  return sendSuccess(res, response, '');
 }));
 
 export default router;

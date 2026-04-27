@@ -1,26 +1,30 @@
 import { Router } from 'express';
-import { getNetworkByName, getNetworksByOrigin, sendSuccess, toNetwork } from '@vaquita/shared';
+import { getNetworkByName, getNetworksByOrigin, sendError, sendSuccess, toNetwork } from '@vaquita/shared';
 
 const router = Router();
 
 router.get('/:networkName', async (req, res) => {
-  
   const { networkName } = req.params;
-  
+  req.log.info({ networkName }, 'GET /network/:networkName');
+
   const { data: network, error } = await getNetworkByName(networkName);
-  
+
   if (error || !network) {
-    return res.status(500).json({ error: error?.message || 'network not found :(' });
+    req.log.error({ err: error, networkName }, 'Network not found');
+    return sendError(res, error?.message || 'network not found', error, 404);
   }
-  
-  sendSuccess(res, await toNetwork(network), '');
+
+  return sendSuccess(res, await toNetwork(network), '');
 });
 
 router.get('/', async (req, res) => {
-  
-  const data = await getNetworksByOrigin(req.get('origin') || '');
-  
-  sendSuccess(res, data, '');
+  const origin = req.get('origin') || '';
+  req.log.info({ origin }, 'GET /network');
+
+  const data = await getNetworksByOrigin(origin);
+  req.log.debug({ count: Array.isArray(data) ? data.length : undefined }, 'Networks resolved by origin');
+
+  return sendSuccess(res, data, '');
 });
 
 export default router;
