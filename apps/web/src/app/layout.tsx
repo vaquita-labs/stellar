@@ -1,4 +1,4 @@
-import { AuthButtons, Providers } from '@/components';
+import { Providers } from '@/components';
 import { WithHydrated } from '@/core-ui/components';
 // import { Analytics } from '@vercel/analytics/react';
 // import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -25,12 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-dvh flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <WithHydrated>
-          <Providers>
-            <div className="">
-              <AuthButtons />
-            </div>
-            <main className="flex-1 min-h-0 overflow-auto">{children}</main>
-          </Providers>
+          <Providers>{children}</Providers>
         </WithHydrated>
         {/* <Analytics /> */}
         {/* <SpeedInsights /> */}

@@ -1,14 +1,15 @@
 'use client';
 
 import { DesktopSidebar, MobileNavigation } from '@/components';
-import { AblyProvider, NetworksProvider, sendLogToAbly } from '@/core-ui/components';
-import { getNetworks } from '@/core-ui/hooks';
+import { AblyProvider, LoaderScreen, NetworksProvider, sendLogToAbly } from '@/core-ui/components';
+import { getNetworks, useIsAuthenticated } from '@/core-ui/hooks';
 import { useResize } from '@/core-ui/stores';
 import { useVisibility } from '@/core-ui/stores/visibility';
 import { Toast } from '@heroui/react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import * as Ably from 'ably';
 import { ChannelProvider, useChannel } from 'ably/react';
+import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 import { TransactionsProvider } from './TransactionsProvider';
 import { WalletProviderSync } from './WalletProviderSync';
@@ -42,6 +43,11 @@ if (process.env.NODE_ENV !== 'development') {
 export function Providers({ children }: { children: ReactNode }) {
   const { ref } = useResize();
   useVisibility();
+  const pathname = usePathname();
+  const router = useRouter();
+  const isAuthenticated = useIsAuthenticated();
+  const isPublicRoute = pathname === '/login';
+  const showAuthGate = !isPublicRoute && !isAuthenticated;
 
   useEffect(() => {
     const listener = () => {
@@ -53,16 +59,26 @@ export function Providers({ children }: { children: ReactNode }) {
     return () => window?.removeEventListener('resize', listener);
   }, []);
 
+  useEffect(() => {
+    if (showAuthGate) {
+      router.replace('/login');
+    }
+  }, [showAuthGate, router]);
+
   return (
     <AblyProvider>
       <Toast.Provider />
       {/*<ToastProvider placement="top-center" />*/}
       <ChannelProvider channelName="deposits-changes">
-        <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
-          <DesktopSidebar />
-          <Main>{children}</Main>
-          <MobileNavigation />
-        </div>
+        {showAuthGate ? (
+          <LoaderScreen withImage />
+        ) : (
+          <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
+            {!isPublicRoute && <DesktopSidebar />}
+            <Main withSidebar={!isPublicRoute}>{children}</Main>
+            {!isPublicRoute && <MobileNavigation />}
+          </div>
+        )}
       </ChannelProvider>
       <TransactionsProvider />
     </AblyProvider>
@@ -79,7 +95,7 @@ const ListenDepositsChanges = () => {
   return null;
 };
 
-const Main = ({ children }: { children: ReactNode }) => {
+const Main = ({ children, withSidebar }: { children: ReactNode; withSidebar: boolean }) => {
   const [types, setTypes] = useState<string[]>([]);
   useEffect(() => {
     const fun = async () => {
@@ -92,7 +108,7 @@ const Main = ({ children }: { children: ReactNode }) => {
 
   return (
     <main
-      className="flex-1 md:ml-64 flex flex-col"
+      className={`flex-1 flex flex-col${withSidebar ? ' md:ml-64' : ''}`}
       style={{ height: 'var(--100VH)', minHeight: 'var(--100VH)', maxHeight: 'var(--100VH)', overflow: 'hidden' }}
       key={types.join(',')}
     >
