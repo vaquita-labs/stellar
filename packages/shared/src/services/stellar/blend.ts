@@ -11,31 +11,38 @@ let lastRequest: { [key: string]: { timestamp: number, blendInterest: number, va
 let lastResponse: { [key: string]: { timestamp: number, reserve: Reserve } } = {};
 
 export const getBlendPoolReserve = async (networkData: Network) => {
-  if (networkData.name !== 'Stellar Testnet') return null;
-  
+  if (networkData.name !== 'Stellar Testnet') {
+    return null;
+  }
+
   const cacheKey = networkData.name;
-  
   // Check cache first
   if (lastResponse[cacheKey] && Date.now() - lastResponse[cacheKey].timestamp <= ONE_HOUR) {
     // return lastResponse[cacheKey].reserve;
   }
-  
-  const poolId = 'CDDG7DLOWSHRYQ2HWGZEZ4UTR7LPTKFFHN3QUCSZEXOWOPARMONX6T65';
+
+  const poolId = 'CDDDPAJOHXE4I5375IT72KXX5EAHGB6V45YKLEIATTTWIGIBUGPEQYJP';
   const asssetId = 'CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU';
   const network = {
     passphrase: 'Test SDF Network ; September 2015',
     rpc: 'https://soroban-testnet.stellar.org',
   };
-  const pool = await PoolV2.load(network, poolId);
-  const reserve = pool.reserves.get(asssetId)!;
-  
-  // Cache the response
-  lastResponse[cacheKey] = {
-    timestamp: Date.now(),
-    reserve,
-  };
-  
-  return reserve;
+
+  try {
+    const pool = await PoolV2.load(network, poolId);
+    const reserve = pool.reserves.get(asssetId)!;
+
+    // Cache the response
+    lastResponse[cacheKey] = {
+      timestamp: Date.now(),
+      reserve,
+    };
+
+    return reserve;
+  } catch (error) {
+    console.log('getBlendPoolReserve', error);
+    return null;
+  }
 };
 
 export const getBlendInterest = async (deposit: Deposit, tokenNetworkData: TokenNetwork, reserve: Reserve) => {
@@ -43,14 +50,14 @@ export const getBlendInterest = async (deposit: Deposit, tokenNetworkData: Token
     if (!isStringJson(deposit.transaction_event_raw)) {
       return EMPTY;
     }
-    
+
     const vaquitaContractId = tokenNetworkData.vaquita_contract_address;
     const transaction = JSON.parse(deposit.transaction_event_raw);
     const contractEvent = transaction?.final?.events?.contractEventsXdr?.at(-1)?.at(-1);
     if (typeof contractEvent !== 'string') {
       return EMPTY;
     }
-    
+
     if (!lastRequest[deposit.deposit_id_hex]) {
       lastRequest[deposit.deposit_id_hex] = {
         timestamp: 0,
@@ -64,7 +71,7 @@ export const getBlendInterest = async (deposit: Deposit, tokenNetworkData: Token
         vaquitaInterest: lastRequest[deposit.deposit_id_hex]!.vaquitaInterest,
       };
     }
-    
+
     const parsedContractEvent = xdr.ContractEvent.fromXDR(contractEvent, 'base64');
     const vec = parsedContractEvent.body().v0().data().vec();
     const i128 = vec?.[vec.length - 1]?.i128();
@@ -74,7 +81,7 @@ export const getBlendInterest = async (deposit: Deposit, tokenNetworkData: Token
       const lo = i128.lo().toBigInt();
       bRate = hi * (2n ** 64n) + lo;
     }
-    
+
     const base = 10 ** tokenNetworkData.token_decimals;
     const currentBRate = BigInt((reserve?.data.bRate ?? 0n));
     const bTokens: number = bRate === 0n ? 0 : (deposit.amount * base / Number(bRate));
