@@ -68,7 +68,7 @@ export function HomePage() {
     <div className="h-full w-full flex flex-col relative">
       <HeaderStats />
       <RewardCoinsButton />
-      <BackgroundMusic />
+      {/* <BackgroundMusic /> */}
       {/* Botón de Editar Mapa / Cerrar */}
       {isEditingMap ? (
         <button
