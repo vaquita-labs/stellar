@@ -71,13 +71,14 @@ export const WorldMap = ({ walletAddress, isLeaderboard, isAvailable, worldType 
         className="h-dvh"
         key={`${width}_${height}_${JSON.stringify(tiles || [])}`}
       >
-        <CloudSkybox />
+        {/* TODO: Check this later, maybe we can remove it */}
+        {/* <CloudSkybox /> */}
+        {/* <Waterfall mapObjects={currentTiles} worldType={worldType} /> */}
         <SpotlightLighting />
         <SceneCamera center={center} />
         <EditGrid />
         <FloatingIslandBase />
         <Ground mapObjects={currentTiles} worldType={worldType} />
-        <Waterfall mapObjects={currentTiles} worldType={worldType} />
         {!isEditMode && (
           <MapObjects
             objects={currentTiles}

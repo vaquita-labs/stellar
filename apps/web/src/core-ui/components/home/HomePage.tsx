@@ -73,7 +73,7 @@ export function HomePage() {
       {isEditingMap ? (
         <button
           id="close-edit-button"
-          className="absolute top-14 md:top-12 right-3 md:right-2 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center rounded-lg bg-transparent"
+          className="absolute top-20 md:top-12 right-3 md:right-2 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center rounded-lg bg-transparent"
           onClick={handleEditMapToggle}
         >
           <Image width={40} height={40} src="/icons/summary/save_map.png" alt="Save" />
@@ -81,7 +81,7 @@ export function HomePage() {
       ) : (
         <button
           id="edit-map-button"
-          className="absolute top-14 md:top-12 right-3 md:right-2 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center  rounded-lg bg-transparent "
+          className="absolute top-20 md:top-12 right-3 md:right-2 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center  rounded-lg bg-transparent "
           onClick={handleEditMapToggle}
         >
           <Image width={40} height={40} src="/icons/summary/edit_map.png" alt="Edit" />

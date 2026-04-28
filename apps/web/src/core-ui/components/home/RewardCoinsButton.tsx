@@ -23,7 +23,7 @@ export const RewardCoinsButton = () => {
 
   return (
     <Button
-      className="bg-transparent rounded-lg gap-2 min-w-0 shrink absolute top-14 md:top-16 left-0 md:left-2 z-10"
+      className="bg-transparent rounded-lg gap-2 min-w-0 shrink absolute top-20 md:top-16 left-0 md:left-2 z-10"
     >
       {isRefetching || isLoading ? (
         <Spinner size="sm" color="current" />
