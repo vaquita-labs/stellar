@@ -13,7 +13,7 @@ import { VaquitaModal, VaquitasListModal } from '../organisms';
 import { MapObjects } from '../templates/WorldMap/map/MapObjects';
 import { SceneCamera } from '../templates/WorldMap/map/SceneCamera';
 import { SceneControls } from '../templates/WorldMap/map/SceneControls';
-import { CloudSkybox } from './CloudSkybox';
+// import { CloudSkybox } from './CloudSkybox';
 import { EditGrid } from './EditGrid';
 import { FloatingIslandBase } from './FloatingIslandBase';
 import { Ground } from './Ground';

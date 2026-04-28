@@ -3,7 +3,7 @@
 import { DesktopSidebar, MobileNavigation } from '@/components';
 import { AblyProvider, LoaderScreen, NetworksProvider, sendLogToAbly } from '@/core-ui/components';
 import { getNetworks, useIsAuthenticated } from '@/core-ui/hooks';
-import { useResize } from '@/core-ui/stores';
+import { useNetworkConfigStore, useResize } from '@/core-ui/stores';
 import { useVisibility } from '@/core-ui/stores/visibility';
 import { Toast } from '@heroui/react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
@@ -40,14 +40,32 @@ if (process.env.NODE_ENV !== 'development') {
   };
 }
 
+const STELLAR_ADDRESS_KEY = 'swk:address';
+
 export function Providers({ children }: { children: ReactNode }) {
   const { ref } = useResize();
   useVisibility();
   const pathname = usePathname();
   const router = useRouter();
   const isAuthenticated = useIsAuthenticated();
+  const setWalletAddress = useNetworkConfigStore((s) => s.setWalletAddress);
   const isPublicRoute = pathname === '/login';
-  const showAuthGate = !isPublicRoute && !isAuthenticated;
+  const isProfileRoute = pathname?.startsWith('/profile') ?? false;
+
+  const [hydrated, setHydrated] = useState(false);
+  const showAuthGate = hydrated && !isPublicRoute && !isAuthenticated;
+  const showLoader = !hydrated || showAuthGate;
+
+  useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STELLAR_ADDRESS_KEY) : null;
+      if (saved) setWalletAddress(saved);
+    } catch (error) {
+      console.warn('Could not pre-hydrate wallet address', error);
+    } finally {
+      setHydrated(true);
+    }
+  }, [setWalletAddress]);
 
   useEffect(() => {
     const listener = () => {
@@ -70,13 +88,13 @@ export function Providers({ children }: { children: ReactNode }) {
       <Toast.Provider />
       {/*<ToastProvider placement="top-center" />*/}
       <ChannelProvider channelName="deposits-changes">
-        {showAuthGate ? (
+        {showLoader ? (
           <LoaderScreen withImage />
         ) : (
           <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
             {!isPublicRoute && <DesktopSidebar />}
             <Main withSidebar={!isPublicRoute}>{children}</Main>
-            {!isPublicRoute && <MobileNavigation />}
+            {!isPublicRoute && !isProfileRoute && <MobileNavigation />}
           </div>
         )}
       </ChannelProvider>

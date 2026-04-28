@@ -1,42 +1,110 @@
 'use client';
 
 import { logoutAll } from '@/helpers';
-import { Avatar, Card, Spinner } from '@heroui/react';
+import { Card } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import React, { ReactNode, useMemo, useState } from 'react';
-import { FiEdit3, FiLogOut, FiUserPlus } from 'react-icons/fi';
-import { truncateMiddle } from '../../helpers';
+import React, { ReactNode, useState } from 'react';
+import {
+  FiBell,
+  FiChevronRight,
+  FiCreditCard,
+  FiEdit3,
+  FiHelpCircle,
+  FiInfo,
+  FiLogOut,
+  FiShield,
+  FiUserPlus,
+} from 'react-icons/fi';
 import { useProfileData } from '../../hooks';
 import { useNetworkConfigStore } from '../../stores';
-import { Button, T } from '../atoms';
-import { Badge } from '../Badge';
-import { EditProfileModal } from '../organisms';
+import { Button } from '../atoms';
+import { ConfirmDialog } from '../molecules';
 
-const LogoByType: Record<string, ReactNode> = {
-  EVM: <Image src="/chains/base_400x400.jpg" alt="EVM" width={24} height={24} className="rounded-sm" />,
-  Stellar: <Image src="/chains/stellar.png" alt="Stellar" width={24} height={24} className="rounded-sm" />,
+type Row = {
+  key: string;
+  icon: ReactNode;
+  label: string;
+  description?: string;
+  href?: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  badge?: string;
 };
+
+function SettingsRow({ icon, label, description, href, onPress, disabled, badge }: Omit<Row, 'key'>) {
+  const inner = (
+    <div
+      className={`flex items-center justify-between gap-3 px-4 py-3.5 transition ${
+        disabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#FFF7E6] cursor-pointer'
+      }`}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[#DDF4FF] border border-[#84D8FF] text-black shrink-0">
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-black truncate">{label}</p>
+            {badge && (
+              <span className="text-[10px] font-bold uppercase tracking-wide bg-primary text-black border border-black rounded-sm px-1.5 py-0.5">
+                {badge}
+              </span>
+            )}
+          </div>
+          {description && <p className="text-xs text-gray-600 truncate mt-0.5">{description}</p>}
+        </div>
+      </div>
+      <FiChevronRight className="text-gray-500 shrink-0" />
+    </div>
+  );
+
+  if (disabled) {
+    return <div aria-disabled>{inner}</div>;
+  }
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onPress} className="block w-full text-left">
+      {inner}
+    </button>
+  );
+}
+
+function Section({ title, rows }: { title: string; rows: Row[] }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1">{title}</h2>
+      <ul className="rounded-lg border border-black border-b-2 bg-white overflow-hidden divide-y divide-gray-200">
+        {rows.map((row) => (
+          <li key={row.key}>
+            <SettingsRow
+              icon={row.icon}
+              label={row.label}
+              description={row.description}
+              href={row.href}
+              onPress={row.onPress}
+              disabled={row.disabled}
+              badge={row.badge}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export function ProfilePage() {
   const { walletAddress, reset } = useNetworkConfigStore();
-  const { data, isLoading, isRefetching } = useProfileData();
+  const { isLoading, isRefetching } = useProfileData();
   const loading = isLoading || isRefetching;
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
-
-  const { network } = useNetworkConfigStore();
-
-  const addressDisplay = useMemo(() => (walletAddress ? truncateMiddle(walletAddress, 8, 6) : ''), [walletAddress]);
-  const profileNickname = data?.nickname || addressDisplay;
-  const currentNickname = (data?.nickname ?? '').trim();
-  const displayName = useMemo(() => {
-    if (isLoading) return 'Cargando...';
-    if (currentNickname) return `@${currentNickname}`;
-    return truncateMiddle(walletAddress) || 'Vaquita';
-  }, [currentNickname, isLoading, walletAddress]);
-
-  const badgeLogo = network?.type ? (LogoByType[network.type] ?? LogoByType.EVM) : LogoByType.EVM;
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const handleDisconnect = async () => {
     if (isDisconnecting) return;
@@ -51,114 +119,150 @@ export function ProfilePage() {
     }
   };
 
-  const ProfileHeader = () => (
-    <div className="flex flex-col gap-2 p-0">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/home" aria-label="Back to home">
-            <Image src="/icons/arrow-back.svg" alt="arrow back" width={24} height={24} />
-          </Link>
-        </div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold md:text-3xl">Profile</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/settings" aria-label="Settings">
-            <Image src="/icons/settings.svg" alt="settings" width={24} height={24} />
-          </Link>
+  const sections: { title: string; rows: Row[] }[] = [
+    {
+      title: 'Account',
+      rows: [
+        {
+          key: 'edit',
+          icon: <FiEdit3 />,
+          label: 'Edit profile',
+          description: 'Update your nickname.',
+          href: '/profile/edit',
+          disabled: loading,
+        },
+        {
+          key: 'friends',
+          icon: <FiUserPlus />,
+          label: 'Friends',
+          description: 'Invite people to save together.',
+          href: '/profile/friends',
+          badge: 'Soon',
+        },
+      ],
+    },
+    {
+      title: 'Finance',
+      rows: [
+        {
+          key: 'wallet',
+          icon: <FiCreditCard />,
+          label: 'Wallet',
+          description: 'View address, send & receive.',
+          href: '/profile/wallet',
+        },
+      ],
+    },
+    {
+      title: 'Preferences',
+      rows: [
+        {
+          key: 'notifications',
+          icon: <FiBell />,
+          label: 'Notifications',
+          description: 'Manage push and email alerts.',
+          href: '/profile/notifications',
+        },
+      ],
+    },
+    {
+      title: 'Support',
+      rows: [
+        {
+          key: 'security',
+          icon: <FiShield />,
+          label: 'Privacy & security',
+          description: 'Account safety options.',
+          disabled: true,
+          badge: 'Soon',
+        },
+        {
+          key: 'help',
+          icon: <FiHelpCircle />,
+          label: 'Help center',
+          description: 'FAQ and contact.',
+          disabled: true,
+          badge: 'Soon',
+        },
+        {
+          key: 'about',
+          icon: <FiInfo />,
+          label: 'About Vaquita',
+          description: 'Version & legal.',
+          disabled: true,
+        },
+      ],
+    },
+  ];
+
+  if (!walletAddress) {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-8">
+          <Card className="border border-default-200/60 bg-white/80 shadow-sm backdrop-blur dark:border-default-100/40 dark:bg-default-50/80">
+            <Card.Content className="flex flex-col gap-6 p-6 sm:p-10 text-center">
+              <div className="flex items-center justify-between">
+                <Link href="/home" aria-label="Back to home">
+                  <Image src="/icons/arrow-back.svg" alt="arrow back" width={24} height={24} />
+                </Link>
+              </div>
+              <div className="space-y-3">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
+                  Connect your wallet
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Access your profile, metrics, and future achievements by connecting your wallet.
+                </p>
+              </div>
+            </Card.Content>
+          </Card>
         </div>
       </div>
+    );
+  }
 
-      <div className="flex flex-col items-center gap-2">
-        {loading ? (
-          <Spinner size="lg" color="accent" />
-        ) : (
-          <>
-            <Badge placement="bottom-right" isOneChar content={badgeLogo}>
-              <Avatar
-                size="lg"
-                className="border-2 border-white shadow-lg dark:border-default-100"
-              >
-                <Avatar.Image src="/vaquita_working.jpg" />
-                <Avatar.Fallback>{displayName.slice(0, 2).toUpperCase()}</Avatar.Fallback>
-              </Avatar>
-            </Badge>
-            <div className="flex flex-col items-center gap-4 text-center">
-              <p className="text-md font-semibold text-gray-900 dark:text-gray-50">
-                {loading ? 'Loading...' : profileNickname}
-              </p>
-            </div>
-          </>
-        )}
-
-        <div className="flex w-full items-center gap-4 flex-row md:justify-center">
-          <Badge content="Soon">
-            <Button startContent={<FiUserPlus />} isDisabled>
-              Add friends
-            </Button>
-          </Badge>
-          <Button
-            type="secondary"
-            startContent={<FiEdit3 />}
-            onPress={() => setIsEditModalOpen(true)}
-            isDisabled={loading}
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col gap-6 pb-12">
+        {/* Header */}
+        <div className="relative flex items-center justify-center h-10">
+          <Link
+            href="/home"
+            aria-label="Back to home"
+            className="absolute left-0 flex h-10 w-10 items-center justify-center"
           >
-            <T>Edit profile</T>
+            <Image src="/icons/arrow-back.svg" alt="back" width={28} height={28} />
+          </Link>
+          <h1 className="text-lg sm:text-xl font-semibold text-black">Profile</h1>
+        </div>
+
+        {sections.map((s) => (
+          <Section key={s.title} title={s.title} rows={s.rows} />
+        ))}
+
+        <div className="pt-2">
+          <Button
+            type="white"
+            startContent={<FiLogOut className="h-4 w-4" />}
+            onPress={() => setConfirmLogout(true)}
+            isDisabled={isDisconnecting}
+            wFull
+          >
+            Logout
           </Button>
         </div>
       </div>
-    </div>
-  );
 
-  const EmptyState = () => (
-    <Card className="border border-default-200/60 bg-white/80 shadow-sm backdrop-blur dark:border-default-100/40 dark:bg-default-50/80">
-      <Card.Content className="flex flex-col gap-6 p-10 text-center">
-        <div className="flex items-center justify-between">
-          <Link href="/home" aria-label="Back to home">
-            <Image src="/icons/arrow-back.svg" alt="arrow back" width={24} height={24} />
-          </Link>
-        </div>
-        <div className="space-y-3">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-50">Connect your wallet</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Access your profile, metrics, and future achievements by connecting your wallet on Base.
-          </p>
-        </div>
-
-        {/* <p className="text-xs text-gray-400">By continuing you accept our Terms of Service and Privacy Policy.</p> */}
-      </Card.Content>
-    </Card>
-  );
-
-  return (
-    <div className="h-full">
-      <div className="mx-auto flex w-full h-full max-w-5xl flex-col gap-4 px-4 py-6">
-        {walletAddress ? (
-          <div className=" h-full flex flex-col justify-between">
-            <ProfileHeader />
-
-            <div className="flex justify-center mb-20">
-              <Button
-                type="danger"
-                startContent={<FiLogOut className="h-4 w-4" />}
-                onPress={handleDisconnect}
-                isLoading={isDisconnecting}
-                isDisabled={isDisconnecting}
-                wFull
-                className="max-w-sm"
-              >
-                Disconnect wallet
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <EmptyState />
-        )}
-      </div>
-      <EditProfileModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        currentNickname={profileNickname}
+      <ConfirmDialog
+        isOpen={confirmLogout}
+        onOpenChange={setConfirmLogout}
+        title="Log out?"
+        description="Are you sure you want to log out?"
+        icon={<FiLogOut className="h-5 w-5" />}
+        status="danger"
+        confirmLabel="Log out"
+        onConfirm={handleDisconnect}
+        isConfirming={isDisconnecting}
       />
     </div>
   );
