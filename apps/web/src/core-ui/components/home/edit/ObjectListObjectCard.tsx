@@ -2,7 +2,6 @@
 
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import Image from 'next/image';
 import { useRef } from 'react';
 import { Group } from 'three';
 import { EditionMode, useMapStore } from '../../../stores';
@@ -10,7 +9,6 @@ import { MapObjectType, WorldType } from '../../../types';
 import { getObjectGroup } from '../../map/helpers';
 
 type ObjectListObjectCardProps = {
-  price: number;
   used: number;
   itemsAvailable: number;
   type: MapObjectType;
@@ -20,7 +18,6 @@ type ObjectListObjectCardProps = {
 };
 
 export function ObjectListObjectCard({
-  price,
   itemsAvailable,
   type,
   variant,
@@ -31,6 +28,7 @@ export function ObjectListObjectCard({
   const rotatingRef = useRef<Group>(null);
   const selectedItem = useMapStore((store) => store.pickedObject);
   const editMode = useMapStore((store) => store.editMode);
+
   useFrame(() => {
     if (rotatingRef.current) {
       rotatingRef.current.rotation.y += 0.01;
@@ -38,43 +36,40 @@ export function ObjectListObjectCard({
   });
 
   const isSelected = editMode === EditionMode.ADD && selectedItem?.type === type && selectedItem?.variant === variant;
-  const isAvailable = itemsAvailable > used;
+  const remaining = Math.max(itemsAvailable - used, 0);
+  const isAvailable = remaining > 0;
+
   return (
     <group position={position} onClick={onClick}>
-      <mesh position={[0, -2, -2]}>
-        <planeGeometry args={[1.6, 4]} />
-        <meshStandardMaterial
-          color={isSelected ? '#34c759' : isAvailable ? '#80F79A' : '#ffffff'}
-          emissive={isSelected ? '#34c759' : isAvailable ? '#80F79A' : '#ffffff'}
-          emissiveIntensity={0.4}
-        />
-      </mesh>
-
-      <group ref={rotatingRef} position={[0, 0.2, 0]}>
+      <group ref={rotatingRef} position={[0, 0.55, 0]} scale={isSelected ? 1.1 : 1}>
         <primitive
           object={getObjectGroup(
-            {
-              type,
-              position: [0, 0, 0],
-              variant,
-              rotation: [0, 0, 0],
-            },
+            { type, position: [0, 0, 0], variant, rotation: [0, 0, 0] },
             WorldType.FOREST
           )}
         />
       </group>
 
-      <Html position={[0, -0.7, 0]} center>
-        <div className="flex flex-col items-center gap-1" onClick={onClick}>
-          <div className="text-[12px] bg-black/80 text-white px-2 py-0.5 rounded-full" style={{ textWrap: 'nowrap' }}>
-            {type} (v{variant + 1})
-          </div>
-          <div className="text-[10px] bg-primary text-white px-2 py-0.5 rounded-full" style={{ textWrap: 'nowrap' }}>
-            {used} / {itemsAvailable}
-          </div>
-          <div className="flex items-center gap-1 bg-white/80 px-2 py-0.5 rounded">
-            <Image src="/icons/summary/silver_coin.png" alt="Silver Coin" width={12} height={12} />
-            <span className="text-[10px] font-medium text-gray-700">{price}</span>
+      {/* Top-right count badge */}
+      {remaining > 0 && (
+        <Html position={[0.65, 1.3, 0]} center transform={false}>
+          <span className="text-[10px] font-bold bg-[#34c759] text-white border border-black/10 rounded-full min-w-5 h-5 px-1.5 inline-flex items-center justify-center pointer-events-none whitespace-nowrap">
+            {remaining}
+          </span>
+        </Html>
+      )}
+
+      {/* Footer: name only */}
+      <Html position={[0, -1.5, 0]} center transform={false}>
+        <div
+          className={`pointer-events-none ${!isAvailable ? 'opacity-60' : ''}`}
+          style={{ width: 110 }}
+        >
+          <div
+            className="text-xs font-bold text-black truncate max-w-full text-center bg-white/90 rounded-full px-2 py-0.5 border border-black/10"
+            style={{ textWrap: 'nowrap' }}
+          >
+            {type} <span className="text-gray-500 font-normal">v{variant + 1}</span>
           </div>
         </div>
       </Html>

@@ -1,6 +1,6 @@
 import { Html } from '@react-three/drei';
 import { Button } from '@heroui/react';
-import { useMapStore } from '../../stores';
+import { EditionMode, useMapStore } from '../../stores';
 import { MapObjectType } from '../../types';
 
 interface EditControlsProps {
@@ -10,6 +10,8 @@ interface EditControlsProps {
 export const EditControls = ({ position }: EditControlsProps) => {
   const updateTile = useMapStore((store) => store.updateTile);
   const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
+  const setPickedItem = useMapStore((store) => store.setPickedItem);
+  const setEditMode = useMapStore((store) => store.setEditMode);
   const getTileAt = useMapStore((store) => store.getTileAt);
 
   const handleRemove = () => {
@@ -53,6 +55,10 @@ export const EditControls = ({ position }: EditControlsProps) => {
 
   const handleDone = () => {
     setEditingObjectPosition(null);
+    // Volver al estado base: deseleccionar el item picado y salir de ADD mode.
+    // Esto re-expande el bottom sheet para que el usuario vea el catálogo de nuevo.
+    setPickedItem(null);
+    setEditMode(EditionMode.SELECT);
   };
 
   return (

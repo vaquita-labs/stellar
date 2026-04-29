@@ -26,6 +26,8 @@ export type MapStoreType = {
   isReplaceablePosition: (x: number, z: number) => boolean;
   editMode: EditionMode | null;
   setEditMode: (editMode: EditionMode | null) => void;
+  isEditingMap: boolean;
+  setIsEditingMap: (isEditingMap: boolean) => void;
   pickedObject: ObjectItem | null;
   setPickedItem: (item: ObjectItem | null) => void;
   selectedObject: ObjectItem | null;
@@ -94,6 +96,8 @@ export const useMapStore = create<MapStoreType>((set, get) => ({
   },
   editMode: null,
   setEditMode: (editMode) => set({ editMode }),
+  isEditingMap: false,
+  setIsEditingMap: (isEditingMap) => set({ isEditingMap }),
   pickedObject: null,
   setPickedItem: (item) => set({ pickedObject: item }),
   selectedObject: null,

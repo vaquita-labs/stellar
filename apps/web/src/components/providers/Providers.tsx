@@ -3,7 +3,7 @@
 import { DesktopSidebar, MobileNavigation } from '@/components';
 import { AblyProvider, LoaderScreen, NetworksProvider, sendLogToAbly } from '@/core-ui/components';
 import { getNetworks, useIsAuthenticated } from '@/core-ui/hooks';
-import { useNetworkConfigStore, useResize } from '@/core-ui/stores';
+import { useMapStore, useNetworkConfigStore, useResize } from '@/core-ui/stores';
 import { useVisibility } from '@/core-ui/stores/visibility';
 import { Toast } from '@heroui/react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
@@ -52,7 +52,8 @@ export function Providers({ children }: { children: ReactNode }) {
   const isPublicRoute = pathname === '/login';
   const isProfileRoute = pathname?.startsWith('/profile') ?? false;
   const isShopRoute = pathname?.startsWith('/shop') ?? false;
-  const hideNavigation = isShopRoute;
+  const isEditingMap = useMapStore((s) => s.isEditingMap);
+  const hideNavigation = isShopRoute || isEditingMap;
 
   const [hydrated, setHydrated] = useState(false);
   const showAuthGate = hydrated && !isPublicRoute && !isAuthenticated;

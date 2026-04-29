@@ -4,9 +4,12 @@ import { AnimatePresence, motion, PanInfo } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useRestProfile } from '../../../hooks';
 import { EditionMode, useMapStore, useSyncMapObjects } from '../../../stores';
+import { CatalogList } from './CatalogList';
 import { ExitEditModeModal } from './ExitEditModeModal';
 import { ObjectList } from './ObjectList';
 import { EditPanelsProps } from './types';
+
+type EditTab = 'catalog' | 'collection';
 
 const SHEET_HEIGHT = 400; // Bottom sheet height in pixels
 const MINIMIZED_HEIGHT = 30; // Height when minimized (only drag handle visible)
@@ -43,14 +46,17 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
   const setTiles = useMapStore((store) => store.setTiles);
   const editMode = useMapStore((store) => store.editMode);
   const editingObjectPosition = useMapStore((store) => store.editingObjectPosition);
+  const setIsEditingMap = useMapStore((store) => store.setIsEditingMap);
   const sheetRef = useRef<HTMLDivElement>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(open);
+  const [activeTab, setActiveTab] = useState<EditTab>('catalog');
   const { saveMapObjects } = useRestProfile();
   const { refetch } = useSyncMapObjects();
 
   const hasChanges = JSON.stringify(currentTiles) !== JSON.stringify(tiles);
-  const isEditing = editingObjectPosition !== null;
+  const isPlacingNewItem = editMode === EditionMode.ADD && !!pickedObject;
+  const isEditing = editingObjectPosition !== null || isPlacingNewItem;
   const minimizedY = SHEET_HEIGHT - MINIMIZED_HEIGHT;
 
   useEffect(() => {
@@ -64,12 +70,14 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
         setShowConfirmDialog(true);
         // Re-activar el modo editar para mantener el estado hasta que el usuario decida
         setEditMode(EditionMode.SELECT);
+        // Mantener el header slim ("Shop") mientras se decide salir o no
+        setIsEditingMap(true);
       } else {
         // Si no hay cambios, permitir el cierre
         setIsModalOpen(false);
       }
     }
-  }, [open, isModalOpen, showConfirmDialog, setEditMode, hasChanges]);
+  }, [open, isModalOpen, showConfirmDialog, setEditMode, hasChanges, setIsEditingMap]);
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Las constraints de drag ya manejan el comportamiento,
@@ -136,7 +144,13 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
               exit={{ y: SHEET_HEIGHT }}
               transition={enterTransition}
               drag="y"
-              dragConstraints={isEditing ? { top: minimizedY, bottom: minimizedY } : { top: 0, bottom: 0 }}
+              dragConstraints={
+                isPlacingNewItem
+                  ? { top: 0, bottom: minimizedY }
+                  : isEditing
+                    ? { top: minimizedY, bottom: minimizedY }
+                    : { top: 0, bottom: 0 }
+              }
               dragElastic={0}
               dragMomentum={false}
               onDragEnd={handleDragEnd}
@@ -149,16 +163,31 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
 
               {!isEditing && (
                 <>
-                  <div className="flex items-center justify-between px-4 mt-4">
-                    <h2 className="text-black font-bold text-xl">Items</h2>
+                  <div className="flex items-center gap-2 px-4 mt-4">
+                    <div className="flex flex-1 bg-[#FFF7E6] border border-black/10 rounded-full p-1">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('catalog')}
+                        className={`flex-1 text-sm font-semibold rounded-full px-3 py-1.5 transition ${
+                          activeTab === 'catalog' ? 'bg-white text-black shadow-sm border border-black/10' : 'text-gray-600'
+                        }`}
+                      >
+                        Catalog
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('collection')}
+                        className={`flex-1 text-sm font-semibold rounded-full px-3 py-1.5 transition ${
+                          activeTab === 'collection' ? 'bg-white text-black shadow-sm border border-black/10' : 'text-gray-600'
+                        }`}
+                      >
+                        My Collection
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="px-4 pb-6 max-h-[60vh] overflow-y-auto">
-                    <div className="space-y-4">
-                      <div className="w-full overflow-x-auto scrollbar-hide">
-                        <ObjectList />
-                      </div>
-                    </div>
+                  <div className="px-4 pb-3 mt-3 max-h-[60vh] min-h-[100px] overflow-y-auto">
+                    {activeTab === 'catalog' ? <CatalogList /> : <ObjectList />}
                   </div>
                 </>
               )}

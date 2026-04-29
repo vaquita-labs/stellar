@@ -11,6 +11,7 @@ import { WorldMap } from '../templates';
 import { BackgroundMusic } from './BackgroundMusic';
 import { EditPanels } from './edit';
 import { HeaderStats } from './HeaderStats';
+import { PlaceModeHint } from './PlaceModeHint';
 import { RewardCoinsButton } from './RewardCoinsButton';
 
 export function HomePage() {
@@ -18,7 +19,8 @@ export function HomePage() {
   const { isLoading } = useDeposits(walletAddress);
   const { trackPageView, trackUserAction } = useAnalytics();
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
-  const [isEditingMap, setIsEditingMap] = useState(false);
+  const isEditingMap = useMapStore((store) => store.isEditingMap);
+  const setIsEditingMap = useMapStore((store) => store.setIsEditingMap);
   const setEditMode = useMapStore((store) => store.setEditMode);
 
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
@@ -45,19 +47,6 @@ export function HomePage() {
     setCoinAnimationTarget(null);
   };
 
-  const handleEditMapToggle = () => {
-    if (isEditingMap) {
-      // Si está editando, guardar cambios y cerrar modal
-      setIsEditingMap(false);
-      setEditMode(null);
-      trackUserAction('map_saved');
-    } else {
-      // Si no está editando, entrar en modo edición y abrir modal
-      setIsEditingMap(true);
-      setEditMode(EditionMode.SELECT);
-      trackUserAction('map_edit_started');
-    }
-  };
 
   const handleEditPanelsClose = () => {
     setIsEditingMap(false);
@@ -67,26 +56,9 @@ export function HomePage() {
   return (
     <div className="h-full w-full flex flex-col relative">
       <HeaderStats />
-      <RewardCoinsButton />
+      <PlaceModeHint />
+      {!isEditingMap && <RewardCoinsButton />}
       {/* <BackgroundMusic /> */}
-      {/* Botón de Editar Mapa / Cerrar */}
-      {isEditingMap ? (
-        <button
-          id="close-edit-button"
-          className="absolute top-20 md:top-12 right-3 md:right-2 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center rounded-lg bg-transparent"
-          onClick={handleEditMapToggle}
-        >
-          <Image width={40} height={40} src="/icons/summary/save_map.png" alt="Save" />
-        </button>
-      ) : (
-        <button
-          id="edit-map-button"
-          className="absolute top-20 md:top-12 right-3 md:right-2 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center  rounded-lg bg-transparent "
-          onClick={handleEditMapToggle}
-        >
-          <Image width={40} height={40} src="/icons/summary/edit_map.png" alt="Edit" />
-        </button>
-      )}
       <CoinAnimation
         key={JSON.stringify(coinAnimationTarget ?? {})}
         targetPosition={coinAnimationTarget}

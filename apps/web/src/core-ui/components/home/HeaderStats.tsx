@@ -1,18 +1,23 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useMapStore, useNetworkConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useDepositsComplete, useProfileStreak } from '../../hooks';
+import { FiX } from 'react-icons/fi';
+import { useDepositsComplete, useProfileRewards, useProfileStreak } from '../../hooks';
 import { BankAPYModal, StreakModal } from '../organisms';
 
 export const HeaderStats = () => {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const { walletAddress, token } = useNetworkConfigStore();
+  const isEditingMap = useMapStore((s) => s.isEditingMap);
+  const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
+  const setEditMode = useMapStore((s) => s.setEditMode);
+  const setPickedItem = useMapStore((s) => s.setPickedItem);
 
   const { data: streakData, isLoading: streakLoading, isRefetching: streakRefetching } = useProfileStreak();
   const {
@@ -20,10 +25,48 @@ export const HeaderStats = () => {
     isLoading: depositsLoading,
     isRefetching: depositsRefetching,
   } = useDepositsComplete(walletAddress);
+  const { data: profileRewards } = useProfileRewards();
   const { activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
+
+  const silverCoins = profileRewards?.rewards?.find((r) => r?.name === 'Silver Coin')?.amount ?? 0;
+  const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
+
+  if (isEditingMap) {
+    return (
+      <div className="w-full px-4 py-3 bg-primary border-b-1 border-[#B97204] rounded-g">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              aria-label="Close shop"
+              onClick={() => {
+                setIsEditingMap(false);
+                setEditMode(null);
+                setPickedItem(null);
+              }}
+              className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-black/10 shrink-0"
+            >
+              <FiX className="text-black" />
+            </button>
+            <span className="text-base font-bold text-black truncate">Shop</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1 bg-white border border-black/10 rounded-full px-2 py-1">
+              <Image src="/icons/summary/silver_coin.png" alt="Silver Coin" width={20} height={20} className="object-contain" />
+              <span className="text-sm font-semibold text-black">{silverCoins}</span>
+            </div>
+            <div className="flex items-center gap-1 bg-white border border-black/10 rounded-full px-2 py-1">
+              <Image src="/icons/summary/gold_coin.png" alt="Gold Coin" width={20} height={20} className="object-contain" />
+              <span className="text-sm font-semibold text-black">{goldCoins}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full px-4 py-3 bg-primary border-b-1 border-[#B97204] rounded-g">

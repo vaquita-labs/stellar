@@ -47,7 +47,7 @@ export const ExitEditModeModal = ({
               </p>
             </div>
           </Modal.Body>
-          <Modal.Footer className="flex gap-3 pb-6 px-6 [&>*]:flex-1">
+          <Modal.Footer className="flex flex-col-reverse gap-2 pb-6 px-4 [&>*]:w-full">
             <Button onPress={handleDiscard} type="white">
               Discard changes
             </Button>
