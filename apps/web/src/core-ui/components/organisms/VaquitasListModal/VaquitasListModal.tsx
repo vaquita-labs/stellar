@@ -2,13 +2,14 @@
 
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { Card, Chip, Modal, Spinner, Tab, Tabs } from '@heroui/react';
+import { Card, Chip, Spinner, Tab, Tabs } from '@heroui/react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { formatTimeDeposit } from '../../../helpers';
 import { useDepositsComplete } from '../../../hooks';
 import { useNetworkConfigStore } from '../../../stores';
 import { DepositSummaryResponseDTO } from '../../../types';
+import { AppModal } from '../../molecules/AppModal';
 import { VaquitaModal } from '../VaquitaModal';
 import { VaquitasListModalProps } from './types';
 
@@ -34,21 +35,15 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
   const { deposits, activeDeposits, withdrawnDeposits } = getDepositsData(depositsData?.deposits ?? []);
 
   return (
-    <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(); }}>
-      <Modal.Container size="lg" scroll="inside">
-        <Modal.Dialog className="bg-background border border-black max-h-[90vh]">
-          <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
-          </Modal.CloseTrigger>
-          <Modal.Header>
-            <Modal.Heading className="text-black font-bold text-xl">
-              <div className="flex items-center gap-2">
-                <Image src={'/icons/deposits.svg'} alt={'deposits'} width={24} height={24} />
-                <span>My Vaquitas</span>
-              </div>
-            </Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="py-0 max-h-[60vh] overflow-y-auto">
+    <>
+      <AppModal
+        open={open}
+        onOpenChange={onOpenChange}
+        title="My Vaquitas"
+        titleIcon="/icons/deposits.svg"
+        titleIconAlt="deposits"
+        size="lg"
+      >
           {isLoading ? (
             <div className="flex justify-center items-center py-8">
               <Spinner size="lg" color="accent" />
@@ -144,9 +139,7 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
               </Tabs.Panel>
             </Tabs>
           )}
-          </Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
+      </AppModal>
 
       {selectedVaquita && (
         <VaquitaModal
@@ -156,6 +149,6 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
           isLeaderboard={false}
         />
       )}
-    </Modal.Backdrop>
+    </>
   );
 }

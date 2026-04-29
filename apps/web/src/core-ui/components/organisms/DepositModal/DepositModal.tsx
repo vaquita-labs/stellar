@@ -6,18 +6,17 @@ import {
   Description,
   Label,
   ListBox,
-  Modal,
   Select,
   Spinner,
   toast,
 } from '@heroui/react';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { formatTimeDeposit, getBalance, getQuickAmounts, truncateDecimals } from '../../../helpers';
 import { useAnalytics, useBalance, useRestDeposit } from '../../../hooks';
 import { useNetworkConfigStore, useTransactionStore } from '../../../stores';
 import { T } from '../../atoms';
+import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
 import { TokenSymbol } from '../../molecules/MoneyInput/types';
 import { TestnetUSDCNotice } from '../TestnetUSDCNotice';
@@ -146,19 +145,24 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
   };
 
   return (
-    <Modal.Backdrop
-      isOpen={open}
-      onOpenChange={isLoading ? undefined : (o) => { if (!o) onOpenChange(); }}
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      isDismissable={!isLoading && !isDepositing}
+      title="Deposit"
+      titleIcon="/icons/bag.svg"
+      titleIconAlt="deposit"
+      size="md"
+      footer={
+        <Button
+          onPress={() => handleDeposit(Number(amount))}
+          className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
+          isDisabled={isDisabled || isDepositing}
+        >
+          {isDepositing ? <><Spinner size="sm" color="current" /> Processing...</> : 'Deposit'}
+        </Button>
+      }
     >
-      <Modal.Container size="md" scroll="inside">
-        <Modal.Dialog className="bg-background border border-black max-h-[90vh]">
-          <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
-          </Modal.CloseTrigger>
-          <Modal.Header>
-            <Modal.Heading className="text-black font-bold text-xl">Deposit</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="py-0 max-h-[60vh] overflow-y-auto">
           {!!network && !!token && (
             <TestnetUSDCNotice networkName={network.name} tokenContract={token.contractAddress} />
           )}
@@ -231,18 +235,6 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
               </Button>
             </div>
           </div>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              onPress={() => handleDeposit(Number(amount))}
-              className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md"
-              isDisabled={isDisabled || isDepositing}
-            >
-              {isDepositing ? <><Spinner size="sm" color="current" /> Processing...</> : 'Deposit'}
-            </Button>
-          </Modal.Footer>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+    </AppModal>
   );
 }

@@ -3,10 +3,12 @@
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { isStellarNetwork } from '@/networks/stellar/helpers';
-import { Card, Chip, Modal, Spinner } from '@heroui/react';
+import { Spinner } from '@heroui/react';
 import Image from 'next/image';
+import { useState } from 'react';
 import { useApyByLockPeriod, useDepositsComplete } from '../../../hooks';
 import { useNetworkConfigStore } from '../../../stores';
+import { AppModal } from '../../molecules/AppModal';
 import { BankAPYModalProps } from './types';
 
 export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
@@ -14,209 +16,168 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
   const { data: dataApy, isLoading: isLoadingApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
   const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
 
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+
   const protocolApy = dataApy?.protocolApy ?? 0;
   const vaquitaApy = dataApy?.vaquitaApy ?? 0;
-  const APYNetwork = protocolApy.toFixed(2);
-  const APYNetworkLabel = dataApy?.lendingMarketName ?? '';
-  const APYVaquita = vaquitaApy.toFixed(2);
+  const networkLabel = dataApy?.lendingMarketName ?? '';
+  const totalApy = vaquitaApy + protocolApy;
+  const hasProtocolApy = !!networkLabel && protocolApy >= 0;
 
   const { deposits, activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
-
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
+  const totalDepositsAllUsers = dataApy?.totalDeposits ?? 0;
+
   const isLoading = isLoadingApy || isLoadingDeposits;
-  const totalDepositsallUsers = dataApy?.totalDeposits ?? 0;
 
   return (
-    <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(); }}>
-      <Modal.Container size="lg" scroll="inside">
-        <Modal.Dialog className="bg-background border border-black max-h-[90vh]">
-          <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
-          </Modal.CloseTrigger>
-          <Modal.Header>
-            <Modal.Heading className="text-black font-bold text-xl">
-              <div className="flex items-center gap-2">
-                <Image src={'/icons/medal.svg'} alt={'rewards'} width={24} height={24} />
-                <span>Bank Rewards</span>
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Bank Rewards"
+      titleIcon="/icons/medal.svg"
+      titleIconAlt="rewards"
+      size="lg"
+    >
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <Spinner size="lg" color="accent" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="border border-success border-b-2 rounded-xl bg-success/10 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowBreakdown((v) => !v)}
+              className="w-full flex items-center justify-between gap-3 p-4 hover:bg-success/5 transition-colors"
+            >
+              <div className="text-left">
+                <p className="text-xs text-success/80 font-semibold uppercase tracking-wide">Total APY</p>
+                <p className="text-3xl font-bold text-success leading-tight">{totalApy.toFixed(2)}%</p>
               </div>
-            </Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="py-0 max-h-[60vh] overflow-y-auto">
-          {isLoading ? (
-            <div className="flex justify-center items-center py-8">
-              <Spinner size="lg" color="accent" />
+              <div className="flex items-center gap-1.5 text-xs text-success font-semibold">
+                <span>{showBreakdown ? 'Hide' : 'Breakdown'}</span>
+                <span className={'transition-transform ' + (showBreakdown ? 'rotate-180' : '')}>▾</span>
+              </div>
+            </button>
+            {showBreakdown && (
+              <div className="border-t border-success/30 px-4 py-3 space-y-3 bg-white/60">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+                      <span className="text-sm font-medium text-black">Vaquita APY</span>
+                    </div>
+                    <span className="text-sm font-bold text-primary">{vaquitaApy.toFixed(2)}%</span>
+                  </div>
+                  <p className="text-xs text-gray-600 ml-5 mt-0.5">
+                    Rewards from the Vaquita community pool, based on your lock period.
+                  </p>
+                </div>
+                {hasProtocolApy && (
+                  <div className="pt-3 border-t border-success/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
+                        <span className="text-sm font-medium text-black">{networkLabel} APY</span>
+                      </div>
+                      <span className="text-sm font-bold text-purple-600">{protocolApy.toFixed(2)}%</span>
+                    </div>
+                    <p className="text-xs text-gray-600 ml-5 mt-0.5">
+                      Yield from {networkLabel} lending protocol where your funds are deposited.
+                    </p>
+                  </div>
+                )}
+                {network?.name && isStellarNetwork(network.name) && dataApy?.interestModelNote ? (
+                  <p className="text-xs text-gray-500 leading-snug pt-3 border-t border-success/20">
+                    {dataApy.interestModelNote}
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="border border-primary border-b-2 rounded-xl bg-primary/10 p-3 text-center">
+              <div className="flex items-center justify-center gap-1.5 mb-1">
+                <Image src="/icons/bag.svg" alt="bag" width={18} height={18} />
+                <p className="text-xs text-primary font-semibold">My deposits</p>
+              </div>
+              <p className="text-lg font-bold text-primary leading-tight">
+                {activeDepositsTotalAmount.toFixed(2)}
+                <span className="text-xs ml-1 font-semibold">{tokenSymbol}</span>
+              </p>
             </div>
-          ) : (
-            <div className="space-y-2 mb-4">
-              <div className="flex flex-row gap-1 flex-wrap w-full">
-                <Chip color="accent" className="rounded-md w-full flex flex-row gap-2">
-                  <span>All users deposits </span>
-                  <b className="text-xs">
-                    {totalDepositsallUsers.toFixed(2)} {tokenSymbol}
-                  </b>
-                </Chip>
+            <div className="border border-black/15 border-b-2 rounded-xl bg-black/5 p-3 text-center">
+              <p className="text-xs text-black/60 font-semibold mb-1">All users</p>
+              <p className="text-lg font-bold text-black leading-tight">
+                {totalDepositsAllUsers.toFixed(2)}
+                <span className="text-xs ml-1 font-semibold">{tokenSymbol}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Image src="/icons/deposits.svg" alt="deposits" width={20} height={20} />
+              <h3 className="text-sm font-bold text-black">My Vaquitas</h3>
+              <span className="text-xs text-gray-500">({activeDeposits.length})</span>
+            </div>
+            {activeDeposits.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
+                <Image src="/no_data.svg" alt="No data" width={80} height={80} />
+                <p className="text-gray-500 text-sm mt-2">No active vaquitas</p>
               </div>
-              <div className="flex gap-2 flex-col">
-                <Card className="border-primary border bg-primary/10 rounded-md w-full mb-4">
-                  <Card.Content className="p-6">
-                    <div className="text-center flex flex-col gap-2 justify-between">
-                      <p className="text-sm text-primary mb-2">Total Deposited</p>
-                      <div className="flex items-center justify-center gap-2">
-                        <Image src="/icons/bag.svg" alt="medal" width={32} height={32} />
-                        <div className="flex gap-0">
-                          <p className="text-2xl font-bold text-primary">{activeDepositsTotalAmount.toFixed(2)}</p>
-                          <span className="text-sm font-semibold text-primary mt-2.5">{tokenSymbol}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card.Content>
-                </Card>
-                <div className="flex items-center gap-2">
-                  <Image src={'/icons/deposits.svg'} alt={'deposits'} width={24} height={24} />
-                  <span>My Vaquitas</span>
-                </div>
-                <div className="gap-3 flex flex-col mb-4 ">
-                  {activeDeposits.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <Image src="/no_data.svg" alt="No data" width={100} height={100} />
-                      <p className="text-gray-500 mt-4">No active vaquitas</p>
-                    </div>
-                  ) : (
-                    activeDeposits.map((deposit) => {
-                      return <VaquitaDepositCard key={deposit.id} deposit={deposit} />;
-                    })
-                  )}
-                </div>
-                {/* APY Total Card */}
-                {/* <Card className="border-success border-1 bg-success/10 rounded-md w-full">
-                  <CardBody className="p-6">
-                    <div className="text-center flex flex-col gap-2 justify-between">
-                      <p className="text-sm text-success mb-2">Total APY</p>
-                      <div className="flex items-center justify-center gap-2">
-                        <Image src="/icons/medal.svg" alt="medal" width={32} height={32} />
-                        <p className="text-xl font-bold text-success">{APYTotal}%</p>
-                      </div>
-                    </div>
-                  </CardBody>
-                </Card> */}
+            ) : (
+              <div className="space-y-2">
+                {activeDeposits.map((deposit) => (
+                  <VaquitaDepositCard key={deposit.id} deposit={deposit} />
+                ))}
               </div>
-              <div className="flex gap-2 md:flex-row flex-col ">
-                {/* Reward Pool */}
-                {/* <Card className="border-[#3272B3] border-1 bg-[#3272B3]/10 rounded-md w-full">
-                  <CardBody className="p-6">
-                    <div className="text-center flex flex-col gap-2 justify-between">
-                      <p className="text-sm text-[#3272B3] mb-2">Reward Pool</p>
-                      <div className="flex items-center justify-center gap-2">
-                        <Image src="/icons/pools.svg" alt="medal" width={32} height={32} />
-                        <div className="flex gap-0">
-                          <p className="text-2xl font-bold text-[#3272B3]">{rewardPool.toFixed(2)}</p>
-                          <span className="text-sm font-semibold text-[#3272B3] mt-2.5">{tokenSymbol}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardBody>
-                </Card> */}
-                {/* <Card className="border-[#3272B3] border-1 bg-[#3272B3]/10 rounded-md w-full">
-                  <CardBody className="p-6">
-                    <div className="text-center flex flex-col gap-2 justify-between">
-                      <p className="text-sm text-[#3272B3] mb-2">Total deposit in this period</p>
-                      <div className="flex items-center justify-center gap-2">
-                        <Image src="/icons/pools.svg" alt="medal" width={32} height={32} />
-                        <div className="flex gap-0">
-                          <p className="text-2xl font-bold text-[#3272B3]">{totalDepositsallUsers.toFixed(2)}</p>
-                          <span className="text-sm font-semibold text-[#3272B3] mt-2.5">{tokenSymbol}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardBody>
-                </Card> */}
+            )}
+          </div>
+
+          <div className="border border-black/10 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowHowItWorks((v) => !v)}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-black/5 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span className="text-sm font-semibold text-black">How rewards work</span>
               </div>
+              <span className={'text-black/60 transition-transform ' + (showHowItWorks ? 'rotate-180' : '')}>
+                ▾
+              </span>
+            </button>
+            {showHowItWorks && (
+              <ul className="px-4 pb-4 pt-1 text-sm text-gray-700 space-y-1.5 list-disc list-inside">
+                <li>Your deposit generates yield from multiple sources.</li>
+                <li>Estimated rewards are calculated using the current APY.</li>
+                <li>The APY is dynamic and may fluctuate based on user activity and total deposits.</li>
+                <li>Rewards become claimable only after the saving period ends.</li>
+                <li>Final rewards are confirmed upon withdrawal.</li>
+              </ul>
+            )}
+          </div>
 
-              {/* APY Breakdown */}
-              <Card className="border-gray-200 rounded-md border border-dashed">
-                <Card.Content className="p-4">
-                  <h3 className="font-semibold text-lg mb-4 text-black">APY Breakdown</h3>
-
-                  <div className="space-y-4">
-                    {/* Vaquita APY */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 bg-primary rounded-full"></div>
-                          <span className="text-gray-700 font-medium">Vaquita APY</span>
-                        </div>
-                        <span className="text-xl font-bold text-primary">{APYVaquita}%</span>
-                      </div>
-                      <p className="text-sm text-gray-600 ml-5">
-                        Rewards distributed from the Vaquita community pool based on your lock period
-                      </p>
-                    </div>
-
-                    {/* Protocol APY (if available) */}
-                    {!!APYNetworkLabel && +APYNetwork >= 0 && (
-                      <>
-                        <hr className="border-gray-200" />
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-purple-600 rounded-full"></div>
-                              <span className="text-gray-700 font-medium">{APYNetworkLabel} APY</span>
-                            </div>
-                            <span className="text-xl font-bold text-purple-600">{APYNetwork}%</span>
-                          </div>
-                          <p className="text-sm text-gray-600 ml-5">
-                            Additional yield from {APYNetworkLabel} lending protocol where your funds are deposited
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  {network?.name && isStellarNetwork(network.name) && dataApy?.interestModelNote ? (
-                    <p className="text-xs text-gray-500 mt-3 leading-snug">{dataApy.interestModelNote}</p>
-                  ) : null}
-                </Card.Content>
-              </Card>
-
-              {/* How it works */}
-              <Card className="border-primary bg-primary/20 rounded-md border">
-                <Card.Content className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-black mb-2">How Rewards Work</h4>
-                      <ul className="text-sm text-gray-700 space-y-1">
-                        <li>• Your deposit generates yield from multiple sources.</li>
-                        <li>• Estimated rewards are calculated using the current APY.</li>
-                        <li>• The APY is dynamic and may fluctuate based on user activity and total deposits.</li>
-                        <li>• Rewards become claimable only after the saving period ends.</li>
-                        <li>• Final rewards are confirmed upon withdrawal.</li>
-                      </ul>
-                    </div>
-                  </div>
-                </Card.Content>
-              </Card>
-
-              {/* Network info */}
-              {network && (
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-4">
-                  <span>Network:</span>
-                  <span className="font-semibold text-black">{network.name}</span>
-                </div>
-              )}
+          {network && (
+            <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500 pt-1">
+              <span>Network:</span>
+              <span className="font-semibold text-black">{network.name}</span>
             </div>
           )}
-          </Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+        </div>
+      )}
+    </AppModal>
   );
 }

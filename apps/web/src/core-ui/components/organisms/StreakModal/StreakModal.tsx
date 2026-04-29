@@ -2,9 +2,10 @@
 
 import { getCurrentDay } from '@/core-ui/helpers';
 import { useProfileStreak } from '@/core-ui/hooks';
-import { Button, Modal } from '@heroui/react';
+import { Button } from '@heroui/react';
 import Image from 'next/image';
 import { ONE_DAY } from '../../../config/constants';
+import { AppModal } from '../../molecules/AppModal';
 import { StreakModalProps } from './types';
 
 const DATES_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -32,24 +33,22 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
   }
 
   return (
-    <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(); }}>
-      <Modal.Container size="md" scroll="inside">
-        <Modal.Dialog className="bg-background border border-black max-h-[90vh]">
-          <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
-          </Modal.CloseTrigger>
-          <Modal.Header>
-            <Modal.Heading className="text-black font-bold text-xl">Streak</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="py-0 max-h-[60vh] overflow-y-auto">
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Streak"
+      titleIcon="/icons/summary/streak.png"
+      titleIconAlt="streak"
+      size="md"
+    >
           <div className="space-y-6 mb-4">
             {/* Streak Status Section */}
             <div className="space-y-4">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Image src={'/icons/summary/streak.png'} alt={'streak'} width={32} height={32} />
-              </div>
               <div className="text-center space-y-2">
-                <h2 className="text-xl font-bold text-black">Current Streak: {currentStreak} days</h2>
+                <h2 className="text-xl font-bold text-black flex items-center justify-center gap-2">
+                  <Image src="/icons/summary/streak.png" alt="streak" width={28} height={28} />
+                  Current Streak: {currentStreak} days
+                </h2>
                 <p className="text-sm text-gray-600">
                   Your streak represents consecutive days of activity. Keep it going to unlock rewards and special tiles for your map!
                 </p>
@@ -143,9 +142,6 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
               </div>
             </div>
           </div>
-          </Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+    </AppModal>
   );
 }
