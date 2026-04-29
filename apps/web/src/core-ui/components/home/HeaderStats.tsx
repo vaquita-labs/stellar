@@ -138,7 +138,7 @@ export const HeaderStats = () => {
                   </span>
                   <EarnChip
                     deposits={activeDeposits}
-                    apy={apyData?.vaquitaApy ?? 0}
+                    apy={(apyData?.vaquitaApy ?? 0) + (apyData?.protocolApy ?? 0)}
                     isLoading={apyLoading || depositsLoading}
                   />
                 </ div>
