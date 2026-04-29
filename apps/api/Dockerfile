@@ -16,11 +16,11 @@ ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
 ARG DEPLOY_ID
 ENV DEPLOY_ID=$DEPLOY_ID
 
-RUN --mount=type=secret,id=webhook_url \
-    --mount=type=secret,id=webhook_token \
+RUN --mount=type=secret,id=notification_webhook_url \
+    --mount=type=secret,id=notification_webhook_token \
     sh -c '\
-      export WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )"; \
-      export WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )"; \
+      export NOTIFICATION_WEBHOOK_URL="$( [ -f /run/secrets/notification_webhook_url ] && cat /run/secrets/notification_webhook_url )"; \
+      export NOTIFICATION_WEBHOOK_TOKEN="$( [ -f /run/secrets/notification_webhook_token ] && cat /run/secrets/notification_webhook_token )"; \
       echo "[DEBUG][deps] DEPLOY_ID: $DEPLOY_ID"; \
       ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/api... \
     '

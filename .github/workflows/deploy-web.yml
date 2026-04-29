@@ -27,6 +27,7 @@ jobs:
   deploy:
     name: Trigger Dokploy Deploy
     runs-on: ubuntu-latest
+    environment: vaquita-web
     steps:
       - name: Compute DEPLOY_ID
         id: ids
@@ -34,6 +35,46 @@ jobs:
           DEPLOY_ID="${{ github.run_id }}-${{ github.run_attempt }}-${GITHUB_SHA:0:8}"
           echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
           echo "Computed DEPLOY_ID: $DEPLOY_ID"
+
+      - name: Notify GitHub Action started
+        env:
+          DEPLOY_ID: ${{ steps.ids.outputs.deploy_id }}
+          NOTIFICATION_WEBHOOK_URL: ${{ secrets.NOTIFICATION_WEBHOOK_URL }}
+          NOTIFICATION_WEBHOOK_TOKEN: ${{ secrets.NOTIFICATION_WEBHOOK_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
+          AUTHOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [ -z "$NOTIFICATION_WEBHOOK_URL" ] || [ -z "$NOTIFICATION_WEBHOOK_TOKEN" ]; then
+            echo "[skipped] webhook secrets not configured"
+            exit 0
+          fi
+          commit_first_line=$(printf '%s' "$COMMIT_MESSAGE" | head -n1 | cut -c1-120)
+          data=$(jq -n \
+            --arg branch "$BRANCH" \
+            --arg author "$AUTHOR" \
+            --arg repo "$REPO" \
+            --arg run_id "$RUN_ID" \
+            --arg run_attempt "$RUN_ATTEMPT" \
+            --arg commit_hash "${COMMIT_SHA:0:8}" \
+            --arg commit_message "$commit_first_line" \
+            '{branch: $branch, author: $author, repo: $repo, run_id: $run_id, run_attempt: $run_attempt, commit_hash: $commit_hash, commit_message: $commit_message}')
+          payload=$(jq -n \
+            --arg event "GITHUB-ACTIONS_START" \
+            --arg message "[GITHUB-ACTIONS] Starting workflow run #$RUN_ID (attempt $RUN_ATTEMPT)" \
+            --arg source "github-actions/web" \
+            --arg gid "$DEPLOY_ID" \
+            --argjson data "$data" \
+            '{event: $event, message: $message, source: $source, group_id: $gid, data: $data}')
+          curl -sSL --max-time 5 --retry 2 --retry-delay 1 \
+            -X POST "$NOTIFICATION_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -H "x-webhook-token: $NOTIFICATION_WEBHOOK_TOKEN" \
+            -d "$payload" || echo "[warn] notification failed, continuing"
 
       - name: Merge DEPLOY_ID into existing build args
         id: merge
@@ -101,3 +142,34 @@ jobs:
           echo "- **DEPLOY_ID:** \`${{ steps.ids.outputs.deploy_id }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Commit:** \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Actor:** ${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify GitHub Action finished
+        if: always()
+        env:
+          DEPLOY_ID: ${{ steps.ids.outputs.deploy_id }}
+          NOTIFICATION_WEBHOOK_URL: ${{ secrets.NOTIFICATION_WEBHOOK_URL }}
+          NOTIFICATION_WEBHOOK_TOKEN: ${{ secrets.NOTIFICATION_WEBHOOK_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          if [ -z "$NOTIFICATION_WEBHOOK_URL" ] || [ -z "$NOTIFICATION_WEBHOOK_TOKEN" ] || [ -z "$DEPLOY_ID" ]; then
+            echo "[skipped] webhook secrets or DEPLOY_ID not available"
+            exit 0
+          fi
+          if [ "$JOB_STATUS" = "success" ]; then
+            EVENT="GITHUB-ACTIONS_SUCCESS"
+            MESSAGE="[GITHUB-ACTIONS] Workflow completed successfully"
+          else
+            EVENT="GITHUB-ACTIONS_ERROR"
+            MESSAGE="[GITHUB-ACTIONS] Workflow failed (job.status=$JOB_STATUS)"
+          fi
+          payload=$(jq -n \
+            --arg event "$EVENT" \
+            --arg message "$MESSAGE" \
+            --arg source "github-actions/web" \
+            --arg gid "$DEPLOY_ID" \
+            '{event: $event, message: $message, source: $source, group_id: $gid}')
+          curl -sSL --max-time 5 --retry 2 --retry-delay 1 \
+            -X POST "$NOTIFICATION_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -H "x-webhook-token: $NOTIFICATION_WEBHOOK_TOKEN" \
+            -d "$payload" || echo "[warn] notification failed"
