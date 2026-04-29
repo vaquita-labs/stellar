@@ -51,9 +51,11 @@ send_webhook() {
 PHASE=$1
 shift # Elimina el primer argumento (la fase) para dejar el resto como el comando a ejecutar
 
-# Deploy group ID: commit SHA si está disponible, sino generamos uno por sesión de build
+# Deploy group ID: prioridad — env DEPLOY_ID (build-arg propagado por Dokploy), commit SHA, archivo, random
 DEPLOY_ID_FILE="/tmp/.deploy_group_id"
-if [ -n "$NIXPACKS_GIT_COMMIT" ]; then
+if [ -n "$DEPLOY_ID" ]; then
+    debug_log "DEPLOY_ID resolved from env: $DEPLOY_ID"
+elif [ -n "$NIXPACKS_GIT_COMMIT" ]; then
     DEPLOY_ID=$(printf '%s' "$NIXPACKS_GIT_COMMIT" | cut -c1-8)
     debug_log "DEPLOY_ID resolved from NIXPACKS_GIT_COMMIT: $DEPLOY_ID"
 elif [ -n "$GIT_COMMIT" ]; then

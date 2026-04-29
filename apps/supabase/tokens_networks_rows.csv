@@ -1,0 +1,2 @@
+token_id,network_id,is_native,is_gas,is_supported,contract_address,vaquita_contract_address,token_decimals,lock_period,aave_pool_contract_address,aave_token_symbol,aave_token_contract_address
+7,9,false,false,true,CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU,CDKCKHTRKFJXVKLICHPIXAPLIVDRBDQEEGJYDKFOTUV35APVNOGTWZW7,7,604800000,,,

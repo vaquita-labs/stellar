@@ -12,6 +12,8 @@ COPY apps/web/package.json ./apps/web/
 
 ARG WEBHOOK_SOURCE=apps/web
 ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
+ARG DEPLOY_ID
+ENV DEPLOY_ID=$DEPLOY_ID
 
 RUN --mount=type=secret,id=webhook_url \
     --mount=type=secret,id=webhook_token \
@@ -23,6 +25,7 @@ RUN --mount=type=secret,id=webhook_url \
       echo "[DEBUG][deps] WEBHOOK_URL length: ${#WEBHOOK_URL}"; \
       echo "[DEBUG][deps] WEBHOOK_TOKEN length: ${#WEBHOOK_TOKEN}"; \
       echo "[DEBUG][deps] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
+      echo "[DEBUG][deps] DEPLOY_ID: $DEPLOY_ID"; \
       ./notify.sh INSTALL pnpm install --frozen-lockfile --filter vaquiland... --network-concurrency 4 \
     '
 
@@ -43,6 +46,8 @@ ENV NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL=$NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL
 
 ARG WEBHOOK_SOURCE=apps/web
 ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
+ARG DEPLOY_ID
+ENV DEPLOY_ID=$DEPLOY_ID
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=2048"
@@ -58,6 +63,7 @@ RUN --mount=type=secret,id=webhook_url \
       echo "[DEBUG][builder] WEBHOOK_URL length: ${#WEBHOOK_URL}"; \
       echo "[DEBUG][builder] WEBHOOK_TOKEN length: ${#WEBHOOK_TOKEN}"; \
       echo "[DEBUG][builder] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
+      echo "[DEBUG][builder] DEPLOY_ID: $DEPLOY_ID"; \
       ./notify.sh BUILD pnpm --filter vaquiland build \
     '
 
@@ -67,6 +73,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV WEBHOOK_SOURCE=apps/web
+ARG DEPLOY_ID
+ENV DEPLOY_ID=$DEPLOY_ID
 
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
