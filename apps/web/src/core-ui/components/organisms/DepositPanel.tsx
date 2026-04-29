@@ -47,19 +47,10 @@ export function DepositPanel() {
               setIsOpen(true);
             }
           }}
-          className={`bg-primary border-black py-7 text-white font-bold w-full border border-b-5  rounded-md`}
+          className={`bg-success border-[#018222] py-7 text-black font-bold w-full border border-b-5 rounded-md`}
         >
           <span className="text-xl text-black capitalize">
-            {isDepositing ? (
-              <T>Processing...</T>
-            ) : (
-              <>
-                <span className="text-xl text-black font-normal">
-                  <T>Save</T>
-                </span>{' '}
-                <span className="text-xl text-black font-bold">1 ${token?.symbol ?? ''}</span>
-              </>
-            )}
+            {isDepositing ? <T>Processing...</T> : <T>Save</T>}
           </span>
         </HeroButton>
       </div>

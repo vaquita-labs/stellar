@@ -12,7 +12,6 @@ import { BackgroundMusic } from './BackgroundMusic';
 import { EditPanels } from './edit';
 import { HeaderStats } from './HeaderStats';
 import { PlaceModeHint } from './PlaceModeHint';
-import { RewardCoinsButton } from './RewardCoinsButton';
 
 export function HomePage() {
   const { walletAddress, lockPeriod, network, token } = useNetworkConfigStore();
@@ -57,7 +56,6 @@ export function HomePage() {
     <div className="h-full w-full flex flex-col relative">
       <HeaderStats />
       <PlaceModeHint />
-      {!isEditingMap && <RewardCoinsButton />}
       {/* <BackgroundMusic /> */}
       <CoinAnimation
         key={JSON.stringify(coinAnimationTarget ?? {})}
@@ -97,7 +95,7 @@ export function HomePage() {
                   },
                 }}
               >
-                <div className="h-full w-full shrink-0">
+                <div className="h-6/7 w-full shrink-0">
                   <WorldMap walletAddress={walletAddress} worldType={WorldType.FOREST} isAvailable={true} />
                 </div>
               </motion.div>
