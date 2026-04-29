@@ -6,7 +6,7 @@ import React, { ReactNode, useState } from 'react';
 import { FiCheck, FiCopy, FiDownload, FiSend, FiShield } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useNetworkConfigStore } from '../../../stores';
-import { ProfileSubHeader } from './ProfileSubHeader';
+import { PageLayout } from '../../molecules';
 
 const LogoByType: Record<string, ReactNode> = {
   EVM: <Image src="/chains/base_400x400.jpg" alt="EVM" width={20} height={20} className="rounded-sm" />,
@@ -32,11 +32,8 @@ export function WalletPage() {
   const networkLogo = network?.type ? LogoByType[network.type] : null;
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col gap-6">
-        <ProfileSubHeader title="Wallet" />
-
-        <section className="rounded-lg border border-black border-b-2 bg-white p-4 sm:p-6 flex flex-col gap-4">
+    <PageLayout title="Wallet" backHref="/profile">
+      <section className="rounded-lg border border-black border-b-2 bg-white p-4 sm:p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2">
             {networkLogo}
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -105,7 +102,6 @@ export function WalletPage() {
             </p>
           </div>
         </section>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

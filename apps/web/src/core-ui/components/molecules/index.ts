@@ -8,3 +8,5 @@ export * from './WithHydrated';
 export * from './NetworksProvider';
 export * from './toast';
 export * from './ConfirmDialog';
+export * from './PageHeader';
+export * from './PageLayout';

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { FiBell, FiMail, FiTrendingUp, FiUsers, FiZap } from 'react-icons/fi';
-import { ProfileSubHeader } from './ProfileSubHeader';
+import { PageLayout } from '../../molecules';
 
 type ToggleKey = 'push' | 'email' | 'deposits' | 'streaks' | 'friends';
 
@@ -59,11 +59,8 @@ export function NotificationsPage() {
   const setValue = (key: ToggleKey, v: boolean) => setValues((prev) => ({ ...prev, [key]: v }));
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col gap-6">
-        <ProfileSubHeader title="Notifications" />
-
-        {SECTIONS.map((section) => (
+    <PageLayout title="Notifications" backHref="/profile">
+      {SECTIONS.map((section) => (
           <section key={section.title} className="flex flex-col gap-2">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1">{section.title}</h2>
             <ul className="rounded-lg border border-black border-b-2 bg-white overflow-hidden divide-y divide-gray-200">
@@ -85,10 +82,9 @@ export function NotificationsPage() {
           </section>
         ))}
 
-        <p className="text-xs text-gray-500 text-center">
-          Preferences are stored locally for now. Backend syncing coming soon.
-        </p>
-      </div>
-    </div>
+      <p className="text-xs text-gray-500 text-center">
+        Preferences are stored locally for now. Backend syncing coming soon.
+      </p>
+    </PageLayout>
   );
 }

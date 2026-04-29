@@ -8,7 +8,7 @@ import { truncateMiddle } from '../../../helpers';
 import { useProfileData, useRestProfile } from '../../../hooks';
 import { useNetworkConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
-import { ProfileSubHeader } from './ProfileSubHeader';
+import { PageLayout } from '../../molecules';
 
 export function EditProfilePage() {
   const router = useRouter();
@@ -101,10 +101,7 @@ export function EditProfilePage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-xl px-4 py-6 sm:py-8 flex flex-col gap-6">
-        <ProfileSubHeader title="Edit profile" />
-
+    <PageLayout title="Edit profile" backHref="/profile">
         {/* Avatar */}
         <div className="flex flex-col items-center gap-2">
           <div className="relative">
@@ -202,7 +199,6 @@ export function EditProfilePage() {
             Save changes
           </Button>
         </div>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

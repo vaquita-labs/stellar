@@ -45,7 +45,7 @@ export const EarnChip = ({ deposits, apy, isLoading, onClick }: EarnChipProps) =
     <Wrapper
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className="inline-flex items-center gap-0.5 bg-transparent"
+      className="flex items-center"
     >
       <FiArrowUp className="text-[#2f820b]" size={12} strokeWidth={3} />
       <span className="text-sm font-bold text-[#2f820b] tabular-nums leading-none">

@@ -2,15 +2,12 @@
 
 import React from 'react';
 import { FiMail, FiUserPlus } from 'react-icons/fi';
-import { ProfileSubHeader } from './ProfileSubHeader';
+import { PageLayout } from '../../molecules';
 
 export function FriendsPage() {
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col gap-6">
-        <ProfileSubHeader title="Friends" />
-
-        <section className="rounded-lg border border-black border-b-2 bg-white p-6 sm:p-8 text-center flex flex-col items-center gap-4">
+    <PageLayout title="Friends" backHref="/profile">
+      <section className="rounded-lg border border-black border-b-2 bg-white p-6 sm:p-8 text-center flex flex-col items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#DDF4FF] border border-[#84D8FF]">
             <FiUserPlus className="h-8 w-8 text-black" />
           </div>
@@ -41,7 +38,6 @@ export function FriendsPage() {
             <li>Get reminders if a friend keeps their streak alive.</li>
           </ul>
         </section>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

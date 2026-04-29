@@ -7,6 +7,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { HiArrowSmallRight } from 'react-icons/hi2';
 import { useProfilesByAverageDepositsData } from '../../hooks';
 import { useNetworkConfigStore } from '../../stores';
+import { PageLayout } from '../molecules';
 
 function simplifyWallet(addr: string) {
   return `${addr.slice(0, 5)}...${addr.slice(-4)}`;
@@ -283,25 +284,16 @@ export const LeaderboardPage = () => {
   };
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-64px)] w-full max-w-4xl flex-col items-center p-4">
-      <div className="w-full mb-14 md:mb-0">
-        <header className="relative mb-2 flex items-center justify-center py-2 ">
-          <div className="absolute left-0 top-1/2 -translate-y-1/2">
-            <Link href="/home" aria-label="Back to home">
-              <Image src="/icons/arrow-back.svg" alt="arrow back" width={24} height={24} />
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold md:text-3xl">Leaderboard</h1>
-          </div>
-
-          <div className="absolute right-0 top-1/2 -translate-y-1/2">
-            <Image src="/icons/share.svg" alt="share" width={24} height={24} className="cursor-not-allowed grayscale" />
-          </div>
-        </header>
-
-        <section className="rounded-3xl border border-white/10 bg-white/10  backdrop-blur-xl md:pt-2">
+    <PageLayout
+      title="Leaderboard"
+      backHref="/home"
+      rightAction={{
+        iconSrc: '/icons/share.svg',
+        ariaLabel: 'Share',
+        disabled: true,
+      }}
+    >
+      <section className="rounded-3xl border border-white/10 bg-white/10  backdrop-blur-xl md:pt-2">
           {isLoading && (
             <div className="flex flex-col items-center justify-center gap-3 py-12 text-center ">
               <Spinner size="lg" color="accent" />
@@ -360,7 +352,6 @@ export const LeaderboardPage = () => {
             </Tabs>
           )}
         </section>
-      </div>
-    </div>
+    </PageLayout>
   );
 };

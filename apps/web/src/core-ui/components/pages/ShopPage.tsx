@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react';
 import { FiArrowDown, FiArrowUp, FiFilter, FiSearch, FiX } from 'react-icons/fi';
 import { useProfileRewards } from '../../hooks';
 import { useNetworkConfigStore } from '../../stores';
+import { PageHeader } from '../molecules';
 import { ShopItem, ShopItemBiome, ShopItemRarity, ShopItemType } from '../organisms/ShopModal/types';
 
 type SortOption = 'price-asc' | 'price-desc';
@@ -257,20 +258,9 @@ export function ShopPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="sticky top-0 z-10 bg-background border-b border-[#B97204]">
-        <div className="mx-auto w-full max-w-3xl px-4 py-3 flex items-center gap-3">
-          <Link
-            href="/home"
-            aria-label="Back to home"
-            className="flex h-10 w-10 items-center justify-center shrink-0"
-          >
-            <Image src="/icons/arrow-back.svg" alt="back" width={28} height={28} />
-          </Link>
-          <div className="flex items-center gap-2 shrink-0">
-            <Image src="/icons/summary/shop.png" alt="shop" width={24} height={24} />
-            <h1 className="text-lg sm:text-xl font-bold text-black">Shop</h1>
-          </div>
-          <div className="flex-1" />
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="mx-auto w-full max-w-3xl px-4 py-3 flex flex-col gap-2">
+          <PageHeader title="Shop" backHref="/home" />
+          <div className="flex items-center justify-end gap-2">
             <div className="flex items-center gap-1 bg-white border border-black border-b-2 rounded-md px-2 py-1">
               <Image
                 src="/icons/summary/silver_coin.png"
@@ -680,25 +670,21 @@ function FiltersPanel({ biomes, types, rarities, onApply, onClose }: FiltersPane
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       <div className="border-b border-[#B97204] bg-background">
-        <div className="mx-auto w-full max-w-3xl px-4 py-3 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Back"
-            className="flex h-10 w-10 items-center justify-center shrink-0"
-          >
-            <Image src="/icons/arrow-back.svg" alt="back" width={28} height={28} />
-          </button>
-          <h1 className="text-lg sm:text-xl font-bold text-black">Filters</h1>
-          <div className="flex-1" />
-          <button
-            type="button"
-            onClick={clearAll}
-            className="text-sm font-semibold text-black underline disabled:text-gray-400 disabled:no-underline"
-            disabled={draftCount === 0}
-          >
-            Clear all
-          </button>
+        <div className="mx-auto w-full max-w-3xl px-4 py-3">
+          <PageHeader
+            title="Filters"
+            onBack={onClose}
+            rightSlot={
+              <button
+                type="button"
+                onClick={clearAll}
+                className="text-sm font-semibold text-black underline disabled:text-gray-400 disabled:no-underline bg-transparent"
+                disabled={draftCount === 0}
+              >
+                Clear all
+              </button>
+            }
+          />
         </div>
       </div>
 

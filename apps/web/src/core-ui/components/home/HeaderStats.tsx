@@ -6,7 +6,6 @@ import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { FiX } from 'react-icons/fi';
 import {
   useApyByLockPeriod,
   useDepositsComplete,
@@ -15,8 +14,8 @@ import {
   useProfileStreak,
 } from '../../hooks';
 import { SILVER_COIN, useElementPositionsStore } from '../../stores';
+import { PageHeader } from '../molecules';
 import { BankAPYModal, StreakModal } from '../organisms';
-import { CoinsChip } from './CoinsChip';
 import { EarnChip } from './EarnChip';
 
 export const HeaderStats = () => {
@@ -61,26 +60,43 @@ export const HeaderStats = () => {
 
   if (isEditingMap) {
     return (
-      <div className="w-full px-4 py-3 bg-primary border-b-1 border-[#B97204] rounded-g">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              aria-label="Close shop"
-              onClick={() => {
-                setIsEditingMap(false);
-                setEditMode(null);
-                setPickedItem(null);
-              }}
-              className="w-12 h-12 rounded-full bg-white flex items-center justify-center border border-black/10 shrink-0"
-            >
-              <FiX className="text-black" />
-            </button>
-            <span className="text-base font-bold text-black truncate">Shop</span>
-          </div>
-          <div className="shrink-0">
-            <CoinsChip silverCoins={silverCoins} goldCoins={goldCoins} silverCoinRef={silverCoinRef} />
-          </div>
+      <div className="w-full px-4 py-3">
+        <div className="max-w-xl mx-auto">
+          <PageHeader
+            title="Shop"
+            onBack={() => {
+              setIsEditingMap(false);
+              setEditMode(null);
+              setPickedItem(null);
+            }}
+            rightSlot={
+              <div className="flex items-center gap-1.5">
+                <div ref={silverCoinRef} className="flex items-center gap-1">
+                  <Image
+                    src="/icons/summary/silver_coin.png"
+                    alt="Silver Coin"
+                    width={20}
+                    height={20}
+                    className="object-contain"
+                    priority
+                  />
+                  <span className="text-sm font-bold text-black tabular-nums">{silverCoins}</span>
+                </div>
+                <div className="w-px h-4 bg-black/15" />
+                <div className="flex items-center gap-1">
+                  <Image
+                    src="/icons/summary/gold_coin.png"
+                    alt="Gold Coin"
+                    width={20}
+                    height={20}
+                    className="object-contain"
+                    priority
+                  />
+                  <span className="text-sm font-bold text-black tabular-nums">{goldCoins}</span>
+                </div>
+              </div>
+            }
+          />
         </div>
       </div>
     );
@@ -116,8 +132,8 @@ export const HeaderStats = () => {
               {depositsLoading || depositsRefetching ? (
                 <Spinner size="sm" color="current" />
               ) : (
-                <>
-                  <span className="text-2xl font-bold text-black leading-tight truncate">
+                <div className='flex justify-end gap-1.5'>
+                  <span className="text-2xl font-bold text-black">
                     ${activeDepositsTotalAmount} {token?.symbol}
                   </span>
                   <EarnChip
@@ -125,7 +141,7 @@ export const HeaderStats = () => {
                     apy={apyData?.vaquitaApy ?? 0}
                     isLoading={apyLoading || depositsLoading}
                   />
-                </>
+                </ div>
               )}
             </button>
           </div>

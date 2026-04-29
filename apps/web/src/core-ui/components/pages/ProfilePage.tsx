@@ -19,7 +19,7 @@ import {
 import { useProfileData } from '../../hooks';
 import { useNetworkConfigStore } from '../../stores';
 import { Button } from '../atoms';
-import { ConfirmDialog } from '../molecules';
+import { ConfirmDialog, PageLayout } from '../molecules';
 
 type Row = {
   key: string;
@@ -197,45 +197,26 @@ export function ProfilePage() {
 
   if (!walletAddress) {
     return (
-      <div className="h-full overflow-y-auto">
-        <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-8">
-          <Card className="border border-default-200/60 bg-white/80 shadow-sm backdrop-blur dark:border-default-100/40 dark:bg-default-50/80">
-            <Card.Content className="flex flex-col gap-6 p-6 sm:p-10 text-center">
-              <div className="flex items-center justify-between">
-                <Link href="/home" aria-label="Back to home">
-                  <Image src="/icons/arrow-back.svg" alt="arrow back" width={24} height={24} />
-                </Link>
-              </div>
-              <div className="space-y-3">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
-                  Connect your wallet
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Access your profile, metrics, and future achievements by connecting your wallet.
-                </p>
-              </div>
-            </Card.Content>
-          </Card>
-        </div>
-      </div>
+      <PageLayout title="Profile" backHref="/home">
+        <Card className="border border-default-200/60 bg-white/80 shadow-sm backdrop-blur dark:border-default-100/40 dark:bg-default-50/80">
+          <Card.Content className="flex flex-col gap-6 p-6 sm:p-10 text-center">
+            <div className="space-y-3">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
+                Connect your wallet
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Access your profile, metrics, and future achievements by connecting your wallet.
+              </p>
+            </div>
+          </Card.Content>
+        </Card>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col gap-6 pb-12">
-        {/* Header */}
-        <div className="relative flex items-center justify-center h-10">
-          <Link
-            href="/home"
-            aria-label="Back to home"
-            className="absolute left-0 flex h-10 w-10 items-center justify-center"
-          >
-            <Image src="/icons/arrow-back.svg" alt="back" width={28} height={28} />
-          </Link>
-          <h1 className="text-lg sm:text-xl font-semibold text-black">Profile</h1>
-        </div>
-
+    <>
+      <PageLayout title="Profile" backHref="/home">
         {sections.map((s) => (
           <Section key={s.title} title={s.title} rows={s.rows} />
         ))}
@@ -251,7 +232,7 @@ export function ProfilePage() {
             Logout
           </Button>
         </div>
-      </div>
+      </PageLayout>
 
       <ConfirmDialog
         isOpen={confirmLogout}
@@ -264,6 +245,6 @@ export function ProfilePage() {
         onConfirm={handleDisconnect}
         isConfirming={isDisconnecting}
       />
-    </div>
+    </>
   );
 }
