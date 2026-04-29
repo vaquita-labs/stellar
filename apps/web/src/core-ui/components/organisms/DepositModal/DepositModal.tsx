@@ -153,6 +153,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
       titleIcon="/icons/bag.svg"
       titleIconAlt="deposit"
       size="md"
+      bodyClassName="flex flex-col gap-4 pb-6"
       footer={
         <Button
           onPress={() => handleDeposit(Number(amount))}
@@ -166,47 +167,43 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           {!!network && !!token && (
             <TestnetUSDCNotice networkName={network.name} tokenContract={token.contractAddress} />
           )}
-          <div>
-            <Select
-              isRequired
-              value={lockPeriod.toString()}
-              onChange={(value) => { if (value) setLockPeriod(parseInt(value as string)); }}
-              disabledKeys={lockTimeOptions.filter((o) => !o.available).map((o) => o.key.toString())}
-              isDisabled={isDepositing}
-            >
-              <Label className="text-black font-normal text-sm">Lock time</Label>
-              <Select.Trigger className="bg-white border border-black border-b-2 h-14">
-                <Select.Value className="text-black font-medium" />
-                <Select.Indicator className="text-black" />
-              </Select.Trigger>
-              <Select.Popover className="bg-white border border-black rounded-md shadow-lg">
-                <ListBox>
-                  {lockTimeOptions?.map((option) => (
-                    <ListBox.Item key={option.key.toString()} id={option.key.toString()} textValue={option.label}>
-                      <span className="font-semibold text-black">{option.label}</span>
-                      <ListBox.ItemIndicator />
-                    </ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-              <Description>The funds will be lock in the vault during the selected period.</Description>
-            </Select>
-          </div>
+          <Select
+            isRequired
+            value={lockPeriod.toString()}
+            onChange={(value) => { if (value) setLockPeriod(parseInt(value as string)); }}
+            disabledKeys={lockTimeOptions.filter((o) => !o.available).map((o) => o.key.toString())}
+            isDisabled={isDepositing}
+          >
+            <Label className="text-black font-normal text-sm">Lock time</Label>
+            <Select.Trigger className="bg-white border border-black border-b-2 h-14 items-center">
+              <Select.Value className="text-black font-medium" />
+              <Select.Indicator className="text-black" />
+            </Select.Trigger>
+            <Select.Popover className="bg-white border border-black rounded-md shadow-lg">
+              <ListBox>
+                {lockTimeOptions?.map((option) => (
+                  <ListBox.Item key={option.key.toString()} id={option.key.toString()} textValue={option.label}>
+                    <span className="font-semibold text-black">{option.label}</span>
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Popover>
+            <Description className="text-default-500 text-xs">The funds will be lock in the vault during the selected period.</Description>
+          </Select>
 
-          <div className="">
-            <div className="">
-              <MoneyInput
-                balanceFormatted={balanceFormatted.toString()}
-                tokenSymbol={token?.symbol as TokenSymbol}
-                value={amount}
-                onValueChange={(v) => setAmount(v)}
-                onTokenChange={(t) => setToken(t)}
-                onReloadBalance={refetch}
-                loading={isDepositing}
-                balanceIsLoading={isRefetching || isLoading}
-              />
-            </div>
-            <div className="flex justify-between gap-1 mb-4">
+          <div className="flex flex-col gap-2">
+            <MoneyInput
+              balanceFormatted={balanceFormatted.toString()}
+              tokenSymbol={token?.symbol as TokenSymbol}
+              value={amount}
+              onValueChange={(v) => setAmount(v)}
+              onTokenChange={(t) => setToken(t)}
+              onReloadBalance={refetch}
+              loading={isDepositing}
+              balanceIsLoading={isRefetching || isLoading}
+            />
+            <div className="flex justify-between gap-2">
               {Array.isArray(quickAmounts) &&
                 quickAmounts.map((value: number) => (
                   <Button
@@ -219,7 +216,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
                           }
                     }
                     className={
-                      'flex-1 bg-transparent border border-black border-b-2 text-black  rounded-md hover:bg-primary' +
+                      'flex-1 bg-transparent border border-black border-b-2 text-black rounded-md hover:bg-primary' +
                       (Number(amount) === value ? ' bg-primary' : '')
                     }
                   >
@@ -229,7 +226,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
               <Button
                 key={'MAX'}
                 onPress={isDepositing ? undefined : () => setAmount(balanceFormatted.toString())}
-                className="flex-1 bg-transparent border border-black border-b-2 text-black  rounded-md hover:bg-primary"
+                className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md hover:bg-primary"
               >
                 MAX
               </Button>

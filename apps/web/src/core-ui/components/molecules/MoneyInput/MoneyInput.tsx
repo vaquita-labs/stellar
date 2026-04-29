@@ -1,7 +1,6 @@
 'use client';
 
 import { useNetworkConfigStore } from '@/core-ui/stores';
-import { Input } from '@heroui/react';
 import { useMemo, useState } from 'react';
 import { IoMdSync } from 'react-icons/io';
 import { MoneyInputProps, TokenSymbol } from './types';
@@ -119,11 +118,11 @@ export function MoneyInput({
     <div className="flex flex-col gap-1 mb-2">
       <label className="text-black font-normal text-sm">Amount to deposit</label>
       <div className={`flex items-center bg-white border border-black border-b-2 h-14 rounded-md px-3 ${error ? 'border-danger' : ''}`}>
-        <Input
+        <input
           disabled={loading}
           placeholder="0.0"
           value={value}
-          className="flex-1 text-black font-medium bg-transparent border-0 outline-none h-full"
+          className="flex-1 min-w-0 text-black font-medium bg-transparent border-0 outline-none h-full text-base placeholder:text-default-400"
           onChange={(e) => handleChange(e.target.value)}
           onBlur={normalizeOnBlur}
           onKeyDown={preventKeys}
@@ -131,26 +130,24 @@ export function MoneyInput({
           inputMode="decimal"
           pattern="[0-9]*[.]?[0-9]*"
         />
-        <div className="flex items-center h-full">
-          <label className="sr-only" htmlFor="currency">Currency</label>
-          <select
-            value={token?.symbol}
-            className="outline-solid outline-transparent border-0 bg-transparent text-default-400 text-small"
-            id="currency"
-            name="currency"
-            onChange={(e) => {
-              const tok = tokenSymbols.find((t) => t.symbol === e.target.value);
-              if (tok) onTokenChange(tok);
-              setTimeout(() => setError(validate(value)), 0);
-            }}
-          >
-            {tokenSymbols.map((t) => (
-              <option key={t.symbol} value={t.symbol}>
-                {t.symbol}
-              </option>
-            ))}
-          </select>
-        </div>
+        <label className="sr-only" htmlFor="currency">Currency</label>
+        <select
+          value={token?.symbol}
+          className="h-full bg-transparent border-0 outline-none text-black font-medium text-sm pl-2"
+          id="currency"
+          name="currency"
+          onChange={(e) => {
+            const tok = tokenSymbols.find((t) => t.symbol === e.target.value);
+            if (tok) onTokenChange(tok);
+            setTimeout(() => setError(validate(value)), 0);
+          }}
+        >
+          {tokenSymbols.map((t) => (
+            <option key={t.symbol} value={t.symbol}>
+              {t.symbol}
+            </option>
+          ))}
+        </select>
       </div>
       {error && <span className="text-danger text-xs">{error}</span>}
       <span className="text-xs text-default-400">

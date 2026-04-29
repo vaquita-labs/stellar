@@ -72,13 +72,13 @@ export function AppModal({
           </Modal.Header>
           <Modal.Body
             className={
-              'px-5 sm:px-6 py-4 overflow-y-auto ' + SCROLLBAR_CLASSES + ' ' + (bodyClassName ?? '')
+              'px-5 sm:px-6 py-4 overflow-y-auto mt-0! ' + SCROLLBAR_CLASSES + ' ' + (bodyClassName ?? '')
             }
           >
             {children}
           </Modal.Body>
           {footer ? (
-            <Modal.Footer className="px-5 sm:px-6 pt-3 pb-5 border-t border-black/10">
+            <Modal.Footer className="px-5 sm:px-6 pt-3 pb-5 border-t border-black/10 mt-0!">
               {footer}
             </Modal.Footer>
           ) : null}

@@ -1,6 +1,9 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { ethers, isAddress, JsonRpcProvider } from 'ethers';
+import { ethers, isAddress as isEvmAddress, JsonRpcProvider } from 'ethers';
 import type { NetworkResponseDTO } from '../types';
+
+const isStellarAddress = (address: string) =>
+  StellarSdk.StrKey.isValidEd25519PublicKey(address);
 
 // 🧠 ABI mínimo de ERC-20 (solo balanceOf y decimals)
 const ERC20_ABI = [
@@ -28,56 +31,58 @@ export async function getBalances(address: string, networks: NetworkResponseDTO[
     tokenSymbol: string
   }[] = [];
   
-  if (!isAddress(address)) {
-    return results;
-  }
   for (const net of networks) {
-    
-    const provider = evmProviders[net.name]!;
-    let balance = 0;
-    for (const token of net.tokens) {
-      if (token.isSupported) {
+    if (net.type === 'Stellar') {
+      if (!isStellarAddress(address)) continue;
+      try {
+        const account = await stellarServers[net.name]?.loadAccount(address);
+        for (const token of net.tokens) {
+          if (!token.isSupported) continue;
+          const match = account.balances.find((bal: any) => {
+            const tokenSymbol = bal.asset_type === 'native' ? 'XLM' : bal.asset_code;
+            return tokenSymbol === token.symbol;
+          });
+          results.push({
+            networkName: net.name,
+            balance: match ? Number(match.balance) * (10 ** token.decimals) : 0,
+            tokenSymbol: token.symbol,
+          });
+        }
+      } catch (error) {
+        console.error(`error on getBalances with ${net.name}`, error);
+      }
+      continue;
+    }
+
+    if (net.type === 'EVM') {
+      if (!isEvmAddress(address)) continue;
+      const provider = evmProviders[net.name];
+      for (const token of net.tokens) {
+        if (!token.isSupported) continue;
+        let balance = 0;
         try {
-          if (net.type === 'Stellar') {
-            const account = await stellarServers[net.name]?.loadAccount(address);
-            for (const bal of account.balances) {
-              const tokenSymbol = bal.asset_type === 'native' ? 'XLM' : `${bal.asset_code}`;
-              if (tokenSymbol === token.symbol) {
-                results.push({
-                  networkName: net.name,
-                  balance: Number(bal.balance) * (10 ** token.decimals),
-                  tokenSymbol,
-                });
-              }
-            }
-            continue; // saltar al siguiente network
-          } else if (net.type === 'EVM') {
-            if (provider) {
-              if (token.isNative) {
-                const nativeWei = await provider.getBalance(address);
-                balance = Number(ethers.formatEther(nativeWei)) * (10 ** token.decimals);
-              } else {
-                const contractAddress = token.contractAddress?.split(',')?.[0] ?? '';
-                if (isAddress(contractAddress)) {
-                  const usdcContract = new ethers.Contract(contractAddress, ERC20_ABI, provider);
-                  const code = await provider.getCode(contractAddress);
-                  
-                  if (code !== '0x') {
-                    balance = Number(await usdcContract.balanceOf?.(address) ?? 0);
-                  } else {
-                    console.warn(`No contract deployed at ${token.contractAddress} on ${net}`);
-                  }
+          if (provider) {
+            if (token.isNative) {
+              const nativeWei = await provider.getBalance(address);
+              balance = Number(ethers.formatEther(nativeWei)) * (10 ** token.decimals);
+            } else {
+              const contractAddress = token.contractAddress?.split(',')?.[0] ?? '';
+              if (isEvmAddress(contractAddress)) {
+                const usdcContract = new ethers.Contract(contractAddress, ERC20_ABI, provider);
+                const code = await provider.getCode(contractAddress);
+                if (code !== '0x') {
+                  balance = Number(await usdcContract.balanceOf?.(address) ?? 0);
                 } else {
-                  console.info(`Invalid contract address: "${contractAddress}" for token ${token.name} on ${net.name}`);
+                  console.warn(`No contract deployed at ${token.contractAddress} on ${net.name}`);
                 }
+              } else {
+                console.info(`Invalid contract address: "${contractAddress}" for token ${token.name} on ${net.name}`);
               }
             }
           }
-          
         } catch (error) {
           console.error(`error on getBalances with ${net.name} and ${token.name}`, error);
         }
-        
         results.push({
           networkName: net.name,
           balance,

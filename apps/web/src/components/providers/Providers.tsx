@@ -88,8 +88,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <AblyProvider>
-      <Toast.Provider />
-      {/*<ToastProvider placement="top-center" />*/}
+      <Toast.Provider placement="top" />
       <ChannelProvider channelName="deposits-changes">
         {showLoader ? (
           <LoaderScreen withImage />

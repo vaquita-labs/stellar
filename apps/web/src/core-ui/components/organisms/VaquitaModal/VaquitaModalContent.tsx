@@ -2,24 +2,35 @@
 
 import { useRestWithdrawal } from '@/core-ui/hooks';
 import { isNewDepositHandled } from '@/networks/helpers';
-import {
-  Button,
-  Chip,
-  Modal,
-  Popover,
-  Spinner,
-  toast,
-} from '@heroui/react';
-import Image from 'next/image';
+import { Button, Spinner, toast } from '@heroui/react';
 import { useEffect, useState } from 'react';
-import { FiCalendar } from 'react-icons/fi';
-import { useWithdrawalTime } from '../../../hooks';
+import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
+import { useApyByLockPeriod, useWithdrawalTime } from '../../../hooks';
 import { useNetworkConfigStore, useTransactionStore } from '../../../stores';
 import { DepositWithdrawalState } from '../../../types';
 import { T } from '../../atoms';
+import { AppModal } from '../../molecules/AppModal';
 import { VaquitaModalContentProps } from './types';
-import { useApyByLockPeriod } from '../../../hooks';
 import { getInterestData } from '../../../helpers';
+
+const TimeTile = ({ value, label }: { value: number; label: string }) => (
+  <div className="flex flex-1 min-w-0 flex-col items-center justify-center bg-white border border-black border-b-2 rounded-md py-2">
+    <span className="text-2xl font-bold text-black tabular-nums leading-none">
+      {value.toString().padStart(2, '0')}
+    </span>
+    <span className="text-[10px] uppercase text-default-500 tracking-wider mt-1">{label}</span>
+  </div>
+);
+
+const breakdownTime = (totalSeconds: number) => {
+  const safe = Math.max(0, totalSeconds);
+  return {
+    days: Math.floor(safe / 86400),
+    hours: Math.floor((safe % 86400) / 3600),
+    minutes: Math.floor((safe % 3600) / 60),
+    seconds: safe % 60,
+  };
+};
 
 export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }: VaquitaModalContentProps) => {
   const [confirming, setConfirming] = useState<number | null>(null);
@@ -28,241 +39,269 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
   const { confirmWithdrawal } = useRestWithdrawal();
   const { network, lockPeriod, token } = useNetworkConfigStore();
   const { data: dataApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
-
   const withdrawalInfo = useWithdrawalTime(vaquita);
-
-  const {vaquitaInterest, aaveInterest, totalInterest} = getInterestData(network!, dataApy, vaquita.amount, lockPeriod);
+  const { vaquitaInterest, aaveInterest, blendInterest, totalInterest } = getInterestData(network!, dataApy, vaquita.amount, lockPeriod);
+  const protocolInterest = aaveInterest + blendInterest;
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
-  const isDisabled = !network || !transactionWithdraw;
-  const onWithdraw = async () => {
-    if (!isDisabled) {
-      setLoading(true);
-      let isSuccess = false;
-      let lastError: unknown = null;
-      if (isNewDepositHandled(network.name)) {
-        const { success, error } = await transactionWithdraw(
-          +vaquita.id,
-          vaquita.depositIdHex,
-          vaquita.vaquitaContractAddress
-        );
-        isSuccess = !!success;
-        lastError = error ?? null;
-      } else {
-        const { success, txHash, transaction, error } = await transactionWithdraw(
-          +vaquita.id,
-          vaquita.depositIdHex,
-          vaquita.vaquitaContractAddress
-        );
-        lastError = error ?? null;
-        if (success) {
-          await confirmWithdrawal({
-            depositId: +vaquita.id,
-            txHash: txHash || `${Date.now()}`,
-            transactionRaw: JSON.stringify(transaction, (key, value) =>
-              typeof value === 'bigint' ? value.toString() : value
-            ),
-          });
-          isSuccess = !!success;
-        }
-      }
-      if (isSuccess) {
-        toast.success(<T>Withdraw sent successfully</T>, {
-          description: <T>If you see a vaquita blinking, it is your withdraw that is still being confirmed.</T>,
-          timeout: 60000,
-        });
-        onClose();
-      } else {
-        toast.danger(<T>Unsuccessful withdraw</T>, {
-          description: lastError instanceof Error ? <T>{lastError.message}</T> : undefined,
-          timeout: 30000,
-        });
-      }
-      setLoading(false);
-    }
-  };
 
+  const isDisabled = !network || !transactionWithdraw;
+  const inLockPeriod = vaquita.inLockPeriod;
+  const isConfirming = confirming === vaquita.id;
   const withWithdrawButton = !isLeaderboard && vaquita.state === DepositWithdrawalState.DEPOSIT_SUCCESS;
   const withdrawProcessing = vaquita.state === DepositWithdrawalState.WITHDRAW_PROCESSING;
+  const time = breakdownTime(withdrawalInfo.timeRemaining);
+  const finalAmount = inLockPeriod ? vaquita.amount : vaquita.amount + totalInterest;
+
+  const onWithdraw = async () => {
+    if (isDisabled) return;
+    setLoading(true);
+    let isSuccess = false;
+    let lastError: unknown = null;
+    if (isNewDepositHandled(network.name)) {
+      const { success, error } = await transactionWithdraw(
+        +vaquita.id,
+        vaquita.depositIdHex,
+        vaquita.vaquitaContractAddress
+      );
+      isSuccess = !!success;
+      lastError = error ?? null;
+    } else {
+      const { success, txHash, transaction, error } = await transactionWithdraw(
+        +vaquita.id,
+        vaquita.depositIdHex,
+        vaquita.vaquitaContractAddress
+      );
+      lastError = error ?? null;
+      if (success) {
+        await confirmWithdrawal({
+          depositId: +vaquita.id,
+          txHash: txHash || `${Date.now()}`,
+          transactionRaw: JSON.stringify(transaction, (_k, v) =>
+            typeof v === 'bigint' ? v.toString() : v
+          ),
+        });
+        isSuccess = !!success;
+      }
+    }
+    if (isSuccess) {
+      toast.success(<T>Withdraw sent successfully</T>, {
+        description: <T>If you see a vaquita blinking, it is your withdraw that is still being confirmed.</T>,
+        timeout: 60000,
+      });
+      onClose();
+    } else {
+      toast.danger(<T>Unsuccessful withdraw</T>, {
+        description: lastError instanceof Error ? <T>{lastError.message}</T> : undefined,
+        timeout: 30000,
+      });
+    }
+    setLoading(false);
+  };
+
+  const detailsFooter = (
+    <div className="flex w-full gap-2">
+      <Button
+        onPress={onClose}
+        className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md font-semibold"
+        isDisabled={loading}
+      >
+        {withWithdrawButton ? <T>Cancel</T> : <T>Close</T>}
+      </Button>
+      {withWithdrawButton && (
+        <Button
+          onPress={() => setConfirming(vaquita.id)}
+          className={
+            'flex-1 rounded-md font-bold text-black border border-black border-b-2 ' +
+            (inLockPeriod
+              ? 'bg-transparent hover:bg-warning-soft'
+              : 'bg-success border-[#018222] border-b-5')
+          }
+          isDisabled={isDisabled}
+        >
+          <T>Withdraw</T>
+        </Button>
+      )}
+      {withdrawProcessing && (
+        <Button
+          className="flex-1 rounded-md font-bold text-black border border-black border-b-2 bg-default-100"
+          isDisabled
+        >
+          <Spinner size="sm" color="current" />
+          <T>Processing</T>
+        </Button>
+      )}
+    </div>
+  );
+
+  const confirmFooter = (
+    <div className="flex w-full gap-2">
+      <Button
+        onPress={() => setConfirming(null)}
+        className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md font-semibold"
+        isDisabled={loading}
+      >
+        <T>Cancel</T>
+      </Button>
+      <Button
+        onPress={onWithdraw}
+        className={
+          'flex-1 rounded-md font-bold border border-b-5 ' +
+          (inLockPeriod
+            ? 'bg-danger border-[#7a1620] text-white'
+            : 'bg-success border-[#018222] text-black')
+        }
+        isDisabled={loading}
+      >
+        {loading ? (
+          <>
+            <Spinner size="sm" color="current" />
+            <T>Processing...</T>
+          </>
+        ) : inLockPeriod ? (
+          <T>Withdraw anyway</T>
+        ) : (
+          <T>Claim now</T>
+        )}
+      </Button>
+    </div>
+  );
 
   return (
-    <Modal.Backdrop
-      isOpen={isOpen}
-      onOpenChange={loading ? undefined : (open) => { if (!open) onClose(); }}
+    <AppModal
+      open={isOpen}
+      onOpenChange={loading ? () => {} : onClose}
+      isDismissable={!loading}
+      title={isConfirming ? 'Confirm withdrawal' : 'Your vaquita'}
+      titleIcon="/icons/bag.svg"
+      titleIconAlt="vaquita"
+      size="sm"
+      bodyClassName="flex flex-col gap-5 pb-6"
+      footer={isConfirming ? confirmFooter : detailsFooter}
     >
-      <Modal.Container size="sm" scroll="inside">
-        <Modal.Dialog className="bg-background text-[#191001] m-0 sm:m-4 border border-black">
-          <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} className="sm:w-10 sm:h-10" />
-          </Modal.CloseTrigger>
-          <Modal.Header className="flex flex-col gap-2 sm:gap-4">
-            <Chip className="text-sm font-medium border rounded-md" color="accent" size="sm">
-              <div className="flex items-center gap-1">
-                <FiCalendar className=" w-4 h-4" />
-                {withdrawalInfo.lockPeriodFormatted} lock
+      {isConfirming ? (
+        <div className="flex flex-col gap-4">
+          {!inLockPeriod && (
+            <div className="flex flex-col items-center gap-2 bg-success-soft border border-success rounded-md p-4 text-center">
+              <FiCheckCircle className="w-8 h-8 text-success" />
+              <div>
+                <p className="font-bold text-black">Time's up!</p>
+                <p className="text-sm text-default-600">Your vaquita is ready to claim.</p>
               </div>
-            </Chip>
-          </Modal.Header>
-
-          {confirming !== vaquita.id ? (
-            <>
-              <Modal.Body>
-                <div className="grid grid-cols-1 gap-6">
-                  <div className="">
-                    <Popover>
-                      <Popover.Trigger>
-                        <div className="flex rounded-xl px-4 pb-4 items-center justify-center">
-                          <div className="flex flex-col items-center justify-center">
-                            <span className="text-2xl font-medium pr-2">
-                              {vaquita.amount} {token?.symbol}
-                            </span>
-                            <span className="text-md text-success text-xs">{`±${totalInterest.toFixed(4)} ${token?.symbol}`}</span>
-                          </div>
-                        </div>
-                      </Popover.Trigger>
-                      <Popover.Content placement="top">
-                        <Popover.Dialog className="bg-background rounded-md border border-black">
-                          <div className="flex flex-col gap-2 p-2">
-                            <span className="text-md font-medium">Rewards</span>
-
-                            <div>
-                              <div className="flex flex-col gap-3">
-                                <div className="flex justify-between items-center">
-                                  <p className="text-xs text-gray-500">Vaquita Interest: </p>
-                                  <p className="text-sm font-semibold text-primary">
-                                    +{vaquitaInterest.toFixed(4)}
-                                  </p>
-                                </div>
-
-                                <div className="flex justify-between items-center">
-                                  <p className="text-xs text-gray-500">Protocol Interest:{" "}</p>
-                                  <p className="text-sm font-semibold text-blue-600">
-                                    +{aaveInterest.toFixed(4)}
-                                  </p>
-                                </div>
-
-                                <div className="flex justify-between items-center border-t border-gray-200 pt-2">
-                                  <p className="text-xs font-medium text-gray-700">Total earn Est.</p>
-                                  <p className="text-sm font-bold text-success">
-                                    +{totalInterest.toFixed(4)}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </Popover.Dialog>
-                      </Popover.Content>
-                    </Popover>
-
-                    <div className="flex flex-col gap-2 items-center">
-                      <div className={`text-sm font-semibold ${vaquita.inLockPeriod ? 'text-warning' : 'text-success'}`}>
-                        {vaquita.inLockPeriod ? `${withdrawalInfo.timeRemainingFormatted} left` : 'Ready to withdraw'}
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-default-200 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-[width] duration-200 ${vaquita.inLockPeriod ? 'bg-warning' : 'bg-success'}`}
-                          style={{ width: `${Math.min(100, Math.max(0, withdrawalInfo.progress))}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-xs text-[#6B5B73] mb-2">
-                      Started at:{' '}
-                      {new Date(vaquita.createdTimestamp).toLocaleDateString('es-ES', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </Modal.Body>
-
-              <Modal.Footer>
-                <div className="w-full">
-                  <div className="flex justify-end gap-1">
-                    <Button onPress={onClose} className="px-4 py-3 rounded-md" size="md">
-                      {withWithdrawButton ? <T>Cancel</T> : <T>Close</T>}
-                    </Button>
-                    {withWithdrawButton && (
-                      <Button
-                        onPress={() => setConfirming(vaquita.id)}
-                        className="px-6 py-1 rounded-md text-black transition-all border border-black"
-                        variant="ghost"
-                        size="md"
-                        isDisabled={isDisabled}
-                      >
-                        <T>Withdraw</T>
-                      </Button>
-                    )}
-                    {withdrawProcessing && (
-                      <Button
-                        className="px-6 py-1 rounded-md text-black transition-all border border-black"
-                        variant="ghost"
-                        size="md"
-                        isDisabled
-                      >
-                        <Spinner size="sm" color="current" />
-                        <T>Processing</T>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </Modal.Footer>
-            </>
-          ) : (
-            <>
-              <Modal.Body>
-                <div className="flex flex-col gap-2 items-center">
-                  {vaquita.inLockPeriod ? (
-                    <>
-                      <span className="text-2xl font-medium pr-2">
-                        {vaquita.amount} {token?.symbol}
-                      </span>
-                      <span className="text-md text-[#F3616F] line-through italic">
-                        ±{totalInterest.toFixed(4)} {token?.symbol}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-2xl font-medium pr-2 text-success">
-                      {(vaquita.amount + totalInterest).toFixed(4)} {token?.symbol}
-                    </span>
-                  )}
-                </div>
-              </Modal.Body>
-              <Modal.Footer>
-                <div className="flex flex-col items-end  w-full">
-                  <span className="text-xs text-[#6B5B73] w-full mb-3">Are you sure you want to withdraw?</span>
-                  <div className="">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        className={`flex-1  text-white  rounded-md py-3 px-8 ${
-                          vaquita.inLockPeriod ? 'bg-[#F3616F] hover:bg-[#D44A5A]' : 'bg-green-500 hover:bg-green-600'
-                        }`}
-                        onPress={() => onWithdraw()}
-                        size="md"
-                        isDisabled={loading}
-                      >
-                        {loading ? <><Spinner size="sm" color="current" /> <T>Processing...</T></> : <T>Withdraw</T>}
-                      </Button>
-                      <Button
-                        className="flex-1  rounded-md text-[#191001] py-3"
-                        onPress={() => setConfirming(null)}
-                        isDisabled={loading}
-                        size="md"
-                      >
-                        <T>Cancel</T>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </Modal.Footer>
-            </>
+            </div>
           )}
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1 bg-white border border-black border-b-2 rounded-md px-4 py-3">
+              <span className="text-xs font-medium text-default-600 uppercase tracking-wide">You will receive</span>
+              <span className="text-2xl font-bold text-success tabular-nums break-all leading-tight">
+                {finalAmount.toFixed(4)} <span className="text-base">{token?.symbol}</span>
+              </span>
+            </div>
+
+            {inLockPeriod && (
+              <div className="flex flex-col gap-1 bg-white border border-black border-b-2 rounded-md px-4 py-3">
+                <span className="text-xs font-medium text-default-600 uppercase tracking-wide">You will lose</span>
+                <span className="text-xl font-bold text-danger tabular-nums break-all leading-tight line-through decoration-2">
+                  ±{totalInterest.toFixed(4)} <span className="text-base">{token?.symbol}</span>
+                </span>
+              </div>
+            )}
+          </div>
+
+          {inLockPeriod ? (
+            <div className="flex items-center justify-center gap-1.5 text-xs text-default-600">
+              <FiAlertTriangle className="w-3.5 h-3.5 text-danger shrink-0" />
+              <span>
+                Early withdrawal — rewards will be{' '}
+                <span className="font-semibold text-danger">forfeited</span>
+              </span>
+            </div>
+          ) : (
+            <p className="text-sm text-center text-default-600">Confirm to send the transaction.</p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center gap-2 self-start bg-white border border-black border-b-2 rounded-md px-3 py-1.5">
+            <FiCalendar className="w-4 h-4 text-black" />
+            <span className="text-sm font-semibold text-black">
+              {withdrawalInfo.lockPeriodFormatted} lock
+            </span>
+          </div>
+
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-3xl font-bold text-black tabular-nums">
+              {vaquita.amount} {token?.symbol}
+            </span>
+            <span className="text-sm font-semibold text-success tabular-nums">
+              +{totalInterest.toFixed(4)} {token?.symbol} est.
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-bold ${inLockPeriod ? 'text-warning' : 'text-success'}`}>
+                {inLockPeriod ? 'Locked' : 'Ready to withdraw'}
+              </span>
+              <span className="text-xs text-default-500 tabular-nums">
+                {Math.round(withdrawalInfo.progress)}%
+              </span>
+            </div>
+            <div className="w-full h-4 bg-white border border-black border-b-2 rounded-full overflow-hidden p-0.5">
+              <div
+                className={`h-full rounded-full transition-[width] duration-300 ${
+                  inLockPeriod ? 'bg-warning' : 'bg-success'
+                }`}
+                style={{ width: `${Math.min(100, Math.max(2, withdrawalInfo.progress))}%` }}
+              />
+            </div>
+            {inLockPeriod && (
+              <div className="flex gap-2">
+                <TimeTile value={time.days} label="Days" />
+                <TimeTile value={time.hours} label="Hours" />
+                <TimeTile value={time.minutes} label="Min" />
+                <TimeTile value={time.seconds} label="Sec" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1.5 bg-default-50 border border-black/10 rounded-md p-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-default-500">Vaquita interest</span>
+              <span className="font-semibold text-primary tabular-nums">
+                +{vaquitaInterest.toFixed(4)} {token?.symbol}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-default-500">Protocol interest</span>
+              <span className="font-semibold text-primary tabular-nums">
+                +{protocolInterest.toFixed(4)} {token?.symbol}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs border-t border-black/10 pt-1.5 mt-0.5">
+              <span className="font-medium text-black">Total est. earnings</span>
+              <span className="font-bold text-success tabular-nums">
+                +{totalInterest.toFixed(4)} {token?.symbol}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-default-500">
+            <span>Started at</span>
+            <span className="tabular-nums">
+              {new Date(vaquita.createdTimestamp).toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </span>
+          </div>
+        </div>
+      )}
+    </AppModal>
   );
 };
