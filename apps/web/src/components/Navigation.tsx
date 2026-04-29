@@ -8,8 +8,9 @@ import { Logo } from './Logo';
 const navItems = [
   { href: '/home', icon: '/icons/home.png', label: 'Home' },
   { href: '/leaderboard', icon: '/icons/leaderboard.png', label: 'Leaderboard' },
+  { href: '/shop', icon: '/icons/shop.png', label: 'Shop' },
   // { href: "/pools", icon: "/icons/pools.svg", label: "Pools" },
-  { href: '/profile', icon: '/icons/profile.png', label: 'Profile' },
+  // { href: '/profile', icon: '/icons/profile.png', label: 'Profile' },
 ];
 
 function NavLink({
