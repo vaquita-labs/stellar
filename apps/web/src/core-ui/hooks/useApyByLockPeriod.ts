@@ -6,7 +6,14 @@ import { useNetworkConfigStore } from '../stores';
 export const useApyByLockPeriod = (lockPeriod: number, tokenSymbol: string) => {
   const { network } = useNetworkConfigStore();
 
-  return useQuery<{ protocolApy: number; vaquitaApy: number; lendingMarketName: string; rewardPool: number; totalDeposits: number } | null>({
+  return useQuery<{
+    protocolApy: number;
+    vaquitaApy: number;
+    lendingMarketName: string;
+    rewardPool: number;
+    totalDeposits: number;
+    interestModelNote?: string;
+  } | null>({
     queryKey: ['deposit', 'network', network?.name, 'token', tokenSymbol, 'lockPeriod', lockPeriod, 'apy'],
     queryFn: async () => {
       try {
@@ -22,6 +29,7 @@ export const useApyByLockPeriod = (lockPeriod: number, tokenSymbol: string) => {
           lendingMarketName: data?.data?.lendingMarketName ?? '',
           rewardPool: data?.data?.rewardPool ?? 0,
           totalDeposits: data?.data?.totalDeposits ?? 0,
+          interestModelNote: typeof data?.data?.interestModelNote === 'string' ? data.data.interestModelNote : undefined,
         };
       } catch (error) {
         console.error('useDepositsApy', error);
@@ -31,6 +39,7 @@ export const useApyByLockPeriod = (lockPeriod: number, tokenSymbol: string) => {
           lendingMarketName: '',
           rewardPool: 0,
           totalDeposits: 0,
+          interestModelNote: undefined,
         };
       }
     },

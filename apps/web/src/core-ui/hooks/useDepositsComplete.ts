@@ -31,6 +31,10 @@ export const useDepositsComplete = (_walletAddress?: string) => {
             vaquitaInterest: Number(deposit.vaquitaInterest),
             aaveInterest: Number(deposit.aaveInterest),
             blendInterest: Number(deposit.blendInterest),
+            vaultInterest:
+              deposit.vaultInterest !== undefined && deposit.vaultInterest !== null
+                ? Number(deposit.vaultInterest)
+                : undefined,
             depositIdHex: deposit.depositIdHex,
             withdrawals: deposit.withdrawals || null,
             createdTimestamp: deposit.createdTimestamp || 0,

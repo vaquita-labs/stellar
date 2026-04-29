@@ -38,6 +38,10 @@ export const useDeposit = (depositId: number) => {
           vaquitaInterest: Number(data?.data?.vaquitaInterest),
           aaveInterest: Number(data?.data?.aaveInterest),
           blendInterest: Number(data?.data?.blendInterest),
+          vaultInterest:
+            data?.data?.vaultInterest !== undefined && data?.data?.vaultInterest !== null
+              ? Number(data.data.vaultInterest)
+              : undefined,
           depositIdHex: data?.data?.depositIdHex,
           withdrawals: data?.data?.withdrawals || null,
           createdTimestamp: data?.data?.createdTimestamp || 0,
