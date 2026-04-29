@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FiTrendingUp } from 'react-icons/fi';
+import { FiArrowUp } from 'react-icons/fi';
 
 const SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
 
@@ -45,13 +45,10 @@ export const EarnChip = ({ deposits, apy, isLoading, onClick }: EarnChipProps) =
     <Wrapper
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-700/20 rounded-full px-2.5 py-1"
+      className="inline-flex items-center gap-0.5 bg-transparent"
     >
-      <FiTrendingUp className="text-emerald-800" size={14} />
-      <span className="text-[10px] font-semibold text-emerald-900/80 uppercase tracking-wide leading-none">
-        Earned
-      </span>
-      <span className="text-sm font-bold text-emerald-900 tabular-nums leading-none">
+      <FiArrowUp className="text-[#2f820b]" size={12} strokeWidth={3} />
+      <span className="text-sm font-bold text-[#2f820b] tabular-nums leading-none">
         {isLoading ? '—' : formatEarnings(earnings)}
       </span>
     </Wrapper>
@@ -62,5 +59,5 @@ const formatEarnings = (value: number) => {
   if (value <= 0) return '$0.00';
   const fixed = value.toFixed(8);
   const trimmed = fixed.replace(/0+$/, '').replace(/\.$/, '');
-  return `+$${trimmed}`;
+  return `$${trimmed}`;
 };

@@ -7,7 +7,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { FiX } from 'react-icons/fi';
-import { useApyByLockPeriod, useDepositsComplete, useProfileRewards, useProfileStreak } from '../../hooks';
+import {
+  useApyByLockPeriod,
+  useDepositsComplete,
+  useProfileData,
+  useProfileRewards,
+  useProfileStreak,
+} from '../../hooks';
 import { SILVER_COIN, useElementPositionsStore } from '../../stores';
 import { BankAPYModal, StreakModal } from '../organisms';
 import { CoinsChip } from './CoinsChip';
@@ -22,6 +28,7 @@ export const HeaderStats = () => {
   const setEditMode = useMapStore((s) => s.setEditMode);
   const setPickedItem = useMapStore((s) => s.setPickedItem);
 
+  const { data: profileData } = useProfileData();
   const { data: streakData, isLoading: streakLoading, isRefetching: streakRefetching } = useProfileStreak();
   const {
     data: depositsData,
@@ -37,6 +44,8 @@ export const HeaderStats = () => {
 
   const silverCoins = profileRewards?.rewards?.find((r) => r?.name === 'Silver Coin')?.amount ?? 0;
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
+
+  const firstName = profileData?.nickname || profileData?.fullName?.split(' ')[0] || '';
 
   const silverCoinRef = useRef<HTMLDivElement>(null);
   const setPositions = useElementPositionsStore((store) => store.setPositions);
@@ -78,55 +87,57 @@ export const HeaderStats = () => {
   }
 
   return (
-    <div className="w-full px-4 py-3 bg-primary border-b-1 border-[#B97204] rounded-g">
-      <div className="max-w-xl mx-auto flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href="/profile" aria-label="Profile" className="relative shrink-0">
-              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center overflow-hidden border border-[#B97204]/30">
-                <Image
-                  src="/vaquita/vaquita_isotipo.svg"
-                  alt="Profile"
-                  width={36}
-                  height={36}
-                  className="object-contain"
-                  priority
-                />
-              </div>
-              <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-red-500 border-2 border-primary" />
-            </Link>
+    <div className="w-full">
+      <div className="w-full px-4 pt-4 pb-4 bg-primary rounded-g">
+        <div className="max-w-xl mx-auto flex items-center gap-3">
+          <Link href="/profile" aria-label="Profile" className="relative shrink-0">
+            <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center overflow-hidden border border-[#B97204]/30">
+              <Image
+                src="/vaquita/vaquita_isotipo.svg"
+                alt="Profile"
+                width={42}
+                height={42}
+                className="object-contain"
+                priority
+              />
+            </div>
+            <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
+          </Link>
+
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-sm font-medium text-black/90 truncate">
+              ¡Vamos{firstName ? `, ${firstName}` : ''}! 🐮✨
+            </span>
             <button
               type="button"
               onClick={() => setShowBankAPYModal(true)}
-              className="flex items-center min-w-0 bg-transparent"
+              className="flex items-center gap-2 min-w-0 bg-transparent"
             >
               {depositsLoading || depositsRefetching ? (
                 <Spinner size="sm" color="current" />
               ) : (
-                <span className="text-xl font-bold text-black leading-tight truncate">
-                  {activeDepositsTotalAmount} {token?.symbol}
-                </span>
+                <>
+                  <span className="text-2xl font-bold text-black leading-tight truncate">
+                    ${activeDepositsTotalAmount} {token?.symbol}
+                  </span>
+                  <EarnChip
+                    deposits={activeDeposits}
+                    apy={apyData?.vaquitaApy ?? 0}
+                    isLoading={apyLoading || depositsLoading}
+                  />
+                </>
               )}
             </button>
           </div>
-
-          <div className="shrink-0">
-            <CoinsChip silverCoins={silverCoins} goldCoins={goldCoins} silverCoinRef={silverCoinRef} />
-          </div>
         </div>
+      </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <EarnChip
-            deposits={activeDeposits}
-            apy={apyData?.vaquitaApy ?? 0}
-            isLoading={apyLoading || depositsLoading}
-            onClick={() => setShowBankAPYModal(true)}
-          />
-
+      <div className="px-4 mt-2 relative z-10">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white rounded-full px-3 py-1.5 shadow-md">
           <button
             type="button"
             onClick={() => setShowStreakModal(true)}
-            className="flex items-center gap-1.5 shrink-0 bg-transparent"
+            className="flex items-center gap-1.5 flex-1 justify-center bg-transparent"
           >
             {streakLoading || streakRefetching ? (
               <Spinner size="sm" color="current" />
@@ -135,18 +146,46 @@ export const HeaderStats = () => {
                 <Image
                   src="/icons/summary/streak.png"
                   alt="Streak"
-                  width={28}
-                  height={28}
+                  width={20}
+                  height={20}
                   className="object-contain"
                   priority
                   style={hasActiveStreak ? {} : { filter: 'grayscale(100%)' }}
                 />
-                <span className="text-base font-bold text-black tabular-nums">
+                <span className="text-sm font-bold text-black tabular-nums">
                   {totalStreak}
                 </span>
               </>
             )}
           </button>
+
+          <div className="w-px h-4 bg-black/10" />
+
+          <div ref={silverCoinRef} className="flex items-center gap-1.5 flex-1 justify-center">
+            <Image
+              src="/icons/summary/silver_coin.png"
+              alt="Silver Coin"
+              width={20}
+              height={20}
+              className="object-contain"
+              priority
+            />
+            <span className="text-sm font-bold text-black tabular-nums">{silverCoins}</span>
+          </div>
+
+          <div className="w-px h-4 bg-black/10" />
+
+          <div className="flex items-center gap-1.5 flex-1 justify-center">
+            <Image
+              src="/icons/summary/gold_coin.png"
+              alt="Gold Coin"
+              width={20}
+              height={20}
+              className="object-contain"
+              priority
+            />
+            <span className="text-sm font-bold text-black tabular-nums">{goldCoins}</span>
+          </div>
         </div>
       </div>
 
