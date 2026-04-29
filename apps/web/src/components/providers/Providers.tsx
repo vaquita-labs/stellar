@@ -51,6 +51,8 @@ export function Providers({ children }: { children: ReactNode }) {
   const setWalletAddress = useNetworkConfigStore((s) => s.setWalletAddress);
   const isPublicRoute = pathname === '/login';
   const isProfileRoute = pathname?.startsWith('/profile') ?? false;
+  const isShopRoute = pathname?.startsWith('/shop') ?? false;
+  const hideNavigation = isShopRoute;
 
   const [hydrated, setHydrated] = useState(false);
   const showAuthGate = hydrated && !isPublicRoute && !isAuthenticated;
@@ -92,9 +94,9 @@ export function Providers({ children }: { children: ReactNode }) {
           <LoaderScreen withImage />
         ) : (
           <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
-            {!isPublicRoute && <DesktopSidebar />}
-            <Main withSidebar={!isPublicRoute}>{children}</Main>
-            {!isPublicRoute && !isProfileRoute && <MobileNavigation />}
+            {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
+            <Main withSidebar={!isPublicRoute && !hideNavigation}>{children}</Main>
+            {!isPublicRoute && !isProfileRoute && !hideNavigation && <MobileNavigation />}
           </div>
         )}
       </ChannelProvider>
