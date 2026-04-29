@@ -10,8 +10,8 @@ debug_log() {
 debug_log "===== notify.sh invoked ====="
 debug_log "PHASE arg: $1"
 debug_log "Command args (after shift): $(echo "$@" | sed 's/^[^ ]* //')"
-debug_log "WEBHOOK_URL is set: $([ -n "$WEBHOOK_URL" ] && echo YES || echo NO) (length=${#WEBHOOK_URL})"
-debug_log "WEBHOOK_TOKEN is set: $([ -n "$WEBHOOK_TOKEN" ] && echo YES || echo NO) (length=${#WEBHOOK_TOKEN})"
+debug_log "NOTIFICATION_WEBHOOK_URL is set: $([ -n "$NOTIFICATION_WEBHOOK_URL" ] && echo YES || echo NO) (length=${#NOTIFICATION_WEBHOOK_URL})"
+debug_log "NOTIFICATION_WEBHOOK_TOKEN is set: $([ -n "$NOTIFICATION_WEBHOOK_TOKEN" ] && echo YES || echo NO) (length=${#NOTIFICATION_WEBHOOK_TOKEN})"
 debug_log "WEBHOOK_SOURCE: $SOURCE"
 debug_log "PWD: $(pwd)"
 debug_log "Whoami: $(whoami 2>/dev/null || id -un 2>/dev/null || echo unknown)"
@@ -21,19 +21,19 @@ send_webhook() {
     status=$2
     msg=$3
 
-    if [ -z "$WEBHOOK_URL" ]; then
-        debug_log "send_webhook[$phase $status]: WEBHOOK_URL vacío, SKIP"
+    if [ -z "$NOTIFICATION_WEBHOOK_URL" ]; then
+        debug_log "send_webhook[$phase $status]: NOTIFICATION_WEBHOOK_URL vacío, SKIP"
         return 0
     fi
 
-    debug_log "send_webhook[$phase $status]: POST → $WEBHOOK_URL"
+    debug_log "send_webhook[$phase $status]: POST → $NOTIFICATION_WEBHOOK_URL"
 
     # Captura body + status code para debug
     response=$(curl -s --max-time 5 --retry 2 --retry-delay 1 \
         -w "\n[DEBUG][curl] HTTP_STATUS=%{http_code} TIME=%{time_total}s" \
-        -X POST "$WEBHOOK_URL" \
+        -X POST "$NOTIFICATION_WEBHOOK_URL" \
         -H "Content-Type: application/json" \
-        -H "x-webhook-token: $WEBHOOK_TOKEN" \
+        -H "x-webhook-token: $NOTIFICATION_WEBHOOK_TOKEN" \
         -d "{
             \"event\": \"${phase}_${status}\",
             \"message\": \"[$phase] $msg\",

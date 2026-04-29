@@ -15,15 +15,15 @@ ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
 ARG DEPLOY_ID
 ENV DEPLOY_ID=$DEPLOY_ID
 
-RUN --mount=type=secret,id=webhook_url \
-    --mount=type=secret,id=webhook_token \
+RUN --mount=type=secret,id=notification_webhook_url \
+    --mount=type=secret,id=notification_webhook_token \
     sh -c '\
-      echo "[DEBUG][deps] webhook_url file exists: $( [ -f /run/secrets/webhook_url ] && echo YES || echo NO )"; \
-      echo "[DEBUG][deps] webhook_token file exists: $( [ -f /run/secrets/webhook_token ] && echo YES || echo NO )"; \
-      export WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )"; \
-      export WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )"; \
-      echo "[DEBUG][deps] WEBHOOK_URL length: ${#WEBHOOK_URL}"; \
-      echo "[DEBUG][deps] WEBHOOK_TOKEN length: ${#WEBHOOK_TOKEN}"; \
+      echo "[DEBUG][deps] notification_webhook_url file exists: $( [ -f /run/secrets/notification_webhook_url ] && echo YES || echo NO )"; \
+      echo "[DEBUG][deps] notification_webhook_token file exists: $( [ -f /run/secrets/notification_webhook_token ] && echo YES || echo NO )"; \
+      export NOTIFICATION_WEBHOOK_URL="$( [ -f /run/secrets/notification_webhook_url ] && cat /run/secrets/notification_webhook_url )"; \
+      export NOTIFICATION_WEBHOOK_TOKEN="$( [ -f /run/secrets/notification_webhook_token ] && cat /run/secrets/notification_webhook_token )"; \
+      echo "[DEBUG][deps] NOTIFICATION_WEBHOOK_URL length: ${#NOTIFICATION_WEBHOOK_URL}"; \
+      echo "[DEBUG][deps] NOTIFICATION_WEBHOOK_TOKEN length: ${#NOTIFICATION_WEBHOOK_TOKEN}"; \
       echo "[DEBUG][deps] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
       echo "[DEBUG][deps] DEPLOY_ID: $DEPLOY_ID"; \
       ./notify.sh INSTALL pnpm install --frozen-lockfile --filter vaquiland... --network-concurrency 4 \
@@ -53,15 +53,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 ENV NEXT_BUILD_WORKERS=1
 
-RUN --mount=type=secret,id=webhook_url \
-    --mount=type=secret,id=webhook_token \
+RUN --mount=type=secret,id=notification_webhook_url \
+    --mount=type=secret,id=notification_webhook_token \
     sh -c '\
-      echo "[DEBUG][builder] webhook_url file exists: $( [ -f /run/secrets/webhook_url ] && echo YES || echo NO )"; \
-      echo "[DEBUG][builder] webhook_token file exists: $( [ -f /run/secrets/webhook_token ] && echo YES || echo NO )"; \
-      export WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )"; \
-      export WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )"; \
-      echo "[DEBUG][builder] WEBHOOK_URL length: ${#WEBHOOK_URL}"; \
-      echo "[DEBUG][builder] WEBHOOK_TOKEN length: ${#WEBHOOK_TOKEN}"; \
+      echo "[DEBUG][builder] notification_webhook_url file exists: $( [ -f /run/secrets/notification_webhook_url ] && echo YES || echo NO )"; \
+      echo "[DEBUG][builder] notification_webhook_token file exists: $( [ -f /run/secrets/notification_webhook_token ] && echo YES || echo NO )"; \
+      export NOTIFICATION_WEBHOOK_URL="$( [ -f /run/secrets/notification_webhook_url ] && cat /run/secrets/notification_webhook_url )"; \
+      export NOTIFICATION_WEBHOOK_TOKEN="$( [ -f /run/secrets/notification_webhook_token ] && cat /run/secrets/notification_webhook_token )"; \
+      echo "[DEBUG][builder] NOTIFICATION_WEBHOOK_URL length: ${#NOTIFICATION_WEBHOOK_URL}"; \
+      echo "[DEBUG][builder] NOTIFICATION_WEBHOOK_TOKEN length: ${#NOTIFICATION_WEBHOOK_TOKEN}"; \
       echo "[DEBUG][builder] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
       echo "[DEBUG][builder] DEPLOY_ID: $DEPLOY_ID"; \
       ./notify.sh BUILD pnpm --filter vaquiland build \
