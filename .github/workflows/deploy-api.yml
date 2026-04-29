@@ -1,0 +1,101 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - "notify.sh"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+env:
+  DOKPLOY_HOST: https://dokploy-stellar.vaquita.fi
+
+jobs:
+  deploy:
+    name: Trigger Dokploy Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute DEPLOY_ID
+        id: ids
+        run: |
+          DEPLOY_ID="${{ github.run_id }}-${{ github.run_attempt }}-${GITHUB_SHA:0:8}"
+          echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
+          echo "Computed DEPLOY_ID: $DEPLOY_ID"
+
+      - name: Merge DEPLOY_ID into existing build args
+        id: merge
+        env:
+          DEPLOY_ID: ${{ steps.ids.outputs.deploy_id }}
+          DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
+          APPLICATION_ID: ${{ secrets.DOKPLOY_API_APPLICATION_ID }}
+        run: |
+          set -euo pipefail
+          current_args=$(curl -fsSL "$DOKPLOY_HOST/api/application.one?applicationId=$APPLICATION_ID" \
+            -H "x-api-key: $DOKPLOY_TOKEN" \
+            | jq -r '.buildArgs // ""')
+          new_args=$(printf '%s\n' "$current_args" | awk -v id="$DEPLOY_ID" '
+            $0 !~ /^DEPLOY_ID=/ && NF { print }
+            END { print "DEPLOY_ID=" id }
+          ')
+          {
+            echo "build_args<<EOF"
+            echo "$new_args"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "Merged buildArgs:"
+          echo "$new_args"
+
+      - name: Update build args
+        env:
+          DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
+          APPLICATION_ID: ${{ secrets.DOKPLOY_API_APPLICATION_ID }}
+          BUILD_ARGS: ${{ steps.merge.outputs.build_args }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -n \
+            --arg appId "$APPLICATION_ID" \
+            --arg buildArgs "$BUILD_ARGS" \
+            '{applicationId: $appId, buildArgs: $buildArgs}')
+          curl -fsSL -X POST "$DOKPLOY_HOST/api/application.update" \
+            -H 'Content-Type: application/json' \
+            -H "x-api-key: $DOKPLOY_TOKEN" \
+            -d "$payload"
+
+      - name: Trigger deployment
+        env:
+          DEPLOY_ID: ${{ steps.ids.outputs.deploy_id }}
+          DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
+          APPLICATION_ID: ${{ secrets.DOKPLOY_API_APPLICATION_ID }}
+        run: |
+          set -euo pipefail
+          payload=$(jq -n \
+            --arg appId "$APPLICATION_ID" \
+            --arg title "GH Actions $DEPLOY_ID" \
+            --arg description "sha=${{ github.sha }} actor=${{ github.actor }} ref=${{ github.ref_name }}" \
+            '{applicationId: $appId, title: $title, description: $description}')
+          echo "Deploy payload: $payload"
+          curl -fsSL -X POST "$DOKPLOY_HOST/api/application.deploy" \
+            -H 'Content-Type: application/json' \
+            -H "x-api-key: $DOKPLOY_TOKEN" \
+            -d "$payload"
+
+      - name: Summary
+        run: |
+          echo "### Deployment triggered" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **DEPLOY_ID:** \`${{ steps.ids.outputs.deploy_id }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Commit:** \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Actor:** ${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"

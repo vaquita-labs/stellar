@@ -13,13 +13,16 @@ COPY packages ./packages
 
 ARG WEBHOOK_SOURCE=apps/api
 ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
+ARG DEPLOY_ID
+ENV DEPLOY_ID=$DEPLOY_ID
 
 RUN --mount=type=secret,id=webhook_url \
     --mount=type=secret,id=webhook_token \
     sh -c '\
       export WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )"; \
       export WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )"; \
-      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/api... --network-concurrency 4 \
+      echo "[DEBUG][deps] DEPLOY_ID: $DEPLOY_ID"; \
+      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/api... \
     '
 
 FROM base AS runner
@@ -28,6 +31,8 @@ WORKDIR /repo
 ENV NODE_ENV=production
 ENV WEBHOOK_SOURCE=apps/api
 ENV PORT=3000
+ARG DEPLOY_ID
+ENV DEPLOY_ID=$DEPLOY_ID
 
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 apiuser

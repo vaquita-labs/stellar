@@ -2,62 +2,88 @@
 
 [![Contracts CI](https://github.com/vaquita-labs/stellar/actions/workflows/contracts-ci.yml/badge.svg?branch=main)](https://github.com/vaquita-labs/stellar/actions/workflows/contracts-ci.yml)
 
-This directory contains the Soroban contracts workspace.
+Soroban workspace with the Vaquita contracts (`vaquita-pool` and related crates).
 
-## Run tests
+## Requirements
+
+- **Rust** stable, with the `wasm32v1-none` target:
+  ```bash
+  rustup target add wasm32v1-none
+  ```
+- **Stellar CLI** — see [Stellar developer tools](https://developers.stellar.org/docs/tools/developer-tools).
+- For coverage: `cargo install cargo-llvm-cov --locked` and `llvm-tools-preview`.
+
+## Tests
 
 From `contracts/`:
 
 ```bash
 cargo test --workspace
-```
-
-Or from `contracts/`:
-
-```bash
+# or
 make test
 ```
 
-## Generate coverage locally
-
-Coverage is produced from host-side Rust tests using `cargo-llvm-cov`.
-
-1. Install tool once:
+## Build the WASM
 
 ```bash
-cargo install cargo-llvm-cov --locked
+cd vaquita-pool
+stellar contract build
 ```
 
-2. Run coverage from `contracts/`:
+## Local coverage
+
+`cargo-llvm-cov` generates reports from the Rust tests.
 
 ```bash
+# 1. Install the tool once
+cargo install cargo-llvm-cov --locked
+
+# 2. Generate coverage from contracts/
 make coverage
 ```
 
 Generated files:
 
-- `contracts/lcov.info` (LCOV report)
-- `contracts/coverage-html/` (HTML report)
+- `contracts/lcov.info` — LCOV report
+- `contracts/coverage-html/` — HTML report
 
-Open HTML report locally (LLVM writes under `coverage-html/html/`):
+Open the HTML report (LLVM writes it under `coverage-html/html/`):
 
 ```bash
 open contracts/coverage-html/html/index.html
 ```
 
-## CI coverage
+## Deployed contract
 
-GitHub Actions workflow: `.github/workflows/contracts-ci.yml`
+[Vaquita Pool on Soroban testnet](https://lab.stellar.org/r/testnet/contract/CDKCKHTRKFJXVKLICHPIXAPLIVDRBDQEEGJYDKFOTUV35APVNOGTWZW7)
 
-On pushes/PRs that touch `contracts/**`, CI runs:
+## Integrations
 
-- contract tests
-- `stellar contract build` sanity build
-- `cargo llvm-cov` coverage generation
+- [Blend USDC](https://github.com/blend-capital/blend-utils/blob/main/testnet.contracts.json)
+- [DeFindex USDC_blend_strategy](https://github.com/paltalabs/defindex/blob/main/public/testnet.contracts.json)
 
-Artifacts uploaded by CI:
+> Re-check after each testnet reset, addresses change.
+
+## CI
+
+Workflow: [`.github/workflows/contracts-ci.yml`](../.github/workflows/contracts-ci.yml).
+
+On every push/PR that touches `contracts/**`:
+
+- `cargo test`
+- `stellar contract build` (sanity build)
+- `cargo llvm-cov` (coverage)
+
+Uploaded artifacts:
 
 - `contracts-lcov`
 - `contracts-coverage-html`
 
-Download artifacts from the workflow run page to inspect coverage results.
+Download them from the workflow run page. Coverage is also published on [Codecov](https://app.codecov.io/gh/vaquita-labs/stellar).
+
+### Configuration notes
+
+- **Upload auth:** the *Contracts Coverage* job needs `CODECOV_TOKEN` in the repo secrets to upload `contracts/lcov.info` ([docs](https://docs.codecov.com/docs/adding-the-codecov-token)).
+- **Badge for private repos:** the SVG URL needs a `token` query param distinct from the upload token. Get it from *Badges & Graphs* in the Codecov repo settings ([docs](https://docs.codecov.com/docs/status-badges)).
+- **Coverage threshold:** 80% on project/patch, configured in [`codecov.yml`](../codecov.yml) with a `contracts` flag and a component scoped to `contracts/`.
+- **Stellar CLI in CI:** installed from the [official release](https://github.com/stellar/stellar-cli/releases) (version pinned via `STELLAR_CLI_VERSION` in the workflow) instead of compiling with Cargo, to avoid native deps (`hidapi`, `libudev`, `dbus`) and keep the job fast.
