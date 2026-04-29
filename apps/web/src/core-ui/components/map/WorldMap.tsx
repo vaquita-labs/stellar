@@ -14,12 +14,12 @@ import { MapObjects } from '../templates/WorldMap/map/MapObjects';
 import { SceneCamera } from '../templates/WorldMap/map/SceneCamera';
 import { SceneControls } from '../templates/WorldMap/map/SceneControls';
 // import { CloudSkybox } from './CloudSkybox';
+import { DayCycleSky } from './DayCycleSky';
 import { EditGrid } from './EditGrid';
 import { FloatingIslandBase } from './FloatingIslandBase';
 import { Ground } from './Ground';
 import { getMapCenter } from './helpers';
 import { ObjectGlow } from './ObjectGlow';
-import { SpotlightLighting } from './SpotlightLighting';
 import { SpotlightPositionUpdater } from './SpotlightPositionUpdater';
 import { TileSpotlightUpdater } from './TileSpotlightUpdater';
 import { Vaquita } from './vaquita';
@@ -74,7 +74,7 @@ export const WorldMap = ({ walletAddress, isLeaderboard, isAvailable, worldType 
         {/* TODO: Check this later, maybe we can remove it */}
         {/* <CloudSkybox /> */}
         {/* <Waterfall mapObjects={currentTiles} worldType={worldType} /> */}
-        <SpotlightLighting />
+        <DayCycleSky />
         <SceneCamera center={center} />
         <EditGrid />
         <FloatingIslandBase />

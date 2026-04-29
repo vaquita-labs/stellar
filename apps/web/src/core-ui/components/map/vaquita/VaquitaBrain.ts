@@ -1,65 +1,43 @@
 import { VaquitaAnimationState } from '@/core-ui/types';
 
+const WAKE_OVERRIDE_MS = 8000;
+
 export class VaquitaBrain {
-  private lastStateChange: number;
   public state: VaquitaAnimationState;
-  private position: [number, number];
+  private overrideUntil: number = 0;
+  private overrideState: VaquitaAnimationState | null = null;
+  private personalityOffset: number;
 
-  constructor(initial: VaquitaAnimationState = 'walking', position: [number, number]) {
+  constructor(initial: VaquitaAnimationState = 'walking') {
     this.state = initial;
-    this.lastStateChange = performance.now();
-    this.position = position;
+    this.personalityOffset = (Math.random() - 0.5) * 0.04;
   }
 
-  shouldChangeState(): boolean {
+  tick(dayProgress: number) {
     const now = performance.now();
-    const delay = this.getDelayForCurrentState();
-    return now - this.lastStateChange > delay;
-  }
-
-  nextState(): VaquitaAnimationState {
-    const probabilities: [VaquitaAnimationState, number][] = [
-      ['working', 0.1],
-      ['walking', 0.8],
-      ['sleeping', 0.2],
-    ];
-
-    const next = this.weightedRandom(probabilities);
-    this.state = next;
-    this.lastStateChange = performance.now();
-    return next;
-  }
-
-  getDelayForCurrentState(): number {
-    switch (this.state) {
-      case 'walking':
-        return 40000; // 40s
-      case 'working':
-        return 50000; // 50s
-      case 'sleeping':
-        return 20000; // 20s
-      default:
-        return 0;
+    if (this.overrideState && now < this.overrideUntil) {
+      this.state = this.overrideState;
+      return this.state;
     }
-  }
-
-  updatePosition(pos: [number, number]) {
-    this.position = pos;
-  }
-
-  private weightedRandom(weights: [VaquitaAnimationState, number][]): VaquitaAnimationState {
-    const total = weights.reduce((acc, [, prob]) => acc + prob, 0);
-    const rand = Math.random() * total;
-
-    let sum = 0;
-    for (const [state, prob] of weights) {
-      sum += prob;
-      if (rand <= sum) {
-        return state;
-      }
+    if (this.overrideState && now >= this.overrideUntil) {
+      this.overrideState = null;
     }
+    this.state = this.scheduledStateFor(dayProgress);
+    return this.state;
+  }
 
-    // ✅ Esto garantiza que siempre retorna
-    return weights.at(-1)?.[0] ?? 'walking'; // o un valor por defecto seguro
+  forceState(state: VaquitaAnimationState, durationMs: number = WAKE_OVERRIDE_MS) {
+    this.overrideState = state;
+    this.overrideUntil = performance.now() + durationMs;
+    this.state = state;
+  }
+
+  private scheduledStateFor(dayProgress: number): VaquitaAnimationState {
+    const p = (dayProgress + this.personalityOffset + 1) % 1;
+    if (p >= 0.9 || p < 0.07) return 'sleeping';
+    if (p < 0.3) return 'working';
+    if (p < 0.55) return 'walking';
+    if (p < 0.78) return 'working';
+    return 'walking';
   }
 }

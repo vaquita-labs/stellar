@@ -65,7 +65,7 @@ export function HomePage() {
       />
       {/* create a component that shows total days  */}
       {lockPeriod !== null && lockPeriod !== undefined && (
-        <div className="relative flex-1 flex items-center">
+        <div className="relative flex-1 flex items-stretch">
           <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div
@@ -76,7 +76,6 @@ export function HomePage() {
                   opacity: 1,
                   y: 0,
                   x: 0,
-                  // x: `${-lockPeriods?.findIndex((lp) => lp.lockPeriod === lockPeriod) * 100}%`,
                 }}
                 exit={{ opacity: 0, y: '-100%', x: 0 }}
                 transition={{
@@ -95,49 +94,18 @@ export function HomePage() {
                   },
                 }}
               >
-                <div className="h-6/7 w-full shrink-0">
+                <div className="h-full w-full shrink-0">
                   <WorldMap walletAddress={walletAddress} worldType={WorldType.FOREST} isAvailable={true} />
                 </div>
               </motion.div>
             </AnimatePresence>
           </div>
 
-          {/* Modal de Edición */}
+          <DepositPanel />
+
           <EditPanels open={isEditingMap} onOpenChange={handleEditPanelsClose} />
-          {/* Botón de Onboarding/Ayuda */}
-          {/* <motion.div
-            animate={{
-              y: [0, -8, 0],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-            className="absolute max-w-xl flex rounded-md top-4 left-4 z-10 bg-transparent hover:bg-primary disabled:opacity-30 py-2 md:px-4 px-0"
-          >
-            <Button
-              id="onboarding-button"
-              isIconOnly
-              variant="solid"
-              className="bg-transparent flex flex-col py-8"
-              onPress={() => {
-                trackUserAction('onboarding_clicked');
-                setIsTutorialModalOpen(true);
-              }}
-              size="lg"
-              title="Tutorial"
-            >
-              <Image src="/vaquita/tutorial.png" alt="Tutorial" width={38} height={38} />
-              <span className="text-black text-xs">Tutorial</span>
-            </Button>
-          </motion.div> */}
         </div>
       )}
-
-      <div className="relative">
-        <DepositPanel />
-      </div>
 
       {isTutorialModalOpen && (
         <TutorialModal isOpen={isTutorialModalOpen} onClose={() => setIsTutorialModalOpen(false)} />

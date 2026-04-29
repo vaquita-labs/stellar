@@ -7,6 +7,7 @@ import { Instance, Instances } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useCallback, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useDayCycleStore } from '@/core-ui/stores';
 import { getNextValidTile } from '../../../map/vaquita/helpers';
 import { VaquitaBrain } from '../../../map/vaquita/VaquitaBrain';
 import { Body } from '../vaquita/animations/parts';
@@ -57,7 +58,7 @@ export const VaquitasInstanced = ({ deposits, onSelect }: VaquitasInstancedProps
 
     deposits.forEach(() => {
       const startTile = initialTile();
-      brainsRef.current.push(new VaquitaBrain('walking', startTile));
+      brainsRef.current.push(new VaquitaBrain('walking'));
       currentTileRef.current.push(startTile);
       targetTileRef.current.push(startTile);
       currentPosRef.current.push(new THREE.Vector3(startTile[0], getTileTopY(), startTile[1]));
@@ -69,54 +70,42 @@ export const VaquitasInstanced = ({ deposits, onSelect }: VaquitasInstancedProps
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   useFrame((_, delta) => {
+    const dayProgress = useDayCycleStore.getState().dayProgress;
     deposits.forEach((vaquita, i) => {
       const brain = brainsRef.current[i];
       const currentTile = currentTileRef.current[i];
-      const targetTile = targetTileRef.current[i];
       const currentPos = currentPosRef.current[i];
       const targetPos = targetPosRef.current[i];
 
-      // Si no está durmiendo ni trabajando
-      if (!(brain.state === 'working' || brain.state === 'sleeping')) {
-        if (brain.shouldChangeState()) {
-          brain.state = brain.nextState();
+      const state = brain.tick(dayProgress);
+
+      if (state === 'walking') {
+        const distance = currentPos.distanceTo(targetPos);
+        const speed = 2;
+        const step = speed * delta;
+
+        if (distance <= step) {
+          const [cx, cz] = currentTile;
+          const nextStep = getNextValidTile([cx, cz], isWalkable);
+
+          targetTileRef.current[i] = nextStep;
+          targetPos.set(nextStep[0], getTileTopY(), nextStep[1]);
+
+          currentTileRef.current[i] = nextStep;
         }
 
-        if (brain.state === 'walking') {
-          const distance = currentPos.distanceTo(targetPos);
-          const speed = 2;
-          const step = speed * delta;
+        currentPos.lerp(targetPos, step);
 
-          if (distance <= step) {
-            const [cx, cz] = currentTile;
-            const nextStep = getNextValidTile([cx, cz], isWalkable);
-
-            targetTileRef.current[i] = nextStep;
-            targetPos.set(nextStep[0], getTileTopY(), nextStep[1]);
-
-            brain.updatePosition(nextStep);
-            currentTileRef.current[i] = nextStep;
-          }
-
-          currentPos.lerp(targetPos, step);
-
-          if (vaquita.state !== DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY) {
-            dummy.position.copy(currentPos);
-          }
-        } else {
-          dummy.position.copy(targetPos);
+        if (vaquita.state !== DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY) {
+          dummy.position.copy(currentPos);
         }
+      } else {
+        dummy.position.copy(targetPos);
       }
 
-      // Escala fija (puedes variar por vaquita si quieres)
       dummy.scale.set(0.5, 0.5, 0.5);
-
-      // Aplicas transformaciones y setMatrixAt
       dummy.updateMatrix();
-      // meshRef.current!.setMatrixAt(i, dummy.matrix);
     });
-
-    // meshRef.current!.instanceMatrix.needsUpdate = true;
   });
 
   return (

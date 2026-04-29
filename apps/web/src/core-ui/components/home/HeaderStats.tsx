@@ -103,7 +103,7 @@ export const HeaderStats = () => {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       <div className="w-full px-4 pt-4 pb-4 bg-primary rounded-g">
         <div className="max-w-xl mx-auto flex items-center gap-3">
           <Link href="/profile" aria-label="Profile" className="relative shrink-0">
@@ -148,8 +148,8 @@ export const HeaderStats = () => {
         </div>
       </div>
 
-      <div className="px-4 mt-2 relative z-10">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white rounded-full px-3 py-1.5 shadow-md">
+      <div className="absolute left-0 right-0 -bottom-10 px-4 z-20 pointer-events-none">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white rounded-full px-3 py-1.5  pointer-events-auto">
           <button
             type="button"
             onClick={() => setShowStreakModal(true)}
