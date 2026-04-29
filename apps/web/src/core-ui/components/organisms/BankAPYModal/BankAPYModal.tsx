@@ -2,6 +2,7 @@
 
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
+import { isStellarNetwork } from '@/networks/stellar/helpers';
 import { Card, Chip, Modal, Spinner } from '@heroui/react';
 import Image from 'next/image';
 import { useApyByLockPeriod, useDepositsComplete } from '../../../hooks';
@@ -170,6 +171,9 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
                       </>
                     )}
                   </div>
+                  {network?.name && isStellarNetwork(network.name) && dataApy?.interestModelNote ? (
+                    <p className="text-xs text-gray-500 mt-3 leading-snug">{dataApy.interestModelNote}</p>
+                  ) : null}
                 </Card.Content>
               </Card>
 

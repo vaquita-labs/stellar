@@ -1,14 +1,20 @@
 import { PoolV2, Reserve } from '@blend-capital/blend-sdk';
-import { xdr } from '@stellar/stellar-sdk';
 import { ONE_DAY, ONE_HOUR } from '../../config/constants';
-import { isStringJson } from '../../helpers';
+import { firstElement } from '../../helpers';
 import type { Deposit, Network, TokenNetwork } from '../../types';
-import { getPeriodData } from './stellar-sdk';
+import { getStellarDepositContractAddress } from './events';
+import { getAssetAmountsPerShares } from './defindexVault';
+import { getPeriodData, getVaquitaPoolPosition } from './stellar-sdk';
 
 const EMPTY = { blendInterest: 0, vaquitaInterest: 0 };
 
-let lastRequest: { [key: string]: { timestamp: number, blendInterest: number, vaquitaInterest: number } } = {};
-let lastResponse: { [key: string]: { timestamp: number, reserve: Reserve } } = {};
+let lastRequest: { [key: string]: { timestamp: number; blendInterest: number; vaquitaInterest: number } } = {};
+let lastResponse: { [key: string]: { timestamp: number; reserve: Reserve } } = {};
+
+function stroopsToAmount(stroops: bigint, decimals: number): number {
+  const base = 10n ** BigInt(decimals);
+  return Number(stroops) / Number(base);
+}
 
 export const getBlendPoolReserve = async (networkData: Network) => {
   if (networkData.name !== 'Stellar Testnet') {
@@ -16,7 +22,6 @@ export const getBlendPoolReserve = async (networkData: Network) => {
   }
 
   const cacheKey = networkData.name;
-  // Check cache first
   if (lastResponse[cacheKey] && Date.now() - lastResponse[cacheKey].timestamp <= ONE_HOUR) {
     // return lastResponse[cacheKey].reserve;
   }
@@ -32,7 +37,6 @@ export const getBlendPoolReserve = async (networkData: Network) => {
     const pool = await PoolV2.load(network, poolId);
     const reserve = pool.reserves.get(asssetId)!;
 
-    // Cache the response
     lastResponse[cacheKey] = {
       timestamp: Date.now(),
       reserve,
@@ -45,16 +49,21 @@ export const getBlendPoolReserve = async (networkData: Network) => {
   }
 };
 
-export const getBlendInterest = async (deposit: Deposit, tokenNetworkData: TokenNetwork, reserve: Reserve) => {
+/**
+ * Per-deposit Stellar yield:
+ * - `blendInterest` (API name kept for compatibility): vault accrual = gross underlying − principal via DeFindex
+ *   `get_asset_amounts_per_shares(shares)` (vault id from env or `defindex_vault_contract_address`).
+ * - `vaquitaInterest`: proportional `reward_pool` share for the lock period (on-chain snapshot).
+ */
+export const getBlendInterest = async (deposit: Deposit, tokenNetworkData: TokenNetwork) => {
   try {
-    if (!isStringJson(deposit.transaction_event_raw)) {
+    if (!deposit.deposit_id_hex) {
       return EMPTY;
     }
 
-    const vaquitaContractId = tokenNetworkData.vaquita_contract_address;
-    const transaction = JSON.parse(deposit.transaction_event_raw);
-    const contractEvent = transaction?.final?.events?.contractEventsXdr?.at(-1)?.at(-1);
-    if (typeof contractEvent !== 'string') {
+    const poolContractId =
+      getStellarDepositContractAddress(deposit) || firstElement(tokenNetworkData.vaquita_contract_address);
+    if (!poolContractId) {
       return EMPTY;
     }
 
@@ -72,31 +81,46 @@ export const getBlendInterest = async (deposit: Deposit, tokenNetworkData: Token
       };
     }
 
-    const parsedContractEvent = xdr.ContractEvent.fromXDR(contractEvent, 'base64');
-    const vec = parsedContractEvent.body().v0().data().vec();
-    const i128 = vec?.[vec.length - 1]?.i128();
-    let bRate = 0n;
-    if (i128) {
-      const hi = i128.hi().toBigInt();
-      const lo = i128.lo().toBigInt();
-      bRate = hi * (2n ** 64n) + lo;
+    const position = await getVaquitaPoolPosition(poolContractId, deposit.deposit_id_hex);
+    if (!position) {
+      return EMPTY;
     }
 
-    const base = 10 ** tokenNetworkData.token_decimals;
-    const currentBRate = BigInt((reserve?.data.bRate ?? 0n));
-    const bTokens: number = bRate === 0n ? 0 : (deposit.amount * base / Number(bRate));
-    const blendInterest = ((Number(currentBRate) - Number(bRate)) * bTokens) / base;
-    const periodData = await getPeriodData(deposit.lock_period ?? ONE_DAY * 7, vaquitaContractId);
-    const vaquitaInterest = periodData.totalDeposits > 0 ? (deposit.amount * Number(periodData.rewardPool) / Number(periodData.totalDeposits)) : 0;
-    console.info({
-      bRate,
-      depositAmount: deposit.amount,
-      currentBRate,
-      bTokens,
-      blendInterest,
-      vaquitaInterest,
-      periodData,
-    });
+    const vaultContractId =
+      firstElement(tokenNetworkData.defindex_vault_contract_address ?? '') ||
+      process.env.STELLAR_DEFINDEX_VAULT_CONTRACT ||
+      '';
+    if (!vaultContractId) {
+      console.warn(
+        '[getBlendInterest] Missing DeFindex vault id: set STELLAR_DEFINDEX_VAULT_CONTRACT or tokens_networks.defindex_vault_contract_address',
+      );
+      return EMPTY;
+    }
+    const amounts = await getAssetAmountsPerShares(vaultContractId, position.shares);
+    if (!amounts || amounts.length === 0) {
+      return EMPTY;
+    }
+    const assets0 = amounts[0] ?? 0n;
+
+    const principal = position.amount;
+    const accrualStroops = assets0 > principal ? assets0 - principal : 0n;
+
+    const decimals = tokenNetworkData.token_decimals ?? 7;
+    const blendInterest = stroopsToAmount(accrualStroops, decimals);
+
+    const lockPeriodMs =
+      position.lockPeriodSec > 0n
+        ? Number(position.lockPeriodSec) * 1000
+        : deposit.lock_period ?? ONE_DAY * 7;
+    const periodData = await getPeriodData(lockPeriodMs, poolContractId);
+    const rp = BigInt(periodData.rewardPool);
+    const td = BigInt(periodData.totalDeposits);
+    let vaquitaInterest = 0;
+    if (td > 0n) {
+      const rewardStroops = (rp * principal) / td;
+      vaquitaInterest = stroopsToAmount(rewardStroops, decimals);
+    }
+
     lastRequest[deposit.deposit_id_hex] = {
       timestamp: Date.now(),
       blendInterest,

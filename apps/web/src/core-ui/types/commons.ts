@@ -79,7 +79,12 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   depositIdHex: string;
   vaquitaInterest: number;
   aaveInterest: number;
+  /**
+   * Stellar: same as `vaultInterest` (DeFindex vault accrual). EVM: Aave-style estimate field name kept for compatibility.
+   */
   blendInterest: number;
+  /** Stellar testnet only: vault NAV accrual. Omitted on other networks. */
+  vaultInterest?: number;
   createdTimestamp: number;
   updatedTimestamp: number;
   serverTimestamp: number;

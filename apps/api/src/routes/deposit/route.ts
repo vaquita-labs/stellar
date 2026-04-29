@@ -224,9 +224,10 @@ router.get('/network/:networkName/token/:tokenSymbol/lockPeriod/:lockPeriod/apy'
   let response: unknown = {};
   if (networkData.name === 'Base' || networkData.name === 'Base Sepolia Testnet') {
     response = await getBaseApyData(networkData, tokenNetworkData, Number(lockPeriod));
-  } else if (networkData.name === 'Stellar Testnet') {
-    const poolData = await getBlendPoolReserve(networkData);
-    response = await getStellarApyData(networkData, Number(lockPeriod), poolData);
+  } else if (networkData.name === 'Stellar Testnet' || networkData.name === 'Stellar') {
+    const poolData =
+      networkData.name === 'Stellar Testnet' ? await getBlendPoolReserve(networkData) : null;
+    response = await getStellarApyData(networkData, Number(lockPeriod), poolData, tokenNetworkData);
   } else if (networkData.name === 'Dummy') {
     response = getDummyApyData(Number(lockPeriod));
   } else {

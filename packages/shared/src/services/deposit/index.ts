@@ -5,7 +5,7 @@ import { firstElement } from '../../helpers';
 import { supabase } from '../../lib/supabase';
 import { ably } from '../ably';
 import { getBaseInterest, getVaquitaPoolData, PROTOCOL_APY_DUMMY, VAQUITA_APY_DUMMY } from '../base';
-import { getBlendInterest, getBlendPoolReserve, getStellarDepositContractAddress } from '../stellar';
+import { getBlendInterest, getStellarDepositContractAddress } from '../stellar';
 import {
   type Deposit,
   type DepositResponseDTO,
@@ -474,10 +474,7 @@ export const toDepositResponseDTO = async (deposit: DepositWithState, networkDat
           } = await getBaseInterest(networkData, deposit, tokenNetworkData));
         }
       } else if (networkData.name === 'Stellar Testnet') {
-        const poolData = await getBlendPoolReserve(networkData);
-        if (poolData) {
-          ({ blendInterest, vaquitaInterest } = await getBlendInterest(deposit, tokenNetworkData, poolData));
-        }
+        ({ blendInterest, vaquitaInterest } = await getBlendInterest(deposit, tokenNetworkData));
       }
     }
   }
@@ -493,6 +490,7 @@ export const toDepositResponseDTO = async (deposit: DepositWithState, networkDat
     aaveInterest,
     vaquitaInterest,
     blendInterest,
+    ...(networkData.name === 'Stellar Testnet' ? { vaultInterest: blendInterest } : {}),
     lockPeriod,
     createdTimestamp: new Date(deposit.created_at || 0).getTime() || 0,
     updatedTimestamp: new Date(deposit.updated_at || 0).getTime() || 0,
