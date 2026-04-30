@@ -13,6 +13,8 @@ const inBounds = (x: number, z: number) => x >= 0 && z >= 0 && x < MAP_SIZE && z
 
 const tilesEqual = (a: [number, number], b: [number, number]) => a[0] === b[0] && a[1] === b[1];
 
+export type IsOccupiedFn = (x: number, z: number) => boolean;
+
 export const getNextValidTile = (pos: [number, number], isWalkable: MapStoreType['isWalkable']): [number, number] => {
   for (const [dx, dz] of [...directions].sort(() => 0.5 - Math.random())) {
     const x = pos[0] + dx;
@@ -27,6 +29,7 @@ export const getNextTileToward = (
   current: [number, number],
   goal: [number, number],
   isWalkable: MapStoreType['isWalkable'],
+  isOccupied?: IsOccupiedFn,
 ): [number, number] => {
   const candidates: { tile: [number, number]; dist: number }[] = [];
   for (const [dx, dz] of directions) {
@@ -34,6 +37,7 @@ export const getNextTileToward = (
     const z = current[1] + dz;
     if (!inBounds(x, z)) continue;
     if (!isWalkable(x, z)) continue;
+    if (isOccupied?.(x, z)) continue;
     candidates.push({ tile: [x, z], dist: Math.abs(x - goal[0]) + Math.abs(z - goal[1]) });
   }
   if (candidates.length === 0) return current;
@@ -46,6 +50,7 @@ export const getNextTileToward = (
 export const pickRandomWalkableGoal = (
   current: [number, number],
   isWalkable: MapStoreType['isWalkable'],
+  isOccupied?: IsOccupiedFn,
   range: number = 3,
 ): [number, number] => {
   for (let i = 0; i < 30; i++) {
@@ -55,7 +60,9 @@ export const pickRandomWalkableGoal = (
     const x = current[0] + dx;
     const z = current[1] + dz;
     if (!inBounds(x, z)) continue;
-    if (isWalkable(x, z)) return [x, z];
+    if (!isWalkable(x, z)) continue;
+    if (isOccupied?.(x, z)) continue;
+    return [x, z];
   }
   return current;
 };
@@ -64,6 +71,7 @@ export const findNearbyWorkSpot = (
   current: [number, number],
   getTileAt: MapStoreType['getTileAt'],
   isWalkable: MapStoreType['isWalkable'],
+  isOccupied?: IsOccupiedFn,
   radius: number = 6,
 ): [number, number] | null => {
   const candidates: { standTile: [number, number]; dist: number }[] = [];
@@ -79,13 +87,13 @@ export const findNearbyWorkSpot = (
         const sx = x + adx;
         const sz = z + adz;
         if (!inBounds(sx, sz)) continue;
-        if (isWalkable(sx, sz)) {
-          candidates.push({
-            standTile: [sx, sz],
-            dist: Math.abs(sx - current[0]) + Math.abs(sz - current[1]),
-          });
-          break;
-        }
+        if (!isWalkable(sx, sz)) continue;
+        if (isOccupied?.(sx, sz)) continue;
+        candidates.push({
+          standTile: [sx, sz],
+          dist: Math.abs(sx - current[0]) + Math.abs(sz - current[1]),
+        });
+        break;
       }
     }
   }

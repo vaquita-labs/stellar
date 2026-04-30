@@ -16,21 +16,18 @@ const SleepingAnimation = ({  scale = 0.5, direction, label }: SleepingAnimation
   const groupRef = useRef<THREE.Group>(null);
 
   const baseColor = '#fff3e1';
-  const bodyColor = '#E4D9C9';
+  const bodyColor = '#fff3e1';
   const spotColor = '#6f4e37';
   const helmetColor = '#FBA71A';
   const noseColor = '#e88e29';
   const hoofColor = '#3a2b1b';
 
-  // Optional: bobbing Zzz
   useFrame(() => {
     if (!groupRef.current) return;
 
-    // Align sleeping direction
     const angle = Math.atan2(direction[0], direction[1]);
     groupRef.current.rotation.y = angle;
 
-    // Animate "zzz"
     groupRef.current.children.forEach((child) => {
       if (child.name === 'zzz') {
         child.position.y = 2.2 + Math.sin(Date.now() * 0.002) * 0.1;

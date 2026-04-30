@@ -33,7 +33,7 @@ const VaquitaModel = ({
   const targetRotation = useRef(0);
 
   const baseColor = '#fff3e1';
-  const bodyColor = '#E4D9C9';
+  const bodyColor = '#fff3e1';
   const spotColor = '#6f4e37';
   const helmetColor = '#FBA71A';
   const noseColor = '#e88e29';
