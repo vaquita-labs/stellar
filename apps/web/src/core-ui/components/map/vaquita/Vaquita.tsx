@@ -6,10 +6,14 @@ import * as THREE from 'three';
 import { getTileTopY } from '../../../helpers';
 import { useDayCycleStore, useMapStore } from '../../../stores';
 import { DepositWithdrawalState, VaquitaAnimationState } from '../../../types';
-import { getNextValidTile } from './helpers';
+import { findNearbyWorkSpot, getNextTileToward, pickRandomWalkableGoal, tilesEqual } from './helpers';
 import { VaquitaControllerProps } from './types';
 import { VaquitaAnimation } from './VaquitaAnimation';
 import { VaquitaBrain } from './VaquitaBrain';
+
+const SPEED = 0.6;
+const IDLE_MIN_MS = 3000;
+const IDLE_RANGE_MS = 4000;
 
 export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps) => {
   const ref = useRef<THREE.Group>(null);
@@ -20,14 +24,13 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
   const [brainState, setBrainState] = useState<VaquitaAnimationState>('walking');
 
   const isWalkable = useMapStore((store) => store.isWalkable);
+  const getTileAt = useMapStore((store) => store.getTileAt);
 
   const initialTile: [number, number] = useMemo(() => {
     for (let i = 0; i < 100; i++) {
       const x = Math.floor(Math.random() * 8) + 1;
       const z = Math.floor(Math.random() * 8) + 1;
-      if (isWalkable(x, z)) {
-        return [x, z];
-      }
+      if (isWalkable(x, z)) return [x, z];
     }
     return [0, 0];
   }, [isWalkable]);
@@ -38,43 +41,108 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
   const targetPosRef = useRef(new THREE.Vector3(initialTile[0], getTileTopY(), initialTile[1]));
 
   const brainRef = useRef(new VaquitaBrain('walking'));
+  const goalRef = useRef<[number, number] | null>(null);
+  const idleUntilRef = useRef(0);
+  const lastPhaseRef = useRef<VaquitaAnimationState>('walking');
+
+  const updateBrainState = (state: VaquitaAnimationState) => {
+    if (brainState !== state) setBrainState(state);
+  };
+
+  const updateDirection = (dir: [number, number]) => {
+    if (dir[0] !== direction[0] || dir[1] !== direction[1]) setDirection(dir);
+  };
+
+  const pickGoalFor = (phase: VaquitaAnimationState): [number, number] => {
+    if (phase === 'working') {
+      const workSpot = findNearbyWorkSpot(currentTileRef.current, getTileAt, isWalkable);
+      if (workSpot) return workSpot;
+    }
+    return pickRandomWalkableGoal(currentTileRef.current, isWalkable);
+  };
 
   useFrame((_, delta) => {
     if (!ref.current) return;
-
+    const dt = Math.min(delta, 0.1);
     const dayProgress = useDayCycleStore.getState().dayProgress;
-    const nextState = brainRef.current.tick(dayProgress);
-    if (nextState !== brainState) setBrainState(nextState);
+    const phase = brainRef.current.tick(dayProgress);
 
-    if (nextState === 'walking') {
-      const distance = currentPosRef.current.distanceTo(targetPosRef.current);
-      const speed = 2;
-      const step = speed * delta;
-      if (distance <= step) {
-        const [cx, cz] = currentTileRef.current;
-        const nextStep = getNextValidTile([cx, cz], isWalkable);
-
-        targetTileRef.current = nextStep;
-        targetPosRef.current.set(nextStep[0], getTileTopY() - 0.3, nextStep[1]);
-
-        const newDir: [number, number] = [nextStep[0] - cx, nextStep[1] - cz];
-        setDirection(newDir);
-
-        currentTileRef.current = nextStep;
-      }
-
-      currentPosRef.current.lerp(targetPosRef.current, step);
-      if (vaquita.state === DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY) return;
-      ref.current.position.copy(currentPosRef.current);
-    } else {
-      currentPosRef.current.copy(targetPosRef.current);
-      ref.current.position.copy(currentPosRef.current);
+    if (phase !== lastPhaseRef.current) {
+      goalRef.current = null;
+      idleUntilRef.current = 0;
+      lastPhaseRef.current = phase;
     }
+
+    if (phase === 'sleeping') {
+      updateBrainState('sleeping');
+      ref.current.position.copy(currentPosRef.current);
+      return;
+    }
+
+    const stepDistance = SPEED * dt;
+    const distToTarget = currentPosRef.current.distanceTo(targetPosRef.current);
+
+    if (distToTarget <= stepDistance) {
+      currentPosRef.current.copy(targetPosRef.current);
+      if (!tilesEqual(currentTileRef.current, targetTileRef.current)) {
+        currentTileRef.current = [targetTileRef.current[0], targetTileRef.current[1]];
+      }
+    } else {
+      const alpha = Math.min(stepDistance / distToTarget, 1);
+      currentPosRef.current.lerp(targetPosRef.current, alpha);
+    }
+
+    const standingStill = tilesEqual(currentTileRef.current, targetTileRef.current);
+
+    if (!goalRef.current) {
+      goalRef.current = pickGoalFor(phase);
+    }
+
+    const atGoal = tilesEqual(currentTileRef.current, goalRef.current);
+
+    if (atGoal && standingStill) {
+      if (phase === 'working') {
+        updateBrainState('working');
+      } else {
+        const now = performance.now();
+        if (idleUntilRef.current === 0) {
+          idleUntilRef.current = now + IDLE_MIN_MS + Math.random() * IDLE_RANGE_MS;
+        }
+        if (now < idleUntilRef.current) {
+          updateBrainState('walking');
+          updateDirection([0, 0]);
+        } else {
+          goalRef.current = null;
+          idleUntilRef.current = 0;
+        }
+      }
+      ref.current.position.copy(currentPosRef.current);
+      return;
+    }
+
+    if (standingStill) {
+      const nextStep = getNextTileToward(currentTileRef.current, goalRef.current, isWalkable);
+      if (tilesEqual(nextStep, currentTileRef.current)) {
+        goalRef.current = null;
+        ref.current.position.copy(currentPosRef.current);
+        return;
+      }
+      targetTileRef.current = nextStep;
+      targetPosRef.current.set(nextStep[0], getTileTopY() - 0.3, nextStep[1]);
+      updateDirection([nextStep[0] - currentTileRef.current[0], nextStep[1] - currentTileRef.current[1]]);
+    }
+
+    updateBrainState('walking');
+
+    if (vaquita.state === DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY) return;
+    ref.current.position.copy(currentPosRef.current);
   });
 
   const handleClick = () => {
     if (brainRef.current.state === 'sleeping') {
       brainRef.current.forceState('walking');
+      goalRef.current = null;
+      idleUntilRef.current = 0;
       setBrainState('walking');
       return;
     }
