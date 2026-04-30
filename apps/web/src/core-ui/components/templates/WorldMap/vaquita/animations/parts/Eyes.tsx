@@ -1,6 +1,20 @@
 import React from 'react';
 
-export const Eyes = ({ isCrying = false }: { isCrying?: boolean }) => {
+export const Eyes = ({ isCrying = false, isSleeping = false }: { isCrying?: boolean; isSleeping?: boolean }) => {
+  if (isSleeping) {
+    return (
+      <group position={[0, 0, 0]}>
+        <mesh position={[-0.1, 0.06, 0.26]} castShadow>
+          <boxGeometry args={[0.12, 0.03, 0]} />
+          <meshStandardMaterial color="black" />
+        </mesh>
+        <mesh position={[0.1, 0.06, 0.26]} castShadow>
+          <boxGeometry args={[0.12, 0.03, 0]} />
+          <meshStandardMaterial color="black" />
+        </mesh>
+      </group>
+    );
+  }
   if (isCrying) {
     return (
       <group position={[0, 0, 0]}>

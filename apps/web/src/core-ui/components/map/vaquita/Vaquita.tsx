@@ -35,15 +35,27 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
     return [0, 0];
   }, [isWalkable]);
 
+  const initialY = getTileTopY() - 0.3;
   const currentTileRef = useRef<[number, number]>(initialTile);
   const targetTileRef = useRef<[number, number]>(initialTile);
-  const currentPosRef = useRef(new THREE.Vector3(initialTile[0], getTileTopY(), initialTile[1]));
-  const targetPosRef = useRef(new THREE.Vector3(initialTile[0], getTileTopY(), initialTile[1]));
+  const currentPosRef = useRef(new THREE.Vector3(initialTile[0], initialY, initialTile[1]));
+  const targetPosRef = useRef(new THREE.Vector3(initialTile[0], initialY, initialTile[1]));
 
   const brainRef = useRef(new VaquitaBrain('walking'));
   const goalRef = useRef<[number, number] | null>(null);
   const idleUntilRef = useRef(0);
   const lastPhaseRef = useRef<VaquitaAnimationState>('walking');
+
+  const settleAtCurrent = () => {
+    targetTileRef.current = [currentTileRef.current[0], currentTileRef.current[1]];
+    targetPosRef.current.copy(currentPosRef.current);
+  };
+
+  const snapCurrentToTile = () => {
+    currentPosRef.current.set(currentTileRef.current[0], initialY, currentTileRef.current[1]);
+    targetTileRef.current = [currentTileRef.current[0], currentTileRef.current[1]];
+    targetPosRef.current.copy(currentPosRef.current);
+  };
 
   const updateBrainState = (state: VaquitaAnimationState) => {
     if (brainState !== state) setBrainState(state);
@@ -70,10 +82,16 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
     if (phase !== lastPhaseRef.current) {
       goalRef.current = null;
       idleUntilRef.current = 0;
+      if (tilesEqual(currentTileRef.current, targetTileRef.current)) {
+        settleAtCurrent();
+      }
       lastPhaseRef.current = phase;
     }
 
     if (phase === 'sleeping') {
+      if (tilesEqual(currentTileRef.current, targetTileRef.current)) {
+        snapCurrentToTile();
+      }
       updateBrainState('sleeping');
       ref.current.position.copy(currentPosRef.current);
       return;
@@ -124,11 +142,18 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
       const nextStep = getNextTileToward(currentTileRef.current, goalRef.current, isWalkable);
       if (tilesEqual(nextStep, currentTileRef.current)) {
         goalRef.current = null;
+        settleAtCurrent();
+        ref.current.position.copy(currentPosRef.current);
+        return;
+      }
+      if (!isWalkable(nextStep[0], nextStep[1])) {
+        goalRef.current = null;
+        settleAtCurrent();
         ref.current.position.copy(currentPosRef.current);
         return;
       }
       targetTileRef.current = nextStep;
-      targetPosRef.current.set(nextStep[0], getTileTopY() - 0.3, nextStep[1]);
+      targetPosRef.current.set(nextStep[0], initialY, nextStep[1]);
       updateDirection([nextStep[0] - currentTileRef.current[0], nextStep[1] - currentTileRef.current[1]]);
     }
 
@@ -143,6 +168,7 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
       brainRef.current.forceState('walking');
       goalRef.current = null;
       idleUntilRef.current = 0;
+      settleAtCurrent();
       setBrainState('walking');
       return;
     }

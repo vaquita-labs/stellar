@@ -40,7 +40,14 @@ const SleepingAnimation = ({  scale = 0.5, direction, label }: SleepingAnimation
 
   return (
     <group ref={groupRef} scale={scale}>
-      <Head baseColor={baseColor} spotColor={spotColor} helmetColor={helmetColor} noseColor={noseColor} />
+      <Head
+        baseColor={baseColor}
+        spotColor={spotColor}
+        helmetColor={helmetColor}
+        noseColor={noseColor}
+        isHelmet={false}
+        isSleeping
+      />
       <Body bodyColor={bodyColor} spotColor={spotColor} />
       <LeftLeg baseColor={baseColor} hoofColor={hoofColor} />
       <RightLeg baseColor={baseColor} hoofColor={hoofColor} />

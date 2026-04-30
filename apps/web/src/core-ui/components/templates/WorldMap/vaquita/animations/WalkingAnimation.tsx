@@ -75,12 +75,42 @@ const VaquitaModel = ({
 
   return (
     <group ref={groupRef} scale={scale}>
-      <Head baseColor={baseColor} spotColor={spotColor} helmetColor={helmetColor} noseColor={noseColor} />
+      <Head
+        baseColor={baseColor}
+        spotColor={spotColor}
+        helmetColor={helmetColor}
+        noseColor={noseColor}
+        isHelmet={false}
+      />
       <Body bodyColor={bodyColor} spotColor={spotColor} />
-      <LeftLeg ref={leftLegRef} baseColor={baseColor} hoofColor={hoofColor} />
-      <RightLeg ref={rightLegRef} baseColor={baseColor} hoofColor={hoofColor} />
-      <LeftArm ref={leftArmRef} baseColor={baseColor} hoofColor={hoofColor} />
-      <RightArm ref={rightArmRef} baseColor={baseColor} hoofColor={hoofColor} />
+      <LeftLeg
+        ref={leftLegRef}
+        baseColor={baseColor}
+        hoofColor={hoofColor}
+        walkCycleRef={walkCycle}
+        isMoving={isMoving}
+      />
+      <RightLeg
+        ref={rightLegRef}
+        baseColor={baseColor}
+        hoofColor={hoofColor}
+        walkCycleRef={walkCycle}
+        isMoving={isMoving}
+      />
+      <LeftArm
+        ref={leftArmRef}
+        baseColor={baseColor}
+        hoofColor={hoofColor}
+        walkCycleRef={walkCycle}
+        isMoving={isMoving}
+      />
+      <RightArm
+        ref={rightArmRef}
+        baseColor={baseColor}
+        hoofColor={hoofColor}
+        walkCycleRef={walkCycle}
+        isMoving={isMoving}
+      />
       <Tail spotColor={spotColor} helmetColor={helmetColor} />
       {label && (
         <Billboard>
