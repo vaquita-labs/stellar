@@ -179,11 +179,9 @@ export const getStellarApyData = async (
     // Vaquita `Period` currently stores reward_pool + total_deposits only.
     // For backward-compatible API shape, fallback to raw total_deposits as proxy shares.
     const totalShares = totalSharesRaw > 0 ? totalSharesRaw : totalDepositsRaw;
+    // Same annualization as `getBaseApyData`: ratio reward/deposit is unitless; do not divide by `base` here.
     const vaquitaApy =
-      periodData.totalDeposits !== '0' && Number(periodData.totalDeposits) > 0
-        ? ((Number(periodData.rewardPool) / Number(periodData.totalDeposits)) * 100 * 12) /
-          (lockPeriodInMonths * base)
-        : 0;
+      totalDeposits > 0 ? (rewardPool * 100 * 12) / (totalDeposits * lockPeriodInMonths) : 0;
 
     const defindexNet = stellarNetworkNameToDefindexHttpNetwork(network.name);
     const host = process.env.DEFINDEX_API_HOST?.trim();
