@@ -1,7 +1,6 @@
-import { PoolV2, Reserve } from '@blend-capital/blend-sdk';
 import { ONE_DAY, ONE_HOUR } from '../../config/constants';
 import { firstElement } from '../../helpers';
-import type { Deposit, Network, TokenNetwork } from '../../types';
+import type { Deposit, TokenNetwork } from '../../types';
 import { getStellarDepositContractAddress } from './events';
 import { getAssetAmountsPerShares } from './defindexVault';
 import { getPeriodData, getVaquitaPoolPosition } from './stellar-sdk';
@@ -9,45 +8,11 @@ import { getPeriodData, getVaquitaPoolPosition } from './stellar-sdk';
 const EMPTY = { blendInterest: 0, vaquitaInterest: 0 };
 
 let lastRequest: { [key: string]: { timestamp: number; blendInterest: number; vaquitaInterest: number } } = {};
-let lastResponse: { [key: string]: { timestamp: number; reserve: Reserve } } = {};
 
 function stroopsToAmount(stroops: bigint, decimals: number): number {
   const base = 10n ** BigInt(decimals);
   return Number(stroops) / Number(base);
 }
-
-export const getBlendPoolReserve = async (networkData: Network) => {
-  if (networkData.name !== 'Stellar Testnet') {
-    return null;
-  }
-
-  const cacheKey = networkData.name;
-  if (lastResponse[cacheKey] && Date.now() - lastResponse[cacheKey].timestamp <= ONE_HOUR) {
-    // return lastResponse[cacheKey].reserve;
-  }
-
-  const poolId = 'CDDDPAJOHXE4I5375IT72KXX5EAHGB6V45YKLEIATTTWIGIBUGPEQYJP';
-  const asssetId = 'CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU';
-  const network = {
-    passphrase: 'Test SDF Network ; September 2015',
-    rpc: 'https://soroban-testnet.stellar.org',
-  };
-
-  try {
-    const pool = await PoolV2.load(network, poolId);
-    const reserve = pool.reserves.get(asssetId)!;
-
-    lastResponse[cacheKey] = {
-      timestamp: Date.now(),
-      reserve,
-    };
-
-    return reserve;
-  } catch (error) {
-    console.log('getBlendPoolReserve', error);
-    return null;
-  }
-};
 
 /**
  * Per-deposit Stellar yield:
