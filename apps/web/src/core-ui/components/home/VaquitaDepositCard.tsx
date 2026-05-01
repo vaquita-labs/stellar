@@ -29,8 +29,8 @@ export const VaquitaDepositCard = ({
   onPress?: () => void;
   deposit: DepositResponseDTO;
 }) => {
-  const { network, lockPeriod, token } = useNetworkConfigStore();
-  const { data: dataApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
+  const { network, token } = useNetworkConfigStore();
+  const { data: dataApy } = useApyByLockPeriod(deposit.lockPeriod, token?.symbol ?? '');
 
   const { totalInterest } = getInterestData(
     network!,
