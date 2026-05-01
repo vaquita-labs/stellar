@@ -21,6 +21,10 @@ coverage:
 		--ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
 		--fail-under-lines 80 \
 		--html --output-dir coverage-html
+	cargo llvm-cov report --remap-path-prefix \
+		--ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
+		--json --summary-only 2>/dev/null \
+		| python3 $(CURDIR)/scripts/print_coverage_summary.py
 
 build:
 	cd $(POOL_DIR) && stellar contract build
