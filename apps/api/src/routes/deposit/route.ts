@@ -9,7 +9,6 @@ import {
   depositSchema,
   failDepositWithTx,
   getBaseApyData,
-  getBlendPoolReserve,
   getCachedDepositsByNetworkIdWalletAddress,
   getDepositsById,
   getDepositsByNetworkId,
@@ -225,9 +224,9 @@ router.get('/network/:networkName/token/:tokenSymbol/lockPeriod/:lockPeriod/apy'
   if (networkData.name === 'Base' || networkData.name === 'Base Sepolia Testnet') {
     response = await getBaseApyData(networkData, tokenNetworkData, Number(lockPeriod));
   } else if (networkData.name === 'Stellar Testnet' || networkData.name === 'Stellar') {
-    const poolData =
-      networkData.name === 'Stellar Testnet' ? await getBlendPoolReserve(networkData) : null;
-    response = await getStellarApyData(networkData, Number(lockPeriod), poolData, tokenNetworkData);
+    // Headline protocolApy: DeFindex HTTP API (+ on-chain period for vaquitaApy). Blend pool reserve is not used:
+    // per-deposit vault yield is share/NAV via `getBlendInterest`, and Blend SDK often lags testnet pool storage.
+    response = await getStellarApyData(networkData, Number(lockPeriod), null, tokenNetworkData);
   } else if (networkData.name === 'Dummy') {
     response = getDummyApyData(Number(lockPeriod));
   } else {

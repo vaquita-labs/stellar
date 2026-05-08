@@ -37,10 +37,16 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
   const [loading, setLoading] = useState(false);
   const { transactionWithdraw } = useTransactionStore();
   const { confirmWithdrawal } = useRestWithdrawal();
-  const { network, lockPeriod, token } = useNetworkConfigStore();
-  const { data: dataApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
+  const { network, token } = useNetworkConfigStore();
+  const depositLockPeriod = vaquita.lockPeriod;
+  const { data: dataApy } = useApyByLockPeriod(depositLockPeriod, token?.symbol ?? '');
   const withdrawalInfo = useWithdrawalTime(vaquita);
-  const { vaquitaInterest, aaveInterest, blendInterest, totalInterest } = getInterestData(network!, dataApy, vaquita.amount, lockPeriod);
+  const { vaquitaInterest, aaveInterest, blendInterest, totalInterest } = getInterestData(
+    network!,
+    dataApy,
+    vaquita.amount,
+    depositLockPeriod,
+  );
   const protocolInterest = aaveInterest + blendInterest;
 
   const [mounted, setMounted] = useState(false);
