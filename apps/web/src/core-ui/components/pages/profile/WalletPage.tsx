@@ -32,7 +32,7 @@ export function WalletPage() {
   const networkLogo = network?.type ? LogoByType[network.type] : null;
 
   return (
-    <PageLayout title="Wallet" backHref="/profile">
+    <PageLayout title="Wallet" backHref="/profile/settings">
       <section className="rounded-lg border border-black border-b-2 bg-white p-4 sm:p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2">
             {networkLogo}

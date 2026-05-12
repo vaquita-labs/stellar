@@ -49,8 +49,11 @@ export function Providers({ children }: { children: ReactNode }) {
   const router = useRouter();
   const isAuthenticated = useIsAuthenticated();
   const setWalletAddress = useNetworkConfigStore((s) => s.setWalletAddress);
-  const isPublicRoute = pathname === '/login';
-  const isProfileRoute = pathname?.startsWith('/profile') ?? false;
+  const PUBLIC_ROUTES = ['/login', '/terms', '/privacy'];
+  const isPublicRoute = !!pathname && PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  // Show the bottom navbar on `/profile` itself, but hide it on any deeper
+  // profile sub-route (settings, edit, wallet, friends, notifications, …).
+  const isProfileSubRoute = pathname?.startsWith('/profile/') ?? false;
   const isShopRoute = pathname?.startsWith('/shop') ?? false;
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const hideNavigation = isShopRoute || isEditingMap;
@@ -96,7 +99,7 @@ export function Providers({ children }: { children: ReactNode }) {
           <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
             {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
             <Main withSidebar={!isPublicRoute && !hideNavigation}>{children}</Main>
-            {!isPublicRoute && !isProfileRoute && !hideNavigation && <MobileNavigation />}
+            {!isPublicRoute && !isProfileSubRoute && !hideNavigation && <MobileNavigation />}
           </div>
         )}
       </ChannelProvider>

@@ -86,7 +86,7 @@ export function EditProfilePage() {
       const { success, message } = await saveNickname({ nickname });
       if (success) {
         toast.success('Profile saved', { timeout: 3000 });
-        router.push('/profile');
+        router.push('/profile/settings');
       } else {
         toast.danger('Could not save profile', { description: message, timeout: 4000 });
       }
@@ -101,7 +101,7 @@ export function EditProfilePage() {
   };
 
   return (
-    <PageLayout title="Edit profile" backHref="/profile">
+    <PageLayout title="Edit profile" backHref="/profile/settings">
         {/* Avatar */}
         <div className="flex flex-col items-center gap-2">
           <div className="relative">
@@ -185,7 +185,7 @@ export function EditProfilePage() {
 
         {/* Actions */}
         <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-background border-t border-black/10 flex gap-3">
-          <Button type="white" onPress={() => router.push('/profile')} isDisabled={saving} wFull>
+          <Button type="white" onPress={() => router.push('/profile/settings')} isDisabled={saving} wFull>
             Cancel
           </Button>
           <Button

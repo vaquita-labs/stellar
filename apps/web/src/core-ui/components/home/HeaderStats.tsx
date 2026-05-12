@@ -13,7 +13,7 @@ import {
   useProfileRewards,
   useProfileStreak,
 } from '../../hooks';
-import { SILVER_COIN, useElementPositionsStore } from '../../stores';
+import { SILVER_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
 import { BankAPYModal, StreakModal } from '../organisms';
 import { EarnChip } from './EarnChip';
@@ -22,6 +22,7 @@ export const HeaderStats = () => {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const { walletAddress, token, lockPeriod } = useNetworkConfigStore();
+  const hideBalance = useHideBalance();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
   const setEditMode = useMapStore((s) => s.setEditMode);
@@ -134,7 +135,7 @@ export const HeaderStats = () => {
               ) : (
                 <div className='flex justify-end gap-1.5'>
                   <span className="text-2xl font-bold text-black">
-                    ${activeDepositsTotalAmount} {token?.symbol}
+                    {hideBalance ? '••••' : `$${activeDepositsTotalAmount} ${token?.symbol}`}
                   </span>
                   <EarnChip
                     deposits={activeDeposits}
