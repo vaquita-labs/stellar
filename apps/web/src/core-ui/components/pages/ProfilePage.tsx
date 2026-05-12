@@ -14,10 +14,11 @@ import {
   useProfileStreak,
 } from '../../hooks';
 import { useHideBalance, useNetworkConfigStore } from '../../stores';
-import { buildAchievements, buildMonthlyBadges } from '../../data/profile-badges';
+import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
 import { AchievementModal, AchievementDetail } from './profile/AchievementModal';
 import { BadgeTile } from './profile/BadgeTile';
+import { ShareProfileModal } from './profile/ShareProfileModal';
 
 const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
@@ -90,7 +91,7 @@ const SummaryItem = ({
 /* ------------------------------------------------------------------ */
 
 export function ProfilePage() {
-  const { walletAddress, network, token } = useNetworkConfigStore();
+  const { walletAddress, token } = useNetworkConfigStore();
   const hideBalance = useHideBalance();
   const { data: profileData } = useProfileData();
   const { data: streakData } = useProfileStreak();
@@ -99,6 +100,7 @@ export function ProfilePage() {
   const { data: depositsData } = useDepositsComplete(walletAddress);
 
   const [selected, setSelected] = useState<AchievementDetail | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -136,33 +138,10 @@ export function ProfilePage() {
     []
   );
 
-  const monthlyBadges = useMemo(buildMonthlyBadges, []);
   const achievements = useMemo(
     () => buildAchievements({ totalStreak, totalDeposits, experience }),
     [totalStreak, totalDeposits, experience]
   );
-
-  const handleShareProfile = async () => {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
-    const text = `Check out my Vaquita profile, ${displayName} 🐮`;
-    try {
-      if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
-        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: 'My Vaquita profile',
-          text,
-          url,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(`${text} — ${url}`);
-      toast.success('Profile link copied');
-    } catch (error) {
-      const message = (error as { message?: string })?.message ?? '';
-      if (message && !message.toLowerCase().includes('abort')) {
-        toast.danger('Could not share', { description: message });
-      }
-    }
-  };
 
   const handleShareToInstagram = async () => {
     // Instagram doesn't expose a public web-share intent for arbitrary URLs.
@@ -220,7 +199,7 @@ export function ProfilePage() {
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={handleShareProfile}
+              onClick={() => setShareOpen(true)}
               aria-label="Share profile"
               className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
             >
@@ -263,8 +242,6 @@ export function ProfilePage() {
         {/* Stats row -------------------------------------------------- */}
         <section className="px-4 sm:px-6">
           <div className="flex items-stretch gap-3">
-            <StatPill value={network?.name ?? '—'} label="Network" />
-            <span className="w-px bg-black/10" aria-hidden />
             <StatPill value={'0'} label="Following" />
             <span className="w-px bg-black/10" aria-hidden />
             <StatPill value={'0'} label="Followers" />
@@ -344,28 +321,12 @@ export function ProfilePage() {
           </div>
         </section>
 
-        {/* Monthly badges -------------------------------------------- */}
-        <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <SectionHeader
-            title="Monthly badges"
-            count={monthlyBadges.filter((b) => b.unlocked).length}
-            href="/profile/achievements?tab=monthly"
-          />
-          <div className="rounded-2xl bg-white border border-black border-b-2 p-4">
-            <div className="grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
-              {monthlyBadges.slice(0, 4).map((badge) => (
-                <BadgeTile key={badge.id} badge={badge} onPress={() => setSelected(badge)} />
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Achievements ---------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <SectionHeader
             title="Achievements"
             count={achievements.filter((b) => b.unlocked).length}
-            href="/profile/achievements?tab=achievements"
+            href="/profile/achievements"
           />
           <div className="rounded-2xl bg-white border border-black border-b-2 p-4">
             <div className="grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
@@ -383,6 +344,13 @@ export function ProfilePage() {
         onOpenChange={(o) => {
           if (!o) setSelected(null);
         }}
+      />
+
+      <ShareProfileModal
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        displayName={displayName}
+        handle={handle}
       />
     </div>
   );

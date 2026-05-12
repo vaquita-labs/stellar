@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 import { getDepositsData } from '../../../helpers/deposits';
@@ -10,17 +9,10 @@ import {
   useProfileExperience,
   useProfileStreak,
 } from '../../../hooks';
-import { buildAchievements, buildMonthlyBadges, type Badge } from '../../../data/profile-badges';
+import { buildAchievements } from '../../../data/profile-badges';
 import { useNetworkConfigStore } from '../../../stores';
 import { AchievementDetail, AchievementModal } from './AchievementModal';
 import { BadgeTile } from './BadgeTile';
-
-type Tab = 'monthly' | 'achievements';
-
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'monthly', label: 'Monthly badges' },
-  { id: 'achievements', label: 'Achievements' },
-];
 
 function StatBar({ unlocked, total }: { unlocked: number; total: number }) {
   const pct = total === 0 ? 0 : Math.round((unlocked / total) * 100);
@@ -43,9 +35,6 @@ function StatBar({ unlocked, total }: { unlocked: number; total: number }) {
 }
 
 export function AllAchievementsPage() {
-  const params = useSearchParams();
-  const initialTab: Tab = params?.get('tab') === 'achievements' ? 'achievements' : 'monthly';
-  const [tab, setTab] = useState<Tab>(initialTab);
   const [selected, setSelected] = useState<AchievementDetail | null>(null);
 
   const { walletAddress } = useNetworkConfigStore();
@@ -58,14 +47,12 @@ export function AllAchievementsPage() {
   const { activeDeposits } = getDepositsData(depositsData?.deposits ?? []);
   const totalDeposits = activeDeposits?.length ?? 0;
 
-  const monthlyBadges = useMemo(buildMonthlyBadges, []);
   const achievements = useMemo(
     () => buildAchievements({ totalStreak, totalDeposits, experience }),
     [totalStreak, totalDeposits, experience]
   );
 
-  const list: Badge[] = tab === 'monthly' ? monthlyBadges : achievements;
-  const unlocked = list.filter((b) => b.unlocked).length;
+  const unlocked = achievements.filter((b) => b.unlocked).length;
 
   return (
     <div className="h-full overflow-y-auto bg-background">
@@ -87,38 +74,15 @@ export function AllAchievementsPage() {
           </p>
         </header>
 
-        {/* Tabs */}
-        <div role="tablist" aria-label="Trophy categories" className="flex p-1 bg-white border border-black border-b-2 rounded-full">
-          {TABS.map(({ id, label }) => {
-            const active = tab === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setTab(id)}
-                className={`flex-1 h-10 px-3 rounded-full text-xs sm:text-sm font-extrabold uppercase tracking-wider transition ${
-                  active
-                    ? 'bg-primary text-black border border-black border-b-2'
-                    : 'text-gray-500 hover:text-black bg-transparent'
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
         {/* Progress summary */}
         <div className="rounded-2xl border border-black border-b-2 bg-white p-4">
-          <StatBar unlocked={unlocked} total={list.length} />
+          <StatBar unlocked={unlocked} total={achievements.length} />
         </div>
 
         {/* Grid */}
         <div className="rounded-2xl border border-black border-b-2 bg-white p-4 sm:p-6">
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 sm:gap-6 place-items-center">
-            {list.map((badge) => (
+            {achievements.map((badge) => (
               <BadgeTile
                 key={badge.id}
                 badge={badge}
