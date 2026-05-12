@@ -90,8 +90,9 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
             className="flex flex-col h-full min-h-[100dvh] w-full"
           >
-            {/* Close button */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-background/95 backdrop-blur-sm">
+            {/* Close button — kept transparent so the medal halo can bleed up
+                under it without being painted over by a backdrop. */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
               <span className="w-10" />
               <span className="h-1.5 w-12 rounded-full bg-black/15" aria-hidden />
               <button
@@ -109,18 +110,25 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
                 initial={{ scale: 0.6, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 18 }}
-                className="flex flex-col items-center gap-4 pt-4"
+                className="flex flex-col items-center gap-4 pt-12 sm:pt-16"
               >
-                <div
-                  className="relative flex h-44 w-44 sm:h-52 sm:w-52 items-center justify-center rounded-full border-2 border-black border-b-4 shadow-lg overflow-hidden"
-                  style={{ background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)' }}
-                >
+                <div className="relative flex h-52 w-52 sm:h-64 sm:w-64 items-center justify-center">
+                  {/* Soft accent halo — sized so it fades inside its own box
+                      and doesn't bleed into the sticky top bar above. */}
+                  <span
+                    aria-hidden
+                    className="absolute inset-10 sm:inset-12 rounded-full blur-2xl opacity-55"
+                    style={{
+                      background:
+                        achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
+                    }}
+                  />
                   <Image
                     src={achievement.icon}
                     alt={achievement.title}
-                    width={140}
-                    height={140}
-                    className="object-contain drop-shadow"
+                    width={320}
+                    height={320}
+                    className="relative h-full w-full object-contain drop-shadow-2xl"
                   />
                 </div>
                 {achievement.tier && (

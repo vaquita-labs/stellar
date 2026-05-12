@@ -139,8 +139,14 @@ export function ProfilePage() {
   );
 
   const achievements = useMemo(
-    () => buildAchievements({ totalStreak, totalDeposits, experience }),
-    [totalStreak, totalDeposits, experience]
+    () =>
+      buildAchievements({
+        totalStreak,
+        totalDeposits,
+        experience,
+        totalSavedAmount: activeDepositsTotalAmount,
+      }),
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount]
   );
 
   const handleShareToInstagram = async () => {

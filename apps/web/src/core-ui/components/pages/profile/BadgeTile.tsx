@@ -7,22 +7,22 @@ type BadgeSize = 'sm' | 'md' | 'lg';
 
 const SIZES: Record<
   BadgeSize,
-  { wrap: string; img: { w: number; h: number; cls: string }; chip: string }
+  { wrap: string; img: { w: number; h: number }; glowInset: string }
 > = {
   sm: {
-    wrap: 'max-w-[64px] sm:max-w-[72px]',
-    img: { w: 80, h: 80, cls: 'w-[60%] h-[60%]' },
-    chip: 'text-[10px]',
+    wrap: 'max-w-[72px] sm:max-w-[80px]',
+    img: { w: 128, h: 128 },
+    glowInset: 'inset-2',
   },
   md: {
-    wrap: 'max-w-[80px] sm:max-w-[96px]',
-    img: { w: 96, h: 96, cls: 'w-[60%] h-[60%]' },
-    chip: 'text-[11px]',
+    wrap: 'max-w-[88px] sm:max-w-[104px]',
+    img: { w: 160, h: 160 },
+    glowInset: 'inset-2',
   },
   lg: {
-    wrap: 'max-w-[120px] sm:max-w-[140px]',
-    img: { w: 140, h: 140, cls: 'w-[62%] h-[62%]' },
-    chip: 'text-xs',
+    wrap: 'max-w-[140px] sm:max-w-[160px]',
+    img: { w: 240, h: 240 },
+    glowInset: 'inset-3',
   },
 };
 
@@ -34,6 +34,11 @@ interface BadgeTileProps {
   showTitle?: boolean;
 }
 
+/**
+ * Renders an achievement as the medal artwork itself — no circular frame.
+ * A soft, blurred accent halo sits behind the image for depth so the badge
+ * still feels gamified without containing the art in a disk.
+ */
 export function BadgeTile({ badge, onPress, size = 'md', showTitle = false }: BadgeTileProps) {
   const s = SIZES[size];
   return (
@@ -43,26 +48,24 @@ export function BadgeTile({ badge, onPress, size = 'md', showTitle = false }: Ba
       className="group flex flex-col items-center gap-1.5 bg-transparent focus:outline-none w-full"
     >
       <span
-        className={`flex aspect-square w-full ${s.wrap} items-center justify-center rounded-full border-2 border-black border-b-4 shadow transition group-hover:-translate-y-0.5 ${
+        className={`relative flex aspect-square w-full ${s.wrap} items-center justify-center transition group-hover:-translate-y-0.5 ${
           badge.unlocked ? '' : 'grayscale opacity-60'
         }`}
-        style={{ background: badge.accent ?? '#F5A161' }}
       >
+        {/* Soft accent halo — gives depth without a hard frame. */}
+        <span
+          aria-hidden
+          className={`absolute ${s.glowInset} rounded-full blur-2xl opacity-50`}
+          style={{ background: badge.accent ?? '#F5A161' }}
+        />
         <Image
           src={badge.icon}
           alt={badge.title}
           width={s.img.w}
           height={s.img.h}
-          className={`${s.img.cls} object-contain drop-shadow`}
+          className="relative h-full w-full object-contain drop-shadow-md"
         />
       </span>
-      {badge.progress && (
-        <span
-          className={`${s.chip} font-bold text-black bg-white border border-black rounded-full px-2 py-0.5 -mt-3 z-[1] tabular-nums`}
-        >
-          {badge.progress.target.toLocaleString()}
-        </span>
-      )}
       {showTitle && (
         <span className="text-[11px] sm:text-xs font-bold text-black text-center leading-tight mt-1 line-clamp-2">
           {badge.title}
