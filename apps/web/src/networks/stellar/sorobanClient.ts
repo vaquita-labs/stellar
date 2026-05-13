@@ -1,7 +1,6 @@
 import { Client as ContractClient } from '@stellar/stellar-sdk/contract';
-import { getStellarWalletsKit } from './kit';
+import { requireActiveAdapter } from './wallet/registry';
 
-/** Normaliza las distintas respuestas de signTransaction de las wallets */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeSignedXdr(res: any): string {
   if (typeof res === 'string') return res;
@@ -10,17 +9,10 @@ function normalizeSignedXdr(res: any): string {
   return out;
 }
 
-/**
- * Keeps a ContractClient instance bound to the current user (address) and wallet signer.
- * Returns a ref whose `.current` is either `ContractClient` or `null` while loading.
- */
-
 const clientRef: { current: ContractClient | null } = { current: null };
 let cachedKey = '';
 
 export async function getSorobanClient(address: string, contractId: string, rpcUrl: string, networkPassphrase: string) {
-  const kit = getStellarWalletsKit();
-
   if (!address) {
     clientRef.current = null;
     cachedKey = '';
@@ -33,11 +25,9 @@ export async function getSorobanClient(address: string, contractId: string, rpcU
   }
 
   const signTransaction = async (xdr: string) => {
-    const res = await kit.signTransaction(xdr, {
-      address,
-      networkPassphrase,
-    });
-    return normalizeSignedXdr(res);
+    const adapter = requireActiveAdapter();
+    const signed = await adapter.signTransaction(xdr, { address, networkPassphrase });
+    return normalizeSignedXdr(signed);
   };
 
   const client = await ContractClient.from({
@@ -45,10 +35,8 @@ export async function getSorobanClient(address: string, contractId: string, rpcU
     rpcUrl,
     networkPassphrase,
     publicKey: address,
-    // @ts-expect-error TODO: signTransaction
+    // @ts-expect-error stellar-sdk's signTransaction type is overly narrow
     signTransaction,
-    // If your wallet supports SEP-43 auth-entry signing, you can also pass:
-    // signAuthEntry: async (authXdr: string) => { ... }
   });
 
   clientRef.current = client;

@@ -5,7 +5,10 @@ import { AblyProvider, LoaderScreen, NetworksProvider, sendLogToAbly } from '@/c
 import { getNetworks, useIsAuthenticated } from '@/core-ui/hooks';
 import { useMapStore, useNetworkConfigStore, useResize } from '@/core-ui/stores';
 import { useVisibility } from '@/core-ui/stores/visibility';
+import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
 import { Toast } from '@heroui/react';
+import { PollarProvider } from '@pollar/react';
+import '@pollar/react/styles.css';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import * as Ably from 'ably';
 import { ChannelProvider, useChannel } from 'ably/react';
@@ -13,6 +16,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 import { TransactionsProvider } from './TransactionsProvider';
 import { WalletProviderSync } from './WalletProviderSync';
+
+const POLLAR_API_KEY = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY ?? '';
+const POLLAR_NETWORK =
+  (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet').toLowerCase() === 'public' ? 'mainnet' : 'testnet';
 
 export const queryClient = new QueryClient();
 
@@ -90,21 +97,24 @@ export function Providers({ children }: { children: ReactNode }) {
   }, [showAuthGate, router]);
 
   return (
-    <AblyProvider>
-      <Toast.Provider placement="top" />
-      <ChannelProvider channelName="deposits-changes">
-        {showLoader ? (
-          <LoaderScreen withImage />
-        ) : (
-          <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
-            {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
-            <Main withSidebar={!isPublicRoute && !hideNavigation}>{children}</Main>
-            {!isPublicRoute && !isProfileSubRoute && !hideNavigation && <MobileNavigation />}
-          </div>
-        )}
-      </ChannelProvider>
-      <TransactionsProvider />
-    </AblyProvider>
+    <PollarProvider config={{ apiKey: POLLAR_API_KEY, stellarNetwork: POLLAR_NETWORK }}>
+      <PollarBridge />
+      <AblyProvider>
+        <Toast.Provider placement="top" />
+        <ChannelProvider channelName="deposits-changes">
+          {showLoader ? (
+            <LoaderScreen withImage />
+          ) : (
+            <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
+              {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
+              <Main withSidebar={!isPublicRoute && !hideNavigation}>{children}</Main>
+              {!isPublicRoute && !isProfileSubRoute && !hideNavigation && <MobileNavigation />}
+            </div>
+          )}
+        </ChannelProvider>
+        <TransactionsProvider />
+      </AblyProvider>
+    </PollarProvider>
   );
 }
 
