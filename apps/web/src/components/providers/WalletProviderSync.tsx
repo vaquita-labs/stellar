@@ -5,6 +5,7 @@ import { LoaderScreen } from '@/core-ui/components/molecules/LoaderScreen';
 import { useNetworkConfigStore } from '@/core-ui/stores';
 import { isStellarNetwork } from '@/networks/stellar';
 import { stellarSession } from '@/networks/stellar/stellar';
+import { getActiveAdapter } from '@/networks/stellar/wallet/registry';
 import { usePrivyStore } from '@/stores';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -37,6 +38,10 @@ export function WalletProviderSync() {
       });
     } else if (!isStellar) {
       // Si cambiamos de Stellar a otra red, desconectar la cartera Stellar
+      const active = getActiveAdapter();
+      if (active) {
+        void active.disconnect();
+      }
       if (sessionRef.current) {
         void sessionRef.current.logout();
         sessionRef.current = null;

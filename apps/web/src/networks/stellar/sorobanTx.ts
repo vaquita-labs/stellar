@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { getStellarWalletsKit } from '@/networks/stellar/kit';
 import { rpcCall, submitAndWait } from './rpc';
+import { requireActiveAdapter } from './wallet/registry';
 import { normalizeSignedXdr } from './xdr';
 
 function toBaseUnits(input: string, decimals: number): bigint {
@@ -34,20 +34,10 @@ type Common = {
 
 type DepositParams = {
   depositId: string;
-  /** If provided, used instead of `amount` */
-  humanAmount?: string; // e.g. "1.25"
-  /** Raw base units (u128) if you don't pass humanAmount */
+  humanAmount?: string;
   amount?: bigint;
-  /** seconds */
   period?: number | string | bigint;
-  /** token decimals for humanAmount */
-  tokenDecimals?: number; // default 7
-  /**
-   * How to encode deposit_id for your contract:
-   * - "hex16-string"  -> pass validated hex string (32 chars) [DEFAULT]
-   * - "hex16-bytes"   -> pass Uint8Array(16)
-   * - "u128"          -> pass BigInt
-   */
+  tokenDecimals?: number;
   depositIdEncoding?: 'hex16-string' | 'hex16-bytes' | 'u128';
 };
 
@@ -57,14 +47,10 @@ type WithdrawParams = {
 };
 
 export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: Common) {
-  const kit = getStellarWalletsKit();
-
-  // Assemble contract call and (optionally) sign auth entries
   const assemble = async (method: string, args: any) => {
     if (!clientRef.current) throw new Error('Contract client not ready');
     const tx = await (clientRef.current as any)[method](args);
 
-    // Some wallets/contracts need non-invoker auth entries to be signed
     let needs: any = false;
     if (typeof tx.needsNonInvokerSigningBy === 'function') {
       try {
@@ -73,14 +59,16 @@ export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: 
     }
     const mustSign = Array.isArray(needs) ? needs.length > 0 : !!needs;
 
-    if (mustSign && (kit as any).signAuthEntry) {
+    if (mustSign) {
+      const adapter = requireActiveAdapter();
+      if (!adapter.signAuthEntry) {
+        throw new Error(
+          `[${method}] requires non-invoker auth entry signing, but adapter "${adapter.id}" does not support it.`,
+        );
+      }
       try {
         await tx.signAuthEntries(address, async (authXdr: string) => {
-          const res = await (kit as any).signAuthEntry(authXdr, {
-            address,
-            networkPassphrase,
-          });
-          const signed = normalizeSignedXdr(res, /*isAuth*/ true);
+          const signed = await adapter.signAuthEntry!(authXdr, { address, networkPassphrase });
           return signed;
         });
       } catch (err: any) {
@@ -97,16 +85,12 @@ export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: 
     return unsigned;
   };
 
-  // Sign a transaction XDR with the wallet
   const sign = async (unsignedXdr: string) => {
-    const res = await kit.signTransaction(unsignedXdr, {
-      address,
-      networkPassphrase,
-    });
+    const adapter = requireActiveAdapter();
+    const res = await adapter.signTransaction(unsignedXdr, { address, networkPassphrase });
     return normalizeSignedXdr(res);
   };
 
-  // Send via JSON-RPC and wait
   const send = async (signedXdr: string) => {
     const sendRes = await rpcCall<{ hash: string }>(rpcUrl, 'sendTransaction', {
       transaction: signedXdr,
@@ -120,7 +104,21 @@ export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: 
     return { hash, final };
   };
 
-  // High-level: deposit
+  /** Run the full sign+submit pipeline, branching on whether the adapter submits internally. */
+  const signAndSubmit = async (unsignedXdr: string) => {
+    const adapter = requireActiveAdapter();
+    if (adapter.submitsOnSign && adapter.signAndSubmitTransaction) {
+      const { hash } = await adapter.signAndSubmitTransaction(unsignedXdr, { address, networkPassphrase });
+      const final = await submitAndWait(rpcUrl, hash);
+      if (final.status !== 'SUCCESS') {
+        throw new Error(`Tx failed: ${final.status} ${final.resultXdr ?? ''}`);
+      }
+      return { hash, final };
+    }
+    const signed = await sign(unsignedXdr);
+    return await send(signed);
+  };
+
   const deposit = async ({
     depositId,
     humanAmount,
@@ -131,11 +129,10 @@ export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: 
   }: DepositParams) => {
     if (!address) throw new Error('No connected address');
 
-    // encode deposit_id for different contract specs
     let deposit_id: any;
     if (depositIdEncoding === 'u128') deposit_id = BigInt(depositId);
     else if (depositIdEncoding === 'hex16-bytes') deposit_id = hexToBytes16(depositId);
-    else deposit_id = assertHex32(depositId); // default: hex16-string
+    else deposit_id = assertHex32(depositId);
 
     const amt =
       humanAmount != null && humanAmount !== ''
@@ -154,11 +151,9 @@ export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: 
     };
 
     const unsigned = await assemble('deposit', args);
-    const signed = await sign(unsigned);
-    return await send(signed);
+    return await signAndSubmit(unsigned);
   };
 
-  // High-level: withdraw
   const withdraw = async ({ depositId, depositIdEncoding = 'hex16-string' }: WithdrawParams) => {
     if (!address) throw new Error('No connected address');
 
@@ -173,9 +168,8 @@ export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: 
     };
 
     const unsigned = await assemble('withdraw', args);
-    const signed = await sign(unsigned);
-    return await send(signed);
+    return await signAndSubmit(unsigned);
   };
 
-  return { assemble, sign, send, deposit, withdraw };
+  return { assemble, sign, send, signAndSubmit, deposit, withdraw };
 }
