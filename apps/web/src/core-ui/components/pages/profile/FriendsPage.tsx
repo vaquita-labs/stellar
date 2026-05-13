@@ -181,16 +181,18 @@ export function FriendsPage() {
   return (
     <div className="h-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-6 pb-12">
-        {/* Header: back arrow + left-aligned title (Duolingo-style) */}
-        <header className="flex flex-col gap-4">
+        {/* Header: back arrow on the left + centered title. The title is
+            absolutely centered on the row so it stays optically balanced
+            regardless of the back-button width. */}
+        <header className="relative flex items-center justify-center h-9">
           <Link
             href="/profile"
             aria-label="Back"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
+            className="absolute left-0 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
           >
             <FiArrowLeft className="h-4 w-4" />
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
+          <h1 className="text-lg sm:text-xl font-extrabold text-black tracking-tight">
             Find your friends
           </h1>
         </header>
@@ -233,8 +235,12 @@ export function FriendsPage() {
               <p className="text-xs text-gray-500 mt-1">Check back soon for new vaqueros to follow.</p>
             </div>
           ) : (
+            // Bleed the carousel out to the viewport edges and re-add the page
+            // padding inside as scroll padding. That way snap-start lands the
+            // first card flush with the content gutter instead of leaving it
+            // half-cropped behind the page padding.
             <div
-              className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full snap-x"
+              className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-px-4 sm:scroll-px-6 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full snap-x snap-mandatory"
               aria-label="Friend suggestions"
             >
               {visibleSuggestions.map((s) => (
