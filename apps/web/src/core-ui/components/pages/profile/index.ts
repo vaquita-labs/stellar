@@ -14,4 +14,5 @@ export * from './SearchFriendsPage';
 export * from './SettingsPage';
 export * from './ShareProfileModal';
 export * from './ShareProfileQrButton';
+export * from './SummaryPage';
 export * from './WalletPage';

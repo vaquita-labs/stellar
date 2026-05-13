@@ -33,12 +33,12 @@ export default function StellarAuthButtons() {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 w-full">
       {isConnected ? (
         <WalletButton handleLogout={handleLogout} startContentSrc="/chains/stellar.png" startContentAlt="Stellar" />
       ) : (
         <div className="flex flex-col items-stretch gap-2 w-full">
-          <ConnectButton onPress={handleConnect} startContentSrc="/chains/stellar.png" startContentAlt="Stellar" />
+          {/* <ConnectButton onPress={handleConnect} startContentSrc="/chains/stellar.png" startContentAlt="Stellar" /> */}
           <PollarLoginButton />
         </div>
       )}

@@ -375,7 +375,7 @@ export function ShareProfileModal({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className="flex flex-col h-dvh w-full"
+            className="flex flex-col h-full min-h-dvh w-full"
           >
             {/* Header — X on the left, drag handle in the middle, spacer on
                 the right to keep the handle visually centered. Mirrors the
@@ -400,12 +400,14 @@ export function ShareProfileModal({
               </div>
             </div>
 
-            {/* Centered content area — `flex-1` + `min-h-0` is the canonical
-                pair that lets this column shrink and become the vertical
-                scroller when the QR + identity + caption don't fit the
-                available viewport. The CTA bar below stays anchored. */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4">
-              <div className="min-h-full w-full max-w-md mx-auto flex flex-col items-center justify-center py-2">
+            {/* Centered content area — matches AchievementModal exactly. No
+                custom overflow / fixed height: when the content exceeds the
+                viewport, `Modal.Container scroll="inside"` makes the whole
+                modal scroll. Stacking a hand-rolled overflow scroller here
+                was forcing a layout recompute during the close animation,
+                which read on screen as a flicker. */}
+            <div className="flex-1 flex flex-col items-center justify-center px-6 pb-4">
+              <div className="w-full max-w-md">
                 {tab === 'mine' ? (
                   <MyQrView
                     url={url}

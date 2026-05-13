@@ -15,10 +15,10 @@ export function PollarLoginButton({ className }: PollarLoginButtonProps) {
       onPress={() => openLoginModal()}
       className={
         className ??
-        'px-5 m-2 rounded-md w-full bg-white border border-black border-b-3 text-black text-sm font-semibold hover:bg-gray-50 transition shadow-sm'
+        'px-5 py-2 rounded-md w-full bg-white border border-black border-b-3 text-black text-sm font-semibold hover:bg-gray-50 transition shadow-sm'
       }
     >
-      Sign in with Pollar
+      Sign in
     </Button>
   );
 }

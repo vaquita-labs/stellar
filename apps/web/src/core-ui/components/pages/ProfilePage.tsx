@@ -258,7 +258,7 @@ export function ProfilePage() {
         </section>
 
         {/* Share to Instagram CTA ------------------------------------- */}
-        <section className="px-4 sm:px-6">
+        {/* <section className="px-4 sm:px-6">
           <div className="relative overflow-hidden rounded-2xl bg-white border border-black border-b-2 p-4 flex items-center gap-4">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-extrabold text-black leading-snug">
@@ -286,19 +286,19 @@ export function ProfilePage() {
               />
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* Resumen ---------------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <SectionHeader title="Summary" />
+          <SectionHeader title="Summary" href="/profile/summary" />
           <div className="grid grid-cols-2 gap-3 rounded-2xl bg-white border border-black border-b-2 p-4">
             <SummaryItem
-              icon={hasActiveStreak ? '/icons/summary/streak.png' : '/icons/summary/streak_freeze.png'}
+              icon={hasActiveStreak ? '/icons/global/streak.png' : '/icons/global/streak_freeze.png'}
               value={`${totalStreak} days`}
               label="Streak"
             />
             <SummaryItem
-              icon="/icons/summary/gold_coin.png"
+              icon="/icons/global/coin.png"
               value={
                 hideBalance
                   ? '••••'
@@ -307,12 +307,12 @@ export function ProfilePage() {
               label="Active deposits"
             />
             <SummaryItem
-              icon="/icons/summary/silver_coin.png"
+              icon="/icons/global/star.png"
               value={silverCoins.toLocaleString()}
               label="Silver"
             />
             <SummaryItem
-              icon="/trofeo.png"
+              icon="/icons/global/trophy.png"
               value={`${experience.toLocaleString()} XP`}
               label={`Gold: ${goldCoins.toLocaleString()}`}
             />
