@@ -43,7 +43,7 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
       title: 'Beta Tester',
       description:
         'You joined Vaquita during the beta. Thanks for helping us shape it.',
-      icon: `${ICONS}/beta-tester.png`,
+      icon: `${ICONS}/beta-tester2.png`,
       accent: 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
       tier: 'Founder',
       date: isBetaTester ? new Date().toISOString() : undefined,

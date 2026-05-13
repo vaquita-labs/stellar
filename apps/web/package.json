@@ -28,6 +28,7 @@
     "driver.js": "^1.4.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.38.0",
+    "html-to-image": "^1.11.13",
     "next": "16.2.4",
     "papaparse": "^5.5.3",
     "react": "19.2.5",

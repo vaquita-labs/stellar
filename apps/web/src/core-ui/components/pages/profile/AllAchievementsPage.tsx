@@ -174,7 +174,7 @@ export function AllAchievementsPage() {
               date={today}
             />
             <RecordCard
-              icon="/icons/achievements/beta-tester.png"
+              icon="/icons/achievements/beta-tester2.png"
               background="linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)"
               title="Awards earned"
               value={`${earned} / ${achievements.length}`}

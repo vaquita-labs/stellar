@@ -2,8 +2,9 @@
 
 import { Modal, toast } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
+import * as htmlToImage from 'html-to-image';
 import Image from 'next/image';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiShare2, FiX } from 'react-icons/fi';
 import { useClaimedAchievements, useProfileRewards } from '../../../hooks';
 
@@ -76,57 +77,63 @@ function VaquitaDots() {
 /* Share preview card — what gets posted to socials                    */
 /* ------------------------------------------------------------------ */
 
-function ShareCard({ achievement }: { achievement: AchievementDetail }) {
-  return (
-    <div
-      className="relative w-full max-w-xs mx-auto rounded-3xl overflow-hidden border border-black border-b-2 shadow-lg"
-      style={{
-        background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
-      }}
-    >
-      {/* Soft dotted texture so the card doesn't feel like a flat swatch. */}
+/**
+ * The visual that's posted to socials. Rendered into the modal preview AND
+ * snapshotted to a PNG by `html-to-image` so the share actually carries an
+ * image. Exposed via `forwardRef` so the share handlers can hand the same
+ * node to the snapshotter without re-mounting a clone.
+ */
+const ShareCard = React.forwardRef<HTMLDivElement, { achievement: AchievementDetail }>(
+  function ShareCard({ achievement }, ref) {
+    return (
       <div
-        aria-hidden
-        className="absolute inset-0 opacity-15"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle, #000 1px, transparent 1px)',
-          backgroundSize: '14px 14px',
-        }}
-      />
-      <div className="relative flex flex-col items-center text-center px-6 pt-6 pb-5 gap-3">
-        <div className="relative h-36 w-36">
-          <Image
-            src={achievement.icon}
-            alt={achievement.title}
-            fill
-            sizes="144px"
-            className="object-contain drop-shadow-xl"
-          />
-        </div>
-        <p className="text-[11px] font-extrabold uppercase tracking-wider text-black/70">
-          Achievement unlocked
-        </p>
-        <p className="text-xl font-extrabold text-black leading-tight">{achievement.title}</p>
-        <p className="text-xs text-black/70 leading-snug max-w-[14rem]">
-          {achievement.description}
-        </p>
-        <div className="mt-2 flex items-center gap-1.5">
-          <Image
-            src="/vaquita/vaquita_isotipo.svg"
-            alt=""
-            width={22}
-            height={22}
-            className="object-contain"
-          />
-          <span className="text-[11px] font-extrabold uppercase tracking-wider text-black">
-            Vaquita
-          </span>
+        ref={ref}
+        className="relative w-full max-w-xs mx-auto rounded-3xl overflow-hidden bg-white border border-black border-b-2 shadow-lg"
+      >
+        <div className="relative flex flex-col items-center text-center px-6 pt-7 pb-6 gap-3">
+          {/* Achievement art on its own subtle halo so it pops on white. */}
+          <div className="relative flex h-36 w-36 items-center justify-center">
+            <span
+              aria-hidden
+              className="absolute inset-4 rounded-full blur-2xl opacity-45"
+              style={{
+                background:
+                  achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
+              }}
+            />
+            <Image
+              src={achievement.icon}
+              alt={achievement.title}
+              fill
+              sizes="144px"
+              className="relative object-contain drop-shadow-md"
+            />
+          </div>
+
+          <p className="text-[11px] font-extrabold uppercase tracking-wider text-primary">
+            Achievement unlocked
+          </p>
+          <p className="text-2xl font-extrabold text-black leading-tight">{achievement.title}</p>
+          <p className="text-xs text-gray-600 leading-snug max-w-[15rem]">
+            {achievement.description}
+          </p>
+
+          {/* Bigger Vaquita lockup as a clean signoff at the bottom. */}
+          <div className="mt-3 flex items-center gap-2 border-t border-black/10 pt-4 w-full justify-center">
+            <Image
+              src="/vaquita/vaquita_isotipo.svg"
+              alt=""
+              width={40}
+              height={40}
+              className="object-contain"
+            />
+            <span className="text-base font-extrabold tracking-tight text-black">Vaquita</span>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
+);
 
 /* ------------------------------------------------------------------ */
 /* Modal                                                               */
@@ -147,6 +154,8 @@ export function AchievementModal({
   const [bonusGold, setBonusGold] = useState(0);
   const goldCoins = baseGoldCoins + bonusGold;
   const [phase, setPhase] = useState<Phase>('detail');
+  const [generating, setGenerating] = useState(false);
+  const shareCardRef = useRef<HTMLDivElement | null>(null);
 
   // Reset to the detail phase every time the modal opens so a previous
   // claim-flow doesn't leak into the next achievement view.
@@ -159,6 +168,27 @@ export function AchievementModal({
 
   const reward = useMemo(() => (achievement ? rewardFor(achievement) : 0), [achievement]);
   const claimed = !!achievement && isClaimed(achievement.id);
+
+  /** Snapshot the on-screen `ShareCard` to a PNG file. Returns `null` when the
+   *  ref isn't mounted yet (e.g. share triggered before the preview rendered)
+   *  or when the browser can't paint the DOM to a canvas (very old Safari).
+   *
+   *  Defined *above* the `if (!achievement) return null` early-exit so the
+   *  hook order stays stable between "no selection" and "open selection"
+   *  renders. */
+  const generateShareImage = useCallback(async (): Promise<File | null> => {
+    if (!shareCardRef.current || !achievement) return null;
+    // 2× pixel ratio so the PNG looks crisp on Retina / phone displays.
+    const blob = await htmlToImage.toBlob(shareCardRef.current, {
+      pixelRatio: 2,
+      cacheBust: true,
+      // The card itself paints a white background; setting it here too keeps
+      // any transparent area (rounded-corner antialiasing) on the same color.
+      backgroundColor: '#FFFFFF',
+    });
+    if (!blob) return null;
+    return new File([blob], `vaquita-${achievement.id}.png`, { type: 'image/png' });
+  }, [achievement]);
 
   if (!achievement) return null;
 
@@ -184,26 +214,42 @@ export function AchievementModal({
     setPhase('detail');
   };
 
-  const handleShare = async () => {
-    const text = `I just unlocked "${achievement.title}" on Vaquita 🐮`;
-    const url = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
+  const shareText = `I just unlocked "${achievement.title}" on Vaquita 🐮`;
+  const shareUrl =
+    typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
 
+  /**
+   * Native share — first tries to hand off an actual PNG via the Web Share
+   * Files API (works on iOS, Android, and modern Chromium desktop). When file
+   * sharing isn't available we fall back to text + URL through the same share
+   * sheet, and finally to clipboard.
+   */
+  const handleNativeShare = async () => {
+    setGenerating(true);
     try {
-      if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
-        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: achievement.title,
-          text,
-          url,
-        });
+      const file = await generateShareImage();
+      const nav = navigator as Navigator & {
+        share?: (data: ShareData) => Promise<void>;
+        canShare?: (data: ShareData) => boolean;
+      };
+      const payload: ShareData = file
+        ? { files: [file], title: achievement.title, text: shareText, url: shareUrl }
+        : { title: achievement.title, text: shareText, url: shareUrl };
+
+      if (nav.share && (!file || (nav.canShare?.(payload) ?? true))) {
+        await nav.share(payload);
         return;
       }
-      await navigator.clipboard.writeText(`${text} ${url}`);
+      // No Web Share API at all → clipboard fallback.
+      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
       toast.success('Link copied to clipboard');
     } catch (error) {
       const message = (error as { message?: string })?.message ?? '';
       if (message && !message.toLowerCase().includes('abort')) {
         toast.danger('Could not share', { description: message });
       }
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -307,23 +353,20 @@ export function AchievementModal({
         <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
           Preview · this is what your friends will see
         </p>
-        <ShareCard achievement={achievement} />
+        <ShareCard ref={shareCardRef} achievement={achievement} />
       </div>
-      <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10 flex flex-col gap-2">
+      <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
+        {/* Single share CTA — the OS share sheet handles target selection
+            (Instagram, X, WhatsApp, Telegram, Mail, …) and we hand it the
+            generated PNG + reference text. */}
         <button
           type="button"
-          onClick={handleShare}
-          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+          onClick={handleNativeShare}
+          disabled={generating}
+          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
         >
           <FiShare2 className="h-4 w-4" />
-          Share
-        </button>
-        <button
-          type="button"
-          onClick={() => setPhase('detail')}
-          className="w-full h-10 inline-flex items-center justify-center rounded-md bg-white text-black border border-black/15 text-xs font-bold uppercase tracking-wide hover:bg-white/80 transition"
-        >
-          Back
+          {generating ? 'Preparing…' : 'Share'}
         </button>
       </div>
     </motion.div>
@@ -438,13 +481,13 @@ export function AchievementModal({
       className="bg-black/70 backdrop-blur-sm data-[exiting=true]:duration-300"
     >
       <Modal.Container size="full" placement="bottom" scroll="inside" className="p-0! m-0!">
-        <Modal.Dialog className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-t-[2rem] border-0 max-h-[100dvh] data-[exiting=true]:duration-300">
+        <Modal.Dialog className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-t-[2rem] border-0 max-h-dvh data-[exiting=true]:duration-300">
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className="flex flex-col h-full min-h-[100dvh] w-full"
+            className="flex flex-col h-full min-h-dvh w-full"
           >
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
               <button
