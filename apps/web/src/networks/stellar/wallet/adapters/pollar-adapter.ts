@@ -60,7 +60,20 @@ export const pollarAdapter: WalletAdapter = {
 
   async disconnect() {
     if (!binding) return;
-    binding.logout();
+    try {
+      binding.client.logout();
+    } catch (e) {
+      console.warn('[pollar-adapter] client.logout failed:', e);
+    }
+    // Belt and suspenders: Pollar's _clearSession() should remove these, but if the
+    // call ever no-ops (e.g. ran during a re-render where the closure was stale)
+    // we still want a clean slate so the next openLoginModal() does not see an
+    // "authenticated" state and auto-close itself.
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('pollar:session');
+      window.localStorage.removeItem('pollar:walletType');
+    }
+    binding = null;
   },
 
   async hydrate() {
