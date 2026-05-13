@@ -72,7 +72,12 @@ const formatDate = (iso: string) =>
 /* ------------------------------------------------------------------ */
 
 export function AllAchievementsPage() {
-  const [selected, setSelected] = useState<AchievementDetail | null>(null);
+  // The detail modal needs both the catalog row (for display) and whether the
+  // user has met the unlock condition, so it can pick Claim vs progress UI.
+  const [selected, setSelected] = useState<{
+    achievement: AchievementDetail;
+    unlocked: boolean;
+  } | null>(null);
 
   const { walletAddress } = useNetworkConfigStore();
   const { data: streakData } = useProfileStreak();
@@ -191,7 +196,7 @@ export function AllAchievementsPage() {
                   badge={badge}
                   size="lg"
                   showTitle
-                  onPress={() => setSelected(badge)}
+                  onPress={() => setSelected({ achievement: badge, unlocked: badge.unlocked })}
                 />
               ))}
             </div>
@@ -200,7 +205,8 @@ export function AllAchievementsPage() {
       </div>
 
       <AchievementModal
-        achievement={selected}
+        achievement={selected?.achievement ?? null}
+        unlocked={selected?.unlocked ?? false}
         open={!!selected}
         onOpenChange={(o) => {
           if (!o) setSelected(null);

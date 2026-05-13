@@ -14,9 +14,9 @@ import {
   useProfileStreak,
 } from '../../hooks';
 import { useHideBalance, useNetworkConfigStore } from '../../stores';
-import { buildAchievements } from '../../data/profile-badges';
+import { buildAchievements, type Badge } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
-import { AchievementModal, AchievementDetail } from './profile/AchievementModal';
+import { AchievementModal } from './profile/AchievementModal';
 import { BadgeTile } from './profile/BadgeTile';
 import { ShareProfileModal } from './profile/ShareProfileModal';
 
@@ -99,7 +99,7 @@ export function ProfilePage() {
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
 
-  const [selected, setSelected] = useState<AchievementDetail | null>(null);
+  const [selected, setSelected] = useState<Badge | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
@@ -346,6 +346,7 @@ export function ProfilePage() {
 
       <AchievementModal
         achievement={selected}
+        unlocked={selected?.unlocked ?? false}
         open={!!selected}
         onOpenChange={(o) => {
           if (!o) setSelected(null);

@@ -1,10 +1,11 @@
 'use client';
 
 import { Modal, toast } from '@heroui/react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FiShare2, FiX } from 'react-icons/fi';
+import { useClaimedAchievements, useProfileRewards } from '../../../hooks';
 
 export type AchievementDetail = {
   id: string;
@@ -23,20 +24,167 @@ export type AchievementDetail = {
 
 interface AchievementModalProps {
   achievement: AchievementDetail | null;
+  /** Whether the user has met the achievement's unlock condition. */
+  unlocked?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+/** Mocked reward table — backend will return the real amount per achievement. */
+const TIER_REWARD: Record<string, number> = {
+  Bronze: 25,
+  Silver: 50,
+  Gold: 100,
+  Diamond: 250,
+  Founder: 500,
+};
+
+const rewardFor = (achievement: AchievementDetail): number =>
+  (achievement.tier ? TIER_REWARD[achievement.tier] : undefined) ?? 25;
 
 const formatDate = (iso?: string) => {
   if (!iso) return '';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  // Short form matches the Duolingo reference ("NOV 4, 2021") and reads
+  // well in the small uppercase pill.
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-export function AchievementModal({ achievement, open, onOpenChange }: AchievementModalProps) {
+type Phase = 'detail' | 'claiming' | 'reward' | 'share';
+
+/* ------------------------------------------------------------------ */
+/* Blinking-dots loader                                                */
+/* ------------------------------------------------------------------ */
+
+function VaquitaDots() {
+  return (
+    <div className="flex items-center gap-2" role="status" aria-label="Claiming reward">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="h-3 w-3 rounded-full bg-primary border border-black"
+          animate={{ opacity: [0.25, 1, 0.25], y: [0, -4, 0] }}
+          transition={{ duration: 1, repeat: Infinity, delay: i * 0.18, ease: 'easeInOut' }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Share preview card — what gets posted to socials                    */
+/* ------------------------------------------------------------------ */
+
+function ShareCard({ achievement }: { achievement: AchievementDetail }) {
+  return (
+    <div
+      className="relative w-full max-w-xs mx-auto rounded-3xl overflow-hidden border border-black border-b-2 shadow-lg"
+      style={{
+        background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
+      }}
+    >
+      {/* Soft dotted texture so the card doesn't feel like a flat swatch. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-15"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle, #000 1px, transparent 1px)',
+          backgroundSize: '14px 14px',
+        }}
+      />
+      <div className="relative flex flex-col items-center text-center px-6 pt-6 pb-5 gap-3">
+        <div className="relative h-36 w-36">
+          <Image
+            src={achievement.icon}
+            alt={achievement.title}
+            fill
+            sizes="144px"
+            className="object-contain drop-shadow-xl"
+          />
+        </div>
+        <p className="text-[11px] font-extrabold uppercase tracking-wider text-black/70">
+          Achievement unlocked
+        </p>
+        <p className="text-xl font-extrabold text-black leading-tight">{achievement.title}</p>
+        <p className="text-xs text-black/70 leading-snug max-w-[14rem]">
+          {achievement.description}
+        </p>
+        <div className="mt-2 flex items-center gap-1.5">
+          <Image
+            src="/vaquita/vaquita_isotipo.svg"
+            alt=""
+            width={22}
+            height={22}
+            className="object-contain"
+          />
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-black">
+            Vaquita
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Modal                                                               */
+/* ------------------------------------------------------------------ */
+
+export function AchievementModal({
+  achievement,
+  unlocked = false,
+  open,
+  onOpenChange,
+}: AchievementModalProps) {
+  const { isClaimed, claim } = useClaimedAchievements();
+  const { data: rewardsData } = useProfileRewards();
+  // Visual-only running tally so the balance ticks up the moment a claim
+  // completes (the real `useProfileRewards` query refetches in the background).
+  const baseGoldCoins =
+    rewardsData?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
+  const [bonusGold, setBonusGold] = useState(0);
+  const goldCoins = baseGoldCoins + bonusGold;
+  const [phase, setPhase] = useState<Phase>('detail');
+
+  // Reset to the detail phase every time the modal opens so a previous
+  // claim-flow doesn't leak into the next achievement view.
+  useEffect(() => {
+    if (open) {
+      setPhase('detail');
+      setBonusGold(0);
+    }
+  }, [open, achievement?.id]);
+
+  const reward = useMemo(() => (achievement ? rewardFor(achievement) : 0), [achievement]);
+  const claimed = !!achievement && isClaimed(achievement.id);
+
+  if (!achievement) return null;
+
+  const progressPct = achievement.progress
+    ? Math.min(100, Math.round((achievement.progress.current / achievement.progress.target) * 100))
+    : null;
+
+  const handleClaim = () => {
+    setPhase('claiming');
+    // Mocked latency — replace with the real "claim" mutation when the
+    // backend ships. Keep the loading screen visible long enough for the dots
+    // animation to read as deliberate, not as jank. The bonus is added to
+    // the visible gold balance when the reveal kicks in so the pill in the
+    // header tracks what the user just earned.
+    window.setTimeout(() => {
+      setBonusGold((v) => v + reward);
+      setPhase('reward');
+    }, 1500);
+  };
+
+  const handleContinue = () => {
+    claim(achievement.id);
+    setPhase('detail');
+  };
+
   const handleShare = async () => {
-    if (!achievement) return;
     const text = `I just unlocked "${achievement.title}" on Vaquita 🐮`;
     const url = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
 
@@ -49,7 +197,7 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
         });
         return;
       }
-      await navigator.clipboard.writeText(`${text} — ${url}`);
+      await navigator.clipboard.writeText(`${text} ${url}`);
       toast.success('Link copied to clipboard');
     } catch (error) {
       const message = (error as { message?: string })?.message ?? '';
@@ -59,11 +207,226 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
     }
   };
 
-  if (!achievement) return null;
+  /* ------------------------------------------------------------------ */
+  /* Phase: claiming                                                     */
+  /* ------------------------------------------------------------------ */
+  const renderClaiming = () => (
+    <motion.div
+      key="claiming"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex-1 flex flex-col items-center justify-center gap-6 px-6"
+    >
+      <div className="relative h-32 w-32 opacity-90">
+        <Image
+          src={achievement.icon}
+          alt=""
+          fill
+          sizes="128px"
+          className="object-contain grayscale-[40%] animate-pulse"
+        />
+      </div>
+      <VaquitaDots />
+      <p className="text-sm font-bold uppercase tracking-wider text-gray-500">Claiming reward</p>
+    </motion.div>
+  );
 
-  const progressPct = achievement.progress
-    ? Math.min(100, Math.round((achievement.progress.current / achievement.progress.target) * 100))
-    : null;
+  /* ------------------------------------------------------------------ */
+  /* Phase: reward reveal                                                */
+  /* ------------------------------------------------------------------ */
+  const renderReward = () => (
+    <motion.div
+      key="reward"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex-1 flex flex-col"
+    >
+      <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6">
+        <motion.div
+          initial={{ scale: 0.4, rotate: -12, opacity: 0 }}
+          animate={{ scale: 1, rotate: 0, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 220, damping: 14 }}
+          className="relative flex items-center justify-center"
+        >
+          <span
+            aria-hidden
+            className="absolute inset-0 rounded-full blur-2xl opacity-60"
+            style={{ background: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)' }}
+          />
+          <Image
+            src="/icons/global/coin.png"
+            alt=""
+            width={160}
+            height={160}
+            className="relative drop-shadow-xl"
+          />
+        </motion.div>
+        <motion.h2
+          initial={{ y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="text-2xl sm:text-3xl font-extrabold text-black text-center"
+        >
+          You earned {reward} coins!
+        </motion.h2>
+        <motion.p
+          initial={{ y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.18 }}
+          className="text-sm text-gray-600 text-center max-w-xs"
+        >
+          {achievement.title} is now in your trophy room.
+        </motion.p>
+      </div>
+      <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
+        <button
+          type="button"
+          onClick={handleContinue}
+          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+        >
+          Continue
+        </button>
+      </div>
+    </motion.div>
+  );
+
+  /* ------------------------------------------------------------------ */
+  /* Phase: share preview                                                */
+  /* ------------------------------------------------------------------ */
+  const renderShare = () => (
+    <motion.div
+      key="share"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex-1 flex flex-col"
+    >
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 py-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+          Preview · this is what your friends will see
+        </p>
+        <ShareCard achievement={achievement} />
+      </div>
+      <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={handleShare}
+          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+        >
+          <FiShare2 className="h-4 w-4" />
+          Share
+        </button>
+        <button
+          type="button"
+          onClick={() => setPhase('detail')}
+          className="w-full h-10 inline-flex items-center justify-center rounded-md bg-white text-black border border-black/15 text-xs font-bold uppercase tracking-wide hover:bg-white/80 transition"
+        >
+          Back
+        </button>
+      </div>
+    </motion.div>
+  );
+
+  /* ------------------------------------------------------------------ */
+  /* Phase: detail                                                       */
+  /* ------------------------------------------------------------------ */
+  const renderDetail = () => {
+    const canClaim = unlocked && !claimed;
+    return (
+      <motion.div
+        key="detail"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="flex-1 flex flex-col"
+      >
+        {/* Compact content — sized so it fits a single mobile screen without
+            internal scrolling. */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-4 gap-4">
+          <motion.div
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="relative flex h-40 w-40 sm:h-48 sm:w-48 items-center justify-center"
+          >
+            <span
+              aria-hidden
+              className="absolute inset-6 rounded-full blur-2xl opacity-55"
+              style={{
+                background:
+                  achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
+              }}
+            />
+            <Image
+              src={achievement.icon}
+              alt={achievement.title}
+              fill
+              sizes="(min-width: 640px) 192px, 160px"
+              className={`relative object-contain drop-shadow-2xl ${
+                unlocked ? '' : 'grayscale opacity-70'
+              }`}
+            />
+          </motion.div>
+
+          {/* Small date pill — Duolingo-style. Replaces both the tier badge and
+              the "Unlocked · ..." caption; the description below carries any
+              remaining context. */}
+          {achievement.date && (
+            <span className="inline-flex items-center text-[11px] font-bold uppercase tracking-wider bg-primary/30 text-[#7A3E00] rounded-full px-3 py-1">
+              {formatDate(achievement.date)}
+            </span>
+          )}
+
+          <div className="text-center max-w-md flex flex-col items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-black">{achievement.title}</h2>
+            <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+              {achievement.description}
+            </p>
+          </div>
+
+          {progressPct !== null && !claimed && (
+            <div className="w-full max-w-md flex flex-col gap-1.5 mt-1">
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
+                <span>Progress</span>
+                <span className="tabular-nums">
+                  {achievement.progress!.current} / {achievement.progress!.target}
+                </span>
+              </div>
+              <div className="h-2.5 w-full bg-white border border-black rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPct}%` }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="h-full bg-primary"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom CTA — only when there's something actionable. Locked rows
+            don't get a button; the progress bar tells the story. */}
+        {canClaim && (
+          <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
+            <button
+              type="button"
+              onClick={handleClaim}
+              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+            >
+              Claim award
+            </button>
+          </div>
+        )}
+      </motion.div>
+    );
+  };
+
+  // Top bar layout: X on the left, drag handle in the middle, share button on
+  // the right (Duolingo-style) — but only when the user has actually claimed
+  // this achievement.
+  const showHeaderShare = phase === 'detail' && claimed;
 
   return (
     <Modal.Backdrop
@@ -74,15 +437,8 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
       }}
       className="bg-black/70 backdrop-blur-sm data-[exiting=true]:duration-300"
     >
-      <Modal.Container
-        size="full"
-        placement="bottom"
-        scroll="inside"
-        className="p-0! m-0!"
-      >
-        <Modal.Dialog
-          className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-t-[2rem] border-0 max-h-[100dvh] data-[exiting=true]:duration-300"
-        >
+      <Modal.Container size="full" placement="bottom" scroll="inside" className="p-0! m-0!">
+        <Modal.Dialog className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-t-[2rem] border-0 max-h-[100dvh] data-[exiting=true]:duration-300">
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
@@ -90,11 +446,7 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
             className="flex flex-col h-full min-h-[100dvh] w-full"
           >
-            {/* Close button — kept transparent so the medal halo can bleed up
-                under it without being painted over by a backdrop. */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
-              <span className="w-10" />
-              <span className="h-1.5 w-12 rounded-full bg-black/15" aria-hidden />
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
@@ -103,94 +455,50 @@ export function AchievementModal({ achievement, open, onOpenChange }: Achievemen
               >
                 <FiX className="h-5 w-5" />
               </button>
-            </div>
-
-            <Modal.Body className="flex-1 px-6 sm:px-10 pb-8 pt-2 flex flex-col items-center justify-start gap-8 overflow-y-auto">
-              <motion.div
-                initial={{ scale: 0.6, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.15, type: 'spring', stiffness: 220, damping: 18 }}
-                className="flex flex-col items-center gap-4 pt-12 sm:pt-16"
-              >
-                <div className="relative flex h-52 w-52 sm:h-64 sm:w-64 items-center justify-center">
-                  {/* Soft accent halo — sized so it fades inside its own box
-                      and doesn't bleed into the sticky top bar above. */}
-                  <span
-                    aria-hidden
-                    className="absolute inset-10 sm:inset-12 rounded-full blur-2xl opacity-55"
-                    style={{
-                      background:
-                        achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
-                    }}
-                  />
-                  <Image
-                    src={achievement.icon}
-                    alt={achievement.title}
-                    width={320}
-                    height={320}
-                    className="relative h-full w-full object-contain drop-shadow-2xl"
-                  />
-                </div>
-                {achievement.tier && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider bg-primary text-black border border-black rounded-full px-3 py-1">
-                    {achievement.tier}
-                  </span>
-                )}
-              </motion.div>
-
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.25, duration: 0.4 }}
-                className="text-center max-w-md flex flex-col items-center gap-3"
-              >
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-black">{achievement.title}</h2>
-                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-                  {achievement.description}
-                </p>
-                {achievement.date && (
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    Unlocked · {formatDate(achievement.date)}
-                  </p>
-                )}
-              </motion.div>
-
-              {progressPct !== null && (
+              <span className="h-1.5 w-12 rounded-full bg-black/15" aria-hidden />
+              {phase === 'reward' || phase === 'claiming' ? (
+                // Duolingo-style coin balance — only meaningful on the reward
+                // reveal (and the loading step into it), so we mount it there
+                // exclusively. Animates in once the bonus has landed.
                 <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.35, duration: 0.4 }}
-                  className="w-full max-w-md flex flex-col gap-2"
+                  key={goldCoins}
+                  initial={{ scale: 0.85, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white border border-black border-b-2 px-3 text-black"
+                  aria-label={`${goldCoins} gold coins`}
                 >
-                  <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
-                    <span>Progress</span>
-                    <span className="tabular-nums">
-                      {achievement.progress!.current} / {achievement.progress!.target}
-                    </span>
-                  </div>
-                  <div className="h-3 w-full bg-white border border-black rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressPct}%` }}
-                      transition={{ delay: 0.45, duration: 0.6 }}
-                      className="h-full bg-primary"
-                    />
-                  </div>
+                  <Image
+                    src="/icons/global/coin.png"
+                    alt=""
+                    width={18}
+                    height={18}
+                    className="object-contain"
+                  />
+                  <span className="text-sm font-extrabold tabular-nums">
+                    {goldCoins.toLocaleString()}
+                  </span>
                 </motion.div>
+              ) : showHeaderShare ? (
+                <button
+                  type="button"
+                  onClick={() => setPhase('share')}
+                  aria-label="Share achievement"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition"
+                >
+                  <FiShare2 className="h-4 w-4" />
+                </button>
+              ) : (
+                <span className="w-10" />
               )}
-            </Modal.Body>
-
-            {/* Sticky share footer */}
-            <div className="sticky bottom-0 px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
-              <button
-                type="button"
-                onClick={handleShare}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-              >
-                <FiShare2 className="h-4 w-4" />
-                Share
-              </button>
             </div>
+
+            <AnimatePresence mode="wait" initial={false}>
+              {phase === 'claiming' && renderClaiming()}
+              {phase === 'reward' && renderReward()}
+              {phase === 'share' && renderShare()}
+              {phase === 'detail' && renderDetail()}
+            </AnimatePresence>
           </motion.div>
         </Modal.Dialog>
       </Modal.Container>
