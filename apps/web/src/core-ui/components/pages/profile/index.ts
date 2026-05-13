@@ -13,4 +13,5 @@ export * from './PrivacySettingsPage';
 export * from './SearchFriendsPage';
 export * from './SettingsPage';
 export * from './ShareProfileModal';
+export * from './ShareProfileQrButton';
 export * from './WalletPage';

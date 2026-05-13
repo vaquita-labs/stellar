@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { BsQrCode } from 'react-icons/bs';
 import { ProfileAverageResponseDTO } from '@/core-ui/types';
 import {
   useProfileData,
@@ -12,7 +11,7 @@ import {
 } from '../../../hooks';
 import { useNetworkConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
-import { ShareProfileModal } from '../profile/ShareProfileModal';
+import { ShareProfileQrButton } from '../profile/ShareProfileQrButton';
 import {
   LeaderboardCard,
   LeaderboardCardData,
@@ -212,27 +211,12 @@ export const LeaderboardPage = () => {
   const [direction, setDirection] = useState<SortDirection>('desc');
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
-  const [shareOpen, setShareOpen] = useState(false);
 
   const { displayName, handle } = useCurrentUserIdentity();
 
   const visibleRows = useMemo(
     () => filterRows(sortRows(rankedRows, sortKey, direction), deferredQuery),
     [rankedRows, sortKey, direction, deferredQuery]
-  );
-
-  // Circular icon button — same pill style as the filter/sort buttons in the
-  // sub-header (white bg, black border-b-2, black icon) so it reads as part of
-  // the Vaquita system. Opens the QR share modal.
-  const shareButton = (
-    <button
-      type="button"
-      onClick={() => setShareOpen(true)}
-      aria-label="Share profile QR"
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary border border-black border-b-2 text-black hover:bg-white/80 transition"
-    >
-      <BsQrCode className="h-4 w-4" />
-    </button>
   );
 
   const renderFeed = () => {
@@ -244,25 +228,20 @@ export const LeaderboardPage = () => {
   };
 
   return (
-    <>
-      <PageLayout title="Leaderboard" rightSlot={shareButton} contentClassName="!gap-3">
-        <LeaderboardSubHeader
-          query={query}
-          onQueryChange={setQuery}
-          sortKey={sortKey}
-          onSortChange={setSortKey}
-          direction={direction}
-          onDirectionChange={setDirection}
-        />
-        {renderFeed()}
-      </PageLayout>
-
-      <ShareProfileModal
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        displayName={displayName}
-        handle={handle}
+    <PageLayout
+      title="Leaderboard"
+      rightSlot={<ShareProfileQrButton displayName={displayName} handle={handle} />}
+      contentClassName="!gap-3"
+    >
+      <LeaderboardSubHeader
+        query={query}
+        onQueryChange={setQuery}
+        sortKey={sortKey}
+        onSortChange={setSortKey}
+        direction={direction}
+        onDirectionChange={setDirection}
       />
-    </>
+      {renderFeed()}
+    </PageLayout>
   );
 };

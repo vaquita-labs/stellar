@@ -3,7 +3,7 @@
 import { Modal, toast } from '@heroui/react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FiCamera, FiCopy, FiImage, FiShare2, FiUserPlus, FiX } from 'react-icons/fi';
 
 interface ShareProfileModalProps {
@@ -87,12 +87,21 @@ interface MyQrViewProps {
   displayName: string;
   handle: string;
   avatarSrc: string;
-  onCopy: () => Promise<void>;
-  onShare: () => Promise<void>;
 }
 
-function MyQrView({ url, displayName, handle, avatarSrc, onCopy, onShare }: MyQrViewProps) {
+/** Centered visual block — avatar + identity + QR + caption. The Share /
+ *  Copy action buttons live in the modal's sticky bottom bar, mirroring how
+ *  AchievementModal anchors its "Claim award" CTA. */
+function MyQrView({ url, displayName, handle, avatarSrc }: MyQrViewProps) {
   const qrSrc = useMemo(() => buildQrSrc(url), [url]);
+
+  // When the user has no full name, `displayName` ends up being the same
+  // string as the handle (just without the `@`) — showing both reads as a
+  // duplicate. Hide the handle line in that case so the identity block
+  // stays tight.
+  const isHandleDuplicate =
+    handle.replace(/^@/, '').trim().toLowerCase() ===
+    displayName.replace(/\s+/g, '').trim().toLowerCase();
 
   return (
     <div className="flex flex-col items-center gap-5 w-full">
@@ -104,44 +113,26 @@ function MyQrView({ url, displayName, handle, avatarSrc, onCopy, onShare }: MyQr
         <h2 className="text-xl font-extrabold text-black tracking-tight text-center">
           {displayName}
         </h2>
-        <p className="text-xs font-semibold text-gray-500 tabular-nums">{handle}</p>
+        {!isHandleDuplicate && (
+          <p className="text-xs font-semibold text-gray-500 tabular-nums">{handle}</p>
+        )}
       </div>
 
-      {/* QR */}
-      <div className="rounded-2xl bg-white border-2 border-black border-b-4 p-3">
+      {/* QR — explicit size classes so the image doesn't stretch with the
+          full-screen flex parent. `w-fit` on the frame keeps the white
+          padding tight against the QR. */}
+      <div className="rounded-2xl bg-white border-2 border-black border-b-4 p-3 w-fit">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={qrSrc}
           alt={`QR code for ${handle}`}
-          width={240}
-          height={240}
-          className="block rounded-md"
+          className="block rounded-md h-44 w-44 sm:h-52 sm:w-52"
         />
       </div>
 
       <p className="text-center text-xs text-gray-600 max-w-[16rem] leading-relaxed">
         Have a friend scan this QR to follow you on Vaquita.
       </p>
-
-      {/* Actions */}
-      <div className="flex flex-col gap-2 w-full pt-1">
-        <button
-          type="button"
-          onClick={onShare}
-          className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
-        >
-          <FiShare2 className="h-4 w-4" />
-          Share link
-        </button>
-        <button
-          type="button"
-          onClick={onCopy}
-          className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
-        >
-          <FiCopy className="h-4 w-4" />
-          Copy link
-        </button>
-      </div>
     </div>
   );
 }
@@ -357,6 +348,14 @@ export function ShareProfileModal({
     toast.success(`Now following ${scannedHandle}`);
   };
 
+  /* ---------------------------------------------------------------- */
+  /* Bottom-sheet layout — same pattern as `AchievementModal`. The dialog
+   * fills the screen from the bottom edge, with rounded top corners, an
+   * X-on-left + drag-handle-center header, centered content, and an
+   * anchored CTA bar at the bottom. `aria-label` on the Dialog silences
+   * the React Aria "Dialog must have a title" warning that otherwise
+   * triggered an extra commit-time re-render (visible as a close flicker).
+   */
   return (
     <Modal.Backdrop
       isOpen={open}
@@ -366,37 +365,83 @@ export function ShareProfileModal({
       }}
       className="bg-black/70 backdrop-blur-sm data-[exiting=true]:duration-300"
     >
-      <Modal.Container size="sm" placement="center" className="p-4!">
-        <Modal.Dialog className="bg-background border border-black border-b-2 rounded-3xl p-0! max-w-sm w-full data-[exiting=true]:duration-300">
+      <Modal.Container size="full" placement="bottom" scroll="inside" className="p-0! m-0!">
+        <Modal.Dialog
+          aria-label={tab === 'mine' ? 'Share your profile QR' : 'Scan a profile QR'}
+          className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-t-[2rem] border-0 max-h-dvh data-[exiting=true]:duration-300"
+        >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-            className="relative flex flex-col p-6 pb-7 gap-5"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 280, damping: 32 }}
+            className="flex flex-col h-dvh w-full"
           >
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              aria-label="Close"
-              className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition z-10"
-            >
-              <FiX className="h-4 w-4" />
-            </button>
+            {/* Header — X on the left, drag handle in the middle, spacer on
+                the right to keep the handle visually centered. Mirrors the
+                AchievementModal top bar. */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                aria-label="Close"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+              <span className="h-1.5 w-12 rounded-full bg-black/15" aria-hidden />
+              <span className="w-10" aria-hidden />
+            </div>
 
-            <TabSwitch value={tab} onChange={setTab} />
+            {/* Tab switch — bounded width so it doesn't stretch on tablets. */}
+            <div className="px-5 sm:px-10 pb-2">
+              <div className="max-w-md mx-auto">
+                <TabSwitch value={tab} onChange={setTab} />
+              </div>
+            </div>
 
-            {tab === 'mine' ? (
-              <MyQrView
-                url={url}
-                displayName={displayName}
-                handle={handle}
-                avatarSrc={avatarSrc}
-                onCopy={handleCopy}
-                onShare={handleNativeShare}
-              />
-            ) : (
-              <ScanQrView onScanned={handleScanned} />
+            {/* Centered content area — `flex-1` + `min-h-0` is the canonical
+                pair that lets this column shrink and become the vertical
+                scroller when the QR + identity + caption don't fit the
+                available viewport. The CTA bar below stays anchored. */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4">
+              <div className="min-h-full w-full max-w-md mx-auto flex flex-col items-center justify-center py-2">
+                {tab === 'mine' ? (
+                  <MyQrView
+                    url={url}
+                    displayName={displayName}
+                    handle={handle}
+                    avatarSrc={avatarSrc}
+                  />
+                ) : (
+                  <ScanQrView onScanned={handleScanned} />
+                )}
+              </div>
+            </div>
+
+            {/* Anchored bottom CTA bar — only on the "My QR" tab. The scan
+                view manages its own state-dependent buttons inline. */}
+            {tab === 'mine' && (
+              <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
+                <div className="max-w-md mx-auto flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={handleNativeShare}
+                    className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+                  >
+                    <FiShare2 className="h-4 w-4" />
+                    Share link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+                  >
+                    <FiCopy className="h-4 w-4" />
+                    Copy link
+                  </button>
+                </div>
+              </div>
             )}
           </motion.div>
         </Modal.Dialog>

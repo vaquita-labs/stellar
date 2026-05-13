@@ -18,7 +18,7 @@ import { buildAchievements, type Badge } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
 import { AchievementModal } from './profile/AchievementModal';
 import { BadgeTile } from './profile/BadgeTile';
-import { ShareProfileModal } from './profile/ShareProfileModal';
+import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
 
 const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
@@ -100,7 +100,6 @@ export function ProfilePage() {
   const { data: depositsData } = useDepositsComplete(walletAddress);
 
   const [selected, setSelected] = useState<Badge | null>(null);
-  const [shareOpen, setShareOpen] = useState(false);
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -203,14 +202,7 @@ export function ProfilePage() {
         <header className="relative bg-primary px-4 sm:px-6 pt-5 pb-12 rounded-b-3xl border-b-2 border-black/10">
           {/* Top action row — Profile is reachable from the nav, so no back button. */}
           <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setShareOpen(true)}
-              aria-label="Share profile"
-              className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
-            >
-              <FiShare2 className="h-4 w-4" />
-            </button>
+            <ShareProfileQrButton displayName={displayName} handle={handle} />
             <Link
               href="/profile/settings"
               aria-label="Settings"
@@ -351,13 +343,6 @@ export function ProfilePage() {
         onOpenChange={(o) => {
           if (!o) setSelected(null);
         }}
-      />
-
-      <ShareProfileModal
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        displayName={displayName}
-        handle={handle}
       />
     </div>
   );
