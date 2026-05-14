@@ -57,8 +57,14 @@ export function BadgeTile({
 }: BadgeTileProps) {
   const s = SIZES[size];
   // An achievement only "lights up" once it's been claimed — until then the
-  // image stays gray so the pulsing halo reads as the active affordance.
+  // image stays gray so the pulsing halo + tinted background read as the
+  // active "click me" affordance.
   const fullyEarned = badge.unlocked && !claimable;
+  // Locked badges desaturate the entire wrap (image + halo together) so the
+  // tile reads as inert. Claimable badges keep the wrap colorful and pull
+  // the grayscale onto the image only — the colored background can then
+  // do its job of catching the eye.
+  const wrapFilter = !badge.unlocked ? 'grayscale opacity-60' : '';
   return (
     <button
       type="button"
@@ -66,10 +72,20 @@ export function BadgeTile({
       className="group flex flex-col items-center gap-1.5 bg-transparent focus:outline-none w-full"
     >
       <span
-        className={`relative flex aspect-square w-full ${s.wrap} items-center justify-center transition group-hover:-translate-y-0.5 ${
-          fullyEarned ? '' : 'grayscale opacity-60'
-        }`}
+        className={`relative flex aspect-square w-full ${s.wrap} items-center justify-center transition group-hover:-translate-y-0.5 ${wrapFilter}`}
       >
+        {/* Claimable cue: a soft tinted disc behind the medal, gently pulsing
+            so the user spots "this one is ready to grab". Circular (and lightly
+            blurred) on purpose — the medallions are round, so a rounded-square
+            panel made the tile look boxy. `animate-pulse` runs a slow 2s
+            opacity dip, drawing the eye without flashing. */}
+        {claimable && (
+          <span
+            aria-hidden
+            className="absolute inset-1 rounded-full blur-md animate-pulse"
+            style={{ background: badge.accent ?? '#F5A161', opacity: 0.45 }}
+          />
+        )}
         {/* Soft accent halo — gives depth without a hard frame. Brighter +
             pulsing when the badge is ready to claim, otherwise a subtle glow. */}
         <span
@@ -84,7 +100,9 @@ export function BadgeTile({
           alt={badge.title}
           width={s.img.w}
           height={s.img.h}
-          className="relative h-full w-full object-contain drop-shadow-md"
+          className={`relative h-full w-full object-contain drop-shadow-md ${
+            fullyEarned ? '' : 'grayscale opacity-70'
+          }`}
         />
       </span>
       {showTitle && (
