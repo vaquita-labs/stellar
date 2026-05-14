@@ -339,7 +339,77 @@ Target: **deployed and end-to-end tested before the first full monthly cycle clo
 
 ---
 
-## 11. References
+## 11. FAQ — Design Decisions
+
+### Category D — Eligibility
+
+**How are Genesis Saver (D1) recipients selected?**
+Pure on-chain FIFO: the first 50 wallets to execute a deposit on testnet receive the badge. The backend maintains a counter; once it reaches 50 it stops signing D1 claims. No manual whitelist, no team reservations.
+
+**Is there a numeric cap on Mainnet Pioneer (D2)?**
+No. Any wallet that makes its first mainnet deposit within days 1–7 of mainnet launch receives the badge, regardless of how many wallets qualify. The criterion is temporal, not positional.
+
+**Do wallets that used testnet qualify for Mainnet Pioneer (D2)?**
+Yes. The only condition is a first deposit on mainnet within the 7-day window. Prior testnet activity does not disqualify a wallet.
+
+---
+
+### `badge_type` — Typing
+
+**Is `badge_type` a closed on-chain enum or a free Symbol?**
+Free `Symbol` controlled by the backend. The contract only verifies the Ed25519 signature — it does not whitelist valid badge types. The whitelist lives in the backend, which means new Category D editions can be added via `add_edition()` without any contract change.
+
+---
+
+### `transfer()` — Soulbound
+
+**Are there any edge cases where transfer is allowed (lost wallet, migration)?**
+No. `transfer()` panics unconditionally with `SoulboundToken`. If a user loses their wallet, the badge is lost. A burn-and-remint migration path could be added in a future version if there is clear demand, but it is out of scope for v1.
+
+---
+
+### Admin Key Custody
+
+**How is the signing key stored and who can rotate it?**
+v1 (testnet and beta): single Ed25519 key stored in the backend `.env` / secrets manager. Before mainnet launch the key migrates to a 2-of-3 multisig. Migration trigger: whichever comes first — TVL exceeds $10k or the first full monthly cycle closes on mainnet. Key rotation via `update_signing_key` is restricted to the CTO plus one additional signer from mainnet deploy onward.
+
+---
+
+### `expiry` — Claim Window and Re-issuance
+
+**What is `expiry` and where is it enforced?**
+`expiry` is a Unix timestamp embedded in the signed payload by the backend. The contract checks `ledger::timestamp() < expiry` before accepting a claim. The backend sets the window (default: 30 days from the eligibility event); the contract enforces it. The badge itself never expires — only the signature does.
+
+**What happens if a user misses the expiry on a Category A/B/C badge?**
+The backend re-issues the signature on demand, transparently. From the user's perspective claiming is always available. Re-issuance policy: automatic for Cat A, B, and C (eligibility is permanent once earned); manual and at team discretion for Cat D.
+
+**Why not set `expiry = u64::MAX` to avoid all this?**
+A short expiry limits blast radius if the signing key is compromised: rotating the key invalidates all outstanding signatures within 30 days. Without expiry, a leaked key allows minting arbitrary badges permanently even after rotation.
+
+---
+
+### Fee Bumping
+
+**Who pays gas for badge claims?**
+Fee bumping is handled by the Privy + Pollar integration. Users never need to hold XLM to claim a badge. Implementation owner: Oscar Gauss.
+
+---
+
+### Metadata and Image Storage
+
+**Where are badge images and metadata JSON hosted?**
+Vaquita's own API (`https://vaquita.fi/badge/{token_id}`). Full control over images and metadata with no dependency on IPFS pinning. This is consistent with the existing achievement assets at `apps/web/public/icons/achievements/`.
+
+---
+
+### Timeline
+
+**When does the `vaquita-badges` contract deploy to testnet?**
+End of Tranche 2, Week 16.
+
+---
+
+## 12. References
 
 - [Vaquita NFT Badges System Spec](./Vaquita_NFT_Badges_System.md)
 - [Leaderboard Scoring Research](./research-leaderboard-scoring.md)
