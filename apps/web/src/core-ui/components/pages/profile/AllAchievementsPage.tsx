@@ -6,6 +6,7 @@ import React, { useMemo, useState } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 import { getDepositsData } from '../../../helpers/deposits';
 import {
+  useClaimedAchievements,
   useDepositsComplete,
   useProfileExperience,
   useProfileRewards,
@@ -84,6 +85,10 @@ export function AllAchievementsPage() {
   const { data: experienceData } = useProfileExperience();
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
+  // Drives the pulsing "ready to claim" halo on each badge tile. A badge is
+  // claimable when the user has met the unlock condition (`badge.unlocked`)
+  // but hasn't cashed in the coin reward yet.
+  const { isClaimed } = useClaimedAchievements();
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const experience = experienceData?.experience ?? 0;
@@ -188,6 +193,7 @@ export function AllAchievementsPage() {
                   badge={badge}
                   size="lg"
                   showTitle
+                  claimable={badge.unlocked && !isClaimed(badge.id)}
                   onPress={() => setSelected({ achievement: badge, unlocked: badge.unlocked })}
                 />
               ))}

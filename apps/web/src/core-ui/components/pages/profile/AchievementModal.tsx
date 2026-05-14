@@ -6,7 +6,7 @@ import * as htmlToImage from 'html-to-image';
 import Image from 'next/image';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiShare2, FiX } from 'react-icons/fi';
-import { useClaimedAchievements, useProfileRewards } from '../../../hooks';
+import { useClaimedAchievements, useIsMobile, useProfileRewards } from '../../../hooks';
 
 export type AchievementDetail = {
   id: string;
@@ -147,6 +147,11 @@ export function AchievementModal({
 }: AchievementModalProps) {
   const { isClaimed, claim } = useClaimedAchievements();
   const { data: rewardsData } = useProfileRewards();
+  // Drives whether we render the full-screen bottom-sheet (phone-sized) or
+  // the compact centered dialog (everything wider than the Tailwind `sm`
+  // breakpoint). Server-render returns `false`, matching the desktop shell
+  // we ship into, so the hydration pass doesn't flicker.
+  const isMobile = useIsMobile();
   // Visual-only running tally so the balance ticks up the moment a claim
   // completes (the real `useProfileRewards` query refetches in the background).
   const baseGoldCoins =
@@ -480,14 +485,29 @@ export function AchievementModal({
       }}
       className="bg-black/70 backdrop-blur-sm data-[exiting=true]:duration-300"
     >
-      <Modal.Container size="full" placement="bottom" scroll="inside" className="p-0! m-0!">
-        <Modal.Dialog className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-t-[2rem] border-0 max-h-dvh data-[exiting=true]:duration-300">
+      <Modal.Container
+        size={isMobile ? 'full' : 'md'}
+        placement={isMobile ? 'bottom' : 'center'}
+        scroll="inside"
+        className={isMobile ? 'p-0! m-0!' : 'p-4!'}
+      >
+        {/* Desktop: we deliberately omit `m-0!` so heroui's `placement=center`
+            rule (`margin-block: auto` on the dialog) keeps the modal centered
+            vertically inside the flex container. Mobile keeps `m-0!` because
+            the bottom-sheet should hug the bottom edge. */}
+        <Modal.Dialog
+          className={
+            isMobile
+              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh data-[exiting=true]:duration-300'
+              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)] data-[exiting=true]:duration-300'
+          }
+        >
           <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
+            initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
+            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
+            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className="flex flex-col h-full min-h-dvh w-full"
+            className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
               <button
@@ -498,7 +518,10 @@ export function AchievementModal({
               >
                 <FiX className="h-5 w-5" />
               </button>
-              <span className="h-1.5 w-12 rounded-full bg-black/15" aria-hidden />
+              <span
+                className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`}
+                aria-hidden
+              />
               {phase === 'reward' || phase === 'claiming' ? (
                 // Duolingo-style coin balance — only meaningful on the reward
                 // reveal (and the loading step into it), so we mount it there

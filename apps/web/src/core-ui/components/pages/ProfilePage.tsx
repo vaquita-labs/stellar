@@ -4,9 +4,11 @@ import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { Card, toast } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import React, { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import React, { useMemo } from 'react';
 import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
+  useClaimedAchievements,
   useDepositsComplete,
   useProfileData,
   useProfileExperience,
@@ -14,9 +16,8 @@ import {
   useProfileStreak,
 } from '../../hooks';
 import { useHideBalance, useNetworkConfigStore } from '../../stores';
-import { buildAchievements, type Badge } from '../../data/profile-badges';
+import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
-import { AchievementModal } from './profile/AchievementModal';
 import { BadgeTile } from './profile/BadgeTile';
 import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
 
@@ -91,6 +92,7 @@ const SummaryItem = ({
 /* ------------------------------------------------------------------ */
 
 export function ProfilePage() {
+  const router = useRouter();
   const { walletAddress, token } = useNetworkConfigStore();
   const hideBalance = useHideBalance();
   const { data: profileData } = useProfileData();
@@ -98,8 +100,9 @@ export function ProfilePage() {
   const { data: experienceData } = useProfileExperience();
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
-
-  const [selected, setSelected] = useState<Badge | null>(null);
+  // Mirrors the trophy room: the preview badges should show the same
+  // "ready to claim" pulse so the cue is consistent across both screens.
+  const { isClaimed } = useClaimedAchievements();
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -290,7 +293,14 @@ export function ProfilePage() {
         {/* Resumen ---------------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <SectionHeader title="Summary" href="/profile/summary" />
-          <div className="grid grid-cols-2 gap-3 rounded-2xl bg-white border border-black border-b-2 p-4">
+          {/* Whole white card is the link target — the chevron in the header
+              is just the visual cue. No interactive children inside, so a
+              plain Link wrap is safe (no nested-anchor warnings). */}
+          <Link
+            href="/profile/summary"
+            aria-label="See full summary"
+            className="grid grid-cols-2 gap-3 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
+          >
             <SummaryItem
               icon={hasActiveStreak ? '/icons/global/streak.png' : '/icons/global/streak_freeze.png'}
               value={`${totalStreak} days`}
@@ -315,7 +325,7 @@ export function ProfilePage() {
               value={`${experience.toLocaleString()} XP`}
               label="Experience"
             />
-          </div>
+          </Link>
         </section>
 
         {/* Achievements ---------------------------------------------- */}
@@ -325,24 +335,32 @@ export function ProfilePage() {
             count={achievements.filter((b) => b.unlocked).length}
             href="/profile/achievements"
           />
-          <div className="rounded-2xl bg-white border border-black border-b-2 p-4">
-            <div className="grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
+          {/* The badge tiles are real <button>s, so we can't wrap the card in
+              an <a> without invalid nesting. Instead, we place an absolute
+              Link layer behind the grid (catches clicks on the padding and
+              gaps), and have each tile's onPress push to the same route so
+              clicking a badge image also takes the user to the trophy room
+              — claiming happens there, not from the profile preview. */}
+          <div className="relative rounded-2xl bg-white border border-black border-b-2 p-4">
+            <Link
+              href="/profile/achievements"
+              aria-label="See all achievements"
+              className="absolute inset-0 rounded-2xl z-0"
+            />
+            <div className="relative z-10 grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
               {achievements.slice(0, 4).map((badge) => (
-                <BadgeTile key={badge.id} badge={badge} onPress={() => setSelected(badge)} />
+                <BadgeTile
+                  key={badge.id}
+                  badge={badge}
+                  claimable={badge.unlocked && !isClaimed(badge.id)}
+                  onPress={() => router.push('/profile/achievements')}
+                />
               ))}
             </div>
           </div>
         </section>
       </div>
 
-      <AchievementModal
-        achievement={selected}
-        unlocked={selected?.unlocked ?? false}
-        open={!!selected}
-        onOpenChange={(o) => {
-          if (!o) setSelected(null);
-        }}
-      />
     </div>
   );
 }

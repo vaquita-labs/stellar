@@ -32,15 +32,33 @@ interface BadgeTileProps {
   size?: BadgeSize;
   /** Show the badge title under the tile (used in the trophy room). */
   showTitle?: boolean;
+  /** Unlocked but not yet claimed — keep the image grayscale (it isn't truly
+   *  "earned" until the reward is collected) and pulse a brighter halo to
+   *  draw the eye to it. Effectively the "next action" affordance. */
+  claimable?: boolean;
 }
 
 /**
  * Renders an achievement as the medal artwork itself — no circular frame.
  * A soft, blurred accent halo sits behind the image for depth so the badge
  * still feels gamified without containing the art in a disk.
+ *
+ * Tri-state visual:
+ *  - locked     → grayscale image + dim halo
+ *  - claimable  → grayscale image + bright pulsing halo (call to action)
+ *  - claimed    → full color image + dim halo
  */
-export function BadgeTile({ badge, onPress, size = 'md', showTitle = false }: BadgeTileProps) {
+export function BadgeTile({
+  badge,
+  onPress,
+  size = 'md',
+  showTitle = false,
+  claimable = false,
+}: BadgeTileProps) {
   const s = SIZES[size];
+  // An achievement only "lights up" once it's been claimed — until then the
+  // image stays gray so the pulsing halo reads as the active affordance.
+  const fullyEarned = badge.unlocked && !claimable;
   return (
     <button
       type="button"
@@ -49,13 +67,16 @@ export function BadgeTile({ badge, onPress, size = 'md', showTitle = false }: Ba
     >
       <span
         className={`relative flex aspect-square w-full ${s.wrap} items-center justify-center transition group-hover:-translate-y-0.5 ${
-          badge.unlocked ? '' : 'grayscale opacity-60'
+          fullyEarned ? '' : 'grayscale opacity-60'
         }`}
       >
-        {/* Soft accent halo — gives depth without a hard frame. */}
+        {/* Soft accent halo — gives depth without a hard frame. Brighter +
+            pulsing when the badge is ready to claim, otherwise a subtle glow. */}
         <span
           aria-hidden
-          className={`absolute ${s.glowInset} rounded-full blur-2xl opacity-50`}
+          className={`absolute ${s.glowInset} rounded-full blur-2xl ${
+            claimable ? 'opacity-90 animate-pulse' : 'opacity-50'
+          }`}
           style={{ background: badge.accent ?? '#F5A161' }}
         />
         <Image
