@@ -190,7 +190,6 @@ export interface RewardResponseDTO {
 }
 
 export enum Reward {
-  SILVER_COIN = 'silver-coin',
   GOLD_COIN = 'gold-coin',
 }
 

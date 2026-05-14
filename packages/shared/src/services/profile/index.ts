@@ -24,7 +24,7 @@ import {
   getCachedDepositsByNetworkIdWalletAddress,
 } from '../deposit';
 import { getNetworkByName } from '../network';
-import { DAILY_SILVER_COINS } from './constants';
+import { DAILY_GOLD_COINS } from './constants';
 import { friendlyStandardMap } from './map-template';
 
 export const listenProfilesChanges = async (onChange: () => void) => {
@@ -225,9 +225,9 @@ export const getProfile = async (networkName: string, walletAddress: string) => 
 };
 
 export const getRewardsData = async (networkData: Network, profileData: Profile) => {
-  
-  const { data: rewardData, error } = await getRewardByKey(Reward.SILVER_COIN);
-  
+
+  const { data: rewardData, error } = await getRewardByKey(Reward.GOLD_COIN);
+
   if (!rewardData) {
     return {
       success: false,
@@ -237,34 +237,33 @@ export const getRewardsData = async (networkData: Network, profileData: Profile)
       profileData,
     };
   }
-  
+
   const { data: profileRewardData } = await supabase
     .from('profiles_rewards')
     .select('*, rewards(*)')
     .eq('profile_id', profileData.id)
     .eq('reward_id', rewardData.id);
-  
+
   let collected = 0;
   let amount = 0;
   for (const profileReward of (profileRewardData || []) as ProfileReward[]) {
-    if (profileReward.type === 'collected' && profileReward?.rewards?.key === Reward.SILVER_COIN && getCurrentDay(new Date(profileReward.created_at)) === getCurrentDay(new Date())) {
+    if (profileReward.type === 'collected' && profileReward?.rewards?.key === Reward.GOLD_COIN && getCurrentDay(new Date(profileReward.created_at)) === getCurrentDay(new Date())) {
       collected += profileReward?.amount || 0;
     }
     if (profileReward.type === 'collected' || profileReward.type === 'earned') {
       amount += profileReward?.amount || 0;
     }
   }
-  
+
   const rewards: RewardResponseDTO[] = [
     {
-      key: Reward.SILVER_COIN,
-      name: 'Silver Coin',
-      amountToCollect: Math.max(DAILY_SILVER_COINS - collected, 0),
+      key: Reward.GOLD_COIN,
+      name: 'Gold Coin',
+      amountToCollect: Math.max(DAILY_GOLD_COINS - collected, 0),
       amount,
     },
-    { key: Reward.GOLD_COIN, name: 'Gold Coin', amountToCollect: 0, amount: 0 },
   ];
-  
+
   return {
     success: true,
     errorMessage: '',

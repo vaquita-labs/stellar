@@ -176,14 +176,14 @@ router.get('/network/:networkName/wallet/:walletAddress/map-objects-available', 
   return sendSuccess(res, await toProfileMapObjectsAvailableResponseDTO(networkData!, profileData));
 });
 
-router.post('/network/:networkName/wallet/:walletAddress/silver-daily-collect', async (req, res) => {
+router.post('/network/:networkName/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
   const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'POST /profile/.../silver-daily-collect');
+  req.log.info({ networkName, walletAddress }, 'POST /profile/.../gold-daily-collect');
 
   const { success, errorMessage, errors, networkData, profileData } = await getProfile(networkName, walletAddress);
 
   if (!success || !profileData || !networkData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for silver-daily-collect');
+    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for gold-daily-collect');
     return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
   }
 
@@ -194,18 +194,18 @@ router.post('/network/:networkName/wallet/:walletAddress/silver-daily-collect', 
     return sendError(res, rewardsResponse.errorMessage, rewardsResponse.errors, 500);
   }
 
-  const { data: rewardData, error: rewardError } = await getRewardByKey(Reward.SILVER_COIN);
+  const { data: rewardData, error: rewardError } = await getRewardByKey(Reward.GOLD_COIN);
 
   if (rewardError || !rewardData) {
-    req.log.error({ err: rewardError, key: Reward.SILVER_COIN }, 'Reward not found');
+    req.log.error({ err: rewardError, key: Reward.GOLD_COIN }, 'Reward not found');
     return sendError(res, 'reward not found', rewardError, 404);
   }
 
-  const silverRewardToAmount = rewardsResponse.rewards.find((reward) => reward.key === Reward.SILVER_COIN)?.amountToCollect;
+  const goldRewardToAmount = rewardsResponse.rewards.find((reward) => reward.key === Reward.GOLD_COIN)?.amountToCollect;
 
-  if (!silverRewardToAmount) {
-    req.log.warn({ profileId: profileData.id }, 'No silver coins available to collect');
-    return sendError(res, 'there are no silver coins to collect', null, 400);
+  if (!goldRewardToAmount) {
+    req.log.warn({ profileId: profileData.id }, 'No gold coins available to collect');
+    return sendError(res, 'there are no gold coins to collect', null, 400);
   }
 
   const result = await supabase
@@ -219,17 +219,17 @@ router.post('/network/:networkName/wallet/:walletAddress/silver-daily-collect', 
 
   if (result.error) {
     req.log.error({ err: result.error, profileId: profileData.id, rewardId: rewardData.id }, 'Failed to insert profile reward');
-    return sendError(res, 'Failed to collect silver coin', result.error, 500);
+    return sendError(res, 'Failed to collect gold coin', result.error, 500);
   }
 
   try {
-    await broadcastProfileChange('silver-daily-collected', [ 'profile-rewards', 'profile-experience' ]);
+    await broadcastProfileChange('gold-daily-collected', [ 'profile-rewards', 'profile-experience' ]);
   } catch (err) {
-    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (silver-daily-collected)');
+    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (gold-daily-collected)');
     // No retornamos error: el reward ya se guardó. Cliente reconcilia en siguiente fetch.
   }
 
-  req.log.info({ profileId: profileData.id }, 'Silver coin collected');
+  req.log.info({ profileId: profileData.id }, 'Gold coin collected');
   return sendSuccess(res, result);
 });
 

@@ -28,9 +28,9 @@ export const useRestProfile = () => {
     [networkName, walletAddress]
   );
 
-  const silverDailyCollect = useCallback(async () => {
+  const goldDailyCollect = useCallback(async () => {
     const response = await fetch(
-      `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${networkName}/wallet/${walletAddress || ''}/silver-daily-collect`,
+      `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${networkName}/wallet/${walletAddress || ''}/gold-daily-collect`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,7 +60,7 @@ export const useRestProfile = () => {
 
   return {
     saveNickname,
-    silverDailyCollect,
+    goldDailyCollect,
     saveMapObjects,
   };
 };

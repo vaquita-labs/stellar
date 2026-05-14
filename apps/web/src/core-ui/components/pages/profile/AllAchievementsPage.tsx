@@ -88,7 +88,6 @@ export function AllAchievementsPage() {
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const experience = experienceData?.experience ?? 0;
   const goldCoins = rewardsData?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
-  const silverCoins = rewardsData?.rewards?.find((r) => r?.name === 'Silver Coin')?.amount ?? 0;
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
   const totalDeposits = activeDeposits?.length ?? 0;
 
@@ -157,13 +156,6 @@ export function AllAchievementsPage() {
               background="linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)"
               title="Active deposits"
               value={totalDeposits.toLocaleString()}
-              date={today}
-            />
-            <RecordCard
-              icon="/icons/achievements/second-place.png"
-              background="linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)"
-              title="Silver coins"
-              value={silverCoins.toLocaleString()}
               date={today}
             />
             <RecordCard

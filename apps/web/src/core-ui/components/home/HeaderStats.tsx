@@ -13,7 +13,7 @@ import {
   useProfileRewards,
   useProfileStreak,
 } from '../../hooks';
-import { SILVER_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
+import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
 import { BankAPYModal, StreakModal } from '../organisms';
 import { EarnChip } from './EarnChip';
@@ -42,16 +42,15 @@ export const HeaderStats = () => {
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
 
-  const silverCoins = profileRewards?.rewards?.find((r) => r?.name === 'Silver Coin')?.amount ?? 0;
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
 
   const firstName = profileData?.nickname || profileData?.fullName?.split(' ')[0] || '';
 
-  const silverCoinRef = useRef<HTMLDivElement>(null);
+  const goldCoinRef = useRef<HTMLDivElement>(null);
   const setPositions = useElementPositionsStore((store) => store.setPositions);
   useEffect(() => {
-    setPositions(SILVER_COIN, () => {
-      const rect = silverCoinRef.current?.getBoundingClientRect() || { left: 0, width: 0, top: 0, height: 0 };
+    setPositions(GOLD_COIN, () => {
+      const rect = goldCoinRef.current?.getBoundingClientRect() || { left: 0, width: 0, top: 0, height: 0 };
       return {
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
@@ -72,21 +71,9 @@ export const HeaderStats = () => {
             }}
             rightSlot={
               <div className="flex items-center gap-1.5">
-                <div ref={silverCoinRef} className="flex items-center gap-1">
+                <div ref={goldCoinRef} className="flex items-center gap-1">
                   <Image
-                    src="/icons/summary/silver_coin.png"
-                    alt="Silver Coin"
-                    width={20}
-                    height={20}
-                    className="object-contain"
-                    priority
-                  />
-                  <span className="text-sm font-bold text-black tabular-nums">{silverCoins}</span>
-                </div>
-                <div className="w-px h-4 bg-black/15" />
-                <div className="flex items-center gap-1">
-                  <Image
-                    src="/icons/summary/gold_coin.png"
+                    src="/icons/global/coin.png"
                     alt="Gold Coin"
                     width={20}
                     height={20}
@@ -178,23 +165,9 @@ export const HeaderStats = () => {
 
           <div className="w-px h-4 bg-black/10" />
 
-          <div ref={silverCoinRef} className="flex items-center gap-1.5 flex-1 justify-center">
+          <div ref={goldCoinRef} className="flex items-center gap-1.5 flex-1 justify-center">
             <Image
-              src="/icons/summary/silver_coin.png"
-              alt="Silver Coin"
-              width={20}
-              height={20}
-              className="object-contain"
-              priority
-            />
-            <span className="text-sm font-bold text-black tabular-nums">{silverCoins}</span>
-          </div>
-
-          <div className="w-px h-4 bg-black/10" />
-
-          <div className="flex items-center gap-1.5 flex-1 justify-center">
-            <Image
-              src="/icons/summary/gold_coin.png"
+              src="/icons/global/coin.png"
               alt="Gold Coin"
               width={20}
               height={20}

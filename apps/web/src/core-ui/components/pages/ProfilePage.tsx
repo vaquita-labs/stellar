@@ -105,7 +105,6 @@ export function ProfilePage() {
   const hasActiveStreak = !!streakData?.todayStreak;
   const experience = experienceData?.experience ?? 0;
   const goldCoins = rewardsData?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
-  const silverCoins = rewardsData?.rewards?.find((r) => r?.name === 'Silver Coin')?.amount ?? 0;
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
   const totalDeposits = activeDeposits?.length ?? 0;
 
@@ -307,14 +306,14 @@ export function ProfilePage() {
               label="Active deposits"
             />
             <SummaryItem
-              icon="/icons/global/star.png"
-              value={silverCoins.toLocaleString()}
-              label="Silver"
+              icon="/icons/global/coin.png"
+              value={goldCoins.toLocaleString()}
+              label="Gold"
             />
             <SummaryItem
               icon="/icons/global/trophy.png"
               value={`${experience.toLocaleString()} XP`}
-              label={`Gold: ${goldCoins.toLocaleString()}`}
+              label="Experience"
             />
           </div>
         </section>

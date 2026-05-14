@@ -1,1 +1,1 @@
-export const DAILY_SILVER_COINS = 5;
+export const DAILY_GOLD_COINS = 1;
