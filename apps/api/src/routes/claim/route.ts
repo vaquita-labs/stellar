@@ -1,8 +1,12 @@
 import { type NextFunction, type Request, type RequestHandler, type Response, Router } from 'express';
 import {
+  checkDisciplinadoEligibility,
   checkGenesisSaverEligibility,
   checkMainnetPioneerEligibility,
+  checkMaratonistEligibility,
   checkPrimeraVaquitaEligibility,
+  checkTrimestralEligibility,
+  checkVeteranoEligibility,
   contractHasClaimed,
   getActiveBadgeClaim,
   getAnyClaim,
@@ -34,18 +38,15 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
 type EligibilityChecker = (wallet: string) => Promise<boolean>;
 
 const BADGE_ELIGIBILITY: Record<string, { cycleId: number; check: EligibilityChecker }> = {
-  primera_vaquita: {
-    cycleId: 0,
-    check: checkPrimeraVaquitaEligibility,
-  },
-  genesis_saver: {
-    cycleId: 0,
-    check: checkGenesisSaverEligibility,
-  },
-  mainnet_pioneer: {
-    cycleId: 0,
-    check: checkMainnetPioneerEligibility,
-  },
+  // Cat C — personal milestones
+  primera_vaquita: { cycleId: 0, check: checkPrimeraVaquitaEligibility },
+  maratonista:     { cycleId: 0, check: checkMaratonistEligibility },
+  trimestral:      { cycleId: 0, check: checkTrimestralEligibility },
+  veterano:        { cycleId: 0, check: checkVeteranoEligibility },
+  disciplinado:    { cycleId: 0, check: checkDisciplinadoEligibility },
+  // Cat D — limited edition
+  genesis_saver:   { cycleId: 0, check: checkGenesisSaverEligibility },
+  mainnet_pioneer: { cycleId: 0, check: checkMainnetPioneerEligibility },
 };
 
 /** Cat D types require manual re-sign approval — automatic refresh is blocked. */

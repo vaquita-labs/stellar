@@ -4,6 +4,7 @@ import { ONE_DAY } from '../../config/constants';
 import { firstElement } from '../../helpers';
 import { supabase } from '../../lib/supabase';
 import { ably } from '../ably';
+import { evaluateCatCMilestones } from '../badges/catc-monitor';
 import { getBaseInterest, getVaquitaPoolData, PROTOCOL_APY_DUMMY, VAQUITA_APY_DUMMY } from '../base';
 import { getBlendInterest, getStellarDepositContractAddress } from '../stellar';
 import {
@@ -295,9 +296,26 @@ export const confirmWithdrawal = async (withdrawalId: number) => {
   if (error) {
     console.error('Error on confirmWithdrawal', { withdrawalId }, error);
   }
-  
+
+  // Fetch wallet address to evaluate Cat C milestones (fire-and-forget)
+  if (!error) {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('withdrawals')
+          .select('deposits!deposit_id(wallet_address)')
+          .eq('id', withdrawalId)
+          .maybeSingle();
+        const wallet = (data as any)?.deposits?.wallet_address as string | undefined;
+        if (wallet) await evaluateCatCMilestones(wallet);
+      } catch {
+        // Non-critical: badge evaluation errors must not affect withdrawal confirmation
+      }
+    })();
+  }
+
   await broadcastDepositsChange('confirmWithdrawal');
-  
+
   return {
     error,
     ...rest,
