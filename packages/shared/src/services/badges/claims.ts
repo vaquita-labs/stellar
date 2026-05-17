@@ -130,6 +130,26 @@ export async function storeBadgeClaim(claim: {
   return data as BadgeClaimRecord;
 }
 
+/** Returns any claim (including superseded) for (wallet, badge_type, cycle_id). Used by the re-sign endpoint to confirm prior issuance for Cat A/B. */
+export async function getAnyClaim(
+  walletAddress: string,
+  badgeType: string,
+  cycleId: number,
+): Promise<BadgeClaimRecord | null> {
+  const { data, error } = await supabase
+    .from('badge_claims')
+    .select('*')
+    .eq('wallet_address', walletAddress)
+    .eq('badge_type', badgeType)
+    .eq('cycle_id', cycleId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as BadgeClaimRecord | null;
+}
+
 export async function supersedeBadgeClaim(claimId: string): Promise<void> {
   const { error } = await supabase
     .from('badge_claims')

@@ -320,6 +320,30 @@ fn add_edition_non_admin_panics() {
     client.add_edition(&non_admin, &symbol_short!("genesis"), &50u32);
 }
 
+// ---------- Cycle 13: has_claimed ----------
+
+#[test]
+fn has_claimed_returns_false_before_mint_and_true_after() {
+    let env = Env::default();
+    let (_, signing_key, client) = deploy(&env);
+
+    let wallet = Address::generate(&env);
+    let badge_type = symbol_short!("gold");
+    let cycle_id: u32 = 202605;
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+
+    assert!(!client.has_claimed(&wallet, &badge_type, &cycle_id));
+
+    let sig = make_signature(&env, &signing_key, &wallet, &badge_type, cycle_id, expiry);
+    client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+
+    assert!(client.has_claimed(&wallet, &badge_type, &cycle_id));
+    // different cycle_id → false
+    assert!(!client.has_claimed(&wallet, &badge_type, &202606u32));
+
+    println!("has_claimed_returns_false_before_mint_and_true_after OK");
+}
+
 // ---------- Cycle 12: badge_type_of ----------
 
 #[test]
