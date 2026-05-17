@@ -264,6 +264,62 @@ fn update_signing_key_non_admin_panics() {
     client.update_signing_key(&non_admin, &new_pk);
 }
 
+// ---------- Cycle 11: add_edition + EditionCap enforcement ----------
+
+#[test]
+fn add_edition_sets_cap_and_mints_up_to_cap() {
+    let env = Env::default();
+    let (admin, signing_key, client) = deploy(&env);
+
+    let edition = symbol_short!("genesis");
+    client.add_edition(&admin, &edition, &2u32);
+
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+
+    // Wallet 1 — should succeed (count = 1)
+    let w1 = Address::generate(&env);
+    let sig1 = make_signature(&env, &signing_key, &w1, &edition, 0, expiry);
+    let t1 = client.mint_badge(&w1, &edition, &0, &expiry, &sig1);
+    assert_eq!(t1, 0);
+
+    // Wallet 2 — should succeed (count = 2, == cap)
+    let w2 = Address::generate(&env);
+    let sig2 = make_signature(&env, &signing_key, &w2, &edition, 0, expiry);
+    let t2 = client.mint_badge(&w2, &edition, &0, &expiry, &sig2);
+    assert_eq!(t2, 1);
+
+    println!("add_edition_sets_cap_and_mints_up_to_cap OK");
+}
+
+#[test]
+#[should_panic(expected = "EditionCapReached")]
+fn mint_badge_rejects_beyond_edition_cap() {
+    let env = Env::default();
+    let (admin, signing_key, client) = deploy(&env);
+
+    let edition = symbol_short!("genesis");
+    client.add_edition(&admin, &edition, &1u32); // cap = 1
+
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+
+    let w1 = Address::generate(&env);
+    let sig1 = make_signature(&env, &signing_key, &w1, &edition, 0, expiry);
+    client.mint_badge(&w1, &edition, &0, &expiry, &sig1); // succeeds
+
+    let w2 = Address::generate(&env);
+    let sig2 = make_signature(&env, &signing_key, &w2, &edition, 0, expiry);
+    client.mint_badge(&w2, &edition, &0, &expiry, &sig2); // must panic
+}
+
+#[test]
+#[should_panic(expected = "Unauthorized")]
+fn add_edition_non_admin_panics() {
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+    let non_admin = Address::generate(&env);
+    client.add_edition(&non_admin, &symbol_short!("genesis"), &50u32);
+}
+
 // ---------- Cycle 10: old key rejected after rotation ----------
 
 #[test]

@@ -57,6 +57,26 @@ impl VaquitaBadges {
         env.crypto()
             .ed25519_verify(&signing_key, &msg_hash.into(), &signature);
 
+        // Cat D: if an EditionCap was registered for this badge_type, enforce it.
+        let edition_cap_key = DataKey::EditionCap(badge_type.clone());
+        if let Some(cap) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, u32>(&edition_cap_key)
+        {
+            let count: u32 = env
+                .storage()
+                .persistent()
+                .get(&DataKey::EditionCount(badge_type.clone()))
+                .unwrap_or(0);
+            if count >= cap {
+                panic!("EditionCapReached");
+            }
+            env.storage()
+                .persistent()
+                .set(&DataKey::EditionCount(badge_type.clone()), &(count + 1));
+        }
+
         let token_id: u32 = env
             .storage()
             .instance()
@@ -90,6 +110,18 @@ impl VaquitaBadges {
             .instance()
             .get(&DataKey::NextTokenId)
             .unwrap_or(0)
+    }
+
+    /// Register a new limited-edition badge type (Cat D). Admin-only.
+    pub fn add_edition(env: Env, caller: Address, edition_id: Symbol, max_supply: u32) {
+        caller.require_auth();
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        if caller != admin {
+            panic!("Unauthorized");
+        }
+        env.storage()
+            .persistent()
+            .set(&DataKey::EditionCap(edition_id), &max_supply);
     }
 
     pub fn update_signing_key(env: Env, caller: Address, new_key: BytesN<32>) {
