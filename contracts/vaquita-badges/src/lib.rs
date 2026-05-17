@@ -114,6 +114,11 @@ impl VaquitaBadges {
             .get(&DataKey::TokenBadgeType(token_id))
     }
 
+    pub fn has_claimed(env: Env, wallet: Address, badge_type: Symbol, cycle_id: u32) -> bool {
+        let claim_key = DataKey::Claimed(badge_type, cycle_id, wallet);
+        env.storage().persistent().has(&claim_key)
+    }
+
     pub fn total_supply(env: Env) -> u32 {
         env.storage()
             .instance()

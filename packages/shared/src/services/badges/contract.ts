@@ -1,5 +1,6 @@
 import {
   Account,
+  Address,
   Contract,
   Keypair,
   nativeToScVal,
@@ -7,6 +8,7 @@ import {
   rpc,
   scValToNative,
   TransactionBuilder,
+  xdr,
 } from '@stellar/stellar-sdk';
 
 const DEFAULT_SOROBAN_RPC = 'https://soroban-testnet.stellar.org';
@@ -19,7 +21,7 @@ function getNetworkPassphrase(): string {
   return process.env.STELLAR_NETWORK_PASSPHRASE ?? Networks.TESTNET;
 }
 
-async function simulateCall(contractId: string, method: string, ...args: ReturnType<typeof nativeToScVal>[]) {
+async function simulateCall(contractId: string, method: string, ...args: xdr.ScVal[]) {
   const contract = new Contract(contractId);
   const server = new rpc.Server(getRpcUrl());
   const keypair = Keypair.random();
@@ -58,5 +60,26 @@ export async function contractBadgeTypeOf(contractId: string, tokenId: number): 
     return (native as string | null) ?? null;
   } catch {
     return null;
+  }
+}
+
+export async function contractHasClaimed(
+  contractId: string,
+  wallet: string,
+  badgeType: string,
+  cycleId: number,
+): Promise<boolean> {
+  try {
+    const retval = await simulateCall(
+      contractId,
+      'has_claimed',
+      new Address(wallet).toScVal(),
+      nativeToScVal(badgeType, { type: 'symbol' }),
+      nativeToScVal(cycleId, { type: 'u32' }),
+    );
+    if (!retval) return false;
+    return scValToNative(retval) as boolean;
+  } catch {
+    return false;
   }
 }

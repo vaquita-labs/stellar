@@ -2,11 +2,14 @@ import { type NextFunction, type Request, type RequestHandler, type Response, Ro
 import {
   checkGenesisSaverEligibility,
   checkPrimeraVaquitaEligibility,
+  contractHasClaimed,
   getActiveBadgeClaim,
+  getAnyClaim,
   getBadgeSigningKeypair,
   makeClaimExpiry,
   signBadgeClaim,
   storeBadgeClaim,
+  supersedeBadgeClaim,
   toClaimPayload,
 } from '@vaquita/shared';
 
@@ -24,7 +27,7 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
   };
 
 // ---------------------------------------------------------------------------
-// Supported Cat C badge types and their eligibility checkers
+// Supported badge types and their eligibility checkers
 // ---------------------------------------------------------------------------
 
 type EligibilityChecker = (wallet: string) => Promise<boolean>;
@@ -39,6 +42,9 @@ const BADGE_ELIGIBILITY: Record<string, { cycleId: number; check: EligibilityChe
     check: checkGenesisSaverEligibility,
   },
 };
+
+/** Cat D types require manual re-sign approval — automatic refresh is blocked. */
+const CAT_D_TYPES = new Set(['genesis_saver', 'mainnet_pioneer', 'hackathon_champion']);
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/claim?type=primera_vaquita&wallet=G...
@@ -102,6 +108,98 @@ router.get(
     const stored = await storeBadgeClaim({ walletAddress: wallet, badgeType, cycleId, expiry, signature });
 
     req.log.info({ badgeType, wallet, claimId: stored.id }, 'Issued new badge claim');
+    return res.json({ status: 'success', data: toClaimPayload(stored) });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/claim/refresh
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-issues a fresh signed claim for Cat A/B/C badges whose original signature
+ * has expired. Automatically re-verifies eligibility before issuing.
+ *
+ * 200 { badge_type, cycle_id, expiry, signature }
+ * 400 missing / invalid body params
+ * 403 Cat D badge (manual process) or wallet no longer eligible
+ * 409 badge already minted on-chain for this wallet
+ */
+router.post(
+  '/refresh',
+  asyncHandler(async (req, res) => {
+    const { wallet, badge_type: badgeType, cycle_id: cycleIdRaw } = req.body as {
+      wallet?: string;
+      badge_type?: string;
+      cycle_id?: unknown;
+    };
+
+    if (!wallet || !badgeType || cycleIdRaw == null) {
+      return res.status(400).json({ status: 'error', message: 'Missing wallet, badge_type, or cycle_id' });
+    }
+
+    const cycleId = Number(cycleIdRaw);
+    if (!Number.isInteger(cycleId) || cycleId < 0) {
+      return res.status(400).json({ status: 'error', message: 'cycle_id must be a non-negative integer' });
+    }
+
+    req.log.info({ badgeType, wallet, cycleId }, 'POST /claim/refresh');
+
+    // Cat D: manual process only
+    if (CAT_D_TYPES.has(badgeType)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Cat D badge re-signs require manual approval. Contact support at support@vaquita.fi',
+      });
+    }
+
+    // Check if already minted on-chain
+    const contractId = process.env.BADGE_CONTRACT_ID;
+    if (contractId) {
+      const alreadyMinted = await contractHasClaimed(contractId, wallet, badgeType, cycleId);
+      if (alreadyMinted) {
+        return res.status(409).json({ status: 'error', message: 'Badge already minted on-chain' });
+      }
+    }
+
+    // Verify eligibility
+    const badgeConfig = BADGE_ELIGIBILITY[badgeType];
+    if (badgeConfig) {
+      // Cat C: re-run live eligibility check
+      const eligible = await badgeConfig.check(wallet);
+      if (!eligible) {
+        return res.status(403).json({ status: 'error', message: 'Wallet is not eligible for this badge' });
+      }
+    } else {
+      // Cat A/B: eligibility is permanent — confirm a prior claim was issued for this exact cycle
+      const prior = await getAnyClaim(wallet, badgeType, cycleId);
+      if (!prior) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'No prior claim found for this wallet, badge type, and cycle',
+        });
+      }
+    }
+
+    // Supersede any active (unexpired) prior claim
+    const existing = await getActiveBadgeClaim(wallet, badgeType, cycleId);
+    if (existing) {
+      await supersedeBadgeClaim(existing.id);
+    }
+
+    // Issue fresh claim
+    let keypair;
+    try {
+      keypair = getBadgeSigningKeypair();
+    } catch {
+      return res.status(500).json({ status: 'error', message: 'Badge signing key not configured' });
+    }
+
+    const expiry = makeClaimExpiry();
+    const signature = signBadgeClaim(wallet, badgeType, cycleId, expiry, keypair);
+    const stored = await storeBadgeClaim({ walletAddress: wallet, badgeType, cycleId, expiry, signature });
+
+    req.log.info({ badgeType, wallet, cycleId, claimId: stored.id }, 'Refreshed badge claim');
     return res.json({ status: 'success', data: toClaimPayload(stored) });
   }),
 );
