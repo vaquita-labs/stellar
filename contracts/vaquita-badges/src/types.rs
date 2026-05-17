@@ -8,6 +8,7 @@ pub enum DataKey {
     /// (badge_type, cycle_id, wallet) — prevents double-mint across all categories
     Claimed(Symbol, u32, Address),
     TokenOwner(u32),
+    TokenBadgeType(u32),
     EditionCap(Symbol),
     EditionCount(Symbol),
 }
