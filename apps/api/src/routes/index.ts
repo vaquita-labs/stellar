@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import adminRoutes from './admin/route';
 import badgeRoutes from './badge/route';
 import claimRoutes from './claim/route';
 import configRoutes from './config/route';
@@ -9,6 +10,7 @@ import userRoutes from './user/route';
 
 const router = Router();
 
+router.use('/admin', adminRoutes);
 router.use('/badge', badgeRoutes);
 router.use('/claim', claimRoutes);
 router.use('/config', configRoutes);
