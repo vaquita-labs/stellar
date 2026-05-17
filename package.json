@@ -16,8 +16,5 @@
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "pnpm@11.1.2",
-  "pnpm": {
-    "neverBuiltDependencies": ["usb"]
-  }
+  "packageManager": "pnpm@11.1.2"
 }
