@@ -171,6 +171,7 @@ export interface ProfileAverageResponseDTO {
   count: number;
   timestamp: number;
   delay: number;
+  badges: number;
 }
 
 export interface UserBalanceResponseDTO {
@@ -191,6 +192,49 @@ export interface RewardResponseDTO {
 
 export enum Reward {
   GOLD_COIN = 'gold-coin',
+}
+
+export enum Achievement {
+  BETA_TESTER = 'beta-tester',
+  ROOKIE = 'rookie',
+  WEEK_WARRIOR = 'week-warrior',
+  FIRST_DEPOSIT = 'first-deposit',
+  FIRST_FRIEND = 'first-friend',
+  SAVINGS_STARTER = 'savings-starter',
+  TRIO_SAVER = 'trio-saver',
+  MONTH_MASTER = 'month-master',
+  EXPLORER = 'explorer',
+  STREAK_MASTER = 'streak-master',
+  WHALE = 'whale',
+  SAVINGS_BARON = 'savings-baron',
+  CENTURY_SAVER = 'century-saver',
+  THIRD_PLACE = 'third-place',
+  SECOND_PLACE = 'second-place',
+  FIRST_PLACE = 'first-place',
+}
+
+export interface AchievementResponseDTO {
+  key: Achievement;
+  name: string;
+  description: string;
+  tier: string;
+  coinReward: number;
+  /** True when the user has met the eligibility rule OR has already claimed it. */
+  unlocked: boolean;
+  /** ISO timestamp of the claim, or null if not yet claimed. */
+  claimedAt: string | null;
+}
+
+export interface ProfileAchievementsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  achievements: AchievementResponseDTO[];
+}
+
+export interface ClaimAchievementResponseDTO {
+  achievementKey: Achievement;
+  coinReward: number;
+  claimedAt: string;
 }
 
 export enum MapObjectType {

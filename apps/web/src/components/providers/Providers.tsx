@@ -5,7 +5,9 @@ import { AblyProvider, LoaderScreen, NetworksProvider, sendLogToAbly } from '@/c
 import { getNetworks, useIsAuthenticated } from '@/core-ui/hooks';
 import { useMapStore, useNetworkConfigStore, useResize } from '@/core-ui/stores';
 import { useVisibility } from '@/core-ui/stores/visibility';
+import { stellarWalletsKitResolver } from '@/networks/stellar/kit';
 import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
+import { usePollarReadyStore } from '@/networks/stellar/wallet/pollarReady';
 import { Toast } from '@heroui/react';
 import { PollarProvider } from '@pollar/react';
 import '@pollar/react/styles.css';
@@ -66,8 +68,16 @@ export function Providers({ children }: { children: ReactNode }) {
   const hideNavigation = isShopRoute || isEditingMap;
 
   const [hydrated, setHydrated] = useState(false);
-  const showAuthGate = hydrated && !isPublicRoute && !isAuthenticated;
-  const showLoader = !hydrated || showAuthGate;
+  // True once PollarClient.ready() has resolved (DPoP key restored + session
+  // restore decision made). Flipped by PollarBridge. Gating the auth-gate on
+  // this prevents F5 from bouncing Pollar-authenticated users to /login while
+  // the session is still being restored in the background.
+  const pollarReady = usePollarReadyStore((s) => s.ready);
+  const showAuthGate = hydrated && pollarReady && !isPublicRoute && !isAuthenticated;
+  // On non-public routes, keep the loader visible until we have a definitive
+  // answer from Pollar (`pollarReady`). Public routes (login/terms/privacy)
+  // shouldn't be blocked — they need to render even when there is no session.
+  const showLoader = !hydrated || (!pollarReady && !isPublicRoute) || showAuthGate;
 
   useEffect(() => {
     try {
@@ -97,7 +107,14 @@ export function Providers({ children }: { children: ReactNode }) {
   }, [showAuthGate, router]);
 
   return (
-    <PollarProvider config={{ apiKey: POLLAR_API_KEY, stellarNetwork: POLLAR_NETWORK }}>
+    <PollarProvider
+      config={{
+        baseUrl: 'https://sdk.api.local.pollar.xyz',
+        apiKey: POLLAR_API_KEY,
+        stellarNetwork: POLLAR_NETWORK,
+        walletAdapter: stellarWalletsKitResolver,
+      }}
+    >
       <PollarBridge />
       <AblyProvider>
         <Toast.Provider placement="top" />

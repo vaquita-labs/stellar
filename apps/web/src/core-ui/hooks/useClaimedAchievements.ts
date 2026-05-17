@@ -1,38 +1,33 @@
 'use client';
 
-import { create } from 'zustand';
+import { useMemo } from 'react';
+import { useClaimAchievement } from './profile/useClaimAchievement';
+import { useProfileAchievements } from './profile/useProfileAchievements';
 
 /**
- * Tracks which achievements the user has *claimed* (i.e. cashed in for coins)
- * during the current session.
- *
- * Intentionally in-memory only — no localStorage, no persist middleware — so
- * the claim flow can be re-tested every reload while we wait for the backend
- * catalog to ship. Swap the store body for a real query/mutation later.
+ * Server-backed view of which achievements the user has claimed. The previous
+ * implementation kept an in-memory Zustand set so reloads wiped the state;
+ * now `claimedIds` derives from `useProfileAchievements` and `claim()` calls
+ * the real mutation. The shape of the hook (`{ claimedIds, isClaimed, claim }`)
+ * is preserved so existing callers (AchievementModal, BadgeTile, …) keep
+ * working without code changes at the call site — only the `claim` return
+ * type changed from `void` to `Promise<ClaimAchievementResponseDTO>`.
  */
-type ClaimedState = {
-  claimedIds: Set<string>;
-  isClaimed: (id: string) => boolean;
-  claim: (id: string) => void;
-};
-
-const useClaimedStore = create<ClaimedState>((set, get) => ({
-  claimedIds: new Set<string>(),
-  isClaimed: (id) => get().claimedIds.has(id),
-  claim: (id) =>
-    set((state) => {
-      if (state.claimedIds.has(id)) return state;
-      const next = new Set(state.claimedIds);
-      next.add(id);
-      return { claimedIds: next };
-    }),
-}));
-
 export function useClaimedAchievements() {
-  const claimedIds = useClaimedStore((s) => s.claimedIds);
-  const claim = useClaimedStore((s) => s.claim);
-  // `isClaimed` reads from the snapshot above so dependent renders update
-  // whenever the set changes — using `get()` directly would skip those.
+  const { data } = useProfileAchievements();
+  const mutation = useClaimAchievement();
+
+  const claimedIds = useMemo<Set<string>>(() => {
+    const next = new Set<string>();
+    for (const a of data?.achievements ?? []) {
+      if (a.claimedAt) next.add(a.key);
+    }
+    return next;
+  }, [data?.achievements]);
+
   const isClaimed = (id: string) => claimedIds.has(id);
+
+  const claim = (id: string) => mutation.mutateAsync(id);
+
   return { claimedIds, isClaimed, claim };
 }

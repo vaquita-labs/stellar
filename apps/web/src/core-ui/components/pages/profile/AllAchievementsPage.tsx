@@ -3,11 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useMemo, useState } from 'react';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiGift } from 'react-icons/fi';
 import { getDepositsData } from '../../../helpers/deposits';
 import {
   useClaimedAchievements,
   useDepositsComplete,
+  useProfileAchievements,
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
@@ -16,6 +17,7 @@ import { buildAchievements } from '../../../data/profile-badges';
 import { useNetworkConfigStore } from '../../../stores';
 import { AchievementDetail, AchievementModal } from './AchievementModal';
 import { BadgeTile } from './BadgeTile';
+import { RedeemCodeModal } from './RedeemCodeModal';
 
 /* ------------------------------------------------------------------ */
 /* Personal record card                                                */
@@ -79,12 +81,14 @@ export function AllAchievementsPage() {
     achievement: AchievementDetail;
     unlocked: boolean;
   } | null>(null);
+  const [redeemOpen, setRedeemOpen] = useState(false);
 
   const { walletAddress } = useNetworkConfigStore();
   const { data: streakData } = useProfileStreak();
   const { data: experienceData } = useProfileExperience();
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
+  const { data: achievementsData } = useProfileAchievements();
   // Drives the pulsing "ready to claim" halo on each badge tile. A badge is
   // claimable when the user has met the unlock condition (`badge.unlocked`)
   // but hasn't cashed in the coin reward yet.
@@ -96,6 +100,11 @@ export function AllAchievementsPage() {
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
   const totalDeposits = activeDeposits?.length ?? 0;
 
+  const betaTester = useMemo(
+    () => achievementsData?.achievements?.find((a) => a.key === 'beta-tester'),
+    [achievementsData?.achievements]
+  );
+
   const achievements = useMemo(
     () =>
       buildAchievements({
@@ -103,17 +112,20 @@ export function AllAchievementsPage() {
         totalDeposits,
         experience,
         totalSavedAmount: activeDepositsTotalAmount,
+        isBetaTester: betaTester?.unlocked ?? false,
+        betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester]
   );
 
-  const earned = achievements.filter((b) => b.unlocked).length;
+  const earned = achievements.filter((b) => b.unlocked && isClaimed(b.id)).length;
   const today = useMemo(() => formatDate(new Date().toISOString()), []);
 
   return (
     <div className="h-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-6 pb-16">
-        {/* Header — back arrow on the left, muted centered title (Duolingo-style) */}
+        {/* Header — back arrow on the left, muted centered title (Duolingo-style),
+            redeem-code button on the right. */}
         <header className="relative flex items-center justify-center min-h-10 border-b border-black/10 pb-3">
           <Link
             href="/profile"
@@ -125,6 +137,15 @@ export function AllAchievementsPage() {
           <h1 className="text-base sm:text-lg font-bold text-gray-500 tracking-wide uppercase">
             Achievements
           </h1>
+          <button
+            type="button"
+            onClick={() => setRedeemOpen(true)}
+            aria-label="Redeem code"
+            title="Canjear código"
+            className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
+          >
+            <FiGift className="h-4 w-4" />
+          </button>
         </header>
 
         {/* Personal records ----------------------------------------- */}
@@ -210,6 +231,8 @@ export function AllAchievementsPage() {
           if (!o) setSelected(null);
         }}
       />
+
+      <RedeemCodeModal open={redeemOpen} onOpenChange={setRedeemOpen} />
     </div>
   );
 }

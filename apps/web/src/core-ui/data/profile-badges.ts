@@ -24,15 +24,21 @@ export type AchievementsCtx = {
   friendsCount?: number;
   /** 1-based leaderboard rank; `undefined` means "not on the board". */
   leaderboardRank?: number;
-  /** Everyone is a beta tester for now; this stays `true` until the backend
-   *  starts dating accounts. */
+  /** Server-derived: true when the user's profile was created before the
+   *  Beta Tester cutoff (see `BETA_TESTER_CUTOFF` in @vaquita/shared). The
+   *  GET /achievements endpoint computes this; callers should pull it from
+   *  `useProfileAchievements()` and pass it in. Defaults to `false` if the
+   *  query hasn't resolved yet so a locked tile is shown by default rather
+   *  than briefly flashing as unlocked. */
   isBetaTester?: boolean;
+  /** Server-derived ISO timestamp of the Beta Tester claim, if any. */
+  betaTesterClaimedAt?: string;
 };
 
 const ICONS = '/icons/achievements';
 
 export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
-  const isBetaTester = ctx.isBetaTester ?? true;
+  const isBetaTester = ctx.isBetaTester ?? false;
   const savings = ctx.totalSavedAmount ?? 0;
   const friends = ctx.friendsCount ?? 0;
   const rank = ctx.leaderboardRank;
@@ -46,7 +52,7 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
       icon: `${ICONS}/beta-tester2.png`,
       accent: 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
       tier: 'Founder',
-      date: isBetaTester ? new Date().toISOString() : undefined,
+      date: ctx.betaTesterClaimedAt ?? (isBetaTester ? new Date().toISOString() : undefined),
       unlocked: isBetaTester,
     },
     {

@@ -124,21 +124,28 @@ export function AchievementModal({
     ? Math.min(100, Math.round((achievement.progress.current / achievement.progress.target) * 100))
     : null;
 
-  const handleClaim = () => {
+  const handleClaim = async () => {
     setPhase('claiming');
-    // Mocked latency — replace with the real "claim" mutation when the
-    // backend ships. Keep the loading screen visible long enough for the dots
-    // animation to read as deliberate, not as jank. The bonus is added to
-    // the visible gold balance when the reveal kicks in so the pill in the
-    // header tracks what the user just earned.
-    window.setTimeout(() => {
-      setBonusGold((v) => v + reward);
+    try {
+      const result = await claim(achievement.id);
+      // Prefer the server-returned reward — it's the authoritative number; fall
+      // back to the local TIER_REWARD table if the API ever omits it. The
+      // bonus is added to the visible gold pill so the header tracks what the
+      // user just earned without waiting for the rewards query to refetch.
+      setBonusGold((v) => v + (result?.coinReward ?? reward));
       setPhase('reward');
-    }, 1500);
+    } catch (err) {
+      const message = (err as Error)?.message ?? 'Unknown error';
+      toast.danger('Could not claim award', { description: message });
+      setPhase('detail');
+    }
   };
 
   const handleContinue = () => {
-    claim(achievement.id);
+    // The server claim already happened in handleClaim — the mutation's
+    // onSuccess invalidated profile-achievements/profile-rewards, so the rest
+    // of the UI will reflect the new state on the next render. Just close the
+    // reveal phase.
     setPhase('detail');
   };
 

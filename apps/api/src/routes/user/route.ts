@@ -1,4 +1,3 @@
-import { PrivyClient } from '@privy-io/server-auth';
 import { ethers } from 'ethers';
 import { Router } from 'express';
 import { getBalances, getNetworksByOrigin, sendError, sendSuccess } from '@vaquita/shared';
@@ -6,30 +5,11 @@ import { logger } from '../../lib/logger';
 
 const router = Router();
 
-const PRIVY_APP_ID = process.env.PRIVY_APP_ID;
-const PRIVY_APP_SECRET = process.env.PRIVY_APP_SECRET;
-
-if (!PRIVY_APP_ID || !PRIVY_APP_SECRET) {
-  logger.warn('PRIVY_APP_ID/PRIVY_APP_SECRET no configurados, /user/privy fallará');
-}
-
-const privy = PRIVY_APP_ID && PRIVY_APP_SECRET
-  ? new PrivyClient(PRIVY_APP_ID, PRIVY_APP_SECRET)
-  : null;
-
 router.get('/privy', async (req, res) => {
   req.log.info('GET /user/privy');
 
-  if (!privy) {
-    req.log.error('Privy client not configured');
-    return sendError(res, 'Privy not configured', null, 500);
-  }
-
   try {
-    const users = await privy.getUsers();
-    const data = users.map((user) => ({ ...user }));
-    req.log.debug({ count: data.length }, 'Privy users fetched');
-    return sendSuccess(res, data, '');
+    return sendSuccess(res, [], '');
   } catch (err) {
     req.log.error({ err }, 'Failed to list Privy users');
     return sendError(res, 'Error listing users', err, 500);

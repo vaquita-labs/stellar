@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { rpcCall, submitAndWait } from './rpc';
-import { requireActiveAdapter } from './wallet/registry';
-import { normalizeSignedXdr } from './xdr';
+import type { PollarClient, TransactionState, TxBuildBody } from '@pollar/core';
+import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 
 function toBaseUnits(input: string, decimals: number): bigint {
   const [wRaw, fRaw = ''] = input.trim().split('.');
@@ -18,18 +16,9 @@ function assertHex32(hex: string): string {
   return h;
 }
 
-function hexToBytes16(hex: string): Uint8Array {
-  const h = assertHex32(hex);
-  const out = new Uint8Array(16);
-  for (let i = 0; i < 16; i++) out[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
-  return out;
-}
-
 type Common = {
   address: string;
-  rpcUrl: string;
-  networkPassphrase: string;
-  clientRef: { current: any | null }; // Ref<ContractClient|null>
+  contractId: string;
 };
 
 type DepositParams = {
@@ -38,101 +27,82 @@ type DepositParams = {
   amount?: bigint;
   period?: number | string | bigint;
   tokenDecimals?: number;
-  depositIdEncoding?: 'hex16-string' | 'hex16-bytes' | 'u128';
 };
 
 type WithdrawParams = {
   depositId: string;
-  depositIdEncoding?: 'hex16-string' | 'hex16-bytes' | 'u128';
 };
 
-export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: Common) {
-  const assemble = async (method: string, args: any) => {
-    if (!clientRef.current) throw new Error('Contract client not ready');
-    const tx = await (clientRef.current as any)[method](args);
+type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' }>['params'];
 
-    let needs: any = false;
-    if (typeof tx.needsNonInvokerSigningBy === 'function') {
-      try {
-        needs = tx.needsNonInvokerSigningBy(address);
-      } catch {}
-    }
-    const mustSign = Array.isArray(needs) ? needs.length > 0 : !!needs;
+/**
+ * Invoke a Vaquita pool method via Pollar's `/tx/build` + `signAndSubmitTx` pipeline.
+ *
+ * We subscribe to Pollar's transaction state machine BEFORE calling `buildTx`
+ * so the `built` callback (which carries the unsigned XDR) triggers
+ * `signAndSubmitTx` and the eventual `success` carries back the on-chain hash.
+ *
+ * `deposit_id` in the Vaquita pool is a `String`, NOT a `BytesN<16>` (see
+ * `contracts/vaquita-pool/src/lib.rs`), so callers pass the 32-char hex string
+ * verbatim under `{ type: 'string' }`.
+ */
+async function invokeViaPollar(
+  client: PollarClient,
+  params: InvokeContractParams,
+  logLabel: string,
+): Promise<{ hash: string }> {
+  return new Promise<{ hash: string }>((resolve, reject) => {
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      unsubscribe();
+      fn();
+    };
 
-    if (mustSign) {
-      const adapter = requireActiveAdapter();
-      if (!adapter.signAuthEntry) {
-        throw new Error(
-          `[${method}] requires non-invoker auth entry signing, but adapter "${adapter.id}" does not support it.`,
-        );
-      }
-      try {
-        await tx.signAuthEntries(address, async (authXdr: string) => {
-          const signed = await adapter.signAuthEntry!(authXdr, { address, networkPassphrase });
-          return signed;
+    const unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
+      console.info(`[${logLabel}] state`, state.step, state);
+      if (state.step === 'built' && state.buildData?.unsignedXdr) {
+        void client.signAndSubmitTx(state.buildData.unsignedXdr).catch((err: unknown) => {
+          finish(() => reject(err instanceof Error ? err : new Error(String(err))));
         });
-      } catch (err: any) {
-        const msg = String(err?.name || err?.message || err);
-        if (!/NoUnsignedNonInvokerAuthEntriesError/i.test(msg)) throw err;
-        console.warn(`[${method}] no unsigned non-invoker auth entries; continuing.`);
+        return;
       }
-    }
-
-    const unsigned: string = (tx as any).built?.toXDR?.() ?? (await (tx as any).toXDR?.());
-    if (typeof unsigned !== 'string') {
-      throw new Error('Could not get unsigned XDR from assembled tx');
-    }
-    return unsigned;
-  };
-
-  const sign = async (unsignedXdr: string) => {
-    const adapter = requireActiveAdapter();
-    const res = await adapter.signTransaction(unsignedXdr, { address, networkPassphrase });
-    return normalizeSignedXdr(res);
-  };
-
-  const send = async (signedXdr: string) => {
-    const sendRes = await rpcCall<{ hash: string }>(rpcUrl, 'sendTransaction', {
-      transaction: signedXdr,
+      if (state.step === 'success') {
+        finish(() => resolve({ hash: state.hash }));
+        return;
+      }
+      if (state.step === 'error') {
+        finish(() => reject(new Error(state.details ?? `Pollar ${params.method} failed`)));
+        return;
+      }
     });
-    const hash = (sendRes as any)?.hash || (typeof sendRes === 'string' ? sendRes : undefined);
-    if (!hash) throw new Error('RPC did not return a transaction hash');
-    const final = await submitAndWait(rpcUrl, hash);
-    if (final.status !== 'SUCCESS') {
-      throw new Error(`Tx failed: ${final.status} ${final.resultXdr ?? ''}`);
-    }
-    return { hash, final };
-  };
 
-  /** Run the full sign+submit pipeline, branching on whether the adapter submits internally. */
-  const signAndSubmit = async (unsignedXdr: string) => {
-    const adapter = requireActiveAdapter();
-    if (adapter.submitsOnSign && adapter.signAndSubmitTransaction) {
-      const { hash } = await adapter.signAndSubmitTransaction(unsignedXdr, { address, networkPassphrase });
-      const final = await submitAndWait(rpcUrl, hash);
-      if (final.status !== 'SUCCESS') {
-        throw new Error(`Tx failed: ${final.status} ${final.resultXdr ?? ''}`);
-      }
-      return { hash, final };
-    }
-    const signed = await sign(unsignedXdr);
-    return await send(signed);
-  };
+    client.buildTx('invoke_contract', params).catch((err: unknown) => {
+      finish(() => reject(err instanceof Error ? err : new Error(String(err))));
+    });
+  });
+}
 
+function requirePollarClient(): PollarClient {
+  const binding = getPollarBinding();
+  if (!binding) {
+    throw new Error(
+      'Pollar adapter is not bound yet — make sure <PollarBridge> ran after login.',
+    );
+  }
+  return binding.client;
+}
+
+export function getSorobanTx({ address, contractId }: Common) {
   const deposit = async ({
     depositId,
     humanAmount,
     amount,
     period,
     tokenDecimals = 7,
-    depositIdEncoding = 'hex16-string',
   }: DepositParams) => {
     if (!address) throw new Error('No connected address');
-
-    let deposit_id: any;
-    if (depositIdEncoding === 'u128') deposit_id = BigInt(depositId);
-    else if (depositIdEncoding === 'hex16-bytes') deposit_id = hexToBytes16(depositId);
-    else deposit_id = assertHex32(depositId);
 
     const amt =
       humanAmount != null && humanAmount !== ''
@@ -143,33 +113,42 @@ export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: 
               throw new Error('Provide humanAmount or amount');
             })();
 
-    const args = {
-      caller: address,
-      deposit_id,
-      amount: amt,
-      period: BigInt(period ?? 604800n),
-    };
-
-    const unsigned = await assemble('deposit', args);
-    return await signAndSubmit(unsigned);
+    const client = requirePollarClient();
+    console.info('[sorobanTx:deposit] routing via Pollar buildTx', { depositId, amt, contractId });
+    return await invokeViaPollar(
+      client,
+      {
+        contractId,
+        method: 'deposit',
+        args: [
+          { type: 'address', value: address },
+          { type: 'string',  value: assertHex32(depositId) },
+          { type: 'i128',    value: amt.toString() },
+          { type: 'u64',     value: BigInt(period ?? 604800n).toString() },
+        ],
+      },
+      'pollar-deposit',
+    );
   };
 
-  const withdraw = async ({ depositId, depositIdEncoding = 'hex16-string' }: WithdrawParams) => {
+  const withdraw = async ({ depositId }: WithdrawParams) => {
     if (!address) throw new Error('No connected address');
 
-    let deposit_id: any;
-    if (depositIdEncoding === 'u128') deposit_id = BigInt(depositId);
-    else if (depositIdEncoding === 'hex16-bytes') deposit_id = hexToBytes16(depositId);
-    else deposit_id = assertHex32(depositId);
-
-    const args = {
-      caller: address,
-      deposit_id,
-    };
-
-    const unsigned = await assemble('withdraw', args);
-    return await signAndSubmit(unsigned);
+    const client = requirePollarClient();
+    console.info('[sorobanTx:withdraw] routing via Pollar buildTx', { depositId, contractId });
+    return await invokeViaPollar(
+      client,
+      {
+        contractId,
+        method: 'withdraw',
+        args: [
+          { type: 'address', value: address },
+          { type: 'string',  value: assertHex32(depositId) },
+        ],
+      },
+      'pollar-withdraw',
+    );
   };
 
-  return { assemble, sign, send, signAndSubmit, deposit, withdraw };
+  return { deposit, withdraw };
 }

@@ -31,7 +31,6 @@
     "@types/jsdom": "^21.1.7",
     "@types/mime-types": "^2.1.4",
     "@types/node": "^20.14.7",
-    "@types/uuid": "^10.0.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-typescript2": "^0.36.0",
     "ts-node": "^10.9.2",

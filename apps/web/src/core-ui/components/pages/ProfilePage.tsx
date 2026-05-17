@@ -10,6 +10,7 @@ import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi
 import {
   useClaimedAchievements,
   useDepositsComplete,
+  useProfileAchievements,
   useProfileData,
   useProfileExperience,
   useProfileRewards,
@@ -100,6 +101,7 @@ export function ProfilePage() {
   const { data: experienceData } = useProfileExperience();
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
+  const { data: achievementsData } = useProfileAchievements();
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
@@ -139,6 +141,11 @@ export function ProfilePage() {
     []
   );
 
+  const betaTester = useMemo(
+    () => achievementsData?.achievements?.find((a) => a.key === 'beta-tester'),
+    [achievementsData?.achievements]
+  );
+
   const achievements = useMemo(
     () =>
       buildAchievements({
@@ -146,8 +153,10 @@ export function ProfilePage() {
         totalDeposits,
         experience,
         totalSavedAmount: activeDepositsTotalAmount,
+        isBetaTester: betaTester?.unlocked ?? false,
+        betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester]
   );
 
   const handleShareToInstagram = async () => {

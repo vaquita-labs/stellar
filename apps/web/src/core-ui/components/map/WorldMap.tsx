@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { formatTimeDeposit } from '../../helpers';
 import { useDeposits } from '../../hooks';
 import { useMapStore, useNetworkConfigStore, useResizeStore, useSyncMapObjects } from '../../stores';
-import { DepositSummaryResponseDTO, WorldType } from '../../types';
+import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
 import { VaquitaModal, VaquitasListModal } from '../organisms';
 import { MapObjects } from '../templates/WorldMap/map/MapObjects';
 import { SceneCamera } from '../templates/WorldMap/map/SceneCamera';
@@ -43,7 +43,7 @@ export const WorldMap = ({ walletAddress, isLeaderboard, isAvailable, worldType 
   const { data } = useDeposits(walletAddress ?? userWalletAddress);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
   const { height, width } = useResizeStore((store) => store);
-  const deposits = data?.deposits ?? [];
+  const deposits = (data?.deposits ?? []).filter((d) => d.state === DepositWithdrawalState.DEPOSIT_SUCCESS);
 
   const handleBarnClick = () => {
     if (userWalletAddress) {

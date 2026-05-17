@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
+  Achievement,
   broadcastProfileChange,
+  claimAchievement,
   getCachedProfilesDepositsByProfileId,
   getNetworkByName,
   getProfile,
@@ -9,14 +11,17 @@ import {
   getRewardByKey,
   getRewardsData,
   HISTORICAL_DELAY,
+  isEligibleForAchievement,
   type Network,
   ONE_DAY,
   type Profile,
   type ProfileAverageResponseDTO,
+  redeemAchievementCode,
   Reward,
   sendError,
   sendSuccess,
   supabase,
+  toProfileAchievementsResponseDTO,
   toProfileExperienceResponseDTO,
   toProfileMapObjectsAvailableResponseDTO,
   toProfileMapObjectsResponseDTO,
@@ -231,6 +236,131 @@ router.post('/network/:networkName/wallet/:walletAddress/gold-daily-collect', as
 
   req.log.info({ profileId: profileData.id }, 'Gold coin collected');
   return sendSuccess(res, result);
+});
+
+router.get('/network/:networkName/wallet/:walletAddress/achievements', async (req, res) => {
+  const { networkName, walletAddress } = req.params;
+  req.log.info({ networkName, walletAddress }, 'GET /profile/.../achievements');
+
+  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+
+  if (!success || !profileData || !networkData) {
+    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
+  }
+
+  return sendSuccess(res, await toProfileAchievementsResponseDTO(networkData, profileData));
+});
+
+router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim', async (req, res) => {
+  const { networkName, walletAddress, key } = req.params;
+  req.log.info({ networkName, walletAddress, key }, 'POST /profile/.../achievements/:key/claim');
+
+  // TODO(auth): match the wallet-in-URL trust used by every other profile
+  // route for v1. When we harden auth across the API (challenge/response via
+  // StellarWalletsKit.signMessage verified server-side), this endpoint moves
+  // along with the rest — don't add a one-off signature check here.
+
+  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+
+  if (!success || !profileData || !networkData) {
+    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for achievement claim');
+    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
+  }
+
+  const achievementKey = key as Achievement;
+  if (!Object.values(Achievement).includes(achievementKey)) {
+    req.log.warn({ key }, 'Unknown achievement key');
+    return sendError(res, `Unknown achievement: ${key}`, null, 404);
+  }
+
+  if (!isEligibleForAchievement(profileData, achievementKey)) {
+    req.log.warn({ profileId: profileData.id, key }, 'Profile is not eligible for achievement');
+    return sendError(res, 'You are not eligible for this achievement yet.', null, 403);
+  }
+
+  const result = await claimAchievement(profileData.id, achievementKey);
+
+  if (!result.success) {
+    if (result.alreadyClaimed) {
+      req.log.info({ profileId: profileData.id, key }, 'Achievement already claimed');
+      return sendError(res, 'You already claimed this achievement.', null, 409);
+    }
+    req.log.error({ err: result.error, profileId: profileData.id, key }, 'Failed to claim achievement');
+    return sendError(res, 'Failed to claim achievement', result.error, 500);
+  }
+
+  try {
+    await broadcastProfileChange('achievement-claimed', [
+      'profile-achievements',
+      'profile-rewards',
+      'profile-experience',
+    ]);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (achievement-claimed)');
+  }
+
+  req.log.info({ profileId: profileData.id, key, coinReward: result.coinReward }, 'Achievement claimed');
+  return sendSuccess(res, {
+    achievementKey,
+    coinReward: result.coinReward,
+    claimedAt: result.claimedAt,
+  });
+});
+
+router.post('/network/:networkName/wallet/:walletAddress/achievements/redeem', async (req, res) => {
+  const { networkName, walletAddress } = req.params;
+  const rawCode = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
+  req.log.info({ networkName, walletAddress, code: rawCode }, 'POST /profile/.../achievements/redeem');
+
+  // TODO(auth): same wallet-in-URL trust as every other profile route. When
+  // the API-wide auth hardening lands this endpoint follows along.
+
+  if (!rawCode) {
+    return sendError(res, 'A code is required.', null, 400);
+  }
+
+  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+
+  if (!success || !profileData || !networkData) {
+    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for redeem');
+    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
+  }
+
+  const result = await redeemAchievementCode(profileData.id, rawCode);
+
+  if (!result.success) {
+    if (result.notFound) {
+      req.log.info({ profileId: profileData.id, code: rawCode }, 'Redeem code not found');
+      return sendError(res, 'That code is not valid.', null, 404);
+    }
+    if (result.alreadyClaimed) {
+      req.log.info({ profileId: profileData.id, code: rawCode }, 'Redeem code already claimed');
+      return sendError(res, 'You already claimed this achievement.', null, 409);
+    }
+    req.log.error({ err: result.error, profileId: profileData.id, code: rawCode }, 'Failed to redeem code');
+    return sendError(res, 'Failed to redeem code', result.error, 500);
+  }
+
+  try {
+    await broadcastProfileChange('achievement-claimed', [
+      'profile-achievements',
+      'profile-rewards',
+      'profile-experience',
+    ]);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast (achievement-claimed via redeem)');
+  }
+
+  req.log.info(
+    { profileId: profileData.id, key: result.achievementKey, coinReward: result.coinReward },
+    'Achievement claimed via redeem code',
+  );
+  return sendSuccess(res, {
+    achievementKey: result.achievementKey,
+    coinReward: result.coinReward,
+    claimedAt: result.claimedAt,
+  });
 });
 
 router.post('/network/:networkName/wallet/:walletAddress/nickname', async (req, res) => {

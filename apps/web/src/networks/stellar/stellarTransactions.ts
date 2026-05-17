@@ -1,21 +1,14 @@
 import { getWalletAddress, toHexFromAny } from '@/core-ui/helpers';
 import { DepositFn, NetworkResponseDTO, WithdrawFn } from '../../core-ui/types';
 import { isStellarWalletConnected } from './helpers';
-import { getNetworkPassphrase, getRpcUrl } from './kit';
-import { getSorobanClient } from './sorobanClient';
 import { getSorobanTx } from './sorobanTx';
 
 export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: NetworkResponseDTO['tokens'][number]) => {
-  const rpcUrl = getRpcUrl();
-  const networkPassphrase = getNetworkPassphrase();
   const address = getWalletAddress();
   const isConnected = isStellarWalletConnected();
-  const clientRef = await getSorobanClient(address, vaquitaContractAddress, rpcUrl, networkPassphrase);
   const { deposit, withdraw } = getSorobanTx({
     address,
-    rpcUrl,
-    networkPassphrase,
-    clientRef,
+    contractId: vaquitaContractAddress,
   });
 
   const transactionDeposit: DepositFn = async (id: number, amount: number, lockPeriod, log) => {
@@ -40,14 +33,12 @@ export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: 
       humanAmount: amount.toString(),
       tokenDecimals: decimals,
       period,
-      depositIdEncoding: 'hex16-string',
     });
     const transaction = await deposit({
       depositId: depositIdHex,
       humanAmount: amount.toString(),
       tokenDecimals: decimals,
       period,
-      depositIdEncoding: 'hex16-string',
     });
 
     const { hash } = transaction;
@@ -75,7 +66,6 @@ export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: 
 
     const transaction = await withdraw({
       depositId: depositIdHex,
-      depositIdEncoding: 'hex16-string',
     });
 
     const { hash } = transaction;

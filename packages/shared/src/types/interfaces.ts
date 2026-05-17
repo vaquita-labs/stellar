@@ -1,4 +1,4 @@
-import { type DepositStatus, DepositWithdrawalState, Reward, WithdrawalStatus } from './commons';
+import { type Achievement, type DepositStatus, DepositWithdrawalState, Reward, WithdrawalStatus } from './commons';
 
 export interface Token {
   id: number,
@@ -76,6 +76,34 @@ export interface Profile {
   full_name: string,
   nickname: string,
   wallet_address: string,
+  created_at?: string,
+  updated_at?: string,
+}
+
+export interface AchievementDocument {
+  id: number,
+  key: Achievement,
+  name: string,
+  description: string,
+  tier: string,
+  coin_reward: number,
+  /** Optional redemption code. Hidden + code-gated badges are claimable only
+   *  via the "Redeem code" flow (POST /achievements/redeem). NULL for regular
+   *  eligibility-driven achievements. */
+  code?: string | null,
+  /** When TRUE, the achievement is filtered out of the public catalog response
+   *  unless the user has already claimed it. */
+  hidden?: boolean,
+  created_at: string,
+  updated_at: string,
+}
+
+export interface ProfileAchievement {
+  id: number,
+  profile_id: number,
+  achievement_id: number,
+  claimed_at: string,
+  achievements?: AchievementDocument,
 }
 
 export interface RewardDocument {

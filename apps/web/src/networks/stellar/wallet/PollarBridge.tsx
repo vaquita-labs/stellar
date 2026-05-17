@@ -4,6 +4,7 @@ import { useNetworkConfigStore } from '@/core-ui/stores';
 import { usePollar } from '@pollar/react';
 import { useEffect } from 'react';
 import { pollarAdapter, setPollarBinding } from './adapters/pollar-adapter';
+import { usePollarReadyStore } from './pollarReady';
 import { getActiveAdapter, setActiveAdapter } from './registry';
 
 /**
@@ -18,6 +19,22 @@ import { getActiveAdapter, setActiveAdapter } from './registry';
 export function PollarBridge() {
   const { walletAddress, isAuthenticated, getClient, logout } = usePollar();
   const setWalletAddress = useNetworkConfigStore((s) => s.setWalletAddress);
+  const setPollarReady = usePollarReadyStore((s) => s.setReady);
+
+  // Flip the global `pollarReady` flag once Pollar has finished its initial
+  // session restore. Providers.tsx blocks the auth-gate redirect on this so
+  // F5 doesn't bounce the user to /login while Pollar is still loading.
+  useEffect(() => {
+    const client = getClient();
+    let cancelled = false;
+    void client.ready().then(() => {
+      if (cancelled) return;
+      setPollarReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [getClient, setPollarReady]);
 
   useEffect(() => {
     if (isAuthenticated && walletAddress) {
