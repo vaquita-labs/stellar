@@ -1,6 +1,7 @@
 import { type NextFunction, type Request, type RequestHandler, type Response, Router } from 'express';
 import {
   checkGenesisSaverEligibility,
+  checkMainnetPioneerEligibility,
   checkPrimeraVaquitaEligibility,
   contractHasClaimed,
   getActiveBadgeClaim,
@@ -40,6 +41,10 @@ const BADGE_ELIGIBILITY: Record<string, { cycleId: number; check: EligibilityChe
   genesis_saver: {
     cycleId: 0,
     check: checkGenesisSaverEligibility,
+  },
+  mainnet_pioneer: {
+    cycleId: 0,
+    check: checkMainnetPioneerEligibility,
   },
 };
 
