@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "vaquita-pool",
+    "vaquita-badges",
 ]
 exclude = ["wasms"]
 resolver = "2"
