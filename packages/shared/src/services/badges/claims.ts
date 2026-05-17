@@ -19,6 +19,12 @@ export interface BadgeClaimPayload {
 }
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+export const GENESIS_SAVER_CAP = 50;
+
+// ---------------------------------------------------------------------------
 // Eligibility checks
 // ---------------------------------------------------------------------------
 
@@ -40,6 +46,41 @@ export async function checkPrimeraVaquitaEligibility(walletAddress: string): Pro
       (w: any) => w.status === 'confirmed' && w.reward != null && Number(w.reward) > 0,
     ),
   );
+}
+
+/**
+ * D1 — Genesis Saver: first GENESIS_SAVER_CAP unique wallet addresses to make
+ * a confirmed deposit. Backend enforces the cap by counting issued claims.
+ */
+export async function checkGenesisSaverEligibility(walletAddress: string): Promise<boolean> {
+  // Stop signing once we've issued cap-many active claims.
+  const { count, error: countErr } = await supabase
+    .from('badge_claims')
+    .select('id', { count: 'exact', head: true })
+    .eq('badge_type', 'genesis_saver')
+    .eq('cycle_id', 0)
+    .is('superseded_at', null);
+  if (countErr) throw countErr;
+  if ((count ?? 0) >= GENESIS_SAVER_CAP) return false;
+
+  // Collect the first GENESIS_SAVER_CAP unique depositing wallets (FIFO by confirmed_at).
+  const { data: deposits, error: depErr } = await supabase
+    .from('deposits')
+    .select('wallet_address, confirmed_at')
+    .eq('status', 'confirmed')
+    .order('confirmed_at', { ascending: true });
+  if (depErr) throw depErr;
+
+  const seen = new Set<string>();
+  const first50: string[] = [];
+  for (const { wallet_address } of deposits ?? []) {
+    if (!seen.has(wallet_address)) {
+      seen.add(wallet_address);
+      first50.push(wallet_address);
+      if (first50.length >= GENESIS_SAVER_CAP) break;
+    }
+  }
+  return first50.includes(walletAddress);
 }
 
 // ---------------------------------------------------------------------------
