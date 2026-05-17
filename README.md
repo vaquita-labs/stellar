@@ -32,7 +32,6 @@ pnpm dev:all        # All in parallel
 |------|-------------|
 | [`apps/web/`](apps/web/) | Gamified DeFi frontend (Next.js + R3F) |
 | [`apps/api/`](apps/api/) | HTTP API (Express) |
-| [`apps/backend/`](apps/backend/) | Legacy backend (Lambda / MongoDB) |
 | [`apps/listener/`](apps/listener/) | On-chain event listener |
 | [`apps/job-deposits/`](apps/job-deposits/) | Deposits history job |
 | [`apps/deployer/`](apps/deployer/) | DeFindex vault deployer |

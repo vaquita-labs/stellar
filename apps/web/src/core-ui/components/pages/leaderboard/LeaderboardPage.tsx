@@ -164,7 +164,7 @@ function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardC
         username: getLeaderboardUsername(profile.nickname, profile.walletAddress),
         level: realLevel ?? placeholder.level,
         streak: realStreak ?? placeholder.streak,
-        badges: placeholder.badges,
+        badges: profile.badges,
         // TODO: Replace with real likes and comments once the API ships thems
         likesSeed: 0,
         commentsSeed: 0,

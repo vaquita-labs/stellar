@@ -545,6 +545,24 @@ export const getClaimedAchievements = async (profileId: number) => {
 };
 
 /**
+ * Single-query rollup of how many achievements each profile has claimed.
+ * The payload is just `profile_id` per row (no joins), so even thousands of
+ * claims is a tiny network read; the GROUP BY happens in JS to avoid needing
+ * a Postgres view / RPC for what is effectively a counter.
+ */
+export const getAchievementCountsByProfile = async (): Promise<{
+  counts: Map<number, number>;
+  error: unknown;
+}> => {
+  const { data, error } = await supabase.from('profiles_achievements').select('profile_id');
+  const counts = new Map<number, number>();
+  for (const row of (data ?? []) as { profile_id: number }[]) {
+    counts.set(row.profile_id, (counts.get(row.profile_id) ?? 0) + 1);
+  }
+  return { counts, error };
+};
+
+/**
  * Inserts the ledger row + the matching gold-coin credit in a single Postgres
  * transaction via the `claim_achievement` PL/pgSQL function. The UNIQUE
  * constraint on (profile_id, achievement_id) surfaces a repeat claim as error
@@ -572,19 +590,125 @@ export const claimAchievement = async (profileId: number, key: Achievement) => {
 };
 
 /**
- * Eligibility table for server-side claimable achievements.
+ * Pre-computed snapshot of every signal the achievement eligibility table
+ * needs. Built once per request via {@link computeEligibilitySignals} so the
+ * GET catalog and the POST claim route share a single set of DB roundtrips.
  *
- * For v1 only Beta Tester is server-eligible — the rest derive their unlock
- * state from live signals on the frontend (streak, deposits, XP). When those
- * signals move server-side, add the corresponding case here.
+ * Fields that depend on systems we haven't built yet (friends, leaderboard)
+ * default to safe values — eligibility for those achievements stays `false`
+ * until the underlying signals exist.
  */
-export const isEligibleForAchievement = (profile: Profile, key: Achievement): boolean => {
-  switch (key) {
-    case Achievement.BETA_TESTER: {
-      const createdAt = profile.created_at ? new Date(profile.created_at) : null;
-      if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
-      return createdAt.getTime() <= BETA_TESTER_CUTOFF.getTime();
+export interface EligibilitySignals {
+  /** Profile creation date. `null` when missing (treated as ineligible for Beta Tester). */
+  createdAt: Date | null;
+  /** Lifetime XP using the same formula as toProfileExperienceResponseDTO. */
+  experience: number;
+  /** Consecutive days saving — `yesterdayStreak + (todayStreak ? 1 : 0)`. */
+  streakCount: number;
+  /** Number of deposits currently in DEPOSIT_SUCCESS state. */
+  activeDeposits: number;
+  /** Sum of amounts (display units, e.g. USDC dollars) across active deposits. */
+  activeAmount: number;
+  /** Followers/friends count. TODO: wire when a friends system exists. */
+  friendsCount: number;
+  /** 1-based monthly leaderboard rank. TODO: wire when leaderboard data exists. */
+  leaderboardRank?: number;
+}
+
+/**
+ * Gather every signal the eligibility table needs, in one go, from the
+ * existing helpers. Deposit + experience math mirrors what
+ * {@link toProfileExperienceResponseDTO} already does so the numbers line up
+ * with the rest of the API.
+ */
+export const computeEligibilitySignals = async (
+  networkData: Network,
+  profile: Profile,
+): Promise<EligibilitySignals> => {
+  let deposits: DepositResponseDTO[] = [];
+  try {
+    const { data } = await getCachedDepositsByNetworkIdWalletAddress(networkData.id, profile.wallet_address);
+    const response = await dataToDepositResponseDTOTotalDepositsResponseDTO(networkData, data ?? [], false, true);
+    deposits = response.deposits as DepositResponseDTO[];
+  } catch (error) {
+    console.warn('[eligibility] failed to load deposits', error);
+  }
+
+  let activeDeposits = 0;
+  let activeAmount = 0;
+  let experience = 0;
+  for (const deposit of deposits) {
+    if (deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS) {
+      activeDeposits++;
+      activeAmount += deposit.amount || 0;
+      const timeElapsed = Math.max(Date.now() - deposit.createdTimestamp, 0);
+      experience += Math.sqrt(deposit.amount || 0) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
     }
+  }
+
+  let streakCount = 0;
+  try {
+    const streak = await getStreakData(networkData, profile);
+    streakCount = streak.yesterdayStreak + (streak.todayStreak ? 1 : 0);
+  } catch (error) {
+    console.warn('[eligibility] failed to load streak', error);
+  }
+
+  const createdAt = profile.created_at ? new Date(profile.created_at) : null;
+
+  return {
+    createdAt: createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt : null,
+    experience,
+    streakCount,
+    activeDeposits,
+    activeAmount,
+    friendsCount: 0,
+    leaderboardRank: undefined,
+  };
+};
+
+/**
+ * Eligibility table for server-side claimable achievements. Stateless — pass
+ * the result of {@link computeEligibilitySignals} as `signals`. The thresholds
+ * mirror the frontend rules in `apps/web/src/core-ui/data/profile-badges.ts`
+ * so a tile that displays as "earned" in the UI also unlocks the Claim CTA.
+ *
+ * Friends + leaderboard achievements stay `false` until those systems exist.
+ */
+export const isEligibleForAchievement = (signals: EligibilitySignals, key: Achievement): boolean => {
+  switch (key) {
+    case Achievement.BETA_TESTER:
+      return !!signals.createdAt && signals.createdAt.getTime() <= BETA_TESTER_CUTOFF.getTime();
+    case Achievement.ROOKIE:
+      return signals.experience >= 50;
+    case Achievement.WEEK_WARRIOR:
+      return signals.streakCount >= 7;
+    case Achievement.FIRST_DEPOSIT:
+      return signals.activeDeposits >= 1;
+    case Achievement.FIRST_FRIEND:
+      return signals.friendsCount >= 1;
+    case Achievement.SAVINGS_STARTER:
+      return signals.activeAmount >= 100;
+    case Achievement.TRIO_SAVER:
+      return signals.activeDeposits >= 3;
+    case Achievement.MONTH_MASTER:
+      return signals.streakCount >= 30;
+    case Achievement.EXPLORER:
+      return signals.experience >= 300;
+    case Achievement.STREAK_MASTER:
+      return signals.streakCount >= 50;
+    case Achievement.WHALE:
+      return signals.experience >= 30000;
+    case Achievement.SAVINGS_BARON:
+      return signals.activeAmount >= 10000;
+    case Achievement.CENTURY_SAVER:
+      return signals.streakCount >= 100;
+    case Achievement.THIRD_PLACE:
+      return signals.leaderboardRank === 3;
+    case Achievement.SECOND_PLACE:
+      return signals.leaderboardRank === 2;
+    case Achievement.FIRST_PLACE:
+      return signals.leaderboardRank === 1;
     default:
       return false;
   }
@@ -594,16 +718,19 @@ export const toProfileAchievementsResponseDTO = async (
   networkData: Network,
   profile: Profile,
 ): Promise<ProfileAchievementsResponseDTO> => {
-  const [allRes, claimedRes] = await Promise.all([
+  // One set of DB calls feeds both the catalog AND the per-row eligibility
+  // computation below. computeEligibilitySignals reuses the cached deposits
+  // helper so this isn't free, but it's bounded — a small handful of queries.
+  const [allRes, claimedRes, signals] = await Promise.all([
     getAllAchievements(),
     getClaimedAchievements(profile.id),
+    computeEligibilitySignals(networkData, profile),
   ]);
 
   const claimedById = new Map<number, ProfileAchievement>(
     claimedRes.data.map((row) => [row.achievement_id, row]),
   );
 
-  console.log('>>>', allRes)
   const achievements: AchievementResponseDTO[] = allRes.data
     // Hide secret achievements until the user actually claims them — the
     // catalog endpoint must not leak the existence of redeem-code badges.
@@ -619,7 +746,7 @@ export const toProfileAchievementsResponseDTO = async (
         // `unlocked` is true if eligibility OR claim — claim implies the user
         // was eligible at the time, so flipping it to true here keeps the tile
         // showing as "earned" even if the eligibility rule later tightens.
-        unlocked: !!claim || isEligibleForAchievement(profile, a.key as Achievement),
+        unlocked: !!claim || isEligibleForAchievement(signals, a.key as Achievement),
         claimedAt: claim?.claimed_at ?? null,
       };
     });

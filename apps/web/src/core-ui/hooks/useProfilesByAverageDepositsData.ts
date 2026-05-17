@@ -25,6 +25,7 @@ export const useProfilesByAverageDepositsData = () => {
           count: profile?.count ?? 0,
           timestamp: profile?.timestamp ?? 0,
           delay: profile?.delay ?? 0,
+          badges: profile?.badges ?? 0,
         };
 
         return p;

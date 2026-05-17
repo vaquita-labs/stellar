@@ -1,4 +1,4 @@
-# vaquiland (web)
+# @vaquita/web
 
 Vaquita frontend. Next.js 16 + React 19, Tailwind v4, HeroUI, Three.js / R3F for the 3D layer, Stellar SDK + Stellar Wallets Kit.
 

@@ -104,14 +104,14 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4(tailwind-merge@3.4.0)(tailwindcss@4.3.0)
       '@pollar/core':
-        specifier: file:.yalc/@pollar/core
-        version: file:apps/web/.yalc/@pollar/core
+        specifier: ^0.7.1
+        version: 0.7.1
       '@pollar/react':
-        specifier: file:.yalc/@pollar/react
-        version: file:apps/web/.yalc/@pollar/react(@pollar/core@file:apps/web/.yalc/@pollar/core)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: ^0.7.1
+        version: 0.7.1(@pollar/core@0.7.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@pollar/stellar-wallets-kit-adapter':
         specifier: file:.yalc/@pollar/stellar-wallets-kit-adapter
-        version: file:apps/web/.yalc/@pollar/stellar-wallets-kit-adapter(@creit.tech/stellar-wallets-kit@2.2.0(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.2(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.14)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.6)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6))(zod@4.4.3))(@pollar/core@file:apps/web/.yalc/@pollar/core)
+        version: file:apps/web/.yalc/@pollar/stellar-wallets-kit-adapter(@creit.tech/stellar-wallets-kit@2.2.0(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.2(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.14)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.6)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6))(zod@4.4.3))(@pollar/core@0.7.1)
       '@react-three/drei':
         specifier: ^10.7.7
         version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(three@0.184.0))(@types/react@19.2.14)(@types/three@0.184.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(three@0.184.0)
@@ -1080,8 +1080,8 @@ packages:
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
 
-  '@pollar/core@file:apps/web/.yalc/@pollar/core':
-    resolution: {directory: apps/web/.yalc/@pollar/core, type: directory}
+  '@pollar/core@0.7.1':
+    resolution: {integrity: sha512-wiGi2XjVbUTVP1TuDBzjygDwH8uXmNqlBGBiUW+jichTOPN0FHaUC5hquMfZRruENyptdM4iLVMP3k1G5xF0uQ==}
     engines: {node: '>=20'}
     peerDependencies:
       expo-secure-store: '>=12'
@@ -1092,8 +1092,8 @@ packages:
       react-native-keychain:
         optional: true
 
-  '@pollar/react@file:apps/web/.yalc/@pollar/react':
-    resolution: {directory: apps/web/.yalc/@pollar/react, type: directory}
+  '@pollar/react@0.7.1':
+    resolution: {integrity: sha512-13/buno2MHxHfab0GJgZgQRj15+EbpBCyY1ehHgEyp3a4sCP33VN3bXJxraQfn50gNAvqOlaEDj3YCEK3HuSkA==}
     engines: {node: '>=20'}
     peerDependencies:
       '@pollar/core': '*'
@@ -6782,23 +6782,23 @@ snapshots:
 
   '@pinojs/redact@0.4.0': {}
 
-  '@pollar/core@file:apps/web/.yalc/@pollar/core':
+  '@pollar/core@0.7.1':
     dependencies:
       '@noble/curves': 1.9.7
       '@stellar/freighter-api': 2.0.0
       openapi-fetch: 0.17.0
 
-  '@pollar/react@file:apps/web/.yalc/@pollar/react(@pollar/core@file:apps/web/.yalc/@pollar/core)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@pollar/react@0.7.1(@pollar/core@0.7.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
-      '@pollar/core': file:apps/web/.yalc/@pollar/core
+      '@pollar/core': 0.7.1
       qr.js: 0.0.0
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
 
-  '@pollar/stellar-wallets-kit-adapter@file:apps/web/.yalc/@pollar/stellar-wallets-kit-adapter(@creit.tech/stellar-wallets-kit@2.2.0(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.2(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.14)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.6)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6))(zod@4.4.3))(@pollar/core@file:apps/web/.yalc/@pollar/core)':
+  '@pollar/stellar-wallets-kit-adapter@file:apps/web/.yalc/@pollar/stellar-wallets-kit-adapter(@creit.tech/stellar-wallets-kit@2.2.0(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.2(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.14)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.6)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6))(zod@4.4.3))(@pollar/core@0.7.1)':
     dependencies:
       '@creit.tech/stellar-wallets-kit': 2.2.0(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.2(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.14)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.6)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.6))(utf-8-validate@6.0.6)(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@6.0.6))(zod@4.4.3)
-      '@pollar/core': file:apps/web/.yalc/@pollar/core
+      '@pollar/core': 0.7.1
 
   '@preact/signals-core@1.14.2': {}
 

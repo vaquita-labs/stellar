@@ -1,3 +1,4 @@
+import type { AchievementResponseDTO } from '../types';
 import type { AchievementDetail } from '../components/pages/profile/AchievementModal';
 
 /**
@@ -33,7 +34,26 @@ export type AchievementsCtx = {
   isBetaTester?: boolean;
   /** Server-derived ISO timestamp of the Beta Tester claim, if any. */
   betaTesterClaimedAt?: string;
+  /** Full server response. Any achievement whose `key` is NOT in the hardcoded
+   *  catalog below is appended at the end of the grid using its server copy
+   *  (name/description/tier/coinReward/claimedAt). This is how redeem-code
+   *  badges (e.g. `secret-launch`, `churrasquito-05-2026`) become visible
+   *  after the user claims them, without us shipping a frontend update per
+   *  badge. The image must live at `/icons/achievements/<key>.png`. */
+  extraAchievements?: AchievementResponseDTO[];
 };
+
+/** Default accent gradient by tier — used for server-only achievements that
+ *  don't have a hand-tuned gradient in the local catalog. */
+const ACCENT_BY_TIER: Record<string, string> = {
+  Bronze: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)',
+  Silver: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)',
+  Gold: 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)',
+  Diamond: 'linear-gradient(180deg, #FFD180 0%, #FF6F00 100%)',
+  Founder: 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
+};
+
+const DEFAULT_ACCENT = ACCENT_BY_TIER.Founder;
 
 const ICONS = '/icons/achievements';
 
@@ -43,7 +63,7 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
   const friends = ctx.friendsCount ?? 0;
   const rank = ctx.leaderboardRank;
 
-  return [
+  const badges: Badge[] = [
     {
       id: 'beta-tester',
       title: 'Beta Tester',
@@ -217,4 +237,24 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
       unlocked: rank === 1,
     },
   ];
+
+  // Append any server-side achievements that aren't in the hardcoded catalog
+  // (typically redeem-code / event badges). The convention for the icon is
+  // `/icons/achievements/<key>.png` — drop the PNG in `apps/web/public/...`
+  // and it will be picked up automatically.
+  const hardcodedKeys = new Set(badges.map((b) => b.id));
+  const extras: Badge[] = (ctx.extraAchievements ?? [])
+    .filter((a) => !hardcodedKeys.has(a.key))
+    .map((a) => ({
+      id: a.key,
+      title: a.name,
+      description: a.description,
+      icon: `${ICONS}/${a.key}.png`,
+      accent: ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
+      tier: a.tier as Badge['tier'],
+      date: a.claimedAt ?? undefined,
+      unlocked: a.unlocked,
+    }));
+
+  return [...badges, ...extras];
 };

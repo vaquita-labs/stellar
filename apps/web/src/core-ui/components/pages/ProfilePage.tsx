@@ -155,8 +155,9 @@ export function ProfilePage() {
         totalSavedAmount: activeDepositsTotalAmount,
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
+        extraAchievements: achievementsData?.achievements,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements]
   );
 
   const handleShareToInstagram = async () => {

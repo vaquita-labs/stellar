@@ -26,7 +26,7 @@ RUN --mount=type=secret,id=notification_webhook_url \
       echo "[DEBUG][deps] NOTIFICATION_WEBHOOK_TOKEN length: ${#NOTIFICATION_WEBHOOK_TOKEN}"; \
       echo "[DEBUG][deps] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
       echo "[DEBUG][deps] DEPLOY_ID: $DEPLOY_ID"; \
-      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter vaquiland... --network-concurrency 4 \
+      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/web... --network-concurrency 4 \
     '
 
 FROM base AS builder
@@ -66,7 +66,7 @@ RUN --mount=type=secret,id=notification_webhook_url \
       echo "[DEBUG][builder] NOTIFICATION_WEBHOOK_TOKEN length: ${#NOTIFICATION_WEBHOOK_TOKEN}"; \
       echo "[DEBUG][builder] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
       echo "[DEBUG][builder] DEPLOY_ID: $DEPLOY_ID"; \
-      ./notify.sh BUILD pnpm --filter vaquiland build \
+      ./notify.sh BUILD pnpm --filter @vaquita/web build \
     '
 
 FROM base AS runner

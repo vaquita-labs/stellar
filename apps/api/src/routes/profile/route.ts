@@ -3,6 +3,8 @@ import {
   Achievement,
   broadcastProfileChange,
   claimAchievement,
+  computeEligibilitySignals,
+  getAchievementCountsByProfile,
   getCachedProfilesDepositsByProfileId,
   getNetworkByName,
   getProfile,
@@ -274,8 +276,12 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim
     return sendError(res, `Unknown achievement: ${key}`, null, 404);
   }
 
-  if (!isEligibleForAchievement(profileData, achievementKey)) {
-    req.log.warn({ profileId: profileData.id, key }, 'Profile is not eligible for achievement');
+  const signals = await computeEligibilitySignals(networkData, profileData);
+  if (!isEligibleForAchievement(signals, achievementKey)) {
+    req.log.warn(
+      { profileId: profileData.id, key, signals },
+      'Profile is not eligible for achievement',
+    );
     return sendError(res, 'You are not eligible for this achievement yet.', null, 403);
   }
 
@@ -433,7 +439,11 @@ router.get('/network/:networkName', async (req, res) => {
   return sendSuccess(res, await Promise.all(data.map((profile) => toProfileResponseDTO(networkData, profile))), '');
 });
 
-const toProfileHistoricResponseDTO = (networkData: Network, log: Logger) =>
+const toProfileHistoricResponseDTO = (
+  networkData: Network,
+  log: Logger,
+  badgesByProfileId: Map<number, number>,
+) =>
   async (profile: Profile): Promise<ProfileAverageResponseDTO> => {
     let totalSums = 0;
     const count = (ONE_DAY / HISTORICAL_DELAY) * 30;
@@ -462,6 +472,7 @@ const toProfileHistoricResponseDTO = (networkData: Network, log: Logger) =>
       count,
       timestamp,
       delay: HISTORICAL_DELAY,
+      badges: badgesByProfileId.get(profile.id) ?? 0,
     };
   };
 
@@ -483,7 +494,16 @@ router.get('/network/:networkName/by-average-deposits', async (req, res) => {
     return sendError(res, error.message, error, 500);
   }
 
-  return sendSuccess(res, await Promise.all(data.map(toProfileHistoricResponseDTO(networkData, req.log))), '');
+  const { counts: badgesByProfileId, error: badgesError } = await getAchievementCountsByProfile();
+  if (badgesError) {
+    req.log.error({ err: badgesError }, 'Failed to fetch badge counts (degraded — leaderboard will show 0 badges)');
+  }
+
+  return sendSuccess(
+    res,
+    await Promise.all(data.map(toProfileHistoricResponseDTO(networkData, req.log, badgesByProfileId))),
+    '',
+  );
 });
 
 export default router;

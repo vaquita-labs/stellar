@@ -1,5 +1,5 @@
 {
-  "name": "vaquiland",
+  "name": "@vaquita/web",
   "version": "0.1.2",
   "private": true,
   "scripts": {
@@ -15,8 +15,8 @@
     "@fontsource/rubik": "^5.2.8",
     "@heroui/react": "^3.0.4",
     "@heroui/styles": "^3.0.4",
-    "@pollar/core": "file:.yalc/@pollar/core",
-    "@pollar/react": "file:.yalc/@pollar/react",
+    "@pollar/core": "^0.7.1",
+    "@pollar/react": "^0.7.1",
     "@pollar/stellar-wallets-kit-adapter": "file:.yalc/@pollar/stellar-wallets-kit-adapter",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",

@@ -114,8 +114,9 @@ export function AllAchievementsPage() {
         totalSavedAmount: activeDepositsTotalAmount,
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
+        extraAchievements: achievementsData?.achievements,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements]
   );
 
   const earned = achievements.filter((b) => b.unlocked && isClaimed(b.id)).length;
