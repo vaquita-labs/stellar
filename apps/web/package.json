@@ -17,7 +17,7 @@
     "@heroui/styles": "^3.0.4",
     "@pollar/core": "^0.7.1",
     "@pollar/react": "^0.7.1",
-    "@pollar/stellar-wallets-kit-adapter": "file:.yalc/@pollar/stellar-wallets-kit-adapter",
+    "@pollar/stellar-wallets-kit-adapter": "^0.7.1",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@stellar/stellar-sdk": "^15.1.0",
