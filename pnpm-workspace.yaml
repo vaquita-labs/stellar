@@ -15,6 +15,5 @@ allowBuilds:
   sharp: true
   tiny-secp256k1: true
   unrs-resolver: true
+  usb: false
   utf-8-validate: true
-ignoredBuiltDependencies:
-  - usb
