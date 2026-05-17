@@ -24,6 +24,23 @@ export interface BadgeClaimPayload {
 
 export const GENESIS_SAVER_CAP = 50;
 
+/** Supabase network.id for Stellar mainnet (id=4 per seed data). */
+export const STELLAR_MAINNET_NETWORK_ID = 4;
+
+/** Number of days after mainnet launch in which D2 (Mainnet Pioneer) claims are open. */
+export const MAINNET_PIONEER_WINDOW_DAYS = 7;
+
+/**
+ * Returns the mainnet launch timestamp in Unix milliseconds, or null if not configured.
+ * Set MAINNET_LAUNCH_TIMESTAMP to a Unix ms value (e.g. Date.parse('2026-06-01T00:00:00Z')).
+ */
+export function getMainnetLaunchTimestampMs(): number | null {
+  const raw = process.env.MAINNET_LAUNCH_TIMESTAMP;
+  if (!raw) return null;
+  const ts = Number(raw);
+  return Number.isFinite(ts) && ts > 0 ? ts : null;
+}
+
 // ---------------------------------------------------------------------------
 // Eligibility checks
 // ---------------------------------------------------------------------------
@@ -81,6 +98,32 @@ export async function checkGenesisSaverEligibility(walletAddress: string): Promi
     }
   }
   return first50.includes(walletAddress);
+}
+
+/**
+ * D2 — Mainnet Pioneer: wallet made a confirmed deposit on Stellar mainnet
+ * within the first MAINNET_PIONEER_WINDOW_DAYS days of launch.
+ * No cap — all qualifying wallets receive the badge.
+ * Prior testnet activity does not disqualify.
+ */
+export async function checkMainnetPioneerEligibility(walletAddress: string): Promise<boolean> {
+  const launchMs = getMainnetLaunchTimestampMs();
+  if (launchMs === null) return false; // mainnet not launched yet
+
+  const windowEndMs = launchMs + MAINNET_PIONEER_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+
+  const { data, error } = await supabase
+    .from('deposits')
+    .select('id')
+    .eq('wallet_address', walletAddress)
+    .eq('network_id', STELLAR_MAINNET_NETWORK_ID)
+    .eq('status', 'confirmed')
+    .gte('confirmed_at', new Date(launchMs).toISOString())
+    .lt('confirmed_at', new Date(windowEndMs).toISOString())
+    .limit(1);
+
+  if (error) throw error;
+  return (data ?? []).length > 0;
 }
 
 // ---------------------------------------------------------------------------
