@@ -171,6 +171,7 @@ export interface ProfileAverageResponseDTO {
   count: number;
   timestamp: number;
   delay: number;
+  badges: number;
 }
 
 export interface UserBalanceResponseDTO {
