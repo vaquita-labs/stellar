@@ -86,6 +86,9 @@ impl VaquitaBadges {
         env.storage()
             .persistent()
             .set(&DataKey::TokenOwner(token_id), &wallet);
+        env.storage()
+            .persistent()
+            .set(&DataKey::TokenBadgeType(token_id), &badge_type);
         env.storage().persistent().set(&claim_key, &());
         env.storage()
             .instance()
@@ -103,6 +106,12 @@ impl VaquitaBadges {
         env.storage()
             .persistent()
             .get(&DataKey::TokenOwner(token_id))
+    }
+
+    pub fn badge_type_of(env: Env, token_id: u32) -> Option<Symbol> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::TokenBadgeType(token_id))
     }
 
     pub fn total_supply(env: Env) -> u32 {

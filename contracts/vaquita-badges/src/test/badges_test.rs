@@ -320,6 +320,27 @@ fn add_edition_non_admin_panics() {
     client.add_edition(&non_admin, &symbol_short!("genesis"), &50u32);
 }
 
+// ---------- Cycle 12: badge_type_of ----------
+
+#[test]
+fn badge_type_of_returns_correct_type() {
+    let env = Env::default();
+    let (_, signing_key, client) = deploy(&env);
+
+    let wallet = Address::generate(&env);
+    let badge_type = symbol_short!("gold");
+    let cycle_id: u32 = 202605;
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+
+    let sig = make_signature(&env, &signing_key, &wallet, &badge_type, cycle_id, expiry);
+    let token_id = client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+
+    assert_eq!(client.badge_type_of(&token_id), Some(badge_type));
+    assert_eq!(client.badge_type_of(&999), None);
+
+    println!("badge_type_of_returns_correct_type OK");
+}
+
 // ---------- Cycle 10: old key rejected after rotation ----------
 
 #[test]
