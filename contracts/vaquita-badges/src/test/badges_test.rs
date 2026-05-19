@@ -365,6 +365,56 @@ fn badge_type_of_returns_correct_type() {
     println!("badge_type_of_returns_correct_type OK");
 }
 
+// ---------- Cycle 14: full key-rotation lifecycle ----------
+
+/// Covers all five steps: pre-rotation success, rotate, old key rejected,
+/// new key succeeds — in a single test so the ordering is unambiguous.
+#[test]
+fn key_rotation_invalidates_old_sig_and_accepts_new() {
+    let env = Env::default();
+    let (admin, key_a, client) = deploy(&env);
+
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+    let badge_type = symbol_short!("gold");
+
+    // Step 2: mint with signing_key_A — must succeed
+    let wallet_1 = Address::generate(&env);
+    let cycle_1: u32 = 202601;
+    let sig_a = make_signature(&env, &key_a, &wallet_1, &badge_type, cycle_1, expiry);
+    let token_id = client.mint_badge(&wallet_1, &badge_type, &cycle_1, &expiry, &sig_a);
+    assert_eq!(token_id, 0, "pre-rotation mint with key_A should succeed");
+
+    // Step 3: rotate to signing_key_B
+    let key_b = generate_signing_key();
+    let pk_b: BytesN<32> = BytesN::from_array(&env, &key_b.verifying_key().to_bytes());
+    client.update_signing_key(&admin, &pk_b);
+
+    // Step 4: old key_A signature must be rejected
+    let wallet_stale = Address::generate(&env);
+    let cycle_stale: u32 = 202602;
+    let stale_sig = make_signature(&env, &key_a, &wallet_stale, &badge_type, cycle_stale, expiry);
+    let rejected = client.try_mint_badge(
+        &wallet_stale,
+        &badge_type,
+        &cycle_stale,
+        &expiry,
+        &stale_sig,
+    );
+    assert!(
+        rejected.is_err(),
+        "old key_A signature must be rejected after rotation to key_B"
+    );
+
+    // Step 5: fresh key_B signature must succeed
+    let wallet_2 = Address::generate(&env);
+    let cycle_2: u32 = 202603;
+    let sig_b = make_signature(&env, &key_b, &wallet_2, &badge_type, cycle_2, expiry);
+    let token_id2 = client.mint_badge(&wallet_2, &badge_type, &cycle_2, &expiry, &sig_b);
+    assert_eq!(token_id2, 1, "new key_B mint should succeed after rotation");
+
+    println!("key_rotation_invalidates_old_sig_and_accepts_new OK");
+}
+
 // ---------- Cycle 10: old key rejected after rotation ----------
 
 #[test]
