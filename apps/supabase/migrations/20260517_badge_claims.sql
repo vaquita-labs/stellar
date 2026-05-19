@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS badge_claims (
   badge_type       text        NOT NULL,
   cycle_id         integer     NOT NULL DEFAULT 0,
   expiry           timestamptz NOT NULL,
-  signature        text        NOT NULL,   -- hex-encoded Ed25519 signature
+  signature        text        NOT NULL,   -- base64-encoded Ed25519 signature
   created_at       timestamptz NOT NULL DEFAULT now(),
   superseded_at    timestamptz             -- NULL = active claim
 );
