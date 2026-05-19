@@ -1,11 +1,12 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
+import { addUsdcTrustline } from '@/networks/stellar/sorobanTx';
 import { Card, toast } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
   useClaimedAchievements,
@@ -105,6 +106,21 @@ export function ProfilePage() {
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
+
+  // TEST — remove before mainnet
+  const [trustlinePending, setTrustlinePending] = useState(false);
+  const handleAddTrustline = async () => {
+    setTrustlinePending(true);
+    try {
+      await addUsdcTrustline();
+      toast.success('USDC trustline added!');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to add trustline';
+      toast.danger('Trustline error', { description: msg });
+    } finally {
+      setTrustlinePending(false);
+    }
+  };
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -267,6 +283,18 @@ export function ProfilePage() {
             <FiUserPlus className="h-4 w-4" />
             Add friends
           </Link>
+        </section>
+
+        {/* TEST — remove before mainnet -------------------------------- */}
+        <section className="px-4 sm:px-6">
+          <button
+            type="button"
+            onClick={handleAddTrustline}
+            disabled={trustlinePending}
+            className="flex items-center justify-center gap-2 w-full h-12 rounded-md bg-yellow-300 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide hover:bg-yellow-200 hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {trustlinePending ? 'Adding…' : '🧪 Add USDC Trustline [TEST]'}
+          </button>
         </section>
 
         {/* Share to Instagram CTA ------------------------------------- */}
