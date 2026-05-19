@@ -51,15 +51,9 @@ export const getBlendInterest = async (deposit: Deposit, tokenNetworkData: Token
       return EMPTY;
     }
 
-    const vaultContractId =
-      firstElement(tokenNetworkData.defindex_vault_contract_address ?? '') ||
-      process.env.STELLAR_DEFINDEX_VAULT_CONTRACT ||
-      '';
+    const vaultContractId = tokenNetworkData.defindex_vault_contract_address;
     if (!vaultContractId) {
-      console.warn(
-        '[getBlendInterest] Missing DeFindex vault id: set STELLAR_DEFINDEX_VAULT_CONTRACT or tokens_networks.defindex_vault_contract_address',
-      );
-      return EMPTY;
+      throw new Error('[getBlendInterest] defindex_vault_contract_address is not set for this token/network row');
     }
     const amounts = await getAssetAmountsPerShares(vaultContractId, position.shares);
     if (!amounts || amounts.length === 0) {

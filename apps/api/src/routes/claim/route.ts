@@ -11,6 +11,7 @@ import {
   getActiveBadgeClaim,
   getAnyClaim,
   getBadgeSigningKeypair,
+  getNetworkByName,
   makeClaimExpiry,
   signBadgeClaim,
   storeBadgeClaim,
@@ -53,7 +54,7 @@ const BADGE_ELIGIBILITY: Record<string, { cycleId: number; check: EligibilityChe
 const CAT_D_TYPES = new Set(['genesis_saver', 'mainnet_pioneer', 'hackathon_champion']);
 
 // ---------------------------------------------------------------------------
-// GET /api/v1/claim?type=primera_vaquita&wallet=G...
+// GET /api/v1/claim/:networkName?type=primera_vaquita&wallet=G...
 // ---------------------------------------------------------------------------
 
 /**
@@ -62,15 +63,25 @@ const CAT_D_TYPES = new Set(['genesis_saver', 'mainnet_pioneer', 'hackathon_cham
  * 200 { badge_type, cycle_id, expiry, signature }
  * 400 missing / unknown parameters
  * 403 wallet is not eligible for the requested badge type
- * 409 wallet already has an unexpired active claim (not yet minted)
+ * 503 badges_contract_address not set for this network
  */
 router.get(
-  '/',
+  '/:networkName',
   asyncHandler(async (req, res) => {
+    const { networkName } = req.params;
     const { type: badgeType, wallet } = req.query as { type?: string; wallet?: string };
 
     if (!badgeType || !wallet) {
       return res.status(400).json({ status: 'error', message: 'Missing type or wallet query param' });
+    }
+
+    const { data: network } = await getNetworkByName(networkName);
+    if (!network) {
+      return res.status(404).json({ status: 'error', message: `Network '${networkName}' not found` });
+    }
+    if (!network.badges_contract_address) {
+      req.log.error({ networkName }, 'badges_contract_address not set for network');
+      return res.status(503).json({ status: 'error', message: 'Badge contract not configured for this network' });
     }
 
     const badgeConfig = BADGE_ELIGIBILITY[badgeType];
@@ -78,7 +89,7 @@ router.get(
       return res.status(400).json({ status: 'error', message: `Unknown badge type: ${badgeType}` });
     }
 
-    req.log.info({ badgeType, wallet }, 'GET /claim');
+    req.log.info({ badgeType, wallet, networkName }, 'GET /claim/:networkName');
 
     // Check eligibility
     const eligible = await badgeConfig.check(wallet);
@@ -119,7 +130,7 @@ router.get(
 );
 
 // ---------------------------------------------------------------------------
-// POST /api/v1/claim/refresh
+// POST /api/v1/claim/:networkName/refresh
 // ---------------------------------------------------------------------------
 
 /**
@@ -130,10 +141,12 @@ router.get(
  * 400 missing / invalid body params
  * 403 Cat D badge (manual process) or wallet no longer eligible
  * 409 badge already minted on-chain for this wallet
+ * 503 badges_contract_address not set for this network
  */
 router.post(
-  '/refresh',
+  '/:networkName/refresh',
   asyncHandler(async (req, res) => {
+    const { networkName } = req.params;
     const { wallet, badge_type: badgeType, cycle_id: cycleIdRaw } = req.body as {
       wallet?: string;
       badge_type?: string;
@@ -149,7 +162,17 @@ router.post(
       return res.status(400).json({ status: 'error', message: 'cycle_id must be a non-negative integer' });
     }
 
-    req.log.info({ badgeType, wallet, cycleId }, 'POST /claim/refresh');
+    const { data: network } = await getNetworkByName(networkName);
+    if (!network) {
+      return res.status(404).json({ status: 'error', message: `Network '${networkName}' not found` });
+    }
+    const contractId = network.badges_contract_address;
+    if (!contractId) {
+      req.log.error({ networkName }, 'badges_contract_address not set for network');
+      return res.status(503).json({ status: 'error', message: 'Badge contract not configured for this network' });
+    }
+
+    req.log.info({ badgeType, wallet, cycleId, networkName }, 'POST /claim/:networkName/refresh');
 
     // Cat D: manual process only
     if (CAT_D_TYPES.has(badgeType)) {
@@ -160,12 +183,9 @@ router.post(
     }
 
     // Check if already minted on-chain
-    const contractId = process.env.BADGE_CONTRACT_ID;
-    if (contractId) {
-      const alreadyMinted = await contractHasClaimed(contractId, wallet, badgeType, cycleId);
-      if (alreadyMinted) {
-        return res.status(409).json({ status: 'error', message: 'Badge already minted on-chain' });
-      }
+    const alreadyMinted = await contractHasClaimed(contractId, wallet, badgeType, cycleId);
+    if (alreadyMinted) {
+      return res.status(409).json({ status: 'error', message: 'Badge already minted on-chain' });
     }
 
     // Verify eligibility

@@ -187,9 +187,7 @@ export const getStellarApyData = async (
     const host = process.env.DEFINDEX_API_HOST?.trim();
     const apiKey = process.env.DEFINDEX_API_KEY?.trim();
     const vaultAddress =
-      firstElement(tokenNetworkData.defindex_vault_contract_address ?? '')?.trim() ||
-      process.env.STELLAR_DEFINDEX_VAULT_CONTRACT?.trim() ||
-      '';
+      firstElement(tokenNetworkData.defindex_vault_contract_address ?? '')?.trim() || '';
 
     let protocolApy = 0;
     let lendingMarketName = 'Blend';

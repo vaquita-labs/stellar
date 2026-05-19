@@ -14,7 +14,6 @@ export interface TokenNetwork {
   tokens: Token,
   contract_address: string,
   vaquita_contract_address: string,
-  /** Optional: DeFindex vault Soroban contract id (per network/token). Falls back to `STELLAR_DEFINDEX_VAULT_CONTRACT` env. */
   defindex_vault_contract_address?: string,
   token_decimals: number,
   lock_period: string,
@@ -34,6 +33,7 @@ export interface Network {
   tokens_networks: TokenNetwork[],
   origins: string,
   order: number,
+  badges_contract_address?: string,
 }
 
 export interface Deposit {
