@@ -5,10 +5,12 @@ export interface BadgeClaimRecord {
   wallet_address: string;
   badge_type: string;
   cycle_id: number;
-  expiry: string;         // ISO timestamp
-  signature: string;      // hex
+  expiry: string;              // ISO timestamp
+  signature: string;           // base64-encoded Ed25519 signature
   created_at: string;
   superseded_at: string | null;
+  confirmed_at: string | null;
+  transaction_hash: string | null;
 }
 
 export interface BadgeClaimPayload {
@@ -209,4 +211,38 @@ export function toClaimPayload(record: BadgeClaimRecord): BadgeClaimPayload {
     expiry: Math.floor(new Date(record.expiry).getTime() / 1000),
     signature: record.signature,
   };
+}
+
+/** Mark the active claim as confirmed with the on-chain transaction hash. */
+export async function confirmBadgeClaim(
+  walletAddress: string,
+  badgeType: string,
+  cycleId: number,
+  transactionHash: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('badge_claims')
+    .update({ confirmed_at: new Date().toISOString(), transaction_hash: transactionHash })
+    .eq('wallet_address', walletAddress)
+    .eq('badge_type', badgeType)
+    .eq('cycle_id', cycleId)
+    .is('superseded_at', null);
+  if (error) throw error;
+}
+
+export interface MintedBadge {
+  badge_type: string;
+  confirmed_at: string;
+  transaction_hash: string;
+}
+
+/** Returns all on-chain confirmed badge mints for a wallet. */
+export async function getMintedBadges(walletAddress: string): Promise<MintedBadge[]> {
+  const { data, error } = await supabase
+    .from('badge_claims')
+    .select('badge_type, confirmed_at, transaction_hash')
+    .eq('wallet_address', walletAddress)
+    .not('confirmed_at', 'is', null);
+  if (error) throw error;
+  return (data ?? []) as MintedBadge[];
 }

@@ -6,6 +6,7 @@ export const toNetwork = async (network: Network): Promise<NetworkResponseDTO> =
   name: network.name,
   type: network.type,
   chainId: network.chain_id || -1,
+  ...(network.badges_contract_address ? { badgesContractAddress: network.badges_contract_address } : {}),
   tokens: await Promise.all(network.tokens_networks.map(async tn => ({
     isGas: tn.is_gas,
     isNative: tn.is_native,

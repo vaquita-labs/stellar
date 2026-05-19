@@ -1,4 +1,6 @@
 export * from './useClaimAchievement';
+export * from './useMintBadge';
+export * from './useMintedBadges';
 export * from './useProfileAchievements';
 export * from './useProfileDailyCheck';
 export * from './useProfileData';

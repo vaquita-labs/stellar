@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { FiShare2, FiX } from 'react-icons/fi';
-import { useClaimedAchievements, useIsMobile, useProfileRewards } from '../../../hooks';
+import { useClaimedAchievements, useIsMobile, useMintBadge, useMintedBadges, useProfileRewards } from '../../../hooks';
+import { useNetworkConfigStore } from '../../../stores';
 
 /**
  * Mocked username used to personalize the share link. Replace with a real
@@ -59,7 +60,7 @@ const formatDate = (iso?: string) => {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-type Phase = 'detail' | 'claiming' | 'reward';
+type Phase = 'detail' | 'claiming' | 'reward' | 'minting' | 'minted';
 
 /* ------------------------------------------------------------------ */
 /* Blinking-dots loader                                                */
@@ -91,6 +92,9 @@ export function AchievementModal({
   onOpenChange,
 }: AchievementModalProps) {
   const { isClaimed, claim } = useClaimedAchievements();
+  const { isMinted } = useMintedBadges();
+  const mintBadgeMutation = useMintBadge();
+  const { network } = useNetworkConfigStore();
   const { data: rewardsData } = useProfileRewards();
   // Drives whether we render the full-screen bottom-sheet (phone-sized) or
   // the compact centered dialog (everything wider than the Tailwind `sm`
@@ -105,6 +109,7 @@ export function AchievementModal({
   const goldCoins = baseGoldCoins + bonusGold;
   const [phase, setPhase] = useState<Phase>('detail');
   const [sharing, setSharing] = useState(false);
+  const [mintTxHash, setMintTxHash] = useState<string | null>(null);
 
   // Reset to the detail phase every time the modal opens so a previous
   // claim-flow doesn't leak into the next achievement view.
@@ -112,8 +117,25 @@ export function AchievementModal({
     if (open) {
       setPhase('detail');
       setBonusGold(0);
+      setMintTxHash(null);
     }
   }, [open, achievement?.id]);
+
+  // Fire the mint mutation when entering the minting phase.
+  useEffect(() => {
+    if (phase !== 'minting' || !achievement) return;
+    mintBadgeMutation.mutate(achievement.id, {
+      onSuccess: ({ hash }) => {
+        setMintTxHash(hash);
+        setPhase('minted');
+      },
+      onError: (err) => {
+        toast.danger('Mint failed', { description: err.message });
+        setPhase('detail');
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   const reward = useMemo(() => (achievement ? rewardFor(achievement) : 0), [achievement]);
   const claimed = !!achievement && isClaimed(achievement.id);
@@ -302,10 +324,113 @@ export function AchievementModal({
   );
 
   /* ------------------------------------------------------------------ */
+  /* Phase: minting (waiting for Pollar wallet)                         */
+  /* ------------------------------------------------------------------ */
+  const renderMinting = () => (
+    <motion.div
+      key="minting"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex-1 flex flex-col items-center justify-center gap-6 px-6"
+    >
+      <div className="relative h-32 w-32">
+        <Image
+          src={achievement.icon}
+          alt=""
+          fill
+          sizes="128px"
+          className="object-contain grayscale animate-pulse"
+        />
+      </div>
+      <VaquitaDots />
+      <p className="text-sm font-bold uppercase tracking-wider text-gray-500">Waiting for wallet…</p>
+    </motion.div>
+  );
+
+  /* ------------------------------------------------------------------ */
+  /* Phase: minted (on-chain confirmed)                                 */
+  /* ------------------------------------------------------------------ */
+  const renderMinted = () => {
+    const explorerNetwork = network?.type === 'mainnet' ? 'mainnet' : 'testnet';
+    const explorerUrl = mintTxHash
+      ? `https://stellar.expert/explorer/${explorerNetwork}/tx/${mintTxHash}`
+      : null;
+    const shortHash = mintTxHash
+      ? `${mintTxHash.slice(0, 6)}…${mintTxHash.slice(-4)}`
+      : null;
+
+    return (
+      <motion.div
+        key="minted"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="flex-1 flex flex-col"
+      >
+        <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6">
+          <motion.div
+            initial={{ scale: 0.4, rotate: -12, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 14 }}
+            className="relative flex h-40 w-40 sm:h-48 sm:w-48 items-center justify-center"
+          >
+            <span
+              aria-hidden
+              className="absolute inset-6 rounded-full blur-2xl opacity-60"
+              style={{
+                background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
+              }}
+            />
+            <Image
+              src={achievement.icon}
+              alt={achievement.title}
+              fill
+              sizes="(min-width: 640px) 192px, 160px"
+              className="relative object-contain drop-shadow-2xl"
+            />
+          </motion.div>
+          <motion.h2
+            initial={{ y: 12, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="text-2xl sm:text-3xl font-extrabold text-black text-center"
+          >
+            Badge minted on-chain!
+          </motion.h2>
+          {explorerUrl && shortHash && (
+            <motion.a
+              initial={{ y: 12, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.18 }}
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono text-primary underline underline-offset-2 hover:text-primary/80 transition"
+            >
+              {shortHash}
+            </motion.a>
+          )}
+        </div>
+        <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+          >
+            Done
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
+  /* ------------------------------------------------------------------ */
   /* Phase: detail                                                       */
   /* ------------------------------------------------------------------ */
   const renderDetail = () => {
     const canClaim = unlocked && !claimed;
+    const canMint = claimed && !isMinted(achievement.id);
     return (
       <motion.div
         key="detail"
@@ -378,17 +503,28 @@ export function AchievementModal({
           )}
         </div>
 
-        {/* Bottom CTA — only when there's something actionable. Locked rows
-            don't get a button; the progress bar tells the story. */}
-        {canClaim && (
+        {/* Bottom CTA — only when there's something actionable. */}
+        {(canClaim || canMint) && (
           <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
-            <button
-              type="button"
-              onClick={handleClaim}
-              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-            >
-              Claim award
-            </button>
+            {canClaim && (
+              <button
+                type="button"
+                onClick={handleClaim}
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+              >
+                Claim award
+              </button>
+            )}
+            {canMint && (
+              <button
+                type="button"
+                onClick={() => setPhase('minting')}
+                disabled={!network?.badgesContractAddress}
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-black hover:bg-black/80 text-white border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Mint badge on-chain
+              </button>
+            )}
           </div>
         )}
       </motion.div>
@@ -397,7 +533,7 @@ export function AchievementModal({
 
   // Top bar layout: X on the left, drag handle in the middle, share button on
   // the right (Duolingo-style) — but only when the user has actually claimed
-  // this achievement.
+  // this achievement and hasn't entered the minting flow.
   const showHeaderShare = phase === 'detail' && claimed;
 
   return (
@@ -446,7 +582,7 @@ export function AchievementModal({
                 className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`}
                 aria-hidden
               />
-              {phase === 'reward' || phase === 'claiming' ? (
+              {phase === 'reward' || phase === 'claiming' || phase === 'minting' ? (
                 // Duolingo-style coin balance — only meaningful on the reward
                 // reveal (and the loading step into it), so we mount it there
                 // exclusively. Animates in once the bonus has landed.
@@ -487,6 +623,8 @@ export function AchievementModal({
             <AnimatePresence mode="wait" initial={false}>
               {phase === 'claiming' && renderClaiming()}
               {phase === 'reward' && renderReward()}
+              {phase === 'minting' && renderMinting()}
+              {phase === 'minted' && renderMinted()}
               {phase === 'detail' && renderDetail()}
             </AnimatePresence>
           </motion.div>
