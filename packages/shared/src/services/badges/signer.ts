@@ -37,7 +37,7 @@ export function signBadgeClaim(
 ): string {
   const msg = buildBadgeMessageBytes(wallet, badgeType, cycleId, expiry);
   const hash = createHash('sha256').update(msg).digest();
-  return (keypair.sign(hash) as Buffer).toString('hex');
+  return (keypair.sign(hash) as Buffer).toString('base64');
 }
 
 /** Load the badge signing keypair from BADGE_SIGNING_SEED env var (64-char hex = 32 bytes). */

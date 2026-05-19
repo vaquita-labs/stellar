@@ -1,6 +1,9 @@
 import type { PollarClient, TransactionState, TxBuildBody } from '@pollar/core';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 
+// TEST — remove before mainnet
+const USDC_TESTNET_ISSUER = 'GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56';
+
 function toBaseUnits(input: string, decimals: number): bigint {
   const [wRaw, fRaw = ''] = input.trim().split('.');
   const w = wRaw.replace(/^0+/, '') || '0';
@@ -19,6 +22,15 @@ function assertHex32(hex: string): string {
 type Common = {
   address: string;
   contractId: string;
+};
+
+type MintBadgeParams = {
+  address: string;
+  badgeContractId: string;
+  badgeType: string;
+  cycleId: number;
+  expiry: number;
+  signature: string; // base64-encoded BytesN<64>
 };
 
 type DepositParams = {
@@ -151,4 +163,82 @@ export function getSorobanTx({ address, contractId }: Common) {
   };
 
   return { deposit, withdraw };
+}
+
+/**
+ * Calls `mint_badge` on the Vaquita Badges contract via Pollar.
+ * The user's wallet pays XLM fees directly (fee-bump is handled separately).
+ */
+export async function mintBadge({
+  address,
+  badgeContractId,
+  badgeType,
+  cycleId,
+  expiry,
+  signature,
+}: MintBadgeParams): Promise<{ hash: string }> {
+  if (!address) throw new Error('No connected address');
+  const client = requirePollarClient();
+  console.info('[sorobanTx:mintBadge] routing via Pollar buildTx', { badgeType, cycleId, badgeContractId });
+  return invokeViaPollar(
+    client,
+    {
+      contractId: badgeContractId,
+      method: 'mint_badge',
+      args: [
+        { type: 'address', value: address },
+        { type: 'symbol',  value: badgeType },
+        { type: 'u32',     value: cycleId },
+        { type: 'u64',     value: expiry.toString() },
+        { type: 'bytes',   value: signature },
+      ],
+    },
+    'pollar-mint-badge',
+  );
+}
+
+// TEST — remove before mainnet
+/** Adds a USDC trustline on Stellar testnet via Pollar. */
+export async function addUsdcTrustline(): Promise<{ hash: string }> {
+  const binding = getPollarBinding();
+  if (!binding) throw new Error('Pollar adapter is not bound — log in first.');
+  const client = binding.client;
+
+  return new Promise<{ hash: string }>((resolve, reject) => {
+    let settled = false;
+    // Use `let` + optional chaining so finish() is safe even if the Pollar
+    // callback fires synchronously before the assignment completes.
+    let unsubscribe: (() => void) | undefined;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      unsubscribe?.();
+      fn();
+    };
+
+    unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
+      if (state.step === 'built' && state.buildData?.unsignedXdr) {
+        void client.signAndSubmitTx(state.buildData.unsignedXdr).catch((err: unknown) => {
+          finish(() => reject(err instanceof Error ? err : new Error(String(err))));
+        });
+        return;
+      }
+      if (state.step === 'success') {
+        finish(() => resolve({ hash: state.hash }));
+        return;
+      }
+      if (state.step === 'error') {
+        finish(() => reject(new Error(state.details ?? 'change_trust failed')));
+        return;
+      }
+    });
+
+    client
+      .buildTx('change_trust', {
+        asset: { type: 'credit_alphanum4', code: 'USDC', issuer: USDC_TESTNET_ISSUER },
+      } as TxBuildBody['params'])
+      .catch((err: unknown) => {
+        finish(() => reject(err instanceof Error ? err : new Error(String(err))));
+      });
+  });
 }
