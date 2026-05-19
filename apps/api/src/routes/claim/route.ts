@@ -7,10 +7,12 @@ import {
   checkPrimeraVaquitaEligibility,
   checkTrimestralEligibility,
   checkVeteranoEligibility,
+  confirmBadgeClaim,
   contractHasClaimed,
   getActiveBadgeClaim,
   getAnyClaim,
   getBadgeSigningKeypair,
+  getMintedBadges,
   getNetworkByName,
   makeClaimExpiry,
   signBadgeClaim,
@@ -52,6 +54,64 @@ const BADGE_ELIGIBILITY: Record<string, { cycleId: number; check: EligibilityChe
 
 /** Cat D types require manual re-sign approval — automatic refresh is blocked. */
 const CAT_D_TYPES = new Set(['genesis_saver', 'mainnet_pioneer', 'hackathon_champion']);
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/claim/:networkName/minted?wallet=G...
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns all on-chain confirmed badge mints for a wallet.
+ *
+ * 200 [{ badge_type, confirmed_at, transaction_hash }]
+ * 400 missing wallet param
+ */
+router.get(
+  '/:networkName/minted',
+  asyncHandler(async (req, res) => {
+    const { wallet } = req.query as { wallet?: string };
+    if (!wallet) {
+      return res.status(400).json({ status: 'error', message: 'Missing wallet query param' });
+    }
+    req.log.info({ wallet }, 'GET /claim/:networkName/minted');
+    const minted = await getMintedBadges(wallet);
+    return res.json({ status: 'success', data: minted });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/claim/:networkName/confirm
+// ---------------------------------------------------------------------------
+
+/**
+ * Marks the active claim as confirmed with the on-chain transaction hash.
+ *
+ * 200 success
+ * 400 missing required fields
+ */
+router.post(
+  '/:networkName/confirm',
+  asyncHandler(async (req, res) => {
+    const { badge_type: badgeType, wallet, cycle_id: cycleIdRaw, transaction_hash: txHash } = req.body as {
+      badge_type?: string;
+      wallet?: string;
+      cycle_id?: unknown;
+      transaction_hash?: string;
+    };
+
+    if (!badgeType || !wallet || cycleIdRaw == null || !txHash) {
+      return res.status(400).json({ status: 'error', message: 'Missing badge_type, wallet, cycle_id, or transaction_hash' });
+    }
+
+    const cycleId = Number(cycleIdRaw);
+    if (!Number.isInteger(cycleId) || cycleId < 0) {
+      return res.status(400).json({ status: 'error', message: 'cycle_id must be a non-negative integer' });
+    }
+
+    req.log.info({ badgeType, wallet, cycleId, txHash }, 'POST /claim/:networkName/confirm');
+    await confirmBadgeClaim(wallet, badgeType, cycleId, txHash);
+    return res.json({ status: 'success', data: null });
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/claim/:networkName?type=primera_vaquita&wallet=G...

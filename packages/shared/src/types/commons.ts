@@ -28,6 +28,7 @@ export interface NetworkResponseDTO {
   name: string;
   type: string;
   chainId: number;
+  badgesContractAddress?: string;
   tokens: {
     isGas: boolean;
     isNative: boolean;
