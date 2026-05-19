@@ -215,7 +215,7 @@ export function AllAchievementsPage() {
                   badge={badge}
                   size="lg"
                   showTitle
-                  claimable={badge.unlocked && !isClaimed(badge.id)}
+                  claimable={true /* TEST: force all badges claimable */}
                   onPress={() => setSelected({ achievement: badge, unlocked: badge.unlocked })}
                 />
               ))}

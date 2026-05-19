@@ -663,7 +663,6 @@ export const computeEligibilitySignals = async (
     activeDeposits,
     activeAmount,
     friendsCount: 0,
-    leaderboardRank: undefined,
   };
 };
 
