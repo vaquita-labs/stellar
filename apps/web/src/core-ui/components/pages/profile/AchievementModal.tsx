@@ -1,5 +1,6 @@
 'use client';
 
+import { clientEnv } from '@/core-ui/config/clientEnv';
 import { Modal, toast } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
@@ -94,7 +95,9 @@ export function AchievementModal({
   const { isClaimed, claim } = useClaimedAchievements();
   const { isMinted } = useMintedBadges();
   const mintBadgeMutation = useMintBadge();
-  const { network } = useNetworkConfigStore();
+  const { network, walletAddress } = useNetworkConfigStore();
+  const networkName = network?.name ?? '';
+  const baseUrl = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
   const { data: rewardsData } = useProfileRewards();
   // Drives whether we render the full-screen bottom-sheet (phone-sized) or
   // the compact centered dialog (everything wider than the Tailwind `sm`
@@ -110,6 +113,9 @@ export function AchievementModal({
   const [phase, setPhase] = useState<Phase>('detail');
   const [sharing, setSharing] = useState(false);
   const [mintTxHash, setMintTxHash] = useState<string | null>(null);
+  // True when the user pressed "Mint Badge On-Chain" and the reward phase
+  // should flow into minting rather than back to the detail view.
+  const [mintFlowPending, setMintFlowPending] = useState(false);
 
   // Reset to the detail phase every time the modal opens so a previous
   // claim-flow doesn't leak into the next achievement view.
@@ -118,6 +124,7 @@ export function AchievementModal({
       setPhase('detail');
       setBonusGold(0);
       setMintTxHash(null);
+      setMintFlowPending(false);
     }
   }, [open, achievement?.id]);
 
@@ -146,14 +153,11 @@ export function AchievementModal({
     ? Math.min(100, Math.round((achievement.progress.current / achievement.progress.target) * 100))
     : null;
 
+  // Claim-only flow (no badge contract configured on this network).
   const handleClaim = async () => {
     setPhase('claiming');
     try {
       const result = await claim(achievement.id);
-      // Prefer the server-returned reward — it's the authoritative number; fall
-      // back to the local TIER_REWARD table if the API ever omits it. The
-      // bonus is added to the visible gold pill so the header tracks what the
-      // user just earned without waiting for the rewards query to refetch.
       setBonusGold((v) => v + (result?.coinReward ?? reward));
       setPhase('reward');
     } catch (err) {
@@ -163,12 +167,42 @@ export function AchievementModal({
     }
   };
 
+  // Unified mint flow: claim off-chain first, then show coins, then Pollar.
+  const handleMintClick = async () => {
+    if (!achievement) return;
+    setMintFlowPending(true);
+    setPhase('claiming');
+    try {
+      const res = await fetch(
+        `${baseUrl}/profile/network/${encodeURIComponent(networkName)}/wallet/${encodeURIComponent(walletAddress)}/achievements/${encodeURIComponent(achievement.id)}/claim`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+      );
+      if (!res.ok && res.status !== 409) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message ?? `Failed to claim (${res.status})`);
+      }
+      if (res.status === 409) {
+        // Already claimed — skip coin animation, go straight to Pollar prompt
+        setPhase('minting');
+      } else {
+        const body = await res.json().catch(() => null);
+        const coinReward: number = body?.data?.coinReward ?? reward;
+        setBonusGold((v) => v + coinReward);
+        setPhase('reward');
+      }
+    } catch (err) {
+      setMintFlowPending(false);
+      toast.danger('Could not start mint', { description: (err as Error)?.message ?? 'Unknown error' });
+      setPhase('detail');
+    }
+  };
+
   const handleContinue = () => {
-    // The server claim already happened in handleClaim — the mutation's
-    // onSuccess invalidated profile-achievements/profile-rewards, so the rest
-    // of the UI will reflect the new state on the next render. Just close the
-    // reveal phase.
-    setPhase('detail');
+    if (mintFlowPending) {
+      setPhase('minting');
+    } else {
+      setPhase('detail');
+    }
   };
 
   const shareText = `I just unlocked "${achievement.title}" on Vaquita 🐮`;
@@ -429,8 +463,11 @@ export function AchievementModal({
   /* Phase: detail                                                       */
   /* ------------------------------------------------------------------ */
   const renderDetail = () => {
-    const canClaim = unlocked && !claimed;
-    const canMint = claimed && !isMinted(achievement.id);
+    const hasBadgesContract = !!network?.badgesContractAddress;
+    // Claim-only: no on-chain badge contract configured.
+    const canClaim = unlocked && !claimed && !hasBadgesContract;
+    // Unified mint: single button covers both the off-chain claim and on-chain mint.
+    const canMintUnified = ((unlocked && !claimed) || (claimed && !isMinted(achievement.id))) && hasBadgesContract;
     return (
       <motion.div
         key="detail"
@@ -504,7 +541,7 @@ export function AchievementModal({
         </div>
 
         {/* Bottom CTA — only when there's something actionable. */}
-        {(canClaim || canMint) && (
+        {(canClaim || canMintUnified) && (
           <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
             {canClaim && (
               <button
@@ -515,12 +552,11 @@ export function AchievementModal({
                 Claim award
               </button>
             )}
-            {canMint && (
+            {canMintUnified && (
               <button
                 type="button"
-                onClick={() => setPhase('minting')}
-                disabled={!network?.badgesContractAddress}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-black hover:bg-black/80 text-white border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={claimed ? () => setPhase('minting') : () => { void handleMintClick(); }}
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-black hover:bg-black/80 text-white border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
               >
                 Mint badge on-chain
               </button>
