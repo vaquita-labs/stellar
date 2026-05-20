@@ -1,21 +1,65 @@
 import { supabase } from '../../lib/supabase';
-import { storeBadgeClaim } from '../badges/claims';
-import { getBadgeSigningKeypair, makeClaimExpiry, signBadgeClaim } from '../badges/signer';
+
+// ---------------------------------------------------------------------------
+// Cycle duration config
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the fixed cycle duration in milliseconds from CYCLE_DURATION_MS env
+ * var, or null in production (calendar month cycles).
+ */
+export function getCycleDurationMs(): number | null {
+  const raw = process.env.CYCLE_DURATION_MS;
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
 // ---------------------------------------------------------------------------
 // Cycle boundary helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Converts a YYYYMM cycle ID to UTC start/end millisecond timestamps.
- * e.g. 202605 → [2026-05-01T00:00:00Z, 2026-06-01T00:00:00Z)
+ * Converts a cycle ID to UTC start/end millisecond timestamps.
+ *
+ * - 6-digit YYYYMM → production monthly cycle
+ * - 10-digit Unix epoch seconds → test fixed-duration cycle (requires CYCLE_DURATION_MS)
  */
 export function cycleIdToBoundaries(cycleId: number): { cycleStart: number; cycleEnd: number } {
-  const year = Math.floor(cycleId / 100);
-  const month = cycleId % 100; // 1-based
-  const cycleStart = Date.UTC(year, month - 1, 1);
-  const cycleEnd = Date.UTC(year, month, 1);
-  return { cycleStart, cycleEnd };
+  if (cycleId < 1_000_000_000) {
+    // YYYYMM format
+    const year = Math.floor(cycleId / 100);
+    const month = cycleId % 100; // 1-based
+    return {
+      cycleStart: Date.UTC(year, month - 1, 1),
+      cycleEnd:   Date.UTC(year, month,     1),
+    };
+  }
+  // Epoch-seconds: end = start + CYCLE_DURATION_MS
+  const durationMs = getCycleDurationMs() ?? 30 * 24 * 60 * 60 * 1000;
+  const cycleStart = cycleId * 1000;
+  return { cycleStart, cycleEnd: cycleStart + durationMs };
+}
+
+/**
+ * Returns the cycle ID of the last fully closed cycle.
+ *
+ * - Without CYCLE_DURATION_MS: previous calendar month as YYYYMM.
+ * - With CYCLE_DURATION_MS: the start (epoch-seconds) of the previous
+ *   completed fixed-duration cycle.
+ */
+export function getLastClosedCycleId(): number {
+  const durationMs = getCycleDurationMs();
+  if (!durationMs) {
+    const d = new Date();
+    const year  = d.getUTCMonth() === 0 ? d.getUTCFullYear() - 1 : d.getUTCFullYear();
+    const month = d.getUTCMonth() === 0 ? 12 : d.getUTCMonth(); // 1-based previous month
+    return year * 100 + month;
+  }
+  const durationS = durationMs / 1000;
+  const nowS = Math.floor(Date.now() / 1000);
+  const currentCycleStart = Math.floor(nowS / durationS) * durationS;
+  return currentCycleStart - durationS; // previous cycle start in seconds
 }
 
 // ---------------------------------------------------------------------------
@@ -109,7 +153,7 @@ export async function getLeaderboard(
     cycleEnd,
   }));
 
-  // Sort by score desc; tiebreaker applied separately by cycle-close job
+  // Sort by score desc; tiebreaker applied separately
   rows.sort((a, b) => b.score - a.score);
   return rows;
 }
@@ -154,27 +198,20 @@ async function getTiebreakerData(
 }
 
 // ---------------------------------------------------------------------------
-// Cycle-close pipeline: issue leaderboard signed claims
+// Lazy rank lookup
 // ---------------------------------------------------------------------------
 
-const LEADERBOARD_BADGES: Record<number, string> = { 1: 'first-place', 2: 'second-place', 3: 'third-place' };
-
 /**
- * Closes the leaderboard for a given cycle: ranks the top 10, issues signed
- * claims, and stores them in Supabase.
- *
- * - Ranks #1–3: receive a leaderboard badge (first-place/second-place/third-place) + top10
- * - Ranks #4–10: receive a top10 badge
- * - Idempotent: existing claims for (wallet, badge_type, cycleId) are skipped
+ * Returns the 1-based rank of walletAddress in the given cycle, or null if
+ * the wallet is not in the top 10. Applies the same tiebreaker as the
+ * cycle-close pipeline.
  */
-export async function closeLeaderboardCycle(
+export async function getLeaderboardRankForWallet(
+  walletAddress: string,
   cycleId: number,
   networkId: number,
-): Promise<void> {
-  const keypair = getBadgeSigningKeypair();
+): Promise<number | null> {
   const rows = await getLeaderboard(cycleId, networkId);
-
-  // Apply tiebreaker to top-10 candidates (fetch slightly more to handle ties)
   const candidates = rows.slice(0, 15);
 
   const tiebreakerMap = new Map<string, TiebreakerData>();
@@ -189,53 +226,12 @@ export async function closeLeaderboardCycle(
       if (b.score !== a.score) return b.score - a.score;
       const tA = tiebreakerMap.get(a.walletAddress)!;
       const tB = tiebreakerMap.get(b.walletAddress)!;
-      if (tB.totalCompletedCycles !== tA.totalCompletedCycles) {
+      if (tB.totalCompletedCycles !== tA.totalCompletedCycles)
         return tB.totalCompletedCycles - tA.totalCompletedCycles;
-      }
       return tA.lastDepositTimestamp - tB.lastDepositTimestamp;
     })
     .slice(0, 10);
 
-  for (let i = 0; i < ranked.length; i++) {
-    const rank = i + 1;
-    const { walletAddress } = ranked[i]!;
-    const expiry = makeClaimExpiry();
-
-    // top10 badge (all top-10)
-    await issueClaim(keypair, walletAddress, 'top10', cycleId, expiry);
-
-    // leaderboard podium badge (ranks 1–3)
-    const podiumBadge = LEADERBOARD_BADGES[rank];
-    if (podiumBadge) {
-      await issueClaim(keypair, walletAddress, podiumBadge, cycleId, expiry);
-    }
-  }
-}
-
-async function issueClaim(
-  keypair: ReturnType<typeof getBadgeSigningKeypair>,
-  walletAddress: string,
-  badgeType: string,
-  cycleId: number,
-  expiry: number,
-): Promise<void> {
-  try {
-    // Check for existing claim to stay idempotent
-    const { data: existing } = await supabase
-      .from('badge_claims')
-      .select('id')
-      .eq('wallet_address', walletAddress)
-      .eq('badge_type', badgeType)
-      .eq('cycle_id', cycleId)
-      .limit(1)
-      .maybeSingle();
-
-    if (existing) return; // already issued
-
-    const signature = signBadgeClaim(walletAddress, badgeType, cycleId, expiry, keypair);
-    await storeBadgeClaim({ walletAddress, badgeType, cycleId, expiry, signature });
-    console.info(`[leaderboard] Issued ${badgeType} claim for ${walletAddress} (cycle ${cycleId})`);
-  } catch (err) {
-    console.error(`[leaderboard] Failed to issue ${badgeType} for ${walletAddress}`, err);
-  }
+  const idx = ranked.findIndex((r) => r.walletAddress === walletAddress);
+  return idx === -1 ? null : idx + 1;
 }
