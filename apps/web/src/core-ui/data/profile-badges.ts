@@ -209,12 +209,12 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
     {
       id: 'third-place',
       title: 'Bronze Medalist',
-      description: 'Finish #3 on the monthly leaderboard.',
+      description: 'Finish in the top 10 on the monthly leaderboard.',
       icon: `${ICONS}/third-place.png`,
       accent: 'linear-gradient(180deg, #FFCC80 0%, #A05A2C 100%)',
       tier: 'Bronze',
-      date: rank === 3 ? new Date().toISOString() : undefined,
-      unlocked: rank === 3,
+      date: rank != null && rank >= 3 && rank <= 10 ? new Date().toISOString() : undefined,
+      unlocked: rank != null && rank >= 3 && rank <= 10,
     },
     {
       id: 'second-place',

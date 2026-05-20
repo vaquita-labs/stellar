@@ -288,12 +288,12 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim
   if (achievementDoc?.cycle_scoped) {
     const cycleId = getLastClosedCycleId();
     const rank = await getLeaderboardRankForWallet(walletAddress, cycleId, networkData.id as number);
-    const requiredRank: Record<string, number> = {
-      'first-place': 1,
-      'second-place': 2,
-      'third-place': 3,
-    };
-    if (rank !== requiredRank[achievementKey]) {
+    const exactRank: Record<string, number> = { 'first-place': 1, 'second-place': 2 };
+    const eligible =
+      achievementKey === 'third-place'
+        ? rank !== null && rank >= 3 && rank <= 10
+        : rank === exactRank[achievementKey];
+    if (!eligible) {
       req.log.warn({ profileId: profileData.id, key, rank, cycleId }, 'Wallet did not finish at required leaderboard rank');
       return sendError(res, 'You did not finish at the required leaderboard rank last cycle.', null, 403);
     }
