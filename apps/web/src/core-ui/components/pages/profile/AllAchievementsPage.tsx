@@ -8,6 +8,7 @@ import { getDepositsData } from '../../../helpers/deposits';
 import {
   useClaimedAchievements,
   useDepositsComplete,
+  useLeaderboardRank,
   useProfileAchievements,
   useProfileExperience,
   useProfileRewards,
@@ -89,6 +90,7 @@ export function AllAchievementsPage() {
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
+  const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
   // Drives the pulsing "ready to claim" halo on each badge tile. A badge is
   // claimable when the user has met the unlock condition (`badge.unlocked`)
   // but hasn't cashed in the coin reward yet.
@@ -115,8 +117,9 @@ export function AllAchievementsPage() {
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
+        leaderboardRank: rankData?.rank ?? undefined,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
   );
 
   const earned = achievements.filter((b) => b.unlocked && isClaimed(b.id)).length;
@@ -216,6 +219,7 @@ export function AllAchievementsPage() {
                   size="lg"
                   showTitle
                   claimable={true /* TEST: force all badges claimable */}
+                  loading={rankLoading && ['first-place', 'second-place', 'third-place'].includes(badge.id)}
                   onPress={() => setSelected({ achievement: badge, unlocked: badge.unlocked })}
                 />
               ))}
