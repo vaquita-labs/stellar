@@ -121,13 +121,15 @@ router.get(
     // Verify the achievement exists in the catalog
     const { data: achievement } = await supabase
       .from('achievements')
-      .select('id, cycle_scoped, refresh_policy')
+      .select('id, cycle_scoped, refresh_policy, tier')
       .eq('key', badgeType)
       .maybeSingle();
 
     if (!achievement) {
       return res.status(400).json({ status: 'error', message: `Unknown badge type: ${badgeType}` });
     }
+
+    const contractSymbol: string = achievement.tier ?? badgeType;
 
     req.log.info({ badgeType, wallet, networkName }, 'GET /claim/:networkName');
 
@@ -163,11 +165,11 @@ router.get(
       const nowUnix = Math.floor(Date.now() / 1000);
       if (expiryUnix > nowUnix) {
         req.log.info({ badgeType, wallet, claimId: existing.id }, 'Returning existing active claim');
-        return res.json({ status: 'success', data: toClaimPayload(existing) });
+        return res.json({ status: 'success', data: toClaimPayload(existing, contractSymbol) });
       }
     }
 
-    // Issue a new signed claim
+    // Issue a new signed claim — sign with the tier (Soroban Symbol) not the key
     let keypair;
     try {
       keypair = getBadgeSigningKeypair();
@@ -176,11 +178,11 @@ router.get(
     }
 
     const expiry = makeClaimExpiry();
-    const signature = signBadgeClaim(wallet, badgeType, cycleId, expiry, keypair);
+    const signature = signBadgeClaim(wallet, contractSymbol, cycleId, expiry, keypair);
     const stored = await storeBadgeClaim({ walletAddress: wallet, badgeType, cycleId, expiry, signature });
 
     req.log.info({ badgeType, wallet, claimId: stored.id }, 'Issued new badge claim');
-    return res.json({ status: 'success', data: toClaimPayload(stored) });
+    return res.json({ status: 'success', data: toClaimPayload(stored, contractSymbol) });
   }),
 );
 
@@ -232,7 +234,7 @@ router.post(
     // Check refresh_policy — manual badges require admin action
     const { data: achievement } = await supabase
       .from('achievements')
-      .select('id, refresh_policy')
+      .select('id, refresh_policy, tier')
       .eq('key', badgeType)
       .maybeSingle();
 
@@ -247,8 +249,10 @@ router.post(
       });
     }
 
-    // Check if already minted on-chain
-    const alreadyMinted = await contractHasClaimed(contractId, wallet, badgeType, cycleId);
+    const contractSymbol: string = achievement.tier ?? badgeType;
+
+    // Check if already minted on-chain (use tier as the contract Symbol)
+    const alreadyMinted = await contractHasClaimed(contractId, wallet, contractSymbol, cycleId);
     if (alreadyMinted) {
       return res.status(409).json({ status: 'error', message: 'Badge already minted on-chain' });
     }
@@ -281,7 +285,7 @@ router.post(
       await supersedeBadgeClaim(existingClaim.id);
     }
 
-    // Issue fresh claim
+    // Issue fresh claim — sign with the tier (Soroban Symbol) not the key
     let keypair;
     try {
       keypair = getBadgeSigningKeypair();
@@ -290,11 +294,11 @@ router.post(
     }
 
     const expiry = makeClaimExpiry();
-    const signature = signBadgeClaim(wallet, badgeType, cycleId, expiry, keypair);
+    const signature = signBadgeClaim(wallet, contractSymbol, cycleId, expiry, keypair);
     const stored = await storeBadgeClaim({ walletAddress: wallet, badgeType, cycleId, expiry, signature });
 
     req.log.info({ badgeType, wallet, cycleId, claimId: stored.id }, 'Refreshed badge claim');
-    return res.json({ status: 'success', data: toClaimPayload(stored) });
+    return res.json({ status: 'success', data: toClaimPayload(stored, contractSymbol) });
   }),
 );
 

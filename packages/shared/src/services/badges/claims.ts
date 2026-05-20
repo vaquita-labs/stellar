@@ -16,8 +16,9 @@ export interface BadgeClaimRecord {
 export interface BadgeClaimPayload {
   badge_type: string;
   cycle_id: number;
-  expiry: number;         // Unix seconds
-  signature: string;      // hex
+  expiry: number;           // Unix seconds
+  signature: string;        // hex
+  contract_symbol: string;  // achievements.tier — valid Soroban Symbol passed to mint_badge
 }
 
 // ---------------------------------------------------------------------------
@@ -204,12 +205,13 @@ export async function supersedeBadgeClaim(claimId: string): Promise<void> {
 }
 
 /** Convert a stored BadgeClaimRecord to the API response payload. */
-export function toClaimPayload(record: BadgeClaimRecord): BadgeClaimPayload {
+export function toClaimPayload(record: BadgeClaimRecord, contractSymbol: string): BadgeClaimPayload {
   return {
     badge_type: record.badge_type,
     cycle_id: record.cycle_id,
     expiry: Math.floor(new Date(record.expiry).getTime() / 1000),
     signature: record.signature,
+    contract_symbol: contractSymbol,
   };
 }
 
