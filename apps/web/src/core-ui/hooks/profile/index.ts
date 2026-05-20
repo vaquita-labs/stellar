@@ -1,4 +1,5 @@
 export * from './useClaimAchievement';
+export * from './useLeaderboardRank';
 export * from './useMintBadge';
 export * from './useMintedBadges';
 export * from './useProfileAchievements';

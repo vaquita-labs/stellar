@@ -11,6 +11,7 @@ import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi
 import {
   useClaimedAchievements,
   useDepositsComplete,
+  useLeaderboardRank,
   useProfileAchievements,
   useProfileData,
   useProfileExperience,
@@ -103,6 +104,7 @@ export function ProfilePage() {
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
+  const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
@@ -172,8 +174,9 @@ export function ProfilePage() {
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
+        leaderboardRank: rankData?.rank ?? undefined,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
   );
 
   const handleShareToInstagram = async () => {
@@ -391,6 +394,7 @@ export function ProfilePage() {
                   key={badge.id}
                   badge={badge}
                   claimable={badge.unlocked && !isClaimed(badge.id)}
+                  loading={rankLoading && ['first-place', 'second-place', 'third-place'].includes(badge.id)}
                   onPress={() => router.push('/profile/achievements')}
                 />
               ))}

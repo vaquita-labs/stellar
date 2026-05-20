@@ -36,6 +36,8 @@ interface BadgeTileProps {
    *  "earned" until the reward is collected) and pulse a brighter halo to
    *  draw the eye to it. Effectively the "next action" affordance. */
   claimable?: boolean;
+  /** Rank query in flight — dim tile and pulse to signal pending state. */
+  loading?: boolean;
 }
 
 /**
@@ -54,6 +56,7 @@ export function BadgeTile({
   size = 'md',
   showTitle = false,
   claimable = false,
+  loading = false,
 }: BadgeTileProps) {
   const s = SIZES[size];
   // An achievement only "lights up" once it's been claimed — until then the
@@ -69,7 +72,7 @@ export function BadgeTile({
     <button
       type="button"
       onClick={onPress}
-      className="group flex flex-col items-center gap-1.5 bg-transparent focus:outline-none w-full"
+      className={`group flex flex-col items-center gap-1.5 bg-transparent focus:outline-none w-full ${loading ? 'opacity-50 animate-pulse pointer-events-none' : ''}`}
     >
       <span
         className={`relative flex aspect-square w-full ${s.wrap} items-center justify-center transition group-hover:-translate-y-0.5 ${wrapFilter}`}
