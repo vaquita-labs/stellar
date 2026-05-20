@@ -1,6 +1,7 @@
 import { type NextFunction, type Request, type RequestHandler, type Response, Router } from 'express';
 import {
   checkDisciplinadoEligibility,
+  checkFirstDepositEligibility,
   checkGenesisSaverEligibility,
   checkMainnetPioneerEligibility,
   checkMaratonistEligibility,
@@ -41,19 +42,15 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
 type EligibilityChecker = (wallet: string) => Promise<boolean>;
 
 const BADGE_ELIGIBILITY: Record<string, { cycleId: number; check: EligibilityChecker }> = {
-  // Cat C — personal milestones
-  primera_vaquita: { cycleId: 0, check: checkPrimeraVaquitaEligibility },
-  maratonista:     { cycleId: 0, check: checkMaratonistEligibility },
-  trimestral:      { cycleId: 0, check: checkTrimestralEligibility },
-  veterano:        { cycleId: 0, check: checkVeteranoEligibility },
-  disciplinado:    { cycleId: 0, check: checkDisciplinadoEligibility },
-  // Cat D — limited edition
-  genesis_saver:   { cycleId: 0, check: checkGenesisSaverEligibility },
-  mainnet_pioneer: { cycleId: 0, check: checkMainnetPioneerEligibility },
+  'first-deposit':  { cycleId: 0, check: checkFirstDepositEligibility },
+  primera_vaquita:  { cycleId: 0, check: checkPrimeraVaquitaEligibility },
+  maratonista:      { cycleId: 0, check: checkMaratonistEligibility },
+  trimestral:       { cycleId: 0, check: checkTrimestralEligibility },
+  veterano:         { cycleId: 0, check: checkVeteranoEligibility },
+  disciplinado:     { cycleId: 0, check: checkDisciplinadoEligibility },
+  genesis_saver:    { cycleId: 0, check: checkGenesisSaverEligibility },
+  mainnet_pioneer:  { cycleId: 0, check: checkMainnetPioneerEligibility },
 };
-
-/** Cat D types require manual re-sign approval — automatic refresh is blocked. */
-const CAT_D_TYPES = new Set(['genesis_saver', 'mainnet_pioneer', 'hackathon_champion']);
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/claim/:networkName/minted?wallet=G...
@@ -194,12 +191,12 @@ router.get(
 // ---------------------------------------------------------------------------
 
 /**
- * Re-issues a fresh signed claim for Cat A/B/C badges whose original signature
- * has expired. Automatically re-verifies eligibility before issuing.
+ * Re-issues a fresh signed claim whose original signature has expired.
+ * Automatically re-verifies eligibility before issuing.
  *
  * 200 { badge_type, cycle_id, expiry, signature }
  * 400 missing / invalid body params
- * 403 Cat D badge (manual process) or wallet no longer eligible
+ * 403 wallet no longer eligible
  * 409 badge already minted on-chain for this wallet
  * 503 badges_contract_address not set for this network
  */
@@ -234,14 +231,6 @@ router.post(
 
     req.log.info({ badgeType, wallet, cycleId, networkName }, 'POST /claim/:networkName/refresh');
 
-    // Cat D: manual process only
-    if (CAT_D_TYPES.has(badgeType)) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Cat D badge re-signs require manual approval. Contact support at support@vaquita.fi',
-      });
-    }
-
     // Check if already minted on-chain
     const alreadyMinted = await contractHasClaimed(contractId, wallet, badgeType, cycleId);
     if (alreadyMinted) {
@@ -251,13 +240,12 @@ router.post(
     // Verify eligibility
     const badgeConfig = BADGE_ELIGIBILITY[badgeType];
     if (badgeConfig) {
-      // Cat C: re-run live eligibility check
       const eligible = await badgeConfig.check(wallet);
       if (!eligible) {
         return res.status(403).json({ status: 'error', message: 'Wallet is not eligible for this badge' });
       }
     } else {
-      // Cat A/B: eligibility is permanent — confirm a prior claim was issued for this exact cycle
+      // Leaderboard / manual badges: confirm a prior claim was issued for this exact cycle
       const prior = await getAnyClaim(wallet, badgeType, cycleId);
       if (!prior) {
         return res.status(403).json({

@@ -19,7 +19,7 @@ function isLockPeriod(raw: number, targetSeconds: number): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Cat C eligibility checks
+// Eligibility checks
 // ---------------------------------------------------------------------------
 
 /**
@@ -126,7 +126,7 @@ function hasConsecutiveDays(sortedDates: string[], streak: number): boolean {
 // Monitor entry point
 // ---------------------------------------------------------------------------
 
-const CAT_C_BADGES: Array<{ badgeType: string; check: (wallet: string) => Promise<boolean> }> = [
+const AUTO_BADGES: Array<{ badgeType: string; check: (wallet: string) => Promise<boolean> }> = [
   { badgeType: 'primera_vaquita', check: checkPrimeraVaquitaEligibility },
   { badgeType: 'maratonista', check: checkMaratonistEligibility },
   { badgeType: 'trimestral', check: checkTrimestralEligibility },
@@ -135,11 +135,11 @@ const CAT_C_BADGES: Array<{ badgeType: string; check: (wallet: string) => Promis
 ];
 
 /**
- * Evaluates all Cat C milestone conditions for a wallet and issues signed claims
+ * Evaluates all milestone conditions for a wallet and issues signed claims
  * for any newly eligible badges. Idempotent: skips badges where a claim already exists.
  * Called automatically after each on-time withdrawal confirmation.
  */
-export async function evaluateCatCMilestones(walletAddress: string): Promise<void> {
+export async function evaluateBadgeMilestones(walletAddress: string): Promise<void> {
   let keypair: ReturnType<typeof getBadgeSigningKeypair>;
   try {
     keypair = getBadgeSigningKeypair();
@@ -147,7 +147,7 @@ export async function evaluateCatCMilestones(walletAddress: string): Promise<voi
     return; // BADGE_SIGNING_SEED not configured — skip silently
   }
 
-  for (const { badgeType, check } of CAT_C_BADGES) {
+  for (const { badgeType, check } of AUTO_BADGES) {
     try {
       const existing = await getAnyClaim(walletAddress, badgeType, 0);
       if (existing) continue;
@@ -158,9 +158,9 @@ export async function evaluateCatCMilestones(walletAddress: string): Promise<voi
       const expiry = makeClaimExpiry();
       const signature = signBadgeClaim(walletAddress, badgeType, 0, expiry, keypair);
       await storeBadgeClaim({ walletAddress, badgeType, cycleId: 0, expiry, signature });
-      console.info(`[cat-c-monitor] Issued ${badgeType} claim for ${walletAddress}`);
+      console.info(`[badge-monitor] Issued ${badgeType} claim for ${walletAddress}`);
     } catch (err) {
-      console.error(`[cat-c-monitor] Error evaluating ${badgeType} for ${walletAddress}`, err);
+      console.error(`[badge-monitor] Error evaluating ${badgeType} for ${walletAddress}`, err);
     }
   }
 }

@@ -30,7 +30,7 @@ function requireAdminSecret(req: Request, res: Response): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Closes a leaderboard cycle: ranks top 10, issues Cat A/B signed claims.
+ * Closes a leaderboard cycle: ranks top 10, issues signed claims.
  * Body: { network_name: string, cycle_id: number }
  *
  * 200 OK
