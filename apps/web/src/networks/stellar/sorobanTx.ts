@@ -65,19 +65,21 @@ async function invokeViaPollar(
 ): Promise<{ hash: string }> {
   return new Promise<{ hash: string }>((resolve, reject) => {
     let settled = false;
+    let unsubscribe: (() => void) | undefined;
     const finish = (fn: () => void) => {
       if (settled) return;
       settled = true;
-      unsubscribe();
+      unsubscribe?.();
       fn();
     };
 
-    const unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
+    unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
       console.info(`[${logLabel}] state`, state.step, state);
       if (state.step === 'built' && state.buildData?.unsignedXdr) {
-        void client.signAndSubmitTx(state.buildData.unsignedXdr).catch((err: unknown) => {
-          finish(() => reject(err instanceof Error ? err : new Error(String(err))));
-        });
+        // Don't catch — let state.step 'success'/'error' be the authoritative
+        // outcome. signAndSubmitTx can reject on transient network errors even
+        // when the tx lands; catching here races against the success state.
+        void client.signAndSubmitTx(state.buildData.unsignedXdr);
         return;
       }
       if (state.step === 'success') {
@@ -90,8 +92,11 @@ async function invokeViaPollar(
       }
     });
 
-    client.buildTx('invoke_contract', params).catch((err: unknown) => {
-      finish(() => reject(err instanceof Error ? err : new Error(String(err))));
+    // Pollar retries 401s internally and communicates the real outcome via
+    // onTransactionStateChange (success / error). Only log here — calling
+    // finish() would reject the promise and unsubscribe before the retry lands.
+    void client.buildTx('invoke_contract', params).catch((err: unknown) => {
+      console.warn(`[${logLabel}] buildTx error (Pollar may retry):`, err);
     });
   });
 }
@@ -218,9 +223,7 @@ export async function addUsdcTrustline(): Promise<{ hash: string }> {
 
     unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
       if (state.step === 'built' && state.buildData?.unsignedXdr) {
-        void client.signAndSubmitTx(state.buildData.unsignedXdr).catch((err: unknown) => {
-          finish(() => reject(err instanceof Error ? err : new Error(String(err))));
-        });
+        void client.signAndSubmitTx(state.buildData.unsignedXdr);
         return;
       }
       if (state.step === 'success') {
@@ -233,12 +236,12 @@ export async function addUsdcTrustline(): Promise<{ hash: string }> {
       }
     });
 
-    client
+    void client
       .buildTx('change_trust', {
         asset: { type: 'credit_alphanum4', code: 'USDC', issuer: USDC_TESTNET_ISSUER },
       } as TxBuildBody['params'])
       .catch((err: unknown) => {
-        finish(() => reject(err instanceof Error ? err : new Error(String(err))));
+        console.warn('[pollar-change-trust] buildTx error (Pollar may retry):', err);
       });
   });
 }

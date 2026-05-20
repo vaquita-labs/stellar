@@ -10,6 +10,7 @@ interface BadgeClaimPayload {
   cycle_id: number;
   expiry: number;
   signature: string;
+  contract_symbol: string;
 }
 
 /**
@@ -77,11 +78,11 @@ export const useMintBadge = () => {
         claim = refreshBody.data;
       }
 
-      // Step 4: mint on-chain via Pollar
+      // Step 4: mint on-chain via Pollar — use tier (Soroban Symbol) not the key
       const { hash } = await mintBadge({
         address: walletAddress,
         badgeContractId: badgesContractAddress,
-        badgeType,
+        badgeType: claim.contract_symbol,
         cycleId: claim.cycle_id,
         expiry: claim.expiry,
         signature: claim.signature,

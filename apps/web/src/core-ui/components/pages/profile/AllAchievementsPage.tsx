@@ -218,7 +218,7 @@ export function AllAchievementsPage() {
                   badge={badge}
                   size="lg"
                   showTitle
-                  claimable={true /* TEST: force all badges claimable */}
+                  claimable={badge.unlocked && !isClaimed(badge.id)}
                   loading={rankLoading && ['first-place', 'second-place', 'third-place'].includes(badge.id)}
                   onPress={() => setSelected({ achievement: badge, unlocked: badge.unlocked })}
                 />
