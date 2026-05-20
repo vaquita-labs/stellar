@@ -20,24 +20,6 @@ ALTER TABLE achievements
     CHECK (refresh_policy IN ('auto', 'manual')),
   ADD COLUMN IF NOT EXISTS cycle_scoped boolean NOT NULL DEFAULT FALSE;
 
--- Seed: limited-edition churrasquito badge (May 2026 event).
-INSERT INTO achievements (key, name, description, tier, coin_reward, hidden)
-VALUES (
-  'churrasquito-05-2026',
-  'Churrasquito',
-  'You joined the Vaquita launch barbecue. A rare badge for the founding herd.',
-  'Founder',
-  500,
-  TRUE
-)
-ON CONFLICT (key) DO UPDATE
-  SET name        = EXCLUDED.name,
-      description = EXCLUDED.description,
-      tier        = EXCLUDED.tier,
-      coin_reward = EXCLUDED.coin_reward,
-      hidden      = EXCLUDED.hidden,
-      updated_at  = NOW();
-
 -- Personal milestones — on-demand, no cycle
 UPDATE achievements SET refresh_policy = 'auto', cycle_scoped = FALSE
   WHERE key IN (
