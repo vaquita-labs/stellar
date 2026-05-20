@@ -13,13 +13,10 @@ interface BadgeMeta {
   imageFile: string;
   category: BadgeCategory;
   rarity: string;
-  // Cat A/B
   tier?: string;
   rank?: number;
-  // Cat C
   milestone?: string;
   unlocked?: string;
-  // Cat D
   edition?: string;
   maxMint?: number;
 }
@@ -27,7 +24,7 @@ interface BadgeMeta {
 const CDN = 'https://vaquita.fi/assets/badges';
 
 const BADGE_CATALOG: Record<string, BadgeMeta> = {
-  gold: {
+  'first-place': {
     name: 'Vaquero de Oro',
     description: 'Awarded to the #1 ranked saver of the month on Vaquita. Soulbound — cannot be transferred.',
     imageFile: 'first-place.png',
@@ -36,7 +33,7 @@ const BADGE_CATALOG: Record<string, BadgeMeta> = {
     tier: 'Gold',
     rank: 1,
   },
-  silver: {
+  'second-place': {
     name: 'Vaquero de Plata',
     description: 'Awarded to the #2 ranked saver of the month on Vaquita. Soulbound — cannot be transferred.',
     imageFile: 'second-place.png',
@@ -45,7 +42,7 @@ const BADGE_CATALOG: Record<string, BadgeMeta> = {
     tier: 'Silver',
     rank: 2,
   },
-  bronze: {
+  'third-place': {
     name: 'Vaquero de Bronce',
     description: 'Awarded to the #3 ranked saver of the month on Vaquita. Soulbound — cannot be transferred.',
     imageFile: 'third-place.png',

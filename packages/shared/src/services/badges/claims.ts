@@ -68,6 +68,20 @@ export async function checkPrimeraVaquitaEligibility(walletAddress: string): Pro
 }
 
 /**
+ * first-deposit: wallet has at least one confirmed deposit.
+ */
+export async function checkFirstDepositEligibility(walletAddress: string): Promise<boolean> {
+  const { count, error } = await supabase
+    .from('deposits')
+    .select('id', { count: 'exact', head: true })
+    .eq('wallet_address', walletAddress)
+    .eq('status', 'confirmed');
+
+  if (error) throw error;
+  return (count ?? 0) > 0;
+}
+
+/**
  * D1 — Genesis Saver: first GENESIS_SAVER_CAP unique wallet addresses to make
  * a confirmed deposit. Backend enforces the cap by counting issued claims.
  */
@@ -175,7 +189,7 @@ export async function storeBadgeClaim(claim: {
   return data as BadgeClaimRecord;
 }
 
-/** Returns any claim (including superseded) for (wallet, badge_type, cycle_id). Used by the re-sign endpoint to confirm prior issuance for Cat A/B. */
+/** Returns any claim (including superseded) for (wallet, badge_type, cycle_id). Used by the re-sign endpoint to confirm prior issuance. */
 export async function getAnyClaim(
   walletAddress: string,
   badgeType: string,

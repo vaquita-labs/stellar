@@ -154,17 +154,17 @@ async function getTiebreakerData(
 }
 
 // ---------------------------------------------------------------------------
-// Cycle-close pipeline: issue Cat A/B signed claims
+// Cycle-close pipeline: issue leaderboard signed claims
 // ---------------------------------------------------------------------------
 
-const CAT_A_BADGES: Record<number, string> = { 1: 'gold', 2: 'silver', 3: 'bronze' };
+const LEADERBOARD_BADGES: Record<number, string> = { 1: 'first-place', 2: 'second-place', 3: 'third-place' };
 
 /**
- * Closes the leaderboard for a given cycle: ranks the top 10, issues Cat A/B
- * signed claims, and stores them in Supabase.
+ * Closes the leaderboard for a given cycle: ranks the top 10, issues signed
+ * claims, and stores them in Supabase.
  *
- * - Ranks #1–3: receive a Cat A badge (gold/silver/bronze) + a Cat B badge (top10)
- * - Ranks #4–10: receive a Cat B badge (top10)
+ * - Ranks #1–3: receive a leaderboard badge (first-place/second-place/third-place) + top10
+ * - Ranks #4–10: receive a top10 badge
  * - Idempotent: existing claims for (wallet, badge_type, cycleId) are skipped
  */
 export async function closeLeaderboardCycle(
@@ -201,13 +201,13 @@ export async function closeLeaderboardCycle(
     const { walletAddress } = ranked[i]!;
     const expiry = makeClaimExpiry();
 
-    // Cat B — top10 (all top-10)
+    // top10 badge (all top-10)
     await issueClaim(keypair, walletAddress, 'top10', cycleId, expiry);
 
-    // Cat A — gold/silver/bronze (ranks 1–3)
-    const catABadge = CAT_A_BADGES[rank];
-    if (catABadge) {
-      await issueClaim(keypair, walletAddress, catABadge, cycleId, expiry);
+    // leaderboard podium badge (ranks 1–3)
+    const podiumBadge = LEADERBOARD_BADGES[rank];
+    if (podiumBadge) {
+      await issueClaim(keypair, walletAddress, podiumBadge, cycleId, expiry);
     }
   }
 }
