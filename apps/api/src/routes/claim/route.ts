@@ -1,25 +1,18 @@
 import { type NextFunction, type Request, type RequestHandler, type Response, Router } from 'express';
 import {
-  checkDisciplinadoEligibility,
-  checkFirstDepositEligibility,
-  checkGenesisSaverEligibility,
-  checkMainnetPioneerEligibility,
-  checkMaratonistEligibility,
-  checkPrimeraVaquitaEligibility,
-  checkTrimestralEligibility,
-  checkVeteranoEligibility,
   confirmBadgeClaim,
   contractHasClaimed,
   getActiveBadgeClaim,
-  getAnyClaim,
   getBadgeSigningKeypair,
+  getLastClosedCycleId,
   getMintedBadges,
-  getNetworkByName,
   makeClaimExpiry,
   signBadgeClaim,
   storeBadgeClaim,
+  supabase,
   supersedeBadgeClaim,
   toClaimPayload,
+  getNetworkByName,
 } from '@vaquita/shared';
 
 const router = Router();
@@ -34,23 +27,6 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
       next(err);
     }
   };
-
-// ---------------------------------------------------------------------------
-// Supported badge types and their eligibility checkers
-// ---------------------------------------------------------------------------
-
-type EligibilityChecker = (wallet: string) => Promise<boolean>;
-
-const BADGE_ELIGIBILITY: Record<string, { cycleId: number; check: EligibilityChecker }> = {
-  'first-deposit':  { cycleId: 0, check: checkFirstDepositEligibility },
-  primera_vaquita:  { cycleId: 0, check: checkPrimeraVaquitaEligibility },
-  maratonista:      { cycleId: 0, check: checkMaratonistEligibility },
-  trimestral:       { cycleId: 0, check: checkTrimestralEligibility },
-  veterano:         { cycleId: 0, check: checkVeteranoEligibility },
-  disciplinado:     { cycleId: 0, check: checkDisciplinadoEligibility },
-  genesis_saver:    { cycleId: 0, check: checkGenesisSaverEligibility },
-  mainnet_pioneer:  { cycleId: 0, check: checkMainnetPioneerEligibility },
-};
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/claim/:networkName/minted?wallet=G...
@@ -111,15 +87,16 @@ router.post(
 );
 
 // ---------------------------------------------------------------------------
-// GET /api/v1/claim/:networkName?type=primera_vaquita&wallet=G...
+// GET /api/v1/claim/:networkName?type=<badge_key>&wallet=G...
 // ---------------------------------------------------------------------------
 
 /**
  * Returns a signed claim payload ready to pass to `mint_badge` on-chain.
+ * Gate: wallet must have a row in profiles_achievements for this badge.
  *
  * 200 { badge_type, cycle_id, expiry, signature }
  * 400 missing / unknown parameters
- * 403 wallet is not eligible for the requested badge type
+ * 403 wallet has not claimed the achievement off-chain yet
  * 503 badges_contract_address not set for this network
  */
 router.get(
@@ -141,21 +118,43 @@ router.get(
       return res.status(503).json({ status: 'error', message: 'Badge contract not configured for this network' });
     }
 
-    const badgeConfig = BADGE_ELIGIBILITY[badgeType];
-    if (!badgeConfig) {
+    // Verify the achievement exists in the catalog
+    const { data: achievement } = await supabase
+      .from('achievements')
+      .select('id, cycle_scoped, refresh_policy')
+      .eq('key', badgeType)
+      .maybeSingle();
+
+    if (!achievement) {
       return res.status(400).json({ status: 'error', message: `Unknown badge type: ${badgeType}` });
     }
 
     req.log.info({ badgeType, wallet, networkName }, 'GET /claim/:networkName');
 
-    // Check eligibility
-    const eligible = await badgeConfig.check(wallet);
-    if (!eligible) {
-      req.log.info({ badgeType, wallet }, 'Wallet not eligible for badge');
+    // Gate: wallet must have claimed the achievement off-chain
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('wallet_address', wallet)
+      .maybeSingle();
+
+    if (!profile) {
       return res.status(403).json({ status: 'error', message: 'Wallet is not eligible for this badge' });
     }
 
-    const { cycleId } = badgeConfig;
+    const { data: claimed } = await supabase
+      .from('profiles_achievements')
+      .select('id')
+      .eq('profile_id', profile.id)
+      .eq('achievement_id', achievement.id)
+      .maybeSingle();
+
+    if (!claimed) {
+      req.log.info({ badgeType, wallet }, 'Achievement not yet claimed off-chain');
+      return res.status(403).json({ status: 'error', message: 'Achievement not yet earned. Complete the challenge first.' });
+    }
+
+    const cycleId = achievement.cycle_scoped ? getLastClosedCycleId() : 0;
 
     // Return existing unexpired active claim if present
     const existing = await getActiveBadgeClaim(wallet, badgeType, cycleId);
@@ -166,11 +165,9 @@ router.get(
         req.log.info({ badgeType, wallet, claimId: existing.id }, 'Returning existing active claim');
         return res.json({ status: 'success', data: toClaimPayload(existing) });
       }
-      // Claim expired — fall through to issue a fresh one (supersede handled below)
     }
 
     // Issue a new signed claim
-    const expiry = makeClaimExpiry();
     let keypair;
     try {
       keypair = getBadgeSigningKeypair();
@@ -178,6 +175,7 @@ router.get(
       return res.status(500).json({ status: 'error', message: 'Badge signing key not configured' });
     }
 
+    const expiry = makeClaimExpiry();
     const signature = signBadgeClaim(wallet, badgeType, cycleId, expiry, keypair);
     const stored = await storeBadgeClaim({ walletAddress: wallet, badgeType, cycleId, expiry, signature });
 
@@ -192,11 +190,11 @@ router.get(
 
 /**
  * Re-issues a fresh signed claim whose original signature has expired.
- * Automatically re-verifies eligibility before issuing.
+ * Uses profiles_achievements as the eligibility gate.
  *
  * 200 { badge_type, cycle_id, expiry, signature }
  * 400 missing / invalid body params
- * 403 wallet no longer eligible
+ * 403 manual badge (requires admin re-sign) or achievement not yet earned
  * 409 badge already minted on-chain for this wallet
  * 503 badges_contract_address not set for this network
  */
@@ -231,34 +229,56 @@ router.post(
 
     req.log.info({ badgeType, wallet, cycleId, networkName }, 'POST /claim/:networkName/refresh');
 
+    // Check refresh_policy — manual badges require admin action
+    const { data: achievement } = await supabase
+      .from('achievements')
+      .select('id, refresh_policy')
+      .eq('key', badgeType)
+      .maybeSingle();
+
+    if (!achievement) {
+      return res.status(400).json({ status: 'error', message: `Unknown badge type: ${badgeType}` });
+    }
+
+    if (achievement.refresh_policy === 'manual') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Manual badges require admin re-sign. Contact support@vaquita.fi',
+      });
+    }
+
     // Check if already minted on-chain
     const alreadyMinted = await contractHasClaimed(contractId, wallet, badgeType, cycleId);
     if (alreadyMinted) {
       return res.status(409).json({ status: 'error', message: 'Badge already minted on-chain' });
     }
 
-    // Verify eligibility
-    const badgeConfig = BADGE_ELIGIBILITY[badgeType];
-    if (badgeConfig) {
-      const eligible = await badgeConfig.check(wallet);
-      if (!eligible) {
-        return res.status(403).json({ status: 'error', message: 'Wallet is not eligible for this badge' });
-      }
-    } else {
-      // Leaderboard / manual badges: confirm a prior claim was issued for this exact cycle
-      const prior = await getAnyClaim(wallet, badgeType, cycleId);
-      if (!prior) {
-        return res.status(403).json({
-          status: 'error',
-          message: 'No prior claim found for this wallet, badge type, and cycle',
-        });
-      }
+    // Gate: wallet must have claimed the achievement off-chain
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('wallet_address', wallet)
+      .maybeSingle();
+
+    if (!profile) {
+      return res.status(403).json({ status: 'error', message: 'Achievement not yet earned' });
+    }
+
+    const { data: claimed } = await supabase
+      .from('profiles_achievements')
+      .select('id')
+      .eq('profile_id', profile.id)
+      .eq('achievement_id', achievement.id)
+      .maybeSingle();
+
+    if (!claimed) {
+      return res.status(403).json({ status: 'error', message: 'Achievement not yet earned' });
     }
 
     // Supersede any active (unexpired) prior claim
-    const existing = await getActiveBadgeClaim(wallet, badgeType, cycleId);
-    if (existing) {
-      await supersedeBadgeClaim(existing.id);
+    const existingClaim = await getActiveBadgeClaim(wallet, badgeType, cycleId);
+    if (existingClaim) {
+      await supersedeBadgeClaim(existingClaim.id);
     }
 
     // Issue fresh claim

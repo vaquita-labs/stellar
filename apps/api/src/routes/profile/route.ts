@@ -6,6 +6,8 @@ import {
   computeEligibilitySignals,
   getAchievementCountsByProfile,
   getCachedProfilesDepositsByProfileId,
+  getLastClosedCycleId,
+  getLeaderboardRankForWallet,
   getNetworkByName,
   getProfile,
   getProfileMapObjects,
@@ -276,13 +278,34 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim
     return sendError(res, `Unknown achievement: ${key}`, null, 404);
   }
 
-  const signals = await computeEligibilitySignals(networkData, profileData);
-  if (!isEligibleForAchievement(signals, achievementKey)) {
-    req.log.warn(
-      { profileId: profileData.id, key, signals },
-      'Profile is not eligible for achievement',
-    );
-    return sendError(res, 'You are not eligible for this achievement yet.', null, 403);
+  // For cycle_scoped badges (leaderboard), verify rank against last closed cycle
+  const { data: achievementDoc } = await supabase
+    .from('achievements')
+    .select('cycle_scoped')
+    .eq('key', achievementKey)
+    .maybeSingle();
+
+  if (achievementDoc?.cycle_scoped) {
+    const cycleId = getLastClosedCycleId();
+    const rank = await getLeaderboardRankForWallet(walletAddress, cycleId, networkData.id as number);
+    const requiredRank: Record<string, number> = {
+      'first-place': 1,
+      'second-place': 2,
+      'third-place': 3,
+    };
+    if (rank !== requiredRank[achievementKey]) {
+      req.log.warn({ profileId: profileData.id, key, rank, cycleId }, 'Wallet did not finish at required leaderboard rank');
+      return sendError(res, 'You did not finish at the required leaderboard rank last cycle.', null, 403);
+    }
+  } else {
+    const signals = await computeEligibilitySignals(networkData, profileData);
+    if (!isEligibleForAchievement(signals, achievementKey)) {
+      req.log.warn(
+        { profileId: profileData.id, key, signals },
+        'Profile is not eligible for achievement',
+      );
+      return sendError(res, 'You are not eligible for this achievement yet.', null, 403);
+    }
   }
 
   const result = await claimAchievement(profileData.id, achievementKey);
