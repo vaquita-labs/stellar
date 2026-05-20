@@ -90,11 +90,11 @@ export async function getLeaderboard(
   // Fetch all confirmed deposits that overlap [cycleStart, cycleEnd)
   const { data: deposits, error } = await supabase
     .from('deposits')
-    .select('wallet_address, amount, confirmed_at, withdrawals(confirmed_at, status, reward)')
+    .select('wallet_address, amount, updated_at, withdrawals(updated_at, status, reward)')
     .eq('network_id', networkId)
     .eq('status', 'confirmed')
-    .lt('confirmed_at', new Date(cycleEnd).toISOString())
-    .not('confirmed_at', 'is', null);
+    .lt('updated_at', new Date(cycleEnd).toISOString())
+    .not('updated_at', 'is', null);
 
   if (error) throw error;
 
@@ -104,11 +104,11 @@ export async function getLeaderboard(
   for (const deposit of deposits ?? []) {
     const wallet = deposit.wallet_address as string;
     const amount = Number(deposit.amount ?? 0);
-    const depositedAt = new Date((deposit.confirmed_at as string)).getTime();
+    const depositedAt = new Date((deposit.updated_at as string)).getTime();
 
     // Find an on-time confirmed withdrawal (reward > 0)
     const withdrawals = (deposit.withdrawals ?? []) as Array<{
-      confirmed_at: string | null;
+      updated_at: string | null;
       status: string;
       reward: string | null;
     }>;
@@ -120,8 +120,8 @@ export async function getLeaderboard(
     let effectiveEnd: number;
     let isActive: boolean;
 
-    if (onTimeWithdrawal?.confirmed_at) {
-      const withdrawnAt = new Date(onTimeWithdrawal.confirmed_at).getTime();
+    if (onTimeWithdrawal?.updated_at) {
+      const withdrawnAt = new Date(onTimeWithdrawal.updated_at).getTime();
       // Only count if withdrawal was after cycle start
       if (withdrawnAt <= cycleStart) continue;
       effectiveEnd = Math.min(withdrawnAt, cycleEnd);
@@ -173,11 +173,11 @@ async function getTiebreakerData(
 ): Promise<TiebreakerData> {
   const { data, error } = await supabase
     .from('deposits')
-    .select('confirmed_at, withdrawals(status, reward)')
+    .select('updated_at, withdrawals(status, reward)')
     .eq('wallet_address', walletAddress)
     .eq('network_id', networkId)
     .eq('status', 'confirmed')
-    .order('confirmed_at', { ascending: true });
+    .order('updated_at', { ascending: true });
 
   if (error) throw error;
 
@@ -185,7 +185,7 @@ async function getTiebreakerData(
   let lastDepositTimestamp = 0;
 
   for (const deposit of data ?? []) {
-    const ts = new Date((deposit.confirmed_at as string)).getTime();
+    const ts = new Date((deposit.updated_at as string)).getTime();
     if (ts > lastDepositTimestamp) lastDepositTimestamp = ts;
 
     const hasOnTime = (deposit.withdrawals as any[]).some(
