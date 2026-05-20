@@ -94,6 +94,12 @@ export interface AchievementDocument {
   /** When TRUE, the achievement is filtered out of the public catalog response
    *  unless the user has already claimed it. */
   hidden?: boolean,
+  /** Controls whether the claim endpoint re-signs on demand ('auto') or requires
+   *  admin intervention ('manual'). Defaults to 'auto'. */
+  refresh_policy: 'auto' | 'manual',
+  /** TRUE for leaderboard badges — eligibility is tied to a specific closed
+   *  cycle's rank, not live signals. */
+  cycle_scoped: boolean,
   created_at: string,
   updated_at: string,
 }
