@@ -23,7 +23,6 @@ fn success() {
     let principal: i128 = 200_000_0000000;
     usdc_client.mint(&alice, &principal);
 
-    // Mock DeFindex vault: mints shares 1:1, holds USDC, returns it on withdraw.
     let defindex_vault_address = e.register(
         MockDeFindexVault,
         MockDeFindexVaultArgs::__constructor(&usdc.address()),

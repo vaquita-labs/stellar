@@ -1,13 +1,18 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, vec, Address, Env, String, IntoVal, Vec, Symbol, token::Client as TokenClient,
+    contract, contractimpl, vec, Address, Env, String, IntoVal, Vec, Symbol,
+    token::Client as TokenClient,
     auth::{InvokerContractAuthEntry, ContractContext, SubContractInvocation},
 };
 
+mod admin;
+mod arithmetic;
 mod defindex_vault;
 mod error;
+mod events;
 mod types;
 
+pub use error::VaquitaPoolError;
 pub use types::{DataKey, Period, Position};
 
 use defindex_vault::DeFindexVaultClient;
@@ -26,9 +31,9 @@ impl VaquitaPool {
         blend_token: Address,
         defindex_vault_address: Address,
         lock_periods: Vec<u64>,
-    ) {
+    ) -> Result<(), VaquitaPoolError> {
         if env.storage().instance().has(&DataKey::Admin) {
-            panic!("Already initialized");
+            return Err(VaquitaPoolError::DepositAlreadyExists);
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::BlendToken, &blend_token);
@@ -38,50 +43,61 @@ impl VaquitaPool {
         env.storage().instance().set(&DataKey::ProtocolFees, &0i128);
 
         for lp in lock_periods.iter() {
-            env.storage().instance().set(&DataKey::SupportedLockPeriod(lp.clone()), &true);
+            env.storage()
+                .instance()
+                .set(&DataKey::SupportedLockPeriod(lp), &true);
         }
-    }
-
-    // ---------- Owner Check ----------
-    fn require_owner(env: &Env, caller: Address) {
-        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
-        if caller != admin {
-            panic!("Not owner");
-        }
+        Ok(())
     }
 
     // ---------- Deposit ----------
-    pub fn deposit(env: Env, caller: Address, deposit_id: String, amount: i128, period: u64) {
+    pub fn deposit(
+        env: Env,
+        caller: Address,
+        deposit_id: String,
+        amount: i128,
+        period: u64,
+    ) -> Result<(), VaquitaPoolError> {
         caller.require_auth();
 
         if amount <= 0 {
-            panic!("Invalid amount");
+            return Err(VaquitaPoolError::InvalidAmount);
         }
-        if env.storage().instance().has(&DataKey::Positions(deposit_id.clone())) {
-            panic!("Deposit already exists");
+        if env
+            .storage()
+            .instance()
+            .has(&DataKey::Positions(deposit_id.clone()))
+        {
+            return Err(VaquitaPoolError::DepositAlreadyExists);
         }
-        let supported: bool = env.storage().instance()
+        let supported: bool = env
+            .storage()
+            .instance()
             .get(&DataKey::SupportedLockPeriod(period))
             .unwrap_or(false);
         if !supported {
-            panic!("Invalid period");
+            return Err(VaquitaPoolError::InvalidPeriod);
         }
 
-        let blend_token: Address = env.storage().instance().get(&DataKey::BlendToken).unwrap();
-        let defindex_vault_address: Address = env.storage().instance().get(&DataKey::DeFindexVaultAddress).unwrap();
+        let blend_token: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::BlendToken)
+            .ok_or(VaquitaPoolError::NotInitialized)?;
+        let defindex_vault_address: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::DeFindexVaultAddress)
+            .ok_or(VaquitaPoolError::NotInitialized)?;
         let contract_address = env.current_contract_address();
         let finalization_time = env.ledger().timestamp() + period;
 
-        // Step 1: Pull blend_token from caller to this contract.
         let token_client = TokenClient::new(&env, &blend_token);
         token_client.transfer(&caller, &contract_address, &amount);
 
         let defindex_vault_client = DeFindexVaultClient::new(&env, &defindex_vault_address);
         let shares_before = defindex_vault_client.balance(&contract_address);
 
-        // Step 2: Pre-authorize the vault's internal token.transfer(pool -> vault, amount).
-        // The vault may also invoke strategy sub-calls when `invest=true`, but those are
-        // authorized by the vault itself (source = vault), so we don't need to list them here.
         env.authorize_as_current_contract(vec![
             &env,
             InvokerContractAuthEntry::Contract(SubContractInvocation {
@@ -99,9 +115,6 @@ impl VaquitaPool {
             }),
         ]);
 
-        // Step 3: Deposit into the DeFindex vault. Single-asset vault, so the Vecs
-        // carry a single element. `amounts_min = amounts_desired` disables slippage
-        // tolerance for now; revisit if the vault starts running a swap on entry.
         let amounts_desired = vec![&env, amount];
         let amounts_min = vec![&env, amount];
         let (_actual_amounts, _minted_reported, _allocations) = defindex_vault_client.deposit(
@@ -112,11 +125,11 @@ impl VaquitaPool {
         );
         let shares_after = defindex_vault_client.balance(&contract_address);
         if shares_after < shares_before {
-            panic!("Vault share balance decreased after deposit");
+            return Err(VaquitaPoolError::VaultShareBalanceDecreased);
         }
-        let shares = shares_after - shares_before;
+        let shares = arithmetic::checked_sub(shares_after, shares_before)?;
         if shares <= 0 {
-            panic!("Vault returned zero shares");
+            return Err(VaquitaPoolError::VaultReturnedZeroShares);
         }
 
         let position = Position {
@@ -126,38 +139,54 @@ impl VaquitaPool {
             finalization_time,
             lock_period: period,
         };
-        env.storage().instance().set(&DataKey::Positions(deposit_id.clone()), &position);
+        env.storage()
+            .instance()
+            .set(&DataKey::Positions(deposit_id.clone()), &position);
 
-        let mut period_data: Period = env.storage().instance()
+        let mut period_data: Period = env
+            .storage()
+            .instance()
             .get(&DataKey::Periods(period))
             .unwrap_or(Period { reward_pool: 0, total_deposits: 0 });
-        period_data.total_deposits += amount;
-        env.storage().instance().set(&DataKey::Periods(period), &period_data);
+        period_data.total_deposits = arithmetic::checked_add(period_data.total_deposits, amount)?;
+        env.storage()
+            .instance()
+            .set(&DataKey::Periods(period), &period_data);
 
-        env.events().publish(
-            (Symbol::new(&env, "deposit"), caller),
-            (deposit_id, blend_token, amount, shares),
-        );
+        events::emit_deposit(&env, caller, deposit_id, blend_token, amount, shares);
+        Ok(())
     }
 
     // ---------- Withdraw ----------
-    pub fn withdraw(env: Env, caller: Address, deposit_id: String) {
+    pub fn withdraw(
+        env: Env,
+        caller: Address,
+        deposit_id: String,
+    ) -> Result<(), VaquitaPoolError> {
         caller.require_auth();
 
-        let position: Position = env.storage().instance().get(&DataKey::Positions(deposit_id.clone()))
-            .unwrap_or_else(|| panic!("Position not found"));
+        let position: Position = env
+            .storage()
+            .instance()
+            .get(&DataKey::Positions(deposit_id.clone()))
+            .ok_or(VaquitaPoolError::PositionNotFound)?;
 
         if caller != position.owner {
-            panic!("Not position owner");
+            return Err(VaquitaPoolError::NotOwner);
         }
 
-        let blend_token: Address = env.storage().instance().get(&DataKey::BlendToken).unwrap();
-        let defindex_vault_address: Address = env.storage().instance().get(&DataKey::DeFindexVaultAddress).unwrap();
+        let blend_token: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::BlendToken)
+            .ok_or(VaquitaPoolError::NotInitialized)?;
+        let defindex_vault_address: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::DeFindexVaultAddress)
+            .ok_or(VaquitaPoolError::NotInitialized)?;
         let contract_address = env.current_contract_address();
 
-        // Redeem every share we hold for this position. The vault returns a Vec with
-        // one element per asset (we only have one), which is the gross asset amount
-        // including any accrued yield the strategies earned.
         let defindex_vault_client = DeFindexVaultClient::new(&env, &defindex_vault_address);
         let withdrawn_amounts = defindex_vault_client.withdraw(
             &position.shares,
@@ -166,11 +195,8 @@ impl VaquitaPool {
         );
         let gross = withdrawn_amounts.get_unchecked(0);
 
-        // Yield = whatever the vault returned beyond the original principal.
-        // Can be zero (or negative if the strategy lost money); treat losses as zero
-        // so the early-withdrawal accounting stays non-negative.
         let interest = if gross > position.amount {
-            gross - position.amount
+            arithmetic::checked_sub(gross, position.amount)?
         } else {
             0
         };
@@ -179,100 +205,186 @@ impl VaquitaPool {
         let mut amount_to_transfer = gross;
         let mut reward: i128 = 0;
 
-        let mut period_data: Period = env.storage().instance()
+        let mut period_data: Period = env
+            .storage()
+            .instance()
             .get(&DataKey::Periods(position.lock_period))
-            .unwrap_or_else(|| panic!("Period data not found"));
+            .ok_or(VaquitaPoolError::PeriodDataNotFound)?;
 
         if now < position.finalization_time {
-            // Early withdrawal: protocol takes a cut of the interest, the remainder
-            // stays in the reward pool. Principal is always returned.
-            let early_fee: i128 = env.storage().instance().get(&DataKey::EarlyWithdrawalFee).unwrap();
-            let fee_amount = (interest * early_fee) / 10000;
-            let remaining_interest = interest - fee_amount;
-            let mut protocol_fees: i128 = env.storage().instance().get(&DataKey::ProtocolFees).unwrap();
-            protocol_fees += fee_amount;
-            env.storage().instance().set(&DataKey::ProtocolFees, &protocol_fees);
-            period_data.reward_pool += remaining_interest;
-            amount_to_transfer -= interest;
+            let early_fee: i128 = env
+                .storage()
+                .instance()
+                .get(&DataKey::EarlyWithdrawalFee)
+                .unwrap_or(0);
+            let basis_points: i128 = env
+                .storage()
+                .instance()
+                .get(&DataKey::BasisPoints)
+                .unwrap_or(10000);
+            let fee_amount = arithmetic::checked_div(
+                arithmetic::checked_mul(interest, early_fee)?,
+                basis_points,
+            )?;
+            let remaining_interest = arithmetic::checked_sub(interest, fee_amount)?;
+            let mut protocol_fees: i128 = env
+                .storage()
+                .instance()
+                .get(&DataKey::ProtocolFees)
+                .unwrap_or(0);
+            protocol_fees = arithmetic::checked_add(protocol_fees, fee_amount)?;
+            env.storage()
+                .instance()
+                .set(&DataKey::ProtocolFees, &protocol_fees);
+            period_data.reward_pool = arithmetic::checked_add(period_data.reward_pool, remaining_interest)?;
+            amount_to_transfer = arithmetic::checked_sub(amount_to_transfer, interest)?;
         } else {
-            // On-time: principal + interest + proportional share of the reward pool.
-            reward = Self::calculate_reward(&period_data, position.amount);
-            period_data.reward_pool -= reward;
-            amount_to_transfer += reward;
+            reward = Self::calculate_reward(&period_data, position.amount)?;
+            period_data.reward_pool = arithmetic::checked_sub(period_data.reward_pool, reward)?;
+            amount_to_transfer = arithmetic::checked_add(amount_to_transfer, reward)?;
         }
 
         let token_client = TokenClient::new(&env, &blend_token);
         token_client.transfer(&contract_address, &caller, &amount_to_transfer);
 
-        period_data.total_deposits -= position.amount;
-        env.storage().instance().set(&DataKey::Periods(position.lock_period), &period_data);
-        env.storage().instance().remove(&DataKey::Positions(deposit_id.clone()));
+        period_data.total_deposits = arithmetic::checked_sub(period_data.total_deposits, position.amount)?;
+        env.storage()
+            .instance()
+            .set(&DataKey::Periods(position.lock_period), &period_data);
+        env.storage()
+            .instance()
+            .remove(&DataKey::Positions(deposit_id.clone()));
 
-        env.events().publish(
-            (Symbol::new(&env, "withdraw"), caller.clone()),
-            (deposit_id, blend_token, amount_to_transfer, reward),
-        );
+        events::emit_withdraw(&env, caller, deposit_id, blend_token, amount_to_transfer, reward);
+        Ok(())
     }
 
-    fn calculate_reward(period_data: &Period, amount: i128) -> i128 {
+    fn calculate_reward(period_data: &Period, amount: i128) -> Result<i128, VaquitaPoolError> {
         if period_data.total_deposits == 0 {
-            return 0;
+            return Ok(0);
         }
-        (period_data.reward_pool * amount) / period_data.total_deposits
+        arithmetic::checked_div(
+            arithmetic::checked_mul(period_data.reward_pool, amount)?,
+            period_data.total_deposits,
+        )
     }
 
-    // ---------- Owner functions ----------
-    pub fn withdraw_protocol_fees(env: Env, caller: Address) {
-        caller.require_auth();
-        Self::require_owner(&env, caller.clone());
-        let blend_token: Address = env.storage().instance().get(&DataKey::BlendToken).unwrap();
+    // ---------- Admin entrypoints ----------
+
+    pub fn withdraw_protocol_fees(env: Env) -> Result<(), VaquitaPoolError> {
+        admin::require_owner(&env)?;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(VaquitaPoolError::NotInitialized)?;
+        let blend_token: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::BlendToken)
+            .ok_or(VaquitaPoolError::NotInitialized)?;
         let contract_address = env.current_contract_address();
-        let protocol_fees: i128 = env.storage().instance().get(&DataKey::ProtocolFees).unwrap();
+        let protocol_fees: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::ProtocolFees)
+            .unwrap_or(0);
 
         if protocol_fees > 0 {
             let token_client = TokenClient::new(&env, &blend_token);
-            token_client.transfer(&contract_address, &caller, &protocol_fees);
-            env.storage().instance().set(&DataKey::ProtocolFees, &0i128);
+            token_client.transfer(&contract_address, &admin, &protocol_fees);
+            env.storage()
+                .instance()
+                .set(&DataKey::ProtocolFees, &0i128);
         }
+        Ok(())
     }
 
-    pub fn add_rewards(env: Env, caller: Address, period: u64, reward_amount: i128) {
-        caller.require_auth();
-        Self::require_owner(&env, caller.clone());
+    pub fn add_rewards(
+        env: Env,
+        period: u64,
+        reward_amount: i128,
+    ) -> Result<(), VaquitaPoolError> {
+        admin::require_owner(&env)?;
 
-        let blend_token: Address = env.storage().instance().get(&DataKey::BlendToken).unwrap();
-        let contract_address = env.current_contract_address();
-        let token_client = TokenClient::new(&env, &blend_token);
-        token_client.transfer(&caller, &contract_address, &reward_amount);
-
-        let supported: bool = env.storage().instance().get(&DataKey::SupportedLockPeriod(period)).unwrap_or(false);
+        if reward_amount <= 0 {
+            return Err(VaquitaPoolError::InvalidAmount);
+        }
+        let supported: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::SupportedLockPeriod(period))
+            .unwrap_or(false);
         if !supported {
-            panic!("Invalid period");
+            return Err(VaquitaPoolError::LockPeriodNotSupported);
         }
-        let mut period_data: Period = env.storage().instance().get(&DataKey::Periods(period)).unwrap_or(Period {
-            reward_pool: 0,
-            total_deposits: 0,
-        });
-        period_data.reward_pool += reward_amount;
-        env.storage().instance().set(&DataKey::Periods(period), &period_data);
+        let period_data: Period = env
+            .storage()
+            .instance()
+            .get(&DataKey::Periods(period))
+            .unwrap_or(Period { reward_pool: 0, total_deposits: 0 });
+        if period_data.total_deposits == 0 {
+            return Err(VaquitaPoolError::PeriodHasNoDeposits);
+        }
+
+        let blend_token: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::BlendToken)
+            .ok_or(VaquitaPoolError::NotInitialized)?;
+        let contract_address = env.current_contract_address();
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(VaquitaPoolError::NotInitialized)?;
+        let token_client = TokenClient::new(&env, &blend_token);
+        token_client.transfer(&admin, &contract_address, &reward_amount);
+
+        let mut updated = period_data;
+        updated.reward_pool = arithmetic::checked_add(updated.reward_pool, reward_amount)?;
+        env.storage()
+            .instance()
+            .set(&DataKey::Periods(period), &updated);
+        Ok(())
     }
 
-    pub fn update_early_withdrawal_fee(env: Env, caller: Address, new_fee: i128) {
-        Self::require_owner(&env, caller);
-        let basis_points: i128 = env.storage().instance().get(&DataKey::BasisPoints).unwrap();
+    pub fn update_early_withdrawal_fee(
+        env: Env,
+        new_fee: i128,
+    ) -> Result<(), VaquitaPoolError> {
+        admin::require_owner(&env)?;
+        let basis_points: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::BasisPoints)
+            .unwrap_or(10000);
         if new_fee > basis_points {
-            panic!("Invalid fee");
+            return Err(VaquitaPoolError::InvalidFee);
         }
-        env.storage().instance().set(&DataKey::EarlyWithdrawalFee, &new_fee);
+        env.storage()
+            .instance()
+            .set(&DataKey::EarlyWithdrawalFee, &new_fee);
+        Ok(())
     }
 
-    pub fn add_lock_period(env: Env, caller: Address, new_lock_period: u64) {
-        Self::require_owner(&env, caller);
-        let exists: bool = env.storage().instance().get(&DataKey::SupportedLockPeriod(new_lock_period)).unwrap_or(false);
+    pub fn add_lock_period(
+        env: Env,
+        new_lock_period: u64,
+    ) -> Result<(), VaquitaPoolError> {
+        admin::require_owner(&env)?;
+        let exists: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::SupportedLockPeriod(new_lock_period))
+            .unwrap_or(false);
         if exists {
-            panic!("Lock period already supported");
+            return Err(VaquitaPoolError::LockPeriodAlreadySupported);
         }
-        env.storage().instance().set(&DataKey::SupportedLockPeriod(new_lock_period), &true);
+        env.storage()
+            .instance()
+            .set(&DataKey::SupportedLockPeriod(new_lock_period), &true);
+        Ok(())
     }
 
     // ---------- View functions ----------
@@ -282,13 +394,6 @@ impl VaquitaPool {
 
     pub fn get_period_data(env: Env, period: u64) -> Option<Period> {
         env.storage().instance().get(&DataKey::Periods(period))
-    }
-}
-
-#[cfg(test)]
-impl VaquitaPool {
-    pub fn test_calculate_reward(period_data: &Period, amount: i128) -> i128 {
-        Self::calculate_reward(period_data, amount)
     }
 }
 
