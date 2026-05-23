@@ -179,6 +179,7 @@ pub mod mock_defindex_vault;
 
 mod arithmetic;
 mod pool_coverage;
+mod positions;
 mod success;
 
 /// Test helper: calculates the reward share for `amount` given `period_data`.
