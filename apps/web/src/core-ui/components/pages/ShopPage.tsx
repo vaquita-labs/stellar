@@ -3,7 +3,6 @@
 import { Button, Card, Modal, toast } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { FiArrowDown, FiArrowUp, FiFilter, FiSearch, FiX } from 'react-icons/fi';
 import { useProfileRewards } from '../../hooks';
@@ -13,12 +12,15 @@ import { ShopItem, ShopItemBiome, ShopItemRarity, ShopItemType } from '../organi
 
 type SortOption = 'price-asc' | 'price-desc';
 
+// Single-currency catalogue. Prices were rebalanced from the previous
+// silver+gold pricing using a 100 silver = 1 gold ratio (rounded up, min 1),
+// so the relative ordering of items matches the legacy economy.
 const shopItems: ShopItem[] = [
   {
     id: '1',
     name: 'Tree',
     description: 'A beautiful tree to decorate your map. Always available!',
-    price: { silverCoins: 1 },
+    price: { goldCoins: 1 },
     image: '/icons/summary/streak_freeze.png',
     alwaysAvailable: true,
     biome: 'forest',
@@ -29,7 +31,7 @@ const shopItems: ShopItem[] = [
     id: '2',
     name: 'Streak Freeze',
     description: 'Protect your streak for one day if you cannot maintain it',
-    price: { silverCoins: 50 },
+    price: { goldCoins: 1 },
     image: '/icons/summary/streak_freeze.png',
     biome: 'any',
     type: 'utility',
@@ -39,7 +41,7 @@ const shopItems: ShopItem[] = [
     id: '3',
     name: 'Streak Repair',
     description: 'Restore your streak up to 7 days',
-    price: { silverCoins: 100, goldCoins: 1 },
+    price: { goldCoins: 2 },
     image: '/icons/summary/streak.png',
     biome: 'any',
     type: 'utility',
@@ -69,7 +71,7 @@ const shopItems: ShopItem[] = [
     id: '6',
     name: 'Energy Boost',
     description: 'Double your daily rewards for 24 hours',
-    price: { silverCoins: 75, goldCoins: 1 },
+    price: { goldCoins: 2 },
     image: '/icons/summary/streak.png',
     biome: 'any',
     type: 'boost',
@@ -99,7 +101,7 @@ const shopItems: ShopItem[] = [
     id: '9',
     name: 'Decorative Fountain',
     description: 'A stunning fountain to enhance your map',
-    price: { silverCoins: 150 },
+    price: { goldCoins: 2 },
     image: '/icons/summary/edit_map.png',
     biome: 'desert',
     type: 'decoration',
@@ -110,7 +112,7 @@ const shopItems: ShopItem[] = [
     name: 'Golden Statue',
     description: 'A prestigious golden statue for your collection',
     price: { goldCoins: 15 },
-    image: '/icons/summary/gold_coin.png',
+    image: '/icons/global/coin.png',
     biome: 'mountain',
     type: 'decoration',
     rarity: 'legendary',
@@ -148,10 +150,6 @@ const rarityStyles: Record<ShopItemRarity, { badge: string; ring: string }> = {
   legendary: { badge: 'bg-amber-100 text-amber-800 border-amber-400', ring: 'ring-amber-400' },
 };
 
-function priceValue(item: ShopItem): number {
-  return (item.price.silverCoins ?? 0) + (item.price.goldCoins ?? 0) * 100;
-}
-
 export function ShopPage() {
   const { data: profileRewards, refetch } = useProfileRewards();
   const queryClient = useQueryClient();
@@ -166,21 +164,17 @@ export function ShopPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<ShopItem | null>(null);
   const [offerMode, setOfferMode] = useState(false);
-  const [offerSilver, setOfferSilver] = useState('');
   const [offerGold, setOfferGold] = useState('');
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isOffering, setIsOffering] = useState(false);
 
-  const silverCoins = profileRewards?.rewards?.find((r) => r?.name === 'Silver Coin')?.amount ?? 0;
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
 
   const activeFilterCount = biomes.length + types.length + rarities.length;
 
   const canAfford = (item: ShopItem): boolean => {
     if (item.alwaysAvailable) return true;
-    const okSilver = !item.price.silverCoins || silverCoins >= item.price.silverCoins;
-    const okGold = !item.price.goldCoins || goldCoins >= item.price.goldCoins;
-    return okSilver && okGold;
+    return goldCoins >= item.price.goldCoins;
   };
 
   const filteredItems = useMemo(() => {
@@ -193,7 +187,7 @@ export function ShopPage() {
       return item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query);
     });
     return filtered.sort((a, b) => {
-      const diff = priceValue(a) - priceValue(b);
+      const diff = a.price.goldCoins - b.price.goldCoins;
       return sort === 'price-asc' ? diff : -diff;
     });
   }, [search, biomes, types, rarities, sort]);
@@ -201,7 +195,6 @@ export function ShopPage() {
   const closeDetail = () => {
     setDetailItem(null);
     setOfferMode(false);
-    setOfferSilver('');
     setOfferGold('');
   };
 
@@ -228,13 +221,12 @@ export function ShopPage() {
 
   const handleMakeOffer = async () => {
     if (!detailItem || isOffering) return;
-    const silver = Number(offerSilver) || 0;
     const gold = Number(offerGold) || 0;
-    if (silver <= 0 && gold <= 0) {
-      toast.danger('Invalid offer', { description: 'Enter at least 1 silver or gold coin.', timeout: 3000 });
+    if (gold <= 0) {
+      toast.danger('Invalid offer', { description: 'Enter at least 1 gold coin.', timeout: 3000 });
       return;
     }
-    if (silver > silverCoins || gold > goldCoins) {
+    if (gold > goldCoins) {
       toast.danger('Not enough coins', { description: 'Your offer exceeds your balance.', timeout: 3000 });
       return;
     }
@@ -242,7 +234,7 @@ export function ShopPage() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
       toast.success('Offer submitted!', {
-        description: `Offered ${silver ? `${silver} silver` : ''}${silver && gold ? ' + ' : ''}${gold ? `${gold} gold` : ''} for ${detailItem.name}`,
+        description: `Offered ${gold} gold for ${detailItem.name}`,
         timeout: 4000,
       });
       closeDetail();
@@ -263,17 +255,7 @@ export function ShopPage() {
           <div className="flex items-center justify-end gap-2">
             <div className="flex items-center gap-1 bg-white border border-black border-b-2 rounded-md px-2 py-1">
               <Image
-                src="/icons/summary/silver_coin.png"
-                alt="Silver Coin"
-                width={20}
-                height={20}
-                className="object-contain"
-              />
-              <span className="text-sm font-semibold text-black">{silverCoins}</span>
-            </div>
-            <div className="flex items-center gap-1 bg-white border border-black border-b-2 rounded-md px-2 py-1">
-              <Image
-                src="/icons/summary/gold_coin.png"
+                src="/icons/global/coin.png"
                 alt="Gold Coin"
                 width={20}
                 height={20}
@@ -391,38 +373,20 @@ export function ShopPage() {
                       <h3 className="font-bold text-black text-sm truncate">{item.name}</h3>
 
                       <div className="mt-auto flex items-center gap-3 flex-nowrap">
-                        {item.price.silverCoins ? (
-                          <div
-                            className={`flex items-center gap-1 ${
-                              !affordable && silverCoins < item.price.silverCoins ? 'text-red-500' : 'text-black'
-                            }`}
-                          >
-                            <Image
-                              src="/icons/summary/silver_coin.png"
-                              alt="Silver"
-                              width={16}
-                              height={16}
-                              className="object-contain shrink-0"
-                            />
-                            <span className="text-sm font-bold">{item.price.silverCoins}</span>
-                          </div>
-                        ) : null}
-                        {item.price.goldCoins ? (
-                          <div
-                            className={`flex items-center gap-1 ${
-                              !affordable && goldCoins < item.price.goldCoins ? 'text-red-500' : 'text-black'
-                            }`}
-                          >
-                            <Image
-                              src="/icons/summary/gold_coin.png"
-                              alt="Gold"
-                              width={16}
-                              height={16}
-                              className="object-contain shrink-0"
-                            />
-                            <span className="text-sm font-bold">{item.price.goldCoins}</span>
-                          </div>
-                        ) : null}
+                        <div
+                          className={`flex items-center gap-1 ${
+                            !affordable && goldCoins < item.price.goldCoins ? 'text-red-500' : 'text-black'
+                          }`}
+                        >
+                          <Image
+                            src="/icons/global/coin.png"
+                            alt="Gold"
+                            width={16}
+                            height={16}
+                            className="object-contain shrink-0"
+                          />
+                          <span className="text-sm font-bold">{item.price.goldCoins}</span>
+                        </div>
                       </div>
                     </Card.Content>
                   </Card>
@@ -496,80 +460,41 @@ export function ShopPage() {
 
                   <div className="pt-2 border-t border-gray-200">
                     <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Price</p>
-                    <div className="flex items-center gap-3">
-                      {detailItem.price.silverCoins ? (
-                        <div className="flex items-center gap-1">
-                          <Image
-                            src="/icons/summary/silver_coin.png"
-                            alt="Silver"
-                            width={24}
-                            height={24}
-                            className="object-contain"
-                          />
-                          <span className="text-lg font-bold text-black">{detailItem.price.silverCoins}</span>
-                        </div>
-                      ) : null}
-                      {detailItem.price.goldCoins ? (
-                        <div className="flex items-center gap-1">
-                          <Image
-                            src="/icons/summary/gold_coin.png"
-                            alt="Gold"
-                            width={24}
-                            height={24}
-                            className="object-contain"
-                          />
-                          <span className="text-lg font-bold text-black">{detailItem.price.goldCoins}</span>
-                        </div>
-                      ) : null}
+                    <div className="flex items-center gap-1">
+                      <Image
+                        src="/icons/global/coin.png"
+                        alt="Gold"
+                        width={24}
+                        height={24}
+                        className="object-contain"
+                      />
+                      <span className="text-lg font-bold text-black">{detailItem.price.goldCoins}</span>
                     </div>
                   </div>
 
                   {offerMode && (
                     <div className="pt-2 border-t border-gray-200 space-y-3">
                       <p className="text-xs text-gray-500 uppercase font-semibold">Your offer</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="min-w-0 flex flex-col gap-1">
-                          <div className="flex items-center gap-2 bg-white border border-black rounded-md px-2 py-1.5 min-w-0">
-                            <Image
-                              src="/icons/summary/silver_coin.png"
-                              alt="Silver"
-                              width={20}
-                              height={20}
-                              className="object-contain shrink-0"
-                            />
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={offerSilver}
-                              onChange={(e) => setOfferSilver(e.target.value.replace(/[^\d]/g, ''))}
-                              placeholder="0"
-                              className="flex-1 min-w-0 w-full bg-transparent text-sm text-black outline-none"
-                            />
-                          </div>
-                          <p className="text-[11px] text-gray-500 px-1">You have {silverCoins}</p>
+                      <div className="min-w-0 flex flex-col gap-1">
+                        <div className="flex items-center gap-2 bg-white border border-black rounded-md px-2 py-1.5 min-w-0">
+                          <Image
+                            src="/icons/global/coin.png"
+                            alt="Gold"
+                            width={20}
+                            height={20}
+                            className="object-contain shrink-0"
+                          />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={offerGold}
+                            onChange={(e) => setOfferGold(e.target.value.replace(/[^\d]/g, ''))}
+                            placeholder="0"
+                            className="flex-1 min-w-0 w-full bg-transparent text-sm text-black outline-none"
+                          />
                         </div>
-                        <div className="min-w-0 flex flex-col gap-1">
-                          <div className="flex items-center gap-2 bg-white border border-black rounded-md px-2 py-1.5 min-w-0">
-                            <Image
-                              src="/icons/summary/gold_coin.png"
-                              alt="Gold"
-                              width={20}
-                              height={20}
-                              className="object-contain shrink-0"
-                            />
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={offerGold}
-                              onChange={(e) => setOfferGold(e.target.value.replace(/[^\d]/g, ''))}
-                              placeholder="0"
-                              className="flex-1 min-w-0 w-full bg-transparent text-sm text-black outline-none"
-                            />
-                          </div>
-                          <p className="text-[11px] text-gray-500 px-1">You have {goldCoins}</p>
-                        </div>
+                        <p className="text-[11px] text-gray-500 px-1">You have {goldCoins}</p>
                       </div>
                     </div>
                   )}
@@ -583,7 +508,6 @@ export function ShopPage() {
                     className="bg-gray-200 border border-gray-400 text-gray-700 font-semibold rounded-md hover:bg-gray-300"
                     onPress={() => {
                       setOfferMode(false);
-                      setOfferSilver('');
                       setOfferGold('');
                     }}
                     isDisabled={isOffering}

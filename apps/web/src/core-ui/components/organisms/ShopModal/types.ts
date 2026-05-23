@@ -12,8 +12,7 @@ export type ShopItem = {
   name: string;
   description: string;
   price: {
-    silverCoins?: number;
-    goldCoins?: number;
+    goldCoins: number;
   };
   image?: string;
   alwaysAvailable?: boolean;

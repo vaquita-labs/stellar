@@ -7,7 +7,7 @@ interface ElementPositionsStore {
   getPositions: Record<string, CB>;
 }
 
-export const SILVER_COIN = 'silver-coin';
+export const GOLD_COIN = 'gold-coin';
 
 export const useElementPositionsStore = create<ElementPositionsStore>((set) => ({
   setPositions: (key, cb) =>

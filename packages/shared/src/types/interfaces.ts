@@ -1,4 +1,4 @@
-import { type DepositStatus, DepositWithdrawalState, Reward, WithdrawalStatus } from './commons';
+import { type Achievement, type DepositStatus, DepositWithdrawalState, Reward, WithdrawalStatus } from './commons';
 
 export interface Token {
   id: number,
@@ -14,7 +14,6 @@ export interface TokenNetwork {
   tokens: Token,
   contract_address: string,
   vaquita_contract_address: string,
-  /** Optional: DeFindex vault Soroban contract id (per network/token). Falls back to `STELLAR_DEFINDEX_VAULT_CONTRACT` env. */
   defindex_vault_contract_address?: string,
   token_decimals: number,
   lock_period: string,
@@ -34,6 +33,7 @@ export interface Network {
   tokens_networks: TokenNetwork[],
   origins: string,
   order: number,
+  badges_contract_address?: string,
 }
 
 export interface Deposit {
@@ -76,6 +76,40 @@ export interface Profile {
   full_name: string,
   nickname: string,
   wallet_address: string,
+  created_at?: string,
+  updated_at?: string,
+}
+
+export interface AchievementDocument {
+  id: number,
+  key: Achievement,
+  name: string,
+  description: string,
+  tier: string,
+  coin_reward: number,
+  /** Optional redemption code. Hidden + code-gated badges are claimable only
+   *  via the "Redeem code" flow (POST /achievements/redeem). NULL for regular
+   *  eligibility-driven achievements. */
+  code?: string | null,
+  /** When TRUE, the achievement is filtered out of the public catalog response
+   *  unless the user has already claimed it. */
+  hidden?: boolean,
+  /** Controls whether the claim endpoint re-signs on demand ('auto') or requires
+   *  admin intervention ('manual'). Defaults to 'auto'. */
+  refresh_policy: 'auto' | 'manual',
+  /** TRUE for leaderboard badges — eligibility is tied to a specific closed
+   *  cycle's rank, not live signals. */
+  cycle_scoped: boolean,
+  created_at: string,
+  updated_at: string,
+}
+
+export interface ProfileAchievement {
+  id: number,
+  profile_id: number,
+  achievement_id: number,
+  claimed_at: string,
+  achievements?: AchievementDocument,
 }
 
 export interface RewardDocument {

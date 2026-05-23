@@ -47,21 +47,17 @@ export default function LoginPage() {
 
       {/* Panel derecho - Login */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-background p-8 relative">
-        {/* Botones de autenticación en la parte superior */}
+        {/* Selector de red en la esquina superior derecha */}
         {types.length > 0 && (
           <div className="absolute top-4 right-4 z-10">
-            <div className="flex justify-end gap-0">
-              <NetworkSelector />
-              {network && isStellarNetwork(network.name) && <StellarAuthButtons />}
-              {isDummyNetwork() && <DummyAuthButtons />}
-            </div>
+            <NetworkSelector />
           </div>
         )}
 
         <div className="w-full max-w-md border-2 border-primary rounded-lg p-8 bg-white/80 backdrop-blur-sm shadow-lg">
-          <div className="flex flex-col items-center gap-4 mt-2">
+          <div className="flex flex-col items-center gap-4">
             {/* Logo móvil */}
-            <div className="md:hidden mb-4">
+            <div className="md:hidden mb-2">
               <Image
                 src="/vaquita/vaquita_logo.png"
                 alt="Vaquita Logo"
@@ -72,8 +68,16 @@ export default function LoginPage() {
               />
             </div>
 
-            <h1 className="text-3xl font-bold text-black mb-2">Welcome</h1>
-            <p className="text-gray-600 text-center mb-6">Connect your wallet to start saving securely</p>
+            <h1 className="text-3xl font-bold text-black">Welcome</h1>
+            <p className="text-gray-600 text-center mb-2">Connect your wallet to start saving securely</p>
+
+            {/* Botones de autenticación dentro de la card */}
+            {types.length > 0 && (
+              <div className="w-full flex flex-col gap-2">
+                {network && isStellarNetwork(network.name) && <StellarAuthButtons />}
+                {isDummyNetwork() && <DummyAuthButtons />}
+              </div>
+            )}
           </div>
         </div>
       </div>

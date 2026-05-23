@@ -30,9 +30,8 @@ pnpm dev:all        # All in parallel
 
 | Path | Description |
 |------|-------------|
-| [`apps/web/`](apps/web/) | Next.js frontend |
+| [`apps/web/`](apps/web/) | Gamified DeFi frontend (Next.js + R3F) |
 | [`apps/api/`](apps/api/) | HTTP API (Express) |
-| [`apps/backend/`](apps/backend/) | Legacy backend (Lambda / MongoDB) |
 | [`apps/listener/`](apps/listener/) | On-chain event listener |
 | [`apps/job-deposits/`](apps/job-deposits/) | Deposits history job |
 | [`apps/deployer/`](apps/deployer/) | DeFindex vault deployer |
@@ -40,6 +39,20 @@ pnpm dev:all        # All in parallel
 | [`packages/`](packages/) | Shared packages |
 
 Each folder has its own `README.md` with details.
+
+## Frontend
+
+`apps/web/` is a gamified DeFi experience built on Next.js 16 (App Router) with React 19 and Tailwind v4. It uses Three.js + React Three Fiber for the 3D layer, HeroUI for components, Zustand + TanStack Query for state/data, and Stellar Wallets Kit for on-chain interactions.
+
+Main screens:
+
+- **Home** — pools, deposits and on-chain positions.
+- **Profile** — user profile with achievements/badges.
+- **Leaderboard** — ranking of users by activity.
+- **Shop** — in-app items and rewards.
+- **Onboarding** — first-run wallet + profile flow.
+
+More details in [`apps/web/README.md`](apps/web/README.md).
 
 ## Contracts
 

@@ -27,7 +27,7 @@ Dokploy expone 3 lugares distintos para definir variables. La diferencia es **cu
       --mount=type=secret,id=webhook_url \
       WEBHOOK_TOKEN="$(cat /run/secrets/webhook_token)" \
       WEBHOOK_URL="$(cat /run/secrets/webhook_url)" \
-      ./notify.sh BUILD pnpm --filter vaquiland build
+      ./notify.sh BUILD pnpm --filter @vaquita/web build
   ```
 
 ## Regla práctica
@@ -92,7 +92,7 @@ RUN --mount=type=secret,id=webhook_url \
     --mount=type=secret,id=webhook_token \
     WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )" \
     WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )" \
-    ./notify.sh INSTALL pnpm install --frozen-lockfile --filter vaquiland...
+    ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/web...
 ```
 
 - El `[ -f ... ] &&` permite que el build no falle si los secrets no están definidos (modo dev local sin webhook).

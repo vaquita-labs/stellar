@@ -11,11 +11,11 @@ import Coin from '../../templates/WorldMap/map/Coin';
 interface BankBuildingProps {
   position: [number, number, number];
   onClick?: () => void;
-  silverCoinsToCollect: number;
+  goldCoinsToCollect: number;
   isLoading: boolean;
 }
 
-export default function BankBuildingObject({ position, onClick, silverCoinsToCollect, isLoading }: BankBuildingProps) {
+export default function BankBuildingObject({ position, onClick, goldCoinsToCollect, isLoading }: BankBuildingProps) {
   const { gl } = useThree();
   // baseY is 0.01 because the bank is in the ground and 0 generated a awful visual effect
   const baseY = 0.01;
@@ -59,8 +59,8 @@ export default function BankBuildingObject({ position, onClick, silverCoinsToCol
       }}
     >
       <primitive object={bankBuilding} />
-      {silverCoinsToCollect > 0 && (
-        <Coin position={coinPosition} size={0.25} counter={silverCoinsToCollect} isLoading={isLoading} />
+      {goldCoinsToCollect > 0 && (
+        <Coin position={coinPosition} size={0.25} counter={goldCoinsToCollect} isLoading={isLoading} />
       )}
     </group>
   );

@@ -5,7 +5,12 @@ import { AblyProvider, LoaderScreen, NetworksProvider, sendLogToAbly } from '@/c
 import { getNetworks, useIsAuthenticated } from '@/core-ui/hooks';
 import { useMapStore, useNetworkConfigStore, useResize } from '@/core-ui/stores';
 import { useVisibility } from '@/core-ui/stores/visibility';
+import { stellarWalletsKitResolver } from '@/networks/stellar/kit';
+import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
+import { usePollarReadyStore } from '@/networks/stellar/wallet/pollarReady';
 import { Toast } from '@heroui/react';
+import { PollarProvider } from '@pollar/react';
+import '@pollar/react/styles.css';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import * as Ably from 'ably';
 import { ChannelProvider, useChannel } from 'ably/react';
@@ -13,6 +18,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 import { TransactionsProvider } from './TransactionsProvider';
 import { WalletProviderSync } from './WalletProviderSync';
+
+const POLLAR_API_KEY = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY ?? '';
+const POLLAR_NETWORK =
+  (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet').toLowerCase() === 'public' ? 'mainnet' : 'testnet';
 
 export const queryClient = new QueryClient();
 
@@ -49,15 +58,26 @@ export function Providers({ children }: { children: ReactNode }) {
   const router = useRouter();
   const isAuthenticated = useIsAuthenticated();
   const setWalletAddress = useNetworkConfigStore((s) => s.setWalletAddress);
-  const isPublicRoute = pathname === '/login';
-  const isProfileRoute = pathname?.startsWith('/profile') ?? false;
+  const PUBLIC_ROUTES = ['/login', '/terms', '/privacy'];
+  const isPublicRoute = !!pathname && PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  // Show the bottom navbar on `/profile` itself, but hide it on any deeper
+  // profile sub-route (settings, edit, wallet, friends, notifications, …).
+  const isProfileSubRoute = pathname?.startsWith('/profile/') ?? false;
   const isShopRoute = pathname?.startsWith('/shop') ?? false;
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const hideNavigation = isShopRoute || isEditingMap;
 
   const [hydrated, setHydrated] = useState(false);
-  const showAuthGate = hydrated && !isPublicRoute && !isAuthenticated;
-  const showLoader = !hydrated || showAuthGate;
+  // True once PollarClient.ready() has resolved (DPoP key restored + session
+  // restore decision made). Flipped by PollarBridge. Gating the auth-gate on
+  // this prevents F5 from bouncing Pollar-authenticated users to /login while
+  // the session is still being restored in the background.
+  const pollarReady = usePollarReadyStore((s) => s.ready);
+  const showAuthGate = hydrated && pollarReady && !isPublicRoute && !isAuthenticated;
+  // On non-public routes, keep the loader visible until we have a definitive
+  // answer from Pollar (`pollarReady`). Public routes (login/terms/privacy)
+  // shouldn't be blocked — they need to render even when there is no session.
+  const showLoader = !hydrated || (!pollarReady && !isPublicRoute) || showAuthGate;
 
   useEffect(() => {
     try {
@@ -87,21 +107,31 @@ export function Providers({ children }: { children: ReactNode }) {
   }, [showAuthGate, router]);
 
   return (
-    <AblyProvider>
-      <Toast.Provider placement="top" />
-      <ChannelProvider channelName="deposits-changes">
-        {showLoader ? (
-          <LoaderScreen withImage />
-        ) : (
-          <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
-            {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
-            <Main withSidebar={!isPublicRoute && !hideNavigation}>{children}</Main>
-            {!isPublicRoute && !isProfileRoute && !hideNavigation && <MobileNavigation />}
-          </div>
-        )}
-      </ChannelProvider>
-      <TransactionsProvider />
-    </AblyProvider>
+    <PollarProvider
+      config={{
+        baseUrl: 'https://sdk.api.pollar.xyz',
+        apiKey: POLLAR_API_KEY,
+        stellarNetwork: POLLAR_NETWORK,
+        walletAdapter: stellarWalletsKitResolver,
+      }}
+    >
+      <PollarBridge />
+      <AblyProvider>
+        <Toast.Provider placement="top" />
+        <ChannelProvider channelName="deposits-changes">
+          {showLoader ? (
+            <LoaderScreen withImage />
+          ) : (
+            <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
+              {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
+              <Main withSidebar={!isPublicRoute && !hideNavigation}>{children}</Main>
+              {!isPublicRoute && !isProfileSubRoute && !hideNavigation && <MobileNavigation />}
+            </div>
+          )}
+        </ChannelProvider>
+        <TransactionsProvider />
+      </AblyProvider>
+    </PollarProvider>
   );
 }
 

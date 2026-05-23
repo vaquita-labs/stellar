@@ -23,7 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           ></script>
         )}
       </head>
-      <body className="min-h-dvh flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <body className="min-h-dvh flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] bg-background">
         <WithHydrated>
           <Providers>{children}</Providers>
         </WithHydrated>
