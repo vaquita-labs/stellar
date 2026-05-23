@@ -26,7 +26,21 @@ pub enum DataKey {
     BasisPoints,
     EarlyWithdrawalFee,
     ProtocolFees,
+    // NOTE: Positions(String) has moved to persistent storage (see positions module).
+    // The variant is kept here so DataKey can still be used as a persistent key.
     Positions(String),
     Periods(u64),
     SupportedLockPeriod(u64),
+    /// Running count of open positions across all periods.
+    PositionCount,
+    /// Running count of open positions for a specific lock period.
+    PositionCountForPeriod(u64),
+    /// Lifecycle flags written by __constructor and read by future slices.
+    Paused,
+    Version,
+    UpgradesLocked,
+    UpgradeTimelockSecs,
+    /// Upgrade timelock state (written by upgrade module in slice 025).
+    PendingUpgradeHash,
+    UpgradeReadyAt,
 }

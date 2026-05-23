@@ -10,6 +10,7 @@ mod arithmetic;
 mod defindex_vault;
 mod error;
 mod events;
+mod positions;
 mod types;
 
 pub use error::VaquitaPoolError;
@@ -63,11 +64,7 @@ impl VaquitaPool {
         if amount <= 0 {
             return Err(VaquitaPoolError::InvalidAmount);
         }
-        if env
-            .storage()
-            .instance()
-            .has(&DataKey::Positions(deposit_id.clone()))
-        {
+        if positions::exists(&env, &deposit_id) {
             return Err(VaquitaPoolError::DepositAlreadyExists);
         }
         let supported: bool = env
@@ -139,9 +136,7 @@ impl VaquitaPool {
             finalization_time,
             lock_period: period,
         };
-        env.storage()
-            .instance()
-            .set(&DataKey::Positions(deposit_id.clone()), &position);
+        positions::set(&env, &deposit_id, &position);
 
         let mut period_data: Period = env
             .storage()
@@ -153,6 +148,7 @@ impl VaquitaPool {
             .instance()
             .set(&DataKey::Periods(period), &period_data);
 
+        positions::bump_instance(&env);
         events::emit_deposit(&env, caller, deposit_id, blend_token, amount, shares);
         Ok(())
     }
@@ -165,10 +161,7 @@ impl VaquitaPool {
     ) -> Result<(), VaquitaPoolError> {
         caller.require_auth();
 
-        let position: Position = env
-            .storage()
-            .instance()
-            .get(&DataKey::Positions(deposit_id.clone()))
+        let position: Position = positions::get(&env, &deposit_id)
             .ok_or(VaquitaPoolError::PositionNotFound)?;
 
         if caller != position.owner {
@@ -251,10 +244,9 @@ impl VaquitaPool {
         env.storage()
             .instance()
             .set(&DataKey::Periods(position.lock_period), &period_data);
-        env.storage()
-            .instance()
-            .remove(&DataKey::Positions(deposit_id.clone()));
+        positions::remove(&env, &deposit_id, position.lock_period);
 
+        positions::bump_instance(&env);
         events::emit_withdraw(&env, caller, deposit_id, blend_token, amount_to_transfer, reward);
         Ok(())
     }
@@ -297,6 +289,7 @@ impl VaquitaPool {
                 .instance()
                 .set(&DataKey::ProtocolFees, &0i128);
         }
+        positions::bump_instance(&env);
         Ok(())
     }
 
@@ -346,6 +339,7 @@ impl VaquitaPool {
         env.storage()
             .instance()
             .set(&DataKey::Periods(period), &updated);
+        positions::bump_instance(&env);
         Ok(())
     }
 
@@ -365,6 +359,7 @@ impl VaquitaPool {
         env.storage()
             .instance()
             .set(&DataKey::EarlyWithdrawalFee, &new_fee);
+        positions::bump_instance(&env);
         Ok(())
     }
 
@@ -384,12 +379,13 @@ impl VaquitaPool {
         env.storage()
             .instance()
             .set(&DataKey::SupportedLockPeriod(new_lock_period), &true);
+        positions::bump_instance(&env);
         Ok(())
     }
 
     // ---------- View functions ----------
     pub fn get_position(env: Env, deposit_id: String) -> Option<Position> {
-        env.storage().instance().get(&DataKey::Positions(deposit_id))
+        positions::get(&env, &deposit_id)
     }
 
     pub fn get_period_data(env: Env, period: u64) -> Option<Period> {
