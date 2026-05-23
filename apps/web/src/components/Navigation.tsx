@@ -8,11 +8,11 @@ import { MouseEvent } from 'react';
 import { Logo } from './Logo';
 
 const navItems = [
-  { href: '/home', icon: '/icons/home.png', label: 'Home' },
-  { href: '/shop', icon: '/icons/shop.png', label: 'Shop' },
-  { href: '/leaderboard', icon: '/icons/leaderboard.png', label: 'Leaderboard' },
+  { href: '/home', icon: '/icons/navigation/home.png', label: 'Home' },
+  { href: '/shop', icon: '/icons/navigation/shop.png', label: 'Shop' },
+  { href: '/leaderboard', icon: '/icons/navigation/leaderboard.png', label: 'Leaderboard' },
   // { href: "/pools", icon: "/icons/pools.svg", label: "Pools" },
-  // { href: '/profile', icon: '/icons/profile.png', label: 'Profile' },
+  { href: '/profile', icon: '/icons/navigation/profile.png', label: 'Profile' },
 ];
 
 function NavLink({
@@ -30,15 +30,18 @@ function NavLink({
   isMobile?: boolean;
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
-  const baseStyle = 'flex font-medium rounded-lg px-3 py-2';
+  // Mobile uses a tighter, padding-light pill so the whole nav can be shorter.
+  const baseStyle = isMobile
+    ? 'flex font-medium rounded-lg px-2 py-1'
+    : 'flex font-medium rounded-lg px-3 py-2';
   const activeStyle = 'bg-[#DDF4FF] border-2 border-[#84D8FF]';
   const inactiveStyle = 'text-black hover:text-primary';
 
   const combinedStyles = `${baseStyle} ${isActive ? activeStyle : inactiveStyle}`;
   return (
     <Link href={href} className={combinedStyles} onClick={onClick}>
-      <div className={`flex ${isMobile ? 'flex-col items-center gap-1' : 'flex-row items-center gap-2'}`}>
-        <Image src={icon} alt={label} width={isMobile ? 44 : 40} height={isMobile ? 44 : 40} />
+      <div className={`flex ${isMobile ? 'flex-col items-center gap-0.5' : 'flex-row items-center gap-2'}`}>
+        <Image src={icon} alt={label} width={isMobile ? 40 : 40} height={isMobile ? 40 : 40} />
         {!isMobile && <span>{label}</span>}
       </div>
     </Link>
@@ -103,7 +106,7 @@ export function MobileNavigation() {
   const isEditingMap = useMapStore((s) => s.isEditingMap);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 h-18  flex justify-around items-center z-10  bg-background w-full rounded-t-lg  backdrop-blur-xl shadow-[0_-10px_30px_rgba(15,23,42,0.18)]">
+    <nav className="md:hidden fixed bottom-0 left-0 h-16 flex justify-around items-center z-10 bg-background w-full rounded-t-lg backdrop-blur-xl shadow-[0_-10px_30px_rgba(15,23,42,0.18)]">
       {navItems.map(({ href, icon, label }) => {
         const isShop = href === '/shop';
         const isActive = isShop ? isEditingMap : pathname.startsWith(href);

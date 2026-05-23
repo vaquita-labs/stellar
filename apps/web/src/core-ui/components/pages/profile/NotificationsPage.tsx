@@ -59,7 +59,7 @@ export function NotificationsPage() {
   const setValue = (key: ToggleKey, v: boolean) => setValues((prev) => ({ ...prev, [key]: v }));
 
   return (
-    <PageLayout title="Notifications" backHref="/profile">
+    <PageLayout title="Notifications" backHref="/profile/settings">
       {SECTIONS.map((section) => (
           <section key={section.title} className="flex flex-col gap-2">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1">{section.title}</h2>

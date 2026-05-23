@@ -265,6 +265,21 @@ GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role
 1. Open the **SQL Editor**, paste **Stage 1**, and run it. Verify that all target tables have been removed.
 2. Clear the editor, paste **Stage 2**, and run it. The script should execute without errors.
 
+## Migration: Silver → Gold consolidation (2026-05-13)
+
+The two-coin economy (silver + gold) was collapsed into gold-only. The
+conversion script lives at `migrations/20260513_silver_to_gold.sql` and must
+be run **after** the gold-only build has been deployed to production (any
+client still reading the silver balance would see it disappear mid-session
+otherwise).
+
+The script converts each profile's lifetime silver total into gold using a
+`ceil(silver / 100)` ratio (rounded up, minimum 1 if anything was earned),
+inserts a single `'earned'` gold row per user for audit purposes, then
+deletes every silver `profiles_rewards` row and finally the `silver-coin`
+entry from the `rewards` catalogue. It is idempotent: running it twice is a
+no-op once the silver reward is gone.
+
 ## Schema Improvements
 
 The following improvements were introduced relative to the previous schema:

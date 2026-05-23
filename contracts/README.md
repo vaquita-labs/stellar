@@ -46,6 +46,7 @@ Generated files:
 
 - `contracts/lcov.info` — LCOV report
 - `contracts/coverage-html/` — HTML report
+- Terminal — after the HTML step, `make coverage` prints function / line / region percentages (same as the HTML summary table)
 
 Open the HTML report (LLVM writes it under `coverage-html/html/`):
 

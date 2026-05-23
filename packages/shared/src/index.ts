@@ -29,3 +29,5 @@ export * from './services/deposit/helpers';
 export * from './services/profile';
 export * from './services/profile/constants';
 export * from './services/profile/map-template';
+export * from './services/badges';
+export * from './services/leaderboard';

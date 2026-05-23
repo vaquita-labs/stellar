@@ -1,0 +1,17 @@
+[package]
+name = "vaquita-badges"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+rand = "0.8"

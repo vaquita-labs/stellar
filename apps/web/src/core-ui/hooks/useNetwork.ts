@@ -8,10 +8,11 @@ import { NetworkResponseDTO } from '../types';
 
 const transformNetworkData = (data: unknown): { networks: NetworkResponseDTO[]; types: string[] } => {
   const networks = ((data ?? []) as NetworkResponseDTO[])
-    .map(({ name, tokens, type, chainId }) => ({
+    .map(({ name, tokens, type, chainId, badgesContractAddress }) => ({
       name,
       type,
       chainId,
+      ...(badgesContractAddress ? { badgesContractAddress } : {}),
       tokens: tokens
         .filter(({ isSupported }) => isSupported)
         .map(

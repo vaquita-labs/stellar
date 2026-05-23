@@ -72,7 +72,7 @@ export const CoinAnimation = ({ targetPosition, onComplete, coinCount = 8 }: Coi
           }}
         >
           <Image
-            src="/icons/summary/silver_coin.png"
+            src="/icons/global/coin.png"
             alt="Coin"
             width={40}
             height={40}

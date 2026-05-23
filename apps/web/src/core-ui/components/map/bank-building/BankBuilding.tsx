@@ -14,13 +14,13 @@ export default function BankBuilding({ position }: BankBuildingProps) {
   const isEditMode = useMapStore((store) => store.editMode);
   const [coinCounter, setCoinCounter] = useState(8);
   const { data, isLoading, isRefetching } = useProfileDailyCheck();
-  const { silverDailyCollect } = useRestProfile();
+  const { goldDailyCollect } = useRestProfile();
   const [delay, setDelay] = useState(false);
   const loading = isLoading || isRefetching || delay;
-  const silverCoinsToCollect = data?.find?.((reward) => reward?.name === 'Silver Coin')?.amountToCollect || 0;
+  const goldCoinsToCollect = data?.find?.((reward) => reward?.name === 'Gold Coin')?.amountToCollect || 0;
   useEffect(() => {
-    setCoinCounter(silverCoinsToCollect);
-  }, [silverCoinsToCollect]);
+    setCoinCounter(goldCoinsToCollect);
+  }, [goldCoinsToCollect]);
 
   const onClick = () => {
     if (!loading) {
@@ -30,7 +30,7 @@ export default function BankBuilding({ position }: BankBuildingProps) {
       }, 2000);
 
       if (coinCounter > 0) {
-        void silverDailyCollect();
+        void goldDailyCollect();
       } else {
       }
     }
@@ -40,7 +40,7 @@ export default function BankBuilding({ position }: BankBuildingProps) {
     <BankBuildingObject
       position={position}
       onClick={isEditMode ? undefined : onClick}
-      silverCoinsToCollect={coinCounter}
+      goldCoinsToCollect={coinCounter}
       isLoading={loading}
     />
   );

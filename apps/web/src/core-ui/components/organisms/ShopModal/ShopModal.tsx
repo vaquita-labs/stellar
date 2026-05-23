@@ -8,14 +8,16 @@ import { useProfileRewards } from '../../../hooks';
 import { useNetworkConfigStore } from '../../../stores';
 import { ShopItem, ShopModalProps } from './types';
 
-// Shop items data
+// Shop items data — single-currency (gold). Prices were rebalanced from the
+// previous silver+gold dual economy using a 100 silver = 1 gold ratio
+// (rounded up, minimum 1) so the relative cost of each item is preserved.
 const shopItems: ShopItem[] = [
   {
     id: '1',
     name: 'Tree',
     description: 'A beautiful tree to decorate your map. Always available!',
     price: {
-      silverCoins: 1,
+      goldCoins: 1,
     },
     image: '/icons/summary/streak_freeze.png',
     alwaysAvailable: true,
@@ -25,7 +27,7 @@ const shopItems: ShopItem[] = [
     name: 'Streak Freeze',
     description: 'Protect your streak for one day if you cannot maintain it',
     price: {
-      silverCoins: 50,
+      goldCoins: 1,
     },
     image: '/icons/summary/streak_freeze.png',
   },
@@ -34,8 +36,7 @@ const shopItems: ShopItem[] = [
     name: 'Streak Repair',
     description: 'Restore your streak up to 7 days',
     price: {
-      silverCoins: 100,
-      goldCoins: 1,
+      goldCoins: 2,
     },
     image: '/icons/summary/streak.png',
   },
@@ -60,8 +61,7 @@ const shopItems: ShopItem[] = [
     name: 'Energy Boost',
     description: 'Double your daily rewards for 24 hours',
     price: {
-      silverCoins: 75,
-      goldCoins: 1,
+      goldCoins: 2,
     },
   },
   {
@@ -85,7 +85,7 @@ const shopItems: ShopItem[] = [
     name: 'Decorative Fountain',
     description: 'A stunning fountain to enhance your map',
     price: {
-      silverCoins: 150,
+      goldCoins: 2,
     },
   },
   {
@@ -106,16 +106,11 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
 
-  const silverCoins = profileRewards?.rewards?.find((reward) => reward?.name === 'Silver Coin')?.amount ?? 0;
   const goldCoins = profileRewards?.rewards?.find((reward) => reward?.name === 'Gold Coin')?.amount ?? 0;
 
   const canAfford = (item: ShopItem): boolean => {
     if (item.alwaysAvailable) return true;
-
-    const hasEnoughSilver = !item.price.silverCoins || silverCoins >= item.price.silverCoins;
-    const hasEnoughGold = !item.price.goldCoins || goldCoins >= item.price.goldCoins;
-
-    return hasEnoughSilver && hasEnoughGold;
+    return goldCoins >= item.price.goldCoins;
   };
 
   const handlePurchaseClick = (item: ShopItem) => {
@@ -165,7 +160,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
             <Modal.CloseTrigger>
               <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
             </Modal.CloseTrigger>
-          <Modal.Header className="flex-shrink-0">
+          <Modal.Header className="shrink-0">
             <Modal.Heading className="text-black font-bold text-xl">
             <div className="flex items-center justify-start w-full gap-4">
               <div className="flex items-center gap-2">
@@ -175,17 +170,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1">
                   <Image
-                    src="/icons/summary/silver_coin.png"
-                    alt="Silver Coin"
-                    width={24}
-                    height={24}
-                    className="object-contain"
-                  />
-                  <span className="text-sm font-semibold text-black">{silverCoins}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Image
-                    src="/icons/summary/gold_coin.png"
+                    src="/icons/global/coin.png"
                     alt="Gold Coin"
                     width={24}
                     height={24}
@@ -233,36 +218,17 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                          <div className="flex items-center gap-2">
-                            {item.price.silverCoins && (
-                              <div
-                                className={`flex items-center gap-1 ${!affordable && silverCoins < item.price.silverCoins ? 'text-red-500' : ''}`}
-                              >
-                                <span className="text-sm font-semibold">{item.price.silverCoins}</span>
-                                <Image
-                                  src="/icons/summary/silver_coin.png"
-                                  alt="Silver Coin"
-                                  width={20}
-                                  height={20}
-                                  className="object-contain"
-                                />
-                              </div>
-                            )}
-                            {item.price.goldCoins && (
-                              <div
-                                className={`flex items-center gap-1 ${!affordable && goldCoins < item.price.goldCoins ? 'text-red-500' : ''}`}
-                              >
-                                {item.price.silverCoins && <span className="text-gray-400 mx-1">+</span>}
-                                <span className="text-sm font-semibold">{item.price.goldCoins}</span>
-                                <Image
-                                  src="/icons/summary/gold_coin.png"
-                                  alt="Gold Coin"
-                                  width={20}
-                                  height={20}
-                                  className="object-contain"
-                                />
-                              </div>
-                            )}
+                          <div
+                            className={`flex items-center gap-1 ${!affordable && goldCoins < item.price.goldCoins ? 'text-red-500' : ''}`}
+                          >
+                            <span className="text-sm font-semibold">{item.price.goldCoins}</span>
+                            <Image
+                              src="/icons/global/coin.png"
+                              alt="Gold Coin"
+                              width={20}
+                              height={20}
+                              className="object-contain"
+                            />
                           </div>
                           <Button
                             className={`${
@@ -318,32 +284,15 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
                 </div>
                 <div className="pt-2 border-t border-gray-200">
                   <p className="text-sm text-gray-700 mb-2">Price:</p>
-                  <div className="flex items-center gap-2">
-                    {selectedItem.price.silverCoins && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-semibold text-black">{selectedItem.price.silverCoins}</span>
-                        <Image
-                          src="/icons/summary/silver_coin.png"
-                          alt="Silver Coin"
-                          width={20}
-                          height={20}
-                          className="object-contain"
-                        />
-                      </div>
-                    )}
-                    {selectedItem.price.goldCoins && (
-                      <div className="flex items-center gap-1">
-                        {selectedItem.price.silverCoins && <span className="text-gray-400 mx-1">+</span>}
-                        <span className="text-sm font-semibold text-black">{selectedItem.price.goldCoins}</span>
-                        <Image
-                          src="/icons/summary/gold_coin.png"
-                          alt="Gold Coin"
-                          width={20}
-                          height={20}
-                          className="object-contain"
-                        />
-                      </div>
-                    )}
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm font-semibold text-black">{selectedItem.price.goldCoins}</span>
+                    <Image
+                      src="/icons/global/coin.png"
+                      alt="Gold Coin"
+                      width={20}
+                      height={20}
+                      className="object-contain"
+                    />
                   </div>
                 </div>
                 {!isAffordable && !selectedItem.alwaysAvailable && (

@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import {
+  Achievement,
   broadcastProfileChange,
+  claimAchievement,
+  computeEligibilitySignals,
+  getAchievementCountsByProfile,
   getCachedProfilesDepositsByProfileId,
+  getLastClosedCycleId,
+  getLeaderboardRankForWallet,
   getNetworkByName,
   getProfile,
   getProfileMapObjects,
@@ -9,14 +15,17 @@ import {
   getRewardByKey,
   getRewardsData,
   HISTORICAL_DELAY,
+  isEligibleForAchievement,
   type Network,
   ONE_DAY,
   type Profile,
   type ProfileAverageResponseDTO,
+  redeemAchievementCode,
   Reward,
   sendError,
   sendSuccess,
   supabase,
+  toProfileAchievementsResponseDTO,
   toProfileExperienceResponseDTO,
   toProfileMapObjectsAvailableResponseDTO,
   toProfileMapObjectsResponseDTO,
@@ -176,14 +185,14 @@ router.get('/network/:networkName/wallet/:walletAddress/map-objects-available', 
   return sendSuccess(res, await toProfileMapObjectsAvailableResponseDTO(networkData!, profileData));
 });
 
-router.post('/network/:networkName/wallet/:walletAddress/silver-daily-collect', async (req, res) => {
+router.post('/network/:networkName/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
   const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'POST /profile/.../silver-daily-collect');
+  req.log.info({ networkName, walletAddress }, 'POST /profile/.../gold-daily-collect');
 
   const { success, errorMessage, errors, networkData, profileData } = await getProfile(networkName, walletAddress);
 
   if (!success || !profileData || !networkData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for silver-daily-collect');
+    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for gold-daily-collect');
     return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
   }
 
@@ -194,18 +203,18 @@ router.post('/network/:networkName/wallet/:walletAddress/silver-daily-collect', 
     return sendError(res, rewardsResponse.errorMessage, rewardsResponse.errors, 500);
   }
 
-  const { data: rewardData, error: rewardError } = await getRewardByKey(Reward.SILVER_COIN);
+  const { data: rewardData, error: rewardError } = await getRewardByKey(Reward.GOLD_COIN);
 
   if (rewardError || !rewardData) {
-    req.log.error({ err: rewardError, key: Reward.SILVER_COIN }, 'Reward not found');
+    req.log.error({ err: rewardError, key: Reward.GOLD_COIN }, 'Reward not found');
     return sendError(res, 'reward not found', rewardError, 404);
   }
 
-  const silverRewardToAmount = rewardsResponse.rewards.find((reward) => reward.key === Reward.SILVER_COIN)?.amountToCollect;
+  const goldRewardToAmount = rewardsResponse.rewards.find((reward) => reward.key === Reward.GOLD_COIN)?.amountToCollect;
 
-  if (!silverRewardToAmount) {
-    req.log.warn({ profileId: profileData.id }, 'No silver coins available to collect');
-    return sendError(res, 'there are no silver coins to collect', null, 400);
+  if (!goldRewardToAmount) {
+    req.log.warn({ profileId: profileData.id }, 'No gold coins available to collect');
+    return sendError(res, 'there are no gold coins to collect', null, 400);
   }
 
   const result = await supabase
@@ -219,18 +228,168 @@ router.post('/network/:networkName/wallet/:walletAddress/silver-daily-collect', 
 
   if (result.error) {
     req.log.error({ err: result.error, profileId: profileData.id, rewardId: rewardData.id }, 'Failed to insert profile reward');
-    return sendError(res, 'Failed to collect silver coin', result.error, 500);
+    return sendError(res, 'Failed to collect gold coin', result.error, 500);
   }
 
   try {
-    await broadcastProfileChange('silver-daily-collected', [ 'profile-rewards', 'profile-experience' ]);
+    await broadcastProfileChange('gold-daily-collected', [ 'profile-rewards', 'profile-experience' ]);
   } catch (err) {
-    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (silver-daily-collected)');
+    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (gold-daily-collected)');
     // No retornamos error: el reward ya se guardó. Cliente reconcilia en siguiente fetch.
   }
 
-  req.log.info({ profileId: profileData.id }, 'Silver coin collected');
+  req.log.info({ profileId: profileData.id }, 'Gold coin collected');
   return sendSuccess(res, result);
+});
+
+router.get('/network/:networkName/wallet/:walletAddress/achievements', async (req, res) => {
+  const { networkName, walletAddress } = req.params;
+  req.log.info({ networkName, walletAddress }, 'GET /profile/.../achievements');
+
+  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+
+  if (!success || !profileData || !networkData) {
+    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
+  }
+
+  return sendSuccess(res, await toProfileAchievementsResponseDTO(networkData, profileData));
+});
+
+router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim', async (req, res) => {
+  const { networkName, walletAddress, key } = req.params;
+  req.log.info({ networkName, walletAddress, key }, 'POST /profile/.../achievements/:key/claim');
+
+  // TODO(auth): match the wallet-in-URL trust used by every other profile
+  // route for v1. When we harden auth across the API (challenge/response via
+  // StellarWalletsKit.signMessage verified server-side), this endpoint moves
+  // along with the rest — don't add a one-off signature check here.
+
+  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+
+  if (!success || !profileData || !networkData) {
+    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for achievement claim');
+    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
+  }
+
+  const achievementKey = key as Achievement;
+  if (!Object.values(Achievement).includes(achievementKey)) {
+    req.log.warn({ key }, 'Unknown achievement key');
+    return sendError(res, `Unknown achievement: ${key}`, null, 404);
+  }
+
+  // For cycle_scoped badges (leaderboard), verify rank against last closed cycle
+  const { data: achievementDoc } = await supabase
+    .from('achievements')
+    .select('cycle_scoped')
+    .eq('key', achievementKey)
+    .maybeSingle();
+
+  if (achievementDoc?.cycle_scoped) {
+    const cycleId = getLastClosedCycleId();
+    const rank = await getLeaderboardRankForWallet(walletAddress, cycleId, networkData.id as number);
+    const exactRank: Record<string, number> = { 'first-place': 1, 'second-place': 2 };
+    const eligible =
+      achievementKey === 'third-place'
+        ? rank !== null && rank >= 3 && rank <= 10
+        : rank === exactRank[achievementKey];
+    if (!eligible) {
+      req.log.warn({ profileId: profileData.id, key, rank, cycleId }, 'Wallet did not finish at required leaderboard rank');
+      return sendError(res, 'You did not finish at the required leaderboard rank last cycle.', null, 403);
+    }
+  } else {
+    const signals = await computeEligibilitySignals(networkData, profileData);
+    if (!isEligibleForAchievement(signals, achievementKey)) {
+      req.log.warn(
+        { profileId: profileData.id, key, signals },
+        'Profile is not eligible for achievement',
+      );
+      return sendError(res, 'You are not eligible for this achievement yet.', null, 403);
+    }
+  }
+
+  const result = await claimAchievement(profileData.id, achievementKey);
+
+  if (!result.success) {
+    if (result.alreadyClaimed) {
+      req.log.info({ profileId: profileData.id, key }, 'Achievement already claimed');
+      return sendError(res, 'You already claimed this achievement.', null, 409);
+    }
+    req.log.error({ err: result.error, profileId: profileData.id, key }, 'Failed to claim achievement');
+    return sendError(res, 'Failed to claim achievement', result.error, 500);
+  }
+
+  try {
+    await broadcastProfileChange('achievement-claimed', [
+      'profile-achievements',
+      'profile-rewards',
+      'profile-experience',
+    ]);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (achievement-claimed)');
+  }
+
+  req.log.info({ profileId: profileData.id, key, coinReward: result.coinReward }, 'Achievement claimed');
+  return sendSuccess(res, {
+    achievementKey,
+    coinReward: result.coinReward,
+    claimedAt: result.claimedAt,
+  });
+});
+
+router.post('/network/:networkName/wallet/:walletAddress/achievements/redeem', async (req, res) => {
+  const { networkName, walletAddress } = req.params;
+  const rawCode = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
+  req.log.info({ networkName, walletAddress, code: rawCode }, 'POST /profile/.../achievements/redeem');
+
+  // TODO(auth): same wallet-in-URL trust as every other profile route. When
+  // the API-wide auth hardening lands this endpoint follows along.
+
+  if (!rawCode) {
+    return sendError(res, 'A code is required.', null, 400);
+  }
+
+  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+
+  if (!success || !profileData || !networkData) {
+    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for redeem');
+    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
+  }
+
+  const result = await redeemAchievementCode(profileData.id, rawCode);
+
+  if (!result.success) {
+    if (result.notFound) {
+      req.log.info({ profileId: profileData.id, code: rawCode }, 'Redeem code not found');
+      return sendError(res, 'That code is not valid.', null, 404);
+    }
+    if (result.alreadyClaimed) {
+      req.log.info({ profileId: profileData.id, code: rawCode }, 'Redeem code already claimed');
+      return sendError(res, 'You already claimed this achievement.', null, 409);
+    }
+    req.log.error({ err: result.error, profileId: profileData.id, code: rawCode }, 'Failed to redeem code');
+    return sendError(res, 'Failed to redeem code', result.error, 500);
+  }
+
+  try {
+    await broadcastProfileChange('achievement-claimed', [
+      'profile-achievements',
+      'profile-rewards',
+      'profile-experience',
+    ]);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast (achievement-claimed via redeem)');
+  }
+
+  req.log.info(
+    { profileId: profileData.id, key: result.achievementKey, coinReward: result.coinReward },
+    'Achievement claimed via redeem code',
+  );
+  return sendSuccess(res, {
+    achievementKey: result.achievementKey,
+    coinReward: result.coinReward,
+    claimedAt: result.claimedAt,
+  });
 });
 
 router.post('/network/:networkName/wallet/:walletAddress/nickname', async (req, res) => {
@@ -303,7 +462,11 @@ router.get('/network/:networkName', async (req, res) => {
   return sendSuccess(res, await Promise.all(data.map((profile) => toProfileResponseDTO(networkData, profile))), '');
 });
 
-const toProfileHistoricResponseDTO = (networkData: Network, log: Logger) =>
+const toProfileHistoricResponseDTO = (
+  networkData: Network,
+  log: Logger,
+  badgesByProfileId: Map<number, number>,
+) =>
   async (profile: Profile): Promise<ProfileAverageResponseDTO> => {
     let totalSums = 0;
     const count = (ONE_DAY / HISTORICAL_DELAY) * 30;
@@ -332,6 +495,7 @@ const toProfileHistoricResponseDTO = (networkData: Network, log: Logger) =>
       count,
       timestamp,
       delay: HISTORICAL_DELAY,
+      badges: badgesByProfileId.get(profile.id) ?? 0,
     };
   };
 
@@ -353,7 +517,16 @@ router.get('/network/:networkName/by-average-deposits', async (req, res) => {
     return sendError(res, error.message, error, 500);
   }
 
-  return sendSuccess(res, await Promise.all(data.map(toProfileHistoricResponseDTO(networkData, req.log))), '');
+  const { counts: badgesByProfileId, error: badgesError } = await getAchievementCountsByProfile();
+  if (badgesError) {
+    req.log.error({ err: badgesError }, 'Failed to fetch badge counts (degraded — leaderboard will show 0 badges)');
+  }
+
+  return sendSuccess(
+    res,
+    await Promise.all(data.map(toProfileHistoricResponseDTO(networkData, req.log, badgesByProfileId))),
+    '',
+  );
 });
 
 export default router;

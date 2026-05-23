@@ -1,7 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { getStellarWalletsKit } from '@/networks/stellar/kit';
-import { rpcCall, submitAndWait } from './rpc';
-import { normalizeSignedXdr } from './xdr';
+import type { PollarClient, TransactionState, TxBuildBody } from '@pollar/core';
+import { getPollarBinding } from './wallet/adapters/pollar-adapter';
+
+// TEST — remove before mainnet
+const USDC_TESTNET_ISSUER = 'GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56';
 
 function toBaseUnits(input: string, decimals: number): bigint {
   const [wRaw, fRaw = ''] = input.trim().split('.');
@@ -18,124 +19,107 @@ function assertHex32(hex: string): string {
   return h;
 }
 
-function hexToBytes16(hex: string): Uint8Array {
-  const h = assertHex32(hex);
-  const out = new Uint8Array(16);
-  for (let i = 0; i < 16; i++) out[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
-  return out;
-}
-
 type Common = {
   address: string;
-  rpcUrl: string;
-  networkPassphrase: string;
-  clientRef: { current: any | null }; // Ref<ContractClient|null>
+  contractId: string;
+};
+
+type MintBadgeParams = {
+  address: string;
+  badgeContractId: string;
+  badgeType: string;
+  cycleId: number;
+  expiry: number;
+  signature: string; // base64-encoded BytesN<64>
 };
 
 type DepositParams = {
   depositId: string;
-  /** If provided, used instead of `amount` */
-  humanAmount?: string; // e.g. "1.25"
-  /** Raw base units (u128) if you don't pass humanAmount */
+  humanAmount?: string;
   amount?: bigint;
-  /** seconds */
   period?: number | string | bigint;
-  /** token decimals for humanAmount */
-  tokenDecimals?: number; // default 7
-  /**
-   * How to encode deposit_id for your contract:
-   * - "hex16-string"  -> pass validated hex string (32 chars) [DEFAULT]
-   * - "hex16-bytes"   -> pass Uint8Array(16)
-   * - "u128"          -> pass BigInt
-   */
-  depositIdEncoding?: 'hex16-string' | 'hex16-bytes' | 'u128';
+  tokenDecimals?: number;
 };
 
 type WithdrawParams = {
   depositId: string;
-  depositIdEncoding?: 'hex16-string' | 'hex16-bytes' | 'u128';
 };
 
-export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: Common) {
-  const kit = getStellarWalletsKit();
+type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' }>['params'];
 
-  // Assemble contract call and (optionally) sign auth entries
-  const assemble = async (method: string, args: any) => {
-    if (!clientRef.current) throw new Error('Contract client not ready');
-    const tx = await (clientRef.current as any)[method](args);
+/**
+ * Invoke a Vaquita pool method via Pollar's `/tx/build` + `signAndSubmitTx` pipeline.
+ *
+ * We subscribe to Pollar's transaction state machine BEFORE calling `buildTx`
+ * so the `built` callback (which carries the unsigned XDR) triggers
+ * `signAndSubmitTx` and the eventual `success` carries back the on-chain hash.
+ *
+ * `deposit_id` in the Vaquita pool is a `String`, NOT a `BytesN<16>` (see
+ * `contracts/vaquita-pool/src/lib.rs`), so callers pass the 32-char hex string
+ * verbatim under `{ type: 'string' }`.
+ */
+async function invokeViaPollar(
+  client: PollarClient,
+  params: InvokeContractParams,
+  logLabel: string,
+): Promise<{ hash: string }> {
+  return new Promise<{ hash: string }>((resolve, reject) => {
+    let settled = false;
+    let unsubscribe: (() => void) | undefined;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      unsubscribe?.();
+      fn();
+    };
 
-    // Some wallets/contracts need non-invoker auth entries to be signed
-    let needs: any = false;
-    if (typeof tx.needsNonInvokerSigningBy === 'function') {
-      try {
-        needs = tx.needsNonInvokerSigningBy(address);
-      } catch {}
-    }
-    const mustSign = Array.isArray(needs) ? needs.length > 0 : !!needs;
-
-    if (mustSign && (kit as any).signAuthEntry) {
-      try {
-        await tx.signAuthEntries(address, async (authXdr: string) => {
-          const res = await (kit as any).signAuthEntry(authXdr, {
-            address,
-            networkPassphrase,
-          });
-          const signed = normalizeSignedXdr(res, /*isAuth*/ true);
-          return signed;
-        });
-      } catch (err: any) {
-        const msg = String(err?.name || err?.message || err);
-        if (!/NoUnsignedNonInvokerAuthEntriesError/i.test(msg)) throw err;
-        console.warn(`[${method}] no unsigned non-invoker auth entries; continuing.`);
+    unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
+      console.info(`[${logLabel}] state`, state.step, state);
+      if (state.step === 'built' && state.buildData?.unsignedXdr) {
+        // Don't catch — let state.step 'success'/'error' be the authoritative
+        // outcome. signAndSubmitTx can reject on transient network errors even
+        // when the tx lands; catching here races against the success state.
+        void client.signAndSubmitTx(state.buildData.unsignedXdr);
+        return;
       }
-    }
-
-    const unsigned: string = (tx as any).built?.toXDR?.() ?? (await (tx as any).toXDR?.());
-    if (typeof unsigned !== 'string') {
-      throw new Error('Could not get unsigned XDR from assembled tx');
-    }
-    return unsigned;
-  };
-
-  // Sign a transaction XDR with the wallet
-  const sign = async (unsignedXdr: string) => {
-    const res = await kit.signTransaction(unsignedXdr, {
-      address,
-      networkPassphrase,
+      if (state.step === 'success') {
+        finish(() => resolve({ hash: state.hash }));
+        return;
+      }
+      if (state.step === 'error') {
+        finish(() => reject(new Error(state.details ?? `Pollar ${params.method} failed`)));
+        return;
+      }
     });
-    return normalizeSignedXdr(res);
-  };
 
-  // Send via JSON-RPC and wait
-  const send = async (signedXdr: string) => {
-    const sendRes = await rpcCall<{ hash: string }>(rpcUrl, 'sendTransaction', {
-      transaction: signedXdr,
+    // Pollar retries 401s internally and communicates the real outcome via
+    // onTransactionStateChange (success / error). Only log here — calling
+    // finish() would reject the promise and unsubscribe before the retry lands.
+    void client.buildTx('invoke_contract', params).catch((err: unknown) => {
+      console.warn(`[${logLabel}] buildTx error (Pollar may retry):`, err);
     });
-    const hash = (sendRes as any)?.hash || (typeof sendRes === 'string' ? sendRes : undefined);
-    if (!hash) throw new Error('RPC did not return a transaction hash');
-    const final = await submitAndWait(rpcUrl, hash);
-    if (final.status !== 'SUCCESS') {
-      throw new Error(`Tx failed: ${final.status} ${final.resultXdr ?? ''}`);
-    }
-    return { hash, final };
-  };
+  });
+}
 
-  // High-level: deposit
+function requirePollarClient(): PollarClient {
+  const binding = getPollarBinding();
+  if (!binding) {
+    throw new Error(
+      'Pollar adapter is not bound yet — make sure <PollarBridge> ran after login.',
+    );
+  }
+  return binding.client;
+}
+
+export function getSorobanTx({ address, contractId }: Common) {
   const deposit = async ({
     depositId,
     humanAmount,
     amount,
     period,
     tokenDecimals = 7,
-    depositIdEncoding = 'hex16-string',
   }: DepositParams) => {
     if (!address) throw new Error('No connected address');
-
-    // encode deposit_id for different contract specs
-    let deposit_id: any;
-    if (depositIdEncoding === 'u128') deposit_id = BigInt(depositId);
-    else if (depositIdEncoding === 'hex16-bytes') deposit_id = hexToBytes16(depositId);
-    else deposit_id = assertHex32(depositId); // default: hex16-string
 
     const amt =
       humanAmount != null && humanAmount !== ''
@@ -146,36 +130,118 @@ export function getSorobanTx({ address, rpcUrl, networkPassphrase, clientRef }: 
               throw new Error('Provide humanAmount or amount');
             })();
 
-    const args = {
-      caller: address,
-      deposit_id,
-      amount: amt,
-      period: BigInt(period ?? 604800n),
-    };
-
-    const unsigned = await assemble('deposit', args);
-    const signed = await sign(unsigned);
-    return await send(signed);
+    const client = requirePollarClient();
+    console.info('[sorobanTx:deposit] routing via Pollar buildTx', { depositId, amt, contractId });
+    return await invokeViaPollar(
+      client,
+      {
+        contractId,
+        method: 'deposit',
+        args: [
+          { type: 'address', value: address },
+          { type: 'string',  value: assertHex32(depositId) },
+          { type: 'i128',    value: amt.toString() },
+          { type: 'u64',     value: BigInt(period ?? 604800n).toString() },
+        ],
+      },
+      'pollar-deposit',
+    );
   };
 
-  // High-level: withdraw
-  const withdraw = async ({ depositId, depositIdEncoding = 'hex16-string' }: WithdrawParams) => {
+  const withdraw = async ({ depositId }: WithdrawParams) => {
     if (!address) throw new Error('No connected address');
 
-    let deposit_id: any;
-    if (depositIdEncoding === 'u128') deposit_id = BigInt(depositId);
-    else if (depositIdEncoding === 'hex16-bytes') deposit_id = hexToBytes16(depositId);
-    else deposit_id = assertHex32(depositId);
-
-    const args = {
-      caller: address,
-      deposit_id,
-    };
-
-    const unsigned = await assemble('withdraw', args);
-    const signed = await sign(unsigned);
-    return await send(signed);
+    const client = requirePollarClient();
+    console.info('[sorobanTx:withdraw] routing via Pollar buildTx', { depositId, contractId });
+    return await invokeViaPollar(
+      client,
+      {
+        contractId,
+        method: 'withdraw',
+        args: [
+          { type: 'address', value: address },
+          { type: 'string',  value: assertHex32(depositId) },
+        ],
+      },
+      'pollar-withdraw',
+    );
   };
 
-  return { assemble, sign, send, deposit, withdraw };
+  return { deposit, withdraw };
+}
+
+/**
+ * Calls `mint_badge` on the Vaquita Badges contract via Pollar.
+ * The user's wallet pays XLM fees directly (fee-bump is handled separately).
+ */
+export async function mintBadge({
+  address,
+  badgeContractId,
+  badgeType,
+  cycleId,
+  expiry,
+  signature,
+}: MintBadgeParams): Promise<{ hash: string }> {
+  if (!address) throw new Error('No connected address');
+  const client = requirePollarClient();
+  console.info('[sorobanTx:mintBadge] routing via Pollar buildTx', { badgeType, cycleId, badgeContractId });
+  return invokeViaPollar(
+    client,
+    {
+      contractId: badgeContractId,
+      method: 'mint_badge',
+      args: [
+        { type: 'address', value: address },
+        { type: 'symbol',  value: badgeType },
+        { type: 'u32',     value: cycleId },
+        { type: 'u64',     value: expiry.toString() },
+        { type: 'bytes',   value: signature },
+      ],
+    },
+    'pollar-mint-badge',
+  );
+}
+
+// TEST — remove before mainnet
+/** Adds a USDC trustline on Stellar testnet via Pollar. */
+export async function addUsdcTrustline(): Promise<{ hash: string }> {
+  const binding = getPollarBinding();
+  if (!binding) throw new Error('Pollar adapter is not bound — log in first.');
+  const client = binding.client;
+
+  return new Promise<{ hash: string }>((resolve, reject) => {
+    let settled = false;
+    // Use `let` + optional chaining so finish() is safe even if the Pollar
+    // callback fires synchronously before the assignment completes.
+    let unsubscribe: (() => void) | undefined;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      unsubscribe?.();
+      fn();
+    };
+
+    unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
+      if (state.step === 'built' && state.buildData?.unsignedXdr) {
+        void client.signAndSubmitTx(state.buildData.unsignedXdr);
+        return;
+      }
+      if (state.step === 'success') {
+        finish(() => resolve({ hash: state.hash }));
+        return;
+      }
+      if (state.step === 'error') {
+        finish(() => reject(new Error(state.details ?? 'change_trust failed')));
+        return;
+      }
+    });
+
+    void client
+      .buildTx('change_trust', {
+        asset: { type: 'credit_alphanum4', code: 'USDC', issuer: USDC_TESTNET_ISSUER },
+      } as TxBuildBody['params'])
+      .catch((err: unknown) => {
+        console.warn('[pollar-change-trust] buildTx error (Pollar may retry):', err);
+      });
+  });
 }

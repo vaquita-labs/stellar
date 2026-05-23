@@ -1,7 +1,11 @@
 -include .env
 
-POOL_DIR := vaquita-pool
-WASM := $(CURDIR)/target/wasm32v1-none/release/vaquita_pool.wasm
+POOL_DIR  := vaquita-pool
+WASM      := $(CURDIR)/target/wasm32v1-none/release/vaquita_pool.wasm
+
+BADGES_DIR  := vaquita-badges
+BADGES_WASM := $(CURDIR)/target/wasm32v1-none/release/vaquita_badges.wasm
+BADGES_ADMIN ?= $(USER_ADDRESS)
 
 INVOKE_FEE ?= 10000000
 
@@ -21,10 +25,18 @@ coverage:
 		--ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
 		--fail-under-lines 80 \
 		--html --output-dir coverage-html
+	cargo llvm-cov report --remap-path-prefix \
+		--ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
+		--json --summary-only 2>/dev/null \
+		| python3 $(CURDIR)/scripts/print_coverage_summary.py
 
 build:
 	cd $(POOL_DIR) && stellar contract build
 	@ls -l $(CURDIR)/target/wasm32v1-none/release/*.wasm
+
+build-badges:
+	cd $(BADGES_DIR) && stellar contract build
+	@ls -l $(BADGES_WASM)
 
 deploy: build
 	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm $(WASM) --alias vaquita_pool
@@ -38,6 +50,16 @@ initialize: deploy
 	--blend_token $(BLEND_TOKEN) \
 	--defindex_vault_address $(DEFINDEX_VAULT_ADDRESS) \
 	--lock_periods "[$(LOCK_PERIODS)]"
+
+deploy-badges: build-badges
+	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm $(BADGES_WASM) --alias vaquita_badges
+
+initialize-badges: deploy-badges
+	stellar contract invoke --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) --id vaquita_badges \
+	-- \
+	initialize \
+	--admin $(BADGES_ADMIN) \
+	--signing_key $(BADGES_SIGNING_KEY)
 
 deposit:
 	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \

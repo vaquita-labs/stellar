@@ -1,12 +1,6 @@
 import type { Abi } from 'viem';
 import { supabase } from '../../lib/supabase';
 
-interface Contracts {
-  id: number,
-  address: string,
-  abi: Abi,
-}
-
 const cache: { [key: string]: Abi } = {};
 
 export const getABIByAddressByNetworkId = async (address: string, networkId: number) => {
@@ -20,13 +14,13 @@ export const getABIByAddressByNetworkId = async (address: string, networkId: num
     .eq('address', address)
     .eq('network_id', networkId)
     .maybeSingle();
-  
+
   if (error) {
     console.error('Error on getABIByAddressByNetworkId', { address, networkId }, error);
   }
   if (data?.abi) {
     cache[key] = data?.abi as Abi;
   }
-  
+
   return (cache[key] || []) as Abi;
 };
