@@ -10,6 +10,7 @@ mod arithmetic;
 mod defindex_vault;
 mod error;
 mod events;
+mod pause;
 mod positions;
 mod types;
 
@@ -71,6 +72,7 @@ impl VaquitaPool {
         caller.require_auth_for_args(
             (caller.clone(), deposit_id.clone(), amount, period).into_val(&env)
         );
+        pause::require_not_paused(&env)?;
 
         if amount <= 0 {
             return Err(VaquitaPoolError::InvalidAmount);
@@ -398,7 +400,64 @@ impl VaquitaPool {
         Ok(())
     }
 
+    pub fn pause(env: Env) -> Result<(), VaquitaPoolError> {
+        pause::pause(&env)?;
+        positions::bump_instance(&env);
+        Ok(())
+    }
+
+    pub fn unpause(env: Env) -> Result<(), VaquitaPoolError> {
+        pause::unpause(&env)?;
+        positions::bump_instance(&env);
+        Ok(())
+    }
+
+    pub fn remove_lock_period(env: Env, period: u64) -> Result<(), VaquitaPoolError> {
+        admin::require_owner(&env)?;
+        let supported: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::SupportedLockPeriod(period))
+            .unwrap_or(false);
+        if !supported {
+            return Err(VaquitaPoolError::LockPeriodNotSupported);
+        }
+        if positions::outstanding_count_for_period(&env, period) > 0 {
+            return Err(VaquitaPoolError::LockPeriodHasPositions);
+        }
+        if let Some(pd) = env
+            .storage()
+            .instance()
+            .get::<DataKey, Period>(&DataKey::Periods(period))
+        {
+            if pd.reward_pool > 0 {
+                let fees: i128 = env
+                    .storage()
+                    .instance()
+                    .get(&DataKey::ProtocolFees)
+                    .unwrap_or(0);
+                let new_fees = arithmetic::checked_add(fees, pd.reward_pool)?;
+                env.storage()
+                    .instance()
+                    .set(&DataKey::ProtocolFees, &new_fees);
+            }
+            env.storage()
+                .instance()
+                .remove(&DataKey::Periods(period));
+        }
+        env.storage()
+            .instance()
+            .remove(&DataKey::SupportedLockPeriod(period));
+        events::emit_lock_period_removed(&env, period);
+        positions::bump_instance(&env);
+        Ok(())
+    }
+
     // ---------- View functions ----------
+    pub fn is_paused(env: Env) -> bool {
+        pause::is_paused(&env)
+    }
+
     pub fn get_position(env: Env, deposit_id: String) -> Option<Position> {
         positions::get(&env, &deposit_id)
     }
