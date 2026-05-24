@@ -278,6 +278,7 @@ impl VaquitaPool {
             env.storage()
                 .instance()
                 .set(&DataKey::ProtocolFees, &0i128);
+            events::emit_protocol_fees_withdrawn(&env, admin, protocol_fees);
         }
         positions::bump_instance(&env);
         Ok(())
@@ -340,6 +341,9 @@ impl VaquitaPool {
         new_fee: i128,
     ) -> Result<(), VaquitaPoolError> {
         admin::require_owner(&env)?;
+        if new_fee < 0 {
+            return Err(VaquitaPoolError::InvalidFee);
+        }
         if new_fee > 2000 {
             return Err(VaquitaPoolError::FeeCapExceeded);
         }
@@ -372,6 +376,7 @@ impl VaquitaPool {
         env.storage()
             .instance()
             .set(&DataKey::SupportedLockPeriod(new_lock_period), &true);
+        events::emit_lock_period_added(&env, new_lock_period);
         positions::bump_instance(&env);
         Ok(())
     }

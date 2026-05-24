@@ -8,7 +8,9 @@ const FEE_UPDATED: Symbol = symbol_short!("fee_upd");
 const REWARDS: Symbol = symbol_short!("rewards");
 const PAUSED: Symbol = symbol_short!("paused");
 const UNPAUSED: Symbol = symbol_short!("unpaused");
+const LP_ADDED: Symbol = symbol_short!("lp_add");
 const LP_REMOVED: Symbol = symbol_short!("lp_rm");
+const FEES_WTHDRWN: Symbol = symbol_short!("fees_wth");
 const VAULT_UPDATED: Symbol = symbol_short!("vault_upd");
 const TOKEN_UPDATED: Symbol = symbol_short!("tok_upd");
 const UPGRADE_PROPOSED: Symbol = symbol_short!("upg_prop");
@@ -99,12 +101,48 @@ pub fn emit_rewards_added(env: &Env, period: u64, amount: i128) {
     );
 }
 
-pub fn emit_paused(env: &Env) {
-    env.events().publish((PAUSED,), ());
+/// Paused event payload.
+#[contracttype]
+pub struct PausedEvent {
+    pub admin: Address,
 }
 
-pub fn emit_unpaused(env: &Env) {
-    env.events().publish((UNPAUSED,), ());
+/// Unpaused event payload.
+#[contracttype]
+pub struct UnpausedEvent {
+    pub admin: Address,
+}
+
+pub fn emit_paused(env: &Env, admin: Address) {
+    env.events().publish((PAUSED,), PausedEvent { admin });
+}
+
+pub fn emit_unpaused(env: &Env, admin: Address) {
+    env.events().publish((UNPAUSED,), UnpausedEvent { admin });
+}
+
+/// LockPeriodAdded event payload.
+#[contracttype]
+pub struct LockPeriodAddedEvent {
+    pub period: u64,
+}
+
+pub fn emit_lock_period_added(env: &Env, period: u64) {
+    env.events().publish((LP_ADDED,), LockPeriodAddedEvent { period });
+}
+
+/// ProtocolFeesWithdrawn event payload.
+#[contracttype]
+pub struct ProtocolFeesWithdrawnEvent {
+    pub admin: Address,
+    pub amount: i128,
+}
+
+pub fn emit_protocol_fees_withdrawn(env: &Env, admin: Address, amount: i128) {
+    env.events().publish(
+        (FEES_WTHDRWN,),
+        ProtocolFeesWithdrawnEvent { admin, amount },
+    );
 }
 
 /// LockPeriodRemoved event payload.
