@@ -43,4 +43,8 @@ pub enum DataKey {
     /// Upgrade timelock state (written by upgrade module in slice 025).
     PendingUpgradeHash,
     UpgradeReadyAt,
+    /// Running total of all open position amounts (for conservation invariant).
+    TotalPrincipal,
+    /// Running total of reward_pool across all periods (for conservation invariant).
+    TotalRewardPool,
 }

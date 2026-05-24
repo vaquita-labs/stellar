@@ -224,7 +224,7 @@ fn calculate_reward_returns_zero_when_no_deposits() {
 }
 
 #[test]
-fn strategy_loss_treats_interest_as_zero() {
+fn vault_loss_reverts_with_less_than_principal() {
     let e = Env::default();
     let (_, alice, _, _, _, pool, vault, tok) = deploy_pool(&e);
 
@@ -237,9 +237,11 @@ fn strategy_loss_treats_interest_as_zero() {
     vault.test_set_withdraw_adjustment(&loss);
 
     e.jump_time(LOCK_7D + 1);
-    let alice_before = tok.balance(&alice);
-    pool.withdraw(&alice, &dep);
-    assert_approx_eq_rel(tok.balance(&alice), alice_before + principal + loss, 1);
+    let result = pool.try_withdraw(&alice, &dep);
+    assert_eq!(
+        result,
+        Err(Ok(VaquitaPoolError::VaultReturnedLessThanPrincipal))
+    );
 }
 
 // ---- Helper for tests that need a pool but want to control auth independently ----

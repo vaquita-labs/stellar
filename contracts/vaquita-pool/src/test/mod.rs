@@ -178,6 +178,7 @@ pub mod mockpool {
 pub mod mock_defindex_vault;
 
 mod arithmetic;
+mod conservation;
 mod pause;
 mod pool_coverage;
 mod positions;
