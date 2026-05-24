@@ -24,9 +24,18 @@ fn setup(e: &Env) -> (Address, Address, VaquitaPoolClient<'_>, MockTokenClient<'
         MockDeFindexVaultArgs::__constructor(&usdc.address()),
     );
     let lp: Vec<u64> = Vec::from_array(e, [LOCK_7D]);
-    let pool_id = e.register(VaquitaPool, ());
+    let pool_id = e.register(
+        VaquitaPool,
+        (
+            admin.clone(),
+            usdc.address(),
+            vault.clone(),
+            lp,
+            0i128,
+            172800u64,
+        ),
+    );
     let pool = VaquitaPoolClient::new(e, &pool_id);
-    pool.initialize(&admin, &usdc.address(), &vault, &lp);
     (alice, admin, pool, usdc_client)
 }
 
