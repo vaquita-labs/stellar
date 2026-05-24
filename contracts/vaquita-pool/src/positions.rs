@@ -13,7 +13,6 @@
 
 use soroban_sdk::{Env, String};
 
-use crate::error::VaquitaPoolError;
 use crate::types::{DataKey, Position};
 
 // ---------- TTL constants ----------

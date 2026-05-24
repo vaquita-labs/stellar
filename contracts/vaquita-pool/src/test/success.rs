@@ -29,10 +29,19 @@ fn success() {
     );
 
     let lock_periods: Vec<u64> = Vec::from_array(&e, [604800]);
-    let vaquita_contract_id = e.register(VaquitaPool, ());
+    let vaquita_contract_id = e.register(
+        VaquitaPool,
+        (
+            admin.clone(),
+            usdc.address(),
+            defindex_vault_address.clone(),
+            lock_periods,
+            0i128,
+            172800u64,
+        ),
+    );
     let vaquita_client = VaquitaPoolClient::new(&e, &vaquita_contract_id);
-    vaquita_client.initialize(&admin, &usdc.address(), &defindex_vault_address, &lock_periods);
-    println!("Vaquita pool initialized");
+    println!("Vaquita pool initialized via constructor");
 
     vaquita_client.deposit(&alice, &String::from_str(&e, "TEST"), &principal, &604800);
     println!("Vaquita pool deposited");

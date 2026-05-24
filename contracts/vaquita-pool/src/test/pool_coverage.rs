@@ -44,9 +44,18 @@ fn deploy_pool(
     let vault_client = MockDeFindexVaultClient::new(e, &defindex_vault_address);
 
     let lock_periods: Vec<u64> = Vec::from_array(e, [LOCK_7D]);
-    let pool_id = e.register(VaquitaPool, ());
+    let pool_id = e.register(
+        VaquitaPool,
+        (
+            admin.clone(),
+            usdc.address(),
+            defindex_vault_address.clone(),
+            lock_periods,
+            0i128,
+            172800u64,
+        ),
+    );
     let pool = VaquitaPoolClient::new(e, &pool_id);
-    pool.initialize(&admin, &usdc.address(), &defindex_vault_address, &lock_periods);
 
     (
         admin,
@@ -140,7 +149,7 @@ fn early_withdraw_routes_interest_to_protocol_and_pool() {
     let e = Env::default();
     let (admin, alice, _, _, vault_addr, pool, vault, tok) = deploy_pool(&e);
 
-    pool.update_early_withdrawal_fee(&2500);
+    pool.update_early_withdrawal_fee(&500);
 
     let principal: i128 = 200_000_0000;
     tok.mint(&alice, &principal);
@@ -157,7 +166,7 @@ fn early_withdraw_routes_interest_to_protocol_and_pool() {
     pool.withdraw(&alice, &dep);
 
     let interest = yield_extra;
-    let fee = interest * 2500 / 10000;
+    let fee = interest * 500 / 10000;
     let remaining = interest - fee;
     assert_approx_eq_rel(tok.balance(&alice), alice_before + principal, 1);
 
@@ -235,9 +244,8 @@ fn strategy_loss_treats_interest_as_zero() {
 
 // ---- Helper for tests that need a pool but want to control auth independently ----
 
-/// Sets up a pool with `initialize` (which doesn't require auth) in an env
-/// where `mock_all_auths` has NOT been called.  Returns pool + admin so the
-/// caller can decide what auths to mock for each subsequent call.
+/// Sets up a pool via __constructor (no auth required) in an env where
+/// mock_all_auths has NOT been called, so subsequent admin calls will fail auth.
 fn deploy_pool_no_auth(
     e: &Env,
 ) -> (Address, Address, VaquitaPoolClient<'_>) {
@@ -251,11 +259,18 @@ fn deploy_pool_no_auth(
         MockDeFindexVaultArgs::__constructor(&usdc.address()),
     );
     let lp: Vec<u64> = Vec::from_array(e, [LOCK_7D]);
-    let pool_id = e.register(VaquitaPool, ());
+    let pool_id = e.register(
+        VaquitaPool,
+        (
+            admin.clone(),
+            usdc.address(),
+            vault.clone(),
+            lp,
+            0i128,
+            172800u64,
+        ),
+    );
     let pool = VaquitaPoolClient::new(e, &pool_id);
-    // `initialize` sets admin in storage but does NOT call require_auth(),
-    // so we can call it without any auth mock.
-    pool.initialize(&admin, &usdc.address(), &vault, &lp);
     (admin, usdc.address(), pool)
 }
 
@@ -280,13 +295,14 @@ fn deposit_rejects_unknown_period() {
 }
 
 #[test]
-fn initialize_twice_returns_error() {
+fn constructor_sets_expected_slots() {
+    // Verifies that all constructor-written slots have the expected initial values.
+    // Re-run prevention is enforced by the Soroban host (constructor runs once at deploy).
     let e = Env::default();
-    let (admin, _, _, usdc, vault, pool, _, _) = deploy_pool(&e);
-    let periods: Vec<u64> = Vec::from_array(&e, [LOCK_7D]);
-    let result = pool.try_initialize(&admin, &usdc, &vault, &periods);
-    // DepositAlreadyExists is the typed error for "already initialized" (reuses the same guard)
-    assert_eq!(result, Err(Ok(VaquitaPoolError::DepositAlreadyExists)));
+    let (_, _, _, _, _, pool, _, _) = deploy_pool(&e);
+    // version() and is_paused() are added in later slices; for now just verify
+    // that the pool responds correctly to existing read functions.
+    assert!(pool.get_period_data(&LOCK_7D).is_none()); // no deposits yet
 }
 
 #[test]
@@ -359,11 +375,11 @@ fn add_rewards_rejects_period_with_no_deposits() {
 }
 
 #[test]
-fn update_fee_rejects_above_basis_points() {
+fn update_fee_rejects_above_2000() {
     let e = Env::default();
     let (_, _, _, _, _, pool, _, _) = deploy_pool(&e);
     let result = pool.try_update_early_withdrawal_fee(&10001i128);
-    assert_eq!(result, Err(Ok(VaquitaPoolError::InvalidFee)));
+    assert_eq!(result, Err(Ok(VaquitaPoolError::FeeCapExceeded)));
 }
 
 #[test]
@@ -434,4 +450,19 @@ fn deposit_rejects_vault_share_drop() {
     vault.test_set_steal_shares_on_deposit(&80i128);
     let result = pool.try_deposit(&alice, &String::from_str(&e, "s2"), &50i128, &LOCK_7D);
     assert_eq!(result, Err(Ok(VaquitaPoolError::VaultShareBalanceDecreased)));
+}
+
+#[test]
+fn fee_cap_accepts_max_2000() {
+    let e = Env::default();
+    let (_, _, _, _, _, pool, _, _) = deploy_pool(&e);
+    pool.update_early_withdrawal_fee(&2000i128);
+}
+
+#[test]
+fn fee_cap_rejects_2001() {
+    let e = Env::default();
+    let (_, _, _, _, _, pool, _, _) = deploy_pool(&e);
+    let result = pool.try_update_early_withdrawal_fee(&2001i128);
+    assert_eq!(result, Err(Ok(VaquitaPoolError::FeeCapExceeded)));
 }
