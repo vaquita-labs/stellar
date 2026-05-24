@@ -39,17 +39,35 @@ build-badges:
 	@ls -l $(BADGES_WASM)
 
 deploy: build
-	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm $(WASM) --alias vaquita_pool
-	CONTRACT_ID=$(stellar contract alias show vaquita_pool)
+	stellar contract deploy \
+		--source $(SOURCE_ACCOUNT) \
+		--network $(NETWORK) \
+		--wasm $(WASM) \
+		--alias vaquita_pool \
+		-- \
+		--admin $(USER_ADDRESS) \
+		--blend_token $(BLEND_TOKEN) \
+		--defindex_vault_address $(DEFINDEX_VAULT_ADDRESS) \
+		--lock_periods "[$(LOCK_PERIODS)]" \
+		--early_withdrawal_fee_bps $(EARLY_WITHDRAWAL_FEE_BPS) \
+		--upgrade_timelock_secs $(UPGRADE_TIMELOCK_SECS)
 
-initialize: deploy
-	stellar contract invoke --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) --id vaquita_pool \
-	-- \
-	initialize \
-	--admin $(USER_ADDRESS) \
-	--blend_token $(BLEND_TOKEN) \
-	--defindex_vault_address $(DEFINDEX_VAULT_ADDRESS) \
-	--lock_periods "[$(LOCK_PERIODS)]"
+# Admin lifecycle helpers
+pause:
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- pause
+
+unpause:
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- unpause
+
+propose-upgrade:
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
+	-- propose_upgrade --new_wasm_hash $(NEW_WASM_HASH)
+
+cancel-upgrade:
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- cancel_upgrade
+
+execute-upgrade:
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- execute_upgrade
 
 deploy-badges: build-badges
 	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm $(BADGES_WASM) --alias vaquita_badges
@@ -81,14 +99,12 @@ add-lock-period:
 	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	add_lock_period \
-	--caller $(USER_ADDRESS) \
 	--new_lock_period $(NEW_LOCK_PERIOD)
 
 add-rewards:
 	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	add_rewards \
-	--caller $(USER_ADDRESS) \
 	--period $(LOCK_PERIOD) \
 	--reward_amount $(REWARD_AMOUNT)
 
