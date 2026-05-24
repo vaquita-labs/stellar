@@ -158,3 +158,41 @@ async function getPeriodData(lockPeriod: number, contractId: string, options?: G
 }
 
 export { getPeriodData };
+
+/**
+ * Simulates `VaquitaPool::is_paused()` (read-only).
+ * Returns `true` if deposits are currently paused, `false` otherwise.
+ * Never throws — returns `false` on any error so callers degrade gracefully.
+ */
+export async function getIsPoolPaused(
+  poolContractId: string,
+  rpcUrl: string = DEFAULT_SOROBAN_RPC,
+  networkPassphrase: string = Networks.TESTNET,
+): Promise<boolean> {
+  if (!poolContractId) return false;
+  try {
+    const contract = new Contract(poolContractId);
+    const server = new rpc.Server(rpcUrl);
+    const keypair = Keypair.random();
+    const account = new Account(keypair.publicKey(), '0');
+    const operation = contract.call('is_paused');
+    const transaction = new TransactionBuilder(account, {
+      fee: '100',
+      networkPassphrase,
+    })
+      .addOperation(operation)
+      .setTimeout(30)
+      .build();
+    const simulation = await server.simulateTransaction(transaction);
+    if (rpc.Api.isSimulationError(simulation)) {
+      console.warn('[stellar-sdk] is_paused simulation error', simulation.error, { poolContractId });
+      return false;
+    }
+    const returnValue = simulation.result?.retval;
+    if (!returnValue) return false;
+    return Boolean(scValToNative(returnValue));
+  } catch (error) {
+    console.error('[stellar-sdk] getIsPoolPaused', error, { poolContractId });
+    return false;
+  }
+}
