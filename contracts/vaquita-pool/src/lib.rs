@@ -39,6 +39,9 @@ impl VaquitaPool {
         early_withdrawal_fee_bps: i128,
         upgrade_timelock_secs: u64,
     ) {
+        // Enforce 20% cap at deploy time — invalid args must fail the deployment tx
+        assert!(early_withdrawal_fee_bps >= 0 && early_withdrawal_fee_bps <= 2000);
+
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::BlendToken, &blend_token);
         env.storage().instance().set(&DataKey::DeFindexVaultAddress, &defindex_vault_address);
