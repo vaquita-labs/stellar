@@ -2,6 +2,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import pinoHttp from 'pino-http';
+import { tryParsePoolError } from '@vaquita/shared';
 import { logger } from './lib/logger';
 import router from './routes';
 
@@ -42,6 +43,18 @@ app.use('/api/v1', router);
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   req.log.error({ err }, 'Unhandled error in request pipeline');
   if (res.headersSent) return;
+
+  const poolErr = tryParsePoolError(err);
+  if (poolErr) {
+    res.status(poolErr.httpStatus).json({
+      success: false,
+      message: poolErr.message,
+      errorCode: poolErr.code,
+      requestId: req.id,
+    });
+    return;
+  }
+
   res.status(500).json({
     success: false,
     message: 'Internal server error',

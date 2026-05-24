@@ -1,9 +1,10 @@
 'use client';
 
 import { isEvmTypeNetwork } from '@/networks/evm';
+import { isStellarNetwork } from '@/networks/stellar';
 import { Button as HeroButton } from '@heroui/react';
 import { useState } from 'react';
-import { useAnalytics } from '../../hooks';
+import { useAnalytics, useIsPoolPaused } from '../../hooks';
 import { useMapStore, useNetworkConfigStore } from '../../stores';
 import { T } from '../atoms';
 import { DepositModal } from './DepositModal';
@@ -16,18 +17,25 @@ export function DepositPanel() {
   const { walletAddress, lockPeriod, network, token } = useNetworkConfigStore();
   const { trackUserAction } = useAnalytics();
   const editMode = useMapStore((store) => store.editMode);
-  const disabled = lockPeriod < 0;
-  
+  const isStellar = network?.name ? isStellarNetwork(network.name) : false;
+  const { isPaused } = useIsPoolPaused();
+  const disabled = lockPeriod < 0 || (isStellar && isPaused);
+
   // Hide Save button when in edit mode
   if (editMode !== null) {
     return null;
   }
-  
+
   return (
     <div
       style={{ filter: disabled ? 'grayscale(100%)' : 'none' }}
       className="absolute bottom-20 md:bottom-10 left-0 flex flex-col items-center justify-center w-full gap-1"
     >
+      {isStellar && isPaused && (
+        <p className="text-sm text-warning font-semibold">
+          <T>Deposits are temporarily paused</T>
+        </p>
+      )}
       <div className="w-full max-w-xl px-2">
         <HeroButton
           size="lg"
