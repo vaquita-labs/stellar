@@ -1,4 +1,4 @@
-use soroban_sdk::{BytesN, Env};
+use soroban_sdk::{Address, BytesN, Env};
 
 use crate::error::VaquitaPoolError;
 use crate::types::DataKey;
@@ -122,11 +122,17 @@ pub fn execute_upgrade(env: &Env) -> Result<(), VaquitaPoolError> {
 pub fn lock_upgrades_forever(env: &Env) -> Result<(), VaquitaPoolError> {
     crate::admin::require_owner(env)?;
 
+    let admin: Address = env
+        .storage()
+        .instance()
+        .get(&DataKey::Admin)
+        .ok_or(VaquitaPoolError::NotInitialized)?;
+
     env.storage()
         .instance()
         .set(&DataKey::UpgradesLocked, &true);
 
-    crate::events::emit_upgrades_locked(env);
+    crate::events::emit_upgrades_locked(env, admin);
     Ok(())
 }
 
