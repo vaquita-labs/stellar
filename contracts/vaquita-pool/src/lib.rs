@@ -1,6 +1,6 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, Address, Env, String, IntoVal, Vec,
+    contract, contractimpl, Address, BytesN, Env, String, IntoVal, Vec,
     token::Client as TokenClient,
 };
 
@@ -14,6 +14,7 @@ mod pause;
 mod positions;
 mod token_config;
 mod types;
+mod upgrade;
 mod vault_adapter;
 
 pub use error::VaquitaPoolError;
@@ -441,6 +442,38 @@ impl VaquitaPool {
         Ok(())
     }
 
+    // ---------- Upgrade entrypoints ----------
+
+    pub fn propose_upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), VaquitaPoolError> {
+        upgrade::propose_upgrade(&env, new_wasm_hash)?;
+        positions::bump_instance(&env);
+        Ok(())
+    }
+
+    pub fn cancel_upgrade(env: Env) -> Result<(), VaquitaPoolError> {
+        upgrade::cancel_upgrade(&env)?;
+        positions::bump_instance(&env);
+        Ok(())
+    }
+
+    pub fn execute_upgrade(env: Env) -> Result<(), VaquitaPoolError> {
+        upgrade::execute_upgrade(&env)?;
+        positions::bump_instance(&env);
+        Ok(())
+    }
+
+    pub fn lock_upgrades_forever(env: Env) -> Result<(), VaquitaPoolError> {
+        upgrade::lock_upgrades_forever(&env)?;
+        positions::bump_instance(&env);
+        Ok(())
+    }
+
+    pub fn migrate(env: Env) -> Result<(), VaquitaPoolError> {
+        admin::require_owner(&env)?;
+        // v1: no-op — reserved for future version migrations
+        Ok(())
+    }
+
     // ---------- View functions ----------
     pub fn is_paused(env: Env) -> bool {
         pause::is_paused(&env)
@@ -452,6 +485,10 @@ impl VaquitaPool {
 
     pub fn get_period_data(env: Env, period: u64) -> Option<Period> {
         env.storage().instance().get(&DataKey::Periods(period))
+    }
+
+    pub fn version(env: Env) -> u32 {
+        upgrade::version(&env)
     }
 
     pub fn check_solvency(env: Env) -> Result<(), VaquitaPoolError> {
