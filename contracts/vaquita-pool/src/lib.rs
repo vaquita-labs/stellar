@@ -12,7 +12,9 @@ mod error;
 mod events;
 mod pause;
 mod positions;
+mod token_config;
 mod types;
+mod vault_adapter;
 
 pub use error::VaquitaPoolError;
 pub use types::{DataKey, Period, Position};
@@ -449,6 +451,18 @@ impl VaquitaPool {
             .instance()
             .remove(&DataKey::SupportedLockPeriod(period));
         events::emit_lock_period_removed(&env, period);
+        positions::bump_instance(&env);
+        Ok(())
+    }
+
+    pub fn set_defindex_vault(env: Env, new_vault: Address) -> Result<(), VaquitaPoolError> {
+        vault_adapter::set_vault_address(&env, new_vault)?;
+        positions::bump_instance(&env);
+        Ok(())
+    }
+
+    pub fn set_blend_token(env: Env, new_token: Address) -> Result<(), VaquitaPoolError> {
+        token_config::set_blend_token(&env, new_token)?;
         positions::bump_instance(&env);
         Ok(())
     }

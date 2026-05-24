@@ -9,6 +9,8 @@ const REWARDS: Symbol = symbol_short!("rewards");
 const PAUSED: Symbol = symbol_short!("paused");
 const UNPAUSED: Symbol = symbol_short!("unpaused");
 const LP_REMOVED: Symbol = symbol_short!("lp_rm");
+const VAULT_UPDATED: Symbol = symbol_short!("vault_upd");
+const TOKEN_UPDATED: Symbol = symbol_short!("tok_upd");
 
 /// Typed payload for a deposit event.
 /// Topic: ("deposit", caller)  Data: DepositEvent
@@ -110,6 +112,34 @@ pub struct LockPeriodRemovedEvent {
 pub fn emit_lock_period_removed(env: &Env, period: u64) {
     env.events()
         .publish((LP_REMOVED,), LockPeriodRemovedEvent { period });
+}
+
+/// DeFindexVaultUpdated event payload.
+#[contracttype]
+pub struct DeFindexVaultUpdatedEvent {
+    pub old_vault: Address,
+    pub new_vault: Address,
+}
+
+pub fn emit_defindex_vault_updated(env: &Env, old_vault: Address, new_vault: Address) {
+    env.events().publish(
+        (VAULT_UPDATED,),
+        DeFindexVaultUpdatedEvent { old_vault, new_vault },
+    );
+}
+
+/// BlendTokenUpdated event payload.
+#[contracttype]
+pub struct BlendTokenUpdatedEvent {
+    pub old_token: Address,
+    pub new_token: Address,
+}
+
+pub fn emit_blend_token_updated(env: &Env, old_token: Address, new_token: Address) {
+    env.events().publish(
+        (TOKEN_UPDATED,),
+        BlendTokenUpdatedEvent { old_token, new_token },
+    );
 }
 
 pub fn emit_withdraw(
