@@ -468,3 +468,11 @@ fn fee_cap_rejects_2001() {
     let result = pool.try_update_early_withdrawal_fee(&2001i128);
     assert_eq!(result, Err(Ok(VaquitaPoolError::FeeCapExceeded)));
 }
+
+#[test]
+fn fee_rejects_negative() {
+    let e = Env::default();
+    let (_, _, _, _, _, pool, _, _) = deploy_pool(&e);
+    let result = pool.try_update_early_withdrawal_fee(&-1i128);
+    assert_eq!(result, Err(Ok(VaquitaPoolError::InvalidFee)));
+}
