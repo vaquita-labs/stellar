@@ -182,6 +182,7 @@ mod pause;
 mod pool_coverage;
 mod positions;
 mod success;
+mod vault_repoint;
 
 /// Test helper: calculates the reward share for `amount` given `period_data`.
 /// Equivalent to the private `VaquitaPool::calculate_reward` method.
