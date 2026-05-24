@@ -1,8 +1,14 @@
-use soroban_sdk::{contracttype, symbol_short, Address, Env, String};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol, Vec};
 
 /// Topic symbols for each event type.
-const DEPOSIT: soroban_sdk::Symbol = symbol_short!("deposit");
-const WITHDRAW: soroban_sdk::Symbol = symbol_short!("withdraw");
+const DEPOSIT: Symbol = symbol_short!("deposit");
+const WITHDRAW: Symbol = symbol_short!("withdraw");
+const CONSTRUCTED: Symbol = symbol_short!("init");
+const FEE_UPDATED: Symbol = symbol_short!("fee_upd");
+const REWARDS: Symbol = symbol_short!("rewards");
+const PAUSED: Symbol = symbol_short!("paused");
+const UNPAUSED: Symbol = symbol_short!("unpaused");
+const LP_REMOVED: Symbol = symbol_short!("lp_rm");
 
 /// Typed payload for a deposit event.
 /// Topic: ("deposit", caller)  Data: DepositEvent
@@ -36,6 +42,74 @@ pub fn emit_deposit(
         (DEPOSIT, caller),
         DepositEvent { deposit_id, token, amount, shares },
     );
+}
+
+/// Typed payload for the constructor event.
+#[contracttype]
+pub struct ConstructedEvent {
+    pub blend_token: Address,
+    pub defindex_vault: Address,
+    pub lock_periods: Vec<u64>,
+}
+
+pub fn emit_constructed(
+    env: &Env,
+    admin: Address,
+    blend_token: Address,
+    defindex_vault: Address,
+    lock_periods: Vec<u64>,
+) {
+    env.events().publish(
+        (CONSTRUCTED, admin),
+        ConstructedEvent { blend_token, defindex_vault, lock_periods },
+    );
+}
+
+/// EarlyWithdrawalFeeUpdated event payload.
+#[contracttype]
+pub struct EarlyWithdrawalFeeUpdatedEvent {
+    pub old_fee: i128,
+    pub new_fee: i128,
+}
+
+pub fn emit_fee_updated(env: &Env, old_fee: i128, new_fee: i128) {
+    env.events().publish(
+        (FEE_UPDATED,),
+        EarlyWithdrawalFeeUpdatedEvent { old_fee, new_fee },
+    );
+}
+
+/// RewardsAdded event payload.
+#[contracttype]
+pub struct RewardsAddedEvent {
+    pub period: u64,
+    pub amount: i128,
+}
+
+pub fn emit_rewards_added(env: &Env, period: u64, amount: i128) {
+    env.events().publish(
+        (REWARDS,),
+        RewardsAddedEvent { period, amount },
+    );
+}
+
+pub fn emit_paused(env: &Env) {
+    env.events().publish((PAUSED,), ());
+}
+
+pub fn emit_unpaused(env: &Env) {
+    env.events().publish((UNPAUSED,), ());
+}
+
+/// LockPeriodRemoved event payload.
+#[contracttype]
+pub struct LockPeriodRemovedEvent {
+    pub period: u64,
+}
+
+pub fn emit_lock_period_removed(env: &Env, period: u64) {
+    env.events()
+        .publish((LP_REMOVED,), LockPeriodRemovedEvent { period });
 }
 
 pub fn emit_withdraw(
