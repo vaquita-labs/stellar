@@ -225,8 +225,14 @@ pub fn emit_upgrade_executed(env: &Env, wasm_hash: BytesN<32>, new_version: u32)
     );
 }
 
-pub fn emit_upgrades_locked(env: &Env) {
-    env.events().publish((UPGRADES_LOCKED,), ());
+/// UpgradesLocked event payload.
+#[contracttype]
+pub struct UpgradesLockedEvent {
+    pub admin: Address,
+}
+
+pub fn emit_upgrades_locked(env: &Env, admin: Address) {
+    env.events().publish((UPGRADES_LOCKED,), UpgradesLockedEvent { admin });
 }
 
 pub fn emit_withdraw(
