@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol, Vec};
+use soroban_sdk::{contracttype, symbol_short, Address, BytesN, Env, String, Symbol, Vec};
 
 /// Topic symbols for each event type.
 const DEPOSIT: Symbol = symbol_short!("deposit");
@@ -11,6 +11,10 @@ const UNPAUSED: Symbol = symbol_short!("unpaused");
 const LP_REMOVED: Symbol = symbol_short!("lp_rm");
 const VAULT_UPDATED: Symbol = symbol_short!("vault_upd");
 const TOKEN_UPDATED: Symbol = symbol_short!("tok_upd");
+const UPGRADE_PROPOSED: Symbol = symbol_short!("upg_prop");
+const UPGRADE_CANCELLED: Symbol = symbol_short!("upg_canc");
+const UPGRADE_EXECUTED: Symbol = symbol_short!("upg_exec");
+const UPGRADES_LOCKED: Symbol = symbol_short!("upg_lock");
 
 /// Typed payload for a deposit event.
 /// Topic: ("deposit", caller)  Data: DepositEvent
@@ -140,6 +144,51 @@ pub fn emit_blend_token_updated(env: &Env, old_token: Address, new_token: Addres
         (TOKEN_UPDATED,),
         BlendTokenUpdatedEvent { old_token, new_token },
     );
+}
+
+/// UpgradeProposed event payload.
+#[contracttype]
+pub struct UpgradeProposedEvent {
+    pub wasm_hash: BytesN<32>,
+    pub ready_at: u64,
+}
+
+pub fn emit_upgrade_proposed(env: &Env, wasm_hash: BytesN<32>, ready_at: u64) {
+    env.events().publish(
+        (UPGRADE_PROPOSED,),
+        UpgradeProposedEvent { wasm_hash, ready_at },
+    );
+}
+
+/// UpgradeCancelled event payload.
+#[contracttype]
+pub struct UpgradeCancelledEvent {
+    pub wasm_hash: BytesN<32>,
+}
+
+pub fn emit_upgrade_cancelled(env: &Env, wasm_hash: BytesN<32>) {
+    env.events().publish(
+        (UPGRADE_CANCELLED,),
+        UpgradeCancelledEvent { wasm_hash },
+    );
+}
+
+/// UpgradeExecuted event payload.
+#[contracttype]
+pub struct UpgradeExecutedEvent {
+    pub wasm_hash: BytesN<32>,
+    pub new_version: u32,
+}
+
+pub fn emit_upgrade_executed(env: &Env, wasm_hash: BytesN<32>, new_version: u32) {
+    env.events().publish(
+        (UPGRADE_EXECUTED,),
+        UpgradeExecutedEvent { wasm_hash, new_version },
+    );
+}
+
+pub fn emit_upgrades_locked(env: &Env) {
+    env.events().publish((UPGRADES_LOCKED,), ());
 }
 
 pub fn emit_withdraw(

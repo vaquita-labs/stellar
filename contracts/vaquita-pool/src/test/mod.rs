@@ -183,6 +183,7 @@ mod pause;
 mod pool_coverage;
 mod positions;
 mod success;
+mod upgrade;
 mod vault_repoint;
 
 /// Test helper: calculates the reward share for `amount` given `period_data`.
