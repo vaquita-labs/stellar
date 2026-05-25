@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sendError, sendSuccess, supabase } from '@vaquita/shared';
+import { env, sendError, sendSuccess } from '@vaquita/shared';
 
 const router = Router();
 
@@ -20,29 +20,54 @@ router.get('/', (req, res) => {
   );
 });
 
-// Readiness — answers "can the API reach Supabase?". Used to verify the DB
-// dependency end-to-end.
+// Readiness — answers "can the API reach Supabase?". Hits PostgREST's root,
+// which returns the OpenAPI spec and exists on every Supabase project. Avoids
+// coupling the health check to any application table, so a missing schema in
+// dev doesn't make the check flap.
 router.get('/db', async (req, res) => {
   req.log.info('GET /health/db (Supabase ping)');
 
+  const url = `${env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/`;
+  const ts = () => new Date().toISOString();
   const startedAt = Date.now();
-  const { error } = await supabase.from('tenant_config').select('network_name').limit(1);
-  const latencyMs = Date.now() - startedAt;
 
-  const env = process.env.NODE_ENV ?? 'development';
-  const ts = new Date().toISOString();
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      signal: AbortSignal.timeout(5_000),
+    });
+    const latencyMs = Date.now() - startedAt;
 
-  if (error) {
-    req.log.error({ err: error, latencyMs }, 'Supabase health check failed');
+    if (!response.ok) {
+      req.log.error({ status: response.status, latencyMs }, 'Supabase responded with non-2xx');
+      return sendError(
+        res,
+        'Supabase health check failed',
+        { db: 'down', env: env.NODE_ENV, ts: ts(), latencyMs, status: response.status },
+        503,
+      );
+    }
+
+    return sendSuccess(
+      res,
+      { db: 'ok', env: env.NODE_ENV, ts: ts(), latencyMs },
+      'db reachable',
+    );
+  } catch (err) {
+    const latencyMs = Date.now() - startedAt;
+    const detail = err instanceof Error ? err.message : String(err);
+    req.log.error({ err, latencyMs }, 'Supabase health check threw');
     return sendError(
       res,
       'Supabase health check failed',
-      { db: 'down', env, ts, latencyMs, detail: error.message },
+      { db: 'down', env: env.NODE_ENV, ts: ts(), latencyMs, detail },
       503,
     );
   }
-
-  return sendSuccess(res, { db: 'ok', env, ts, latencyMs }, 'db reachable');
 });
 
 export default router;
