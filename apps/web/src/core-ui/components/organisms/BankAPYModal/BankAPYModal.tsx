@@ -8,7 +8,9 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useApyByLockPeriod, useDepositsComplete } from '../../../hooks';
 import { useNetworkConfigStore } from '../../../stores';
+import { DepositResponseDTO } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
+import { VaquitaModalContent } from '../VaquitaModal';
 import { BankAPYModalProps } from './types';
 
 export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
@@ -18,6 +20,7 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
 
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [selectedVaquita, setSelectedVaquita] = useState<DepositResponseDTO | null>(null);
 
   const protocolApy = dataApy?.protocolApy ?? 0;
   const vaquitaApy = dataApy?.vaquitaApy ?? 0;
@@ -27,11 +30,16 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
 
   const { deposits, activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
-  const totalDepositsAllUsers = dataApy?.totalDeposits ?? 0;
+  const estimatedAnnualReturn = activeDepositsTotalAmount * (totalApy / 100);
+  const totalEstimatedEarnings = activeDeposits.reduce(
+    (acc, d) => acc + (d.vaquitaInterest ?? 0) + (d.aaveInterest ?? 0) + (d.blendInterest ?? 0),
+    0,
+  );
 
   const isLoading = isLoadingApy || isLoadingDeposits;
 
   return (
+    <>
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
@@ -53,8 +61,13 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
               className="w-full flex items-center justify-between gap-3 p-4 hover:bg-success/5 transition-colors"
             >
               <div className="text-left">
-                <p className="text-xs text-success/80 font-semibold uppercase tracking-wide">Total APY</p>
-                <p className="text-3xl font-bold text-success leading-tight">{totalApy.toFixed(2)}%</p>
+                <p className="text-xs text-success/80 font-semibold uppercase tracking-wide">
+                  Estimated annual return
+                </p>
+                <p className="text-3xl font-bold text-success leading-tight">
+                  {estimatedAnnualReturn.toFixed(2)}
+                  <span className="text-base ml-1 font-semibold">{tokenSymbol}</span>
+                </p>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-success font-semibold">
                 <span>{showBreakdown ? 'Hide' : 'Breakdown'}</span>
@@ -110,9 +123,9 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
               </p>
             </div>
             <div className="border border-black/15 border-b-2 rounded-xl bg-black/5 p-3 text-center">
-              <p className="text-xs text-black/60 font-semibold mb-1">All users</p>
+              <p className="text-xs text-black/60 font-semibold mb-1">Estimated earnings total</p>
               <p className="text-lg font-bold text-black leading-tight">
-                {totalDepositsAllUsers.toFixed(2)}
+                {totalEstimatedEarnings.toFixed(2)}
                 <span className="text-xs ml-1 font-semibold">{tokenSymbol}</span>
               </p>
             </div>
@@ -132,7 +145,11 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
             ) : (
               <div className="space-y-2">
                 {activeDeposits.map((deposit) => (
-                  <VaquitaDepositCard key={deposit.id} deposit={deposit} />
+                  <VaquitaDepositCard
+                    key={deposit.id}
+                    deposit={deposit}
+                    onPress={() => setSelectedVaquita(deposit)}
+                  />
                 ))}
               </div>
             )}
@@ -179,5 +196,13 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
         </div>
       )}
     </AppModal>
+    {selectedVaquita && (
+      <VaquitaModalContent
+        isOpen={!!selectedVaquita}
+        onClose={() => setSelectedVaquita(null)}
+        vaquita={selectedVaquita}
+      />
+    )}
+    </>
   );
 }

@@ -352,7 +352,7 @@ export function ProfilePage() {
               value={
                 hideBalance
                   ? '••••'
-                  : `$${activeDepositsTotalAmount} ${token?.symbol ?? ''}`.trim()
+                  : `$${activeDepositsTotalAmount.toFixed(2)} ${token?.symbol ?? ''}`.trim()
               }
               label="Active deposits"
             />

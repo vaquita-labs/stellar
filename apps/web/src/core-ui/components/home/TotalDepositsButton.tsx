@@ -32,7 +32,7 @@ export const TotalDepositsButton = () => {
               priority
             />
             <span className="text-xs font-semibold text-black">
-              {activeDepositsTotalAmount} {token?.symbol}
+              {activeDepositsTotalAmount.toFixed(2)} {token?.symbol}
             </span>
           </>
         )}

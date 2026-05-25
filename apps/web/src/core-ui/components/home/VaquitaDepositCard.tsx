@@ -105,7 +105,7 @@ export const VaquitaDepositCard = ({
         <div className="mt-1.5 pt-1.5 border-t border-black/10 flex items-center justify-between">
           <span className="text-xs text-gray-600">Earnings</span>
           <span className="text-sm font-bold text-success">
-            +{totalInterest.toFixed(4)} {deposit.tokenSymbol}
+            +{totalInterest.toFixed(2)} {deposit.tokenSymbol}
           </span>
         </div>
       </Card.Content>
