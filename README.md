@@ -58,13 +58,12 @@ More details in [`apps/web/README.md`](apps/web/README.md).
 
 ## API
 
-The HTTP API is deployed at **`https://api.vaquita.fi`** and serves live data
-from Supabase (staging/production). All routes live under `/api/v1`.
+The HTTP API is deployed at **`https://api.stellar.dev.vaquita.fi`** and serves
+live data from Supabase. All routes live under `/api/v1`.
 
 - **Endpoint reference:** [`apps/api/README.md`](apps/api/README.md#endpoints)
-- **Liveness:** [`https://api.vaquita.fi/api/v1/health`](https://api.vaquita.fi/api/v1/health) — confirms the API process is up
-- **DB health:** [`https://api.vaquita.fi/api/v1/health/db`](https://api.vaquita.fi/api/v1/health/db) — pings Supabase and reports DB connectivity
-- **Config (example live data):** `curl https://api.vaquita.fi/api/v1/config`
+- **Liveness:** [`https://api.stellar.dev.vaquita.fi/api/v1/health`](https://api.stellar.dev.vaquita.fi/api/v1/health) — confirms the API process is up
+- **DB health:** [`https://api.stellar.dev.vaquita.fi/api/v1/health/db`](https://api.stellar.dev.vaquita.fi/api/v1/health/db) — pings Supabase and reports live DB latency
 
 ## Contracts
 
