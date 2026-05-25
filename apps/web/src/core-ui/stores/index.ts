@@ -6,3 +6,4 @@ export * from './network-config';
 export * from './privacy';
 export * from './resize';
 export * from './transaction';
+export * from './vaquita-positions';
