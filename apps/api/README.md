@@ -56,7 +56,7 @@ Has no external dependencies, so a flaky Supabase will not flip this to red
 (which would cause orchestrators to reboot the container for no reason).
 
 ```bash
-curl https://api.vaquita.fi/api/v1/health
+curl https://api.stellar.dev.vaquita.fi/api/v1/health
 ```
 
 ```json
@@ -65,7 +65,7 @@ curl https://api.vaquita.fi/api/v1/health
   "message": "alive",
   "data": {
     "service": "ok",
-    "env": "production",
+    "env": "development",
     "uptimeSec": 1234,
     "ts": "2026-05-25T00:00:00.000Z"
   }
@@ -77,7 +77,7 @@ and reports DB connectivity. Returns `200` when the DB is reachable, `503`
 when it is not.
 
 ```bash
-curl https://api.vaquita.fi/api/v1/health/db
+curl https://api.stellar.dev.vaquita.fi/api/v1/health/db
 ```
 
 ```json
@@ -86,7 +86,7 @@ curl https://api.vaquita.fi/api/v1/health/db
   "message": "db reachable",
   "data": {
     "db": "ok",
-    "env": "production",
+    "env": "development",
     "ts": "2026-05-25T00:00:00.000Z",
     "latencyMs": 42
   }
