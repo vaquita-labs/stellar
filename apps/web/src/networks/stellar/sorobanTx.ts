@@ -58,6 +58,11 @@ type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' 
  * `contracts/vaquita-pool/src/lib.rs`), so callers pass the 32-char hex string
  * verbatim under `{ type: 'string' }`.
  */
+// If Pollar never emits success/error (e.g. user closes Freighter without
+// signing), unsubscribe after this many ms so the listener doesn't stay
+// alive and double-sign the next attempt's `built` event.
+const POLLAR_TX_TIMEOUT_MS = 120_000;
+
 async function invokeViaPollar(
   client: PollarClient,
   params: InvokeContractParams,
@@ -65,17 +70,25 @@ async function invokeViaPollar(
 ): Promise<{ hash: string }> {
   return new Promise<{ hash: string }>((resolve, reject) => {
     let settled = false;
+    let signed = false;
     let unsubscribe: (() => void) | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const finish = (fn: () => void) => {
       if (settled) return;
       settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
       unsubscribe?.();
       fn();
     };
 
     unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
       console.info(`[${logLabel}] state`, state.step, state);
-      if (state.step === 'built' && state.buildData?.unsignedXdr) {
+      // `onTransactionStateChange` is a global subscription, so an orphaned
+      // listener from a previous attempt would also fire here on the next
+      // `built` and trigger another Freighter popup. Guard with `signed` so
+      // each listener only ever signs the first `built` it sees.
+      if (state.step === 'built' && state.buildData?.unsignedXdr && !signed) {
+        signed = true;
         // Don't catch — let state.step 'success'/'error' be the authoritative
         // outcome. signAndSubmitTx can reject on transient network errors even
         // when the tx lands; catching here races against the success state.
@@ -91,6 +104,10 @@ async function invokeViaPollar(
         return;
       }
     });
+
+    timeoutId = setTimeout(() => {
+      finish(() => reject(new Error(`Pollar ${params.method} timed out`)));
+    }, POLLAR_TX_TIMEOUT_MS);
 
     // Pollar retries 401s internally and communicates the real outcome via
     // onTransactionStateChange (success / error). Only log here — calling
@@ -211,18 +228,22 @@ export async function addUsdcTrustline(): Promise<{ hash: string }> {
 
   return new Promise<{ hash: string }>((resolve, reject) => {
     let settled = false;
+    let signed = false;
     // Use `let` + optional chaining so finish() is safe even if the Pollar
     // callback fires synchronously before the assignment completes.
     let unsubscribe: (() => void) | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const finish = (fn: () => void) => {
       if (settled) return;
       settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
       unsubscribe?.();
       fn();
     };
 
     unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
-      if (state.step === 'built' && state.buildData?.unsignedXdr) {
+      if (state.step === 'built' && state.buildData?.unsignedXdr && !signed) {
+        signed = true;
         void client.signAndSubmitTx(state.buildData.unsignedXdr);
         return;
       }
@@ -235,6 +256,10 @@ export async function addUsdcTrustline(): Promise<{ hash: string }> {
         return;
       }
     });
+
+    timeoutId = setTimeout(() => {
+      finish(() => reject(new Error('change_trust timed out')));
+    }, POLLAR_TX_TIMEOUT_MS);
 
     void client
       .buildTx('change_trust', {
