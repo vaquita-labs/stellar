@@ -95,7 +95,7 @@ export const WorldMap = ({ walletAddress, isLeaderboard, isAvailable, worldType 
                 key={vaquita.id}
                 vaquita={vaquita}
                 onSelect={() => setSelectedCow(vaquita)}
-                headLabel={`${vaquita.amount} ${token.symbol} (${formatTimeDeposit(vaquita.lockPeriod)})`}
+                headLabel={`${vaquita.amount.toFixed(2)} ${token.symbol} (${formatTimeDeposit(vaquita.lockPeriod)})`}
               />
             );
           })}

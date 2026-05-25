@@ -122,7 +122,7 @@ export const HeaderStats = () => {
               ) : (
                 <div className='flex justify-end gap-1.5'>
                   <span className="text-2xl font-bold text-black">
-                    {hideBalance ? '••••' : `$${activeDepositsTotalAmount} ${token?.symbol}`}
+                    {hideBalance ? '••••' : `$${activeDepositsTotalAmount.toFixed(2)} ${token?.symbol}`}
                   </span>
                   <EarnChip
                     deposits={activeDeposits}
