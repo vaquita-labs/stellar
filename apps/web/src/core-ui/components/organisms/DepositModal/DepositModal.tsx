@@ -1,6 +1,7 @@
 'use client';
 
 import { isNewDepositHandled } from '@/networks/helpers';
+import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import {
   Button,
   Description,
@@ -135,8 +136,13 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           lockPeriod,
           network: network?.name,
         });
+        const poolMsg = parsePoolErrorMessage(lastError);
         toast.danger(<T>Unsuccessful deposit</T>, {
-          description: lastError instanceof Error ? <T>{lastError.message}</T> : undefined,
+          description: poolMsg
+            ? <T>{poolMsg}</T>
+            : lastError instanceof Error
+              ? <T>{lastError.message}</T>
+              : undefined,
           timeout: 3000,
         });
       }
