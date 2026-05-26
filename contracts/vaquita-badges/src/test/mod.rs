@@ -29,3 +29,4 @@ impl EnvTestUtils for Env {
 }
 
 mod badges_test;
+mod types_test;
