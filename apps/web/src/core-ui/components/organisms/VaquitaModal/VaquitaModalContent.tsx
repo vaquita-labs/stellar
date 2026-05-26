@@ -2,6 +2,7 @@
 
 import { useRestWithdrawal } from '@/core-ui/hooks';
 import { isNewDepositHandled } from '@/networks/helpers';
+import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import { Button, Spinner, toast } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
@@ -99,8 +100,13 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
       });
       onClose();
     } else {
+      const poolMsg = parsePoolErrorMessage(lastError);
       toast.danger(<T>Unsuccessful withdraw</T>, {
-        description: lastError instanceof Error ? <T>{lastError.message}</T> : undefined,
+        description: poolMsg
+          ? <T>{poolMsg}</T>
+          : lastError instanceof Error
+            ? <T>{lastError.message}</T>
+            : undefined,
         timeout: 30000,
       });
     }
