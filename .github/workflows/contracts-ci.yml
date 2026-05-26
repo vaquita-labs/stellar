@@ -91,18 +91,8 @@ jobs:
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked
 
-      - name: Generate lcov report
-        run: |
-          cargo llvm-cov --workspace --all-features --remap-path-prefix \
-            --ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
-            --lcov --output-path lcov.info
-
-      - name: Generate HTML report
-        run: |
-          cargo llvm-cov report --remap-path-prefix \
-            --ignore-filename-regex '/test/|defindex_vault\.rs|vaquita-pool/src/types\.rs' \
-            --fail-under-lines 80 \
-            --html --output-dir coverage-html
+      - name: Generate coverage report
+        run: make coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
