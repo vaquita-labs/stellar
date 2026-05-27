@@ -21,7 +21,7 @@ export const StreakButton = () => {
         ) : (
           <>
             <Image
-              src="/icons/summary/streak.png"
+              src="/icons/global/streak.png"
               alt="Streak"
               width={typeof window !== 'undefined' && window.innerWidth < 768 ? 24 : 40}
               height={typeof window !== 'undefined' && window.innerWidth < 768 ? 24 : 40}
