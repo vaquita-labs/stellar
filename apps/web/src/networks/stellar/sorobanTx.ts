@@ -58,24 +58,55 @@ type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' 
  * `contracts/vaquita-pool/src/lib.rs`), so callers pass the 32-char hex string
  * verbatim under `{ type: 'string' }`.
  */
+// If Pollar never emits success/error (e.g. user closes Freighter without
+// signing), unsubscribe after this many ms so the listener doesn't stay
+// alive and double-sign the next attempt's `built` event.
+const POLLAR_TX_TIMEOUT_MS = 120_000;
+
+// Coalesce overlapping invocations of the same contract call into one
+// in-flight request. `onTransactionStateChange` is a global subscription on
+// the Pollar client, so two parallel `invokeViaPollar` calls would each
+// subscribe and each sign the same `built` event → two Freighter tabs.
+// Keying by the full request signature lets independent deposits/withdraws
+// still run in parallel.
+const INFLIGHT_REQUESTS = new Map<string, Promise<{ hash: string }>>();
+
+function requestKey(params: InvokeContractParams): string {
+  return `${params.contractId}:${params.method}:${JSON.stringify(params.args)}`;
+}
+
 async function invokeViaPollar(
   client: PollarClient,
   params: InvokeContractParams,
   logLabel: string,
 ): Promise<{ hash: string }> {
-  return new Promise<{ hash: string }>((resolve, reject) => {
+  const key = requestKey(params);
+  const existing = INFLIGHT_REQUESTS.get(key);
+  if (existing) {
+    console.warn(`[${logLabel}] duplicate call coalesced into in-flight request`);
+    return existing;
+  }
+
+  const promise = new Promise<{ hash: string }>((resolve, reject) => {
     let settled = false;
+    let signed = false;
     let unsubscribe: (() => void) | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const finish = (fn: () => void) => {
       if (settled) return;
       settled = true;
+      INFLIGHT_REQUESTS.delete(key);
+      if (timeoutId) clearTimeout(timeoutId);
       unsubscribe?.();
       fn();
     };
 
     unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
       console.info(`[${logLabel}] state`, state.step, state);
-      if (state.step === 'built' && state.buildData?.unsignedXdr) {
+      // Belt-and-suspenders against orphaned listeners from a previous
+      // attempt: each listener only signs the first `built` it sees.
+      if (state.step === 'built' && state.buildData?.unsignedXdr && !signed) {
+        signed = true;
         // Don't catch — let state.step 'success'/'error' be the authoritative
         // outcome. signAndSubmitTx can reject on transient network errors even
         // when the tx lands; catching here races against the success state.
@@ -92,6 +123,10 @@ async function invokeViaPollar(
       }
     });
 
+    timeoutId = setTimeout(() => {
+      finish(() => reject(new Error(`Pollar ${params.method} timed out`)));
+    }, POLLAR_TX_TIMEOUT_MS);
+
     // Pollar retries 401s internally and communicates the real outcome via
     // onTransactionStateChange (success / error). Only log here — calling
     // finish() would reject the promise and unsubscribe before the retry lands.
@@ -99,6 +134,9 @@ async function invokeViaPollar(
       console.warn(`[${logLabel}] buildTx error (Pollar may retry):`, err);
     });
   });
+
+  INFLIGHT_REQUESTS.set(key, promise);
+  return promise;
 }
 
 function requirePollarClient(): PollarClient {
