@@ -109,21 +109,6 @@ export function ProfilePage() {
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
 
-  // TEST — remove before mainnet
-  const [trustlinePending, setTrustlinePending] = useState(false);
-  const handleAddTrustline = async () => {
-    setTrustlinePending(true);
-    try {
-      await addUsdcTrustline();
-      toast.success('USDC trustline added!');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to add trustline';
-      toast.danger('Trustline error', { description: msg });
-    } finally {
-      setTrustlinePending(false);
-    }
-  };
-
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
   const experience = experienceData?.experience ?? 0;
@@ -178,31 +163,6 @@ export function ProfilePage() {
       }),
     [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
   );
-
-  const handleShareToInstagram = async () => {
-    // Instagram doesn't expose a public web-share intent for arbitrary URLs.
-    // We try the native share sheet first (which surfaces Instagram on mobile),
-    // and fall back to copying the link with a hint to paste into a story.
-    const url = typeof window !== 'undefined' ? window.location.href : '';
-    const text = `I'm saving with Vaquita 🐮 — join me!`;
-    try {
-      if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
-        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: 'Vaquita',
-          text,
-          url,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(`${text} — ${url}`);
-      toast.success('Copied! Paste it in your Instagram story.');
-    } catch (error) {
-      const message = (error as { message?: string })?.message ?? '';
-      if (message && !message.toLowerCase().includes('abort')) {
-        toast.danger('Could not share', { description: message });
-      }
-    }
-  };
 
   /* -------------------------------------------------------------- */
   /* Disconnected state                                              */
@@ -288,48 +248,6 @@ export function ProfilePage() {
           </Link>
         </section>
 
-        {/* TEST — remove before mainnet -------------------------------- */}
-        <section className="px-4 sm:px-6">
-          <button
-            type="button"
-            onClick={handleAddTrustline}
-            disabled={trustlinePending}
-            className="flex items-center justify-center gap-2 w-full h-12 rounded-md bg-yellow-300 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide hover:bg-yellow-200 hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {trustlinePending ? 'Adding…' : '🧪 Add USDC Trustline [TEST]'}
-          </button>
-        </section>
-
-        {/* Share to Instagram CTA ------------------------------------- */}
-        {/* <section className="px-4 sm:px-6">
-          <div className="relative overflow-hidden rounded-2xl bg-white border border-black border-b-2 p-4 flex items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-extrabold text-black leading-snug">
-                Share your Vaquita on Instagram!
-              </p>
-              <p className="text-xs text-gray-600 mt-0.5">
-                Brag a little — invite your friends to save together.
-              </p>
-              <button
-                type="button"
-                onClick={handleShareToInstagram}
-                className="mt-3 inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-primary text-black border border-black border-b-3 text-xs font-bold uppercase tracking-wide hover:bg-primary/80 hover:-translate-y-0.5 transition"
-              >
-                <FiShare2 className="h-3.5 w-3.5" />
-                Share now
-              </button>
-            </div>
-            <div className="shrink-0">
-              <Image
-                src="/vaquita/vaquita_isotipo.svg"
-                alt="Vaquita"
-                width={72}
-                height={72}
-                className="object-contain"
-              />
-            </div>
-          </div>
-        </section> */}
 
         {/* Resumen ---------------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
