@@ -249,7 +249,6 @@ export function ProfilePage() {
         </section>
 
 
-        {/* Resumen ---------------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <SectionHeader title="Summary" href="/profile/summary" />
           {/* Whole white card is the link target — the chevron in the header
@@ -276,12 +275,12 @@ export function ProfilePage() {
             />
             <SummaryItem
               icon="/icons/global/coin.png"
-              value={goldCoins.toLocaleString()}
+              value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               label="Gold"
             />
             <SummaryItem
               icon="/icons/global/trophy.png"
-              value={`${experience.toLocaleString()} XP`}
+              value={`${Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })} XP`}
               label="Experience"
             />
           </Link>
