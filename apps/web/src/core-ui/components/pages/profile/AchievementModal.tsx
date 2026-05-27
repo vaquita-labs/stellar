@@ -525,7 +525,7 @@ export function AchievementModal({
               <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
                 <span>Progress</span>
                 <span className="tabular-nums">
-                  {achievement.progress!.current} / {achievement.progress!.target}
+                  {Math.floor(achievement.progress!.current)} / {Math.floor(achievement.progress!.target)}
                 </span>
               </div>
               <div className="h-2.5 w-full bg-white border border-black rounded-full overflow-hidden">
@@ -638,7 +638,7 @@ export function AchievementModal({
                     className="object-contain"
                   />
                   <span className="text-sm font-extrabold tabular-nums">
-                    {goldCoins.toLocaleString()}
+                    {Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
                 </motion.div>
               ) : showHeaderShare ? (
