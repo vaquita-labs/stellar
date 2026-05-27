@@ -1,8 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FiArrowLeft, FiGift } from 'react-icons/fi';
 import { getDepositsData } from '../../../helpers/deposits';
 import {
@@ -18,55 +17,8 @@ import { buildAchievements } from '../../../data/profile-badges';
 import { useNetworkConfigStore } from '../../../stores';
 import { AchievementDetail, AchievementModal } from './AchievementModal';
 import { BadgeTile } from './BadgeTile';
+import { PersonalRecords } from './PersonalRecords';
 import { RedeemCodeModal } from './RedeemCodeModal';
-
-/* ------------------------------------------------------------------ */
-/* Personal record card                                                */
-/* ------------------------------------------------------------------ */
-
-interface RecordCardProps {
-  icon: string;
-  /** CSS background applied to the image panel. */
-  background: string;
-  title: string;
-  value: React.ReactNode;
-  date: string;
-}
-
-/**
- * Picture-forward record: a soft outlined frame (no fill) wraps the medal art
- * and its caption. The colored halo blooms behind the artwork so each tile
- * reads as a poster, not as a card.
- */
-function RecordCard({ icon, background, title, value, date }: RecordCardProps) {
-  return (
-    <div className="shrink-0 w-40 sm:w-44 snap-start rounded-3xl border border-black/10 px-3 pt-3 pb-3 flex flex-col items-center gap-1.5">
-      <div className="relative w-full aspect-square flex items-center justify-center">
-        <span
-          aria-hidden
-          className="absolute inset-3 rounded-full blur-2xl opacity-65"
-          style={{ background }}
-        />
-        <Image
-          src={icon}
-          alt={title}
-          width={240}
-          height={240}
-          className="relative h-full w-full object-contain drop-shadow-md"
-        />
-      </div>
-      <div className="flex flex-col items-center text-center min-w-0 w-full leading-tight">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 truncate w-full">
-          {title}
-        </span>
-        <span className="text-xl font-extrabold text-black tabular-nums leading-none mt-0.5">
-          {value}
-        </span>
-        <span className="text-[10px] text-gray-400 leading-none mt-1">{date}</span>
-      </div>
-    </div>
-  );
-}
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -157,52 +109,15 @@ export function AllAchievementsPage() {
           <h2 className="text-base sm:text-lg font-extrabold text-black px-1">
             Personal records
           </h2>
-          <div
-            className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full snap-x"
-            aria-label="Personal records"
-          >
-            {/*
-              `icon` paths below currently point at the achievement medallions
-              you already generated, so the design is fully visible while we
-              wait for dedicated records art. The intended final paths are
-              `/icons/records/<id>.png` — swap each one once those PNGs land.
-            */}
-            <RecordCard
-              icon="/icons/achievements/streak-master.png"
-              background="linear-gradient(180deg, #FFB347 0%, #FF7A00 100%)"
-              title="Day streak"
-              value={`${totalStreak.toLocaleString()} ${totalStreak === 1 ? 'day' : 'days'}`}
-              date={today}
-            />
-            <RecordCard
-              icon="/icons/achievements/explorer.png"
-              background="linear-gradient(180deg, #FFE082 0%, #F5A161 100%)"
-              title="Total XP"
-              value={experience.toLocaleString()}
-              date={today}
-            />
-            <RecordCard
-              icon="/icons/achievements/first-deposit.png"
-              background="linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)"
-              title="Active deposits"
-              value={totalDeposits.toLocaleString()}
-              date={today}
-            />
-            <RecordCard
-              icon="/icons/achievements/first-place.png"
-              background="linear-gradient(180deg, #FFE082 0%, #FFA000 100%)"
-              title="Gold coins"
-              value={goldCoins.toLocaleString()}
-              date={today}
-            />
-            <RecordCard
-              icon="/icons/achievements/beta-tester2.png"
-              background="linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)"
-              title="Awards earned"
-              value={`${earned} / ${achievements.length}`}
-              date={today}
-            />
-          </div>
+          <PersonalRecords
+            totalStreak={totalStreak}
+            experience={experience}
+            totalDeposits={totalDeposits}
+            goldCoins={goldCoins}
+            earned={earned}
+            totalAchievements={achievements.length}
+            date={today}
+          />
         </section>
 
         {/* Awards --------------------------------------------------- */}
