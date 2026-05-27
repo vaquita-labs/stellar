@@ -148,7 +148,7 @@ export const HeaderStats = () => {
             ) : (
               <>
                 <Image
-                  src="/icons/summary/streak.png"
+                  src="/icons/global/streak.png"
                   alt="Streak"
                   width={20}
                   height={20}

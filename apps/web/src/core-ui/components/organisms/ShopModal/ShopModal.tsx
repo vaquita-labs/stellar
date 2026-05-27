@@ -38,7 +38,7 @@ const shopItems: ShopItem[] = [
     price: {
       goldCoins: 2,
     },
-    image: '/icons/summary/streak.png',
+    image: '/icons/global/streak.png',
   },
   {
     id: '4',
