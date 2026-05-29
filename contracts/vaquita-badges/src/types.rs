@@ -19,6 +19,8 @@ pub enum DataKey {
     Paused,
     Version,
     UpgradesLocked,
+    PendingUpgradeHash,
+    UpgradeReadyAt,
 }
 
 /// Per-badge-type mint policy. Governs how the Claimed key is constructed.

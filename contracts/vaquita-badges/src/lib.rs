@@ -6,7 +6,9 @@ mod admin;
 mod error;
 mod events;
 mod mint_policy;
+mod pause;
 mod types;
+mod upgrade;
 
 pub use error::BadgeError;
 pub use types::{DataKey, MintPolicy};
@@ -41,6 +43,7 @@ impl VaquitaBadges {
         signature: BytesN<64>,
     ) -> Result<u32, BadgeError> {
         wallet.require_auth();
+        pause::require_not_paused(&env)?;
 
         if env.ledger().timestamp() >= expiry {
             return Err(BadgeError::ClaimExpired);
@@ -265,6 +268,41 @@ impl VaquitaBadges {
         events::emit_signing_key_rotated(&env, old_key, new_key);
         Ok(())
     }
+
+    pub fn is_paused(env: Env) -> bool {
+        pause::is_paused(&env)
+    }
+
+    pub fn pause(env: Env) -> Result<(), BadgeError> {
+        pause::pause(&env)
+    }
+
+    pub fn unpause(env: Env) -> Result<(), BadgeError> {
+        pause::unpause(&env)
+    }
+
+    pub fn version(env: Env) -> u32 {
+        upgrade::get_version(&env)
+    }
+
+    pub fn propose_upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), BadgeError> {
+        upgrade::propose_upgrade(&env, new_wasm_hash)
+    }
+
+    pub fn execute_upgrade(env: Env) -> Result<(), BadgeError> {
+        upgrade::execute_upgrade(&env)
+    }
+
+    pub fn cancel_upgrade(env: Env) -> Result<(), BadgeError> {
+        upgrade::cancel_upgrade(&env)
+    }
+
+    pub fn lock_upgrades_forever(env: Env) -> Result<(), BadgeError> {
+        upgrade::lock_upgrades_forever(&env)
+    }
+
+    /// No-op for v1; reserved for post-upgrade state migration.
+    pub fn migrate(_env: Env) {}
 }
 
 #[cfg(test)]
