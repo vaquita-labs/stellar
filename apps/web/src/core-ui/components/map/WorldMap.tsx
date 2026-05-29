@@ -89,7 +89,7 @@ export const WorldMap = ({ walletAddress, isLeaderboard, isAvailable, worldType 
         )}
         {!isEditMode &&
           token &&
-          deposits.map((vaquita) => {
+          deposits.slice(0, 1).map((vaquita) => {
             return (
               <Vaquita
                 key={vaquita.id}
