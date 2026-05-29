@@ -3,10 +3,10 @@ use soroban_sdk::{
     vec, Address, Env, IntoVal, Symbol, Vec,
 };
 
+use crate::arithmetic;
 use crate::defindex_vault::DeFindexVaultClient;
 use crate::error::VaquitaPoolError;
 use crate::types::DataKey;
-use crate::arithmetic;
 
 /// Deposit `amount` into the DeFindex vault on behalf of the pool contract.
 /// Returns the number of vault shares minted.
@@ -64,11 +64,8 @@ pub fn withdraw_from_vault(
 ) -> Result<i128, VaquitaPoolError> {
     let contract_address = env.current_contract_address();
     let defindex_vault_client = DeFindexVaultClient::new(env, defindex_vault_address);
-    let withdrawn_amounts = defindex_vault_client.withdraw(
-        &shares,
-        &vec![env, min_amount],
-        &contract_address,
-    );
+    let withdrawn_amounts =
+        defindex_vault_client.withdraw(&shares, &vec![env, min_amount], &contract_address);
     let gross = withdrawn_amounts.get_unchecked(0);
     if gross < min_amount {
         return Err(VaquitaPoolError::VaultReturnedLessThanPrincipal);

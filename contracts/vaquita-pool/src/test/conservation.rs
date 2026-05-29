@@ -10,12 +10,12 @@
 //! - storage-corrupted invariant (ConservationInvariantViolated)
 //! - property test: 100+ sequences over bounded state space
 
-use crate::test::std::string::ToString;
-use crate::test::std::vec::Vec as StdVec;
 use crate::error::VaquitaPoolError;
 use crate::test::mock_defindex_vault::{
     MockDeFindexVault, MockDeFindexVaultArgs, MockDeFindexVaultClient,
 };
+use crate::test::std::string::ToString;
+use crate::test::std::vec::Vec as StdVec;
 use crate::test::EnvTestUtils;
 use crate::{VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;

@@ -208,9 +208,7 @@ fn early_withdraw_with_zero_yield_still_hits_early_branch() {
 fn get_views_return_none_for_missing_keys() {
     let e = Env::default();
     let (_, _, _, _, _, pool, _, _) = deploy_pool(&e);
-    assert!(pool
-        .get_position(&String::from_str(&e, "nope"))
-        .is_none());
+    assert!(pool.get_position(&String::from_str(&e, "nope")).is_none());
     assert!(pool.get_period_data(&999_999u64).is_none());
 }
 
@@ -248,9 +246,7 @@ fn vault_loss_reverts_with_less_than_principal() {
 
 /// Sets up a pool via __constructor (no auth required) in an env where
 /// mock_all_auths has NOT been called, so subsequent admin calls will fail auth.
-fn deploy_pool_no_auth(
-    e: &Env,
-) -> (Address, Address, VaquitaPoolClient<'_>) {
+fn deploy_pool_no_auth(e: &Env) -> (Address, Address, VaquitaPoolClient<'_>) {
     e.cost_estimate().budget().reset_unlimited();
     e.set_default_info();
 
@@ -407,7 +403,10 @@ fn add_lock_period_rejects_duplicate() {
     let (_, _, _, _, _, pool, _, _) = deploy_pool(&e);
     pool.add_lock_period(&LOCK_14D);
     let result = pool.try_add_lock_period(&LOCK_14D);
-    assert_eq!(result, Err(Ok(VaquitaPoolError::LockPeriodAlreadySupported)));
+    assert_eq!(
+        result,
+        Err(Ok(VaquitaPoolError::LockPeriodAlreadySupported))
+    );
 }
 
 #[test]
@@ -451,7 +450,10 @@ fn deposit_rejects_vault_share_drop() {
     pool.deposit(&alice, &String::from_str(&e, "s1"), &100i128, &LOCK_7D);
     vault.test_set_steal_shares_on_deposit(&80i128);
     let result = pool.try_deposit(&alice, &String::from_str(&e, "s2"), &50i128, &LOCK_7D);
-    assert_eq!(result, Err(Ok(VaquitaPoolError::VaultShareBalanceDecreased)));
+    assert_eq!(
+        result,
+        Err(Ok(VaquitaPoolError::VaultShareBalanceDecreased))
+    );
 }
 
 #[test]

@@ -1,14 +1,11 @@
 #![cfg(test)]
 use crate::test::{std::println, EnvTestUtils};
-use crate::{VaquitaBadges, VaquitaBadgesClient};
+use crate::{BadgeError, VaquitaBadges, VaquitaBadgesClient};
 
 use ed25519_dalek::{Signer, SigningKey};
 use rand::rngs::OsRng;
 use soroban_sdk::{
-    symbol_short,
-    testutils::Address as _,
-    xdr::ToXdr,
-    Address, Bytes, BytesN, Env, Symbol,
+    symbol_short, testutils::Address as _, xdr::ToXdr, Address, Bytes, BytesN, Env, Symbol,
 };
 
 // ---------- helpers ----------
@@ -54,8 +51,7 @@ fn deploy(env: &Env) -> (Address, SigningKey, VaquitaBadgesClient<'_>) {
 
     let admin = Address::generate(env);
     let signing_key = generate_signing_key();
-    let pk_bytes: BytesN<32> =
-        BytesN::from_array(env, &signing_key.verifying_key().to_bytes());
+    let pk_bytes: BytesN<32> = BytesN::from_array(env, &signing_key.verifying_key().to_bytes());
 
     let contract_id = env.register(VaquitaBadges, ());
     let client = VaquitaBadgesClient::new(env, &contract_id);
@@ -75,8 +71,7 @@ fn initialize_succeeds() {
 
     let admin = Address::generate(&env);
     let signing_key = generate_signing_key();
-    let pk_bytes: BytesN<32> =
-        BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
+    let pk_bytes: BytesN<32> = BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
 
     let contract_id = env.register(VaquitaBadges, ());
     let client = VaquitaBadgesClient::new(&env, &contract_id);
@@ -90,16 +85,14 @@ fn initialize_succeeds() {
 // ---------- Cycle 2: initialize reverts on re-init ----------
 
 #[test]
-#[should_panic(expected = "AlreadyInitialized")]
-fn initialize_twice_panics() {
+fn initialize_twice_fails() {
     let env = Env::default();
     let (_, _, client) = deploy(&env);
-    // second call — must panic
     let new_admin = Address::generate(&env);
     let new_key = generate_signing_key();
-    let pk_bytes: BytesN<32> =
-        BytesN::from_array(&env, &new_key.verifying_key().to_bytes());
-    client.initialize(&new_admin, &pk_bytes);
+    let pk_bytes: BytesN<32> = BytesN::from_array(&env, &new_key.verifying_key().to_bytes());
+    let result = client.try_initialize(&new_admin, &pk_bytes);
+    assert_eq!(result, Err(Ok(BadgeError::AlreadyInitialized)));
 }
 
 // ---------- Cycle 3: mint_badge happy path ----------
@@ -133,7 +126,6 @@ fn mint_badge_returns_token_id_and_increments_supply() {
 // ---------- Cycle 4: expiry check ----------
 
 #[test]
-#[should_panic(expected = "ClaimExpired")]
 fn mint_badge_rejects_expired_claim() {
     let env = Env::default();
     let (_, signing_key, client) = deploy(&env);
@@ -141,17 +133,16 @@ fn mint_badge_rejects_expired_claim() {
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
     let cycle_id: u32 = 202605;
-    // expiry is in the past relative to ledger timestamp
     let expiry: u64 = env.ledger().timestamp() - 1;
 
     let sig = make_signature(&env, &signing_key, &wallet, &badge_type, cycle_id, expiry);
-    client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    let result = client.try_mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    assert_eq!(result, Err(Ok(BadgeError::ClaimExpired)));
 }
 
 // ---------- Cycle 5: double-claim prevention ----------
 
 #[test]
-#[should_panic(expected = "AlreadyClaimed")]
 fn mint_badge_rejects_double_claim() {
     let env = Env::default();
     let (_, signing_key, client) = deploy(&env);
@@ -164,9 +155,9 @@ fn mint_badge_rejects_double_claim() {
     let sig = make_signature(&env, &signing_key, &wallet, &badge_type, cycle_id, expiry);
     client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
 
-    // second call with same (badge_type, cycle_id, wallet) must panic
     let sig2 = make_signature(&env, &signing_key, &wallet, &badge_type, cycle_id, expiry);
-    client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig2);
+    let result = client.try_mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig2);
+    assert_eq!(result, Err(Ok(BadgeError::AlreadyClaimed)));
 }
 
 // ---------- Cycle 6: invalid signature is rejected ----------
@@ -191,8 +182,7 @@ fn mint_badge_rejects_wrong_signature() {
 // ---------- Cycle 7: transfer is always blocked ----------
 
 #[test]
-#[should_panic(expected = "SoulboundToken")]
-fn transfer_always_panics() {
+fn transfer_always_fails() {
     let env = Env::default();
     let (_, signing_key, client) = deploy(&env);
 
@@ -205,7 +195,8 @@ fn transfer_always_panics() {
     client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
 
     let other = Address::generate(&env);
-    client.transfer(&wallet, &other, &0);
+    let result = client.try_transfer(&wallet, &other, &0);
+    assert_eq!(result, Err(Ok(BadgeError::SoulboundToken)));
 }
 
 // ---------- Cycle 8: owner_of ----------
@@ -234,11 +225,12 @@ fn owner_of_returns_minter_wallet() {
 #[test]
 fn update_signing_key_rotates_key() {
     let env = Env::default();
-    let (admin, _old_key, client) = deploy(&env);
+    let (_, _old_key, client) = deploy(&env);
 
     let new_key = generate_signing_key();
     let new_pk: BytesN<32> = BytesN::from_array(&env, &new_key.verifying_key().to_bytes());
-    client.update_signing_key(&admin, &new_pk);
+    // no caller parameter — require_owner reads admin from storage
+    client.update_signing_key(&new_pk);
 
     // mint with the new key must succeed
     let wallet = Address::generate(&env);
@@ -253,15 +245,25 @@ fn update_signing_key_rotates_key() {
 }
 
 #[test]
-#[should_panic(expected = "Unauthorized")]
-fn update_signing_key_non_admin_panics() {
+fn update_signing_key_non_admin_rejected() {
+    // No mock_all_auths — require_auth on admin will fail
     let env = Env::default();
-    let (_, _, client) = deploy(&env);
+    env.cost_estimate().budget().reset_unlimited();
+    env.set_default_info();
 
-    let non_admin = Address::generate(&env);
+    let admin = Address::generate(&env);
+    let signing_key = generate_signing_key();
+    let pk_bytes: BytesN<32> = BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
+
+    let contract_id = env.register(VaquitaBadges, ());
+    let client = VaquitaBadgesClient::new(&env, &contract_id);
+    // initialize doesn't call require_auth, so it works without mocking
+    client.initialize(&admin, &pk_bytes);
+
     let new_key = generate_signing_key();
     let new_pk: BytesN<32> = BytesN::from_array(&env, &new_key.verifying_key().to_bytes());
-    client.update_signing_key(&non_admin, &new_pk);
+    let result = client.try_update_signing_key(&new_pk);
+    assert!(result.is_err());
 }
 
 // ---------- Cycle 11: add_edition + EditionCap enforcement ----------
@@ -269,10 +271,11 @@ fn update_signing_key_non_admin_panics() {
 #[test]
 fn add_edition_sets_cap_and_mints_up_to_cap() {
     let env = Env::default();
-    let (admin, signing_key, client) = deploy(&env);
+    let (_, signing_key, client) = deploy(&env);
 
     let edition = symbol_short!("genesis");
-    client.add_edition(&admin, &edition, &2u32);
+    // no caller parameter — require_owner reads admin from storage
+    client.add_edition(&edition, &2u32);
 
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
@@ -292,13 +295,12 @@ fn add_edition_sets_cap_and_mints_up_to_cap() {
 }
 
 #[test]
-#[should_panic(expected = "EditionCapReached")]
 fn mint_badge_rejects_beyond_edition_cap() {
     let env = Env::default();
-    let (admin, signing_key, client) = deploy(&env);
+    let (_, signing_key, client) = deploy(&env);
 
     let edition = symbol_short!("genesis");
-    client.add_edition(&admin, &edition, &1u32); // cap = 1
+    client.add_edition(&edition, &1u32); // cap = 1
 
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
@@ -308,16 +310,27 @@ fn mint_badge_rejects_beyond_edition_cap() {
 
     let w2 = Address::generate(&env);
     let sig2 = make_signature(&env, &signing_key, &w2, &edition, 0, expiry);
-    client.mint_badge(&w2, &edition, &0, &expiry, &sig2); // must panic
+    let result = client.try_mint_badge(&w2, &edition, &0, &expiry, &sig2);
+    assert_eq!(result, Err(Ok(BadgeError::EditionCapReached)));
 }
 
 #[test]
-#[should_panic(expected = "Unauthorized")]
-fn add_edition_non_admin_panics() {
+fn add_edition_non_admin_rejected() {
+    // No mock_all_auths — require_auth on admin will fail
     let env = Env::default();
-    let (_, _, client) = deploy(&env);
-    let non_admin = Address::generate(&env);
-    client.add_edition(&non_admin, &symbol_short!("genesis"), &50u32);
+    env.cost_estimate().budget().reset_unlimited();
+    env.set_default_info();
+
+    let admin = Address::generate(&env);
+    let signing_key = generate_signing_key();
+    let pk_bytes: BytesN<32> = BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
+
+    let contract_id = env.register(VaquitaBadges, ());
+    let client = VaquitaBadgesClient::new(&env, &contract_id);
+    client.initialize(&admin, &pk_bytes);
+
+    let result = client.try_add_edition(&symbol_short!("genesis"), &50u32);
+    assert!(result.is_err());
 }
 
 // ---------- Cycle 13: has_claimed ----------
@@ -372,7 +385,7 @@ fn badge_type_of_returns_correct_type() {
 #[test]
 fn key_rotation_invalidates_old_sig_and_accepts_new() {
     let env = Env::default();
-    let (admin, key_a, client) = deploy(&env);
+    let (_, key_a, client) = deploy(&env);
 
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
     let badge_type = symbol_short!("gold");
@@ -384,15 +397,22 @@ fn key_rotation_invalidates_old_sig_and_accepts_new() {
     let token_id = client.mint_badge(&wallet_1, &badge_type, &cycle_1, &expiry, &sig_a);
     assert_eq!(token_id, 0, "pre-rotation mint with key_A should succeed");
 
-    // Step 3: rotate to signing_key_B
+    // Step 3: rotate to signing_key_B (no caller param)
     let key_b = generate_signing_key();
     let pk_b: BytesN<32> = BytesN::from_array(&env, &key_b.verifying_key().to_bytes());
-    client.update_signing_key(&admin, &pk_b);
+    client.update_signing_key(&pk_b);
 
     // Step 4: old key_A signature must be rejected
     let wallet_stale = Address::generate(&env);
     let cycle_stale: u32 = 202602;
-    let stale_sig = make_signature(&env, &key_a, &wallet_stale, &badge_type, cycle_stale, expiry);
+    let stale_sig = make_signature(
+        &env,
+        &key_a,
+        &wallet_stale,
+        &badge_type,
+        cycle_stale,
+        expiry,
+    );
     let rejected = client.try_mint_badge(
         &wallet_stale,
         &badge_type,
@@ -421,11 +441,11 @@ fn key_rotation_invalidates_old_sig_and_accepts_new() {
 #[should_panic]
 fn mint_badge_with_old_key_fails_after_rotation() {
     let env = Env::default();
-    let (admin, old_key, client) = deploy(&env);
+    let (_, old_key, client) = deploy(&env);
 
     let new_key = generate_signing_key();
     let new_pk: BytesN<32> = BytesN::from_array(&env, &new_key.verifying_key().to_bytes());
-    client.update_signing_key(&admin, &new_pk);
+    client.update_signing_key(&new_pk);
 
     // signing with the old key must now fail
     let wallet = Address::generate(&env);

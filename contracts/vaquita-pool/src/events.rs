@@ -48,7 +48,12 @@ pub fn emit_deposit(
 ) {
     env.events().publish(
         (DEPOSIT, caller),
-        DepositEvent { deposit_id, token, amount, shares },
+        DepositEvent {
+            deposit_id,
+            token,
+            amount,
+            shares,
+        },
     );
 }
 
@@ -69,7 +74,11 @@ pub fn emit_constructed(
 ) {
     env.events().publish(
         (CONSTRUCTED, admin),
-        ConstructedEvent { blend_token, defindex_vault, lock_periods },
+        ConstructedEvent {
+            blend_token,
+            defindex_vault,
+            lock_periods,
+        },
     );
 }
 
@@ -95,10 +104,8 @@ pub struct RewardsAddedEvent {
 }
 
 pub fn emit_rewards_added(env: &Env, period: u64, amount: i128) {
-    env.events().publish(
-        (REWARDS,),
-        RewardsAddedEvent { period, amount },
-    );
+    env.events()
+        .publish((REWARDS,), RewardsAddedEvent { period, amount });
 }
 
 /// Paused event payload.
@@ -128,7 +135,8 @@ pub struct LockPeriodAddedEvent {
 }
 
 pub fn emit_lock_period_added(env: &Env, period: u64) {
-    env.events().publish((LP_ADDED,), LockPeriodAddedEvent { period });
+    env.events()
+        .publish((LP_ADDED,), LockPeriodAddedEvent { period });
 }
 
 /// ProtocolFeesWithdrawn event payload.
@@ -166,7 +174,10 @@ pub struct DeFindexVaultUpdatedEvent {
 pub fn emit_defindex_vault_updated(env: &Env, old_vault: Address, new_vault: Address) {
     env.events().publish(
         (VAULT_UPDATED,),
-        DeFindexVaultUpdatedEvent { old_vault, new_vault },
+        DeFindexVaultUpdatedEvent {
+            old_vault,
+            new_vault,
+        },
     );
 }
 
@@ -180,7 +191,10 @@ pub struct BlendTokenUpdatedEvent {
 pub fn emit_blend_token_updated(env: &Env, old_token: Address, new_token: Address) {
     env.events().publish(
         (TOKEN_UPDATED,),
-        BlendTokenUpdatedEvent { old_token, new_token },
+        BlendTokenUpdatedEvent {
+            old_token,
+            new_token,
+        },
     );
 }
 
@@ -194,7 +208,10 @@ pub struct UpgradeProposedEvent {
 pub fn emit_upgrade_proposed(env: &Env, wasm_hash: BytesN<32>, ready_at: u64) {
     env.events().publish(
         (UPGRADE_PROPOSED,),
-        UpgradeProposedEvent { wasm_hash, ready_at },
+        UpgradeProposedEvent {
+            wasm_hash,
+            ready_at,
+        },
     );
 }
 
@@ -205,10 +222,8 @@ pub struct UpgradeCancelledEvent {
 }
 
 pub fn emit_upgrade_cancelled(env: &Env, wasm_hash: BytesN<32>) {
-    env.events().publish(
-        (UPGRADE_CANCELLED,),
-        UpgradeCancelledEvent { wasm_hash },
-    );
+    env.events()
+        .publish((UPGRADE_CANCELLED,), UpgradeCancelledEvent { wasm_hash });
 }
 
 /// UpgradeExecuted event payload.
@@ -221,7 +236,10 @@ pub struct UpgradeExecutedEvent {
 pub fn emit_upgrade_executed(env: &Env, wasm_hash: BytesN<32>, new_version: u32) {
     env.events().publish(
         (UPGRADE_EXECUTED,),
-        UpgradeExecutedEvent { wasm_hash, new_version },
+        UpgradeExecutedEvent {
+            wasm_hash,
+            new_version,
+        },
     );
 }
 
@@ -232,7 +250,8 @@ pub struct UpgradesLockedEvent {
 }
 
 pub fn emit_upgrades_locked(env: &Env, admin: Address) {
-    env.events().publish((UPGRADES_LOCKED,), UpgradesLockedEvent { admin });
+    env.events()
+        .publish((UPGRADES_LOCKED,), UpgradesLockedEvent { admin });
 }
 
 pub fn emit_withdraw(
@@ -245,6 +264,11 @@ pub fn emit_withdraw(
 ) {
     env.events().publish(
         (WITHDRAW, caller),
-        WithdrawEvent { deposit_id, token, amount, reward },
+        WithdrawEvent {
+            deposit_id,
+            token,
+            amount,
+            reward,
+        },
     );
 }

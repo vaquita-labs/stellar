@@ -1,7 +1,8 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, Symbol};
 use soroban_sdk::xdr::ToXdr;
+use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, Symbol};
 
+mod admin;
 mod error;
 mod types;
 
@@ -13,13 +14,16 @@ pub struct VaquitaBadges;
 
 #[contractimpl]
 impl VaquitaBadges {
-    pub fn initialize(env: Env, admin: Address, signing_key: BytesN<32>) {
+    pub fn initialize(env: Env, admin: Address, signing_key: BytesN<32>) -> Result<(), BadgeError> {
         if env.storage().instance().has(&DataKey::Admin) {
-            panic!("AlreadyInitialized");
+            return Err(BadgeError::AlreadyInitialized);
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::AdminSigningKey, &signing_key);
+        env.storage()
+            .instance()
+            .set(&DataKey::AdminSigningKey, &signing_key);
         env.storage().instance().set(&DataKey::NextTokenId, &0u32);
+        Ok(())
     }
 
     pub fn mint_badge(
@@ -29,23 +33,23 @@ impl VaquitaBadges {
         cycle_id: u32,
         expiry: u64,
         signature: BytesN<64>,
-    ) -> u32 {
+    ) -> Result<u32, BadgeError> {
         wallet.require_auth();
 
         if env.ledger().timestamp() >= expiry {
-            panic!("ClaimExpired");
+            return Err(BadgeError::ClaimExpired);
         }
 
         let claim_key = DataKey::Claimed(badge_type.clone(), cycle_id, wallet.clone());
         if env.storage().persistent().has(&claim_key) {
-            panic!("AlreadyClaimed");
+            return Err(BadgeError::AlreadyClaimed);
         }
 
         let signing_key: BytesN<32> = env
             .storage()
             .instance()
             .get(&DataKey::AdminSigningKey)
-            .unwrap();
+            .ok_or(BadgeError::NotInitialized)?;
 
         let mut msg = Bytes::new(&env);
         msg.append(&wallet.clone().to_xdr(&env));
@@ -57,7 +61,7 @@ impl VaquitaBadges {
         env.crypto()
             .ed25519_verify(&signing_key, &msg_hash.into(), &signature);
 
-        // Cat D: if an EditionCap was registered for this badge_type, enforce it.
+        // If an EditionCap was registered for this badge_type, enforce it.
         let edition_cap_key = DataKey::EditionCap(badge_type.clone());
         if let Some(cap) = env
             .storage()
@@ -70,7 +74,7 @@ impl VaquitaBadges {
                 .get(&DataKey::EditionCount(badge_type.clone()))
                 .unwrap_or(0);
             if count >= cap {
-                panic!("EditionCapReached");
+                return Err(BadgeError::EditionCapReached);
             }
             env.storage()
                 .persistent()
@@ -94,12 +98,17 @@ impl VaquitaBadges {
             .instance()
             .set(&DataKey::NextTokenId, &(token_id + 1));
 
-        token_id
+        Ok(token_id)
     }
 
-    /// Always panics — badges are soulbound and non-transferable.
-    pub fn transfer(_env: Env, _from: Address, _to: Address, _token_id: u32) {
-        panic!("SoulboundToken");
+    /// Always returns an error — badges are soulbound and non-transferable.
+    pub fn transfer(
+        _env: Env,
+        _from: Address,
+        _to: Address,
+        _token_id: u32,
+    ) -> Result<(), BadgeError> {
+        Err(BadgeError::SoulboundToken)
     }
 
     pub fn owner_of(env: Env, token_id: u32) -> Option<Address> {
@@ -126,27 +135,21 @@ impl VaquitaBadges {
             .unwrap_or(0)
     }
 
-    /// Register a new limited-edition badge type (Cat D). Admin-only.
-    pub fn add_edition(env: Env, caller: Address, edition_id: Symbol, max_supply: u32) {
-        caller.require_auth();
-        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
-        if caller != admin {
-            panic!("Unauthorized");
-        }
+    /// Register a new limited-edition badge type. Admin-only.
+    pub fn add_edition(env: Env, edition_id: Symbol, max_supply: u32) -> Result<(), BadgeError> {
+        admin::require_owner(&env)?;
         env.storage()
             .persistent()
             .set(&DataKey::EditionCap(edition_id), &max_supply);
+        Ok(())
     }
 
-    pub fn update_signing_key(env: Env, caller: Address, new_key: BytesN<32>) {
-        caller.require_auth();
-        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
-        if caller != admin {
-            panic!("Unauthorized");
-        }
+    pub fn update_signing_key(env: Env, new_key: BytesN<32>) -> Result<(), BadgeError> {
+        admin::require_owner(&env)?;
         env.storage()
             .instance()
             .set(&DataKey::AdminSigningKey, &new_key);
+        Ok(())
     }
 }
 

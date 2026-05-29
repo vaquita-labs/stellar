@@ -15,11 +15,7 @@ pub fn propose_upgrade(env: &Env, new_wasm_hash: BytesN<32>) -> Result<(), Vaqui
         return Err(VaquitaPoolError::UpgradeLocked);
     }
 
-    if env
-        .storage()
-        .instance()
-        .has(&DataKey::PendingUpgradeHash)
-    {
+    if env.storage().instance().has(&DataKey::PendingUpgradeHash) {
         return Err(VaquitaPoolError::UpgradeNotReady);
     }
 
@@ -44,11 +40,7 @@ pub fn propose_upgrade(env: &Env, new_wasm_hash: BytesN<32>) -> Result<(), Vaqui
 pub fn cancel_upgrade(env: &Env) -> Result<(), VaquitaPoolError> {
     crate::admin::require_owner(env)?;
 
-    if !env
-        .storage()
-        .instance()
-        .has(&DataKey::PendingUpgradeHash)
-    {
+    if !env.storage().instance().has(&DataKey::PendingUpgradeHash) {
         return Err(VaquitaPoolError::UpgradeNotProposed);
     }
 
@@ -60,9 +52,7 @@ pub fn cancel_upgrade(env: &Env) -> Result<(), VaquitaPoolError> {
     env.storage()
         .instance()
         .remove(&DataKey::PendingUpgradeHash);
-    env.storage()
-        .instance()
-        .remove(&DataKey::UpgradeReadyAt);
+    env.storage().instance().remove(&DataKey::UpgradeReadyAt);
 
     crate::events::emit_upgrade_cancelled(env, hash);
     Ok(())
@@ -99,15 +89,9 @@ pub fn execute_upgrade(env: &Env) -> Result<(), VaquitaPoolError> {
     env.storage()
         .instance()
         .remove(&DataKey::PendingUpgradeHash);
-    env.storage()
-        .instance()
-        .remove(&DataKey::UpgradeReadyAt);
+    env.storage().instance().remove(&DataKey::UpgradeReadyAt);
 
-    let old_version: u32 = env
-        .storage()
-        .instance()
-        .get(&DataKey::Version)
-        .unwrap_or(1);
+    let old_version: u32 = env.storage().instance().get(&DataKey::Version).unwrap_or(1);
     let new_version = old_version.saturating_add(1);
     env.storage()
         .instance()
@@ -137,8 +121,5 @@ pub fn lock_upgrades_forever(env: &Env) -> Result<(), VaquitaPoolError> {
 }
 
 pub fn version(env: &Env) -> u32 {
-    env.storage()
-        .instance()
-        .get(&DataKey::Version)
-        .unwrap_or(1)
+    env.storage().instance().get(&DataKey::Version).unwrap_or(1)
 }
