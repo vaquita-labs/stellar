@@ -3,13 +3,17 @@ packages:
   - 'apps/listener'
   - 'apps/job-deposits'
   - 'apps/web'
+  - 'apps/admin'
   - 'packages/*'
 allowBuilds:
+  '@heroui/shared-utils': true
   '@reown/appkit': true
   '@stellar/stellar-sdk': true
   blake-hash: true
   bufferutil: true
+  core-js: false
   esbuild: true
+  keccak: true
   protobufjs: true
   secp256k1: true
   sharp: true

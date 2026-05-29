@@ -2,18 +2,19 @@
   "version": "v1",
   "packages": {
     "@pollar/core": {
-      "signature": "1b1bd931a0c4d64a3a3af3db71f5a0ac",
+      "signature": "1ac510388165d51d8c8fefedc328f5f9",
       "file": true,
-      "replaced": "^0.7.0"
+      "replaced": "^0.7.1"
     },
     "@pollar/react": {
-      "signature": "6bdbb485325e66465ca18586e43937b2",
+      "signature": "56c943eb24f47d328cb5ed33db8f9a95",
       "file": true,
-      "replaced": "^0.7.0"
+      "replaced": "^0.7.1"
     },
     "@pollar/stellar-wallets-kit-adapter": {
-      "signature": "f2f97c50c9bc6fc2e8195c820942de77",
-      "file": true
+      "signature": "937208a91ecb0eae9e9aaccdec61996d",
+      "file": true,
+      "replaced": "^0.7.1"
     }
   }
 }
