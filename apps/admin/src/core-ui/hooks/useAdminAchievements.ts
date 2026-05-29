@@ -48,6 +48,9 @@ export interface AchievementPayload {
   hidden?: boolean;
   enabled?: boolean;
   displayOrder?: number;
+  /** Explicit override to allow changing `tier` on an existing badge — the API
+   *  blocks it otherwise because tier is the Soroban mint symbol. */
+  allowTierChange?: boolean;
 }
 
 const adminHeaders = (): HeadersInit => ({

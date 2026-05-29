@@ -12,7 +12,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@blend-capital/blend-sdk": "^3.2.1",
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.2.1",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.7"
   }
 }

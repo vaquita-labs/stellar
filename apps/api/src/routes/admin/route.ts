@@ -97,7 +97,23 @@ router.patch(
       return sendError(res, `Unknown achievement: ${key}`, null, 404);
     }
 
-    const { data, error } = await updateAchievement(key, achievementPayloadToRow(parsed.data as AchievementAdminPayload));
+    // Guard: `tier` doubles as the Soroban contract symbol used when minting a
+    // badge on-chain. Silently changing it on an existing badge can break the
+    // mint flow, so require an explicit override.
+    const payload = parsed.data as AchievementAdminPayload;
+    const wantsTierChange = payload.tier !== undefined && payload.tier !== existing.tier;
+    const allowTierChange = (req.body as { allowTierChange?: unknown })?.allowTierChange === true;
+    if (wantsTierChange && !allowTierChange) {
+      req.log.warn({ key, from: existing.tier, to: payload.tier }, 'Blocked tier change without override');
+      return sendError(
+        res,
+        "Changing 'tier' can break on-chain badge minting (tier is the Soroban contract symbol). Resend with allowTierChange:true to override.",
+        null,
+        409,
+      );
+    }
+
+    const { data, error } = await updateAchievement(key, achievementPayloadToRow(payload));
     if (error) return sendError(res, 'Failed to update achievement', error, 500);
     req.log.info({ key }, 'Achievement updated (admin)');
     return sendSuccess(res, { achievement: data });
