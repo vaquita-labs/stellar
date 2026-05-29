@@ -10,14 +10,7 @@ use soroban_sdk::{Address, Env, String, Vec};
 
 const LOCK_7D: u64 = 604_800;
 
-fn setup(
-    e: &Env,
-) -> (
-    Address,
-    Address,
-    VaquitaPoolClient<'_>,
-    MockTokenClient<'_>,
-) {
+fn setup(e: &Env) -> (Address, Address, VaquitaPoolClient<'_>, MockTokenClient<'_>) {
     e.cost_estimate().budget().reset_unlimited();
     e.mock_all_auths_allowing_non_root_auth();
     e.set_default_info();
@@ -210,12 +203,7 @@ fn remove_lock_period_sweeps_reward_pool() {
     pool.remove_lock_period(&LOCK_7D);
 
     // LOCK_7D is gone — depositing into it fails
-    let gone = pool.try_deposit(
-        &alice,
-        &String::from_str(&e, "after"),
-        &1i128,
-        &LOCK_7D,
-    );
+    let gone = pool.try_deposit(&alice, &String::from_str(&e, "after"), &1i128, &LOCK_7D);
     assert_eq!(gone, Err(Ok(VaquitaPoolError::InvalidPeriod)));
 
     // Protocol fees increased by the swept reward pool
@@ -223,7 +211,10 @@ fn remove_lock_period_sweeps_reward_pool() {
     let admin_before = tok.balance(&admin);
     pool.withdraw_protocol_fees();
     let admin_after = tok.balance(&admin);
-    assert!(admin_after > admin_before, "swept reward pool should appear in protocol fees");
+    assert!(
+        admin_after > admin_before,
+        "swept reward pool should appear in protocol fees"
+    );
 }
 
 // ---- Cycle 9: remove_lock_period rejects unknown period ----

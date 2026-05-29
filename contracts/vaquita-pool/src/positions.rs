@@ -130,7 +130,8 @@ fn decrement_count(env: &Env, period: u64) {
         .instance()
         .get(&DataKey::PositionCountForPeriod(period))
         .unwrap_or(0u64);
-    env.storage()
-        .instance()
-        .set(&DataKey::PositionCountForPeriod(period), &per_period.saturating_sub(1));
+    env.storage().instance().set(
+        &DataKey::PositionCountForPeriod(period),
+        &per_period.saturating_sub(1),
+    );
 }

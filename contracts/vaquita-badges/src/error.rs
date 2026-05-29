@@ -10,4 +10,11 @@ pub enum BadgeError {
     ClaimExpired = 4,
     Unauthorized = 5,
     EditionCapReached = 6,
+    NotInitialized = 7,
+    InvalidCycleId = 8,
+    PolicyFrozen = 9,
+    Paused = 10,
+    UpgradeNotProposed = 11,
+    UpgradeNotReady = 12,
+    UpgradeLocked = 13,
 }

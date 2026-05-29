@@ -45,9 +45,10 @@ pub fn add_principal(env: &Env, delta: i128) -> Result<(), VaquitaPoolError> {
         .instance()
         .get(&DataKey::TotalPrincipal)
         .unwrap_or(0);
-    env.storage()
-        .instance()
-        .set(&DataKey::TotalPrincipal, &arithmetic::checked_add(current, delta)?);
+    env.storage().instance().set(
+        &DataKey::TotalPrincipal,
+        &arithmetic::checked_add(current, delta)?,
+    );
     Ok(())
 }
 
@@ -58,9 +59,10 @@ pub fn sub_principal(env: &Env, delta: i128) -> Result<(), VaquitaPoolError> {
         .instance()
         .get(&DataKey::TotalPrincipal)
         .unwrap_or(0);
-    env.storage()
-        .instance()
-        .set(&DataKey::TotalPrincipal, &arithmetic::checked_sub(current, delta)?);
+    env.storage().instance().set(
+        &DataKey::TotalPrincipal,
+        &arithmetic::checked_sub(current, delta)?,
+    );
     Ok(())
 }
 
@@ -71,9 +73,10 @@ pub fn add_reward_pool(env: &Env, delta: i128) -> Result<(), VaquitaPoolError> {
         .instance()
         .get(&DataKey::TotalRewardPool)
         .unwrap_or(0);
-    env.storage()
-        .instance()
-        .set(&DataKey::TotalRewardPool, &arithmetic::checked_add(current, delta)?);
+    env.storage().instance().set(
+        &DataKey::TotalRewardPool,
+        &arithmetic::checked_add(current, delta)?,
+    );
     Ok(())
 }
 
@@ -84,8 +87,9 @@ pub fn sub_reward_pool(env: &Env, delta: i128) -> Result<(), VaquitaPoolError> {
         .instance()
         .get(&DataKey::TotalRewardPool)
         .unwrap_or(0);
-    env.storage()
-        .instance()
-        .set(&DataKey::TotalRewardPool, &arithmetic::checked_sub(current, delta)?);
+    env.storage().instance().set(
+        &DataKey::TotalRewardPool,
+        &arithmetic::checked_sub(current, delta)?,
+    );
     Ok(())
 }
