@@ -138,8 +138,17 @@ const AUTO_BADGES: Array<{ badgeType: string; check: (wallet: string) => Promise
  * Evaluates all milestone conditions for a wallet and issues signed claims
  * for any newly eligible badges. Idempotent: skips badges where a claim already exists.
  * Called automatically after each on-time withdrawal confirmation.
+ *
+ * @param contractAddress - The deployed vaquita-badges contract ID. Required to build
+ *   the hardened signature message (sha256 includes the contract address as the first field).
+ *   If not provided, signing is skipped and this function returns without issuing claims.
  */
-export async function evaluateBadgeMilestones(walletAddress: string): Promise<void> {
+export async function evaluateBadgeMilestones(
+  walletAddress: string,
+  contractAddress: string | null,
+): Promise<void> {
+  if (!contractAddress) return; // contract not configured for this network
+
   let keypair: ReturnType<typeof getBadgeSigningKeypair>;
   try {
     keypair = getBadgeSigningKeypair();
@@ -156,7 +165,7 @@ export async function evaluateBadgeMilestones(walletAddress: string): Promise<vo
       if (!eligible) continue;
 
       const expiry = makeClaimExpiry();
-      const signature = signBadgeClaim(walletAddress, badgeType, 0, expiry, keypair);
+      const signature = signBadgeClaim(contractAddress, walletAddress, badgeType, 0, expiry, keypair);
       await storeBadgeClaim({ walletAddress, badgeType, cycleId: 0, expiry, signature });
       console.info(`[badge-monitor] Issued ${badgeType} claim for ${walletAddress}`);
     } catch (err) {

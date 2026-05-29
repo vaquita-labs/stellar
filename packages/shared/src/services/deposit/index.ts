@@ -5,6 +5,7 @@ import { firstElement } from '../../helpers';
 import { supabase } from '../../lib/supabase';
 import { ably } from '../ably';
 import { evaluateBadgeMilestones } from '../badges/badge-monitor';
+import { getNetworkById } from '../network';
 import { getBaseInterest, getVaquitaPoolData, PROTOCOL_APY_DUMMY, VAQUITA_APY_DUMMY } from '../base';
 import { getBlendInterest, getStellarDepositContractAddress } from '../stellar';
 import {
@@ -303,11 +304,16 @@ export const confirmWithdrawal = async (withdrawalId: number) => {
       try {
         const { data } = await supabase
           .from('withdrawals')
-          .select('deposits!deposit_id(wallet_address)')
+          .select('deposits!deposit_id(wallet_address, network_id)')
           .eq('id', withdrawalId)
           .maybeSingle();
         const wallet = (data as any)?.deposits?.wallet_address as string | undefined;
-        if (wallet) await evaluateBadgeMilestones(wallet);
+        const networkId = (data as any)?.deposits?.network_id as number | undefined;
+        if (!wallet) return;
+        const contractAddress = networkId
+          ? ((await getNetworkById(networkId)).data?.badges_contract_address ?? null)
+          : null;
+        await evaluateBadgeMilestones(wallet, contractAddress);
       } catch {
         // Non-critical: badge evaluation errors must not affect withdrawal confirmation
       }

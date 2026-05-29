@@ -85,7 +85,7 @@ Issued one-time per wallet. The backend monitors withdrawal events and platform 
 | `churrasquito-05-2026` | Special May 2026 event | variable | Epic |
 | `secret-launch` | Internal launch event | variable | Epic |
 
-New limited-edition badges are defined on-chain via `add_edition()` without redeployment. Manual badges require admin intervention to issue; the claim endpoint returns 403 with a support contact message instead of auto-signing.
+New limited-edition badges are defined on-chain via `register_badge_type(badge_type, OneTimeOnly, Some(cap))` without redeployment. Manual badges require admin intervention to issue; the claim endpoint returns 403 with a support contact message instead of auto-signing.
 
 ---
 
@@ -114,25 +114,40 @@ Persistent storage (per-token and per-claim data, must survive TTL):
 ### 4.2 Public interface
 
 ```rust
-// --- Admin ---
-fn initialize(env, admin: Address, signing_key: BytesN<32>)
+// --- Constructor (called once at deploy time) ---
+fn __constructor(env, admin: Address, signing_key: BytesN<32>)
 
-// Define a new limited-edition badge type (manual)
-fn add_edition(env, caller: Address, edition_id: Symbol, max_supply: u32)
+// --- Admin: badge type management ---
+fn register_badge_type(env, badge_type: Symbol, policy: MintPolicy, edition_cap: Option<u32>)
+fn set_mint_policy(env, badge_type: Symbol, policy: MintPolicy)
+fn update_edition_cap(env, badge_type: Symbol, new_cap: u32)
+fn update_signing_key(env, new_key: BytesN<32>)
+
+// --- Admin: operational ---
+fn pause(env)
+fn unpause(env)
+fn propose_upgrade(env, new_wasm_hash: BytesN<32>)
+fn execute_upgrade(env)   // requires 48-hour timelock
+fn cancel_upgrade(env)
+fn lock_upgrades_forever(env)
 
 // --- User: all badge types ---
 fn mint_badge(
     env,
     wallet: Address,
     badge_type: Symbol,        // matches achievements.key
-    cycle_id: u32,             // YYYYMM for leaderboard badges; 0 for others
+    cycle_id: u32,             // YYYYMM for PerCycle badges; 0 for OneTimeOnly
     expiry: u64,               // ledger timestamp after which sig is invalid
-    signature: BytesN<64>,     // Ed25519 sig over sha256(wallet || badge_type || cycle_id || expiry)
+    signature: BytesN<64>,     // Ed25519 sig over sha256(contract_addr || wallet || badge_type || cycle_id_be4 || expiry_be8)
 ) -> Result<u32, Error>        // returns minted token_id
 
 // --- View ---
 fn owner_of(env, token_id: u32) -> Option<Address>
+fn badge_type_of(env, token_id: u32) -> Option<Symbol>
+fn has_claimed(env, wallet: Address, badge_type: Symbol, cycle_id: u32) -> bool
 fn total_supply(env) -> u32
+fn is_paused(env) -> bool
+fn version(env) -> u32
 ```
 
 ### 4.3 Soulbound enforcement
@@ -177,11 +192,13 @@ All badge types share the same on-chain flow. Eligibility verification is off-ch
 
 **Signature verification (Soroban contract):**
 ```rust
+// Hardened message: contract address is the first field — sig is contract-specific.
 let mut msg = Bytes::new(&env);
+msg.append(&env.current_contract_address().to_xdr(&env));
 msg.append(&wallet.to_xdr(&env));
 msg.append(&badge_type.to_xdr(&env));
-msg.append(&cycle_id.to_xdr(&env));
-msg.append(&expiry.to_xdr(&env));
+msg.append(&Bytes::from_array(&env, &cycle_id.to_be_bytes()));
+msg.append(&Bytes::from_array(&env, &expiry.to_be_bytes()));
 let msg_hash = env.crypto().sha256(&msg);
 let signing_key: BytesN<32> = env.storage().instance().get(&DataKey::AdminSigningKey).unwrap();
 env.crypto().ed25519_verify(&signing_key, &msg_hash.into(), &signature);
@@ -200,7 +217,39 @@ env.storage().persistent().set(&claim_key, &());
 
 ---
 
-## 6. Cycle IDs
+## 6. Mint Policy
+
+Every badge type registered on-chain has a `MintPolicy` value that governs how the double-mint guard is applied:
+
+| Policy | `cycle_id` requirement | Double-mint scope |
+|--------|------------------------|-------------------|
+| `OneTimeOnly` | Must be `0` | A wallet can mint once, ever |
+| `PerCycle` | Any `u32` | A wallet can mint once **per `cycle_id`** |
+
+### 6.1 OneTimeOnly (default)
+
+Unregistered badge types default to `OneTimeOnly`. The claim key stored on-chain is `Claimed(badge_type, 0, wallet)`. Passing `cycle_id ≠ 0` at mint time returns `InvalidCycleId` before signature verification. This guarantees that even a valid backend signature cannot be used to mint a second time in a later cycle.
+
+Personal milestone badges (`cycle_scoped = false` in the DB) use `OneTimeOnly`. The backend signing service always passes `cycle_id = 0` for these.
+
+### 6.2 PerCycle
+
+Leaderboard badges (`cycle_scoped = true`) are registered with `PerCycle`. Each distinct `cycle_id` (e.g. `202605`, `202606`) produces a separate claim key `Claimed(badge_type, cycle_id, wallet)`. The same wallet can win first place in two consecutive months and mint two separate badges.
+
+### 6.3 Policy registration and tightening
+
+Admins register badge types with an explicit policy via `register_badge_type(badge_type, policy, edition_cap?)`. After registration, the policy can be **tightened** (`PerCycle → OneTimeOnly`) at any time. **Loosening** (`OneTimeOnly → PerCycle`) is blocked once any mint has been recorded for that badge type — a `PolicyFrozen` error is returned. This prevents retroactive expansion of the claim scope.
+
+### 6.4 Verification from on-chain history
+
+Badge holders can verify a badge type's policy from on-chain event history:
+- Look for the most recent `BadgeTypeRegistered` or `MintPolicyUpdated` event for the badge type.
+- The event includes the `policy` field as a `MintPolicy` enum value (`0 = OneTimeOnly`, `1 = PerCycle`).
+- If no event exists, the policy is `OneTimeOnly` (the default).
+
+---
+
+## 7. Cycle IDs
 
 Cycle IDs are `u32`. Two formats are supported:
 
@@ -393,7 +442,7 @@ The three leaderboard badge tiles (`first-place`, `second-place`, `third-place`)
 New badge types can be added without contract redeployment:
 
 - **New milestone badge:** insert a row into `achievements` with `refresh_policy = 'auto'`, `cycle_scoped = false`, and add the eligibility check to `evaluateBadgeMilestones`. No contract change.
-- **New limited-edition badge:** insert a row with `refresh_policy = 'manual'`, then admin calls `add_edition(edition_id, max_supply)` on the contract. No contract change.
+- **New limited-edition badge:** insert a row with `refresh_policy = 'manual'`, then admin calls `register_badge_type(badge_type, OneTimeOnly, Some(max_supply))` on the contract. No contract change.
 - **New leaderboard badge:** insert a row with `refresh_policy = 'auto'`, `cycle_scoped = true`, and add the required rank check in the claim route. No contract change.
 
 ---
