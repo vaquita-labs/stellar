@@ -30,3 +30,4 @@ impl EnvTestUtils for Env {
 
 mod badges_test;
 mod types_test;
+mod upgrade_pause_test;

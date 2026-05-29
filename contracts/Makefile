@@ -79,6 +79,22 @@ initialize-badges: deploy-badges
 	--admin $(BADGES_ADMIN) \
 	--signing_key $(BADGES_SIGNING_KEY)
 
+pause-badges:
+	stellar contract invoke --id vaquita_badges --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- pause
+
+unpause-badges:
+	stellar contract invoke --id vaquita_badges --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- unpause
+
+propose-upgrade-badges:
+	stellar contract invoke --id vaquita_badges --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
+	-- propose_upgrade --new_wasm_hash $(NEW_WASM_HASH)
+
+cancel-upgrade-badges:
+	stellar contract invoke --id vaquita_badges --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- cancel_upgrade
+
+execute-upgrade-badges:
+	stellar contract invoke --id vaquita_badges --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- execute_upgrade
+
 deposit:
 	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
