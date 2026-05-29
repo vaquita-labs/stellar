@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 import { MathUtils } from 'three';
+import { VaquitaMood } from '@/core-ui/types';
 import { Body, Head, LeftArm, LeftLeg, RightLeg, Tail } from './parts';
 
 interface WorkingVaquitaProps {
@@ -12,9 +13,10 @@ interface WorkingVaquitaProps {
   position: { x: number; y: number; z: number };
   scale?: number;
   label?: string;
+  mood?: VaquitaMood;
 }
 
-const WorkingAnimationVaquita = ({ direction, position, scale = 0.5, label }: WorkingVaquitaProps) => {
+const WorkingAnimationVaquita = ({ direction, position, scale = 0.5, label, mood = 'normal' }: WorkingVaquitaProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
   const rightArmRef = useRef<THREE.Group>(null);
@@ -49,7 +51,7 @@ const WorkingAnimationVaquita = ({ direction, position, scale = 0.5, label }: Wo
 
   return (
     <group ref={groupRef} position={[position.x, position.y, position.z]} scale={scale}>
-      <Head baseColor={baseColor} spotColor={spotColor} helmetColor={helmetColor} noseColor={noseColor} />
+      <Head baseColor={baseColor} spotColor={spotColor} helmetColor={helmetColor} noseColor={noseColor} mood={mood} />
       <Body bodyColor={bodyColor} spotColor={spotColor} />
       <LeftLeg baseColor={baseColor} hoofColor={hoofColor} />
       <RightLeg baseColor={baseColor} hoofColor={hoofColor} />

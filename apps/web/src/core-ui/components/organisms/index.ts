@@ -16,5 +16,7 @@ export * from './TutorialModal';
 export * from './CoinAnimation';
 export * from './StreakModal';
 export * from './ShopModal';
+export * from './DailyRewardModal';
+export * from './MoodMessageModal';
 export * from './SavingsStats';
 export * from './RequireAuth';
