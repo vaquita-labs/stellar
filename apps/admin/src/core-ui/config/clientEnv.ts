@@ -5,6 +5,11 @@ const envClientSchema = z.object({
   NEXT_PUBLIC_SERVICES_URL: z.string().min(1),
   NEXT_PUBLIC_ABLY_KEY: z.string().min(1),
   NEXT_PUBLIC_POSTHOG_KEY: z.string().min(1),
+  // Sent as the `x-admin-secret` header on admin write calls. Optional so dev
+  // works against a backend with no ADMIN_SECRET configured (open mode).
+  // SECURITY: NEXT_PUBLIC_ vars ship to the browser — only acceptable because
+  // the admin app is expected to live behind network/SSO access control.
+  NEXT_PUBLIC_ADMIN_SECRET: z.string().optional(),
 });
 
 const parsed = envClientSchema.safeParse({
@@ -12,6 +17,7 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_SERVICES_URL: process.env.NEXT_PUBLIC_SERVICES_URL,
   NEXT_PUBLIC_ABLY_KEY: process.env.NEXT_PUBLIC_ABLY_KEY,
   NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+  NEXT_PUBLIC_ADMIN_SECRET: process.env.NEXT_PUBLIC_ADMIN_SECRET,
 });
 
 if (!parsed.success) {
