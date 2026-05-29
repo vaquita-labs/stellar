@@ -11,6 +11,10 @@ pub enum DataKey {
     TokenBadgeType(u32),
     EditionCap(Symbol),
     EditionCount(Symbol),
+    /// Per-badge-type mint policy (instance storage, admin-curated)
+    MintPolicy(Symbol),
+    /// Cumulative mint count per badge type (persistent storage)
+    MintCount(Symbol),
     // Pause and upgrade state — set in constructor, governed by future slices
     Paused,
     Version,

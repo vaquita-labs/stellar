@@ -1,6 +1,6 @@
 #![cfg(test)]
 use crate::test::{std::println, EnvTestUtils};
-use crate::{BadgeError, VaquitaBadges, VaquitaBadgesClient};
+use crate::{BadgeError, MintPolicy, VaquitaBadges, VaquitaBadgesClient};
 
 use ed25519_dalek::{Signer, SigningKey};
 use rand::rngs::OsRng;
@@ -84,7 +84,6 @@ fn mint_badge_returns_token_id_and_increments_supply() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
     let sig = make_signature(
@@ -93,11 +92,11 @@ fn mint_badge_returns_token_id_and_increments_supply() {
         &signing_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
 
-    let token_id = client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    let token_id = client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
     assert_eq!(token_id, 0);
     assert_eq!(client.total_supply(), 1);
 
@@ -127,20 +126,19 @@ fn mint_badge_rejects_signature_without_contract_address() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
     // Build signature with OLD layout (no contract address prefix) — must be rejected.
     let mut msg = Bytes::new(&env);
     msg.append(&wallet.clone().to_xdr(&env));
     msg.append(&badge_type.clone().to_xdr(&env));
-    msg.append(&Bytes::from_array(&env, &cycle_id.to_be_bytes()));
+    msg.append(&Bytes::from_array(&env, &0u32.to_be_bytes()));
     msg.append(&Bytes::from_array(&env, &expiry.to_be_bytes()));
     let hash = env.crypto().sha256(&msg);
     let raw_sig = signing_key.sign(&hash.to_array());
     let sig = BytesN::from_array(&env, &raw_sig.to_bytes());
 
-    let result = client.try_mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    let result = client.try_mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
     assert!(
         result.is_err(),
         "signature without contract address must be rejected"
@@ -156,7 +154,6 @@ fn mint_badge_rejects_signature_for_different_contract() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
     // Sign with a different (random) contract address
@@ -167,11 +164,11 @@ fn mint_badge_rejects_signature_for_different_contract() {
         &signing_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
 
-    let result = client.try_mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    let result = client.try_mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
     assert!(
         result.is_err(),
         "signature for wrong contract must be rejected"
@@ -187,7 +184,6 @@ fn mint_badge_rejects_expired_claim() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() - 1;
 
     let sig = make_signature(
@@ -196,10 +192,10 @@ fn mint_badge_rejects_expired_claim() {
         &signing_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
-    let result = client.try_mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    let result = client.try_mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
     assert_eq!(result, Err(Ok(BadgeError::ClaimExpired)));
 }
 
@@ -212,7 +208,6 @@ fn mint_badge_rejects_double_claim() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
     let sig = make_signature(
@@ -221,10 +216,10 @@ fn mint_badge_rejects_double_claim() {
         &signing_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
-    client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
 
     let sig2 = make_signature(
         &env,
@@ -232,10 +227,10 @@ fn mint_badge_rejects_double_claim() {
         &signing_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
-    let result = client.try_mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig2);
+    let result = client.try_mint_badge(&wallet, &badge_type, &0, &expiry, &sig2);
     assert_eq!(result, Err(Ok(BadgeError::AlreadyClaimed)));
 }
 
@@ -249,7 +244,6 @@ fn mint_badge_rejects_wrong_signature() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
     let wrong_key = generate_signing_key();
@@ -259,10 +253,10 @@ fn mint_badge_rejects_wrong_signature() {
         &wrong_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
-    client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
 }
 
 // ---------- Cycle 9: transfer is always blocked ----------
@@ -274,7 +268,6 @@ fn transfer_always_fails() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
     let sig = make_signature(
@@ -283,10 +276,10 @@ fn transfer_always_fails() {
         &signing_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
-    client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
 
     let other = Address::generate(&env);
     let result = client.try_transfer(&wallet, &other, &0);
@@ -302,7 +295,6 @@ fn owner_of_returns_minter_wallet() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
     let sig = make_signature(
@@ -311,10 +303,10 @@ fn owner_of_returns_minter_wallet() {
         &signing_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
-    let token_id = client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    let token_id = client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
 
     assert_eq!(client.owner_of(&token_id), Some(wallet));
     assert_eq!(client.owner_of(&999), None);
@@ -335,7 +327,6 @@ fn update_signing_key_rotates_key() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
     let sig = make_signature(
         &env,
@@ -343,10 +334,10 @@ fn update_signing_key_rotates_key() {
         &new_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
-    let token_id = client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    let token_id = client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
     assert_eq!(token_id, 0);
 
     println!("update_signing_key_rotates_key OK");
@@ -372,15 +363,15 @@ fn update_signing_key_non_admin_rejected() {
     assert!(result.is_err());
 }
 
-// ---------- Cycle 12: add_edition + EditionCap enforcement ----------
+// ---------- Cycle 12: register_badge_type + EditionCap enforcement ----------
 
 #[test]
-fn add_edition_sets_cap_and_mints_up_to_cap() {
+fn register_badge_type_sets_cap_and_mints_up_to_cap() {
     let env = Env::default();
     let (contract_id, signing_key, client) = deploy(&env);
 
     let edition = symbol_short!("genesis");
-    client.add_edition(&edition, &2u32);
+    client.register_badge_type(&edition, &MintPolicy::OneTimeOnly, &Some(2u32));
 
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
@@ -394,7 +385,7 @@ fn add_edition_sets_cap_and_mints_up_to_cap() {
     let t2 = client.mint_badge(&w2, &edition, &0, &expiry, &sig2);
     assert_eq!(t2, 1);
 
-    println!("add_edition_sets_cap_and_mints_up_to_cap OK");
+    println!("register_badge_type_sets_cap_and_mints_up_to_cap OK");
 }
 
 #[test]
@@ -403,7 +394,7 @@ fn mint_badge_rejects_beyond_edition_cap() {
     let (contract_id, signing_key, client) = deploy(&env);
 
     let edition = symbol_short!("genesis");
-    client.add_edition(&edition, &1u32);
+    client.register_badge_type(&edition, &MintPolicy::OneTimeOnly, &Some(1u32));
 
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
@@ -418,7 +409,7 @@ fn mint_badge_rejects_beyond_edition_cap() {
 }
 
 #[test]
-fn add_edition_non_admin_rejected() {
+fn register_badge_type_non_admin_rejected() {
     let env = Env::default();
     env.cost_estimate().budget().reset_unlimited();
     env.set_default_info();
@@ -430,7 +421,11 @@ fn add_edition_non_admin_rejected() {
     let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes));
     let client = VaquitaBadgesClient::new(&env, &contract_id);
 
-    let result = client.try_add_edition(&symbol_short!("genesis"), &50u32);
+    let result = client.try_register_badge_type(
+        &symbol_short!("genesis"),
+        &MintPolicy::OneTimeOnly,
+        &Some(50u32),
+    );
     assert!(result.is_err());
 }
 
@@ -443,6 +438,8 @@ fn has_claimed_returns_false_before_mint_and_true_after() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
+    // PerCycle so non-zero cycle_ids are valid.
+    client.register_badge_type(&badge_type, &MintPolicy::PerCycle, &None);
     let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
@@ -474,7 +471,6 @@ fn badge_type_of_returns_correct_type() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
 
     let sig = make_signature(
@@ -483,10 +479,10 @@ fn badge_type_of_returns_correct_type() {
         &signing_key,
         &wallet,
         &badge_type,
-        cycle_id,
+        0,
         expiry,
     );
-    let token_id = client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    let token_id = client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
 
     assert_eq!(client.badge_type_of(&token_id), Some(badge_type));
     assert_eq!(client.badge_type_of(&999), None);
@@ -503,6 +499,8 @@ fn key_rotation_invalidates_old_sig_and_accepts_new() {
 
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
     let badge_type = symbol_short!("gold");
+    // PerCycle so distinct cycle_ids per wallet are valid.
+    client.register_badge_type(&badge_type, &MintPolicy::PerCycle, &None);
 
     let wallet_1 = Address::generate(&env);
     let cycle_1: u32 = 202601;
@@ -576,7 +574,6 @@ fn mint_badge_with_old_key_fails_after_rotation() {
 
     let wallet = Address::generate(&env);
     let badge_type = symbol_short!("gold");
-    let cycle_id: u32 = 202605;
     let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
     let sig = make_signature(
         &env,
@@ -584,8 +581,205 @@ fn mint_badge_with_old_key_fails_after_rotation() {
         &old_key,
         &wallet,
         &badge_type,
+        0,
+        expiry,
+    );
+    client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
+}
+
+// ---------- Cycle 17: MintPolicy system ----------
+
+#[test]
+fn onetimeonly_default_rejects_nonzero_cycle_id() {
+    // Unregistered badge type defaults to OneTimeOnly; cycle_id != 0 must return InvalidCycleId.
+    let env = Env::default();
+    let (contract_id, signing_key, client) = deploy(&env);
+
+    let wallet = Address::generate(&env);
+    let badge_type = symbol_short!("gold");
+    let cycle_id: u32 = 202605;
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+
+    let sig = make_signature(
+        &env,
+        &contract_id,
+        &signing_key,
+        &wallet,
+        &badge_type,
         cycle_id,
         expiry,
     );
-    client.mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    let result = client.try_mint_badge(&wallet, &badge_type, &cycle_id, &expiry, &sig);
+    assert_eq!(result, Err(Ok(BadgeError::InvalidCycleId)));
+}
+
+#[test]
+fn registered_onetimeonly_blocks_remint_same_wallet() {
+    // Explicit OneTimeOnly registration: first mint succeeds; second with cycle_id=0 fails.
+    let env = Env::default();
+    let (contract_id, signing_key, client) = deploy(&env);
+
+    let badge_type = symbol_short!("gold");
+    client.register_badge_type(&badge_type, &MintPolicy::OneTimeOnly, &None);
+
+    let wallet = Address::generate(&env);
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+
+    let sig1 = make_signature(
+        &env,
+        &contract_id,
+        &signing_key,
+        &wallet,
+        &badge_type,
+        0,
+        expiry,
+    );
+    client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig1);
+
+    let sig2 = make_signature(
+        &env,
+        &contract_id,
+        &signing_key,
+        &wallet,
+        &badge_type,
+        0,
+        expiry,
+    );
+    let result = client.try_mint_badge(&wallet, &badge_type, &0, &expiry, &sig2);
+    assert_eq!(result, Err(Ok(BadgeError::AlreadyClaimed)));
+}
+
+#[test]
+fn percycle_allows_different_cycles_blocks_same_twice() {
+    // PerCycle: cycle_id=1 then cycle_id=2 both succeed; cycle_id=2 again fails.
+    let env = Env::default();
+    let (contract_id, signing_key, client) = deploy(&env);
+
+    let badge_type = symbol_short!("streak");
+    client.register_badge_type(&badge_type, &MintPolicy::PerCycle, &None);
+
+    let wallet = Address::generate(&env);
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+
+    let sig1 = make_signature(
+        &env,
+        &contract_id,
+        &signing_key,
+        &wallet,
+        &badge_type,
+        1,
+        expiry,
+    );
+    let t1 = client.mint_badge(&wallet, &badge_type, &1, &expiry, &sig1);
+    assert_eq!(t1, 0);
+
+    let sig2 = make_signature(
+        &env,
+        &contract_id,
+        &signing_key,
+        &wallet,
+        &badge_type,
+        2,
+        expiry,
+    );
+    let t2 = client.mint_badge(&wallet, &badge_type, &2, &expiry, &sig2);
+    assert_eq!(t2, 1);
+
+    let sig3 = make_signature(
+        &env,
+        &contract_id,
+        &signing_key,
+        &wallet,
+        &badge_type,
+        2,
+        expiry,
+    );
+    let result = client.try_mint_badge(&wallet, &badge_type, &2, &expiry, &sig3);
+    assert_eq!(result, Err(Ok(BadgeError::AlreadyClaimed)));
+}
+
+#[test]
+fn set_mint_policy_blocks_loosening_after_mints() {
+    // Loosening (OneTimeOnly → PerCycle) is blocked once any mint has been recorded.
+    let env = Env::default();
+    let (contract_id, signing_key, client) = deploy(&env);
+
+    let badge_type = symbol_short!("gold");
+    client.register_badge_type(&badge_type, &MintPolicy::OneTimeOnly, &None);
+
+    let wallet = Address::generate(&env);
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+    let sig = make_signature(
+        &env,
+        &contract_id,
+        &signing_key,
+        &wallet,
+        &badge_type,
+        0,
+        expiry,
+    );
+    client.mint_badge(&wallet, &badge_type, &0, &expiry, &sig);
+
+    let result = client.try_set_mint_policy(&badge_type, &MintPolicy::PerCycle);
+    assert_eq!(result, Err(Ok(BadgeError::PolicyFrozen)));
+}
+
+#[test]
+fn set_mint_policy_allows_tightening_after_mints() {
+    // Tightening (PerCycle → OneTimeOnly) is always allowed even after mints.
+    let env = Env::default();
+    let (contract_id, signing_key, client) = deploy(&env);
+
+    let badge_type = symbol_short!("streak");
+    client.register_badge_type(&badge_type, &MintPolicy::PerCycle, &None);
+
+    let wallet = Address::generate(&env);
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+    let sig = make_signature(
+        &env,
+        &contract_id,
+        &signing_key,
+        &wallet,
+        &badge_type,
+        1,
+        expiry,
+    );
+    client.mint_badge(&wallet, &badge_type, &1, &expiry, &sig);
+
+    client.set_mint_policy(&badge_type, &MintPolicy::OneTimeOnly);
+}
+
+#[test]
+fn has_claimed_onetimeonly_nonzero_cycle_returns_false() {
+    // has_claimed returns false (not error) for OneTimeOnly type with cycle_id != 0.
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+
+    let wallet = Address::generate(&env);
+    let badge_type = symbol_short!("gold"); // unregistered → default OneTimeOnly
+
+    assert!(!client.has_claimed(&wallet, &badge_type, &202605));
+}
+
+#[test]
+fn update_edition_cap_takes_effect_on_next_mint() {
+    let env = Env::default();
+    let (contract_id, signing_key, client) = deploy(&env);
+
+    let edition = symbol_short!("genesis");
+    client.register_badge_type(&edition, &MintPolicy::OneTimeOnly, &Some(10u32));
+
+    // Lower the cap to 1.
+    client.update_edition_cap(&edition, &1u32);
+
+    let expiry: u64 = env.ledger().timestamp() + 86_400 * 30;
+
+    let w1 = Address::generate(&env);
+    let sig1 = make_signature(&env, &contract_id, &signing_key, &w1, &edition, 0, expiry);
+    client.mint_badge(&w1, &edition, &0, &expiry, &sig1);
+
+    let w2 = Address::generate(&env);
+    let sig2 = make_signature(&env, &contract_id, &signing_key, &w2, &edition, 0, expiry);
+    let result = client.try_mint_badge(&w2, &edition, &0, &expiry, &sig2);
+    assert_eq!(result, Err(Ok(BadgeError::EditionCapReached)));
 }
