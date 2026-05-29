@@ -10,6 +10,7 @@ import {
   useApyByLockPeriod,
   useDepositsComplete,
   useProfileData,
+  useProfileExperience,
   useProfileRewards,
   useProfileStreak,
 } from '../../hooks';
@@ -36,6 +37,7 @@ export const HeaderStats = () => {
     isRefetching: depositsRefetching,
   } = useDepositsComplete(walletAddress);
   const { data: profileRewards } = useProfileRewards();
+  const { data: experienceData } = useProfileExperience();
   const { data: apyData, isLoading: apyLoading } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
 
@@ -43,6 +45,7 @@ export const HeaderStats = () => {
   const hasActiveStreak = !!streakData?.todayStreak;
 
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
+  const experience = experienceData?.experience ?? 0;
 
   const firstName = profileData?.nickname || profileData?.fullName?.split(' ')[0] || '';
 
@@ -176,6 +179,22 @@ export const HeaderStats = () => {
             />
             <span className="text-sm font-bold text-black tabular-nums">{goldCoins}</span>
           </div>
+
+          <div className="w-px h-4 bg-black/10" />
+
+          <Link href="/profile/summary" className="flex items-center gap-1.5 flex-1 justify-center">
+            <Image
+              src="/icons/global/star.png"
+              alt="Experience"
+              width={20}
+              height={20}
+              className="object-contain"
+              priority
+            />
+            <span className="text-sm font-bold text-black tabular-nums">
+              {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </span>
+          </Link>
         </div>
       </div>
 
