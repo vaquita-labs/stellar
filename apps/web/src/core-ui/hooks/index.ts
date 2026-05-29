@@ -18,4 +18,5 @@ export * from './useRestDeposit';
 export * from './useIsPoolPaused';
 export * from './useRestWithdrawal';
 export * from './useUsers';
+export * from './useVaquitaMood';
 export * from './useWithdrawalTime';
