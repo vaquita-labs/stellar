@@ -5,6 +5,9 @@ import {
   Achievement,
   type AchievementDocument,
   type AchievementResponseDTO,
+  type BadgeRule,
+  type BadgeUnlockType,
+  type CatalogAchievementResponseDTO,
   type DepositResponseDTO,
   DepositWithdrawalState,
   type MapObject,
@@ -29,8 +32,9 @@ import {
   getCachedDepositsByNetworkIdWalletAddress,
 } from '../deposit';
 import { getNetworkByName } from '../network';
-import { BETA_TESTER_CUTOFF, DAILY_GOLD_COINS } from './constants';
+import { DAILY_GOLD_COINS } from './constants';
 import { friendlyStandardMap } from './map-template';
+import { evaluateRule } from './rules';
 
 export const listenProfilesChanges = async (onChange: () => void) => {
   await supabase.realtime.setAuth();
@@ -507,7 +511,7 @@ export const broadcastProfileChange = async (message: string, keys: string[]) =>
 // Achievements
 // ---------------------------------------------------------------------------
 
-export const getAchievementByKey = async (key: Achievement) => {
+export const getAchievementByKey = async (key: Achievement | string) => {
   const { data, ...rest } = await supabase
     .from('achievements')
     .select('*')
@@ -520,6 +524,53 @@ export const getAchievementByKey = async (key: Achievement) => {
   };
 };
 
+/** Fields the admin panel may write on an achievement. snake_case to match the
+ *  DB columns; all optional so PATCH can send a partial. */
+export interface AchievementWriteFields {
+  name: string;
+  description: string;
+  tier: string;
+  coin_reward: number;
+  unlock_type: BadgeUnlockType;
+  rule: BadgeRule | null;
+  icon: string | null;
+  accent: string | null;
+  code: string | null;
+  hidden: boolean;
+  cycle_scoped: boolean;
+  refresh_policy: 'auto' | 'manual';
+  display_order: number;
+  enabled: boolean;
+}
+
+/** Insert a new achievement (admin). `key` is immutable once created. */
+export const createAchievement = async (
+  input: Partial<AchievementWriteFields> & { key: string },
+) => {
+  const { data, error } = await supabase
+    .from('achievements')
+    .insert([input])
+    .select()
+    .maybeSingle();
+
+  return { data: data as AchievementDocument | null, error };
+};
+
+/** Patch an existing achievement by key (admin). We never change `key`. */
+export const updateAchievement = async (
+  key: string,
+  patch: Partial<AchievementWriteFields>,
+) => {
+  const { data, error } = await supabase
+    .from('achievements')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('key', key)
+    .select()
+    .maybeSingle();
+
+  return { data: data as AchievementDocument | null, error };
+};
+
 export const getAllAchievements = async () => {
   const { data, ...rest } = await supabase
     .from('achievements')
@@ -530,6 +581,30 @@ export const getAllAchievements = async () => {
     data: (data || []) as AchievementDocument[],
     ...rest,
   };
+};
+
+/**
+ * Public, user-agnostic badge catalog for the web app to render instead of a
+ * hardcoded list. Returns only `enabled`, non-`hidden` badges, ordered by
+ * `display_order`. Secret (redeem-code) badges stay out of the public catalog
+ * until the user claims them — same rule as {@link toProfileAchievementsResponseDTO}.
+ */
+export const toCatalogAchievementsResponseDTO = async (): Promise<CatalogAchievementResponseDTO[]> => {
+  const { data } = await getAllAchievements();
+  return data
+    .filter((a) => a.enabled !== false && !a.hidden)
+    .sort((x, y) => (x.display_order ?? 0) - (y.display_order ?? 0))
+    .map((a) => ({
+      key: a.key,
+      name: a.name,
+      description: a.description,
+      tier: a.tier,
+      coinReward: a.coin_reward,
+      icon: a.icon ?? null,
+      accent: a.accent ?? null,
+      unlockType: a.unlock_type,
+      displayOrder: a.display_order ?? 0,
+    }));
 };
 
 export const getClaimedAchievements = async (profileId: number) => {
@@ -667,50 +742,21 @@ export const computeEligibilitySignals = async (
 };
 
 /**
- * Eligibility table for server-side claimable achievements. Stateless — pass
- * the result of {@link computeEligibilitySignals} as `signals`. The thresholds
- * mirror the frontend rules in `apps/web/src/core-ui/data/profile-badges.ts`
- * so a tile that displays as "earned" in the UI also unlocks the Claim CTA.
+ * Whether a badge is unlocked by the *live signals* alone, driven by the
+ * badge's configurable `rule` (see {@link evaluateRule}). Stateless — pass the
+ * result of {@link computeEligibilitySignals} as `signals`.
  *
- * Friends + leaderboard achievements stay `false` until those systems exist.
+ * Only `unlock_type === 'rule'` badges are signal-driven. `cycle_rank`
+ * (leaderboard) eligibility needs cycle context and is verified in the claim
+ * route; `redeem_code` / `manual` are claim-driven and never auto-unlock from
+ * signals — so they return `false` here.
  */
-export const isEligibleForAchievement = (signals: EligibilitySignals, key: Achievement): boolean => {
-  switch (key) {
-    case Achievement.BETA_TESTER:
-      return !!signals.createdAt && signals.createdAt.getTime() <= BETA_TESTER_CUTOFF.getTime();
-    case Achievement.ROOKIE:
-      return signals.experience >= 50;
-    case Achievement.WEEK_WARRIOR:
-      return signals.streakCount >= 7;
-    case Achievement.FIRST_DEPOSIT:
-      return signals.activeDeposits >= 1;
-    case Achievement.FIRST_FRIEND:
-      return signals.friendsCount >= 1;
-    case Achievement.SAVINGS_STARTER:
-      return signals.activeAmount >= 100;
-    case Achievement.TRIO_SAVER:
-      return signals.activeDeposits >= 3;
-    case Achievement.MONTH_MASTER:
-      return signals.streakCount >= 30;
-    case Achievement.EXPLORER:
-      return signals.experience >= 300;
-    case Achievement.STREAK_MASTER:
-      return signals.streakCount >= 50;
-    case Achievement.WHALE:
-      return signals.experience >= 30000;
-    case Achievement.SAVINGS_BARON:
-      return signals.activeAmount >= 10000;
-    case Achievement.CENTURY_SAVER:
-      return signals.streakCount >= 100;
-    case Achievement.THIRD_PLACE:
-      return signals.leaderboardRank === 3;
-    case Achievement.SECOND_PLACE:
-      return signals.leaderboardRank === 2;
-    case Achievement.FIRST_PLACE:
-      return signals.leaderboardRank === 1;
-    default:
-      return false;
-  }
+export const isAchievementEligible = (
+  achievement: AchievementDocument,
+  signals: EligibilitySignals,
+): boolean => {
+  if (achievement.unlock_type !== 'rule') return false;
+  return evaluateRule(achievement.rule, signals);
 };
 
 export const toProfileAchievementsResponseDTO = async (
@@ -745,7 +791,7 @@ export const toProfileAchievementsResponseDTO = async (
         // `unlocked` is true if eligibility OR claim — claim implies the user
         // was eligible at the time, so flipping it to true here keeps the tile
         // showing as "earned" even if the eligibility rule later tightens.
-        unlocked: !!claim || isEligibleForAchievement(signals, a.key as Achievement),
+        unlocked: !!claim || isAchievementEligible(a, signals),
         claimedAt: claim?.claimed_at ?? null,
       };
     });
