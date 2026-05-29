@@ -116,7 +116,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <PollarProvider
       client={{
-        baseUrl: 'https://sdk.api.local.pollar.xyz',
+        baseUrl: 'https://sdk.api.pollar.xyz',
         apiKey: POLLAR_API_KEY,
         walletAdapter: bundle.walletAdapter,
         stellarNetwork: POLLAR_NETWORK,
