@@ -70,12 +70,8 @@ execute-upgrade:
 	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- execute_upgrade
 
 deploy-badges: build-badges
-	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm $(BADGES_WASM) --alias vaquita_badges
-
-initialize-badges: deploy-badges
-	stellar contract invoke --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) --id vaquita_badges \
+	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm $(BADGES_WASM) --alias vaquita_badges \
 	-- \
-	initialize \
 	--admin $(BADGES_ADMIN) \
 	--signing_key $(BADGES_SIGNING_KEY)
 

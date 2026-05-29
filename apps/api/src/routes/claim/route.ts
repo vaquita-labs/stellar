@@ -178,7 +178,7 @@ router.get(
     }
 
     const expiry = makeClaimExpiry();
-    const signature = signBadgeClaim(wallet, contractSymbol, cycleId, expiry, keypair);
+    const signature = signBadgeClaim(network.badges_contract_address, wallet, contractSymbol, cycleId, expiry, keypair);
     const stored = await storeBadgeClaim({ walletAddress: wallet, badgeType, cycleId, expiry, signature });
 
     req.log.info({ badgeType, wallet, claimId: stored.id }, 'Issued new badge claim');
@@ -294,7 +294,7 @@ router.post(
     }
 
     const expiry = makeClaimExpiry();
-    const signature = signBadgeClaim(wallet, contractSymbol, cycleId, expiry, keypair);
+    const signature = signBadgeClaim(contractId, wallet, contractSymbol, cycleId, expiry, keypair);
     const stored = await storeBadgeClaim({ walletAddress: wallet, badgeType, cycleId, expiry, signature });
 
     req.log.info({ badgeType, wallet, cycleId, claimId: stored.id }, 'Refreshed badge claim');
