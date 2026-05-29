@@ -1,6 +1,6 @@
 {
   "name": "@pollar/react",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "React components for Pollar authentication",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -42,5 +42,5 @@
     "@pollar/core": "*",
     "qr.js": "^0.0.0"
   },
-  "yalcSig": "6bdbb485325e66465ca18586e43937b2"
+  "yalcSig": "56c943eb24f47d328cb5ed33db8f9a95"
 }

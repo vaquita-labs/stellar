@@ -1,0 +1,59 @@
+{
+  "name": "@vaquita/admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 3010",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format": "prettier --write .",
+    "update-abis": "node -e \"const fs=require('fs');const abi=JSON.parse(fs.readFileSync('contracts/out/VaquitaPool.sol/VaquitaPool.json')).abi;fs.writeFileSync('src/abis/VaquitaPool.json',JSON.stringify(abi,null,2));\""
+  },
+  "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "^1.9.5",
+    "@farcaster/miniapp-sdk": "^0.2.1",
+    "@fontsource/rubik": "^5.2.6",
+    "@heroui/react": "^2.8.3",
+    "@privy-io/react-auth": "^2.24.0",
+    "@privy-io/server-auth": "^1.32.2",
+    "@privy-io/wagmi": "^1.0.6",
+    "@react-three/drei": "^10.7.4",
+    "@react-three/fiber": "^9.3.0",
+    "@stellar/stellar-sdk": "^14.1.1",
+    "@tailwindcss/postcss": "^4.1.14",
+    "@tanstack/react-query": "^5.87.1",
+    "@types/file-saver": "^2.0.7",
+    "@types/papaparse": "^5.3.16",
+    "@vercel/analytics": "^1.5.0",
+    "ably": "^2.14.0",
+    "file-saver": "^2.0.5",
+    "framer-motion": "^12.23.12",
+    "next": "^15.5.2",
+    "papaparse": "^5.5.3",
+    "posthog-js": "^1.268.9",
+    "posthog-node": "^5.9.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-icons": "^5.5.0",
+    "react-resize-detector": "^12.3.0",
+    "three": "^0.180.0",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^15.5.2",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^4.1.13",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}

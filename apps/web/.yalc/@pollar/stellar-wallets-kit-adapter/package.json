@@ -1,6 +1,6 @@
 {
   "name": "@pollar/stellar-wallets-kit-adapter",
-  "version": "0.6.3",
+  "version": "0.8.0",
   "description": "Stellar Wallets Kit adapter for @pollar/core — plug additional wallet modules (xBull, Lobstr, WalletConnect, hardware wallets…) into Pollar without bundling them into @pollar/core.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -14,6 +14,16 @@
       "require": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      }
+    },
+    "./picker": {
+      "import": {
+        "types": "./dist/picker.d.mts",
+        "default": "./dist/picker.mjs"
+      },
+      "require": {
+        "types": "./dist/picker.d.ts",
+        "default": "./dist/picker.js"
       }
     }
   },
@@ -32,10 +42,24 @@
   },
   "peerDependencies": {
     "@creit.tech/stellar-wallets-kit": "^2.0.0",
-    "@pollar/core": "*"
+    "@pollar/core": "*",
+    "@pollar/react": "^0.8.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@pollar/react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@pollar/core": "*"
   },
-  "yalcSig": "f2f97c50c9bc6fc2e8195c820942de77"
+  "yalcSig": "937208a91ecb0eae9e9aaccdec61996d"
 }
