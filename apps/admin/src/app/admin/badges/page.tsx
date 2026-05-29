@@ -68,6 +68,7 @@ type FormState = {
   displayOrder: string;
   hidden: boolean;
   enabled: boolean;
+  allowTierChange: boolean;
   conditions: BadgeRuleCondition[];
 };
 
@@ -84,6 +85,7 @@ const emptyForm = (): FormState => ({
   displayOrder: '0',
   hidden: false,
   enabled: true,
+  allowTierChange: false,
   conditions: [{ signal: 'experience', op: '>=', value: 0 }],
 });
 
@@ -100,6 +102,7 @@ const formFromAchievement = (a: AdminAchievement): FormState => ({
   displayOrder: String(a.display_order ?? 0),
   hidden: !!a.hidden,
   enabled: a.enabled !== false,
+  allowTierChange: false,
   conditions:
     a.rule?.all && a.rule.all.length > 0
       ? a.rule.all
@@ -244,6 +247,7 @@ const BadgeFormModal = ({
       accent: form.accent.trim() || null,
       hidden: form.hidden,
       enabled: form.enabled,
+      allowTierChange: form.allowTierChange,
       displayOrder: Number(form.displayOrder) || 0,
       code: form.unlockType === 'redeem_code' ? form.code.trim() || null : null,
       rule:
@@ -404,6 +408,22 @@ const BadgeFormModal = ({
               Hidden (until claimed)
             </Switch>
           </div>
+
+          {isEdit && editing && form.tier !== editing.tier && (
+            <div className="flex flex-col gap-1 rounded-medium bg-warning-50 p-3">
+              <Switch
+                isSelected={form.allowTierChange}
+                onValueChange={(v) => set('allowTierChange', v)}
+                color="warning"
+              >
+                Allow tier change
+              </Switch>
+              <span className="text-xs text-warning-600">
+                Tier is the Soroban mint symbol — changing it can break on-chain minting for
+                this badge. Enable only if you know what you&apos;re doing.
+              </span>
+            </div>
+          )}
         </ModalBody>
         <ModalFooter>
           <Button variant="light" onPress={onClose}>
