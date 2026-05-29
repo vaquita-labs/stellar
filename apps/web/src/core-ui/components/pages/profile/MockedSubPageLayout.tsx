@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ReactNode } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 
@@ -8,7 +8,7 @@ interface MockedSubPageLayoutProps {
   title: string;
   /** Short tagline shown under the title. */
   subtitle?: string;
-  /** Where the back arrow returns to. */
+  /** Fallback route when there's no in-app history to go back to. */
   backHref?: string;
   /** Hide the "Soon" badge if the page becomes real later. */
   showSoonBadge?: boolean;
@@ -27,18 +27,31 @@ export function MockedSubPageLayout({
   showSoonBadge = true,
   children,
 }: MockedSubPageLayoutProps) {
+  const router = useRouter();
+
+  const handleBack = () => {
+    // Prefer returning to wherever the user came from. Fall back to the
+    // provided href when there's no in-app history (e.g. direct URL entry).
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(backHref);
+    }
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pt-5 sm:pt-6 pb-6 flex flex-col gap-6">
         <header className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <Link
-              href={backHref}
+            <button
+              type="button"
+              onClick={handleBack}
               aria-label="Back"
               className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
             >
               <FiArrowLeft className="h-4 w-4" />
-            </Link>
+            </button>
             {showSoonBadge && (
               <span className="text-[10px] font-bold uppercase tracking-wider bg-primary text-black border border-black border-b-2 rounded-full px-3 py-1">
                 Soon

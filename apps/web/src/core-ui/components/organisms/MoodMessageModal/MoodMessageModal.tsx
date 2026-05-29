@@ -3,6 +3,7 @@
 import { Button } from '@heroui/react';
 import { VaquitaMood } from '@/core-ui/types';
 import { AppModal } from '../../molecules/AppModal';
+import { DailyCheckCountdown } from './DailyCheckCountdown';
 import { MoodMessageModalProps } from './types';
 
 const MOOD_COPY: Record<VaquitaMood, { emoji: string; title: string; message: string; cta: string }> = {
@@ -52,6 +53,7 @@ export function MoodMessageModal({ open, onOpenChange, mood }: MoodMessageModalP
       <div className="flex flex-col items-center text-center gap-5 py-2">
         <span className="text-6xl">{copy.emoji}</span>
         <p className="text-base text-black">{copy.message}</p>
+        <DailyCheckCountdown />
         <Button
           onPress={onOpenChange}
           className="w-full bg-primary text-black border border-black border-b-2 font-semibold rounded-md"

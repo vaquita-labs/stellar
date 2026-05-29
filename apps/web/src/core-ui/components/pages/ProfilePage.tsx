@@ -279,7 +279,7 @@ export function ProfilePage() {
               label="Gold"
             />
             <SummaryItem
-              icon="/icons/global/trophy.png"
+              icon="/icons/global/star.png"
               value={`${Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })} XP`}
               label="Experience"
             />

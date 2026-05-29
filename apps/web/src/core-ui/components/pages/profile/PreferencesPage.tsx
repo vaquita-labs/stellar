@@ -16,9 +16,8 @@ const LANGUAGES: Option[] = [
 
 const CURRENCIES: Option[] = [
   { id: 'usd', label: 'USD', hint: 'US Dollar' },
-  { id: 'eur', label: 'EUR', hint: 'Euro' },
-  { id: 'cop', label: 'COP', hint: 'Peso colombiano' },
-  { id: 'mxn', label: 'MXN', hint: 'Peso mexicano' },
+  { id: 'ars', label: 'ARS', hint: 'Peso argentino' },
+  { id: 'bob', label: 'BOB', hint: 'Boliviano' },
 ];
 
 /**
