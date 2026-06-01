@@ -25,9 +25,7 @@ const transformNetworkData = (data: unknown): { networks: NetworkResponseDTO[]; 
             isSupported,
             vaquitaContractAddress,
             contractAddress,
-            contractAbi,
             lockPeriod,
-            vaquitaContractAbi,
           }) => ({
             name,
             decimals,
@@ -37,9 +35,7 @@ const transformNetworkData = (data: unknown): { networks: NetworkResponseDTO[]; 
             symbol,
             vaquitaContractAddress,
             contractAddress,
-            contractAbi,
             lockPeriod,
-            vaquitaContractAbi,
           })
         ),
     }))
