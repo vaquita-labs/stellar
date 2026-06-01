@@ -1,6 +1,5 @@
 'use client';
 
-import { sdk } from '@farcaster/miniapp-sdk';
 import { Button } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
@@ -68,23 +67,7 @@ export function HomePage() {
       const baseUrl = window.location.origin;
       const shareUrl = `${baseUrl}/share`;
 
-      const isMiniApp = await sdk.isInMiniApp();
-      if (isMiniApp) {
-        try {
-          const result = await sdk.actions.composeCast({
-            text: 'Achieve your savings goal and earn from the reward pool while having fun', // optional
-            embeds: ['https://miniapp.vaquita.fi/share'],
-          });
-
-          if (result?.cast) {
-            console.log('User posted a cast:', result.cast);
-          } else {
-            console.log('User canceled composing the cast.');
-          }
-        } catch (err) {
-          console.error('Failed to open cast composer:', err);
-        }
-      } else if (navigator.share) {
+      if (navigator.share) {
         await navigator.share({
           title: 'Vaquita - DeFi Savings Game',
           text: 'Join me in the Vaquita ecosystem and start earning rewards through DeFi savings! 🐋',
