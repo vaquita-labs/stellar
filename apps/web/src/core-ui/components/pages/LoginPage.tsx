@@ -1,14 +1,19 @@
 'use client';
 
 import StellarAuthButtons from '@/components/profile/StellarAuthButtons';
-import { DummyAuthButtons, NetworkSelector } from '@/core-ui/components';
+import { DummyAuthButtons, NetworkSelector, OnboardingIntro } from '@/core-ui/components';
 import { useIsAuthenticated, useNetworks } from '@/core-ui/hooks';
 import { useNetworkConfigStore } from '@/core-ui/stores';
 import { isDummyNetwork } from '@/networks/dummy';
 import { isStellarNetwork } from '@/networks/stellar';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+
+// Simulación de "mostrar onboarding" vía env var (sin persistencia local).
+// Mientras no haya señal del backend, esto controla si se ve el intro.
+// Por defecto se muestra; al reiniciar reaparece. Poner 'false' para ocultarlo.
+const SHOW_ONBOARDING_INTRO = process.env.NEXT_PUBLIC_SHOW_ONBOARDING_INTRO !== 'false';
 
 export default function LoginPage() {
   const isAuthenticated = useIsAuthenticated();
@@ -17,6 +22,9 @@ export default function LoginPage() {
   const {
     data: { types },
   } = useNetworks();
+
+  // Solo estado de sesión: si recargas, vuelve a aparecer (no se persiste).
+  const [introDismissed, setIntroDismissed] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -27,6 +35,10 @@ export default function LoginPage() {
   // No mostrar nada mientras se verifica la autenticación o si ya está autenticado
   if (isAuthenticated) {
     return null;
+  }
+
+  if (SHOW_ONBOARDING_INTRO && !introDismissed) {
+    return <OnboardingIntro onFinish={() => setIntroDismissed(true)} />;
   }
 
   return (
@@ -78,6 +90,14 @@ export default function LoginPage() {
                 {isDummyNetwork() && <DummyAuthButtons />}
               </div>
             )}
+
+            {/* Botón para volver a ver el intro (testeo / replay) */}
+            <button
+              onClick={() => setIntroDismissed(false)}
+              className="mt-1 text-sm font-semibold text-black/50 hover:text-black underline underline-offset-2 transition"
+            >
+              View intro again
+            </button>
           </div>
         </div>
       </div>
