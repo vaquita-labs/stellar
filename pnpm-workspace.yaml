@@ -7,6 +7,8 @@ packages:
   - 'packages/*'
 allowBuilds:
   '@heroui/shared-utils': true
+  '@prisma/client': true
+  '@prisma/engines': true
   '@reown/appkit': true
   '@stellar/stellar-sdk': true
   blake-hash: true
@@ -14,6 +16,7 @@ allowBuilds:
   core-js: false
   esbuild: true
   keccak: true
+  prisma: true
   protobufjs: true
   secp256k1: true
   sharp: true
