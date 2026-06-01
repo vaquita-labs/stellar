@@ -1,7 +1,6 @@
 'use client';
 
 import { useNetworkConfigStore } from '@/core-ui/stores';
-import { Input } from '@heroui/react';
 import { useMemo, useState } from 'react';
 import { IoMdSync } from 'react-icons/io';
 import { MoneyInputProps, TokenSymbol } from './types';
@@ -85,9 +84,6 @@ export function MoneyInput({
     if (!rx.test(sanitized)) {
       return; // Bloquear si no cumple el formato de decimales
     }
-    // Si está escribiendo y termina en punto, permitir (ej: "23.")
-    const isTypingDecimal = sanitized.endsWith('.');
-    // Solo validar máximo si NO está escribiendo el punto (para permitir "23." antes de "23.2")
 
     // Actualizar valor y validar
     onValueChange(sanitized);
@@ -136,60 +132,55 @@ export function MoneyInput({
   };
 
   return (
-    <Input
-      disabled={loading}
-      label="Amount to deposit"
-      placeholder="0.0"
-      value={value}
-      isInvalid={!!error}
-      errorMessage={error ?? undefined}
-      classNames={{
-        inputWrapper: 'bg-white border border-black border-b-2 h-14',
-        label: 'text-black font-normal text-sm',
-        input: 'text-black font-medium',
-      }}
-      description={
-        <span>
-          Total balance: ${balanceFormatted}{' '}
-          <IoMdSync
-            className={`inline h-4 w-4 cursor-pointer text-gray-500 hover:text-black transition ${
-              balanceIsLoading ? 'animate-spin text-black' : ''
-            }`}
-            onClick={!balanceIsLoading ? onReloadBalance : undefined}
-          />
-        </span>
-      }
-      onChange={(e) => handleChange(e.target.value)}
-      onBlur={normalizeOnBlur}
-      onKeyDown={preventKeys}
-      type="text" // evita problemas del input number (e/E, redondeos, 0.00)
-      inputMode="decimal" // teclado numérico en móviles
-      pattern="[0-9]*[.]?[0-9]*" // pista para navegadores móviles
-      endContent={
-        <div className="flex items-center h-full">
-          <label className="sr-only" htmlFor="currency">
-            Currency
-          </label>
-          <select
-            value={token?.symbol}
-            className="outline-solid outline-transparent border-0 bg-transparent text-default-400 text-small"
-            id="currency"
-            name="currency"
-            onChange={(e) => {
-              const token = tokenSymbols.find((t) => t.symbol === e.target.value);
-              if (token) onTokenChange(token);
-              // al cambiar token, revalida con nuevas reglas
-              setTimeout(() => setError(validate(value)), 0);
-            }}
-          >
-            {tokenSymbols.map((t) => (
-              <option key={t.symbol} value={t.symbol}>
-                {t.symbol}
-              </option>
-            ))}
-          </select>
-        </div>
-      }
-    />
+    <div className="flex flex-col gap-1 mb-2">
+      <label className="text-black font-normal text-sm">Amount to deposit</label>
+      <div
+        className={`flex items-center bg-white border border-black border-b-2 h-14 rounded-md px-3 ${error ? 'border-danger' : ''}`}
+      >
+        <input
+          disabled={loading}
+          placeholder="0.0"
+          value={value}
+          className="flex-1 min-w-0 text-black font-medium bg-transparent border-0 outline-none h-full text-base placeholder:text-default-400"
+          onChange={(e) => handleChange(e.target.value)}
+          onBlur={normalizeOnBlur}
+          onKeyDown={preventKeys}
+          type="text" // evita problemas del input number (e/E, redondeos, 0.00)
+          inputMode="decimal" // teclado numérico en móviles
+          pattern="[0-9]*[.]?[0-9]*" // pista para navegadores móviles
+        />
+        <label className="sr-only" htmlFor="currency">
+          Currency
+        </label>
+        <select
+          value={token?.symbol}
+          className="h-full bg-transparent border-0 outline-none text-black font-medium text-sm pl-2"
+          id="currency"
+          name="currency"
+          onChange={(e) => {
+            const token = tokenSymbols.find((t) => t.symbol === e.target.value);
+            if (token) onTokenChange(token);
+            // al cambiar token, revalida con nuevas reglas
+            setTimeout(() => setError(validate(value)), 0);
+          }}
+        >
+          {tokenSymbols.map((t) => (
+            <option key={t.symbol} value={t.symbol}>
+              {t.symbol}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && <span className="text-danger text-xs">{error}</span>}
+      <span className="text-xs text-default-400">
+        Total balance: ${balanceFormatted}{' '}
+        <IoMdSync
+          className={`inline h-4 w-4 cursor-pointer text-gray-500 hover:text-black transition ${
+            balanceIsLoading ? 'animate-spin text-black' : ''
+          }`}
+          onClick={!balanceIsLoading ? onReloadBalance : undefined}
+        />
+      </span>
+    </div>
   );
 }

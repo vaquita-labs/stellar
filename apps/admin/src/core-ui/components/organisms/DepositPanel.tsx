@@ -1,18 +1,19 @@
 'use client';
 
-import { addToast, Button, useDisclosure } from '@heroui/react';
+import { Button } from '@heroui/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { formatTimeDeposit } from '../../helpers';
 import { useNetworkConfigStore } from '../../stores';
 import { T } from '../atoms';
+import { addSuccessToast } from '../molecules';
 import { DepositModal } from './DepositModal';
 import { VaquitasListModal } from './VaquitasListModal';
 
 export function DepositPanel() {
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const { isOpen: isVaquitasListOpen, onOpenChange: onVaquitasListOpenChange } = useDisclosure();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isVaquitasListOpen, setIsVaquitasListOpen] = useState(false);
   const [isDepositing, setIsDepositing] = useState(false);
   const { walletAddress, lockPeriod, network, setLockPeriod, token, setToken } = useNetworkConfigStore();
   const router = useRouter();
@@ -68,7 +69,7 @@ export function DepositPanel() {
         </Button>
         {token && availableTokens.length > 0 && (
           <Button
-            variant="solid"
+            variant="primary"
             className="flex w-1/4 items-center justify-center text-black gap-0 rounded-md border border-black bg-white"
             onPress={handleChangeNextToken}
           >
@@ -88,18 +89,13 @@ export function DepositPanel() {
       <div className="w-full sm:w-2/4 px-2">
         <Button
           size="lg"
-          disabled={disabled}
+          isDisabled={disabled}
           onPress={() => {
             if (!walletAddress) {
               router.replace('/profile');
-              addToast({
-                title: <T>First connect your wallet</T>,
-                color: 'success',
-                variant: 'solid',
-                timeout: 60000,
-              });
+              addSuccessToast(<T>First connect your wallet</T>);
             } else {
-              onOpen();
+              setIsOpen(true);
             }
           }}
           className={`bg-success border-[#018222] py-6 text-white font-bold w-full border border-b-5  rounded-md`}
@@ -111,11 +107,13 @@ export function DepositPanel() {
       </div>
       <DepositModal
         open={isOpen}
-        onOpenChange={onOpenChange}
+        onOpenChange={() => setIsOpen(false)}
         isDepositing={isDepositing}
         setIsDepositing={setIsDepositing}
       />
-      {isVaquitasListOpen && <VaquitasListModal open={isVaquitasListOpen} onOpenChange={onVaquitasListOpenChange} />}
+      {isVaquitasListOpen && (
+        <VaquitasListModal open={isVaquitasListOpen} onOpenChange={() => setIsVaquitasListOpen(false)} />
+      )}
     </div>
   );
 }

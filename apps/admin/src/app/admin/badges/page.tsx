@@ -1,6 +1,6 @@
 'use client';
 
-import { GenericTable } from '@/core-ui/components';
+import { addDangerToast, addSuccessToast, AppModal, GenericTable } from '@/core-ui/components';
 import {
   type AchievementPayload,
   type AdminAchievement,
@@ -11,20 +11,7 @@ import {
   updateAchievement,
   useAdminAchievements,
 } from '@/core-ui/hooks';
-import {
-  addToast,
-  Button,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  Spinner,
-  Switch,
-  Textarea,
-  useDisclosure,
-} from '@heroui/react';
+import { Button, Input, Spinner, Switch, TextArea } from '@heroui/react';
 import { useMemo, useState } from 'react';
 
 // Mirror of the backend signal registry (packages/shared/.../profile/rules.ts).
@@ -128,7 +115,7 @@ const RuleBuilder = ({
         <span className="text-sm font-medium">Unlock when ALL conditions are met</span>
         <Button
           size="sm"
-          variant="flat"
+          variant="secondary"
           onPress={() => onChange([...conditions, { signal: 'experience', op: '>=', value: 0 }])}
         >
           + Condition
@@ -143,7 +130,7 @@ const RuleBuilder = ({
             <select
               className={selectClass + ' max-w-[200px]'}
               value={c.signal}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                 const signal = e.target.value;
                 const newKind = kindOf(signal);
                 // Reset op to a valid one for the new kind.
@@ -164,7 +151,9 @@ const RuleBuilder = ({
             <select
               className={selectClass + ' max-w-[110px]'}
               value={c.op}
-              onChange={(e) => update(i, { op: e.target.value as BadgeRuleOp })}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                update(i, { op: e.target.value as BadgeRuleOp })
+              }
             >
               {ops.map((op) => (
                 <option key={op} value={op}>
@@ -175,29 +164,28 @@ const RuleBuilder = ({
 
             {kind === 'date' ? (
               <Input
-                size="sm"
-                variant="bordered"
                 className="max-w-[240px]"
                 placeholder="ISO date e.g. 2026-05-17T23:59:59Z"
                 value={String(c.value ?? '')}
-                onChange={(e) => update(i, { value: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  update(i, { value: e.target.value })
+                }
               />
             ) : (
               <Input
-                size="sm"
                 type="number"
-                variant="bordered"
                 className="max-w-[140px]"
                 value={String(c.value ?? 0)}
-                onChange={(e) => update(i, { value: Number(e.target.value) })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  update(i, { value: Number(e.target.value) })
+                }
               />
             )}
 
             {conditions.length > 1 && (
               <Button
                 size="sm"
-                color="danger"
-                variant="light"
+                variant="danger"
                 onPress={() => onChange(conditions.filter((_, idx) => idx !== i))}
               >
                 Remove
@@ -267,174 +255,204 @@ const BadgeFormModal = ({
 
   const submit = async () => {
     if (!form.name.trim() || !form.description.trim()) {
-      addToast({ title: 'Missing fields', description: 'Name and description are required.' });
+      addDangerToast('Missing fields', 'Name and description are required.');
       return;
     }
     if (!isEdit && !/^[a-z0-9-]+$/.test(form.key)) {
-      addToast({ title: 'Invalid key', description: 'Key must be kebab-case (a-z, 0-9, -).' });
+      addDangerToast('Invalid key', 'Key must be kebab-case (a-z, 0-9, -).');
       return;
     }
     setSaving(true);
     try {
       if (isEdit && editing) {
         await updateAchievement(editing.key, buildPayload());
-        addToast({ title: 'Saved', description: `Updated "${editing.key}".` });
+        addSuccessToast('Saved', `Updated "${editing.key}".`);
       } else {
         await createAchievement({ key: form.key, ...buildPayload() });
-        addToast({ title: 'Created', description: `Badge "${form.key}" created.` });
+        addSuccessToast('Created', `Badge "${form.key}" created.`);
       }
       onSaved();
       onClose();
     } catch (err) {
-      addToast({ title: 'Error', description: (err as Error)?.message ?? 'Save failed' });
+      addDangerToast('Error', (err as Error)?.message ?? 'Save failed');
     } finally {
       setSaving(false);
     }
   };
 
+  const inputLabel = 'flex flex-col gap-1 text-sm';
+  const inputClass =
+    'w-full rounded-medium border-2 border-default-200 bg-default-100 px-3 py-2 text-sm outline-none focus:border-default-400';
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
-      <ModalContent>
-        <ModalHeader>{isEdit ? `Edit badge · ${editing?.key}` : 'New badge'}</ModalHeader>
-        <ModalBody className="flex flex-col gap-3">
-          {!isEdit && (
-            <Input
-              label="Key (immutable)"
-              variant="bordered"
+    <AppModal
+      open={isOpen}
+      onOpenChange={() => onClose()}
+      size="lg"
+      title={isEdit ? `Edit badge · ${editing?.key}` : 'New badge'}
+      footer={
+        <>
+          <Button variant="ghost" onPress={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" onPress={submit} isDisabled={saving}>
+            {saving ? <Spinner size="sm" color="current" /> : isEdit ? 'Save' : 'Create'}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        {!isEdit && (
+          <label className={inputLabel}>
+            Key (immutable)
+            <input
+              className={inputClass}
               placeholder="e.g. summer-2026"
               value={form.key}
-              onChange={(e) => set('key', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('key', e.target.value)}
             />
-          )}
-          <Input
-            label="Name"
-            variant="bordered"
+          </label>
+        )}
+        <label className={inputLabel}>
+          Name
+          <input
+            className={inputClass}
             value={form.name}
-            onChange={(e) => set('name', e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('name', e.target.value)}
           />
-          <Textarea
-            label="Description"
-            variant="bordered"
+        </label>
+        <label className={inputLabel}>
+          Description
+          <TextArea
             value={form.description}
-            onChange={(e) => set('description', e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+              set('description', e.target.value)
+            }
           />
+        </label>
 
-          <div className="flex flex-wrap gap-3">
-            <label className="flex flex-1 flex-col gap-1 text-sm">
-              Tier
-              <select className={selectClass} value={form.tier} onChange={(e) => set('tier', e.target.value)}>
-                {TIERS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Input
-              className="flex-1"
-              type="number"
-              label="Coin reward"
-              variant="bordered"
-              value={form.coinReward}
-              onChange={(e) => set('coinReward', e.target.value)}
-            />
-            <Input
-              className="flex-1"
-              type="number"
-              label="Display order"
-              variant="bordered"
-              value={form.displayOrder}
-              onChange={(e) => set('displayOrder', e.target.value)}
-            />
-          </div>
-
-          <label className="flex flex-col gap-1 text-sm">
-            Unlock type
+        <div className="flex flex-wrap gap-3">
+          <label className="flex flex-1 flex-col gap-1 text-sm">
+            Tier
             <select
               className={selectClass}
-              value={form.unlockType}
-              onChange={(e) => set('unlockType', e.target.value as BadgeUnlockType)}
+              value={form.tier}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => set('tier', e.target.value)}
             >
-              {UNLOCK_TYPES.map((u) => (
-                <option key={u.value} value={u.value}>
-                  {u.label}
+              {TIERS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
                 </option>
               ))}
             </select>
           </label>
+          <label className={`flex-1 ${inputLabel}`}>
+            Coin reward
+            <input
+              className={inputClass}
+              type="number"
+              value={form.coinReward}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                set('coinReward', e.target.value)
+              }
+            />
+          </label>
+          <label className={`flex-1 ${inputLabel}`}>
+            Display order
+            <input
+              className={inputClass}
+              type="number"
+              value={form.displayOrder}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                set('displayOrder', e.target.value)
+              }
+            />
+          </label>
+        </div>
 
-          {form.unlockType === 'rule' && (
-            <RuleBuilder conditions={form.conditions} onChange={(c) => set('conditions', c)} />
-          )}
-          {form.unlockType === 'redeem_code' && (
-            <Input
-              label="Redeem code"
-              variant="bordered"
+        <label className="flex flex-col gap-1 text-sm">
+          Unlock type
+          <select
+            className={selectClass}
+            value={form.unlockType}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              set('unlockType', e.target.value as BadgeUnlockType)
+            }
+          >
+            {UNLOCK_TYPES.map((u) => (
+              <option key={u.value} value={u.value}>
+                {u.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {form.unlockType === 'rule' && (
+          <RuleBuilder conditions={form.conditions} onChange={(c) => set('conditions', c)} />
+        )}
+        {form.unlockType === 'redeem_code' && (
+          <label className={inputLabel}>
+            Redeem code
+            <input
+              className={inputClass}
               placeholder="e.g. VERANO26"
               value={form.code}
-              onChange={(e) => set('code', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('code', e.target.value)}
             />
-          )}
-          {form.unlockType === 'cycle_rank' && (
-            <p className="text-sm text-warning-600">
-              Leaderboard badges use built-in rank logic tied to the standard keys
-              (first/second/third-place). New cycle_rank keys won&apos;t auto-unlock.
-            </p>
-          )}
+          </label>
+        )}
+        {form.unlockType === 'cycle_rank' && (
+          <p className="text-sm text-warning-600">
+            Leaderboard badges use built-in rank logic tied to the standard keys
+            (first/second/third-place). New cycle_rank keys won&apos;t auto-unlock.
+          </p>
+        )}
 
-          <div className="flex flex-wrap gap-3">
-            <Input
-              className="flex-1"
-              label="Icon (path or URL)"
-              variant="bordered"
+        <div className="flex flex-wrap gap-3">
+          <label className={`flex-1 ${inputLabel}`}>
+            Icon (path or URL)
+            <input
+              className={inputClass}
               placeholder="/icons/achievements/<key>.png"
               value={form.icon}
-              onChange={(e) => set('icon', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('icon', e.target.value)}
             />
-            <Input
-              className="flex-1"
-              label="Accent (CSS gradient)"
-              variant="bordered"
+          </label>
+          <label className={`flex-1 ${inputLabel}`}>
+            Accent (CSS gradient)
+            <input
+              className={inputClass}
               value={form.accent}
-              onChange={(e) => set('accent', e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('accent', e.target.value)}
             />
-          </div>
+          </label>
+        </div>
 
-          <div className="flex gap-6">
-            <Switch isSelected={form.enabled} onValueChange={(v) => set('enabled', v)}>
-              Enabled
-            </Switch>
-            <Switch isSelected={form.hidden} onValueChange={(v) => set('hidden', v)}>
-              Hidden (until claimed)
-            </Switch>
-          </div>
+        <div className="flex gap-6">
+          <Switch isSelected={form.enabled} onChange={(v: boolean) => set('enabled', v)}>
+            Enabled
+          </Switch>
+          <Switch isSelected={form.hidden} onChange={(v: boolean) => set('hidden', v)}>
+            Hidden (until claimed)
+          </Switch>
+        </div>
 
-          {isEdit && editing && form.tier !== editing.tier && (
-            <div className="flex flex-col gap-1 rounded-medium bg-warning-50 p-3">
-              <Switch
-                isSelected={form.allowTierChange}
-                onValueChange={(v) => set('allowTierChange', v)}
-                color="warning"
-              >
-                Allow tier change
-              </Switch>
-              <span className="text-xs text-warning-600">
-                Tier is the Soroban mint symbol — changing it can break on-chain minting for
-                this badge. Enable only if you know what you&apos;re doing.
-              </span>
-            </div>
-          )}
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="light" onPress={onClose}>
-            Cancel
-          </Button>
-          <Button color="primary" onPress={submit} isDisabled={saving}>
-            {saving ? <Spinner size="sm" color="white" /> : isEdit ? 'Save' : 'Create'}
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        {isEdit && editing && form.tier !== editing.tier && (
+          <div className="flex flex-col gap-1 rounded-medium bg-warning-50 p-3">
+            <Switch
+              isSelected={form.allowTierChange}
+              onChange={(v: boolean) => set('allowTierChange', v)}
+            >
+              Allow tier change
+            </Switch>
+            <span className="text-xs text-warning-600">
+              Tier is the Soroban mint symbol — changing it can break on-chain minting for this
+              badge. Enable only if you know what you&apos;re doing.
+            </span>
+          </div>
+        )}
+      </div>
+    </AppModal>
   );
 };
 
@@ -461,7 +479,9 @@ export default function Page() {
     [achievements],
   );
 
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [isOpen, setIsOpen] = useState(false);
+  const onOpen = () => setIsOpen(true);
+  const onClose = () => setIsOpen(false);
   const [editing, setEditing] = useState<AdminAchievement | null>(null);
 
   const openCreate = () => {
@@ -478,7 +498,7 @@ export default function Page() {
     <div className="flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Badges</h1>
-        <Button color="primary" onPress={openCreate}>
+        <Button variant="primary" onPress={openCreate}>
           + New badge
         </Button>
       </div>

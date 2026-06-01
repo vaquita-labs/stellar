@@ -99,7 +99,7 @@ export function HomePage() {
           <Button
             id="left-button"
             isIconOnly
-            variant="solid"
+            variant="ghost"
             className="absolute rounded-md mb-40 left-2 z-10 bg-transparent backdrop-blur-sm border-1 border-b-2 border-black hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed"
             onPress={handlePrev}
             isDisabled={!canGoPrev}
@@ -153,7 +153,7 @@ export function HomePage() {
           <Button
             id="right-button"
             isIconOnly
-            variant="solid"
+            variant="ghost"
             className="absolute rounded-md mb-40 right-2 z-10 bg-transparent backdrop-blur-sm border-1 border-b-2 border-black hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed"
             onPress={handleNext}
             isDisabled={!canGoNext}
@@ -167,13 +167,13 @@ export function HomePage() {
             <Button
               id="share-button"
               isIconOnly
-              variant="solid"
+              variant="ghost"
               className="bg-transparent flex flex-col py-8"
               onPress={() => {
                 handleShare();
               }}
               size="lg"
-              title="Share"
+              aria-label="Share"
             >
               <Image src="/vaquita/share.png" alt="Share" width={38} height={38} />
               <span className="text-black text-xs">Share</span>
@@ -195,13 +195,13 @@ export function HomePage() {
             <Button
               id="onboarding-button"
               isIconOnly
-              variant="solid"
+              variant="ghost"
               className="bg-transparent flex flex-col py-8"
               onPress={() => {
                 setIsTutorialModalOpen(true);
               }}
               size="lg"
-              title="Tutorial"
+              aria-label="Tutorial"
             >
               <Image src="/vaquita/tutorial.png" alt="Tutorial" width={38} height={38} />
               <span className="text-black text-xs">Tutorial</span>
