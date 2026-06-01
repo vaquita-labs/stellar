@@ -1,25 +1,15 @@
 'use client';
 
 import { isNewDepositHandled } from '@/networks/helpers';
-import {
-  addToast,
-  Button,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  Select,
-  SelectItem,
-  Spinner,
-} from '@heroui/react';
-import Image from 'next/image';
+import { Button, Description, Label, ListBox, Select, Spinner } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { formatTimeDeposit, getBalance, getQuickAmounts, truncateDecimals } from '../../../helpers';
 import { useBalance, useRestDeposit } from '../../../hooks';
 import { useNetworkConfigStore, useTransactionStore } from '../../../stores';
 import { T } from '../../atoms';
+import { addDangerToast, addSuccessToast } from '../../molecules';
+import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
 import { TokenSymbol } from '../../molecules/MoneyInput/types';
 import { TestnetUSDCNotice } from '../TestnetUSDCNotice';
@@ -103,140 +93,120 @@ export function DepositModal({
           }
         }
       }
-      
+
       if (isSuccess) {
-        addToast({
-          title: <T>Deposit sent successfully</T>,
-          description: (
-            <T>If you see a vaquita blinking, it is your deposit that is still being confirmed.</T>
-          ),
-          color: 'success',
-          variant: 'solid',
-          timeout: 6000,
-        });
+        addSuccessToast(
+          <T>Deposit sent successfully</T>,
+          <T>If you see a vaquita blinking, it is your deposit that is still being confirmed.</T>
+        );
         onOpenChange();
       } else {
-        addToast({
-          title: <T>Unsuccessful deposit</T>,
-          color: 'danger',
-          variant: 'solid',
-          timeout: 3000,
-        });
+        addDangerToast(<T>Unsuccessful deposit</T>, null);
       }
       setIsDepositing(false);
     }
   };
 
   return (
-    <Modal
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      isDismissable={!isLoading && !isDepositing}
+      title="Deposit"
       size="md"
-      isOpen={open}
-      onOpenChange={isLoading ? undefined : onOpenChange}
-      closeButton={<Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />}
-      scrollBehavior="inside"
-      classNames={{
-        base: 'max-h-[90vh]',
-        body: 'overflow-y-auto',
-      }}
-    >
-      <ModalContent className="bg-background border border-black">
-        <ModalHeader className="text-black font-bold text-xl">Deposit</ModalHeader>
-        <ModalBody className="py-0 max-h-[60vh] overflow-y-auto">
-          {!!network && !!token && (
-            <TestnetUSDCNotice networkName={network.name} tokenContract={token.contractAddress} />
+      bodyClassName="flex flex-col gap-4 pb-6"
+      footer={
+        <Button
+          onPress={() => handleDeposit(Number(amount))}
+          className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
+          isDisabled={isDisabled || isDepositing}
+        >
+          {isDepositing ? (
+            <>
+              <Spinner size="sm" color="current" /> Processing...
+            </>
+          ) : (
+            'Deposit'
           )}
-          <div>
-            <Select
-              label="Lock time"
-              isRequired
-              selectedKeys={[lockPeriod.toString()]}
-              onSelectionChange={(keys) => {
-                const selectedKey = Array.from(keys)[0] as string;
-                if (selectedKey) {
-                  setLockPeriod(parseInt(selectedKey));
-                }
-              }}
-              classNames={{
-                trigger: 'bg-white border border-black border-b-2 h-14',
-                label: 'text-black font-normal text-sm',
-                value: 'text-black font-medium',
-                popoverContent: 'bg-white border border-black rounded-md shadow-lg',
-                selectorIcon: 'text-black ',
-              }}
-              description="The funds will be lock in the vault during the selected period."
-              disabled={isDepositing}
-            >
-              {lockTimeOptions?.map((option) => (
-                <SelectItem
-                  key={option.key}
-                  textValue={option.label}
-                  isDisabled={!option.available}
-                >
-                  <div className="flex justify-between items-center w-full">
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-black">{option.label}</span>
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </Select>
-          </div>
-
-          <div className="">
-            <div className="">
-              <MoneyInput
-                balanceFormatted={balanceFormatted.toString()}
-                tokenSymbol={token?.symbol as TokenSymbol}
-                value={amount}
-                onValueChange={(v) => setAmount(v)}
-                onTokenChange={(t) => setToken(t)}
-                onReloadBalance={refetch}
-                loading={isDepositing}
-                balanceIsLoading={isRefetching || isLoading}
-              />
-            </div>
-            <div className="flex justify-between gap-1 mb-4">
-              {Array.isArray(quickAmounts) &&
-                quickAmounts.map((value: number) => (
-                  <Button
-                    key={value}
-                    onPress={
-                      isDepositing
-                        ? undefined
-                        : () => {
-                            setAmount(value.toString());
-                          }
-                    }
-                    className={
-                      'flex-1 bg-transparent border border-black border-b-2 text-black  rounded-md hover:bg-primary' +
-                      (Number(amount) === value ? ' bg-primary' : '')
-                    }
-                  >
-                    {value}
-                  </Button>
-                ))}
-              <Button
-                key={'MAX'}
-                onPress={isDepositing ? undefined : () => setAmount(balanceFormatted.toString())}
-                className="flex-1 bg-transparent border border-black border-b-2 text-black  rounded-md hover:bg-primary"
+        </Button>
+      }
+    >
+      {!!network && !!token && (
+        <TestnetUSDCNotice networkName={network.name} tokenContract={token.contractAddress} />
+      )}
+      <Select
+        isRequired
+        value={lockPeriod.toString()}
+        onChange={(value) => {
+          if (value) setLockPeriod(parseInt(value as string));
+        }}
+        disabledKeys={lockTimeOptions.filter((o) => !o.available).map((o) => o.key.toString())}
+        isDisabled={isDepositing}
+      >
+        <Label className="text-black font-normal text-sm">Lock time</Label>
+        <Select.Trigger className="bg-white border border-black border-b-2 h-14 items-center">
+          <Select.Value className="text-black font-medium" />
+          <Select.Indicator className="text-black" />
+        </Select.Trigger>
+        <Select.Popover className="bg-white border border-black rounded-md shadow-lg">
+          <ListBox>
+            {lockTimeOptions?.map((option) => (
+              <ListBox.Item
+                key={option.key.toString()}
+                id={option.key.toString()}
+                textValue={option.label}
               >
-                MAX
+                <span className="font-semibold text-black">{option.label}</span>
+                <ListBox.ItemIndicator />
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+        <Description className="text-default-500 text-xs">
+          The funds will be lock in the vault during the selected period.
+        </Description>
+      </Select>
+
+      <div className="flex flex-col gap-2">
+        <MoneyInput
+          balanceFormatted={balanceFormatted.toString()}
+          tokenSymbol={token?.symbol as TokenSymbol}
+          value={amount}
+          onValueChange={(v) => setAmount(v)}
+          onTokenChange={(t) => setToken(t)}
+          onReloadBalance={refetch}
+          loading={isDepositing}
+          balanceIsLoading={isRefetching || isLoading}
+        />
+        <div className="flex justify-between gap-2">
+          {Array.isArray(quickAmounts) &&
+            quickAmounts.map((value: number) => (
+              <Button
+                key={value}
+                onPress={
+                  isDepositing
+                    ? undefined
+                    : () => {
+                        setAmount(value.toString());
+                      }
+                }
+                className={
+                  'flex-1 bg-transparent border border-black border-b-2 text-black rounded-md hover:bg-primary' +
+                  (Number(amount) === value ? ' bg-primary' : '')
+                }
+              >
+                {value}
               </Button>
-            </div>
-          </div>
-        </ModalBody>
-        <ModalFooter>
+            ))}
           <Button
-            onPress={() => handleDeposit(Number(amount))}
-            className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md"
-            isLoading={isDepositing}
-            spinner={<Spinner size="sm" color="white" />}
-            isDisabled={isDisabled}
+            key={'MAX'}
+            onPress={isDepositing ? undefined : () => setAmount(balanceFormatted.toString())}
+            className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md hover:bg-primary"
           >
-            {isDepositing ? 'Processing...' : 'Deposit'}
+            MAX
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </div>
+      </div>
+    </AppModal>
   );
 }

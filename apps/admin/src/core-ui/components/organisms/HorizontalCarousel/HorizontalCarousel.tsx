@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card, CardBody, CardHeader, ScrollShadow } from '@heroui/react';
+import { Button, Card, ScrollShadow } from '@heroui/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { HorizontalCarouselProps } from './types';
@@ -101,15 +101,15 @@ export function HorizontalCarousel<T>({ title, items, renderItem }: HorizontalCa
   const progressPct = useMemo(() => `${Math.round(progress * 100)}%`, [progress]);
 
   return (
-    <Card shadow="sm" className="bg-white">
-      <CardHeader className="flex items-center justify-between">
+    <Card className="bg-white shadow-sm">
+      <Card.Header className="flex items-center justify-between">
         <h3 className="text-base font-semibold">{title}</h3>
         <div className="flex gap-2">
           <Button
             aria-label="Scroll left"
             isIconOnly
-            variant="light"
-            radius="full"
+            variant="ghost"
+            className="rounded-full"
             onPress={() => scroll('left')}
             isDisabled={atStart}
           >
@@ -118,16 +118,16 @@ export function HorizontalCarousel<T>({ title, items, renderItem }: HorizontalCa
           <Button
             aria-label="Scroll right"
             isIconOnly
-            variant="light"
-            radius="full"
+            variant="ghost"
+            className="rounded-full"
             onPress={() => scroll('right')}
             isDisabled={atEnd} // fixed: disable when at end
           >
             <FiChevronRight />
           </Button>
         </div>
-      </CardHeader>
-      <CardBody className="pt-0">
+      </Card.Header>
+      <Card.Content className="pt-0">
         {/* Fade edges + smooth scroll */}
         <ScrollShadow orientation="horizontal" size={24} className="rounded-xl">
           <div
@@ -147,7 +147,7 @@ export function HorizontalCarousel<T>({ title, items, renderItem }: HorizontalCa
         <div className="mt-2 h-1 w-full rounded-full bg-default-200 overflow-hidden">
           <div className="h-full bg-primary transition-[width] duration-200" style={{ width: progressPct }} />
         </div>
-      </CardBody>
+      </Card.Content>
 
       {/* Hide native scrollbars + drag cursors */}
       <style jsx>{`

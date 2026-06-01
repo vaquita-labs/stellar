@@ -1,6 +1,6 @@
 'use client';
 
-import { Avatar, Badge, Button, Card, CardBody, Tooltip } from '@heroui/react';
+import { Avatar, Badge, Button, Card, Tooltip } from '@heroui/react';
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiCopy, FiEdit3 } from 'react-icons/fi';
@@ -45,26 +45,20 @@ export function ProfilePage() {
         <div className="mx-auto w-full max-w-4xl px-4 py-4 md:py-6">
           {/* Profile Header */}
           <Card className=" shadow-xl border border-default-200 rounded-3xl mb-4 bg-white/80 backdrop-blur-sm">
-            <CardBody className="p-4 md:p-8">
+            <Card.Content className="p-4 md:p-8">
               <div className="flex items-center gap-4">
                 {/* Avatar */}
                 <div className="flex-shrink-0 ">
-                  <Badge
-                    content=""
-                    color="success"
-                    shape="circle"
-                    size="md"
-                    placement="bottom-right"
-                    showOutline={false}
-                    classNames={{
-                      badge: 'w-3 h-3 bg-green-500 border border-white',
-                    }}
-                  >
-                    <Avatar
-                      src="/vaquita_working.jpg"
-                      className="w-16 h-16 md:w-20 md:h-20 border-2 border-white shadow-md"
-                      name={isLoading ? 'Loading...' : nickname || 'Vaquita'}
-                    />
+                  <Badge color="success" placement="bottom-right">
+                    <Badge.Anchor>
+                      <Avatar className="w-16 h-16 md:w-20 md:h-20 border-2 border-white shadow-md">
+                        <Avatar.Image src="/vaquita_working.jpg" />
+                        <Avatar.Fallback>
+                          {(isLoading ? 'Loading...' : nickname || 'Vaquita').slice(0, 2).toUpperCase()}
+                        </Avatar.Fallback>
+                      </Avatar>
+                    </Badge.Anchor>
+                    <Badge.Label className="w-3 h-3 bg-green-500 border border-white" />
                   </Badge>
                 </div>
 
@@ -75,37 +69,42 @@ export function ProfilePage() {
                   </h1>
                   {walletAddress && (
                     <div className="flex flex-wrap items-center gap-2 mt-1">
-                      <Tooltip content={copied ? '¡Copiado!' : 'Copiar dirección'} placement="bottom">
-                        <Button
-                          variant="light"
-                          onPress={handleCopy}
-                          className="text-xs text-gray-500 hover:text-gray-700 transition-colors p-1 h-auto min-w-0 flex-shrink-0"
-                          startContent={copied ? <FiCheck className="text-green-500" /> : <FiCopy />}
-                        >
-                          {addressDisplay}
-                        </Button>
+                      <Tooltip>
+                        <Tooltip.Trigger>
+                          <Button
+                            variant="ghost"
+                            onPress={handleCopy}
+                            className="text-xs text-gray-500 hover:text-gray-700 transition-colors p-1 h-auto min-w-0 flex-shrink-0 inline-flex items-center gap-2"
+                          >
+                            {copied ? <FiCheck className="text-green-500" /> : <FiCopy />}
+                            {addressDisplay}
+                          </Button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content placement="bottom">
+                          {copied ? '¡Copiado!' : 'Copiar dirección'}
+                        </Tooltip.Content>
                       </Tooltip>
                       <Button
-                        variant="bordered"
-                        startContent={<FiEdit3 />}
+                        variant="outline"
                         onPress={() => setIsEditModalOpen(true)}
-                        className="border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all text-xs px-2 py-1 h-auto flex-shrink-0"
+                        className="border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all text-xs px-2 py-1 h-auto flex-shrink-0 inline-flex items-center gap-2"
                         size="sm"
                         isDisabled={isLoading}
                       >
+                        <FiEdit3 />
                         Editar
                       </Button>
                     </div>
                   )}
                 </div>
               </div>
-            </CardBody>
+            </Card.Content>
           </Card>
 
           {/* Social Links */}
           {walletAddress && (
             <Card className="shadow-lg border border-default-200 rounded-2xl bg-white backdrop-blur-sm">
-              <CardBody className="p-4 md:p-8">
+              <Card.Content className="p-4 md:p-8">
                 <h3 className="text-lg font-semibold mb-4 text-gray-800">Follow us</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 md:gap-4 gap-2">
                   <Link
@@ -127,14 +126,14 @@ export function ProfilePage() {
                     </svg>
                   </Link>
                 </div>
-              </CardBody>
+              </Card.Content>
             </Card>
           )}
         </div>
       ) : (
         <div className="mx-auto w-full max-w-4xl px-4 py-4 md:py-6">
           <Card className="shadow-xl border border-default-200 rounded-3xl mb-4 bg-white backdrop-blur-sm">
-            <CardBody className="p-8  md:p-12">
+            <Card.Content className="p-8  md:p-12">
               <div className="text-center space-y-6">
                 {/* Title */}
                 <div className="">
@@ -148,7 +147,7 @@ export function ProfilePage() {
                   </p>
                 </div>
               </div>
-            </CardBody>
+            </Card.Content>
           </Card>
         </div>
       )}

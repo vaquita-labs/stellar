@@ -1,20 +1,10 @@
 'use client';
 
-import { GenericTable } from '@/core-ui/components';
+import { addDangerToast, addSuccessToast, AppModal, GenericTable } from '@/core-ui/components';
 import { T } from '@/core-ui/components/atoms';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useBalance, useBalanceServer, useUsers } from '@/core-ui/hooks';
-import {
-  addToast,
-  Button,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  Spinner,
-} from '@heroui/react';
+import { Button, Input, Spinner } from '@heroui/react';
 import { useMemo, useState } from 'react';
 
 const FundWallet = ({ walletAddress: initialWalletAddress }: { walletAddress: string }) => {
@@ -42,30 +32,26 @@ const FundWallet = ({ walletAddress: initialWalletAddress }: { walletAddress: st
       <div className="flex flex-col gap-2">
         <T>Wallet Address</T>
         <Input
+          className="w-full"
           value={walletAddress}
-          onChange={(e) => setWalletAddress(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWalletAddress(e.target.value)}
           placeholder="Enter wallet address"
-          fullWidth
-          size="sm"
-          variant="bordered"
         />
         <Input
+          className="w-full"
           type="number"
           value={amount + ''}
-          onChange={(e) => setAmount(Number(e.target.value))}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(Number(e.target.value))}
           placeholder="Enter amount"
-          fullWidth
-          size="sm"
-          variant="bordered"
         />
       </div>
 
       <div className="flex gap-2">
-        <Button color="primary" onPress={() => refetch()} isDisabled={!walletAddress}>
+        <Button variant="primary" onPress={() => refetch()} isDisabled={!walletAddress}>
           <T>Refetch</T>
         </Button>
         <Button
-          color="success"
+          variant="secondary"
           onPress={async () => {
             setLoadingETH(true);
             try {
@@ -82,19 +68,19 @@ const FundWallet = ({ walletAddress: initialWalletAddress }: { walletAddress: st
                 throw new Error(errorData.message || 'Failed to fund ETH');
               }
               refetch();
-              addToast({ title: 'Success', description: 'ETH funded successfully' });
+              addSuccessToast('Success', 'ETH funded successfully');
             } catch (error) {
-              addToast({ title: 'Error', description: (error as Error)?.message || 'Failed to fund ETH' });
+              addDangerToast('Error', (error as Error)?.message || 'Failed to fund ETH');
             } finally {
               setLoadingETH(false);
             }
           }}
           isDisabled={!walletAddress}
         >
-          {loadingETH ? <Spinner size="sm" color="white" /> : <T>Fund ETH</T>}
+          {loadingETH ? <Spinner size="sm" color="current" /> : <T>Fund ETH</T>}
         </Button>
         <Button
-          color="secondary"
+          variant="tertiary"
           onPress={async () => {
             setLoadingUSDC(true);
             try {
@@ -111,16 +97,16 @@ const FundWallet = ({ walletAddress: initialWalletAddress }: { walletAddress: st
                 throw new Error(errorData.message || 'Failed to fund USDC');
               }
               refetch();
-              addToast({ title: 'Success', description: 'USDC funded successfully' });
+              addSuccessToast('Success', 'USDC funded successfully');
             } catch (error) {
-              addToast({ title: 'Error', description: (error as Error)?.message || 'Failed to fund USDC' });
+              addDangerToast('Error', (error as Error)?.message || 'Failed to fund USDC');
             } finally {
               setLoadingUSDC(false);
             }
           }}
           isDisabled={!walletAddress}
         >
-          {loadingUSDC ? <Spinner size="sm" color="white" /> : <T>Fund USDC</T>}
+          {loadingUSDC ? <Spinner size="sm" color="current" /> : <T>Fund USDC</T>}
         </Button>
       </div>
       <div className="mt-4">
@@ -128,7 +114,7 @@ const FundWallet = ({ walletAddress: initialWalletAddress }: { walletAddress: st
         <div className="font-small">{dataS?.wallet.walletAddress}</div>
         {loading && (
           <div className="flex justify-center items-center py-8">
-            <Spinner size="lg" color="primary" />
+            <Spinner size="lg" color="accent" />
           </div>
         )}
         {!loading && Array.isArray(dataS?.balances) && dataS.balances.length > 0 && (
@@ -148,7 +134,7 @@ const FundWallet = ({ walletAddress: initialWalletAddress }: { walletAddress: st
         <T>Balance</T>
         {loading && (
           <div className="flex justify-center items-center py-8">
-            <Spinner size="lg" color="primary" />
+            <Spinner size="lg" color="accent" />
           </div>
         )}
         {!loading && Array.isArray(data?.balances) && data.balances.length > 0 && (
@@ -178,25 +164,24 @@ export default function Page() {
 
   return (
     <>
-      <Modal isOpen={!!item} onClose={() => setItem(null)} scrollBehavior="inside">
-        <ModalContent>
-          <ModalHeader>Found</ModalHeader>
-          <ModalBody
-            className="flex flex-col gap-2"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                setItem(null);
-              }
-            }}
-          >
-            {item?.wallet?.address && <FundWallet walletAddress={item?.wallet?.address} />}
-          </ModalBody>
-          <ModalFooter>
-            <Button onPress={() => setItem(null)}>Cerrar</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <AppModal
+        open={!!item}
+        onOpenChange={() => setItem(null)}
+        title="Found"
+        footer={<Button onPress={() => setItem(null)}>Cerrar</Button>}
+      >
+        <div
+          className="flex flex-col gap-2"
+          onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              setItem(null);
+            }
+          }}
+        >
+          {item?.wallet?.address && <FundWallet walletAddress={item?.wallet?.address} />}
+        </div>
+      </AppModal>
       <GenericTable rows={rows} refetch={refetch}>
         {(data) => (
           <div>

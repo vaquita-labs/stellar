@@ -1,6 +1,6 @@
 'use client';
 
-import { Modal, ModalBody, ModalContent, Button } from '@heroui/react';
+import { Button, Modal } from '@heroui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
@@ -36,33 +36,24 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
     setCurrentStep(1);
   };
 
-  const handleBack = () => {
-    setCurrentStep(0);
-  };
-
   const handleClose = () => {
     setCurrentStep(0);
     onClose();
   };
   return (
-    <Modal
+    <Modal.Backdrop
       isOpen={isOpen}
-      onClose={handleClose}
-      size="full"
-      hideCloseButton={false}
-      classNames={{
-        base: "m-0 p-0",
-        backdrop: "bg-black/80 backdrop-blur-sm",
-        wrapper: "inset-0",
-        body: "p-0 overflow-y-auto",
+      className="bg-black/80 backdrop-blur-sm"
+      onOpenChange={(o) => {
+        if (!o) handleClose();
       }}
-      placement="center"
-      closeButton={
-        <Image src="/icons/close-circle.svg" alt="close" width={52} height={52} className="sm:w-10 sm:h-10" />
-      }
     >
-      <ModalContent className="bg-transparent">
-        <ModalBody className="p-0 flex items-center justify-center min-h-screen overflow-y-auto">
+      <Modal.Container size="full">
+        <Modal.Dialog className="bg-transparent m-0 p-0">
+          <Modal.CloseTrigger>
+            <Image src="/icons/close-circle.svg" alt="close" width={52} height={52} className="sm:w-10 sm:h-10" />
+          </Modal.CloseTrigger>
+          <Modal.Body className="p-0 flex items-center justify-center min-h-screen overflow-y-auto">
           <AnimatePresence mode="wait">
             {currentStep === 0 ? (
               <motion.div
@@ -196,8 +187,9 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
               </motion.div>
             )}
           </AnimatePresence>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
+          </Modal.Body>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 }

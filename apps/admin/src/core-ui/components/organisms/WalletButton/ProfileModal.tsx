@@ -1,4 +1,4 @@
-import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader } from '@heroui/react';
+import { Modal } from '@heroui/react';
 import Image from 'next/image';
 import { Dispatch, ReactNode, SetStateAction, useState } from 'react';
 import { FiCheck, FiCopy } from 'react-icons/fi';
@@ -39,53 +39,55 @@ export const ProfileModal = ({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      size="sm"
-      closeButton={<Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />}
-    >
-      <ModalContent className="bg-background border border-black">
-        <ModalHeader className="text-black font-bold text-lg">Disconnect Wallet</ModalHeader>
-        <ModalBody>
-          <p className="text-black">
-            Are you sure you want to disconnect your {network?.type} wallet?
-          </p>
-          <div className="flex items-center gap-2 justify-center">
-            {network?.type && LogoByType[network?.type]}
-            <span className="text-xs font-mono text-gray-700 bg-gray-200 px-2 py-1 rounded">
-              {truncateMiddle(walletAddress)}
-            </span>
+    <Modal.Backdrop isOpen={isOpen} onOpenChange={(o) => onOpenChange(o)}>
+      <Modal.Container size="sm">
+        <Modal.Dialog className="bg-background border border-black">
+          <Modal.CloseTrigger>
+            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+          </Modal.CloseTrigger>
+          <Modal.Header>
+            <Modal.Heading className="text-black font-bold text-lg">Disconnect Wallet</Modal.Heading>
+          </Modal.Header>
+          <Modal.Body>
+            <p className="text-black">
+              Are you sure you want to disconnect your {network?.type} wallet?
+            </p>
+            <div className="flex items-center gap-2 justify-center">
+              {network?.type && LogoByType[network?.type]}
+              <span className="text-xs font-mono text-gray-700 bg-gray-200 px-2 py-1 rounded">
+                {truncateMiddle(walletAddress)}
+              </span>
+              <button
+                onClick={() => copyToClipboard(walletAddress)}
+                className="p-1 hover:bg-yellow-100 rounded transition-colors"
+                title={copied ? 'Copied!' : 'Copy address'}
+              >
+                {copied ? (
+                  <FiCheck className="h-3 w-3 text-green-600" />
+                ) : (
+                  <FiCopy className="h-3 w-3 text-gray-500" />
+                )}
+              </button>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
             <button
-              onClick={() => copyToClipboard(walletAddress)}
-              className="p-1 hover:bg-yellow-100 rounded transition-colors"
-              title={copied ? 'Copied!' : 'Copy address'}
+              onClick={() => onOpenChange(false)}
+              className="px-4 py-2 rounded-md bg-gray-200 text-black text-sm font-semibold hover:bg-gray-300 transition"
             >
-              {copied ? (
-                <FiCheck className="h-3 w-3 text-green-600" />
-              ) : (
-                <FiCopy className="h-3 w-3 text-gray-500" />
-              )}
+              <T>Cancel</T>
             </button>
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="px-4 py-2 rounded-md bg-gray-200 text-black text-sm font-semibold hover:bg-gray-300 transition"
-          >
-            <T>Cancel</T>
-          </button>
-          {handleLogout && (
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-md bg-primary text-black text-sm font-semibold hover:bg-primary/80 transition"
-            >
-              <T>Disconnect</T>
-            </button>
-          )}
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+            {handleLogout && (
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-md bg-primary text-black text-sm font-semibold hover:bg-primary/80 transition"
+              >
+                <T>Disconnect</T>
+              </button>
+            )}
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
   );
 };

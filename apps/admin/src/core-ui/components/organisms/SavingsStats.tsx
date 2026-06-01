@@ -38,7 +38,7 @@ export const SavingsStats = ({ walletAddress }: { walletAddress?: string }) => {
     <div className="absolute top-0 left-0 right-0 justify-around bg-[#FEF5E4] py-2 w-full h-12">
       <div className="flex justify-around bg-[#FEF5E4] py-2 w-full h-12">
         {isLoadingApy ? (
-          <Spinner size="md" color="primary" />
+          <Spinner size="md" color="accent" />
         ) : (
           <Button onPress={handleBankAPYModal} className="flex items-center gap-2 bg-transparent z-10">
             <Image src={`/chains/${token?.symbol}.png`} alt="info" width={32} height={32} />

@@ -1,9 +1,9 @@
 'use client';
 
-import { Select, SelectItem } from '@heroui/react';
+import { ListBox, Select } from '@heroui/react';
+import Image from 'next/image';
 import { useNetworks } from '../../hooks';
 import { useNetworkConfigStore } from '../../stores';
-import Image from 'next/image';
 import { T } from '../atoms/T';
 
 const icons: { [key: string]: string } = {
@@ -32,44 +32,44 @@ export const NetworkSelector = () => {
   return (
     <Select
       aria-label="Select network"
-      variant="bordered"
-      selectedKeys={network?.name ? [network.name] : []}
-      onSelectionChange={([value]) => {
-        const network = networks.find(({ name }) => name === value);
-        if (network) {
-          setNetwork(network);
-        }
-      }}
-      classNames={{
-        trigger: 'border-black border-1 rounded-md',
-        popoverContent: 'bg-white border-black border-1 rounded-md',
-      }}
-      className="w-36"
-      renderValue={(selected) => {
-        const network = networks.find(({ name }) => name === selected[0]?.key);
-        if (network) {
-          return (
-            <div className="flex items-center gap-2 w-36">
-              <Image src={icons[network?.name]} alt={network.name}  width={20} height={20} />
-              <span className="truncate flex-1">{network.name}</span>
-            </div>
-          );
-        }
-        return (
-          <div className="flex items-center gap-2">
-            <T>Select a network</T>
-          </div>
-        );
+      className="w-36 flex items-center justify-center"
+      value={network?.name ?? null}
+      onChange={(value) => {
+        const net = networks.find(({ name }) => name === value);
+        if (net) setNetwork(net);
       }}
     >
-      {networks.map((network) => (
-        <SelectItem key={network.name}>
-          <div className="flex items-center gap-2">
-            <Image src={icons[network.name]} alt={network.name} className="w-5 h-5" width={20} height={20} />
-            {network.name}
-          </div>
-        </SelectItem>
-      ))}
+      <Select.Trigger className="border-black border rounded-md">
+        <Select.Value>
+          {({ isPlaceholder, state }) => {
+            const selected = state?.selectedItem;
+            const net = selected ? networks.find(({ name }) => name === String(selected.key)) : null;
+            if (net) {
+              return (
+                <div className="flex items-center gap-2">
+                  <Image src={icons[net.name]} alt={net.name} width={20} height={20} />
+                  <span className="truncate flex-1">{net.name}</span>
+                </div>
+              );
+            }
+            return <div className="flex items-center gap-2"><T>Select a network</T></div>;
+          }}
+        </Select.Value>
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover className="bg-white border-black border rounded-md">
+        <ListBox>
+          {networks.map((net) => (
+            <ListBox.Item key={net.name} id={net.name} textValue={net.name}>
+              <div className="flex items-center gap-2">
+                <Image src={icons[net.name]} alt={net.name} className="w-5 h-5" width={20} height={20} />
+                {net.name}
+              </div>
+              <ListBox.ItemIndicator />
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </Select.Popover>
     </Select>
   );
 };
