@@ -59,7 +59,7 @@ const formatDate = (iso?: string): string | null => {
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const { u, date } = await searchParams;
-  const achievement = getCatalogAchievement(id);
+  const achievement = await getCatalogAchievement(id);
   if (!achievement) return { title: 'Achievement · Vaquita' };
 
   const origin = await resolveOrigin();
@@ -106,7 +106,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 export default async function SharedAchievementPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { u: username, date } = await searchParams;
-  const achievement = getCatalogAchievement(id);
+  const achievement = await getCatalogAchievement(id);
   if (!achievement) notFound();
 
   const formattedDate = formatDate(date);

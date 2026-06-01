@@ -18,6 +18,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
 import { TransactionsProvider } from './TransactionsProvider';
 import { WalletProviderSync } from './WalletProviderSync';
+import { createStellarWalletsKitBundle } from '@pollar/stellar-wallets-kit-adapter/picker';
+import { Networks } from '@creit.tech/stellar-wallets-kit';
 
 const POLLAR_API_KEY = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY ?? '';
 const POLLAR_NETWORK =
@@ -50,6 +52,11 @@ if (process.env.NODE_ENV !== 'development') {
 }
 
 const STELLAR_ADDRESS_KEY = 'swk:address';
+
+const bundle = createStellarWalletsKitBundle({
+  network: Networks.TESTNET,
+  // picker: { wallets: ['xbull', 'lobstr', 'freighter'] },
+});
 
 export function Providers({ children }: { children: ReactNode }) {
   const { ref } = useResize();
@@ -108,12 +115,13 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <PollarProvider
-      config={{
+      client={{
         baseUrl: 'https://sdk.api.pollar.xyz',
         apiKey: POLLAR_API_KEY,
+        walletAdapter: bundle.walletAdapter,
         stellarNetwork: POLLAR_NETWORK,
-        walletAdapter: stellarWalletsKitResolver,
       }}
+      ui={{ renderWallets: bundle.renderWallets }}
     >
       <PollarBridge />
       <AblyProvider>

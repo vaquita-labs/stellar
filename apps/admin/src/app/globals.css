@@ -1,0 +1,42 @@
+@import '@fontsource/rubik/latin.css' layer(base);
+
+@import 'tailwindcss';
+@import '@heroui/styles';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --color-primary: #F5A161;
+    --color-success: #34c759;
+    --color-error: #f3616f;
+    --color-background: #fef5e4;
+    --color-black: #262626;
+    --font-sans: Rubik, sans-serif;
+}
+
+html {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    min-height: var(--100VH);
+    height: var(--100VH);
+    max-height: var(--100VH);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    @apply font-sans;
+    --100VH: calc(var(--vh, 1vh) * 100);
+    min-height: var(--100VH);
+    height: var(--100VH);
+    max-height: var(--100VH);
+}
+
+#__next {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
