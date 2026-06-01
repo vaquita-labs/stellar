@@ -137,7 +137,7 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
   const serverByKey = new Map<string, AchievementResponseDTO>(
     (ctx.extraAchievements ?? []).map((a) => [a.key, a]),
   );
-  const meta = ctx.catalog && ctx.catalog.length > 0 ? ctx.catalog : FALLBACK_BADGE_META;
+  const meta = ctx.catalog && ctx.catalog.length > 0 ? ctx.catalog : [];
 
   const badges: Badge[] = meta.map((m) => {
     const k = known[m.id];

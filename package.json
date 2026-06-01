@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev:api": "pnpm --filter @vaquita/api dev",
-    "dev:web": "pnpm --filter @vaquita/web dev",
+    "dev:app": "pnpm --filter @vaquita/web dev",
+    "dev:admin": "pnpm --filter @vaquita/admin dev",
     "dev:listener": "pnpm --filter @vaquita/listener dev",
     "dev:job": "pnpm --filter @vaquita/job-deposits dev",
+    "dev": "pnpm --parallel --filter @vaquita/api --filter @vaquita/admin --filter @vaquita/web dev",
     "dev:all": "pnpm -r --parallel --filter='./apps/*' dev",
     "build": "pnpm -r --filter='./packages/*' --filter='./apps/*' build",
     "typecheck": "pnpm -r --filter='./packages/*' --filter='./apps/*' typecheck",

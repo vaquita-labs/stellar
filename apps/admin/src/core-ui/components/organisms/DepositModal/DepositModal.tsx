@@ -17,14 +17,13 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { formatTimeDeposit, getBalance, getQuickAmounts, truncateDecimals } from '../../../helpers';
-import { useBalance, useRestDeposit, useAnalytics } from '../../../hooks';
+import { useBalance, useRestDeposit } from '../../../hooks';
 import { useNetworkConfigStore, useTransactionStore } from '../../../stores';
 import { T } from '../../atoms';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
 import { TokenSymbol } from '../../molecules/MoneyInput/types';
 import { TestnetUSDCNotice } from '../TestnetUSDCNotice';
 import { DepositModalProps } from './types';
-import { useAccount, useChainId } from 'wagmi';
 
 export function DepositModal({
   open,
@@ -37,7 +36,6 @@ export function DepositModal({
     useNetworkConfigStore();
   const { createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactionStore();
-  const { trackUserAction, trackConversion, trackError } = useAnalytics();
   const lockTimeOptions =
     token?.lockPeriod.map((lockPeriod) => ({
       key: lockPeriod,
@@ -45,8 +43,6 @@ export function DepositModal({
       available: lockPeriod >= 0,
     })) || [];
   const amountNum = Number(amount);
-  const chainId = useChainId();
-  const account = useAccount()
   const isDisabled =
     !amount ||
     amount === '' ||
@@ -71,15 +67,7 @@ export function DepositModal({
   const handleDeposit = async (amount: number) => {
     if (!isDisabled) {
       setIsDepositing(true);
-      
-      // Track deposit attempt
-      trackUserAction('deposit_attempted', {
-        amount,
-        token: token?.symbol,
-        lockPeriod,
-        network: network?.name
-      });
-      
+
       let isSuccess = false;
       if (isNewDepositHandled(network?.name)) {
         onOpenChange();
@@ -117,15 +105,6 @@ export function DepositModal({
       }
       
       if (isSuccess) {
-        // Track successful conversion
-        trackConversion('deposit_successful', amount, token?.symbol);
-        trackUserAction('deposit_completed', {
-          amount,
-          token: token?.symbol,
-          lockPeriod,
-          network: network?.name
-        });
-        
         addToast({
           title: <T>Deposit sent successfully</T>,
           description: (
@@ -137,14 +116,6 @@ export function DepositModal({
         });
         onOpenChange();
       } else {
-        // Track failed conversion
-        trackError('deposit_failed', {
-          amount,
-          token: token?.symbol,
-          lockPeriod,
-          network: network?.name
-        });
-        
         addToast({
           title: <T>Unsuccessful deposit</T>,
           color: 'danger',

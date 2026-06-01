@@ -1,5 +1,4 @@
 // Shared across frontend and backend
-import { type Abi } from 'viem';
 
 export enum WithdrawalStatus {
   INITIATED = 'initiated',
@@ -37,9 +36,9 @@ export interface NetworkResponseDTO {
     decimals: number;
     lockPeriod: number[];
     contractAddress: string;
-    contractAbi: Abi;
+    contractAbi: unknown[];
     vaquitaContractAddress: string;
-    vaquitaContractAbi: Abi;
+    vaquitaContractAbi: unknown[];
   }[];
 }
 
