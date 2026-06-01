@@ -5,9 +5,9 @@ import { Button } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import { useAnalytics, useDeposits } from '../../hooks';
+import { useDeposits } from '../../hooks';
 import { useNetworkConfigStore } from '../../stores';
 import { WorldType } from '../../types';
 import { T } from '../atoms';
@@ -19,23 +19,7 @@ export function HomePage() {
   const router = useRouter();
   const { walletAddress, lockPeriod, network, token, setLockPeriod } = useNetworkConfigStore();
   const { isLoading } = useDeposits(walletAddress);
-  const { trackPageView, trackUserAction, trackConversion } = useAnalytics();
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
-
-  // Track page view when component mounts
-  useEffect(() => {
-    trackPageView('home');
-  }, [trackPageView]);
-
-  // Track when user has wallet connected
-  useEffect(() => {
-    if (walletAddress) {
-      trackUserAction('wallet_connected', {
-        walletAddress: walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4),
-        network: network?.name || null,
-      });
-    }
-  }, [walletAddress, network?.name, trackUserAction]);
 
   const lockPeriods = useMemo(() => {
     if (!network?.tokens || !token) return [];
@@ -67,14 +51,6 @@ export function HomePage() {
       const newIndex = currentIndex <= 0 ? lockPeriods.length - 1 : currentIndex - 1;
       const newLockPeriod = lockPeriods[newIndex].lockPeriod;
       setLockPeriod(newLockPeriod);
-
-      // Track navigation action
-      trackUserAction('period_navigation', {
-        direction: 'prev',
-        fromPeriod: lockPeriod,
-        toPeriod: newLockPeriod,
-        worldType: lockPeriods[newIndex].type,
-      });
     }
   };
 
@@ -83,14 +59,6 @@ export function HomePage() {
       const newIndex = currentIndex >= lockPeriods.length - 1 ? 0 : currentIndex + 1;
       const newLockPeriod = lockPeriods[newIndex].lockPeriod;
       setLockPeriod(newLockPeriod);
-
-      // Track navigation action
-      trackUserAction('period_navigation', {
-        direction: 'next',
-        fromPeriod: lockPeriod,
-        toPeriod: newLockPeriod,
-        worldType: lockPeriods[newIndex].type,
-      });
     }
   };
 
@@ -122,32 +90,15 @@ export function HomePage() {
           text: 'Join me in the Vaquita ecosystem and start earning rewards through DeFi savings! 🐋',
           url: shareUrl,
         });
-
-        // Track successful share
-        trackUserAction('share_success', {
-          method: 'native_share',
-          url: shareUrl,
-        });
       } else {
         // Fallback: copy to clipboard
         await navigator.clipboard.writeText(shareUrl);
-
-        // Track successful share
-        trackUserAction('share_success', {
-          method: 'clipboard_copy',
-          url: shareUrl,
-        });
 
         // You could show a toast notification here
         alert('Share link copied to clipboard!');
       }
     } catch (error) {
       console.error('Error sharing:', error);
-
-      // Track share error
-      trackUserAction('share_error', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
     }
   };
 
@@ -236,7 +187,6 @@ export function HomePage() {
               variant="solid"
               className="bg-transparent flex flex-col py-8"
               onPress={() => {
-                trackUserAction('share_clicked');
                 handleShare();
               }}
               size="lg"
@@ -265,7 +215,6 @@ export function HomePage() {
               variant="solid"
               className="bg-transparent flex flex-col py-8"
               onPress={() => {
-                trackUserAction('onboarding_clicked');
                 setIsTutorialModalOpen(true);
               }}
               size="lg"

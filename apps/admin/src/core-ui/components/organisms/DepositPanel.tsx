@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { formatTimeDeposit } from '../../helpers';
-import { useAnalytics } from '../../hooks';
 import { useNetworkConfigStore } from '../../stores';
 import { T } from '../atoms';
 import { DepositModal } from './DepositModal';
@@ -16,7 +15,6 @@ export function DepositPanel() {
   const { isOpen: isVaquitasListOpen, onOpenChange: onVaquitasListOpenChange } = useDisclosure();
   const [isDepositing, setIsDepositing] = useState(false);
   const { walletAddress, lockPeriod, network, setLockPeriod, token, setToken } = useNetworkConfigStore();
-  const { trackUserAction, trackConversion } = useAnalytics();
   const router = useRouter();
   const lockPeriods = network?.tokens.find((tk) => tk.symbol === token?.symbol)?.lockPeriod || [];
   const disabled = lockPeriod < 0;
@@ -31,13 +29,6 @@ export function DepositPanel() {
     const nextIndex = (currentIndex + 1) % lockPeriods.length;
     const newLockPeriod = lockPeriods[nextIndex];
     setLockPeriod(newLockPeriod);
-    
-    // Track lock period change
-    trackUserAction('lock_period_changed', {
-      fromPeriod: lockPeriod,
-      toPeriod: newLockPeriod,
-      token: token?.symbol || null
-    });
   };
 
   const handleChangeNextToken = () => {
@@ -46,14 +37,7 @@ export function DepositPanel() {
     const nextToken = availableTokens[nextIndex];
     if (nextToken) {
       setToken(nextToken);
-      
-      // Track token change
-      trackUserAction('token_changed', {
-        fromToken: token?.symbol || null,
-        toToken: nextToken.symbol,
-        network: network?.name || null
-      });
-      
+
       if (nextToken.lockPeriod && nextToken.lockPeriod.length > 0) {
         const currentLockPeriod = lockPeriod;
         const hasCurrentLockPeriod = nextToken.lockPeriod.includes(currentLockPeriod);
@@ -107,7 +91,6 @@ export function DepositPanel() {
           disabled={disabled}
           onPress={() => {
             if (!walletAddress) {
-              trackUserAction('deposit_attempted_no_wallet');
               router.replace('/profile');
               addToast({
                 title: <T>First connect your wallet</T>,
@@ -116,11 +99,6 @@ export function DepositPanel() {
                 timeout: 60000,
               });
             } else {
-              trackUserAction('deposit_modal_opened', {
-                token: token?.symbol || null,
-                lockPeriod,
-                network: network?.name || null
-              });
               onOpen();
             }
           }}
