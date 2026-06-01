@@ -100,8 +100,44 @@ export interface AchievementDocument {
   /** TRUE for leaderboard badges — eligibility is tied to a specific closed
    *  cycle's rank, not live signals. */
   cycle_scoped: boolean,
+  /** How the badge unlocks. 'rule' is evaluated by the rules engine against the
+   *  live eligibility signals; 'cycle_rank' keeps the leaderboard special-case;
+   *  'redeem_code'/'manual' are claim-driven. Defaults to 'rule'. */
+  unlock_type: BadgeUnlockType,
+  /** Rule definition evaluated by the rules engine. Present only when
+   *  `unlock_type === 'rule'`; NULL otherwise. */
+  rule?: BadgeRule | null,
+  /** Public icon path (e.g. '/icons/achievements/rookie.png') or absolute URL. */
+  icon?: string | null,
+  /** CSS gradient used as the halo behind the icon in the UI. */
+  accent?: string | null,
+  /** Ascending sort order in the catalog UI. */
+  display_order: number,
+  /** Soft-delete flag. Disabled badges are hidden from the public catalog, but
+   *  their historical claims survive — we never DELETE rows. */
+  enabled: boolean,
   created_at: string,
   updated_at: string,
+}
+
+/** How a badge becomes claimable. See {@link AchievementDocument.unlock_type}. */
+export type BadgeUnlockType = 'rule' | 'redeem_code' | 'manual' | 'cycle_rank';
+
+/** Comparison operators supported by the rules engine. Numeric ops compare the
+ *  signal as a number; date ops (`before`/`after`) compare it as a timestamp. */
+export type BadgeRuleOp = '>=' | '>' | '<=' | '<' | '==' | 'before' | 'after';
+
+/** A single condition: `<signal> <op> <value>`. `signal` must be a key the
+ *  signal registry knows how to resolve (see the rules engine). */
+export interface BadgeRuleCondition {
+  signal: string,
+  op: BadgeRuleOp,
+  value: number | string,
+}
+
+/** A rule definition. Currently an AND of conditions; extensible to OR later. */
+export interface BadgeRule {
+  all: BadgeRuleCondition[],
 }
 
 export interface ProfileAchievement {

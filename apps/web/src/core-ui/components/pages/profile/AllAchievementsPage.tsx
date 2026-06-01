@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { FiArrowLeft, FiGift } from 'react-icons/fi';
 import { getDepositsData } from '../../../helpers/deposits';
 import {
+  useCatalogAchievements,
   useClaimedAchievements,
   useDepositsComplete,
   useLeaderboardRank,
@@ -42,6 +43,7 @@ export function AllAchievementsPage() {
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
+  const { data: catalogData } = useCatalogAchievements();
   const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
   // Drives the pulsing "ready to claim" halo on each badge tile. A badge is
   // claimable when the user has met the unlock condition (`badge.unlocked`)
@@ -69,9 +71,10 @@ export function AllAchievementsPage() {
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
+        catalog: catalogData,
         leaderboardRank: rankData?.rank ?? undefined,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, catalogData, rankData?.rank]
   );
 
   const earned = achievements.filter((b) => b.unlocked && isClaimed(b.id)).length;

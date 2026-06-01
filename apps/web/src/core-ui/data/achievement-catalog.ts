@@ -1,22 +1,25 @@
+import { clientEnv } from '@/core-ui/config/clientEnv';
+
 /**
  * Identity-level catalog of achievements (title / description / icon / accent).
  *
+ * The catalog is now served by the backend (`GET /api/v1/achievements/catalog`,
+ * editable from the admin panel). `getCatalogAchievement` fetches it (cached)
+ * and falls back to {@link FALLBACK_CATALOG} below when the request fails — so
+ * the share/OG flow keeps working even if the API is briefly unreachable.
+ *
  * Decoupled from `profile-badges.ts` on purpose: the share/OG flow needs the
  * static metadata of an achievement without the user-specific signals (XP,
- * streak, unlocked state, …) that `buildAchievements` mixes in. The OG image
- * endpoint and the public share page can resolve a badge by `id` without
- * dragging a fake `AchievementsCtx` through them.
- *
- * When the backend ships a real catalog this file becomes a thin client of
- * that endpoint (e.g. cached `fetch` in a server util). The OG route and the
- * `/share` page stay the same.
+ * streak, unlocked state, …). The OG route and the public share page resolve a
+ * badge by `id` without dragging a fake `AchievementsCtx` through them.
  */
 export type CatalogAchievement = {
   id: string;
   title: string;
   description: string;
-  /** Public path under `apps/web/public`. Always relative — the OG endpoint
-   *  resolves it against the request origin before handing it to satori. */
+  /** Relative public path under `apps/web/public` (e.g. `/icons/...`) OR an
+   *  absolute URL (admin-uploaded icon). The OG endpoint resolves relative
+   *  paths against the request origin; absolute URLs pass through unchanged. */
   icon: string;
   /** CSS gradient used as the halo behind the icon. Falls back to the
    *  golden gradient when omitted. */
@@ -24,7 +27,13 @@ export type CatalogAchievement = {
   tier?: 'Bronze' | 'Silver' | 'Gold' | 'Diamond' | 'Founder';
 };
 
-export const ACHIEVEMENT_CATALOG: Record<string, CatalogAchievement> = {
+/**
+ * Static fallback used only when the backend catalog endpoint is unreachable.
+ * Mirrors the rows seeded in `apps/supabase/migrations/20260516_*` +
+ * `20260529_achievement_rules.sql`. Keep in sync as a safety net; the backend
+ * is the source of truth.
+ */
+export const FALLBACK_CATALOG: Record<string, CatalogAchievement> = {
   'beta-tester': {
     id: 'beta-tester',
     title: 'Beta Tester',
@@ -155,7 +164,68 @@ export const ACHIEVEMENT_CATALOG: Record<string, CatalogAchievement> = {
   },
 };
 
-/** Look up an achievement by id. Returns `null` for unknown ids so callers
- *  can decide whether to 404 or fall back to a generic card. */
-export const getCatalogAchievement = (id: string): CatalogAchievement | null =>
-  ACHIEVEMENT_CATALOG[id] ?? null;
+/** @deprecated Prefer {@link getCatalogAchievement}. Kept as the static map for
+ *  callers that need a synchronous lookup; reflects the fallback, not live edits. */
+export const ACHIEVEMENT_CATALOG = FALLBACK_CATALOG;
+
+type CatalogApiAchievement = {
+  key: string;
+  name: string;
+  description: string;
+  tier?: string;
+  icon?: string | null;
+  accent?: string | null;
+};
+
+const VALID_TIERS: ReadonlySet<string> = new Set([
+  'Bronze',
+  'Silver',
+  'Gold',
+  'Diamond',
+  'Founder',
+]);
+
+const toCatalogAchievement = (a: CatalogApiAchievement): CatalogAchievement => {
+  const fallback = FALLBACK_CATALOG[a.key];
+  const tier = a.tier && VALID_TIERS.has(a.tier) ? (a.tier as CatalogAchievement['tier']) : fallback?.tier;
+  return {
+    id: a.key,
+    title: a.name,
+    description: a.description,
+    // Convention for new/server-only badges: `/icons/achievements/<key>.png`.
+    icon: a.icon ?? fallback?.icon ?? `/icons/achievements/${a.key}.png`,
+    accent: a.accent ?? fallback?.accent,
+    tier,
+  };
+};
+
+/**
+ * Fetch the catalog from the backend (cached at the framework layer for 5 min).
+ * Returns the static fallback on any failure so share/OG never hard-fail.
+ */
+export const fetchCatalog = async (): Promise<Record<string, CatalogAchievement>> => {
+  try {
+    const res = await fetch(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/achievements/catalog`, {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return FALLBACK_CATALOG;
+    const json = (await res.json()) as { data?: { achievements?: CatalogApiAchievement[] } };
+    const list = json?.data?.achievements;
+    if (!Array.isArray(list) || list.length === 0) return FALLBACK_CATALOG;
+    const map: Record<string, CatalogAchievement> = {};
+    for (const a of list) {
+      if (!a?.key) continue;
+      map[a.key] = toCatalogAchievement(a);
+    }
+    return map;
+  } catch {
+    return FALLBACK_CATALOG;
+  }
+};
+
+/** Look up an achievement by id from the backend catalog (with static
+ *  fallback). Returns `null` for unknown ids so callers can 404. */
+export const getCatalogAchievement = async (id: string): Promise<CatalogAchievement | null> => {
+  const catalog = await fetchCatalog();
+  return catalog[id] ?? FALLBACK_CATALOG[id] ?? null;
+};

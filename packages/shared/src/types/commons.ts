@@ -232,6 +232,26 @@ export interface ProfileAchievementsResponseDTO {
   achievements: AchievementResponseDTO[];
 }
 
+/** A single badge in the public, user-agnostic catalog. This is the shape the
+ *  web app reads instead of a hardcoded list — driven by the admin-editable
+ *  `achievements` table. `icon` may be a relative path ('/icons/...') or an
+ *  absolute URL (admin-uploaded). */
+export interface CatalogAchievementResponseDTO {
+  key: string;
+  name: string;
+  description: string;
+  tier: string;
+  coinReward: number;
+  icon: string | null;
+  accent: string | null;
+  unlockType: 'rule' | 'redeem_code' | 'manual' | 'cycle_rank';
+  displayOrder: number;
+}
+
+export interface AchievementsCatalogResponseDTO {
+  achievements: CatalogAchievementResponseDTO[];
+}
+
 export interface ClaimAchievementResponseDTO {
   achievementKey: Achievement;
   coinReward: number;
