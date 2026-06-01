@@ -125,12 +125,18 @@ export function AchievementModal({
       setBonusGold(0);
       setMintTxHash(null);
       setMintFlowPending(false);
+      mintBadgeMutation.reset();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, achievement?.id]);
 
-  // Fire the mint mutation when entering the minting phase.
-  useEffect(() => {
-    if (phase !== 'minting' || !achievement) return;
+  // Fire the mint mutation synchronously from the user gesture. Bailing on
+  // `isPending` keeps a double-click (or any stray re-trigger) from spawning
+  // a second Freighter popup — useMutation does NOT dedupe in-flight calls
+  // on its own.
+  const triggerMint = () => {
+    if (!achievement || mintBadgeMutation.isPending) return;
+    setPhase('minting');
     mintBadgeMutation.mutate(achievement.id, {
       onSuccess: ({ hash }) => {
         setMintTxHash(hash);
@@ -141,8 +147,7 @@ export function AchievementModal({
         setPhase('detail');
       },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  };
 
   const reward = useMemo(() => (achievement ? rewardFor(achievement) : 0), [achievement]);
   const claimed = !!achievement && isClaimed(achievement.id);
@@ -183,7 +188,7 @@ export function AchievementModal({
       }
       if (res.status === 409) {
         // Already claimed — skip coin animation, go straight to Pollar prompt
-        setPhase('minting');
+        triggerMint();
       } else {
         const body = await res.json().catch(() => null);
         const coinReward: number = body?.data?.coinReward ?? reward;
@@ -199,7 +204,7 @@ export function AchievementModal({
 
   const handleContinue = () => {
     if (mintFlowPending) {
-      setPhase('minting');
+      triggerMint();
     } else {
       setPhase('detail');
     }
@@ -349,7 +354,8 @@ export function AchievementModal({
         <button
           type="button"
           onClick={handleContinue}
-          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+          disabled={mintBadgeMutation.isPending}
+          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
         >
           Continue
         </button>
@@ -555,8 +561,9 @@ export function AchievementModal({
             {canMintUnified && (
               <button
                 type="button"
-                onClick={claimed ? () => setPhase('minting') : () => { void handleMintClick(); }}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-black hover:bg-black/80 text-white border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+                onClick={claimed ? triggerMint : () => { void handleMintClick(); }}
+                disabled={mintBadgeMutation.isPending}
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-black hover:bg-black/80 text-white border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
               >
                 Mint badge on-chain
               </button>

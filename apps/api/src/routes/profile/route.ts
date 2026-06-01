@@ -4,6 +4,7 @@ import {
   broadcastProfileChange,
   claimAchievement,
   computeEligibilitySignals,
+  getAchievementByKey,
   getAchievementCountsByProfile,
   getCachedProfilesDepositsByProfileId,
   getLastClosedCycleId,
@@ -15,7 +16,7 @@ import {
   getRewardByKey,
   getRewardsData,
   HISTORICAL_DELAY,
-  isEligibleForAchievement,
+  isAchievementEligible,
   type Network,
   ONE_DAY,
   type Profile,
@@ -273,19 +274,18 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim
   }
 
   const achievementKey = key as Achievement;
-  if (!Object.values(Achievement).includes(achievementKey)) {
+
+  // The catalog (DB) is the source of truth for which badges exist — admin can
+  // add new ones beyond the static Achievement enum, so we validate against the
+  // row, not the enum.
+  const { data: achievementDoc } = await getAchievementByKey(achievementKey);
+  if (!achievementDoc) {
     req.log.warn({ key }, 'Unknown achievement key');
     return sendError(res, `Unknown achievement: ${key}`, null, 404);
   }
 
-  // For cycle_scoped badges (leaderboard), verify rank against last closed cycle
-  const { data: achievementDoc } = await supabase
-    .from('achievements')
-    .select('cycle_scoped')
-    .eq('key', achievementKey)
-    .maybeSingle();
-
-  if (achievementDoc?.cycle_scoped) {
+  if (achievementDoc.unlock_type === 'cycle_rank' || achievementDoc.cycle_scoped) {
+    // Leaderboard badges: verify rank against the last closed cycle.
     const cycleId = getLastClosedCycleId();
     const rank = await getLeaderboardRankForWallet(walletAddress, cycleId, networkData.id as number);
     const exactRank: Record<string, number> = { 'first-place': 1, 'second-place': 2 };
@@ -297,15 +297,27 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim
       req.log.warn({ profileId: profileData.id, key, rank, cycleId }, 'Wallet did not finish at required leaderboard rank');
       return sendError(res, 'You did not finish at the required leaderboard rank last cycle.', null, 403);
     }
-  } else {
+  } else if (achievementDoc.unlock_type === 'rule') {
+    // Signal-driven badges: evaluate the configurable rule.
     const signals = await computeEligibilitySignals(networkData, profileData);
-    if (!isEligibleForAchievement(signals, achievementKey)) {
+    if (!isAchievementEligible(achievementDoc, signals)) {
       req.log.warn(
         { profileId: profileData.id, key, signals },
         'Profile is not eligible for achievement',
       );
       return sendError(res, 'You are not eligible for this achievement yet.', null, 403);
     }
+  } else {
+    // redeem_code / manual badges are not claimable through this endpoint.
+    req.log.warn({ profileId: profileData.id, key, unlockType: achievementDoc.unlock_type }, 'Achievement not claimable via this endpoint');
+    return sendError(
+      res,
+      achievementDoc.unlock_type === 'redeem_code'
+        ? 'This badge is claimable only with a redeem code.'
+        : 'This badge is granted manually and cannot be claimed here.',
+      null,
+      403,
+    );
   }
 
   const result = await claimAchievement(profileData.id, achievementKey);
