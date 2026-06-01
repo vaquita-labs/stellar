@@ -28,6 +28,17 @@ export const useRestProfile = () => {
     [networkName, walletAddress]
   );
 
+  const checkNicknameAvailability = useCallback(
+    async (nickname: string): Promise<boolean> => {
+      const response = await fetch(
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${networkName}/nickname-available?nickname=${encodeURIComponent(nickname)}`
+      );
+      const data = await response.json();
+      return data?.data?.available === true;
+    },
+    [networkName]
+  );
+
   const goldDailyCollect = useCallback(async () => {
     const response = await fetch(
       `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${networkName}/wallet/${walletAddress || ''}/gold-daily-collect`,
@@ -60,6 +71,7 @@ export const useRestProfile = () => {
 
   return {
     saveNickname,
+    checkNicknameAvailability,
     goldDailyCollect,
     saveMapObjects,
   };

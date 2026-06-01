@@ -441,6 +441,36 @@ router.post('/network/:networkName/wallet/:walletAddress/nickname', async (req, 
   return sendSuccess(res, result);
 });
 
+router.get('/network/:networkName/nickname-available', async (req, res) => {
+  const { networkName } = req.params;
+  const nickname = String(req.query?.nickname ?? '').trim();
+  req.log.info({ networkName, nickname }, 'GET /profile/.../nickname-available');
+
+  if (!nickname) {
+    return sendSuccess(res, { available: false });
+  }
+
+  const { data: networkData, error: networkError } = await getNetworkByName(networkName);
+
+  if (networkError || !networkData) {
+    req.log.error({ err: networkError, networkName }, 'Network not found');
+    return sendError(res, 'Network not found', networkError, 404);
+  }
+
+  const { data: existing, error: lookupError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('network_id', networkData.id)
+    .eq('nickname', nickname);
+
+  if (lookupError) {
+    req.log.error({ err: lookupError, networkId: networkData.id, nickname }, 'Failed to check nickname availability');
+    return sendError(res, 'Failed to check nickname availability', lookupError, 500);
+  }
+
+  return sendSuccess(res, { available: !existing || existing.length === 0 });
+});
+
 router.get('/network/:networkName', async (req, res) => {
   const { networkName } = req.params;
   req.log.info({ networkName }, 'GET /profile/network/:networkName');
