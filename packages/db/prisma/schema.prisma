@@ -125,15 +125,15 @@ model MapObject {
 /// (now removed) `networks` table, since the app is single-network now. The
 /// `order` column from `networks` was dropped — it only made sense for ordering
 /// multiple networks.
-model ProjectConfig {
+model Config {
   id                    Int      @id @default(autoincrement())
-  networkName           String   @map("network_name") @db.VarChar(50)
   origins               String[] @default([])
-  // Stellar identifies the network by its passphrase (text), not a numeric chain id.
+  networkName           String   @map("network_name") @db.VarChar(50)
   networkPassphrase     String?  @map("network_passphrase")
   badgesContractAddress String?  @map("badges_contract_address")
-  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("config")
 }
@@ -144,6 +144,10 @@ model Profile {
   nickname      String?   @db.VarChar(50)
   fullName      String?   @map("full_name") @db.VarChar(100)
   email         String?   @db.VarChar(100)
+
+  onboardingCompleted Boolean @default(false) @map("onboarding_completed")
+  tutorialCompleted   Boolean @default(false) @map("tutorial_completed")
+
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
@@ -158,9 +162,6 @@ model Profile {
 
 model ProfileAchievement {
   id            BigInt   @id @default(autoincrement())
-  // profileId was `bigint` in the original DB while profiles.id is `int`; realigned
-  // to Int here so the relation is valid (the FK only ever holds int profile ids).
-  // The migration must ALTER this column bigint → int.
   profileId     Int      @map("profile_id")
   achievementId BigInt   @map("achievement_id")
   claimedAt     DateTime @default(now()) @map("claimed_at") @db.Timestamptz(6)

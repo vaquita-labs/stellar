@@ -55,7 +55,7 @@ const updateSchema = z.object({
 // (id: null) when the `config` table has no row yet, never null.
 export async function GET(req: NextRequest) {
   if (!adminSecretOk(req)) return forbidden();
-  const config = await prisma.projectConfig.findFirst({ orderBy: { id: 'asc' } });
+  const config = await prisma.config.findFirst({ orderBy: { id: 'asc' } });
   return NextResponse.json({ data: { config: config ?? emptyConfig } });
 }
 
@@ -80,7 +80,7 @@ export async function PATCH(req: NextRequest) {
   }
   const data = parsed.data;
 
-  const existing = await prisma.projectConfig.findFirst({ orderBy: { id: 'asc' } });
+  const existing = await prisma.config.findFirst({ orderBy: { id: 'asc' } });
 
   if (!existing) {
     if (!data.networkName) {
@@ -89,7 +89,7 @@ export async function PATCH(req: NextRequest) {
         { status: 400 },
       );
     }
-    const config = await prisma.projectConfig.create({
+    const config = await prisma.config.create({
       data: {
         networkName: data.networkName,
         origins: data.origins ?? [],
@@ -100,7 +100,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ data: { config } });
   }
 
-  const config = await prisma.projectConfig.update({
+  const config = await prisma.config.update({
     where: { id: existing.id },
     // networkName / origins are truly optional (only written when sent). The two
     // nullableStr fields always resolve to string|null (never undefined), so the

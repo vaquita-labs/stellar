@@ -10,7 +10,7 @@ export { toProjectConfig };
  * name to stamp on a DTO. Single-network: there is exactly one config row.
  */
 export const getNetworkName = async (): Promise<string> => {
-  const config = await prisma.projectConfig.findFirst({ select: { networkName: true } });
+  const config = await prisma.config.findFirst({ select: { networkName: true } });
   return config?.networkName ?? '';
 };
 
@@ -19,7 +19,7 @@ export const getNetworkName = async (): Promise<string> => {
  * getNetworkByName, now sourced from the singleton `config` row.
  */
 export const getBadgesContractAddress = async (): Promise<string | null> => {
-  const config = await prisma.projectConfig.findFirst({ select: { badgesContractAddress: true } });
+  const config = await prisma.config.findFirst({ select: { badgesContractAddress: true } });
   return config?.badgesContractAddress ?? null;
 };
 
@@ -30,7 +30,7 @@ export const getBadgesContractAddress = async (): Promise<string | null> => {
  * exactly one network/config for every origin.
  */
 export const getProjectConfig = async (): Promise<ProjectConfigResponseDTO | null> => {
-  const config = await prisma.projectConfig.findFirst();
+  const config = await prisma.config.findFirst();
   if (!config) return null;
 
   const tokens = await prisma.token.findMany({

@@ -1,4 +1,4 @@
-import type { ProjectConfig, Token } from '@vaquita/db';
+import type { Config, Token } from '@vaquita/db';
 import { firstElement } from '../../helpers';
 import type { ProjectConfigResponseDTO } from '../../types';
 import { getABIByAddress } from '../contracts';
@@ -8,7 +8,7 @@ import { getABIByAddress } from '../contracts';
  * Token fields that used to live in `tokens_networks` are now on `tokens` directly.
  */
 export const toProjectConfig = async (
-  config: ProjectConfig,
+  config: Config,
   tokens: Token[],
 ): Promise<ProjectConfigResponseDTO> => ({
   networkName: config.networkName,
