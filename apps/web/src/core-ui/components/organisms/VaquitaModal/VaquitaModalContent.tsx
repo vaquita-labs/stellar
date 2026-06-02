@@ -6,8 +6,8 @@ import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import { Button, Spinner, toast } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
-import { useApyByLockPeriod, useWithdrawalTime } from '../../../hooks';
-import { useConfigStore, useTransactionStore } from '../../../stores';
+import { useApyByLockPeriod, useTransactions, useWithdrawalTime } from '../../../hooks';
+import { useConfigStore } from '../../../stores';
 import { DepositWithdrawalState } from '../../../types';
 import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
@@ -36,7 +36,7 @@ const breakdownTime = (totalSeconds: number) => {
 export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }: VaquitaModalContentProps) => {
   const [confirming, setConfirming] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  const { transactionWithdraw } = useTransactionStore();
+  const { transactionWithdraw } = useTransactions();
   const { confirmWithdrawal } = useRestWithdrawal();
   const { network, token } = useConfigStore();
   const depositLockPeriod = vaquita.lockPeriod;
