@@ -24,9 +24,9 @@ export enum DepositWithdrawalState {
 }
 
 export interface NetworkResponseDTO {
-  name: string;
+  networkName: string;
   type: string;
-  chainId: number;
+  networkPassphrase: string | null;
   badgesContractAddress?: string;
   tokens: {
     isGas: boolean;
@@ -35,7 +35,7 @@ export interface NetworkResponseDTO {
     symbol: string;
     name: string;
     decimals: number;
-    lockPeriod: number[];
+    lockPeriods: number[];
     contractAddress: string;
     vaquitaContractAddress: string;
   }[];

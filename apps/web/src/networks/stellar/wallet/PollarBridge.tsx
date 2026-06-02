@@ -1,6 +1,6 @@
 'use client';
 
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { usePollar } from '@pollar/react';
 import { useEffect } from 'react';
 import { pollarAdapter, setPollarBinding } from './adapters/pollar-adapter';
@@ -18,7 +18,7 @@ import { getActiveAdapter, setActiveAdapter } from './registry';
  */
 export function PollarBridge() {
   const { walletAddress, isAuthenticated, getClient, logout } = usePollar();
-  const setWalletAddress = useNetworkConfigStore((s) => s.setWalletAddress);
+  const setWalletAddress = useConfigStore((s) => s.setWalletAddress);
   const setPollarReady = usePollarReadyStore((s) => s.setReady);
 
   // Flip the global `pollarReady` flag once Pollar has finished its initial

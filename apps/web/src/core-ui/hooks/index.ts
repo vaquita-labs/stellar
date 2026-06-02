@@ -10,7 +10,6 @@ export * from './useFont';
 export * from './useHasHydrated';
 export * from './useIsAuthenticated';
 export * from './useIsMobile';
-export * from './useNetwork';
 export * from './profile';
 export * from './useProfilesByAverageDepositsData';
 export * from './useRestDeposit';

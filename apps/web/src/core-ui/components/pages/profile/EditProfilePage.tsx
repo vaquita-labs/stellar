@@ -6,13 +6,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FiCamera, FiSave, FiTrash2 } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useProfileData, useRestProfile } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { PageLayout } from '../../molecules';
 
 export function EditProfilePage() {
   const router = useRouter();
-  const { walletAddress, network } = useNetworkConfigStore();
+  const { walletAddress, network } = useConfigStore();
   const { data, isLoading } = useProfileData();
   const { saveNickname } = useRestProfile();
 

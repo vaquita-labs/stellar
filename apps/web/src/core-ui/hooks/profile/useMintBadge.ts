@@ -1,7 +1,7 @@
 'use client';
 
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { mintBadge } from '@/networks/stellar/sorobanTx';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -23,8 +23,8 @@ interface BadgeClaimPayload {
  */
 export const useMintBadge = () => {
   const queryClient = useQueryClient();
-  const { network, walletAddress } = useNetworkConfigStore();
-  const networkName = network?.name ?? '';
+  const { network, walletAddress } = useConfigStore();
+  const networkName = network?.networkName ?? '';
   const badgesContractAddress = network?.badgesContractAddress;
   const baseUrl = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
 

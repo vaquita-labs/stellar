@@ -1,15 +1,15 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { RewardResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
 export const useProfileDailyCheck = () => {
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
   return useQuery<RewardResponseDTO[]>({
-    queryKey: ['profile', network?.name, walletAddress, 'daily-check'],
+    queryKey: ['profile', network?.networkName, walletAddress, 'daily-check'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.name}/wallet/${walletAddress}/daily-check`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.networkName}/wallet/${walletAddress}/daily-check`
       );
 
       const data = await response.json();
@@ -22,6 +22,6 @@ export const useProfileDailyCheck = () => {
 
       return rewards;
     },
-    enabled: !!network?.name && !!walletAddress,
+    enabled: !!network?.networkName && !!walletAddress,
   });
 };

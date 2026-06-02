@@ -2,7 +2,7 @@
 import { NetworkResponseDTO } from "../types";
 
 export const getInterestData = (network: NetworkResponseDTO, dataApy: any, depositAmount: number, lockPeriod: number) => {
-    const isStellarTestnet = network?.name === 'Stellar Testnet';
+    const isStellarTestnet = network?.networkName === 'Stellar Testnet';
 
     const protocolApy = dataApy?.protocolApy ?? 0;
     const vaquitaApy = dataApy?.vaquitaApy ?? 0;

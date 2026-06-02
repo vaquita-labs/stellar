@@ -1,9 +1,9 @@
-import { useNetworkConfigStore } from '../stores';
+import { useConfigStore } from '../stores';
 
 export const getWalletAddress = () => {
-  return useNetworkConfigStore.getState().walletAddress;
+  return useConfigStore.getState().walletAddress;
 };
 
 export const getNetworkName = () => {
-  return useNetworkConfigStore.getState().network?.name;
+  return useConfigStore.getState().network?.networkName;
 };

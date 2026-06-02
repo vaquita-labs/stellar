@@ -1,12 +1,12 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { ProfileMapObjectsResponseDTO } from '@/core-ui/types';
 import { useCallback } from 'react';
 
 export const useRestProfile = () => {
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
 
-  const networkName = network?.name || '';
+  const networkName = network?.networkName || '';
 
   const saveNickname = useCallback(
     async (payload: { nickname: string }) => {

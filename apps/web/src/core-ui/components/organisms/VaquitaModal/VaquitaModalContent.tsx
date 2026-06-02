@@ -7,7 +7,7 @@ import { Button, Spinner, toast } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { useApyByLockPeriod, useWithdrawalTime } from '../../../hooks';
-import { useNetworkConfigStore, useTransactionStore } from '../../../stores';
+import { useConfigStore, useTransactionStore } from '../../../stores';
 import { DepositWithdrawalState } from '../../../types';
 import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
@@ -38,7 +38,7 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
   const [loading, setLoading] = useState(false);
   const { transactionWithdraw } = useTransactionStore();
   const { confirmWithdrawal } = useRestWithdrawal();
-  const { network, token } = useNetworkConfigStore();
+  const { network, token } = useConfigStore();
   const depositLockPeriod = vaquita.lockPeriod;
   const { data: dataApy } = useApyByLockPeriod(depositLockPeriod, token?.symbol ?? '');
   const withdrawalInfo = useWithdrawalTime(vaquita);
@@ -67,7 +67,7 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
     setLoading(true);
     let isSuccess = false;
     let lastError: unknown = null;
-    if (isNewDepositHandled(network.name)) {
+    if (isNewDepositHandled(network.networkName)) {
       const { success, error } = await transactionWithdraw(
         +vaquita.id,
         vaquita.depositIdHex,

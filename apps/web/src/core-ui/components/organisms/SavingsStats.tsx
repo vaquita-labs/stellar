@@ -4,11 +4,11 @@ import { Button, Spinner } from '@heroui/react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useApyByLockPeriod } from '../../hooks';
-import { useNetworkConfigStore } from '../../stores';
+import { useConfigStore } from '../../stores';
 import { BankAPYModal } from './BankAPYModal';
 
 export const SavingsStats = () => {
-  const { lockPeriod, token } = useNetworkConfigStore();
+  const { lockPeriod, token } = useConfigStore();
   const { data: dataApy, isLoading: isLoadingApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
   const protocolApy = dataApy?.protocolApy ?? 0;
   const vaquitaApy = dataApy?.vaquitaApy ?? 0;

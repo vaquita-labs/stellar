@@ -4,7 +4,7 @@ import { isStellarNetwork } from '@/networks/stellar';
 import { Button as HeroButton } from '@heroui/react';
 import { useState } from 'react';
 import { useAnalytics, useIsPoolPaused } from '../../hooks';
-import { useMapStore, useNetworkConfigStore } from '../../stores';
+import { useMapStore, useConfigStore } from '../../stores';
 import { T } from '../atoms';
 import { DepositModal } from './DepositModal';
 import { VaquitasListModal } from './VaquitasListModal';
@@ -13,10 +13,10 @@ export function DepositPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [isVaquitasListOpen, setIsVaquitasListOpen] = useState(false);
   const [ isDepositing, setIsDepositing ] = useState(false);
-  const { walletAddress, lockPeriod, network, token } = useNetworkConfigStore();
+  const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { trackUserAction } = useAnalytics();
   const editMode = useMapStore((store) => store.editMode);
-  const isStellar = network?.name ? isStellarNetwork(network.name) : false;
+  const isStellar = network?.networkName ? isStellarNetwork(network.networkName) : false;
   const { isPaused } = useIsPoolPaused();
   const disabled = lockPeriod < 0 || (isStellar && isPaused);
 
@@ -46,7 +46,7 @@ export function DepositPanel() {
               trackUserAction('deposit_modal_opened', {
                 token: token?.symbol || null,
                 lockPeriod,
-                network: network?.name || null,
+                network: network?.networkName || null,
               });
               setIsOpen(true);
             }

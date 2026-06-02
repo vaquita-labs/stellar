@@ -5,7 +5,7 @@ export * from './StatItem';
 export * from './GlobalLoader';
 export * from './LoaderScreen';
 export * from './WithHydrated';
-export * from './NetworksProvider';
+export * from './ConfigProvider';
 export * from './toast';
 export * from './ConfirmDialog';
 export * from './AppModal';

@@ -19,7 +19,7 @@ import {
   useProfileRewards,
   useProfileStreak,
 } from '../../hooks';
-import { useHideBalance, useNetworkConfigStore } from '../../stores';
+import { useHideBalance, useConfigStore } from '../../stores';
 import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
 import { BadgeTile } from './profile/BadgeTile';
@@ -97,7 +97,7 @@ const SummaryItem = ({
 
 export function ProfilePage() {
   const router = useRouter();
-  const { walletAddress, token } = useNetworkConfigStore();
+  const { walletAddress, token } = useConfigStore();
   const hideBalance = useHideBalance();
   const { data: profileData } = useProfileData();
   const { data: streakData } = useProfileStreak();

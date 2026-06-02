@@ -1,15 +1,15 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { MapObjectType, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
 export const useProfileMapObjects = () => {
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
   return useQuery<ProfileMapObjectsResponseDTO>({
-    queryKey: ['profile', network?.name, walletAddress, 'profile-map-objects'],
+    queryKey: ['profile', network?.networkName, walletAddress, 'profile-map-objects'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.name}/wallet/${walletAddress}/map-objects`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.networkName}/wallet/${walletAddress}/map-objects`
       );
       const data = await response.json();
 
@@ -25,6 +25,6 @@ export const useProfileMapObjects = () => {
 
       return profile;
     },
-    enabled: !!network?.name && !!walletAddress,
+    enabled: !!network?.networkName && !!walletAddress,
   });
 };

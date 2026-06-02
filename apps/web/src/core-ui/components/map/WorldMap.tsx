@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
-import { useMapStore, useNetworkConfigStore, useResizeStore, useSyncMapObjects } from '../../stores';
+import { useMapStore, useConfigStore, useResizeStore, useSyncMapObjects } from '../../stores';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
 import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
 import { MapObjects } from '../templates/WorldMap/map/MapObjects';
@@ -49,7 +49,7 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
   const [showMoodModal, setShowMoodModal] = useState(false);
-  const { walletAddress: userWalletAddress } = useNetworkConfigStore((store) => store);
+  const { walletAddress: userWalletAddress } = useConfigStore((store) => store);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
   const { height, width } = useResizeStore((store) => store);
   const { mood, canCollect, goldCoinsToCollect } = useVaquitaMood();

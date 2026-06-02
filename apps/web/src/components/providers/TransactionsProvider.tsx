@@ -1,24 +1,20 @@
 'use client';
 
-import { useNetworkConfigStore, useTransactionStore } from '@/core-ui/stores';
+import { useConfigStore, useTransactionStore } from '@/core-ui/stores';
 import { DepositFn, DepositFunction, WithdrawFn, WithdrawFunction } from '@/core-ui/types';
-import { isDummyNetwork } from '@/networks/dummy';
-import { dummyTransactions } from '@/networks/dummy/dummyTransactions';
 import { isStellarNetwork } from '@/networks/stellar';
 import { stellarTransactions } from '@/networks/stellar/stellarTransactions';
 import { useEffect } from 'react';
 
 export function TransactionsProvider() {
   const { setTransactions } = useTransactionStore();
-  const { walletAddress, setWalletAddress, reset, network, token } = useNetworkConfigStore();
-  const networkName = network?.name ?? '';
+  const { walletAddress, setWalletAddress, reset, network, token } = useConfigStore();
+  const networkName = network?.networkName ?? '';
   useEffect(() => {
     (async () => {
       try {
         let transactions: { transactionDeposit: DepositFn; transactionWithdraw: WithdrawFn };
-        if (isDummyNetwork()) {
-          transactions = dummyTransactions();
-        } else if (token && isStellarNetwork(networkName)) {
+        if (token && isStellarNetwork(networkName)) {
           transactions = await stellarTransactions(token);
         } else {
           setTransactions(null, null);

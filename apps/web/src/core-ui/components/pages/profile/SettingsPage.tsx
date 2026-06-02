@@ -18,7 +18,7 @@ import {
   FiUserPlus,
 } from 'react-icons/fi';
 import { useProfileData } from '../../../hooks';
-import { usePrivacyStore, useNetworkConfigStore } from '../../../stores';
+import { usePrivacyStore, useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { ConfirmDialog } from '../../molecules';
 import { PRIVACY_LAST_UPDATED, TERMS_LAST_UPDATED } from '../legal';
@@ -162,7 +162,7 @@ const formatDate = (iso: string) => {
 
 export function SettingsPage() {
   const router = useRouter();
-  const { reset } = useNetworkConfigStore();
+  const { reset } = useConfigStore();
   const { isLoading, isRefetching } = useProfileData();
   const loading = isLoading || isRefetching;
   const [isDisconnecting, setIsDisconnecting] = useState(false);

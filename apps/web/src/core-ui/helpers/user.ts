@@ -5,7 +5,7 @@ export const getBalance = (
   token: NetworkResponseDTO['tokens'][number] | null,
   balances: UserBalanceResponseDTO['balances']
 ) => {
-  return balances?.find((balance) => balance.tokenSymbol === token?.symbol && balance.networkName === network?.name);
+  return balances?.find((balance) => balance.tokenSymbol === token?.symbol && balance.networkName === network?.networkName);
 };
 
 export const getQuickAmounts = (tokenSymbol: string) => {

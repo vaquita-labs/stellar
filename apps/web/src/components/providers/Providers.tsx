@@ -1,9 +1,9 @@
 'use client';
 
 import { DesktopSidebar, MobileNavigation } from '@/components';
-import { AblyProvider, LoaderScreen, NetworksProvider, sendLogToAbly } from '@/core-ui/components';
-import { getNetworks, useIsAuthenticated } from '@/core-ui/hooks';
-import { useMapStore, useNetworkConfigStore, useResize } from '@/core-ui/stores';
+import { AblyProvider, ConfigProvider, LoaderScreen, sendLogToAbly } from '@/core-ui/components';
+import { useIsAuthenticated } from '@/core-ui/hooks';
+import { useMapStore, useConfigStore, useResize } from '@/core-ui/stores';
 import { useVisibility } from '@/core-ui/stores/visibility';
 import { stellarWalletsKitResolver } from '@/networks/stellar/kit';
 import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
@@ -64,7 +64,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isAuthenticated = useIsAuthenticated();
-  const setWalletAddress = useNetworkConfigStore((s) => s.setWalletAddress);
+  const setWalletAddress = useConfigStore((s) => s.setWalletAddress);
   const PUBLIC_ROUTES = ['/login', '/terms', '/privacy'];
   const isPublicRoute = !!pathname && PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   // Show the bottom navbar on `/profile` itself, but hide it on any deeper
@@ -154,25 +154,14 @@ const ListenDepositsChanges = () => {
 };
 
 const Main = ({ children, withSidebar }: { children: ReactNode; withSidebar: boolean }) => {
-  const [types, setTypes] = useState<string[]>([]);
-  useEffect(() => {
-    const fun = async () => {
-      const { types } = await getNetworks();
-      setTypes(types);
-    };
-    void fun();
-  }, []);
-  if (types.length === 0) return null;
-
   return (
     <main
       className={`flex-1 flex flex-col${withSidebar ? ' md:ml-64' : ''}`}
       style={{ height: 'var(--100VH)', minHeight: 'var(--100VH)', maxHeight: 'var(--100VH)', overflow: 'hidden' }}
-      key={types.join(',')}
     >
       <QueryClientProvider client={queryClient}>
         <WalletProviderSync />
-        <NetworksProvider>{children}</NetworksProvider>
+        <ConfigProvider>{children}</ConfigProvider>
         <ListenDepositsChanges />
       </QueryClientProvider>
     </main>

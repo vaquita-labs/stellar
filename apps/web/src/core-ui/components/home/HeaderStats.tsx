@@ -1,7 +1,7 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { useMapStore, useNetworkConfigStore } from '@/core-ui/stores';
+import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -22,7 +22,7 @@ import { EarnChip } from './EarnChip';
 export const HeaderStats = () => {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
-  const { walletAddress, token, lockPeriod } = useNetworkConfigStore();
+  const { walletAddress, token, lockPeriod } = useConfigStore();
   const hideBalance = useHideBalance();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);

@@ -15,7 +15,7 @@ import {
   useProfileStreak,
 } from '../../../hooks';
 import { buildAchievements } from '../../../data/profile-badges';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { AchievementDetail, AchievementModal } from './AchievementModal';
 import { BadgeTile } from './BadgeTile';
 import { PersonalRecords } from './PersonalRecords';
@@ -37,7 +37,7 @@ export function AllAchievementsPage() {
   } | null>(null);
   const [redeemOpen, setRedeemOpen] = useState(false);
 
-  const { walletAddress } = useNetworkConfigStore();
+  const { walletAddress } = useConfigStore();
   const { data: streakData } = useProfileStreak();
   const { data: experienceData } = useProfileExperience();
   const { data: rewardsData } = useProfileRewards();
