@@ -8,6 +8,7 @@ import {
   TableBody,
   TableCell,
   TableColumn,
+  TableContent,
   TableHeader,
   TableRow,
 } from '@heroui/react';
@@ -291,24 +292,26 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
         </Modal.Container>
       </Modal.Backdrop>
 
-      <Table aria-label="Tabla" className="w-full" style={{ tableLayout: 'auto' }}>
-        <TableHeader columns={columns}>
-          {(column) => <TableColumn id={column.id}>{renderHeaderCell(column)}</TableColumn>}
-        </TableHeader>
-        <TableBody items={bodyItems} renderEmptyState={() => 'No hay datos'}>
-          {(item) => (
-            <TableRow
-              id={item.id}
-              columns={columns}
-              className={
-                (highlight && item.row[highlight.key]?.value === highlight.value ? 'bg-yellow-100' : '') +
-                (sort.key && alterColor[item.row[sort?.key]?.value] % 2 === 0 ? 'bg-blue-50' : '')
-              }
-            >
-              {(column) => <TableCell>{renderBodyCell(item.row, column.id)}</TableCell>}
-            </TableRow>
-          )}
-        </TableBody>
+      <Table className="w-full">
+        <TableContent aria-label="Tabla" style={{ tableLayout: 'auto' }}>
+          <TableHeader columns={columns}>
+            {(column) => <TableColumn id={column.id}>{renderHeaderCell(column)}</TableColumn>}
+          </TableHeader>
+          <TableBody items={bodyItems} renderEmptyState={() => 'No hay datos'}>
+            {(item) => (
+              <TableRow
+                id={item.id}
+                columns={columns}
+                className={
+                  (highlight && item.row[highlight.key]?.value === highlight.value ? 'bg-yellow-100' : '') +
+                  (sort.key && alterColor[item.row[sort?.key]?.value] % 2 === 0 ? 'bg-blue-50' : '')
+                }
+              >
+                {(column) => <TableCell>{renderBodyCell(item.row, column.id)}</TableCell>}
+              </TableRow>
+            )}
+          </TableBody>
+        </TableContent>
       </Table>
 
       <Modal.Backdrop isOpen={!!expandedValue} onOpenChange={(o) => { if (!o) setExpandedValue(null); }}>
