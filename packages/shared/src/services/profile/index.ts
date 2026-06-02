@@ -111,34 +111,6 @@ const getActiveDepositSignalsByWallet = async (
     }));
 };
 
-export const listenProfilesChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:profiles`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal profiles:', status);
-    });
-};
-
-export const listenProfilesDepositsChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:profiles_deposits`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal profiles_deposits:', status);
-    });
-};
-
 export const getProfiles = async () => {
   try {
     const rows = await prisma.profile.findMany({ where: { deletedAt: null } });
