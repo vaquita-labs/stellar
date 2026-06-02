@@ -7,8 +7,10 @@ import { stellarTransactions } from '@/networks/stellar/stellarTransactions';
 import { useEffect } from 'react';
 
 export function TransactionsProvider() {
-  const { setTransactions } = useTransactionStore();
-  const { walletAddress, setWalletAddress, reset, network, token } = useConfigStore();
+  const setTransactions = useTransactionStore((s) => s.setTransactions);
+  const walletAddress = useConfigStore((s) => s.walletAddress);
+  const network = useConfigStore((s) => s.network);
+  const token = useConfigStore((s) => s.token);
   const networkName = network?.networkName ?? '';
   useEffect(() => {
     (async () => {
@@ -115,7 +117,7 @@ export function TransactionsProvider() {
         // reset();
       }
     })();
-  }, [walletAddress, networkName, reset, setWalletAddress, setTransactions, token, network]);
+  }, [walletAddress, networkName, token, setTransactions]);
 
   return null;
 }

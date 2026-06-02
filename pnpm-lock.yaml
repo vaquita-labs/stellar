@@ -104,6 +104,9 @@ importers:
       '@vaquita/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      ably:
+        specifier: ^2.21.0
+        version: 2.21.0(bufferutil@4.1.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(utf-8-validate@6.0.6)
       cors:
         specifier: ^2.8.6
         version: 2.8.6

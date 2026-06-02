@@ -5,90 +5,43 @@ import { LoaderScreen } from '@/core-ui/components/molecules/LoaderScreen';
 import { useConfigStore } from '@/core-ui/stores';
 import { isStellarNetwork } from '@/networks/stellar';
 import { stellarSession } from '@/networks/stellar/stellar';
-import { getActiveAdapter } from '@/networks/stellar/wallet/registry';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
- * Componente de sincronización de carteras Stellar
- * Integra Stellar Wallet Kit para gestión de carteras Stellar
+ * Bootstraps the Stellar wallet session. This is a single-network app: the
+ * project config is always a Stellar network, so the provider only ever *enters*
+ * a Stellar session — there is no other network to transition out of, hence no
+ * disconnect/teardown branch (`isStellar` is a derived value, not state).
  */
 export function WalletProviderSync() {
-  const { walletAddress: userWalletAddress, network, reset } = useConfigStore();
+  const network = useConfigStore((s) => s.network);
+  const isStellar = !!network && isStellarNetwork(network.networkName);
 
-  // Estado para Stellar Wallet Kit
   const [stellarReady, setStellarReady] = useState(false);
-  const [isStellar, setIsStellar] = useState(false);
   const sessionRef = useRef<ReturnType<typeof stellarSession> | null>(null);
 
-  // Determinar si la red actual es Stellar
   useEffect(() => {
-    const isStellarNet = network ? isStellarNetwork(network.networkName) : false;
-    setIsStellar(isStellarNet);
-  }, [network]);
-
-  // Track the previous isStellar value so we can distinguish "first sample
-  // before network has loaded" from "we were on Stellar and are now leaving".
-  // Without this, the initial mount fires the cleanup branch with `network`
-  // still null, which tears down a freshly restored Pollar session.
-  const wasStellarRef = useRef<boolean | null>(null);
-
-  // Inicializar sesión de Stellar cuando la red es Stellar
-  useEffect(() => {
-    // Wait for ConfigProvider to load the network before deciding to
-    // touch any adapter — `network = null` is "unknown", not "non-Stellar".
-    // We still mark this provider as "ready" so its internal loader doesn't
-    // block; the auth-gate in Providers.tsx is what decides what to render.
+    // `network === null` means ConfigProvider hasn't loaded the network yet —
+    // don't touch any adapter; just keep this provider non-blocking. The
+    // auth-gate in Providers.tsx decides what to render.
     if (!network) {
       setStellarReady(true);
       return;
     }
 
-    const wasStellar = wasStellarRef.current;
-    wasStellarRef.current = isStellar;
-
     if (isStellar && !sessionRef.current) {
       sessionRef.current = stellarSession();
-      // Hidratar (restaurar) la cartera guardada
-      sessionRef.current.hidrate().finally(() => {
-        setStellarReady(true);
-      });
+      // Hydrate (restore) the saved wallet.
+      sessionRef.current.hidrate().finally(() => setStellarReady(true));
       return;
     }
 
-    if (!isStellar) {
-      // Only run the disconnect when we are actually transitioning OUT of a
-      // Stellar network. The initial sample (wasStellar === null) means we
-      // just mounted on a non-Stellar route — there's nothing to clean up.
-      if (wasStellar === true) {
-        const active = getActiveAdapter();
-        if (active) {
-          void active.disconnect();
-        }
-        if (sessionRef.current) {
-          void sessionRef.current.logout();
-          sessionRef.current = null;
-        }
-      }
-      setStellarReady(true); // No es Stellar, considerar listo
-    }
-  }, [isStellar, network]);
+    setStellarReady(true);
+  }, [network, isStellar]);
 
-  // Hard reset por foco
-  const resetHardRef = useRef(() => {});
-  resetHardRef.current = () => {
-    reset(true);
-    if (sessionRef.current) {
-      void sessionRef.current.logout();
-    }
-  };
-
+  // Track focus / return-to-tab timestamps used elsewhere for staleness checks.
   useEffect(() => {
     const handleFocus = () => {
-      const timestamp = +(localStorage.getItem(VAQUITA_KEY_TIMESTAMP) ?? 0);
-      if (!!timestamp && timestamp > VAQUITA_TIMESTAMP_VALUE.current) {
-        // Si quieres forzar hard reset al volver de otra pestaña, descomenta:
-        // resetHardRef.current();
-      }
       VAQUITA_TIMESTAMP_VALUE.current = Date.now();
       localStorage.setItem(VAQUITA_KEY_TIMESTAMP, VAQUITA_TIMESTAMP_VALUE.current.toString());
     };
@@ -100,22 +53,7 @@ export function WalletProviderSync() {
     };
   }, []);
 
-  // Placeholder de lógica adicional cuando tengas address+network
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    const run = async () => {
-      try {
-        if (!userWalletAddress) return;
-        setLoading(true);
-        // ... tu lógica de post-conexión ...
-      } finally {
-        setLoading(false);
-      }
-    };
-    void run();
-  }, [userWalletAddress, network?.networkName, reset]);
-
-  if (!stellarReady || loading) {
+  if (!stellarReady) {
     return (
       <LoaderScreen withImage>
         <></>

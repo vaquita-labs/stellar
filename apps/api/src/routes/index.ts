@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import ablyRoutes from './ably/route';
 import achievementsRoutes from './achievements/route';
 import adminRoutes from './admin/route';
 import badgeRoutes from './badge/route';
@@ -11,6 +12,7 @@ import userRoutes from './user/route';
 
 const router = Router();
 
+router.use('/ably', ablyRoutes);
 router.use('/achievements', achievementsRoutes);
 router.use('/admin', adminRoutes);
 router.use('/badge', badgeRoutes);
