@@ -1,6 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import type { Network, NetworkResponseDTO, Token, TokenNetwork } from '../../types';
-import { toNetwork } from './helpers';
+import type { Network, Token, TokenNetwork } from '../../types';
 
 export const getNetworkById = async (id: number) => {
   const { data, ...rest } = await supabase
@@ -38,36 +37,6 @@ export const getNetworkByName = async (networkName: string) => {
     data: data as Network | null,
     ...rest,
   };
-};
-
-export const getNetworks = async () => {
-  const { data, ...rest } = await supabase
-    .from('networks')
-    .select(`
-      *,
-      tokens_networks (
-        *,
-        tokens (*)
-      )
-    `);
-  return {
-    data: (data || []) as Network[],
-    ...rest,
-  };
-};
-
-export const getNetworksByOrigin = async (origin: string) => {
-  const { data: networks, error } = await getNetworks();
-
-  if (error) {
-    console.error(error);
-    return [] as NetworkResponseDTO[];
-  }
-
-  const filteredNetworks = networks.filter(net =>
-    net.origins?.split(',').map(h => h.trim()).includes(origin),
-  ).sort((a, b) => (a.order || 100) - (b.order || 100));
-  return await Promise.all(filteredNetworks.map(toNetwork));
 };
 
 export const getTokenBySymbol = async (networkSymbol: string) => {
