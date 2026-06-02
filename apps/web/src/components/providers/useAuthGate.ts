@@ -43,9 +43,11 @@ export function useAuthGate() {
 
   useEffect(() => {
     if (showAuthGate) {
-      router.replace('/login');
+      const target =
+        pathname && pathname !== '/login' ? `/login?redirect=${encodeURIComponent(pathname)}` : '/login';
+      router.replace(target);
     }
-  }, [showAuthGate, router]);
+  }, [showAuthGate, router, pathname]);
 
   return { isPublicRoute, showLoader };
 }

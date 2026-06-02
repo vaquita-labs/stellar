@@ -4,7 +4,7 @@ import StellarAuthButtons from '@/components/profile/StellarAuthButtons';
 import { OnboardingIntro } from '@/core-ui/components';
 import { useIsAuthenticated } from '@/core-ui/hooks';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 // Simulación de "mostrar onboarding" vía env var (sin persistencia local).
@@ -15,15 +15,19 @@ const SHOW_ONBOARDING_INTRO = process.env.NEXT_PUBLIC_SHOW_ONBOARDING_INTRO !== 
 export default function LoginPage() {
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Solo estado de sesión: si recargas, vuelve a aparecer (no se persiste).
   const [introDismissed, setIntroDismissed] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/home');
+      // Volver a la ruta de origen (?redirect=) si la hay; solo rutas internas
+      // para evitar open-redirect. Si no, al /home por defecto.
+      const redirect = searchParams.get('redirect');
+      router.replace(redirect && redirect.startsWith('/') ? redirect : '/home');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, searchParams]);
 
   // No mostrar nada mientras se verifica la autenticación o si ya está autenticado
   if (isAuthenticated) {
