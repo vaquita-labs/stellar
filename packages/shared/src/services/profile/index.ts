@@ -132,74 +132,44 @@ export const getCachedProfiles = async () => {
   return profilesCacheRef.current;
 };
 
-export const profilesDepositsByProfileIdCacheRef: { current: { [key: string]: any } } = { current: {} };
-
-async function getProfilesDepositsByProfileId(profileId: number) {
+/**
+ * Current active-deposit sum per wallet, computed on the fly from `deposits`.
+ *
+ * Replaces the precomputed `profiles_deposits` snapshot table (and the deleted
+ * `job-deposits` cron that fed it): instead of reading a stored time series we
+ * sum the live "active" deposits — DEPOSIT_SUCCESS (confirmed on-chain with tx
+ * hash + deposit id) and not yet withdrawn — grouped by wallet in one query.
+ */
+export const getActiveDepositSumsByWallet = async (): Promise<{
+  sums: Map<string, number>;
+  error: unknown;
+}> => {
   try {
-    const row = await prisma.profileDeposit.findFirst({ where: { profileId } });
-    return {
-      error: null,
-      data: row
-        ? {
-            total_active_deposits: row.totalActiveDeposits.map(Number),
-            timestamp: row.timestamp,
-          }
-        : null,
-    };
+    const deposits = await prisma.deposit.findMany({
+      where: { deletedAt: null, status: DepositStatus.CONFIRMED },
+      select: {
+        walletAddress: true,
+        amount: true,
+        transactionHash: true,
+        depositIdHex: true,
+        withdrawals: { select: { id: true } },
+      },
+    });
+
+    const sums = new Map<string, number>();
+    for (const d of deposits) {
+      if (!d.transactionHash || !d.depositIdHex || d.withdrawals.length > 0) {
+        continue;
+      }
+      sums.set(d.walletAddress, (sums.get(d.walletAddress) ?? 0) + Number(d.amount ?? 0));
+    }
+
+    return { sums, error: null };
   } catch (error) {
-    console.error('Error on getProfilesDepositsByProfileId', { profileId }, error);
-    return { error, data: null };
+    console.error('Error on getActiveDepositSumsByWallet', error);
+    return { sums: new Map<string, number>(), error };
   }
-}
-
-export async function getCachedProfilesDepositsByProfileId(profileId: number) {
-  // const cachedData = profilesDepositsByProfileIdCacheRef.current[profileId];
-  // if (cachedData) {
-  //   return cachedData;
-  // }
-
-  const data = await getProfilesDepositsByProfileId(profileId);
-  profilesDepositsByProfileIdCacheRef.current[profileId] = data;
-
-  return data;
-}
-
-export async function createProfilesDepositsByProfileId(profileId: number) {
-  const { error, ...rest } = await supabase
-    .from('profiles_deposits')
-    .insert({
-      total_active_deposits: [],
-      total_active_deposits_count: 0,
-      profile_id: profileId,
-    })
-    .select()
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error on createProfilesDepositsByProfileId', error);
-  }
-
-  return {
-    error,
-    ...rest,
-  };
-}
-
-export async function profileIncrement(profileId: number, totalActiveDeposits: number[], totalActiveDepositsCount: number, timestamp: number) {
-  const { error } = await supabase
-    .from('profiles_deposits')
-    .update({
-      total_active_deposits: totalActiveDeposits,
-      total_active_deposits_count: totalActiveDepositsCount,
-      timestamp: new Date(timestamp),
-    })
-    .eq('profile_id', profileId)
-    .select();
-
-  if (error) {
-    console.error('Error on profileIncrement', error);
-  }
-}
+};
 
 export const getRewardByKey = async (rewardKey: Reward) => {
   try {

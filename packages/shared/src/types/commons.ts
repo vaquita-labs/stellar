@@ -187,6 +187,10 @@ export interface ProfileAverageResponseDTO {
   fullName: string;
   nickname: string;
   walletAddress: string;
+  // Current active-deposit balance for the wallet, computed on the fly from the
+  // `deposits` table. `totalSums === lastSum` and `count === 1` now — the old
+  // 30-day snapshot series (profiles_deposits) was removed. Kept on the DTO so
+  // the leaderboard's `totalSums / count` ranking keeps working unchanged.
   totalSums: number;
   lastSum: number;
   count: number;
