@@ -1,3 +1,3 @@
+export * from './auth';
 export * from './Navigation';
-export * from './profile';
 export * from './providers';

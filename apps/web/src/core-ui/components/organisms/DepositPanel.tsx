@@ -1,6 +1,5 @@
 'use client';
 
-import { isEvmTypeNetwork } from '@/networks/evm';
 import { isStellarNetwork } from '@/networks/stellar';
 import { Button as HeroButton } from '@heroui/react';
 import { useState } from 'react';
@@ -43,9 +42,6 @@ export function DepositPanel() {
           onPress={() => {
             if (!walletAddress) {
               trackUserAction('deposit_attempted_no_wallet');
-              if (network?.name && isEvmTypeNetwork(network.name)) {
-                console.error('Not wallet found when user attempt to deposit');
-              }
             } else {
               trackUserAction('deposit_modal_opened', {
                 token: token?.symbol || null,

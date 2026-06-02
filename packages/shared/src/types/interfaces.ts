@@ -17,9 +17,6 @@ export interface TokenNetwork {
   defindex_vault_contract_address?: string,
   token_decimals: number,
   lock_period: string,
-  aave_pool_contract_address: string,
-  aave_token_symbol: string,
-  aave_token_contract_address: string,
 }
 
 export interface Network {

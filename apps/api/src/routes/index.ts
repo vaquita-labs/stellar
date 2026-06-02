@@ -5,7 +5,7 @@ import badgeRoutes from './badge/route';
 import claimRoutes from './claim/route';
 import configRoutes from './config/route';
 import depositRoutes from './deposit/route';
-import networkRoutes from './network/route';
+import leaderboardRoutes from './leaderboard/route';
 import profileRoutes from './profile/route';
 import userRoutes from './user/route';
 
@@ -18,7 +18,7 @@ router.use('/claim', claimRoutes);
 router.use('/config', configRoutes);
 router.use('/profile', profileRoutes);
 router.use('/deposit', depositRoutes);
-router.use('/network', networkRoutes);
+router.use('/leaderboard', leaderboardRoutes);
 router.use('/user', userRoutes);
 
 export default router;
