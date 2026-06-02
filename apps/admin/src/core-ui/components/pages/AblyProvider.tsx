@@ -1,25 +1,38 @@
 'use client';
 
 import * as Ably from 'ably';
-import {
-  AblyProvider as Provider,
-  ChannelProvider,
-  useChannel,
-  useConnectionStateListener,
-} from 'ably/react';
+import { AblyProvider as Provider, ChannelProvider, useChannel, useConnectionStateListener } from 'ably/react';
 import { ReactNode, useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { clientEnv } from '../../config/clientEnv';
 
-const realtimeClient = new Ably.Realtime({
-  key: clientEnv.NEXT_PUBLIC_ABLY_KEY,
-});
+let client: Ably.Realtime | null = null;
+
+/**
+ * Lazily creates a single Ably Realtime client using token auth against the
+ * admin-scoped endpoint (`GET /api/v1/ably/admin-token`, gated by the admin
+ * secret). The Ably API key stays on the server; created lazily so importing
+ * this module never opens a realtime connection (and never runs under SSR).
+ */
+function getAblyClient(): Ably.Realtime {
+  if (!client) {
+    client = new Ably.Realtime({
+      authUrl: `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/ably/admin-token`,
+      authMethod: 'GET',
+      ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET
+        ? { authHeaders: { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } }
+        : {}),
+    });
+  }
+  return client;
+}
 
 const idRef = { current: v4() };
 
 export const AblyProvider = ({ children }: { children: ReactNode }) => {
+  const [ably] = useState(getAblyClient);
   return (
-    <Provider client={realtimeClient}>
+    <Provider client={ably}>
       <ChannelProvider channelName="register-customer">
         <RegisterUser />
       </ChannelProvider>
@@ -28,12 +41,10 @@ export const AblyProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const logChannel = realtimeClient.channels.get('logs');
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function sendLogToAbly(level: 'log' | 'info' | 'error' | 'warn', args: any[]) {
-  if (!logChannel) return;
   try {
+    const logChannel = getAblyClient().channels.get('logs');
     const message = {
       sessionId: idRef.current,
       level,
@@ -48,6 +59,7 @@ export async function sendLogToAbly(level: 'log' | 'info' | 'error' | 'warn', ar
       timestamp: new Date().toISOString(),
     };
     await logChannel.publish(level, message);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (e) {}
 }
 
