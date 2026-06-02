@@ -6,6 +6,7 @@ export * from './GlobalLoader';
 export * from './LoaderScreen';
 export * from './WithHydrated';
 export * from './ConfigProvider';
+export * from './ProfileDataProvider';
 export * from './toast';
 export * from './ConfirmDialog';
 export * from './AppModal';
