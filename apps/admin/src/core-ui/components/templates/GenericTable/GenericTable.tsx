@@ -16,7 +16,6 @@ import Papa from 'papaparse';
 import { useEffect, useMemo, useState } from 'react';
 import { IoMdCheckmarkCircleOutline } from 'react-icons/io';
 import { truncateMiddle } from '../../../helpers';
-import { useNetworkConfigStore } from '../../../stores';
 import { GenericTableProps } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,7 +29,6 @@ const getValue = (value: any) => {
 };
 
 export function GenericTable({ rows, refetch, children }: GenericTableProps) {
-  const { network } = useNetworkConfigStore();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedValue, setExpandedValue] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<{ key: string; value: string } | null>(null);
@@ -85,7 +83,7 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
 
   useEffect(() => {
     void refetch();
-  }, [filters, network?.name, refetch]);
+  }, [filters, refetch]);
 
   const activeFiltersSummary = Object.entries(filters)
     .filter(([, value]) => value)

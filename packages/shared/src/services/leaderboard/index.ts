@@ -81,7 +81,9 @@ export interface LeaderboardRow {
  */
 export async function getLeaderboard(
   cycleId: number,
-  networkId: number,
+  // Single-network now: network_id was dropped. Param kept optional + ignored for
+  // back-compat with existing callers.
+  _networkId?: number,
 ): Promise<LeaderboardRow[]> {
   const { cycleStart, cycleEnd: rawEnd } = cycleIdToBoundaries(cycleId);
   const now = Date.now();
@@ -91,7 +93,6 @@ export async function getLeaderboard(
   const { data: deposits, error } = await supabase
     .from('deposits')
     .select('wallet_address, amount, updated_at, withdrawals(updated_at, status, reward)')
-    .eq('network_id', networkId)
     .eq('status', 'confirmed')
     .lt('updated_at', new Date(cycleEnd).toISOString())
     .not('updated_at', 'is', null);
@@ -169,13 +170,11 @@ interface TiebreakerData {
 
 async function getTiebreakerData(
   walletAddress: string,
-  networkId: number,
 ): Promise<TiebreakerData> {
   const { data, error } = await supabase
     .from('deposits')
     .select('updated_at, withdrawals(status, reward)')
     .eq('wallet_address', walletAddress)
-    .eq('network_id', networkId)
     .eq('status', 'confirmed')
     .order('updated_at', { ascending: true });
 
@@ -209,15 +208,16 @@ async function getTiebreakerData(
 export async function getLeaderboardRankForWallet(
   walletAddress: string,
   cycleId: number,
-  networkId: number,
+  // Single-network now: kept optional + ignored for back-compat.
+  _networkId?: number,
 ): Promise<number | null> {
-  const rows = await getLeaderboard(cycleId, networkId);
+  const rows = await getLeaderboard(cycleId);
   const candidates = rows.slice(0, 15);
 
   const tiebreakerMap = new Map<string, TiebreakerData>();
   await Promise.all(
     candidates.map(async (r) => {
-      tiebreakerMap.set(r.walletAddress, await getTiebreakerData(r.walletAddress, networkId));
+      tiebreakerMap.set(r.walletAddress, await getTiebreakerData(r.walletAddress));
     }),
   );
 

@@ -1,42 +1,32 @@
 import { Router } from 'express';
-import { sendError, sendSuccess, supabase } from '@vaquita/shared';
+import { getProjectConfig, sendError, sendSuccess } from '@vaquita/shared';
 
 const router = Router();
 
+// ---------------------------------------------------------------------------
+// GET /api/v1/config
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the single project configuration (name, type, networkPassphrase,
+ * badgesContractAddress, tokens[]). Single-network: there is exactly one config.
+ *
+ * 200 { name, type, networkPassphrase, badgesContractAddress?, tokens: [...] }
+ * 404 config not found (project_config table empty)
+ */
 router.get('/', async (req, res) => {
-  const networkName = 'Base';
-  req.log.info({ networkName }, 'GET /config (default)');
+  req.log.info('GET /config');
 
-  const { data, error } = await supabase
-    .from('tenant_config')
-    .select('*')
-    .eq('network_name', networkName)
-    .maybeSingle();
-
-  if (error) {
-    req.log.error({ err: error, networkName }, 'Failed to fetch tenant_config');
-    return sendError(res, error.message, error, 500);
+  try {
+    const config = await getProjectConfig();
+    if (!config) {
+      return sendError(res, 'project config not found', null, 404);
+    }
+    return sendSuccess(res, config, '');
+  } catch (err: any) {
+    req.log.error({ err }, 'Failed to fetch project config');
+    return sendError(res, err?.message ?? 'Failed to fetch project config', err, 500);
   }
-
-  return sendSuccess(res, data, '');
-});
-
-router.get('/:networkName', async (req, res) => {
-  const { networkName } = req.params;
-  req.log.info({ networkName }, 'GET /config/:networkName');
-
-  const { data, error } = await supabase
-    .from('tenant_config')
-    .select('*')
-    .eq('network_name', networkName)
-    .maybeSingle();
-
-  if (error) {
-    req.log.error({ err: error, networkName }, 'Failed to fetch tenant_config');
-    return sendError(res, error.message, error, 500);
-  }
-
-  return sendSuccess(res, data, '');
 });
 
 export default router;

@@ -18,6 +18,7 @@ export * from './services/stellar';
 export * from './services/contracts';
 export * from './services/network';
 export * from './services/network/helpers';
+export * from './services/project-config';
 export * from './services/deposit';
 export * from './services/deposit/helpers';
 export * from './services/profile';

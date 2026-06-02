@@ -19,12 +19,6 @@ importers:
       '@heroui/styles':
         specifier: ^3.1.0
         version: 3.1.0(tailwind-merge@3.4.0)(tailwindcss@4.3.0)
-      '@react-three/drei':
-        specifier: ^10.7.7
-        version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.184.0))(@types/react@19.2.16)(@types/three@0.184.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.184.0)
-      '@react-three/fiber':
-        specifier: ^9.6.1
-        version: 9.6.1(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.184.0)
       '@tailwindcss/postcss':
         specifier: ^4.3.0
         version: 4.3.0
@@ -37,15 +31,15 @@ importers:
       '@types/papaparse':
         specifier: ^5.5.2
         version: 5.5.2
+      '@vaquita/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       ably:
         specifier: ^2.21.0
         version: 2.21.0(bufferutil@4.1.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(utf-8-validate@6.0.6)
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
-      framer-motion:
-        specifier: ^12.40.0
-        version: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next:
         specifier: ^16.2.7
         version: 16.2.7(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -64,9 +58,6 @@ importers:
       react-resize-detector:
         specifier: ^12.3.0
         version: 12.3.0(react@19.2.7)
-      three:
-        specifier: ^0.184.0
-        version: 0.184.0
       uuid:
         specifier: ^14.0.0
         version: 14.0.0
@@ -89,9 +80,6 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.3(@types/react@19.2.16)
-      '@types/three':
-        specifier: ^0.184.1
-        version: 0.184.1
       eslint:
         specifier: ^10.4.1
         version: 10.4.1(jiti@2.7.0)
@@ -355,6 +343,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.106.2
         version: 2.106.2
+      '@vaquita/db':
+        specifier: workspace:*
+        version: link:../db
       ably:
         specifier: ^2.21.0
         version: 2.21.0(bufferutil@4.1.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(utf-8-validate@6.0.6)

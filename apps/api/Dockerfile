@@ -30,7 +30,7 @@ WORKDIR /repo
 
 ENV NODE_ENV=production
 ENV WEBHOOK_SOURCE=apps/api
-ENV PORT=3000
+ENV PORT=3100
 ARG DEPLOY_ID
 ENV DEPLOY_ID=$DEPLOY_ID
 
@@ -46,6 +46,6 @@ COPY --chown=apiuser:nodejs notify.sh ./notify.sh
 
 USER apiuser
 
-EXPOSE 3000
+EXPOSE 3100
 
 CMD ["sh", "-c", "./notify.sh RUNTIME-PING true && exec pnpm --filter @vaquita/api start"]

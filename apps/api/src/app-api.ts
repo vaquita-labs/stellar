@@ -70,7 +70,7 @@ process.on('unhandledRejection', (reason) => {
   logger.fatal({ reason }, 'unhandledRejection');
 });
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 3100;
 
 app.listen(PORT, () => {
   logger.info({ port: PORT, env: process.env.NODE_ENV ?? 'development' }, 'API listening');

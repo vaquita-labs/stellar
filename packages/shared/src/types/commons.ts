@@ -49,6 +49,32 @@ export interface NetworkResponseDTO {
   }[];
 }
 
+export interface ProjectConfigTokenDTO {
+  isGas: boolean;
+  isNative: boolean;
+  isSupported: boolean;
+  symbol: string;
+  name: string;
+  decimals: number;
+  lockPeriods: number[];
+  contractAddress: string;
+  contractAbi: Abi;
+  vaquitaContractAddress: string;
+  vaquitaContractAbi: Abi;
+}
+
+/**
+ * Single-network project configuration (replaces the per-network NetworkResponseDTO).
+ * `chainId` (EVM leftover) is replaced by `networkPassphrase` (Stellar).
+ */
+export interface ProjectConfigResponseDTO {
+  name: string;
+  type: string;
+  networkPassphrase: string | null;
+  badgesContractAddress?: string;
+  tokens: ProjectConfigTokenDTO[];
+}
+
 export interface DepositSummaryResponseDTO {
   id: number;
   state: DepositWithdrawalState;
