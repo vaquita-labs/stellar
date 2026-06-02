@@ -6,7 +6,6 @@ import { useConfigStore } from '@/core-ui/stores';
 import { isStellarNetwork } from '@/networks/stellar';
 import { stellarSession } from '@/networks/stellar/stellar';
 import { getActiveAdapter } from '@/networks/stellar/wallet/registry';
-import { usePrivyStore } from '@/stores';
 import React, { useEffect, useRef, useState } from 'react';
 
 /**
@@ -15,7 +14,6 @@ import React, { useEffect, useRef, useState } from 'react';
  */
 export function WalletProviderSync() {
   const { walletAddress: userWalletAddress, network, reset } = useConfigStore();
-  const setPrivyData = usePrivyStore((s) => s.setPrivyData);
 
   // Estado para Stellar Wallet Kit
   const [stellarReady, setStellarReady] = useState(false);
@@ -74,27 +72,6 @@ export function WalletProviderSync() {
       setStellarReady(true); // No es Stellar, considerar listo
     }
   }, [isStellar, network]);
-
-  // Sincronizar address desde Stellar Wallet Kit
-  useEffect(() => {
-    if (!isStellar) return;
-
-    // La dirección de Stellar ya está sincronizada por stellarSession
-    // Solo actualizamos el store de compatibilidad
-    const stellarAddress = userWalletAddress || '';
-
-    setPrivyData({
-      ready: stellarReady,
-      authenticated: !!stellarAddress,
-      logout: async () => {
-        if (sessionRef.current) {
-          await sessionRef.current.logout();
-        }
-      },
-      userInfo: null,
-      address: stellarAddress,
-    });
-  }, [isStellar, userWalletAddress, stellarReady, setPrivyData]);
 
   // Hard reset por foco
   const resetHardRef = useRef(() => {});

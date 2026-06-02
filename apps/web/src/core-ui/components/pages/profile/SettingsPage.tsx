@@ -1,6 +1,5 @@
 'use client';
 
-import { logoutAll } from '@/helpers';
 import { Switch } from '@heroui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,7 +16,7 @@ import {
   FiSliders,
   FiUserPlus,
 } from 'react-icons/fi';
-import { useProfileData } from '../../../hooks';
+import { useLogout, useProfileData } from '../../../hooks';
 import { usePrivacyStore, useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { ConfirmDialog } from '../../molecules';
@@ -162,6 +161,7 @@ const formatDate = (iso: string) => {
 
 export function SettingsPage() {
   const router = useRouter();
+  const logout = useLogout();
   const { reset } = useConfigStore();
   const { isLoading, isRefetching } = useProfileData();
   const loading = isLoading || isRefetching;
@@ -174,7 +174,7 @@ export function SettingsPage() {
     if (isDisconnecting) return;
     setIsDisconnecting(true);
     try {
-      await logoutAll();
+      await logout();
       reset?.(true);
     } catch (error) {
       console.error('Failed to disconnect wallet', error);
