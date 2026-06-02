@@ -6,10 +6,14 @@ import { isDummyNetwork } from '@/networks/dummy';
 import { dummyTransactions } from '@/networks/dummy/dummyTransactions';
 import { useEffect } from 'react';
 
+// TODO(single-network): admin is Stellar-only now, so this no longer comes from the
+// token resolved via /api/v1/network. Hardcoded for now — move to project-config
+// when the backend exposes it.
+const VAQUITA_CONTRACT_ADDRESS = '';
+
 export function TransactionsProvider() {
   const { setTransactions } = useTransactionStore();
-  const { walletAddress, setWalletAddress, reset, network, token } = useNetworkConfigStore();
-  const networkName = network?.name ?? '';
+  const { walletAddress, setWalletAddress, reset } = useNetworkConfigStore();
   useEffect(() => {
     (async () => {
       try {
@@ -59,7 +63,7 @@ export function TransactionsProvider() {
             const { success, txHash, transaction, explorer, error } = (await transactions?.transactionWithdraw?.(
               id,
               depositIdHex,
-              token?.vaquitaContractAddress || '',
+              VAQUITA_CONTRACT_ADDRESS,
               log
             )) || { success: false, txHash: '', transaction: null, error: null };
             if (success && !!txHash && !!transaction && !error) {
@@ -87,7 +91,7 @@ export function TransactionsProvider() {
         reset();
       }
     })();
-  }, [walletAddress, networkName, reset, setWalletAddress, setTransactions, token, network]);
+  }, [walletAddress, reset, setWalletAddress, setTransactions]);
 
   return null;
 }
