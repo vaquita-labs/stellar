@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getBalances, getNetworksByOrigin, sendError, sendSuccess } from '@vaquita/shared';
+import { getBalances, getProjectConfig, sendError, sendSuccess } from '@vaquita/shared';
 
 const router = Router();
 
@@ -8,8 +8,9 @@ router.get('/balance/wallet/:wallet_address', async (req, res) => {
   req.log.info({ walletAddress }, 'GET /user/balance/wallet/:wallet_address');
 
   try {
-    const networks = await getNetworksByOrigin(req.get('origin') || '');
-    const balances = await getBalances(walletAddress, networks);
+    // Single-network: origin-based filtering was dropped — there is one config.
+    const config = await getProjectConfig();
+    const balances = await getBalances(walletAddress, config);
     return sendSuccess(res, { balances, wallet: { walletAddress } }, '');
   } catch (err) {
     req.log.error({ err, walletAddress }, 'Failed to fetch wallet balance');
