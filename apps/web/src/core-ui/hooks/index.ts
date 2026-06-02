@@ -16,6 +16,7 @@ export * from './useProfilesByAverageDepositsData';
 export * from './useRestDeposit';
 export * from './useIsPoolPaused';
 export * from './useRestWithdrawal';
+export * from './useTransactions';
 export * from './useUsers';
 export * from './useVaquitaMood';
 export * from './useWithdrawalTime';

@@ -6,7 +6,6 @@ import { Toast } from '@heroui/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useEffect } from 'react';
 import { useResizeDetector } from 'react-resize-detector';
-import { TransactionsProvider } from './TransactionsProvider';
 
 export const queryClient = new QueryClient();
 
@@ -39,7 +38,6 @@ export function Providers({ children }: { children: ReactNode }) {
         <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
           <Main>{children}</Main>
         </div>
-        <TransactionsProvider />
       </QueryClientProvider>
     </AblyProvider>
   );

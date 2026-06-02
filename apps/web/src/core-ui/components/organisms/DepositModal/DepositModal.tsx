@@ -14,8 +14,8 @@ import {
 import { useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { formatTimeDeposit, getBalance, getQuickAmounts, truncateDecimals } from '../../../helpers';
-import { useAnalytics, useBalance, useRestDeposit } from '../../../hooks';
-import { useConfigStore, useTransactionStore } from '../../../stores';
+import { useAnalytics, useBalance, useRestDeposit, useTransactions } from '../../../hooks';
+import { useConfigStore } from '../../../stores';
 import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
@@ -28,7 +28,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
   const [amount, setAmount] = useState<string>('');
   const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useConfigStore();
   const { createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
-  const { transactionDeposit } = useTransactionStore();
+  const { transactionDeposit } = useTransactions();
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
   const lockTimeOptions =
     token?.lockPeriods.map((lockPeriod) => ({

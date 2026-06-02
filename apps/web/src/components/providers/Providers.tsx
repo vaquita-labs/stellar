@@ -12,7 +12,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ChannelProvider } from 'ably/react';
 import { ReactNode, useState } from 'react';
 import { AppShell } from './AppShell';
-import { TransactionsProvider } from './TransactionsProvider';
 import { useAuthGate } from './useAuthGate';
 import { useConsoleToAbly } from './useConsoleToAbly';
 import { useViewportVh } from './useViewportVh';
@@ -56,7 +55,6 @@ export function Providers({ children }: { children: ReactNode }) {
               {children}
             </AppShell>
           </ChannelProvider>
-          <TransactionsProvider />
         </AblyProvider>
       </PollarProvider>
     </QueryClientProvider>
