@@ -20,34 +20,6 @@ import {
 import { getTokenNetworkByNetworkIdTokenId } from '../network';
 import { toDepositSummaryResponseDTO } from './helpers';
 
-export const listenDepositsChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:deposits`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal deposits:', status);
-    });
-};
-
-export const listenWithdrawalsChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:withdrawals`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal withdrawals:', status);
-    });
-};
-
 const broadcastDepositsChange = async (message: string) => {
   const channel = ably.channels.get('deposits-changes');
   console.info('broadcastDepositsChange:', message);
