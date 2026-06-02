@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { FiShare2, FiX } from 'react-icons/fi';
 import { useClaimedAchievements, useIsMobile, useMintBadge, useMintedBadges, useProfileRewards } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 
 /**
  * Mocked username used to personalize the share link. Replace with a real
@@ -95,8 +95,8 @@ export function AchievementModal({
   const { isClaimed, claim } = useClaimedAchievements();
   const { isMinted } = useMintedBadges();
   const mintBadgeMutation = useMintBadge();
-  const { network, walletAddress } = useNetworkConfigStore();
-  const networkName = network?.name ?? '';
+  const { network, walletAddress } = useConfigStore();
+  const networkName = network?.networkName ?? '';
   const baseUrl = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
   const { data: rewardsData } = useProfileRewards();
   // Drives whether we render the full-screen bottom-sheet (phone-sized) or

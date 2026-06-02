@@ -1,15 +1,15 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import type { ProfileAchievementsResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
 export const useProfileAchievements = () => {
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
   return useQuery<ProfileAchievementsResponseDTO>({
-    queryKey: ['profile', network?.name, walletAddress, 'profile-achievements'],
+    queryKey: ['profile', network?.networkName, walletAddress, 'profile-achievements'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.name}/wallet/${walletAddress}/achievements`,
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.networkName}/wallet/${walletAddress}/achievements`,
       );
       const data = await response.json();
 
@@ -21,6 +21,6 @@ export const useProfileAchievements = () => {
 
       return dto;
     },
-    enabled: !!network?.name && !!walletAddress,
+    enabled: !!network?.networkName && !!walletAddress,
   });
 };

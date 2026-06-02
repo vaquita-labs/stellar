@@ -9,7 +9,7 @@ import {
   useProfilesByAverageDepositsData,
   useProfileStreak,
 } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
 import { ShareProfileQrButton } from '../profile/ShareProfileQrButton';
 import {
@@ -135,7 +135,7 @@ function LeaderboardFeed({ rows }: { rows: LeaderboardCardData[] }) {
 /* ------------------------------------------------------------------ */
 
 function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardCardData[] {
-  const { walletAddress: currentUserWallet } = useNetworkConfigStore();
+  const { walletAddress: currentUserWallet } = useConfigStore();
   // Real stats for the current user only — every other row falls back to
   // the deterministic placeholder until the API ships per-user XP/streak.
   const { data: streakData } = useProfileStreak();
@@ -179,7 +179,7 @@ function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardC
 /* ------------------------------------------------------------------ */
 
 function useCurrentUserIdentity() {
-  const { walletAddress } = useNetworkConfigStore();
+  const { walletAddress } = useConfigStore();
   const { data: profileData } = useProfileData();
 
   const displayName = useMemo(() => {

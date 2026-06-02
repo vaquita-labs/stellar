@@ -1,14 +1,14 @@
 import { BankAPYModal } from '@/core-ui/components';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { useDepositsComplete } from '@/core-ui/hooks';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { Button, Spinner } from '@heroui/react';
 import Image from 'next/image';
 import React, { useState } from 'react';
 
 export const TotalDepositsButton = () => {
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
-  const { walletAddress, token } = useNetworkConfigStore();
+  const { walletAddress, token } = useConfigStore();
 
   const { data, isLoading, isRefetching } = useDepositsComplete(walletAddress);
   const { activeDepositsTotalAmount } = getDepositsData(data?.deposits ?? []);

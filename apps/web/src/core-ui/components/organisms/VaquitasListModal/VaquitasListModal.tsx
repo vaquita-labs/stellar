@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { formatTimeDeposit } from '../../../helpers';
 import { useDepositsComplete } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { DepositSummaryResponseDTO } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
 import { VaquitaModal } from '../VaquitaModal';
@@ -28,7 +28,7 @@ const formatDate = (timestamp: number) => {
 };
 
 export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps) {
-  const { walletAddress } = useNetworkConfigStore();
+  const { walletAddress } = useConfigStore();
   const { data: depositsData, isLoading } = useDepositsComplete(walletAddress);
   const [selectedVaquita, setSelectedVaquita] = useState<DepositSummaryResponseDTO | null>(null);
 

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import React, { ReactNode, useState } from 'react';
 import { FiCheck, FiCopy, FiDollarSign, FiDownload, FiEye, FiSend, FiShield } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
 
 const LogoByType: Record<string, ReactNode> = {
@@ -14,7 +14,7 @@ const LogoByType: Record<string, ReactNode> = {
 };
 
 export function WalletPage() {
-  const { walletAddress, network } = useNetworkConfigStore();
+  const { walletAddress, network } = useConfigStore();
   const { openDistributionRulesModal, openWalletBalanceModal } = usePollar();
   const [copied, setCopied] = useState(false);
 
@@ -38,7 +38,7 @@ export function WalletPage() {
           <div className="flex items-center gap-2">
             {networkLogo}
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-              {network?.name ?? 'Network'}
+              {network?.networkName ?? 'Network'}
             </p>
           </div>
 

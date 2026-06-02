@@ -1,6 +1,6 @@
 import { getIsPoolPaused } from '@/networks/stellar/poolQueries';
 import { useQuery } from '@tanstack/react-query';
-import { useNetworkConfigStore } from '../stores';
+import { useConfigStore } from '../stores';
 
 const POLL_INTERVAL_MS = 60_000; // re-check every 60 s
 
@@ -10,7 +10,7 @@ const POLL_INTERVAL_MS = 60_000; // re-check every 60 s
  * Only queries when `token.vaquitaContractAddress` is available.
  */
 export function useIsPoolPaused(): { isPaused: boolean; isLoading: boolean } {
-  const { token } = useNetworkConfigStore();
+  const { token } = useConfigStore();
   const contractId = token?.vaquitaContractAddress ?? '';
 
   const { data, isLoading } = useQuery({

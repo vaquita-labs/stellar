@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { formatTimeDeposit, getBalance, getQuickAmounts, truncateDecimals } from '../../../helpers';
 import { useAnalytics, useBalance, useRestDeposit } from '../../../hooks';
-import { useNetworkConfigStore, useTransactionStore } from '../../../stores';
+import { useConfigStore, useTransactionStore } from '../../../stores';
 import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
@@ -26,12 +26,12 @@ import { DepositModalProps } from './types';
 export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing }: DepositModalProps) {
   const [mounted, setMounted] = useState(false);
   const [amount, setAmount] = useState<string>('');
-  const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useNetworkConfigStore();
+  const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useConfigStore();
   const { createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactionStore();
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
   const lockTimeOptions =
-    token?.lockPeriod.map((lockPeriod) => ({
+    token?.lockPeriods.map((lockPeriod) => ({
       key: lockPeriod,
       label: formatTimeDeposit(lockPeriod),
       available: lockPeriod >= 0,
@@ -68,11 +68,11 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
         amount,
         token: token?.symbol,
         lockPeriod,
-        network: network?.name,
+        network: network?.networkName,
       });
 
       let isSuccess = false;
-      if (isNewDepositHandled(network?.name)) {
+      if (isNewDepositHandled(network?.networkName)) {
         onOpenChange();
         const { success, error } = await transactionDeposit(0, amount, lockPeriod);
         isSuccess = !!success;
@@ -121,7 +121,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           amount,
           token: token?.symbol,
           lockPeriod,
-          network: network?.name,
+          network: network?.networkName,
         });
         toast.success(<T>Deposit sent successfully</T>, {
           description: <T>If you see a vaquita blinking, it is your deposit that is still being confirmed.</T>,
@@ -134,7 +134,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           amount,
           token: token?.symbol,
           lockPeriod,
-          network: network?.name,
+          network: network?.networkName,
         });
         const poolMsg = parsePoolErrorMessage(lastError);
         toast.danger(<T>Unsuccessful deposit</T>, {
@@ -171,7 +171,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
       }
     >
           {!!network && !!token && (
-            <TestnetUSDCNotice networkName={network.name} tokenContract={token.contractAddress} />
+            <TestnetUSDCNotice networkName={network.networkName} tokenContract={token.contractAddress} />
           )}
           <Select
             isRequired
