@@ -2,7 +2,7 @@ import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// Server-side admin API for the singleton `project_config` row. Runs in the
+// Server-side admin API for the singleton `config` row. Runs in the
 // Next.js Node server (never the browser) and talks to the same Postgres DB as
 // apps/api via the shared @vaquita/db Prisma client.
 export const runtime = 'nodejs';
@@ -23,6 +23,18 @@ function adminSecretOk(req: NextRequest): boolean {
 
 const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
 
+// The empty shape returned when no config row exists yet. `id` is null so the
+// client can tell "nothing saved" apart from a real row (which always has an id).
+const emptyConfig = {
+  id: null,
+  networkName: '',
+  origins: [] as string[],
+  networkPassphrase: null,
+  badgesContractAddress: null,
+  createdAt: null,
+  updatedAt: null,
+};
+
 // Accept camelCase from the client; map to Prisma's camelCase model fields.
 // Empty strings coming from the form are normalized to null (clears the column).
 const nullableStr = (max: number) =>
@@ -33,23 +45,21 @@ const nullableStr = (max: number) =>
     .transform((v) => (v && v.trim() ? v.trim() : null));
 
 const updateSchema = z.object({
-  name: z.string().min(1).max(50).optional(),
-  layer: nullableStr(20),
-  type: nullableStr(100),
-  smartContractEnv: nullableStr(50),
+  networkName: z.string().min(1).max(50).optional(),
   origins: z.array(z.string().trim().min(1)).optional(),
   networkPassphrase: nullableStr(10_000),
   badgesContractAddress: nullableStr(10_000),
 });
 
-// GET /api/admin/project-config — read the singleton config (or null).
+// GET /api/config — read the singleton config. Returns the empty-values shape
+// (id: null) when the `config` table has no row yet, never null.
 export async function GET(req: NextRequest) {
   if (!adminSecretOk(req)) return forbidden();
   const config = await prisma.projectConfig.findFirst({ orderBy: { id: 'asc' } });
-  return NextResponse.json({ data: { config } });
+  return NextResponse.json({ data: { config: config ?? emptyConfig } });
 }
 
-// PATCH /api/admin/project-config — upsert the singleton. Creates the row if it
+// PATCH /api/config — upsert the singleton. Creates the row if it
 // doesn't exist yet (the table starts empty), otherwise updates the existing one.
 export async function PATCH(req: NextRequest) {
   if (!adminSecretOk(req)) return forbidden();
@@ -64,7 +74,7 @@ export async function PATCH(req: NextRequest) {
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { status: 'error', message: 'Invalid project config payload', details: parsed.error.flatten() },
+      { status: 'error', message: 'Invalid config payload', details: parsed.error.flatten() },
       { status: 400 },
     );
   }
@@ -73,18 +83,15 @@ export async function PATCH(req: NextRequest) {
   const existing = await prisma.projectConfig.findFirst({ orderBy: { id: 'asc' } });
 
   if (!existing) {
-    if (!data.name) {
+    if (!data.networkName) {
       return NextResponse.json(
-        { status: 'error', message: 'name is required to create the project config' },
+        { status: 'error', message: 'networkName is required to create the config' },
         { status: 400 },
       );
     }
     const config = await prisma.projectConfig.create({
       data: {
-        name: data.name,
-        layer: data.layer ?? null,
-        type: data.type ?? null,
-        smartContractEnv: data.smartContractEnv ?? null,
+        networkName: data.networkName,
         origins: data.origins ?? [],
         networkPassphrase: data.networkPassphrase ?? null,
         badgesContractAddress: data.badgesContractAddress ?? null,
@@ -95,17 +102,14 @@ export async function PATCH(req: NextRequest) {
 
   const config = await prisma.projectConfig.update({
     where: { id: existing.id },
-    // Only write keys the client actually sent.
+    // networkName / origins are truly optional (only written when sent). The two
+    // nullableStr fields always resolve to string|null (never undefined), so the
+    // form's full-payload saves write them every time — clearing on blank input.
     data: {
-      ...(data.name !== undefined ? { name: data.name } : {}),
-      ...(data.layer !== undefined ? { layer: data.layer } : {}),
-      ...(data.type !== undefined ? { type: data.type } : {}),
-      ...(data.smartContractEnv !== undefined ? { smartContractEnv: data.smartContractEnv } : {}),
+      ...(data.networkName !== undefined ? { networkName: data.networkName } : {}),
       ...(data.origins !== undefined ? { origins: data.origins } : {}),
-      ...(data.networkPassphrase !== undefined ? { networkPassphrase: data.networkPassphrase } : {}),
-      ...(data.badgesContractAddress !== undefined
-        ? { badgesContractAddress: data.badgesContractAddress }
-        : {}),
+      networkPassphrase: data.networkPassphrase,
+      badgesContractAddress: data.badgesContractAddress,
     },
   });
   return NextResponse.json({ data: { config } });

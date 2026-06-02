@@ -3,7 +3,7 @@
 // SOURCE OF TRUTH: the SQL migrations in apps/supabase/migrations.
 //
 // ⚠️ DESIGN DRAFT: this schema is intentionally AHEAD of the live DB. It encodes the
-// target design (single-network refactor, project_config table, soft-delete columns,
+// target design (single-network refactor, config table, soft-delete columns,
 // camelCase↔snake_case mapping). The matching SQL migrations are to be written in a
 // later step. Until then:
 //   - DO NOT run `prisma db pull` — it would revert this design to the current DB.
@@ -120,10 +120,7 @@ model MapObject {
 /// multiple networks.
 model ProjectConfig {
   id                    Int      @id @default(autoincrement())
-  name                  String   @db.VarChar(50)
-  layer                 String?  @db.VarChar(20)
-  type                  String?  @db.VarChar(100)
-  smartContractEnv      String?  @map("smart_contract_env") @db.VarChar(50)
+  networkName           String   @map("network_name") @db.VarChar(50)
   origins               String[] @default([])
   // Stellar identifies the network by its passphrase (text), not a numeric chain id.
   networkPassphrase     String?  @map("network_passphrase")
@@ -131,7 +128,7 @@ model ProjectConfig {
   createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@map("project_config")
+  @@map("config")
 }
 
 model Profile {

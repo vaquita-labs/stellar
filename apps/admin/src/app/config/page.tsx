@@ -1,40 +1,27 @@
 'use client';
 
+import { BackToAdmin } from '@/components';
 import { addDangerToast, addSuccessToast } from '@/core-ui/components';
-import {
-  type ProjectConfig,
-  type ProjectConfigPayload,
-  updateProjectConfig,
-  useProjectConfig,
-} from '@/core-ui/hooks';
+import { type ProjectConfig, type ProjectConfigPayload, updateProjectConfig, useProjectConfig } from '@/core-ui/hooks';
 import { Button, Spinner } from '@heroui/react';
 import { useState } from 'react';
 
 type FormState = {
-  name: string;
-  layer: string;
-  type: string;
-  smartContractEnv: string;
+  networkName: string;
   origins: string;
   networkPassphrase: string;
   badgesContractAddress: string;
 };
 
 const emptyForm = (): FormState => ({
-  name: '',
-  layer: '',
-  type: '',
-  smartContractEnv: '',
+  networkName: '',
   origins: '',
   networkPassphrase: '',
   badgesContractAddress: '',
 });
 
 const formFromConfig = (c: ProjectConfig): FormState => ({
-  name: c.name ?? '',
-  layer: c.layer ?? '',
-  type: c.type ?? '',
-  smartContractEnv: c.smartContractEnv ?? '',
+  networkName: c.networkName ?? '',
   // Edited one-per-line; joined back to a string[] on submit.
   origins: (c.origins ?? []).join('\n'),
   networkPassphrase: c.networkPassphrase ?? '',
@@ -47,6 +34,9 @@ const inputClass =
 
 export default function Page() {
   const { data, refetch, isLoading } = useProjectConfig();
+
+  // The API always returns a config object; `id` is null until the row exists.
+  const exists = data?.id != null;
 
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
@@ -62,17 +52,13 @@ export default function Page() {
     }
   }
 
-  const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
-    setForm((f) => ({ ...f, [k]: v }));
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   // Trim; a blank field becomes null (clears the column).
   const orNull = (v: string): string | null => (v.trim() ? v.trim() : null);
 
   const buildPayload = (): ProjectConfigPayload => ({
-    name: form.name.trim(),
-    layer: orNull(form.layer),
-    type: orNull(form.type),
-    smartContractEnv: orNull(form.smartContractEnv),
+    networkName: form.networkName.trim(),
     origins: form.origins
       .split('\n')
       .map((o) => o.trim())
@@ -82,18 +68,18 @@ export default function Page() {
   });
 
   const submit = async () => {
-    if (!form.name.trim()) {
-      addDangerToast('Missing field', 'Name is required.');
+    if (!form.networkName.trim()) {
+      addDangerToast('Missing field', 'Network name is required.');
       return;
     }
-    if (form.name.trim().length > 50) {
-      addDangerToast('Invalid name', 'Name must be 50 characters or fewer.');
+    if (form.networkName.trim().length > 50) {
+      addDangerToast('Invalid network name', 'Network name must be 50 characters or fewer.');
       return;
     }
     setSaving(true);
     try {
       await updateProjectConfig(buildPayload());
-      addSuccessToast('Saved', data ? 'Project configuration updated.' : 'Project configuration created.');
+      addSuccessToast('Saved', exists ? 'Project configuration updated.' : 'Project configuration created.');
       await refetch();
     } catch (err) {
       addDangerToast('Error', (err as Error)?.message ?? 'Save failed');
@@ -104,17 +90,16 @@ export default function Page() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
+      <BackToAdmin />
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Project configuration</h1>
-        {data && (
-          <span className="text-xs text-default-500">
-            Updated {new Date(data.updatedAt).toLocaleString()}
-          </span>
+        {exists && data?.updatedAt && (
+          <span className="text-xs text-default-500">Updated {new Date(data.updatedAt).toLocaleString()}</span>
         )}
       </div>
 
       <p className="text-sm text-default-500">
-        Singleton settings for the project (network, smart-contract environment, allowed origins).
+        Singleton settings for the project (network name, passphrase, badges contract, allowed origins).
       </p>
 
       {isLoading ? (
@@ -123,55 +108,19 @@ export default function Page() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {!data && (
+          {!exists && (
             <div className="rounded-medium bg-warning-50 p-3 text-sm text-warning-700">
-              No configuration exists yet. Saving will create the first <code>project_config</code> row.
+              No configuration exists yet. Saving will create the first <code>config</code> row.
             </div>
           )}
 
           <label className={inputLabel}>
-            Name
+            Network name
             <input
               className={inputClass}
               maxLength={50}
-              value={form.name}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('name', e.target.value)}
-            />
-          </label>
-
-          <div className="flex flex-wrap gap-3">
-            <label className={`flex-1 ${inputLabel}`}>
-              Layer
-              <input
-                className={inputClass}
-                maxLength={20}
-                placeholder="e.g. L1"
-                value={form.layer}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('layer', e.target.value)}
-              />
-            </label>
-            <label className={`flex-1 ${inputLabel}`}>
-              Type
-              <input
-                className={inputClass}
-                maxLength={100}
-                placeholder="e.g. mainnet / testnet"
-                value={form.type}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('type', e.target.value)}
-              />
-            </label>
-          </div>
-
-          <label className={inputLabel}>
-            Smart contract environment
-            <input
-              className={inputClass}
-              maxLength={50}
-              placeholder="e.g. production"
-              value={form.smartContractEnv}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                set('smartContractEnv', e.target.value)
-              }
+              value={form.networkName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('networkName', e.target.value)}
             />
           </label>
 
@@ -181,9 +130,7 @@ export default function Page() {
               className={inputClass}
               placeholder="e.g. Public Global Stellar Network ; September 2015"
               value={form.networkPassphrase}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                set('networkPassphrase', e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('networkPassphrase', e.target.value)}
             />
           </label>
 
@@ -193,9 +140,7 @@ export default function Page() {
               className={inputClass}
               placeholder="C..."
               value={form.badgesContractAddress}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                set('badgesContractAddress', e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('badgesContractAddress', e.target.value)}
             />
           </label>
 
@@ -205,9 +150,7 @@ export default function Page() {
               className={`${inputClass} min-h-[120px] font-mono`}
               placeholder={'https://app.example.com\nhttps://admin.example.com'}
               value={form.origins}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                set('origins', e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set('origins', e.target.value)}
             />
           </label>
 
@@ -220,7 +163,7 @@ export default function Page() {
               Reset
             </Button>
             <Button variant="primary" onPress={submit} isDisabled={saving}>
-              {saving ? <Spinner size="sm" color="current" /> : data ? 'Save' : 'Create'}
+              {saving ? <Spinner size="sm" color="current" /> : exists ? 'Save' : 'Create'}
             </Button>
           </div>
         </div>
