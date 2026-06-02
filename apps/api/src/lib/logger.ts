@@ -15,7 +15,6 @@ const options: LoggerOptions = {
       '*.privateKey',
       '*.private_key',
       '*.serverPrivateKey',
-      '*.SUPABASE_SERVICE_ROLE_KEY',
     ],
     censor: '[REDACTED]',
   },
