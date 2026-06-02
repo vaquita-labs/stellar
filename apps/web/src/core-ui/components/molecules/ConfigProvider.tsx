@@ -7,6 +7,7 @@ import { ONE_MINUTE } from '../../config/constants';
 import { useLoading } from '@/core-ui/stores';
 import { useConfigStore } from '@/core-ui/stores';
 import { NetworkResponseDTO } from '../../types';
+import { LoaderScreen } from './LoaderScreen';
 
 /**
  * Shape returned by `GET /api/v1/config` (single-network `ProjectConfigResponseDTO`):
@@ -64,8 +65,11 @@ export const ConfigProvider = ({ children }: { children: ReactNode }) => {
 
   useLoading('network', isLoading || !network);
 
+  // Keep the full-screen loader up (instead of a bare orange `bg-background`)
+  // while config resolves, so the boot loader stays continuous from the
+  // auth-gate → config → profile phases with no flicker in between.
   if (isLoading || !network) {
-    return null;
+    return <LoaderScreen withImage />;
   }
 
   return children;

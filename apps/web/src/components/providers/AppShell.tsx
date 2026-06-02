@@ -1,7 +1,7 @@
 'use client';
 
 import { DesktopSidebar, MobileNavigation } from '@/components';
-import { ConfigProvider, LoaderScreen } from '@/core-ui/components';
+import { ConfigProvider, LoaderScreen, ProfileDataProvider } from '@/core-ui/components';
 import { useMapStore, useResize } from '@/core-ui/stores';
 import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
@@ -15,7 +15,9 @@ const Main = ({ children, withSidebar }: { children: ReactNode; withSidebar: boo
       style={{ height: 'var(--100VH)', minHeight: 'var(--100VH)', maxHeight: 'var(--100VH)', overflow: 'hidden' }}
     >
       <WalletProviderSync />
-      <ConfigProvider>{children}</ConfigProvider>
+      <ConfigProvider>
+        <ProfileDataProvider>{children}</ProfileDataProvider>
+      </ConfigProvider>
       <ListenDepositsChanges />
     </main>
   );
