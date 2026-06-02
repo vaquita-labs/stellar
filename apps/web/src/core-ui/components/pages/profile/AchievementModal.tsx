@@ -96,7 +96,6 @@ export function AchievementModal({
   const { isMinted } = useMintedBadges();
   const mintBadgeMutation = useMintBadge();
   const { network, walletAddress } = useConfigStore();
-  const networkName = network?.networkName ?? '';
   const baseUrl = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
   const { data: rewardsData } = useProfileRewards();
   // Drives whether we render the full-screen bottom-sheet (phone-sized) or
@@ -179,7 +178,7 @@ export function AchievementModal({
     setPhase('claiming');
     try {
       const res = await fetch(
-        `${baseUrl}/profile/network/${encodeURIComponent(networkName)}/wallet/${encodeURIComponent(walletAddress)}/achievements/${encodeURIComponent(achievement.id)}/claim`,
+        `${baseUrl}/profile/wallet/${encodeURIComponent(walletAddress)}/achievements/${encodeURIComponent(achievement.id)}/claim`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' } },
       );
       if (!res.ok && res.status !== 409) {

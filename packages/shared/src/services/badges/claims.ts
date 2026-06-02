@@ -1,4 +1,19 @@
+import { prisma } from '@vaquita/db';
+import type { BadgeClaim as PrismaBadgeClaim } from '@vaquita/db';
 import { supabase } from '../../lib/supabase';
+
+const toBadgeClaimRecord = (c: PrismaBadgeClaim): BadgeClaimRecord => ({
+  id: c.id,
+  wallet_address: c.walletAddress,
+  badge_type: c.badgeType,
+  cycle_id: c.cycleId,
+  expiry: c.expiry.toISOString(),
+  signature: c.signature,
+  created_at: c.createdAt.toISOString(),
+  superseded_at: c.supersededAt ? c.supersededAt.toISOString() : null,
+  confirmed_at: c.confirmedAt ? c.confirmedAt.toISOString() : null,
+  transaction_hash: c.transactionHash ?? null,
+});
 
 export interface BadgeClaimRecord {
   id: string;
@@ -138,19 +153,11 @@ export async function getActiveBadgeClaim(
   badgeType: string,
   cycleId: number,
 ): Promise<BadgeClaimRecord | null> {
-  const { data, error } = await supabase
-    .from('badge_claims')
-    .select('*')
-    .eq('wallet_address', walletAddress)
-    .eq('badge_type', badgeType)
-    .eq('cycle_id', cycleId)
-    .is('superseded_at', null)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data as BadgeClaimRecord | null;
+  const claim = await prisma.badgeClaim.findFirst({
+    where: { walletAddress, badgeType, cycleId, supersededAt: null, deletedAt: null },
+    orderBy: { createdAt: 'desc' },
+  });
+  return claim ? toBadgeClaimRecord(claim) : null;
 }
 
 export async function storeBadgeClaim(claim: {
@@ -160,20 +167,16 @@ export async function storeBadgeClaim(claim: {
   expiry: number;
   signature: string;
 }): Promise<BadgeClaimRecord> {
-  const { data, error } = await supabase
-    .from('badge_claims')
-    .insert({
-      wallet_address: claim.walletAddress,
-      badge_type: claim.badgeType,
-      cycle_id: claim.cycleId,
-      expiry: new Date(claim.expiry * 1000).toISOString(),
+  const created = await prisma.badgeClaim.create({
+    data: {
+      walletAddress: claim.walletAddress,
+      badgeType: claim.badgeType,
+      cycleId: claim.cycleId,
+      expiry: new Date(claim.expiry * 1000),
       signature: claim.signature,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as BadgeClaimRecord;
+    },
+  });
+  return toBadgeClaimRecord(created);
 }
 
 /** Returns any claim (including superseded) for (wallet, badge_type, cycle_id). Used by the re-sign endpoint to confirm prior issuance. */
@@ -197,11 +200,10 @@ export async function getAnyClaim(
 }
 
 export async function supersedeBadgeClaim(claimId: string): Promise<void> {
-  const { error } = await supabase
-    .from('badge_claims')
-    .update({ superseded_at: new Date().toISOString() })
-    .eq('id', claimId);
-  if (error) throw error;
+  await prisma.badgeClaim.update({
+    where: { id: claimId },
+    data: { supersededAt: new Date() },
+  });
 }
 
 /** Convert a stored BadgeClaimRecord to the API response payload. */
@@ -222,14 +224,10 @@ export async function confirmBadgeClaim(
   cycleId: number,
   transactionHash: string,
 ): Promise<void> {
-  const { error } = await supabase
-    .from('badge_claims')
-    .update({ confirmed_at: new Date().toISOString(), transaction_hash: transactionHash })
-    .eq('wallet_address', walletAddress)
-    .eq('badge_type', badgeType)
-    .eq('cycle_id', cycleId)
-    .is('superseded_at', null);
-  if (error) throw error;
+  await prisma.badgeClaim.updateMany({
+    where: { walletAddress, badgeType, cycleId, supersededAt: null },
+    data: { confirmedAt: new Date(), transactionHash },
+  });
 }
 
 export interface MintedBadge {
@@ -240,11 +238,13 @@ export interface MintedBadge {
 
 /** Returns all on-chain confirmed badge mints for a wallet. */
 export async function getMintedBadges(walletAddress: string): Promise<MintedBadge[]> {
-  const { data, error } = await supabase
-    .from('badge_claims')
-    .select('badge_type, confirmed_at, transaction_hash')
-    .eq('wallet_address', walletAddress)
-    .not('confirmed_at', 'is', null);
-  if (error) throw error;
-  return (data ?? []) as MintedBadge[];
+  const rows = await prisma.badgeClaim.findMany({
+    where: { walletAddress, confirmedAt: { not: null } },
+    select: { badgeType: true, confirmedAt: true, transactionHash: true },
+  });
+  return rows.map((r) => ({
+    badge_type: r.badgeType,
+    confirmed_at: r.confirmedAt ? r.confirmedAt.toISOString() : '',
+    transaction_hash: r.transactionHash ?? '',
+  }));
 }

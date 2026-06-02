@@ -10,7 +10,7 @@ export const useProfilesByAverageDepositsData = () => {
     queryKey: ['profiles', 'network', network?.networkName, 'by-average-deposits'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.networkName}/by-average-deposits`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/by-average-deposits`
       );
       const data = await response.json();
 

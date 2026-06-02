@@ -1,5 +1,8 @@
 export * from './lib/supabase';
 
+// Single shared Prisma client (the DB layer the data services now run on).
+export { prisma } from '@vaquita/db';
+
 export * from './helpers';
 export * from './helpers/date';
 export * from './helpers/express';

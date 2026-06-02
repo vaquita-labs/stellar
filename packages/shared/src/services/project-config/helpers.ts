@@ -11,8 +11,7 @@ export const toProjectConfig = async (
   config: ProjectConfig,
   tokens: Token[],
 ): Promise<ProjectConfigResponseDTO> => ({
-  name: config.name,
-  type: config.type ?? '',
+  networkName: config.networkName,
   networkPassphrase: config.networkPassphrase ?? null,
   ...(config.badgesContractAddress
     ? { badgesContractAddress: config.badgesContractAddress }

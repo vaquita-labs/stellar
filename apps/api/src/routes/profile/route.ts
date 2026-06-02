@@ -9,23 +9,22 @@ import {
   getCachedProfilesDepositsByProfileId,
   getLastClosedCycleId,
   getLeaderboardRankForWallet,
-  getNetworkByName,
+  getNetworkName,
   getProfile,
   getProfileMapObjects,
-  getProfilesByNetworkId,
+  getProfiles,
   getRewardByKey,
   getRewardsData,
   HISTORICAL_DELAY,
   isAchievementEligible,
-  type Network,
   ONE_DAY,
+  prisma,
   type Profile,
   type ProfileAverageResponseDTO,
   redeemAchievementCode,
   Reward,
   sendError,
   sendSuccess,
-  supabase,
   toProfileAchievementsResponseDTO,
   toProfileExperienceResponseDTO,
   toProfileMapObjectsAvailableResponseDTO,
@@ -38,89 +37,91 @@ import type { Logger } from 'pino';
 
 const router = Router();
 
-// TODO: remove when main branch vaquita-ui is merged with dev
-router.get('/network/:networkName/wallet/:walletAddress', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'GET /profile/network/:networkName/wallet/:walletAddress');
+// Single-network: the network is implicit (one `config` row). Routes are keyed
+// by wallet only — the legacy /network/:networkName prefix was removed.
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+router.get('/wallet/:walletAddress', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /profile/wallet/:walletAddress');
+
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage, errors, 404);
   }
 
-  return sendSuccess(res, toProfileResponseDTO(networkData!, profileData));
+  return sendSuccess(res, toProfileResponseDTO(await getNetworkName(), profileData));
 });
 
-router.get('/network/:networkName/wallet/:walletAddress/data', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'GET /profile/.../data');
+router.get('/wallet/:walletAddress/data', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /profile/.../data');
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage, errors, 404);
   }
 
-  return sendSuccess(res, toProfileResponseDTO(networkData!, profileData));
+  return sendSuccess(res, toProfileResponseDTO(await getNetworkName(), profileData));
 });
 
-router.get('/network/:networkName/wallet/:walletAddress/experience', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'GET /profile/.../experience');
+router.get('/wallet/:walletAddress/experience', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /profile/.../experience');
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage, errors, 404);
   }
 
-  return sendSuccess(res, await toProfileExperienceResponseDTO(networkData!, profileData));
+  return sendSuccess(res, await toProfileExperienceResponseDTO(await getNetworkName(), profileData));
 });
 
-router.get('/network/:networkName/wallet/:walletAddress/rewards', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'GET /profile/.../rewards');
+router.get('/wallet/:walletAddress/rewards', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /profile/.../rewards');
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage, errors, 404);
   }
 
-  return sendSuccess(res, await toProfileRewardsResponseDTO(networkData!, profileData));
+  return sendSuccess(res, await toProfileRewardsResponseDTO(await getNetworkName(), profileData));
 });
 
-router.get('/network/:networkName/wallet/:walletAddress/streak', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'GET /profile/.../streak');
+router.get('/wallet/:walletAddress/streak', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /profile/.../streak');
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage, errors, 404);
   }
 
-  return sendSuccess(res, await toProfileStreakResponseDTO(networkData!, profileData));
+  return sendSuccess(res, await toProfileStreakResponseDTO(await getNetworkName(), profileData));
 });
 
-router.get('/network/:networkName/wallet/:walletAddress/daily-check', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'GET /profile/.../daily-check');
+router.get('/wallet/:walletAddress/daily-check', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /profile/.../daily-check');
 
-  const { success, errorMessage, errors, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errorMessage, errors, profileData } = await getProfile(walletAddress);
 
-  if (!success || !profileData || !networkData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for daily-check');
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved for daily-check');
     return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
   }
 
-  const rewardsResponse = await getRewardsData(networkData, profileData);
+  const rewardsResponse = await getRewardsData(profileData);
 
   if (!rewardsResponse.success) {
     req.log.error({ errors: rewardsResponse.errors, errorMessage: rewardsResponse.errorMessage }, 'Failed to fetch rewards data');
@@ -130,74 +131,72 @@ router.get('/network/:networkName/wallet/:walletAddress/daily-check', async (req
   return sendSuccess(res, rewardsResponse.rewards);
 });
 
-router.get('/network/:networkName/wallet/:walletAddress/map-objects', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'GET /profile/.../map-objects');
+router.get('/wallet/:walletAddress/map-objects', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /profile/.../map-objects');
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage, errors, 404);
   }
 
-  return sendSuccess(res, await toProfileMapObjectsResponseDTO(networkData!, profileData));
+  return sendSuccess(res, await toProfileMapObjectsResponseDTO(await getNetworkName(), profileData));
 });
 
-router.post('/network/:networkName/wallet/:walletAddress/map-objects', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
+router.post('/wallet/:walletAddress/map-objects', async (req, res) => {
+  const { walletAddress } = req.params;
   const { objects } = req.body ?? {};
-  req.log.info({ networkName, walletAddress, objectsCount: Array.isArray(objects) ? objects.length : undefined }, 'POST /profile/.../map-objects');
+  req.log.info({ walletAddress, objectsCount: Array.isArray(objects) ? objects.length : undefined }, 'POST /profile/.../map-objects');
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage, errors, 404);
   }
 
   const { profileMapObjects } = await getProfileMapObjects(profileData);
 
-  const result = await supabase
-    .from('profiles_map_objects')
-    .update({ objects })
-    .eq('id', profileMapObjects.id)
-    .maybeSingle();
-
-  if (result.error) {
-    req.log.error({ err: result.error, profileMapObjectsId: profileMapObjects.id }, 'Failed to update map objects');
-    return sendError(res, 'Failed to update map objects', result.error, 500);
+  try {
+    const result = await prisma.profileMapObject.update({
+      where: { id: profileMapObjects.id },
+      data: { objects },
+    });
+    return sendSuccess(res, result);
+  } catch (err) {
+    req.log.error({ err, profileMapObjectsId: profileMapObjects.id }, 'Failed to update map objects');
+    return sendError(res, 'Failed to update map objects', err, 500);
   }
-
-  return sendSuccess(res, result);
 });
 
-router.get('/network/:networkName/wallet/:walletAddress/map-objects-available', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'GET /profile/.../map-objects-available');
+router.get('/wallet/:walletAddress/map-objects-available', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /profile/.../map-objects-available');
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage, errors, 404);
   }
 
-  return sendSuccess(res, await toProfileMapObjectsAvailableResponseDTO(networkData!, profileData));
+  return sendSuccess(res, await toProfileMapObjectsAvailableResponseDTO(await getNetworkName(), profileData));
 });
 
-router.post('/network/:networkName/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'POST /profile/.../gold-daily-collect');
+router.post('/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'POST /profile/.../gold-daily-collect');
 
-  const { success, errorMessage, errors, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errorMessage, errors, profileData } = await getProfile(walletAddress);
 
-  if (!success || !profileData || !networkData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for gold-daily-collect');
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved for gold-daily-collect');
     return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
   }
 
-  const rewardsResponse = await getRewardsData(networkData, profileData);
+  const rewardsResponse = await getRewardsData(profileData);
 
   if (!rewardsResponse.success) {
     req.log.error({ errors: rewardsResponse.errors, errorMessage: rewardsResponse.errorMessage }, 'Failed to fetch rewards data');
@@ -218,18 +217,19 @@ router.post('/network/:networkName/wallet/:walletAddress/gold-daily-collect', as
     return sendError(res, 'there are no gold coins to collect', null, 400);
   }
 
-  const result = await supabase
-    .from('profiles_rewards')
-    .insert({
-      profile_id: profileData.id,
-      reward_id: rewardData.id,
-      type: 'collected',
-      amount: 1,
+  let result;
+  try {
+    result = await prisma.profileReward.create({
+      data: {
+        profileId: profileData.id,
+        rewardId: BigInt(rewardData.id),
+        type: 'collected',
+        amount: 1,
+      },
     });
-
-  if (result.error) {
-    req.log.error({ err: result.error, profileId: profileData.id, rewardId: rewardData.id }, 'Failed to insert profile reward');
-    return sendError(res, 'Failed to collect gold coin', result.error, 500);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id, rewardId: rewardData.id }, 'Failed to insert profile reward');
+    return sendError(res, 'Failed to collect gold coin', err, 500);
   }
 
   try {
@@ -243,33 +243,33 @@ router.post('/network/:networkName/wallet/:walletAddress/gold-daily-collect', as
   return sendSuccess(res, result);
 });
 
-router.get('/network/:networkName/wallet/:walletAddress/achievements', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
-  req.log.info({ networkName, walletAddress }, 'GET /profile/.../achievements');
+router.get('/wallet/:walletAddress/achievements', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /profile/.../achievements');
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
-  if (!success || !profileData || !networkData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
   }
 
-  return sendSuccess(res, await toProfileAchievementsResponseDTO(networkData, profileData));
+  return sendSuccess(res, await toProfileAchievementsResponseDTO(await getNetworkName(), profileData));
 });
 
-router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim', async (req, res) => {
-  const { networkName, walletAddress, key } = req.params;
-  req.log.info({ networkName, walletAddress, key }, 'POST /profile/.../achievements/:key/claim');
+router.post('/wallet/:walletAddress/achievements/:key/claim', async (req, res) => {
+  const { walletAddress, key } = req.params;
+  req.log.info({ walletAddress, key }, 'POST /profile/.../achievements/:key/claim');
 
   // TODO(auth): match the wallet-in-URL trust used by every other profile
   // route for v1. When we harden auth across the API (challenge/response via
   // StellarWalletsKit.signMessage verified server-side), this endpoint moves
   // along with the rest — don't add a one-off signature check here.
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
-  if (!success || !profileData || !networkData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for achievement claim');
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved for achievement claim');
     return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
   }
 
@@ -287,7 +287,7 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim
   if (achievementDoc.unlock_type === 'cycle_rank' || achievementDoc.cycle_scoped) {
     // Leaderboard badges: verify rank against the last closed cycle.
     const cycleId = getLastClosedCycleId();
-    const rank = await getLeaderboardRankForWallet(walletAddress, cycleId, networkData.id as number);
+    const rank = await getLeaderboardRankForWallet(walletAddress, cycleId);
     const exactRank: Record<string, number> = { 'first-place': 1, 'second-place': 2 };
     const eligible =
       achievementKey === 'third-place'
@@ -299,7 +299,7 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim
     }
   } else if (achievementDoc.unlock_type === 'rule') {
     // Signal-driven badges: evaluate the configurable rule.
-    const signals = await computeEligibilitySignals(networkData, profileData);
+    const signals = await computeEligibilitySignals(profileData);
     if (!isAchievementEligible(achievementDoc, signals)) {
       req.log.warn(
         { profileId: profileData.id, key, signals },
@@ -349,10 +349,10 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/:key/claim
   });
 });
 
-router.post('/network/:networkName/wallet/:walletAddress/achievements/redeem', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
+router.post('/wallet/:walletAddress/achievements/redeem', async (req, res) => {
+  const { walletAddress } = req.params;
   const rawCode = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
-  req.log.info({ networkName, walletAddress, code: rawCode }, 'POST /profile/.../achievements/redeem');
+  req.log.info({ walletAddress, code: rawCode }, 'POST /profile/.../achievements/redeem');
 
   // TODO(auth): same wallet-in-URL trust as every other profile route. When
   // the API-wide auth hardening lands this endpoint follows along.
@@ -361,10 +361,10 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/redeem', a
     return sendError(res, 'A code is required.', null, 400);
   }
 
-  const { success, errors, errorMessage, networkData, profileData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
-  if (!success || !profileData || !networkData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved for redeem');
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved for redeem');
     return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
   }
 
@@ -404,108 +404,83 @@ router.post('/network/:networkName/wallet/:walletAddress/achievements/redeem', a
   });
 });
 
-router.post('/network/:networkName/wallet/:walletAddress/nickname', async (req, res) => {
-  const { networkName, walletAddress } = req.params;
+router.post('/wallet/:walletAddress/nickname', async (req, res) => {
+  const { walletAddress } = req.params;
   const nickname = req.body?.nickname ?? '';
-  req.log.info({ networkName, walletAddress, nickname }, 'POST /profile/.../nickname');
+  req.log.info({ walletAddress, nickname }, 'POST /profile/.../nickname');
 
-  const { success, errors, errorMessage, profileData, networkData } = await getProfile(networkName, walletAddress);
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, networkName, walletAddress }, 'Profile not resolved');
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
     return sendError(res, errorMessage, errors, 404);
   }
 
-  const { data: existing, error: lookupError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('network_id', networkData.id)
-    .eq('nickname', nickname);
-
-  if (lookupError) {
-    req.log.error({ err: lookupError, networkId: networkData.id, nickname }, 'Failed to check nickname availability');
-    return sendError(res, 'Failed to check nickname availability', lookupError, 500);
-  }
-
-  if (existing && existing.length > 0) {
-    req.log.warn({ nickname, networkId: networkData.id }, 'Nickname already in use');
-    return sendError(res, 'The nickname is already in use.', null, 409);
-  }
-
-  const result = await supabase
-    .from('profiles')
-    .update({ nickname })
-    .eq('id', profileData.id)
-    .maybeSingle();
-
-  if (result.error) {
-    req.log.error({ err: result.error, profileId: profileData.id, nickname }, 'Failed to update nickname');
-    return sendError(res, 'Failed to update nickname', result.error, 500);
-  }
-
   try {
-    await broadcastProfileChange('set-nickname', [ 'profile-data' ]);
-  } catch (err) {
-    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (set-nickname)');
-  }
+    const existing = await prisma.profile.findFirst({
+      where: { nickname, id: { not: profileData.id } },
+      select: { id: true },
+    });
 
-  req.log.info({ profileId: profileData.id, nickname }, 'Nickname updated');
-  return sendSuccess(res, result);
+    if (existing) {
+      req.log.warn({ nickname }, 'Nickname already in use');
+      return sendError(res, 'The nickname is already in use.', null, 409);
+    }
+
+    const result = await prisma.profile.update({
+      where: { id: profileData.id },
+      data: { nickname },
+    });
+
+    try {
+      await broadcastProfileChange('set-nickname', [ 'profile-data' ]);
+    } catch (err) {
+      req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (set-nickname)');
+    }
+
+    req.log.info({ profileId: profileData.id, nickname }, 'Nickname updated');
+    return sendSuccess(res, result);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id, nickname }, 'Failed to update nickname');
+    return sendError(res, 'Failed to update nickname', err, 500);
+  }
 });
 
-router.get('/network/:networkName/nickname-available', async (req, res) => {
-  const { networkName } = req.params;
+router.get('/nickname-available', async (req, res) => {
   const nickname = String(req.query?.nickname ?? '').trim();
-  req.log.info({ networkName, nickname }, 'GET /profile/.../nickname-available');
+  req.log.info({ nickname }, 'GET /profile/nickname-available');
 
   if (!nickname) {
     return sendSuccess(res, { available: false });
   }
 
-  const { data: networkData, error: networkError } = await getNetworkByName(networkName);
-
-  if (networkError || !networkData) {
-    req.log.error({ err: networkError, networkName }, 'Network not found');
-    return sendError(res, 'Network not found', networkError, 404);
+  try {
+    const existing = await prisma.profile.findFirst({
+      where: { nickname },
+      select: { id: true },
+    });
+    return sendSuccess(res, { available: !existing });
+  } catch (err) {
+    req.log.error({ err, nickname }, 'Failed to check nickname availability');
+    return sendError(res, 'Failed to check nickname availability', err, 500);
   }
-
-  const { data: existing, error: lookupError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('network_id', networkData.id)
-    .eq('nickname', nickname);
-
-  if (lookupError) {
-    req.log.error({ err: lookupError, networkId: networkData.id, nickname }, 'Failed to check nickname availability');
-    return sendError(res, 'Failed to check nickname availability', lookupError, 500);
-  }
-
-  return sendSuccess(res, { available: !existing || existing.length === 0 });
 });
 
-router.get('/network/:networkName', async (req, res) => {
-  const { networkName } = req.params;
-  req.log.info({ networkName }, 'GET /profile/network/:networkName');
+router.get('/', async (req, res) => {
+  req.log.info('GET /profile (list)');
 
-  const { data: networkData, error: networkError } = await getNetworkByName(networkName);
-
-  if (networkError || !networkData) {
-    req.log.error({ err: networkError, networkName }, 'Network not found');
-    return sendError(res, 'Network not found', networkError, 404);
-  }
-
-  const { data, error } = await getProfilesByNetworkId(networkData.id);
+  const { data, error } = await getProfiles();
 
   if (error) {
-    req.log.error({ err: error, networkId: networkData.id }, 'Failed to list profiles');
-    return sendError(res, error.message, error, 500);
+    req.log.error({ err: error }, 'Failed to list profiles');
+    return sendError(res, 'Failed to list profiles', error, 500);
   }
 
-  return sendSuccess(res, await Promise.all(data.map((profile) => toProfileResponseDTO(networkData, profile))), '');
+  const networkName = await getNetworkName();
+  return sendSuccess(res, data.map((profile) => toProfileResponseDTO(networkName, profile)), '');
 });
 
 const toProfileHistoricResponseDTO = (
-  networkData: Network,
   log: Logger,
   badgesByProfileId: Map<number, number>,
 ) =>
@@ -541,22 +516,14 @@ const toProfileHistoricResponseDTO = (
     };
   };
 
-router.get('/network/:networkName/by-average-deposits', async (req, res) => {
-  const { networkName } = req.params;
-  req.log.info({ networkName }, 'GET /profile/network/:networkName/by-average-deposits');
+router.get('/by-average-deposits', async (req, res) => {
+  req.log.info('GET /profile/by-average-deposits');
 
-  const { data: networkData, error: networkError } = await getNetworkByName(networkName);
-
-  if (networkError || !networkData) {
-    req.log.error({ err: networkError, networkName }, 'Network not found');
-    return sendError(res, 'Network not found', networkError, 404);
-  }
-
-  const { data, error } = await getProfilesByNetworkId(networkData.id);
+  const { data, error } = await getProfiles();
 
   if (error) {
-    req.log.error({ err: error, networkId: networkData.id }, 'Failed to list profiles');
-    return sendError(res, error.message, error, 500);
+    req.log.error({ err: error }, 'Failed to list profiles');
+    return sendError(res, 'Failed to list profiles', error, 500);
   }
 
   const { counts: badgesByProfileId, error: badgesError } = await getAchievementCountsByProfile();
@@ -566,7 +533,7 @@ router.get('/network/:networkName/by-average-deposits', async (req, res) => {
 
   return sendSuccess(
     res,
-    await Promise.all(data.map(toProfileHistoricResponseDTO(networkData, req.log, badgesByProfileId))),
+    await Promise.all(data.map(toProfileHistoricResponseDTO(req.log, badgesByProfileId))),
     '',
   );
 });

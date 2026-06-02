@@ -35,6 +35,13 @@ model Achievement {
   hidden        Boolean   @default(false)
   refreshPolicy String    @default("auto") @map("refresh_policy")
   cycleScoped   Boolean   @default(false) @map("cycle_scoped")
+  // Configurable badge catalog + rules engine (migration 20260529_achievement_rules).
+  unlockType    String    @default("rule") @map("unlock_type")
+  rule          Json?
+  icon          String?
+  accent        String?
+  displayOrder  Int       @default(0) @map("display_order")
+  enabled       Boolean   @default(true)
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)

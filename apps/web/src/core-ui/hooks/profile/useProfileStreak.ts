@@ -9,7 +9,7 @@ export const useProfileStreak = () => {
     queryKey: ['profile', network?.networkName, walletAddress, 'profile-streak'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.networkName}/wallet/${walletAddress}/streak`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/streak`
       );
       const data = await response.json();
 

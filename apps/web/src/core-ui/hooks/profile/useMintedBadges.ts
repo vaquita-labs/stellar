@@ -24,7 +24,7 @@ export const useMintedBadges = () => {
     queryFn: async () => {
       if (!walletAddress || !networkName) return new Set<string>();
       const res = await fetch(
-        `${baseUrl}/claim/${networkName}/minted?wallet=${encodeURIComponent(walletAddress)}`,
+        `${baseUrl}/claim/minted?wallet=${encodeURIComponent(walletAddress)}`,
       );
       if (!res.ok) return new Set<string>();
       const body = await res.json();

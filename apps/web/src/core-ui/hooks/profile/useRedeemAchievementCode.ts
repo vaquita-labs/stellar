@@ -21,7 +21,7 @@ export const useRedeemAchievementCode = () => {
   return useMutation<ClaimAchievementResponseDTO, Error, string>({
     mutationFn: async (code) => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.networkName}/wallet/${walletAddress}/achievements/redeem`,
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/achievements/redeem`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
