@@ -127,6 +127,119 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
     }
   });
 
+  // HeroUI's Table is built on react-aria's collection system, which does not support mixing a
+  // static <TableColumn>/<TableRow> with a spread array of dynamic ones. Build flat collections and
+  // feed them through the dynamic `columns`/`items` API instead.
+  type Column = { id: string; type: 'select' | 'data' | 'action' };
+  const columns: Column[] = [
+    { id: '__select__', type: 'select' },
+    ...keys.map((key): Column => ({ id: key, type: 'data' })),
+    ...(children ? [{ id: '__action__', type: 'action' as const }] : []),
+  ];
+
+  const bodyItems = filteredData.map((row, index) => ({
+    id: `${row.id?.value ?? ''}_${index}`,
+    row,
+  }));
+
+  const renderHeaderCell = (column: Column) => {
+    if (column.type === 'select') {
+      return (
+        <input
+          type="checkbox"
+          checked={filteredData.length > 0 && filteredData.every((item) => selectedRows.has(item.id?.value as string))}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedRows(new Set(filteredData.map((item) => item.id?.value as string)));
+            } else {
+              setSelectedRows(new Set());
+            }
+          }}
+        />
+      );
+    }
+    if (column.type === 'action') {
+      return 'Action';
+    }
+    const key = column.id;
+    let arrow = '-';
+    if (sort.key === key) {
+      if (sort.direction === 'asc') arrow = '↑';
+      else if (sort.direction === 'desc') arrow = '↓';
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (sort.key !== key) {
+            setSort({ key, direction: 'asc' });
+          } else if (sort.direction === 'asc') {
+            setSort({ key, direction: 'desc' });
+          } else if (sort.direction === 'desc') {
+            setSort({ key: '', direction: null });
+          } else {
+            setSort({ key, direction: 'asc' });
+          }
+        }}
+        style={{
+          all: 'unset',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.25rem',
+        }}
+        aria-label={`Ordenar por ${key}`}
+        title={`Ordenar por ${key}`}
+      >
+        <span>{key.toUpperCase()}</span>
+        <span aria-hidden="true">{arrow}</span>
+      </button>
+    );
+  };
+
+  const renderBodyCell = (row: (typeof filteredData)[number], columnKey: string) => {
+    if (columnKey === '__select__') {
+      return (
+        <input
+          type="checkbox"
+          checked={selectedRows.has(row.id?.value as string)}
+          onChange={() => toggleRowSelection(row.id?.value as string)}
+        />
+      );
+    }
+    if (columnKey === '__action__') {
+      return children ? children(row) : null;
+    }
+    const key = columnKey;
+    return (
+      <div className="flex flex-row font-mono text-xs" style={{ gap: 4, alignItems: 'center' }}>
+        {row[key]?.truncated ? (
+          <Button size="sm" onPress={() => setExpandedValue(row[key]?.original)}>
+            {row[key]?.value}
+          </Button>
+        ) : (
+          <span>{row[key]?.value}</span>
+        )}
+        <div
+          onClick={() => {
+            if (key === highlight?.key && row[key]?.value === highlight?.value) {
+              setHighlight({ key: '', value: '' });
+            } else {
+              setHighlight({ key, value: row[key]?.value as string });
+            }
+          }}
+          className={`cursor-pointer rounded transition p-1 hover:bg-green-100 opacity-0 hover:opacity-100 ${
+            highlight?.key === key && row[key]?.value === highlight?.value ? 'opacity-100' : ''
+          }`}
+          style={{ height: 'min-content' }}
+          title={`Resaltar por ${key}`}
+        >
+          <IoMdCheckmarkCircleOutline className="h-4 w-4 text-green-600" />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full w-full left-0 overflow-auto bg-background">
       <div className="flex items-center gap-4 mb-2 flex-wrap">
@@ -179,125 +292,22 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
       </Modal.Backdrop>
 
       <Table aria-label="Tabla" className="w-full" style={{ tableLayout: 'auto' }}>
-        <TableHeader>
-          <TableColumn key="select">
-            <input
-              type="checkbox"
-              checked={
-                filteredData.length > 0 && filteredData.every((item) => selectedRows.has(item.id?.value as string))
-              }
-              onChange={(e) => {
-                if (e.target.checked) {
-                  const allIds = new Set(filteredData.map((item) => item.id?.value as string));
-                  setSelectedRows(allIds);
-                } else {
-                  setSelectedRows(new Set());
-                }
-              }}
-            />
-          </TableColumn>
-          {
-            [
-              ...keys.map((key) => {
-                let arrow = '-';
-                if (sort.key === key) {
-                  if (sort.direction === 'asc') arrow = '↑';
-                  else if (sort.direction === 'desc') arrow = '↓';
-                }
-                return (
-                  <TableColumn key={key}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (sort.key !== key) {
-                          setSort({ key, direction: 'asc' });
-                        } else {
-                          if (sort.direction === 'asc') {
-                            setSort({ key, direction: 'desc' });
-                          } else if (sort.direction === 'desc') {
-                            setSort({ key: '', direction: null });
-                          } else {
-                            setSort({ key, direction: 'asc' });
-                          }
-                        }
-                      }}
-                      style={{
-                        all: 'unset',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                      }}
-                      aria-label={`Ordenar por ${key}`}
-                      title={`Ordenar por ${key}`}
-                    >
-                      <span>{key.toUpperCase()}</span>
-                      <span aria-hidden="true">{arrow}</span>
-                    </button>
-                  </TableColumn>
-                );
-              }),
-              ...(children ? [<TableColumn key="action">Action</TableColumn>] : []),
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ] as any
-          }
+        <TableHeader columns={columns}>
+          {(column) => <TableColumn id={column.id}>{renderHeaderCell(column)}</TableColumn>}
         </TableHeader>
-        <TableBody>
-          {filteredData.map((item, index) => (
+        <TableBody items={bodyItems} renderEmptyState={() => 'No hay datos'}>
+          {(item) => (
             <TableRow
-              key={item.id?.value + '' + index}
+              id={item.id}
+              columns={columns}
               className={
-                (highlight && item[highlight.key]?.value === highlight.value ? 'bg-yellow-100' : '') +
-                (sort.key && alterColor[item[sort?.key]?.value] % 2 === 0 ? 'bg-blue-50' : '')
+                (highlight && item.row[highlight.key]?.value === highlight.value ? 'bg-yellow-100' : '') +
+                (sort.key && alterColor[item.row[sort?.key]?.value] % 2 === 0 ? 'bg-blue-50' : '')
               }
             >
-              <TableCell key="select">
-                <input
-                  type="checkbox"
-                  checked={selectedRows.has(item.id?.value as string)}
-                  onChange={() => toggleRowSelection(item.id?.value as string)}
-                />
-              </TableCell>
-              {
-                [
-                  ...keys.map((key) => {
-                    return (
-                      <TableCell key={key}>
-                        <div className="flex flex-row font-mono text-xs" style={{ gap: 4, alignItems: 'center' }}>
-                          {item[key]?.truncated ? (
-                            <Button size="sm" onPress={() => setExpandedValue(item[key]?.original)}>
-                              {item[key]?.value}
-                            </Button>
-                          ) : (
-                            <span>{item[key]?.value}</span>
-                          )}
-                          <div
-                            onClick={() => {
-                              if (key === highlight?.key && item[key]?.value === highlight?.value) {
-                                setHighlight({ key: '', value: '' });
-                              } else {
-                                setHighlight({ key, value: item[key]?.value as string });
-                              }
-                            }}
-                            className={`cursor-pointer rounded transition p-1 hover:bg-green-100 opacity-0 hover:opacity-100 ${
-                              highlight?.key === key && item[key]?.value === highlight?.value ? 'opacity-100' : ''
-                            }`}
-                            style={{ height: 'min-content' }}
-                            title={`Resaltar por ${key}`}
-                          >
-                            {/* <CheckIcon className="h-4 w-4 text-green-600" /> */}
-                            <IoMdCheckmarkCircleOutline className="h-4 w-4 text-green-600" />
-                          </div>
-                        </div>
-                      </TableCell>
-                    );
-                  }),
-                  ...(children ? [<TableCell key="children">{children(item)}</TableCell>] : []),
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                ] as any
-              }
+              {(column) => <TableCell>{renderBodyCell(item.row, column.id)}</TableCell>}
             </TableRow>
-          ))}
+          )}
         </TableBody>
       </Table>
 
