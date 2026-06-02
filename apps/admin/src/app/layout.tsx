@@ -1,4 +1,4 @@
-import { Providers } from '@/components';
+import { LogoutButton, Providers } from '@/components';
 import { WithHydrated } from '@/core-ui/components';
 import type { Metadata } from 'next';
 import './globals.css';
@@ -14,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-[100dvh] flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <WithHydrated>
           <Providers>
+            <LogoutButton />
             <main className="flex-1 min-h-0 overflow-auto">{children}</main>
           </Providers>
         </WithHydrated>

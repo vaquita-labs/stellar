@@ -19,6 +19,7 @@
     "@blend-capital/blend-sdk": "^3.2.2",
     "@stellar/stellar-sdk": "^15.1.0",
     "@supabase/supabase-js": "^2.106.2",
+    "@vaquita/db": "workspace:*",
     "ably": "^2.21.0",
     "dotenv": "^17.4.2",
     "uuid": "^14.0.0",
