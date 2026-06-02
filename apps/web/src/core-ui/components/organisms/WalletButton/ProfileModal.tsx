@@ -16,7 +16,6 @@ interface ProfileModalProps {
 }
 
 const LogoByType: Record<string, ReactNode> = {
-  EVM: <Image src="/chains/base_400x400.jpg" alt="EVM" width={24} height={24} className="rounded-sm" />,
   Stellar: <Image src="/chains/stellar.png" alt="Stellar" width={24} height={24} className="rounded-sm" />,
 };
 

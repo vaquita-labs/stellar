@@ -12,14 +12,8 @@ export * from './types';
 
 export * from './schemas';
 
-export * from './abi/aavePoolAbi';
-export * from './abi/vaquitaPoolAbi';
-export * from './abi/VaquitaPoolBaseSepolia';
-export * from './abi/VaquitaPoolMultiAsset';
-
 export * from './services/ably';
 export * from './services/balances';
-export * from './services/base';
 export * from './services/stellar';
 export * from './services/contracts';
 export * from './services/network';

@@ -10,7 +10,6 @@ import { useNetworkConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
 
 const LogoByType: Record<string, ReactNode> = {
-  EVM: <Image src="/chains/base_400x400.jpg" alt="EVM" width={20} height={20} className="rounded-sm" />,
   Stellar: <Image src="/chains/stellar.png" alt="Stellar" width={20} height={20} className="rounded-sm" />,
 };
 

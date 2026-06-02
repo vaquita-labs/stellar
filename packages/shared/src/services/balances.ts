@@ -1,22 +1,8 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { ethers, isAddress as isEvmAddress, JsonRpcProvider } from 'ethers';
 import type { NetworkResponseDTO } from '../types';
 
 const isStellarAddress = (address: string) =>
   StellarSdk.StrKey.isValidEd25519PublicKey(address);
-
-// 🧠 ABI mínimo de ERC-20 (solo balanceOf y decimals)
-const ERC20_ABI = [
-  'function balanceOf(address) view returns (uint256)',
-  'function decimals() view returns (uint8)',
-  'function symbol() view returns (string)',
-];
-
-const evmProviders: { [key: string]: JsonRpcProvider } = {
-  // https://developer.metamask.io/key/active-endpoints
-  Base: new ethers.JsonRpcProvider('https://base-mainnet.infura.io/v3/cc2eea3068bd4e7594bebcf9100d0aa1'),
-  ['Base Sepolia Testnet']: new ethers.JsonRpcProvider('https://base-sepolia.infura.io/v3/cc2eea3068bd4e7594bebcf9100d0aa1'),
-};
 
 const stellarServers: { [key: string]: any } = {
   ['Stellar Testnet']: new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org'),
@@ -53,44 +39,7 @@ export async function getBalances(address: string, networks: NetworkResponseDTO[
       }
       continue;
     }
-
-    if (net.type === 'EVM') {
-      if (!isEvmAddress(address)) continue;
-      const provider = evmProviders[net.name];
-      for (const token of net.tokens) {
-        if (!token.isSupported) continue;
-        let balance = 0;
-        try {
-          if (provider) {
-            if (token.isNative) {
-              const nativeWei = await provider.getBalance(address);
-              balance = Number(ethers.formatEther(nativeWei)) * (10 ** token.decimals);
-            } else {
-              const contractAddress = token.contractAddress?.split(',')?.[0] ?? '';
-              if (isEvmAddress(contractAddress)) {
-                const usdcContract = new ethers.Contract(contractAddress, ERC20_ABI, provider);
-                const code = await provider.getCode(contractAddress);
-                if (code !== '0x') {
-                  balance = Number(await usdcContract.balanceOf?.(address) ?? 0);
-                } else {
-                  console.warn(`No contract deployed at ${token.contractAddress} on ${net.name}`);
-                }
-              } else {
-                console.info(`Invalid contract address: "${contractAddress}" for token ${token.name} on ${net.name}`);
-              }
-            }
-          }
-        } catch (error) {
-          console.error(`error on getBalances with ${net.name} and ${token.name}`, error);
-        }
-        results.push({
-          networkName: net.name,
-          balance,
-          tokenSymbol: token.symbol,
-        });
-      }
-    }
   }
-  
+
   return results;
 }

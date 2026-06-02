@@ -78,7 +78,7 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   transactionHash: string;
   depositIdHex: string;
   vaquitaInterest: number;
-  aaveInterest: number;
+  protocolInterest: number;
   blendInterest: number;
   createdTimestamp: number;
   updatedTimestamp: number;
@@ -91,10 +91,10 @@ export type TotalDepositsResponseDTO = {
     [key in DepositWithdrawalState]: {
       totalCount: number;
       totalAmount: number;
-      totalAaveInterest: number;
+      totalProtocolInterest: number;
       totalBlendInterest: number;
       totalVaquitaInterest: number;
-      totalAaveApy: number;
+      totalProtocolApy: number;
       totalBlendApy: number;
       totalVaquitaApy: number;
     };

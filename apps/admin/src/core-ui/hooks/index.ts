@@ -2,7 +2,6 @@ export * from './useAdminAchievements';
 export * from './useAdminDeposits';
 export * from './useApyByLockPeriod';
 export * from './useBalance';
-export * from './useBalanceServer';
 export * from './useDeposit';
 export * from './useDeposits';
 export * from './useDepositsComplete';

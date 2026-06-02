@@ -42,13 +42,13 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
   const depositLockPeriod = vaquita.lockPeriod;
   const { data: dataApy } = useApyByLockPeriod(depositLockPeriod, token?.symbol ?? '');
   const withdrawalInfo = useWithdrawalTime(vaquita);
-  const { vaquitaInterest, aaveInterest, blendInterest, totalInterest } = getInterestData(
+  const { vaquitaInterest, protocolInterest: protocolInterestSource, blendInterest, totalInterest } = getInterestData(
     network!,
     dataApy,
     vaquita.amount,
     depositLockPeriod,
   );
-  const protocolInterest = aaveInterest + blendInterest;
+  const protocolInterest = protocolInterestSource + blendInterest;
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);

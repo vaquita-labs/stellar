@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write .",
-    "update-abis": "node -e \"const fs=require('fs');const abi=JSON.parse(fs.readFileSync('contracts/out/VaquitaPool.sol/VaquitaPool.json')).abi;fs.writeFileSync('src/abis/VaquitaPool.json',JSON.stringify(abi,null,2));\""
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@fontsource/rubik": "^5.2.8",

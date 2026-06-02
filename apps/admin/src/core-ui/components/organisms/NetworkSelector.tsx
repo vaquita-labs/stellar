@@ -7,8 +7,6 @@ import { useNetworkConfigStore } from '../../stores';
 import { T } from '../atoms/T';
 
 const icons: { [key: string]: string } = {
-  Base: '/chains/base_400x400.jpg',
-  'Base Sepolia Testnet': '/chains/base_400x400.jpg',
   'Core Testnet 2': '/chains/core.png',
   Lisk: '/chains/lisk.png',
   Stellar: '/chains/stellar.png',

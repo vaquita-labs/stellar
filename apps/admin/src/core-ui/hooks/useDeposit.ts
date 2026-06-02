@@ -24,10 +24,10 @@ export const useDeposit = (depositId: number) => {
         const vaquitaApyMultiplier = vaquitaApy / 100;
         const lockPeriodInMilSeconds = lockPeriod;
         const lockPeriodInYears = lockPeriodInMilSeconds / 12 / 30 / 24 / 60 / 60 / 1000;
-        const aaveInterest = !isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
+        const protocolInterest = !isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
         const blendInterest = isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
         const vaquitaInterest = depositAmount * (vaquitaApyMultiplier * lockPeriodInYears);
-        const vaquitaReward = aaveInterest + vaquitaInterest + blendInterest;
+        const vaquitaReward = protocolInterest + vaquitaInterest + blendInterest;
 
         const deposit: DepositResponseDTO = {
           transactionHash: data?.data.transactionHash,
@@ -38,7 +38,7 @@ export const useDeposit = (depositId: number) => {
           id: data?.data?.id,
           vaquitaContractAddress: data?.data?.vaquitaContractAddress || data?.data?.contractAddress,
           vaquitaInterest: Number(data?.data?.vaquitaInterest),
-          aaveInterest: Number(data?.data?.aaveInterest),
+          protocolInterest: Number(data?.data?.protocolInterest),
           blendInterest: Number(data?.data?.blendInterest),
           depositIdHex: data?.data?.depositIdHex,
           withdrawals: data?.data?.withdrawals || null,
