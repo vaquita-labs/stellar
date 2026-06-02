@@ -1,11 +1,5 @@
 // Shared across frontend and backend
 
-/**
- * Minimal contract-ABI shape. Legacy EVM field kept for response compatibility;
- * Stellar/Soroban does not consume it. Replaces the former `viem` `Abi` import.
- */
-export type Abi = readonly unknown[];
-
 export enum WithdrawalStatus {
   INITIATED = 'initiated',
   CONFIRMED = 'confirmed',
@@ -43,9 +37,7 @@ export interface NetworkResponseDTO {
     decimals: number;
     lockPeriod: number[];
     contractAddress: string;
-    contractAbi: Abi;
     vaquitaContractAddress: string;
-    vaquitaContractAbi: Abi;
   }[];
 }
 
@@ -58,9 +50,7 @@ export interface ProjectConfigTokenDTO {
   decimals: number;
   lockPeriods: number[];
   contractAddress: string;
-  contractAbi: Abi;
   vaquitaContractAddress: string;
-  vaquitaContractAbi: Abi;
 }
 
 /**

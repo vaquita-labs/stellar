@@ -70,18 +70,6 @@ model BadgeClaim {
   @@map("badge_claims")
 }
 
-model Contract {
-  id          BigInt    @id @default(autoincrement())
-  address     String?
-  description String?
-  abi         Json?
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
-
-  @@map("contracts")
-}
-
 model Deposit {
   id                     Int       @id @default(autoincrement())
   walletAddress          String    @map("wallet_address") @db.VarChar(100)
