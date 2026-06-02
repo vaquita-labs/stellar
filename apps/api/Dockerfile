@@ -7,7 +7,7 @@ RUN corepack enable
 FROM base AS deps
 WORKDIR /repo
 COPY notify.sh ./notify.sh
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages ./packages
 
@@ -40,7 +40,7 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=deps --chown=apiuser:nodejs /repo/node_modules ./node_modules
 COPY --from=deps --chown=apiuser:nodejs /repo/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps --chown=apiuser:nodejs /repo/packages ./packages
-COPY --chown=apiuser:nodejs pnpm-workspace.yaml package.json ./
+COPY --chown=apiuser:nodejs pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY --chown=apiuser:nodejs apps/api ./apps/api
 COPY --chown=apiuser:nodejs notify.sh ./notify.sh
 
