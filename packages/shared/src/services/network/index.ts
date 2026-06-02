@@ -2,48 +2,6 @@ import { supabase } from '../../lib/supabase';
 import type { Network, NetworkResponseDTO, Token, TokenNetwork } from '../../types';
 import { toNetwork } from './helpers';
 
-export const listenNetworksChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:networks`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal networks:', status);
-    });
-};
-
-export const listenTokensChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:tokens`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal tokens:', status);
-    });
-};
-
-export const listenTokensNetworksChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:tokens_networks`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal tokens_networks:', status);
-    });
-};
-
 export const getNetworkById = async (id: number) => {
   const { data, ...rest } = await supabase
     .from('networks')
