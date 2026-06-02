@@ -1,4 +1,4 @@
-import type { Abi } from 'viem';
+import type { Abi } from '../../types';
 import { supabase } from '../../lib/supabase';
 
 const cache: { [key: string]: Abi } = {};

@@ -36,7 +36,7 @@ export const useDeposit = (depositId: number) => {
           id: data?.data?.id,
           vaquitaContractAddress: data?.data?.vaquitaContractAddress || data?.data?.contractAddress,
           vaquitaInterest: Number(data?.data?.vaquitaInterest),
-          aaveInterest: Number(data?.data?.aaveInterest),
+          protocolInterest: Number(data?.data?.protocolInterest),
           blendInterest: Number(data?.data?.blendInterest),
           vaultInterest:
             data?.data?.vaultInterest !== undefined && data?.data?.vaultInterest !== null

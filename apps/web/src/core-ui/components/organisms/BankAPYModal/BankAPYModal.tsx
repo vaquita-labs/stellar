@@ -32,7 +32,7 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
   const estimatedAnnualReturn = activeDepositsTotalAmount * (totalApy / 100);
   const totalEstimatedEarnings = activeDeposits.reduce(
-    (acc, d) => acc + (d.vaquitaInterest ?? 0) + (d.aaveInterest ?? 0) + (d.blendInterest ?? 0),
+    (acc, d) => acc + (d.vaquitaInterest ?? 0) + (d.protocolInterest ?? 0) + (d.blendInterest ?? 0),
     0,
   );
 

@@ -1,11 +1,9 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 import { v4 } from 'uuid';
-import { ONE_DAY } from '../../config/constants';
 import { firstElement } from '../../helpers';
 import { supabase } from '../../lib/supabase';
 import { ably } from '../ably';
 import { evaluateBadgeMilestones } from '../badges/badge-monitor';
-import { getBaseInterest, getVaquitaPoolData, PROTOCOL_APY_DUMMY, VAQUITA_APY_DUMMY } from '../base';
 import { getBlendInterest, getStellarDepositContractAddress } from '../stellar';
 import {
   type Deposit,
@@ -462,36 +460,21 @@ const toDepositWithdrawalResponseDTO = (withdrawal: Deposit['withdrawals'][numbe
 
 export const toDepositResponseDTO = async (deposit: DepositWithState, networkData: Network, tokenNetworkData: TokenNetwork | null, tempCache: any): Promise<DepositResponseDTO> => {
   
-  let aaveInterest = 0;
+  let protocolInterest = 0;
   let blendInterest = 0;
   let vaquitaInterest = 0;
   
   // Control vaquita contract address
   let vaquitaContractAddress = tokenNetworkData?.vaquita_contract_address ?? '';
   if (tokenNetworkData) {
-    if (networkData.name === 'Base Sepolia Testnet' || networkData.name === 'Base') {
-      // contractAddress = getBaseDepositContractAddress(deposit);
-    } else if (networkData.name === 'Stellar Testnet') {
+    if (networkData.name === 'Stellar Testnet') {
       vaquitaContractAddress = getStellarDepositContractAddress(deposit);
     }
   }
-  
+
   if (deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS) {
     if (tokenNetworkData) {
-      if (networkData.name === 'Dummy') {
-        aaveInterest = deposit.amount * (PROTOCOL_APY_DUMMY / 100);
-        vaquitaInterest = deposit.amount * (((VAQUITA_APY_DUMMY[deposit.lock_period] ?? 0) / 100) / (ONE_DAY * 365 / deposit.lock_period));
-      } else if (networkData.name === 'Base Sepolia Testnet' || networkData.name === 'Base') {
-        const {
-          poolReserveData,
-        } = await getVaquitaPoolData(networkData, tokenNetworkData, deposit.lock_period / 1000, tempCache);
-        if (poolReserveData) {
-          ({
-            aaveInterest,
-            vaquitaInterest,
-          } = await getBaseInterest(networkData, deposit, tokenNetworkData));
-        }
-      } else if (networkData.name === 'Stellar Testnet') {
+      if (networkData.name === 'Stellar Testnet') {
         ({ blendInterest, vaquitaInterest } = await getBlendInterest(deposit, tokenNetworkData));
       }
     }
@@ -505,7 +488,7 @@ export const toDepositResponseDTO = async (deposit: DepositWithState, networkDat
     status: deposit.status,
     transactionHash: deposit.transaction_hash,
     depositIdHex: deposit.deposit_id_hex,
-    aaveInterest,
+    protocolInterest,
     vaquitaInterest,
     blendInterest,
     ...(networkData.name === 'Stellar Testnet' ? { vaultInterest: blendInterest } : {}),

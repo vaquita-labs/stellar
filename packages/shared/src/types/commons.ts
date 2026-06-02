@@ -1,5 +1,10 @@
 // Shared across frontend and backend
-import { type Abi } from 'viem';
+
+/**
+ * Minimal contract-ABI shape. Legacy EVM field kept for response compatibility;
+ * Stellar/Soroban does not consume it. Replaces the former `viem` `Abi` import.
+ */
+export type Abi = readonly unknown[];
 
 export enum WithdrawalStatus {
   INITIATED = 'initiated',
@@ -79,9 +84,9 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   transactionHash: string;
   depositIdHex: string;
   vaquitaInterest: number;
-  aaveInterest: number;
+  protocolInterest: number;
   /**
-   * Stellar: same as `vaultInterest` (DeFindex vault accrual). EVM: Aave-style estimate field name kept for compatibility.
+   * Stellar: same as `vaultInterest` (DeFindex vault accrual).
    */
   blendInterest: number;
   /** Stellar testnet only: vault NAV accrual (gross underlying minus principal). Omitted on other networks. */
@@ -97,10 +102,10 @@ export type TotalDepositsResponseDTO = {
     [key in DepositWithdrawalState]: {
       totalCount: number;
       totalAmount: number;
-      totalAaveInterest: number;
+      totalProtocolInterest: number;
       totalBlendInterest: number;
       totalVaquitaInterest: number;
-      totalAaveApy: number;
+      totalProtocolApy: number;
       totalBlendApy: number;
       totalVaquitaApy: number;
     };

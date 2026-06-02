@@ -76,9 +76,9 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   transactionHash: string;
   depositIdHex: string;
   vaquitaInterest: number;
-  aaveInterest: number;
+  protocolInterest: number;
   /**
-   * Stellar: same as `vaultInterest` (DeFindex vault accrual). EVM: Aave-style estimate field name kept for compatibility.
+   * Stellar: same as `vaultInterest` (DeFindex vault accrual).
    */
   blendInterest: number;
   /** Stellar testnet only: vault NAV accrual. Omitted on other networks. */
@@ -94,10 +94,10 @@ export type TotalDepositsResponseDTO = {
     [key in DepositWithdrawalState]: {
       totalCount: number;
       totalAmount: number;
-      totalAaveInterest: number;
+      totalProtocolInterest: number;
       totalBlendInterest: number;
       totalVaquitaInterest: number;
-      totalAaveApy: number;
+      totalProtocolApy: number;
       totalBlendApy: number;
       totalVaquitaApy: number;
     };
