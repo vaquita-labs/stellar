@@ -443,6 +443,49 @@ router.post('/wallet/:walletAddress/nickname', async (req, res) => {
   }
 });
 
+router.patch('/wallet/:walletAddress/flags', async (req, res) => {
+  const { walletAddress } = req.params;
+  const { onboardingCompleted, tutorialCompleted, cryptoSavvy } = req.body ?? {};
+  req.log.info({ walletAddress, onboardingCompleted, tutorialCompleted, cryptoSavvy }, 'PATCH /profile/.../flags');
+
+  // Build a partial update from only the flags actually present in the body, so
+  // a toggle can be flipped without touching the others.
+  const data: { onboardingCompleted?: boolean; tutorialCompleted?: boolean; cryptoSavvy?: boolean } = {};
+  if (typeof onboardingCompleted === 'boolean') data.onboardingCompleted = onboardingCompleted;
+  if (typeof tutorialCompleted === 'boolean') data.tutorialCompleted = tutorialCompleted;
+  if (typeof cryptoSavvy === 'boolean') data.cryptoSavvy = cryptoSavvy;
+
+  if (Object.keys(data).length === 0) {
+    return sendError(res, 'Provide a boolean onboardingCompleted, tutorialCompleted and/or cryptoSavvy.', null, 400);
+  }
+
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
+
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
+    return sendError(res, errorMessage, errors, 404);
+  }
+
+  try {
+    const result = await prisma.profile.update({
+      where: { id: profileData.id },
+      data,
+    });
+
+    try {
+      await broadcastProfileChange('set-flags', [ 'profile-data' ]);
+    } catch (err) {
+      req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (set-flags)');
+    }
+
+    req.log.info({ profileId: profileData.id, ...data }, 'Profile flags updated');
+    return sendSuccess(res, result);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id, data }, 'Failed to update profile flags');
+    return sendError(res, 'Failed to update profile flags', err, 500);
+  }
+});
+
 router.get('/nickname-available', async (req, res) => {
   const nickname = String(req.query?.nickname ?? '').trim();
   req.log.info({ nickname }, 'GET /profile/nickname-available');

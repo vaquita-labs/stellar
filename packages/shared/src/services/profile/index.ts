@@ -48,6 +48,9 @@ const toProfileShape = (p: PrismaProfile): Profile => ({
   full_name: p.fullName ?? '',
   nickname: p.nickname ?? '',
   wallet_address: p.walletAddress,
+  onboarding_completed: p.onboardingCompleted ?? false,
+  tutorial_completed: p.tutorialCompleted ?? false,
+  crypto_savvy: p.cryptoSavvy ?? false,
   created_at: p.createdAt?.toISOString(),
   updated_at: p.updatedAt?.toISOString(),
 });
@@ -344,6 +347,9 @@ export const toProfileResponseDTO = (networkName: string, profile: Profile): Pro
     email: profile.email ?? '',
     fullName: profile.full_name ?? '',
     nickname: profile.nickname ?? '',
+    onboardingCompleted: profile.onboarding_completed ?? false,
+    tutorialCompleted: profile.tutorial_completed ?? false,
+    cryptoSavvy: profile.crypto_savvy ?? false,
   };
 };
 

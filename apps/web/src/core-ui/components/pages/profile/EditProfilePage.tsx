@@ -1,6 +1,6 @@
 'use client';
 
-import { Avatar, Spinner, toast } from '@heroui/react';
+import { Avatar, Spinner, Switch, toast } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FiCamera, FiSave, FiTrash2 } from 'react-icons/fi';
@@ -13,8 +13,8 @@ import { PageLayout } from '../../molecules';
 export function EditProfilePage() {
   const router = useRouter();
   const { walletAddress, network } = useConfigStore();
-  const { data, isLoading } = useProfileData();
-  const { saveNickname } = useRestProfile();
+  const { data, isLoading, refetch } = useProfileData();
+  const { saveNickname, saveProfileFlags } = useRestProfile();
 
   const initialNickname = (data?.nickname ?? '').trim();
   const profileEmail = (data?.email ?? '').trim();
@@ -22,6 +22,9 @@ export function EditProfilePage() {
   const DEFAULT_AVATAR = '/vaquita_working.jpg';
 
   const [nickname, setNickname] = useState<string>(initialNickname);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [tutorialCompleted, setTutorialCompleted] = useState(false);
+  const [savingFlag, setSavingFlag] = useState<null | 'onboarding' | 'tutorial'>(null);
   const [saving, setSaving] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState<string>(DEFAULT_AVATAR);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -31,6 +34,11 @@ export function EditProfilePage() {
   useEffect(() => {
     setNickname(initialNickname);
   }, [initialNickname]);
+
+  useEffect(() => {
+    setOnboardingCompleted(data?.onboardingCompleted ?? false);
+    setTutorialCompleted(data?.tutorialCompleted ?? false);
+  }, [data?.onboardingCompleted, data?.tutorialCompleted]);
 
   useEffect(() => {
     return () => {
@@ -78,6 +86,34 @@ export function EditProfilePage() {
     const base = nickname.trim() || initialNickname || truncateMiddle(walletAddress) || 'VQ';
     return base.slice(0, 2).toUpperCase();
   }, [nickname, initialNickname, walletAddress]);
+
+  const handleToggleFlag = async (flag: 'onboarding' | 'tutorial', value: boolean) => {
+    if (!walletAddress || savingFlag) return;
+    const setLocal = flag === 'onboarding' ? setOnboardingCompleted : setTutorialCompleted;
+    const prev = flag === 'onboarding' ? onboardingCompleted : tutorialCompleted;
+    setLocal(value); // optimistic; reverted on failure
+    setSavingFlag(flag);
+    try {
+      const payload =
+        flag === 'onboarding' ? { onboardingCompleted: value } : { tutorialCompleted: value };
+      const { success, message } = await saveProfileFlags(payload);
+      if (success) {
+        toast.success('Preferences updated', { timeout: 2000 });
+        refetch();
+      } else {
+        setLocal(prev);
+        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+      }
+    } catch (error) {
+      setLocal(prev);
+      toast.danger('Could not update preferences', {
+        description: (error as { message?: string })?.message ?? '',
+        timeout: 4000,
+      });
+    } finally {
+      setSavingFlag(null);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!canSave) return;
@@ -181,6 +217,26 @@ export function EditProfilePage() {
             />
             <p className="text-xs text-gray-500 mt-1.5">Email editing is coming soon.</p>
           </div>
+
+          {/* Flags */}
+          <div className="flex flex-col gap-3">
+            <FlagToggle
+              label="Onboarding completed"
+              description="Mark the initial onboarding flow as done."
+              value={onboardingCompleted}
+              isDisabled={!walletAddress || isLoading || savingFlag === 'onboarding'}
+              isSaving={savingFlag === 'onboarding'}
+              onChange={(checked) => handleToggleFlag('onboarding', checked)}
+            />
+            <FlagToggle
+              label="Tutorial completed"
+              description="Mark the in-app tutorial as done."
+              value={tutorialCompleted}
+              isDisabled={!walletAddress || isLoading || savingFlag === 'tutorial'}
+              isSaving={savingFlag === 'tutorial'}
+              onChange={(checked) => handleToggleFlag('tutorial', checked)}
+            />
+          </div>
         </section>
 
         {/* Actions */}
@@ -200,5 +256,49 @@ export function EditProfilePage() {
           </Button>
         </div>
     </PageLayout>
+  );
+}
+
+/**
+ * A labelled on/off row. HeroUI v3's `Switch` is a compound component built on
+ * react-aria: it renders nothing visible unless `Switch.Control`/`Switch.Thumb`
+ * are provided, and it already renders its own <label> (so the row wrapper is a
+ * <div> — nesting <label>s breaks the click). The `@heroui/styles` sheet (loaded
+ * in globals.css) styles the track/thumb via the auto-applied `switch__*` slot
+ * classes, so we pass NO custom classes — overriding them fought the theme's
+ * margin-based thumb animation and hid the white knob.
+ */
+function FlagToggle({
+  label,
+  description,
+  value,
+  isDisabled,
+  isSaving,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: boolean;
+  isDisabled?: boolean;
+  isSaving?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-black border-b-2 bg-white px-3 py-3">
+      <span>
+        <span className="block text-black font-medium text-sm">{label}</span>
+        <span className="block text-xs text-gray-500">{description}</span>
+      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={`text-xs font-semibold ${value ? 'text-green-600' : 'text-gray-400'}`}>
+          {isSaving ? 'Saving…' : value ? 'On' : 'Off'}
+        </span>
+        <Switch isSelected={value} onChange={onChange} isDisabled={isDisabled} aria-label={label}>
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch>
+      </div>
+    </div>
   );
 }

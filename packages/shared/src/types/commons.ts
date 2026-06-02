@@ -133,6 +133,9 @@ export interface ProfileResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  onboardingCompleted: boolean;
+  tutorialCompleted: boolean;
+  cryptoSavvy: boolean;
 }
 
 export interface ProfileExperienceResponseDTO {

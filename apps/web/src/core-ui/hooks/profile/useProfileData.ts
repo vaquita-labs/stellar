@@ -19,6 +19,9 @@ export const useProfileData = () => {
         email: data?.data?.email || '',
         fullName: data?.data?.fullName || '',
         nickname: data?.data?.nickname || '',
+        onboardingCompleted: data?.data?.onboardingCompleted ?? false,
+        tutorialCompleted: data?.data?.tutorialCompleted ?? false,
+        cryptoSavvy: data?.data?.cryptoSavvy ?? false,
       };
 
       return profile;
