@@ -1,6 +1,6 @@
 'use client';
 
-import { AblyProvider, NetworksProvider } from '@/core-ui/components';
+import { AblyProvider } from '@/core-ui/components';
 import { useResizeStore } from '@/core-ui/stores';
 import { Toast } from '@heroui/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -33,11 +33,12 @@ export function Providers({ children }: { children: ReactNode }) {
     <AblyProvider>
       <Toast.Provider placement="top" />
       <QueryClientProvider client={queryClient}>
-        <NetworksProvider>
-          <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
-            <Main>{children}</Main>
-          </div>
-        </NetworksProvider>
+        {/* TODO(single-network): NetworksProvider (which fetched /api/v1/network and
+            gated render) was removed. Restore a project-config bootstrap here if the
+            admin ever needs server-driven network config again. */}
+        <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
+          <Main>{children}</Main>
+        </div>
         <TransactionsProvider />
       </QueryClientProvider>
     </AblyProvider>
