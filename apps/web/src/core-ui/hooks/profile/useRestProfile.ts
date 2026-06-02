@@ -28,6 +28,26 @@ export const useRestProfile = () => {
     [networkName, walletAddress]
   );
 
+  const saveProfileFlags = useCallback(
+    async (payload: { onboardingCompleted?: boolean; tutorialCompleted?: boolean; cryptoSavvy?: boolean }) => {
+      const response = await fetch(
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/flags`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+      const data = await response.json();
+
+      return {
+        success: data?.status === 'success',
+        message: data?.message,
+      };
+    },
+    [networkName, walletAddress]
+  );
+
   const checkNicknameAvailability = useCallback(
     async (nickname: string): Promise<boolean> => {
       const response = await fetch(
@@ -71,6 +91,7 @@ export const useRestProfile = () => {
 
   return {
     saveNickname,
+    saveProfileFlags,
     checkNicknameAvailability,
     goldDailyCollect,
     saveMapObjects,
