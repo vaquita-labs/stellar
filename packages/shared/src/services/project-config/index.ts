@@ -5,6 +5,25 @@ import { toProjectConfig } from './helpers';
 export { toProjectConfig };
 
 /**
+ * Lightweight single-column read of the configured network name. Cheaper than
+ * {@link getProjectConfig} (no tokens / ABIs) for handlers that only need the
+ * name to stamp on a DTO. Single-network: there is exactly one config row.
+ */
+export const getNetworkName = async (): Promise<string> => {
+  const config = await prisma.projectConfig.findFirst({ select: { networkName: true } });
+  return config?.networkName ?? '';
+};
+
+/**
+ * Returns the single project configuration that previously powered
+ * getNetworkByName, now sourced from the singleton `config` row.
+ */
+export const getBadgesContractAddress = async (): Promise<string | null> => {
+  const config = await prisma.projectConfig.findFirst({ select: { badgesContractAddress: true } });
+  return config?.badgesContractAddress ?? null;
+};
+
+/**
  * Returns the single project configuration (the app is single-network now), with
  * its supported tokens. Replaces the old getNetworkByName / getNetworks /
  * getNetworksByOrigin functions. Origin-based filtering was dropped — there is

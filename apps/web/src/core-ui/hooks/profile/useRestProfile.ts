@@ -11,7 +11,7 @@ export const useRestProfile = () => {
   const saveNickname = useCallback(
     async (payload: { nickname: string }) => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${networkName}/wallet/${walletAddress}/nickname`,
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/nickname`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -31,7 +31,7 @@ export const useRestProfile = () => {
   const checkNicknameAvailability = useCallback(
     async (nickname: string): Promise<boolean> => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${networkName}/nickname-available?nickname=${encodeURIComponent(nickname)}`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/nickname-available?nickname=${encodeURIComponent(nickname)}`
       );
       const data = await response.json();
       return data?.data?.available === true;
@@ -41,7 +41,7 @@ export const useRestProfile = () => {
 
   const goldDailyCollect = useCallback(async () => {
     const response = await fetch(
-      `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${networkName}/wallet/${walletAddress || ''}/gold-daily-collect`,
+      `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress || ''}/gold-daily-collect`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,7 +55,7 @@ export const useRestProfile = () => {
   const saveMapObjects = useCallback(
     async (payload: { objects: ProfileMapObjectsResponseDTO['objects'] }) => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${networkName}/wallet/${walletAddress || ''}/map-objects`,
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress || ''}/map-objects`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -21,7 +21,7 @@ export const useClaimAchievement = () => {
   return useMutation<ClaimAchievementResponseDTO, Error, string>({
     mutationFn: async (achievementKey) => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.networkName}/wallet/${walletAddress}/achievements/${achievementKey}/claim`,
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/achievements/${achievementKey}/claim`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

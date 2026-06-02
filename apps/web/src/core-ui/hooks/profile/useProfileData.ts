@@ -9,7 +9,7 @@ export const useProfileData = () => {
     queryKey: ['profile', network?.networkName, walletAddress, 'profile-data'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.networkName}/wallet/${walletAddress}/data`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/data`
       );
       const data = await response.json();
 

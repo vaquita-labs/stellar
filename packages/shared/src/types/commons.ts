@@ -68,8 +68,7 @@ export interface ProjectConfigTokenDTO {
  * `chainId` (EVM leftover) is replaced by `networkPassphrase` (Stellar).
  */
 export interface ProjectConfigResponseDTO {
-  name: string;
-  type: string;
+  networkName: string;
   networkPassphrase: string | null;
   badgesContractAddress?: string;
   tokens: ProjectConfigTokenDTO[];

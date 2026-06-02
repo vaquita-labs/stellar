@@ -9,7 +9,7 @@ export const useProfileDailyCheck = () => {
     queryKey: ['profile', network?.networkName, walletAddress, 'daily-check'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.networkName}/wallet/${walletAddress}/daily-check`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/daily-check`
       );
 
       const data = await response.json();
