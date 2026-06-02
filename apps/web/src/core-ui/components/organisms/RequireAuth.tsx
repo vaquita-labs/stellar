@@ -15,7 +15,7 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
   useEffect(() => {
     if (!isAuthenticated && pathname !== '/login') {
-      router.push('/login');
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [isAuthenticated, router, pathname]);
 

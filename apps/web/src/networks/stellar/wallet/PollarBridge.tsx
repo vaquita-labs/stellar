@@ -2,7 +2,7 @@
 
 import { useConfigStore } from '@/core-ui/stores';
 import { usePollar } from '@pollar/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { pollarAdapter, setPollarBinding } from './adapters/pollar-adapter';
 import { usePollarReadyStore } from './pollarReady';
 import { getActiveAdapter, setActiveAdapter } from './registry';
@@ -21,20 +21,23 @@ export function PollarBridge() {
   const setWalletAddress = useConfigStore((s) => s.setWalletAddress);
   const setPollarReady = usePollarReadyStore((s) => s.setReady);
 
-  // Flip the global `pollarReady` flag once Pollar has finished its initial
-  // session restore. Providers.tsx blocks the auth-gate redirect on this so
-  // F5 doesn't bounce the user to /login while Pollar is still loading.
+  // Track when Pollar's initial session restore (`client.ready()`) has resolved.
+  // This alone is NOT enough to declare the auth-gate "settled": `ready()` can
+  // resolve a tick before `usePollar()` re-renders with the restored
+  // `walletAddress`, so we also wait for the mirror below before flipping
+  // `pollarReady`. Otherwise F5 bounces a logged-in user to /login.
+  const [restored, setRestored] = useState(false);
   useEffect(() => {
     const client = getClient();
     let cancelled = false;
     void client.ready().then(() => {
       if (cancelled) return;
-      setPollarReady(true);
+      setRestored(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [getClient, setPollarReady]);
+  }, [getClient]);
 
   useEffect(() => {
     if (isAuthenticated && walletAddress) {
@@ -47,17 +50,24 @@ export function PollarBridge() {
       // so signing routes through Pollar instead of any previously-active kit session.
       setActiveAdapter(pollarAdapter);
       setWalletAddress(walletAddress);
-      return;
+    } else {
+      // Not authenticated: drop the binding. If Pollar was the active adapter, demote it.
+      setPollarBinding(null);
+      const active = getActiveAdapter();
+      if (active?.id === 'pollar') {
+        setActiveAdapter(null);
+        setWalletAddress('');
+      }
     }
 
-    // Not authenticated: drop the binding. If Pollar was the active adapter, demote it.
-    setPollarBinding(null);
-    const active = getActiveAdapter();
-    if (active?.id === 'pollar') {
-      setActiveAdapter(null);
-      setWalletAddress('');
+    // Declare the gate "ready" only once restore has resolved AND the auth state
+    // is consistent: either Pollar is genuinely logged out (redirect is correct),
+    // or the restored address has been mirrored into the store (so the gate sees
+    // `isAuthenticated` before it sees `pollarReady`). This closes the F5 flash.
+    if (restored && (!isAuthenticated || walletAddress)) {
+      setPollarReady(true);
     }
-  }, [isAuthenticated, walletAddress, getClient, logout, setWalletAddress]);
+  }, [restored, isAuthenticated, walletAddress, getClient, logout, setWalletAddress, setPollarReady]);
 
   return null;
 }
