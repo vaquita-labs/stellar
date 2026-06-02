@@ -6,7 +6,7 @@ import {
   computeEligibilitySignals,
   getAchievementByKey,
   getAchievementCountsByProfile,
-  getCachedProfilesDepositsByProfileId,
+  getActiveDepositSumsByWallet,
   getLastClosedCycleId,
   getLeaderboardRankForWallet,
   getNetworkName,
@@ -15,9 +15,7 @@ import {
   getProfiles,
   getRewardByKey,
   getRewardsData,
-  HISTORICAL_DELAY,
   isAchievementEligible,
-  ONE_DAY,
   prisma,
   type Profile,
   type ProfileAverageResponseDTO,
@@ -33,7 +31,6 @@ import {
   toProfileRewardsResponseDTO,
   toProfileStreakResponseDTO,
 } from '@vaquita/shared';
-import type { Logger } from 'pino';
 
 const router = Router();
 
@@ -480,38 +477,28 @@ router.get('/', async (req, res) => {
   return sendSuccess(res, data.map((profile) => toProfileResponseDTO(networkName, profile)), '');
 });
 
-const toProfileHistoricResponseDTO = (
-  log: Logger,
+// Builds the leaderboard row for a profile. `totalSums`/`lastSum` now hold the
+// profile's current active-deposit balance (computed on the fly from `deposits`,
+// see getActiveDepositSumsByWallet) instead of the old 30-day snapshot series.
+// `count` is 1 so the frontend's `totalSums / count` ranking equals the balance.
+const toProfileByDepositsResponseDTO = (
   badgesByProfileId: Map<number, number>,
+  depositSumsByWallet: Map<string, number>,
 ) =>
-  async (profile: Profile): Promise<ProfileAverageResponseDTO> => {
-    let totalSums = 0;
-    const count = (ONE_DAY / HISTORICAL_DELAY) * 30;
-    let lastSum = 0;
-    let timestamp = 0;
-    try {
-      const { data, error } = await getCachedProfilesDepositsByProfileId(profile.id);
-      if (error) {
-        log.error({ err: error, profileId: profile.id }, 'Failed to fetch cached profile deposits (degraded)');
-      }
-      const sums = (data?.total_active_deposits || []);
-      timestamp = new Date(data?.timestamp ?? 0).getTime();
-      totalSums = sums.slice(-count).reduce((total: number, sum: number) => total + +sum, 0);
-      lastSum = sums.slice(-1)?.[0] ?? 0;
-    } catch (err) {
-      log.error({ err, profileId: profile.id }, 'Exception in toProfileHistoricResponseDTO (degraded)');
-    }
+  (profile: Profile): ProfileAverageResponseDTO => {
+    const wallet = profile.wallet_address ?? '';
+    const sum = depositSumsByWallet.get(wallet) ?? 0;
 
     return {
       email: profile.email ?? '',
       fullName: profile.full_name ?? '',
       nickname: profile.nickname ?? '',
-      walletAddress: profile.wallet_address ?? '',
-      totalSums,
-      lastSum,
-      count,
-      timestamp,
-      delay: HISTORICAL_DELAY,
+      walletAddress: wallet,
+      totalSums: sum,
+      lastSum: sum,
+      count: 1,
+      timestamp: 0,
+      delay: 0,
       badges: badgesByProfileId.get(profile.id) ?? 0,
     };
   };
@@ -531,9 +518,14 @@ router.get('/by-average-deposits', async (req, res) => {
     req.log.error({ err: badgesError }, 'Failed to fetch badge counts (degraded — leaderboard will show 0 badges)');
   }
 
+  const { sums: depositSumsByWallet, error: depositsError } = await getActiveDepositSumsByWallet();
+  if (depositsError) {
+    req.log.error({ err: depositsError }, 'Failed to compute active deposit sums (degraded — leaderboard amounts will be 0)');
+  }
+
   return sendSuccess(
     res,
-    await Promise.all(data.map(toProfileHistoricResponseDTO(req.log, badgesByProfileId))),
+    data.map(toProfileByDepositsResponseDTO(badgesByProfileId, depositSumsByWallet)),
     '',
   );
 });
