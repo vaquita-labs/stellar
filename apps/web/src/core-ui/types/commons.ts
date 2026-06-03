@@ -124,6 +124,7 @@ export interface ProfileResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  avatarUrl: string;
   onboardingCompleted: boolean;
   tutorialCompleted: boolean;
   cryptoSavvy: boolean;
@@ -180,6 +181,7 @@ export interface ProfileAverageResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  avatarUrl: string;
   walletAddress: string;
   totalSums: number;
   lastSum: number;
@@ -187,15 +189,6 @@ export interface ProfileAverageResponseDTO {
   timestamp: number;
   delay: number;
   badges: number;
-}
-
-export interface UserBalanceResponseDTO {
-  balances: {
-    balance: number;
-    networkName: string;
-    tokenSymbol: string;
-  }[];
-  wallet: { walletAddress: string };
 }
 
 export interface RewardResponseDTO {
