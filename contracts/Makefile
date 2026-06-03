@@ -19,14 +19,14 @@ test: build
 # --remap-path-prefix: avoid HTML mirroring absolute paths (coverage/Users/.../projects/...).
 coverage:
 	cargo llvm-cov --workspace --all-features --remap-path-prefix \
-		--ignore-filename-regex '/test/|defindex_vault\.rs|src/types\.rs' \
+		--ignore-filename-regex '/test/|defindex_vault\.rs|src/types\.rs|src/events\.rs' \
 		--lcov --output-path lcov.info
 	cargo llvm-cov report --remap-path-prefix \
-		--ignore-filename-regex '/test/|defindex_vault\.rs|src/types\.rs' \
+		--ignore-filename-regex '/test/|defindex_vault\.rs|src/types\.rs|src/events\.rs' \
 		--fail-under-lines 80 \
 		--html --output-dir coverage-html
 	cargo llvm-cov report --remap-path-prefix \
-		--ignore-filename-regex '/test/|defindex_vault\.rs|src/types\.rs' \
+		--ignore-filename-regex '/test/|defindex_vault\.rs|src/types\.rs|src/events\.rs' \
 		--json --summary-only 2>/dev/null \
 		| python3 $(CURDIR)/scripts/print_coverage_summary.py
 

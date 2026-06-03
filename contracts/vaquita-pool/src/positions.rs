@@ -87,7 +87,7 @@ pub fn outstanding_count_for_period(env: &Env, period: u64) -> u64 {
 // ---------- Instance TTL bump ----------
 
 /// Bump instance storage TTL on every state-changing call.
-pub fn bump_instance(env: &Env) {
+pub fn extend_instance(env: &Env) {
     env.storage()
         .instance()
         .extend_ttl(TTL_THRESHOLD_LEDGERS, INSTANCE_TTL_EXTEND_TO);

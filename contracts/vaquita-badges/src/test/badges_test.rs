@@ -783,3 +783,10 @@ fn update_edition_cap_takes_effect_on_next_mint() {
     let result = client.try_mint_badge(&w2, &edition, &0, &expiry, &sig2);
     assert_eq!(result, Err(Ok(BadgeError::EditionCapReached)));
 }
+
+#[test]
+fn migrate_is_callable() {
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+    client.migrate();
+}
