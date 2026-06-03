@@ -1,6 +1,20 @@
 import type { Config, Token } from '@vaquita/db';
 import { firstElement } from '../../helpers';
-import type { ProjectConfigResponseDTO } from '../../types';
+import type { ProjectConfigCurrencyDTO, ProjectConfigResponseDTO } from '../../types';
+
+/**
+ * Coerces the `config.currencies` Json column into a typed currency list,
+ * tolerating a null/non-array column or malformed entries (those are dropped).
+ */
+const toCurrencies = (value: unknown): ProjectConfigCurrencyDTO[] => {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return [];
+    const { id, label, hint } = entry as Record<string, unknown>;
+    if (typeof id !== 'string' || typeof label !== 'string') return [];
+    return [{ id, label, ...(typeof hint === 'string' ? { hint } : {}) }];
+  });
+};
 
 /**
  * Maps the singleton ProjectConfig + its tokens (Prisma rows) to the public DTO.
@@ -26,4 +40,5 @@ export const toProjectConfig = (
     contractAddress: token.contractAddress?.split(',')?.[0] ?? '',
     vaquitaContractAddress: firstElement(token.vaquitaContractAddress ?? ''),
   })),
+  currencies: toCurrencies(config.currencies),
 });

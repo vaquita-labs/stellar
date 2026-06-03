@@ -25,12 +25,17 @@ const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden
 
 // The empty shape returned when no config row exists yet. `id` is null so the
 // client can tell "nothing saved" apart from a real row (which always has an id).
+// A fiat display currency offered in the web UI's Preferences page. Stored on
+// the singleton config row as a Json array of `{ id, label, hint? }`.
+type Currency = { id: string; label: string; hint?: string };
+
 const emptyConfig = {
   id: null,
   networkName: '',
   origins: [] as string[],
   networkPassphrase: null,
   badgesContractAddress: null,
+  currencies: [] as Currency[],
   createdAt: null,
   updatedAt: null,
 };
@@ -44,11 +49,25 @@ const nullableStr = (max: number) =>
     .nullish()
     .transform((v) => (v && v.trim() ? v.trim() : null));
 
+// A currency entry: short id (e.g. "usd"), display label ("USD") and optional
+// hint ("US Dollar"). Empty hints are normalized away so the column stays clean.
+const currencySchema = z.object({
+  id: z.string().trim().min(1).max(20),
+  label: z.string().trim().min(1).max(50),
+  hint: z
+    .string()
+    .trim()
+    .max(100)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
+});
+
 const updateSchema = z.object({
   networkName: z.string().min(1).max(50).optional(),
   origins: z.array(z.string().trim().min(1)).optional(),
   networkPassphrase: nullableStr(10_000),
   badgesContractAddress: nullableStr(10_000),
+  currencies: z.array(currencySchema).optional(),
 });
 
 // GET /api/config — read the singleton config. Returns the empty-values shape
@@ -95,6 +114,7 @@ export async function PATCH(req: NextRequest) {
         origins: data.origins ?? [],
         networkPassphrase: data.networkPassphrase ?? null,
         badgesContractAddress: data.badgesContractAddress ?? null,
+        currencies: data.currencies ?? [],
       },
     });
     return NextResponse.json({ data: { config } });
@@ -108,6 +128,7 @@ export async function PATCH(req: NextRequest) {
     data: {
       ...(data.networkName !== undefined ? { networkName: data.networkName } : {}),
       ...(data.origins !== undefined ? { origins: data.origins } : {}),
+      ...(data.currencies !== undefined ? { currencies: data.currencies } : {}),
       networkPassphrase: data.networkPassphrase,
       badgesContractAddress: data.badgesContractAddress,
     },

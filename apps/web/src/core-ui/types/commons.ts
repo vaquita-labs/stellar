@@ -23,6 +23,12 @@ export enum DepositWithdrawalState {
   WITHDRAW_SUCCESS = 'withdraw_success',
 }
 
+export interface CurrencyDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
 export interface NetworkResponseDTO {
   networkName: string;
   type: string;
@@ -39,6 +45,7 @@ export interface NetworkResponseDTO {
     contractAddress: string;
     vaquitaContractAddress: string;
   }[];
+  currencies: CurrencyDTO[];
 }
 
 export interface DepositSummaryResponseDTO {

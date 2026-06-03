@@ -1,8 +1,9 @@
 'use client';
 
 import { ListBox, Select, Switch, toast } from '@heroui/react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FiChevronDown } from 'react-icons/fi';
+import { useConfigStore } from '../../../stores';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
 type Option = { id: string; label: string; hint?: string };
@@ -12,12 +13,6 @@ const LANGUAGES: Option[] = [
   { id: 'es', label: 'Español', hint: 'América Latina' },
   { id: 'pt', label: 'Português', hint: 'Brasil' },
   { id: 'fr', label: 'Français', hint: 'France' },
-];
-
-const CURRENCIES: Option[] = [
-  { id: 'usd', label: 'USD', hint: 'US Dollar' },
-  { id: 'ars', label: 'ARS', hint: 'Peso argentino' },
-  { id: 'bob', label: 'BOB', hint: 'Boliviano' },
 ];
 
 /**
@@ -129,8 +124,21 @@ function ToggleRow({
 }
 
 export function PreferencesPage() {
+  const { network } = useConfigStore();
+
+  // Backend-driven (from `GET /api/v1/config` → config store), no longer hardcoded.
+  const currencies: Option[] = network?.currencies ?? [];
+
   const [language, setLanguage] = useState('en');
   const [currency, setCurrency] = useState('usd');
+
+  // Default the selection to the first backend currency once the list loads,
+  // if the current pick isn't offered (e.g. the seeded 'usd' fallback).
+  useEffect(() => {
+    if (currencies.length > 0 && !currencies.some((c) => c.id === currency)) {
+      setCurrency(currencies[0].id);
+    }
+  }, [currencies, currency]);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [hapticFeedback, setHapticFeedback] = useState(true);
   const [autoplaySounds, setAutoplaySounds] = useState(true);
@@ -156,7 +164,7 @@ export function PreferencesPage() {
       <OptionSelect
         title="Currency"
         description="Used to display your balances and rewards."
-        options={CURRENCIES}
+        options={currencies}
         value={currency}
         onChange={setCurrency}
         ariaLabel="Currency"

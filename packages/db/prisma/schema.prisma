@@ -119,6 +119,9 @@ model Config {
   networkName           String   @map("network_name") @db.VarChar(50)
   networkPassphrase     String?  @map("network_passphrase")
   badgesContractAddress String?  @map("badges_contract_address")
+  // Fiat display currencies offered in the UI (Preferences page). Each entry is
+  // `{ id, label, hint? }`, e.g. `{ "id": "usd", "label": "USD", "hint": "US Dollar" }`.
+  currencies            Json     @default("[]")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)

@@ -7,12 +7,20 @@ import { useQuery } from '@tanstack/react-query';
  * directly, so fields are camelCase. When the table is empty the route returns
  * the empty-values shape with `id: null` (so the UI can offer to create it).
  */
+/** A fiat display currency offered in the web UI's Preferences page. */
+export interface Currency {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
 export interface ProjectConfig {
   id: number | null;
   networkName: string;
   origins: string[];
   networkPassphrase: string | null;
   badgesContractAddress: string | null;
+  currencies: Currency[];
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -23,6 +31,7 @@ export interface ProjectConfigPayload {
   origins?: string[];
   networkPassphrase?: string | null;
   badgesContractAddress?: string | null;
+  currencies?: Currency[];
 }
 
 // Same-origin route handler inside this admin app — no NEXT_PUBLIC_SERVICES_URL.

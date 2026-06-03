@@ -54,6 +54,16 @@ export interface ProjectConfigTokenDTO {
 }
 
 /**
+ * A fiat display currency offered in the UI (Preferences page). Sourced from
+ * the singleton `config` row so the option list is backend-driven, not hardcoded.
+ */
+export interface ProjectConfigCurrencyDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+/**
  * Single-network project configuration (replaces the per-network NetworkResponseDTO).
  * `chainId` (EVM leftover) is replaced by `networkPassphrase` (Stellar).
  */
@@ -62,6 +72,7 @@ export interface ProjectConfigResponseDTO {
   networkPassphrase: string | null;
   badgesContractAddress?: string;
   tokens: ProjectConfigTokenDTO[];
+  currencies: ProjectConfigCurrencyDTO[];
 }
 
 export interface DepositSummaryResponseDTO {
@@ -133,6 +144,7 @@ export interface ProfileResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  avatarUrl: string;
   onboardingCompleted: boolean;
   tutorialCompleted: boolean;
   cryptoSavvy: boolean;

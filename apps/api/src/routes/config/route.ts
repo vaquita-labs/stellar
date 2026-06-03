@@ -9,9 +9,11 @@ const router = Router();
 
 /**
  * Returns the single project configuration (name, type, networkPassphrase,
- * badgesContractAddress, tokens[]). Single-network: there is exactly one config.
+ * badgesContractAddress, tokens[], currencies[]). Single-network: there is
+ * exactly one config. `currencies` are the fiat display options the UI shows
+ * on the Preferences page (backend-driven, not hardcoded).
  *
- * 200 { name, type, networkPassphrase, badgesContractAddress?, tokens: [...] }
+ * 200 { name, type, networkPassphrase, badgesContractAddress?, tokens: [...], currencies: [...] }
  * 404 config not found (project_config table empty)
  */
 router.get('/', async (req, res) => {

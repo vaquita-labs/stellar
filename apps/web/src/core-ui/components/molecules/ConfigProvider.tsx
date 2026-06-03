@@ -20,6 +20,7 @@ type ProjectConfigResponse = {
   networkPassphrase: string | null;
   badgesContractAddress?: string;
   tokens: NetworkResponseDTO['tokens'];
+  currencies?: NetworkResponseDTO['currencies'];
 };
 
 const transformConfig = (data: unknown): NetworkResponseDTO | null => {
@@ -34,6 +35,7 @@ const transformConfig = (data: unknown): NetworkResponseDTO | null => {
     networkPassphrase: config.networkPassphrase ?? null,
     ...(config.badgesContractAddress ? { badgesContractAddress: config.badgesContractAddress } : {}),
     tokens,
+    currencies: config.currencies ?? [],
   };
 };
 
