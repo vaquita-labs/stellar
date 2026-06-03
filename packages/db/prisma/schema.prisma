@@ -220,8 +220,9 @@ model Token {
   isSupported                  Boolean   @default(false) @map("is_supported")
   contractAddress              String?   @map("contract_address") @db.VarChar(128)
   vaquitaContractAddress       String?   @map("vaquita_contract_address") @db.VarChar(128)
-  lockPeriods                  Int[]     @default([]) @map("lock_periods")
+  lockPeriods                  BigInt[]  @default([]) @map("lock_periods")
   defindexVaultContractAddress String?   @map("defindex_vault_contract_address")
+
   createdAt                    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt                    DateTime? @map("deleted_at") @db.Timestamptz(6)

@@ -49,7 +49,8 @@ export const toProjectConfig = (
     symbol: token.symbol,
     name: token.name,
     decimals: token.decimals ?? 0,
-    lockPeriods: token.lockPeriods,
+    // lock_periods is a bigint[] column; the DTO contract is number[] (ms).
+    lockPeriods: token.lockPeriods.map(Number),
     contractAddress: token.contractAddress?.split(',')?.[0] ?? '',
     vaquitaContractAddress: firstElement(token.vaquitaContractAddress ?? ''),
   })),
