@@ -14,6 +14,13 @@ export interface Currency {
   hint?: string;
 }
 
+/** A UI language offered in the web UI's Preferences page. */
+export interface Language {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
 export interface ProjectConfig {
   id: number | null;
   networkName: string;
@@ -21,6 +28,7 @@ export interface ProjectConfig {
   networkPassphrase: string | null;
   badgesContractAddress: string | null;
   currencies: Currency[];
+  languages: Language[];
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -32,6 +40,7 @@ export interface ProjectConfigPayload {
   networkPassphrase?: string | null;
   badgesContractAddress?: string | null;
   currencies?: Currency[];
+  languages?: Language[];
 }
 
 // Same-origin route handler inside this admin app — no NEXT_PUBLIC_SERVICES_URL.

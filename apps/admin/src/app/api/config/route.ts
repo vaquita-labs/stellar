@@ -23,12 +23,14 @@ function adminSecretOk(req: NextRequest): boolean {
 
 const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
 
+// Currencies and languages are both fiat/UI display options shown on the web
+// app's Preferences page, stored on the singleton config row as Json arrays of
+// `{ id, label, hint? }`.
+type Currency = { id: string; label: string; hint?: string };
+type Language = { id: string; label: string; hint?: string };
+
 // The empty shape returned when no config row exists yet. `id` is null so the
 // client can tell "nothing saved" apart from a real row (which always has an id).
-// A fiat display currency offered in the web UI's Preferences page. Stored on
-// the singleton config row as a Json array of `{ id, label, hint? }`.
-type Currency = { id: string; label: string; hint?: string };
-
 const emptyConfig = {
   id: null,
   networkName: '',
@@ -36,6 +38,7 @@ const emptyConfig = {
   networkPassphrase: null,
   badgesContractAddress: null,
   currencies: [] as Currency[],
+  languages: [] as Language[],
   createdAt: null,
   updatedAt: null,
 };
@@ -49,9 +52,10 @@ const nullableStr = (max: number) =>
     .nullish()
     .transform((v) => (v && v.trim() ? v.trim() : null));
 
-// A currency entry: short id (e.g. "usd"), display label ("USD") and optional
-// hint ("US Dollar"). Empty hints are normalized away so the column stays clean.
-const currencySchema = z.object({
+// An option entry: short id (e.g. "usd" / "en"), display label ("USD" /
+// "English") and optional hint ("US Dollar" / "United States"). Empty hints are
+// normalized away so the column stays clean. Shared by currencies and languages.
+const optionSchema = z.object({
   id: z.string().trim().min(1).max(20),
   label: z.string().trim().min(1).max(50),
   hint: z
@@ -67,7 +71,8 @@ const updateSchema = z.object({
   origins: z.array(z.string().trim().min(1)).optional(),
   networkPassphrase: nullableStr(10_000),
   badgesContractAddress: nullableStr(10_000),
-  currencies: z.array(currencySchema).optional(),
+  currencies: z.array(optionSchema).optional(),
+  languages: z.array(optionSchema).optional(),
 });
 
 // GET /api/config — read the singleton config. Returns the empty-values shape
@@ -115,6 +120,7 @@ export async function PATCH(req: NextRequest) {
         networkPassphrase: data.networkPassphrase ?? null,
         badgesContractAddress: data.badgesContractAddress ?? null,
         currencies: data.currencies ?? [],
+        languages: data.languages ?? [],
       },
     });
     return NextResponse.json({ data: { config } });
@@ -129,6 +135,7 @@ export async function PATCH(req: NextRequest) {
       ...(data.networkName !== undefined ? { networkName: data.networkName } : {}),
       ...(data.origins !== undefined ? { origins: data.origins } : {}),
       ...(data.currencies !== undefined ? { currencies: data.currencies } : {}),
+      ...(data.languages !== undefined ? { languages: data.languages } : {}),
       networkPassphrase: data.networkPassphrase,
       badgesContractAddress: data.badgesContractAddress,
     },

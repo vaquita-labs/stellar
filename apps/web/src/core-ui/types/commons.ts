@@ -29,6 +29,12 @@ export interface CurrencyDTO {
   hint?: string;
 }
 
+export interface LanguageDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
 export interface NetworkResponseDTO {
   networkName: string;
   type: string;
@@ -46,6 +52,7 @@ export interface NetworkResponseDTO {
     vaquitaContractAddress: string;
   }[];
   currencies: CurrencyDTO[];
+  languages: LanguageDTO[];
 }
 
 export interface DepositSummaryResponseDTO {
