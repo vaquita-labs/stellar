@@ -1,7 +1,7 @@
 'use client';
 
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { useQuery } from '@tanstack/react-query';
 
 interface MintedBadge {
@@ -15,8 +15,8 @@ interface MintedBadge {
  * Uses the confirmed_at column to distinguish minted vs merely claimed badges.
  */
 export const useMintedBadges = () => {
-  const { network, walletAddress } = useNetworkConfigStore();
-  const networkName = network?.name ?? '';
+  const { network, walletAddress } = useConfigStore();
+  const networkName = network?.networkName ?? '';
   const baseUrl = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
 
   const query = useQuery<Set<string>>({
@@ -24,7 +24,7 @@ export const useMintedBadges = () => {
     queryFn: async () => {
       if (!walletAddress || !networkName) return new Set<string>();
       const res = await fetch(
-        `${baseUrl}/claim/${networkName}/minted?wallet=${encodeURIComponent(walletAddress)}`,
+        `${baseUrl}/claim/minted?wallet=${encodeURIComponent(walletAddress)}`,
       );
       if (!res.ok) return new Set<string>();
       const body = await res.json();

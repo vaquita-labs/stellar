@@ -1,17 +1,17 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO, TotalDepositsResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
 export const useAdminDeposits = () => {
-  const { network } = useNetworkConfigStore();
+  const { network } = useConfigStore();
 
   return useQuery<{ deposits: DepositResponseDTO[]; totals: TotalDepositsResponseDTO } | null>({
-    queryKey: ['deposit', 'admin', 'network', network?.name, 'complete'],
+    queryKey: ['deposit', 'admin', 'network', network?.networkName, 'complete'],
     queryFn: async () => {
       try {
         const response = await fetch(
-          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/admin/network/${network?.name}/complete`
+          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/admin/network/${network?.networkName}/complete`
         );
 
         const data = await response.json();
@@ -25,6 +25,6 @@ export const useAdminDeposits = () => {
         };
       }
     },
-    enabled: !!network?.name,
+    enabled: !!network?.networkName,
   });
 };

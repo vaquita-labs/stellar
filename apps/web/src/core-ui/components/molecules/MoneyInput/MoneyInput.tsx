@@ -1,6 +1,6 @@
 'use client';
 
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { useMemo, useState } from 'react';
 import { IoMdSync } from 'react-icons/io';
 import { MoneyInputProps, TokenSymbol } from './types';
@@ -36,7 +36,7 @@ export function MoneyInput({
   onReloadBalance,
   balanceIsLoading,
 }: MoneyInputProps) {
-  const { token, network } = useNetworkConfigStore();
+  const { token, network } = useConfigStore();
   const tokenSymbols = network?.tokens ?? [];
 
   const rules = (token && TOKEN_RULES[token?.symbol as TokenSymbol]) ?? { min: 0, max: 0, maxDecimals: 0 };

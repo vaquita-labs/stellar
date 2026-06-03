@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { MathUtils } from 'three';
+import { VaquitaMood } from '@/core-ui/types';
 import { applyBlinkEffect } from './effects';
 import { Body, Head, LeftArm, LeftLeg, RightArm, RightLeg, Tail } from './parts';
 
@@ -14,6 +15,7 @@ interface VaquitaModelProps {
   blinking?: boolean;
   label?: string;
   color?: string;
+  mood?: VaquitaMood;
 }
 
 const VaquitaModel = ({
@@ -22,6 +24,7 @@ const VaquitaModel = ({
   blinking = false,
   label,
   color,
+  mood = 'normal',
 }: VaquitaModelProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const leftLegRef = useRef<THREE.Group>(null);
@@ -81,6 +84,7 @@ const VaquitaModel = ({
         helmetColor={helmetColor}
         noseColor={noseColor}
         isHelmet={false}
+        mood={mood}
       />
       <Body bodyColor={bodyColor} spotColor={spotColor} />
       <LeftLeg

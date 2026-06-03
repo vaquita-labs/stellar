@@ -7,19 +7,18 @@
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "pnpm@9.0.0",
   "scripts": {
     "deploy:vault": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^15.0.1",
-    "zod": "^4.3.6"
+    "@stellar/stellar-sdk": "^15.1.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
-    "tsx": "^4.21.0",
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }
 }

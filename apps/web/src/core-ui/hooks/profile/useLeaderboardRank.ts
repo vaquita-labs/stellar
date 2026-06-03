@@ -1,19 +1,18 @@
 'use client';
 
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { useQuery } from '@tanstack/react-query';
 
 export const useLeaderboardRank = () => {
-  const { network, walletAddress } = useNetworkConfigStore();
-  const networkName = network?.name ?? '';
+  const { walletAddress } = useConfigStore();
 
   return useQuery<{ rank: number | null; cycleId: number } | null>({
-    queryKey: ['leaderboard-rank', networkName, walletAddress],
-    enabled: !!networkName && !!walletAddress,
+    queryKey: ['leaderboard-rank', walletAddress],
+    enabled: !!walletAddress,
     queryFn: async () => {
       const res = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/network/${encodeURIComponent(networkName)}/leaderboard/rank?wallet=${encodeURIComponent(walletAddress ?? '')}`,
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/leaderboard/rank?wallet=${encodeURIComponent(walletAddress ?? '')}`,
       );
       if (!res.ok) return null;
       const body = await res.json();

@@ -8,6 +8,7 @@ export * from './FriendsPage';
 export * from './HelpCenterPage';
 export * from './MockedSubPageLayout';
 export * from './NotificationsPage';
+export * from './PersonalRecords';
 export * from './PreferencesPage';
 export * from './PrivacySettingsPage';
 export * from './SearchFriendsPage';

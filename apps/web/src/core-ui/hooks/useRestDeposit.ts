@@ -1,9 +1,9 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { useCallback } from 'react';
 
 export const useRestDeposit = () => {
-  const { walletAddress, network } = useNetworkConfigStore();
+  const { walletAddress, network } = useConfigStore();
 
   const createDeposit = useCallback(
     async (payload: { amount: number; tokenSymbol: string; lockPeriod: number, vaquitaContract: string }) => {
@@ -11,7 +11,7 @@ export const useRestDeposit = () => {
         const response = await fetch(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...payload, networkName: network?.name, walletAddress }),
+          body: JSON.stringify({ ...payload, networkName: network?.networkName, walletAddress }),
         });
         const data = await response.json();
 
@@ -29,7 +29,7 @@ export const useRestDeposit = () => {
         };
       }
     },
-    [network?.name, walletAddress]
+    [network?.networkName, walletAddress]
   );
 
   const confirmDeposit = useCallback(

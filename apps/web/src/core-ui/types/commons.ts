@@ -1,5 +1,4 @@
 // Shared across frontend and backend
-import { type Abi } from 'viem';
 
 export enum WithdrawalStatus {
   INITIATED = 'initiated',
@@ -24,10 +23,22 @@ export enum DepositWithdrawalState {
   WITHDRAW_SUCCESS = 'withdraw_success',
 }
 
+export interface CurrencyDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+export interface LanguageDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
 export interface NetworkResponseDTO {
-  name: string;
+  networkName: string;
   type: string;
-  chainId: number;
+  networkPassphrase: string | null;
   badgesContractAddress?: string;
   tokens: {
     isGas: boolean;
@@ -36,12 +47,12 @@ export interface NetworkResponseDTO {
     symbol: string;
     name: string;
     decimals: number;
-    lockPeriod: number[];
+    lockPeriods: number[];
     contractAddress: string;
-    contractAbi: Abi;
     vaquitaContractAddress: string;
-    vaquitaContractAbi: Abi;
   }[];
+  currencies: CurrencyDTO[];
+  languages: LanguageDTO[];
 }
 
 export interface DepositSummaryResponseDTO {
@@ -79,9 +90,9 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   transactionHash: string;
   depositIdHex: string;
   vaquitaInterest: number;
-  aaveInterest: number;
+  protocolInterest: number;
   /**
-   * Stellar: same as `vaultInterest` (DeFindex vault accrual). EVM: Aave-style estimate field name kept for compatibility.
+   * Stellar: same as `vaultInterest` (DeFindex vault accrual).
    */
   blendInterest: number;
   /** Stellar testnet only: vault NAV accrual. Omitted on other networks. */
@@ -97,10 +108,10 @@ export type TotalDepositsResponseDTO = {
     [key in DepositWithdrawalState]: {
       totalCount: number;
       totalAmount: number;
-      totalAaveInterest: number;
+      totalProtocolInterest: number;
       totalBlendInterest: number;
       totalVaquitaInterest: number;
-      totalAaveApy: number;
+      totalProtocolApy: number;
       totalBlendApy: number;
       totalVaquitaApy: number;
     };
@@ -113,6 +124,10 @@ export interface ProfileResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  avatarUrl: string;
+  onboardingCompleted: boolean;
+  tutorialCompleted: boolean;
+  cryptoSavvy: boolean;
 }
 
 export interface ProfileExperienceResponseDTO {
@@ -166,6 +181,7 @@ export interface ProfileAverageResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  avatarUrl: string;
   walletAddress: string;
   totalSums: number;
   lastSum: number;
@@ -173,15 +189,6 @@ export interface ProfileAverageResponseDTO {
   timestamp: number;
   delay: number;
   badges: number;
-}
-
-export interface UserBalanceResponseDTO {
-  balances: {
-    balance: number;
-    networkName: string;
-    tokenSymbol: string;
-  }[];
-  wallet: { walletAddress: string };
 }
 
 export interface RewardResponseDTO {

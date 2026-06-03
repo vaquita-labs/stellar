@@ -48,7 +48,7 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const { id } = await ctx.params;
-  const achievement = getCatalogAchievement(id);
+  const achievement = await getCatalogAchievement(id);
   if (!achievement) {
     return new Response('Achievement not found', { status: 404 });
   }

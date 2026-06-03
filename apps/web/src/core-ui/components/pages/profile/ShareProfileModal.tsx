@@ -365,17 +365,22 @@ export function ShareProfileModal({
       }}
       className="bg-black/70 backdrop-blur-sm data-[exiting=true]:duration-300"
     >
-      <Modal.Container size="full" placement="bottom" scroll="inside" className="p-0! m-0!">
+      <Modal.Container
+        size="full"
+        placement="bottom"
+        scroll="inside"
+        className="p-0! m-0! sm:items-center sm:justify-center sm:p-4!"
+      >
         <Modal.Dialog
           aria-label={tab === 'mine' ? 'Share your profile QR' : 'Scan a profile QR'}
-          className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-t-[2rem] border-0 max-h-dvh data-[exiting=true]:duration-300"
+          className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-3xl border-0 max-h-dvh sm:max-h-[90vh] sm:max-w-md sm:w-full sm:mx-auto data-[exiting=true]:duration-300"
         >
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className="flex flex-col h-full min-h-dvh w-full"
+            className="flex flex-col h-full min-h-dvh w-full sm:min-h-0 sm:h-auto sm:max-h-[90vh]"
           >
             {/* Header — X on the left, drag handle in the middle, spacer on
                 the right to keep the handle visually centered. Mirrors the
@@ -389,7 +394,7 @@ export function ShareProfileModal({
               >
                 <FiX className="h-5 w-5" />
               </button>
-              <span className="h-1.5 w-12 rounded-full bg-black/15" aria-hidden />
+              <span className="h-1.5 w-12 rounded-full bg-black/15 sm:hidden" aria-hidden />
               <span className="w-10" aria-hidden />
             </div>
 

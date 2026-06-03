@@ -48,57 +48,52 @@ type WithdrawParams = {
 type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' }>['params'];
 
 /**
- * Invoke a Vaquita pool method via Pollar's `/tx/build` + `signAndSubmitTx` pipeline.
- *
- * We subscribe to Pollar's transaction state machine BEFORE calling `buildTx`
- * so the `built` callback (which carries the unsigned XDR) triggers
- * `signAndSubmitTx` and the eventual `success` carries back the on-chain hash.
+ * Invoke a Vaquita pool method via Pollar's `buildAndSignAndSubmitTx`, which
+ * does build → sign → submit in one awaitable call (for external wallets it
+ * composes `buildTx` + `signAndSubmitTx` internally and still drives the state
+ * machine for modal UIs). We just `await` it and read the returned outcome —
+ * no manual `onTransactionStateChange` subscription needed.
  *
  * `deposit_id` in the Vaquita pool is a `String`, NOT a `BytesN<16>` (see
  * `contracts/vaquita-pool/src/lib.rs`), so callers pass the 32-char hex string
  * verbatim under `{ type: 'string' }`.
  */
+// Coalesce overlapping invocations of the same contract call into one
+// in-flight request. A double-click or re-render that fires two identical
+// calls would otherwise open two Freighter popups. Keying by the full request
+// signature lets independent deposits/withdraws still run in parallel.
+const INFLIGHT_REQUESTS = new Map<string, Promise<{ hash: string }>>();
+
+function requestKey(params: InvokeContractParams): string {
+  return `${params.contractId}:${params.method}:${JSON.stringify(params.args)}`;
+}
+
 async function invokeViaPollar(
   client: PollarClient,
   params: InvokeContractParams,
   logLabel: string,
 ): Promise<{ hash: string }> {
-  return new Promise<{ hash: string }>((resolve, reject) => {
-    let settled = false;
-    let unsubscribe: (() => void) | undefined;
-    const finish = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      unsubscribe?.();
-      fn();
-    };
+  const key = requestKey(params);
+  const existing = INFLIGHT_REQUESTS.get(key);
+  if (existing) {
+    console.warn(`[${logLabel}] duplicate call coalesced into in-flight request`);
+    return existing;
+  }
 
-    unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
-      console.info(`[${logLabel}] state`, state.step, state);
-      if (state.step === 'built' && state.buildData?.unsignedXdr) {
-        // Don't catch — let state.step 'success'/'error' be the authoritative
-        // outcome. signAndSubmitTx can reject on transient network errors even
-        // when the tx lands; catching here races against the success state.
-        void client.signAndSubmitTx(state.buildData.unsignedXdr);
-        return;
-      }
-      if (state.step === 'success') {
-        finish(() => resolve({ hash: state.hash }));
-        return;
-      }
-      if (state.step === 'error') {
-        finish(() => reject(new Error(state.details ?? `Pollar ${params.method} failed`)));
-        return;
-      }
-    });
-
-    // Pollar retries 401s internally and communicates the real outcome via
-    // onTransactionStateChange (success / error). Only log here — calling
-    // finish() would reject the promise and unsubscribe before the retry lands.
-    void client.buildTx('invoke_contract', params).catch((err: unknown) => {
-      console.warn(`[${logLabel}] buildTx error (Pollar may retry):`, err);
-    });
+  const promise = (async () => {
+    const outcome = await client.buildAndSignAndSubmitTx('invoke_contract', params);
+    console.info(`[${logLabel}] outcome`, outcome.status, outcome);
+    if (outcome.status === 'error') {
+      throw new Error(outcome.details ?? `Pollar ${params.method} failed`);
+    }
+    // Both 'success' (ledger-confirmed) and 'pending' (Horizon ack) carry a hash.
+    return { hash: outcome.hash };
+  })().finally(() => {
+    INFLIGHT_REQUESTS.delete(key);
   });
+
+  INFLIGHT_REQUESTS.set(key, promise);
+  return promise;
 }
 
 function requirePollarClient(): PollarClient {

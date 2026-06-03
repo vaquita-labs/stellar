@@ -6,8 +6,8 @@ import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import { Button, Spinner, toast } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
-import { useApyByLockPeriod, useWithdrawalTime } from '../../../hooks';
-import { useNetworkConfigStore, useTransactionStore } from '../../../stores';
+import { useApyByLockPeriod, useTransactions, useWithdrawalTime } from '../../../hooks';
+import { useConfigStore } from '../../../stores';
 import { DepositWithdrawalState } from '../../../types';
 import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
@@ -36,19 +36,19 @@ const breakdownTime = (totalSeconds: number) => {
 export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }: VaquitaModalContentProps) => {
   const [confirming, setConfirming] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  const { transactionWithdraw } = useTransactionStore();
+  const { transactionWithdraw } = useTransactions();
   const { confirmWithdrawal } = useRestWithdrawal();
-  const { network, token } = useNetworkConfigStore();
+  const { network, token } = useConfigStore();
   const depositLockPeriod = vaquita.lockPeriod;
   const { data: dataApy } = useApyByLockPeriod(depositLockPeriod, token?.symbol ?? '');
   const withdrawalInfo = useWithdrawalTime(vaquita);
-  const { vaquitaInterest, aaveInterest, blendInterest, totalInterest } = getInterestData(
+  const { vaquitaInterest, protocolInterest: protocolInterestSource, blendInterest, totalInterest } = getInterestData(
     network!,
     dataApy,
     vaquita.amount,
     depositLockPeriod,
   );
-  const protocolInterest = aaveInterest + blendInterest;
+  const protocolInterest = protocolInterestSource + blendInterest;
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -67,7 +67,7 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
     setLoading(true);
     let isSuccess = false;
     let lastError: unknown = null;
-    if (isNewDepositHandled(network.name)) {
+    if (isNewDepositHandled(network.networkName)) {
       const { success, error } = await transactionWithdraw(
         +vaquita.id,
         vaquita.depositIdHex,

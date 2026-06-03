@@ -1,6 +1,6 @@
 'use client';
 
-import { DepositWithdrawalState, VaquitaAnimationState } from '../../../types';
+import { DepositWithdrawalState, VaquitaAnimationState, VaquitaMood } from '../../../types';
 import SleepingAnimation from '../../templates/WorldMap/vaquita/animations/SleepingAnimation';
 import WalkingAnimation from '../../templates/WorldMap/vaquita/animations/WalkingAnimation';
 import WorkingAnimation from '../../templates/WorldMap/vaquita/animations/WorkingAnimation';
@@ -11,14 +11,15 @@ interface VaquitaProps {
   direction: [number, number];
   scale: number;
   label?: string;
+  mood?: VaquitaMood;
 }
 
-export const VaquitaAnimation = ({ direction, scale, status, brainState, label }: VaquitaProps) => {
+export const VaquitaAnimation = ({ direction, scale, status, brainState, label, mood }: VaquitaProps) => {
   const blinkColor = blinkColorFor(status);
   const blinking = blinkColor !== undefined;
 
   if (brainState === 'sleeping') {
-    return <SleepingAnimation direction={direction} scale={scale} label={label} />;
+    return <SleepingAnimation direction={direction} scale={scale} label={label} mood={mood} />;
   }
 
   if (brainState === 'working') {
@@ -28,11 +29,21 @@ export const VaquitaAnimation = ({ direction, scale, status, brainState, label }
         scale={scale}
         position={{ x: 0, y: 0, z: 0 }}
         label={label}
+        mood={mood}
       />
     );
   }
 
-  return <WalkingAnimation direction={direction} scale={scale} blinking={blinking} color={blinkColor} label={label} />;
+  return (
+    <WalkingAnimation
+      direction={direction}
+      scale={scale}
+      blinking={blinking}
+      color={blinkColor}
+      label={label}
+      mood={mood}
+    />
+  );
 };
 
 const blinkColorFor = (status: DepositWithdrawalState): string | undefined => {

@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useProfileRewards } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { ShopItem, ShopModalProps } from './types';
 
 // Shop items data — single-currency (gold). Prices were rebalanced from the
@@ -38,7 +38,7 @@ const shopItems: ShopItem[] = [
     price: {
       goldCoins: 2,
     },
-    image: '/icons/summary/streak.png',
+    image: '/icons/global/streak.png',
   },
   {
     id: '4',
@@ -101,7 +101,7 @@ const shopItems: ShopItem[] = [
 export function ShopModal({ open, onOpenChange }: ShopModalProps) {
   const { data: profileRewards, refetch } = useProfileRewards();
   const queryClient = useQueryClient();
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -130,7 +130,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
 
       // Invalidate and refetch the rewards query to update coins
       await queryClient.invalidateQueries({
-        queryKey: ['profile', network?.name, walletAddress, 'profile-rewards'],
+        queryKey: ['profile', network?.networkName, walletAddress, 'profile-rewards'],
       });
       await refetch();
 

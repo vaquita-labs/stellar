@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { FiShare2, FiX } from 'react-icons/fi';
 import { useClaimedAchievements, useIsMobile, useMintBadge, useMintedBadges, useProfileRewards } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 
 /**
  * Mocked username used to personalize the share link. Replace with a real
@@ -95,8 +95,7 @@ export function AchievementModal({
   const { isClaimed, claim } = useClaimedAchievements();
   const { isMinted } = useMintedBadges();
   const mintBadgeMutation = useMintBadge();
-  const { network, walletAddress } = useNetworkConfigStore();
-  const networkName = network?.name ?? '';
+  const { network, walletAddress } = useConfigStore();
   const baseUrl = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
   const { data: rewardsData } = useProfileRewards();
   // Drives whether we render the full-screen bottom-sheet (phone-sized) or
@@ -125,12 +124,18 @@ export function AchievementModal({
       setBonusGold(0);
       setMintTxHash(null);
       setMintFlowPending(false);
+      mintBadgeMutation.reset();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, achievement?.id]);
 
-  // Fire the mint mutation when entering the minting phase.
-  useEffect(() => {
-    if (phase !== 'minting' || !achievement) return;
+  // Fire the mint mutation synchronously from the user gesture. Bailing on
+  // `isPending` keeps a double-click (or any stray re-trigger) from spawning
+  // a second Freighter popup — useMutation does NOT dedupe in-flight calls
+  // on its own.
+  const triggerMint = () => {
+    if (!achievement || mintBadgeMutation.isPending) return;
+    setPhase('minting');
     mintBadgeMutation.mutate(achievement.id, {
       onSuccess: ({ hash }) => {
         setMintTxHash(hash);
@@ -141,8 +146,7 @@ export function AchievementModal({
         setPhase('detail');
       },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  };
 
   const reward = useMemo(() => (achievement ? rewardFor(achievement) : 0), [achievement]);
   const claimed = !!achievement && isClaimed(achievement.id);
@@ -174,7 +178,7 @@ export function AchievementModal({
     setPhase('claiming');
     try {
       const res = await fetch(
-        `${baseUrl}/profile/network/${encodeURIComponent(networkName)}/wallet/${encodeURIComponent(walletAddress)}/achievements/${encodeURIComponent(achievement.id)}/claim`,
+        `${baseUrl}/profile/wallet/${encodeURIComponent(walletAddress)}/achievements/${encodeURIComponent(achievement.id)}/claim`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' } },
       );
       if (!res.ok && res.status !== 409) {
@@ -183,7 +187,7 @@ export function AchievementModal({
       }
       if (res.status === 409) {
         // Already claimed — skip coin animation, go straight to Pollar prompt
-        setPhase('minting');
+        triggerMint();
       } else {
         const body = await res.json().catch(() => null);
         const coinReward: number = body?.data?.coinReward ?? reward;
@@ -199,7 +203,7 @@ export function AchievementModal({
 
   const handleContinue = () => {
     if (mintFlowPending) {
-      setPhase('minting');
+      triggerMint();
     } else {
       setPhase('detail');
     }
@@ -349,7 +353,8 @@ export function AchievementModal({
         <button
           type="button"
           onClick={handleContinue}
-          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+          disabled={mintBadgeMutation.isPending}
+          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
         >
           Continue
         </button>
@@ -525,7 +530,7 @@ export function AchievementModal({
               <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
                 <span>Progress</span>
                 <span className="tabular-nums">
-                  {achievement.progress!.current} / {achievement.progress!.target}
+                  {Math.floor(achievement.progress!.current)} / {Math.floor(achievement.progress!.target)}
                 </span>
               </div>
               <div className="h-2.5 w-full bg-white border border-black rounded-full overflow-hidden">
@@ -555,8 +560,9 @@ export function AchievementModal({
             {canMintUnified && (
               <button
                 type="button"
-                onClick={claimed ? () => setPhase('minting') : () => { void handleMintClick(); }}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-black hover:bg-black/80 text-white border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+                onClick={claimed ? triggerMint : () => { void handleMintClick(); }}
+                disabled={mintBadgeMutation.isPending}
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-black hover:bg-black/80 text-white border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
               >
                 Mint badge on-chain
               </button>
@@ -638,7 +644,7 @@ export function AchievementModal({
                     className="object-contain"
                   />
                   <span className="text-sm font-extrabold tabular-nums">
-                    {goldCoins.toLocaleString()}
+                    {Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
                 </motion.div>
               ) : showHeaderShare ? (

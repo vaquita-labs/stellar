@@ -1,15 +1,17 @@
+import { Prisma, prisma } from '@vaquita/db';
+import type { Achievement as PrismaAchievement, Profile as PrismaProfile } from '@vaquita/db';
 import { getCurrentDay } from '../../helpers/date';
-import { supabase } from '../../lib/supabase';
 import { ably } from '../ably';
 import {
   Achievement,
   type AchievementDocument,
   type AchievementResponseDTO,
-  type DepositResponseDTO,
-  DepositWithdrawalState,
+  type BadgeRule,
+  type BadgeUnlockType,
+  type CatalogAchievementResponseDTO,
+  DepositStatus,
   type MapObject,
   MapObjectType,
-  type Network,
   type Profile,
   type ProfileAchievement,
   type ProfileAchievementsResponseDTO,
@@ -17,70 +19,110 @@ import {
   type ProfileMapObjectsAvailableResponseDTO,
   type ProfileMapObjectsResponseDTO,
   type ProfileResponseDTO,
-  type ProfileReward,
   type ProfileRewardsResponseDTO,
   type ProfileStreakResponseDTO,
   Reward,
   type RewardDocument,
   type RewardResponseDTO,
 } from '../../types';
-import {
-  dataToDepositResponseDTOTotalDepositsResponseDTO,
-  getCachedDepositsByNetworkIdWalletAddress,
-} from '../deposit';
-import { getNetworkByName } from '../network';
-import { BETA_TESTER_CUTOFF, DAILY_GOLD_COINS } from './constants';
+import { DAILY_GOLD_COINS } from './constants';
 import { friendlyStandardMap } from './map-template';
+import { evaluateRule } from './rules';
 
-export const listenProfilesChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:profiles`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal profiles:', status);
-    });
-};
+// ---------------------------------------------------------------------------
+// Prisma row → legacy snake_case shape mappers.
+//
+// The service still speaks the snake_case `Profile` / `AchievementDocument`
+// shapes the DTOs and routes expect, but the rows now come from Prisma
+// (camelCase). These mappers keep the boundary in one place so the rest of the
+// file is unchanged when the underlying client is Prisma instead of Supabase.
+// ---------------------------------------------------------------------------
 
-export const listenProfilesDepositsChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:profiles_deposits`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal profiles_deposits:', status);
-    });
-};
+const toProfileShape = (p: PrismaProfile): Profile => ({
+  id: p.id,
+  // network_id was dropped (single-network). Kept on the type for back-compat;
+  // nothing reads it anymore.
+  network_id: 0,
+  email: p.email ?? '',
+  full_name: p.fullName ?? '',
+  nickname: p.nickname ?? '',
+  wallet_address: p.walletAddress,
+  avatar_url: p.avatarUrl ?? null,
+  avatar_key: p.avatarKey ?? null,
+  onboarding_completed: p.onboardingCompleted ?? false,
+  tutorial_completed: p.tutorialCompleted ?? false,
+  crypto_savvy: p.cryptoSavvy ?? false,
+  created_at: p.createdAt?.toISOString(),
+  updated_at: p.updatedAt?.toISOString(),
+});
 
-export const getProfilesByNetworkId = async (networkId: number) => {
-  const { data, ...rest } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('network_id', networkId);
+const toAchievementDoc = (a: PrismaAchievement): AchievementDocument => ({
+  id: Number(a.id),
+  key: a.key as Achievement,
+  name: a.name,
+  description: a.description,
+  tier: a.tier,
+  coin_reward: a.coinReward,
+  code: a.code,
+  hidden: a.hidden,
+  refresh_policy: a.refreshPolicy as 'auto' | 'manual',
+  cycle_scoped: a.cycleScoped,
+  unlock_type: a.unlockType as BadgeUnlockType,
+  rule: (a.rule as BadgeRule | null) ?? null,
+  icon: a.icon,
+  accent: a.accent,
+  display_order: a.displayOrder,
+  enabled: a.enabled,
+  created_at: a.createdAt.toISOString(),
+  updated_at: a.updatedAt.toISOString(),
+});
 
-  return {
-    data: (data || []) as Profile[],
-    ...rest,
-  };
+/**
+ * Lean active-deposit signals for XP / eligibility. Reads deposits by wallet
+ * (single-network: `network_id` was dropped) and replicates the
+ * `DEPOSIT_SUCCESS` rule from the deposit service without pulling in the full
+ * token-network DTO machinery (that lives in the deposit domain).
+ *
+ * A deposit is "active" (DEPOSIT_SUCCESS) when it is confirmed on-chain
+ * (`status='confirmed'` + tx hash + deposit id) and has no withdrawal rows yet.
+ */
+const getActiveDepositSignalsByWallet = async (
+  walletAddress: string,
+): Promise<{ amount: number; createdTimestamp: number }[]> => {
+  const deposits = await prisma.deposit.findMany({
+    where: { walletAddress, deletedAt: null },
+    select: {
+      amount: true,
+      status: true,
+      transactionHash: true,
+      depositIdHex: true,
+      createdAt: true,
+      withdrawals: { select: { id: true } },
+    },
+  });
+
+  return deposits
+    .filter(
+      (d) =>
+        d.status === DepositStatus.CONFIRMED &&
+        !!d.transactionHash &&
+        !!d.depositIdHex &&
+        d.withdrawals.length === 0,
+    )
+    .map((d) => ({
+      amount: Number(d.amount ?? 0),
+      createdTimestamp: d.createdAt?.getTime() ?? 0,
+    }));
 };
 
 export const getProfiles = async () => {
-  const { data, ...rest } = await supabase
-    .from('profiles')
-    .select('*');
-
-  return {
-    data: (data || []) as Profile[],
-    ...rest,
-  };
+  try {
+    const rows = await prisma.profile.findMany({ where: { deletedAt: null } });
+    return { data: rows.map(toProfileShape), error: null };
+  } catch (error) {
+    console.error('Error on getProfiles', error);
+    return { data: [] as Profile[], error };
+  }
 };
 
 export const profilesCacheRef: { current: any | null } = { current: null };
@@ -94,142 +136,94 @@ export const getCachedProfiles = async () => {
   return profilesCacheRef.current;
 };
 
-export const profilesDepositsByProfileIdCacheRef: { current: { [key: string]: any } } = { current: {} };
+/**
+ * Current active-deposit sum per wallet, computed on the fly from `deposits`.
+ *
+ * Replaces the precomputed `profiles_deposits` snapshot table (and the deleted
+ * `job-deposits` cron that fed it): instead of reading a stored time series we
+ * sum the live "active" deposits — DEPOSIT_SUCCESS (confirmed on-chain with tx
+ * hash + deposit id) and not yet withdrawn — grouped by wallet in one query.
+ */
+export const getActiveDepositSumsByWallet = async (): Promise<{
+  sums: Map<string, number>;
+  error: unknown;
+}> => {
+  try {
+    const deposits = await prisma.deposit.findMany({
+      where: { deletedAt: null, status: DepositStatus.CONFIRMED },
+      select: {
+        walletAddress: true,
+        amount: true,
+        transactionHash: true,
+        depositIdHex: true,
+        withdrawals: { select: { id: true } },
+      },
+    });
 
-async function getProfilesDepositsByProfileId(profileId: number) {
-  const { error, ...rest } = await supabase
-    .from('profiles_deposits')
-    .select('*')
-    .eq('profile_id', profileId)
-    .select()
-    .maybeSingle();
+    const sums = new Map<string, number>();
+    for (const d of deposits) {
+      if (!d.transactionHash || !d.depositIdHex || d.withdrawals.length > 0) {
+        continue;
+      }
+      sums.set(d.walletAddress, (sums.get(d.walletAddress) ?? 0) + Number(d.amount ?? 0));
+    }
 
-  if (error) {
-    console.error('Error on profileIncrement', { profileId }, error);
+    return { sums, error: null };
+  } catch (error) {
+    console.error('Error on getActiveDepositSumsByWallet', error);
+    return { sums: new Map<string, number>(), error };
   }
-
-  return {
-    error,
-    ...rest,
-  };
-}
-
-export async function getCachedProfilesDepositsByProfileId(profileId: number) {
-  // const cachedData = profilesDepositsByProfileIdCacheRef.current[profileId];
-  // if (cachedData) {
-  //   return cachedData;
-  // }
-
-  const data = await getProfilesDepositsByProfileId(profileId);
-  profilesDepositsByProfileIdCacheRef.current[profileId] = data;
-
-  return data;
-}
-
-export async function createProfilesDepositsByProfileId(profileId: number) {
-  const { error, ...rest } = await supabase
-    .from('profiles_deposits')
-    .insert({
-      total_active_deposits: [],
-      total_active_deposits_count: 0,
-      profile_id: profileId,
-    })
-    .select()
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error on createProfilesDepositsByProfileId', error);
-  }
-
-  return {
-    error,
-    ...rest,
-  };
-}
-
-export async function profileIncrement(profileId: number, totalActiveDeposits: number[], totalActiveDepositsCount: number, timestamp: number) {
-  const { error } = await supabase
-    .from('profiles_deposits')
-    .update({
-      total_active_deposits: totalActiveDeposits,
-      total_active_deposits_count: totalActiveDepositsCount,
-      timestamp: new Date(timestamp),
-    })
-    .eq('profile_id', profileId)
-    .select();
-
-  if (error) {
-    console.error('Error on profileIncrement', error);
-  }
-}
-
-export const getRewardByKey = async (rewardKey: Reward) => {
-  const { data, ...rest } = await supabase
-    .from('rewards')
-    .select(`
-      *
-    `)
-    .eq('key', rewardKey)
-    .maybeSingle();
-
-  return {
-    data: data as RewardDocument | null,
-    ...rest,
-  };
 };
 
-export const getProfile = async (networkName: string, walletAddress: string) => {
-
-  const { data: networkData, error: networkError } = await getNetworkByName(networkName);
-
-  if (networkError || !networkData) {
-    return {
-      success: false,
-      errorMessage: 'Network not found',
-      errors: networkError,
-      networkData: null,
-      profileData: null,
-    };
+export const getRewardByKey = async (rewardKey: Reward) => {
+  try {
+    const row = await prisma.reward.findFirst({ where: { key: rewardKey } });
+    const data: RewardDocument | null = row
+      ? {
+          id: Number(row.id),
+          name: row.name ?? '',
+          key: (row.key ?? '') as Reward,
+          created_at: row.createdAt.toISOString(),
+          updated_at: row.updatedAt.toISOString(),
+        }
+      : null;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error on getRewardByKey', error);
+    return { data: null as RewardDocument | null, error };
   }
+};
 
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('network_id', networkData.id)
-    .eq('wallet_address', walletAddress)
-    .maybeSingle();
+/**
+ * Resolve the profile for a wallet, creating it on first sight. Single-network:
+ * the lookup/insert no longer carries a network_id. `wallet_address` is unique.
+ */
+export const getProfile = async (walletAddress: string) => {
+  try {
+    const profile = await prisma.profile.upsert({
+      where: { walletAddress },
+      update: {},
+      create: { walletAddress },
+    });
 
-  if (profileData) {
     return {
       success: true,
       errorMessage: '',
-      errors: [],
-      networkData,
-      profileData: profileData as Profile,
+      errors: [] as unknown,
+      profileData: toProfileShape(profile),
+    };
+  } catch (error) {
+    console.error('Error on getProfile', error);
+    return {
+      success: false,
+      errorMessage: 'Failed to resolve profile',
+      errors: error,
+      profileData: null as Profile | null,
     };
   }
-
-  const newProfile = {
-    network_id: networkData.id,
-    wallet_address: walletAddress,
-  };
-
-  const result = await supabase
-    .from('profiles')
-    .insert([ newProfile ])
-    .select()
-    .maybeSingle();
-
-  return {
-    success: true,
-    errorMessage: '',
-    errors: [],
-    networkData,
-    profileData: result.data as Profile,
-  };
 };
 
-export const getRewardsData = async (networkData: Network, profileData: Profile) => {
+export const getRewardsData = async (profileData: Profile) => {
 
   const { data: rewardData, error } = await getRewardByKey(Reward.GOLD_COIN);
 
@@ -243,20 +237,20 @@ export const getRewardsData = async (networkData: Network, profileData: Profile)
     };
   }
 
-  const { data: profileRewardData } = await supabase
-    .from('profiles_rewards')
-    .select('*, rewards(*)')
-    .eq('profile_id', profileData.id)
-    .eq('reward_id', rewardData.id);
+  const profileRewardData = await prisma.profileReward.findMany({
+    where: { profileId: profileData.id, rewardId: BigInt(rewardData.id) },
+    include: { reward: true },
+  });
 
   let collected = 0;
   let amount = 0;
-  for (const profileReward of (profileRewardData || []) as ProfileReward[]) {
-    if (profileReward.type === 'collected' && profileReward?.rewards?.key === Reward.GOLD_COIN && getCurrentDay(new Date(profileReward.created_at)) === getCurrentDay(new Date())) {
-      collected += profileReward?.amount || 0;
+  for (const profileReward of profileRewardData) {
+    const rewardAmount = Number(profileReward.amount ?? 0);
+    if (profileReward.type === 'collected' && profileReward.reward?.key === Reward.GOLD_COIN && getCurrentDay(profileReward.createdAt) === getCurrentDay(new Date())) {
+      collected += rewardAmount;
     }
     if (profileReward.type === 'collected' || profileReward.type === 'earned') {
-      amount += profileReward?.amount || 0;
+      amount += rewardAmount;
     }
   }
 
@@ -278,30 +272,23 @@ export const getRewardsData = async (networkData: Network, profileData: Profile)
   };
 };
 
-export const getStreakData = async (networkData: Network, profileData: Profile) => {
-  const { data } = await supabase
-    .from('deposits')
-    .select(`
-      id,confirmed_at
-    `)
-    .eq('wallet_address', profileData.wallet_address)
-    .eq('network_id', networkData.id)
-    .eq('status', 'confirmed');
-  const { data: profileRewardsData, error } = await supabase
-    .from('profiles_rewards')
-    .select(`
-      id,created_at
-    `)
-    .eq('profile_id', profileData.id)
-    .eq('type', 'collected');
+export const getStreakData = async (profileData: Profile) => {
+  const deposits = await prisma.deposit.findMany({
+    where: { walletAddress: profileData.wallet_address, status: DepositStatus.CONFIRMED },
+    select: { confirmedAt: true },
+  });
+  const profileRewardsData = await prisma.profileReward.findMany({
+    where: { profileId: profileData.id, type: 'collected' },
+    select: { createdAt: true },
+  });
 
   const daysSet = new Set<number>();
 
-  for (const deposit of (data || [])) {
-    daysSet.add(getCurrentDay(new Date(deposit.confirmed_at || 0)));
+  for (const deposit of deposits) {
+    daysSet.add(getCurrentDay(new Date(deposit.confirmedAt ?? 0)));
   }
-  for (const deposit of (profileRewardsData || [])) {
-    daysSet.add(getCurrentDay(new Date(deposit.created_at || 0)));
+  for (const reward of profileRewardsData) {
+    daysSet.add(getCurrentDay(new Date(reward.createdAt ?? 0)));
   }
 
   const todayDay = getCurrentDay(new Date());
@@ -323,23 +310,21 @@ export const getStreakData = async (networkData: Network, profileData: Profile) 
   };
 };
 
-export const getMapObjectsAvailableData = async (networkData: Network, profileData: Profile) => {
+export const getMapObjectsAvailableData = async () => {
 
-  const { data } = await supabase
-    .from('map_objects')
-    .select('*');
+  const data = await prisma.mapObject.findMany({ where: { deletedAt: null } });
 
   const objects: ProfileMapObjectsAvailableResponseDTO['objects'] = [];
-  for (const { variants, type, prices, free_items } of (data || [])) {
+  for (const { variants, type, prices, freeItems } of data) {
     const objectVariants = (variants || '').split(',').map(Number);
-    const objectPrices = (prices || '').split(',').map(Number);
-    const objectFreeItems = (free_items || '').split(',').map(Number);
+    const objectPrices = String(prices ?? '').split(',').map(Number);
+    const objectFreeItems = (freeItems || '').split(',').map(Number);
     for (let i = 0; i < objectVariants.length; i++) {
       const variant = objectVariants[i];
-      if (variant >= 0 && variant <= 100) {
+      if (variant != null && variant >= 0 && variant <= 100) {
         objects.push({
-          type,
-          variant,
+          type: (type ?? '') as MapObjectType,
+          variant: variant as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7,
           price: Math.max(objectPrices[i] || 0, 0),
           itemsAvailable: Math.max(objectFreeItems[i] || 0, 0),
         });
@@ -355,65 +340,58 @@ export const getMapObjectsAvailableData = async (networkData: Network, profileDa
   };
 };
 
-export const toProfileResponseDTO = (networkData: Network, profile: Profile): ProfileResponseDTO => {
+export const toProfileResponseDTO = (networkName: string, profile: Profile): ProfileResponseDTO => {
 
   return {
     walletAddress: profile?.wallet_address || '',
-    networkName: networkData?.name || '',
+    networkName,
     email: profile.email ?? '',
     fullName: profile.full_name ?? '',
     nickname: profile.nickname ?? '',
+    avatarUrl: profile.avatar_url ?? '',
+    onboardingCompleted: profile.onboarding_completed ?? false,
+    tutorialCompleted: profile.tutorial_completed ?? false,
+    cryptoSavvy: profile.crypto_savvy ?? false,
   };
 };
 
-export const toProfileExperienceResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileExperienceResponseDTO> => {
-  let deposits: DepositResponseDTO[] = [];
-  try {
-    const { data } = await getCachedDepositsByNetworkIdWalletAddress(networkData.id, profile.wallet_address);
-    const response = await dataToDepositResponseDTOTotalDepositsResponseDTO(
-      networkData,
-      data ?? [],
-      false,
-      true,
-    );
-    deposits = response.deposits as DepositResponseDTO[];
-  } catch (error) {
-    console.warn('error on toProfileResponseDTO', error);
-  }
-
+export const toProfileExperienceResponseDTO = async (networkName: string, profile: Profile): Promise<ProfileExperienceResponseDTO> => {
   let experience = 0;
-  for (const deposit of deposits) {
-    if (deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS) {
+  try {
+    const deposits = await getActiveDepositSignalsByWallet(profile.wallet_address);
+    for (const deposit of deposits) {
       const timeElapsed = Math.max(Date.now() - deposit.createdTimestamp, 0);
       experience += Math.sqrt(deposit.amount || 0) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
     }
+  } catch (error) {
+    console.warn('error on toProfileExperienceResponseDTO', error);
   }
 
   return {
     walletAddress: profile?.wallet_address || '',
-    networkName: networkData?.name || '',
+    networkName,
     experience,
   };
 };
 
-export const toProfileRewardsResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileRewardsResponseDTO> => {
+export const toProfileRewardsResponseDTO = async (networkName: string, profile: Profile): Promise<ProfileRewardsResponseDTO> => {
 
-  const { rewards } = await getRewardsData(networkData, profile);
+  const { rewards } = await getRewardsData(profile);
 
   return {
     walletAddress: profile?.wallet_address || '',
-    networkName: networkData?.name || '',
+    networkName,
     rewards: rewards.map(reward => ({ name: reward.name, amount: reward.amount })),
   };
 };
 
-export const toProfileStreakResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileStreakResponseDTO> => {
+export const toProfileStreakResponseDTO = async (networkName: string, profile: Profile): Promise<ProfileStreakResponseDTO> => {
 
-  const { todayStreak, yesterdayStreak, days } = await getStreakData(networkData, profile);
+  const { todayStreak, yesterdayStreak, days } = await getStreakData(profile);
 
   return {
     walletAddress: profile?.wallet_address || '',
-    networkName: networkData?.name || '',
+    networkName,
     todayStreak,
     yesterdayStreak,
     days,
@@ -432,63 +410,57 @@ const toMapObjects = (objects: any): MapObject[] => {
   return [];
 };
 export const getProfileMapObjects = async (profile: Profile) => {
-  const { data } = await supabase
-    .from('profiles_map_objects')
-    .select('*')
-    .eq('profile_id', profile.id)
-    .maybeSingle();
-  if (data) {
+  const existing = await prisma.profileMapObject.findFirst({
+    where: { profileId: profile.id },
+  });
+  if (existing) {
     return {
       success: true,
       errorMessage: '',
       errors: [],
       profileMapObjects: {
-        ...data,
-        objects: toMapObjects(data?.objects || []),
+        id: existing.id,
+        objects: toMapObjects(existing.objects ?? []),
       },
     };
   }
 
-  const newProfile = {
-    profile_id: profile.id,
-    objects: friendlyStandardMap,
-  };
-
-  const { data: dataNew } = await supabase
-    .from('profiles_map_objects')
-    .insert([ newProfile ])
-    .select()
-    .maybeSingle();
+  const created = await prisma.profileMapObject.create({
+    data: {
+      profileId: profile.id,
+      objects: friendlyStandardMap as object,
+    },
+  });
 
   return {
     success: true,
     errorMessage: '',
     errors: [],
     profileMapObjects: {
-      ...dataNew,
-      objects: toMapObjects(dataNew?.objects || []),
+      id: created.id,
+      objects: toMapObjects(created.objects ?? []),
     },
   };
 };
 
-export const toProfileMapObjectsResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileMapObjectsResponseDTO> => {
+export const toProfileMapObjectsResponseDTO = async (networkName: string, profile: Profile): Promise<ProfileMapObjectsResponseDTO> => {
 
   const { profileMapObjects } = await getProfileMapObjects(profile);
 
   return {
     walletAddress: profile?.wallet_address || '',
-    networkName: networkData?.name || '',
+    networkName,
     objects: profileMapObjects?.objects || [],
   };
 };
 
-export const toProfileMapObjectsAvailableResponseDTO = async (networkData: Network, profile: Profile): Promise<ProfileMapObjectsAvailableResponseDTO> => {
+export const toProfileMapObjectsAvailableResponseDTO = async (networkName: string, profile: Profile): Promise<ProfileMapObjectsAvailableResponseDTO> => {
 
-  const { objects } = await getMapObjectsAvailableData(networkData, profile);
+  const { objects } = await getMapObjectsAvailableData();
 
   return {
     walletAddress: profile?.wallet_address || '',
-    networkName: networkData?.name || '',
+    networkName,
     objects,
   };
 };
@@ -507,41 +479,147 @@ export const broadcastProfileChange = async (message: string, keys: string[]) =>
 // Achievements
 // ---------------------------------------------------------------------------
 
-export const getAchievementByKey = async (key: Achievement) => {
-  const { data, ...rest } = await supabase
-    .from('achievements')
-    .select('*')
-    .eq('key', key)
-    .maybeSingle();
+export const getAchievementByKey = async (key: Achievement | string) => {
+  try {
+    const row = await prisma.achievement.findFirst({ where: { key, deletedAt: null } });
+    return { data: row ? toAchievementDoc(row) : null, error: null };
+  } catch (error) {
+    console.error('Error on getAchievementByKey', error);
+    return { data: null as AchievementDocument | null, error };
+  }
+};
 
-  return {
-    data: data as AchievementDocument | null,
-    ...rest,
-  };
+/** Fields the admin panel may write on an achievement. snake_case to match the
+ *  DB columns; all optional so PATCH can send a partial. */
+export interface AchievementWriteFields {
+  name: string;
+  description: string;
+  tier: string;
+  coin_reward: number;
+  unlock_type: BadgeUnlockType;
+  rule: BadgeRule | null;
+  icon: string | null;
+  accent: string | null;
+  code: string | null;
+  hidden: boolean;
+  cycle_scoped: boolean;
+  refresh_policy: 'auto' | 'manual';
+  display_order: number;
+  enabled: boolean;
+}
+
+/** Map the admin panel's snake_case write fields onto Prisma's camelCase columns.
+ *  Only keys present in `input` are emitted, so PATCH can send a partial. */
+const achievementWriteToPrisma = (
+  input: Partial<AchievementWriteFields>,
+): Prisma.AchievementUncheckedUpdateInput => {
+  const data: Prisma.AchievementUncheckedUpdateInput = {};
+  if (input.name !== undefined) data.name = input.name;
+  if (input.description !== undefined) data.description = input.description;
+  if (input.tier !== undefined) data.tier = input.tier;
+  if (input.coin_reward !== undefined) data.coinReward = input.coin_reward;
+  if (input.unlock_type !== undefined) data.unlockType = input.unlock_type;
+  if (input.rule !== undefined)
+    data.rule = input.rule === null ? Prisma.DbNull : (input.rule as unknown as Prisma.InputJsonValue);
+  if (input.icon !== undefined) data.icon = input.icon;
+  if (input.accent !== undefined) data.accent = input.accent;
+  if (input.code !== undefined) data.code = input.code;
+  if (input.hidden !== undefined) data.hidden = input.hidden;
+  if (input.cycle_scoped !== undefined) data.cycleScoped = input.cycle_scoped;
+  if (input.refresh_policy !== undefined) data.refreshPolicy = input.refresh_policy;
+  if (input.display_order !== undefined) data.displayOrder = input.display_order;
+  if (input.enabled !== undefined) data.enabled = input.enabled;
+  return data;
+};
+
+/** Insert a new achievement (admin). `key` is immutable once created. */
+export const createAchievement = async (
+  input: Partial<AchievementWriteFields> & { key: string },
+) => {
+  try {
+    const { key, ...rest } = input;
+    const row = await prisma.achievement.create({
+      data: { key, ...achievementWriteToPrisma(rest) } as Prisma.AchievementUncheckedCreateInput,
+    });
+    return { data: toAchievementDoc(row), error: null };
+  } catch (error) {
+    console.error('Error on createAchievement', error);
+    return { data: null as AchievementDocument | null, error };
+  }
+};
+
+/** Patch an existing achievement by key (admin). We never change `key`. */
+export const updateAchievement = async (
+  key: string,
+  patch: Partial<AchievementWriteFields>,
+) => {
+  try {
+    const row = await prisma.achievement.update({
+      where: { key },
+      data: achievementWriteToPrisma(patch),
+    });
+    return { data: toAchievementDoc(row), error: null };
+  } catch (error) {
+    console.error('Error on updateAchievement', error);
+    return { data: null as AchievementDocument | null, error };
+  }
 };
 
 export const getAllAchievements = async () => {
-  const { data, ...rest } = await supabase
-    .from('achievements')
-    .select('*')
-    .order('id', { ascending: true });
+  try {
+    const rows = await prisma.achievement.findMany({
+      where: { deletedAt: null },
+      orderBy: { id: 'asc' },
+    });
+    return { data: rows.map(toAchievementDoc), error: null };
+  } catch (error) {
+    console.error('Error on getAllAchievements', error);
+    return { data: [] as AchievementDocument[], error };
+  }
+};
 
-  return {
-    data: (data || []) as AchievementDocument[],
-    ...rest,
-  };
+/**
+ * Public, user-agnostic badge catalog for the web app to render instead of a
+ * hardcoded list. Returns only `enabled`, non-`hidden` badges, ordered by
+ * `display_order`. Secret (redeem-code) badges stay out of the public catalog
+ * until the user claims them — same rule as {@link toProfileAchievementsResponseDTO}.
+ */
+export const toCatalogAchievementsResponseDTO = async (): Promise<CatalogAchievementResponseDTO[]> => {
+  const { data } = await getAllAchievements();
+  return data
+    .filter((a) => a.enabled !== false && !a.hidden)
+    .sort((x, y) => (x.display_order ?? 0) - (y.display_order ?? 0))
+    .map((a) => ({
+      key: a.key,
+      name: a.name,
+      description: a.description,
+      tier: a.tier,
+      coinReward: a.coin_reward,
+      icon: a.icon ?? null,
+      accent: a.accent ?? null,
+      unlockType: a.unlock_type,
+      displayOrder: a.display_order ?? 0,
+    }));
 };
 
 export const getClaimedAchievements = async (profileId: number) => {
-  const { data, ...rest } = await supabase
-    .from('profiles_achievements')
-    .select('*, achievements(*)')
-    .eq('profile_id', profileId);
-
-  return {
-    data: (data || []) as ProfileAchievement[],
-    ...rest,
-  };
+  try {
+    const rows = await prisma.profileAchievement.findMany({
+      where: { profileId },
+      include: { achievement: true },
+    });
+    const data: ProfileAchievement[] = rows.map((row) => ({
+      id: Number(row.id),
+      profile_id: row.profileId,
+      achievement_id: Number(row.achievementId),
+      claimed_at: row.claimedAt.toISOString(),
+      ...(row.achievement ? { achievements: toAchievementDoc(row.achievement) } : {}),
+    }));
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error on getClaimedAchievements', error);
+    return { data: [] as ProfileAchievement[], error };
+  }
 };
 
 /**
@@ -554,12 +632,17 @@ export const getAchievementCountsByProfile = async (): Promise<{
   counts: Map<number, number>;
   error: unknown;
 }> => {
-  const { data, error } = await supabase.from('profiles_achievements').select('profile_id');
   const counts = new Map<number, number>();
-  for (const row of (data ?? []) as { profile_id: number }[]) {
-    counts.set(row.profile_id, (counts.get(row.profile_id) ?? 0) + 1);
+  try {
+    const rows = await prisma.profileAchievement.findMany({ select: { profileId: true } });
+    for (const row of rows) {
+      counts.set(row.profileId, (counts.get(row.profileId) ?? 0) + 1);
+    }
+    return { counts, error: null };
+  } catch (error) {
+    console.error('Error on getAchievementCountsByProfile', error);
+    return { counts, error };
   }
-  return { counts, error };
 };
 
 /**
@@ -570,23 +653,27 @@ export const getAchievementCountsByProfile = async (): Promise<{
  * `alreadyClaimed` so the API layer can turn it into a 409.
  */
 export const claimAchievement = async (profileId: number, key: Achievement) => {
-  const { data, error } = await supabase.rpc('claim_achievement', {
-    p_profile_id: profileId,
-    p_achievement_key: key,
-  });
+  try {
+    const rows = await prisma.$queryRaw<
+      { achievement_id: bigint; coin_reward: number; claimed_at: Date }[]
+    >`SELECT * FROM claim_achievement(${profileId}::bigint, ${key}::text)`;
 
-  if (error) {
-    const alreadyClaimed = (error as { code?: string })?.code === '23505';
+    const row = rows[0];
+    return {
+      success: true as const,
+      achievementId: Number(row?.achievement_id ?? 0),
+      coinReward: Number(row?.coin_reward ?? 0),
+      claimedAt: (row?.claimed_at ?? new Date()).toISOString(),
+    };
+  } catch (error) {
+    // Prisma surfaces the Postgres error code on the raw-query error; 23505 is
+    // the UNIQUE (profile_id, achievement_id) violation = already claimed.
+    const code =
+      (error as { meta?: { code?: string }; code?: string })?.meta?.code ??
+      (error as { code?: string })?.code;
+    const alreadyClaimed = code === '23505' || /23505/.test(String((error as Error)?.message ?? ''));
     return { success: false as const, alreadyClaimed, error };
   }
-
-  const row = Array.isArray(data) ? data[0] : data;
-  return {
-    success: true as const,
-    achievementId: Number(row?.achievement_id ?? 0),
-    coinReward: Number(row?.coin_reward ?? 0),
-    claimedAt: String(row?.claimed_at ?? new Date().toISOString()),
-  };
 };
 
 /**
@@ -622,33 +709,26 @@ export interface EligibilitySignals {
  * with the rest of the API.
  */
 export const computeEligibilitySignals = async (
-  networkData: Network,
   profile: Profile,
 ): Promise<EligibilitySignals> => {
-  let deposits: DepositResponseDTO[] = [];
-  try {
-    const { data } = await getCachedDepositsByNetworkIdWalletAddress(networkData.id, profile.wallet_address);
-    const response = await dataToDepositResponseDTOTotalDepositsResponseDTO(networkData, data ?? [], false, true);
-    deposits = response.deposits as DepositResponseDTO[];
-  } catch (error) {
-    console.warn('[eligibility] failed to load deposits', error);
-  }
-
   let activeDeposits = 0;
   let activeAmount = 0;
   let experience = 0;
-  for (const deposit of deposits) {
-    if (deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS) {
+  try {
+    const deposits = await getActiveDepositSignalsByWallet(profile.wallet_address);
+    for (const deposit of deposits) {
       activeDeposits++;
       activeAmount += deposit.amount || 0;
       const timeElapsed = Math.max(Date.now() - deposit.createdTimestamp, 0);
       experience += Math.sqrt(deposit.amount || 0) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
     }
+  } catch (error) {
+    console.warn('[eligibility] failed to load deposits', error);
   }
 
   let streakCount = 0;
   try {
-    const streak = await getStreakData(networkData, profile);
+    const streak = await getStreakData(profile);
     streakCount = streak.yesterdayStreak + (streak.todayStreak ? 1 : 0);
   } catch (error) {
     console.warn('[eligibility] failed to load streak', error);
@@ -667,63 +747,34 @@ export const computeEligibilitySignals = async (
 };
 
 /**
- * Eligibility table for server-side claimable achievements. Stateless — pass
- * the result of {@link computeEligibilitySignals} as `signals`. The thresholds
- * mirror the frontend rules in `apps/web/src/core-ui/data/profile-badges.ts`
- * so a tile that displays as "earned" in the UI also unlocks the Claim CTA.
+ * Whether a badge is unlocked by the *live signals* alone, driven by the
+ * badge's configurable `rule` (see {@link evaluateRule}). Stateless — pass the
+ * result of {@link computeEligibilitySignals} as `signals`.
  *
- * Friends + leaderboard achievements stay `false` until those systems exist.
+ * Only `unlock_type === 'rule'` badges are signal-driven. `cycle_rank`
+ * (leaderboard) eligibility needs cycle context and is verified in the claim
+ * route; `redeem_code` / `manual` are claim-driven and never auto-unlock from
+ * signals — so they return `false` here.
  */
-export const isEligibleForAchievement = (signals: EligibilitySignals, key: Achievement): boolean => {
-  switch (key) {
-    case Achievement.BETA_TESTER:
-      return !!signals.createdAt && signals.createdAt.getTime() <= BETA_TESTER_CUTOFF.getTime();
-    case Achievement.ROOKIE:
-      return signals.experience >= 50;
-    case Achievement.WEEK_WARRIOR:
-      return signals.streakCount >= 7;
-    case Achievement.FIRST_DEPOSIT:
-      return signals.activeDeposits >= 1;
-    case Achievement.FIRST_FRIEND:
-      return signals.friendsCount >= 1;
-    case Achievement.SAVINGS_STARTER:
-      return signals.activeAmount >= 100;
-    case Achievement.TRIO_SAVER:
-      return signals.activeDeposits >= 3;
-    case Achievement.MONTH_MASTER:
-      return signals.streakCount >= 30;
-    case Achievement.EXPLORER:
-      return signals.experience >= 300;
-    case Achievement.STREAK_MASTER:
-      return signals.streakCount >= 50;
-    case Achievement.WHALE:
-      return signals.experience >= 30000;
-    case Achievement.SAVINGS_BARON:
-      return signals.activeAmount >= 10000;
-    case Achievement.CENTURY_SAVER:
-      return signals.streakCount >= 100;
-    case Achievement.THIRD_PLACE:
-      return signals.leaderboardRank === 3;
-    case Achievement.SECOND_PLACE:
-      return signals.leaderboardRank === 2;
-    case Achievement.FIRST_PLACE:
-      return signals.leaderboardRank === 1;
-    default:
-      return false;
-  }
+export const isAchievementEligible = (
+  achievement: AchievementDocument,
+  signals: EligibilitySignals,
+): boolean => {
+  if (achievement.unlock_type !== 'rule') return false;
+  return evaluateRule(achievement.rule, signals);
 };
 
 export const toProfileAchievementsResponseDTO = async (
-  networkData: Network,
+  networkName: string,
   profile: Profile,
 ): Promise<ProfileAchievementsResponseDTO> => {
   // One set of DB calls feeds both the catalog AND the per-row eligibility
-  // computation below. computeEligibilitySignals reuses the cached deposits
+  // computation below. computeEligibilitySignals reuses the deposit-signals
   // helper so this isn't free, but it's bounded — a small handful of queries.
   const [allRes, claimedRes, signals] = await Promise.all([
     getAllAchievements(),
     getClaimedAchievements(profile.id),
-    computeEligibilitySignals(networkData, profile),
+    computeEligibilitySignals(profile),
   ]);
 
   const claimedById = new Map<number, ProfileAchievement>(
@@ -745,14 +796,14 @@ export const toProfileAchievementsResponseDTO = async (
         // `unlocked` is true if eligibility OR claim — claim implies the user
         // was eligible at the time, so flipping it to true here keeps the tile
         // showing as "earned" even if the eligibility rule later tightens.
-        unlocked: !!claim || isEligibleForAchievement(signals, a.key as Achievement),
+        unlocked: !!claim || isAchievementEligible(a, signals),
         claimedAt: claim?.claimed_at ?? null,
       };
     });
 
   return {
     walletAddress: profile?.wallet_address || '',
-    networkName: networkData?.name || '',
+    networkName,
     achievements,
   };
 };
@@ -762,16 +813,13 @@ export const toProfileAchievementsResponseDTO = async (
 // ---------------------------------------------------------------------------
 
 export const getAchievementByCode = async (code: string) => {
-  const { data, ...rest } = await supabase
-    .from('achievements')
-    .select('*')
-    .eq('code', code)
-    .maybeSingle();
-
-  return {
-    data: data as AchievementDocument | null,
-    ...rest,
-  };
+  try {
+    const row = await prisma.achievement.findFirst({ where: { code, deletedAt: null } });
+    return { data: row ? toAchievementDoc(row) : null, error: null };
+  } catch (error) {
+    console.error('Error on getAchievementByCode', error);
+    return { data: null as AchievementDocument | null, error };
+  }
 };
 
 /**
