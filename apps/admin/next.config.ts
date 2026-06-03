@@ -7,9 +7,6 @@ const nextConfig: NextConfig = {
   // @vaquita/db and @vaquita/ui ship raw TS/TSX (exports ./src/index.ts), so
   // Next must transpile them for the admin app to import them.
   transpilePackages: ['@vaquita/db', '@vaquita/ui'],
-  eslint: {
-    // ignoreDuringBuilds: true,
-  },
 };
 
 export default nextConfig;
