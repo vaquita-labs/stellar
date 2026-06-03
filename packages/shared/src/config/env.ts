@@ -6,9 +6,6 @@ dotenv.config();
 const envSchema = z.object({
   PORT: z.string().regex(/^\d+$/).transform(Number),
   NODE_ENV: z.enum(['development', 'production', 'test']),
-  SUPABASE_URL: z.string().min(1),
-  // SUPABASE_ANON_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   // Pooled Postgres connection used by the Prisma driver adapter (@vaquita/db).
   DATABASE_URL: z.string().min(1),
 });

@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { prisma } from '@vaquita/db';
 
 // ---------------------------------------------------------------------------
 // Cycle duration config
@@ -90,39 +90,40 @@ export async function getLeaderboard(
   const cycleEnd = cycleId === 0 ? now : rawEnd;
 
   // Fetch all confirmed deposits that overlap [cycleStart, cycleEnd)
-  const { data: deposits, error } = await supabase
-    .from('deposits')
-    .select('wallet_address, amount, updated_at, withdrawals(updated_at, status, reward)')
-    .eq('status', 'confirmed')
-    .lt('updated_at', new Date(cycleEnd).toISOString())
-    .not('updated_at', 'is', null);
-
-  if (error) throw error;
+  const deposits = await prisma.deposit.findMany({
+    where: {
+      status: 'confirmed',
+      updatedAt: { lt: new Date(cycleEnd) },
+      deletedAt: null,
+    },
+    select: {
+      walletAddress: true,
+      amount: true,
+      updatedAt: true,
+      withdrawals: { select: { updatedAt: true, status: true, reward: true } },
+    },
+  });
 
   // Score accumulator per wallet
   const scoreMap = new Map<string, { score: number; activeAmount: number }>();
 
-  for (const deposit of deposits ?? []) {
-    const wallet = deposit.wallet_address as string;
-    const amount = Number(deposit.amount ?? 0);
-    const depositedAt = new Date((deposit.updated_at as string)).getTime();
+  for (const deposit of deposits) {
+    const wallet = deposit.walletAddress;
+    const amount = deposit.amount.toNumber();
+    const depositedAt = deposit.updatedAt.getTime();
 
     // Find an on-time confirmed withdrawal (reward > 0)
-    const withdrawals = (deposit.withdrawals ?? []) as Array<{
-      updated_at: string | null;
-      status: string;
-      reward: string | null;
-    }>;
+    const withdrawals = deposit.withdrawals;
 
     const onTimeWithdrawal = withdrawals.find(
-      (w) => w.status === 'confirmed' && w.reward != null && Number(w.reward) > 0,
+      (w) => w.status === 'confirmed' && w.reward != null && w.reward.toNumber() > 0,
     );
 
     let effectiveEnd: number;
     let isActive: boolean;
 
-    if (onTimeWithdrawal?.updated_at) {
-      const withdrawnAt = new Date(onTimeWithdrawal.updated_at).getTime();
+    if (onTimeWithdrawal?.updatedAt) {
+      const withdrawnAt = onTimeWithdrawal.updatedAt.getTime();
       // Only count if withdrawal was after cycle start
       if (withdrawnAt <= cycleStart) continue;
       effectiveEnd = Math.min(withdrawnAt, cycleEnd);
@@ -171,24 +172,21 @@ interface TiebreakerData {
 async function getTiebreakerData(
   walletAddress: string,
 ): Promise<TiebreakerData> {
-  const { data, error } = await supabase
-    .from('deposits')
-    .select('updated_at, withdrawals(status, reward)')
-    .eq('wallet_address', walletAddress)
-    .eq('status', 'confirmed')
-    .order('updated_at', { ascending: true });
-
-  if (error) throw error;
+  const data = await prisma.deposit.findMany({
+    where: { walletAddress, status: 'confirmed', deletedAt: null },
+    select: { updatedAt: true, withdrawals: { select: { status: true, reward: true } } },
+    orderBy: { updatedAt: 'asc' },
+  });
 
   let totalCompletedCycles = 0;
   let lastDepositTimestamp = 0;
 
-  for (const deposit of data ?? []) {
-    const ts = new Date((deposit.updated_at as string)).getTime();
+  for (const deposit of data) {
+    const ts = deposit.updatedAt.getTime();
     if (ts > lastDepositTimestamp) lastDepositTimestamp = ts;
 
-    const hasOnTime = (deposit.withdrawals as any[]).some(
-      (w) => w.status === 'confirmed' && w.reward != null && Number(w.reward) > 0,
+    const hasOnTime = deposit.withdrawals.some(
+      (w) => w.status === 'confirmed' && w.reward != null && w.reward.toNumber() > 0,
     );
     if (hasOnTime) totalCompletedCycles++;
   }
