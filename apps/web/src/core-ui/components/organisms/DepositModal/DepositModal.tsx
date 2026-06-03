@@ -11,10 +11,11 @@ import {
   Spinner,
   toast,
 } from '@heroui/react';
+import { usePollar } from '@pollar/react';
 import { useEffect, useState } from 'react';
 import { v4 } from 'uuid';
-import { formatTimeDeposit, getBalance, getQuickAmounts, truncateDecimals } from '../../../helpers';
-import { useAnalytics, useBalance, useRestDeposit, useTransactions } from '../../../hooks';
+import { formatTimeDeposit, getQuickAmounts, truncateDecimals } from '../../../helpers';
+import { useAnalytics, useRestDeposit, useTransactions } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
@@ -47,14 +48,24 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
     !token ||
     !transactionDeposit;
 
-  const { data: balances, refetch, isRefetching, isLoading } = useBalance(walletAddress);
-  const balance = getBalance(network, token, balances?.balances ?? [])?.balance || 0;
-  const balanceFormatted = balance ? truncateDecimals(balance / 10 ** (token?.decimals ?? 0), 5) : 0;
+  const { walletBalance, refreshWalletBalance } = usePollar();
+  const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
+  // Pollar already returns balances in human units (decimal strings), so no 10**decimals scaling.
+  // Match the native asset by Pollar's `type` (it's always reported as XLM) and other assets by
+  // code — which requires the config token `symbol` to equal the on-chain Stellar asset code.
+  const tokenBalance = balances.find((b) =>
+    token?.isNative ? b.type === 'native' : b.code.toUpperCase() === token?.symbol?.toUpperCase(),
+  );
+  const balanceFormatted = tokenBalance ? truncateDecimals(Number(tokenBalance.available), 5) : 0;
+  const balanceIsLoading = walletBalance.step === 'loading';
   const quickAmounts = getQuickAmounts(token?.symbol ?? '');
 
   useEffect(() => {
     setAmount('');
   }, [token?.symbol]);
+  useEffect(() => {
+    if (open && walletAddress) void refreshWalletBalance();
+  }, [open, walletAddress, refreshWalletBalance]);
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
@@ -154,7 +165,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      isDismissable={!isLoading && !isDepositing}
+      isDismissable={!balanceIsLoading && !isDepositing}
       title="Deposit"
       titleIcon="/icons/bag.svg"
       titleIconAlt="deposit"
@@ -205,9 +216,9 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
               value={amount}
               onValueChange={(v) => setAmount(v)}
               onTokenChange={(t) => setToken(t)}
-              onReloadBalance={refetch}
+              onReloadBalance={refreshWalletBalance}
               loading={isDepositing}
-              balanceIsLoading={isRefetching || isLoading}
+              balanceIsLoading={balanceIsLoading}
             />
             <div className="flex justify-between gap-2">
               {Array.isArray(quickAmounts) &&
