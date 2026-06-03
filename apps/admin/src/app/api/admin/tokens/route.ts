@@ -78,6 +78,16 @@ const updateSchema = z.object({
 
 const invalidJson = () => NextResponse.json({ status: 'error', message: 'Invalid JSON body' }, { status: 400 });
 
+// `lock_periods` is a `bigint[]` column (durations in ms can exceed int32), but
+// the public contract is `number[]`. BigInt has no JSON representation, so we
+// must map it to Number before handing the row to NextResponse.json. The values
+// are millisecond durations, well within Number.MAX_SAFE_INTEGER.
+type TokenRow = Awaited<ReturnType<typeof prisma.token.findFirstOrThrow>>;
+const serializeToken = (token: TokenRow) => ({
+  ...token,
+  lockPeriods: token.lockPeriods.map(Number),
+});
+
 // GET /api/admin/tokens — list every non-deleted token, ordered by id.
 export async function GET(req: NextRequest) {
   if (!adminSecretOk(req)) return forbidden();
@@ -85,7 +95,7 @@ export async function GET(req: NextRequest) {
     where: { deletedAt: null },
     orderBy: { id: 'asc' },
   });
-  return NextResponse.json({ data: { tokens } });
+  return NextResponse.json({ data: { tokens: tokens.map(serializeToken) } });
 }
 
 // POST /api/admin/tokens — create a new token.
@@ -118,11 +128,11 @@ export async function POST(req: NextRequest) {
       isSupported: d.isSupported ?? false,
       contractAddress: d.contractAddress ?? null,
       vaquitaContractAddress: d.vaquitaContractAddress ?? null,
-      lockPeriods: d.lockPeriods ?? [],
+      lockPeriods: (d.lockPeriods ?? []).map((n) => BigInt(n)),
       defindexVaultContractAddress: d.defindexVaultContractAddress ?? null,
     },
   });
-  return NextResponse.json({ data: { token } });
+  return NextResponse.json({ data: { token: serializeToken(token) } });
 }
 
 // PATCH /api/admin/tokens — update an existing token (id in the body).
@@ -162,13 +172,13 @@ export async function PATCH(req: NextRequest) {
       ...(data.isSupported !== undefined ? { isSupported: data.isSupported } : {}),
       ...(data.contractAddress !== undefined ? { contractAddress: data.contractAddress } : {}),
       ...(data.vaquitaContractAddress !== undefined ? { vaquitaContractAddress: data.vaquitaContractAddress } : {}),
-      ...(data.lockPeriods !== undefined ? { lockPeriods: data.lockPeriods } : {}),
+      ...(data.lockPeriods !== undefined ? { lockPeriods: data.lockPeriods.map((n) => BigInt(n)) } : {}),
       ...(data.defindexVaultContractAddress !== undefined
         ? { defindexVaultContractAddress: data.defindexVaultContractAddress }
         : {}),
     },
   });
-  return NextResponse.json({ data: { token } });
+  return NextResponse.json({ data: { token: serializeToken(token) } });
 }
 
 // DELETE /api/admin/tokens?id=123 — soft-delete (sets deleted_at).
