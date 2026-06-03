@@ -9,7 +9,7 @@ export function BackToAdmin() {
   return (
     <Link
       href="/admin"
-      className="inline-flex w-fit items-center gap-1 rounded-medium border-2 border-default-200 px-3 py-1.5 text-sm font-medium text-default-600 transition-colors hover:border-default-400 hover:text-default-900"
+      className="inline-flex w-fit items-center gap-1 rounded-md border border-black border-b-2 bg-white px-3 py-1.5 text-sm font-medium text-black shadow-sm transition hover:-translate-y-0.5 hover:bg-primary/10"
     >
       <span aria-hidden>←</span>
       Back to admin

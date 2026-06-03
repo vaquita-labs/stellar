@@ -34,8 +34,8 @@ export default function Page() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-4 p-4">
       <div>
-        <h1 className="text-xl font-semibold">Admin</h1>
-        <p className="text-sm text-default-500">Manage the project configuration and data.</p>
+        <h1 className="text-xl font-semibold text-black">Admin</h1>
+        <p className="text-sm text-black/60">Manage the project configuration and data.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -43,10 +43,10 @@ export default function Page() {
           <Link
             key={s.href}
             href={s.href}
-            className="flex flex-col gap-1 rounded-medium border-2 border-default-200 bg-default-50 p-4 transition-colors hover:border-default-400 hover:bg-default-100"
+            className="flex flex-col gap-1 rounded-xl border border-black border-b-2 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-primary/5"
           >
-            <span className="text-base font-semibold">{s.title}</span>
-            <span className="text-sm text-default-500">{s.description}</span>
+            <span className="text-base font-semibold text-black">{s.title}</span>
+            <span className="text-sm text-black/60">{s.description}</span>
           </Link>
         ))}
       </div>

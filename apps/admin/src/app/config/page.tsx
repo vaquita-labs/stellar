@@ -8,7 +8,8 @@ import {
   updateProjectConfig,
   useProjectConfig,
 } from '@/core-ui/hooks';
-import { Button, Spinner } from '@heroui/react';
+import { Spinner } from '@heroui/react';
+import { Button, Input, Textarea } from '@vaquita/ui';
 import { useState } from 'react';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
 
@@ -51,10 +52,6 @@ const formFromConfig = (c: ProjectConfig): FormState => ({
   currencies: toRows(c.currencies),
   languages: toRows(c.languages),
 });
-
-const inputLabel = 'flex flex-col gap-1 text-sm';
-const inputClass =
-  'w-full rounded-medium border-2 border-default-200 bg-default-100 px-3 py-2 text-sm outline-none focus:border-default-400';
 
 // Trim every field and drop the optional hint when blank, so the persisted
 // shape matches `{ id, label, hint? }` exactly.
@@ -101,43 +98,37 @@ function OptionListEditor({
       <p className="text-xs text-default-500">{description}</p>
 
       {items.length === 0 ? (
-        <div className="rounded-medium border-2 border-dashed border-default-200 p-4 text-center text-sm text-default-400">
+        <div className="rounded-xl border border-dashed border-black/30 bg-white p-4 text-center text-sm text-default-400">
           {emptyText}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
           {items.map((item, i) => (
             <div key={i} className="flex items-end gap-2">
-              <label className={`${inputLabel} w-24 shrink-0`}>
-                <span className="text-xs text-default-500">id</span>
-                <input
-                  className={inputClass}
-                  maxLength={20}
-                  placeholder={placeholders.id}
-                  value={item.id}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(i, 'id', e.target.value)}
-                />
-              </label>
-              <label className={`${inputLabel} w-28 shrink-0`}>
-                <span className="text-xs text-default-500">label</span>
-                <input
-                  className={inputClass}
-                  maxLength={50}
-                  placeholder={placeholders.label}
-                  value={item.label}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(i, 'label', e.target.value)}
-                />
-              </label>
-              <label className={`${inputLabel} flex-1`}>
-                <span className="text-xs text-default-500">hint (optional)</span>
-                <input
-                  className={inputClass}
-                  maxLength={100}
-                  placeholder={placeholders.hint}
-                  value={item.hint ?? ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(i, 'hint', e.target.value)}
-                />
-              </label>
+              <Input
+                label={<span className="text-xs text-default-500">id</span>}
+                containerClassName="w-24 shrink-0"
+                maxLength={20}
+                placeholder={placeholders.id}
+                value={item.id}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(i, 'id', e.target.value)}
+              />
+              <Input
+                label={<span className="text-xs text-default-500">label</span>}
+                containerClassName="w-28 shrink-0"
+                maxLength={50}
+                placeholder={placeholders.label}
+                value={item.label}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(i, 'label', e.target.value)}
+              />
+              <Input
+                label={<span className="text-xs text-default-500">hint (optional)</span>}
+                containerClassName="flex-1"
+                maxLength={100}
+                placeholder={placeholders.hint}
+                value={item.hint ?? ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(i, 'hint', e.target.value)}
+              />
               <Button
                 variant="ghost"
                 className="mb-[1px] px-3 text-danger"
@@ -272,45 +263,34 @@ export default function Page() {
             </div>
           )}
 
-          <label className={inputLabel}>
-            Network name
-            <input
-              className={inputClass}
-              maxLength={50}
-              value={form.networkName}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('networkName', e.target.value)}
-            />
-          </label>
+          <Input
+            label="Network name"
+            maxLength={50}
+            value={form.networkName}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('networkName', e.target.value)}
+          />
 
-          <label className={inputLabel}>
-            Network passphrase
-            <input
-              className={inputClass}
-              placeholder="e.g. Public Global Stellar Network ; September 2015"
-              value={form.networkPassphrase}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('networkPassphrase', e.target.value)}
-            />
-          </label>
+          <Input
+            label="Network passphrase"
+            placeholder="e.g. Public Global Stellar Network ; September 2015"
+            value={form.networkPassphrase}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('networkPassphrase', e.target.value)}
+          />
 
-          <label className={inputLabel}>
-            Badges contract address
-            <input
-              className={inputClass}
-              placeholder="C..."
-              value={form.badgesContractAddress}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('badgesContractAddress', e.target.value)}
-            />
-          </label>
+          <Input
+            label="Badges contract address"
+            placeholder="C..."
+            value={form.badgesContractAddress}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('badgesContractAddress', e.target.value)}
+          />
 
-          <label className={inputLabel}>
-            Allowed origins (one per line)
-            <textarea
-              className={`${inputClass} min-h-[120px] font-mono`}
-              placeholder={'https://app.example.com\nhttps://admin.example.com'}
-              value={form.origins}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set('origins', e.target.value)}
-            />
-          </label>
+          <Textarea
+            label="Allowed origins (one per line)"
+            className="min-h-[120px] font-mono"
+            placeholder={'https://app.example.com\nhttps://admin.example.com'}
+            value={form.origins}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set('origins', e.target.value)}
+          />
 
           <OptionListEditor
             title="Currencies"
@@ -358,8 +338,8 @@ export default function Page() {
             >
               Reset
             </Button>
-            <Button variant="primary" onPress={submit} isDisabled={saving}>
-              {saving ? <Spinner size="sm" color="current" /> : exists ? 'Save' : 'Create'}
+            <Button variant="primary" onPress={submit} isDisabled={saving} isLoading={saving}>
+              {exists ? 'Save' : 'Create'}
             </Button>
           </div>
         </div>
