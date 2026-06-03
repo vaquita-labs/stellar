@@ -179,6 +179,7 @@ pub mod mock_defindex_vault;
 
 mod arithmetic;
 mod conservation;
+mod event_payloads;
 mod pause;
 mod pool_coverage;
 mod positions;
@@ -194,3 +195,4 @@ pub fn test_calculate_reward(period_data: &crate::Period, amount: i128) -> i128 
     }
     (period_data.reward_pool * amount) / period_data.total_deposits
 }
+

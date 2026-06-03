@@ -478,3 +478,10 @@ fn fee_rejects_negative() {
     let result = pool.try_update_early_withdrawal_fee(&-1i128);
     assert_eq!(result, Err(Ok(VaquitaPoolError::InvalidFee)));
 }
+
+#[test]
+fn migrate_is_callable() {
+    let e = Env::default();
+    let (_, _, _, _, _, pool, _, _) = deploy_pool(&e);
+    pool.migrate();
+}

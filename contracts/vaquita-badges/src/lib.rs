@@ -7,6 +7,7 @@ mod error;
 mod events;
 mod mint_policy;
 mod pause;
+mod storage;
 mod types;
 mod upgrade;
 
@@ -19,7 +20,6 @@ pub struct VaquitaBadges;
 #[contractimpl]
 impl VaquitaBadges {
     pub fn __constructor(env: Env, admin: Address, signing_key: BytesN<32>) {
-        let max_ttl = env.ledger().max_live_until_ledger() - env.ledger().sequence();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage()
             .instance()
@@ -30,7 +30,7 @@ impl VaquitaBadges {
         env.storage()
             .instance()
             .set(&DataKey::UpgradesLocked, &false);
-        env.storage().instance().extend_ttl(max_ttl, max_ttl);
+        storage::extend_instance(&env);
         events::emit_constructed(&env, admin, signing_key);
     }
 
@@ -75,8 +75,6 @@ impl VaquitaBadges {
         env.crypto()
             .ed25519_verify(&signing_key, &msg_hash.into(), &signature);
 
-        let max_ttl = env.ledger().max_live_until_ledger() - env.ledger().sequence();
-
         // EditionCap enforcement (if registered).
         let edition_cap_key = DataKey::EditionCap(badge_type.clone());
         if let Some(cap) = env
@@ -94,9 +92,7 @@ impl VaquitaBadges {
             }
             let count_key = DataKey::EditionCount(badge_type.clone());
             env.storage().persistent().set(&count_key, &(count + 1));
-            env.storage()
-                .persistent()
-                .extend_ttl(&count_key, max_ttl, max_ttl);
+            storage::extend_persistent(&env, &count_key);
         }
 
         let token_id: u32 = env
@@ -107,27 +103,21 @@ impl VaquitaBadges {
 
         let owner_key = DataKey::TokenOwner(token_id);
         env.storage().persistent().set(&owner_key, &wallet);
-        env.storage()
-            .persistent()
-            .extend_ttl(&owner_key, max_ttl, max_ttl);
+        storage::extend_persistent(&env, &owner_key);
 
         let type_key = DataKey::TokenBadgeType(token_id);
         env.storage().persistent().set(&type_key, &badge_type);
-        env.storage()
-            .persistent()
-            .extend_ttl(&type_key, max_ttl, max_ttl);
+        storage::extend_persistent(&env, &type_key);
 
         env.storage().persistent().set(&claim_key, &());
-        env.storage()
-            .persistent()
-            .extend_ttl(&claim_key, max_ttl, max_ttl);
+        storage::extend_persistent(&env, &claim_key);
 
         mint_policy::increment_mint_count(&env, &badge_type);
 
         env.storage()
             .instance()
             .set(&DataKey::NextTokenId, &(token_id + 1));
-        env.storage().instance().extend_ttl(max_ttl, max_ttl);
+        storage::extend_instance(&env);
 
         events::emit_minted(&env, wallet, badge_type, cycle_id, token_id);
         Ok(token_id)
@@ -186,7 +176,6 @@ impl VaquitaBadges {
         edition_cap: Option<u32>,
     ) -> Result<(), BadgeError> {
         admin::require_owner(&env)?;
-        let max_ttl = env.ledger().max_live_until_ledger() - env.ledger().sequence();
 
         env.storage()
             .instance()
@@ -195,12 +184,10 @@ impl VaquitaBadges {
         if let Some(cap) = edition_cap {
             let cap_key = DataKey::EditionCap(badge_type.clone());
             env.storage().persistent().set(&cap_key, &cap);
-            env.storage()
-                .persistent()
-                .extend_ttl(&cap_key, max_ttl, max_ttl);
+            storage::extend_persistent(&env, &cap_key);
         }
 
-        env.storage().instance().extend_ttl(max_ttl, max_ttl);
+        storage::extend_instance(&env);
         events::emit_badge_type_registered(&env, badge_type, policy, edition_cap);
         Ok(())
     }
@@ -226,11 +213,10 @@ impl VaquitaBadges {
             return Err(BadgeError::PolicyFrozen);
         }
 
-        let max_ttl = env.ledger().max_live_until_ledger() - env.ledger().sequence();
         env.storage()
             .instance()
             .set(&DataKey::MintPolicy(badge_type.clone()), &policy);
-        env.storage().instance().extend_ttl(max_ttl, max_ttl);
+        storage::extend_instance(&env);
         events::emit_mint_policy_updated(&env, badge_type, old_policy, policy);
         Ok(())
     }
@@ -242,13 +228,10 @@ impl VaquitaBadges {
         new_cap: u32,
     ) -> Result<(), BadgeError> {
         admin::require_owner(&env)?;
-        let max_ttl = env.ledger().max_live_until_ledger() - env.ledger().sequence();
         let cap_key = DataKey::EditionCap(badge_type.clone());
         env.storage().persistent().set(&cap_key, &new_cap);
-        env.storage()
-            .persistent()
-            .extend_ttl(&cap_key, max_ttl, max_ttl);
-        env.storage().instance().extend_ttl(max_ttl, max_ttl);
+        storage::extend_persistent(&env, &cap_key);
+        storage::extend_instance(&env);
         events::emit_edition_cap_updated(&env, badge_type, new_cap);
         Ok(())
     }
@@ -260,11 +243,10 @@ impl VaquitaBadges {
             .instance()
             .get(&DataKey::AdminSigningKey)
             .ok_or(BadgeError::NotInitialized)?;
-        let max_ttl = env.ledger().max_live_until_ledger() - env.ledger().sequence();
         env.storage()
             .instance()
             .set(&DataKey::AdminSigningKey, &new_key);
-        env.storage().instance().extend_ttl(max_ttl, max_ttl);
+        storage::extend_instance(&env);
         events::emit_signing_key_rotated(&env, old_key, new_key);
         Ok(())
     }

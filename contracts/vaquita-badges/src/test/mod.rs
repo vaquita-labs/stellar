@@ -11,6 +11,7 @@ use soroban_sdk::{
 
 pub trait EnvTestUtils {
     fn set_default_info(&self);
+    fn jump_time(&self, seconds: u64);
 }
 
 impl EnvTestUtils for Env {
@@ -26,8 +27,22 @@ impl EnvTestUtils for Env {
             max_entry_ttl: 365 * ONE_DAY_LEDGERS,
         });
     }
+
+    fn jump_time(&self, seconds: u64) {
+        self.ledger().set(LedgerInfo {
+            timestamp: self.ledger().timestamp().saturating_add(seconds),
+            protocol_version: 22,
+            sequence_number: self.ledger().sequence().saturating_add(1),
+            network_id: Default::default(),
+            base_reserve: 10,
+            min_temp_entry_ttl: 30 * ONE_DAY_LEDGERS,
+            min_persistent_entry_ttl: 30 * ONE_DAY_LEDGERS,
+            max_entry_ttl: 365 * ONE_DAY_LEDGERS,
+        });
+    }
 }
 
 mod badges_test;
+mod event_payloads;
 mod types_test;
 mod upgrade_pause_test;

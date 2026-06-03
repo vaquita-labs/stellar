@@ -151,7 +151,7 @@ impl VaquitaPool {
 
         accounting::add_principal(&env, amount)?;
 
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         events::emit_deposit(&env, caller, deposit_id, blend_token, amount, shares);
         Ok(())
     }
@@ -251,7 +251,7 @@ impl VaquitaPool {
             .set(&DataKey::Periods(position.lock_period), &period_data);
         positions::remove(&env, &deposit_id, position.lock_period);
 
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         events::emit_withdraw(
             &env,
             caller,
@@ -301,7 +301,7 @@ impl VaquitaPool {
             env.storage().instance().set(&DataKey::ProtocolFees, &0i128);
             events::emit_protocol_fees_withdrawn(&env, admin, protocol_fees);
         }
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
@@ -352,7 +352,7 @@ impl VaquitaPool {
             .set(&DataKey::Periods(period), &updated);
         accounting::add_reward_pool(&env, reward_amount)?;
         events::emit_rewards_added(&env, period, reward_amount);
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
@@ -373,7 +373,7 @@ impl VaquitaPool {
             .instance()
             .set(&DataKey::EarlyWithdrawalFee, &new_fee);
         events::emit_fee_updated(&env, old_fee, new_fee);
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
@@ -391,19 +391,19 @@ impl VaquitaPool {
             .instance()
             .set(&DataKey::SupportedLockPeriod(new_lock_period), &true);
         events::emit_lock_period_added(&env, new_lock_period);
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
     pub fn pause(env: Env) -> Result<(), VaquitaPoolError> {
         pause::pause(&env)?;
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
     pub fn unpause(env: Env) -> Result<(), VaquitaPoolError> {
         pause::unpause(&env)?;
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
@@ -443,19 +443,19 @@ impl VaquitaPool {
             .instance()
             .remove(&DataKey::SupportedLockPeriod(period));
         events::emit_lock_period_removed(&env, period);
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
     pub fn set_defindex_vault(env: Env, new_vault: Address) -> Result<(), VaquitaPoolError> {
         vault_adapter::set_vault_address(&env, new_vault)?;
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
     pub fn set_blend_token(env: Env, new_token: Address) -> Result<(), VaquitaPoolError> {
         token_config::set_blend_token(&env, new_token)?;
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
@@ -463,25 +463,25 @@ impl VaquitaPool {
 
     pub fn propose_upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), VaquitaPoolError> {
         upgrade::propose_upgrade(&env, new_wasm_hash)?;
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
     pub fn cancel_upgrade(env: Env) -> Result<(), VaquitaPoolError> {
         upgrade::cancel_upgrade(&env)?;
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
     pub fn execute_upgrade(env: Env) -> Result<(), VaquitaPoolError> {
         upgrade::execute_upgrade(&env)?;
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
     pub fn lock_upgrades_forever(env: Env) -> Result<(), VaquitaPoolError> {
         upgrade::lock_upgrades_forever(&env)?;
-        positions::bump_instance(&env);
+        positions::extend_instance(&env);
         Ok(())
     }
 
@@ -498,6 +498,13 @@ impl VaquitaPool {
 
     pub fn get_position(env: Env, deposit_id: String) -> Option<Position> {
         positions::get(&env, &deposit_id)
+    }
+
+    /// Extend the TTL of an open position so it is not archived before maturity.
+    /// Anyone may call this — no auth required.
+    pub fn refresh_position_ttl(env: Env, deposit_id: String) {
+        positions::extend_ttl(&env, &deposit_id);
+        positions::extend_instance(&env);
     }
 
     pub fn get_period_data(env: Env, period: u64) -> Option<Period> {

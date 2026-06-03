@@ -1,6 +1,7 @@
 use soroban_sdk::{Address, Env, Symbol};
 
 use crate::error::BadgeError;
+use crate::storage;
 use crate::types::{DataKey, MintPolicy};
 
 /// Returns the stored policy for `badge_type`, defaulting to `OneTimeOnly`
@@ -38,11 +39,8 @@ pub fn effective_claim_key(
 pub fn increment_mint_count(env: &Env, badge_type: &Symbol) {
     let key = DataKey::MintCount(badge_type.clone());
     let count: u32 = env.storage().persistent().get(&key).unwrap_or(0);
-    let max_ttl = env.ledger().max_live_until_ledger() - env.ledger().sequence();
     env.storage().persistent().set(&key, &(count + 1));
-    env.storage()
-        .persistent()
-        .extend_ttl(&key, max_ttl, max_ttl);
+    storage::extend_persistent(env, &key);
 }
 
 /// Returns the cumulative mint count for `badge_type` (0 if never minted).
