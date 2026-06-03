@@ -163,8 +163,6 @@ export function SettingsPage() {
   const router = useRouter();
   const logout = useLogout();
   const { reset } = useConfigStore();
-  const { isLoading, isRefetching } = useProfileData();
-  const loading = isLoading || isRefetching;
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
 
@@ -200,7 +198,6 @@ export function SettingsPage() {
       label: 'Profile',
       description: 'Edit your nickname and avatar.',
       href: '/profile/edit',
-      disabled: loading,
     },
     {
       kind: 'link',

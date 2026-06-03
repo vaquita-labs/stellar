@@ -3,6 +3,7 @@
 import { ListBox, Select, Switch, toast } from '@heroui/react';
 import React, { useEffect, useState } from 'react';
 import { FiChevronDown } from 'react-icons/fi';
+import { useProfileData, useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
@@ -116,8 +117,50 @@ function ToggleRow({
   );
 }
 
+/**
+ * Like {@link ToggleRow} but persisted: it renders the visible Hero UI thumb
+ * (the bare `<Switch>` above shows no knob — see EditProfilePage) and reflects
+ * a saving/disabled state while the PATCH is in flight.
+ */
+function PersistedToggleRow({
+  label,
+  description,
+  value,
+  isDisabled,
+  isSaving,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: boolean;
+  isDisabled?: boolean;
+  isSaving?: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white">
+      <div className="flex flex-col min-w-0">
+        <span className="text-[15px] font-extrabold text-black">{label}</span>
+        <span className="text-xs text-gray-500">{description}</span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={`text-xs font-semibold ${value ? 'text-green-600' : 'text-gray-400'}`}>
+          {isSaving ? 'Saving…' : value ? 'On' : 'Off'}
+        </span>
+        <Switch isSelected={value} onChange={onChange} isDisabled={isDisabled} aria-label={label}>
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch>
+      </div>
+    </div>
+  );
+}
+
 export function PreferencesPage() {
-  const { network } = useConfigStore();
+  const { walletAddress, network } = useConfigStore();
+  const { data, isLoading, refetch } = useProfileData();
+  const { saveProfileFlags } = useRestProfile();
 
   // Backend-driven (from `GET /api/v1/config` → config store), no longer hardcoded.
   const currencies: Option[] = network?.currencies ?? [];
@@ -142,6 +185,38 @@ export function PreferencesPage() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [hapticFeedback, setHapticFeedback] = useState(true);
   const [autoplaySounds, setAutoplaySounds] = useState(true);
+
+  const [cryptoSavvy, setCryptoSavvy] = useState(false);
+  const [savingCryptoSavvy, setSavingCryptoSavvy] = useState(false);
+
+  useEffect(() => {
+    setCryptoSavvy(data?.cryptoSavvy ?? false);
+  }, [data?.cryptoSavvy]);
+
+  const handleToggleCryptoSavvy = async (value: boolean) => {
+    if (!walletAddress || savingCryptoSavvy) return;
+    const prev = cryptoSavvy;
+    setCryptoSavvy(value); // optimistic; reverted on failure
+    setSavingCryptoSavvy(true);
+    try {
+      const { success, message } = await saveProfileFlags({ cryptoSavvy: value });
+      if (success) {
+        toast.success('Preferences updated', { timeout: 2000 });
+        refetch();
+      } else {
+        setCryptoSavvy(prev);
+        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+      }
+    } catch (error) {
+      setCryptoSavvy(prev);
+      toast.danger('Could not update preferences', {
+        description: (error as { message?: string })?.message ?? '',
+        timeout: 4000,
+      });
+    } finally {
+      setSavingCryptoSavvy(false);
+    }
+  };
 
   const handleSave = () => {
     toast.success('Preferences saved (mock)', { timeout: 2000 });
@@ -169,6 +244,25 @@ export function PreferencesPage() {
         onChange={setCurrency}
         ariaLabel="Currency"
       />
+
+      <section className="flex flex-col gap-2">
+        <div className="flex flex-col gap-0.5 px-1">
+          <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
+            Crypto mode
+          </h2>
+          <p className="text-xs text-gray-500">
+            How much blockchain detail Vaquita shows you. Saved to your profile.
+          </p>
+        </div>
+        <PersistedToggleRow
+          label="I know crypto"
+          description="Show raw on-chain details (wallet addresses, tx hashes, network terms) instead of simplified copy."
+          value={cryptoSavvy}
+          isDisabled={!walletAddress || isLoading || savingCryptoSavvy}
+          isSaving={savingCryptoSavvy}
+          onChange={handleToggleCryptoSavvy}
+        />
+      </section>
 
       <section className="flex flex-col gap-2">
         <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500 px-1">
