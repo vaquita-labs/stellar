@@ -162,6 +162,7 @@ function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardC
         position: index + 1,
         walletAddress: profile.walletAddress,
         username: getLeaderboardUsername(profile.nickname, profile.walletAddress),
+        avatarUrl: profile.avatarUrl,
         level: realLevel ?? placeholder.level,
         streak: realStreak ?? placeholder.streak,
         badges: profile.badges,

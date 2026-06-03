@@ -139,8 +139,18 @@ model Profile {
   fullName      String?   @map("full_name") @db.VarChar(100)
   email         String?   @db.VarChar(100)
 
+  // Profile avatar served from MinIO (S3-compatible). `avatarUrl` is the public
+  // URL stored for rendering; `avatarKey` is the object key we delete when the
+  // photo is replaced/removed. Both NULL while the user keeps the default avatar.
+  avatarUrl     String?   @map("avatar_url") @db.VarChar(500)
+  avatarKey     String?   @map("avatar_key") @db.VarChar(300)
+
   onboardingCompleted Boolean @default(false) @map("onboarding_completed")
   tutorialCompleted   Boolean @default(false) @map("tutorial_completed")
+  // The user self-identifies as crypto-savvy, so the UI can drop the
+  // beginner-friendly framing and surface raw on-chain details (wallet
+  // addresses, tx hashes, gas/network terms) instead of simplified copy.
+  cryptoSavvy         Boolean @default(false) @map("crypto_savvy")
 
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)

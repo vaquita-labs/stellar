@@ -73,6 +73,8 @@ export interface Profile {
   full_name: string,
   nickname: string,
   wallet_address: string,
+  avatar_url?: string | null,
+  avatar_key?: string | null,
   onboarding_completed: boolean,
   tutorial_completed: boolean,
   crypto_savvy: boolean,

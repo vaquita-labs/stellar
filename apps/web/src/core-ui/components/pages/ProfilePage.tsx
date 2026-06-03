@@ -213,14 +213,28 @@ export function ProfilePage() {
               aria-label="Edit profile"
               className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-black border-b-4 shadow"
             >
-              <Image
-                src={DEFAULT_AVATAR}
-                alt={displayName}
-                width={120}
-                height={120}
-                className="object-contain"
-                priority
-              />
+              {profileData?.avatarUrl ? (
+                // Real uploaded photo: fill the circle (object-cover). next/image
+                // fetches it server-side and re-serves over https, so an http
+                // MinIO source still renders on an https page.
+                <Image
+                  src={profileData.avatarUrl}
+                  alt={displayName}
+                  fill
+                  sizes="128px"
+                  className="object-cover"
+                  priority
+                />
+              ) : (
+                <Image
+                  src={DEFAULT_AVATAR}
+                  alt={displayName}
+                  width={120}
+                  height={120}
+                  className="object-contain"
+                  priority
+                />
+              )}
             </Link>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
               {displayName}

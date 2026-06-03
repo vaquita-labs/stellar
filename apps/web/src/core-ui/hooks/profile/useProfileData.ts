@@ -19,6 +19,7 @@ export const useProfileData = () => {
         email: data?.data?.email || '',
         fullName: data?.data?.fullName || '',
         nickname: data?.data?.nickname || '',
+        avatarUrl: data?.data?.avatarUrl || '',
         onboardingCompleted: data?.data?.onboardingCompleted ?? false,
         tutorialCompleted: data?.data?.tutorialCompleted ?? false,
         cryptoSavvy: data?.data?.cryptoSavvy ?? false,
