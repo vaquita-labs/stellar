@@ -1,4 +1,7 @@
 import { Router } from 'express';
+import multer from 'multer';
+import { v4 } from 'uuid';
+import { isStorageConfigured, putAvatar, removeAvatar } from '../../lib/storage';
 import {
   Achievement,
   broadcastProfileChange,
@@ -36,6 +39,21 @@ const router = Router();
 
 // Single-network: the network is implicit (one `config` row). Routes are keyed
 // by wallet only — the legacy /network/:networkName prefix was removed.
+
+// Avatar uploads are proxied through the API: the browser POSTs the raw file
+// here, we validate it and forward the bytes to MinIO. `memoryStorage` keeps the
+// file in a Buffer (avatars are small); the 5 MB cap is enforced by multer.
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const AVATAR_MIME_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: AVATAR_MAX_BYTES, files: 1 },
+}).single('file');
 
 router.get('/wallet/:walletAddress', async (req, res) => {
   const { walletAddress } = req.params;
@@ -443,6 +461,211 @@ router.post('/wallet/:walletAddress/nickname', async (req, res) => {
   }
 });
 
+// Update nickname and/or email in one call. Each field is validated and saved
+// INDEPENDENTLY: if the email is taken but the nickname is free, the nickname is
+// still persisted and only the email reports an error (and vice versa). The
+// response carries a per-field `{ saved, error }` so the UI can show a friendly
+// message next to whichever field failed.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+router.patch('/wallet/:walletAddress/profile', async (req, res) => {
+  const { walletAddress } = req.params;
+  const body = req.body ?? {};
+  const hasNickname = typeof body.nickname === 'string';
+  const hasEmail = typeof body.email === 'string';
+  req.log.info({ walletAddress, hasNickname, hasEmail }, 'PATCH /profile/.../profile');
+
+  if (!hasNickname && !hasEmail) {
+    return sendError(res, 'Provide a nickname and/or email to update.', null, 400);
+  }
+
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
+
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
+    return sendError(res, errorMessage, errors, 404);
+  }
+
+  const result = {
+    nickname: { saved: false, error: null as string | null },
+    email: { saved: false, error: null as string | null },
+  };
+  const data: { nickname?: string; email?: string } = {};
+
+  // --- Nickname ---
+  if (hasNickname) {
+    const nickname = String(body.nickname).trim();
+    if (!nickname) {
+      result.nickname.error = 'Please enter a nickname.';
+    } else if (nickname.length > 50) {
+      result.nickname.error = 'That nickname is too long (max 50 characters).';
+    } else {
+      const taken = await prisma.profile.findFirst({
+        where: { nickname, id: { not: profileData.id }, deletedAt: null },
+        select: { id: true },
+      });
+      if (taken) {
+        result.nickname.error = 'That nickname is already taken. Please choose another one.';
+      } else {
+        data.nickname = nickname;
+      }
+    }
+  }
+
+  // --- Email ---
+  if (hasEmail) {
+    const email = String(body.email).trim();
+    if (!email) {
+      result.email.error = 'Please enter an email address.';
+    } else if (email.length > 100) {
+      result.email.error = 'That email is too long (max 100 characters).';
+    } else if (!EMAIL_REGEX.test(email)) {
+      result.email.error = 'Please enter a valid email address.';
+    } else {
+      // Case-insensitive match so Foo@x.com can't shadow foo@x.com on another account.
+      const taken = await prisma.profile.findFirst({
+        where: {
+          email: { equals: email, mode: 'insensitive' },
+          id: { not: profileData.id },
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (taken) {
+        result.email.error = 'That email is already registered to another account.';
+      } else {
+        data.email = email;
+      }
+    }
+  }
+
+  // Persist only the fields that passed validation.
+  if (Object.keys(data).length > 0) {
+    try {
+      await prisma.profile.update({ where: { id: profileData.id }, data });
+      if (data.nickname !== undefined) result.nickname.saved = true;
+      if (data.email !== undefined) result.email.saved = true;
+
+      try {
+        await broadcastProfileChange('set-profile', ['profile-data']);
+      } catch (err) {
+        req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (set-profile)');
+      }
+
+      req.log.info({ profileId: profileData.id, ...data }, 'Profile updated');
+    } catch (err) {
+      req.log.error({ err, profileId: profileData.id, data }, 'Failed to update profile');
+      return sendError(res, 'Failed to save profile', err, 500);
+    }
+  }
+
+  return sendSuccess(res, result);
+});
+
+// Runs the multer middleware as a promise so we can validate inside the async
+// handler and surface upload errors (e.g. file too large) as clean JSON.
+const runAvatarUpload = (req: Parameters<typeof avatarUpload>[0], res: Parameters<typeof avatarUpload>[1]) =>
+  new Promise<void>((resolve, reject) => {
+    avatarUpload(req, res, (err: unknown) => (err ? reject(err) : resolve()));
+  });
+
+router.post('/wallet/:walletAddress/avatar', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'POST /profile/.../avatar');
+
+  if (!isStorageConfigured) {
+    req.log.error('Avatar upload attempted but MinIO storage is not configured');
+    return sendError(res, 'Photo uploads are not available right now.', null, 503);
+  }
+
+  try {
+    await runAvatarUpload(req, res);
+  } catch (err) {
+    const tooLarge = (err as { code?: string })?.code === 'LIMIT_FILE_SIZE';
+    req.log.warn({ err, walletAddress }, 'Avatar upload rejected by multer');
+    return sendError(res, tooLarge ? 'The image is too large (max 5 MB).' : 'Could not read the uploaded file.', null, 400);
+  }
+
+  const file = (req as unknown as { file?: { buffer: Buffer; mimetype: string; size: number } }).file;
+  if (!file) {
+    return sendError(res, 'No image file was provided.', null, 400);
+  }
+
+  const ext = AVATAR_MIME_EXT[file.mimetype];
+  if (!ext) {
+    return sendError(res, 'Unsupported image type. Use JPG, PNG, WEBP or GIF.', null, 400);
+  }
+
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
+
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
+    return sendError(res, errorMessage, errors, 404);
+  }
+
+  try {
+    const key = `${profileData.id}/${v4()}.${ext}`;
+    const { url } = await putAvatar({ key, body: file.buffer, contentType: file.mimetype });
+
+    const previousKey = profileData.avatar_key ?? null;
+
+    const result = await prisma.profile.update({
+      where: { id: profileData.id },
+      data: { avatarUrl: url, avatarKey: key },
+    });
+
+    // Replace = delete the object we just superseded, after the DB points at the new one.
+    if (previousKey && previousKey !== key) await removeAvatar(previousKey);
+
+    try {
+      await broadcastProfileChange('set-avatar', [ 'profile-data' ]);
+    } catch (err) {
+      req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (set-avatar)');
+    }
+
+    req.log.info({ profileId: profileData.id, key }, 'Avatar updated');
+    return sendSuccess(res, { avatarUrl: result.avatarUrl });
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id }, 'Failed to upload avatar');
+    return sendError(res, 'Failed to upload photo', err, 500);
+  }
+});
+
+router.delete('/wallet/:walletAddress/avatar', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'DELETE /profile/.../avatar');
+
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
+
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
+    return sendError(res, errorMessage, errors, 404);
+  }
+
+  try {
+    const previousKey = profileData.avatar_key ?? null;
+
+    await prisma.profile.update({
+      where: { id: profileData.id },
+      data: { avatarUrl: null, avatarKey: null },
+    });
+
+    if (previousKey) await removeAvatar(previousKey);
+
+    try {
+      await broadcastProfileChange('set-avatar', [ 'profile-data' ]);
+    } catch (err) {
+      req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (remove-avatar)');
+    }
+
+    req.log.info({ profileId: profileData.id }, 'Avatar removed');
+    return sendSuccess(res, { avatarUrl: '' });
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id }, 'Failed to remove avatar');
+    return sendError(res, 'Failed to remove photo', err, 500);
+  }
+});
+
 router.patch('/wallet/:walletAddress/flags', async (req, res) => {
   const { walletAddress } = req.params;
   const { onboardingCompleted, tutorialCompleted, cryptoSavvy } = req.body ?? {};
@@ -536,6 +759,7 @@ const toProfileByDepositsResponseDTO = (
       email: profile.email ?? '',
       fullName: profile.full_name ?? '',
       nickname: profile.nickname ?? '',
+      avatarUrl: profile.avatar_url ?? '',
       walletAddress: wallet,
       totalSums: sum,
       lastSum: sum,

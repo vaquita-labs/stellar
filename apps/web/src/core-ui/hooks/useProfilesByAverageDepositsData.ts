@@ -19,6 +19,7 @@ export const useProfilesByAverageDepositsData = () => {
           email: profile?.email ?? '',
           fullName: profile?.fullName ?? '',
           nickname: profile?.nickname ?? '',
+          avatarUrl: profile?.avatarUrl ?? '',
           walletAddress: profile?.walletAddress ?? '',
           totalSums: profile?.totalSums ?? 0,
           lastSum: profile?.lastSum ?? 0,

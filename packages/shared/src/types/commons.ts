@@ -212,6 +212,7 @@ export interface ProfileAverageResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  avatarUrl: string;
   walletAddress: string;
   // Current active-deposit balance for the wallet, computed on the fly from the
   // `deposits` table. `totalSums === lastSum` and `count === 1` now — the old
