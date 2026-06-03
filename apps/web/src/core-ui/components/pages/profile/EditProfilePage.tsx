@@ -221,10 +221,8 @@ export function EditProfilePage() {
           timeout: 5000,
         });
       }
-      // Leave the page only when everything the user changed saved cleanly.
-      if (savedAny && fieldErrors.length === 0) {
-        router.push('/profile/settings');
-      }
+      // Stay on the edit page after saving — the success toast + refetch already
+      // reflect the saved values, so the user keeps editing without navigating away.
     } catch (error) {
       toast.danger('Could not save profile', {
         description: (error as { message?: string })?.message ?? '',
