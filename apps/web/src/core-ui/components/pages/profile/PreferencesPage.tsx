@@ -1,25 +1,13 @@
 'use client';
 
 import { ListBox, Select, Switch, toast } from '@heroui/react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FiChevronDown } from 'react-icons/fi';
+import { useProfileData, useRestProfile } from '../../../hooks';
+import { useConfigStore } from '../../../stores';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
 type Option = { id: string; label: string; hint?: string };
-
-const LANGUAGES: Option[] = [
-  { id: 'en', label: 'English', hint: 'United States' },
-  { id: 'es', label: 'Español', hint: 'América Latina' },
-  { id: 'pt', label: 'Português', hint: 'Brasil' },
-  { id: 'fr', label: 'Français', hint: 'France' },
-];
-
-const CURRENCIES: Option[] = [
-  { id: 'usd', label: 'USD', hint: 'US Dollar' },
-  { id: 'eur', label: 'EUR', hint: 'Euro' },
-  { id: 'cop', label: 'COP', hint: 'Peso colombiano' },
-  { id: 'mxn', label: 'MXN', hint: 'Peso mexicano' },
-];
 
 /**
  * A Hero UI Select rendered as a popover dropdown — i.e. the option list
@@ -129,12 +117,106 @@ function ToggleRow({
   );
 }
 
+/**
+ * Like {@link ToggleRow} but persisted: it renders the visible Hero UI thumb
+ * (the bare `<Switch>` above shows no knob — see EditProfilePage) and reflects
+ * a saving/disabled state while the PATCH is in flight.
+ */
+function PersistedToggleRow({
+  label,
+  description,
+  value,
+  isDisabled,
+  isSaving,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: boolean;
+  isDisabled?: boolean;
+  isSaving?: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white">
+      <div className="flex flex-col min-w-0">
+        <span className="text-[15px] font-extrabold text-black">{label}</span>
+        <span className="text-xs text-gray-500">{description}</span>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={`text-xs font-semibold ${value ? 'text-green-600' : 'text-gray-400'}`}>
+          {isSaving ? 'Saving…' : value ? 'On' : 'Off'}
+        </span>
+        <Switch isSelected={value} onChange={onChange} isDisabled={isDisabled} aria-label={label}>
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch>
+      </div>
+    </div>
+  );
+}
+
 export function PreferencesPage() {
+  const { walletAddress, network } = useConfigStore();
+  const { data, isLoading, refetch } = useProfileData();
+  const { saveProfileFlags } = useRestProfile();
+
+  // Backend-driven (from `GET /api/v1/config` → config store), no longer hardcoded.
+  const currencies: Option[] = network?.currencies ?? [];
+  const languages: Option[] = network?.languages ?? [];
+
   const [language, setLanguage] = useState('en');
   const [currency, setCurrency] = useState('usd');
+
+  // Default each selection to the first backend option once the list loads, if
+  // the current pick isn't offered (e.g. the seeded 'usd' / 'en' fallback).
+  useEffect(() => {
+    if (currencies.length > 0 && !currencies.some((c) => c.id === currency)) {
+      setCurrency(currencies[0].id);
+    }
+  }, [currencies, currency]);
+
+  useEffect(() => {
+    if (languages.length > 0 && !languages.some((l) => l.id === language)) {
+      setLanguage(languages[0].id);
+    }
+  }, [languages, language]);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [hapticFeedback, setHapticFeedback] = useState(true);
   const [autoplaySounds, setAutoplaySounds] = useState(true);
+
+  const [cryptoSavvy, setCryptoSavvy] = useState(false);
+  const [savingCryptoSavvy, setSavingCryptoSavvy] = useState(false);
+
+  useEffect(() => {
+    setCryptoSavvy(data?.cryptoSavvy ?? false);
+  }, [data?.cryptoSavvy]);
+
+  const handleToggleCryptoSavvy = async (value: boolean) => {
+    if (!walletAddress || savingCryptoSavvy) return;
+    const prev = cryptoSavvy;
+    setCryptoSavvy(value); // optimistic; reverted on failure
+    setSavingCryptoSavvy(true);
+    try {
+      const { success, message } = await saveProfileFlags({ cryptoSavvy: value });
+      if (success) {
+        toast.success('Preferences updated', { timeout: 2000 });
+        refetch();
+      } else {
+        setCryptoSavvy(prev);
+        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+      }
+    } catch (error) {
+      setCryptoSavvy(prev);
+      toast.danger('Could not update preferences', {
+        description: (error as { message?: string })?.message ?? '',
+        timeout: 4000,
+      });
+    } finally {
+      setSavingCryptoSavvy(false);
+    }
+  };
 
   const handleSave = () => {
     toast.success('Preferences saved (mock)', { timeout: 2000 });
@@ -148,7 +230,7 @@ export function PreferencesPage() {
       <OptionSelect
         title="Language"
         description="The language Vaquita uses to talk to you."
-        options={LANGUAGES}
+        options={languages}
         value={language}
         onChange={setLanguage}
         ariaLabel="Language"
@@ -157,11 +239,30 @@ export function PreferencesPage() {
       <OptionSelect
         title="Currency"
         description="Used to display your balances and rewards."
-        options={CURRENCIES}
+        options={currencies}
         value={currency}
         onChange={setCurrency}
         ariaLabel="Currency"
       />
+
+      <section className="flex flex-col gap-2">
+        <div className="flex flex-col gap-0.5 px-1">
+          <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
+            Crypto mode
+          </h2>
+          <p className="text-xs text-gray-500">
+            How much blockchain detail Vaquita shows you. Saved to your profile.
+          </p>
+        </div>
+        <PersistedToggleRow
+          label="I know crypto"
+          description="Show raw on-chain details (wallet addresses, tx hashes, network terms) instead of simplified copy."
+          value={cryptoSavvy}
+          isDisabled={!walletAddress || isLoading || savingCryptoSavvy}
+          isSaving={savingCryptoSavvy}
+          onChange={handleToggleCryptoSavvy}
+        />
+      </section>
 
       <section className="flex flex-col gap-2">
         <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500 px-1">

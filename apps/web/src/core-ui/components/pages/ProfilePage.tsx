@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
+  useCatalogAchievements,
   useClaimedAchievements,
   useDepositsComplete,
   useLeaderboardRank,
@@ -18,7 +19,7 @@ import {
   useProfileRewards,
   useProfileStreak,
 } from '../../hooks';
-import { useHideBalance, useNetworkConfigStore } from '../../stores';
+import { useHideBalance, useConfigStore } from '../../stores';
 import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
 import { BadgeTile } from './profile/BadgeTile';
@@ -96,7 +97,7 @@ const SummaryItem = ({
 
 export function ProfilePage() {
   const router = useRouter();
-  const { walletAddress, token } = useNetworkConfigStore();
+  const { walletAddress, token } = useConfigStore();
   const hideBalance = useHideBalance();
   const { data: profileData } = useProfileData();
   const { data: streakData } = useProfileStreak();
@@ -104,25 +105,11 @@ export function ProfilePage() {
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
+  const { data: catalogData } = useCatalogAchievements();
   const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
-
-  // TEST — remove before mainnet
-  const [trustlinePending, setTrustlinePending] = useState(false);
-  const handleAddTrustline = async () => {
-    setTrustlinePending(true);
-    try {
-      await addUsdcTrustline();
-      toast.success('USDC trustline added!');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to add trustline';
-      toast.danger('Trustline error', { description: msg });
-    } finally {
-      setTrustlinePending(false);
-    }
-  };
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -174,35 +161,11 @@ export function ProfilePage() {
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
+        catalog: catalogData,
         leaderboardRank: rankData?.rank ?? undefined,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, catalogData, rankData?.rank]
   );
-
-  const handleShareToInstagram = async () => {
-    // Instagram doesn't expose a public web-share intent for arbitrary URLs.
-    // We try the native share sheet first (which surfaces Instagram on mobile),
-    // and fall back to copying the link with a hint to paste into a story.
-    const url = typeof window !== 'undefined' ? window.location.href : '';
-    const text = `I'm saving with Vaquita 🐮 — join me!`;
-    try {
-      if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
-        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: 'Vaquita',
-          text,
-          url,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(`${text} — ${url}`);
-      toast.success('Copied! Paste it in your Instagram story.');
-    } catch (error) {
-      const message = (error as { message?: string })?.message ?? '';
-      if (message && !message.toLowerCase().includes('abort')) {
-        toast.danger('Could not share', { description: message });
-      }
-    }
-  };
 
   /* -------------------------------------------------------------- */
   /* Disconnected state                                              */
@@ -250,14 +213,28 @@ export function ProfilePage() {
               aria-label="Edit profile"
               className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-black border-b-4 shadow"
             >
-              <Image
-                src={DEFAULT_AVATAR}
-                alt={displayName}
-                width={120}
-                height={120}
-                className="object-contain"
-                priority
-              />
+              {profileData?.avatarUrl ? (
+                // Real uploaded photo: fill the circle (object-cover). next/image
+                // fetches it server-side and re-serves over https, so an http
+                // MinIO source still renders on an https page.
+                <Image
+                  src={profileData.avatarUrl}
+                  alt={displayName}
+                  fill
+                  sizes="128px"
+                  className="object-cover"
+                  priority
+                />
+              ) : (
+                <Image
+                  src={DEFAULT_AVATAR}
+                  alt={displayName}
+                  width={120}
+                  height={120}
+                  className="object-contain"
+                  priority
+                />
+              )}
             </Link>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
               {displayName}
@@ -288,50 +265,7 @@ export function ProfilePage() {
           </Link>
         </section>
 
-        {/* TEST — remove before mainnet -------------------------------- */}
-        <section className="px-4 sm:px-6">
-          <button
-            type="button"
-            onClick={handleAddTrustline}
-            disabled={trustlinePending}
-            className="flex items-center justify-center gap-2 w-full h-12 rounded-md bg-yellow-300 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide hover:bg-yellow-200 hover:-translate-y-0.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {trustlinePending ? 'Adding…' : '🧪 Add USDC Trustline [TEST]'}
-          </button>
-        </section>
 
-        {/* Share to Instagram CTA ------------------------------------- */}
-        {/* <section className="px-4 sm:px-6">
-          <div className="relative overflow-hidden rounded-2xl bg-white border border-black border-b-2 p-4 flex items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-extrabold text-black leading-snug">
-                Share your Vaquita on Instagram!
-              </p>
-              <p className="text-xs text-gray-600 mt-0.5">
-                Brag a little — invite your friends to save together.
-              </p>
-              <button
-                type="button"
-                onClick={handleShareToInstagram}
-                className="mt-3 inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-primary text-black border border-black border-b-3 text-xs font-bold uppercase tracking-wide hover:bg-primary/80 hover:-translate-y-0.5 transition"
-              >
-                <FiShare2 className="h-3.5 w-3.5" />
-                Share now
-              </button>
-            </div>
-            <div className="shrink-0">
-              <Image
-                src="/vaquita/vaquita_isotipo.svg"
-                alt="Vaquita"
-                width={72}
-                height={72}
-                className="object-contain"
-              />
-            </div>
-          </div>
-        </section> */}
-
-        {/* Resumen ---------------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <SectionHeader title="Summary" href="/profile/summary" />
           {/* Whole white card is the link target — the chevron in the header
@@ -358,12 +292,12 @@ export function ProfilePage() {
             />
             <SummaryItem
               icon="/icons/global/coin.png"
-              value={goldCoins.toLocaleString()}
+              value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               label="Gold"
             />
             <SummaryItem
-              icon="/icons/global/trophy.png"
-              value={`${experience.toLocaleString()} XP`}
+              icon="/icons/global/star.png"
+              value={`${Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })} XP`}
               label="Experience"
             />
           </Link>

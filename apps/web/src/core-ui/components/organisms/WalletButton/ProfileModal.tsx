@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useState } from 'react';
 import { FiCheck, FiCopy, FiEdit3, FiLogOut, FiSave, FiUserPlus } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { Badge } from '../../Badge';
 
@@ -16,7 +16,6 @@ interface ProfileModalProps {
 }
 
 const LogoByType: Record<string, ReactNode> = {
-  EVM: <Image src="/chains/base_400x400.jpg" alt="EVM" width={24} height={24} className="rounded-sm" />,
   Stellar: <Image src="/chains/stellar.png" alt="Stellar" width={24} height={24} className="rounded-sm" />,
 };
 
@@ -25,7 +24,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
   const [isEditing, setIsEditing] = useState(false);
   const [nickname, setNickname] = useState('');
   const [saving, setSaving] = useState(false);
-  const { network } = useNetworkConfigStore();
+  const { network } = useConfigStore();
   const { data, isLoading, refetch } = useProfileData();
   const { saveNickname } = useRestProfile();
   const currentNickname = data?.nickname ?? '';
@@ -38,7 +37,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
   }, [currentNickname, isLoading, trimmedNickname, walletAddress]);
   const walletDisplay = useMemo(() => truncateMiddle(walletAddress), [walletAddress]);
   const isDirty = trimmedNickname !== currentNickname && !!trimmedNickname;
-  const canSave = !!walletAddress && !!network?.name && isDirty && !saving;
+  const canSave = !!walletAddress && !!network?.networkName && isDirty && !saving;
 
   useEffect(() => {
     if (!isEditing) {
@@ -67,7 +66,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
   };
 
   const handleSave = async () => {
-    if (!canSave || !network?.name) return;
+    if (!canSave || !network?.networkName) return;
     setSaving(true);
     try {
       await saveNickname({ nickname: trimmedNickname });

@@ -1,7 +1,7 @@
 'use client';
 
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { mintBadge } from '@/networks/stellar/sorobanTx';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -23,8 +23,8 @@ interface BadgeClaimPayload {
  */
 export const useMintBadge = () => {
   const queryClient = useQueryClient();
-  const { network, walletAddress } = useNetworkConfigStore();
-  const networkName = network?.name ?? '';
+  const { network, walletAddress } = useConfigStore();
+  const networkName = network?.networkName ?? '';
   const badgesContractAddress = network?.badgesContractAddress;
   const baseUrl = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
 
@@ -37,7 +37,7 @@ export const useMintBadge = () => {
 
       // Step 1: claim achievement off-chain (idempotent)
       const claimRes = await fetch(
-        `${baseUrl}/profile/network/${networkName}/wallet/${encodeURIComponent(walletAddress)}/achievements/${encodeURIComponent(badgeType)}/claim`,
+        `${baseUrl}/profile/wallet/${encodeURIComponent(walletAddress)}/achievements/${encodeURIComponent(badgeType)}/claim`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' } },
       );
       if (!claimRes.ok && claimRes.status !== 409) {
@@ -49,7 +49,7 @@ export const useMintBadge = () => {
 
       // Step 2: fetch signed claim
       const signRes = await fetch(
-        `${baseUrl}/claim/${encodeURIComponent(networkName)}?type=${encodeURIComponent(badgeType)}&wallet=${encodeURIComponent(walletAddress)}`,
+        `${baseUrl}/claim?type=${encodeURIComponent(badgeType)}&wallet=${encodeURIComponent(walletAddress)}`,
       );
       if (!signRes.ok) {
         const body = await signRes.json().catch(() => null);
@@ -61,7 +61,7 @@ export const useMintBadge = () => {
       // Step 3: refresh if signature expired
       const nowUnix = Math.floor(Date.now() / 1000);
       if (claim.expiry <= nowUnix) {
-        const refreshRes = await fetch(`${baseUrl}/claim/${encodeURIComponent(networkName)}/refresh`, {
+        const refreshRes = await fetch(`${baseUrl}/claim/refresh`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -89,7 +89,7 @@ export const useMintBadge = () => {
       });
 
       // Step 5: confirm on server
-      await fetch(`${baseUrl}/claim/${encodeURIComponent(networkName)}/confirm`, {
+      await fetch(`${baseUrl}/claim/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

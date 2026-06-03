@@ -7,14 +7,14 @@ import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useApyByLockPeriod, useDepositsComplete } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { DepositResponseDTO } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
 import { VaquitaModalContent } from '../VaquitaModal';
 import { BankAPYModalProps } from './types';
 
 export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
-  const { network, lockPeriod, walletAddress, token } = useNetworkConfigStore();
+  const { network, lockPeriod, walletAddress, token } = useConfigStore();
   const { data: dataApy, isLoading: isLoadingApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
   const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
 
@@ -32,7 +32,7 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
   const estimatedAnnualReturn = activeDepositsTotalAmount * (totalApy / 100);
   const totalEstimatedEarnings = activeDeposits.reduce(
-    (acc, d) => acc + (d.vaquitaInterest ?? 0) + (d.aaveInterest ?? 0) + (d.blendInterest ?? 0),
+    (acc, d) => acc + (d.vaquitaInterest ?? 0) + (d.protocolInterest ?? 0) + (d.blendInterest ?? 0),
     0,
   );
 
@@ -102,7 +102,7 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
                     </p>
                   </div>
                 )}
-                {network?.name && isStellarNetwork(network.name) && dataApy?.interestModelNote ? (
+                {network?.networkName && isStellarNetwork(network.networkName) && dataApy?.interestModelNote ? (
                   <p className="text-xs text-gray-500 leading-snug pt-3 border-t border-success/20">
                     {dataApy.interestModelNote}
                   </p>
@@ -190,7 +190,7 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
           {network && (
             <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500 pt-1">
               <span>Network:</span>
-              <span className="font-semibold text-black">{network.name}</span>
+              <span className="font-semibold text-black">{network.networkName}</span>
             </div>
           )}
         </div>

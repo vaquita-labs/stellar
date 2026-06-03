@@ -1,9 +1,9 @@
 'use client';
 
-import { useNetworkConfigStore } from '../stores';
+import { useConfigStore } from '../stores';
 
 export const useIsAuthenticated = () => {
-  const walletAddress = useNetworkConfigStore((state) => state.walletAddress);
+  const walletAddress = useConfigStore((state) => state.walletAddress);
   return !!walletAddress;
 };
 

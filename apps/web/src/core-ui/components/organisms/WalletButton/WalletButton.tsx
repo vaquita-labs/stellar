@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { truncateMiddle } from '../../../helpers';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { Button } from '../../atoms/Button';
 import { ProfileModal } from './ProfileModal';
 
@@ -14,7 +14,7 @@ interface WalletButtonProps {
 
 export function WalletButton({ handleLogout }: WalletButtonProps) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const walletAddress = useNetworkConfigStore((store) => store.walletAddress);
+  const walletAddress = useConfigStore((store) => store.walletAddress);
 
   if (!walletAddress) {
     return null;

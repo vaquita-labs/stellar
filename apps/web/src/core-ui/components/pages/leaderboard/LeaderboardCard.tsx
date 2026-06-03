@@ -17,6 +17,8 @@ export type LeaderboardCardData = {
   /** Always the username (nickname or `vaqueroXXXX` fallback) — the wallet
    *  is never surfaced in the UI. */
   username: string;
+  /** Uploaded profile photo URL, or '' to fall back to the initials avatar. */
+  avatarUrl?: string;
   level: number;
   streak: number;
   badges: number;
@@ -65,8 +67,17 @@ function initialsOf(username: string): string {
 /* Sub-components                                                      */
 /* ------------------------------------------------------------------ */
 
-function Avatar({ username }: { username: string }) {
+function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: string }) {
   const palette = AVATAR_PALETTES[hashString(username) % AVATAR_PALETTES.length];
+  if (avatarUrl) {
+    // next/image fetches the (possibly http) MinIO URL server-side and re-serves
+    // it over https, so the photo renders without a mixed-content block.
+    return (
+      <div className="relative h-10 w-10 shrink-0 rounded-full border border-black/15 overflow-hidden">
+        <Image src={avatarUrl} alt={username} fill sizes="40px" className="object-cover" />
+      </div>
+    );
+  }
   return (
     <div
       className={`h-10 w-10 shrink-0 rounded-full border border-black/15 flex items-center justify-center text-sm font-extrabold ${palette}`}
@@ -184,7 +195,7 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
 function CardHeader({ user }: { user: LeaderboardCardData }) {
   return (
     <div className="flex items-center gap-3">
-      <Avatar username={user.username} />
+      <Avatar username={user.username} avatarUrl={user.avatarUrl} />
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
         <p className="text-sm font-extrabold text-black truncate">{user.username}</p>

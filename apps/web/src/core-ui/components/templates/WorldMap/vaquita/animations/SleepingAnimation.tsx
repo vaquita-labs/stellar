@@ -4,15 +4,17 @@ import { Text } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import type * as THREE from 'three';
+import { VaquitaMood } from '@/core-ui/types';
 import { Body, Head, LeftArm, LeftLeg, RightArm, RightLeg, Tail } from './parts';
 
 interface SleepingAnimationProps {
   direction: [number, number];
   scale?: number;
   label?: string;
+  mood?: VaquitaMood;
 }
 
-const SleepingAnimation = ({  scale = 0.5, direction, label }: SleepingAnimationProps) => {
+const SleepingAnimation = ({  scale = 0.5, direction, label, mood = 'normal' }: SleepingAnimationProps) => {
   const groupRef = useRef<THREE.Group>(null);
 
   const baseColor = '#fff3e1';
@@ -44,6 +46,7 @@ const SleepingAnimation = ({  scale = 0.5, direction, label }: SleepingAnimation
         noseColor={noseColor}
         isHelmet={false}
         isSleeping
+        mood={mood}
       />
       <Body bodyColor={bodyColor} spotColor={spotColor} />
       <LeftLeg baseColor={baseColor} hoofColor={hoofColor} />

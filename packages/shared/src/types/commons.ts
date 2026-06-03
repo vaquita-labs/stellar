@@ -1,5 +1,4 @@
 // Shared across frontend and backend
-import { type Abi } from 'viem';
 
 export enum WithdrawalStatus {
   INITIATED = 'initiated',
@@ -38,10 +37,53 @@ export interface NetworkResponseDTO {
     decimals: number;
     lockPeriod: number[];
     contractAddress: string;
-    contractAbi: Abi;
     vaquitaContractAddress: string;
-    vaquitaContractAbi: Abi;
   }[];
+}
+
+export interface ProjectConfigTokenDTO {
+  isGas: boolean;
+  isNative: boolean;
+  isSupported: boolean;
+  symbol: string;
+  name: string;
+  decimals: number;
+  lockPeriods: number[];
+  contractAddress: string;
+  vaquitaContractAddress: string;
+}
+
+/**
+ * A fiat display currency offered in the UI (Preferences page). Sourced from
+ * the singleton `config` row so the option list is backend-driven, not hardcoded.
+ */
+export interface ProjectConfigCurrencyDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+/**
+ * A UI language offered in the Preferences page. Sourced from the singleton
+ * `config` row so the option list is backend-driven, not hardcoded.
+ */
+export interface ProjectConfigLanguageDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+/**
+ * Single-network project configuration (replaces the per-network NetworkResponseDTO).
+ * `chainId` (EVM leftover) is replaced by `networkPassphrase` (Stellar).
+ */
+export interface ProjectConfigResponseDTO {
+  networkName: string;
+  networkPassphrase: string | null;
+  badgesContractAddress?: string;
+  tokens: ProjectConfigTokenDTO[];
+  currencies: ProjectConfigCurrencyDTO[];
+  languages: ProjectConfigLanguageDTO[];
 }
 
 export interface DepositSummaryResponseDTO {
@@ -79,9 +121,9 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   transactionHash: string;
   depositIdHex: string;
   vaquitaInterest: number;
-  aaveInterest: number;
+  protocolInterest: number;
   /**
-   * Stellar: same as `vaultInterest` (DeFindex vault accrual). EVM: Aave-style estimate field name kept for compatibility.
+   * Stellar: same as `vaultInterest` (DeFindex vault accrual).
    */
   blendInterest: number;
   /** Stellar testnet only: vault NAV accrual (gross underlying minus principal). Omitted on other networks. */
@@ -97,10 +139,10 @@ export type TotalDepositsResponseDTO = {
     [key in DepositWithdrawalState]: {
       totalCount: number;
       totalAmount: number;
-      totalAaveInterest: number;
+      totalProtocolInterest: number;
       totalBlendInterest: number;
       totalVaquitaInterest: number;
-      totalAaveApy: number;
+      totalProtocolApy: number;
       totalBlendApy: number;
       totalVaquitaApy: number;
     };
@@ -113,6 +155,10 @@ export interface ProfileResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  avatarUrl: string;
+  onboardingCompleted: boolean;
+  tutorialCompleted: boolean;
+  cryptoSavvy: boolean;
 }
 
 export interface ProfileExperienceResponseDTO {
@@ -166,7 +212,12 @@ export interface ProfileAverageResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  avatarUrl: string;
   walletAddress: string;
+  // Current active-deposit balance for the wallet, computed on the fly from the
+  // `deposits` table. `totalSums === lastSum` and `count === 1` now — the old
+  // 30-day snapshot series (profiles_deposits) was removed. Kept on the DTO so
+  // the leaderboard's `totalSums / count` ranking keeps working unchanged.
   totalSums: number;
   lastSum: number;
   count: number;
@@ -230,6 +281,26 @@ export interface ProfileAchievementsResponseDTO {
   networkName: string;
   walletAddress: string;
   achievements: AchievementResponseDTO[];
+}
+
+/** A single badge in the public, user-agnostic catalog. This is the shape the
+ *  web app reads instead of a hardcoded list — driven by the admin-editable
+ *  `achievements` table. `icon` may be a relative path ('/icons/...') or an
+ *  absolute URL (admin-uploaded). */
+export interface CatalogAchievementResponseDTO {
+  key: string;
+  name: string;
+  description: string;
+  tier: string;
+  coinReward: number;
+  icon: string | null;
+  accent: string | null;
+  unlockType: 'rule' | 'redeem_code' | 'manual' | 'cycle_rank';
+  displayOrder: number;
+}
+
+export interface AchievementsCatalogResponseDTO {
+  achievements: CatalogAchievementResponseDTO[];
 }
 
 export interface ClaimAchievementResponseDTO {

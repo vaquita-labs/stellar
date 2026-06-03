@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useState } from 'react';
 import { useProfileRewards } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { ShopItem } from '../../organisms/ShopModal/types';
 
 const catalogItems: ShopItem[] = [
@@ -72,7 +72,7 @@ const rarityBadge: Record<NonNullable<ShopItem['rarity']>, string> = {
 export function CatalogList() {
   const { data: profileRewards, refetch } = useProfileRewards();
   const queryClient = useQueryClient();
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
 
   const [detailItem, setDetailItem] = useState<ShopItem | null>(null);
   const [offerMode, setOfferMode] = useState(false);
@@ -99,7 +99,7 @@ export function CatalogList() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
       await queryClient.invalidateQueries({
-        queryKey: ['profile', network?.name, walletAddress, 'profile-rewards'],
+        queryKey: ['profile', network?.networkName, walletAddress, 'profile-rewards'],
       });
       await refetch();
       toast.success('Purchase successful!', {

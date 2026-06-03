@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { prisma } from '@vaquita/db';
 import { contractBadgeTypeOf, contractOwnerOf } from './contract';
 
 // ---------------------------------------------------------------------------
@@ -183,29 +183,23 @@ function categoryLabel(cat: BadgeCategory): string {
 }
 
 async function lookupCycleId(wallet: string, badgeType: string): Promise<string | null> {
-  const { data } = await supabase
-    .from('badge_claims')
-    .select('cycle_id')
-    .eq('wallet_address', wallet)
-    .eq('badge_type', badgeType)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!data) return null;
-  const c = (data as { cycle_id: number }).cycle_id;
-  return c ? String(c) : null;
+  const claim = await prisma.badgeClaim.findFirst({
+    where: { walletAddress: wallet, badgeType },
+    orderBy: { createdAt: 'desc' },
+    select: { cycleId: true },
+  });
+  if (!claim) return null;
+  return claim.cycleId ? String(claim.cycleId) : null;
 }
 
 async function lookupEditionSerial(wallet: string, badgeType: string): Promise<number | null> {
   // Serial = position of this wallet's claim by created_at within this edition
-  const { data } = await supabase
-    .from('badge_claims')
-    .select('wallet_address, created_at')
-    .eq('badge_type', badgeType)
-    .order('created_at', { ascending: true });
-  if (!data) return null;
-  const rows = data as { wallet_address: string; created_at: string }[];
-  const idx = rows.findIndex((r) => r.wallet_address === wallet);
+  const rows = await prisma.badgeClaim.findMany({
+    where: { badgeType },
+    orderBy: { createdAt: 'asc' },
+    select: { walletAddress: true },
+  });
+  const idx = rows.findIndex((r) => r.walletAddress === wallet);
   return idx >= 0 ? idx + 1 : null;
 }
 

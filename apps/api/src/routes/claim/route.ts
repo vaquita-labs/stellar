@@ -3,16 +3,16 @@ import {
   confirmBadgeClaim,
   contractHasClaimed,
   getActiveBadgeClaim,
+  getBadgesContractAddress,
   getBadgeSigningKeypair,
   getLastClosedCycleId,
   getMintedBadges,
   makeClaimExpiry,
+  prisma,
   signBadgeClaim,
   storeBadgeClaim,
-  supabase,
   supersedeBadgeClaim,
   toClaimPayload,
-  getNetworkByName,
 } from '@vaquita/shared';
 
 const router = Router();
@@ -28,8 +28,11 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
     }
   };
 
+// Single-network: the badge contract lives on the one configured network, so
+// the legacy /:networkName path segment was removed.
+
 // ---------------------------------------------------------------------------
-// GET /api/v1/claim/:networkName/minted?wallet=G...
+// GET /api/v1/claim/minted?wallet=G...
 // ---------------------------------------------------------------------------
 
 /**
@@ -39,20 +42,20 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
  * 400 missing wallet param
  */
 router.get(
-  '/:networkName/minted',
+  '/minted',
   asyncHandler(async (req, res) => {
     const { wallet } = req.query as { wallet?: string };
     if (!wallet) {
       return res.status(400).json({ status: 'error', message: 'Missing wallet query param' });
     }
-    req.log.info({ wallet }, 'GET /claim/:networkName/minted');
+    req.log.info({ wallet }, 'GET /claim/minted');
     const minted = await getMintedBadges(wallet);
     return res.json({ status: 'success', data: minted });
   }),
 );
 
 // ---------------------------------------------------------------------------
-// POST /api/v1/claim/:networkName/confirm
+// POST /api/v1/claim/confirm
 // ---------------------------------------------------------------------------
 
 /**
@@ -62,7 +65,7 @@ router.get(
  * 400 missing required fields
  */
 router.post(
-  '/:networkName/confirm',
+  '/confirm',
   asyncHandler(async (req, res) => {
     const { badge_type: badgeType, wallet, cycle_id: cycleIdRaw, transaction_hash: txHash } = req.body as {
       badge_type?: string;
@@ -80,14 +83,14 @@ router.post(
       return res.status(400).json({ status: 'error', message: 'cycle_id must be a non-negative integer' });
     }
 
-    req.log.info({ badgeType, wallet, cycleId, txHash }, 'POST /claim/:networkName/confirm');
+    req.log.info({ badgeType, wallet, cycleId, txHash }, 'POST /claim/confirm');
     await confirmBadgeClaim(wallet, badgeType, cycleId, txHash);
     return res.json({ status: 'success', data: null });
   }),
 );
 
 // ---------------------------------------------------------------------------
-// GET /api/v1/claim/:networkName?type=<badge_key>&wallet=G...
+// GET /api/v1/claim?type=<badge_key>&wallet=G...
 // ---------------------------------------------------------------------------
 
 /**
@@ -97,33 +100,28 @@ router.post(
  * 200 { badge_type, cycle_id, expiry, signature }
  * 400 missing / unknown parameters
  * 403 wallet has not claimed the achievement off-chain yet
- * 503 badges_contract_address not set for this network
+ * 503 badges_contract_address not configured
  */
 router.get(
-  '/:networkName',
+  '/',
   asyncHandler(async (req, res) => {
-    const { networkName } = req.params;
     const { type: badgeType, wallet } = req.query as { type?: string; wallet?: string };
 
     if (!badgeType || !wallet) {
       return res.status(400).json({ status: 'error', message: 'Missing type or wallet query param' });
     }
 
-    const { data: network } = await getNetworkByName(networkName);
-    if (!network) {
-      return res.status(404).json({ status: 'error', message: `Network '${networkName}' not found` });
-    }
-    if (!network.badges_contract_address) {
-      req.log.error({ networkName }, 'badges_contract_address not set for network');
-      return res.status(503).json({ status: 'error', message: 'Badge contract not configured for this network' });
+    const badgesContractAddress = await getBadgesContractAddress();
+    if (!badgesContractAddress) {
+      req.log.error('badges_contract_address not configured');
+      return res.status(503).json({ status: 'error', message: 'Badge contract not configured' });
     }
 
     // Verify the achievement exists in the catalog
-    const { data: achievement } = await supabase
-      .from('achievements')
-      .select('id, cycle_scoped, refresh_policy, tier')
-      .eq('key', badgeType)
-      .maybeSingle();
+    const achievement = await prisma.achievement.findFirst({
+      where: { key: badgeType, deletedAt: null },
+      select: { id: true, cycleScoped: true, refreshPolicy: true, tier: true },
+    });
 
     if (!achievement) {
       return res.status(400).json({ status: 'error', message: `Unknown badge type: ${badgeType}` });
@@ -131,32 +129,29 @@ router.get(
 
     const contractSymbol: string = achievement.tier ?? badgeType;
 
-    req.log.info({ badgeType, wallet, networkName }, 'GET /claim/:networkName');
+    req.log.info({ badgeType, wallet }, 'GET /claim');
 
     // Gate: wallet must have claimed the achievement off-chain
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('wallet_address', wallet)
-      .maybeSingle();
+    const profile = await prisma.profile.findFirst({
+      where: { walletAddress: wallet },
+      select: { id: true },
+    });
 
     if (!profile) {
       return res.status(403).json({ status: 'error', message: 'Wallet is not eligible for this badge' });
     }
 
-    const { data: claimed } = await supabase
-      .from('profiles_achievements')
-      .select('id')
-      .eq('profile_id', profile.id)
-      .eq('achievement_id', achievement.id)
-      .maybeSingle();
+    const claimed = await prisma.profileAchievement.findFirst({
+      where: { profileId: profile.id, achievementId: achievement.id },
+      select: { id: true },
+    });
 
     if (!claimed) {
       req.log.info({ badgeType, wallet }, 'Achievement not yet claimed off-chain');
       return res.status(403).json({ status: 'error', message: 'Achievement not yet earned. Complete the challenge first.' });
     }
 
-    const cycleId = achievement.cycle_scoped ? getLastClosedCycleId() : 0;
+    const cycleId = achievement.cycleScoped ? getLastClosedCycleId() : 0;
 
     // Return existing unexpired active claim if present
     const existing = await getActiveBadgeClaim(wallet, badgeType, cycleId);
@@ -187,7 +182,7 @@ router.get(
 );
 
 // ---------------------------------------------------------------------------
-// POST /api/v1/claim/:networkName/refresh
+// POST /api/v1/claim/refresh
 // ---------------------------------------------------------------------------
 
 /**
@@ -198,12 +193,11 @@ router.get(
  * 400 missing / invalid body params
  * 403 manual badge (requires admin re-sign) or achievement not yet earned
  * 409 badge already minted on-chain for this wallet
- * 503 badges_contract_address not set for this network
+ * 503 badges_contract_address not configured
  */
 router.post(
-  '/:networkName/refresh',
+  '/refresh',
   asyncHandler(async (req, res) => {
-    const { networkName } = req.params;
     const { wallet, badge_type: badgeType, cycle_id: cycleIdRaw } = req.body as {
       wallet?: string;
       badge_type?: string;
@@ -219,30 +213,25 @@ router.post(
       return res.status(400).json({ status: 'error', message: 'cycle_id must be a non-negative integer' });
     }
 
-    const { data: network } = await getNetworkByName(networkName);
-    if (!network) {
-      return res.status(404).json({ status: 'error', message: `Network '${networkName}' not found` });
-    }
-    const contractId = network.badges_contract_address;
+    const contractId = await getBadgesContractAddress();
     if (!contractId) {
-      req.log.error({ networkName }, 'badges_contract_address not set for network');
-      return res.status(503).json({ status: 'error', message: 'Badge contract not configured for this network' });
+      req.log.error('badges_contract_address not configured');
+      return res.status(503).json({ status: 'error', message: 'Badge contract not configured' });
     }
 
-    req.log.info({ badgeType, wallet, cycleId, networkName }, 'POST /claim/:networkName/refresh');
+    req.log.info({ badgeType, wallet, cycleId }, 'POST /claim/refresh');
 
     // Check refresh_policy — manual badges require admin action
-    const { data: achievement } = await supabase
-      .from('achievements')
-      .select('id, refresh_policy, tier')
-      .eq('key', badgeType)
-      .maybeSingle();
+    const achievement = await prisma.achievement.findFirst({
+      where: { key: badgeType, deletedAt: null },
+      select: { id: true, refreshPolicy: true, tier: true },
+    });
 
     if (!achievement) {
       return res.status(400).json({ status: 'error', message: `Unknown badge type: ${badgeType}` });
     }
 
-    if (achievement.refresh_policy === 'manual') {
+    if (achievement.refreshPolicy === 'manual') {
       return res.status(403).json({
         status: 'error',
         message: 'Manual badges require admin re-sign. Contact support@vaquita.fi',
@@ -258,22 +247,19 @@ router.post(
     }
 
     // Gate: wallet must have claimed the achievement off-chain
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('wallet_address', wallet)
-      .maybeSingle();
+    const profile = await prisma.profile.findFirst({
+      where: { walletAddress: wallet },
+      select: { id: true },
+    });
 
     if (!profile) {
       return res.status(403).json({ status: 'error', message: 'Achievement not yet earned' });
     }
 
-    const { data: claimed } = await supabase
-      .from('profiles_achievements')
-      .select('id')
-      .eq('profile_id', profile.id)
-      .eq('achievement_id', achievement.id)
-      .maybeSingle();
+    const claimed = await prisma.profileAchievement.findFirst({
+      where: { profileId: profile.id, achievementId: achievement.id },
+      select: { id: true },
+    });
 
     if (!claimed) {
       return res.status(403).json({ status: 'error', message: 'Achievement not yet earned' });

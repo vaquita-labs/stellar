@@ -1,12 +1,8 @@
-import type { PostgrestError } from '@supabase/supabase-js';
 import { v4 } from 'uuid';
-import { ONE_DAY } from '../../config/constants';
+import { prisma } from '@vaquita/db';
 import { firstElement } from '../../helpers';
-import { supabase } from '../../lib/supabase';
 import { ably } from '../ably';
 import { evaluateBadgeMilestones } from '../badges/badge-monitor';
-import { getNetworkById } from '../network';
-import { getBaseInterest, getVaquitaPoolData, PROTOCOL_APY_DUMMY, VAQUITA_APY_DUMMY } from '../base';
 import { getBlendInterest, getStellarDepositContractAddress } from '../stellar';
 import {
   type Deposit,
@@ -20,36 +16,8 @@ import {
   type TokenNetwork,
   WithdrawalStatus,
 } from '../../types';
-import { getTokenNetworkByNetworkIdTokenId } from '../network';
+import { getTokenNetworkByNetworkIdTokenId, SINGLE_NETWORK_ID, toTokenShape } from '../network';
 import { toDepositSummaryResponseDTO } from './helpers';
-
-export const listenDepositsChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:deposits`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal deposits:', status);
-    });
-};
-
-export const listenWithdrawalsChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:withdrawals`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal withdrawals:', status);
-    });
-};
 
 const broadcastDepositsChange = async (message: string) => {
   const channel = ably.channels.get('deposits-changes');
@@ -60,21 +28,61 @@ const broadcastDepositsChange = async (message: string) => {
   });
 };
 
+const iso = (date: Date | null | undefined): string => (date ? date.toISOString() : '');
+
+/** Maps a Prisma deposit row (optionally with `withdrawals`/`token` relations)
+ *  back to the legacy snake_case `Deposit` shape the DTO + stellar layers use. */
+const toDepositShape = (row: any): Deposit => ({
+  id: row.id,
+  wallet_address: row.walletAddress,
+  amount: Number(row.amount),
+  status: row.status as DepositStatus,
+  // Legacy field: the app is single-network, so every deposit maps to the one config network.
+  network_id: SINGLE_NETWORK_ID,
+  lock_period: row.lockPeriod ?? 0,
+  token_id: row.tokenId,
+  deposit_id_hex: row.depositIdHex ?? '',
+  transaction_hash: row.transactionHash ?? '',
+  transaction_event_raw: row.transactionEventRaw ?? '',
+  vaquita_contract_address: row.vaquitaContractAddress ?? '',
+  withdrawals: (row.withdrawals ?? []).map((w: any) => ({
+    confirmed_at: iso(w.confirmedAt),
+    created_at: iso(w.createdAt),
+    deposit_id: w.depositId,
+    id: w.id,
+    status: w.status as WithdrawalStatus,
+    reward: w.reward != null ? Number(w.reward) : 0,
+    transaction_event_raw: w.transactionEventRaw ?? '',
+    transaction_hash: w.transactionHash ?? '',
+    updated_at: iso(w.updatedAt),
+  })),
+  tokens: row.token ? toTokenShape(row.token) : null,
+  created_at: iso(row.createdAt),
+  updated_at: iso(row.updatedAt),
+  confirmed_at: iso(row.confirmedAt),
+});
+
+const depositInclude = { withdrawals: true, token: true } as const;
+
 export const creteWithdrawal = async (withdrawal: {
   transactionHash: string,
   depositId: number,
   transactionEventRaw: string
 }) => {
-  const response = await supabase
-    .from('withdrawals')
-    .insert({
-      status: WithdrawalStatus.INITIATED,
-      transaction_hash: withdrawal.transactionHash,
-      deposit_id: withdrawal.depositId,
-      transaction_event_raw: withdrawal.transactionEventRaw,
+  try {
+    const data = await prisma.withdrawal.create({
+      data: {
+        status: WithdrawalStatus.INITIATED,
+        transactionHash: withdrawal.transactionHash,
+        depositId: withdrawal.depositId,
+        transactionEventRaw: withdrawal.transactionEventRaw,
+      },
     });
-  await broadcastDepositsChange('creteWithdrawal');
-  return response;
+    await broadcastDepositsChange('creteWithdrawal');
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
 export const creteConfirmWithdrawal = async (withdrawal: {
@@ -82,69 +90,59 @@ export const creteConfirmWithdrawal = async (withdrawal: {
   depositId: number,
   transactionEventRaw: string
 }) => {
-  const response = await supabase
-    .from('withdrawals')
-    .insert({
-      status: WithdrawalStatus.CONFIRMED,
-      transaction_hash: withdrawal.transactionHash,
-      deposit_id: withdrawal.depositId,
-      transaction_event_raw: withdrawal.transactionEventRaw,
+  try {
+    const data = await prisma.withdrawal.create({
+      data: {
+        status: WithdrawalStatus.CONFIRMED,
+        transactionHash: withdrawal.transactionHash,
+        depositId: withdrawal.depositId,
+        transactionEventRaw: withdrawal.transactionEventRaw,
+      },
     });
-  
-  await broadcastDepositsChange('creteConfirmWithdrawal');
-  
-  return response;
+    await broadcastDepositsChange('creteConfirmWithdrawal');
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
 export const creteWithdrawalWithDepositTx = async (withdrawal: {
   transactionHash: string,
   transactionEventRaw: string
-}, depositIdHex: string, networkId: number, vaquitaContractAddress: string) => {
-  
-  const { data: depositData, error: depositError } = await supabase
-    .from('deposits')
-    .select('id')
-    .eq('deposit_id_hex', depositIdHex)
-    .eq('network_id', networkId)
-    .eq('vaquita_contract_address', vaquitaContractAddress)
-    .maybeSingle();
-  
-  if (!depositData || depositError) {
-    const { data: depositDataLog } = await supabase
-      .from('deposits')
-      .select('id')
-      .eq('deposit_id_hex', depositIdHex);
-    console.error('Error on creteWithdrawalWithDepositTx get depositData', {
-      withdrawal,
-      depositIdHex,
-      networkId,
-      vaquitaContractAddress,
-      depositDataLog,
-    }, depositError);
+}, depositIdHex: string, _networkId: number, vaquitaContractAddress: string) => {
+  try {
+    const depositRow = await prisma.deposit.findFirst({
+      where: { depositIdHex, vaquitaContractAddress },
+      select: { id: true },
+    });
+    const depositId = depositRow?.id;
+
+    if (!depositId) {
+      console.error('Error on creteWithdrawalWithDepositTx get depositData', {
+        withdrawal,
+        depositIdHex,
+        networkId: _networkId,
+        vaquitaContractAddress,
+      });
+      return { error: new Error('Deposit not found for withdrawal'), data: null, depositId };
+    }
+
+    const data = await prisma.withdrawal.create({
+      data: {
+        status: WithdrawalStatus.INITIATED,
+        transactionHash: withdrawal.transactionHash,
+        depositId,
+        transactionEventRaw: withdrawal.transactionEventRaw,
+      },
+    });
+
+    await broadcastDepositsChange('creteWithdrawalWithDepositTx');
+
+    return { error: null, data, depositId };
+  } catch (error) {
+    console.error('Error on creteWithdrawalWithDepositTx', { withdrawal, depositIdHex }, error);
+    return { error: error as Error, data: null, depositId: undefined };
   }
-  const depositId = depositData?.id;
-  const { error, ...rest } = await supabase
-    .from('withdrawals')
-    .insert({
-      status: 'initiated',
-      transaction_hash: withdrawal.transactionHash,
-      deposit_id: depositId,
-      transaction_event_raw: withdrawal.transactionEventRaw,
-    })
-    .select()
-    .maybeSingle();
-  
-  if (error) {
-    console.error('Error on creteWithdrawalWithDepositTx', { withdrawal, depositIdHex, depositId }, depositError);
-  }
-  
-  await broadcastDepositsChange('creteWithdrawalWithDepositTx');
-  
-  return {
-    error,
-    ...rest,
-    depositId,
-  };
 };
 
 export const createDeposit = async (deposit: {
@@ -158,197 +156,166 @@ export const createDeposit = async (deposit: {
   lockPeriod: number,
   vaquitaContract: string,
 }) => {
-  
-  const newDeposit = {
-    status: DepositStatus.INITIATED,
-    deposit_id_hex: deposit.depositIdHex,
-    amount: deposit.amount,
-    wallet_address: deposit.walletAddress,
-    network_id: deposit.networkId,
-    token_id: deposit.tokenId,
-    transaction_hash: deposit.transactionHash,
-    transaction_event_raw: deposit.transactionEventRaw,
-    lock_period: deposit.lockPeriod,
-    vaquita_contract_address: deposit.vaquitaContract,
-  };
-  
-  const result = await supabase
-    .from('deposits')
-    .insert([ newDeposit ])
-    .select()
-    .maybeSingle();
-  
-  await broadcastDepositsChange('createDeposit');
-  
-  return result;
+  try {
+    const row = await prisma.deposit.create({
+      data: {
+        status: DepositStatus.INITIATED,
+        depositIdHex: deposit.depositIdHex,
+        amount: deposit.amount,
+        walletAddress: deposit.walletAddress,
+        tokenId: deposit.tokenId,
+        transactionHash: deposit.transactionHash,
+        transactionEventRaw: deposit.transactionEventRaw,
+        lockPeriod: deposit.lockPeriod,
+        vaquitaContractAddress: deposit.vaquitaContract,
+      },
+    });
+
+    await broadcastDepositsChange('createDeposit');
+
+    return { data: toDepositShape(row), error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
 export const createDepositByNames = async (depositIdHex: string, amount: number, walletAddress: string, networkName: string, tokenSymbol: string, lockPeriod: number, vaquitaContract: string) => {
-  
-  const { data: networkData, error: networkError } = await supabase
-    .from('networks')
-    .select('id')
-    .eq('name', networkName)
-    .maybeSingle();
-  
-  if (networkError || !networkData) {
+
+  const config = await prisma.config.findFirst({ select: { networkName: true } });
+  if (!config || config.networkName !== networkName) {
     throw new Error(`Network not found "${networkName}"`);
   }
-  
-  const { data: tokenData, error: tokenError } = await supabase
-    .from('tokens')
-    .select('id')
-    .eq('symbol', tokenSymbol)
-    .maybeSingle();
-  
-  if (tokenError || !tokenData) {
+
+  const token = await prisma.token.findFirst({
+    where: { symbol: tokenSymbol, deletedAt: null },
+    select: { id: true },
+  });
+  if (!token) {
     throw new Error(`Token not found "${tokenSymbol}"`);
   }
-  
+
   return createDeposit({
     transactionEventRaw: '',
     transactionHash: 'initial_' + v4(),
     depositIdHex,
     amount,
     walletAddress,
-    networkId: networkData.id,
-    tokenId: tokenData.id,
+    networkId: SINGLE_NETWORK_ID,
+    tokenId: token.id,
     lockPeriod,
     vaquitaContract,
   });
 };
 
 export const confirmDepositWithTx = async (depositId: number, depositIdHex: string, txHash: string, transactionRaw: string) => {
-  const response = await supabase
-    .from('deposits')
-    .update({
-      status: DepositStatus.CONFIRMED,
-      deposit_id_hex: depositIdHex,
-      transaction_hash: txHash,
-      transaction_event_raw: transactionRaw,
-    })
-    .eq('id', depositId)
-    .maybeSingle();
-  
-  await broadcastDepositsChange('confirmDepositWithTx');
-  
-  return response;
+  try {
+    const data = await prisma.deposit.update({
+      where: { id: depositId },
+      data: {
+        status: DepositStatus.CONFIRMED,
+        depositIdHex,
+        transactionHash: txHash,
+        transactionEventRaw: transactionRaw,
+      },
+    });
+
+    await broadcastDepositsChange('confirmDepositWithTx');
+
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
 export const _updateDeposit = async (depositId: number, update: any) => {
-  const { error, ...rest } = await supabase
-    .from('deposits')
-    .update(update)
-    .eq('id', depositId)
-    .maybeSingle();
-  if (error) {
+  try {
+    const data = await prisma.deposit.update({ where: { id: depositId }, data: update });
+    await broadcastDepositsChange('_updateDeposit');
+    return { data, error: null };
+  } catch (error) {
     console.error('Error on _updateDeposit', { depositId, update }, error);
+    return { data: null, error: error as Error };
   }
-  
-  await broadcastDepositsChange('_updateDeposit');
-  
-  return {
-    error,
-    ...rest,
-  };
 };
 
 export const failDepositWithTx = async (depositId: number, depositIdHex: string, txHash: string, transactionRaw: string) => {
-  const response = await supabase
-    .from('deposits')
-    .update({
-      status: DepositStatus.FAILED,
-      deposit_id_hex: depositIdHex,
-      transaction_hash: txHash,
-      transaction_event_raw: transactionRaw,
-    })
-    .eq('id', depositId)
-    .maybeSingle();
-  
-  await broadcastDepositsChange('failDepositWithTx');
-  
-  return response;
+  try {
+    const data = await prisma.deposit.update({
+      where: { id: depositId },
+      data: {
+        status: DepositStatus.FAILED,
+        depositIdHex,
+        transactionHash: txHash,
+        transactionEventRaw: transactionRaw,
+      },
+    });
+
+    await broadcastDepositsChange('failDepositWithTx');
+
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
 export const confirmDeposit = async (depositId: number) => {
-  const { error, ...rest } = await supabase
-    .from('deposits')
-    .update({ status: DepositStatus.CONFIRMED, confirmed_at: new Date() })
-    .eq('id', depositId)
-    .maybeSingle();
-  if (error) {
+  try {
+    const data = await prisma.deposit.update({
+      where: { id: depositId },
+      data: { status: DepositStatus.CONFIRMED, confirmedAt: new Date() },
+    });
+    await broadcastDepositsChange('confirmDeposit');
+    return { data, error: null };
+  } catch (error) {
     console.error('Error on confirmDeposit', { depositId }, error);
+    return { data: null, error: error as Error };
   }
-  
-  await broadcastDepositsChange('confirmDeposit');
-  
-  return {
-    error,
-    ...rest,
-  };
 };
 
 export const confirmWithdrawal = async (withdrawalId: number) => {
-  const { error, ...rest } = await supabase
-    .from('withdrawals')
-    .update({ status: WithdrawalStatus.CONFIRMED, confirmed_at: new Date() })
-    .eq('id', withdrawalId)
-    .maybeSingle();
-  if (error) {
+  try {
+    const data = await prisma.withdrawal.update({
+      where: { id: withdrawalId },
+      data: { status: WithdrawalStatus.CONFIRMED, confirmedAt: new Date() },
+      include: { deposit: { select: { walletAddress: true } } },
+    });
+
+    // Fire-and-forget badge evaluation. Non-critical: errors must not affect
+    // withdrawal confirmation.
+    const wallet = data?.deposit?.walletAddress;
+    if (wallet) {
+      void (async () => {
+        try {
+          await evaluateBadgeMilestones(wallet);
+        } catch {
+          // intentionally ignored
+        }
+      })();
+    }
+
+    await broadcastDepositsChange('confirmWithdrawal');
+
+    return { data, error: null };
+  } catch (error) {
     console.error('Error on confirmWithdrawal', { withdrawalId }, error);
+    return { data: null, error: error as Error };
   }
-
-  // Fetch wallet address to evaluate badge milestones (fire-and-forget)
-  if (!error) {
-    void (async () => {
-      try {
-        const { data } = await supabase
-          .from('withdrawals')
-          .select('deposits!deposit_id(wallet_address, network_id)')
-          .eq('id', withdrawalId)
-          .maybeSingle();
-        const wallet = (data as any)?.deposits?.wallet_address as string | undefined;
-        const networkId = (data as any)?.deposits?.network_id as number | undefined;
-        if (!wallet) return;
-        const contractAddress = networkId
-          ? ((await getNetworkById(networkId)).data?.badges_contract_address ?? null)
-          : null;
-        await evaluateBadgeMilestones(wallet, contractAddress);
-      } catch {
-        // Non-critical: badge evaluation errors must not affect withdrawal confirmation
-      }
-    })();
-  }
-
-  await broadcastDepositsChange('confirmWithdrawal');
-
-  return {
-    error,
-    ...rest,
-  };
 };
 
 export const _updateWithdrawal = async (withdrawalId: number, update: any) => {
-  const { error, ...rest } = await supabase
-    .from('withdrawals')
-    .update(update)
-    .eq('id', withdrawalId)
-    .maybeSingle();
-  if (error) {
+  try {
+    const data = await prisma.withdrawal.update({ where: { id: withdrawalId }, data: update });
+    await broadcastDepositsChange('_updateWithdrawal');
+    return { data, error: null };
+  } catch (error) {
     console.error('Error on _updateWithdrawal', { withdrawalId, update }, error);
+    return { data: null, error: error as Error };
   }
-  
-  await broadcastDepositsChange('_updateWithdrawal');
-  
-  return {
-    error,
-    ...rest,
-  };
 };
 
 const toDepositWithState = (deposit: Deposit): DepositWithState => {
   let state = DepositWithdrawalState.NONE;
-  
+
   if (deposit.status === DepositStatus.INITIATED) {
     state = DepositWithdrawalState.DEPOSIT_PROCESSING;
   } else if (deposit.status === DepositStatus.CONFIRMED && !!deposit.transaction_hash && !!deposit.deposit_id_hex) {
@@ -367,7 +334,7 @@ const toDepositWithState = (deposit: Deposit): DepositWithState => {
   } else {
     state = DepositWithdrawalState.DEPOSIT_FAILED;
   }
-  
+
   return {
     ...deposit,
     state,
@@ -375,43 +342,35 @@ const toDepositWithState = (deposit: Deposit): DepositWithState => {
 };
 
 export const getDepositsById = async (id: number) => {
-  const { data, ...rest } = await supabase
-    .from('deposits')
-    .select('*, withdrawals(*), tokens(*)')
-    .eq('id', id)
-    .maybeSingle();
-  
-  return {
-    data: toDepositWithState(data),
-    ...rest,
-  };
+  try {
+    const row = await prisma.deposit.findUnique({ where: { id }, include: depositInclude });
+    if (!row) return { data: null, error: null };
+    return { data: toDepositWithState(toDepositShape(row)), error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
 export const getDepositsByTransactionHash = async (transactionHash: string) => {
-  const { data, error, ...rest } = await supabase
-    .from('deposits')
-    .select('*, withdrawals(*), tokens(*)')
-    .eq('transaction_hash', transactionHash)
-    .maybeSingle();
-  
-  return {
-    data: (!!data && !error) ? toDepositWithState(data) : null,
-    error,
-    ...rest,
-  };
+  try {
+    const row = await prisma.deposit.findFirst({ where: { transactionHash }, include: depositInclude });
+    return { data: row ? toDepositWithState(toDepositShape(row)) : null, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
-const getDepositsByNetworkIdWalletAddress = async (networkId: number, walletAddress: string) => {
-  const { data, ...rest } = await supabase
-    .from('deposits')
-    .select('*, withdrawals(*), tokens(*)')
-    .eq('network_id', networkId)
-    .eq('wallet_address', walletAddress);
-  return {
-    data: ((data || []) as Deposit[]).map(toDepositWithState),
-    ...rest,
-    cached: false,
-  };
+const getDepositsByNetworkIdWalletAddress = async (_networkId: number, walletAddress: string) => {
+  try {
+    // Single-network: filter by wallet only (deposits no longer carry a network_id).
+    const rows = await prisma.deposit.findMany({
+      where: { walletAddress },
+      include: depositInclude,
+    });
+    return { data: rows.map(row => toDepositWithState(toDepositShape(row))), error: null, cached: false };
+  } catch (error) {
+    return { data: [] as DepositWithState[], error: error as Error, cached: false };
+  }
 };
 
 export let depositsCacheRef: {
@@ -419,40 +378,27 @@ export let depositsCacheRef: {
 } = { current: {} };
 
 export const getCachedDepositsByNetworkIdWalletAddress = async (networkId: number, walletAddress: string) => {
-  // const key = `${networkId}_${walletAddress}`;
-  // const dataCached = depositsCacheRef.current[key];
-  // if (dataCached) {
-  //   dataCached.cached = true;
-  //   return dataCached;
-  // }
-  
   const data = await getDepositsByNetworkIdWalletAddress(networkId, walletAddress);
-  // depositsCacheRef.current[key] = data;
   return data;
 };
 
-export const getDepositsByNetworkId = async (networkId: number) => {
-  const { data, ...rest } = await supabase
-    .from('deposits')
-    .select('*, withdrawals(*), tokens(*)')
-    .eq('network_id', networkId);
-  return {
-    data: ((data || []) as Deposit[]).map(toDepositWithState),
-    ...rest,
-  };
+export const getDepositsByNetworkId = async (_networkId: number) => {
+  try {
+    // Single-network: every deposit belongs to the one configured network.
+    const rows = await prisma.deposit.findMany({ include: depositInclude });
+    return { data: rows.map(row => toDepositWithState(toDepositShape(row))), error: null };
+  } catch (error) {
+    return { data: [] as DepositWithState[], error: error as Error };
+  }
 };
 
 export const getWithdrawalByTransactionHash = async (transactionHash: string) => {
-  const { data, ...rest } = await supabase
-    .from('withdrawals')
-    .select('*')
-    .eq('transaction_hash', transactionHash)
-    .maybeSingle();
-  
-  return {
-    data,
-    ...rest,
-  };
+  try {
+    const data = await prisma.withdrawal.findFirst({ where: { transactionHash } });
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
 const toDepositWithdrawalResponseDTO = (withdrawal: Deposit['withdrawals'][number]): DepositWithdrawalResponseDTO => {
@@ -467,42 +413,27 @@ const toDepositWithdrawalResponseDTO = (withdrawal: Deposit['withdrawals'][numbe
 };
 
 export const toDepositResponseDTO = async (deposit: DepositWithState, networkData: Network, tokenNetworkData: TokenNetwork | null, tempCache: any): Promise<DepositResponseDTO> => {
-  
-  let aaveInterest = 0;
+
+  let protocolInterest = 0;
   let blendInterest = 0;
   let vaquitaInterest = 0;
-  
+
   // Control vaquita contract address
   let vaquitaContractAddress = tokenNetworkData?.vaquita_contract_address ?? '';
   if (tokenNetworkData) {
-    if (networkData.name === 'Base Sepolia Testnet' || networkData.name === 'Base') {
-      // contractAddress = getBaseDepositContractAddress(deposit);
-    } else if (networkData.name === 'Stellar Testnet') {
+    if (networkData.name === 'Stellar Testnet') {
       vaquitaContractAddress = getStellarDepositContractAddress(deposit);
     }
   }
-  
+
   if (deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS) {
     if (tokenNetworkData) {
-      if (networkData.name === 'Dummy') {
-        aaveInterest = deposit.amount * (PROTOCOL_APY_DUMMY / 100);
-        vaquitaInterest = deposit.amount * (((VAQUITA_APY_DUMMY[deposit.lock_period] ?? 0) / 100) / (ONE_DAY * 365 / deposit.lock_period));
-      } else if (networkData.name === 'Base Sepolia Testnet' || networkData.name === 'Base') {
-        const {
-          poolReserveData,
-        } = await getVaquitaPoolData(networkData, tokenNetworkData, deposit.lock_period / 1000, tempCache);
-        if (poolReserveData) {
-          ({
-            aaveInterest,
-            vaquitaInterest,
-          } = await getBaseInterest(networkData, deposit, tokenNetworkData));
-        }
-      } else if (networkData.name === 'Stellar Testnet') {
+      if (networkData.name === 'Stellar Testnet') {
         ({ blendInterest, vaquitaInterest } = await getBlendInterest(deposit, tokenNetworkData));
       }
     }
   }
-  
+
   const lockPeriod = deposit.lock_period || +(networkData.tokens_networks.find(tokenNetwork => tokenNetwork.tokens.symbol === deposit.tokens?.symbol)?.lock_period?.split(',')?.[0] ?? 0) || 0;
   return {
     ...toDepositSummaryResponseDTO({ ...deposit, lock_period: lockPeriod }),
@@ -511,7 +442,7 @@ export const toDepositResponseDTO = async (deposit: DepositWithState, networkDat
     status: deposit.status,
     transactionHash: deposit.transaction_hash,
     depositIdHex: deposit.deposit_id_hex,
-    aaveInterest,
+    protocolInterest,
     vaquitaInterest,
     blendInterest,
     ...(networkData.name === 'Stellar Testnet' ? { vaultInterest: blendInterest } : {}),
@@ -526,24 +457,20 @@ export const toDepositResponseDTO = async (deposit: DepositWithState, networkDat
 export const dataToDepositResponseDTOTotalDepositsResponseDTO = async (networkData: Network, data: DepositWithState[], all: boolean, complete: boolean) => {
   const newData: (DepositResponseDTO | DepositSummaryResponseDTO)[] = [];
   const tempCache = {};
-  const cache: {
-    [key: string]:
-      { error: PostgrestError, count: null, status: number, statusText: string, data: TokenNetwork | null } |
-      { error: null, count: number | null, status: number, statusText: string, data: TokenNetwork | null }
-  } = {};
-  
+  const cache: { [key: string]: Awaited<ReturnType<typeof getTokenNetworkByNetworkIdTokenId>> } = {};
+
   for (const deposit of data) {
     if (!all && (deposit.status === DepositStatus.FAILED || deposit.state === DepositWithdrawalState.DEPOSIT_FAILED || deposit.state === DepositWithdrawalState.NONE)) {
       continue;
     }
-    
+
     const cacheKey = `${deposit.network_id}_${deposit.token_id}`;
     if (!cache[cacheKey]) {
       cache[cacheKey] = await getTokenNetworkByNetworkIdTokenId(deposit.network_id, deposit.token_id);
     }
-    
+
     const { data: tokenNetworkData } = cache[cacheKey];
-    
+
     if (!all && deposit.vaquita_contract_address !== firstElement(tokenNetworkData?.vaquita_contract_address ?? '')) {
       // continue;
     }
@@ -555,40 +482,7 @@ export const dataToDepositResponseDTOTotalDepositsResponseDTO = async (networkDa
       newData.push(depositResponse);
     }
   }
-  
-  // const empty = () => ({
-  //   totalCount: 0,
-  //   totalAmount: 0,
-  //   totalAaveInterest: 0,
-  //   totalBlendInterest: 0,
-  //   totalVaquitaInterest: 0,
-  //   totalAaveApy: 0,
-  //   totalBlendApy: 0,
-  //   totalVaquitaApy: 0,
-  // });
-  // const totalEmpty = () => ({
-  //   [DepositWithdrawalState.NONE]: empty(),
-  //   [DepositWithdrawalState.DEPOSIT_PROCESSING]: empty(),
-  //   [DepositWithdrawalState.DEPOSIT_SUCCESS]: empty(),
-  //   [DepositWithdrawalState.DEPOSIT_FAILED]: empty(),
-  //   [DepositWithdrawalState.WITHDRAW_PROCESSING]: empty(),
-  //   [DepositWithdrawalState.WITHDRAW_SUCCESS]: empty(),
-  //   [DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY]: empty(),
-  //   [DepositWithdrawalState.WITHDRAW_FAILED]: empty(),
-  // });
-  //
-  // const totals: TotalDepositsResponseDTO = {};
-  // for (const deposit of newData) {
-  //   if (!totals[deposit.tokenSymbol]) {
-  //     totals[deposit.tokenSymbol] = totalEmpty();
-  //   }
-  //   totals[deposit.tokenSymbol]![deposit.state].totalCount++;
-  //   totals[deposit.tokenSymbol]![deposit.state].totalAmount += deposit.amount;
-  //   totals[deposit.tokenSymbol]![deposit.state].totalAaveInterest += deposit.aaveInterest;
-  //   totals[deposit.tokenSymbol]![deposit.state].totalBlendInterest += deposit.blendInterest;
-  //   totals[deposit.tokenSymbol]![deposit.state].totalVaquitaInterest += deposit.vaquitaInterest;
-  // }
-  
+
   return {
     deposits: newData.sort((a, b) => b.id - a.id),
   };

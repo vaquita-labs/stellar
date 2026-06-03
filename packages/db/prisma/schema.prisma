@@ -1,0 +1,264 @@
+// Prisma schema for the Vaquita Postgres database (hosted on Supabase).
+//
+// SOURCE OF TRUTH: the SQL migrations in apps/supabase/migrations.
+//
+// ⚠️ DESIGN DRAFT: this schema is intentionally AHEAD of the live DB. It encodes the
+// target design (single-network refactor, config table, soft-delete columns,
+// camelCase↔snake_case mapping). The matching SQL migrations are to be written in a
+// later step. Until then:
+//   - DO NOT run `prisma db pull` — it would revert this design to the current DB.
+//   - The generated client is ahead of the database; do not rely on it at runtime yet.
+//
+// Naming convention: models and fields are camelCase in code, mapped to the real
+// snake_case DB names with @map / @@map. Model names are PascalCase singular (their
+// Prisma Client accessors are auto-camelCased, e.g. `prisma.profileAchievement`).
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Achievement {
+  id            BigInt    @id @default(autoincrement())
+  key           String    @unique
+  name          String
+  description   String
+  tier          String
+  code          String?   @unique(map: "achievements_code_unique", where: raw("(code IS NOT NULL)"))
+  coinReward    Int       @default(0) @map("coin_reward")
+  hidden        Boolean   @default(false)
+  refreshPolicy String    @default("auto") @map("refresh_policy")
+  cycleScoped   Boolean   @default(false) @map("cycle_scoped")
+  // Configurable badge catalog + rules engine (migration 20260529_achievement_rules).
+  unlockType    String    @default("rule") @map("unlock_type")
+  rule          Json?
+  icon          String?
+  accent        String?
+  displayOrder  Int       @default(0) @map("display_order")
+  enabled       Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  profileAchievements ProfileAchievement[]
+
+  @@map("achievements")
+}
+
+model BadgeClaim {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  walletAddress   String    @map("wallet_address")
+  badgeType       String    @map("badge_type")
+  cycleId         Int       @default(0) @map("cycle_id")
+  expiry          DateTime  @db.Timestamptz(6)
+  signature       String
+  transactionHash String?   @map("transaction_hash")
+  supersededAt    DateTime? @map("superseded_at") @db.Timestamptz(6)
+  confirmedAt     DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([walletAddress, badgeType, cycleId], map: "idx_badge_claims_active", where: raw("(superseded_at IS NULL)"))
+  @@index([walletAddress, badgeType], map: "idx_badge_claims_confirmed", where: raw("(confirmed_at IS NOT NULL)"))
+  @@map("badge_claims")
+}
+
+model Deposit {
+  id                     Int       @id @default(autoincrement())
+  walletAddress          String    @map("wallet_address") @db.VarChar(100)
+  tokenId                Int       @map("token_id")
+  amount                 Decimal   @db.Decimal
+  status                 String    @default("initiated") @db.VarChar(20)
+  transactionHash        String?   @map("transaction_hash") @db.VarChar(100)
+  transactionEventRaw    String?   @map("transaction_event_raw")
+  depositIdHex           String?   @map("deposit_id_hex")
+  lockPeriod             Int?      @map("lock_period")
+  vaquitaContractAddress String?   @map("vaquita_contract_address")
+  confirmedAt            DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt              DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  token       Token        @relation(fields: [tokenId], references: [id], onUpdate: NoAction)
+  withdrawals Withdrawal[]
+
+  @@index([status], map: "idx_deposits_status")
+  @@index([tokenId], map: "idx_deposits_token_id")
+  @@index([walletAddress], map: "idx_deposits_wallet_address")
+  @@map("deposits")
+}
+
+model MapObject {
+  id        BigInt    @id @default(autoincrement())
+  type      String?   @default("")
+  size      String?   @default("0,0,0")
+  variants  String?   @default("")
+  prices    Decimal?  @default(0) @db.Decimal
+  freeItems String?   @map("free_items")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@map("map_objects")
+}
+
+/// Singleton project configuration. Holds the data that previously lived in the
+/// (now removed) `networks` table, since the app is single-network now. The
+/// `order` column from `networks` was dropped — it only made sense for ordering
+/// multiple networks.
+model Config {
+  id                    Int      @id @default(autoincrement())
+  origins               String[] @default([])
+  networkName           String   @map("network_name") @db.VarChar(50)
+  networkPassphrase     String?  @map("network_passphrase")
+  badgesContractAddress String?  @map("badges_contract_address")
+  // Fiat display currencies offered in the UI (Preferences page). Each entry is
+  // `{ id, label, hint? }`, e.g. `{ "id": "usd", "label": "USD", "hint": "US Dollar" }`.
+  currencies            Json     @default("[]")
+  // UI languages offered in the Preferences page. Each entry is
+  // `{ id, label, hint? }`, e.g. `{ "id": "en", "label": "English", "hint": "United States" }`.
+  languages             Json     @default("[]")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("config")
+}
+
+model Profile {
+  id            Int       @id @default(autoincrement())
+  walletAddress String    @unique(map: "profiles_wallet_unique") @map("wallet_address") @db.VarChar(100)
+  nickname      String?   @db.VarChar(50)
+  fullName      String?   @map("full_name") @db.VarChar(100)
+  email         String?   @db.VarChar(100)
+
+  // Profile avatar served from MinIO (S3-compatible). `avatarUrl` is the public
+  // URL stored for rendering; `avatarKey` is the object key we delete when the
+  // photo is replaced/removed. Both NULL while the user keeps the default avatar.
+  avatarUrl     String?   @map("avatar_url") @db.VarChar(500)
+  avatarKey     String?   @map("avatar_key") @db.VarChar(300)
+
+  onboardingCompleted Boolean @default(false) @map("onboarding_completed")
+  tutorialCompleted   Boolean @default(false) @map("tutorial_completed")
+  // The user self-identifies as crypto-savvy, so the UI can drop the
+  // beginner-friendly framing and surface raw on-chain details (wallet
+  // addresses, tx hashes, gas/network terms) instead of simplified copy.
+  cryptoSavvy         Boolean @default(false) @map("crypto_savvy")
+
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  profileAchievements ProfileAchievement[]
+  profileMapObjects   ProfileMapObject[]
+  profileRewards      ProfileReward[]
+
+  @@map("profiles")
+}
+
+model ProfileAchievement {
+  id            BigInt   @id @default(autoincrement())
+  profileId     Int      @map("profile_id")
+  achievementId BigInt   @map("achievement_id")
+  claimedAt     DateTime @default(now()) @map("claimed_at") @db.Timestamptz(6)
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profile     Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([profileId, achievementId])
+  @@index([profileId], map: "profiles_achievements_profile_idx")
+  @@map("profiles_achievements")
+}
+
+model ProfileMapObject {
+  id        BigInt   @id @default(autoincrement())
+  profileId Int?     @map("profile_id")
+  objects   Json?    @db.Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([profileId], map: "idx_profiles_map_objects_profile_id")
+  @@map("profiles_map_objects")
+}
+
+model ProfileReward {
+  id        BigInt   @id @default(autoincrement())
+  profileId Int      @map("profile_id")
+  rewardId  BigInt   @map("reward_id")
+  type      String
+  amount    Decimal  @db.Decimal
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reward  Reward  @relation(fields: [rewardId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([profileId], map: "idx_profiles_rewards_profile_id")
+  @@index([rewardId], map: "idx_profiles_rewards_reward_id")
+  @@map("profiles_rewards")
+}
+
+model Reward {
+  id        BigInt    @id @default(autoincrement())
+  key       String?
+  name      String?   @default("")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  profileRewards ProfileReward[]
+
+  @@map("rewards")
+}
+
+model Token {
+  id                           Int       @id @default(autoincrement())
+  name                         String    @db.VarChar(50)
+  symbol                       String    @db.VarChar(20)
+  decimals                     Int?
+  isNative                     Boolean   @default(false) @map("is_native")
+  isGas                        Boolean   @default(false) @map("is_gas")
+  isSupported                  Boolean   @default(false) @map("is_supported")
+  contractAddress              String?   @map("contract_address") @db.VarChar(128)
+  vaquitaContractAddress       String?   @map("vaquita_contract_address") @db.VarChar(128)
+  lockPeriods                  BigInt[]  @default([]) @map("lock_periods")
+  defindexVaultContractAddress String?   @map("defindex_vault_contract_address")
+
+  createdAt                    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt                    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  deposits Deposit[]
+
+  @@map("tokens")
+}
+
+model Withdrawal {
+  id                  Int       @id @default(autoincrement())
+  depositId           Int       @map("deposit_id")
+  status              String    @default("initiated") @db.VarChar(20)
+  transactionHash     String?   @map("transaction_hash") @db.VarChar(100)
+  transactionEventRaw String?   @map("transaction_event_raw")
+  transferAmount      Decimal?  @map("transfer_amount") @db.Decimal
+  interest            Decimal?  @db.Decimal
+  reward              Decimal?  @db.Decimal
+  confirmedAt         DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  deposit Deposit @relation(fields: [depositId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([depositId], map: "idx_withdrawals_deposit_id")
+  @@index([status], map: "idx_withdrawals_status")
+  @@map("withdrawals")
+}

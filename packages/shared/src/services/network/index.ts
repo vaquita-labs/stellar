@@ -1,152 +1,113 @@
-import { supabase } from '../../lib/supabase';
-import type { Network, NetworkResponseDTO, Token, TokenNetwork } from '../../types';
-import { toNetwork } from './helpers';
+import { prisma } from '@vaquita/db';
+import type { Config as PrismaConfig, Token as PrismaToken } from '@vaquita/db';
+import type { Network, Token, TokenNetwork } from '../../types';
 
-export const listenNetworksChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:networks`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal networks:', status);
-    });
+/**
+ * Legacy network id. The `networks` table was dropped in the single-network
+ * refactor (network data now lives in the singleton `config` row), but the
+ * legacy `Deposit.network_id` field and the DTO layer still expect a numeric
+ * id. We stamp the config row id here and ignore network filtering everywhere.
+ */
+export const SINGLE_NETWORK_ID = 1;
+
+type ServiceResult<T> = { data: T; error: Error | null };
+
+/** Maps a Prisma `Token` row to the legacy `TokenNetwork` shape the DTO/stellar
+ *  layers consume. Fields that used to live in `tokens_networks` are now on the
+ *  token directly. */
+export const toTokenNetworkShape = (token: PrismaToken): TokenNetwork => ({
+  is_native: token.isNative,
+  is_gas: token.isGas,
+  is_supported: token.isSupported,
+  tokens: toTokenShape(token),
+  contract_address: token.contractAddress ?? '',
+  vaquita_contract_address: token.vaquitaContractAddress ?? '',
+  ...(token.defindexVaultContractAddress
+    ? { defindex_vault_contract_address: token.defindexVaultContractAddress }
+    : {}),
+  token_decimals: token.decimals ?? 7,
+  // Legacy DTO contract: a comma-joined string of lock periods (ms).
+  lock_period: token.lockPeriods.map(String).join(','),
+});
+
+export const toTokenShape = (token: PrismaToken): Token => ({
+  id: token.id,
+  name: token.name,
+  symbol: token.symbol,
+  decimals: token.decimals ?? 0,
+});
+
+/** Builds the legacy `Network` shape from the singleton config + its tokens. */
+const toNetworkShape = (config: PrismaConfig, tokens: PrismaToken[]): Network => ({
+  id: config.id,
+  name: config.networkName,
+  layer: '',
+  type: '',
+  chain_id: 0,
+  smart_contract_env: '',
+  languages: '',
+  tokens_networks: tokens.map(toTokenNetworkShape),
+  origins: (config.origins ?? []).join(','),
+  order: 0,
+  ...(config.badgesContractAddress ? { badges_contract_address: config.badgesContractAddress } : {}),
+});
+
+/** Loads the single project network (config singleton + supported tokens). */
+const loadNetwork = async (): Promise<Network | null> => {
+  const config = await prisma.config.findFirst();
+  if (!config) return null;
+  const tokens = await prisma.token.findMany({ where: { deletedAt: null } });
+  return toNetworkShape(config, tokens);
 };
 
-export const listenTokensChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:tokens`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal tokens:', status);
-    });
-};
-
-export const listenTokensNetworksChanges = async (onChange: () => void) => {
-  await supabase.realtime.setAuth();
-  supabase
-    .channel(`table:tokens_networks`, {
-      config: { private: true },
-    })
-    .on('broadcast', { event: '*' }, () => {
-      onChange();
-    })
-    .subscribe((status) => {
-      console.info('Estado canal tokens_networks:', status);
-    });
-};
-
-export const getNetworkById = async (id: number) => {
-  const { data, ...rest } = await supabase
-    .from('networks')
-    .select(`
-      *,
-      tokens_networks (
-        *,
-        tokens (*)
-      )
-    `)
-    .eq('id', id)
-    .maybeSingle();
-
-  return {
-    data: data as Network | null,
-    ...rest,
-  };
-};
-
-export const getNetworkByName = async (networkName: string) => {
-  const { data, ...rest } = await supabase
-    .from('networks')
-    .select(`
-      *,
-      tokens_networks (
-        *,
-        tokens (*)
-      )
-    `)
-    .eq('name', networkName)
-    .maybeSingle();
-
-  return {
-    data: data as Network | null,
-    ...rest,
-  };
-};
-
-export const getNetworks = async () => {
-  const { data, ...rest } = await supabase
-    .from('networks')
-    .select(`
-      *,
-      tokens_networks (
-        *,
-        tokens (*)
-      )
-    `);
-  return {
-    data: (data || []) as Network[],
-    ...rest,
-  };
-};
-
-export const getNetworksByOrigin = async (origin: string) => {
-  const { data: networks, error } = await getNetworks();
-
-  if (error) {
-    console.error(error);
-    return [] as NetworkResponseDTO[];
+export const getNetworkById = async (_id: number): Promise<ServiceResult<Network | null>> => {
+  try {
+    return { data: await loadNetwork(), error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
   }
-
-  const filteredNetworks = networks.filter(net =>
-    net.origins?.split(',').map(h => h.trim()).includes(origin),
-  ).sort((a, b) => (a.order || 100) - (b.order || 100));
-  return await Promise.all(filteredNetworks.map(toNetwork));
 };
 
-export const getTokenBySymbol = async (networkSymbol: string) => {
-  const { data, ...rest } = await supabase
-    .from('tokens')
-    .select('*')
-    .eq('symbol', networkSymbol)
-    .maybeSingle();
-
-  return {
-    data: data as Token | null,
-    ...rest,
-  };
+export const getNetworkByName = async (networkName: string): Promise<ServiceResult<Network | null>> => {
+  try {
+    const data = await loadNetwork();
+    // Single-network: only the configured network exists; anything else is "not found".
+    if (!data || data.name !== networkName) return { data: null, error: null };
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
-export const getTokenNetworkByNetworkIdTokenId = async (networkId: number, tokenId: number) => {
-  const { data, ...rest } = await supabase
-    .from('tokens_networks')
-    .select('*, tokens (*)')
-    .eq('network_id', networkId)
-    .eq('token_id', tokenId)
-    .maybeSingle();
-  return {
-    data: data as TokenNetwork | null,
-    ...rest,
-  };
+export const getTokenBySymbol = async (tokenSymbol: string): Promise<ServiceResult<Token | null>> => {
+  try {
+    const token = await prisma.token.findFirst({ where: { symbol: tokenSymbol, deletedAt: null } });
+    return { data: token ? toTokenShape(token) : null, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };
 
-export const getTokenNetworkByContractAddressAndNetworkId = async (contractAddress: string, networkId: number) => {
-  const { data, ...rest } = await supabase
-    .from('tokens_networks')
-    .select('*, tokens (*)')
-    .eq('contract_address', contractAddress)
-    .eq('network_id', networkId)
-    .maybeSingle();
-  return {
-    data: data as TokenNetwork | null,
-    ...rest,
-  };
+export const getTokenNetworkByNetworkIdTokenId = async (
+  _networkId: number,
+  tokenId: number,
+): Promise<ServiceResult<TokenNetwork | null>> => {
+  try {
+    const token = await prisma.token.findFirst({ where: { id: tokenId, deletedAt: null } });
+    return { data: token ? toTokenNetworkShape(token) : null, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
+};
+
+export const getTokenNetworkByContractAddressAndNetworkId = async (
+  contractAddress: string,
+  _networkId: number,
+): Promise<ServiceResult<TokenNetwork | null>> => {
+  try {
+    const token = await prisma.token.findFirst({ where: { contractAddress, deletedAt: null } });
+    return { data: token ? toTokenNetworkShape(token) : null, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
 };

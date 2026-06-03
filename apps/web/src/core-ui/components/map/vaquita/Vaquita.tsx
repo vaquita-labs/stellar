@@ -7,6 +7,7 @@ import { getTileTopY } from '../../../helpers';
 import { useDayCycleStore, useMapStore, useVaquitaPositionsStore } from '../../../stores';
 import { DepositWithdrawalState, VaquitaAnimationState } from '../../../types';
 import { findNearbyWorkSpot, getNextTileToward, pickRandomWalkableGoal, tilesEqual } from './helpers';
+import { MoodBubble } from './MoodBubble';
 import { VaquitaControllerProps } from './types';
 import { VaquitaAnimation } from './VaquitaAnimation';
 import { VaquitaBrain } from './VaquitaBrain';
@@ -16,14 +17,40 @@ const IDLE_MIN_MS = 3000;
 const IDLE_RANGE_MS = 4000;
 const STUCK_PAUSE_MIN_MS = 1500;
 const STUCK_PAUSE_RANGE_MS = 1500;
+const MOOD_PULSE_SHOW_MS = 3500;
+const MOOD_PULSE_HIDE_MIN_MS = 12000;
+const MOOD_PULSE_HIDE_RANGE_MS = 6000;
 
-export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps) => {
+export const Vaquita = ({ vaquita, onSelect, headLabel, mood = 'normal' }: VaquitaControllerProps) => {
   const ref = useRef<THREE.Group>(null);
   const { gl } = useThree();
 
   const [scale, setScale] = useState(0.5);
+  const [moodPulseActive, setMoodPulseActive] = useState(false);
+
+  useEffect(() => {
+    if (mood === 'normal') {
+      setMoodPulseActive(false);
+      return;
+    }
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const tick = (show: boolean) => {
+      setMoodPulseActive(show);
+      const duration = show
+        ? MOOD_PULSE_SHOW_MS
+        : MOOD_PULSE_HIDE_MIN_MS + Math.random() * MOOD_PULSE_HIDE_RANGE_MS;
+      timeoutId = setTimeout(() => tick(!show), duration);
+    };
+    timeoutId = setTimeout(
+      () => tick(true),
+      MOOD_PULSE_HIDE_MIN_MS + Math.random() * MOOD_PULSE_HIDE_RANGE_MS,
+    );
+    return () => clearTimeout(timeoutId);
+  }, [mood]);
+
   const [direction, setDirection] = useState<[number, number]>([1, 1]);
   const [brainState, setBrainState] = useState<VaquitaAnimationState>('walking');
+  const displayMood = moodPulseActive && brainState === 'walking' ? mood : 'normal';
 
   const isWalkable = useMapStore((store) => store.isWalkable);
   const getTileAt = useMapStore((store) => store.getTileAt);
@@ -223,7 +250,9 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
         direction={direction}
         scale={scale}
         label={headLabel}
+        mood={displayMood}
       />
+      <MoodBubble mood={displayMood} />
     </group>
   );
 };

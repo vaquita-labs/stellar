@@ -2,28 +2,36 @@
 
 import { Billboard, Text } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import * as THREE from 'three';
-import { formatTimeDeposit } from '../../helpers';
-import { useDeposits } from '../../hooks';
-import { useMapStore, useNetworkConfigStore, useResizeStore, useSyncMapObjects } from '../../stores';
+import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
+import { useMapStore, useConfigStore, useResizeStore, useSyncMapObjects } from '../../stores';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
-import { VaquitaModal, VaquitasListModal } from '../organisms';
+import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
 import { MapObjects } from '../templates/WorldMap/map/MapObjects';
 import { SceneCamera } from '../templates/WorldMap/map/SceneCamera';
 import { SceneControls } from '../templates/WorldMap/map/SceneControls';
 // import { CloudSkybox } from './CloudSkybox';
 import { DayCycleSky } from './DayCycleSky';
 import { EditGrid } from './EditGrid';
-import { FloatingIslandBase } from './FloatingIslandBase';
 import { Ground } from './Ground';
 import { getMapCenter } from './helpers';
 import { ObjectGlow } from './ObjectGlow';
 import { SpotlightPositionUpdater } from './SpotlightPositionUpdater';
 import { TileSpotlightUpdater } from './TileSpotlightUpdater';
 import { Vaquita } from './vaquita';
-import { Waterfall } from './Waterfall';
+
+const PLACEHOLDER_VAQUITA: DepositSummaryResponseDTO = {
+  id: 0,
+  state: DepositWithdrawalState.DEPOSIT_SUCCESS,
+  amount: 0,
+  tokenSymbol: '',
+  inLockPeriod: false,
+  lockPeriod: 0,
+  vaquitaContractAddress: '',
+};
 
 interface MapProps {
   walletAddress?: string;
@@ -32,18 +40,24 @@ interface MapProps {
   isAvailable: boolean;
 }
 
-export const WorldMap = ({ walletAddress, isLeaderboard, isAvailable, worldType }: MapProps) => {
+export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
   const router = useRouter();
   const isEditMode = useMapStore((store) => store.editMode);
   const { tiles, currentTiles } = useMapStore();
   useSyncMapObjects();
-  const [selectedCow, setSelectedCow] = useState<DepositSummaryResponseDTO | null>(null);
   const [showVaquitasListModal, setShowVaquitasListModal] = useState(false);
-  const { walletAddress: userWalletAddress, token } = useNetworkConfigStore((store) => store);
-  const { data } = useDeposits(walletAddress ?? userWalletAddress);
+  const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
+  const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
+  const [showMoodModal, setShowMoodModal] = useState(false);
+  const { walletAddress: userWalletAddress } = useConfigStore((store) => store);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
   const { height, width } = useResizeStore((store) => store);
-  const deposits = (data?.deposits ?? []).filter((d) => d.state === DepositWithdrawalState.DEPOSIT_SUCCESS);
+  const { mood, canCollect, goldCoinsToCollect } = useVaquitaMood();
+  const { data: streak } = useProfileStreak();
+  const { goldDailyCollect } = useRestProfile();
+  const queryClient = useQueryClient();
+
+  const currentStreakDays = (streak?.yesterdayStreak ?? 0) + (streak?.todayStreak ? 1 : 0);
 
   const handleBarnClick = () => {
     if (userWalletAddress) {
@@ -51,8 +65,30 @@ export const WorldMap = ({ walletAddress, isLeaderboard, isAvailable, worldType 
     }
   };
 
+  const handleBankClick = () => {
+    if (userWalletAddress) {
+      setShowVaquitasListModal(true);
+    }
+  };
+
   const handleLeaderBoardClick = () => {
     router.push('/leaderboard');
+  };
+
+  const handleVaquitaClick = async () => {
+    if (canCollect) {
+      const coins = goldCoinsToCollect;
+      setDailyRewardCoins(coins);
+      setShowDailyRewardModal(true);
+      try {
+        await goldDailyCollect();
+        await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      } catch (err) {
+        console.error('goldDailyCollect', err);
+      }
+      return;
+    }
+    setShowMoodModal(true);
   };
 
   return (
@@ -77,28 +113,18 @@ export const WorldMap = ({ walletAddress, isLeaderboard, isAvailable, worldType 
         <DayCycleSky />
         <SceneCamera center={center} />
         <EditGrid />
-        <FloatingIslandBase />
+        {/* <FloatingIslandBase /> */}
         <Ground mapObjects={currentTiles} worldType={worldType} />
         {!isEditMode && (
           <MapObjects
             objects={currentTiles}
             onBarnClick={handleBarnClick}
+            onBankClick={handleBankClick}
             onLeaderBoardClick={handleLeaderBoardClick}
             hasWallet={!!userWalletAddress}
           />
         )}
-        {!isEditMode &&
-          token &&
-          deposits.map((vaquita) => {
-            return (
-              <Vaquita
-                key={vaquita.id}
-                vaquita={vaquita}
-                onSelect={() => setSelectedCow(vaquita)}
-                headLabel={`${vaquita.amount.toFixed(2)} ${token.symbol} (${formatTimeDeposit(vaquita.lockPeriod)})`}
-              />
-            );
-          })}
+        {!isEditMode && <Vaquita vaquita={PLACEHOLDER_VAQUITA} mood={mood} onSelect={handleVaquitaClick} />}
         {!isAvailable && (
           <Billboard>
             <Text fontWeight="bold" position={[0, 1, 3]} fontSize={2} color="black" anchorX="center" anchorY="middle">
@@ -117,16 +143,19 @@ export const WorldMap = ({ walletAddress, isLeaderboard, isAvailable, worldType 
         <TileSpotlightUpdater />
         <ObjectGlow />
       </Canvas>
-      {selectedCow && (
-        <VaquitaModal
-          vaquitaSummary={selectedCow}
-          isOpen={!!selectedCow}
-          onClose={() => setSelectedCow(null)}
-          isLeaderboard={isLeaderboard}
-        />
-      )}
       {showVaquitasListModal && (
         <VaquitasListModal open={showVaquitasListModal} onOpenChange={() => setShowVaquitasListModal(false)} />
+      )}
+      {showDailyRewardModal && (
+        <DailyRewardModal
+          open={showDailyRewardModal}
+          onOpenChange={() => setShowDailyRewardModal(false)}
+          coinsCollected={dailyRewardCoins}
+          streakDays={currentStreakDays}
+        />
+      )}
+      {showMoodModal && (
+        <MoodMessageModal open={showMoodModal} onOpenChange={() => setShowMoodModal(false)} mood={mood} />
       )}
     </div>
   );

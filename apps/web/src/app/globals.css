@@ -3,6 +3,9 @@
 @import 'tailwindcss';
 @import '@heroui/styles';
 
+/* Shared UI lib lives outside this app, so point Tailwind at its source. */
+@source '../../../../packages/ui/src';
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -39,6 +42,18 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+/* Onboarding slide fade-in */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Custom Scrollbar Styles */
