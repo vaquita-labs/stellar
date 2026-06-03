@@ -1,7 +1,6 @@
-import { prisma } from '@vaquita/db';
+import { Prisma, prisma } from '@vaquita/db';
 import type { Achievement as PrismaAchievement, Profile as PrismaProfile } from '@vaquita/db';
 import { getCurrentDay } from '../../helpers/date';
-import { supabase } from '../../lib/supabase';
 import { ably } from '../ably';
 import {
   Achievement,
@@ -509,17 +508,44 @@ export interface AchievementWriteFields {
   enabled: boolean;
 }
 
+/** Map the admin panel's snake_case write fields onto Prisma's camelCase columns.
+ *  Only keys present in `input` are emitted, so PATCH can send a partial. */
+const achievementWriteToPrisma = (
+  input: Partial<AchievementWriteFields>,
+): Prisma.AchievementUncheckedUpdateInput => {
+  const data: Prisma.AchievementUncheckedUpdateInput = {};
+  if (input.name !== undefined) data.name = input.name;
+  if (input.description !== undefined) data.description = input.description;
+  if (input.tier !== undefined) data.tier = input.tier;
+  if (input.coin_reward !== undefined) data.coinReward = input.coin_reward;
+  if (input.unlock_type !== undefined) data.unlockType = input.unlock_type;
+  if (input.rule !== undefined)
+    data.rule = input.rule === null ? Prisma.DbNull : (input.rule as unknown as Prisma.InputJsonValue);
+  if (input.icon !== undefined) data.icon = input.icon;
+  if (input.accent !== undefined) data.accent = input.accent;
+  if (input.code !== undefined) data.code = input.code;
+  if (input.hidden !== undefined) data.hidden = input.hidden;
+  if (input.cycle_scoped !== undefined) data.cycleScoped = input.cycle_scoped;
+  if (input.refresh_policy !== undefined) data.refreshPolicy = input.refresh_policy;
+  if (input.display_order !== undefined) data.displayOrder = input.display_order;
+  if (input.enabled !== undefined) data.enabled = input.enabled;
+  return data;
+};
+
 /** Insert a new achievement (admin). `key` is immutable once created. */
 export const createAchievement = async (
   input: Partial<AchievementWriteFields> & { key: string },
 ) => {
-  const { data, error } = await supabase
-    .from('achievements')
-    .insert([input])
-    .select()
-    .maybeSingle();
-
-  return { data: data as AchievementDocument | null, error };
+  try {
+    const { key, ...rest } = input;
+    const row = await prisma.achievement.create({
+      data: { key, ...achievementWriteToPrisma(rest) } as Prisma.AchievementUncheckedCreateInput,
+    });
+    return { data: toAchievementDoc(row), error: null };
+  } catch (error) {
+    console.error('Error on createAchievement', error);
+    return { data: null as AchievementDocument | null, error };
+  }
 };
 
 /** Patch an existing achievement by key (admin). We never change `key`. */
@@ -527,14 +553,16 @@ export const updateAchievement = async (
   key: string,
   patch: Partial<AchievementWriteFields>,
 ) => {
-  const { data, error } = await supabase
-    .from('achievements')
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq('key', key)
-    .select()
-    .maybeSingle();
-
-  return { data: data as AchievementDocument | null, error };
+  try {
+    const row = await prisma.achievement.update({
+      where: { key },
+      data: achievementWriteToPrisma(patch),
+    });
+    return { data: toAchievementDoc(row), error: null };
+  } catch (error) {
+    console.error('Error on updateAchievement', error);
+    return { data: null as AchievementDocument | null, error };
+  }
 };
 
 export const getAllAchievements = async () => {
