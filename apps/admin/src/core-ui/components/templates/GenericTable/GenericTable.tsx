@@ -1,8 +1,6 @@
 'use client';
 
 import {
-  Button,
-  Input,
   Modal,
   Table,
   TableBody,
@@ -12,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@heroui/react';
+import { Button, Input } from '@vaquita/ui';
 import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
 import { useEffect, useMemo, useState } from 'react';

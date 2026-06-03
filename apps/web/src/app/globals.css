@@ -3,6 +3,9 @@
 @import 'tailwindcss';
 @import '@heroui/styles';
 
+/* Shared UI lib lives outside this app, so point Tailwind at its source. */
+@source '../../../../packages/ui/src';
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {

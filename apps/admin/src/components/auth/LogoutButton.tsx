@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@vaquita/ui';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -25,13 +26,15 @@ export function LogoutButton() {
   };
 
   return (
-    <button
-      type="button"
-      onClick={onLogout}
-      disabled={loading}
-      className="fixed top-2 right-2 z-50 rounded-md border border-black border-b-3 bg-white px-3 py-1 text-xs font-semibold text-black transition hover:bg-primary disabled:opacity-50"
+    <Button
+      variant="white"
+      size="sm"
+      className="fixed top-2 right-2 z-50"
+      onPress={onLogout}
+      isDisabled={loading}
+      isLoading={loading}
     >
-      {loading ? '…' : 'Logout'}
-    </button>
+      Logout
+    </Button>
   );
 }

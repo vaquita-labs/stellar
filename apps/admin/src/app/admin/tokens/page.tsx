@@ -2,7 +2,8 @@
 
 import { addDangerToast, addSuccessToast } from '@/core-ui/components';
 import { type Token, type TokenCreatePayload, createToken, deleteToken, updateToken, useTokens } from '@/core-ui/hooks';
-import { Button, Spinner } from '@heroui/react';
+import { Spinner } from '@heroui/react';
+import { Button, Card, Checkbox, Input } from '@vaquita/ui';
 import { useState } from 'react';
 
 type FormState = {
@@ -44,11 +45,6 @@ const formFromToken = (t: Token): FormState => ({
   lockPeriods: (t.lockPeriods ?? []).join(', '),
   defindexVaultContractAddress: t.defindexVaultContractAddress ?? '',
 });
-
-const inputLabel = 'flex flex-col gap-1 text-sm';
-const inputClass =
-  'w-full rounded-medium border-2 border-default-200 bg-default-100 px-3 py-2 text-sm outline-none focus:border-default-400';
-const checkboxLabel = 'flex items-center gap-2 text-sm';
 
 // "30, 60 90" -> [30, 60, 90]; ignores blanks/non-numbers.
 const parseLockPeriods = (raw: string): number[] =>
@@ -174,121 +170,94 @@ export default function Page() {
         <div className="flex flex-col gap-3">
           {/* Inline create/edit form */}
           {editing !== null && (
-            <div className="flex flex-col gap-3 rounded-medium border-2 border-default-200 p-4">
-              <h2 className="text-base font-semibold">{editing === 'new' ? 'New token' : `Edit token #${editing}`}</h2>
+            <Card className="flex flex-col gap-3 p-4">
+              <h2 className="text-base font-semibold text-black">
+                {editing === 'new' ? 'New token' : `Edit token #${editing}`}
+              </h2>
 
               <div className="flex flex-wrap gap-3">
-                <label className={`flex-1 ${inputLabel}`}>
-                  Name
-                  <input
-                    className={inputClass}
-                    maxLength={50}
-                    value={form.name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('name', e.target.value)}
-                  />
-                </label>
-                <label className={`flex-1 ${inputLabel}`}>
-                  Symbol
-                  <input
-                    className={inputClass}
-                    maxLength={20}
-                    placeholder="e.g. USDC"
-                    value={form.symbol}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('symbol', e.target.value)}
-                  />
-                </label>
-                <label className={`w-28 ${inputLabel}`}>
-                  Decimals
-                  <input
-                    className={inputClass}
-                    inputMode="numeric"
-                    placeholder="e.g. 7"
-                    value={form.decimals}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('decimals', e.target.value)}
-                  />
-                </label>
+                <Input
+                  label="Name"
+                  containerClassName="flex-1"
+                  maxLength={50}
+                  value={form.name}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('name', e.target.value)}
+                />
+                <Input
+                  label="Symbol"
+                  containerClassName="flex-1"
+                  maxLength={20}
+                  placeholder="e.g. USDC"
+                  value={form.symbol}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('symbol', e.target.value)}
+                />
+                <Input
+                  label="Decimals"
+                  containerClassName="w-28"
+                  inputMode="numeric"
+                  placeholder="e.g. 7"
+                  value={form.decimals}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('decimals', e.target.value)}
+                />
               </div>
 
               <div className="flex flex-wrap gap-4">
-                <label className={checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={form.isNative}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('isNative', e.target.checked)}
-                  />
-                  Native
-                </label>
-                <label className={checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={form.isGas}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('isGas', e.target.checked)}
-                  />
-                  Gas
-                </label>
-                <label className={checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={form.isSupported}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('isSupported', e.target.checked)}
-                  />
-                  Supported
-                </label>
+                <Checkbox
+                  label="Native"
+                  checked={form.isNative}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('isNative', e.target.checked)}
+                />
+                <Checkbox
+                  label="Gas"
+                  checked={form.isGas}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('isGas', e.target.checked)}
+                />
+                <Checkbox
+                  label="Supported"
+                  checked={form.isSupported}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('isSupported', e.target.checked)}
+                />
               </div>
 
-              <label className={inputLabel}>
-                Contract address
-                <input
-                  className={inputClass}
-                  maxLength={128}
-                  placeholder="C..."
-                  value={form.contractAddress}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('contractAddress', e.target.value)}
-                />
-              </label>
+              <Input
+                label="Contract address"
+                maxLength={128}
+                placeholder="C..."
+                value={form.contractAddress}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('contractAddress', e.target.value)}
+              />
 
-              <label className={inputLabel}>
-                Vaquita contract address
-                <input
-                  className={inputClass}
-                  maxLength={128}
-                  placeholder="C..."
-                  value={form.vaquitaContractAddress}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('vaquitaContractAddress', e.target.value)}
-                />
-              </label>
+              <Input
+                label="Vaquita contract address"
+                maxLength={128}
+                placeholder="C..."
+                value={form.vaquitaContractAddress}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('vaquitaContractAddress', e.target.value)}
+              />
 
-              <label className={inputLabel}>
-                DeFindex vault contract address
-                <input
-                  className={inputClass}
-                  placeholder="C..."
-                  value={form.defindexVaultContractAddress}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    set('defindexVaultContractAddress', e.target.value)
-                  }
-                />
-              </label>
+              <Input
+                label="DeFindex vault contract address"
+                placeholder="C..."
+                value={form.defindexVaultContractAddress}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('defindexVaultContractAddress', e.target.value)}
+              />
 
-              <label className={inputLabel}>
-                Lock periods (comma separated)
-                <input
-                  className={inputClass}
-                  placeholder="e.g. 30, 60, 90"
-                  value={form.lockPeriods}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('lockPeriods', e.target.value)}
-                />
-              </label>
+              <Input
+                label="Lock periods (comma separated)"
+                placeholder="e.g. 30, 60, 90"
+                value={form.lockPeriods}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('lockPeriods', e.target.value)}
+              />
 
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onPress={closeForm} isDisabled={saving}>
                   Cancel
                 </Button>
-                <Button variant="primary" onPress={submit} isDisabled={saving}>
-                  {saving ? <Spinner size="sm" color="current" /> : editing === 'new' ? 'Create' : 'Save'}
+                <Button variant="primary" onPress={submit} isDisabled={saving} isLoading={saving}>
+                  {editing === 'new' ? 'Create' : 'Save'}
                 </Button>
               </div>
-            </div>
+            </Card>
           )}
 
           {/* Token list */}
@@ -301,7 +270,7 @@ export default function Page() {
               {tokens?.map((t) => (
                 <li
                   key={t.id}
-                  className="flex items-center justify-between gap-3 rounded-medium border-2 border-default-200 p-3"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-black border-b-2 bg-white p-3 shadow-sm"
                 >
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-2">
@@ -328,8 +297,14 @@ export default function Page() {
                     <Button size="sm" variant="ghost" onPress={() => openEdit(t)} isDisabled={saving}>
                       Edit
                     </Button>
-                    <Button size="sm" variant="danger" onPress={() => remove(t)} isDisabled={deletingId === t.id}>
-                      {deletingId === t.id ? <Spinner size="sm" color="current" /> : 'Delete'}
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onPress={() => remove(t)}
+                      isDisabled={deletingId === t.id}
+                      isLoading={deletingId === t.id}
+                    >
+                      Delete
                     </Button>
                   </div>
                 </li>

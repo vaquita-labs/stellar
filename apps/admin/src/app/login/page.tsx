@@ -1,5 +1,6 @@
 'use client';
 
+import { Button, Input } from '@vaquita/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormEvent, Suspense, useState } from 'react';
 
@@ -39,32 +40,27 @@ function LoginForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="w-full max-w-sm flex flex-col gap-4 rounded-lg border border-black border-b-4 bg-white p-6 shadow-sm"
+      className="w-full max-w-sm flex flex-col gap-4 rounded-xl border border-black border-b-4 bg-white p-6 shadow-sm"
     >
       <div className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold text-black">Admin access</h1>
         <p className="text-sm text-black/60">Enter the passcode to continue.</p>
       </div>
 
-      <input
+      <Input
         type="password"
         autoFocus
         autoComplete="off"
         value={passcode}
         onChange={(e) => setPasscode(e.target.value)}
         placeholder="Passcode"
-        className="w-full rounded-md border border-black px-4 py-2 text-black outline-none focus:border-primary"
       />
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={loading || passcode.length === 0}
-        className="w-full rounded-md border border-black border-b-3 bg-primary px-5 py-2 text-sm font-semibold text-black transition hover:bg-primary/80 disabled:opacity-50"
-      >
-        {loading ? 'Checking…' : 'Unlock'}
-      </button>
+      <Button htmlType="submit" wFull isDisabled={loading || passcode.length === 0} isLoading={loading}>
+        Unlock
+      </Button>
     </form>
   );
 }

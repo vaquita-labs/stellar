@@ -11,7 +11,8 @@ import {
   updateAchievement,
   useAdminAchievements,
 } from '@/core-ui/hooks';
-import { Button, Input, Spinner, Switch, TextArea } from '@heroui/react';
+import { Spinner, Switch } from '@heroui/react';
+import { Button, Input, Select, Textarea } from '@vaquita/ui';
 import { useMemo, useState } from 'react';
 
 // Mirror of the backend signal registry (packages/shared/.../profile/rules.ts).
@@ -38,9 +39,6 @@ const UNLOCK_TYPES: { value: BadgeUnlockType; label: string }[] = [
 
 const kindOf = (signal: string): 'number' | 'date' =>
   SIGNALS.find((s) => s.key === signal)?.kind ?? 'number';
-
-const selectClass =
-  'w-full rounded-medium border-2 border-default-200 bg-default-100 px-3 py-2 text-sm outline-none focus:border-default-400';
 
 type FormState = {
   key: string;
@@ -110,9 +108,9 @@ const RuleBuilder = ({
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-medium bg-default-50 p-3">
+    <div className="flex flex-col gap-3 rounded-xl border border-black/15 bg-white p-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">Unlock when ALL conditions are met</span>
+        <span className="text-sm font-medium text-black">Unlock when ALL conditions are met</span>
         <Button
           size="sm"
           variant="secondary"
@@ -127,8 +125,8 @@ const RuleBuilder = ({
         const ops = kind === 'date' ? DATE_OPS : NUMERIC_OPS;
         return (
           <div key={i} className="flex flex-wrap items-center gap-2">
-            <select
-              className={selectClass + ' max-w-[200px]'}
+            <Select
+              className="max-w-[200px]"
               value={c.signal}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                 const signal = e.target.value;
@@ -146,39 +144,33 @@ const RuleBuilder = ({
                   {s.label}
                 </option>
               ))}
-            </select>
+            </Select>
 
-            <select
-              className={selectClass + ' max-w-[110px]'}
+            <Select
+              className="max-w-[110px]"
               value={c.op}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                update(i, { op: e.target.value as BadgeRuleOp })
-              }
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => update(i, { op: e.target.value as BadgeRuleOp })}
             >
               {ops.map((op) => (
                 <option key={op} value={op}>
                   {op}
                 </option>
               ))}
-            </select>
+            </Select>
 
             {kind === 'date' ? (
               <Input
                 className="max-w-[240px]"
                 placeholder="ISO date e.g. 2026-05-17T23:59:59Z"
                 value={String(c.value ?? '')}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  update(i, { value: e.target.value })
-                }
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => update(i, { value: e.target.value })}
               />
             ) : (
               <Input
                 type="number"
                 className="max-w-[140px]"
                 value={String(c.value ?? 0)}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  update(i, { value: Number(e.target.value) })
-                }
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => update(i, { value: Number(e.target.value) })}
               />
             )}
 
@@ -280,10 +272,6 @@ const BadgeFormModal = ({
     }
   };
 
-  const inputLabel = 'flex flex-col gap-1 text-sm';
-  const inputClass =
-    'w-full rounded-medium border-2 border-default-200 bg-default-100 px-3 py-2 text-sm outline-none focus:border-default-400';
-
   return (
     <AppModal
       open={isOpen}
@@ -295,111 +283,83 @@ const BadgeFormModal = ({
           <Button variant="ghost" onPress={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onPress={submit} isDisabled={saving}>
-            {saving ? <Spinner size="sm" color="current" /> : isEdit ? 'Save' : 'Create'}
+          <Button variant="primary" onPress={submit} isDisabled={saving} isLoading={saving}>
+            {isEdit ? 'Save' : 'Create'}
           </Button>
         </>
       }
     >
       <div className="flex flex-col gap-3">
         {!isEdit && (
-          <label className={inputLabel}>
-            Key (immutable)
-            <input
-              className={inputClass}
-              placeholder="e.g. summer-2026"
-              value={form.key}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('key', e.target.value)}
-            />
-          </label>
+          <Input
+            label="Key (immutable)"
+            placeholder="e.g. summer-2026"
+            value={form.key}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('key', e.target.value)}
+          />
         )}
-        <label className={inputLabel}>
-          Name
-          <input
-            className={inputClass}
-            value={form.name}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('name', e.target.value)}
-          />
-        </label>
-        <label className={inputLabel}>
-          Description
-          <TextArea
-            value={form.description}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              set('description', e.target.value)
-            }
-          />
-        </label>
+        <Input
+          label="Name"
+          value={form.name}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('name', e.target.value)}
+        />
+        <Textarea
+          label="Description"
+          value={form.description}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set('description', e.target.value)}
+        />
 
         <div className="flex flex-wrap gap-3">
-          <label className="flex flex-1 flex-col gap-1 text-sm">
-            Tier
-            <select
-              className={selectClass}
-              value={form.tier}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => set('tier', e.target.value)}
-            >
-              {TIERS.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={`flex-1 ${inputLabel}`}>
-            Coin reward
-            <input
-              className={inputClass}
-              type="number"
-              value={form.coinReward}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                set('coinReward', e.target.value)
-              }
-            />
-          </label>
-          <label className={`flex-1 ${inputLabel}`}>
-            Display order
-            <input
-              className={inputClass}
-              type="number"
-              value={form.displayOrder}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                set('displayOrder', e.target.value)
-              }
-            />
-          </label>
-        </div>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Unlock type
-          <select
-            className={selectClass}
-            value={form.unlockType}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-              set('unlockType', e.target.value as BadgeUnlockType)
-            }
+          <Select
+            label="Tier"
+            containerClassName="flex-1"
+            value={form.tier}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => set('tier', e.target.value)}
           >
-            {UNLOCK_TYPES.map((u) => (
-              <option key={u.value} value={u.value}>
-                {u.label}
+            {TIERS.map((t) => (
+              <option key={t} value={t}>
+                {t}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+          <Input
+            label="Coin reward"
+            containerClassName="flex-1"
+            type="number"
+            value={form.coinReward}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('coinReward', e.target.value)}
+          />
+          <Input
+            label="Display order"
+            containerClassName="flex-1"
+            type="number"
+            value={form.displayOrder}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('displayOrder', e.target.value)}
+          />
+        </div>
+
+        <Select
+          label="Unlock type"
+          value={form.unlockType}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => set('unlockType', e.target.value as BadgeUnlockType)}
+        >
+          {UNLOCK_TYPES.map((u) => (
+            <option key={u.value} value={u.value}>
+              {u.label}
+            </option>
+          ))}
+        </Select>
 
         {form.unlockType === 'rule' && (
           <RuleBuilder conditions={form.conditions} onChange={(c) => set('conditions', c)} />
         )}
         {form.unlockType === 'redeem_code' && (
-          <label className={inputLabel}>
-            Redeem code
-            <input
-              className={inputClass}
-              placeholder="e.g. VERANO26"
-              value={form.code}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('code', e.target.value)}
-            />
-          </label>
+          <Input
+            label="Redeem code"
+            placeholder="e.g. VERANO26"
+            value={form.code}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('code', e.target.value)}
+          />
         )}
         {form.unlockType === 'cycle_rank' && (
           <p className="text-sm text-warning-600">
@@ -409,23 +369,19 @@ const BadgeFormModal = ({
         )}
 
         <div className="flex flex-wrap gap-3">
-          <label className={`flex-1 ${inputLabel}`}>
-            Icon (path or URL)
-            <input
-              className={inputClass}
-              placeholder="/icons/achievements/<key>.png"
-              value={form.icon}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('icon', e.target.value)}
-            />
-          </label>
-          <label className={`flex-1 ${inputLabel}`}>
-            Accent (CSS gradient)
-            <input
-              className={inputClass}
-              value={form.accent}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('accent', e.target.value)}
-            />
-          </label>
+          <Input
+            label="Icon (path or URL)"
+            containerClassName="flex-1"
+            placeholder="/icons/achievements/<key>.png"
+            value={form.icon}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('icon', e.target.value)}
+          />
+          <Input
+            label="Accent (CSS gradient)"
+            containerClassName="flex-1"
+            value={form.accent}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('accent', e.target.value)}
+          />
         </div>
 
         <div className="flex gap-6">
