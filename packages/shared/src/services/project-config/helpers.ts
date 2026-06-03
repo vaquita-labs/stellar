@@ -1,20 +1,33 @@
 import type { Config, Token } from '@vaquita/db';
 import { firstElement } from '../../helpers';
-import type { ProjectConfigCurrencyDTO, ProjectConfigResponseDTO } from '../../types';
+import type {
+  ProjectConfigCurrencyDTO,
+  ProjectConfigLanguageDTO,
+  ProjectConfigResponseDTO,
+} from '../../types';
 
 /**
- * Coerces the `config.currencies` Json column into a typed currency list,
+ * Coerces a `{ id, label, hint? }[]` Json column into a typed option list,
  * tolerating a null/non-array column or malformed entries (those are dropped).
+ * Shared by the currencies and languages columns (same shape).
  */
-const toCurrencies = (value: unknown): ProjectConfigCurrencyDTO[] => {
+const toOptionList = <T extends { id: string; label: string; hint?: string }>(
+  value: unknown,
+): T[] => {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry) => {
     if (!entry || typeof entry !== 'object') return [];
     const { id, label, hint } = entry as Record<string, unknown>;
     if (typeof id !== 'string' || typeof label !== 'string') return [];
-    return [{ id, label, ...(typeof hint === 'string' ? { hint } : {}) }];
+    return [{ id, label, ...(typeof hint === 'string' ? { hint } : {}) } as T];
   });
 };
+
+const toCurrencies = (value: unknown): ProjectConfigCurrencyDTO[] =>
+  toOptionList<ProjectConfigCurrencyDTO>(value);
+
+const toLanguages = (value: unknown): ProjectConfigLanguageDTO[] =>
+  toOptionList<ProjectConfigLanguageDTO>(value);
 
 /**
  * Maps the singleton ProjectConfig + its tokens (Prisma rows) to the public DTO.
@@ -41,4 +54,5 @@ export const toProjectConfig = (
     vaquitaContractAddress: firstElement(token.vaquitaContractAddress ?? ''),
   })),
   currencies: toCurrencies(config.currencies),
+  languages: toLanguages(config.languages),
 });

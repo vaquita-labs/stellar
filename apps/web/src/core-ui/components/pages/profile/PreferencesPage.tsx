@@ -8,13 +8,6 @@ import { MockedSubPageLayout } from './MockedSubPageLayout';
 
 type Option = { id: string; label: string; hint?: string };
 
-const LANGUAGES: Option[] = [
-  { id: 'en', label: 'English', hint: 'United States' },
-  { id: 'es', label: 'Español', hint: 'América Latina' },
-  { id: 'pt', label: 'Português', hint: 'Brasil' },
-  { id: 'fr', label: 'Français', hint: 'France' },
-];
-
 /**
  * A Hero UI Select rendered as a popover dropdown — i.e. the option list
  * floats above the page instead of pushing siblings down, exactly like Hero
@@ -128,17 +121,24 @@ export function PreferencesPage() {
 
   // Backend-driven (from `GET /api/v1/config` → config store), no longer hardcoded.
   const currencies: Option[] = network?.currencies ?? [];
+  const languages: Option[] = network?.languages ?? [];
 
   const [language, setLanguage] = useState('en');
   const [currency, setCurrency] = useState('usd');
 
-  // Default the selection to the first backend currency once the list loads,
-  // if the current pick isn't offered (e.g. the seeded 'usd' fallback).
+  // Default each selection to the first backend option once the list loads, if
+  // the current pick isn't offered (e.g. the seeded 'usd' / 'en' fallback).
   useEffect(() => {
     if (currencies.length > 0 && !currencies.some((c) => c.id === currency)) {
       setCurrency(currencies[0].id);
     }
   }, [currencies, currency]);
+
+  useEffect(() => {
+    if (languages.length > 0 && !languages.some((l) => l.id === language)) {
+      setLanguage(languages[0].id);
+    }
+  }, [languages, language]);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [hapticFeedback, setHapticFeedback] = useState(true);
   const [autoplaySounds, setAutoplaySounds] = useState(true);
@@ -155,7 +155,7 @@ export function PreferencesPage() {
       <OptionSelect
         title="Language"
         description="The language Vaquita uses to talk to you."
-        options={LANGUAGES}
+        options={languages}
         value={language}
         onChange={setLanguage}
         ariaLabel="Language"

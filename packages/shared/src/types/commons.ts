@@ -64,6 +64,16 @@ export interface ProjectConfigCurrencyDTO {
 }
 
 /**
+ * A UI language offered in the Preferences page. Sourced from the singleton
+ * `config` row so the option list is backend-driven, not hardcoded.
+ */
+export interface ProjectConfigLanguageDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+/**
  * Single-network project configuration (replaces the per-network NetworkResponseDTO).
  * `chainId` (EVM leftover) is replaced by `networkPassphrase` (Stellar).
  */
@@ -73,6 +83,7 @@ export interface ProjectConfigResponseDTO {
   badgesContractAddress?: string;
   tokens: ProjectConfigTokenDTO[];
   currencies: ProjectConfigCurrencyDTO[];
+  languages: ProjectConfigLanguageDTO[];
 }
 
 export interface DepositSummaryResponseDTO {

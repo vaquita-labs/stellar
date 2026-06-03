@@ -122,6 +122,9 @@ model Config {
   // Fiat display currencies offered in the UI (Preferences page). Each entry is
   // `{ id, label, hint? }`, e.g. `{ "id": "usd", "label": "USD", "hint": "US Dollar" }`.
   currencies            Json     @default("[]")
+  // UI languages offered in the Preferences page. Each entry is
+  // `{ id, label, hint? }`, e.g. `{ "id": "en", "label": "English", "hint": "United States" }`.
+  languages             Json     @default("[]")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
