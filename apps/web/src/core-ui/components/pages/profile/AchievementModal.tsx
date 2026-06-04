@@ -1,10 +1,9 @@
 'use client';
 
-import { clientEnv } from '@/core-ui/config/clientEnv';
 import { Modal, toast } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FiShare2, FiX } from 'react-icons/fi';
 import { useClaimedAchievements, useIsMobile, useMintBadge, useMintedBadges, useProfileRewards } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
@@ -40,18 +39,6 @@ interface AchievementModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-/** Mocked reward table — backend will return the real amount per achievement. */
-const TIER_REWARD: Record<string, number> = {
-  Bronze: 25,
-  Silver: 50,
-  Gold: 100,
-  Diamond: 250,
-  Founder: 500,
-};
-
-const rewardFor = (achievement: AchievementDetail): number =>
-  (achievement.tier ? TIER_REWARD[achievement.tier] : undefined) ?? 25;
-
 const formatDate = (iso?: string) => {
   if (!iso) return '';
   const d = new Date(iso);
@@ -61,7 +48,7 @@ const formatDate = (iso?: string) => {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-type Phase = 'detail' | 'claiming' | 'reward' | 'minting' | 'minted';
+type Phase = 'detail' | 'reward' | 'minting' | 'minted';
 
 /* ------------------------------------------------------------------ */
 /* Blinking-dots loader                                                */
@@ -86,44 +73,34 @@ function VaquitaDots() {
 /* Modal                                                               */
 /* ------------------------------------------------------------------ */
 
-export function AchievementModal({
-  achievement,
-  unlocked = false,
-  open,
-  onOpenChange,
-}: AchievementModalProps) {
-  const { isClaimed, claim } = useClaimedAchievements();
+export function AchievementModal({ achievement, unlocked = false, open, onOpenChange }: AchievementModalProps) {
+  const { isClaimed } = useClaimedAchievements();
   const { isMinted } = useMintedBadges();
   const mintBadgeMutation = useMintBadge();
-  const { network, walletAddress } = useConfigStore();
-  const baseUrl = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
+  const { network } = useConfigStore();
   const { data: rewardsData } = useProfileRewards();
   // Drives whether we render the full-screen bottom-sheet (phone-sized) or
   // the compact centered dialog (everything wider than the Tailwind `sm`
   // breakpoint). Server-render returns `false`, matching the desktop shell
   // we ship into, so the hydration pass doesn't flicker.
   const isMobile = useIsMobile();
-  // Visual-only running tally so the balance ticks up the moment a claim
-  // completes (the real `useProfileRewards` query refetches in the background).
-  const baseGoldCoins =
-    rewardsData?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
-  const [bonusGold, setBonusGold] = useState(0);
-  const goldCoins = baseGoldCoins + bonusGold;
+  // The coin balance comes straight from the server query; claiming
+  // invalidates `profile-rewards`, so it refetches and ticks up on its own.
+  const goldCoins = rewardsData?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
   const [phase, setPhase] = useState<Phase>('detail');
   const [sharing, setSharing] = useState(false);
   const [mintTxHash, setMintTxHash] = useState<string | null>(null);
-  // True when the user pressed "Mint Badge On-Chain" and the reward phase
-  // should flow into minting rather than back to the detail view.
-  const [mintFlowPending, setMintFlowPending] = useState(false);
+  // Real coin reward returned by the mint flow's off-chain claim step; drives
+  // the "You earned N coins!" reveal shown after a successful mint.
+  const [coinReward, setCoinReward] = useState(0);
 
   // Reset to the detail phase every time the modal opens so a previous
   // claim-flow doesn't leak into the next achievement view.
   useEffect(() => {
     if (open) {
       setPhase('detail');
-      setBonusGold(0);
       setMintTxHash(null);
-      setMintFlowPending(false);
+      setCoinReward(0);
       mintBadgeMutation.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,14 +109,16 @@ export function AchievementModal({
   // Fire the mint mutation synchronously from the user gesture. Bailing on
   // `isPending` keeps a double-click (or any stray re-trigger) from spawning
   // a second Freighter popup — useMutation does NOT dedupe in-flight calls
-  // on its own.
+  // on its own. On success we reveal the earned coins, then the on-chain
+  // confirmation screen.
   const triggerMint = () => {
     if (!achievement || mintBadgeMutation.isPending) return;
     setPhase('minting');
     mintBadgeMutation.mutate(achievement.id, {
-      onSuccess: ({ hash }) => {
+      onSuccess: ({ hash, coinReward }) => {
         setMintTxHash(hash);
-        setPhase('minted');
+        setCoinReward(coinReward);
+        setPhase('reward');
       },
       onError: (err) => {
         toast.danger('Mint failed', { description: err.message });
@@ -148,7 +127,6 @@ export function AchievementModal({
     });
   };
 
-  const reward = useMemo(() => (achievement ? rewardFor(achievement) : 0), [achievement]);
   const claimed = !!achievement && isClaimed(achievement.id);
 
   if (!achievement) return null;
@@ -157,57 +135,13 @@ export function AchievementModal({
     ? Math.min(100, Math.round((achievement.progress.current / achievement.progress.target) * 100))
     : null;
 
-  // Claim-only flow (no badge contract configured on this network).
-  const handleClaim = async () => {
-    setPhase('claiming');
-    try {
-      const result = await claim(achievement.id);
-      setBonusGold((v) => v + (result?.coinReward ?? reward));
-      setPhase('reward');
-    } catch (err) {
-      const message = (err as Error)?.message ?? 'Unknown error';
-      toast.danger('Could not claim award', { description: message });
-      setPhase('detail');
-    }
-  };
+  // Badges are always minted on-chain — there is no off-chain-only path. The
+  // mint flow (useMintBadge) performs the off-chain reward claim as its first
+  // step, then signs and mints; the reward reveal runs on success.
+  const handleClaim = () => triggerMint();
 
-  // Unified mint flow: claim off-chain first, then show coins, then Pollar.
-  const handleMintClick = async () => {
-    if (!achievement) return;
-    setMintFlowPending(true);
-    setPhase('claiming');
-    try {
-      const res = await fetch(
-        `${baseUrl}/profile/wallet/${encodeURIComponent(walletAddress)}/achievements/${encodeURIComponent(achievement.id)}/claim`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' } },
-      );
-      if (!res.ok && res.status !== 409) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.message ?? `Failed to claim (${res.status})`);
-      }
-      if (res.status === 409) {
-        // Already claimed — skip coin animation, go straight to Pollar prompt
-        triggerMint();
-      } else {
-        const body = await res.json().catch(() => null);
-        const coinReward: number = body?.data?.coinReward ?? reward;
-        setBonusGold((v) => v + coinReward);
-        setPhase('reward');
-      }
-    } catch (err) {
-      setMintFlowPending(false);
-      toast.danger('Could not start mint', { description: (err as Error)?.message ?? 'Unknown error' });
-      setPhase('detail');
-    }
-  };
-
-  const handleContinue = () => {
-    if (mintFlowPending) {
-      triggerMint();
-    } else {
-      setPhase('detail');
-    }
-  };
+  // From the reward reveal, advance to the on-chain confirmation screen.
+  const handleContinue = () => setPhase('minted');
 
   const shareText = `I just unlocked "${achievement.title}" on Vaquita 🐮`;
 
@@ -222,8 +156,7 @@ export function AchievementModal({
    * origin during SSR so the URL is always absolute.
    */
   const buildShareUrl = (): string => {
-    const origin =
-      typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
     const qs = new URLSearchParams();
     if (MOCK_USERNAME) qs.set('u', MOCK_USERNAME);
     if (achievement.date) qs.set('date', achievement.date);
@@ -264,10 +197,7 @@ export function AchievementModal({
       const err = error as { name?: string; message?: string };
       const name = err?.name ?? '';
       const message = (err?.message ?? '').toLowerCase();
-      const isCancel =
-        name === 'AbortError' ||
-        message.includes('abort') ||
-        message.includes('cancel'); // catches "canceled" and "cancelled"
+      const isCancel = name === 'AbortError' || message.includes('abort') || message.includes('cancel'); // catches "canceled" and "cancelled"
       if (!isCancel) {
         toast.danger('Could not share', { description: err?.message ?? 'Unknown error' });
       }
@@ -275,31 +205,6 @@ export function AchievementModal({
       setSharing(false);
     }
   };
-
-  /* ------------------------------------------------------------------ */
-  /* Phase: claiming                                                     */
-  /* ------------------------------------------------------------------ */
-  const renderClaiming = () => (
-    <motion.div
-      key="claiming"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="flex-1 flex flex-col items-center justify-center gap-6 px-6"
-    >
-      <div className="relative h-32 w-32 opacity-90">
-        <Image
-          src={achievement.icon}
-          alt=""
-          fill
-          sizes="128px"
-          className="object-contain grayscale-[40%] animate-pulse"
-        />
-      </div>
-      <VaquitaDots />
-      <p className="text-sm font-bold uppercase tracking-wider text-gray-500">Claiming reward</p>
-    </motion.div>
-  );
 
   /* ------------------------------------------------------------------ */
   /* Phase: reward reveal                                                */
@@ -324,13 +229,7 @@ export function AchievementModal({
             className="absolute inset-0 rounded-full blur-2xl opacity-60"
             style={{ background: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)' }}
           />
-          <Image
-            src="/icons/global/coin.png"
-            alt=""
-            width={160}
-            height={160}
-            className="relative drop-shadow-xl"
-          />
+          <Image src="/icons/global/coin.png" alt="" width={160} height={160} className="relative drop-shadow-xl" />
         </motion.div>
         <motion.h2
           initial={{ y: 12, opacity: 0 }}
@@ -338,7 +237,7 @@ export function AchievementModal({
           transition={{ delay: 0.1 }}
           className="text-2xl sm:text-3xl font-extrabold text-black text-center"
         >
-          You earned {reward} coins!
+          You earned {coinReward} coins!
         </motion.h2>
         <motion.p
           initial={{ y: 12, opacity: 0 }}
@@ -374,13 +273,7 @@ export function AchievementModal({
       className="flex-1 flex flex-col items-center justify-center gap-6 px-6"
     >
       <div className="relative h-32 w-32">
-        <Image
-          src={achievement.icon}
-          alt=""
-          fill
-          sizes="128px"
-          className="object-contain grayscale animate-pulse"
-        />
+        <Image src={achievement.icon} alt="" fill sizes="128px" className="object-contain grayscale animate-pulse" />
       </div>
       <VaquitaDots />
       <p className="text-sm font-bold uppercase tracking-wider text-gray-500">Waiting for wallet…</p>
@@ -392,12 +285,8 @@ export function AchievementModal({
   /* ------------------------------------------------------------------ */
   const renderMinted = () => {
     const explorerNetwork = network?.type === 'mainnet' ? 'mainnet' : 'testnet';
-    const explorerUrl = mintTxHash
-      ? `https://stellar.expert/explorer/${explorerNetwork}/tx/${mintTxHash}`
-      : null;
-    const shortHash = mintTxHash
-      ? `${mintTxHash.slice(0, 6)}…${mintTxHash.slice(-4)}`
-      : null;
+    const explorerUrl = mintTxHash ? `https://stellar.expert/explorer/${explorerNetwork}/tx/${mintTxHash}` : null;
+    const shortHash = mintTxHash ? `${mintTxHash.slice(0, 6)}…${mintTxHash.slice(-4)}` : null;
 
     return (
       <motion.div
@@ -468,11 +357,7 @@ export function AchievementModal({
   /* Phase: detail                                                       */
   /* ------------------------------------------------------------------ */
   const renderDetail = () => {
-    const hasBadgesContract = !!network?.badgesContractAddress;
-    // Claim-only: no on-chain badge contract configured.
-    const canClaim = unlocked && !claimed && !hasBadgesContract;
-    // Unified mint: single button covers both the off-chain claim and on-chain mint.
-    const canMintUnified = ((unlocked && !claimed) || (claimed && !isMinted(achievement.id))) && hasBadgesContract;
+    const canClaim = unlocked && !claimed && !!network?.badgesContractAddress;
     return (
       <motion.div
         key="detail"
@@ -494,8 +379,7 @@ export function AchievementModal({
               aria-hidden
               className="absolute inset-6 rounded-full blur-2xl opacity-55"
               style={{
-                background:
-                  achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
+                background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
               }}
             />
             <Image
@@ -503,9 +387,7 @@ export function AchievementModal({
               alt={achievement.title}
               fill
               sizes="(min-width: 640px) 192px, 160px"
-              className={`relative object-contain drop-shadow-2xl ${
-                unlocked ? '' : 'grayscale opacity-70'
-              }`}
+              className={`relative object-contain drop-shadow-2xl ${unlocked ? '' : 'grayscale opacity-70'}`}
             />
           </motion.div>
 
@@ -520,9 +402,7 @@ export function AchievementModal({
 
           <div className="text-center max-w-md flex flex-col items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-extrabold text-black">{achievement.title}</h2>
-            <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-              {achievement.description}
-            </p>
+            <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">{achievement.description}</p>
           </div>
 
           {progressPct !== null && !claimed && (
@@ -545,28 +425,15 @@ export function AchievementModal({
           )}
         </div>
 
-        {/* Bottom CTA — only when there's something actionable. */}
-        {(canClaim || canMintUnified) && (
+        {canClaim && (
           <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
-            {canClaim && (
-              <button
-                type="button"
-                onClick={handleClaim}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-              >
-                Claim award
-              </button>
-            )}
-            {canMintUnified && (
-              <button
-                type="button"
-                onClick={claimed ? triggerMint : () => { void handleMintClick(); }}
-                disabled={mintBadgeMutation.isPending}
-                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-black hover:bg-black/80 text-white border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
-              >
-                Mint badge on-chain
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleClaim}
+              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+            >
+              Claim award
+            </button>
           </div>
         )}
       </motion.div>
@@ -620,11 +487,8 @@ export function AchievementModal({
               >
                 <FiX className="h-5 w-5" />
               </button>
-              <span
-                className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`}
-                aria-hidden
-              />
-              {phase === 'reward' || phase === 'claiming' || phase === 'minting' ? (
+              <span className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`} aria-hidden />
+              {phase === 'reward' || phase === 'minting' ? (
                 // Duolingo-style coin balance — only meaningful on the reward
                 // reveal (and the loading step into it), so we mount it there
                 // exclusively. Animates in once the bonus has landed.
@@ -636,13 +500,7 @@ export function AchievementModal({
                   className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white border border-black border-b-2 px-3 text-black"
                   aria-label={`${goldCoins} gold coins`}
                 >
-                  <Image
-                    src="/icons/global/coin.png"
-                    alt=""
-                    width={18}
-                    height={18}
-                    className="object-contain"
-                  />
+                  <Image src="/icons/global/coin.png" alt="" width={18} height={18} className="object-contain" />
                   <span className="text-sm font-extrabold tabular-nums">
                     {Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
@@ -663,7 +521,6 @@ export function AchievementModal({
             </div>
 
             <AnimatePresence mode="wait" initial={false}>
-              {phase === 'claiming' && renderClaiming()}
               {phase === 'reward' && renderReward()}
               {phase === 'minting' && renderMinting()}
               {phase === 'minted' && renderMinted()}
