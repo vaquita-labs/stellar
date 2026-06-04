@@ -30,7 +30,7 @@ router.get('/rank', async (req, res) => {
   req.log.info({ wallet }, 'GET /leaderboard/rank');
 
   try {
-    const cycleId = getLastClosedCycleId();
+    const cycleId = await getLastClosedCycleId();
     const rank = await getLeaderboardRankForWallet(wallet, cycleId);
     return sendSuccess(res, { rank, cycleId }, '');
   } catch (err: any) {

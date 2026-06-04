@@ -56,7 +56,7 @@ model BadgeClaim {
   walletAddress   String    @map("wallet_address")
   badgeType       String    @map("badge_type")
   cycleId         Int       @default(0) @map("cycle_id")
-  expiry          DateTime  @db.Timestamptz(6)
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(6)
   signature       String
   transactionHash String?   @map("transaction_hash")
   supersededAt    DateTime? @map("superseded_at") @db.Timestamptz(6)
@@ -119,6 +119,10 @@ model Config {
   networkName           String   @map("network_name") @db.VarChar(50)
   networkPassphrase     String?  @map("network_passphrase")
   badgesContractAddress String?  @map("badges_contract_address")
+  // Fixed leaderboard cycle duration in milliseconds. `null` = production
+  // calendar-month cycles; a positive value enables fixed-duration test cycles.
+  // Replaces the old CYCLE_DURATION_MS env var.
+  cycleDurationMs       Int?     @map("cycle_duration_ms")
   // Fiat display currencies offered in the UI (Preferences page). Each entry is
   // `{ id, label, hint? }`, e.g. `{ "id": "usd", "label": "USD", "hint": "US Dollar" }`.
   currencies            Json     @default("[]")

@@ -301,7 +301,7 @@ router.post('/wallet/:walletAddress/achievements/:key/claim', async (req, res) =
 
   if (achievementDoc.unlock_type === 'cycle_rank' || achievementDoc.cycle_scoped) {
     // Leaderboard badges: verify rank against the last closed cycle.
-    const cycleId = getLastClosedCycleId();
+    const cycleId = await getLastClosedCycleId();
     const rank = await getLeaderboardRankForWallet(walletAddress, cycleId);
     const exactRank: Record<string, number> = { 'first-place': 1, 'second-place': 2 };
     const eligible =

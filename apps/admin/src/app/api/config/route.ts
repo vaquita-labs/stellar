@@ -37,6 +37,7 @@ const emptyConfig = {
   origins: [] as string[],
   networkPassphrase: null,
   badgesContractAddress: null,
+  cycleDurationMs: null as number | null,
   currencies: [] as Currency[],
   languages: [] as Language[],
   createdAt: null,
@@ -71,6 +72,15 @@ const updateSchema = z.object({
   origins: z.array(z.string().trim().min(1)).optional(),
   networkPassphrase: nullableStr(10_000),
   badgesContractAddress: nullableStr(10_000),
+  // Fixed leaderboard cycle duration in ms. null/blank clears it (production
+  // monthly cycles). Always resolves to number|null so the full-payload save
+  // writes it every time, like the nullableStr fields.
+  cycleDurationMs: z
+    .number()
+    .int()
+    .positive()
+    .nullish()
+    .transform((v) => (typeof v === 'number' && v > 0 ? v : null)),
   currencies: z.array(optionSchema).optional(),
   languages: z.array(optionSchema).optional(),
 });
@@ -119,6 +129,7 @@ export async function PATCH(req: NextRequest) {
         origins: data.origins ?? [],
         networkPassphrase: data.networkPassphrase ?? null,
         badgesContractAddress: data.badgesContractAddress ?? null,
+        cycleDurationMs: data.cycleDurationMs ?? null,
         currencies: data.currencies ?? [],
         languages: data.languages ?? [],
       },
@@ -138,6 +149,7 @@ export async function PATCH(req: NextRequest) {
       ...(data.languages !== undefined ? { languages: data.languages } : {}),
       networkPassphrase: data.networkPassphrase,
       badgesContractAddress: data.badgesContractAddress,
+      cycleDurationMs: data.cycleDurationMs,
     },
   });
   return NextResponse.json({ data: { config } });

@@ -151,7 +151,7 @@ router.get(
       return res.status(403).json({ status: 'error', message: 'Achievement not yet earned. Complete the challenge first.' });
     }
 
-    const cycleId = achievement.cycleScoped ? getLastClosedCycleId() : 0;
+    const cycleId = achievement.cycleScoped ? await getLastClosedCycleId() : 0;
 
     // Return existing unexpired active claim if present
     const existing = await getActiveBadgeClaim(wallet, badgeType, cycleId);
