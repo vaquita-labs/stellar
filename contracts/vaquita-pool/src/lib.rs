@@ -193,6 +193,7 @@ impl VaquitaPool {
         };
 
         let now = env.ledger().timestamp();
+        let matured = now >= position.finalization_time;
         let mut amount_to_transfer = gross;
         let mut reward: i128 = 0;
         let mut early_fee_amount: i128 = 0;
@@ -203,7 +204,7 @@ impl VaquitaPool {
             .get(&DataKey::Periods(position.lock_period))
             .ok_or(VaquitaPoolError::PeriodDataNotFound)?;
 
-        if now < position.finalization_time {
+        if !matured {
             let early_fee: i128 = env
                 .storage()
                 .instance()
@@ -261,6 +262,7 @@ impl VaquitaPool {
             amount_to_transfer,
             reward,
             early_fee_amount,
+            matured,
         );
         Ok(())
     }

@@ -62,12 +62,13 @@ ORDER BY hour;
 
 -- ============================================================
 -- PANEL 3 — COMPLETED CYCLES  (positions held to maturity)   Visualization: Counter
---   A cycle "completes" when a position reaches maturity and is withdrawn with
---   no early-withdrawal penalty (early_fee = 0). Early exits are excluded.
---   Want EVERY closed position instead? Drop the early_fee filter.
+--   A cycle "completes" when a position is withdrawn at/after maturity. The
+--   contract sets `matured` on the withdraw event, so filter on that directly.
+--   (Don't use early_fee = 0 — that's also true for an early exit that earned
+--    no interest, so it would over-count.)
 -- ============================================================
 WITH ev AS (
-  SELECT environment, event_name, caller, deposit_id, amount, reward, early_fee, ledger, ledger_closed_at
+  SELECT environment, event_name, matured
   FROM (
     SELECT *, row_number() OVER (PARTITION BY event_id ORDER BY ledger) AS rn
     FROM dune.<handle>.vaquita_events
@@ -76,7 +77,7 @@ WITH ev AS (
 )
 SELECT count(*) AS completed_cycles
 FROM ev
-WHERE event_name = 'withdraw' AND early_fee = 0;
+WHERE event_name = 'withdraw' AND matured;
 
 
 -- ============================================================
