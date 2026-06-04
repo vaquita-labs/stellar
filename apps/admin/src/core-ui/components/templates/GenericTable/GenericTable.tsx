@@ -9,6 +9,7 @@ import {
   TableContent,
   TableHeader,
   TableRow,
+  TableScrollContainer,
 } from '@heroui/react';
 import { Button, Input } from '@vaquita/ui';
 import { saveAs } from 'file-saver';
@@ -28,19 +29,21 @@ const getValue = (value: any) => {
   return { truncated: false, original: valueString, value: String(value) };
 };
 
-export function GenericTable({ rows, refetch, children }: GenericTableProps) {
+export function GenericTable({ rows, refetch, children, hiddenKeys = [] }: GenericTableProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedValue, setExpandedValue] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<{ key: string; value: string } | null>(null);
   const [sort, setSort] = useState<{ key: string; direction: 'asc' | 'desc' | null }>({ key: '', direction: null });
   const [searchTerm, setSearchTerm] = useState('');
+  // Columns shown in the table. Hidden keys stay in the row data (so `children`
+  // can read them) but are not rendered as their own columns.
   const keys = [
     ...new Set(
       Object.values(rows)
         .map((deposit) => Object.keys(deposit))
         .flat()
     ),
-  ];
+  ].filter((key) => !hiddenKeys.includes(key));
   const [filters, setFilters] = useState<Record<string, string>>({});
   const filteredData = useMemo(() => {
     const keys = [
@@ -136,6 +139,10 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
     ...keys.map((key): Column => ({ id: key, type: 'data' })),
     ...(children ? [{ id: '__action__', type: 'action' as const }] : []),
   ];
+
+  // react-aria's Table requires exactly one column to be the row header; mark
+  // the first data column (the select/action columns can't be it).
+  const rowHeaderKey = keys[0];
 
   const bodyItems = filteredData.map((row, index) => ({
     id: `${row.id?.value ?? ''}_${index}`,
@@ -263,7 +270,9 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
       <Modal.Backdrop isOpen={isOpen} onOpenChange={setIsOpen}>
         <Modal.Container scroll="inside">
           <Modal.Dialog>
-            <Modal.Header><Modal.Heading>Filtros</Modal.Heading></Modal.Header>
+            <Modal.Header>
+              <Modal.Heading>Filtros</Modal.Heading>
+            </Modal.Header>
             <Modal.Body
               className="flex flex-col gap-2"
               onKeyDown={(e) => {
@@ -292,31 +301,44 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
       </Modal.Backdrop>
 
       <Table className="w-full">
-        <TableContent aria-label="Tabla" style={{ tableLayout: 'auto' }}>
-          <TableHeader columns={columns}>
-            {(column) => <TableColumn id={column.id}>{renderHeaderCell(column)}</TableColumn>}
-          </TableHeader>
-          <TableBody items={bodyItems} renderEmptyState={() => 'No hay datos'}>
-            {(item) => (
-              <TableRow
-                id={item.id}
-                columns={columns}
-                className={
-                  (highlight && item.row[highlight.key]?.value === highlight.value ? 'bg-yellow-100' : '') +
-                  (sort.key && alterColor[item.row[sort?.key]?.value] % 2 === 0 ? 'bg-blue-50' : '')
-                }
-              >
-                {(column) => <TableCell>{renderBodyCell(item.row, column.id)}</TableCell>}
-              </TableRow>
-            )}
-          </TableBody>
-        </TableContent>
+        <TableScrollContainer>
+          <TableContent aria-label="Tabla" style={{ tableLayout: 'auto' }}>
+            <TableHeader columns={columns}>
+              {(column) => (
+                <TableColumn id={column.id} isRowHeader={column.id === rowHeaderKey}>
+                  {renderHeaderCell(column)}
+                </TableColumn>
+              )}
+            </TableHeader>
+            <TableBody items={bodyItems} renderEmptyState={() => 'No hay datos'}>
+              {(item) => (
+                <TableRow
+                  id={item.id}
+                  columns={columns}
+                  className={
+                    (highlight && item.row[highlight.key]?.value === highlight.value ? 'bg-yellow-100' : '') +
+                    (sort.key && alterColor[item.row[sort?.key]?.value] % 2 === 0 ? 'bg-blue-50' : '')
+                  }
+                >
+                  {(column) => <TableCell>{renderBodyCell(item.row, column.id)}</TableCell>}
+                </TableRow>
+              )}
+            </TableBody>
+          </TableContent>
+        </TableScrollContainer>
       </Table>
 
-      <Modal.Backdrop isOpen={!!expandedValue} onOpenChange={(o) => { if (!o) setExpandedValue(null); }}>
+      <Modal.Backdrop
+        isOpen={!!expandedValue}
+        onOpenChange={(o) => {
+          if (!o) setExpandedValue(null);
+        }}
+      >
         <Modal.Container scroll="inside">
           <Modal.Dialog>
-            <Modal.Header><Modal.Heading>Valor completo</Modal.Heading></Modal.Header>
+            <Modal.Header>
+              <Modal.Heading>Valor completo</Modal.Heading>
+            </Modal.Header>
             <Modal.Body>
               <pre className="whitespace-pre-wrap break-all text-sm">{expandedValue}</pre>
             </Modal.Body>

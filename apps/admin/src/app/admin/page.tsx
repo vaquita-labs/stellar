@@ -28,6 +28,11 @@ const sections: { href: string; title: string; description: string }[] = [
     title: 'Listening',
     description: 'Live on-chain event listener and transactions.',
   },
+  {
+    href: '/admin/contract-events',
+    title: 'Review contract',
+    description: 'Scan the pool contract for deposit/withdraw events in a date range.',
+  },
 ];
 
 export default function Page() {
