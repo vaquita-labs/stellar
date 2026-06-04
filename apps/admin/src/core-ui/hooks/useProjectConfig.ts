@@ -27,6 +27,7 @@ export interface ProjectConfig {
   origins: string[];
   networkPassphrase: string | null;
   badgesContractAddress: string | null;
+  cycleDurationMs: number | null;
   currencies: Currency[];
   languages: Language[];
   createdAt: string | null;
@@ -39,6 +40,7 @@ export interface ProjectConfigPayload {
   origins?: string[];
   networkPassphrase?: string | null;
   badgesContractAddress?: string | null;
+  cycleDurationMs?: number | null;
   currencies?: Currency[];
   languages?: Language[];
 }

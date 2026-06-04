@@ -6,7 +6,7 @@ const toBadgeClaimRecord = (c: PrismaBadgeClaim): BadgeClaimRecord => ({
   wallet_address: c.walletAddress,
   badge_type: c.badgeType,
   cycle_id: c.cycleId,
-  expiry: c.expiry.toISOString(),
+  expiry: c.expiresAt.toISOString(),
   signature: c.signature,
   created_at: c.createdAt.toISOString(),
   superseded_at: c.supersededAt ? c.supersededAt.toISOString() : null,
@@ -159,7 +159,7 @@ export async function storeBadgeClaim(claim: {
       walletAddress: claim.walletAddress,
       badgeType: claim.badgeType,
       cycleId: claim.cycleId,
-      expiry: new Date(claim.expiry * 1000),
+      expiresAt: new Date(claim.expiry * 1000),
       signature: claim.signature,
     },
   });

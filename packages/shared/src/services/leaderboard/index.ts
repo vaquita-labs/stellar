@@ -5,14 +5,14 @@ import { prisma } from '@vaquita/db';
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the fixed cycle duration in milliseconds from CYCLE_DURATION_MS env
- * var, or null in production (calendar month cycles).
+ * Returns the fixed cycle duration in milliseconds from the singleton `config`
+ * row (`cycle_duration_ms`), or null in production (calendar month cycles).
+ * Sourced from the DB so it can be changed at runtime from the admin.
  */
-export function getCycleDurationMs(): number | null {
-  const raw = process.env.CYCLE_DURATION_MS;
-  if (!raw) return null;
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : null;
+export async function getCycleDurationMs(): Promise<number | null> {
+  const config = await prisma.config.findFirst({ select: { cycleDurationMs: true } });
+  const n = config?.cycleDurationMs;
+  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -23,9 +23,9 @@ export function getCycleDurationMs(): number | null {
  * Converts a cycle ID to UTC start/end millisecond timestamps.
  *
  * - 6-digit YYYYMM → production monthly cycle
- * - 10-digit Unix epoch seconds → test fixed-duration cycle (requires CYCLE_DURATION_MS)
+ * - 10-digit Unix epoch seconds → test fixed-duration cycle (requires cycle_duration_ms)
  */
-export function cycleIdToBoundaries(cycleId: number): { cycleStart: number; cycleEnd: number } {
+export async function cycleIdToBoundaries(cycleId: number): Promise<{ cycleStart: number; cycleEnd: number }> {
   if (cycleId < 1_000_000_000) {
     // YYYYMM format
     const year = Math.floor(cycleId / 100);
@@ -35,8 +35,8 @@ export function cycleIdToBoundaries(cycleId: number): { cycleStart: number; cycl
       cycleEnd:   Date.UTC(year, month,     1),
     };
   }
-  // Epoch-seconds: end = start + CYCLE_DURATION_MS
-  const durationMs = getCycleDurationMs() ?? 30 * 24 * 60 * 60 * 1000;
+  // Epoch-seconds: end = start + cycle_duration_ms
+  const durationMs = (await getCycleDurationMs()) ?? 30 * 24 * 60 * 60 * 1000;
   const cycleStart = cycleId * 1000;
   return { cycleStart, cycleEnd: cycleStart + durationMs };
 }
@@ -44,12 +44,12 @@ export function cycleIdToBoundaries(cycleId: number): { cycleStart: number; cycl
 /**
  * Returns the cycle ID of the last fully closed cycle.
  *
- * - Without CYCLE_DURATION_MS: previous calendar month as YYYYMM.
- * - With CYCLE_DURATION_MS: the start (epoch-seconds) of the previous
+ * - Without cycle_duration_ms: previous calendar month as YYYYMM.
+ * - With cycle_duration_ms: the start (epoch-seconds) of the previous
  *   completed fixed-duration cycle.
  */
-export function getLastClosedCycleId(): number {
-  const durationMs = getCycleDurationMs();
+export async function getLastClosedCycleId(): Promise<number> {
+  const durationMs = await getCycleDurationMs();
   if (!durationMs) {
     const d = new Date();
     const year  = d.getUTCMonth() === 0 ? d.getUTCFullYear() - 1 : d.getUTCFullYear();
@@ -85,7 +85,7 @@ export async function getLeaderboard(
   // back-compat with existing callers.
   _networkId?: number,
 ): Promise<LeaderboardRow[]> {
-  const { cycleStart, cycleEnd: rawEnd } = cycleIdToBoundaries(cycleId);
+  const { cycleStart, cycleEnd: rawEnd } = await cycleIdToBoundaries(cycleId);
   const now = Date.now();
   const cycleEnd = cycleId === 0 ? now : rawEnd;
 

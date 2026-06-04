@@ -26,6 +26,8 @@ type FormState = {
   origins: string;
   networkPassphrase: string;
   badgesContractAddress: string;
+  // Held as a string while editing; parsed to number|null on submit.
+  cycleDurationMs: string;
   // Edited inline as a list of rows; each blank-hint row stores hint: ''.
   currencies: Option[];
   languages: Option[];
@@ -36,6 +38,7 @@ const emptyForm = (): FormState => ({
   origins: '',
   networkPassphrase: '',
   badgesContractAddress: '',
+  cycleDurationMs: '',
   currencies: [],
   languages: [],
 });
@@ -49,6 +52,7 @@ const formFromConfig = (c: ProjectConfig): FormState => ({
   origins: (c.origins ?? []).join('\n'),
   networkPassphrase: c.networkPassphrase ?? '',
   badgesContractAddress: c.badgesContractAddress ?? '',
+  cycleDurationMs: c.cycleDurationMs != null ? String(c.cycleDurationMs) : '',
   currencies: toRows(c.currencies),
   languages: toRows(c.languages),
 });
@@ -192,6 +196,7 @@ export default function Page() {
       .filter(Boolean),
     networkPassphrase: orNull(form.networkPassphrase),
     badgesContractAddress: orNull(form.badgesContractAddress),
+    cycleDurationMs: form.cycleDurationMs.trim() ? Number(form.cycleDurationMs.trim()) : null,
     currencies: buildOptions(form.currencies),
     languages: buildOptions(form.languages),
   });
@@ -213,6 +218,13 @@ export default function Page() {
     if (form.networkName.trim().length > 50) {
       addDangerToast('Invalid network name', 'Network name must be 50 characters or fewer.');
       return;
+    }
+    if (form.cycleDurationMs.trim()) {
+      const ms = Number(form.cycleDurationMs.trim());
+      if (!Number.isInteger(ms) || ms <= 0) {
+        addDangerToast('Invalid cycle duration', 'Cycle duration must be a positive whole number of milliseconds, or empty.');
+        return;
+      }
     }
     const currencyError = validateOptions(form.currencies, 'currency');
     if (currencyError) {
@@ -282,6 +294,14 @@ export default function Page() {
             placeholder="C..."
             value={form.badgesContractAddress}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('badgesContractAddress', e.target.value)}
+          />
+
+          <Input
+            label="Cycle duration (ms)"
+            type="number"
+            placeholder="Leave empty for monthly cycles (production). e.g. 900000 = 15 min"
+            value={form.cycleDurationMs}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('cycleDurationMs', e.target.value)}
           />
 
           <Textarea
