@@ -115,6 +115,8 @@ fn deposit_event_payload() {
 
 #[test]
 fn withdraw_event_payload() {
+    // Early withdrawal that earned no interest: early_fee == 0 here too, so the
+    // `matured` flag (false) is what distinguishes it from a completed cycle.
     let e = Env::default();
     let (_, alice, _, pool, _, tok) = setup(&e);
     tok.mint(&alice, &1_000_000i128);
@@ -124,7 +126,23 @@ fn withdraw_event_payload() {
     let ev = WithdrawEvent::try_from_val(&e, &last_val(&e)).unwrap();
     assert_eq!(ev.deposit_id, dep);
     assert_eq!(ev.reward, 0);
-    assert_eq!(ev.early_fee, 0); // no yield → no fee
+    assert_eq!(ev.early_fee, 0);
+    assert!(!ev.matured, "withdrawn before finalization_time → not matured");
+}
+
+#[test]
+fn withdraw_event_matured_flag() {
+    // Held to maturity: matured == true even though early_fee is 0.
+    let e = Env::default();
+    let (_, alice, _, pool, _, tok) = setup(&e);
+    tok.mint(&alice, &1_000_000i128);
+    let dep = String::from_str(&e, "wm");
+    pool.deposit(&alice, &dep, &1_000_000i128, &LOCK_7D);
+    e.jump_time(LOCK_7D + 1);
+    pool.withdraw(&alice, &dep);
+    let ev = WithdrawEvent::try_from_val(&e, &last_val(&e)).unwrap();
+    assert_eq!(ev.early_fee, 0);
+    assert!(ev.matured, "withdrawn at/after finalization_time → matured");
 }
 
 // ---- EarlyWithdrawalFeeUpdatedEvent ----

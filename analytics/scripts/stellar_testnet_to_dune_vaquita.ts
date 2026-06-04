@@ -9,7 +9,7 @@
  *
  * Tailored to the VaquitaPool contract's events:
  *   deposit   topic ("deposit", caller)   data { deposit_id, token, amount, shares }
- *   withdraw  topic ("withdraw", caller)   data { deposit_id, token, amount, reward, early_fee }
+ *   withdraw  topic ("withdraw", caller)   data { deposit_id, token, amount, reward, early_fee, matured }
  *   fees_wth  topic ("fees_wth",)          data { admin, amount }      (penalties swept)
  *   (plus init, rewards, fee_upd, lp_add, lp_rm, upg_*, etc. — captured generically)
  *
@@ -141,6 +141,7 @@ const COLUMNS = [
   "amount",
   "reward",
   "early_fee",
+  "matured",
   "topics_json",
   "value_json",
 ] as const;
@@ -159,7 +160,8 @@ const SCHEMA: SchemaColumn[] = [
   { name: "deposit_id", type: "varchar", nullable: true }, // data.deposit_id (join key)
   { name: "amount", type: "double", nullable: true }, // deposit=principal, withdraw=payout, fees_wth=swept
   { name: "reward", type: "double", nullable: true }, // withdraw only
-  { name: "early_fee", type: "double", nullable: true }, // withdraw: penalty charged (0 if matured)
+  { name: "early_fee", type: "double", nullable: true }, // withdraw: penalty charged (also 0 if early w/ no interest)
+  { name: "matured", type: "boolean", nullable: true }, // withdraw: true = held to maturity (completed cycle)
   { name: "topics_json", type: "varchar", nullable: true },
   { name: "value_json", type: "varchar", nullable: true },
 ];
@@ -313,6 +315,7 @@ function flatten(events: StellarEvent[], environment: string): EventRow[] {
       amount: data.amount != null ? scaled(data.amount) : "",
       reward: data.reward != null ? scaled(data.reward) : "",
       early_fee: data.early_fee != null ? scaled(data.early_fee) : "",
+      matured: typeof data.matured === "boolean" ? String(data.matured) : "",
       topics_json: JSON.stringify(e.topicJson ?? e.topic ?? []),
       value_json: JSON.stringify(e.valueJson ?? e.value ?? null),
     };
