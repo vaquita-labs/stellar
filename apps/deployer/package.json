@@ -5,7 +5,7 @@
   "description": "Vaquita vault deployer: creates a DeFindex vault via REST API, signs the XDR locally, submits it, and writes VAULT_ID back to Doppler.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13"
   },
   "scripts": {
     "deploy:vault": "tsx src/index.ts",

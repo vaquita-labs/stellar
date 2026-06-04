@@ -18,7 +18,7 @@
     "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'pnpm-lock.yaml' -delete"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13"
   },
   "packageManager": "pnpm@11.5.0"
 }
