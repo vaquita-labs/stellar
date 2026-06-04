@@ -41,7 +41,7 @@ fn deploy(env: &Env) -> (Address, SigningKey, VaquitaBadgesClient<'_>) {
     let admin = Address::generate(env);
     let signing_key = generate_signing_key();
     let pk_bytes: BytesN<32> = BytesN::from_array(env, &signing_key.verifying_key().to_bytes());
-    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes));
+    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes, 172_800u64));
     let client = VaquitaBadgesClient::new(env, &contract_id);
     (contract_id, signing_key, client)
 }
@@ -143,7 +143,7 @@ fn pause_non_admin_rejected() {
     let admin = Address::generate(&env);
     let signing_key = generate_signing_key();
     let pk_bytes: BytesN<32> = BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
-    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes));
+    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes, 172_800u64));
     let client = VaquitaBadgesClient::new(&env, &contract_id);
 
     assert!(client.try_pause().is_err());
@@ -224,9 +224,73 @@ fn propose_upgrade_non_admin_rejected() {
     let admin = Address::generate(&env);
     let signing_key = generate_signing_key();
     let pk_bytes: BytesN<32> = BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
-    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes));
+    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes, 172_800u64));
     let client = VaquitaBadgesClient::new(&env, &contract_id);
 
     let fake_hash = BytesN::from_array(&env, &[4u8; 32]);
     assert!(client.try_propose_upgrade(&fake_hash).is_err());
+}
+
+// ---------- upgrade_timelock_secs ----------
+
+#[test]
+fn constructor_stores_upgrade_timelock_secs() {
+    // propose_upgrade uses the configured timelock to compute ready_at
+    let env = Env::default();
+    let timelock: u64 = 3_600; // 1 hour
+    env.cost_estimate().budget().reset_unlimited();
+    env.mock_all_auths_allowing_non_root_auth();
+    env.set_default_info();
+
+    let admin = Address::generate(&env);
+    let key = generate_signing_key();
+    let pk: BytesN<32> = BytesN::from_array(&env, &key.verifying_key().to_bytes());
+    let contract_id = env.register(VaquitaBadges, (admin, pk, timelock));
+    let client = VaquitaBadgesClient::new(&env, &contract_id);
+
+    let hash = BytesN::from_array(&env, &[1u8; 32]);
+    client.propose_upgrade(&hash);
+
+    // Executing immediately must fail — timelock not yet elapsed
+    let result = client.try_execute_upgrade();
+    assert_eq!(result, Err(Ok(BadgeError::UpgradeNotReady)));
+
+    // Jump exactly the configured timelock — no longer blocked by UpgradeNotReady
+    env.jump_time(timelock);
+    // execute_upgrade needs a real WASM; just confirm the timelock check passes
+    let result2 = client.try_execute_upgrade();
+    assert_ne!(result2, Err(Ok(BadgeError::UpgradeNotReady)));
+}
+
+#[test]
+fn update_upgrade_timelock_secs_takes_effect_on_next_propose() {
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+
+    // Lower timelock to 60 seconds
+    let new_timelock: u64 = 60;
+    client.update_upgrade_timelock_secs(&new_timelock);
+
+    let hash = BytesN::from_array(&env, &[5u8; 32]);
+    client.propose_upgrade(&hash);
+
+    // Jump only 60 seconds — timelock check should now pass
+    env.jump_time(new_timelock);
+    let result = client.try_execute_upgrade();
+    assert_ne!(result, Err(Ok(BadgeError::UpgradeNotReady)));
+}
+
+#[test]
+fn update_upgrade_timelock_secs_non_admin_rejected() {
+    let env = Env::default();
+    env.cost_estimate().budget().reset_unlimited();
+    env.set_default_info();
+
+    let admin = Address::generate(&env);
+    let key = generate_signing_key();
+    let pk: BytesN<32> = BytesN::from_array(&env, &key.verifying_key().to_bytes());
+    let contract_id = env.register(VaquitaBadges, (admin, pk, 172_800u64));
+    let client = VaquitaBadgesClient::new(&env, &contract_id);
+
+    assert!(client.try_update_upgrade_timelock_secs(&3_600u64).is_err());
 }

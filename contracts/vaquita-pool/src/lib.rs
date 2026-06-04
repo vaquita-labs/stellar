@@ -485,6 +485,15 @@ impl VaquitaPool {
         Ok(())
     }
 
+    pub fn update_upgrade_timelock_secs(
+        env: Env,
+        new_secs: u64,
+    ) -> Result<(), VaquitaPoolError> {
+        upgrade::update_upgrade_timelock_secs(&env, new_secs)?;
+        positions::extend_instance(&env);
+        Ok(())
+    }
+
     pub fn migrate(env: Env) -> Result<(), VaquitaPoolError> {
         admin::require_owner(&env)?;
         // v1: no-op — reserved for future version migrations

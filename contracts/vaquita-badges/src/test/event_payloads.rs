@@ -50,7 +50,7 @@ fn deploy(env: &Env) -> (Address, SigningKey, VaquitaBadgesClient<'_>) {
     let admin = Address::generate(env);
     let key = gen_key();
     let pk: BytesN<32> = BytesN::from_array(env, &key.verifying_key().to_bytes());
-    let id = env.register(VaquitaBadges, (admin, pk));
+    let id = env.register(VaquitaBadges, (admin, pk, 172_800u64));
     let client = VaquitaBadgesClient::new(env, &id);
     (id, key, client)
 }

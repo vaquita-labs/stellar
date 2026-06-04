@@ -297,3 +297,67 @@ fn non_admin_cannot_lock() {
     let result = pool.try_lock_upgrades_forever();
     assert!(result.is_err());
 }
+
+// ---- update_upgrade_timelock_secs ----
+
+#[test]
+fn update_upgrade_timelock_secs_takes_effect_on_next_propose() {
+    let e = Env::default();
+    let (_, pool) = deploy(&e);
+
+    // Lower timelock to 1 second
+    let new_timelock: u64 = 1;
+    pool.update_upgrade_timelock_secs(&new_timelock);
+
+    pool.propose_upgrade(&random_hash(&e));
+
+    // Jump only 1 second — should satisfy the new timelock
+    e.jump_time(new_timelock);
+    let result = pool.try_execute_upgrade();
+    assert_ne!(result, Err(Ok(VaquitaPoolError::UpgradeNotReady)));
+}
+
+#[test]
+fn update_upgrade_timelock_secs_does_not_affect_pending_proposal() {
+    // Changing the timelock after a proposal is pending does not alter the
+    // already-computed ready_at for that proposal.
+    let e = Env::default();
+    let (_, pool) = deploy(&e);
+
+    pool.propose_upgrade(&random_hash(&e));
+
+    // Reduce timelock to 0 AFTER proposing — pending ready_at was already set
+    pool.update_upgrade_timelock_secs(&0u64);
+
+    // Immediately try to execute — the original 48-hour ready_at still blocks it
+    let result = pool.try_execute_upgrade();
+    assert_eq!(result, Err(Ok(VaquitaPoolError::UpgradeNotReady)));
+}
+
+#[test]
+fn update_upgrade_timelock_secs_non_admin_rejected() {
+    let e = Env::default();
+    e.cost_estimate().budget().reset_unlimited();
+    e.set_default_info();
+
+    let admin = Address::generate(&e);
+    let usdc = e.register_stellar_asset_contract_v2(admin.clone());
+    let vault = e.register(
+        MockDeFindexVault,
+        MockDeFindexVaultArgs::__constructor(&usdc.address()),
+    );
+    let lp: Vec<u64> = Vec::from_array(&e, [LOCK_7D]);
+    let pool_id = e.register(
+        VaquitaPool,
+        (
+            admin.clone(),
+            usdc.address(),
+            vault,
+            lp,
+            0i128,
+            TIMELOCK_48H,
+        ),
+    );
+    let pool = VaquitaPoolClient::new(&e, &pool_id);
+    assert!(pool.try_update_upgrade_timelock_secs(&0u64).is_err());
+}

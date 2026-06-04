@@ -18,7 +18,12 @@ pub struct VaquitaBadges;
 
 #[contractimpl]
 impl VaquitaBadges {
-    pub fn __constructor(env: Env, admin: Address, signing_key: BytesN<32>) {
+    pub fn __constructor(
+        env: Env,
+        admin: Address,
+        signing_key: BytesN<32>,
+        upgrade_timelock_secs: u64,
+    ) {
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage()
             .instance()
@@ -29,6 +34,9 @@ impl VaquitaBadges {
         env.storage()
             .instance()
             .set(&DataKey::UpgradesLocked, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::UpgradeTimelockSecs, &upgrade_timelock_secs);
         storage::extend_instance(&env);
         events::emit_constructed(&env, admin, signing_key);
     }
@@ -216,6 +224,10 @@ impl VaquitaBadges {
 
     pub fn lock_upgrades_forever(env: Env) -> Result<(), BadgeError> {
         upgrade::lock_upgrades_forever(&env)
+    }
+
+    pub fn update_upgrade_timelock_secs(env: Env, new_secs: u64) -> Result<(), BadgeError> {
+        upgrade::update_upgrade_timelock_secs(&env, new_secs)
     }
 
     /// No-op for v1; reserved for post-upgrade state migration.

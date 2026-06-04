@@ -56,7 +56,7 @@ fn deploy(env: &Env) -> (Address, SigningKey, VaquitaBadgesClient<'_>) {
     let signing_key = generate_signing_key();
     let pk_bytes: BytesN<32> = BytesN::from_array(env, &signing_key.verifying_key().to_bytes());
 
-    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes));
+    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes, 172_800u64));
     let client = VaquitaBadgesClient::new(env, &contract_id);
 
     (contract_id, signing_key, client)
@@ -279,7 +279,7 @@ fn update_signing_key_non_admin_rejected() {
     let admin = Address::generate(&env);
     let signing_key = generate_signing_key();
     let pk_bytes: BytesN<32> = BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
-    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes));
+    let contract_id = env.register(VaquitaBadges, (admin.clone(), pk_bytes, 172_800u64));
     let client = VaquitaBadgesClient::new(&env, &contract_id);
 
     let new_pk: BytesN<32> = BytesN::from_array(&env, &generate_signing_key().verifying_key().to_bytes());

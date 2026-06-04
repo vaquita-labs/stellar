@@ -17,6 +17,7 @@ pub enum DataKey {
     Paused,
     Version,
     UpgradesLocked,
+    UpgradeTimelockSecs,
     PendingUpgradeHash,
     UpgradeReadyAt,
 }

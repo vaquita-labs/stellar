@@ -6,6 +6,7 @@ WASM      := $(CURDIR)/target/wasm32v1-none/release/vaquita_pool.wasm
 BADGES_DIR  := vaquita-badges
 BADGES_WASM := $(CURDIR)/target/wasm32v1-none/release/vaquita_badges.wasm
 BADGES_ADMIN ?= $(USER_ADDRESS)
+BADGES_UPGRADE_TIMELOCK_SECS ?= 60
 
 INVOKE_FEE ?= 10000000
 
@@ -38,6 +39,8 @@ build-badges:
 	cd $(BADGES_DIR) && stellar contract build
 	@ls -l $(BADGES_WASM)
 
+build-all: build build-badges
+
 deploy: build
 	stellar contract deploy \
 		--source $(SOURCE_ACCOUNT) \
@@ -69,11 +72,16 @@ cancel-upgrade:
 execute-upgrade:
 	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- execute_upgrade
 
+update-upgrade-timelock:
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
+	-- update_upgrade_timelock_secs --new_secs $(UPGRADE_TIMELOCK_SECS)
+
 deploy-badges: build-badges
 	stellar contract deploy --source $(SOURCE_ACCOUNT) --network $(NETWORK) --wasm $(BADGES_WASM) --alias vaquita_badges \
 	-- \
 	--admin $(BADGES_ADMIN) \
-	--signing_key $(BADGES_SIGNING_KEY)
+	--signing_key $(BADGES_SIGNING_KEY) \
+	--upgrade_timelock_secs $(BADGES_UPGRADE_TIMELOCK_SECS)
 
 pause-badges:
 	stellar contract invoke --id vaquita_badges --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- pause
@@ -90,6 +98,10 @@ cancel-upgrade-badges:
 
 execute-upgrade-badges:
 	stellar contract invoke --id vaquita_badges --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) -- execute_upgrade
+
+update-upgrade-timelock-badges:
+	stellar contract invoke --id vaquita_badges --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
+	-- update_upgrade_timelock_secs --new_secs $(BADGES_UPGRADE_TIMELOCK_SECS)
 
 deposit:
 	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
