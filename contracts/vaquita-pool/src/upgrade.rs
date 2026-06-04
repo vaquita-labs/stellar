@@ -123,3 +123,14 @@ pub fn lock_upgrades_forever(env: &Env) -> Result<(), VaquitaPoolError> {
 pub fn version(env: &Env) -> u32 {
     env.storage().instance().get(&DataKey::Version).unwrap_or(1)
 }
+
+pub fn update_upgrade_timelock_secs(
+    env: &Env,
+    new_secs: u64,
+) -> Result<(), crate::VaquitaPoolError> {
+    crate::admin::require_owner(env)?;
+    env.storage()
+        .instance()
+        .set(&DataKey::UpgradeTimelockSecs, &new_secs);
+    Ok(())
+}

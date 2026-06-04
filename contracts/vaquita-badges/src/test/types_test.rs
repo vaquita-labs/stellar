@@ -15,7 +15,7 @@ fn setup() -> (Env, soroban_sdk::Address) {
     let admin = Address::generate(&env);
     let signing_key = SigningKey::generate(&mut OsRng);
     let pk_bytes: BytesN<32> = BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
-    let contract_id = env.register(VaquitaBadges, (admin, pk_bytes));
+    let contract_id = env.register(VaquitaBadges, (admin, pk_bytes, 172_800u64));
     (env, contract_id)
 }
 

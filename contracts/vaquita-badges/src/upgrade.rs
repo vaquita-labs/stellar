@@ -6,7 +6,9 @@ use crate::events;
 use crate::storage;
 use crate::types::DataKey;
 
-const UPGRADE_TIMELOCK_SECS: u64 = 48 * 60 * 60; // 48 hours
+/// Fallback used when the timelock key is absent (e.g. contracts deployed
+/// before the parameter was introduced).
+const DEFAULT_TIMELOCK_SECS: u64 = 48 * 60 * 60; // 48 hours
 
 pub fn get_version(env: &Env) -> u32 {
     env.storage().instance().get(&DataKey::Version).unwrap_or(1)
@@ -22,7 +24,12 @@ pub fn propose_upgrade(env: &Env, new_wasm_hash: BytesN<32>) -> Result<(), Badge
     if locked {
         return Err(BadgeError::UpgradeLocked);
     }
-    let ready_at = env.ledger().timestamp() + UPGRADE_TIMELOCK_SECS;
+    let timelock: u64 = env
+        .storage()
+        .instance()
+        .get(&DataKey::UpgradeTimelockSecs)
+        .unwrap_or(DEFAULT_TIMELOCK_SECS);
+    let ready_at = env.ledger().timestamp() + timelock;
     env.storage()
         .instance()
         .set(&DataKey::PendingUpgradeHash, &new_wasm_hash);
@@ -88,5 +95,14 @@ pub fn lock_upgrades_forever(env: &Env) -> Result<(), BadgeError> {
         .set(&DataKey::UpgradesLocked, &true);
     storage::extend_instance(env);
     events::emit_upgrades_locked(env, admin);
+    Ok(())
+}
+
+pub fn update_upgrade_timelock_secs(env: &Env, new_secs: u64) -> Result<(), BadgeError> {
+    admin::require_owner(env)?;
+    env.storage()
+        .instance()
+        .set(&DataKey::UpgradeTimelockSecs, &new_secs);
+    storage::extend_instance(env);
     Ok(())
 }
