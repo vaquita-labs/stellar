@@ -5,14 +5,13 @@ use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, Symbol};
 mod admin;
 mod error;
 mod events;
-mod mint_policy;
 mod pause;
 mod storage;
 mod types;
 mod upgrade;
 
 pub use error::BadgeError;
-pub use types::{DataKey, MintPolicy};
+pub use types::DataKey;
 
 #[contract]
 pub struct VaquitaBadges;
@@ -49,9 +48,8 @@ impl VaquitaBadges {
             return Err(BadgeError::ClaimExpired);
         }
 
-        // Policy-aware claim key — also validates cycle_id for OneTimeOnly types.
-        let claim_key =
-            mint_policy::effective_claim_key(&env, badge_type.clone(), cycle_id, wallet.clone())?;
+        // cycle_id is a backend-controlled pass-through — no on-chain validation.
+        let claim_key = DataKey::Claimed(badge_type.clone(), cycle_id, wallet.clone());
 
         if env.storage().persistent().has(&claim_key) {
             return Err(BadgeError::AlreadyClaimed);
@@ -75,7 +73,7 @@ impl VaquitaBadges {
         env.crypto()
             .ed25519_verify(&signing_key, &msg_hash.into(), &signature);
 
-        // EditionCap enforcement (if registered).
+        // EditionCap enforcement (optional — only if a cap has been set).
         let edition_cap_key = DataKey::EditionCap(badge_type.clone());
         if let Some(cap) = env
             .storage()
@@ -112,8 +110,6 @@ impl VaquitaBadges {
         env.storage().persistent().set(&claim_key, &());
         storage::extend_persistent(&env, &claim_key);
 
-        mint_policy::increment_mint_count(&env, &badge_type);
-
         env.storage()
             .instance()
             .set(&DataKey::NextTokenId, &(token_id + 1));
@@ -145,17 +141,11 @@ impl VaquitaBadges {
             .get(&DataKey::TokenBadgeType(token_id))
     }
 
-    /// Returns whether `wallet` has claimed `badge_type`.
-    ///
-    /// Uses `effective_claim_key` to normalise the lookup: for `OneTimeOnly` badge types,
-    /// the stored key always uses `cycle_id = 0` regardless of the argument passed here.
-    /// If the effective claim key cannot be computed (e.g. `cycle_id != 0` for a
-    /// `OneTimeOnly` type), returns `false`.
+    /// Returns whether `wallet` has claimed `badge_type` for the given `cycle_id`.
     pub fn has_claimed(env: Env, wallet: Address, badge_type: Symbol, cycle_id: u32) -> bool {
-        mint_policy::effective_claim_key(&env, badge_type, cycle_id, wallet)
-            .ok()
-            .map(|key| env.storage().persistent().has(&key))
-            .unwrap_or(false)
+        env.storage()
+            .persistent()
+            .has(&DataKey::Claimed(badge_type, cycle_id, wallet))
     }
 
     pub fn total_supply(env: Env) -> u32 {
@@ -165,63 +155,8 @@ impl VaquitaBadges {
             .unwrap_or(0)
     }
 
-    /// Register a badge type with a mint policy and optional edition cap. Admin-only.
-    ///
-    /// Replaces the old `add_edition` entrypoint with a richer interface that sets
-    /// the `MintPolicy` and optionally the edition cap in one atomic call.
-    pub fn register_badge_type(
-        env: Env,
-        badge_type: Symbol,
-        policy: MintPolicy,
-        edition_cap: Option<u32>,
-    ) -> Result<(), BadgeError> {
-        admin::require_owner(&env)?;
-
-        env.storage()
-            .instance()
-            .set(&DataKey::MintPolicy(badge_type.clone()), &policy);
-
-        if let Some(cap) = edition_cap {
-            let cap_key = DataKey::EditionCap(badge_type.clone());
-            env.storage().persistent().set(&cap_key, &cap);
-            storage::extend_persistent(&env, &cap_key);
-        }
-
-        storage::extend_instance(&env);
-        events::emit_badge_type_registered(&env, badge_type, policy, edition_cap);
-        Ok(())
-    }
-
-    /// Update the mint policy for a registered badge type. Admin-only.
-    ///
-    /// Loosening (`OneTimeOnly → PerCycle`) is blocked once any mint has been recorded
-    /// for the badge type (`PolicyFrozen`). Tightening (`PerCycle → OneTimeOnly`) is
-    /// always allowed.
-    pub fn set_mint_policy(
-        env: Env,
-        badge_type: Symbol,
-        policy: MintPolicy,
-    ) -> Result<(), BadgeError> {
-        admin::require_owner(&env)?;
-        let old_policy = mint_policy::get_policy(&env, &badge_type);
-
-        // Block loosening after mints.
-        if old_policy == MintPolicy::OneTimeOnly
-            && policy == MintPolicy::PerCycle
-            && mint_policy::get_mint_count(&env, &badge_type) > 0
-        {
-            return Err(BadgeError::PolicyFrozen);
-        }
-
-        env.storage()
-            .instance()
-            .set(&DataKey::MintPolicy(badge_type.clone()), &policy);
-        storage::extend_instance(&env);
-        events::emit_mint_policy_updated(&env, badge_type, old_policy, policy);
-        Ok(())
-    }
-
-    /// Update the edition cap for a badge type. Admin-only.
+    /// Set or update the edition cap for a badge type. Admin-only.
+    /// No registration required — can be called for any badge type at any time.
     pub fn update_edition_cap(
         env: Env,
         badge_type: Symbol,
