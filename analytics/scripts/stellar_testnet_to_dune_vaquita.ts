@@ -167,8 +167,15 @@ const SCHEMA: SchemaColumn[] = [
 // ------------------- ScVal (xdrFormat:"json") decoding ------------------------
 // Recursively turn an ScVal-JSON node into a native JS value. Handles the field
 // shapes VaquitaPool emits; tolerant of hi/lo as string or number.
-function i128ToBig(p: { hi?: unknown; lo?: unknown }): bigint {
-  return (BigInt(String(p.hi ?? 0)) << 64n) + BigInt(String(p.lo ?? 0));
+// Decode a 64/128/256-bit ScVal scalar. Current Stellar RPC encodes these as a
+// plain decimal string ("50000000"); older RPC used a {hi, lo} parts object.
+// Handle both so amounts don't silently decode to 0.
+function bigFromScalar(v: unknown): bigint {
+  if (v !== null && typeof v === "object") {
+    const o = v as Record<string, unknown>;
+    return (BigInt(String(o.hi ?? 0)) << 64n) + BigInt(String(o.lo ?? 0));
+  }
+  return BigInt(String(v));
 }
 function scToNative(v: unknown): unknown {
   if (v === null || typeof v !== "object") return v;
@@ -184,10 +191,12 @@ function scToNative(v: unknown): unknown {
   if ("bool" in o) return o.bool;
   if ("u32" in o) return Number(o.u32);
   if ("i32" in o) return Number(o.i32);
-  if ("u64" in o) return BigInt(String(o.u64));
-  if ("i64" in o) return BigInt(String(o.i64));
-  if ("u128" in o) return i128ToBig(o.u128);
-  if ("i128" in o) return i128ToBig(o.i128);
+  if ("u64" in o) return bigFromScalar(o.u64);
+  if ("i64" in o) return bigFromScalar(o.i64);
+  if ("u128" in o) return bigFromScalar(o.u128);
+  if ("i128" in o) return bigFromScalar(o.i128);
+  if ("u256" in o) return bigFromScalar(o.u256);
+  if ("i256" in o) return bigFromScalar(o.i256);
   if ("bytes" in o) return o.bytes;
   if ("vec" in o) return (o.vec ?? []).map(scToNative);
   if ("map" in o) {
