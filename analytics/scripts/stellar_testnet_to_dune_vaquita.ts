@@ -33,6 +33,8 @@
  *   DUNE_API_KEY="..."                       # dune.com -> Settings -> API
  *   DUNE_NAMESPACE="vaquitaprotocol"         # your Dune user/team handle
  *   VAQUITA_CONTRACTS="dev=C...,stage=C..."  # env=contractId, comma-separated
+ *   DUNE_REFRESH_QUERY_IDS="123,456,..."     # optional: dashboard query IDs to
+ *                                            # re-run (10s apart) after an insert
  *   npx tsx stellar_testnet_to_dune_vaquita.ts
  */
 
@@ -85,6 +87,15 @@ const DUNE_NAMESPACE: string = process.env.DUNE_NAMESPACE ?? "vaquitaprotocol017
 // Insert:  POST /v1/uploads/:ns/:tbl/insert
 const DUNE_CREATE_URL = "https://api.dune.com/api/v1/uploads";
 const DUNE_INSERT_BASE = "https://api.dune.com/api/v1/uploads";
+const DUNE_EXECUTE_BASE = "https://api.dune.com/api/v1/query"; // POST /:id/execute
+
+// Saved dashboard query IDs to re-run after a successful insert so the panels
+// show fresh data. Comma-separated, e.g. "7652901,7653540,...". Optional.
+const DUNE_REFRESH_QUERY_IDS: string[] = (process.env.DUNE_REFRESH_QUERY_IDS ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const REFRESH_DELAY_MS = 10_000; // space executions 10s apart (free-tier friendly)
 
 // ----------------------------- Types -----------------------------------------
 type DuneColumnType = "varchar" | "integer" | "double" | "boolean" | "timestamp";
@@ -370,6 +381,27 @@ async function insertRows(rows: EventRow[]): Promise<void> {
   console.log(`Inserted ${rows.length} new events.`);
 }
 
+/** Re-run the saved dashboard queries (one at a time, spaced 10s apart) so the
+ *  panels show the just-inserted data. Uses the free engine to minimise credits.
+ *  Best-effort: a failed refresh logs a warning but never fails the ingest. */
+async function refreshDashboard(queryIds: string[]): Promise<void> {
+  console.log(`Refreshing ${queryIds.length} dashboard quer${queryIds.length === 1 ? "y" : "ies"} (10s apart)...`);
+  for (let i = 0; i < queryIds.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, REFRESH_DELAY_MS));
+    const id = queryIds[i];
+    try {
+      const res = await fetch(`${DUNE_EXECUTE_BASE}/${id}/execute`, {
+        method: "POST",
+        headers: duneHeaders("application/json"),
+        body: JSON.stringify({ performance: "free" }),
+      });
+      console.log(`  query ${id}: ${res.status} ${await res.text()}`);
+    } catch (err) {
+      console.warn(`  query ${id} refresh failed: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+}
+
 // ------------------------------- State ----------------------------------------
 function loadState(): IngestState {
   if (existsSync(STATE_FILE)) return JSON.parse(readFileSync(STATE_FILE, "utf8")) as IngestState;
@@ -435,6 +467,11 @@ async function main(): Promise<void> {
 
   await insertRows(allNewRows);
   saveState(state);
+
+  // Only refresh when something changed and query IDs are configured.
+  if (allNewRows.length > 0 && DUNE_REFRESH_QUERY_IDS.length > 0) {
+    await refreshDashboard(DUNE_REFRESH_QUERY_IDS);
+  }
 
   console.log(
     `\nQuery it in Dune:\n    select * from dune.${DUNE_NAMESPACE}.${TABLE_NAME} order by ledger desc`
