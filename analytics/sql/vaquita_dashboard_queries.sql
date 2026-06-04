@@ -30,33 +30,33 @@ WHERE event_name = 'deposit' AND caller <> '';
 
 
 -- ============================================================
--- PANEL 2 — TVL  (principal still locked, over time)   Visualization: Area chart
+-- PANEL 2 — TVL  (net funds deposited, over time)   Visualization: Area chart
 --   x = hour, y = tvl
---   withdraw.amount is the PAYOUT, not principal, so recover the original
---   principal by joining each withdrawal back to its deposit on deposit_id.
---   deposit_id is only unique within an environment, so join on it too.
+--   Funds don't sit in the pool — they're routed to the DeFindex vault — so
+--   "value locked" = net of what users put in vs took out:
+--       cumulative( SUM(deposit.amount) - SUM(withdraw.amount) ).
+--   This flow-based sum avoids any deposit<->withdraw join, which matters
+--   because deposit_id is reused across cycles (a join would mis-match).
+--   Note: withdraw.amount is the payout, so a matured withdrawal also returns
+--   its reward share; for this dashboard that net-flow view is the intent.
 -- ============================================================
 WITH ev AS (
-  SELECT environment, event_name, caller, deposit_id, amount, reward, early_fee, ledger, ledger_closed_at
+  SELECT environment, event_name, amount, ledger_closed_at
   FROM (
     SELECT *, row_number() OVER (PARTITION BY event_id ORDER BY ledger) AS rn
     FROM dune.<handle>.vaquita_events
     WHERE environment LIKE '{{environment}}'
   ) WHERE rn = 1
 ),
-dep AS (
-  SELECT environment, deposit_id, amount, ledger_closed_at AS ts FROM ev WHERE event_name = 'deposit'
-),
-wd AS (
-  SELECT environment, deposit_id, ledger_closed_at AS ts FROM ev WHERE event_name = 'withdraw'
-),
 flows AS (
-  SELECT ts, amount AS delta FROM dep                                          -- deposit: +principal
-  UNION ALL
-  SELECT wd.ts, -dep.amount FROM wd JOIN dep USING (environment, deposit_id)   -- withdraw: -original principal
+  SELECT date_trunc('hour', ledger_closed_at) AS hour,
+         SUM(CASE event_name WHEN 'deposit' THEN amount WHEN 'withdraw' THEN -amount ELSE 0 END) AS delta
+  FROM ev
+  WHERE event_name IN ('deposit', 'withdraw')
+  GROUP BY 1
 )
 SELECT hour, SUM(delta) OVER (ORDER BY hour) AS tvl
-FROM (SELECT date_trunc('hour', ts) AS hour, SUM(delta) AS delta FROM flows GROUP BY 1)
+FROM flows
 ORDER BY hour;
 
 

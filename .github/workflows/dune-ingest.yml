@@ -1,7 +1,12 @@
 # .github/workflows/dune-ingest.yml
 # Scheduled ingest of testnet contract events into Dune.
-# Runs every 5 minutes (GitHub minimum) — well inside the ~24h Stellar
-# testnet RPC event-retention window so no events age out between runs.
+#
+# Cadence: hourly. Sized to stay safely inside BOTH free tiers:
+#   - GitHub Free: ~730 billed Actions min/mo (Linux x1, one job/run) vs the
+#     2000 min/mo private-repo allowance.
+#   - Dune Free: only runs that insert rows cost ~1 credit (quiet runs cost 0),
+#     so worst case ~730 credits/mo vs the 2500/mo quota.
+# Far inside the ~7-day (120960-ledger) Stellar testnet RPC retention window.
 #
 # Multi-environment: ingests every VaquitaPool deployment listed in the
 # VAQUITA_CONTRACTS repo variable ("dev=C...,stage=C...") into one Dune table.
@@ -10,7 +15,7 @@ name: Dune Ingest
 
 on:
   schedule:
-    - cron: "*/5 * * * *" # every 5 minutes (GitHub minimum)
+    - cron: "0 * * * *" # every hour (top of the hour)
   workflow_dispatch: {} # allow manual runs from the Actions tab
 
 # Allow committing the state file back if you choose the "commit state" option.
@@ -26,6 +31,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: analytics/package-lock.json
 
       # Persist the high-water-mark between scheduled runs.
       # The dashboard queries also de-dupe by event_id, so a rare cache miss
@@ -39,7 +46,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: analytics
-        run: npm install
+        run: npm ci
 
       - name: Run incremental ingest
         working-directory: analytics
