@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use crate::test::EnvTestUtils;
-use crate::{BadgeError, MintPolicy, VaquitaBadges, VaquitaBadgesClient};
+use crate::{BadgeError, VaquitaBadges, VaquitaBadgesClient};
 use ed25519_dalek::{Signer, SigningKey};
 use rand::rngs::OsRng;
 use soroban_sdk::{symbol_short, testutils::Address as _, xdr::ToXdr, Address, Bytes, BytesN, Env};
@@ -103,8 +103,8 @@ fn admin_functions_work_while_paused() {
     let new_pk: BytesN<32> = BytesN::from_array(&env, &new_key.verifying_key().to_bytes());
     client.update_signing_key(&new_pk);
 
-    // register_badge_type succeeds while paused
-    client.register_badge_type(&symbol_short!("gold"), &MintPolicy::OneTimeOnly, &None);
+    // update_edition_cap succeeds while paused
+    client.update_edition_cap(&symbol_short!("gold"), &100u32);
 
     assert!(client.is_paused());
 }

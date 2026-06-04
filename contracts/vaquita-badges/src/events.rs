@@ -1,13 +1,9 @@
 use soroban_sdk::{contracttype, symbol_short, Address, BytesN, Env, Symbol};
 
-use crate::types::MintPolicy;
-
 // Topic symbols (≤10 chars each)
 const CONSTRUCTED: Symbol = symbol_short!("init");
 const MINTED: Symbol = symbol_short!("minted");
 const KEY_ROTATED: Symbol = symbol_short!("key_rot");
-const TYPE_REG: Symbol = symbol_short!("type_reg");
-const POLICY_UPD: Symbol = symbol_short!("pol_upd");
 const CAP_UPD: Symbol = symbol_short!("cap_upd");
 const PAUSED: Symbol = symbol_short!("paused");
 const UNPAUSED: Symbol = symbol_short!("unpaused");
@@ -34,20 +30,6 @@ pub struct MintedEvent {
 pub struct SigningKeyRotatedEvent {
     pub old_key: BytesN<32>,
     pub new_key: BytesN<32>,
-}
-
-#[contracttype]
-pub struct BadgeTypeRegisteredEvent {
-    pub badge_type: Symbol,
-    pub policy: MintPolicy,
-    pub edition_cap: Option<u32>,
-}
-
-#[contracttype]
-pub struct MintPolicyUpdatedEvent {
-    pub badge_type: Symbol,
-    pub old_policy: MintPolicy,
-    pub new_policy: MintPolicy,
 }
 
 #[contracttype]
@@ -88,8 +70,6 @@ pub struct UpgradesLockedEvent {
     pub admin: Address,
 }
 
-// ---- emit helpers (used now) ----
-
 pub fn emit_constructed(env: &Env, admin: Address, signing_key: BytesN<32>) {
     env.events()
         .publish((CONSTRUCTED,), ConstructedEvent { admin, signing_key });
@@ -110,40 +90,6 @@ pub fn emit_minted(env: &Env, wallet: Address, badge_type: Symbol, cycle_id: u32
 pub fn emit_signing_key_rotated(env: &Env, old_key: BytesN<32>, new_key: BytesN<32>) {
     env.events()
         .publish((KEY_ROTATED,), SigningKeyRotatedEvent { old_key, new_key });
-}
-
-pub fn emit_badge_type_registered(
-    env: &Env,
-    badge_type: Symbol,
-    policy: MintPolicy,
-    edition_cap: Option<u32>,
-) {
-    env.events().publish(
-        (TYPE_REG,),
-        BadgeTypeRegisteredEvent {
-            badge_type,
-            policy,
-            edition_cap,
-        },
-    );
-}
-
-// ---- emit helpers (emitted by future slices; defined here for completeness) ----
-
-pub fn emit_mint_policy_updated(
-    env: &Env,
-    badge_type: Symbol,
-    old_policy: MintPolicy,
-    new_policy: MintPolicy,
-) {
-    env.events().publish(
-        (POLICY_UPD,),
-        MintPolicyUpdatedEvent {
-            badge_type,
-            old_policy,
-            new_policy,
-        },
-    );
 }
 
 pub fn emit_edition_cap_updated(env: &Env, badge_type: Symbol, new_cap: u32) {

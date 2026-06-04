@@ -4,12 +4,12 @@
 //! event.
 
 use crate::events::{
-    BadgeTypeRegisteredEvent, ConstructedEvent, EditionCapUpdatedEvent, MintedEvent,
-    MintPolicyUpdatedEvent, PausedEvent, SigningKeyRotatedEvent, UnpausedEvent,
-    UpgradeCancelledEvent, UpgradeExecutedEvent, UpgradeProposedEvent, UpgradesLockedEvent,
+    ConstructedEvent, EditionCapUpdatedEvent, MintedEvent, PausedEvent, SigningKeyRotatedEvent,
+    UnpausedEvent, UpgradeCancelledEvent, UpgradeExecutedEvent, UpgradeProposedEvent,
+    UpgradesLockedEvent,
 };
 use crate::test::EnvTestUtils;
-use crate::{MintPolicy, VaquitaBadges, VaquitaBadgesClient};
+use crate::{VaquitaBadges, VaquitaBadgesClient};
 use ed25519_dalek::{Signer, SigningKey};
 use rand::rngs::OsRng;
 use soroban_sdk::testutils::{Address as _, BytesN as _, Events as _};
@@ -78,7 +78,6 @@ fn minted_event_payload() {
     let e = Env::default();
     let (id, key, client) = deploy(&e);
     let bt = symbol_short!("gold");
-    client.register_badge_type(&bt, &MintPolicy::OneTimeOnly, &None);
     let wallet = Address::generate(&e);
     let expiry = e.ledger().timestamp() + 86_400 * 30;
     client.mint_badge(&wallet, &bt, &0, &expiry, &make_sig(&e, &id, &key, &wallet, &bt, 0, expiry));
@@ -97,35 +96,6 @@ fn signing_key_rotated_event_payload() {
     client.update_signing_key(&new_pk);
     let ev = SigningKeyRotatedEvent::try_from_val(&e, &last_val(&e)).unwrap();
     assert_eq!(ev.new_key, new_pk);
-}
-
-// ---- BadgeTypeRegisteredEvent ----
-
-#[test]
-fn badge_type_registered_event_payload() {
-    let e = Env::default();
-    let (_, _, client) = deploy(&e);
-    let bt = symbol_short!("silver");
-    client.register_badge_type(&bt, &MintPolicy::PerCycle, &Some(100u32));
-    let ev = BadgeTypeRegisteredEvent::try_from_val(&e, &last_val(&e)).unwrap();
-    assert_eq!(ev.badge_type, bt);
-    assert_eq!(ev.policy, MintPolicy::PerCycle);
-    assert_eq!(ev.edition_cap, Some(100u32));
-}
-
-// ---- MintPolicyUpdatedEvent ----
-
-#[test]
-fn mint_policy_updated_event_payload() {
-    let e = Env::default();
-    let (_, _, client) = deploy(&e);
-    let bt = symbol_short!("bronze");
-    client.register_badge_type(&bt, &MintPolicy::OneTimeOnly, &None);
-    client.set_mint_policy(&bt, &MintPolicy::PerCycle);
-    let ev = MintPolicyUpdatedEvent::try_from_val(&e, &last_val(&e)).unwrap();
-    assert_eq!(ev.badge_type, bt);
-    assert_eq!(ev.old_policy, MintPolicy::OneTimeOnly);
-    assert_eq!(ev.new_policy, MintPolicy::PerCycle);
 }
 
 // ---- EditionCapUpdatedEvent ----
