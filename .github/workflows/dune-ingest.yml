@@ -1,0 +1,51 @@
+# .github/workflows/dune-ingest.yml
+# Scheduled ingest of testnet contract events into Dune.
+# Runs every 5 minutes (GitHub minimum) — well inside the ~24h Stellar
+# testnet RPC event-retention window so no events age out between runs.
+#
+# Multi-environment: ingests every VaquitaPool deployment listed in the
+# VAQUITA_CONTRACTS repo variable ("dev=C...,stage=C...") into one Dune table.
+# Add a new environment by appending to that variable — no code change.
+name: Dune Ingest
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # every 5 minutes (GitHub minimum)
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+# Allow committing the state file back if you choose the "commit state" option.
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Persist the high-water-mark between scheduled runs.
+      # The dashboard queries also de-dupe by event_id, so a rare cache miss
+      # causes (cheap) re-inserts, not wrong numbers.
+      - name: Restore ingest state
+        uses: actions/cache@v4
+        with:
+          path: analytics/dune_ingest_state.json
+          key: dune-ingest-state-${{ github.run_id }}
+          restore-keys: dune-ingest-state-
+
+      - name: Install dependencies
+        working-directory: analytics
+        run: npm install
+
+      - name: Run incremental ingest
+        working-directory: analytics
+        env:
+          DUNE_API_KEY: ${{ secrets.DUNE_API_KEY }}
+          DUNE_NAMESPACE: ${{ secrets.DUNE_NAMESPACE }}
+          # Public contract IDs — store as a repo *variable*, e.g. "dev=C...,stage=C..."
+          VAQUITA_CONTRACTS: ${{ vars.VAQUITA_CONTRACTS }}
+        run: npm run ingest
