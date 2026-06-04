@@ -195,6 +195,7 @@ impl VaquitaPool {
         let now = env.ledger().timestamp();
         let mut amount_to_transfer = gross;
         let mut reward: i128 = 0;
+        let mut early_fee_amount: i128 = 0;
 
         let mut period_data: Period = env
             .storage()
@@ -213,17 +214,17 @@ impl VaquitaPool {
                 .instance()
                 .get(&DataKey::BasisPoints)
                 .unwrap_or(10000);
-            let fee_amount = arithmetic::checked_div(
+            early_fee_amount = arithmetic::checked_div(
                 arithmetic::checked_mul(interest, early_fee)?,
                 basis_points,
             )?;
-            let remaining_interest = arithmetic::checked_sub(interest, fee_amount)?;
+            let remaining_interest = arithmetic::checked_sub(interest, early_fee_amount)?;
             let mut protocol_fees: i128 = env
                 .storage()
                 .instance()
                 .get(&DataKey::ProtocolFees)
                 .unwrap_or(0);
-            protocol_fees = arithmetic::checked_add(protocol_fees, fee_amount)?;
+            protocol_fees = arithmetic::checked_add(protocol_fees, early_fee_amount)?;
             env.storage()
                 .instance()
                 .set(&DataKey::ProtocolFees, &protocol_fees);
@@ -259,6 +260,7 @@ impl VaquitaPool {
             blend_token,
             amount_to_transfer,
             reward,
+            early_fee_amount,
         );
         Ok(())
     }

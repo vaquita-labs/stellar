@@ -30,12 +30,16 @@ pub struct DepositEvent {
 
 /// Typed payload for a withdraw event.
 /// Topic: ("withdraw", caller)  Data: WithdrawEvent
+/// `early_fee` is the penalty charged on early withdrawal; 0 on the matured path.
+/// Dune queries: SUM(early_fee) WHERE event_name='withdraw' → total penalties;
+///               WHERE early_fee = 0 → completed (matured) withdrawals only.
 #[contracttype]
 pub struct WithdrawEvent {
     pub deposit_id: String,
     pub token: Address,
     pub amount: i128,
     pub reward: i128,
+    pub early_fee: i128,
 }
 
 pub fn emit_deposit(
@@ -261,6 +265,7 @@ pub fn emit_withdraw(
     token: Address,
     amount: i128,
     reward: i128,
+    early_fee: i128,
 ) {
     env.events().publish(
         (WITHDRAW, caller),
@@ -269,6 +274,7 @@ pub fn emit_withdraw(
             token,
             amount,
             reward,
+            early_fee,
         },
     );
 }

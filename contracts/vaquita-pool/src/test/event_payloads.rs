@@ -124,6 +124,7 @@ fn withdraw_event_payload() {
     let ev = WithdrawEvent::try_from_val(&e, &last_val(&e)).unwrap();
     assert_eq!(ev.deposit_id, dep);
     assert_eq!(ev.reward, 0);
+    assert_eq!(ev.early_fee, 0); // no yield → no fee
 }
 
 // ---- EarlyWithdrawalFeeUpdatedEvent ----
