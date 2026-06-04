@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <WithHydrated>
           <Providers>
             <LogoutButton />
-            <main className="flex-1 min-h-0 overflow-auto">{children}</main>
+            <main className="flex-1 min-h-0 min-w-0 overflow-auto">{children}</main>
           </Providers>
         </WithHydrated>
       </body>
