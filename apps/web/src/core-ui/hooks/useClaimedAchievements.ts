@@ -1,21 +1,20 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useClaimAchievement } from './profile/useClaimAchievement';
 import { useProfileAchievements } from './profile/useProfileAchievements';
 
 /**
- * Server-backed view of which achievements the user has claimed. The previous
- * implementation kept an in-memory Zustand set so reloads wiped the state;
- * now `claimedIds` derives from `useProfileAchievements` and `claim()` calls
- * the real mutation. The shape of the hook (`{ claimedIds, isClaimed, claim }`)
- * is preserved so existing callers (AchievementModal, BadgeTile, …) keep
- * working without code changes at the call site — only the `claim` return
- * type changed from `void` to `Promise<ClaimAchievementResponseDTO>`.
+ * Server-backed view of which achievements the user has claimed. `claimedIds`
+ * derives from `useProfileAchievements` (the `claimedAt` field), so it survives
+ * reloads without any client-side state.
+ *
+ * There is no `claim()` here anymore: badges are always minted on-chain, so the
+ * claim happens as step 1 of the mint flow (`useMintBadge`). This hook is now a
+ * read-only selector — callers (ProfilePage, AllAchievementsPage, …) only need
+ * `isClaimed`.
  */
 export function useClaimedAchievements() {
   const { data } = useProfileAchievements();
-  const mutation = useClaimAchievement();
 
   const claimedIds = useMemo<Set<string>>(() => {
     const next = new Set<string>();
@@ -27,7 +26,5 @@ export function useClaimedAchievements() {
 
   const isClaimed = (id: string) => claimedIds.has(id);
 
-  const claim = (id: string) => mutation.mutateAsync(id);
-
-  return { claimedIds, isClaimed, claim };
+  return { claimedIds, isClaimed };
 }
