@@ -1,7 +1,11 @@
 'use client';
 
+import { ONE_DAY } from '@/core-ui/config/constants';
+import { useDepositsComplete } from '@/core-ui/hooks';
+import { useProfileExperience, useProfileStreak } from '@/core-ui/hooks/profile';
+import { DepositResponseDTO } from '@/core-ui/types';
 import Image from 'next/image';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FiPlus, FiTrendingUp } from 'react-icons/fi';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
@@ -13,6 +17,8 @@ interface PanelProps {
   icon: string;
   title: string;
   subtitle?: string;
+  /** Show a small "Soon" pill when the panel is still mocked. */
+  soon?: boolean;
   children: React.ReactNode;
 }
 
@@ -21,47 +27,99 @@ interface PanelProps {
  * Wraps every metric block so the page reads as a stack of "cards" without
  * needing a heavyweight chart library.
  */
-function Panel({ icon, title, subtitle, children }: PanelProps) {
+function Panel({ icon, title, subtitle, soon, children }: PanelProps) {
   return (
     <section className="rounded-2xl bg-white border border-black border-b-2 p-4 flex flex-col gap-3">
       <header className="flex items-center gap-2.5">
         <Image src={icon} alt={title} width={28} height={28} className="object-contain" />
-        <div className="flex flex-col leading-tight">
+        <div className="flex flex-col leading-tight flex-1 min-w-0">
           <h2 className="text-sm font-extrabold text-black">{title}</h2>
           {subtitle && <p className="text-[11px] text-gray-500">{subtitle}</p>}
         </div>
+        {soon && (
+          <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider bg-primary text-black border border-black border-b-2 rounded-full px-2 py-0.5">
+            Soon
+          </span>
+        )}
       </header>
       {children}
     </section>
   );
 }
 
+/** Subtle inline placeholder while a panel's query is loading. */
+function PanelLoading() {
+  return <div className="h-24 w-full rounded-xl bg-black/5 animate-pulse" aria-hidden />;
+}
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+// Mirror of the backend `getCurrentDay` (packages/shared/src/helpers/date.ts):
+// timestamps are bucketed into integer "day-numbers" of ms / ONE_DAY (UTC).
+const getDayNumber = (ms: number) => Math.ceil(ms / ONE_DAY);
+
+// Weekday letter (Sun-indexed) for a given day-number, taken at the midpoint of
+// its UTC window so it lands squarely inside the day regardless of rounding.
+const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const weekdayLetter = (dayNumber: number) =>
+  WEEKDAY_LETTERS[new Date((dayNumber - 0.5) * ONE_DAY).getUTCDay()];
+
+// Monday 00:00 (local) of the week containing `ms`.
+function startOfWeek(ms: number): Date {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  const mondayOffset = (d.getDay() + 6) % 7; // Mon = 0 … Sun = 6
+  d.setDate(d.getDate() - mondayOffset);
+  return d;
+}
+
+// Bucket confirmed deposits into the last `WEEKS` ISO weeks (Monday-start),
+// summing amounts per week. Weeks with no deposits stay at 0 so the chart keeps
+// a stable shape. Labels use the week-start date (e.g. "Apr 7").
+const WEEKS = 6;
+function buildWeeklyDeposits(deposits: DepositResponseDTO[]) {
+  const thisWeek = startOfWeek(Date.now());
+  const buckets = Array.from({ length: WEEKS }, (_, i) => {
+    const ws = new Date(thisWeek);
+    ws.setDate(ws.getDate() - (WEEKS - 1 - i) * 7);
+    return {
+      start: ws.getTime(),
+      week: ws.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      amount: 0,
+    };
+  });
+  const firstStart = buckets[0].start;
+
+  for (const dep of deposits) {
+    const ts = dep.confirmedTimestamp || dep.createdTimestamp || 0;
+    if (!ts || ts < firstStart) continue;
+    const weekStart = startOfWeek(ts).getTime();
+    const bucket = buckets.find((b) => b.start === weekStart);
+    if (bucket) bucket.amount += Number(dep.amount) || 0;
+  }
+  return buckets;
+}
+
+// Derive a level + progress from a single total-XP value. The backend only
+// exposes aggregated `experience`, so the level curve lives here until it does:
+// reaching the next level costs 100 XP, +50 more each level (100, 150, 200 …).
+function deriveLevel(totalXp: number) {
+  let level = 1;
+  let remaining = Math.max(0, Math.floor(totalXp));
+  let xpForNextLevel = 100;
+  while (remaining >= xpForNextLevel && level < 999) {
+    remaining -= xpForNextLevel;
+    level += 1;
+    xpForNextLevel = 100 + (level - 1) * 50;
+  }
+  return { level, xpIntoLevel: remaining, xpForNextLevel };
+}
+
 /* ------------------------------------------------------------------ */
 /* Mocked datasets                                                     */
 /* ------------------------------------------------------------------ */
-
-// Duolingo-style streak calendar: each day is either "kept" (1) or "missed" (0).
-// We render the last 4 full weeks ending today (28 days), with today marked.
-// Replace with real per-day data once the backend exposes it.
-const STREAK_DAYS: (0 | 1)[] = [
-  1, 1, 0, 1, 1, 1, 1,
-  1, 1, 1, 1, 0, 1, 1,
-  1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1,
-];
-const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-// Mock weekly deposits in USDC for the line chart. Replace with grouped real
-// data (sum of deposit.amount bucketed by ISO week) when wiring backend. Labels
-// use the week-start date so they make sense without context.
-const DEPOSITS_BY_WEEK = [
-  { week: 'Apr 7', amount: 25 },
-  { week: 'Apr 14', amount: 45 },
-  { week: 'Apr 21', amount: 30 },
-  { week: 'Apr 28', amount: 80 },
-  { week: 'May 5', amount: 60 },
-  { week: 'May 12', amount: 110 },
-];
 
 const SAVINGS_GOALS = [
   { id: 'g1', title: 'Trip to Cartagena', target: 500, saved: 215, due: 'Dec 2026' },
@@ -74,15 +132,28 @@ const SAVINGS_GOALS = [
 /* ------------------------------------------------------------------ */
 
 function StreakCalendar() {
-  // "Today" is the very last cell (index 27 in a 28-day window).
-  const todayIndex = STREAK_DAYS.length - 1;
-  const kept = STREAK_DAYS.filter((d) => d === 1).length;
-  const total = STREAK_DAYS.length;
+  const { data: streak, isLoading } = useProfileStreak();
+
+  // Render the last 4 full weeks (28 days) ending today. 28 = 4×7, so each grid
+  // column maps to a fixed weekday — letting us label headers from real dates.
+  const { cells, labels, kept, total } = useMemo(() => {
+    const active = new Set(streak?.days ?? []);
+    const todayNumber = getDayNumber(Date.now());
+    const start = todayNumber - 27;
+    const cells = Array.from({ length: 28 }, (_, i) => {
+      const dayNumber = start + i;
+      return { dayNumber, kept: active.has(dayNumber), isToday: dayNumber === todayNumber };
+    });
+    const labels = Array.from({ length: 7 }, (_, c) => weekdayLetter(start + c));
+    return { cells, labels, kept: cells.filter((c) => c.kept).length, total: cells.length };
+  }, [streak?.days]);
+
+  if (isLoading) return <PanelLoading />;
 
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-7 gap-y-2 gap-x-1 text-center">
-        {DAY_LABELS.map((d, i) => (
+        {labels.map((d, i) => (
           <span
             key={`label-${i}`}
             className="text-[10px] font-bold uppercase tracking-wider text-gray-400"
@@ -90,12 +161,11 @@ function StreakCalendar() {
             {d}
           </span>
         ))}
-        {STREAK_DAYS.map((day, i) => {
-          const isToday = i === todayIndex;
-          if (day) {
+        {cells.map(({ dayNumber, kept, isToday }) => {
+          if (kept) {
             return (
               <div
-                key={i}
+                key={dayNumber}
                 className={`mx-auto h-9 w-9 rounded-full bg-primary/15 flex items-center justify-center ${
                   isToday ? 'ring-2 ring-black ring-offset-1 ring-offset-white' : ''
                 }`}
@@ -113,7 +183,7 @@ function StreakCalendar() {
           }
           return (
             <div
-              key={i}
+              key={dayNumber}
               className={`mx-auto h-9 w-9 rounded-full bg-black/5 flex items-center justify-center ${
                 isToday ? 'ring-2 ring-black ring-offset-1 ring-offset-white' : ''
               }`}
@@ -137,6 +207,9 @@ function StreakCalendar() {
 }
 
 function DepositsAreaChart() {
+  const { data, isLoading } = useDepositsComplete();
+  const weekly = useMemo(() => buildWeeklyDeposits(data?.deposits ?? []), [data?.deposits]);
+
   // SVG viewBox is a convenient unitless canvas — we paint at 320×140 logical
   // units and let CSS scale it responsively via preserveAspectRatio="none".
   const W = 320;
@@ -146,11 +219,11 @@ function DepositsAreaChart() {
   const PADDING_BOTTOM = 22;
   const innerW = W - PADDING_X * 2;
   const innerH = H - PADDING_TOP - PADDING_BOTTOM;
-  const max = Math.max(...DEPOSITS_BY_WEEK.map((d) => d.amount));
-  const total = DEPOSITS_BY_WEEK.reduce((acc, d) => acc + d.amount, 0);
+  const max = Math.max(...weekly.map((d) => d.amount)) || 1;
+  const total = weekly.reduce((acc, d) => acc + d.amount, 0);
 
-  const points = DEPOSITS_BY_WEEK.map((d, i) => {
-    const x = PADDING_X + (innerW / (DEPOSITS_BY_WEEK.length - 1)) * i;
+  const points = weekly.map((d, i) => {
+    const x = PADDING_X + (innerW / (weekly.length - 1)) * i;
     const y = PADDING_TOP + innerH - (d.amount / max) * innerH;
     return { ...d, x, y };
   });
@@ -169,6 +242,8 @@ function DepositsAreaChart() {
 
   // Three horizontal gridlines at 0 / 50% / max for a "real chart" feel.
   const gridYs = [PADDING_TOP, PADDING_TOP + innerH / 2, PADDING_TOP + innerH];
+
+  if (isLoading) return <PanelLoading />;
 
   return (
     <div className="flex flex-col gap-3">
@@ -240,7 +315,7 @@ function DepositsAreaChart() {
         </span>
         <span className="text-sm font-extrabold text-black tabular-nums flex items-center gap-1.5">
           <FiTrendingUp className="h-3.5 w-3.5 text-emerald-600" />
-          ${total} USDC
+          ${total.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC
         </span>
       </div>
     </div>
@@ -248,23 +323,19 @@ function DepositsAreaChart() {
 }
 
 function XpProgress() {
-  // Mocked numbers — replace with real experience/level once the backend lands.
-  const level = 3;
-  const xp = 240;
-  const xpForNextLevel = 500;
-  const pct = Math.min(100, (xp / xpForNextLevel) * 100);
-  const breakdown = [
-    { label: 'Daily streak', value: 80 },
-    { label: 'Deposits', value: 110 },
-    { label: 'Achievements', value: 50 },
-  ];
+  const { data, isLoading } = useProfileExperience();
+  const totalXp = Math.round(data?.experience ?? 0);
+  const { level, xpIntoLevel, xpForNextLevel } = useMemo(() => deriveLevel(totalXp), [totalXp]);
+  const pct = Math.min(100, (xpIntoLevel / xpForNextLevel) * 100);
+
+  if (isLoading) return <PanelLoading />;
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
         <span className="text-2xl font-extrabold text-black tabular-nums">Lvl {level}</span>
         <span className="text-[11px] font-semibold text-gray-500 tabular-nums">
-          {xp} / {xpForNextLevel} XP
+          {xpIntoLevel} / {xpForNextLevel} XP
         </span>
       </div>
       <div className="h-3 w-full rounded-full bg-black/10 overflow-hidden border border-black/10">
@@ -273,14 +344,10 @@ function XpProgress() {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <ul className="flex flex-col gap-1.5 mt-1">
-        {breakdown.map((b) => (
-          <li key={b.label} className="flex items-center justify-between text-xs">
-            <span className="text-gray-600">{b.label}</span>
-            <span className="font-bold text-black tabular-nums">+{b.value} XP</span>
-          </li>
-        ))}
-      </ul>
+      <div className="flex items-center justify-between text-xs mt-1">
+        <span className="text-gray-600">Total experience</span>
+        <span className="font-bold text-black tabular-nums">{totalXp.toLocaleString('en-US')} XP</span>
+      </div>
     </div>
   );
 }
@@ -328,8 +395,9 @@ export function SummaryPage() {
   return (
     <MockedSubPageLayout
       title="Your summary"
-      subtitle="How your saving habit is shaping up. Numbers below are placeholders for now."
+      subtitle="How your saving habit is shaping up."
       backHref="/profile"
+      showSoonBadge={false}
     >
       <Panel
         icon="/icons/global/streak.png"
@@ -359,6 +427,7 @@ export function SummaryPage() {
         icon="/icons/global/star.png"
         title="Savings goals"
         subtitle="What you're working toward"
+        soon
       >
         <SavingsGoals />
       </Panel>
