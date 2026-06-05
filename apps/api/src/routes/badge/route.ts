@@ -1,5 +1,5 @@
 import { type NextFunction, type Request, type RequestHandler, type Response, Router } from 'express';
-import { getBadgeMetadata, getNetworkByName } from '@vaquita/shared';
+import { getBadgeMetadata, getBadgesContractAddress } from '@vaquita/shared';
 
 const router = Router();
 
@@ -15,7 +15,7 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
   };
 
 // ---------------------------------------------------------------------------
-// GET /api/v1/badge/:networkName/:tokenId
+// GET /api/v1/badge/:tokenId
 // ---------------------------------------------------------------------------
 
 /**
@@ -23,31 +23,26 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
  *
  * 200 — valid NFT metadata object
  * 400 — token_id is not a non-negative integer
- * 404 — token has not been minted or network not found
- * 503 — badges_contract_address not set for this network
+ * 404 — token has not been minted
+ * 503 — badges_contract_address not configured
  */
 router.get(
-  '/:networkName/:tokenId',
+  '/:tokenId',
   asyncHandler(async (req, res) => {
-    const { networkName, tokenId } = req.params;
+    const { tokenId } = req.params;
 
     const tokenIdNum = Number(tokenId);
     if (!Number.isInteger(tokenIdNum) || tokenIdNum < 0) {
       return res.status(400).json({ status: 'error', message: 'token_id must be a non-negative integer' });
     }
 
-    const { data: network } = await getNetworkByName(networkName);
-    if (!network) {
-      return res.status(404).json({ status: 'error', message: `Network '${networkName}' not found` });
-    }
-
-    const contractId = network.badges_contract_address;
+    const contractId = await getBadgesContractAddress();
     if (!contractId) {
-      req.log.error({ networkName }, 'badges_contract_address not set for network');
-      return res.status(503).json({ status: 'error', message: 'Badge contract not configured for this network' });
+      req.log.error('badges_contract_address not configured');
+      return res.status(503).json({ status: 'error', message: 'Badge contract not configured' });
     }
 
-    req.log.info({ networkName, tokenId: tokenIdNum }, 'GET /badge/:networkName/:tokenId');
+    req.log.info({ tokenId: tokenIdNum }, 'GET /badge/:tokenId');
 
     const metadata = await getBadgeMetadata(contractId, tokenIdNum);
     if (!metadata) {

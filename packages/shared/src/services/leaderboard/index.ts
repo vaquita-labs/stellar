@@ -1,18 +1,18 @@
-import { supabase } from '../../lib/supabase';
+import { prisma } from '@vaquita/db';
 
 // ---------------------------------------------------------------------------
 // Cycle duration config
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the fixed cycle duration in milliseconds from CYCLE_DURATION_MS env
- * var, or null in production (calendar month cycles).
+ * Returns the fixed cycle duration in milliseconds from the singleton `config`
+ * row (`cycle_duration_ms`), or null in production (calendar month cycles).
+ * Sourced from the DB so it can be changed at runtime from the admin.
  */
-export function getCycleDurationMs(): number | null {
-  const raw = process.env.CYCLE_DURATION_MS;
-  if (!raw) return null;
-  const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : null;
+export async function getCycleDurationMs(): Promise<number | null> {
+  const config = await prisma.config.findFirst({ select: { cycleDurationMs: true } });
+  const n = config?.cycleDurationMs;
+  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -23,9 +23,9 @@ export function getCycleDurationMs(): number | null {
  * Converts a cycle ID to UTC start/end millisecond timestamps.
  *
  * - 6-digit YYYYMM → production monthly cycle
- * - 10-digit Unix epoch seconds → test fixed-duration cycle (requires CYCLE_DURATION_MS)
+ * - 10-digit Unix epoch seconds → test fixed-duration cycle (requires cycle_duration_ms)
  */
-export function cycleIdToBoundaries(cycleId: number): { cycleStart: number; cycleEnd: number } {
+export async function cycleIdToBoundaries(cycleId: number): Promise<{ cycleStart: number; cycleEnd: number }> {
   if (cycleId < 1_000_000_000) {
     // YYYYMM format
     const year = Math.floor(cycleId / 100);
@@ -35,8 +35,8 @@ export function cycleIdToBoundaries(cycleId: number): { cycleStart: number; cycl
       cycleEnd:   Date.UTC(year, month,     1),
     };
   }
-  // Epoch-seconds: end = start + CYCLE_DURATION_MS
-  const durationMs = getCycleDurationMs() ?? 30 * 24 * 60 * 60 * 1000;
+  // Epoch-seconds: end = start + cycle_duration_ms
+  const durationMs = (await getCycleDurationMs()) ?? 30 * 24 * 60 * 60 * 1000;
   const cycleStart = cycleId * 1000;
   return { cycleStart, cycleEnd: cycleStart + durationMs };
 }
@@ -44,12 +44,12 @@ export function cycleIdToBoundaries(cycleId: number): { cycleStart: number; cycl
 /**
  * Returns the cycle ID of the last fully closed cycle.
  *
- * - Without CYCLE_DURATION_MS: previous calendar month as YYYYMM.
- * - With CYCLE_DURATION_MS: the start (epoch-seconds) of the previous
+ * - Without cycle_duration_ms: previous calendar month as YYYYMM.
+ * - With cycle_duration_ms: the start (epoch-seconds) of the previous
  *   completed fixed-duration cycle.
  */
-export function getLastClosedCycleId(): number {
-  const durationMs = getCycleDurationMs();
+export async function getLastClosedCycleId(): Promise<number> {
+  const durationMs = await getCycleDurationMs();
   if (!durationMs) {
     const d = new Date();
     const year  = d.getUTCMonth() === 0 ? d.getUTCFullYear() - 1 : d.getUTCFullYear();
@@ -81,47 +81,49 @@ export interface LeaderboardRow {
  */
 export async function getLeaderboard(
   cycleId: number,
-  networkId: number,
+  // Single-network now: network_id was dropped. Param kept optional + ignored for
+  // back-compat with existing callers.
+  _networkId?: number,
 ): Promise<LeaderboardRow[]> {
-  const { cycleStart, cycleEnd: rawEnd } = cycleIdToBoundaries(cycleId);
+  const { cycleStart, cycleEnd: rawEnd } = await cycleIdToBoundaries(cycleId);
   const now = Date.now();
   const cycleEnd = cycleId === 0 ? now : rawEnd;
 
   // Fetch all confirmed deposits that overlap [cycleStart, cycleEnd)
-  const { data: deposits, error } = await supabase
-    .from('deposits')
-    .select('wallet_address, amount, updated_at, withdrawals(updated_at, status, reward)')
-    .eq('network_id', networkId)
-    .eq('status', 'confirmed')
-    .lt('updated_at', new Date(cycleEnd).toISOString())
-    .not('updated_at', 'is', null);
-
-  if (error) throw error;
+  const deposits = await prisma.deposit.findMany({
+    where: {
+      status: 'confirmed',
+      updatedAt: { lt: new Date(cycleEnd) },
+      deletedAt: null,
+    },
+    select: {
+      walletAddress: true,
+      amount: true,
+      updatedAt: true,
+      withdrawals: { select: { updatedAt: true, status: true, reward: true } },
+    },
+  });
 
   // Score accumulator per wallet
   const scoreMap = new Map<string, { score: number; activeAmount: number }>();
 
-  for (const deposit of deposits ?? []) {
-    const wallet = deposit.wallet_address as string;
-    const amount = Number(deposit.amount ?? 0);
-    const depositedAt = new Date((deposit.updated_at as string)).getTime();
+  for (const deposit of deposits) {
+    const wallet = deposit.walletAddress;
+    const amount = deposit.amount.toNumber();
+    const depositedAt = deposit.updatedAt.getTime();
 
     // Find an on-time confirmed withdrawal (reward > 0)
-    const withdrawals = (deposit.withdrawals ?? []) as Array<{
-      updated_at: string | null;
-      status: string;
-      reward: string | null;
-    }>;
+    const withdrawals = deposit.withdrawals;
 
     const onTimeWithdrawal = withdrawals.find(
-      (w) => w.status === 'confirmed' && w.reward != null && Number(w.reward) > 0,
+      (w) => w.status === 'confirmed' && w.reward != null && w.reward.toNumber() > 0,
     );
 
     let effectiveEnd: number;
     let isActive: boolean;
 
-    if (onTimeWithdrawal?.updated_at) {
-      const withdrawnAt = new Date(onTimeWithdrawal.updated_at).getTime();
+    if (onTimeWithdrawal?.updatedAt) {
+      const withdrawnAt = onTimeWithdrawal.updatedAt.getTime();
       // Only count if withdrawal was after cycle start
       if (withdrawnAt <= cycleStart) continue;
       effectiveEnd = Math.min(withdrawnAt, cycleEnd);
@@ -169,27 +171,22 @@ interface TiebreakerData {
 
 async function getTiebreakerData(
   walletAddress: string,
-  networkId: number,
 ): Promise<TiebreakerData> {
-  const { data, error } = await supabase
-    .from('deposits')
-    .select('updated_at, withdrawals(status, reward)')
-    .eq('wallet_address', walletAddress)
-    .eq('network_id', networkId)
-    .eq('status', 'confirmed')
-    .order('updated_at', { ascending: true });
-
-  if (error) throw error;
+  const data = await prisma.deposit.findMany({
+    where: { walletAddress, status: 'confirmed', deletedAt: null },
+    select: { updatedAt: true, withdrawals: { select: { status: true, reward: true } } },
+    orderBy: { updatedAt: 'asc' },
+  });
 
   let totalCompletedCycles = 0;
   let lastDepositTimestamp = 0;
 
-  for (const deposit of data ?? []) {
-    const ts = new Date((deposit.updated_at as string)).getTime();
+  for (const deposit of data) {
+    const ts = deposit.updatedAt.getTime();
     if (ts > lastDepositTimestamp) lastDepositTimestamp = ts;
 
-    const hasOnTime = (deposit.withdrawals as any[]).some(
-      (w) => w.status === 'confirmed' && w.reward != null && Number(w.reward) > 0,
+    const hasOnTime = deposit.withdrawals.some(
+      (w) => w.status === 'confirmed' && w.reward != null && w.reward.toNumber() > 0,
     );
     if (hasOnTime) totalCompletedCycles++;
   }
@@ -209,15 +206,16 @@ async function getTiebreakerData(
 export async function getLeaderboardRankForWallet(
   walletAddress: string,
   cycleId: number,
-  networkId: number,
+  // Single-network now: kept optional + ignored for back-compat.
+  _networkId?: number,
 ): Promise<number | null> {
-  const rows = await getLeaderboard(cycleId, networkId);
+  const rows = await getLeaderboard(cycleId);
   const candidates = rows.slice(0, 15);
 
   const tiebreakerMap = new Map<string, TiebreakerData>();
   await Promise.all(
     candidates.map(async (r) => {
-      tiebreakerMap.set(r.walletAddress, await getTiebreakerData(r.walletAddress, networkId));
+      tiebreakerMap.set(r.walletAddress, await getTiebreakerData(r.walletAddress));
     }),
   );
 

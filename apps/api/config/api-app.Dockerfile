@@ -18,7 +18,7 @@ COPY . .
 RUN npm install -g nodemon ts-node typescript
 
 # 7. Exponer puerto
-EXPOSE 3000
+EXPOSE 3100
 
 # 8. Comando por defecto
 CMD ["npm", "run", "dev-all"]

@@ -8,7 +8,6 @@ import {
   dataToDepositResponseDTOTotalDepositsResponseDTO,
   depositSchema,
   failDepositWithTx,
-  getBaseApyData,
   getCachedDepositsByNetworkIdWalletAddress,
   getDepositsById,
   getDepositsByNetworkId,
@@ -21,7 +20,22 @@ import {
   sendError,
   sendSuccess,
   toDepositResponseDTO,
+  tryParsePoolError,
 } from '@vaquita/shared';
+
+/**
+ * Returns a typed VaquitaPoolError response when `err` is a recognised contract
+ * error, or `null` so the caller can fall back to a generic sendError.
+ */
+function poolErrorResponse(res: Response, err: unknown): ReturnType<typeof res.json> | null {
+  const poolErr = tryParsePoolError(err);
+  if (!poolErr) return null;
+  return res.status(poolErr.httpStatus).json({
+    status: 'error',
+    message: poolErr.message,
+    errorCode: poolErr.code,
+  });
+}
 
 const router = Router();
 
@@ -73,7 +87,7 @@ router.post('/', asyncHandler(async (req, res) => {
     );
   } catch (err) {
     childLog.error({ err }, 'createDepositByNames threw');
-    return sendError(res, (err as Error)?.message ?? 'Failed to create deposit', err, 500);
+    return poolErrorResponse(res, err) ?? sendError(res, (err as Error)?.message ?? 'Failed to create deposit', err, 500);
   }
 
   if (result.error) {
@@ -221,9 +235,7 @@ router.get('/network/:networkName/token/:tokenSymbol/lockPeriod/:lockPeriod/apy'
   }
 
   let response: unknown = {};
-  if (networkData.name === 'Base' || networkData.name === 'Base Sepolia Testnet') {
-    response = await getBaseApyData(networkData, tokenNetworkData, Number(lockPeriod));
-  } else if (networkData.name === 'Stellar Testnet' || networkData.name === 'Stellar') {
+  if (networkData.name === 'Stellar Testnet' || networkData.name === 'Stellar') {
     // Headline protocolApy: DeFindex HTTP API (+ on-chain period for vaquitaApy). Blend pool reserve is not used:
     // per-deposit vault yield is share/NAV via `getBlendInterest`, and Blend SDK often lags testnet pool storage.
     response = await getStellarApyData(networkData, Number(lockPeriod), null, tokenNetworkData);

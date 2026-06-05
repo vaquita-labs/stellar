@@ -72,7 +72,7 @@ export function BadgeTile({
     <button
       type="button"
       onClick={onPress}
-      className={`group flex flex-col items-center gap-1.5 bg-transparent focus:outline-none w-full ${loading ? 'opacity-50 animate-pulse pointer-events-none' : ''}`}
+      className={`group flex flex-col items-center gap-1.5 bg-transparent focus:outline-none w-full cursor-pointer ${loading ? 'opacity-50 animate-pulse pointer-events-none' : ''}`}
     >
       <span
         className={`relative flex aspect-square w-full ${s.wrap} items-center justify-center transition group-hover:-translate-y-0.5 ${wrapFilter}`}

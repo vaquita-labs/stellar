@@ -1,27 +1,34 @@
 'use client';
 
-import { Avatar, Spinner, toast } from '@heroui/react';
+import { Spinner, Switch, toast } from '@heroui/react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FiCamera, FiSave, FiTrash2 } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useProfileData, useRestProfile } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { PageLayout } from '../../molecules';
 
 export function EditProfilePage() {
   const router = useRouter();
-  const { walletAddress, network } = useNetworkConfigStore();
-  const { data, isLoading } = useProfileData();
-  const { saveNickname } = useRestProfile();
+  const { walletAddress, network } = useConfigStore();
+  const { data, isLoading, refetch } = useProfileData();
+  const { saveProfile, saveProfileFlags, uploadAvatar, removeAvatar } = useRestProfile();
 
   const initialNickname = (data?.nickname ?? '').trim();
-  const profileEmail = (data?.email ?? '').trim();
+  const initialEmail = (data?.email ?? '').trim();
 
   const DEFAULT_AVATAR = '/vaquita_working.jpg';
 
   const [nickname, setNickname] = useState<string>(initialNickname);
+  const [email, setEmail] = useState<string>(initialEmail);
+  const [nicknameError, setNicknameError] = useState<string>('');
+  const [emailError, setEmailError] = useState<string>('');
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [tutorialCompleted, setTutorialCompleted] = useState(false);
+  const [savingFlag, setSavingFlag] = useState<null | 'onboarding' | 'tutorial'>(null);
   const [saving, setSaving] = useState(false);
   const [avatarSrc, setAvatarSrc] = useState<string>(DEFAULT_AVATAR);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -33,6 +40,22 @@ export function EditProfilePage() {
   }, [initialNickname]);
 
   useEffect(() => {
+    setEmail(initialEmail);
+  }, [initialEmail]);
+
+  useEffect(() => {
+    setOnboardingCompleted(data?.onboardingCompleted ?? false);
+    setTutorialCompleted(data?.tutorialCompleted ?? false);
+  }, [data?.onboardingCompleted, data?.tutorialCompleted]);
+
+  // Reflect the persisted avatar. Skip while a freshly-picked local preview is
+  // showing (objectUrlRef set) so a background refetch can't clobber it.
+  useEffect(() => {
+    if (objectUrlRef.current) return;
+    setAvatarSrc(data?.avatarUrl ? data.avatarUrl : DEFAULT_AVATAR);
+  }, [data?.avatarUrl]);
+
+  useEffect(() => {
     return () => {
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     };
@@ -42,7 +65,14 @@ export function EditProfilePage() {
     fileInputRef.current?.click();
   };
 
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const clearPreview = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  };
+
+  const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
@@ -50,28 +80,74 @@ export function EditProfilePage() {
       toast.danger('Please choose an image file');
       return;
     }
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    const url = URL.createObjectURL(file);
-    objectUrlRef.current = url;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.danger('The image is too large (max 5 MB).');
+      return;
+    }
+    if (!walletAddress || uploadingPhoto) return;
+
+    // Show the picked file immediately while the upload is in flight.
+    clearPreview();
+    const previewUrl = URL.createObjectURL(file);
+    objectUrlRef.current = previewUrl;
+    const prevSrc = avatarSrc;
+    setAvatarSrc(previewUrl);
     setUploadingPhoto(true);
-    setTimeout(() => {
-      setAvatarSrc(url);
+    try {
+      const { success, message, avatarUrl } = await uploadAvatar(file);
+      if (success && avatarUrl) {
+        clearPreview();
+        setAvatarSrc(avatarUrl);
+        toast.success('Photo updated', { timeout: 2000 });
+        refetch();
+      } else {
+        clearPreview();
+        setAvatarSrc(prevSrc);
+        toast.danger('Could not update photo', { description: message, timeout: 4000 });
+      }
+    } catch (error) {
+      clearPreview();
+      setAvatarSrc(prevSrc);
+      toast.danger('Could not update photo', {
+        description: (error as { message?: string })?.message ?? '',
+        timeout: 4000,
+      });
+    } finally {
       setUploadingPhoto(false);
-      toast.success('Photo updated', { timeout: 2000 });
-    }, 700);
+    }
   };
 
-  const handleResetPhoto = () => {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
+  const handleResetPhoto = async () => {
+    if (!walletAddress || uploadingPhoto) return;
+    const prevSrc = avatarSrc;
+    setUploadingPhoto(true);
+    try {
+      const { success, message } = await removeAvatar();
+      if (success) {
+        clearPreview();
+        setAvatarSrc(DEFAULT_AVATAR);
+        toast.success('Photo removed', { timeout: 2000 });
+        refetch();
+      } else {
+        setAvatarSrc(prevSrc);
+        toast.danger('Could not remove photo', { description: message, timeout: 4000 });
+      }
+    } catch (error) {
+      setAvatarSrc(prevSrc);
+      toast.danger('Could not remove photo', {
+        description: (error as { message?: string })?.message ?? '',
+        timeout: 4000,
+      });
+    } finally {
+      setUploadingPhoto(false);
     }
-    setAvatarSrc(DEFAULT_AVATAR);
   };
 
   const isCustomPhoto = avatarSrc !== DEFAULT_AVATAR;
 
-  const isDirty = nickname.trim() !== initialNickname;
+  const nicknameDirty = nickname.trim() !== initialNickname;
+  const emailDirty = email.trim() !== initialEmail;
+  const isDirty = nicknameDirty || emailDirty;
   const canSave = !!walletAddress && isDirty && !saving && !!network;
 
   const fallbackInitials = useMemo(() => {
@@ -79,17 +155,74 @@ export function EditProfilePage() {
     return base.slice(0, 2).toUpperCase();
   }, [nickname, initialNickname, walletAddress]);
 
+  const handleToggleFlag = async (flag: 'onboarding' | 'tutorial', value: boolean) => {
+    if (!walletAddress || savingFlag) return;
+    const setLocal = flag === 'onboarding' ? setOnboardingCompleted : setTutorialCompleted;
+    const prev = flag === 'onboarding' ? onboardingCompleted : tutorialCompleted;
+    setLocal(value); // optimistic; reverted on failure
+    setSavingFlag(flag);
+    try {
+      const payload =
+        flag === 'onboarding' ? { onboardingCompleted: value } : { tutorialCompleted: value };
+      const { success, message } = await saveProfileFlags(payload);
+      if (success) {
+        toast.success('Preferences updated', { timeout: 2000 });
+        refetch();
+      } else {
+        setLocal(prev);
+        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+      }
+    } catch (error) {
+      setLocal(prev);
+      toast.danger('Could not update preferences', {
+        description: (error as { message?: string })?.message ?? '',
+        timeout: 4000,
+      });
+    } finally {
+      setSavingFlag(null);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!canSave) return;
+
+    // Send only the fields the user actually changed. The API validates and
+    // saves each one independently, so e.g. a free nickname still persists even
+    // if the email is already taken.
+    const payload: { nickname?: string; email?: string } = {};
+    if (nicknameDirty) payload.nickname = nickname.trim();
+    if (emailDirty) payload.email = email.trim();
+
+    setNicknameError('');
+    setEmailError('');
     setSaving(true);
     try {
-      const { success, message } = await saveNickname({ nickname });
-      if (success) {
-        toast.success('Profile saved', { timeout: 3000 });
-        router.push('/profile/settings');
-      } else {
+      const { success, message, result } = await saveProfile(payload);
+
+      if (!success || !result) {
         toast.danger('Could not save profile', { description: message, timeout: 4000 });
+        return;
       }
+
+      // Surface per-field errors inline (and clear the ones that succeeded).
+      if (payload.nickname !== undefined) setNicknameError(result.nickname.error ?? '');
+      if (payload.email !== undefined) setEmailError(result.email.error ?? '');
+
+      const fieldErrors = [result.nickname.error, result.email.error].filter(Boolean) as string[];
+      const savedAny = result.nickname.saved || result.email.saved;
+
+      if (savedAny) {
+        toast.success('Profile saved', { timeout: 2500 });
+        refetch();
+      }
+      if (fieldErrors.length > 0) {
+        toast.danger('Some changes were not saved', {
+          description: fieldErrors.join(' '),
+          timeout: 5000,
+        });
+      }
+      // Stay on the edit page after saving — the success toast + refetch already
+      // reflect the saved values, so the user keeps editing without navigating away.
     } catch (error) {
       toast.danger('Could not save profile', {
         description: (error as { message?: string })?.message ?? '',
@@ -111,10 +244,22 @@ export function EditProfilePage() {
               aria-label="Change photo"
               className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden border-2 border-black shadow group focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <Avatar size="lg" className="h-full w-full">
-                <Avatar.Image src={avatarSrc} className="h-full w-full object-cover" />
-                <Avatar.Fallback>{fallbackInitials}</Avatar.Fallback>
-              </Avatar>
+              {/* Fallback initials sit behind the image; a loaded photo covers them. */}
+              <span className="absolute inset-0 flex items-center justify-center bg-[#FFE8A3] text-2xl font-extrabold text-gray-600">
+                {fallbackInitials}
+              </span>
+              <Image
+                key={avatarSrc}
+                src={avatarSrc}
+                alt="Profile photo"
+                fill
+                sizes="128px"
+                className="object-cover"
+                // Local previews (blob:/data:) can't be optimized by the server;
+                // pass them through. Remote MinIO URLs ARE optimized (fetched
+                // server-side → served over https, so no mixed-content block).
+                unoptimized={avatarSrc.startsWith('blob:') || avatarSrc.startsWith('data:')}
+              />
               <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition">
                 Change photo
               </span>
@@ -144,7 +289,8 @@ export function EditProfilePage() {
             <button
               type="button"
               onClick={handleResetPhoto}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-red-600 transition"
+              disabled={uploadingPhoto || !walletAddress}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-red-600 transition disabled:opacity-50"
             >
               <FiTrash2 className="h-3 w-3" />
               Remove photo
@@ -162,11 +308,18 @@ export function EditProfilePage() {
               type="text"
               placeholder="@nickname"
               value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              maxLength={32}
+              onChange={(e) => {
+                setNickname(e.target.value);
+                if (nicknameError) setNicknameError('');
+              }}
+              maxLength={50}
               disabled={!walletAddress || isLoading}
-              className="w-full bg-white border border-black border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none focus:border-primary disabled:opacity-50"
+              aria-invalid={!!nicknameError}
+              className={`w-full bg-white border border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none disabled:opacity-50 ${
+                nicknameError ? 'border-red-500 focus:border-red-500' : 'border-black focus:border-primary'
+              }`}
             />
+            {nicknameError && <p className="text-xs text-red-600 mt-1.5">{nicknameError}</p>}
           </div>
 
           <div>
@@ -174,12 +327,47 @@ export function EditProfilePage() {
             <input
               type="email"
               placeholder="you@example.com"
-              value={profileEmail}
-              readOnly
-              disabled
-              className="w-full bg-gray-50 border border-black border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none opacity-70 cursor-not-allowed"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError('');
+              }}
+              maxLength={100}
+              disabled={!walletAddress || isLoading}
+              aria-invalid={!!emailError}
+              className={`w-full bg-white border border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none disabled:opacity-50 ${
+                emailError ? 'border-red-500 focus:border-red-500' : 'border-black focus:border-primary'
+              }`}
             />
-            <p className="text-xs text-gray-500 mt-1.5">Email editing is coming soon.</p>
+            {emailError && <p className="text-xs text-red-600 mt-1.5">{emailError}</p>}
+          </div>
+
+          {/* Flags — dev/testing only */}
+          <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-black/30 bg-black/[0.02] p-3">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
+                Profile flags
+              </span>
+              <span className="rounded-full bg-[#39FF14] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-black shadow-[0_0_8px_rgba(57,255,20,0.7)] ring-1 ring-black/20">
+                Testing only
+              </span>
+            </div>
+            <FlagToggle
+              label="Onboarding completed"
+              description="Mark the initial onboarding flow as done."
+              value={onboardingCompleted}
+              isDisabled={!walletAddress || isLoading || savingFlag === 'onboarding'}
+              isSaving={savingFlag === 'onboarding'}
+              onChange={(checked) => handleToggleFlag('onboarding', checked)}
+            />
+            <FlagToggle
+              label="Tutorial completed"
+              description="Mark the in-app tutorial as done."
+              value={tutorialCompleted}
+              isDisabled={!walletAddress || isLoading || savingFlag === 'tutorial'}
+              isSaving={savingFlag === 'tutorial'}
+              onChange={(checked) => handleToggleFlag('tutorial', checked)}
+            />
           </div>
         </section>
 
@@ -200,5 +388,49 @@ export function EditProfilePage() {
           </Button>
         </div>
     </PageLayout>
+  );
+}
+
+/**
+ * A labelled on/off row. HeroUI v3's `Switch` is a compound component built on
+ * react-aria: it renders nothing visible unless `Switch.Control`/`Switch.Thumb`
+ * are provided, and it already renders its own <label> (so the row wrapper is a
+ * <div> — nesting <label>s breaks the click). The `@heroui/styles` sheet (loaded
+ * in globals.css) styles the track/thumb via the auto-applied `switch__*` slot
+ * classes, so we pass NO custom classes — overriding them fought the theme's
+ * margin-based thumb animation and hid the white knob.
+ */
+function FlagToggle({
+  label,
+  description,
+  value,
+  isDisabled,
+  isSaving,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: boolean;
+  isDisabled?: boolean;
+  isSaving?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-black border-b-2 bg-white px-3 py-3">
+      <span>
+        <span className="block text-black font-medium text-sm">{label}</span>
+        <span className="block text-xs text-gray-500">{description}</span>
+      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={`text-xs font-semibold ${value ? 'text-green-600' : 'text-gray-400'}`}>
+          {isSaving ? 'Saving…' : value ? 'On' : 'Off'}
+        </span>
+        <Switch isSelected={value} onChange={onChange} isDisabled={isDisabled} aria-label={label}>
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch>
+      </div>
+    </div>
   );
 }

@@ -1,0 +1,9 @@
+# Node
+node_modules/
+
+# Ingest high-water-mark (persisted via Actions cache, not committed)
+dune_ingest_state.json
+
+# Env / secrets
+.env
+.env.*

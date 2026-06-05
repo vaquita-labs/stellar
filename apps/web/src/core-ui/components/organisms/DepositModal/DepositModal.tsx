@@ -1,6 +1,7 @@
 'use client';
 
 import { isNewDepositHandled } from '@/networks/helpers';
+import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import {
   Button,
   Description,
@@ -10,11 +11,12 @@ import {
   Spinner,
   toast,
 } from '@heroui/react';
+import { usePollar } from '@pollar/react';
 import { useEffect, useState } from 'react';
 import { v4 } from 'uuid';
-import { formatTimeDeposit, getBalance, getQuickAmounts, truncateDecimals } from '../../../helpers';
-import { useAnalytics, useBalance, useRestDeposit } from '../../../hooks';
-import { useNetworkConfigStore, useTransactionStore } from '../../../stores';
+import { formatTimeDeposit, getQuickAmounts, truncateDecimals } from '../../../helpers';
+import { useAnalytics, useRestDeposit, useTransactions } from '../../../hooks';
+import { useConfigStore } from '../../../stores';
 import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
@@ -25,12 +27,12 @@ import { DepositModalProps } from './types';
 export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing }: DepositModalProps) {
   const [mounted, setMounted] = useState(false);
   const [amount, setAmount] = useState<string>('');
-  const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useNetworkConfigStore();
+  const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useConfigStore();
   const { createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
-  const { transactionDeposit } = useTransactionStore();
+  const { transactionDeposit } = useTransactions();
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
   const lockTimeOptions =
-    token?.lockPeriod.map((lockPeriod) => ({
+    token?.lockPeriods.map((lockPeriod) => ({
       key: lockPeriod,
       label: formatTimeDeposit(lockPeriod),
       available: lockPeriod >= 0,
@@ -46,14 +48,24 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
     !token ||
     !transactionDeposit;
 
-  const { data: balances, refetch, isRefetching, isLoading } = useBalance(walletAddress);
-  const balance = getBalance(network, token, balances?.balances ?? [])?.balance || 0;
-  const balanceFormatted = balance ? truncateDecimals(balance / 10 ** (token?.decimals ?? 0), 5) : 0;
+  const { walletBalance, refreshWalletBalance } = usePollar();
+  const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
+  // Pollar already returns balances in human units (decimal strings), so no 10**decimals scaling.
+  // Match the native asset by Pollar's `type` (it's always reported as XLM) and other assets by
+  // code — which requires the config token `symbol` to equal the on-chain Stellar asset code.
+  const tokenBalance = balances.find((b) =>
+    token?.isNative ? b.type === 'native' : b.code.toUpperCase() === token?.symbol?.toUpperCase(),
+  );
+  const balanceFormatted = tokenBalance ? truncateDecimals(Number(tokenBalance.available), 5) : 0;
+  const balanceIsLoading = walletBalance.step === 'loading';
   const quickAmounts = getQuickAmounts(token?.symbol ?? '');
 
   useEffect(() => {
     setAmount('');
   }, [token?.symbol]);
+  useEffect(() => {
+    if (open && walletAddress) void refreshWalletBalance();
+  }, [open, walletAddress, refreshWalletBalance]);
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
@@ -67,11 +79,11 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
         amount,
         token: token?.symbol,
         lockPeriod,
-        network: network?.name,
+        network: network?.networkName,
       });
 
       let isSuccess = false;
-      if (isNewDepositHandled(network?.name)) {
+      if (isNewDepositHandled(network?.networkName)) {
         onOpenChange();
         const { success, error } = await transactionDeposit(0, amount, lockPeriod);
         isSuccess = !!success;
@@ -120,7 +132,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           amount,
           token: token?.symbol,
           lockPeriod,
-          network: network?.name,
+          network: network?.networkName,
         });
         toast.success(<T>Deposit sent successfully</T>, {
           description: <T>If you see a vaquita blinking, it is your deposit that is still being confirmed.</T>,
@@ -133,10 +145,15 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           amount,
           token: token?.symbol,
           lockPeriod,
-          network: network?.name,
+          network: network?.networkName,
         });
+        const poolMsg = parsePoolErrorMessage(lastError);
         toast.danger(<T>Unsuccessful deposit</T>, {
-          description: lastError instanceof Error ? <T>{lastError.message}</T> : undefined,
+          description: poolMsg
+            ? <T>{poolMsg}</T>
+            : lastError instanceof Error
+              ? <T>{lastError.message}</T>
+              : undefined,
           timeout: 3000,
         });
       }
@@ -148,7 +165,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      isDismissable={!isLoading && !isDepositing}
+      isDismissable={!balanceIsLoading && !isDepositing}
       title="Deposit"
       titleIcon="/icons/bag.svg"
       titleIconAlt="deposit"
@@ -165,7 +182,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
       }
     >
           {!!network && !!token && (
-            <TestnetUSDCNotice networkName={network.name} tokenContract={token.contractAddress} />
+            <TestnetUSDCNotice networkName={network.networkName} tokenContract={token.contractAddress} />
           )}
           <Select
             isRequired
@@ -199,9 +216,9 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
               value={amount}
               onValueChange={(v) => setAmount(v)}
               onTokenChange={(t) => setToken(t)}
-              onReloadBalance={refetch}
+              onReloadBalance={refreshWalletBalance}
               loading={isDepositing}
-              balanceIsLoading={isRefetching || isLoading}
+              balanceIsLoading={balanceIsLoading}
             />
             <div className="flex justify-between gap-2">
               {Array.isArray(quickAmounts) &&

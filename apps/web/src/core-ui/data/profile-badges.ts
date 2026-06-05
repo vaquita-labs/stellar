@@ -3,16 +3,34 @@ import type { AchievementDetail } from '../components/pages/profile/AchievementM
 
 /**
  * Shared catalog of achievements rendered on the profile page and the trophy
- * room. Today it is a static mock that derives `progress` / `unlocked` from
- * live user signals (streak, deposits, XP, savings, friends, leaderboard).
- * When the backend exposes a real catalog the only swap is replacing
- * `buildAchievements` with a hook.
+ * room.
  *
- * Files referenced by `icon` live at `apps/web/public/icons/achievements/`
- * and are named after the achievement `id` for predictable lookups — see
- * the README in that folder when adding a new achievement.
+ * The badge METADATA (title / description / icon / accent / tier / order) and
+ * per-wallet status now come from a single endpoint — `GET
+ * /api/v1/wallets/:wallet/badges` (`ctx.extraAchievements`), which embeds the
+ * admin-editable catalog fields per row. {@link FALLBACK_BADGE_META} renders the
+ * built-in set while that list loads, so the grid never flashes empty.
+ *
+ * Per-user PROGRESS + unlock for the built-in milestone keys is still computed
+ * client-side from live signals (streak, deposits, XP, savings, rank) — see
+ * {@link computeKnownState}. Badges that come from the backend but aren't in
+ * that known set (admin-created rule badges, redeem-code badges) take their
+ * `unlocked` state straight from the server response.
+ *
+ * Files referenced by `icon` live at `apps/web/public/icons/achievements/`.
  */
 export type Badge = AchievementDetail & { unlocked: boolean };
+
+/** Identity-level metadata for a badge (no user-specific signals). Mirrors the
+ *  catalog endpoint's response, mapped to the field names the UI uses. */
+export type CatalogBadgeMeta = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  accent?: string;
+  tier?: Badge['tier'];
+};
 
 export type AchievementsCtx = {
   totalStreak: number;
@@ -26,20 +44,14 @@ export type AchievementsCtx = {
   /** 1-based leaderboard rank; `undefined` means "not on the board". */
   leaderboardRank?: number;
   /** Server-derived: true when the user's profile was created before the
-   *  Beta Tester cutoff (see `BETA_TESTER_CUTOFF` in @vaquita/shared). The
-   *  GET /achievements endpoint computes this; callers should pull it from
-   *  `useProfileAchievements()` and pass it in. Defaults to `false` if the
-   *  query hasn't resolved yet so a locked tile is shown by default rather
-   *  than briefly flashing as unlocked. */
+   *  Beta Tester cutoff (see `BETA_TESTER_CUTOFF` in @vaquita/shared). */
   isBetaTester?: boolean;
   /** Server-derived ISO timestamp of the Beta Tester claim, if any. */
   betaTesterClaimedAt?: string;
-  /** Full server response. Any achievement whose `key` is NOT in the hardcoded
-   *  catalog below is appended at the end of the grid using its server copy
-   *  (name/description/tier/coinReward/claimedAt). This is how redeem-code
-   *  badges (e.g. `secret-launch`, `churrasquito-05-2026`) become visible
-   *  after the user claims them, without us shipping a frontend update per
-   *  badge. The image must live at `/icons/achievements/<key>.png`. */
+  /** The wallet badges list (`GET /wallets/:wallet/badges`). The single source
+   *  of truth for the grid: every badge with its copy, icon, accent, order and
+   *  server-computed `unlocked` / `claimedAt` / `minted`. Falls back to
+   *  {@link FALLBACK_BADGE_META} when empty/not loaded. */
   extraAchievements?: AchievementResponseDTO[];
 };
 
@@ -57,204 +69,118 @@ const DEFAULT_ACCENT = ACCENT_BY_TIER.Founder;
 
 const ICONS = '/icons/achievements';
 
-export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
+/**
+ * Static metadata fallback for the built-in 16 badges, in display order. Used
+ * when the backend catalog hasn't loaded. Mirrors the rows backfilled by
+ * `apps/supabase/migrations/20260529_achievement_rules.sql`.
+ */
+export const FALLBACK_BADGE_META: CatalogBadgeMeta[] = [
+  { id: 'beta-tester', title: 'Beta Tester', description: 'You joined Vaquita during the beta. Thanks for helping us shape it.', icon: `${ICONS}/beta-tester2.png`, accent: 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)', tier: 'Founder' },
+  { id: 'rookie', title: 'Rookie', description: 'Earn your first 50 XP. Welcome to the herd.', icon: `${ICONS}/rookie.png`, accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', tier: 'Bronze' },
+  { id: 'week-warrior', title: 'Week Warrior', description: 'Reach a 7-day savings streak.', icon: `${ICONS}/week-warrior.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)', tier: 'Bronze' },
+  { id: 'first-deposit', title: 'First Deposit', description: 'Made your very first deposit in Vaquita.', icon: `${ICONS}/first-deposit.png`, accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', tier: 'Bronze' },
+  { id: 'first-friend', title: 'Crew Mate', description: 'Follow your first fellow vaquero.', icon: `${ICONS}/first-friend.png`, accent: 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)', tier: 'Bronze' },
+  { id: 'savings-starter', title: 'Savings Starter', description: 'Reach $100 USDC in cumulative deposits.', icon: `${ICONS}/savings-starter.png`, accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', tier: 'Silver' },
+  { id: 'trio-saver', title: 'Triple Threat', description: 'Keep 3 active deposits running at the same time.', icon: `${ICONS}/trio-saver.png`, accent: 'linear-gradient(180deg, #B89AFF 0%, #7C4DFF 100%)', tier: 'Silver' },
+  { id: 'month-master', title: 'Month Master', description: 'Reach a 30-day savings streak.', icon: `${ICONS}/month-master.png`, accent: 'linear-gradient(180deg, #FF8A65 0%, #E64A19 100%)', tier: 'Silver' },
+  { id: 'explorer', title: 'Explorer', description: 'Earn 300 XP across all challenges.', icon: `${ICONS}/explorer.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)', tier: 'Silver' },
+  { id: 'streak-master', title: 'Streak Master', description: 'Reach a 50-day savings streak.', icon: `${ICONS}/streak-master.png`, accent: 'linear-gradient(180deg, #FFB347 0%, #FF7A00 100%)', tier: 'Gold' },
+  { id: 'whale', title: 'Vaquita Whale', description: 'Reach 30,000 XP. Now THAT is dedication.', icon: `${ICONS}/whale.png`, accent: 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)', tier: 'Gold' },
+  { id: 'savings-baron', title: 'Savings Baron', description: 'Reach $10,000 USDC in cumulative deposits.', icon: `${ICONS}/savings-baron.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', tier: 'Gold' },
+  { id: 'century-saver', title: 'Century Saver', description: 'Reach a 100-day savings streak. Legendary.', icon: `${ICONS}/century-saver.png`, accent: 'linear-gradient(180deg, #FFD180 0%, #FF6F00 100%)', tier: 'Diamond' },
+  { id: 'third-place', title: 'Bronze Medalist', description: 'Finish in the top 10 on the monthly leaderboard.', icon: `${ICONS}/third-place.png`, accent: 'linear-gradient(180deg, #FFCC80 0%, #A05A2C 100%)', tier: 'Bronze' },
+  { id: 'second-place', title: 'Silver Medalist', description: 'Finish #2 on the monthly leaderboard.', icon: `${ICONS}/second-place.png`, accent: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)', tier: 'Silver' },
+  { id: 'first-place', title: 'Gold Medalist', description: 'Finish #1 on the monthly leaderboard.', icon: `${ICONS}/first-place.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', tier: 'Gold' },
+];
+
+type KnownState = { progress?: { current: number; target: number }; unlocked: boolean };
+
+/**
+ * Per-user progress + unlock for the built-in milestone keys, computed from the
+ * live signals. Keyed by badge id. Badges not in this map (admin-created) get
+ * their unlock state from the server response instead.
+ */
+const computeKnownState = (ctx: AchievementsCtx): Record<string, KnownState> => {
   const isBetaTester = ctx.isBetaTester ?? false;
   const savings = ctx.totalSavedAmount ?? 0;
   const friends = ctx.friendsCount ?? 0;
   const rank = ctx.leaderboardRank;
+  const exp = ctx.experience;
+  const streak = ctx.totalStreak;
+  const deposits = ctx.totalDeposits;
 
-  const badges: Badge[] = [
-    {
-      id: 'beta-tester',
-      title: 'Beta Tester',
-      description:
-        'You joined Vaquita during the beta. Thanks for helping us shape it.',
-      icon: `${ICONS}/beta-tester2.png`,
-      accent: 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
-      tier: 'Founder',
-      date: ctx.betaTesterClaimedAt ?? (isBetaTester ? new Date().toISOString() : undefined),
-      unlocked: isBetaTester,
-    },
-    {
-      id: 'rookie',
-      title: 'Rookie',
-      description: 'Earn your first 50 XP. Welcome to the herd.',
-      icon: `${ICONS}/rookie.png`,
-      accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)',
-      tier: 'Bronze',
-      progress: { current: Math.min(ctx.experience, 50), target: 50 },
-      date: ctx.experience >= 50 ? new Date().toISOString() : undefined,
-      unlocked: ctx.experience >= 50,
-    },
-    {
-      id: 'week-warrior',
-      title: 'Week Warrior',
-      description: 'Reach a 7-day savings streak.',
-      icon: `${ICONS}/week-warrior.png`,
-      accent: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)',
-      tier: 'Bronze',
-      progress: { current: Math.min(ctx.totalStreak, 7), target: 7 },
-      date: ctx.totalStreak >= 7 ? new Date().toISOString() : undefined,
-      unlocked: ctx.totalStreak >= 7,
-    },
-    {
-      id: 'first-deposit',
-      title: 'First Deposit',
-      description: 'Made your very first deposit in Vaquita.',
-      icon: `${ICONS}/first-deposit.png`,
-      accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)',
-      tier: 'Bronze',
-      date: ctx.totalDeposits >= 1 ? new Date().toISOString() : undefined,
-      unlocked: ctx.totalDeposits >= 1,
-    },
-    {
-      id: 'first-friend',
-      title: 'Crew Mate',
-      description: 'Follow your first fellow vaquero.',
-      icon: `${ICONS}/first-friend.png`,
-      accent: 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)',
-      tier: 'Bronze',
-      progress: { current: Math.min(friends, 1), target: 1 },
-      date: friends >= 1 ? new Date().toISOString() : undefined,
-      unlocked: friends >= 1,
-    },
-    {
-      id: 'savings-starter',
-      title: 'Savings Starter',
-      description: 'Reach $100 USDC in cumulative deposits.',
-      icon: `${ICONS}/savings-starter.png`,
-      accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)',
-      tier: 'Silver',
-      progress: { current: Math.min(Math.floor(savings), 100), target: 100 },
-      date: savings >= 100 ? new Date().toISOString() : undefined,
-      unlocked: savings >= 100,
-    },
-    {
-      id: 'trio-saver',
-      title: 'Triple Threat',
-      description: 'Keep 3 active deposits running at the same time.',
-      icon: `${ICONS}/trio-saver.png`,
-      accent: 'linear-gradient(180deg, #B89AFF 0%, #7C4DFF 100%)',
-      tier: 'Silver',
-      progress: { current: Math.min(ctx.totalDeposits, 3), target: 3 },
-      date: ctx.totalDeposits >= 3 ? new Date().toISOString() : undefined,
-      unlocked: ctx.totalDeposits >= 3,
-    },
-    {
-      id: 'month-master',
-      title: 'Month Master',
-      description: 'Reach a 30-day savings streak.',
-      icon: `${ICONS}/month-master.png`,
-      accent: 'linear-gradient(180deg, #FF8A65 0%, #E64A19 100%)',
-      tier: 'Silver',
-      progress: { current: Math.min(ctx.totalStreak, 30), target: 30 },
-      date: ctx.totalStreak >= 30 ? new Date().toISOString() : undefined,
-      unlocked: ctx.totalStreak >= 30,
-    },
-    {
-      id: 'explorer',
-      title: 'Explorer',
-      description: 'Earn 300 XP across all challenges.',
-      icon: `${ICONS}/explorer.png`,
-      accent: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)',
-      tier: 'Silver',
-      progress: { current: Math.min(ctx.experience, 300), target: 300 },
-      date: ctx.experience >= 300 ? new Date().toISOString() : undefined,
-      unlocked: ctx.experience >= 300,
-    },
-    {
-      id: 'streak-master',
-      title: 'Streak Master',
-      description: 'Reach a 50-day savings streak.',
-      icon: `${ICONS}/streak-master.png`,
-      accent: 'linear-gradient(180deg, #FFB347 0%, #FF7A00 100%)',
-      tier: 'Gold',
-      progress: { current: Math.min(ctx.totalStreak, 50), target: 50 },
-      date: ctx.totalStreak >= 50 ? new Date().toISOString() : undefined,
-      unlocked: ctx.totalStreak >= 50,
-    },
-    {
-      id: 'whale',
-      title: 'Vaquita Whale',
-      description: 'Reach 30,000 XP. Now THAT is dedication.',
-      icon: `${ICONS}/whale.png`,
-      accent: 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)',
-      tier: 'Gold',
-      progress: { current: Math.min(ctx.experience, 30000), target: 30000 },
-      date: ctx.experience >= 30000 ? new Date().toISOString() : undefined,
-      unlocked: ctx.experience >= 30000,
-    },
-    {
-      id: 'savings-baron',
-      title: 'Savings Baron',
-      description: 'Reach $10,000 USDC in cumulative deposits.',
-      icon: `${ICONS}/savings-baron.png`,
-      accent: 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)',
-      tier: 'Gold',
-      progress: { current: Math.min(Math.floor(savings), 10000), target: 10000 },
-      date: savings >= 10000 ? new Date().toISOString() : undefined,
-      unlocked: savings >= 10000,
-    },
-    {
-      id: 'century-saver',
-      title: 'Century Saver',
-      description: 'Reach a 100-day savings streak. Legendary.',
-      icon: `${ICONS}/century-saver.png`,
-      accent: 'linear-gradient(180deg, #FFD180 0%, #FF6F00 100%)',
-      tier: 'Diamond',
-      progress: { current: Math.min(ctx.totalStreak, 100), target: 100 },
-      date: ctx.totalStreak >= 100 ? new Date().toISOString() : undefined,
-      unlocked: ctx.totalStreak >= 100,
-    },
-    {
-      id: 'third-place',
-      title: 'Bronze Medalist',
-      description: 'Finish in the top 10 on the monthly leaderboard.',
-      icon: `${ICONS}/third-place.png`,
-      accent: 'linear-gradient(180deg, #FFCC80 0%, #A05A2C 100%)',
-      tier: 'Bronze',
-      date: rank != null && rank >= 3 && rank <= 10 ? new Date().toISOString() : undefined,
-      unlocked: rank != null && rank >= 3 && rank <= 10,
-    },
-    {
-      id: 'second-place',
-      title: 'Silver Medalist',
-      description: 'Finish #2 on the monthly leaderboard.',
-      icon: `${ICONS}/second-place.png`,
-      accent: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)',
-      tier: 'Silver',
-      date: rank === 2 ? new Date().toISOString() : undefined,
-      unlocked: rank === 2,
-    },
-    {
-      id: 'first-place',
-      title: 'Gold Medalist',
-      description: 'Finish #1 on the monthly leaderboard.',
-      icon: `${ICONS}/first-place.png`,
-      accent: 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)',
-      tier: 'Gold',
-      date: rank === 1 ? new Date().toISOString() : undefined,
-      unlocked: rank === 1,
-    },
-  ];
+  return {
+    'beta-tester': { unlocked: isBetaTester },
+    rookie: { progress: { current: Math.min(exp, 50), target: 50 }, unlocked: exp >= 50 },
+    'week-warrior': { progress: { current: Math.min(streak, 7), target: 7 }, unlocked: streak >= 7 },
+    'first-deposit': { unlocked: deposits >= 1 },
+    'first-friend': { progress: { current: Math.min(friends, 1), target: 1 }, unlocked: friends >= 1 },
+    'savings-starter': { progress: { current: Math.min(Math.floor(savings), 100), target: 100 }, unlocked: savings >= 100 },
+    'trio-saver': { progress: { current: Math.min(deposits, 3), target: 3 }, unlocked: deposits >= 3 },
+    'month-master': { progress: { current: Math.min(streak, 30), target: 30 }, unlocked: streak >= 30 },
+    explorer: { progress: { current: Math.min(exp, 300), target: 300 }, unlocked: exp >= 300 },
+    'streak-master': { progress: { current: Math.min(streak, 50), target: 50 }, unlocked: streak >= 50 },
+    whale: { progress: { current: Math.min(exp, 30000), target: 30000 }, unlocked: exp >= 30000 },
+    'savings-baron': { progress: { current: Math.min(Math.floor(savings), 10000), target: 10000 }, unlocked: savings >= 10000 },
+    'century-saver': { progress: { current: Math.min(streak, 100), target: 100 }, unlocked: streak >= 100 },
+    'third-place': { unlocked: rank != null && rank >= 3 && rank <= 10 },
+    'second-place': { unlocked: rank === 2 },
+    'first-place': { unlocked: rank === 1 },
+  };
+};
 
-  // Append any server-side achievements that aren't in the hardcoded catalog
-  // (typically redeem-code / event badges). The convention for the icon is
-  // `/icons/achievements/<key>.png` — drop the PNG in `apps/web/public/...`
-  // and it will be picked up automatically.
-  const hardcodedKeys = new Set(badges.map((b) => b.id));
-  const extras: Badge[] = (ctx.extraAchievements ?? [])
-    .filter((a) => !hardcodedKeys.has(a.key))
-    .map((a) => ({
-      id: a.key,
-      title: a.name,
-      description: a.description,
-      icon: `${ICONS}/${a.key}.png`,
-      accent: ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
-      tier: a.tier as Badge['tier'],
-      date: a.claimedAt ?? undefined,
-      unlocked: a.unlocked,
-    }));
+export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
+  const known = computeKnownState(ctx);
+  const server = ctx.extraAchievements ?? [];
 
-  return [...badges, ...extras];
+  // While the wallet list loads, render the built-in set (locked, with
+  // client-computed progress) so the grid never flashes empty.
+  if (server.length === 0) {
+    return FALLBACK_BADGE_META.map((m) => {
+      const k = known[m.id];
+      return {
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        icon: m.icon,
+        accent: m.accent,
+        tier: m.tier,
+        progress: k?.progress,
+        unlocked: k?.unlocked ?? false,
+        date: k?.unlocked ? new Date().toISOString() : undefined,
+      };
+    });
+  }
+
+  // The wallet list is the single source of truth (copy + visuals + order +
+  // status). Built-in milestones still take their progress/unlock from live
+  // client signals; everything else trusts the server's `unlocked`.
+  return [...server]
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .map((a) => {
+      const k = known[a.key];
+      const base = {
+        id: a.key,
+        title: a.name,
+        description: a.description,
+        icon: a.icon ?? `${ICONS}/${a.key}.png`,
+        accent: a.accent ?? ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
+        tier: a.tier as Badge['tier'],
+      };
+
+      if (k) {
+        return {
+          ...base,
+          progress: k.progress,
+          unlocked: k.unlocked,
+          date: a.claimedAt ?? (k.unlocked ? new Date().toISOString() : undefined),
+        };
+      }
+
+      return {
+        ...base,
+        unlocked: a.unlocked,
+        date: a.claimedAt ?? undefined,
+      };
+    });
 };

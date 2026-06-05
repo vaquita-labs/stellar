@@ -1,0 +1,286 @@
+use soroban_sdk::{contracttype, symbol_short, Address, BytesN, Env, String, Symbol, Vec};
+
+/// Topic symbols for each event type.
+const DEPOSIT: Symbol = symbol_short!("deposit");
+const WITHDRAW: Symbol = symbol_short!("withdraw");
+const CONSTRUCTED: Symbol = symbol_short!("init");
+const FEE_UPDATED: Symbol = symbol_short!("fee_upd");
+const REWARDS: Symbol = symbol_short!("rewards");
+const PAUSED: Symbol = symbol_short!("paused");
+const UNPAUSED: Symbol = symbol_short!("unpaused");
+const LP_ADDED: Symbol = symbol_short!("lp_add");
+const LP_REMOVED: Symbol = symbol_short!("lp_rm");
+const FEES_WTHDRWN: Symbol = symbol_short!("fees_wth");
+const VAULT_UPDATED: Symbol = symbol_short!("vault_upd");
+const TOKEN_UPDATED: Symbol = symbol_short!("tok_upd");
+const UPGRADE_PROPOSED: Symbol = symbol_short!("upg_prop");
+const UPGRADE_CANCELLED: Symbol = symbol_short!("upg_canc");
+const UPGRADE_EXECUTED: Symbol = symbol_short!("upg_exec");
+const UPGRADES_LOCKED: Symbol = symbol_short!("upg_lock");
+
+/// Typed payload for a deposit event.
+/// Topic: ("deposit", caller)  Data: DepositEvent
+#[contracttype]
+pub struct DepositEvent {
+    pub deposit_id: String,
+    pub token: Address,
+    pub amount: i128,
+    pub shares: i128,
+}
+
+/// Typed payload for a withdraw event.
+/// Topic: ("withdraw", caller)  Data: WithdrawEvent
+/// `matured` is the authoritative early-vs-on-time discriminator (the contract
+/// took the matured branch). `early_fee` is the penalty charged on early
+/// withdrawal — note it is also 0 for an early withdrawal that earned no
+/// interest, so use `matured` (not `early_fee = 0`) to identify completed cycles.
+/// Dune queries: SUM(early_fee) WHERE event_name='withdraw' → total penalties;
+///               WHERE matured → completed (held-to-maturity) withdrawals only.
+#[contracttype]
+pub struct WithdrawEvent {
+    pub deposit_id: String,
+    pub token: Address,
+    pub amount: i128,
+    pub reward: i128,
+    pub early_fee: i128,
+    pub matured: bool,
+}
+
+pub fn emit_deposit(
+    env: &Env,
+    caller: Address,
+    deposit_id: String,
+    token: Address,
+    amount: i128,
+    shares: i128,
+) {
+    env.events().publish(
+        (DEPOSIT, caller),
+        DepositEvent {
+            deposit_id,
+            token,
+            amount,
+            shares,
+        },
+    );
+}
+
+/// Typed payload for the constructor event.
+#[contracttype]
+pub struct ConstructedEvent {
+    pub blend_token: Address,
+    pub defindex_vault: Address,
+    pub lock_periods: Vec<u64>,
+}
+
+pub fn emit_constructed(
+    env: &Env,
+    admin: Address,
+    blend_token: Address,
+    defindex_vault: Address,
+    lock_periods: Vec<u64>,
+) {
+    env.events().publish(
+        (CONSTRUCTED, admin),
+        ConstructedEvent {
+            blend_token,
+            defindex_vault,
+            lock_periods,
+        },
+    );
+}
+
+/// EarlyWithdrawalFeeUpdated event payload.
+#[contracttype]
+pub struct EarlyWithdrawalFeeUpdatedEvent {
+    pub old_fee: i128,
+    pub new_fee: i128,
+}
+
+pub fn emit_fee_updated(env: &Env, old_fee: i128, new_fee: i128) {
+    env.events().publish(
+        (FEE_UPDATED,),
+        EarlyWithdrawalFeeUpdatedEvent { old_fee, new_fee },
+    );
+}
+
+/// RewardsAdded event payload.
+#[contracttype]
+pub struct RewardsAddedEvent {
+    pub period: u64,
+    pub amount: i128,
+}
+
+pub fn emit_rewards_added(env: &Env, period: u64, amount: i128) {
+    env.events()
+        .publish((REWARDS,), RewardsAddedEvent { period, amount });
+}
+
+/// Paused event payload.
+#[contracttype]
+pub struct PausedEvent {
+    pub admin: Address,
+}
+
+/// Unpaused event payload.
+#[contracttype]
+pub struct UnpausedEvent {
+    pub admin: Address,
+}
+
+pub fn emit_paused(env: &Env, admin: Address) {
+    env.events().publish((PAUSED,), PausedEvent { admin });
+}
+
+pub fn emit_unpaused(env: &Env, admin: Address) {
+    env.events().publish((UNPAUSED,), UnpausedEvent { admin });
+}
+
+/// LockPeriodAdded event payload.
+#[contracttype]
+pub struct LockPeriodAddedEvent {
+    pub period: u64,
+}
+
+pub fn emit_lock_period_added(env: &Env, period: u64) {
+    env.events()
+        .publish((LP_ADDED,), LockPeriodAddedEvent { period });
+}
+
+/// ProtocolFeesWithdrawn event payload.
+#[contracttype]
+pub struct ProtocolFeesWithdrawnEvent {
+    pub admin: Address,
+    pub amount: i128,
+}
+
+pub fn emit_protocol_fees_withdrawn(env: &Env, admin: Address, amount: i128) {
+    env.events().publish(
+        (FEES_WTHDRWN,),
+        ProtocolFeesWithdrawnEvent { admin, amount },
+    );
+}
+
+/// LockPeriodRemoved event payload.
+#[contracttype]
+pub struct LockPeriodRemovedEvent {
+    pub period: u64,
+}
+
+pub fn emit_lock_period_removed(env: &Env, period: u64) {
+    env.events()
+        .publish((LP_REMOVED,), LockPeriodRemovedEvent { period });
+}
+
+/// DeFindexVaultUpdated event payload.
+#[contracttype]
+pub struct DeFindexVaultUpdatedEvent {
+    pub old_vault: Address,
+    pub new_vault: Address,
+}
+
+pub fn emit_defindex_vault_updated(env: &Env, old_vault: Address, new_vault: Address) {
+    env.events().publish(
+        (VAULT_UPDATED,),
+        DeFindexVaultUpdatedEvent {
+            old_vault,
+            new_vault,
+        },
+    );
+}
+
+/// BlendTokenUpdated event payload.
+#[contracttype]
+pub struct BlendTokenUpdatedEvent {
+    pub old_token: Address,
+    pub new_token: Address,
+}
+
+pub fn emit_blend_token_updated(env: &Env, old_token: Address, new_token: Address) {
+    env.events().publish(
+        (TOKEN_UPDATED,),
+        BlendTokenUpdatedEvent {
+            old_token,
+            new_token,
+        },
+    );
+}
+
+/// UpgradeProposed event payload.
+#[contracttype]
+pub struct UpgradeProposedEvent {
+    pub wasm_hash: BytesN<32>,
+    pub ready_at: u64,
+}
+
+pub fn emit_upgrade_proposed(env: &Env, wasm_hash: BytesN<32>, ready_at: u64) {
+    env.events().publish(
+        (UPGRADE_PROPOSED,),
+        UpgradeProposedEvent {
+            wasm_hash,
+            ready_at,
+        },
+    );
+}
+
+/// UpgradeCancelled event payload.
+#[contracttype]
+pub struct UpgradeCancelledEvent {
+    pub wasm_hash: BytesN<32>,
+}
+
+pub fn emit_upgrade_cancelled(env: &Env, wasm_hash: BytesN<32>) {
+    env.events()
+        .publish((UPGRADE_CANCELLED,), UpgradeCancelledEvent { wasm_hash });
+}
+
+/// UpgradeExecuted event payload.
+#[contracttype]
+pub struct UpgradeExecutedEvent {
+    pub wasm_hash: BytesN<32>,
+    pub new_version: u32,
+}
+
+pub fn emit_upgrade_executed(env: &Env, wasm_hash: BytesN<32>, new_version: u32) {
+    env.events().publish(
+        (UPGRADE_EXECUTED,),
+        UpgradeExecutedEvent {
+            wasm_hash,
+            new_version,
+        },
+    );
+}
+
+/// UpgradesLocked event payload.
+#[contracttype]
+pub struct UpgradesLockedEvent {
+    pub admin: Address,
+}
+
+pub fn emit_upgrades_locked(env: &Env, admin: Address) {
+    env.events()
+        .publish((UPGRADES_LOCKED,), UpgradesLockedEvent { admin });
+}
+
+pub fn emit_withdraw(
+    env: &Env,
+    caller: Address,
+    deposit_id: String,
+    token: Address,
+    amount: i128,
+    reward: i128,
+    early_fee: i128,
+    matured: bool,
+) {
+    env.events().publish(
+        (WITHDRAW, caller),
+        WithdrawEvent {
+            deposit_id,
+            token,
+            amount,
+            reward,
+            early_fee,
+            matured,
+        },
+    );
+}

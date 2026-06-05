@@ -3,19 +3,22 @@ import { Address, Keypair, nativeToScVal } from '@stellar/stellar-sdk';
 
 /**
  * Builds the exact byte sequence the vaquita-badges contract hashes before verifying:
- *   sha256( wallet_xdr || badge_type_xdr || cycle_id_be4 || expiry_be8 )
+ *   sha256( contract_address_xdr || wallet_xdr || badge_type_xdr || cycle_id_be4 || expiry_be8 )
  *
- * - wallet_xdr    : XDR encoding of ScVal::Address(ScAddress::Account(pubkey))
- * - badge_type_xdr: XDR encoding of ScVal::Symbol(badge_type)
- * - cycle_id_be4  : 4 big-endian bytes  (u32)
- * - expiry_be8    : 8 big-endian bytes  (u64, Unix timestamp)
+ * - contract_address_xdr: XDR encoding of ScVal::Address(ScAddress::Contract(hash))
+ * - wallet_xdr          : XDR encoding of ScVal::Address(ScAddress::Account(pubkey))
+ * - badge_type_xdr      : XDR encoding of ScVal::Symbol(badge_type)
+ * - cycle_id_be4        : 4 big-endian bytes  (u32)
+ * - expiry_be8          : 8 big-endian bytes  (u64, Unix timestamp)
  */
 export function buildBadgeMessageBytes(
+  contractAddress: string,
   wallet: string,
   badgeType: string,
   cycleId: number,
   expiry: number,
 ): Buffer {
+  const contractXdr = new Address(contractAddress).toScVal().toXDR() as Buffer;
   const walletXdr = new Address(wallet).toScVal().toXDR() as Buffer;
   const symXdr = nativeToScVal(badgeType, { type: 'symbol' }).toXDR() as Buffer;
 
@@ -25,17 +28,18 @@ export function buildBadgeMessageBytes(
   const expiryBuf = Buffer.alloc(8);
   expiryBuf.writeBigUInt64BE(BigInt(expiry));
 
-  return Buffer.concat([walletXdr, symXdr, cycleIdBuf, expiryBuf]);
+  return Buffer.concat([contractXdr, walletXdr, symXdr, cycleIdBuf, expiryBuf]);
 }
 
 export function signBadgeClaim(
+  contractAddress: string,
   wallet: string,
   badgeType: string,
   cycleId: number,
   expiry: number,
   keypair: Keypair,
 ): string {
-  const msg = buildBadgeMessageBytes(wallet, badgeType, cycleId, expiry);
+  const msg = buildBadgeMessageBytes(contractAddress, wallet, badgeType, cycleId, expiry);
   const hash = createHash('sha256').update(msg).digest();
   return (keypair.sign(hash) as Buffer).toString('base64');
 }

@@ -5,7 +5,6 @@ Esta guía documenta cómo configurar correctamente las variables de entorno en 
 ```
 ❌ Error en configuración de variables de entorno:
   NEXT_PUBLIC_SERVICES_URL: 'Too small: expected string to have >=1 characters'
-  NEXT_PUBLIC_ABLY_KEY: 'Too small: expected string to have >=1 characters'
 ```
 
 ## Las 3 secciones de variables en Dokploy
@@ -44,12 +43,13 @@ El `Dockerfile` declara `ARG` para las `NEXT_PUBLIC_*` y consume secrets vía `-
 
 ```env
 NEXT_PUBLIC_SERVICES_URL=https://tu-api.dominio.com
-NEXT_PUBLIC_ABLY_KEY=tu_ably_publishable_key
 NEXT_PUBLIC_STELLAR_NETWORK=testnet
 NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 ```
 
-> ⚠️ Sobre `NEXT_PUBLIC_ABLY_KEY`: las variables `NEXT_PUBLIC_*` terminan en el JS del cliente y son visibles públicamente. Asegúrate de usar una **publishable key** de Ably (con capacidades limitadas), nunca una root key con `publish + subscribe + admin`.
+> ℹ️ Ably ya **no** usa una key en el cliente. El navegador pide tokens efímeros a
+> `GET ${NEXT_PUBLIC_SERVICES_URL}/api/v1/ably/token` (y el admin a `/api/v1/ably/admin-token`).
+> La key full de Ably vive solo en la API como `ABLY_KEY` (Environment Settings, runtime).
 
 ### Build-time Secrets
 

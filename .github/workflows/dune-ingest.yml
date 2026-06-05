@@ -1,0 +1,61 @@
+# .github/workflows/dune-ingest.yml
+# Scheduled ingest of testnet contract events into Dune.
+#
+# Cadence: hourly. Sized to stay safely inside BOTH free tiers:
+#   - GitHub Free: ~730 billed Actions min/mo (Linux x1, one job/run) vs the
+#     2000 min/mo private-repo allowance.
+#   - Dune Free: only runs that insert rows cost ~1 credit (quiet runs cost 0),
+#     so worst case ~730 credits/mo vs the 2500/mo quota.
+# Far inside the ~7-day (120960-ledger) Stellar testnet RPC retention window.
+#
+# Multi-environment: ingests every VaquitaPool deployment listed in the
+# VAQUITA_CONTRACTS repo variable ("dev=C...,stage=C...") into one Dune table.
+# Add a new environment by appending to that variable — no code change.
+name: Dune Ingest
+
+on:
+  schedule:
+    - cron: "0 * * * *" # every hour (top of the hour)
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+# Allow committing the state file back if you choose the "commit state" option.
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: analytics/package-lock.json
+
+      # Persist the high-water-mark between scheduled runs.
+      # The dashboard queries also de-dupe by event_id, so a rare cache miss
+      # causes (cheap) re-inserts, not wrong numbers.
+      - name: Restore ingest state
+        uses: actions/cache@v4
+        with:
+          path: analytics/dune_ingest_state.json
+          key: dune-ingest-state-${{ github.run_id }}
+          restore-keys: dune-ingest-state-
+
+      - name: Install dependencies
+        working-directory: analytics
+        run: npm ci
+
+      - name: Run incremental ingest
+        working-directory: analytics
+        env:
+          DUNE_API_KEY: ${{ secrets.DUNE_API_KEY }}
+          DUNE_NAMESPACE: ${{ secrets.DUNE_NAMESPACE }}
+          # Public contract IDs — store as a repo *variable*, e.g. "dev=C...,stage=C..."
+          VAQUITA_CONTRACTS: ${{ vars.VAQUITA_CONTRACTS }}
+          # Optional: dashboard query IDs to re-run after an insert (repo variable),
+          # e.g. "7652901,7653540,...". Leave unset to skip the refresh.
+          DUNE_REFRESH_QUERY_IDS: ${{ vars.DUNE_REFRESH_QUERY_IDS }}
+        run: npm run ingest

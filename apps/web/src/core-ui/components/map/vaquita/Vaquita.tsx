@@ -1,12 +1,13 @@
 'use client';
 
 import { useFrame, useThree } from '@react-three/fiber';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { getTileTopY } from '../../../helpers';
-import { useDayCycleStore, useMapStore } from '../../../stores';
+import { useDayCycleStore, useMapStore, useVaquitaPositionsStore } from '../../../stores';
 import { DepositWithdrawalState, VaquitaAnimationState } from '../../../types';
 import { findNearbyWorkSpot, getNextTileToward, pickRandomWalkableGoal, tilesEqual } from './helpers';
+import { MoodBubble } from './MoodBubble';
 import { VaquitaControllerProps } from './types';
 import { VaquitaAnimation } from './VaquitaAnimation';
 import { VaquitaBrain } from './VaquitaBrain';
@@ -14,23 +15,58 @@ import { VaquitaBrain } from './VaquitaBrain';
 const SPEED = 0.6;
 const IDLE_MIN_MS = 3000;
 const IDLE_RANGE_MS = 4000;
+const STUCK_PAUSE_MIN_MS = 1500;
+const STUCK_PAUSE_RANGE_MS = 1500;
+const MOOD_PULSE_SHOW_MS = 3500;
+const MOOD_PULSE_HIDE_MIN_MS = 12000;
+const MOOD_PULSE_HIDE_RANGE_MS = 6000;
 
-export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps) => {
+export const Vaquita = ({ vaquita, onSelect, headLabel, mood = 'normal' }: VaquitaControllerProps) => {
   const ref = useRef<THREE.Group>(null);
   const { gl } = useThree();
 
   const [scale, setScale] = useState(0.5);
+  const [moodPulseActive, setMoodPulseActive] = useState(false);
+
+  useEffect(() => {
+    if (mood === 'normal') {
+      setMoodPulseActive(false);
+      return;
+    }
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const tick = (show: boolean) => {
+      setMoodPulseActive(show);
+      const duration = show
+        ? MOOD_PULSE_SHOW_MS
+        : MOOD_PULSE_HIDE_MIN_MS + Math.random() * MOOD_PULSE_HIDE_RANGE_MS;
+      timeoutId = setTimeout(() => tick(!show), duration);
+    };
+    timeoutId = setTimeout(
+      () => tick(true),
+      MOOD_PULSE_HIDE_MIN_MS + Math.random() * MOOD_PULSE_HIDE_RANGE_MS,
+    );
+    return () => clearTimeout(timeoutId);
+  }, [mood]);
+
   const [direction, setDirection] = useState<[number, number]>([1, 1]);
   const [brainState, setBrainState] = useState<VaquitaAnimationState>('walking');
+  const displayMood = moodPulseActive && brainState === 'walking' ? mood : 'normal';
 
   const isWalkable = useMapStore((store) => store.isWalkable);
   const getTileAt = useMapStore((store) => store.getTileAt);
 
+  const vaquitaIdRef = useRef(String(vaquita.id));
+
   const initialTile: [number, number] = useMemo(() => {
-    for (let i = 0; i < 100; i++) {
+    const store = useVaquitaPositionsStore.getState();
+    const id = vaquitaIdRef.current;
+    for (let i = 0; i < 200; i++) {
       const x = Math.floor(Math.random() * 8) + 1;
       const z = Math.floor(Math.random() * 8) + 1;
-      if (isWalkable(x, z)) return [x, z];
+      if (!isWalkable(x, z)) continue;
+      if (store.isTileOccupied(x, z, id)) continue;
+      store.setClaim(id, [x, z], [x, z]);
+      return [x, z];
     }
     return [0, 0];
   }, [isWalkable]);
@@ -46,15 +82,27 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
   const idleUntilRef = useRef(0);
   const lastPhaseRef = useRef<VaquitaAnimationState>('walking');
 
+  useEffect(() => {
+    const id = vaquitaIdRef.current;
+    useVaquitaPositionsStore.getState().setClaim(id, currentTileRef.current, targetTileRef.current);
+    return () => {
+      useVaquitaPositionsStore.getState().removeClaim(id);
+    };
+  }, []);
+
+  const isOccupiedByOther = (x: number, z: number) =>
+    useVaquitaPositionsStore.getState().isTileOccupied(x, z, vaquitaIdRef.current);
+
+  const syncClaim = () => {
+    useVaquitaPositionsStore
+      .getState()
+      .setClaim(vaquitaIdRef.current, currentTileRef.current, targetTileRef.current);
+  };
+
   const settleAtCurrent = () => {
     targetTileRef.current = [currentTileRef.current[0], currentTileRef.current[1]];
     targetPosRef.current.copy(currentPosRef.current);
-  };
-
-  const snapCurrentToTile = () => {
-    currentPosRef.current.set(currentTileRef.current[0], initialY, currentTileRef.current[1]);
-    targetTileRef.current = [currentTileRef.current[0], currentTileRef.current[1]];
-    targetPosRef.current.copy(currentPosRef.current);
+    syncClaim();
   };
 
   const updateBrainState = (state: VaquitaAnimationState) => {
@@ -67,10 +115,10 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
 
   const pickGoalFor = (phase: VaquitaAnimationState): [number, number] => {
     if (phase === 'working') {
-      const workSpot = findNearbyWorkSpot(currentTileRef.current, getTileAt, isWalkable);
+      const workSpot = findNearbyWorkSpot(currentTileRef.current, getTileAt, isWalkable, isOccupiedByOther);
       if (workSpot) return workSpot;
     }
-    return pickRandomWalkableGoal(currentTileRef.current, isWalkable);
+    return pickRandomWalkableGoal(currentTileRef.current, isWalkable, isOccupiedByOther);
   };
 
   useFrame((_, delta) => {
@@ -78,32 +126,21 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
     const dt = Math.min(delta, 0.1);
     const dayProgress = useDayCycleStore.getState().dayProgress;
     const phase = brainRef.current.tick(dayProgress);
+    const now = performance.now();
 
     if (phase !== lastPhaseRef.current) {
       goalRef.current = null;
       idleUntilRef.current = 0;
-      if (tilesEqual(currentTileRef.current, targetTileRef.current)) {
-        settleAtCurrent();
-      }
       lastPhaseRef.current = phase;
-    }
-
-    if (phase === 'sleeping') {
-      if (tilesEqual(currentTileRef.current, targetTileRef.current)) {
-        snapCurrentToTile();
-      }
-      updateBrainState('sleeping');
-      ref.current.position.copy(currentPosRef.current);
-      return;
     }
 
     const stepDistance = SPEED * dt;
     const distToTarget = currentPosRef.current.distanceTo(targetPosRef.current);
-
     if (distToTarget <= stepDistance) {
       currentPosRef.current.copy(targetPosRef.current);
       if (!tilesEqual(currentTileRef.current, targetTileRef.current)) {
         currentTileRef.current = [targetTileRef.current[0], targetTileRef.current[1]];
+        syncClaim();
       }
     } else {
       const alpha = Math.min(stepDistance / distToTarget, 1);
@@ -112,51 +149,70 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
 
     const standingStill = tilesEqual(currentTileRef.current, targetTileRef.current);
 
+    if (phase === 'sleeping') {
+      if (standingStill) {
+        updateBrainState('sleeping');
+      } else {
+        updateBrainState('walking');
+      }
+      ref.current.position.copy(currentPosRef.current);
+      return;
+    }
+
+    if (idleUntilRef.current > 0) {
+      if (now < idleUntilRef.current) {
+        if (phase === 'working' && standingStill) {
+          updateBrainState('working');
+        } else {
+          updateBrainState('walking');
+          if (standingStill) updateDirection([0, 0]);
+        }
+        ref.current.position.copy(currentPosRef.current);
+        return;
+      }
+      idleUntilRef.current = 0;
+      goalRef.current = null;
+    }
+
+    if (!standingStill) {
+      updateBrainState('walking');
+      ref.current.position.copy(currentPosRef.current);
+      return;
+    }
+
     if (!goalRef.current) {
       goalRef.current = pickGoalFor(phase);
     }
 
     const atGoal = tilesEqual(currentTileRef.current, goalRef.current);
 
-    if (atGoal && standingStill) {
+    if (atGoal) {
       if (phase === 'working') {
         updateBrainState('working');
       } else {
-        const now = performance.now();
-        if (idleUntilRef.current === 0) {
-          idleUntilRef.current = now + IDLE_MIN_MS + Math.random() * IDLE_RANGE_MS;
-        }
-        if (now < idleUntilRef.current) {
-          updateBrainState('walking');
-          updateDirection([0, 0]);
-        } else {
-          goalRef.current = null;
-          idleUntilRef.current = 0;
-        }
+        updateBrainState('walking');
+        updateDirection([0, 0]);
       }
+      idleUntilRef.current = now + IDLE_MIN_MS + Math.random() * IDLE_RANGE_MS;
       ref.current.position.copy(currentPosRef.current);
       return;
     }
 
-    if (standingStill) {
-      const nextStep = getNextTileToward(currentTileRef.current, goalRef.current, isWalkable);
-      if (tilesEqual(nextStep, currentTileRef.current)) {
-        goalRef.current = null;
-        settleAtCurrent();
-        ref.current.position.copy(currentPosRef.current);
-        return;
-      }
-      if (!isWalkable(nextStep[0], nextStep[1])) {
-        goalRef.current = null;
-        settleAtCurrent();
-        ref.current.position.copy(currentPosRef.current);
-        return;
-      }
-      targetTileRef.current = nextStep;
-      targetPosRef.current.set(nextStep[0], initialY, nextStep[1]);
-      updateDirection([nextStep[0] - currentTileRef.current[0], nextStep[1] - currentTileRef.current[1]]);
+    const nextStep = getNextTileToward(currentTileRef.current, goalRef.current, isWalkable, isOccupiedByOther);
+    if (tilesEqual(nextStep, currentTileRef.current)) {
+      goalRef.current = null;
+      settleAtCurrent();
+      idleUntilRef.current = now + STUCK_PAUSE_MIN_MS + Math.random() * STUCK_PAUSE_RANGE_MS;
+      updateDirection([0, 0]);
+      updateBrainState('walking');
+      ref.current.position.copy(currentPosRef.current);
+      return;
     }
 
+    targetTileRef.current = nextStep;
+    targetPosRef.current.set(nextStep[0], initialY, nextStep[1]);
+    syncClaim();
+    updateDirection([nextStep[0] - currentTileRef.current[0], nextStep[1] - currentTileRef.current[1]]);
     updateBrainState('walking');
 
     if (vaquita.state === DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY) return;
@@ -194,7 +250,9 @@ export const Vaquita = ({ vaquita, onSelect, headLabel }: VaquitaControllerProps
         direction={direction}
         scale={scale}
         label={headLabel}
+        mood={displayMood}
       />
+      <MoodBubble mood={displayMood} />
     </group>
   );
 };

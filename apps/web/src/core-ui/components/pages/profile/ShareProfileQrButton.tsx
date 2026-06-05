@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { BsQrCode } from 'react-icons/bs';
+import { MdQrCode } from "react-icons/md";
 import { ShareProfileModal } from './ShareProfileModal';
 
 interface ShareProfileQrButtonProps {
@@ -34,7 +35,7 @@ export function ShareProfileQrButton({
         aria-label="Share profile QR"
         className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
       >
-        <BsQrCode className="h-4 w-4" />
+        <MdQrCode className="h-4 w-4" />
       </button>
 
       <ShareProfileModal

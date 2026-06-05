@@ -1,16 +1,16 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { ProfileAverageResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 import { ONE_MINUTE } from '../config/constants';
 
 export const useProfilesByAverageDepositsData = () => {
-  const { network } = useNetworkConfigStore();
+  const { network } = useConfigStore();
   return useQuery<ProfileAverageResponseDTO[]>({
-    queryKey: ['profiles', 'network', network?.name, 'by-average-deposits'],
+    queryKey: ['profiles', 'network', network?.networkName, 'by-average-deposits'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.name}/by-average-deposits`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/by-average-deposits`
       );
       const data = await response.json();
 
@@ -19,6 +19,7 @@ export const useProfilesByAverageDepositsData = () => {
           email: profile?.email ?? '',
           fullName: profile?.fullName ?? '',
           nickname: profile?.nickname ?? '',
+          avatarUrl: profile?.avatarUrl ?? '',
           walletAddress: profile?.walletAddress ?? '',
           totalSums: profile?.totalSums ?? 0,
           lastSum: profile?.lastSum ?? 0,
@@ -32,7 +33,7 @@ export const useProfilesByAverageDepositsData = () => {
       });
     },
     refetchInterval: ONE_MINUTE * 5,
-    enabled: !!network?.name,
+    enabled: !!network?.networkName,
     refetchOnReconnect: true,
     refetchOnWindowFocus: true,
   });

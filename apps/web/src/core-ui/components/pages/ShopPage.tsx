@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { FiArrowDown, FiArrowUp, FiFilter, FiSearch, FiX } from 'react-icons/fi';
 import { useProfileRewards } from '../../hooks';
-import { useNetworkConfigStore } from '../../stores';
+import { useConfigStore } from '../../stores';
 import { PageHeader } from '../molecules';
 import { ShopItem, ShopItemBiome, ShopItemRarity, ShopItemType } from '../organisms/ShopModal/types';
 
@@ -42,7 +42,7 @@ const shopItems: ShopItem[] = [
     name: 'Streak Repair',
     description: 'Restore your streak up to 7 days',
     price: { goldCoins: 2 },
-    image: '/icons/summary/streak.png',
+    image: '/icons/global/streak.png',
     biome: 'any',
     type: 'utility',
     rarity: 'rare',
@@ -72,7 +72,7 @@ const shopItems: ShopItem[] = [
     name: 'Energy Boost',
     description: 'Double your daily rewards for 24 hours',
     price: { goldCoins: 2 },
-    image: '/icons/summary/streak.png',
+    image: '/icons/global/streak.png',
     biome: 'any',
     type: 'boost',
     rarity: 'rare',
@@ -153,7 +153,7 @@ const rarityStyles: Record<ShopItemRarity, { badge: string; ring: string }> = {
 export function ShopPage() {
   const { data: profileRewards, refetch } = useProfileRewards();
   const queryClient = useQueryClient();
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
 
   const [search, setSearch] = useState('');
   const [biomes, setBiomes] = useState<ShopItemBiome[]>([]);
@@ -204,7 +204,7 @@ export function ShopPage() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       await queryClient.invalidateQueries({
-        queryKey: ['profile', network?.name, walletAddress, 'profile-rewards'],
+        queryKey: ['profile', network?.networkName, walletAddress, 'profile-rewards'],
       });
       await refetch();
       toast.success('Purchase successful!', {

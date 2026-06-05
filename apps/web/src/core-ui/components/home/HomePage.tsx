@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import { useAnalytics, useDeposits } from '../../hooks';
-import { EditionMode, useLoading, useMapStore, useNetworkConfigStore } from '../../stores';
+import { EditionMode, useLoading, useMapStore, useConfigStore } from '../../stores';
 import { WorldType } from '../../types';
 import { BankAPYModal, CoinAnimation, DepositPanel, TutorialModal } from '../organisms';
 import { WorldMap } from '../templates';
@@ -14,7 +14,7 @@ import { HeaderStats } from './HeaderStats';
 import { PlaceModeHint } from './PlaceModeHint';
 
 export function HomePage() {
-  const { walletAddress, lockPeriod, network, token } = useNetworkConfigStore();
+  const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { isLoading } = useDeposits(walletAddress);
   const { trackPageView, trackUserAction } = useAnalytics();
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
@@ -35,10 +35,10 @@ export function HomePage() {
     if (walletAddress) {
       trackUserAction('wallet_connected', {
         walletAddress: walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4),
-        network: network?.name || null,
+        network: network?.networkName || null,
       });
     }
-  }, [walletAddress, network?.name, trackUserAction]);
+  }, [walletAddress, network?.networkName, trackUserAction]);
 
   useLoading('deposits', isLoading);
 

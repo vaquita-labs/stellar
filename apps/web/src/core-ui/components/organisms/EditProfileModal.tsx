@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { FiSave } from 'react-icons/fi';
 import { truncateMiddle } from '../../helpers';
 import { useRestProfile } from '../../hooks';
-import { useNetworkConfigStore } from '../../stores';
+import { useConfigStore } from '../../stores';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -15,7 +15,7 @@ interface EditProfileModalProps {
 }
 
 export function EditProfileModal({ isOpen, onClose, currentNickname }: EditProfileModalProps) {
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
   const { saveNickname } = useRestProfile();
   const [nickname, setNickname] = useState<string>(currentNickname);
   const [saving, setSaving] = useState(false);

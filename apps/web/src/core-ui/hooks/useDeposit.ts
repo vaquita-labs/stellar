@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { DepositResponseDTO } from '../types';
 
 export const useDeposit = (depositId: number) => {
-  // const { network, lockPeriod, token } = useNetworkConfigStore();
+  // const { network, lockPeriod, token } = useConfigStore();
   // const { data: dataApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
 
   return useQuery<DepositResponseDTO | null>({
@@ -14,7 +14,7 @@ export const useDeposit = (depositId: number) => {
 
         const data = await response.json();
 
-        // const isStellarTestnet = network?.name === 'Stellar Testnet';
+        // const isStellarTestnet = network?.networkName === 'Stellar Testnet';
         // const depositAmount = data?.data?.amount;
         // const protocolApy = dataApy?.protocolApy ?? 0;
         // const vaquitaApy = dataApy?.vaquitaApy ?? 0;
@@ -36,7 +36,7 @@ export const useDeposit = (depositId: number) => {
           id: data?.data?.id,
           vaquitaContractAddress: data?.data?.vaquitaContractAddress || data?.data?.contractAddress,
           vaquitaInterest: Number(data?.data?.vaquitaInterest),
-          aaveInterest: Number(data?.data?.aaveInterest),
+          protocolInterest: Number(data?.data?.protocolInterest),
           blendInterest: Number(data?.data?.blendInterest),
           vaultInterest:
             data?.data?.vaultInterest !== undefined && data?.data?.vaultInterest !== null

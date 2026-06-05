@@ -1,24 +1,18 @@
 'use client';
 
 import { WalletButton } from '@/core-ui/components';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useLogout } from '@/core-ui/hooks';
+import { useConfigStore } from '@/core-ui/stores';
 import { isStellarNetwork } from '@/networks/stellar';
 import { PollarLoginButton } from '@/networks/stellar/wallet/PollarLoginButton';
-import { pollarAdapter } from '@/networks/stellar/wallet/adapters/pollar-adapter';
-import { setActiveAdapter } from '@/networks/stellar/wallet/registry';
 
 export default function StellarAuthButtons() {
-  const walletAddress = useNetworkConfigStore().walletAddress;
-  const network = useNetworkConfigStore((store) => store.network);
+  const walletAddress = useConfigStore().walletAddress;
+  const network = useConfigStore((store) => store.network);
+  const handleLogout = useLogout();
 
-  const isStellarNet = network ? isStellarNetwork(network.name) : false;
+  const isStellarNet = network ? isStellarNetwork(network.networkName) : false;
   const isConnected = !!walletAddress && isStellarNet;
-
-  const handleLogout = async () => {
-    await pollarAdapter.disconnect();
-    setActiveAdapter(null);
-    useNetworkConfigStore.getState().setWalletAddress('');
-  };
 
   return (
     <div className="flex items-center gap-2 w-full">

@@ -1,32 +1,41 @@
 'use client';
 
 import StellarAuthButtons from '@/components/profile/StellarAuthButtons';
-import { DummyAuthButtons, NetworkSelector } from '@/core-ui/components';
-import { useIsAuthenticated, useNetworks } from '@/core-ui/hooks';
-import { useNetworkConfigStore } from '@/core-ui/stores';
-import { isDummyNetwork } from '@/networks/dummy';
-import { isStellarNetwork } from '@/networks/stellar';
+import { OnboardingIntro } from '@/core-ui/components';
+import { useIsAuthenticated } from '@/core-ui/hooks';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+// Simulación de "mostrar onboarding" vía env var (sin persistencia local).
+// Mientras no haya señal del backend, esto controla si se ve el intro.
+// Por defecto se muestra; al reiniciar reaparece. Poner 'false' para ocultarlo.
+const SHOW_ONBOARDING_INTRO = process.env.NEXT_PUBLIC_SHOW_ONBOARDING_INTRO !== 'false';
 
 export default function LoginPage() {
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
-  const { network } = useNetworkConfigStore();
-  const {
-    data: { types },
-  } = useNetworks();
+  const searchParams = useSearchParams();
+
+  // Solo estado de sesión: si recargas, vuelve a aparecer (no se persiste).
+  const [introDismissed, setIntroDismissed] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/home');
+      // Volver a la ruta de origen (?redirect=) si la hay; solo rutas internas
+      // para evitar open-redirect. Si no, al /home por defecto.
+      const redirect = searchParams.get('redirect');
+      router.replace(redirect && redirect.startsWith('/') ? redirect : '/home');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, searchParams]);
 
   // No mostrar nada mientras se verifica la autenticación o si ya está autenticado
   if (isAuthenticated) {
     return null;
+  }
+
+  if (SHOW_ONBOARDING_INTRO && !introDismissed) {
+    return <OnboardingIntro onFinish={() => setIntroDismissed(true)} />;
   }
 
   return (
@@ -47,13 +56,6 @@ export default function LoginPage() {
 
       {/* Panel derecho - Login */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-background p-8 relative">
-        {/* Selector de red en la esquina superior derecha */}
-        {types.length > 0 && (
-          <div className="absolute top-4 right-4 z-10">
-            <NetworkSelector />
-          </div>
-        )}
-
         <div className="w-full max-w-md border-2 border-primary rounded-lg p-8 bg-white/80 backdrop-blur-sm shadow-lg">
           <div className="flex flex-col items-center gap-4">
             {/* Logo móvil */}
@@ -72,12 +74,17 @@ export default function LoginPage() {
             <p className="text-gray-600 text-center mb-2">Connect your wallet to start saving securely</p>
 
             {/* Botones de autenticación dentro de la card */}
-            {types.length > 0 && (
-              <div className="w-full flex flex-col gap-2">
-                {network && isStellarNetwork(network.name) && <StellarAuthButtons />}
-                {isDummyNetwork() && <DummyAuthButtons />}
-              </div>
-            )}
+            <div className="w-full flex flex-col gap-2">
+              <StellarAuthButtons />
+            </div>
+
+            {/* Botón para volver a ver el intro (testeo / replay) */}
+            <button
+              onClick={() => setIntroDismissed(false)}
+              className="mt-1 text-sm font-semibold text-black/50 hover:text-black underline underline-offset-2 transition"
+            >
+              View intro again
+            </button>
           </div>
         </div>
       </div>

@@ -1,4 +1,24 @@
+import { VaquitaMood } from '@/core-ui/types';
 import { Eyes } from './Eyes';
+
+interface HeadProps {
+  baseColor: string;
+  noseColor: string;
+  spotColor: string;
+  helmetColor: string;
+  isCrying?: boolean;
+  isHelmet?: boolean;
+  isSleeping?: boolean;
+  mood?: VaquitaMood;
+}
+
+const MOOD_BLUSH: Partial<Record<VaquitaMood, string>> = {
+  happy: '#ff8aa1',
+  celebrating: '#ffb347',
+  loved: '#ff7099',
+  sad: '#9bb3d0',
+  sick: '#9bd0a3',
+};
 
 export const Head = ({
   baseColor,
@@ -8,15 +28,11 @@ export const Head = ({
   isCrying = false,
   isHelmet = true,
   isSleeping = false,
-}: {
-  baseColor: string;
-  noseColor: string;
-  spotColor: string;
-  helmetColor: string;
-  isCrying?: boolean;
-  isHelmet?: boolean;
-  isSleeping?: boolean;
-}) => {
+  mood = 'normal',
+}: HeadProps) => {
+  const blushColor = MOOD_BLUSH[mood] ?? '#f6b8a6';
+  const showMouth = !isSleeping;
+
   return (
     <group position={[0, 1.15, 0]}>
       {/* Head */}
@@ -25,7 +41,7 @@ export const Head = ({
         <meshStandardMaterial color={baseColor} />
       </mesh>
       {/* Eyes */}
-      <Eyes isCrying={isCrying} isSleeping={isSleeping} />
+      <Eyes isCrying={isCrying} isSleeping={isSleeping} mood={mood} />
 
       {/* Nose */}
       <group position={[0, -0.05, 0]}>
@@ -44,6 +60,78 @@ export const Head = ({
           <meshStandardMaterial color="black" />
         </mesh>
       </group>
+
+      {/* Mouth — varies by mood */}
+      {showMouth && mood === 'celebrating' && (
+        <group position={[0, -0.22, 0.36]}>
+          {/* open laughing mouth */}
+          <mesh position={[0, -0.02, 0]} castShadow>
+            <boxGeometry args={[0.2, 0.1, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+          <mesh position={[0, -0.04, 0.001]} castShadow>
+            <boxGeometry args={[0.14, 0.05, 0]} />
+            <meshStandardMaterial color="#ff7796" />
+          </mesh>
+        </group>
+      )}
+      {showMouth && mood === 'happy' && (
+        <group position={[0, -0.22, 0.36]}>
+          <mesh position={[-0.07, -0.02, 0]} rotation={[0, 0, -0.5]} castShadow>
+            <boxGeometry args={[0.1, 0.03, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+          <mesh position={[0.07, -0.02, 0]} rotation={[0, 0, 0.5]} castShadow>
+            <boxGeometry args={[0.1, 0.03, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+          <mesh position={[0, -0.05, 0]} castShadow>
+            <boxGeometry args={[0.12, 0.03, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+        </group>
+      )}
+      {showMouth && mood === 'loved' && (
+        <group position={[0, -0.22, 0.36]}>
+          <mesh position={[-0.06, 0, 0]} rotation={[0, 0, -0.5]} castShadow>
+            <boxGeometry args={[0.1, 0.03, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+          <mesh position={[0.06, 0, 0]} rotation={[0, 0, 0.5]} castShadow>
+            <boxGeometry args={[0.1, 0.03, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+        </group>
+      )}
+      {showMouth && mood === 'sad' && (
+        <group position={[0, -0.22, 0.36]}>
+          <mesh position={[-0.06, -0.04, 0]} rotation={[0, 0, 0.5]} castShadow>
+            <boxGeometry args={[0.1, 0.03, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+          <mesh position={[0.06, -0.04, 0]} rotation={[0, 0, -0.5]} castShadow>
+            <boxGeometry args={[0.1, 0.03, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+        </group>
+      )}
+      {showMouth && mood === 'sick' && (
+        <group position={[0, -0.22, 0.36]}>
+          <mesh position={[0, 0, 0]} castShadow>
+            <boxGeometry args={[0.18, 0.04, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+          <mesh position={[-0.05, -0.04, 0]} castShadow>
+            <boxGeometry args={[0.04, 0.04, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+          <mesh position={[0.05, -0.04, 0]} castShadow>
+            <boxGeometry args={[0.04, 0.04, 0]} />
+            <meshStandardMaterial color="black" />
+          </mesh>
+        </group>
+      )}
+
       {/* Ears */}
       <mesh position={[-0.3, 0.12, 0]} castShadow>
         <boxGeometry args={[0.2, 0.15, 0.1]} />
@@ -93,11 +181,11 @@ export const Head = ({
       {/* Cheek blush */}
       <mesh position={[-0.22, -0.05, 0.26]} castShadow>
         <boxGeometry args={[0.08, 0.06, 0]} />
-        <meshStandardMaterial color="#f6b8a6" />
+        <meshStandardMaterial color={blushColor} />
       </mesh>
       <mesh position={[0.22, -0.05, 0.26]} castShadow>
         <boxGeometry args={[0.08, 0.06, 0]} />
-        <meshStandardMaterial color="#f6b8a6" />
+        <meshStandardMaterial color={blushColor} />
       </mesh>
 
       {/* Helmet */}

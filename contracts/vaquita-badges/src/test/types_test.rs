@@ -3,25 +3,35 @@
 use crate::test::EnvTestUtils;
 use crate::types::DataKey;
 use crate::VaquitaBadges;
-use soroban_sdk::{symbol_short, testutils::Address as _, Address, Env};
+use ed25519_dalek::SigningKey;
+use rand::rngs::OsRng;
+use soroban_sdk::{symbol_short, testutils::Address as _, Address, BytesN, Env};
 
 fn setup() -> (Env, soroban_sdk::Address) {
     let env = Env::default();
     env.cost_estimate().budget().reset_unlimited();
+    env.mock_all_auths_allowing_non_root_auth();
     env.set_default_info();
-    let contract_id = env.register(VaquitaBadges, ());
+    let admin = Address::generate(&env);
+    let signing_key = SigningKey::generate(&mut OsRng);
+    let pk_bytes: BytesN<32> = BytesN::from_array(&env, &signing_key.verifying_key().to_bytes());
+    let contract_id = env.register(VaquitaBadges, (admin, pk_bytes, 172_800u64));
     (env, contract_id)
 }
 
 // DataKey::Admin, ::AdminSigningKey, ::NextTokenId — all instance-storage keys — are
-// distinct and absent before being set.
+// present and independent after construction.
 #[test]
 fn instance_keys_absent_before_set() {
     let (env, id) = setup();
     env.as_contract(&id, || {
-        assert!(!env.storage().instance().has(&DataKey::Admin));
-        assert!(!env.storage().instance().has(&DataKey::AdminSigningKey));
-        assert!(!env.storage().instance().has(&DataKey::NextTokenId));
+        // Constructor sets these; verify they are present and independent.
+        assert!(env.storage().instance().has(&DataKey::Admin));
+        assert!(env.storage().instance().has(&DataKey::AdminSigningKey));
+        assert!(env.storage().instance().has(&DataKey::NextTokenId));
+        // Verify they hold distinct values.
+        let next_id: u32 = env.storage().instance().get(&DataKey::NextTokenId).unwrap();
+        assert_eq!(next_id, 0);
     });
 }
 
@@ -30,11 +40,17 @@ fn instance_keys_roundtrip_and_are_independent() {
     let (env, id) = setup();
     env.as_contract(&id, || {
         env.storage().instance().set(&DataKey::Admin, &1u32);
-        env.storage().instance().set(&DataKey::AdminSigningKey, &2u32);
+        env.storage()
+            .instance()
+            .set(&DataKey::AdminSigningKey, &2u32);
         env.storage().instance().set(&DataKey::NextTokenId, &3u32);
 
         let a: u32 = env.storage().instance().get(&DataKey::Admin).unwrap();
-        let b: u32 = env.storage().instance().get(&DataKey::AdminSigningKey).unwrap();
+        let b: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::AdminSigningKey)
+            .unwrap();
         let c: u32 = env.storage().instance().get(&DataKey::NextTokenId).unwrap();
         assert_eq!(a, 1);
         assert_eq!(b, 2);

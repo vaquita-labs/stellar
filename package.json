@@ -5,16 +5,20 @@
   "type": "module",
   "scripts": {
     "dev:api": "pnpm --filter @vaquita/api dev",
-    "dev:web": "pnpm --filter @vaquita/web dev",
+    "dev:app": "pnpm --filter @vaquita/web dev",
+    "dev:admin": "pnpm --filter @vaquita/admin dev",
     "dev:listener": "pnpm --filter @vaquita/listener dev",
     "dev:job": "pnpm --filter @vaquita/job-deposits dev",
+    "dev": "pnpm --parallel --filter @vaquita/api --filter @vaquita/admin --filter @vaquita/web dev",
     "dev:all": "pnpm -r --parallel --filter='./apps/*' dev",
     "build": "pnpm -r --filter='./packages/*' --filter='./apps/*' build",
     "typecheck": "pnpm -r --filter='./packages/*' --filter='./apps/*' typecheck",
+    "db:generate": "pnpm --filter @vaquita/db generate",
+    "db:push": "pnpm --filter @vaquita/db exec prisma db push",
     "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'pnpm-lock.yaml' -delete"
   },
   "engines": {
     "node": ">=22.13"
   },
-  "packageManager": "pnpm@11.1.2"
+  "packageManager": "pnpm@11.5.2"
 }

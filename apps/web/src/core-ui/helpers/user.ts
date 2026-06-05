@@ -1,13 +1,3 @@
-import { NetworkResponseDTO, UserBalanceResponseDTO } from '@/core-ui/types';
-
-export const getBalance = (
-  network: NetworkResponseDTO | null,
-  token: NetworkResponseDTO['tokens'][number] | null,
-  balances: UserBalanceResponseDTO['balances']
-) => {
-  return balances?.find((balance) => balance.tokenSymbol === token?.symbol && balance.networkName === network?.name);
-};
-
 export const getQuickAmounts = (tokenSymbol: string) => {
   const tokens = [
     { symbol: 'ETH', prices: [0.01, 0.05] },

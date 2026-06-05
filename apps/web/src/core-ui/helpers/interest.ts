@@ -2,7 +2,7 @@
 import { NetworkResponseDTO } from "../types";
 
 export const getInterestData = (network: NetworkResponseDTO, dataApy: any, depositAmount: number, lockPeriod: number) => {
-    const isStellarTestnet = network?.name === 'Stellar Testnet';
+    const isStellarTestnet = network?.networkName === 'Stellar Testnet';
 
     const protocolApy = dataApy?.protocolApy ?? 0;
     const vaquitaApy = dataApy?.vaquitaApy ?? 0;
@@ -10,13 +10,13 @@ export const getInterestData = (network: NetworkResponseDTO, dataApy: any, depos
     const vaquitaApyMultiplier = vaquitaApy / 100;
     const lockPeriodInMilSeconds = lockPeriod;
     const lockPeriodInYears = lockPeriodInMilSeconds / 12 / 30 / 24 / 60 / 60 / 1000;
-    const aaveInterest = !isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
+    const protocolInterest = !isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
     const blendInterest = isStellarTestnet ? depositAmount * (protocolApyMultiplier * lockPeriodInYears) : 0;
     const vaquitaInterest = depositAmount * (vaquitaApyMultiplier * lockPeriodInYears);
-    const totalInterest = aaveInterest + vaquitaInterest + blendInterest;
+    const totalInterest = protocolInterest + vaquitaInterest + blendInterest;
 
     return {
-        aaveInterest,
+        protocolInterest,
         blendInterest,
         vaquitaInterest,
         totalInterest,

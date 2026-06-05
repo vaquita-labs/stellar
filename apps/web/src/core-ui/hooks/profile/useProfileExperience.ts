@@ -1,15 +1,15 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { ProfileExperienceResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
 export const useProfileExperience = () => {
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
   return useQuery<ProfileExperienceResponseDTO>({
-    queryKey: ['profile', network?.name, walletAddress, 'profile-experience'],
+    queryKey: ['profile', network?.networkName, walletAddress, 'profile-experience'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.name}/wallet/${walletAddress}/experience`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/experience`
       );
       const data = await response.json();
 
@@ -21,6 +21,6 @@ export const useProfileExperience = () => {
 
       return profile;
     },
-    enabled: !!network?.name && !!walletAddress,
+    enabled: !!network?.networkName && !!walletAddress,
   });
 };
