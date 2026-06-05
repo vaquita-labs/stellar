@@ -3,30 +3,21 @@ import multer from 'multer';
 import { v4 } from 'uuid';
 import { isStorageConfigured, putAvatar, removeAvatar } from '../../lib/storage';
 import {
-  Achievement,
   broadcastProfileChange,
-  claimAchievement,
-  computeEligibilitySignals,
-  getAchievementByKey,
   getAchievementCountsByProfile,
   getActiveDepositSumsByWallet,
-  getLastClosedCycleId,
-  getLeaderboardRankForWallet,
   getNetworkName,
   getProfile,
   getProfileMapObjects,
   getProfiles,
   getRewardByKey,
   getRewardsData,
-  isAchievementEligible,
   prisma,
   type Profile,
   type ProfileAverageResponseDTO,
-  redeemAchievementCode,
   Reward,
   sendError,
   sendSuccess,
-  toProfileAchievementsResponseDTO,
   toProfileExperienceResponseDTO,
   toProfileMapObjectsAvailableResponseDTO,
   toProfileMapObjectsResponseDTO,
@@ -256,167 +247,6 @@ router.post('/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
 
   req.log.info({ profileId: profileData.id }, 'Gold coin collected');
   return sendSuccess(res, result);
-});
-
-router.get('/wallet/:walletAddress/achievements', async (req, res) => {
-  const { walletAddress } = req.params;
-  req.log.info({ walletAddress }, 'GET /profile/.../achievements');
-
-  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
-
-  if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
-    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
-  }
-
-  return sendSuccess(res, await toProfileAchievementsResponseDTO(await getNetworkName(), profileData));
-});
-
-router.post('/wallet/:walletAddress/achievements/:key/claim', async (req, res) => {
-  const { walletAddress, key } = req.params;
-  req.log.info({ walletAddress, key }, 'POST /profile/.../achievements/:key/claim');
-
-  // TODO(auth): match the wallet-in-URL trust used by every other profile
-  // route for v1. When we harden auth across the API (challenge/response via
-  // StellarWalletsKit.signMessage verified server-side), this endpoint moves
-  // along with the rest — don't add a one-off signature check here.
-
-  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
-
-  if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved for achievement claim');
-    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
-  }
-
-  const achievementKey = key as Achievement;
-
-  // The catalog (DB) is the source of truth for which badges exist — admin can
-  // add new ones beyond the static Achievement enum, so we validate against the
-  // row, not the enum.
-  const { data: achievementDoc } = await getAchievementByKey(achievementKey);
-  if (!achievementDoc) {
-    req.log.warn({ key }, 'Unknown achievement key');
-    return sendError(res, `Unknown achievement: ${key}`, null, 404);
-  }
-
-  if (achievementDoc.unlock_type === 'cycle_rank' || achievementDoc.cycle_scoped) {
-    // Leaderboard badges: verify rank against the last closed cycle.
-    const cycleId = await getLastClosedCycleId();
-    const rank = await getLeaderboardRankForWallet(walletAddress, cycleId);
-    const exactRank: Record<string, number> = { 'first-place': 1, 'second-place': 2 };
-    const eligible =
-      achievementKey === 'third-place'
-        ? rank !== null && rank >= 3 && rank <= 10
-        : rank === exactRank[achievementKey];
-    if (!eligible) {
-      req.log.warn({ profileId: profileData.id, key, rank, cycleId }, 'Wallet did not finish at required leaderboard rank');
-      return sendError(res, 'You did not finish at the required leaderboard rank last cycle.', null, 403);
-    }
-  } else if (achievementDoc.unlock_type === 'rule') {
-    // Signal-driven badges: evaluate the configurable rule.
-    const signals = await computeEligibilitySignals(profileData);
-    if (!isAchievementEligible(achievementDoc, signals)) {
-      req.log.warn(
-        { profileId: profileData.id, key, signals },
-        'Profile is not eligible for achievement',
-      );
-      return sendError(res, 'You are not eligible for this achievement yet.', null, 403);
-    }
-  } else {
-    // redeem_code / manual badges are not claimable through this endpoint.
-    req.log.warn({ profileId: profileData.id, key, unlockType: achievementDoc.unlock_type }, 'Achievement not claimable via this endpoint');
-    return sendError(
-      res,
-      achievementDoc.unlock_type === 'redeem_code'
-        ? 'This badge is claimable only with a redeem code.'
-        : 'This badge is granted manually and cannot be claimed here.',
-      null,
-      403,
-    );
-  }
-
-  const result = await claimAchievement(profileData.id, achievementKey);
-
-  if (!result.success) {
-    if (result.alreadyClaimed) {
-      req.log.info({ profileId: profileData.id, key }, 'Achievement already claimed');
-      return sendError(res, 'You already claimed this achievement.', null, 409);
-    }
-    req.log.error({ err: result.error, profileId: profileData.id, key }, 'Failed to claim achievement');
-    return sendError(res, 'Failed to claim achievement', result.error, 500);
-  }
-
-  try {
-    await broadcastProfileChange('achievement-claimed', [
-      'profile-achievements',
-      'profile-rewards',
-      'profile-experience',
-    ]);
-  } catch (err) {
-    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (achievement-claimed)');
-  }
-
-  req.log.info({ profileId: profileData.id, key, coinReward: result.coinReward }, 'Achievement claimed');
-  return sendSuccess(res, {
-    achievementKey,
-    coinReward: result.coinReward,
-    claimedAt: result.claimedAt,
-  });
-});
-
-router.post('/wallet/:walletAddress/achievements/redeem', async (req, res) => {
-  const { walletAddress } = req.params;
-  const rawCode = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
-  req.log.info({ walletAddress, code: rawCode }, 'POST /profile/.../achievements/redeem');
-
-  // TODO(auth): same wallet-in-URL trust as every other profile route. When
-  // the API-wide auth hardening lands this endpoint follows along.
-
-  if (!rawCode) {
-    return sendError(res, 'A code is required.', null, 400);
-  }
-
-  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
-
-  if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved for redeem');
-    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
-  }
-
-  const result = await redeemAchievementCode(profileData.id, rawCode);
-
-  if (!result.success) {
-    if (result.notFound) {
-      req.log.info({ profileId: profileData.id, code: rawCode }, 'Redeem code not found');
-      return sendError(res, 'That code is not valid.', null, 404);
-    }
-    if (result.alreadyClaimed) {
-      req.log.info({ profileId: profileData.id, code: rawCode }, 'Redeem code already claimed');
-      return sendError(res, 'You already claimed this achievement.', null, 409);
-    }
-    req.log.error({ err: result.error, profileId: profileData.id, code: rawCode }, 'Failed to redeem code');
-    return sendError(res, 'Failed to redeem code', result.error, 500);
-  }
-
-  try {
-    await broadcastProfileChange('achievement-claimed', [
-      'profile-achievements',
-      'profile-rewards',
-      'profile-experience',
-    ]);
-  } catch (err) {
-    req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast (achievement-claimed via redeem)');
-  }
-
-  req.log.info(
-    { profileId: profileData.id, key: result.achievementKey, coinReward: result.coinReward },
-    'Achievement claimed via redeem code',
-  );
-  return sendSuccess(res, {
-    achievementKey: result.achievementKey,
-    coinReward: result.coinReward,
-    claimedAt: result.claimedAt,
-  });
 });
 
 router.post('/wallet/:walletAddress/nickname', async (req, res) => {

@@ -9,7 +9,7 @@ export const useProfileAchievements = () => {
     queryKey: ['profile', network?.networkName, walletAddress, 'profile-achievements'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/achievements`,
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/wallets/${walletAddress}/badges`,
       );
       const data = await response.json();
 

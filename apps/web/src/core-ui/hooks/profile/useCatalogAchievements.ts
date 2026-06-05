@@ -22,7 +22,7 @@ export const useCatalogAchievements = () =>
     queryFn: async () => {
       try {
         const response = await fetch(
-          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/achievements/catalog`,
+          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/badges`,
         );
         const data = await response.json();
         const list = data?.data?.achievements as CatalogApiAchievement[] | undefined;
