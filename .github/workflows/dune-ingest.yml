@@ -30,9 +30,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: analytics/package-lock.json
+          node-version: "20"
 
       # Persist the high-water-mark between scheduled runs.
       # The dashboard queries also de-dupe by event_id, so a rare cache miss
@@ -46,7 +44,12 @@ jobs:
 
       - name: Install dependencies
         working-directory: analytics
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Run incremental ingest
         working-directory: analytics
