@@ -3,6 +3,7 @@ import { prisma } from '@vaquita/db';
 import { firstElement } from '../../helpers';
 import { ably } from '../ably';
 import { evaluateBadgeMilestones } from '../badges/badge-monitor';
+import { getBadgesContractAddress } from '../project-config';
 import { getBlendInterest, getStellarDepositContractAddress } from '../stellar';
 import {
   type Deposit,
@@ -286,7 +287,8 @@ export const confirmWithdrawal = async (withdrawalId: number) => {
     if (wallet) {
       void (async () => {
         try {
-          await evaluateBadgeMilestones(wallet);
+          const contractAddress = await getBadgesContractAddress();
+          await evaluateBadgeMilestones(wallet, contractAddress);
         } catch {
           // intentionally ignored
         }
