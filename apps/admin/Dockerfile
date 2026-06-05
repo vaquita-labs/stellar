@@ -7,8 +7,13 @@ RUN corepack enable
 FROM base AS deps
 WORKDIR /repo
 COPY notify.sh ./notify.sh
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY apps/admin/package.json ./apps/admin/
+# admin depends on @vaquita/db (Prisma) and @vaquita/ui. The workspace packages
+# must be present at install time so pnpm installs @vaquita/db's dependency
+# subtree (@prisma/client, @prisma/adapter-pg) and runs its postinstall
+# `prisma generate`, which emits the client into packages/db/src/generated.
+COPY packages ./packages
 
 ARG WEBHOOK_SOURCE=apps/admin
 ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
@@ -34,15 +39,15 @@ WORKDIR /repo
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/admin/node_modules ./apps/admin/node_modules
 COPY . .
+# Restore the installed packages (incl. the generated Prisma client and their
+# node_modules symlinks) from deps — COPY . . above brings the clean source tree
+# without the git-ignored generated/ output, so this must come after it.
+COPY --from=deps /repo/packages ./packages
 
 ARG NEXT_PUBLIC_SERVICES_URL
-ARG NEXT_PUBLIC_POSTHOG_KEY
-ARG NEXT_PUBLIC_POSTHOG_HOST
-ARG NEXT_PUBLIC_PRIVY_APP_ID
+ARG NEXT_PUBLIC_ADMIN_SECRET
 ENV NEXT_PUBLIC_SERVICES_URL=$NEXT_PUBLIC_SERVICES_URL
-ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
-ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
-ENV NEXT_PUBLIC_PRIVY_APP_ID=$NEXT_PUBLIC_PRIVY_APP_ID
+ENV NEXT_PUBLIC_ADMIN_SECRET=$NEXT_PUBLIC_ADMIN_SECRET
 
 ARG WEBHOOK_SOURCE=apps/admin
 ENV WEBHOOK_SOURCE=$WEBHOOK_SOURCE
