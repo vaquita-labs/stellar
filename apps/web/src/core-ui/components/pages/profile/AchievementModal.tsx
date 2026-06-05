@@ -14,6 +14,7 @@ import {
   useProfileRewards,
 } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 
 /**
  * Mocked username used to personalize the share link. Replace with a real
@@ -147,9 +148,9 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
     : null;
 
   // Shared stellar.expert tx linking, used by both the live mint confirmation
-  // and the "already minted" detail view. Badges mint on testnet, matching the
-  // explorer links elsewhere (see stellarTransactions.ts).
-  const txExplorerUrl = (hash: string) => `https://stellar.expert/explorer/testnet/tx/${hash}`;
+  // and the "already minted" detail view. The network segment comes from the
+  // config provider (network.type) — single source of truth across the app.
+  const txExplorerUrl = (hash: string) => stellarExpertTxUrl(hash, network?.type);
   const shortenHash = (hash: string) => `${hash.slice(0, 6)}…${hash.slice(-4)}`;
 
   // Tx hash stored server-side for an already-minted badge. Only surfaced in
