@@ -26,7 +26,8 @@ import {
   type RewardDocument,
   type RewardResponseDTO,
 } from '../../types';
-import { DAILY_GOLD_COINS } from './constants';
+import { getRewardsConfig } from '../project-config';
+import { REWARD_REASON_DAILY_CHECKIN } from './constants';
 import { friendlyStandardMap } from './map-template';
 import { evaluateRule } from './rules';
 
@@ -53,6 +54,8 @@ const toProfileShape = (p: PrismaProfile): Profile => ({
   onboarding_completed: p.onboardingCompleted ?? false,
   tutorial_completed: p.tutorialCompleted ?? false,
   crypto_savvy: p.cryptoSavvy ?? false,
+  language: p.language ?? null,
+  currency: p.currency ?? null,
   created_at: p.createdAt?.toISOString(),
   updated_at: p.updatedAt?.toISOString(),
 });
@@ -238,29 +241,61 @@ export const getRewardsData = async (profileData: Profile) => {
     };
   }
 
+  // Daily reward amounts are admin-configurable (config row), not hard-coded.
+  const { dailyGoldCoins, dailyCheckinExperience } = await getRewardsConfig();
+
+  // Pull every reward row for this profile in one read and bucket by reward key
+  // — gold coins gate the daily check-in; experience is the persisted check-in XP.
   const profileRewardData = await prisma.profileReward.findMany({
-    where: { profileId: profileData.id, rewardId: BigInt(rewardData.id) },
+    where: { profileId: profileData.id },
     include: { reward: true },
   });
 
-  let collected = 0;
-  let amount = 0;
+  const today = getCurrentDay(new Date());
+  let goldCollectedToday = 0;
+  let goldAmount = 0;
+  let experienceAmount = 0;
+  // Sum of XP already earned from daily check-ins TODAY — drives the per-day cap
+  // so the profile never earns more than the configured amount in a single day.
+  let checkinExperienceToday = 0;
   for (const profileReward of profileRewardData) {
     const rewardAmount = Number(profileReward.amount ?? 0);
-    if (profileReward.type === 'collected' && profileReward.reward?.key === Reward.GOLD_COIN && getCurrentDay(profileReward.createdAt) === getCurrentDay(new Date())) {
-      collected += rewardAmount;
-    }
-    if (profileReward.type === 'collected' || profileReward.type === 'earned') {
-      amount += rewardAmount;
+    const key = profileReward.reward?.key;
+    // `reason` is the single source discriminator now (the old `type` column is
+    // gone): only daily-checkin rows gate the daily caps; rewards from other
+    // events (e.g. achievements) still count toward the totals but never the gate.
+    const isDailyCheckinToday =
+      profileReward.reason === REWARD_REASON_DAILY_CHECKIN && getCurrentDay(profileReward.createdAt) === today;
+    if (key === Reward.GOLD_COIN) {
+      goldAmount += rewardAmount;
+      if (isDailyCheckinToday) {
+        goldCollectedToday += rewardAmount;
+      }
+    } else if (key === Reward.EXPERIENCE) {
+      experienceAmount += rewardAmount;
+      if (isDailyCheckinToday) {
+        checkinExperienceToday += rewardAmount;
+      }
     }
   }
+
+  const goldToCollect = Math.max(dailyGoldCoins - goldCollectedToday, 0);
+  // Top-up to the configured daily cap: only what's left to reach it today, so a
+  // re-collect (or a mid-day cap increase) never grants the full amount twice.
+  const experienceToCollect = Math.max(dailyCheckinExperience - checkinExperienceToday, 0);
 
   const rewards: RewardResponseDTO[] = [
     {
       key: Reward.GOLD_COIN,
       name: 'Gold Coin',
-      amountToCollect: Math.max(DAILY_GOLD_COINS - collected, 0),
-      amount,
+      amountToCollect: goldToCollect,
+      amount: goldAmount,
+    },
+    {
+      key: Reward.EXPERIENCE,
+      name: 'Experience',
+      amountToCollect: experienceToCollect,
+      amount: experienceAmount,
     },
   ];
 
@@ -274,20 +309,20 @@ export const getRewardsData = async (profileData: Profile) => {
 };
 
 export const getStreakData = async (profileData: Profile) => {
-  const deposits = await prisma.deposit.findMany({
-    where: { walletAddress: profileData.wallet_address, status: DepositStatus.CONFIRMED },
-    select: { confirmedAt: true },
-  });
+  // A day counts for the streak only if the user collected their daily check-in
+  // coin that day — a gold-coin reward stamped with the 'daily-checkin' reason.
+  // Confirmed deposits no longer contribute to the streak.
   const profileRewardsData = await prisma.profileReward.findMany({
-    where: { profileId: profileData.id, type: 'collected' },
+    where: {
+      profileId: profileData.id,
+      reason: REWARD_REASON_DAILY_CHECKIN,
+      reward: { key: Reward.GOLD_COIN },
+    },
     select: { createdAt: true },
   });
 
   const daysSet = new Set<number>();
 
-  for (const deposit of deposits) {
-    daysSet.add(getCurrentDay(new Date(deposit.confirmedAt ?? 0)));
-  }
   for (const reward of profileRewardsData) {
     daysSet.add(getCurrentDay(new Date(reward.createdAt ?? 0)));
   }
@@ -353,7 +388,28 @@ export const toProfileResponseDTO = (networkName: string, profile: Profile): Pro
     onboardingCompleted: profile.onboarding_completed ?? false,
     tutorialCompleted: profile.tutorial_completed ?? false,
     cryptoSavvy: profile.crypto_savvy ?? false,
+    language: profile.language ?? '',
+    currency: profile.currency ?? '',
+    createdAt: profile.created_at ?? '',
   };
+};
+
+/**
+ * Sum of experience persisted to `profiles_rewards` for this profile — the XP
+ * earned from daily check-ins (the `experience` reward, type 'earned'). Lives
+ * alongside the deposit-derived XP in {@link toProfileExperienceResponseDTO}.
+ */
+export const getCheckinExperience = async (profileId: number): Promise<number> => {
+  try {
+    const rows = await prisma.profileReward.findMany({
+      where: { profileId, reward: { key: Reward.EXPERIENCE } },
+      select: { amount: true },
+    });
+    return rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+  } catch (error) {
+    console.warn('error on getCheckinExperience', error);
+    return 0;
+  }
 };
 
 export const toProfileExperienceResponseDTO = async (networkName: string, profile: Profile): Promise<ProfileExperienceResponseDTO> => {
@@ -367,6 +423,10 @@ export const toProfileExperienceResponseDTO = async (networkName: string, profil
   } catch (error) {
     console.warn('error on toProfileExperienceResponseDTO', error);
   }
+
+  // Add the experience persisted from daily check-ins (the deposit formula above
+  // is unchanged — this is an additional, ledgered source of XP).
+  experience += await getCheckinExperience(profile.id);
 
   return {
     walletAddress: profile?.wallet_address || '',
@@ -697,7 +757,7 @@ export interface EligibilitySignals {
   activeDeposits: number;
   /** Sum of amounts (display units, e.g. USDC dollars) across active deposits. */
   activeAmount: number;
-  /** Followers/friends count. TODO: wire when a friends system exists. */
+  /** Number of profiles this user follows (from the `follows` graph). */
   friendsCount: number;
   /** 1-based monthly leaderboard rank. TODO: wire when leaderboard data exists. */
   leaderboardRank?: number;
@@ -735,6 +795,15 @@ export const computeEligibilitySignals = async (
     console.warn('[eligibility] failed to load streak', error);
   }
 
+  // Number of profiles this user follows — drives the FIRST_FRIEND badge.
+  // Queried inline (not via the follows service) to avoid a circular import.
+  let friendsCount = 0;
+  try {
+    friendsCount = await prisma.follow.count({ where: { followerId: profile.id } });
+  } catch (error) {
+    console.warn('[eligibility] failed to load friends count', error);
+  }
+
   const createdAt = profile.created_at ? new Date(profile.created_at) : null;
 
   return {
@@ -743,7 +812,7 @@ export const computeEligibilitySignals = async (
     streakCount,
     activeDeposits,
     activeAmount,
-    friendsCount: 0,
+    friendsCount,
   };
 };
 
@@ -784,7 +853,9 @@ export const toProfileAchievementsResponseDTO = async (
   );
 
   // On-chain mints are keyed by badge_type, which equals the achievement key.
-  const mintedKeys = new Set(minted.map((m) => m.badge_type));
+  // Keep the tx hash alongside so clients can link an already-minted badge to
+  // its stellar.expert transaction without triggering a re-mint.
+  const mintedByKey = new Map(minted.map((m) => [m.badge_type, m.transaction_hash]));
 
   const achievements: AchievementResponseDTO[] = allRes.data
     // Hide secret achievements until the user actually claims them — the
@@ -803,7 +874,9 @@ export const toProfileAchievementsResponseDTO = async (
         // showing as "earned" even if the eligibility rule later tightens.
         unlocked: !!claim || isAchievementEligible(a, signals),
         claimedAt: claim?.claimed_at ?? null,
-        minted: mintedKeys.has(a.key),
+        minted: mintedByKey.has(a.key),
+        // Empty string from getMintedBadges (unconfirmed/missing) normalizes to null.
+        transactionHash: mintedByKey.get(a.key) || null,
         icon: a.icon ?? null,
         accent: a.accent ?? null,
         displayOrder: a.display_order ?? 0,

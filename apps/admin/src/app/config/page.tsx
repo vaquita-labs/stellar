@@ -28,6 +28,10 @@ type FormState = {
   badgesContractAddress: string;
   // Held as a string while editing; parsed to number|null on submit.
   cycleDurationMs: string;
+  // Daily check-in reward amounts. Held as strings while editing; parsed to
+  // non-negative integers on submit.
+  dailyGoldCoins: string;
+  dailyCheckinExperience: string;
   // Edited inline as a list of rows; each blank-hint row stores hint: ''.
   currencies: Option[];
   languages: Option[];
@@ -39,6 +43,8 @@ const emptyForm = (): FormState => ({
   networkPassphrase: '',
   badgesContractAddress: '',
   cycleDurationMs: '',
+  dailyGoldCoins: '0',
+  dailyCheckinExperience: '0',
   currencies: [],
   languages: [],
 });
@@ -53,6 +59,8 @@ const formFromConfig = (c: ProjectConfig): FormState => ({
   networkPassphrase: c.networkPassphrase ?? '',
   badgesContractAddress: c.badgesContractAddress ?? '',
   cycleDurationMs: c.cycleDurationMs != null ? String(c.cycleDurationMs) : '',
+  dailyGoldCoins: String(c.dailyGoldCoins ?? 0),
+  dailyCheckinExperience: String(c.dailyCheckinExperience ?? 0),
   currencies: toRows(c.currencies),
   languages: toRows(c.languages),
 });
@@ -197,6 +205,8 @@ export default function Page() {
     networkPassphrase: orNull(form.networkPassphrase),
     badgesContractAddress: orNull(form.badgesContractAddress),
     cycleDurationMs: form.cycleDurationMs.trim() ? Number(form.cycleDurationMs.trim()) : null,
+    dailyGoldCoins: form.dailyGoldCoins.trim() ? Number(form.dailyGoldCoins.trim()) : 0,
+    dailyCheckinExperience: form.dailyCheckinExperience.trim() ? Number(form.dailyCheckinExperience.trim()) : 0,
     currencies: buildOptions(form.currencies),
     languages: buildOptions(form.languages),
   });
@@ -223,6 +233,20 @@ export default function Page() {
       const ms = Number(form.cycleDurationMs.trim());
       if (!Number.isInteger(ms) || ms <= 0) {
         addDangerToast('Invalid cycle duration', 'Cycle duration must be a positive whole number of milliseconds, or empty.');
+        return;
+      }
+    }
+    if (form.dailyGoldCoins.trim()) {
+      const coins = Number(form.dailyGoldCoins.trim());
+      if (!Number.isInteger(coins) || coins < 0) {
+        addDangerToast('Invalid daily coins', 'Daily gold coins must be a non-negative whole number.');
+        return;
+      }
+    }
+    if (form.dailyCheckinExperience.trim()) {
+      const xp = Number(form.dailyCheckinExperience.trim());
+      if (!Number.isInteger(xp) || xp < 0) {
+        addDangerToast('Invalid daily experience', 'Daily check-in experience must be a non-negative whole number.');
         return;
       }
     }
@@ -302,6 +326,22 @@ export default function Page() {
             placeholder="Leave empty for monthly cycles (production). e.g. 900000 = 15 min"
             value={form.cycleDurationMs}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('cycleDurationMs', e.target.value)}
+          />
+
+          <Input
+            label="Daily check-in coins"
+            type="number"
+            placeholder="Gold coins granted per daily check-in (e.g. 1)"
+            value={form.dailyGoldCoins}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('dailyGoldCoins', e.target.value)}
+          />
+
+          <Input
+            label="Daily check-in experience (XP)"
+            type="number"
+            placeholder="Experience granted per daily check-in (0 disables it)"
+            value={form.dailyCheckinExperience}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('dailyCheckinExperience', e.target.value)}
           />
 
           <Textarea

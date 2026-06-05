@@ -123,6 +123,13 @@ model Config {
   // calendar-month cycles; a positive value enables fixed-duration test cycles.
   // Replaces the old CYCLE_DURATION_MS env var.
   cycleDurationMs       Int?     @map("cycle_duration_ms")
+  // Gold coins granted per daily check-in. Replaces the hard-coded
+  // DAILY_GOLD_COINS constant; read live from this column on every check-in.
+  dailyGoldCoins        Int      @default(1) @map("daily_gold_coins")
+  // Experience granted per daily check-in. Persisted to `profiles_rewards`
+  // (type 'earned', the `experience` reward) on collect and summed into the
+  // profile's total experience. `0` disables the check-in XP bonus.
+  dailyCheckinExperience Int     @default(0) @map("daily_checkin_experience")
   // Fiat display currencies offered in the UI (Preferences page). Each entry is
   // `{ id, label, hint? }`, e.g. `{ "id": "usd", "label": "USD", "hint": "US Dollar" }`.
   currencies            Json     @default("[]")
@@ -156,6 +163,13 @@ model Profile {
   // addresses, tx hashes, gas/network terms) instead of simplified copy.
   cryptoSavvy         Boolean @default(false) @map("crypto_savvy")
 
+  // Per-user display preferences picked on the Preferences page. Each holds the
+  // `id` of an option from the project config's languages/currencies lists
+  // (e.g. 'en', 'usd'). NULL until the user changes it (UI falls back to the
+  // first configured option).
+  language      String?   @db.VarChar(10)
+  currency      String?   @db.VarChar(10)
+
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
@@ -164,7 +178,28 @@ model Profile {
   profileMapObjects   ProfileMapObject[]
   profileRewards      ProfileReward[]
 
+  // Unidirectional follow graph. `following` are edges where this profile is the
+  // follower; `followers` are edges where it is the followee.
+  following Follow[] @relation("following")
+  followers Follow[] @relation("followers")
+
   @@map("profiles")
+}
+
+/// Unidirectional follow edge: `follower` follows `followee` (Twitter-style, not mutual).
+model Follow {
+  id         Int      @id @default(autoincrement())
+  followerId Int      @map("follower_id")
+  followeeId Int      @map("followee_id")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  follower Profile @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
+  followee Profile @relation("followers", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followeeId], map: "follows_unique_pair")
+  @@index([followerId], map: "idx_follows_follower")
+  @@index([followeeId], map: "idx_follows_followee")
+  @@map("follows")
 }
 
 model ProfileAchievement {
@@ -198,8 +233,12 @@ model ProfileReward {
   id        BigInt   @id @default(autoincrement())
   profileId Int      @map("profile_id")
   rewardId  BigInt   @map("reward_id")
-  type      String
   amount    Decimal  @db.Decimal
+  // Why this reward was granted — the single ledger discriminator (replaced the
+  // old `type` collected/earned column). Daily check-in rewards use
+  // 'daily-checkin'; achievement credits use 'achievement'. Combined with
+  // `reward_id` it identifies any reward's source.
+  reason    String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

@@ -2,23 +2,20 @@
 
 import StellarAuthButtons from '@/components/profile/StellarAuthButtons';
 import { OnboardingIntro } from '@/core-ui/components';
-import { useIsAuthenticated } from '@/core-ui/hooks';
+import { useIntroSeen, useIsAuthenticated } from '@/core-ui/hooks';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-
-// Simulación de "mostrar onboarding" vía env var (sin persistencia local).
-// Mientras no haya señal del backend, esto controla si se ve el intro.
-// Por defecto se muestra; al reiniciar reaparece. Poner 'false' para ocultarlo.
-const SHOW_ONBOARDING_INTRO = process.env.NEXT_PUBLIC_SHOW_ONBOARDING_INTRO !== 'false';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Solo estado de sesión: si recargas, vuelve a aparecer (no se persiste).
-  const [introDismissed, setIntroDismissed] = useState(false);
+  // El intro vive por dispositivo en localStorage: se muestra una sola vez y
+  // no reaparece al recargar. Sin env var (el env es global al build y no sabe
+  // si este dispositivo ya lo vio).
+  const { hydrated, seen, markSeen, replay } = useIntroSeen();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -29,13 +26,14 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, router, searchParams]);
 
-  // No mostrar nada mientras se verifica la autenticación o si ya está autenticado
-  if (isAuthenticated) {
+  // No mostrar nada mientras se verifica la autenticación, si ya está
+  // autenticado, o hasta leer localStorage (evita parpadeo del intro).
+  if (isAuthenticated || !hydrated) {
     return null;
   }
 
-  if (SHOW_ONBOARDING_INTRO && !introDismissed) {
-    return <OnboardingIntro onFinish={() => setIntroDismissed(true)} />;
+  if (!seen) {
+    return <OnboardingIntro onFinish={markSeen} />;
   }
 
   return (
@@ -80,7 +78,7 @@ export default function LoginPage() {
 
             {/* Botón para volver a ver el intro (testeo / replay) */}
             <button
-              onClick={() => setIntroDismissed(false)}
+              onClick={replay}
               className="mt-1 text-sm font-semibold text-black/50 hover:text-black underline underline-offset-2 transition"
             >
               View intro again
