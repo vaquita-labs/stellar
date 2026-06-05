@@ -38,6 +38,8 @@ const emptyConfig = {
   networkPassphrase: null,
   badgesContractAddress: null,
   cycleDurationMs: null as number | null,
+  dailyGoldCoins: 0,
+  dailyCheckinExperience: 0,
   currencies: [] as Currency[],
   languages: [] as Language[],
   createdAt: null,
@@ -81,6 +83,9 @@ const updateSchema = z.object({
     .positive()
     .nullish()
     .transform((v) => (typeof v === 'number' && v > 0 ? v : null)),
+  // Daily check-in reward amounts. Non-negative integers; only written when sent.
+  dailyGoldCoins: z.number().int().min(0).optional(),
+  dailyCheckinExperience: z.number().int().min(0).optional(),
   currencies: z.array(optionSchema).optional(),
   languages: z.array(optionSchema).optional(),
 });
@@ -130,6 +135,8 @@ export async function PATCH(req: NextRequest) {
         networkPassphrase: data.networkPassphrase ?? null,
         badgesContractAddress: data.badgesContractAddress ?? null,
         cycleDurationMs: data.cycleDurationMs ?? null,
+        dailyGoldCoins: data.dailyGoldCoins ?? 1,
+        dailyCheckinExperience: data.dailyCheckinExperience ?? 0,
         currencies: data.currencies ?? [],
         languages: data.languages ?? [],
       },
@@ -147,6 +154,8 @@ export async function PATCH(req: NextRequest) {
       ...(data.origins !== undefined ? { origins: data.origins } : {}),
       ...(data.currencies !== undefined ? { currencies: data.currencies } : {}),
       ...(data.languages !== undefined ? { languages: data.languages } : {}),
+      ...(data.dailyGoldCoins !== undefined ? { dailyGoldCoins: data.dailyGoldCoins } : {}),
+      ...(data.dailyCheckinExperience !== undefined ? { dailyCheckinExperience: data.dailyCheckinExperience } : {}),
       networkPassphrase: data.networkPassphrase,
       badgesContractAddress: data.badgesContractAddress,
       cycleDurationMs: data.cycleDurationMs,

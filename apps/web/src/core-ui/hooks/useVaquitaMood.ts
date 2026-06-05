@@ -7,6 +7,7 @@ export interface VaquitaMoodInfo {
   mood: VaquitaMood;
   canCollect: boolean;
   goldCoinsToCollect: number;
+  experienceToCollect: number;
 }
 
 export const useVaquitaMood = (): VaquitaMoodInfo => {
@@ -15,6 +16,7 @@ export const useVaquitaMood = (): VaquitaMoodInfo => {
 
   return useMemo(() => {
     const goldCoinsToCollect = dailyCheck?.find?.((r) => r?.name === 'Gold Coin')?.amountToCollect ?? 0;
+    const experienceToCollect = dailyCheck?.find?.((r) => r?.name === 'Experience')?.amountToCollect ?? 0;
     const canCollect = goldCoinsToCollect > 0;
 
     const deposits = depositsData?.deposits ?? [];
@@ -30,6 +32,6 @@ export const useVaquitaMood = (): VaquitaMoodInfo => {
     else if (depositReachedGoal) mood = 'celebrating';
     else if (recentEarlyWithdraw) mood = 'sad';
 
-    return { mood, canCollect, goldCoinsToCollect };
+    return { mood, canCollect, goldCoinsToCollect, experienceToCollect };
   }, [dailyCheck, depositsData]);
 };

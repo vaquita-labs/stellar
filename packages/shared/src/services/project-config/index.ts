@@ -23,6 +23,29 @@ export const getBadgesContractAddress = async (): Promise<string | null> => {
   return config?.badgesContractAddress ?? null;
 };
 
+/** Daily check-in reward amounts, sourced live from the singleton `config` row. */
+export interface RewardsConfig {
+  /** Gold coins granted per daily check-in. */
+  dailyGoldCoins: number;
+  /** Experience granted per daily check-in (0 disables the bonus). */
+  dailyCheckinExperience: number;
+}
+
+/**
+ * Reads the admin-configurable daily check-in reward amounts. Falls back to the
+ * historical defaults (1 coin, 0 XP) when the config row doesn't exist yet, so
+ * callers never need to special-case a missing singleton.
+ */
+export const getRewardsConfig = async (): Promise<RewardsConfig> => {
+  const config = await prisma.config.findFirst({
+    select: { dailyGoldCoins: true, dailyCheckinExperience: true },
+  });
+  return {
+    dailyGoldCoins: config?.dailyGoldCoins ?? 1,
+    dailyCheckinExperience: config?.dailyCheckinExperience ?? 0,
+  };
+};
+
 /**
  * Returns the single project configuration (the app is single-network now), with
  * its supported tokens. Replaces the old getNetworkByName / getNetworks /

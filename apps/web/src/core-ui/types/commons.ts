@@ -256,6 +256,7 @@ export interface RewardResponseDTO {
 
 export enum Reward {
   GOLD_COIN = 'gold-coin',
+  EXPERIENCE = 'experience',
 }
 
 export enum Achievement {

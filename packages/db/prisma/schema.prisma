@@ -123,6 +123,13 @@ model Config {
   // calendar-month cycles; a positive value enables fixed-duration test cycles.
   // Replaces the old CYCLE_DURATION_MS env var.
   cycleDurationMs       Int?     @map("cycle_duration_ms")
+  // Gold coins granted per daily check-in. Replaces the hard-coded
+  // DAILY_GOLD_COINS constant; read live from this column on every check-in.
+  dailyGoldCoins        Int      @default(1) @map("daily_gold_coins")
+  // Experience granted per daily check-in. Persisted to `profiles_rewards`
+  // (type 'earned', the `experience` reward) on collect and summed into the
+  // profile's total experience. `0` disables the check-in XP bonus.
+  dailyCheckinExperience Int     @default(0) @map("daily_checkin_experience")
   // Fiat display currencies offered in the UI (Preferences page). Each entry is
   // `{ id, label, hint? }`, e.g. `{ "id": "usd", "label": "USD", "hint": "US Dollar" }`.
   currencies            Json     @default("[]")
@@ -226,8 +233,12 @@ model ProfileReward {
   id        BigInt   @id @default(autoincrement())
   profileId Int      @map("profile_id")
   rewardId  BigInt   @map("reward_id")
-  type      String
   amount    Decimal  @db.Decimal
+  // Why this reward was granted — the single ledger discriminator (replaced the
+  // old `type` collected/earned column). Daily check-in rewards use
+  // 'daily-checkin'; achievement credits use 'achievement'. Combined with
+  // `reward_id` it identifies any reward's source.
+  reason    String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 

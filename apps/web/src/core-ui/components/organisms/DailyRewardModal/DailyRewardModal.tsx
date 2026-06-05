@@ -8,7 +8,14 @@ import { DailyRewardModalProps } from './types';
 
 type Step = 'confirm' | 'success';
 
-export function DailyRewardModal({ open, onOpenChange, coinsToCollect, streakDays, onCollect }: DailyRewardModalProps) {
+export function DailyRewardModal({
+  open,
+  onOpenChange,
+  coinsToCollect,
+  experienceToCollect,
+  streakDays,
+  onCollect,
+}: DailyRewardModalProps) {
   const [step, setStep] = useState<Step>('confirm');
   const [isCollecting, setIsCollecting] = useState(false);
 
@@ -32,6 +39,7 @@ export function DailyRewardModal({ open, onOpenChange, coinsToCollect, streakDay
   };
 
   const coinLabel = coinsToCollect === 1 ? 'moneda' : 'monedas';
+  const hasExperience = experienceToCollect > 0;
 
   return (
     <AppModal
@@ -48,6 +56,12 @@ export function DailyRewardModal({ open, onOpenChange, coinsToCollect, streakDay
           <Image src="/icons/global/coin.png" alt="coins" width={56} height={56} priority />
           <span className="text-4xl font-bold text-black">+{coinsToCollect}</span>
         </div>
+
+        {hasExperience && (
+          <div className="flex items-center justify-center gap-2 rounded-full bg-white border border-black border-b-2 px-3 py-1">
+            <span className="text-base font-bold text-black">+{experienceToCollect} XP</span>
+          </div>
+        )}
 
         {step === 'confirm' ? (
           <>
@@ -70,7 +84,8 @@ export function DailyRewardModal({ open, onOpenChange, coinsToCollect, streakDay
         ) : (
           <>
             <p className="text-lg font-semibold text-black">
-              ¡Ganaste {coinsToCollect} {coinLabel}!
+              ¡Ganaste {coinsToCollect} {coinLabel}
+              {hasExperience ? ` y ${experienceToCollect} XP` : ''}!
             </p>
 
             <div className="flex items-center justify-center gap-2 bg-white border border-black border-b-2 rounded-md px-4 py-3 w-full">

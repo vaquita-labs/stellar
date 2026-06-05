@@ -48,11 +48,12 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
   const [showVaquitasListModal, setShowVaquitasListModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
+  const [dailyRewardExperience, setDailyRewardExperience] = useState(0);
   const [showMoodModal, setShowMoodModal] = useState(false);
   const { walletAddress: userWalletAddress } = useConfigStore((store) => store);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
   const { height, width } = useResizeStore((store) => store);
-  const { mood, canCollect, goldCoinsToCollect } = useVaquitaMood();
+  const { mood, canCollect, goldCoinsToCollect, experienceToCollect } = useVaquitaMood();
   const { data: streak } = useProfileStreak();
   const { goldDailyCollect } = useRestProfile();
   const queryClient = useQueryClient();
@@ -78,6 +79,7 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
   const handleVaquitaClick = () => {
     if (canCollect) {
       setDailyRewardCoins(goldCoinsToCollect);
+      setDailyRewardExperience(experienceToCollect);
       setShowDailyRewardModal(true);
       return;
     }
@@ -149,6 +151,7 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
           open={showDailyRewardModal}
           onOpenChange={() => setShowDailyRewardModal(false)}
           coinsToCollect={dailyRewardCoins}
+          experienceToCollect={dailyRewardExperience}
           streakDays={currentStreakDays}
           onCollect={handleCollectDailyReward}
         />
