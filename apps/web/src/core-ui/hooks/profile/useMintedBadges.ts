@@ -1,42 +1,27 @@
 'use client';
 
-import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useConfigStore } from '@/core-ui/stores';
-import { useQuery } from '@tanstack/react-query';
-
-interface MintedBadge {
-  badge_type: string;
-  confirmed_at: string;
-  transaction_hash: string;
-}
+import { useMemo } from 'react';
+import { useProfileAchievements } from './useProfileAchievements';
 
 /**
- * Query that returns the set of badge types the wallet has minted on-chain.
- * Uses the confirmed_at column to distinguish minted vs merely claimed badges.
+ * Server-backed view of which badge types the wallet has minted on-chain.
+ * Derives from `useProfileAchievements` (the `minted` field, folded into the
+ * badges list), so there's no separate request and it survives reloads.
  */
 export const useMintedBadges = () => {
-  const { network, walletAddress } = useConfigStore();
-  const networkName = network?.networkName ?? '';
-  const baseUrl = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
+  const { data, ...query } = useProfileAchievements();
 
-  const query = useQuery<Set<string>>({
-    queryKey: ['minted-badges', networkName, walletAddress],
-    queryFn: async () => {
-      if (!walletAddress || !networkName) return new Set<string>();
-      const res = await fetch(
-        `${baseUrl}/wallets/${encodeURIComponent(walletAddress)}/badges/minted`,
-      );
-      if (!res.ok) return new Set<string>();
-      const body = await res.json();
-      const badges: MintedBadge[] = body.data ?? [];
-      return new Set(badges.map((b) => b.badge_type));
-    },
-    enabled: !!walletAddress && !!networkName,
-    staleTime: 30_000,
-  });
+  const mintedIds = useMemo<Set<string>>(() => {
+    const next = new Set<string>();
+    for (const a of data?.achievements ?? []) {
+      if (a.minted) next.add(a.key);
+    }
+    return next;
+  }, [data?.achievements]);
 
   return {
     ...query,
-    isMinted: (badgeType: string) => query.data?.has(badgeType) ?? false,
+    data: mintedIds,
+    isMinted: (badgeType: string) => mintedIds.has(badgeType),
   };
 };

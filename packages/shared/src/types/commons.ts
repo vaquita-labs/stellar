@@ -275,6 +275,8 @@ export interface AchievementResponseDTO {
   unlocked: boolean;
   /** ISO timestamp of the claim, or null if not yet claimed. */
   claimedAt: string | null;
+  /** True when the badge has been minted on-chain (a confirmed badge_claims row). */
+  minted: boolean;
 }
 
 export interface ProfileAchievementsResponseDTO {

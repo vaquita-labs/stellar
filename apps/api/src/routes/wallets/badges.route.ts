@@ -12,7 +12,6 @@ import {
   getBadgesContractAddress,
   getLastClosedCycleId,
   getLeaderboardRankForWallet,
-  getMintedBadges,
   getNetworkName,
   getProfile,
   isAchievementEligible,
@@ -48,8 +47,9 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
 // ---------------------------------------------------------------------------
 
 /**
- * Lists every badge with this wallet's status (locked / unlocked / claimed) plus
- * coin reward and claim timestamp. The off-chain catalog + eligibility view.
+ * Lists every badge with this wallet's full lifecycle status per row: `unlocked`
+ * (eligible), `claimedAt` (claimed off-chain) and `minted` (confirmed on-chain),
+ * plus coin reward. Single source of truth for the badges grid.
  */
 router.get(
   '/',
@@ -65,25 +65,6 @@ router.get(
     }
 
     return sendSuccess(res, await toProfileAchievementsResponseDTO(await getNetworkName(), profileData));
-  }),
-);
-
-// ---------------------------------------------------------------------------
-// GET /api/v1/wallets/:wallet/badges/minted
-// ---------------------------------------------------------------------------
-
-/**
- * Returns all on-chain confirmed badge mints for the wallet.
- *
- * 200 [{ badge_type, confirmed_at, transaction_hash }]
- */
-router.get(
-  '/minted',
-  asyncHandler(async (req, res) => {
-    const { wallet } = req.params as { wallet: string };
-    req.log.info({ wallet }, 'GET /wallets/:wallet/badges/minted');
-    const minted = await getMintedBadges(wallet);
-    return res.json({ status: 'success', data: minted });
   }),
 );
 

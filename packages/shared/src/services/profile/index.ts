@@ -2,6 +2,7 @@ import { Prisma, prisma } from '@vaquita/db';
 import type { Achievement as PrismaAchievement, Profile as PrismaProfile } from '@vaquita/db';
 import { getCurrentDay } from '../../helpers/date';
 import { ably } from '../ably';
+import { getMintedBadges } from '../badges/claims';
 import {
   Achievement,
   type AchievementDocument,
@@ -771,15 +772,19 @@ export const toProfileAchievementsResponseDTO = async (
   // One set of DB calls feeds both the catalog AND the per-row eligibility
   // computation below. computeEligibilitySignals reuses the deposit-signals
   // helper so this isn't free, but it's bounded — a small handful of queries.
-  const [allRes, claimedRes, signals] = await Promise.all([
+  const [allRes, claimedRes, signals, minted] = await Promise.all([
     getAllAchievements(),
     getClaimedAchievements(profile.id),
     computeEligibilitySignals(profile),
+    getMintedBadges(profile.wallet_address),
   ]);
 
   const claimedById = new Map<number, ProfileAchievement>(
     claimedRes.data.map((row) => [row.achievement_id, row]),
   );
+
+  // On-chain mints are keyed by badge_type, which equals the achievement key.
+  const mintedKeys = new Set(minted.map((m) => m.badge_type));
 
   const achievements: AchievementResponseDTO[] = allRes.data
     // Hide secret achievements until the user actually claims them — the
@@ -798,6 +803,7 @@ export const toProfileAchievementsResponseDTO = async (
         // showing as "earned" even if the eligibility rule later tightens.
         unlocked: !!claim || isAchievementEligible(a, signals),
         claimedAt: claim?.claimed_at ?? null,
+        minted: mintedKeys.has(a.key),
       };
     });
 
