@@ -75,20 +75,18 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
     router.push('/leaderboard');
   };
 
-  const handleVaquitaClick = async () => {
+  const handleVaquitaClick = () => {
     if (canCollect) {
-      const coins = goldCoinsToCollect;
-      setDailyRewardCoins(coins);
+      setDailyRewardCoins(goldCoinsToCollect);
       setShowDailyRewardModal(true);
-      try {
-        await goldDailyCollect();
-        await queryClient.invalidateQueries({ queryKey: ['profile'] });
-      } catch (err) {
-        console.error('goldDailyCollect', err);
-      }
       return;
     }
     setShowMoodModal(true);
+  };
+
+  const handleCollectDailyReward = async () => {
+    await goldDailyCollect();
+    await queryClient.invalidateQueries({ queryKey: ['profile'] });
   };
 
   return (
@@ -150,8 +148,9 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
         <DailyRewardModal
           open={showDailyRewardModal}
           onOpenChange={() => setShowDailyRewardModal(false)}
-          coinsCollected={dailyRewardCoins}
+          coinsToCollect={dailyRewardCoins}
           streakDays={currentStreakDays}
+          onCollect={handleCollectDailyReward}
         />
       )}
       {showMoodModal && (
