@@ -1,4 +1,3 @@
-export * from './useCatalogAchievements';
 export * from './useLeaderboardRank';
 export * from './useMintBadge';
 export * from './useMintedBadges';

@@ -233,6 +233,11 @@ export interface AchievementResponseDTO {
   claimedAt: string | null;
   /** True when the badge has been minted on-chain (a confirmed badge_claims row). */
   minted: boolean;
+  /** Catalog visual metadata, embedded so logged-in views need only this list.
+   *  `icon` may be a relative path or an absolute (admin-uploaded) URL. */
+  icon: string | null;
+  accent: string | null;
+  displayOrder: number;
 }
 
 export interface ProfileAchievementsResponseDTO {

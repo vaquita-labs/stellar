@@ -804,6 +804,9 @@ export const toProfileAchievementsResponseDTO = async (
         unlocked: !!claim || isAchievementEligible(a, signals),
         claimedAt: claim?.claimed_at ?? null,
         minted: mintedKeys.has(a.key),
+        icon: a.icon ?? null,
+        accent: a.accent ?? null,
+        displayOrder: a.display_order ?? 0,
       };
     });
 
