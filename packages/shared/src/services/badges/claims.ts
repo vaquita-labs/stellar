@@ -1,4 +1,18 @@
-import { supabase } from '../../lib/supabase';
+import { prisma } from '@vaquita/db';
+import type { BadgeClaim as PrismaBadgeClaim } from '@vaquita/db';
+
+const toBadgeClaimRecord = (c: PrismaBadgeClaim): BadgeClaimRecord => ({
+  id: c.id,
+  wallet_address: c.walletAddress,
+  badge_type: c.badgeType,
+  cycle_id: c.cycleId,
+  expiry: c.expiresAt.toISOString(),
+  signature: c.signature,
+  created_at: c.createdAt.toISOString(),
+  superseded_at: c.supersededAt ? c.supersededAt.toISOString() : null,
+  confirmed_at: c.confirmedAt ? c.confirmedAt.toISOString() : null,
+  transaction_hash: c.transactionHash ?? null,
+});
 
 export interface BadgeClaimRecord {
   id: string;
@@ -27,9 +41,6 @@ export interface BadgeClaimPayload {
 
 export const GENESIS_SAVER_CAP = 50;
 
-/** Supabase network.id for Stellar mainnet (id=4 per seed data). */
-export const STELLAR_MAINNET_NETWORK_ID = 4;
-
 /** Number of days after mainnet launch in which D2 (Mainnet Pioneer) claims are open. */
 export const MAINNET_PIONEER_WINDOW_DAYS = 7;
 
@@ -53,17 +64,14 @@ export function getMainnetLaunchTimestampMs(): number | null {
  * (reward > 0 indicates on-time; early withdrawals have reward = null or 0).
  */
 export async function checkPrimeraVaquitaEligibility(walletAddress: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('deposits')
-    .select('id, withdrawals(id, status, reward)')
-    .eq('wallet_address', walletAddress)
-    .eq('status', 'confirmed');
+  const data = await prisma.deposit.findMany({
+    where: { walletAddress, status: 'confirmed', deletedAt: null },
+    select: { withdrawals: { select: { status: true, reward: true } } },
+  });
 
-  if (error) throw error;
-
-  return (data ?? []).some((deposit: any) =>
-    (deposit.withdrawals ?? []).some(
-      (w: any) => w.status === 'confirmed' && w.reward != null && Number(w.reward) > 0,
+  return data.some((deposit) =>
+    deposit.withdrawals.some(
+      (w) => w.status === 'confirmed' && w.reward != null && w.reward.toNumber() > 0,
     ),
   );
 }
@@ -74,29 +82,24 @@ export async function checkPrimeraVaquitaEligibility(walletAddress: string): Pro
  */
 export async function checkGenesisSaverEligibility(walletAddress: string): Promise<boolean> {
   // Stop signing once we've issued cap-many active claims.
-  const { count, error: countErr } = await supabase
-    .from('badge_claims')
-    .select('id', { count: 'exact', head: true })
-    .eq('badge_type', 'genesis_saver')
-    .eq('cycle_id', 0)
-    .is('superseded_at', null);
-  if (countErr) throw countErr;
-  if ((count ?? 0) >= GENESIS_SAVER_CAP) return false;
+  const count = await prisma.badgeClaim.count({
+    where: { badgeType: 'genesis_saver', cycleId: 0, supersededAt: null, deletedAt: null },
+  });
+  if (count >= GENESIS_SAVER_CAP) return false;
 
   // Collect the first GENESIS_SAVER_CAP unique depositing wallets (FIFO by confirmed_at).
-  const { data: deposits, error: depErr } = await supabase
-    .from('deposits')
-    .select('wallet_address, confirmed_at')
-    .eq('status', 'confirmed')
-    .order('confirmed_at', { ascending: true });
-  if (depErr) throw depErr;
+  const deposits = await prisma.deposit.findMany({
+    where: { status: 'confirmed', deletedAt: null },
+    select: { walletAddress: true },
+    orderBy: { confirmedAt: 'asc' },
+  });
 
   const seen = new Set<string>();
   const first50: string[] = [];
-  for (const { wallet_address } of deposits ?? []) {
-    if (!seen.has(wallet_address)) {
-      seen.add(wallet_address);
-      first50.push(wallet_address);
+  for (const { walletAddress: wallet } of deposits) {
+    if (!seen.has(wallet)) {
+      seen.add(wallet);
+      first50.push(wallet);
       if (first50.length >= GENESIS_SAVER_CAP) break;
     }
   }
@@ -104,10 +107,10 @@ export async function checkGenesisSaverEligibility(walletAddress: string): Promi
 }
 
 /**
- * D2 — Mainnet Pioneer: wallet made a confirmed deposit on Stellar mainnet
- * within the first MAINNET_PIONEER_WINDOW_DAYS days of launch.
+ * D2 — Mainnet Pioneer: wallet made a confirmed deposit within the first
+ * MAINNET_PIONEER_WINDOW_DAYS days of launch. The app is single-network
+ * (Stellar mainnet) now, so every confirmed deposit qualifies network-wise.
  * No cap — all qualifying wallets receive the badge.
- * Prior testnet activity does not disqualify.
  */
 export async function checkMainnetPioneerEligibility(walletAddress: string): Promise<boolean> {
   const launchMs = getMainnetLaunchTimestampMs();
@@ -115,18 +118,17 @@ export async function checkMainnetPioneerEligibility(walletAddress: string): Pro
 
   const windowEndMs = launchMs + MAINNET_PIONEER_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
-  const { data, error } = await supabase
-    .from('deposits')
-    .select('id')
-    .eq('wallet_address', walletAddress)
-    .eq('network_id', STELLAR_MAINNET_NETWORK_ID)
-    .eq('status', 'confirmed')
-    .gte('confirmed_at', new Date(launchMs).toISOString())
-    .lt('confirmed_at', new Date(windowEndMs).toISOString())
-    .limit(1);
+  const data = await prisma.deposit.findFirst({
+    where: {
+      walletAddress,
+      status: 'confirmed',
+      confirmedAt: { gte: new Date(launchMs), lt: new Date(windowEndMs) },
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
 
-  if (error) throw error;
-  return (data ?? []).length > 0;
+  return data !== null;
 }
 
 // ---------------------------------------------------------------------------
@@ -138,19 +140,11 @@ export async function getActiveBadgeClaim(
   badgeType: string,
   cycleId: number,
 ): Promise<BadgeClaimRecord | null> {
-  const { data, error } = await supabase
-    .from('badge_claims')
-    .select('*')
-    .eq('wallet_address', walletAddress)
-    .eq('badge_type', badgeType)
-    .eq('cycle_id', cycleId)
-    .is('superseded_at', null)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data as BadgeClaimRecord | null;
+  const claim = await prisma.badgeClaim.findFirst({
+    where: { walletAddress, badgeType, cycleId, supersededAt: null, deletedAt: null },
+    orderBy: { createdAt: 'desc' },
+  });
+  return claim ? toBadgeClaimRecord(claim) : null;
 }
 
 export async function storeBadgeClaim(claim: {
@@ -160,20 +154,16 @@ export async function storeBadgeClaim(claim: {
   expiry: number;
   signature: string;
 }): Promise<BadgeClaimRecord> {
-  const { data, error } = await supabase
-    .from('badge_claims')
-    .insert({
-      wallet_address: claim.walletAddress,
-      badge_type: claim.badgeType,
-      cycle_id: claim.cycleId,
-      expiry: new Date(claim.expiry * 1000).toISOString(),
+  const created = await prisma.badgeClaim.create({
+    data: {
+      walletAddress: claim.walletAddress,
+      badgeType: claim.badgeType,
+      cycleId: claim.cycleId,
+      expiresAt: new Date(claim.expiry * 1000),
       signature: claim.signature,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as BadgeClaimRecord;
+    },
+  });
+  return toBadgeClaimRecord(created);
 }
 
 /** Returns any claim (including superseded) for (wallet, badge_type, cycle_id). Used by the re-sign endpoint to confirm prior issuance. */
@@ -182,26 +172,18 @@ export async function getAnyClaim(
   badgeType: string,
   cycleId: number,
 ): Promise<BadgeClaimRecord | null> {
-  const { data, error } = await supabase
-    .from('badge_claims')
-    .select('*')
-    .eq('wallet_address', walletAddress)
-    .eq('badge_type', badgeType)
-    .eq('cycle_id', cycleId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data as BadgeClaimRecord | null;
+  const claim = await prisma.badgeClaim.findFirst({
+    where: { walletAddress, badgeType, cycleId },
+    orderBy: { createdAt: 'desc' },
+  });
+  return claim ? toBadgeClaimRecord(claim) : null;
 }
 
 export async function supersedeBadgeClaim(claimId: string): Promise<void> {
-  const { error } = await supabase
-    .from('badge_claims')
-    .update({ superseded_at: new Date().toISOString() })
-    .eq('id', claimId);
-  if (error) throw error;
+  await prisma.badgeClaim.update({
+    where: { id: claimId },
+    data: { supersededAt: new Date() },
+  });
 }
 
 /** Convert a stored BadgeClaimRecord to the API response payload. */
@@ -222,14 +204,10 @@ export async function confirmBadgeClaim(
   cycleId: number,
   transactionHash: string,
 ): Promise<void> {
-  const { error } = await supabase
-    .from('badge_claims')
-    .update({ confirmed_at: new Date().toISOString(), transaction_hash: transactionHash })
-    .eq('wallet_address', walletAddress)
-    .eq('badge_type', badgeType)
-    .eq('cycle_id', cycleId)
-    .is('superseded_at', null);
-  if (error) throw error;
+  await prisma.badgeClaim.updateMany({
+    where: { walletAddress, badgeType, cycleId, supersededAt: null },
+    data: { confirmedAt: new Date(), transactionHash },
+  });
 }
 
 export interface MintedBadge {
@@ -240,11 +218,13 @@ export interface MintedBadge {
 
 /** Returns all on-chain confirmed badge mints for a wallet. */
 export async function getMintedBadges(walletAddress: string): Promise<MintedBadge[]> {
-  const { data, error } = await supabase
-    .from('badge_claims')
-    .select('badge_type, confirmed_at, transaction_hash')
-    .eq('wallet_address', walletAddress)
-    .not('confirmed_at', 'is', null);
-  if (error) throw error;
-  return (data ?? []) as MintedBadge[];
+  const rows = await prisma.badgeClaim.findMany({
+    where: { walletAddress, confirmedAt: { not: null } },
+    select: { badgeType: true, confirmedAt: true, transactionHash: true },
+  });
+  return rows.map((r) => ({
+    badge_type: r.badgeType,
+    confirmed_at: r.confirmedAt ? r.confirmedAt.toISOString() : '',
+    transaction_hash: r.transactionHash ?? '',
+  }));
 }

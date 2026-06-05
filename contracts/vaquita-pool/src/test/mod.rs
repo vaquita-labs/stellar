@@ -177,5 +177,22 @@ pub mod mockpool {
 
 pub mod mock_defindex_vault;
 
+mod arithmetic;
+mod conservation;
+mod event_payloads;
+mod pause;
 mod pool_coverage;
+mod positions;
 mod success;
+mod upgrade;
+mod vault_repoint;
+
+/// Test helper: calculates the reward share for `amount` given `period_data`.
+/// Equivalent to the private `VaquitaPool::calculate_reward` method.
+pub fn test_calculate_reward(period_data: &crate::Period, amount: i128) -> i128 {
+    if period_data.total_deposits == 0 {
+        return 0;
+    }
+    (period_data.reward_pool * amount) / period_data.total_deposits
+}
+

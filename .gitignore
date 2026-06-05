@@ -10,9 +10,8 @@ dist
 
 # env
 .env
-.env.local
-.env.production
-.env.development
+.env.**
+!.env.example
 
 # logs
 *.log

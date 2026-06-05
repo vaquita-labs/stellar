@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { prisma } from '@vaquita/db';
 import {
   checkPrimeraVaquitaEligibility,
   getAnyClaim,
@@ -26,18 +26,15 @@ function isLockPeriod(raw: number, targetSeconds: number): boolean {
  * Maratonista: first completed 6-month cycle (on-time withdrawal, reward > 0).
  */
 export async function checkMaratonistEligibility(walletAddress: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('deposits')
-    .select('lock_period, withdrawals(id, status, reward)')
-    .eq('wallet_address', walletAddress)
-    .eq('status', 'confirmed');
+  const data = await prisma.deposit.findMany({
+    where: { walletAddress, status: 'confirmed', deletedAt: null },
+    select: { lockPeriod: true, withdrawals: { select: { status: true, reward: true } } },
+  });
 
-  if (error) throw error;
-
-  return (data ?? []).some((deposit: any) => {
-    if (!isLockPeriod(Number(deposit.lock_period ?? 0), SIX_MONTHS_S)) return false;
-    return (deposit.withdrawals ?? []).some(
-      (w: any) => w.status === 'confirmed' && w.reward != null && Number(w.reward) > 0,
+  return data.some((deposit) => {
+    if (!isLockPeriod(Number(deposit.lockPeriod ?? 0), SIX_MONTHS_S)) return false;
+    return deposit.withdrawals.some(
+      (w) => w.status === 'confirmed' && w.reward != null && w.reward.toNumber() > 0,
     );
   });
 }
@@ -46,18 +43,15 @@ export async function checkMaratonistEligibility(walletAddress: string): Promise
  * Trimestral: first completed 3-month cycle (on-time withdrawal, reward > 0).
  */
 export async function checkTrimestralEligibility(walletAddress: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('deposits')
-    .select('lock_period, withdrawals(id, status, reward)')
-    .eq('wallet_address', walletAddress)
-    .eq('status', 'confirmed');
+  const data = await prisma.deposit.findMany({
+    where: { walletAddress, status: 'confirmed', deletedAt: null },
+    select: { lockPeriod: true, withdrawals: { select: { status: true, reward: true } } },
+  });
 
-  if (error) throw error;
-
-  return (data ?? []).some((deposit: any) => {
-    if (!isLockPeriod(Number(deposit.lock_period ?? 0), THREE_MONTHS_S)) return false;
-    return (deposit.withdrawals ?? []).some(
-      (w: any) => w.status === 'confirmed' && w.reward != null && Number(w.reward) > 0,
+  return data.some((deposit) => {
+    if (!isLockPeriod(Number(deposit.lockPeriod ?? 0), THREE_MONTHS_S)) return false;
+    return deposit.withdrawals.some(
+      (w) => w.status === 'confirmed' && w.reward != null && w.reward.toNumber() > 0,
     );
   });
 }
@@ -66,17 +60,14 @@ export async function checkTrimestralEligibility(walletAddress: string): Promise
  * Veterano: 12+ completed cycles without early withdrawal (each reward > 0).
  */
 export async function checkVeteranoEligibility(walletAddress: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('deposits')
-    .select('id, withdrawals(id, status, reward)')
-    .eq('wallet_address', walletAddress)
-    .eq('status', 'confirmed');
+  const data = await prisma.deposit.findMany({
+    where: { walletAddress, status: 'confirmed', deletedAt: null },
+    select: { withdrawals: { select: { status: true, reward: true } } },
+  });
 
-  if (error) throw error;
-
-  const completedCycles = (data ?? []).filter((deposit: any) =>
-    (deposit.withdrawals ?? []).some(
-      (w: any) => w.status === 'confirmed' && w.reward != null && Number(w.reward) > 0,
+  const completedCycles = data.filter((deposit) =>
+    deposit.withdrawals.some(
+      (w) => w.status === 'confirmed' && w.reward != null && w.reward.toNumber() > 0,
     ),
   ).length;
 
@@ -88,19 +79,14 @@ export async function checkVeteranoEligibility(walletAddress: string): Promise<b
  * "Activity" is defined as any deposit confirmed on a given day.
  */
 export async function checkDisciplinadoEligibility(walletAddress: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('deposits')
-    .select('confirmed_at')
-    .eq('wallet_address', walletAddress)
-    .eq('status', 'confirmed')
-    .not('confirmed_at', 'is', null);
-
-  if (error) throw error;
+  const data = await prisma.deposit.findMany({
+    where: { walletAddress, status: 'confirmed', confirmedAt: { not: null }, deletedAt: null },
+    select: { confirmedAt: true },
+  });
 
   const dateSet = new Set<string>();
-  for (const row of data ?? []) {
-    const raw = (row as { confirmed_at: string | null }).confirmed_at;
-    if (raw) dateSet.add(raw.slice(0, 10));
+  for (const row of data) {
+    if (row.confirmedAt) dateSet.add(row.confirmedAt.toISOString().slice(0, 10));
   }
 
   return hasConsecutiveDays(Array.from(dateSet).sort(), 30);
@@ -138,8 +124,17 @@ const AUTO_BADGES: Array<{ badgeType: string; check: (wallet: string) => Promise
  * Evaluates all milestone conditions for a wallet and issues signed claims
  * for any newly eligible badges. Idempotent: skips badges where a claim already exists.
  * Called automatically after each on-time withdrawal confirmation.
+ *
+ * @param contractAddress - The deployed vaquita-badges contract ID. Required to build
+ *   the hardened signature message (sha256 includes the contract address as the first field).
+ *   If not provided, signing is skipped and this function returns without issuing claims.
  */
-export async function evaluateBadgeMilestones(walletAddress: string): Promise<void> {
+export async function evaluateBadgeMilestones(
+  walletAddress: string,
+  contractAddress: string | null,
+): Promise<void> {
+  if (!contractAddress) return; // contract not configured for this network
+
   let keypair: ReturnType<typeof getBadgeSigningKeypair>;
   try {
     keypair = getBadgeSigningKeypair();
@@ -156,7 +151,7 @@ export async function evaluateBadgeMilestones(walletAddress: string): Promise<vo
       if (!eligible) continue;
 
       const expiry = makeClaimExpiry();
-      const signature = signBadgeClaim(walletAddress, badgeType, 0, expiry, keypair);
+      const signature = signBadgeClaim(contractAddress, walletAddress, badgeType, 0, expiry, keypair);
       await storeBadgeClaim({ walletAddress, badgeType, cycleId: 0, expiry, signature });
       console.info(`[badge-monitor] Issued ${badgeType} claim for ${walletAddress}`);
     } catch (err) {

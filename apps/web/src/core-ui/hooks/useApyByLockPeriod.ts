@@ -1,10 +1,10 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { ONE_MINUTE } from '@/core-ui/config/constants';
 import { useQuery } from '@tanstack/react-query';
-import { useNetworkConfigStore } from '../stores';
+import { useConfigStore } from '../stores';
 
 export const useApyByLockPeriod = (lockPeriod: number, tokenSymbol: string) => {
-  const { network } = useNetworkConfigStore();
+  const { network } = useConfigStore();
 
   return useQuery<{
     protocolApy: number;
@@ -14,11 +14,11 @@ export const useApyByLockPeriod = (lockPeriod: number, tokenSymbol: string) => {
     totalDeposits: number;
     interestModelNote?: string;
   } | null>({
-    queryKey: ['deposit', 'network', network?.name, 'token', tokenSymbol, 'lockPeriod', lockPeriod, 'apy'],
+    queryKey: ['deposit', 'network', network?.networkName, 'token', tokenSymbol, 'lockPeriod', lockPeriod, 'apy'],
     queryFn: async () => {
       try {
         const response = await fetch(
-          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.name}/token/${tokenSymbol}/lockPeriod/${lockPeriod}/apy`
+          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.networkName}/token/${tokenSymbol}/lockPeriod/${lockPeriod}/apy`
         );
 
         const data = await response.json();
@@ -44,6 +44,6 @@ export const useApyByLockPeriod = (lockPeriod: number, tokenSymbol: string) => {
       }
     },
     refetchInterval: ONE_MINUTE * 5,
-    enabled: !!network?.name && lockPeriod > 0,
+    enabled: !!network?.networkName && lockPeriod > 0,
   });
 };

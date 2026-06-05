@@ -1,6 +1,6 @@
 import { formatAmount, formatTimeDeposit, getInterestData } from '@/core-ui/helpers';
 import { useApyByLockPeriod } from '@/core-ui/hooks';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
 import { Card } from '@heroui/react';
 
@@ -29,7 +29,7 @@ export const VaquitaDepositCard = ({
   onPress?: () => void;
   deposit: DepositResponseDTO;
 }) => {
-  const { network, token } = useNetworkConfigStore();
+  const { network, token } = useConfigStore();
   const { data: dataApy } = useApyByLockPeriod(deposit.lockPeriod, token?.symbol ?? '');
 
   const { totalInterest } = getInterestData(
@@ -105,7 +105,7 @@ export const VaquitaDepositCard = ({
         <div className="mt-1.5 pt-1.5 border-t border-black/10 flex items-center justify-between">
           <span className="text-xs text-gray-600">Earnings</span>
           <span className="text-sm font-bold text-success">
-            +{totalInterest.toFixed(4)} {deposit.tokenSymbol}
+            +{totalInterest.toFixed(2)} {deposit.tokenSymbol}
           </span>
         </div>
       </Card.Content>

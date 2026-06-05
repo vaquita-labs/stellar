@@ -4,14 +4,14 @@ import { Button, Description, Label, ListBox, Modal, Select } from '@heroui/reac
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { formatTimeDeposit } from '../../../helpers';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { T } from '../../atoms/T';
 import { LockPeriodModalProps } from './types';
 
 export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
-  const { token, lockPeriod, setLockPeriod } = useNetworkConfigStore();
+  const { token, lockPeriod, setLockPeriod } = useConfigStore();
   const lockTimeOptions =
-    token?.lockPeriod.map((lockPeriod) => ({
+    token?.lockPeriods.map((lockPeriod) => ({
       key: lockPeriod,
       label: formatTimeDeposit(lockPeriod),
       available: lockPeriod < 0 ? false : true,

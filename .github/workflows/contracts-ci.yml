@@ -57,13 +57,15 @@ jobs:
           workspaces: |
             contracts
 
+      # WASM must exist BEFORE `cargo test`: upgrade/event tests `include_bytes!`
+      # the built wasm, which is resolved at compile time. Build both contracts.
+      - name: Build contract wasm (pool + badges)
+        run: |
+          (cd vaquita-pool && stellar contract build)
+          (cd vaquita-badges && stellar contract build)
+
       - name: Run contract tests
         run: cargo test --workspace
-
-      - name: Build contract wasm
-        run: |
-          cd vaquita-pool
-          stellar contract build
 
   contracts-coverage:
     name: Contracts Coverage (llvm-cov)
@@ -81,6 +83,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
+          targets: wasm32v1-none
 
       - name: Cache Rust artifacts
         uses: Swatinem/rust-cache@v2
@@ -88,8 +91,18 @@ jobs:
           workspaces: |
             contracts
 
+      # Same include_bytes! requirement as the test job. Build via plain cargo
+      # (no stellar CLI needed here); the raw contract wasm is a valid upload
+      # target for the upgrade tests.
+      - name: Build contract wasm (pool + badges)
+        run: cargo build --release --target wasm32v1-none -p vaquita-pool -p vaquita-badges
+
+      # Prebuilt binary instead of `cargo install --locked` (which compiles from
+      # source on every run) — saves several minutes.
       - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
 
       - name: Generate coverage report
         run: make coverage

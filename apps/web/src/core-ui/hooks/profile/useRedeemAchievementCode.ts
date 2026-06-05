@@ -1,5 +1,5 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import type { ClaimAchievementResponseDTO } from '@/core-ui/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -16,12 +16,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
  */
 export const useRedeemAchievementCode = () => {
   const queryClient = useQueryClient();
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { network, walletAddress } = useConfigStore();
 
   return useMutation<ClaimAchievementResponseDTO, Error, string>({
     mutationFn: async (code) => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.name}/wallet/${walletAddress}/achievements/redeem`,
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/wallets/${walletAddress}/badges/redeem`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -39,7 +39,7 @@ export const useRedeemAchievementCode = () => {
       return body.data as ClaimAchievementResponseDTO;
     },
     onSuccess: () => {
-      const networkName = network?.name;
+      const networkName = network?.networkName;
       void queryClient.invalidateQueries({
         queryKey: ['profile', networkName, walletAddress, 'profile-achievements'],
       });

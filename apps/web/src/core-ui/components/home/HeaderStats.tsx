@@ -1,7 +1,7 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { useMapStore, useNetworkConfigStore } from '@/core-ui/stores';
+import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -10,6 +10,7 @@ import {
   useApyByLockPeriod,
   useDepositsComplete,
   useProfileData,
+  useProfileExperience,
   useProfileRewards,
   useProfileStreak,
 } from '../../hooks';
@@ -21,7 +22,7 @@ import { EarnChip } from './EarnChip';
 export const HeaderStats = () => {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
-  const { walletAddress, token, lockPeriod } = useNetworkConfigStore();
+  const { walletAddress, token, lockPeriod } = useConfigStore();
   const hideBalance = useHideBalance();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
@@ -36,6 +37,7 @@ export const HeaderStats = () => {
     isRefetching: depositsRefetching,
   } = useDepositsComplete(walletAddress);
   const { data: profileRewards } = useProfileRewards();
+  const { data: experienceData } = useProfileExperience();
   const { data: apyData, isLoading: apyLoading } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
 
@@ -43,6 +45,7 @@ export const HeaderStats = () => {
   const hasActiveStreak = !!streakData?.todayStreak;
 
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
+  const experience = experienceData?.experience ?? 0;
 
   const firstName = profileData?.nickname || profileData?.fullName?.split(' ')[0] || '';
 
@@ -122,7 +125,7 @@ export const HeaderStats = () => {
               ) : (
                 <div className='flex justify-end gap-1.5'>
                   <span className="text-2xl font-bold text-black">
-                    {hideBalance ? '••••' : `$${activeDepositsTotalAmount} ${token?.symbol}`}
+                    {hideBalance ? '••••' : `$${activeDepositsTotalAmount.toFixed(2)} ${token?.symbol}`}
                   </span>
                   <EarnChip
                     deposits={activeDeposits}
@@ -148,7 +151,7 @@ export const HeaderStats = () => {
             ) : (
               <>
                 <Image
-                  src="/icons/summary/streak.png"
+                  src="/icons/global/streak.png"
                   alt="Streak"
                   width={20}
                   height={20}
@@ -176,6 +179,22 @@ export const HeaderStats = () => {
             />
             <span className="text-sm font-bold text-black tabular-nums">{goldCoins}</span>
           </div>
+
+          <div className="w-px h-4 bg-black/10" />
+
+          <Link href="/profile/summary" className="flex items-center gap-1.5 flex-1 justify-center">
+            <Image
+              src="/icons/global/star.png"
+              alt="Experience"
+              width={20}
+              height={20}
+              className="object-contain"
+              priority
+            />
+            <span className="text-sm font-bold text-black tabular-nums">
+              {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </span>
+          </Link>
         </div>
       </div>
 

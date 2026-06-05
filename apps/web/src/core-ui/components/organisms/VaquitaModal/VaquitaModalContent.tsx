@@ -2,11 +2,12 @@
 
 import { useRestWithdrawal } from '@/core-ui/hooks';
 import { isNewDepositHandled } from '@/networks/helpers';
+import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import { Button, Spinner, toast } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
-import { useApyByLockPeriod, useWithdrawalTime } from '../../../hooks';
-import { useNetworkConfigStore, useTransactionStore } from '../../../stores';
+import { useApyByLockPeriod, useTransactions, useWithdrawalTime } from '../../../hooks';
+import { useConfigStore } from '../../../stores';
 import { DepositWithdrawalState } from '../../../types';
 import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
@@ -35,19 +36,19 @@ const breakdownTime = (totalSeconds: number) => {
 export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }: VaquitaModalContentProps) => {
   const [confirming, setConfirming] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  const { transactionWithdraw } = useTransactionStore();
+  const { transactionWithdraw } = useTransactions();
   const { confirmWithdrawal } = useRestWithdrawal();
-  const { network, token } = useNetworkConfigStore();
+  const { network, token } = useConfigStore();
   const depositLockPeriod = vaquita.lockPeriod;
   const { data: dataApy } = useApyByLockPeriod(depositLockPeriod, token?.symbol ?? '');
   const withdrawalInfo = useWithdrawalTime(vaquita);
-  const { vaquitaInterest, aaveInterest, blendInterest, totalInterest } = getInterestData(
+  const { vaquitaInterest, protocolInterest: protocolInterestSource, blendInterest, totalInterest } = getInterestData(
     network!,
     dataApy,
     vaquita.amount,
     depositLockPeriod,
   );
-  const protocolInterest = aaveInterest + blendInterest;
+  const protocolInterest = protocolInterestSource + blendInterest;
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -66,7 +67,7 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
     setLoading(true);
     let isSuccess = false;
     let lastError: unknown = null;
-    if (isNewDepositHandled(network.name)) {
+    if (isNewDepositHandled(network.networkName)) {
       const { success, error } = await transactionWithdraw(
         +vaquita.id,
         vaquita.depositIdHex,
@@ -99,8 +100,13 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
       });
       onClose();
     } else {
+      const poolMsg = parsePoolErrorMessage(lastError);
       toast.danger(<T>Unsuccessful withdraw</T>, {
-        description: lastError instanceof Error ? <T>{lastError.message}</T> : undefined,
+        description: poolMsg
+          ? <T>{poolMsg}</T>
+          : lastError instanceof Error
+            ? <T>{lastError.message}</T>
+            : undefined,
         timeout: 30000,
       });
     }
@@ -203,7 +209,7 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
             <div className="flex flex-col gap-1 bg-white border border-black border-b-2 rounded-md px-4 py-3">
               <span className="text-xs font-medium text-default-600 uppercase tracking-wide">You will receive</span>
               <span className="text-2xl font-bold text-success tabular-nums break-all leading-tight">
-                {finalAmount.toFixed(4)} <span className="text-base">{token?.symbol}</span>
+                {finalAmount.toFixed(2)} <span className="text-base">{token?.symbol}</span>
               </span>
             </div>
 
@@ -211,7 +217,7 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
               <div className="flex flex-col gap-1 bg-white border border-black border-b-2 rounded-md px-4 py-3">
                 <span className="text-xs font-medium text-default-600 uppercase tracking-wide">You will lose</span>
                 <span className="text-xl font-bold text-danger tabular-nums break-all leading-tight line-through decoration-2">
-                  ±{totalInterest.toFixed(4)} <span className="text-base">{token?.symbol}</span>
+                  ±{totalInterest.toFixed(2)} <span className="text-base">{token?.symbol}</span>
                 </span>
               </div>
             )}
@@ -240,10 +246,10 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
 
           <div className="flex flex-col items-center gap-1">
             <span className="text-3xl font-bold text-black tabular-nums">
-              {vaquita.amount} {token?.symbol}
+              {vaquita.amount.toFixed(2)} {token?.symbol}
             </span>
             <span className="text-sm font-semibold text-success tabular-nums">
-              +{totalInterest.toFixed(4)} {token?.symbol} est.
+              +{totalInterest.toFixed(2)} {token?.symbol} est.
             </span>
           </div>
 
@@ -278,19 +284,19 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
             <div className="flex items-center justify-between text-xs">
               <span className="text-default-500">Vaquita interest</span>
               <span className="font-semibold text-primary tabular-nums">
-                +{vaquitaInterest.toFixed(4)} {token?.symbol}
+                +{vaquitaInterest.toFixed(2)} {token?.symbol}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-default-500">Protocol interest</span>
               <span className="font-semibold text-primary tabular-nums">
-                +{protocolInterest.toFixed(4)} {token?.symbol}
+                +{protocolInterest.toFixed(2)} {token?.symbol}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs border-t border-black/10 pt-1.5 mt-0.5">
               <span className="font-medium text-black">Total est. earnings</span>
               <span className="font-bold text-success tabular-nums">
-                +{totalInterest.toFixed(4)} {token?.symbol}
+                +{totalInterest.toFixed(2)} {token?.symbol}
               </span>
             </div>
           </div>

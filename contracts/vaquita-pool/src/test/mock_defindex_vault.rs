@@ -36,14 +36,22 @@ pub struct MockDeFindexVault;
 impl MockDeFindexVault {
     pub fn __constructor(env: Env, asset: Address) {
         env.storage().instance().set(&DataKey::Asset, &asset);
-        env.storage().instance().set(&DataKey::WithdrawAdjustment, &0i128);
-        env.storage().instance().set(&DataKey::TestStealSharesOnDeposit, &0i128);
-        env.storage().instance().set(&DataKey::TestSkipShareMint, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::WithdrawAdjustment, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::TestStealSharesOnDeposit, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::TestSkipShareMint, &false);
     }
 
     /// Changes gross asset returned by `withdraw` vs. share burn (default 1:1).
     pub fn test_set_withdraw_adjustment(env: Env, delta: i128) {
-        env.storage().instance().set(&DataKey::WithdrawAdjustment, &delta);
+        env.storage()
+            .instance()
+            .set(&DataKey::WithdrawAdjustment, &delta);
     }
 
     pub fn test_set_steal_shares_on_deposit(env: Env, steal: i128) {
@@ -53,7 +61,9 @@ impl MockDeFindexVault {
     }
 
     pub fn test_set_skip_share_mint(env: Env, skip: bool) {
-        env.storage().instance().set(&DataKey::TestSkipShareMint, &skip);
+        env.storage()
+            .instance()
+            .set(&DataKey::TestSkipShareMint, &skip);
     }
 
     pub fn asset(env: Env) -> Address {
@@ -123,9 +133,10 @@ impl MockDeFindexVault {
         if withdraw_shares > current_shares {
             panic!("Insufficient shares");
         }
-        env.storage()
-            .instance()
-            .set(&DataKey::Shares(from.clone()), &(current_shares - withdraw_shares));
+        env.storage().instance().set(
+            &DataKey::Shares(from.clone()),
+            &(current_shares - withdraw_shares),
+        );
         let asset: Address = env.storage().instance().get(&DataKey::Asset).unwrap();
         let token = TokenClient::new(&env, &asset);
         let adjustment: i128 = env

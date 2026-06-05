@@ -1,9 +1,9 @@
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 
 export function getVaquitaContract(): string {
-  return useNetworkConfigStore.getState().token?.vaquitaContractAddress ?? '';
+  return useConfigStore.getState().token?.vaquitaContractAddress ?? '';
 }
 
 export const getDecimals = () => {
-  return useNetworkConfigStore.getState().token?.decimals ?? 0;
+  return useConfigStore.getState().token?.decimals ?? 0;
 };

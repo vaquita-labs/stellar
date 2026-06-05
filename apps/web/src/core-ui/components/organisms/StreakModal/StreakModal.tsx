@@ -37,7 +37,7 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
       open={open}
       onOpenChange={onOpenChange}
       title="Streak"
-      titleIcon="/icons/summary/streak.png"
+      titleIcon="/icons/global/streak.png"
       titleIconAlt="streak"
       size="md"
     >
@@ -46,7 +46,7 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
             <div className="space-y-4">
               <div className="text-center space-y-2">
                 <h2 className="text-xl font-bold text-black flex items-center justify-center gap-2">
-                  <Image src="/icons/summary/streak.png" alt="streak" width={28} height={28} />
+                  <Image src="/icons/global/streak.png" alt="streak" width={28} height={28} />
                   Current Streak: {currentStreak} days
                 </h2>
                 <p className="text-sm text-gray-600">
@@ -66,7 +66,7 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
                       <div className="w-6 h-6 rounded-full bg-gray-200 border border-gray-300" />
                     ) : (
                       <Image
-                        src="/icons/summary/streak.png"
+                        src="/icons/global/streak.png"
                         alt="streak"
                         width={24}
                         height={24}
@@ -111,7 +111,7 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
                 <p className="text-sm text-black">
                   If you&apos;ve lost your streak, you can restore it back to <span className="font-semibold">{streakRepair.canRestoreTo} days</span>
                   <Image
-                    src="/icons/summary/streak.png"
+                    src="/icons/global/streak.png"
                     alt="streak"
                     width={16}
                     height={16}
@@ -124,9 +124,9 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
                     <span className="font-semibold text-black">Cost:</span>
                     <div className="flex items-center gap-1 mt-1">
                       <span>{streakRepair.cost}</span>
-                      <Image src="/icons/summary/streak.png" alt="streak" width={16} height={16} className="w-4 h-4" />
+                      <Image src="/icons/global/streak.png" alt="streak" width={16} height={16} className="w-4 h-4" />
                       <span className="text-purple-600">+ 1</span>
-                      <Image src="/icons/summary/streak.png" alt="streak" width={16} height={16} className="w-4 h-4" />
+                      <Image src="/icons/global/streak.png" alt="streak" width={16} height={16} className="w-4 h-4" />
                     </div>
                   </div>
                   <p className="text-xs text-gray-500">

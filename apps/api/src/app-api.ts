@@ -1,11 +1,13 @@
+// MUST be first: loads .env into process.env before @vaquita/db is evaluated,
+// since that package builds the Prisma adapter eagerly from process.env.DATABASE_URL
+// at import time (ESM evaluates all imports before any file-body statement runs).
+import 'dotenv/config';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import pinoHttp from 'pino-http';
+import { tryParsePoolError } from '@vaquita/shared';
 import { logger } from './lib/logger';
 import router from './routes';
-
-dotenv.config();
 
 const app = express();
 
@@ -42,6 +44,18 @@ app.use('/api/v1', router);
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   req.log.error({ err }, 'Unhandled error in request pipeline');
   if (res.headersSent) return;
+
+  const poolErr = tryParsePoolError(err);
+  if (poolErr) {
+    res.status(poolErr.httpStatus).json({
+      success: false,
+      message: poolErr.message,
+      errorCode: poolErr.code,
+      requestId: req.id,
+    });
+    return;
+  }
+
   res.status(500).json({
     success: false,
     message: 'Internal server error',
@@ -57,7 +71,7 @@ process.on('unhandledRejection', (reason) => {
   logger.fatal({ reason }, 'unhandledRejection');
 });
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 3100;
 
 app.listen(PORT, () => {
   logger.info({ port: PORT, env: process.env.NODE_ENV ?? 'development' }, 'API listening');

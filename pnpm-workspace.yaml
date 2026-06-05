@@ -3,13 +3,20 @@ packages:
   - 'apps/listener'
   - 'apps/job-deposits'
   - 'apps/web'
+  - 'apps/admin'
   - 'packages/*'
 allowBuilds:
+  '@heroui/shared-utils': true
+  '@prisma/client': true
+  '@prisma/engines': true
   '@reown/appkit': true
   '@stellar/stellar-sdk': true
   blake-hash: true
   bufferutil: true
+  core-js: false
   esbuild: true
+  keccak: true
+  prisma: true
   protobufjs: true
   secp256k1: true
   sharp: true
@@ -17,3 +24,36 @@ allowBuilds:
   unrs-resolver: true
   usb: false
   utf-8-validate: true
+minimumReleaseAgeExclude:
+  - '@next/env@16.2.7'
+  - '@next/eslint-plugin-next@16.2.7'
+  - '@next/swc-darwin-arm64@16.2.7'
+  - '@next/swc-darwin-x64@16.2.7'
+  - '@next/swc-linux-arm64-gnu@16.2.7'
+  - '@next/swc-linux-arm64-musl@16.2.7'
+  - '@next/swc-linux-x64-gnu@16.2.7'
+  - '@next/swc-linux-x64-musl@16.2.7'
+  - '@next/swc-win32-arm64-msvc@16.2.7'
+  - '@next/swc-win32-x64-msvc@16.2.7'
+  - '@types/react@19.2.16'
+  - '@vitest/expect@4.1.8'
+  - '@vitest/mocker@4.1.8'
+  - '@vitest/pretty-format@4.1.8'
+  - '@vitest/runner@4.1.8'
+  - '@vitest/snapshot@4.1.8'
+  - '@vitest/spy@4.1.8'
+  - '@vitest/utils@4.1.8'
+  - eslint-config-next@16.2.7
+  - next@16.2.7
+  - react-dom@19.2.7
+  - react@19.2.7
+  - viem@2.52.0
+  - vitest@4.1.8
+  - '@aws-sdk/client-s3@3.1062.0'
+  - '@aws-sdk/credential-provider-ini@3.972.49'
+  - '@aws-sdk/credential-provider-login@3.972.48'
+  - '@aws-sdk/credential-provider-node@3.972.51'
+  - '@aws-sdk/credential-provider-sso@3.972.48'
+  - '@aws-sdk/credential-provider-web-identity@3.972.48'
+  - '@aws-sdk/nested-clients@3.997.16'
+  - '@aws-sdk/token-providers@3.1062.0'

@@ -7,7 +7,7 @@ RUN corepack enable
 FROM base AS deps
 WORKDIR /repo
 COPY notify.sh ./notify.sh
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages ./packages
 
@@ -30,7 +30,7 @@ WORKDIR /repo
 
 ENV NODE_ENV=production
 ENV WEBHOOK_SOURCE=apps/api
-ENV PORT=3000
+ENV PORT=3100
 ARG DEPLOY_ID
 ENV DEPLOY_ID=$DEPLOY_ID
 
@@ -40,12 +40,12 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=deps --chown=apiuser:nodejs /repo/node_modules ./node_modules
 COPY --from=deps --chown=apiuser:nodejs /repo/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps --chown=apiuser:nodejs /repo/packages ./packages
-COPY --chown=apiuser:nodejs pnpm-workspace.yaml package.json ./
+COPY --chown=apiuser:nodejs pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY --chown=apiuser:nodejs apps/api ./apps/api
 COPY --chown=apiuser:nodejs notify.sh ./notify.sh
 
 USER apiuser
 
-EXPOSE 3000
+EXPOSE 3100
 
 CMD ["sh", "-c", "./notify.sh RUNTIME-PING true && exec pnpm --filter @vaquita/api start"]
