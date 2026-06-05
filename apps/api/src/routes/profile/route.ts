@@ -14,6 +14,7 @@ import {
   getRewardByKey,
   getRewardsData,
   prisma,
+  REWARD_REASON_DAILY_CHECKIN,
   type Profile,
   type ProfileAverageResponseDTO,
   Reward,
@@ -224,16 +225,41 @@ router.post('/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
     return sendError(res, 'there are no gold coins to collect', null, 400);
   }
 
+  // Experience earned alongside the daily coin. The amount is the per-day cap
+  // top-up from getRewardsData — max(configured XP - XP already earned today, 0)
+  // — so a profile never exceeds the configured daily total. Persisted as an
+  // 'earned' row stamped 'daily-checkin' so it can be summed/capped and audited.
+  const experienceToCollect =
+    rewardsResponse.rewards.find((reward) => reward.key === Reward.EXPERIENCE)?.amountToCollect ?? 0;
+  const { data: experienceReward } = await getRewardByKey(Reward.EXPERIENCE);
+
   let result;
   try {
-    result = await prisma.profileReward.create({
-      data: {
-        profileId: profileData.id,
-        rewardId: BigInt(rewardData.id),
-        type: 'collected',
-        amount: 1,
-      },
-    });
+    // Atomic: the gold coin and its check-in XP are collected together, so a
+    // partial failure never grants one without the other.
+    const [goldRow] = await prisma.$transaction([
+      prisma.profileReward.create({
+        data: {
+          profileId: profileData.id,
+          rewardId: BigInt(rewardData.id),
+          amount: goldRewardToAmount,
+          reason: REWARD_REASON_DAILY_CHECKIN,
+        },
+      }),
+      ...(experienceReward && experienceToCollect > 0
+        ? [
+            prisma.profileReward.create({
+              data: {
+                profileId: profileData.id,
+                rewardId: BigInt(experienceReward.id),
+                amount: experienceToCollect,
+                reason: REWARD_REASON_DAILY_CHECKIN,
+              },
+            }),
+          ]
+        : []),
+    ]);
+    result = goldRow;
   } catch (err) {
     req.log.error({ err, profileId: profileData.id, rewardId: rewardData.id }, 'Failed to insert profile reward');
     return sendError(res, 'Failed to collect gold coin', err, 500);
@@ -249,7 +275,7 @@ router.post('/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
   req.log.info({ profileId: profileData.id }, 'Gold coin collected');
   return sendSuccess(res, {
     id: Number(result.id),
-    type: result.type,
+    reason: result.reason,
     amount: Number(result.amount),
     createdAt: result.createdAt,
   });
