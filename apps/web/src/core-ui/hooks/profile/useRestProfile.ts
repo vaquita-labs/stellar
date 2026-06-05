@@ -77,6 +77,29 @@ export const useRestProfile = () => {
     [networkName, walletAddress]
   );
 
+  // Persist the user's display preferences (language / currency). The API
+  // validates each id against the active project config; an unknown id comes
+  // back as a failure with a message.
+  const saveProfilePreferences = useCallback(
+    async (payload: { language?: string; currency?: string }) => {
+      const response = await fetch(
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/preferences`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+      const data = await response.json();
+
+      return {
+        success: data?.status === 'success',
+        message: data?.message,
+      };
+    },
+    [networkName, walletAddress]
+  );
+
   const uploadAvatar = useCallback(
     async (file: File) => {
       const form = new FormData();
@@ -159,6 +182,7 @@ export const useRestProfile = () => {
     saveNickname,
     saveProfile,
     saveProfileFlags,
+    saveProfilePreferences,
     uploadAvatar,
     removeAvatar,
     checkNicknameAvailability,
