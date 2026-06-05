@@ -24,26 +24,39 @@ import { TokenSymbol } from '../../molecules/MoneyInput/types';
 import { TestnetUSDCNotice } from '../TestnetUSDCNotice';
 import { DepositModalProps } from './types';
 
-export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing }: DepositModalProps) {
+export function DepositModal({
+  open,
+  onOpenChange,
+  isDepositing,
+  setIsDepositing,
+  simulate = false,
+  initialAmount,
+  simulateLockMs = 5000,
+  onSimulatedSuccess,
+}: DepositModalProps) {
   const [mounted, setMounted] = useState(false);
   const [amount, setAmount] = useState<string>('');
   const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useConfigStore();
   const { createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactions();
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
-  const lockTimeOptions =
-    token?.lockPeriods.map((lockPeriod) => ({
-      key: lockPeriod,
-      label: formatTimeDeposit(lockPeriod),
-      available: lockPeriod >= 0,
-    })) || [];
+  // En modo tutorial el lock es local (no toca el config global) y se ofrece una
+  // sola opción de pocos segundos; en modo normal salen los lock periods reales.
+  const lockTimeOptions = simulate
+    ? [{ key: simulateLockMs, label: `${Math.round(simulateLockMs / 1000)} seconds`, available: true }]
+    : token?.lockPeriods.map((lockPeriod) => ({
+        key: lockPeriod,
+        label: formatTimeDeposit(lockPeriod),
+        available: lockPeriod >= 0,
+      })) || [];
+  const effectiveLockPeriod = simulate ? simulateLockMs : lockPeriod;
   const amountNum = Number(amount);
   const isDisabled =
     !amount ||
     amount === '' ||
     amountNum <= 0 ||
     isNaN(amountNum) ||
-    !lockPeriod ||
+    !effectiveLockPeriod ||
     !network ||
     !token ||
     !transactionDeposit;
@@ -63,6 +76,10 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
   useEffect(() => {
     setAmount('');
   }, [token?.symbol]);
+  // En modo tutorial precargamos el monto de ejemplo al abrir.
+  useEffect(() => {
+    if (open && initialAmount != null) setAmount(initialAmount);
+  }, [open, initialAmount]);
   useEffect(() => {
     if (open && walletAddress) void refreshWalletBalance();
   }, [open, walletAddress, refreshWalletBalance]);
@@ -70,7 +87,20 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
   if (!mounted) return null;
 
   const handleDeposit = async (amount: number) => {
-    if (!isDisabled) {
+    if (isDisabled) return;
+
+    // Modo tutorial: misma UI, pero sin transacción real. Simulamos una breve
+    // confirmación y avisamos al orquestador del tutorial.
+    if (simulate) {
+      setIsDepositing(true);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setIsDepositing(false);
+      onOpenChange();
+      onSimulatedSuccess?.(amount, effectiveLockPeriod);
+      return;
+    }
+
+    {
       setIsDepositing(true);
       let lastError: unknown = null;
 
@@ -186,10 +216,10 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           )}
           <Select
             isRequired
-            value={lockPeriod.toString()}
-            onChange={(value) => { if (value) setLockPeriod(parseInt(value as string)); }}
+            value={effectiveLockPeriod.toString()}
+            onChange={(value) => { if (value && !simulate) setLockPeriod(parseInt(value as string)); }}
             disabledKeys={lockTimeOptions.filter((o) => !o.available).map((o) => o.key.toString())}
-            isDisabled={isDepositing}
+            isDisabled={isDepositing || simulate}
           >
             <Label className="text-black font-normal text-sm">Lock time</Label>
             <Select.Trigger className="bg-white border border-black border-b-2 h-14 items-center">

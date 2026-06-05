@@ -117,6 +117,7 @@ export const HeaderStats = () => {
             </span>
             <button
               type="button"
+              data-tutorial="tutorial-balance"
               onClick={() => setShowBankAPYModal(true)}
               className="flex items-center gap-2 min-w-0 bg-transparent"
             >
