@@ -10,6 +10,7 @@ import {
   getProfile,
   getProfileMapObjects,
   getProfiles,
+  getProjectConfig,
   getRewardByKey,
   getRewardsData,
   prisma,
@@ -246,7 +247,12 @@ router.post('/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
   }
 
   req.log.info({ profileId: profileData.id }, 'Gold coin collected');
-  return sendSuccess(res, result);
+  return sendSuccess(res, {
+    id: Number(result.id),
+    type: result.type,
+    amount: Number(result.amount),
+    createdAt: result.createdAt,
+  });
 });
 
 router.post('/wallet/:walletAddress/nickname', async (req, res) => {
@@ -536,6 +542,71 @@ router.patch('/wallet/:walletAddress/flags', async (req, res) => {
   } catch (err) {
     req.log.error({ err, profileId: profileData.id, data }, 'Failed to update profile flags');
     return sendError(res, 'Failed to update profile flags', err, 500);
+  }
+});
+
+// Persist the user's display preferences (language / currency). Each value must
+// be the `id` of an option offered by the active project config — anything else
+// is rejected so we never store a selection the UI can't render.
+router.patch('/wallet/:walletAddress/preferences', async (req, res) => {
+  const { walletAddress } = req.params;
+  const { language, currency } = req.body ?? {};
+  req.log.info({ walletAddress, language, currency }, 'PATCH /profile/.../preferences');
+
+  if (language !== undefined && typeof language !== 'string') {
+    return sendError(res, 'language must be a string option id.', null, 400);
+  }
+  if (currency !== undefined && typeof currency !== 'string') {
+    return sendError(res, 'currency must be a string option id.', null, 400);
+  }
+  if (language === undefined && currency === undefined) {
+    return sendError(res, 'Provide a language and/or currency option id.', null, 400);
+  }
+
+  const config = await getProjectConfig();
+  if (!config) {
+    return sendError(res, 'project config not found', null, 404);
+  }
+
+  // Validate each provided id against the configured option lists.
+  const data: { language?: string; currency?: string } = {};
+  if (language !== undefined) {
+    if (!config.languages.some((l) => l.id === language)) {
+      return sendError(res, `Unsupported language '${language}'.`, null, 400);
+    }
+    data.language = language;
+  }
+  if (currency !== undefined) {
+    if (!config.currencies.some((c) => c.id === currency)) {
+      return sendError(res, `Unsupported currency '${currency}'.`, null, 400);
+    }
+    data.currency = currency;
+  }
+
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
+
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
+    return sendError(res, errorMessage, errors, 404);
+  }
+
+  try {
+    const result = await prisma.profile.update({
+      where: { id: profileData.id },
+      data,
+    });
+
+    try {
+      await broadcastProfileChange('set-preferences', [ 'profile-data' ]);
+    } catch (err) {
+      req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (set-preferences)');
+    }
+
+    req.log.info({ profileId: profileData.id, ...data }, 'Profile preferences updated');
+    return sendSuccess(res, result);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id, data }, 'Failed to update profile preferences');
+    return sendError(res, 'Failed to update profile preferences', err, 500);
   }
 });
 
