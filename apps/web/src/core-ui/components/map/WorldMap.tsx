@@ -38,9 +38,11 @@ interface MapProps {
   isLeaderboard?: boolean | false;
   worldType: WorldType;
   isAvailable: boolean;
+  /** Tutorial: solo mover/ver el mapa; los clicks de objetos se ignoran. */
+  interactionsDisabled?: boolean;
 }
 
-export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
+export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false }: MapProps) => {
   const router = useRouter();
   const isEditMode = useMapStore((store) => store.editMode);
   const { tiles, currentTiles } = useMapStore();
@@ -61,22 +63,26 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
   const currentStreakDays = (streak?.yesterdayStreak ?? 0) + (streak?.todayStreak ? 1 : 0);
 
   const handleBarnClick = () => {
+    if (interactionsDisabled) return;
     if (userWalletAddress) {
       setShowVaquitasListModal(true);
     }
   };
 
   const handleBankClick = () => {
+    if (interactionsDisabled) return;
     if (userWalletAddress) {
       setShowVaquitasListModal(true);
     }
   };
 
   const handleLeaderBoardClick = () => {
+    if (interactionsDisabled) return;
     router.push('/leaderboard');
   };
 
   const handleVaquitaClick = () => {
+    if (interactionsDisabled) return;
     if (canCollect) {
       setDailyRewardCoins(goldCoinsToCollect);
       setDailyRewardExperience(experienceToCollect);

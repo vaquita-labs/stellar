@@ -13,7 +13,7 @@ import { AppModal } from '../../molecules/AppModal';
 import { VaquitaModalContent } from '../VaquitaModal';
 import { BankAPYModalProps } from './types';
 
-export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
+export function BankAPYModal({ open, onOpenChange, injectedDeposits, onVaquitaSelect }: BankAPYModalProps) {
   const { network, lockPeriod, walletAddress, token } = useConfigStore();
   const { data: dataApy, isLoading: isLoadingApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
   const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
@@ -22,13 +22,16 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [selectedVaquita, setSelectedVaquita] = useState<DepositResponseDTO | null>(null);
 
+  // En modo tutorial mostramos un depósito inyectado en vez de los reales.
+  const sourceDeposits = injectedDeposits ?? depositsData?.deposits ?? [];
+
   const protocolApy = dataApy?.protocolApy ?? 0;
   const vaquitaApy = dataApy?.vaquitaApy ?? 0;
   const networkLabel = dataApy?.lendingMarketName ?? '';
   const totalApy = vaquitaApy + protocolApy;
   const hasProtocolApy = !!networkLabel && protocolApy >= 0;
 
-  const { deposits, activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
+  const { deposits, activeDeposits, activeDepositsTotalAmount } = getDepositsData(sourceDeposits);
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
   const estimatedAnnualReturn = activeDepositsTotalAmount * (totalApy / 100);
   const totalEstimatedEarnings = activeDeposits.reduce(
@@ -36,7 +39,8 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
     0,
   );
 
-  const isLoading = isLoadingApy || isLoadingDeposits;
+  // Con depósitos inyectados (tutorial) no esperamos a las queries reales.
+  const isLoading = !injectedDeposits && (isLoadingApy || isLoadingDeposits);
 
   return (
     <>
@@ -145,11 +149,12 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
             ) : (
               <div className="space-y-2">
                 {activeDeposits.map((deposit) => (
-                  <VaquitaDepositCard
-                    key={deposit.id}
-                    deposit={deposit}
-                    onPress={() => setSelectedVaquita(deposit)}
-                  />
+                  <div key={deposit.id} data-tutorial={onVaquitaSelect ? 'tutorial-vaquita-card' : undefined}>
+                    <VaquitaDepositCard
+                      deposit={deposit}
+                      onPress={() => (onVaquitaSelect ? onVaquitaSelect(deposit) : setSelectedVaquita(deposit))}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -196,7 +201,7 @@ export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
         </div>
       )}
     </AppModal>
-    {selectedVaquita && (
+    {!onVaquitaSelect && selectedVaquita && (
       <VaquitaModalContent
         isOpen={!!selectedVaquita}
         onClose={() => setSelectedVaquita(null)}

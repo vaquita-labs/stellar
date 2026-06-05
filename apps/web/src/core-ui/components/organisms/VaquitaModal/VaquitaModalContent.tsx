@@ -33,7 +33,15 @@ const breakdownTime = (totalSeconds: number) => {
   };
 };
 
-export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }: VaquitaModalContentProps) => {
+export const VaquitaModalContent = ({
+  isOpen,
+  onClose,
+  vaquita,
+  isLeaderboard,
+  simulate = false,
+  simulateInterest = 0,
+  onSimulatedWithdraw,
+}: VaquitaModalContentProps) => {
   const [confirming, setConfirming] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const { transactionWithdraw } = useTransactions();
@@ -42,20 +50,19 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
   const depositLockPeriod = vaquita.lockPeriod;
   const { data: dataApy } = useApyByLockPeriod(depositLockPeriod, token?.symbol ?? '');
   const withdrawalInfo = useWithdrawalTime(vaquita);
-  const { vaquitaInterest, protocolInterest: protocolInterestSource, blendInterest, totalInterest } = getInterestData(
-    network!,
-    dataApy,
-    vaquita.amount,
-    depositLockPeriod,
-  );
-  const protocolInterest = protocolInterestSource + blendInterest;
+  const realInterest = getInterestData(network!, dataApy, vaquita.amount, depositLockPeriod);
+  // En modo tutorial el interés es fijo (demo) y el lock se deriva en vivo del
+  // contador; en modo normal salen del cálculo real y del flag del backend.
+  const totalInterest = simulate ? simulateInterest : realInterest.totalInterest;
+  const vaquitaInterest = simulate ? simulateInterest : realInterest.vaquitaInterest;
+  const protocolInterest = simulate ? 0 : realInterest.protocolInterest + realInterest.blendInterest;
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
-  const isDisabled = !network || !transactionWithdraw;
-  const inLockPeriod = vaquita.inLockPeriod;
+  const isDisabled = simulate ? false : !network || !transactionWithdraw;
+  const inLockPeriod = simulate ? !withdrawalInfo.canWithdraw : vaquita.inLockPeriod;
   const isConfirming = confirming === vaquita.id;
   const withWithdrawButton = !isLeaderboard && vaquita.state === DepositWithdrawalState.DEPOSIT_SUCCESS;
   const withdrawProcessing = vaquita.state === DepositWithdrawalState.WITHDRAW_PROCESSING;
@@ -64,6 +71,18 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
 
   const onWithdraw = async () => {
     if (isDisabled) return;
+
+    // Modo tutorial: confirmación simulada, sin transacción real.
+    if (simulate) {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setLoading(false);
+      onSimulatedWithdraw?.();
+      onClose();
+      return;
+    }
+
+    if (!network || !transactionWithdraw) return;
     setLoading(true);
     let isSuccess = false;
     let lastError: unknown = null;
@@ -165,7 +184,9 @@ export const VaquitaModalContent = ({ isOpen, onClose, vaquita, isLeaderboard }:
             ? 'bg-danger border-[#7a1620] text-white'
             : 'bg-success border-[#018222] text-black')
         }
-        isDisabled={loading}
+        // Tutorial: dejamos VER el aviso de retiro anticipado, pero bloqueamos
+        // confirmarlo — hay que esperar el contador y reclamar con interés.
+        isDisabled={loading || (simulate && inLockPeriod)}
       >
         {loading ? (
           <>

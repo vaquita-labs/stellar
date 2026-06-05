@@ -11,6 +11,7 @@ export * from './SavingsStats';
 export * from './VaquitasListModal';
 export * from './BankAPYModal';
 export * from './TutorialModal';
+export * from './Tutorial';
 export * from './CoinAnimation';
 export * from './StreakModal';
 export * from './ShopModal';

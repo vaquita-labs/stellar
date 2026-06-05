@@ -16,6 +16,8 @@ export interface AppModalProps {
   children: ReactNode;
   footer?: ReactNode;
   isDismissable?: boolean;
+  /** Oculta la X de cerrar (ej. tutorial: el modal solo se cierra por su acción). */
+  hideClose?: boolean;
   bodyClassName?: string;
   dialogClassName?: string;
 }
@@ -37,6 +39,7 @@ export function AppModal({
   children,
   footer,
   isDismissable = true,
+  hideClose = false,
   bodyClassName,
   dialogClassName,
 }: AppModalProps) {
@@ -64,11 +67,13 @@ export function AppModal({
             <Modal.Heading className="text-black font-bold text-base flex-1 min-w-0 truncate">
               {title}
             </Modal.Heading>
-            <Modal.CloseTrigger
-              aria-label="Close"
-              className='bg-primary text-black text-sm border-[0.5] border-black'
-            >
-            </Modal.CloseTrigger>
+            {!hideClose && (
+              <Modal.CloseTrigger
+                aria-label="Close"
+                className='bg-primary text-black text-sm border-[0.5] border-black'
+              >
+              </Modal.CloseTrigger>
+            )}
           </Modal.Header>
           <Modal.Body
             className={
