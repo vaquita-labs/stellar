@@ -156,6 +156,13 @@ model Profile {
   // addresses, tx hashes, gas/network terms) instead of simplified copy.
   cryptoSavvy         Boolean @default(false) @map("crypto_savvy")
 
+  // Per-user display preferences picked on the Preferences page. Each holds the
+  // `id` of an option from the project config's languages/currencies lists
+  // (e.g. 'en', 'usd'). NULL until the user changes it (UI falls back to the
+  // first configured option).
+  language      String?   @db.VarChar(10)
+  currency      String?   @db.VarChar(10)
+
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
