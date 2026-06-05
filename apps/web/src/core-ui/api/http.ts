@@ -51,3 +51,8 @@ export function postJson<T>(path: string, body?: unknown, okStatuses?: number[])
     okStatuses,
   });
 }
+
+/** DELETE helper that unwraps `data`. */
+export function delJson<T>(path: string, okStatuses?: number[]): Promise<T | null> {
+  return apiFetch<T>(path, { method: 'DELETE', okStatuses });
+}
