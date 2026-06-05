@@ -159,6 +159,12 @@ export interface ProfileResponseDTO {
   onboardingCompleted: boolean;
   tutorialCompleted: boolean;
   cryptoSavvy: boolean;
+  // Per-user display preferences (option ids from the project config lists).
+  // Empty string until the user picks one.
+  language: string;
+  currency: string;
+  // Account creation timestamp (ISO 8601). Empty string when unknown.
+  createdAt: string;
 }
 
 export interface ProfileExperienceResponseDTO {
@@ -182,6 +188,60 @@ export interface ProfileStreakResponseDTO {
   yesterdayStreak: number;
   todayStreak: boolean;
   days: number[];
+}
+
+/**
+ * A vaquero shown in the friend search / follow list. `level` is always 0 for
+ * now (no level system yet); `streak` and `followers` are computed live.
+ * `isFollowing` is relative to the viewer who made the request.
+ */
+export interface FriendDTO {
+  walletAddress: string;
+  /** Display name: full name, else nickname, else a shortened wallet. */
+  name: string;
+  /** `@handle` derived from the nickname (or a shortened wallet fallback). */
+  handle: string;
+  nickname: string;
+  fullName: string;
+  avatarUrl: string;
+  level: number;
+  streak: number;
+  followers: number;
+  isFollowing: boolean;
+}
+
+export interface FriendSearchResponseDTO {
+  networkName: string;
+  query: string;
+  results: FriendDTO[];
+}
+
+export interface FollowResponseDTO {
+  followerWallet: string;
+  followeeWallet: string;
+  /** True after a follow, false after an unfollow. */
+  following: boolean;
+}
+
+/**
+ * A suggested vaquero for the "Friend suggestions" rail. `followedBy` names the
+ * mutual friend who connects the viewer to this suggestion (friend-of-a-friend);
+ * it is '' for suggestions added by the random fill.
+ */
+export interface FriendSuggestionDTO extends FriendDTO {
+  followedBy: string;
+}
+
+export interface FriendSuggestionsResponseDTO {
+  networkName: string;
+  suggestions: FriendSuggestionDTO[];
+}
+
+export interface FollowCountsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  following: number;
+  followers: number;
 }
 
 export type MapObject = {
@@ -244,6 +304,7 @@ export interface RewardResponseDTO {
 
 export enum Reward {
   GOLD_COIN = 'gold-coin',
+  EXPERIENCE = 'experience',
 }
 
 export enum Achievement {
@@ -277,6 +338,9 @@ export interface AchievementResponseDTO {
   claimedAt: string | null;
   /** True when the badge has been minted on-chain (a confirmed badge_claims row). */
   minted: boolean;
+  /** On-chain mint transaction hash, or null when not minted. Lets clients link
+   *  an already-minted badge to its stellar.expert tx without a re-mint. */
+  transactionHash: string | null;
   /** Catalog visual metadata, embedded so logged-in views need only this list.
    *  `icon` may be a relative path or an absolute (admin-uploaded) URL. */
   icon: string | null;

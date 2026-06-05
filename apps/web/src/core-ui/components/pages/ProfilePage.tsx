@@ -11,6 +11,7 @@ import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi
 import {
   useClaimedAchievements,
   useDepositsComplete,
+  useFollowCounts,
   useLeaderboardRank,
   useProfileAchievements,
   useProfileData,
@@ -105,6 +106,7 @@ export function ProfilePage() {
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
   const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
+  const { data: followCounts } = useFollowCounts();
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
@@ -133,16 +135,18 @@ export function ProfilePage() {
     return '@vaquero';
   }, [profileData?.nickname, walletAddress]);
 
-  // We don't yet have a real "joined" date from the backend, so we show the
-  // current month + year as a friendly placeholder ("joined May 2026").
-  const joinedLabel = useMemo(
-    () =>
-      new Date().toLocaleDateString(undefined, {
-        month: 'long',
-        year: 'numeric',
-      }),
-    []
-  );
+  // Real account creation date from the backend ("joined 5 May 2026"). Falls
+  // back to the current date if the timestamp hasn't loaded yet.
+  const joinedLabel = useMemo(() => {
+    const createdAt = profileData?.createdAt;
+    const date = createdAt ? new Date(createdAt) : new Date();
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [profileData?.createdAt]);
 
   const betaTester = useMemo(
     () => achievementsData?.achievements?.find((a) => a.key === 'beta-tester'),
@@ -245,9 +249,9 @@ export function ProfilePage() {
         {/* Stats row -------------------------------------------------- */}
         <section className="px-4 sm:px-6">
           <div className="flex items-stretch gap-3">
-            <StatPill value={'0'} label="Following" />
+            <StatPill value={followCounts?.following ?? 0} label="Following" />
             <span className="w-px bg-black/10" aria-hidden />
-            <StatPill value={'0'} label="Followers" />
+            <StatPill value={followCounts?.followers ?? 0} label="Followers" />
           </div>
         </section>
 

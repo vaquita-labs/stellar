@@ -28,6 +28,8 @@ export interface ProjectConfig {
   networkPassphrase: string | null;
   badgesContractAddress: string | null;
   cycleDurationMs: number | null;
+  dailyGoldCoins: number;
+  dailyCheckinExperience: number;
   currencies: Currency[];
   languages: Language[];
   createdAt: string | null;
@@ -41,6 +43,8 @@ export interface ProjectConfigPayload {
   networkPassphrase?: string | null;
   badgesContractAddress?: string | null;
   cycleDurationMs?: number | null;
+  dailyGoldCoins?: number;
+  dailyCheckinExperience?: number;
   currencies?: Currency[];
   languages?: Language[];
 }

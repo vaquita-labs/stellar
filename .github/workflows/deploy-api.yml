@@ -2,7 +2,7 @@ name: Deploy API
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
     paths:
       - "apps/api/**"
       - "packages/**"
@@ -27,7 +27,7 @@ jobs:
   deploy:
     name: Trigger Dokploy Deploy
     runs-on: ubuntu-latest
-    environment: vaquita-api
+    environment: vaquita-api-dev
     steps:
       - name: Compute DEPLOY_ID
         id: ids
@@ -81,7 +81,7 @@ jobs:
         env:
           DEPLOY_ID: ${{ steps.ids.outputs.deploy_id }}
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
-          APPLICATION_ID: ${{ secrets.DOKPLOY_API_APPLICATION_ID }}
+          APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
         run: |
           set -euo pipefail
           current_args=$(curl -fsSL "$DOKPLOY_HOST/api/application.one?applicationId=$APPLICATION_ID" \
@@ -102,7 +102,7 @@ jobs:
       - name: Update build args
         env:
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
-          APPLICATION_ID: ${{ secrets.DOKPLOY_API_APPLICATION_ID }}
+          APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
           BUILD_ARGS: ${{ steps.merge.outputs.build_args }}
         run: |
           set -euo pipefail
@@ -119,7 +119,7 @@ jobs:
         env:
           DEPLOY_ID: ${{ steps.ids.outputs.deploy_id }}
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
-          APPLICATION_ID: ${{ secrets.DOKPLOY_API_APPLICATION_ID }}
+          APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
         run: |
           set -euo pipefail
           payload=$(jq -n \

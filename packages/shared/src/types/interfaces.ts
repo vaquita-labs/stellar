@@ -78,6 +78,8 @@ export interface Profile {
   onboarding_completed: boolean,
   tutorial_completed: boolean,
   crypto_savvy: boolean,
+  language?: string | null,
+  currency?: string | null,
   created_at?: string,
   updated_at?: string,
 }

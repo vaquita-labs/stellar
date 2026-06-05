@@ -1,6 +1,8 @@
 export type DailyRewardModalProps = {
   open: boolean;
   onOpenChange: () => void;
-  coinsCollected: number;
+  coinsToCollect: number;
+  experienceToCollect: number;
   streakDays: number;
+  onCollect: () => Promise<void>;
 };

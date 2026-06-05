@@ -5,8 +5,16 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { FiShare2, FiX } from 'react-icons/fi';
-import { useClaimedAchievements, useIsMobile, useMintBadge, useMintedBadges, useProfileRewards } from '../../../hooks';
+import {
+  useClaimedAchievements,
+  useIsMobile,
+  useMintBadge,
+  useMintedBadges,
+  useProfileData,
+  useProfileRewards,
+} from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 
 /**
  * Mocked username used to personalize the share link. Replace with a real
@@ -75,10 +83,14 @@ function VaquitaDots() {
 
 export function AchievementModal({ achievement, unlocked = false, open, onOpenChange }: AchievementModalProps) {
   const { isClaimed } = useClaimedAchievements();
-  const { isMinted } = useMintedBadges();
+  const { isMinted, getMintTxHash } = useMintedBadges();
   const mintBadgeMutation = useMintBadge();
   const { network } = useConfigStore();
   const { data: rewardsData } = useProfileRewards();
+  // "Crypto mode": power-user flag that opts the wallet into on-chain detail —
+  // gates the stellar.expert link shown for already-minted badges.
+  const { data: profile } = useProfileData();
+  const cryptoMode = profile?.cryptoSavvy ?? false;
   // Drives whether we render the full-screen bottom-sheet (phone-sized) or
   // the compact centered dialog (everything wider than the Tailwind `sm`
   // breakpoint). Server-render returns `false`, matching the desktop shell
@@ -134,6 +146,17 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   const progressPct = achievement.progress
     ? Math.min(100, Math.round((achievement.progress.current / achievement.progress.target) * 100))
     : null;
+
+  // Shared stellar.expert tx linking, used by both the live mint confirmation
+  // and the "already minted" detail view. The network segment comes from the
+  // config provider (network.type) — single source of truth across the app.
+  const txExplorerUrl = (hash: string) => stellarExpertTxUrl(hash, network?.type);
+  const shortenHash = (hash: string) => `${hash.slice(0, 6)}…${hash.slice(-4)}`;
+
+  // Tx hash stored server-side for an already-minted badge. Only surfaced in
+  // crypto mode, on the detail view of a badge the user previously minted.
+  const storedTxHash = isMinted(achievement.id) ? getMintTxHash(achievement.id) : null;
+  const showStoredTx = cryptoMode && !!storedTxHash;
 
   // Badges are always minted on-chain — there is no off-chain-only path. The
   // mint flow (useMintBadge) performs the off-chain reward claim as its first
@@ -284,9 +307,8 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   /* Phase: minted (on-chain confirmed)                                 */
   /* ------------------------------------------------------------------ */
   const renderMinted = () => {
-    const explorerNetwork = network?.type === 'mainnet' ? 'mainnet' : 'testnet';
-    const explorerUrl = mintTxHash ? `https://stellar.expert/explorer/${explorerNetwork}/tx/${mintTxHash}` : null;
-    const shortHash = mintTxHash ? `${mintTxHash.slice(0, 6)}…${mintTxHash.slice(-4)}` : null;
+    const explorerUrl = mintTxHash ? txExplorerUrl(mintTxHash) : null;
+    const shortHash = mintTxHash ? shortenHash(mintTxHash) : null;
 
     return (
       <motion.div
@@ -434,6 +456,22 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
             >
               Claim award
             </button>
+          </div>
+        )}
+
+        {/* Crypto mode: surface the on-chain tx for an already-minted badge.
+            Tapping it opens the transaction on stellar.expert in a new tab. */}
+        {!canClaim && showStoredTx && storedTxHash && (
+          <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10 flex flex-col items-center gap-2">
+            <a
+              href={txExplorerUrl(storedTxHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+            >
+              View transaction on Stellar Expert
+            </a>
+            <span className="text-xs font-mono text-gray-500">{shortenHash(storedTxHash)}</span>
           </div>
         )}
       </motion.div>

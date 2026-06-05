@@ -2,7 +2,7 @@ name: Deploy Web
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
     paths:
       - "apps/web/**"
       - "packages/**"
@@ -27,7 +27,7 @@ jobs:
   deploy:
     name: Trigger Dokploy Deploy
     runs-on: ubuntu-latest
-    environment: vaquita-web
+    environment: vaquita-app-dev
     steps:
       - name: Compute DEPLOY_ID
         id: ids
@@ -81,7 +81,7 @@ jobs:
         env:
           DEPLOY_ID: ${{ steps.ids.outputs.deploy_id }}
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
-          APPLICATION_ID: ${{ secrets.DOKPLOY_WEB_APPLICATION_ID }}
+          APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
         run: |
           set -euo pipefail
           # Fetch current application config to preserve existing build args
@@ -105,7 +105,7 @@ jobs:
       - name: Update build args
         env:
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
-          APPLICATION_ID: ${{ secrets.DOKPLOY_WEB_APPLICATION_ID }}
+          APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
           BUILD_ARGS: ${{ steps.merge.outputs.build_args }}
         run: |
           set -euo pipefail
@@ -122,7 +122,7 @@ jobs:
         env:
           DEPLOY_ID: ${{ steps.ids.outputs.deploy_id }}
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
-          APPLICATION_ID: ${{ secrets.DOKPLOY_WEB_APPLICATION_ID }}
+          APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
         run: |
           set -euo pipefail
           payload=$(jq -n \
