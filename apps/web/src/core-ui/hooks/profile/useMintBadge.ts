@@ -67,9 +67,8 @@ export const useMintBadge = () => {
       return { hash, coinReward };
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['minted-badges', networkName, walletAddress],
-      });
+      // `minted` is folded into the profile-achievements list, so invalidating
+      // it refreshes the minted state too (see useMintedBadges).
       void queryClient.invalidateQueries({
         queryKey: ['profile', networkName, walletAddress, 'profile-achievements'],
       });
