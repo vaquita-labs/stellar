@@ -18,6 +18,8 @@ export interface AppModalProps {
   isDismissable?: boolean;
   /** Oculta la X de cerrar (ej. tutorial: el modal solo se cierra por su acción). */
   hideClose?: boolean;
+  /** Posición vertical del modal. Por defecto el comportamiento de HeroUI. */
+  placement?: 'auto' | 'top' | 'center' | 'bottom';
   bodyClassName?: string;
   dialogClassName?: string;
 }
@@ -40,6 +42,7 @@ export function AppModal({
   footer,
   isDismissable = true,
   hideClose = false,
+  placement,
   bodyClassName,
   dialogClassName,
 }: AppModalProps) {
@@ -50,7 +53,7 @@ export function AppModal({
       onOpenChange={(o) => { if (!o) onOpenChange(); }}
       className={SLOW_EXIT}
     >
-      <Modal.Container size={size} scroll="inside" className="px-0! py-3! sm:p-10!">
+      <Modal.Container size={size} scroll="inside" placement={placement} className="px-0! py-3! sm:p-10!">
         <Modal.Dialog
           className={
             'bg-background border border-black ' +

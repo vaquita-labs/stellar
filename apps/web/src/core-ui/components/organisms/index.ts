@@ -12,6 +12,7 @@ export * from './VaquitasListModal';
 export * from './BankAPYModal';
 export * from './TutorialModal';
 export * from './Tutorial';
+export * from './ClaimReward';
 export * from './CoinAnimation';
 export * from './StreakModal';
 export * from './ShopModal';
