@@ -5,11 +5,11 @@ import type { AchievementDetail } from '../components/pages/profile/AchievementM
  * Shared catalog of achievements rendered on the profile page and the trophy
  * room.
  *
- * The badge METADATA (title / description / icon / accent / tier) and the set +
- * order of badges now come from the backend catalog (`GET
- * /api/v1/badges`, editable in the admin panel) — pass it via
- * `ctx.catalog`. {@link FALLBACK_BADGE_META} is used when the catalog hasn't
- * loaded, so the grid never renders empty.
+ * The badge METADATA (title / description / icon / accent / tier / order) and
+ * per-wallet status now come from a single endpoint — `GET
+ * /api/v1/wallets/:wallet/badges` (`ctx.extraAchievements`), which embeds the
+ * admin-editable catalog fields per row. {@link FALLBACK_BADGE_META} renders the
+ * built-in set while that list loads, so the grid never flashes empty.
  *
  * Per-user PROGRESS + unlock for the built-in milestone keys is still computed
  * client-side from live signals (streak, deposits, XP, savings, rank) — see
@@ -48,13 +48,10 @@ export type AchievementsCtx = {
   isBetaTester?: boolean;
   /** Server-derived ISO timestamp of the Beta Tester claim, if any. */
   betaTesterClaimedAt?: string;
-  /** Backend catalog metadata (from `useCatalogAchievements`). Drives which
-   *  badges exist, their copy/icon/accent/tier, and their order. Falls back to
+  /** The wallet badges list (`GET /wallets/:wallet/badges`). The single source
+   *  of truth for the grid: every badge with its copy, icon, accent, order and
+   *  server-computed `unlocked` / `claimedAt` / `minted`. Falls back to
    *  {@link FALLBACK_BADGE_META} when empty/not loaded. */
-  catalog?: CatalogBadgeMeta[];
-  /** Full server response. Provides server-computed `unlocked` + `claimedAt`
-   *  per key, and any badge whose `key` is NOT in the catalog (e.g. redeem-code
-   *  badges) is appended at the end of the grid using its server copy. */
   extraAchievements?: AchievementResponseDTO[];
 };
 
@@ -134,57 +131,56 @@ const computeKnownState = (ctx: AchievementsCtx): Record<string, KnownState> => 
 
 export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
   const known = computeKnownState(ctx);
-  const serverByKey = new Map<string, AchievementResponseDTO>(
-    (ctx.extraAchievements ?? []).map((a) => [a.key, a]),
-  );
-  const meta = ctx.catalog && ctx.catalog.length > 0 ? ctx.catalog : [];
+  const server = ctx.extraAchievements ?? [];
 
-  const badges: Badge[] = meta.map((m) => {
-    const k = known[m.id];
-    const server = serverByKey.get(m.id);
-    const base = {
-      id: m.id,
-      title: m.title,
-      description: m.description,
-      icon: m.icon,
-      accent: m.accent,
-      tier: m.tier,
-    };
+  // While the wallet list loads, render the built-in set (locked, with
+  // client-computed progress) so the grid never flashes empty.
+  if (server.length === 0) {
+    return FALLBACK_BADGE_META.map((m) => {
+      const k = known[m.id];
+      return {
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        icon: m.icon,
+        accent: m.accent,
+        tier: m.tier,
+        progress: k?.progress,
+        unlocked: k?.unlocked ?? false,
+        date: k?.unlocked ? new Date().toISOString() : undefined,
+      };
+    });
+  }
 
-    if (k) {
-      // Built-in milestone — preserve the client-computed progress/unlock.
+  // The wallet list is the single source of truth (copy + visuals + order +
+  // status). Built-in milestones still take their progress/unlock from live
+  // client signals; everything else trusts the server's `unlocked`.
+  return [...server]
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .map((a) => {
+      const k = known[a.key];
+      const base = {
+        id: a.key,
+        title: a.name,
+        description: a.description,
+        icon: a.icon ?? `${ICONS}/${a.key}.png`,
+        accent: a.accent ?? ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
+        tier: a.tier as Badge['tier'],
+      };
+
+      if (k) {
+        return {
+          ...base,
+          progress: k.progress,
+          unlocked: k.unlocked,
+          date: a.claimedAt ?? (k.unlocked ? new Date().toISOString() : undefined),
+        };
+      }
+
       return {
         ...base,
-        progress: k.progress,
-        unlocked: k.unlocked,
-        date: server?.claimedAt ?? (k.unlocked ? new Date().toISOString() : undefined),
+        unlocked: a.unlocked,
+        date: a.claimedAt ?? undefined,
       };
-    }
-
-    // Admin-created / non-milestone badge — trust the server's unlock state.
-    return {
-      ...base,
-      unlocked: server?.unlocked ?? false,
-      date: server?.claimedAt ?? undefined,
-    };
-  });
-
-  // Append server achievements that aren't in the catalog at all (typically
-  // hidden redeem-code badges, which only appear once claimed). The icon
-  // convention is `/icons/achievements/<key>.png`.
-  const catalogKeys = new Set(meta.map((m) => m.id));
-  const extras: Badge[] = (ctx.extraAchievements ?? [])
-    .filter((a) => !catalogKeys.has(a.key))
-    .map((a) => ({
-      id: a.key,
-      title: a.name,
-      description: a.description,
-      icon: `${ICONS}/${a.key}.png`,
-      accent: ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
-      tier: a.tier as Badge['tier'],
-      date: a.claimedAt ?? undefined,
-      unlocked: a.unlocked,
-    }));
-
-  return [...badges, ...extras];
+    });
 };

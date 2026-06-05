@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
-  useCatalogAchievements,
   useClaimedAchievements,
   useDepositsComplete,
   useLeaderboardRank,
@@ -105,7 +104,6 @@ export function ProfilePage() {
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
-  const { data: catalogData } = useCatalogAchievements();
   const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
@@ -161,10 +159,9 @@ export function ProfilePage() {
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
-        catalog: catalogData,
         leaderboardRank: rankData?.rank ?? undefined,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, catalogData, rankData?.rank]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
   );
 
   /* -------------------------------------------------------------- */
