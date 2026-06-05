@@ -1,6 +1,6 @@
 import { getWalletAddress, toHexFromAny } from '@/core-ui/helpers';
 import { DepositFn, NetworkResponseDTO, WithdrawFn } from '../../core-ui/types';
-import { isStellarWalletConnected } from './helpers';
+import { isStellarWalletConnected, stellarExpertTxUrl } from './helpers';
 import { getSorobanTx } from './sorobanTx';
 
 export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: NetworkResponseDTO['tokens'][number]) => {
@@ -48,7 +48,7 @@ export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: 
       txHash: hash as string,
       transaction,
       depositIdHex,
-      explorer: `https://stellar.expert/explorer/testnet/tx/${hash}`,
+      explorer: stellarExpertTxUrl(hash as string),
       error: null,
     };
   };
@@ -74,7 +74,7 @@ export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: 
       success: true,
       txHash: hash as string,
       transaction,
-      explorer: `https://stellar.expert/explorer/testnet/tx/${hash}`,
+      explorer: stellarExpertTxUrl(hash as string),
       error: null,
     };
   };
