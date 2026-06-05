@@ -53,6 +53,8 @@ const toProfileShape = (p: PrismaProfile): Profile => ({
   onboarding_completed: p.onboardingCompleted ?? false,
   tutorial_completed: p.tutorialCompleted ?? false,
   crypto_savvy: p.cryptoSavvy ?? false,
+  language: p.language ?? null,
+  currency: p.currency ?? null,
   created_at: p.createdAt?.toISOString(),
   updated_at: p.updatedAt?.toISOString(),
 });
@@ -353,6 +355,9 @@ export const toProfileResponseDTO = (networkName: string, profile: Profile): Pro
     onboardingCompleted: profile.onboarding_completed ?? false,
     tutorialCompleted: profile.tutorial_completed ?? false,
     cryptoSavvy: profile.crypto_savvy ?? false,
+    language: profile.language ?? '',
+    currency: profile.currency ?? '',
+    createdAt: profile.created_at ?? '',
   };
 };
 

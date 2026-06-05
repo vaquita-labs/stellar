@@ -135,16 +135,18 @@ export function ProfilePage() {
     return '@vaquero';
   }, [profileData?.nickname, walletAddress]);
 
-  // We don't yet have a real "joined" date from the backend, so we show the
-  // current month + year as a friendly placeholder ("joined May 2026").
-  const joinedLabel = useMemo(
-    () =>
-      new Date().toLocaleDateString(undefined, {
-        month: 'long',
-        year: 'numeric',
-      }),
-    []
-  );
+  // Real account creation date from the backend ("joined 5 May 2026"). Falls
+  // back to the current date if the timestamp hasn't loaded yet.
+  const joinedLabel = useMemo(() => {
+    const createdAt = profileData?.createdAt;
+    const date = createdAt ? new Date(createdAt) : new Date();
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [profileData?.createdAt]);
 
   const betaTester = useMemo(
     () => achievementsData?.achievements?.find((a) => a.key === 'beta-tester'),

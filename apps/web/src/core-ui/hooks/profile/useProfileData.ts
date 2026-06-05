@@ -23,6 +23,9 @@ export const useProfileData = () => {
         onboardingCompleted: data?.data?.onboardingCompleted ?? false,
         tutorialCompleted: data?.data?.tutorialCompleted ?? false,
         cryptoSavvy: data?.data?.cryptoSavvy ?? false,
+        language: data?.data?.language ?? '',
+        currency: data?.data?.currency ?? '',
+        createdAt: data?.data?.createdAt ?? '',
       };
 
       return profile;

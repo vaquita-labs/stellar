@@ -159,6 +159,12 @@ export interface ProfileResponseDTO {
   onboardingCompleted: boolean;
   tutorialCompleted: boolean;
   cryptoSavvy: boolean;
+  // Per-user display preferences (option ids from the project config lists).
+  // Empty string until the user picks one.
+  language: string;
+  currency: string;
+  // Account creation timestamp (ISO 8601). Empty string when unknown.
+  createdAt: string;
 }
 
 export interface ProfileExperienceResponseDTO {
