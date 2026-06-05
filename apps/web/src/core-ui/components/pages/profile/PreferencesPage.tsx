@@ -2,7 +2,7 @@
 
 import { ListBox, Select, Switch, toast } from '@heroui/react';
 import React, { useEffect, useState } from 'react';
-import { FiChevronDown } from 'react-icons/fi';
+import { FiChevronDown, FiLoader } from 'react-icons/fi';
 import { useProfileData, useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
@@ -21,6 +21,7 @@ function OptionSelect({
   value,
   onChange,
   ariaLabel,
+  isSaving,
 }: {
   title: string;
   description: string;
@@ -28,16 +29,26 @@ function OptionSelect({
   value: string;
   onChange: (id: string) => void;
   ariaLabel: string;
+  isSaving?: boolean;
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex flex-col gap-0.5 px-1">
-        <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500">{title}</h2>
-        <p className="text-xs text-gray-500">{description}</p>
+      <div className="flex items-center justify-between gap-2 px-1">
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500">{title}</h2>
+          <p className="text-xs text-gray-500">{description}</p>
+        </div>
+        {isSaving && (
+          <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 shrink-0">
+            <FiLoader className="animate-spin" />
+            Saving…
+          </span>
+        )}
       </div>
       <Select
         aria-label={ariaLabel}
         value={value}
+        isDisabled={isSaving}
         onChange={(next) => {
           if (typeof next === 'string' && next) onChange(next);
         }}
@@ -64,7 +75,11 @@ function OptionSelect({
             }}
           </Select.Value>
           <Select.Indicator>
-            <FiChevronDown className="text-gray-500 shrink-0 transition-transform data-[open]:rotate-180" />
+            {isSaving ? (
+              <FiLoader className="text-gray-500 shrink-0 animate-spin" />
+            ) : (
+              <FiChevronDown className="text-gray-500 shrink-0 transition-transform data-[open]:rotate-180" />
+            )}
           </Select.Indicator>
         </Select.Trigger>
         <Select.Popover
@@ -99,15 +114,22 @@ function ToggleRow({
   label,
   description,
   value,
+  showSoon,
   onChange,
 }: {
   label: string;
   description: string;
   value: boolean;
+  showSoon?: boolean;
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white cursor-pointer hover:bg-[#FFF7E6] transition">
+    <label className="relative flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white cursor-pointer hover:bg-[#FFF7E6] transition">
+      {showSoon && (
+        <span className="absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wide bg-primary text-black border border-black rounded-sm px-1.5 py-0.5">
+          Soon
+        </span>
+      )}
       <div className="flex flex-col min-w-0">
         <span className="text-[15px] font-extrabold text-black">{label}</span>
         <span className="text-xs text-gray-500">{description}</span>
@@ -160,7 +182,7 @@ function PersistedToggleRow({
 export function PreferencesPage() {
   const { walletAddress, network } = useConfigStore();
   const { data, isLoading, refetch } = useProfileData();
-  const { saveProfileFlags } = useRestProfile();
+  const { saveProfileFlags, saveProfilePreferences } = useRestProfile();
 
   // Backend-driven (from `GET /api/v1/config` → config store), no longer hardcoded.
   const currencies: Option[] = network?.currencies ?? [];
@@ -182,6 +204,21 @@ export function PreferencesPage() {
       setLanguage(languages[0].id);
     }
   }, [languages, language]);
+
+  // Hydrate each selection from the saved profile preference when present. The
+  // fallback effects above still pick the first config option when it's empty
+  // (never set) or stale (no longer offered).
+  useEffect(() => {
+    if (data?.language) setLanguage(data.language);
+  }, [data?.language]);
+
+  useEffect(() => {
+    if (data?.currency) setCurrency(data.currency);
+  }, [data?.currency]);
+
+  const [savingLanguage, setSavingLanguage] = useState(false);
+  const [savingCurrency, setSavingCurrency] = useState(false);
+
   const [reducedMotion, setReducedMotion] = useState(false);
   const [hapticFeedback, setHapticFeedback] = useState(true);
   const [autoplaySounds, setAutoplaySounds] = useState(true);
@@ -218,22 +255,72 @@ export function PreferencesPage() {
     }
   };
 
-  const handleSave = () => {
-    toast.success('Preferences saved (mock)', { timeout: 2000 });
+  const handleSelectLanguage = async (value: string) => {
+    if (!walletAddress || savingLanguage || value === language) return;
+    const prev = language;
+    setLanguage(value); // optimistic; reverted on failure
+    setSavingLanguage(true);
+    try {
+      const { success, message } = await saveProfilePreferences({ language: value });
+      if (success) {
+        // Keep the loader on through the reload, not just the save request.
+        await refetch();
+        toast.success('Preferences updated', { timeout: 2000 });
+      } else {
+        setLanguage(prev);
+        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+      }
+    } catch (error) {
+      setLanguage(prev);
+      toast.danger('Could not update preferences', {
+        description: (error as { message?: string })?.message ?? '',
+        timeout: 4000,
+      });
+    } finally {
+      setSavingLanguage(false);
+    }
+  };
+
+  const handleSelectCurrency = async (value: string) => {
+    if (!walletAddress || savingCurrency || value === currency) return;
+    const prev = currency;
+    setCurrency(value); // optimistic; reverted on failure
+    setSavingCurrency(true);
+    try {
+      const { success, message } = await saveProfilePreferences({ currency: value });
+      if (success) {
+        // Keep the loader on through the reload, not just the save request.
+        await refetch();
+        toast.success('Preferences updated', { timeout: 2000 });
+      } else {
+        setCurrency(prev);
+        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+      }
+    } catch (error) {
+      setCurrency(prev);
+      toast.danger('Could not update preferences', {
+        description: (error as { message?: string })?.message ?? '',
+        timeout: 4000,
+      });
+    } finally {
+      setSavingCurrency(false);
+    }
   };
 
   return (
     <MockedSubPageLayout
       title="Preferences"
-      subtitle="Language, currency and display options. Saved locally for now."
+      subtitle="Language, currency and display options. Language and currency are saved to your profile."
+      showSoonBadge={false}
     >
       <OptionSelect
         title="Language"
         description="The language Vaquita uses to talk to you."
         options={languages}
         value={language}
-        onChange={setLanguage}
+        onChange={handleSelectLanguage}
         ariaLabel="Language"
+        isSaving={savingLanguage}
       />
 
       <OptionSelect
@@ -241,8 +328,9 @@ export function PreferencesPage() {
         description="Used to display your balances and rewards."
         options={currencies}
         value={currency}
-        onChange={setCurrency}
+        onChange={handleSelectCurrency}
         ariaLabel="Currency"
+        isSaving={savingCurrency}
       />
 
       <section className="flex flex-col gap-2">
@@ -273,30 +361,25 @@ export function PreferencesPage() {
             label="Reduce motion"
             description="Disable bouncy animations across the app."
             value={reducedMotion}
+            showSoon
             onChange={setReducedMotion}
           />
           <ToggleRow
             label="Haptic feedback"
             description="Vibrate on key actions on supported devices."
             value={hapticFeedback}
+            showSoon
             onChange={setHapticFeedback}
           />
           <ToggleRow
             label="Autoplay sound effects"
             description="Play the moo and coin sounds during interactions."
             value={autoplaySounds}
+            showSoon
             onChange={setAutoplaySounds}
           />
         </div>
       </section>
-
-      <button
-        type="button"
-        onClick={handleSave}
-        className="w-full h-12 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
-      >
-        Save changes
-      </button>
     </MockedSubPageLayout>
   );
 }
