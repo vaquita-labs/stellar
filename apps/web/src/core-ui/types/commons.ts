@@ -233,6 +233,9 @@ export interface AchievementResponseDTO {
   claimedAt: string | null;
   /** True when the badge has been minted on-chain (a confirmed badge_claims row). */
   minted: boolean;
+  /** On-chain mint transaction hash, or null when not minted. Lets clients link
+   *  an already-minted badge to its stellar.expert tx without a re-mint. */
+  transactionHash: string | null;
   /** Catalog visual metadata, embedded so logged-in views need only this list.
    *  `icon` may be a relative path or an absolute (admin-uploaded) URL. */
   icon: string | null;
