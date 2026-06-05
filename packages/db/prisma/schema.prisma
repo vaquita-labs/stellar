@@ -164,7 +164,28 @@ model Profile {
   profileMapObjects   ProfileMapObject[]
   profileRewards      ProfileReward[]
 
+  // Unidirectional follow graph. `following` are edges where this profile is the
+  // follower; `followers` are edges where it is the followee.
+  following Follow[] @relation("following")
+  followers Follow[] @relation("followers")
+
   @@map("profiles")
+}
+
+/// Unidirectional follow edge: `follower` follows `followee` (Twitter-style, not mutual).
+model Follow {
+  id         Int      @id @default(autoincrement())
+  followerId Int      @map("follower_id")
+  followeeId Int      @map("followee_id")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  follower Profile @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
+  followee Profile @relation("followers", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followeeId], map: "follows_unique_pair")
+  @@index([followerId], map: "idx_follows_follower")
+  @@index([followeeId], map: "idx_follows_followee")
+  @@map("follows")
 }
 
 model ProfileAchievement {

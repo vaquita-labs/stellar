@@ -153,6 +153,56 @@ export interface ProfileStreakResponseDTO {
   days: number[];
 }
 
+/**
+ * A vaquero shown in the friend search / follow list. `level` is always 0 for
+ * now (no level system yet); `streak` and `followers` are computed live.
+ * `isFollowing` is relative to the viewer who made the request.
+ */
+export interface FriendDTO {
+  walletAddress: string;
+  name: string;
+  handle: string;
+  nickname: string;
+  fullName: string;
+  avatarUrl: string;
+  level: number;
+  streak: number;
+  followers: number;
+  isFollowing: boolean;
+}
+
+export interface FriendSearchResponseDTO {
+  networkName: string;
+  query: string;
+  results: FriendDTO[];
+}
+
+export interface FollowResponseDTO {
+  followerWallet: string;
+  followeeWallet: string;
+  following: boolean;
+}
+
+/**
+ * A suggested vaquero for the "Friend suggestions" rail. `followedBy` names the
+ * mutual friend who connects the viewer to this suggestion; '' for random fills.
+ */
+export interface FriendSuggestionDTO extends FriendDTO {
+  followedBy: string;
+}
+
+export interface FriendSuggestionsResponseDTO {
+  networkName: string;
+  suggestions: FriendSuggestionDTO[];
+}
+
+export interface FollowCountsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  following: number;
+  followers: number;
+}
+
 export type MapObject = {
   position: [number, number, number];
   type: MapObjectType;

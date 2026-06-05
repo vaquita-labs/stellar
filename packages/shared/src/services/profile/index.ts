@@ -697,7 +697,7 @@ export interface EligibilitySignals {
   activeDeposits: number;
   /** Sum of amounts (display units, e.g. USDC dollars) across active deposits. */
   activeAmount: number;
-  /** Followers/friends count. TODO: wire when a friends system exists. */
+  /** Number of profiles this user follows (from the `follows` graph). */
   friendsCount: number;
   /** 1-based monthly leaderboard rank. TODO: wire when leaderboard data exists. */
   leaderboardRank?: number;
@@ -735,6 +735,15 @@ export const computeEligibilitySignals = async (
     console.warn('[eligibility] failed to load streak', error);
   }
 
+  // Number of profiles this user follows — drives the FIRST_FRIEND badge.
+  // Queried inline (not via the follows service) to avoid a circular import.
+  let friendsCount = 0;
+  try {
+    friendsCount = await prisma.follow.count({ where: { followerId: profile.id } });
+  } catch (error) {
+    console.warn('[eligibility] failed to load friends count', error);
+  }
+
   const createdAt = profile.created_at ? new Date(profile.created_at) : null;
 
   return {
@@ -743,7 +752,7 @@ export const computeEligibilitySignals = async (
     streakCount,
     activeDeposits,
     activeAmount,
-    friendsCount: 0,
+    friendsCount,
   };
 };
 

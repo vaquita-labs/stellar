@@ -11,6 +11,7 @@ import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi
 import {
   useClaimedAchievements,
   useDepositsComplete,
+  useFollowCounts,
   useLeaderboardRank,
   useProfileAchievements,
   useProfileData,
@@ -105,6 +106,7 @@ export function ProfilePage() {
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
   const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
+  const { data: followCounts } = useFollowCounts();
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
@@ -245,9 +247,9 @@ export function ProfilePage() {
         {/* Stats row -------------------------------------------------- */}
         <section className="px-4 sm:px-6">
           <div className="flex items-stretch gap-3">
-            <StatPill value={'0'} label="Following" />
+            <StatPill value={followCounts?.following ?? 0} label="Following" />
             <span className="w-px bg-black/10" aria-hidden />
-            <StatPill value={'0'} label="Followers" />
+            <StatPill value={followCounts?.followers ?? 0} label="Followers" />
           </div>
         </section>
 
