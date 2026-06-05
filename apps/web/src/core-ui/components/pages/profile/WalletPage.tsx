@@ -15,7 +15,7 @@ const LogoByType: Record<string, ReactNode> = {
 
 export function WalletPage() {
   const { walletAddress, network } = useConfigStore();
-  const { openDistributionRulesModal, openWalletBalanceModal } = usePollar();
+  const { openDistributionRulesModal, openWalletBalanceModal, openSendModal, openReceiveModal } = usePollar();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -74,12 +74,9 @@ export function WalletPage() {
         <section className="grid grid-cols-3 gap-3">
           <button
             type="button"
-            disabled
-            className="relative w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black opacity-70 cursor-not-allowed"
+            onClick={openReceiveModal}
+            className="relative w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black hover:bg-[#F5FBFF] transition"
           >
-            <span className="absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wide bg-primary text-black border border-black rounded-sm px-1.5 py-0.5">
-              Soon
-            </span>
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#DDF4FF] border border-[#84D8FF]">
               <FiDownload className="w-6 h-6" />
             </span>
@@ -88,12 +85,9 @@ export function WalletPage() {
           </button>
           <button
             type="button"
-            disabled
-            className="relative w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black opacity-70 cursor-not-allowed"
+            onClick={openSendModal}
+            className="relative w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black hover:bg-[#F5FBFF] transition"
           >
-            <span className="absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wide bg-primary text-black border border-black rounded-sm px-1.5 py-0.5">
-              Soon
-            </span>
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#DDF4FF] border border-[#84D8FF]">
               <FiSend className="w-6 h-6" />
             </span>
