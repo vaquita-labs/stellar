@@ -7,6 +7,7 @@ export * from './useDeposits';
 export * from './useDepositsComplete';
 export * from './useFont';
 export * from './useHasHydrated';
+export * from './useIntroSeen';
 export * from './useIsAuthenticated';
 export * from './useIsMobile';
 export * from './useLogout';
