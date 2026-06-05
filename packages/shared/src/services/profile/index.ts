@@ -784,7 +784,9 @@ export const toProfileAchievementsResponseDTO = async (
   );
 
   // On-chain mints are keyed by badge_type, which equals the achievement key.
-  const mintedKeys = new Set(minted.map((m) => m.badge_type));
+  // Keep the tx hash alongside so clients can link an already-minted badge to
+  // its stellar.expert transaction without triggering a re-mint.
+  const mintedByKey = new Map(minted.map((m) => [m.badge_type, m.transaction_hash]));
 
   const achievements: AchievementResponseDTO[] = allRes.data
     // Hide secret achievements until the user actually claims them — the
@@ -803,7 +805,9 @@ export const toProfileAchievementsResponseDTO = async (
         // showing as "earned" even if the eligibility rule later tightens.
         unlocked: !!claim || isAchievementEligible(a, signals),
         claimedAt: claim?.claimed_at ?? null,
-        minted: mintedKeys.has(a.key),
+        minted: mintedByKey.has(a.key),
+        // Empty string from getMintedBadges (unconfirmed/missing) normalizes to null.
+        transactionHash: mintedByKey.get(a.key) || null,
         icon: a.icon ?? null,
         accent: a.accent ?? null,
         displayOrder: a.display_order ?? 0,
