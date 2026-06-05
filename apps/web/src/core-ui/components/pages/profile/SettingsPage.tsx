@@ -189,7 +189,6 @@ export function SettingsPage() {
       label: 'Preferences',
       description: 'Language, currency and display options.',
       href: '/profile/preferences',
-      badge: 'Soon',
     },
     {
       kind: 'link',
@@ -206,6 +205,7 @@ export function SettingsPage() {
       label: 'Notifications',
       description: 'Manage push and email alerts.',
       href: '/profile/notifications',
+      badge: 'soon'
     },
     {
       kind: 'link',
@@ -224,6 +224,7 @@ export function SettingsPage() {
         ? 'Balance hidden on this device.'
         : 'Hide your balance on the profile and home screens.',
       href: '/profile/privacy-settings',
+      badge: 'soon'
     },
   ];
 
