@@ -3,7 +3,7 @@ import { clientEnv } from '@/core-ui/config/clientEnv';
 /**
  * Identity-level catalog of achievements (title / description / icon / accent).
  *
- * The catalog is now served by the backend (`GET /api/v1/achievements/catalog`,
+ * The catalog is now served by the backend (`GET /api/v1/badges`,
  * editable from the admin panel). `getCatalogAchievement` fetches it (cached)
  * and falls back to {@link FALLBACK_CATALOG} below when the request fails — so
  * the share/OG flow keeps working even if the API is briefly unreachable.
@@ -205,7 +205,7 @@ const toCatalogAchievement = (a: CatalogApiAchievement): CatalogAchievement => {
  */
 export const fetchCatalog = async (): Promise<Record<string, CatalogAchievement>> => {
   try {
-    const res = await fetch(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/achievements/catalog`, {
+    const res = await fetch(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/badges`, {
       next: { revalidate: 300 },
     });
     if (!res.ok) return FALLBACK_CATALOG;

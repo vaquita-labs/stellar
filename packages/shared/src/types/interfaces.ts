@@ -90,7 +90,7 @@ export interface AchievementDocument {
   tier: string,
   coin_reward: number,
   /** Optional redemption code. Hidden + code-gated badges are claimable only
-   *  via the "Redeem code" flow (POST /achievements/redeem). NULL for regular
+   *  via the "Redeem code" flow (POST /wallets/:wallet/badges/redeem). NULL for regular
    *  eligibility-driven achievements. */
   code?: string | null,
   /** When TRUE, the achievement is filtered out of the public catalog response

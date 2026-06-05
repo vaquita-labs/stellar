@@ -19,7 +19,7 @@ const enc = encodeURIComponent;
  */
 export function claimAchievement(wallet: string, achievementKey: string): Promise<ClaimAchievementResponseDTO | null> {
   return postJson<ClaimAchievementResponseDTO>(
-    `/profile/wallet/${enc(wallet)}/achievements/${enc(achievementKey)}/claim`,
+    `/wallets/${enc(wallet)}/badges/${enc(achievementKey)}/claim`,
     undefined,
     [409],
   );
@@ -27,7 +27,7 @@ export function claimAchievement(wallet: string, achievementKey: string): Promis
 
 /** Fetch the signed claim needed to mint a badge on-chain. */
 export function fetchSignedClaim(wallet: string, badgeType: string): Promise<BadgeClaimPayload | null> {
-  return getJson<BadgeClaimPayload>(`/claim?type=${enc(badgeType)}&wallet=${enc(wallet)}`);
+  return getJson<BadgeClaimPayload>(`/wallets/${enc(wallet)}/badges/${enc(badgeType)}/voucher`);
 }
 
 /** Re-sign a claim whose signature has expired. */
@@ -36,7 +36,10 @@ export function refreshSignedClaim(input: {
   badge_type: string;
   cycle_id: number;
 }): Promise<BadgeClaimPayload | null> {
-  return postJson<BadgeClaimPayload>('/claim/refresh', input);
+  return postJson<BadgeClaimPayload>(
+    `/wallets/${enc(input.wallet)}/badges/${enc(input.badge_type)}/voucher/refresh`,
+    { cycle_id: input.cycle_id },
+  );
 }
 
 /** Tell the server the on-chain mint landed, so it can finalise the claim. */
@@ -46,5 +49,8 @@ export function confirmMint(input: {
   cycle_id: number;
   transaction_hash: string;
 }): Promise<unknown> {
-  return postJson('/claim/confirm', input);
+  return postJson(`/wallets/${enc(input.wallet)}/badges/${enc(input.badge_type)}/mint`, {
+    cycle_id: input.cycle_id,
+    transaction_hash: input.transaction_hash,
+  });
 }

@@ -7,7 +7,7 @@ import type { AchievementDetail } from '../components/pages/profile/AchievementM
  *
  * The badge METADATA (title / description / icon / accent / tier) and the set +
  * order of badges now come from the backend catalog (`GET
- * /api/v1/achievements/catalog`, editable in the admin panel) — pass it via
+ * /api/v1/badges`, editable in the admin panel) — pass it via
  * `ctx.catalog`. {@link FALLBACK_BADGE_META} is used when the catalog hasn't
  * loaded, so the grid never renders empty.
  *
