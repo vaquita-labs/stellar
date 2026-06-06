@@ -13,6 +13,7 @@ import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organi
 import { MapObjects } from '../templates/WorldMap/map/MapObjects';
 import { SceneCamera } from '../templates/WorldMap/map/SceneCamera';
 import { SceneControls } from '../templates/WorldMap/map/SceneControls';
+import { WaterBackground } from '../templates/WorldMap/map/WaterBackground';
 // import { CloudSkybox } from './CloudSkybox';
 import { DayCycleSky } from './DayCycleSky';
 import { EditGrid } from './EditGrid';
@@ -120,6 +121,7 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
         <SceneCamera center={center} />
         <EditGrid />
         {/* <FloatingIslandBase /> */}
+        <WaterBackground worldType={worldType} />
         <Ground mapObjects={currentTiles} worldType={worldType} />
         {!isEditMode && (
           <MapObjects

@@ -68,7 +68,9 @@ export const DayCycleSky = () => {
   const directionalRef = useRef<THREE.DirectionalLight>(null);
 
   const skyColor = useMemo(() => new THREE.Color('#9fd6f5'), []);
-  const fog = useMemo(() => new THREE.Fog('#cfeaf7', 25, 90), []);
+  // La niebla arranca lejos y usa el color del cielo para que el agua del horizonte
+  // se funda con el cielo (horizonte natural, sin franja blanca).
+  const fog = useMemo(() => new THREE.Fog('#9fd6f5', 60, 220), []);
 
   useEffect(() => {
     scene.background = skyColor;
@@ -85,7 +87,9 @@ export const DayCycleSky = () => {
     const values = interpolate(progress);
 
     skyColor.set(values.sky);
-    fog.color.set(values.fog);
+    // La niebla siempre toma el color del cielo para un horizonte sin costura
+    // (el agua lejana se funde con el cielo como en la realidad).
+    fog.color.set(values.sky);
 
     const editDimAmbient = editingObjectPosition ? 0.6 : 1;
     const editDimDirectional = editingObjectPosition ? 0.5 : 1;
