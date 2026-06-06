@@ -6,40 +6,26 @@ import { AppModal } from '../../molecules/AppModal';
 import { DailyCheckCountdown } from './DailyCheckCountdown';
 import { MoodMessageModalProps } from './types';
 
-const MOOD_COPY: Record<VaquitaMood, { emoji: string; title: string; message: string; cta: string }> = {
-  happy: {
-    emoji: '✨',
-    title: 'Tu vaquita está feliz',
-    message: 'Tienes tu recompensa diaria lista para recoger. Toca a tu vaquita para recogerla.',
+const MODAL_TITLE = 'Estado de tu vaquita';
+
+const MOOD_COPY: Record<VaquitaMood, { image: string; message: string; cta: string }> = {
+  excited: {
+    image: '/vaquita/moods/excited.png',
+    message: '¡Uno de tus depósitos llegó a su objetivo o tienes tu recompensa diaria lista! ¡A celebrar!',
     cta: 'Entendido',
   },
-  celebrating: {
-    emoji: '🎉',
-    title: '¡Tu vaquita está celebrando!',
-    message: 'Uno de tus depósitos llegó a su objetivo. Ya puedes retirarlo con todas sus ganancias.',
-    cta: 'Ver depósitos',
-  },
   loved: {
-    emoji: '❤',
-    title: 'Tu vaquita está enamorada',
+    image: '/vaquita/moods/loved.png',
     message: 'Tienes depósitos activos generando intereses. ¡Sigue así!',
     cta: 'Entendido',
   },
   sad: {
-    emoji: '😢',
-    title: 'Tu vaquita está triste',
+    image: '/vaquita/moods/sad.png',
     message: 'Hiciste un retiro anticipado. ¡Vuelve a depositar para alegrarla!',
     cta: 'Entendido',
   },
-  sick: {
-    emoji: '🤒',
-    title: 'Tu vaquita está enferma',
-    message: 'Algo no anda bien. Revisa tu racha o tus depósitos.',
-    cta: 'Entendido',
-  },
   normal: {
-    emoji: '🙂',
-    title: 'Tu vaquita está tranquila',
+    image: '/vaquita/moods/normal.png',
     message: 'Todo en orden por ahora.',
     cta: 'Entendido',
   },
@@ -49,9 +35,10 @@ export function MoodMessageModal({ open, onOpenChange, mood }: MoodMessageModalP
   const copy = MOOD_COPY[mood];
 
   return (
-    <AppModal open={open} onOpenChange={onOpenChange} title={copy.title} size="sm">
+    <AppModal open={open} onOpenChange={onOpenChange} title={MODAL_TITLE} size="sm">
       <div className="flex flex-col items-center text-center gap-5 py-2">
-        <span className="text-6xl">{copy.emoji}</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={copy.image} alt={mood} className="w-32 h-32 object-contain" draggable={false} />
         <p className="text-base text-black">{copy.message}</p>
         <DailyCheckCountdown />
         <Button

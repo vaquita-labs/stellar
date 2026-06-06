@@ -63,16 +63,14 @@ export const useVaquitaMood = (): VaquitaMoodInfo => {
 
     let mood: VaquitaMood = 'normal';
     if (lastEvent?.state === DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY) mood = 'sad';
-    else if (lastEvent?.state === DepositWithdrawalState.WITHDRAW_SUCCESS) mood = 'celebrating';
-    // A standing deposit means active savings — "loved", not "happy". 'happy' is
-    // reserved for a claimable daily reward so the modal's "Recoger" CTA only
-    // shows when there is actually something to collect.
+    else if (lastEvent?.state === DepositWithdrawalState.WITHDRAW_SUCCESS) mood = 'excited';
+    // A standing deposit means active savings — "loved".
     else if (lastEvent?.state === DepositWithdrawalState.DEPOSIT_SUCCESS) mood = 'loved';
 
-    // Overrides, lowest to highest priority: reaching a goal celebrates over a
-    // plain deposit, and a claimable daily reward makes her happy above all.
-    if (depositReachedGoal) mood = 'celebrating';
-    if (canCollect) mood = 'happy';
+    // Overrides, lowest to highest priority: reaching a goal and a claimable
+    // daily reward are both celebratory moments — the vaquita gets "excited".
+    if (depositReachedGoal) mood = 'excited';
+    if (canCollect) mood = 'excited';
 
     return { mood, canCollect, goldCoinsToCollect, experienceToCollect };
   }, [dailyCheck, depositsData]);

@@ -116,7 +116,7 @@ export function TutorialExperience() {
   const goNext = () => setIndex((i) => Math.min(i + 1, TUTORIAL_STEPS.length - 1));
 
   // Hace feliz a la vaquita del mapa real: sembramos useDeposits con un depósito
-  // SUCCESS fuera de lock → useVaquitaMood lo lee como 'celebrating'.
+  // SUCCESS fuera de lock → useVaquitaMood lo lee como 'excited'.
   const seedHappyVaquita = () => {
     queryClient.setQueryData(['deposit', 'network', network?.networkName, 'wallet', walletAddress], {
       deposits: [
