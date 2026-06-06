@@ -5,14 +5,22 @@ import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import { useState } from 'react';
-import { useApyByLockPeriod, useDepositsComplete } from '../../../hooks';
+import { useApyByLockPeriod, useDeposit, useDepositsComplete } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { DepositResponseDTO } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
-import { VaquitaModalContent } from '../VaquitaModal';
+import { useVaquitaDetail } from '../VaquitaModal';
 import { BankAPYModalProps } from './types';
 
-export function BankAPYModal({ open, onOpenChange, injectedDeposits, onVaquitaSelect }: BankAPYModalProps) {
+export function BankAPYModal({
+  open,
+  onOpenChange,
+  injectedDeposits,
+  simulate = false,
+  simulateInterest = 0,
+  onSimulatedWithdraw,
+  onDetailOpenChange,
+}: BankAPYModalProps) {
   const { network, lockPeriod, walletAddress, token } = useConfigStore();
   const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
   // APY real por fuente y nombre del mercado de lending (ej. Defindex).
@@ -42,16 +50,50 @@ export function BankAPYModal({ open, onOpenChange, injectedDeposits, onVaquitaSe
   // Con depósitos inyectados (tutorial) no esperamos a las queries reales.
   const isLoading = !injectedDeposits && isLoadingDeposits;
 
+  // Detalle dentro del MISMO modal (igual que la lista de depósitos): al
+  // seleccionar una vaquita pintamos su detalle aquí, con flecha de "atrás", en
+  // vez de abrir un 2º modal encima. El tutorial usa el mismo detalle inline en
+  // modo simulado (sin segundo modal).
+  const inDetail = !!selectedVaquita;
+  const { data: fullDeposit } = useDeposit(selectedVaquita?.id ?? 0);
+  // En tutorial el depósito vive en `injectedDeposits` y se recalcula en cada
+  // render (cuenta regresiva), así que tomamos la versión viva por id; en modo
+  // real refrescamos el contador con useDeposit.
+  const detailVaquita = !inDetail
+    ? null
+    : simulate
+      ? deposits.find((d) => d.id === selectedVaquita!.id) ?? selectedVaquita
+      : fullDeposit ?? selectedVaquita;
+  const backToList = () => {
+    setSelectedVaquita(null);
+    onDetailOpenChange?.(false);
+  };
+  const detail = useVaquitaDetail({
+    vaquita: detailVaquita,
+    onClose: backToList,
+    isLeaderboard: false,
+    simulate,
+    simulateInterest,
+    onSimulatedWithdraw,
+  });
+  const detailReady = inDetail && detail.ready;
+
   return (
-    <>
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      title="Bank Rewards"
-      titleIconAlt="rewards"
+      isDismissable={!detail.loading}
+      onBack={inDetail && !detail.loading ? backToList : undefined}
+      title={inDetail ? detail.title : 'Bank Rewards'}
+      titleIcon={inDetail ? '/icons/bag.svg' : undefined}
+      titleIconAlt={inDetail ? 'vaquita' : 'rewards'}
       size="lg"
+      bodyClassName={inDetail ? 'flex flex-col gap-5 pb-6' : undefined}
+      footer={detailReady ? detail.footer : undefined}
     >
-      {isLoading ? (
+      {inDetail ? (
+        detail.body
+      ) : isLoading ? (
         <div className="flex justify-center items-center py-12">
           <Spinner size="lg" color="accent" />
         </div>
@@ -148,10 +190,13 @@ export function BankAPYModal({ open, onOpenChange, injectedDeposits, onVaquitaSe
             ) : (
               <div className="space-y-2">
                 {activeDeposits.map((deposit) => (
-                  <div key={deposit.id} data-tutorial={onVaquitaSelect ? 'tutorial-vaquita-card' : undefined}>
+                  <div key={deposit.id} data-tutorial={simulate ? 'tutorial-vaquita-card' : undefined}>
                     <VaquitaDepositCard
                       deposit={deposit}
-                      onPress={() => (onVaquitaSelect ? onVaquitaSelect(deposit) : setSelectedVaquita(deposit))}
+                      onPress={() => {
+                        setSelectedVaquita(deposit);
+                        onDetailOpenChange?.(true);
+                      }}
                     />
                   </div>
                 ))}
@@ -200,13 +245,5 @@ export function BankAPYModal({ open, onOpenChange, injectedDeposits, onVaquitaSe
         </div>
       )}
     </AppModal>
-    {!onVaquitaSelect && selectedVaquita && (
-      <VaquitaModalContent
-        isOpen={!!selectedVaquita}
-        onClose={() => setSelectedVaquita(null)}
-        vaquita={selectedVaquita}
-      />
-    )}
-    </>
   );
 }
