@@ -8,23 +8,13 @@ import { useState } from 'react';
 import { formatTimeDeposit } from '../../../helpers';
 import { useDeposit, useDepositsComplete } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
-import { DepositResponseDTO } from '../../../types';
+import { DepositResponseDTO, DepositWithdrawalState } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
 import { useVaquitaDetail } from '../VaquitaModal';
 import { VaquitasListModalProps } from './types';
 
 const formatAmount = (amount: number, tokenSymbol: string) => {
   return `${amount.toFixed(2)} ${tokenSymbol}`;
-};
-
-const formatDate = (timestamp: number) => {
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 };
 
 type TabId = 'active' | 'withdrawn';
@@ -63,8 +53,8 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
       return (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <Image src="/no_data.svg" alt="No data" width={120} height={120} />
-          <p className="text-gray-500 mt-4">No vaquitas yet</p>
-          <p className="text-gray-400 text-sm">Make your first deposit to create a vaquita</p>
+          <p className="text-gray-500 mt-4">No deposits yet</p>
+          <p className="text-gray-400 text-sm">Make your first deposit to get started</p>
         </div>
       );
     }
@@ -115,7 +105,7 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
             {activeDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Image src="/no_data.svg" alt="No data" width={100} height={100} />
-                <p className="text-gray-500 mt-4">No active vaquitas</p>
+                <p className="text-gray-500 mt-4">No active deposits</p>
               </div>
             ) : (
               activeDeposits.map((deposit) => (
@@ -132,40 +122,55 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
             {withdrawnDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Image src="/no_data.svg" alt="No data" width={100} height={100} />
-                <p className="text-gray-500 mt-4">No withdrawn vaquitas</p>
+                <p className="text-gray-500 mt-4">No withdrawn deposits</p>
               </div>
             ) : (
-              withdrawnDeposits.map((deposit) => (
-                <Card key={deposit.id} className="border border-black border-b-2 bg-white rounded-md">
-                  <Card.Content className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <Image
-                            src="/vaquita_working.jpg"
-                            alt="Vaquita"
-                            width={40}
-                            height={40}
-                            className="rounded-full opacity-60"
-                          />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-black">
-                            {formatAmount(deposit.amount, deposit.tokenSymbol)}
-                          </p>
-                          <p className="text-sm text-gray-600">{formatTimeDeposit(deposit.lockPeriod)}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="inline-block mb-2 px-2 py-0.5 rounded-full bg-default-100 text-default-600 text-xs font-bold">
-                          Withdrawn
+              withdrawnDeposits.map((deposit) => {
+                const isEarly = deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY;
+                const earnings =
+                  (deposit.vaquitaInterest ?? 0) +
+                  (deposit.protocolInterest ?? 0) +
+                  (deposit.blendInterest ?? 0);
+                return (
+                  <Card
+                    key={deposit.id}
+                    onClick={() => setSelectedVaquita(deposit)}
+                    className={
+                      'border border-black border-b-2 rounded-md cursor-pointer active:translate-y-0.5 transition-all ' +
+                      (isEarly ? 'bg-default-100 hover:bg-default-200' : 'bg-success/15 hover:bg-success/25')
+                    }
+                  >
+                    <Card.Content className="px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-bold text-black leading-tight truncate">
+                          {formatAmount(deposit.amount, deposit.tokenSymbol)}
+                        </p>
+                        <span
+                          className={
+                            'shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ' +
+                            (isEarly ? 'bg-default-500 text-white' : 'bg-success text-white')
+                          }
+                        >
+                          {isEarly ? 'Withdrawn early' : 'Withdrawn'}
                         </span>
-                        <p className="text-xs text-gray-500">{formatDate(deposit.createdTimestamp)}</p>
                       </div>
-                    </div>
-                  </Card.Content>
-                </Card>
-              ))
+                      <p className="text-xs text-gray-600 mt-0.5">{formatTimeDeposit(deposit.lockPeriod)}</p>
+                      <div className="mt-1.5 pt-1.5 border-t border-black/10 flex items-center justify-between">
+                        <span className="text-xs text-gray-600">{isEarly ? 'Rewards forfeited' : 'Earned'}</span>
+                        <span
+                          className={
+                            'text-sm font-bold tabular-nums ' +
+                            (isEarly ? 'text-default-500 line-through' : 'text-success')
+                          }
+                        >
+                          {isEarly ? '−' : '+'}
+                          {earnings.toFixed(2)} {deposit.tokenSymbol}
+                        </span>
+                      </div>
+                    </Card.Content>
+                  </Card>
+                );
+              })
             )}
           </div>
         )}
