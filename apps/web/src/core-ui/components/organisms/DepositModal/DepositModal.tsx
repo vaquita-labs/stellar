@@ -21,7 +21,6 @@ import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
 import { TokenSymbol } from '../../molecules/MoneyInput/types';
-import { TestnetUSDCNotice } from '../TestnetUSDCNotice';
 import { DepositModalProps } from './types';
 
 export function DepositModal({
@@ -211,9 +210,6 @@ export function DepositModal({
         </Button>
       }
     >
-          {!!network && !!token && (
-            <TestnetUSDCNotice networkName={network.networkName} tokenContract={token.contractAddress} />
-          )}
           <Select
             isRequired
             value={effectiveLockPeriod.toString()}
