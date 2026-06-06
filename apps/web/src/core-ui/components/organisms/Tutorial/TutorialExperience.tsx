@@ -3,7 +3,7 @@
 import { Button as HeroButton, Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import {
@@ -18,10 +18,12 @@ import { WorldMap } from '../../templates';
 import { BankAPYModal } from '../BankAPYModal';
 import { DepositModal } from '../DepositModal';
 import { TutorialOverlay } from './TutorialOverlay';
+import { TutorialPatienceModal } from './TutorialPatienceModal';
 import { TutorialRing } from './TutorialRing';
 import {
   TUTORIAL_ANCHOR_SAVE,
   TUTORIAL_ANCHOR_VAQUITA_CARD,
+  TUTORIAL_ANCHOR_WITHDRAW,
   TUTORIAL_DEFAULT_AMOUNT,
   TUTORIAL_LOCK_MS,
   TUTORIAL_STEPS,
@@ -51,6 +53,12 @@ export function TutorialExperience() {
   // segundo modal). Esto solo refleja si ese detalle está abierto, para ocultar
   // el anillo guía y avanzar el paso al volver a la lista.
   const [detailOpen, setDetailOpen] = useState(false);
+  // Aviso "Patience pays off" mostrado SOBRE la pantalla de confirmación de
+  // retiro anticipado (cuando el usuario intenta retirar antes de tiempo).
+  const [showPatience, setShowPatience] = useState(false);
+  // Una vez visto el aviso, dejamos de forzar el toque en Withdraw para que el
+  // usuario pueda cancelar y seguir esperando el timer.
+  const [patienceAcked, setPatienceAcked] = useState(false);
   const [finishing, setFinishing] = useState(false);
   // Momento en que el lock llegó a 0: mostramos la vaquita feliz en el mapa
   // unos segundos antes de pasar a la pantalla "Time's up".
@@ -156,15 +164,39 @@ export function TutorialExperience() {
     router.replace('/home');
   };
 
-  // El detalle inline del Bank Rewards se abrió/cerró. En el primer vistazo
-  // (find-deposit), al volver del detalle a la lista cerramos el banco y vamos a
-  // la pantalla "But if you wait…" (el cronómetro arranca ahí).
+  // Cierra el banco y avanza a "But if you wait…". Tras ver el aviso de
+  // paciencia, CUALQUIER salida del detalle/confirmación (X, atrás o Cancel)
+  // debe avanzar el tutorial. Como esas salidas pueden disparar más de un
+  // callback a la vez, el ref evita un doble goNext (que saltaría un paso).
+  const findAdvancedRef = useRef(false);
+  const exitFindDepositToNext = () => {
+    if (step.id !== 'find-deposit' || findAdvancedRef.current) return;
+    findAdvancedRef.current = true;
+    setShowPatience(false);
+    setPatienceAcked(false);
+    setDetailOpen(false);
+    setBankOpen(false);
+    goNext();
+  };
+
+  // El detalle inline del Bank Rewards se abrió/cerró. Tras ver el aviso, volver
+  // a la lista (atrás / Cancel del detalle) avanza el tutorial.
   const handleDetailOpenChange = (inDetail: boolean) => {
     setDetailOpen(inDetail);
-    if (!inDetail && step.id === 'find-deposit') {
-      setBankOpen(false);
-      goNext();
+    if (!inDetail && patienceAcked) exitFindDepositToNext();
+  };
+
+  // Cuando el usuario llega a "Confirm withdrawal" intentando retirar antes de
+  // tiempo (paso find-deposit, depósito aún bloqueado) mostramos el aviso de
+  // paciencia encima. En 'ready' el retiro es a tiempo, así que no aplica. Si
+  // sale de la confirmación (Cancel) ya habiendo visto el aviso, avanzamos.
+  const handleConfirmingChange = (isConfirming: boolean) => {
+    if (isConfirming) {
+      setShowPatience(step.id === 'find-deposit');
+      return;
     }
+    setShowPatience(false);
+    if (patienceAcked) exitFindDepositToNext();
   };
 
   const onPrimary = () => {
@@ -182,6 +214,9 @@ export function TutorialExperience() {
         break;
       }
       case 'find-deposit':
+        findAdvancedRef.current = false;
+        setBankOpen(true);
+        break;
       case 'ready':
         setBankOpen(true);
         break;
@@ -266,8 +301,15 @@ export function TutorialExperience() {
         <BankAPYModal
           open={bankOpen}
           onOpenChange={() => {
+            // Tras ver el aviso, cerrar el banco con la X también avanza.
+            if (step.id === 'find-deposit' && patienceAcked) {
+              exitFindDepositToNext();
+              return;
+            }
             setBankOpen(false);
             setDetailOpen(false);
+            setShowPatience(false);
+            setPatienceAcked(false);
           }}
           injectedDeposits={[simulatedDeposit]}
           simulate
@@ -278,11 +320,31 @@ export function TutorialExperience() {
             goNext();
           }}
           onDetailOpenChange={handleDetailOpenChange}
+          onConfirmingChange={handleConfirmingChange}
+          lockToWithdraw={step.id === 'find-deposit' && detailOpen && !patienceAcked}
+        />
+      )}
+
+      {/* Aviso "Patience pays off" SOBRE la confirmación de retiro anticipado */}
+      {bankOpen && showPatience && (
+        <TutorialPatienceModal
+          amount={amount}
+          interest={interest}
+          onAck={() => {
+            setShowPatience(false);
+            setPatienceAcked(true);
+          }}
         />
       )}
 
       {/* Guía (sin texto): resalta el depósito para tocarlo dentro del modal */}
       {bankOpen && !detailOpen && <TutorialRing selector={`[data-tutorial="${TUTORIAL_ANCHOR_VAQUITA_CARD}"]`} />}
+
+      {/* En find-deposit forzamos el toque en Withdraw (para llegar al aviso de
+          paciencia). Tras verlo dejamos de insistir para que pueda cancelar. */}
+      {bankOpen && detailOpen && step.id === 'find-deposit' && !showPatience && !patienceAcked && (
+        <TutorialRing selector={`[data-tutorial="${TUTORIAL_ANCHOR_WITHDRAW}"]`} />
+      )}
 
       {/* Capa de coachmarks (oculta mientras hay un modal abierto) */}
       {!anyModalOpen && (
