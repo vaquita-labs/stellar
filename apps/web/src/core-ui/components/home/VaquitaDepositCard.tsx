@@ -48,25 +48,25 @@ export const VaquitaDepositCard = ({
   const isInteractive = !!onPress;
 
   const cardClasses = isLocked
-    ? 'border border-slate-300 border-b-2 bg-slate-50'
-    : 'border border-success/50 border-b-2 bg-success/10';
+    ? 'border border-black border-b-2 bg-white'
+    : 'border border-success border-b-2 bg-success/10';
   const hoverClasses = isInteractive
-    ? (isLocked ? 'hover:bg-slate-100' : 'hover:bg-success/20') +
+    ? (isLocked ? 'hover:bg-default-100' : 'hover:bg-success/20') +
       ' cursor-pointer active:translate-y-0.5 transition-all'
     : '';
-  const trackClasses = isLocked ? 'bg-slate-200' : 'bg-success/20';
+  const trackClasses = isLocked ? 'bg-default-100' : 'bg-success/20';
   const fillClasses = 'bg-success';
   const displayProgress = Math.max(progress, 0.08);
 
   return (
-    <Card className={`${cardClasses} ${hoverClasses} rounded-xl`} onClick={onPress}>
+    <Card className={`${cardClasses} ${hoverClasses} rounded-md`} onClick={onPress}>
       <Card.Content className="px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-bold text-black leading-tight truncate">
             {formatAmount(deposit.amount, deposit.tokenSymbol)}
           </p>
           {isLocked ? (
-            <span className="inline-flex items-center gap-1 shrink-0 bg-slate-700 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 shrink-0 bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
               <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 1a4 4 0 0 0-4 4v3H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1V5a4 4 0 0 0-4-4Zm2 7V5a2 2 0 1 0-4 0v3h4Z" clipRule="evenodd" />
               </svg>
@@ -87,7 +87,7 @@ export const VaquitaDepositCard = ({
           {isLocked && (
             <>
               {' · '}
-              <span className="font-semibold text-slate-700">{formatRemaining(remainingMs)}</span>
+              <span className="font-semibold text-black">{formatRemaining(remainingMs)}</span>
             </>
           )}
         </p>

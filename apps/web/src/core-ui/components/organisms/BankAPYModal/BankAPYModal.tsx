@@ -2,7 +2,6 @@
 
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { isStellarNetwork } from '@/networks/stellar/helpers';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -15,32 +14,33 @@ import { BankAPYModalProps } from './types';
 
 export function BankAPYModal({ open, onOpenChange, injectedDeposits, onVaquitaSelect }: BankAPYModalProps) {
   const { network, lockPeriod, walletAddress, token } = useConfigStore();
-  const { data: dataApy, isLoading: isLoadingApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
   const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
+  // APY real por fuente y nombre del mercado de lending (ej. Defindex).
+  const { data: dataApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
+  const lendingMarketName = dataApy?.lendingMarketName ?? '';
+  const vaquitaApy = dataApy?.vaquitaApy ?? 0;
+  const protocolApy = dataApy?.protocolApy ?? 0;
 
-  const [showBreakdown, setShowBreakdown] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showEarningsInfo, setShowEarningsInfo] = useState(false);
   const [selectedVaquita, setSelectedVaquita] = useState<DepositResponseDTO | null>(null);
 
   // En modo tutorial mostramos un depósito inyectado en vez de los reales.
   const sourceDeposits = injectedDeposits ?? depositsData?.deposits ?? [];
 
-  const protocolApy = dataApy?.protocolApy ?? 0;
-  const vaquitaApy = dataApy?.vaquitaApy ?? 0;
-  const networkLabel = dataApy?.lendingMarketName ?? '';
-  const totalApy = vaquitaApy + protocolApy;
-  const hasProtocolApy = !!networkLabel && protocolApy >= 0;
-
   const { deposits, activeDeposits, activeDepositsTotalAmount } = getDepositsData(sourceDeposits);
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
-  const estimatedAnnualReturn = activeDepositsTotalAmount * (totalApy / 100);
-  const totalEstimatedEarnings = activeDeposits.reduce(
-    (acc, d) => acc + (d.vaquitaInterest ?? 0) + (d.protocolInterest ?? 0) + (d.blendInterest ?? 0),
+  // Ganancias acumuladas hasta el momento (no la proyección anual), desglosadas
+  // por su origen para el detalle expandible.
+  const vaquitaEarnings = activeDeposits.reduce((acc, d) => acc + (d.vaquitaInterest ?? 0), 0);
+  const protocolEarnings = activeDeposits.reduce(
+    (acc, d) => acc + (d.protocolInterest ?? 0) + (d.blendInterest ?? 0),
     0,
   );
+  const totalEstimatedEarnings = vaquitaEarnings + protocolEarnings;
 
   // Con depósitos inyectados (tutorial) no esperamos a las queries reales.
-  const isLoading = !injectedDeposits && (isLoadingApy || isLoadingDeposits);
+  const isLoading = !injectedDeposits && isLoadingDeposits;
 
   return (
     <>
@@ -48,7 +48,6 @@ export function BankAPYModal({ open, onOpenChange, injectedDeposits, onVaquitaSe
       open={open}
       onOpenChange={onOpenChange}
       title="Bank Rewards"
-      titleIcon="/icons/medal.svg"
       titleIconAlt="rewards"
       size="lg"
     >
@@ -58,93 +57,93 @@ export function BankAPYModal({ open, onOpenChange, injectedDeposits, onVaquitaSe
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="border border-success border-b-2 rounded-xl bg-success/10 overflow-hidden">
+          {/* Métrica principal: total depositado (lo más grande) */}
+          <div className="border border-black border-b-2 rounded-xl bg-primary/10 p-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Image src="/icons/bag.svg" alt="bag" width={18} height={18} />
+              <p className="text-xs text-primary font-semibold uppercase tracking-wide">My deposits</p>
+            </div>
+            <p className="text-4xl font-bold text-primary leading-tight">
+              {activeDepositsTotalAmount.toFixed(2)}
+              <span className="text-lg ml-1 font-semibold">{tokenSymbol}</span>
+            </p>
+          </div>
+
+          {/* Segunda métrica: ganancias ganadas hasta ahora, con desglose */}
+          <div className="border border-black border-b-2 rounded-xl bg-success/10 overflow-hidden">
             <button
               type="button"
-              onClick={() => setShowBreakdown((v) => !v)}
-              className="w-full flex items-center justify-between gap-3 p-4 hover:bg-success/5 transition-colors"
+              onClick={() => setShowEarningsInfo((v) => !v)}
+              className="w-full flex items-center justify-between gap-3 p-4 hover:bg-success/5 transition-colors text-left"
             >
-              <div className="text-left">
+              <div>
                 <p className="text-xs text-success/80 font-semibold uppercase tracking-wide">
-                  Estimated annual return
+                  Estimated earnings total
                 </p>
-                <p className="text-3xl font-bold text-success leading-tight">
-                  {estimatedAnnualReturn.toFixed(2)}
-                  <span className="text-base ml-1 font-semibold">{tokenSymbol}</span>
+                <p className="text-2xl font-bold text-success leading-tight">
+                  {totalEstimatedEarnings.toFixed(2)}
+                  <span className="text-sm ml-1 font-semibold">{tokenSymbol}</span>
                 </p>
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-success font-semibold">
-                <span>{showBreakdown ? 'Hide' : 'Breakdown'}</span>
-                <span className={'transition-transform ' + (showBreakdown ? 'rotate-180' : '')}>▾</span>
+              <div className="flex items-center gap-1.5 text-xs text-success font-semibold shrink-0">
+                <span>{showEarningsInfo ? 'Hide' : 'Details'}</span>
+                <span className={'transition-transform ' + (showEarningsInfo ? 'rotate-180' : '')}>▾</span>
               </div>
             </button>
-            {showBreakdown && (
-              <div className="border-t border-success/30 px-4 py-3 space-y-3 bg-white/60">
+            {showEarningsInfo && (
+              <div className="border-t border-black/10 px-4 py-3 space-y-3 bg-white/60">
                 <div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-                      <span className="text-sm font-medium text-black">Vaquita APY</span>
+                      <span className="text-sm font-medium text-black">Vaquita rewards</span>
+                      <span className="text-[10px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded-full">
+                        {vaquitaApy.toFixed(2)}% APY
+                      </span>
                     </div>
-                    <span className="text-sm font-bold text-primary">{vaquitaApy.toFixed(2)}%</span>
+                    <span className="text-sm font-bold text-black tabular-nums">
+                      +{vaquitaEarnings.toFixed(2)} {tokenSymbol}
+                    </span>
                   </div>
                   <p className="text-xs text-gray-600 ml-5 mt-0.5">
                     Rewards from the Vaquita community pool, based on your lock period.
                   </p>
                 </div>
-                {hasProtocolApy && (
-                  <div className="pt-3 border-t border-success/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
-                        <span className="text-sm font-medium text-black">{networkLabel} APY</span>
-                      </div>
-                      <span className="text-sm font-bold text-purple-600">{protocolApy.toFixed(2)}%</span>
+                <div className="pt-3 border-t border-black/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-success" />
+                      <span className="text-sm font-medium text-black">
+                        {lendingMarketName ? `${lendingMarketName} rewards` : 'Protocol rewards'}
+                      </span>
+                      <span className="text-[10px] font-bold text-success bg-success/15 px-1.5 py-0.5 rounded-full">
+                        {protocolApy.toFixed(2)}% APY
+                      </span>
                     </div>
-                    <p className="text-xs text-gray-600 ml-5 mt-0.5">
-                      Yield from {networkLabel} lending protocol where your funds are deposited.
-                    </p>
+                    <span className="text-sm font-bold text-black tabular-nums">
+                      +{protocolEarnings.toFixed(2)} {tokenSymbol}
+                    </span>
                   </div>
-                )}
-                {network?.networkName && isStellarNetwork(network.networkName) && dataApy?.interestModelNote ? (
-                  <p className="text-xs text-gray-500 leading-snug pt-3 border-t border-success/20">
-                    {dataApy.interestModelNote}
+                  <p className="text-xs text-gray-600 ml-5 mt-0.5">
+                    Yield from {lendingMarketName || 'the lending protocol'} where your funds are deposited.
                   </p>
-                ) : null}
+                </div>
+                <p className="text-xs text-gray-500 leading-snug pt-3 border-t border-black/10">
+                  These are estimates and update over time — final rewards are confirmed when you withdraw.
+                </p>
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="border border-primary border-b-2 rounded-xl bg-primary/10 p-3 text-center">
-              <div className="flex items-center justify-center gap-1.5 mb-1">
-                <Image src="/icons/bag.svg" alt="bag" width={18} height={18} />
-                <p className="text-xs text-primary font-semibold">My deposits</p>
-              </div>
-              <p className="text-lg font-bold text-primary leading-tight">
-                {activeDepositsTotalAmount.toFixed(2)}
-                <span className="text-xs ml-1 font-semibold">{tokenSymbol}</span>
-              </p>
-            </div>
-            <div className="border border-black/15 border-b-2 rounded-xl bg-black/5 p-3 text-center">
-              <p className="text-xs text-black/60 font-semibold mb-1">Estimated earnings total</p>
-              <p className="text-lg font-bold text-black leading-tight">
-                {totalEstimatedEarnings.toFixed(2)}
-                <span className="text-xs ml-1 font-semibold">{tokenSymbol}</span>
-              </p>
-            </div>
-          </div>
-
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Image src="/icons/deposits.svg" alt="deposits" width={20} height={20} />
-              <h3 className="text-sm font-bold text-black">My Vaquitas</h3>
+              <h3 className="text-sm font-bold text-black">My deposits</h3>
               <span className="text-xs text-gray-500">({activeDeposits.length})</span>
             </div>
             {activeDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
                 <Image src="/no_data.svg" alt="No data" width={80} height={80} />
-                <p className="text-gray-500 text-sm mt-2">No active vaquitas</p>
+                <p className="text-gray-500 text-sm mt-2">No active deposits</p>
               </div>
             ) : (
               <div className="space-y-2">
