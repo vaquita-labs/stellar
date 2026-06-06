@@ -69,6 +69,11 @@ export interface UseVaquitaDetailParams {
   simulateInterest?: number;
   /** Llamado tras un retiro simulado exitoso. */
   onSimulatedWithdraw?: () => void;
+  /**
+   * Modo tutorial: bloquea el botón Cancel/Close del detalle para forzar el
+   * toque en Withdraw (el único accionable en ese paso).
+   */
+  lockClose?: boolean;
 }
 
 export interface VaquitaDetailView {
@@ -79,6 +84,8 @@ export interface VaquitaDetailView {
   loading: boolean;
   /** Ya montado en cliente (evita desajustes de hidratación por el reloj). */
   ready: boolean;
+  /** Está en la pantalla de "Confirm withdrawal" (paso de confirmar el retiro). */
+  isConfirming: boolean;
 }
 
 /**
@@ -94,6 +101,7 @@ export const useVaquitaDetail = ({
   simulate = false,
   simulateInterest = 0,
   onSimulatedWithdraw,
+  lockClose = false,
 }: UseVaquitaDetailParams): VaquitaDetailView => {
   const deposit = vaquita ?? EMPTY_DEPOSIT;
   const [confirming, setConfirming] = useState<number | null>(null);
@@ -216,23 +224,27 @@ export const useVaquitaDetail = ({
       <Button
         onPress={onClose}
         className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md font-semibold"
-        isDisabled={loading}
+        isDisabled={loading || lockClose}
       >
         {withWithdrawButton ? <T>Cancel</T> : <T>Close</T>}
       </Button>
       {withWithdrawButton && (
-        <Button
-          onPress={() => setConfirming(deposit.id)}
-          className={
-            'flex-1 rounded-md font-bold text-black border border-black border-b-2 ' +
-            (inLockPeriod
-              ? 'bg-transparent hover:bg-warning-soft'
-              : 'bg-success border-[#018222] border-b-5')
-          }
-          isDisabled={isDisabled}
-        >
-          <T>Withdraw</T>
-        </Button>
+        // En tutorial marcamos el botón para que el anillo guía pueda forzar el
+        // toque en Withdraw (y así llegar a la confirmación / aviso de paciencia).
+        <div className="flex flex-1" data-tutorial={simulate ? 'tutorial-withdraw' : undefined}>
+          <Button
+            onPress={() => setConfirming(deposit.id)}
+            className={
+              'flex-1 rounded-md font-bold text-black border border-black border-b-2 ' +
+              (inLockPeriod
+                ? 'bg-transparent hover:bg-warning-soft'
+                : 'bg-success border-[#018222] border-b-5')
+            }
+            isDisabled={isDisabled}
+          >
+            <T>Withdraw</T>
+          </Button>
+        </div>
       )}
       {withdrawProcessing && (
         <Button
@@ -489,5 +501,6 @@ export const useVaquitaDetail = ({
     footer: isWithdrawn ? withdrawnFooter : isConfirming ? confirmFooter : detailsFooter,
     loading,
     ready: mounted,
+    isConfirming,
   };
 };

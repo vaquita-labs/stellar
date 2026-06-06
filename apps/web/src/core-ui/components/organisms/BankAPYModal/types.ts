@@ -23,4 +23,14 @@ export type BankAPYModalProps = {
    * para coordinar el anillo guía y el avance de pasos.
    */
   onDetailOpenChange?: (inDetail: boolean) => void;
+  /**
+   * Notifica al orquestador (tutorial) cuando se entra/sale de la pantalla de
+   * "Confirm withdrawal", para mostrar el aviso de paciencia encima.
+   */
+  onConfirmingChange?: (isConfirming: boolean) => void;
+  /**
+   * Modo tutorial: bloquea todo en el detalle (back, X, cerrar tocando afuera y
+   * el botón Cancel) dejando SOLO el botón Withdraw accionable.
+   */
+  lockToWithdraw?: boolean;
 };

@@ -4,7 +4,7 @@ import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApyByLockPeriod, useDeposit, useDepositsComplete } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { DepositResponseDTO } from '../../../types';
@@ -20,6 +20,8 @@ export function BankAPYModal({
   simulateInterest = 0,
   onSimulatedWithdraw,
   onDetailOpenChange,
+  onConfirmingChange,
+  lockToWithdraw = false,
 }: BankAPYModalProps) {
   const { network, lockPeriod, walletAddress, token } = useConfigStore();
   const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
@@ -75,15 +77,26 @@ export function BankAPYModal({
     simulate,
     simulateInterest,
     onSimulatedWithdraw,
+    // Bloquea el Cancel del detalle (solo aplica a la pantalla de detalle; la de
+    // confirmación usa otro footer, donde el Cancel sigue habilitado).
+    lockClose: lockToWithdraw,
   });
   const detailReady = inDetail && detail.ready;
+
+  // Avisamos al orquestador (tutorial) cuando se entra/sale de "Confirm
+  // withdrawal" para que muestre el aviso de paciencia encima.
+  useEffect(() => {
+    onConfirmingChange?.(inDetail && detail.isConfirming);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inDetail, detail.isConfirming]);
 
   return (
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      isDismissable={!detail.loading}
-      onBack={inDetail && !detail.loading ? backToList : undefined}
+      isDismissable={!detail.loading && !lockToWithdraw}
+      hideClose={lockToWithdraw}
+      onBack={inDetail && !detail.loading && !lockToWithdraw ? backToList : undefined}
       title={inDetail ? detail.title : 'Bank Rewards'}
       titleIcon={inDetail ? '/icons/bag.svg' : undefined}
       titleIconAlt={inDetail ? 'vaquita' : 'rewards'}

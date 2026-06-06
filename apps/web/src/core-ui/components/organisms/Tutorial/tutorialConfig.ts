@@ -53,10 +53,22 @@ export const tutorialInterest = (amount: number) => amount * TUTORIAL_INTEREST_R
 export const TUTORIAL_ANCHOR_SAVE = 'tutorial-save';
 export const TUTORIAL_ANCHOR_BALANCE = 'tutorial-balance';
 export const TUTORIAL_ANCHOR_VAQUITA_CARD = 'tutorial-vaquita-card';
+export const TUTORIAL_ANCHOR_WITHDRAW = 'tutorial-withdraw';
 
 /** Formato de moneda compartido por las tarjetas del tutorial. */
 export const formatTutorialMoney = (n: number) =>
   `${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${TUTORIAL_CURRENCY}`;
+
+/**
+ * Copy del aviso "Patience pays off". Ya no es un paso propio: se muestra POR
+ * ENCIMA de la pantalla de confirmación de retiro anticipado (cuando el usuario
+ * intenta retirar antes de tiempo dentro del banco) para empujarlo a cancelar.
+ */
+export const TUTORIAL_PATIENCE = {
+  title: 'Patience pays off',
+  body: 'Withdraw too early and you lose the interest. Wait for the timer.',
+  cta: 'Got it',
+};
 
 const SPOT_SAVE = `[data-tutorial="${TUTORIAL_ANCHOR_SAVE}"]`;
 const SPOT_BALANCE = `[data-tutorial="${TUTORIAL_ANCHOR_BALANCE}"]`;
@@ -85,13 +97,6 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Find your savings',
     body: 'Tap your balance up top, then tap your vaquita.',
     cta: 'Open savings',
-  },
-  {
-    id: 'patience',
-    kind: 'warn',
-    title: 'Patience pays off',
-    body: 'Withdraw too early and you lose the interest. Wait for the timer.',
-    cta: 'Got it',
   },
   {
     id: 'wait-intro',
