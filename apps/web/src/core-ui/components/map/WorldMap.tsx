@@ -14,7 +14,6 @@ import { MapObjects } from '../templates/WorldMap/map/MapObjects';
 import { SceneCamera } from '../templates/WorldMap/map/SceneCamera';
 import { SceneControls } from '../templates/WorldMap/map/SceneControls';
 import { WaterBackground } from '../templates/WorldMap/map/WaterBackground';
-// import { CloudSkybox } from './CloudSkybox';
 import { DayCycleSky } from './DayCycleSky';
 import { EditGrid } from './EditGrid';
 import { Ground } from './Ground';
@@ -114,9 +113,6 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
         className="h-dvh"
         key={`${width}_${height}_${JSON.stringify(tiles || [])}`}
       >
-        {/* TODO: Check this later, maybe we can remove it */}
-        {/* <CloudSkybox /> */}
-        {/* <Waterfall mapObjects={currentTiles} worldType={worldType} /> */}
         <DayCycleSky />
         <SceneCamera center={center} />
         <EditGrid />
@@ -140,12 +136,6 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
             </Text>
           </Billboard>
         )}
-        {/* TODO: Check this later */}
-        {/*<VaquitasInstanced*/}
-        {/*  deposits={deposits}*/}
-        {/*  onSelect={(vaquita) => setSelectedCow(vaquita)}*/}
-        {/*  tokenSymbol={tokenSymbol}*/}
-        {/*/>*/}
         <SceneControls center={center} />
         <SpotlightPositionUpdater />
         <TileSpotlightUpdater />
