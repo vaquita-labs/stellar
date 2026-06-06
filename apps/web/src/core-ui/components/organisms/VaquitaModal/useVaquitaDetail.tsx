@@ -122,10 +122,19 @@ export const useVaquitaDetail = ({
   const isDisabled = simulate ? false : !network || !transactionWithdraw;
   const inLockPeriod = simulate ? !withdrawalInfo.canWithdraw : deposit.inLockPeriod;
   const isConfirming = confirming === deposit.id && confirming !== null;
+  const isEarlyWithdrawn = deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY;
+  const isWithdrawn = isEarlyWithdrawn || deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS;
   const withWithdrawButton = !isLeaderboard && deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS;
   const withdrawProcessing = deposit.state === DepositWithdrawalState.WITHDRAW_PROCESSING;
   const time = breakdownTime(withdrawalInfo.timeRemaining);
   const finalAmount = inLockPeriod ? deposit.amount : deposit.amount + totalInterest;
+
+  // Para depósitos retirados mostramos el valor real guardado (lo ganado), no
+  // la estimación en vivo del APY.
+  const storedTotal =
+    (deposit.vaquitaInterest ?? 0) + (deposit.protocolInterest ?? 0) + (deposit.blendInterest ?? 0);
+  const withdrawnTimestamp =
+    deposit.withdrawals?.[deposit.withdrawals.length - 1]?.confirmedTimestamp || deposit.updatedTimestamp;
 
   const onWithdraw = async () => {
     if (isDisabled) return;
@@ -397,10 +406,87 @@ export const useVaquitaDetail = ({
     </div>
   );
 
+  // Detalle de un depósito ya retirado: solo lectura, mostrando lo ganado
+  // (a tiempo, verde) o lo perdido por retirar antes (early, plomo).
+  const withdrawnBody = (
+    <div className="flex flex-col gap-5">
+      {isEarlyWithdrawn ? (
+        <div className="flex items-center gap-3 bg-default-100 border border-black border-b-2 rounded-md px-4 py-3">
+          <FiAlertTriangle className="w-5 h-5 text-default-500 shrink-0" />
+          <div>
+            <p className="font-bold text-black">Withdrawn early</p>
+            <p className="text-xs text-default-600">
+              You withdrew before the lock ended, so the rewards were forfeited.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 bg-success/10 border border-success border-b-2 rounded-md px-4 py-3">
+          <FiCheckCircle className="w-5 h-5 text-success shrink-0" />
+          <div>
+            <p className="font-bold text-black">Withdrawn on time</p>
+            <p className="text-xs text-default-600">
+              You completed the full lock period and kept your rewards.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-3xl font-bold text-black tabular-nums">
+          {deposit.amount.toFixed(2)} {token?.symbol}
+        </span>
+        {isEarlyWithdrawn ? (
+          <span className="text-xs text-default-500">Deposited amount returned</span>
+        ) : (
+          <span className="text-sm font-semibold text-success tabular-nums">
+            +{storedTotal.toFixed(2)} {token?.symbol} earned
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1 text-xs text-default-500">
+        <div className="flex items-center justify-between">
+          <span>Started at</span>
+          <span className="tabular-nums">
+            {new Date(deposit.createdTimestamp).toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Withdrawn at</span>
+          <span className="tabular-nums">
+            {new Date(withdrawnTimestamp).toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const withdrawnFooter = (
+    <div className="flex w-full">
+      <Button
+        onPress={onClose}
+        className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md font-semibold"
+      >
+        <T>Close</T>
+      </Button>
+    </div>
+  );
+
   return {
-    title: isConfirming ? 'Confirm withdrawal' : 'Your deposit',
-    body: isConfirming ? confirmBody : detailBody,
-    footer: isConfirming ? confirmFooter : detailsFooter,
+    title: isWithdrawn ? 'Your deposit' : isConfirming ? 'Confirm withdrawal' : 'Your deposit',
+    body: isWithdrawn ? withdrawnBody : isConfirming ? confirmBody : detailBody,
+    footer: isWithdrawn ? withdrawnFooter : isConfirming ? confirmFooter : detailsFooter,
     loading,
     ready: mounted,
   };
