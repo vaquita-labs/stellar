@@ -10,8 +10,8 @@ const MOOD_COPY: Record<VaquitaMood, { emoji: string; title: string; message: st
   happy: {
     emoji: '✨',
     title: 'Tu vaquita está feliz',
-    message: 'Tienes tu recompensa diaria lista para recoger.',
-    cta: 'Recoger',
+    message: 'Tienes tu recompensa diaria lista para recoger. Toca a tu vaquita para recogerla.',
+    cta: 'Entendido',
   },
   celebrating: {
     emoji: '🎉',

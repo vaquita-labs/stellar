@@ -21,6 +21,7 @@ export function HomePage() {
   const isEditingMap = useMapStore((store) => store.isEditingMap);
   const setIsEditingMap = useMapStore((store) => store.setIsEditingMap);
   const setEditMode = useMapStore((store) => store.setEditMode);
+  const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
 
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const [coinAnimationTarget, setCoinAnimationTarget] = useState<{ x: number; y: number } | null>(null);
@@ -50,6 +51,7 @@ export function HomePage() {
   const handleEditPanelsClose = () => {
     setIsEditingMap(false);
     setEditMode(null);
+    setEditingObjectPosition(null);
   };
 
   return (

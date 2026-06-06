@@ -4,6 +4,7 @@ import { useRestWithdrawal } from '@/core-ui/hooks';
 import { isNewDepositHandled } from '@/networks/helpers';
 import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import { Button, Spinner, toast } from '@heroui/react';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { useApyByLockPeriod, useTransactions, useWithdrawalTime } from '../../../hooks';
@@ -113,14 +114,26 @@ export const VaquitaModalContent = ({
       }
     }
     if (isSuccess) {
-      toast.success(<T>Withdraw sent successfully</T>, {
-        description: <T>If you see a vaquita blinking, it is your withdraw that is still being confirmed.</T>,
-        timeout: 60000,
+      toast.success(<T>Withdrawal successful!</T>, {
+        indicator: (
+          <Image
+            src="/icons/global/coin.png"
+            alt=""
+            width={30}
+            height={30}
+            className="drop-shadow-sm"
+          />
+        ),
+        description: (
+          <T>Your money is on its way! This may take a few seconds. Everything will be ready in a moment.</T>
+        ),
+        timeout: 6000,
       });
       onClose();
     } else {
       const poolMsg = parsePoolErrorMessage(lastError);
-      toast.danger(<T>Unsuccessful withdraw</T>, {
+      toast.danger(<T>Withdrawal didn&apos;t go through</T>, {
+        indicator: <Image src="/vaquita/error.svg" alt="" width={32} height={32} />,
         description: poolMsg
           ? <T>{poolMsg}</T>
           : lastError instanceof Error

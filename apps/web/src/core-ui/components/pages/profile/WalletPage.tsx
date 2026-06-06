@@ -4,7 +4,7 @@ import { usePollar } from '@pollar/react';
 import { toast } from '@heroui/react';
 import Image from 'next/image';
 import React, { ReactNode, useState } from 'react';
-import { FiCheck, FiCopy, FiDollarSign, FiDownload, FiEye, FiSend, FiShield } from 'react-icons/fi';
+import { FiCheck, FiCopy, FiDownload, FiEye, FiSend, FiShield } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
@@ -15,7 +15,7 @@ const LogoByType: Record<string, ReactNode> = {
 
 export function WalletPage() {
   const { walletAddress, network } = useConfigStore();
-  const { openDistributionRulesModal, openWalletBalanceModal, openSendModal, openReceiveModal } = usePollar();
+  const { openWalletBalanceModal, openSendModal, openReceiveModal } = usePollar();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -71,7 +71,7 @@ export function WalletPage() {
           </div>
         </section>
 
-        <section className="grid grid-cols-3 gap-3">
+        <section className="grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={openReceiveModal}
@@ -93,17 +93,6 @@ export function WalletPage() {
             </span>
             <span className="text-sm font-semibold">Send</span>
             <span className="text-xs text-gray-500">Transfer assets</span>
-          </button>
-          <button
-            type="button"
-            onClick={openDistributionRulesModal}
-            className="relative w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black hover:bg-[#F5FBFF] transition"
-          >
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#DDF4FF] border border-[#84D8FF]">
-              <FiDollarSign className="w-6 h-6" />
-            </span>
-            <span className="text-sm font-semibold">Fund</span>
-            <span className="text-xs text-gray-500">Add assets</span>
           </button>
         </section>
 

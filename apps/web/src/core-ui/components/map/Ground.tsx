@@ -4,6 +4,7 @@ import { useCallback, useRef } from 'react';
 import * as THREE from 'three';
 import { EditionMode, useMapStore } from '../../stores';
 import { MapObject, MapObjectType } from '../../types';
+import { composeBuildingRotation } from './buildingRotations';
 import { EditableObjectGroup } from './EditableObjectGroup';
 import { EditControls } from './EditControls';
 import { getObjectGroup, objectSelectDown, objectSelectUp } from './helpers';
@@ -135,10 +136,18 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
         const isBlocked = !!editingObjectPosition && !isEditing;
 
         // Asegurar que rotation sea un array válido
-        const currentRotation: [number, number, number] =
+        const userRotation: [number, number, number] =
           rotation && Array.isArray(rotation) && rotation.length === 3
             ? [rotation[0] || 0, rotation[1] || 0, rotation[2] || 0]
             : [0, 0, 0];
+
+        // Los edificios especiales tienen una orientación base; el resto usa la rotación tal cual.
+        // Así en edición miran igual que en el mapa normal (misma fuente de verdad).
+        const isSpecialBuilding =
+          type === MapObjectType.BANK || type === MapObjectType.LEADERBOARD || type === MapObjectType.BARN;
+        const currentRotation: [number, number, number] = isSpecialBuilding
+          ? composeBuildingRotation(type, userRotation)
+          : userRotation;
 
         // El key debe ser estable basado solo en posición, tipo y variant, NO en rotación
         // para evitar que React cree un nuevo componente cuando cambia la rotación
@@ -232,7 +241,7 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
           />
         </group>
       )}
-      {editingObjectPosition && <EditControls position={editingObjectPosition} />}
+      {editMode !== null && editingObjectPosition && <EditControls position={editingObjectPosition} />}
     </group>
   );
 };
