@@ -1,4 +1,3 @@
-import { ONE_MINUTE } from '@/core-ui/config/constants';
 import { useQuery } from '@tanstack/react-query';
 import { clientEnv } from '../config/clientEnv';
 import { useConfigStore } from '../stores';
@@ -40,7 +39,8 @@ export const useDeposits = (_walletAddress?: string) => {
         };
       }
     },
-    refetchInterval: ONE_MINUTE * 5,
+    // No polling: invalidated by the Ably `deposits-changes` channel on
+    // deposit/withdraw (see ListenDepositsChanges).
     enabled: !!network?.networkName && !!walletAddress,
   });
 };

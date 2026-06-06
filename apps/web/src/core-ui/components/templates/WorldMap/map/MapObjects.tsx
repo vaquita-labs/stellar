@@ -16,15 +16,18 @@ interface MapObjectsProps {
 export const MapObjects = ({ objects, onBarnClick, onBankClick, onLeaderBoardClick, hasWallet }: MapObjectsProps) => {
   const editMode = useMapStore((store) => store.editMode);
 
-  return objects.map(({ position, type }, index) => {
+  return objects.map(({ position, type, rotation }, index) => {
     if (type === MapObjectType.BANK && !editMode) {
-      return <BankBuilding key={position.join(',') + index} position={position} onClick={onBankClick} />;
+      return (
+        <BankBuilding key={position.join(',') + index} position={position} rotation={rotation} onClick={onBankClick} />
+      );
     }
-    if (type === MapObjectType.BARN) {
+    if (type === MapObjectType.BARN && !editMode) {
       return (
         <BarnBuilding
           key={position.join(',') + index}
           position={position}
+          rotation={rotation}
           onClick={onBarnClick}
           hasWallet={hasWallet}
         />
@@ -32,7 +35,14 @@ export const MapObjects = ({ objects, onBarnClick, onBankClick, onLeaderBoardCli
     }
 
     if (type === MapObjectType.LEADERBOARD && !editMode) {
-      return <Leaderboard key={position.join(',') + index} position={position} onClick={onLeaderBoardClick} />;
+      return (
+        <Leaderboard
+          key={position.join(',') + index}
+          position={position}
+          rotation={rotation}
+          onClick={onLeaderBoardClick}
+        />
+      );
     }
     return null;
   });

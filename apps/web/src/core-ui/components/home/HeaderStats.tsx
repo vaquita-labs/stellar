@@ -28,14 +28,11 @@ export const HeaderStats = () => {
   const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
   const setEditMode = useMapStore((s) => s.setEditMode);
   const setPickedItem = useMapStore((s) => s.setPickedItem);
+  const setEditingObjectPosition = useMapStore((s) => s.setEditingObjectPosition);
 
   const { data: profileData } = useProfileData();
-  const { data: streakData, isLoading: streakLoading, isRefetching: streakRefetching } = useProfileStreak();
-  const {
-    data: depositsData,
-    isLoading: depositsLoading,
-    isRefetching: depositsRefetching,
-  } = useDepositsComplete(walletAddress);
+  const { data: streakData, isLoading: streakLoading } = useProfileStreak();
+  const { data: depositsData, isLoading: depositsLoading } = useDepositsComplete(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
   const { data: apyData, isLoading: apyLoading } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
@@ -71,6 +68,7 @@ export const HeaderStats = () => {
               setIsEditingMap(false);
               setEditMode(null);
               setPickedItem(null);
+              setEditingObjectPosition(null);
             }}
             rightSlot={
               <div className="flex items-center gap-1.5">
@@ -121,7 +119,7 @@ export const HeaderStats = () => {
               onClick={() => setShowBankAPYModal(true)}
               className="flex items-center gap-2 min-w-0 bg-transparent"
             >
-              {depositsLoading || depositsRefetching ? (
+              {depositsLoading && !depositsData ? (
                 <Spinner size="sm" color="current" />
               ) : (
                 <div className='flex justify-end gap-1.5'>
@@ -147,7 +145,7 @@ export const HeaderStats = () => {
             onClick={() => setShowStreakModal(true)}
             className="flex items-center gap-1.5 flex-1 justify-center bg-transparent"
           >
-            {streakLoading || streakRefetching ? (
+            {streakLoading && !streakData ? (
               <Spinner size="sm" color="current" />
             ) : (
               <>

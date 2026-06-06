@@ -12,6 +12,7 @@ import {
   toast,
 } from '@heroui/react';
 import { usePollar } from '@pollar/react';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { formatTimeDeposit, getQuickAmounts, truncateDecimals } from '../../../helpers';
@@ -163,8 +164,19 @@ export function DepositModal({
           lockPeriod,
           network: network?.networkName,
         });
-        toast.success(<T>Deposit sent successfully</T>, {
-          description: <T>If you see a vaquita blinking, it is your deposit that is still being confirmed.</T>,
+        toast.success(<T>Deposit successful!</T>, {
+          indicator: (
+            <Image
+              src="/icons/global/coin.png"
+              alt=""
+              width={30}
+              height={30}
+              className="drop-shadow-sm"
+            />
+          ),
+          description: (
+            <T>Your savings are on their way! This may take a few seconds. Everything will be ready in a moment.</T>
+          ),
           timeout: 6000,
         });
         onOpenChange();
@@ -177,7 +189,8 @@ export function DepositModal({
           network: network?.networkName,
         });
         const poolMsg = parsePoolErrorMessage(lastError);
-        toast.danger(<T>Unsuccessful deposit</T>, {
+        toast.danger(<T>Deposit didn&apos;t go through</T>, {
+          indicator: <Image src="/vaquita/error.svg" alt="" width={32} height={32} />,
           description: poolMsg
             ? <T>{poolMsg}</T>
             : lastError instanceof Error

@@ -46,6 +46,7 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
   const setTiles = useMapStore((store) => store.setTiles);
   const editMode = useMapStore((store) => store.editMode);
   const editingObjectPosition = useMapStore((store) => store.editingObjectPosition);
+  const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
   const setIsEditingMap = useMapStore((store) => store.setIsEditingMap);
   const sheetRef = useRef<HTMLDivElement>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -89,6 +90,7 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
     setIsModalOpen(false);
     setEditMode(null);
     setPickedItem(null);
+    setEditingObjectPosition(null);
     onOpenChange();
   };
 

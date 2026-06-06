@@ -7,15 +7,23 @@ import { ThreeEvent, useThree } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import Coin from '../../templates/WorldMap/map/Coin';
+import { composeBuildingRotation } from '../buildingRotations';
 
 interface BankBuildingProps {
   position: [number, number, number];
+  rotation?: [number, number, number];
   onClick?: () => void;
   goldCoinsToCollect: number;
   isLoading: boolean;
 }
 
-export default function BankBuildingObject({ position, onClick, goldCoinsToCollect, isLoading }: BankBuildingProps) {
+export default function BankBuildingObject({
+  position,
+  rotation: userRotation,
+  onClick,
+  goldCoinsToCollect,
+  isLoading,
+}: BankBuildingProps) {
   const { gl } = useThree();
   // baseY is 0.01 because the bank is in the ground and 0 generated a awful visual effect
   const baseY = 0.01;
@@ -38,7 +46,7 @@ export default function BankBuildingObject({ position, onClick, goldCoinsToColle
     return [0, roofTopY, 0];
   }, [baseY]);
 
-  const rotation: MapObject['rotation'] = [0, Math.PI, 0];
+  const rotation: MapObject['rotation'] = composeBuildingRotation(MapObjectType.BANK, userRotation);
 
   return (
     <group
