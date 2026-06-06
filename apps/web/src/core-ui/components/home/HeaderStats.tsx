@@ -139,7 +139,7 @@ export const HeaderStats = () => {
       </div>
 
       <div className="absolute left-0 right-0 -bottom-10 px-4 z-20 pointer-events-none">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white rounded-full px-3 py-1.5  pointer-events-auto">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-1.5  pointer-events-auto">
           <button
             type="button"
             onClick={() => setShowStreakModal(true)}

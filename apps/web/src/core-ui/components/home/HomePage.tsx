@@ -55,7 +55,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col relative">
+    <div className="h-full w-full flex flex-col relative overflow-hidden min-h-0">
       <HeaderStats />
       <PlaceModeHint />
       {/* <BackgroundMusic /> */}
@@ -67,7 +67,7 @@ export function HomePage() {
       />
       {/* create a component that shows total days  */}
       {lockPeriod !== null && lockPeriod !== undefined && (
-        <div className="relative flex-1 flex items-stretch">
+        <div className="relative flex-1 flex items-stretch min-h-0">
           <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div

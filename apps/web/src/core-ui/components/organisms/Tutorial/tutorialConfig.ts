@@ -77,13 +77,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     body: 'Tap the green Save button and confirm any amount.',
     cta: 'Tap Save',
   },
-  {
-    id: 'patience',
-    kind: 'warn',
-    title: 'Patience pays off',
-    body: 'Withdraw too early and you lose the interest. Wait for the timer.',
-    cta: 'Got it',
-  },
+
   {
     id: 'find-deposit',
     kind: 'spotlight',
@@ -91,6 +85,13 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     title: 'Find your savings',
     body: 'Tap your balance up top, then tap your vaquita.',
     cta: 'Open savings',
+  },
+  {
+    id: 'patience',
+    kind: 'warn',
+    title: 'Patience pays off',
+    body: 'Withdraw too early and you lose the interest. Wait for the timer.',
+    cta: 'Got it',
   },
   {
     id: 'wait-intro',

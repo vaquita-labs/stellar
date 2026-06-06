@@ -9,8 +9,18 @@ export type BankAPYModalProps = {
    */
   injectedDeposits?: DepositResponseDTO[];
   /**
-   * Modo tutorial: al tocar una vaquita de la lista, en vez de abrir el modal de
-   * retiro interno (que refetchea on-chain), delega al orquestador del tutorial.
+   * Modo tutorial: el detalle se pinta inline (igual que en modo real), pero el
+   * lock/interés se derivan del depósito simulado y al confirmar NO se toca la
+   * blockchain.
    */
-  onVaquitaSelect?: (deposit: DepositResponseDTO) => void;
+  simulate?: boolean;
+  /** Interés total a mostrar/entregar en el detalle simulado. */
+  simulateInterest?: number;
+  /** Llamado tras un retiro simulado exitoso. */
+  onSimulatedWithdraw?: () => void;
+  /**
+   * Notifica al orquestador (tutorial) cuando se entra/sale del detalle inline,
+   * para coordinar el anillo guía y el avance de pasos.
+   */
+  onDetailOpenChange?: (inDetail: boolean) => void;
 };

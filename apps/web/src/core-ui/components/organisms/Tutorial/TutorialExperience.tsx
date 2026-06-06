@@ -17,7 +17,6 @@ import { HeaderStats } from '../../home/HeaderStats';
 import { WorldMap } from '../../templates';
 import { BankAPYModal } from '../BankAPYModal';
 import { DepositModal } from '../DepositModal';
-import { VaquitaModalContent } from '../VaquitaModal';
 import { TutorialOverlay } from './TutorialOverlay';
 import { TutorialRing } from './TutorialRing';
 import {
@@ -48,7 +47,10 @@ export function TutorialExperience() {
   const [depositOpen, setDepositOpen] = useState(false);
   const [isDepositing, setIsDepositing] = useState(false);
   const [bankOpen, setBankOpen] = useState(false);
-  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  // El detalle de la vaquita ahora vive INLINE dentro del Bank Rewards (sin un
+  // segundo modal). Esto solo refleja si ese detalle está abierto, para ocultar
+  // el anillo guía y avanzar el paso al volver a la lista.
+  const [detailOpen, setDetailOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
   // Momento en que el lock llegó a 0: mostramos la vaquita feliz en el mapa
   // unos segundos antes de pasar a la pantalla "Time's up".
@@ -71,7 +73,7 @@ export function TutorialExperience() {
 
   const step = TUTORIAL_STEPS[index];
   const interest = tutorialInterest(amount);
-  const anyModalOpen = depositOpen || bankOpen || withdrawOpen;
+  const anyModalOpen = depositOpen || bankOpen;
 
   const secondsLeft =
     lockStartAt == null ? LOCK_SECONDS : Math.max(0, Math.ceil((lockStartAt + TUTORIAL_LOCK_MS - now) / 1000));
@@ -154,11 +156,12 @@ export function TutorialExperience() {
     router.replace('/home');
   };
 
-  // Cierre del modal de retiro. En el primer vistazo (find-deposit) cerramos
-  // todo y vamos a la pantalla "But if you wait…" (el cronómetro arranca ahí).
-  const handleWithdrawClose = () => {
-    setWithdrawOpen(false);
-    if (step.id === 'find-deposit') {
+  // El detalle inline del Bank Rewards se abrió/cerró. En el primer vistazo
+  // (find-deposit), al volver del detalle a la lista cerramos el banco y vamos a
+  // la pantalla "But if you wait…" (el cronómetro arranca ahí).
+  const handleDetailOpenChange = (inDetail: boolean) => {
+    setDetailOpen(inDetail);
+    if (!inDetail && step.id === 'find-deposit') {
       setBankOpen(false);
       goNext();
     }
@@ -257,34 +260,29 @@ export function TutorialExperience() {
         }}
       />
 
-      {/* Bank Rewards REAL con el depósito simulado inyectado */}
+      {/* Bank Rewards REAL con el depósito simulado inyectado. El detalle/retiro
+          se pinta INLINE dentro de este mismo modal (sin un segundo modal). */}
       {bankOpen && (
         <BankAPYModal
           open={bankOpen}
-          onOpenChange={() => setBankOpen(false)}
+          onOpenChange={() => {
+            setBankOpen(false);
+            setDetailOpen(false);
+          }}
           injectedDeposits={[simulatedDeposit]}
-          onVaquitaSelect={() => setWithdrawOpen(true)}
+          simulate
+          simulateInterest={interest}
+          onSimulatedWithdraw={() => {
+            setDetailOpen(false);
+            setBankOpen(false);
+            goNext();
+          }}
+          onDetailOpenChange={handleDetailOpenChange}
         />
       )}
 
       {/* Guía (sin texto): resalta el depósito para tocarlo dentro del modal */}
-      {bankOpen && !withdrawOpen && <TutorialRing selector={`[data-tutorial="${TUTORIAL_ANCHOR_VAQUITA_CARD}"]`} />}
-
-      {/* Modal de retiro REAL (simulado) con el depósito recién hecho */}
-      {withdrawOpen && (
-        <VaquitaModalContent
-          isOpen={withdrawOpen}
-          onClose={handleWithdrawClose}
-          vaquita={simulatedDeposit}
-          simulate
-          simulateInterest={interest}
-          onSimulatedWithdraw={() => {
-            setWithdrawOpen(false);
-            setBankOpen(false);
-            goNext();
-          }}
-        />
-      )}
+      {bankOpen && !detailOpen && <TutorialRing selector={`[data-tutorial="${TUTORIAL_ANCHOR_VAQUITA_CARD}"]`} />}
 
       {/* Capa de coachmarks (oculta mientras hay un modal abierto) */}
       {!anyModalOpen && (
