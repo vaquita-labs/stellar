@@ -1,16 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiBell, FiMail, FiTrendingUp, FiUsers, FiZap } from 'react-icons/fi';
 import { PageLayout } from '../../molecules';
 
 type ToggleKey = 'push' | 'email' | 'deposits' | 'streaks' | 'friends';
 
 const SECTIONS: {
+  id: string;
   title: string;
   items: { key: ToggleKey; icon: React.ReactNode; title: string; description: string }[];
 }[] = [
   {
+    id: 'channels',
     title: 'Channels',
     items: [
       { key: 'push', icon: <FiBell />, title: 'Push notifications', description: 'Receive alerts on this device.' },
@@ -18,6 +21,7 @@ const SECTIONS: {
     ],
   },
   {
+    id: 'activity',
     title: 'Activity',
     items: [
       { key: 'deposits', icon: <FiTrendingUp />, title: 'Deposits & yield', description: 'When your savings earn rewards.' },
@@ -48,6 +52,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 export function NotificationsPage() {
+  const { t } = useTranslation();
   const [values, setValues] = useState<Record<ToggleKey, boolean>>({
     push: true,
     email: false,
@@ -60,17 +65,19 @@ export function NotificationsPage() {
 
   return (
     <PageLayout
-      title="Notifications"
+      title={t('profilePages.notifications.title', 'Notifications')}
       backHref="/profile/settings"
       rightSlot={
         <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider bg-primary text-black border border-black border-b-2 rounded-full px-2 py-0.5">
-          Soon
+          {t('common.soon')}
         </span>
       }
     >
       {SECTIONS.map((section) => (
-          <section key={section.title} className="flex flex-col gap-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1">{section.title}</h2>
+          <section key={section.id} className="flex flex-col gap-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1">
+              {t(`profilePages.notifications.sections.${section.id}.title`, section.title)}
+            </h2>
             <ul className="rounded-lg border border-black border-b-2 bg-white overflow-hidden divide-y divide-gray-200">
               {section.items.map(({ key, icon, title, description }) => (
                 <li key={key} className="flex items-center justify-between gap-3 px-4 py-3.5">
@@ -79,8 +86,12 @@ export function NotificationsPage() {
                       {icon}
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-black truncate">{title}</p>
-                      <p className="text-xs text-gray-600 truncate">{description}</p>
+                      <p className="text-sm font-semibold text-black truncate">
+                        {t(`profilePages.notifications.items.${key}.title`, title)}
+                      </p>
+                      <p className="text-xs text-gray-600 truncate">
+                        {t(`profilePages.notifications.items.${key}.description`, description)}
+                      </p>
                     </div>
                   </div>
                   <Toggle checked={values[key]} onChange={(v) => setValue(key, v)} />
@@ -91,7 +102,7 @@ export function NotificationsPage() {
         ))}
 
       <p className="text-xs text-gray-500 text-center">
-        Preferences are stored locally for now. Backend syncing coming soon.
+        {t('profilePages.notifications.localNote', 'Preferences are stored locally for now. Backend syncing coming soon.')}
       </p>
     </PageLayout>
   );

@@ -4,6 +4,7 @@ import { Modal } from '@heroui/react';
 import Image from 'next/image';
 import { ReactNode } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 
 export type AppModalSize = 'sm' | 'md' | 'lg';
 
@@ -53,6 +54,7 @@ export function AppModal({
   bodyClassName,
   dialogClassName,
 }: AppModalProps) {
+  const { t } = useTranslation();
   return (
     <Modal.Backdrop
       isOpen={open}
@@ -74,7 +76,7 @@ export function AppModal({
             {onBack ? (
               <button
                 type="button"
-                aria-label="Back"
+                aria-label={t('common.back')}
                 onClick={onBack}
                 className="flex items-center justify-center w-7 h-7 -ml-1 rounded-full border border-black border-b-2 bg-white text-black hover:bg-default-100 active:translate-y-0.5 transition-all shrink-0"
               >
@@ -89,7 +91,7 @@ export function AppModal({
             </Modal.Heading>
             {!hideClose && (
               <Modal.CloseTrigger
-                aria-label="Close"
+                aria-label={t('common.close')}
                 className='bg-primary text-black text-sm border-[0.5] border-black'
               >
               </Modal.CloseTrigger>

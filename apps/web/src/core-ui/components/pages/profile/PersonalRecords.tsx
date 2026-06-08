@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface RecordCardProps {
   icon: string;
@@ -63,43 +64,48 @@ export function PersonalRecords({
   totalAchievements,
   date,
 }: PersonalRecordsProps) {
+  const { t } = useTranslation();
   return (
     <div
       className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full snap-x"
-      aria-label="Personal records"
+      aria-label={t('profilePages.records.ariaLabel', 'Personal records')}
     >
       <RecordCard
         icon="/icons/achievements/streak-master.png"
         background="linear-gradient(180deg, #FFB347 0%, #FF7A00 100%)"
-        title="Day streak"
-        value={`${formatInt(totalStreak)} ${totalStreak === 1 ? 'day' : 'days'}`}
+        title={t('profilePages.records.dayStreak', 'Day streak')}
+        value={t('profilePages.records.daysValue', {
+          count: totalStreak,
+          formatted: formatInt(totalStreak),
+          defaultValue: '{{formatted}} days',
+        })}
         date={date}
       />
       <RecordCard
         icon="/icons/achievements/explorer.png"
         background="linear-gradient(180deg, #FFE082 0%, #F5A161 100%)"
-        title="Total XP"
+        title={t('profilePages.records.totalXp', 'Total XP')}
         value={formatInt(experience)}
         date={date}
       />
       <RecordCard
         icon="/icons/achievements/first-deposit.png"
         background="linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)"
-        title="Active deposits"
+        title={t('profilePages.records.activeDeposits', 'Active deposits')}
         value={formatInt(totalDeposits)}
         date={date}
       />
       <RecordCard
         icon="/icons/achievements/first-place.png"
         background="linear-gradient(180deg, #FFE082 0%, #FFA000 100%)"
-        title="Gold coins"
+        title={t('profilePages.records.goldCoins', 'Gold coins')}
         value={formatInt(goldCoins)}
         date={date}
       />
       <RecordCard
         icon="/icons/achievements/beta-tester2.png"
         background="linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)"
-        title="Awards earned"
+        title={t('profilePages.records.awardsEarned', 'Awards earned')}
         value={`${formatInt(earned)} / ${formatInt(totalAchievements)}`}
         date={date}
       />

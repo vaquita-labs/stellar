@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { FiArrowDown, FiArrowUp, FiFilter, FiSearch, FiX } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 import { useProfileRewards } from '../../hooks';
 import { useConfigStore } from '../../stores';
 import { PageHeader } from '../molecules';
@@ -151,6 +152,7 @@ const rarityStyles: Record<ShopItemRarity, { badge: string; ring: string }> = {
 };
 
 export function ShopPage() {
+  const { t } = useTranslation();
   const { data: profileRewards, refetch } = useProfileRewards();
   const queryClient = useQueryClient();
   const { network, walletAddress } = useConfigStore();
@@ -207,8 +209,10 @@ export function ShopPage() {
         queryKey: ['profile', network?.networkName, walletAddress, 'profile-rewards'],
       });
       await refetch();
-      toast.success('Purchase successful!', {
-        description: `You've successfully purchased ${detailItem.name}`,
+      toast.success(t('shop.toast.purchaseSuccessTitle', 'Purchase successful!'), {
+        description: t('shop.toast.purchaseSuccessDescription', "You've successfully purchased {{name}}", {
+          name: t(`shop.items.${detailItem.id}.name`, detailItem.name),
+        }),
         timeout: 4000,
       });
       closeDetail();
@@ -223,18 +227,27 @@ export function ShopPage() {
     if (!detailItem || isOffering) return;
     const gold = Number(offerGold) || 0;
     if (gold <= 0) {
-      toast.danger('Invalid offer', { description: 'Enter at least 1 gold coin.', timeout: 3000 });
+      toast.danger(t('shop.toast.invalidOfferTitle', 'Invalid offer'), {
+        description: t('shop.toast.invalidOfferDescription', 'Enter at least 1 gold coin.'),
+        timeout: 3000,
+      });
       return;
     }
     if (gold > goldCoins) {
-      toast.danger('Not enough coins', { description: 'Your offer exceeds your balance.', timeout: 3000 });
+      toast.danger(t('shop.toast.notEnoughCoinsTitle', 'Not enough coins'), {
+        description: t('shop.toast.notEnoughCoinsDescription', 'Your offer exceeds your balance.'),
+        timeout: 3000,
+      });
       return;
     }
     setIsOffering(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 800));
-      toast.success('Offer submitted!', {
-        description: `Offered ${gold} gold for ${detailItem.name}`,
+      toast.success(t('shop.toast.offerSubmittedTitle', 'Offer submitted!'), {
+        description: t('shop.toast.offerSubmittedDescription', 'Offered {{gold}} gold for {{name}}', {
+          gold,
+          name: t(`shop.items.${detailItem.id}.name`, detailItem.name),
+        }),
         timeout: 4000,
       });
       closeDetail();
@@ -251,12 +264,12 @@ export function ShopPage() {
     <div className="h-full overflow-y-auto">
       <div className="sticky top-0 z-10 bg-background border-b border-[#B97204]">
         <div className="mx-auto w-full max-w-3xl px-4 py-3 flex flex-col gap-2">
-          <PageHeader title="Shop" backHref="/home" />
+          <PageHeader title={t('shop.page.title', 'Shop')} backHref="/home" />
           <div className="flex items-center justify-end gap-2">
             <div className="flex items-center gap-1 bg-white border border-black border-b-2 rounded-md px-2 py-1">
               <Image
                 src="/icons/global/coin.png"
-                alt="Gold Coin"
+                alt={t('shop.goldCoinAlt', 'Gold Coin')}
                 width={20}
                 height={20}
                 className="object-contain"
@@ -275,14 +288,14 @@ export function ShopPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search items..."
+              placeholder={t('shop.page.searchPlaceholder', 'Search items...')}
               className="flex-1 bg-transparent text-sm text-black placeholder:text-gray-500 outline-none"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                aria-label="Clear search"
+                aria-label={t('shop.page.clearSearch', 'Clear search')}
                 className="text-gray-500 hover:text-black"
               >
                 <FiX />
@@ -297,7 +310,7 @@ export function ShopPage() {
               className="flex items-center justify-center gap-1.5 bg-white border border-black border-b-2 rounded-md px-2.5 py-1 text-xs font-semibold text-black hover:bg-[#FFF7E6] whitespace-nowrap"
             >
               <FiFilter className="text-sm" />
-              <span>Filters</span>
+              <span>{t('shop.page.filters', 'Filters')}</span>
               {activeFilterCount > 0 && (
                 <span className="text-[10px] font-bold bg-primary text-black border border-black rounded-full min-w-4 h-4 px-1 inline-flex items-center justify-center">
                   {activeFilterCount}
@@ -310,15 +323,15 @@ export function ShopPage() {
               className="flex items-center justify-center gap-1.5 bg-white border border-black border-b-2 rounded-md px-2.5 py-1 text-xs font-semibold text-black hover:bg-[#FFF7E6] whitespace-nowrap"
             >
               {sort === 'price-asc' ? <FiArrowUp className="text-sm" /> : <FiArrowDown className="text-sm" />}
-              <span>Price</span>
+              <span>{t('shop.page.price', 'Price')}</span>
             </button>
           </div>
         </div>
 
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-12 gap-2">
-            <Image src="/icons/summary/shop.png" alt="shop" width={48} height={48} className="opacity-60" />
-            <p className="text-sm text-gray-600">No items match your filters.</p>
+            <Image src="/icons/summary/shop.png" alt={t('shop.page.shopAlt', 'shop')} width={48} height={48} className="opacity-60" />
+            <p className="text-sm text-gray-600">{t('shop.page.noItems', 'No items match your filters.')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -343,18 +356,18 @@ export function ShopPage() {
                           <span
                             className={`absolute top-1 left-1 text-[10px] font-bold uppercase tracking-wide border rounded-sm px-1.5 py-0.5 ${rarityStyle.badge}`}
                           >
-                            {item.rarity}
+                            {t(`shop.rarity.${item.rarity}`, item.rarity)}
                           </span>
                         )}
                         {item.alwaysAvailable && (
                           <span className="absolute top-1 right-1 text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-800 border border-green-300 rounded-sm px-1.5 py-0.5">
-                            Always
+                            {t('shop.badge.always', 'Always')}
                           </span>
                         )}
                         {item.image ? (
                           <Image
                             src={item.image}
-                            alt={item.name}
+                            alt={t(`shop.items.${item.id}.name`, item.name)}
                             width={96}
                             height={96}
                             className="object-contain"
@@ -362,7 +375,7 @@ export function ShopPage() {
                         ) : (
                           <Image
                             src="/icons/summary/bag.png"
-                            alt={item.name}
+                            alt={t(`shop.items.${item.id}.name`, item.name)}
                             width={64}
                             height={64}
                             className="object-contain opacity-60"
@@ -370,7 +383,7 @@ export function ShopPage() {
                         )}
                       </div>
 
-                      <h3 className="font-bold text-black text-sm truncate">{item.name}</h3>
+                      <h3 className="font-bold text-black text-sm truncate">{t(`shop.items.${item.id}.name`, item.name)}</h3>
 
                       <div className="mt-auto flex items-center gap-3 flex-nowrap">
                         <div
@@ -380,7 +393,7 @@ export function ShopPage() {
                         >
                           <Image
                             src="/icons/global/coin.png"
-                            alt="Gold"
+                            alt={t('shop.goldCoinAlt', 'Gold Coin')}
                             width={16}
                             height={16}
                             className="object-contain shrink-0"
@@ -401,11 +414,11 @@ export function ShopPage() {
         <Modal.Container size="md">
           <Modal.Dialog className="bg-background border border-black">
             <Modal.CloseTrigger>
-              <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+              <Image src="/icons/close-circle.svg" alt={t('shop.page.closeAlt', 'close')} width={40} height={40} />
             </Modal.CloseTrigger>
             <Modal.Header>
               <Modal.Heading className="text-black font-bold text-lg">
-                {detailItem?.name ?? 'Item'}
+                {detailItem ? t(`shop.items.${detailItem.id}.name`, detailItem.name) : t('shop.detail.fallbackTitle', 'Item')}
               </Modal.Heading>
             </Modal.Header>
             <Modal.Body>
@@ -415,7 +428,7 @@ export function ShopPage() {
                     {detailItem.image ? (
                       <Image
                         src={detailItem.image}
-                        alt={detailItem.name}
+                        alt={t(`shop.items.${detailItem.id}.name`, detailItem.name)}
                         width={160}
                         height={160}
                         className="object-contain"
@@ -423,7 +436,7 @@ export function ShopPage() {
                     ) : (
                       <Image
                         src="/icons/summary/bag.png"
-                        alt={detailItem.name}
+                        alt={t(`shop.items.${detailItem.id}.name`, detailItem.name)}
                         width={120}
                         height={120}
                         className="object-contain opacity-60"
@@ -436,34 +449,34 @@ export function ShopPage() {
                       <span
                         className={`text-[11px] font-bold uppercase tracking-wide border rounded-sm px-2 py-0.5 ${rarityStyles[detailItem.rarity].badge}`}
                       >
-                        {detailItem.rarity}
+                        {t(`shop.rarity.${detailItem.rarity}`, detailItem.rarity)}
                       </span>
                     )}
                     {detailItem.type && (
                       <span className="text-[11px] font-semibold uppercase tracking-wide bg-[#DDF4FF] text-black border border-[#84D8FF] rounded-sm px-2 py-0.5">
-                        {detailItem.type}
+                        {t(`shop.type.${detailItem.type}`, detailItem.type)}
                       </span>
                     )}
                     {detailItem.biome && (
                       <span className="text-[11px] font-semibold uppercase tracking-wide bg-[#FFF7E6] text-black border border-[#B97204]/40 rounded-sm px-2 py-0.5">
-                        {detailItem.biome}
+                        {t(`shop.biome.${detailItem.biome}`, detailItem.biome)}
                       </span>
                     )}
                     {detailItem.alwaysAvailable && (
                       <span className="text-[11px] font-bold uppercase bg-green-100 text-green-800 border border-green-300 rounded-sm px-2 py-0.5">
-                        Always
+                        {t('shop.badge.always', 'Always')}
                       </span>
                     )}
                   </div>
 
-                  <p className="text-sm text-gray-700">{detailItem.description}</p>
+                  <p className="text-sm text-gray-700">{t(`shop.items.${detailItem.id}.description`, detailItem.description)}</p>
 
                   <div className="pt-2 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Price</p>
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">{t('shop.detail.priceLabel', 'Price')}</p>
                     <div className="flex items-center gap-1">
                       <Image
                         src="/icons/global/coin.png"
-                        alt="Gold"
+                        alt={t('shop.goldCoinAlt', 'Gold Coin')}
                         width={24}
                         height={24}
                         className="object-contain"
@@ -474,12 +487,12 @@ export function ShopPage() {
 
                   {offerMode && (
                     <div className="pt-2 border-t border-gray-200 space-y-3">
-                      <p className="text-xs text-gray-500 uppercase font-semibold">Your offer</p>
+                      <p className="text-xs text-gray-500 uppercase font-semibold">{t('shop.detail.yourOffer', 'Your offer')}</p>
                       <div className="min-w-0 flex flex-col gap-1">
                         <div className="flex items-center gap-2 bg-white border border-black rounded-md px-2 py-1.5 min-w-0">
                           <Image
                             src="/icons/global/coin.png"
-                            alt="Gold"
+                            alt={t('shop.goldCoinAlt', 'Gold Coin')}
                             width={20}
                             height={20}
                             className="object-contain shrink-0"
@@ -494,7 +507,7 @@ export function ShopPage() {
                             className="flex-1 min-w-0 w-full bg-transparent text-sm text-black outline-none"
                           />
                         </div>
-                        <p className="text-[11px] text-gray-500 px-1">You have {goldCoins}</p>
+                        <p className="text-[11px] text-gray-500 px-1">{t('shop.detail.youHave', 'You have {{count}}', { count: goldCoins })}</p>
                       </div>
                     </div>
                   )}
@@ -512,14 +525,14 @@ export function ShopPage() {
                     }}
                     isDisabled={isOffering}
                   >
-                    Back
+                    {t('common.back')}
                   </Button>
                   <Button
                     className="bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00] rounded-md"
                     onPress={handleMakeOffer}
                     isDisabled={isOffering}
                   >
-                    {isOffering ? 'Sending...' : 'Submit offer'}
+                    {isOffering ? t('shop.detail.sending', 'Sending...') : t('shop.detail.submitOffer', 'Submit offer')}
                   </Button>
                 </>
               ) : (
@@ -529,7 +542,7 @@ export function ShopPage() {
                     onPress={() => setOfferMode(true)}
                     isDisabled={isPurchasing}
                   >
-                    Make offer
+                    {t('shop.detail.makeOffer', 'Make offer')}
                   </Button>
                   <Button
                     className={`${
@@ -540,7 +553,7 @@ export function ShopPage() {
                     onPress={handleBuy}
                     isDisabled={(!detailAffordable && !detailItem?.alwaysAvailable) || isPurchasing}
                   >
-                    {isPurchasing ? 'Processing...' : 'Buy'}
+                    {isPurchasing ? t('shop.detail.processing', 'Processing...') : t('shop.detail.buy', 'Buy')}
                   </Button>
                 </>
               )}
@@ -579,6 +592,7 @@ type FiltersPanelProps = FilterValues & {
 };
 
 function FiltersPanel({ biomes, types, rarities, onApply, onClose }: FiltersPanelProps) {
+  const { t } = useTranslation();
   const [draftBiomes, setDraftBiomes] = useState<ShopItemBiome[]>(biomes);
   const [draftTypes, setDraftTypes] = useState<ShopItemType[]>(types);
   const [draftRarities, setDraftRarities] = useState<ShopItemRarity[]>(rarities);
@@ -596,7 +610,7 @@ function FiltersPanel({ biomes, types, rarities, onApply, onClose }: FiltersPane
       <div className="border-b border-[#B97204] bg-background">
         <div className="mx-auto w-full max-w-3xl px-4 py-3">
           <PageHeader
-            title="Filters"
+            title={t('shop.filters.title', 'Filters')}
             onBack={onClose}
             rightSlot={
               <button
@@ -605,7 +619,7 @@ function FiltersPanel({ biomes, types, rarities, onApply, onClose }: FiltersPane
                 className="text-sm font-semibold text-black underline disabled:text-gray-400 disabled:no-underline bg-transparent"
                 disabled={draftCount === 0}
               >
-                Clear all
+                {t('shop.filters.clearAll', 'Clear all')}
               </button>
             }
           />
@@ -615,22 +629,22 @@ function FiltersPanel({ biomes, types, rarities, onApply, onClose }: FiltersPane
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-3xl px-4 py-4 flex flex-col gap-6 pb-6">
           <FilterSection
-            title="Biome"
+            title={t('shop.filters.biome', 'Biome')}
             values={draftBiomes}
             onChange={setDraftBiomes}
-            options={biomeOptions}
+            options={biomeOptions.map((o) => ({ value: o.value, label: t(`shop.biome.${o.value}`, o.label) }))}
           />
           <FilterSection
-            title="Type"
+            title={t('shop.filters.type', 'Type')}
             values={draftTypes}
             onChange={setDraftTypes}
-            options={typeOptions}
+            options={typeOptions.map((o) => ({ value: o.value, label: t(`shop.type.${o.value}`, o.label) }))}
           />
           <FilterSection
-            title="Rarity"
+            title={t('shop.filters.rarity', 'Rarity')}
             values={draftRarities}
             onChange={setDraftRarities}
-            options={rarityOptions}
+            options={rarityOptions.map((o) => ({ value: o.value, label: t(`shop.rarity.${o.value}`, o.label) }))}
           />
         </div>
       </div>
@@ -641,13 +655,13 @@ function FiltersPanel({ biomes, types, rarities, onApply, onClose }: FiltersPane
             className="flex-1 bg-white border border-black border-b-2 text-black font-semibold rounded-md hover:bg-gray-100"
             onPress={onClose}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             className="flex-1 bg-primary border border-black border-b-2 text-black font-semibold rounded-md hover:bg-[#e68a00]"
             onPress={() => onApply({ biomes: draftBiomes, types: draftTypes, rarities: draftRarities })}
           >
-            Apply{draftCount > 0 ? ` (${draftCount})` : ''}
+            {t('shop.filters.apply', 'Apply')}{draftCount > 0 ? ` (${draftCount})` : ''}
           </Button>
         </div>
       </div>
@@ -663,6 +677,7 @@ type FilterSectionProps<T extends string> = {
 };
 
 function FilterSection<T extends string>({ title, values, onChange, options }: FilterSectionProps<T>) {
+  const { t } = useTranslation();
   const toggle = (value: T) => {
     onChange(values.includes(value) ? values.filter((v) => v !== value) : [...values, value]);
   };
@@ -677,7 +692,7 @@ function FilterSection<T extends string>({ title, values, onChange, options }: F
             onClick={() => onChange([])}
             className="text-[11px] font-semibold text-gray-500 hover:text-black"
           >
-            Clear
+            {t('shop.filters.clear', 'Clear')}
           </button>
         )}
       </div>

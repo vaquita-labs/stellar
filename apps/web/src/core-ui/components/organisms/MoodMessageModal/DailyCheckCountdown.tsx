@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /** Seconds left until the next daily check-in unlocks (next UTC midnight). */
 const secondsUntilNextCheckIn = () => {
@@ -24,6 +25,7 @@ const TimeTile = ({ value, label }: { value: number; label: string }) => (
  * (mirrors `getCurrentDay`), so we tick every second toward that boundary.
  */
 export function DailyCheckCountdown() {
+  const { t } = useTranslation();
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -42,12 +44,12 @@ export function DailyCheckCountdown() {
   return (
     <div className="flex w-full flex-col gap-2">
       <span className="text-xs font-semibold uppercase tracking-wide text-default-500">
-        ¡Mu! Regresa en
+        {t('rewards.countdown.comeBackIn', 'Moo! Come back in')}
       </span>
       <div className="flex gap-2">
-        <TimeTile value={hours} label="Hrs" />
-        <TimeTile value={minutes} label="Min" />
-        <TimeTile value={seconds} label="Seg" />
+        <TimeTile value={hours} label={t('rewards.countdown.hrs', 'Hrs')} />
+        <TimeTile value={minutes} label={t('rewards.countdown.min', 'Min')} />
+        <TimeTile value={seconds} label={t('rewards.countdown.sec', 'Sec')} />
       </div>
     </div>
   );

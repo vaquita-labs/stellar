@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle } from 'react-icons/fi';
 import { Button } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
@@ -22,6 +23,7 @@ interface TutorialPatienceModalProps {
  * usuario toca Cancel manualmente.
  */
 export function TutorialPatienceModal({ amount, interest, onAck }: TutorialPatienceModalProps) {
+  const { t } = useTranslation();
   return (
     <AppModal
       open
@@ -30,19 +32,23 @@ export function TutorialPatienceModal({ amount, interest, onAck }: TutorialPatie
       hideClose
       placement="top"
       size="sm"
-      title={TUTORIAL_PATIENCE.title}
+      title={t(TUTORIAL_PATIENCE.titleKey)}
       bodyClassName="flex flex-col gap-4 pb-2"
       footer={
         <Button type="primary" wFull onPress={onAck}>
-          {TUTORIAL_PATIENCE.cta}
+          {t(TUTORIAL_PATIENCE.ctaKey)}
         </Button>
       }
     >
-      <p className="text-sm leading-relaxed text-black/70">{TUTORIAL_PATIENCE.body}</p>
+      <p className="text-sm leading-relaxed text-black/70">{t(TUTORIAL_PATIENCE.bodyKey)}</p>
       <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
         <FiAlertTriangle className="shrink-0" size={18} />
         <span>
-          Keep {formatTutorialMoney(amount)}, lose {formatTutorialMoney(interest)} interest.
+          {t('tutorial.warn.keepLose', {
+            defaultValue: 'Keep {{amount}}, lose {{interest}} interest.',
+            amount: formatTutorialMoney(amount),
+            interest: formatTutorialMoney(interest),
+          })}
         </span>
       </div>
     </AppModal>

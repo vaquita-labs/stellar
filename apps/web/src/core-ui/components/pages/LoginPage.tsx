@@ -6,8 +6,10 @@ import { useIntroSeen, useIsAuthenticated } from '@/core-ui/hooks';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,7 +45,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center gap-4">
           <Image
             src="/vaquita/vaquita_isotipo.svg"
-            alt="Vaquita Logo"
+            alt={t('auth.login.logoAlt')}
             width={500}
             height={500}
             className="object-contain"
@@ -60,7 +62,7 @@ export default function LoginPage() {
             <div className="md:hidden mb-2">
               <Image
                 src="/vaquita/vaquita_logo.png"
-                alt="Vaquita Logo"
+                alt={t('auth.login.logoAlt')}
                 width={180}
                 height={180}
                 className="object-contain"
@@ -68,8 +70,8 @@ export default function LoginPage() {
               />
             </div>
 
-            <h1 className="text-3xl font-bold text-black">Welcome</h1>
-            <p className="text-gray-600 text-center mb-2">Connect your wallet to start saving securely</p>
+            <h1 className="text-3xl font-bold text-black">{t('auth.login.welcomeTitle')}</h1>
+            <p className="text-gray-600 text-center mb-2">{t('auth.login.welcomeSubtitle')}</p>
 
             {/* Botones de autenticación dentro de la card */}
             <div className="w-full flex flex-col gap-2">
@@ -81,7 +83,7 @@ export default function LoginPage() {
               onClick={replay}
               className="mt-1 text-sm font-semibold text-black/50 hover:text-black underline underline-offset-2 transition"
             >
-              View intro again
+              {t('auth.login.viewIntroAgain')}
             </button>
           </div>
         </div>

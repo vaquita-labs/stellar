@@ -3,6 +3,7 @@
 import { toast } from '@heroui/react';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiCheck, FiX } from 'react-icons/fi';
 import { useRestProfile } from '../../../hooks';
 import { Button } from '../../atoms';
@@ -16,6 +17,7 @@ const MIN_LENGTH = 3;
 type AvailabilityStatus = 'idle' | 'short' | 'checking' | 'available' | 'taken' | 'error';
 
 export function UsernamePrompt({ onDone }: UsernamePromptProps) {
+  const { t } = useTranslation();
   const { saveNickname, checkNicknameAvailability } = useRestProfile();
   const [nickname, setNickname] = useState('');
   const [saving, setSaving] = useState(false);
@@ -62,14 +64,17 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
     try {
       const { success, message } = await saveNickname({ nickname: trimmed });
       if (success) {
-        toast.success('Username saved', { timeout: 3000 });
+        toast.success(t('onboarding.username.savedToast', 'Username saved'), { timeout: 3000 });
         onDone();
       } else {
-        toast.danger('Could not save username', { description: message, timeout: 4000 });
+        toast.danger(t('onboarding.username.saveErrorToast', 'Could not save username'), {
+          description: message,
+          timeout: 4000,
+        });
         setStatus('taken');
       }
     } catch (error) {
-      toast.danger('Could not save username', {
+      toast.danger(t('onboarding.username.saveErrorToast', 'Could not save username'), {
         description: (error as { message?: string })?.message ?? '',
         timeout: 4000,
       });
@@ -80,17 +85,43 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
   const helper = (() => {
     switch (status) {
       case 'short':
-        return { text: `At least ${MIN_LENGTH} characters`, className: 'text-black/50' };
+        return {
+          text: t('onboarding.username.helperShort', 'At least {{count}} characters', {
+            count: MIN_LENGTH,
+          }),
+          className: 'text-black/50',
+        };
       case 'checking':
-        return { text: 'Checking availability…', className: 'text-black/50' };
+        return {
+          text: t('onboarding.username.helperChecking', 'Checking availability…'),
+          className: 'text-black/50',
+        };
       case 'available':
-        return { text: `@${trimmed} is available`, className: 'text-success' };
+        return {
+          text: t('onboarding.username.helperAvailable', '@{{name}} is available', {
+            name: trimmed,
+          }),
+          className: 'text-success',
+        };
       case 'taken':
-        return { text: `@${trimmed} is already taken`, className: 'text-error' };
+        return {
+          text: t('onboarding.username.helperTaken', '@{{name}} is already taken', {
+            name: trimmed,
+          }),
+          className: 'text-error',
+        };
       case 'error':
-        return { text: 'Could not check availability, try again', className: 'text-error' };
+        return {
+          text: t('onboarding.username.helperError', 'Could not check availability, try again'),
+          className: 'text-error',
+        };
       default:
-        return { text: `Shown as @${trimmed || 'username'}`, className: 'text-black/50' };
+        return {
+          text: t('onboarding.username.helperDefault', 'Shown as @{{name}}', {
+            name: trimmed || t('onboarding.username.placeholderName', 'username'),
+          }),
+          className: 'text-black/50',
+        };
     }
   })();
 
@@ -104,17 +135,24 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
           <Image src="/vaquita/vaquita_isotipo.svg" alt="Vaquita" fill sizes="112px" className="object-contain" priority />
         </div>
 
-        <h1 className="text-2xl font-bold text-black">Choose your username</h1>
+        <h1 className="text-2xl font-bold text-black">
+          {t('onboarding.username.title', 'Choose your username')}
+        </h1>
         <p className="text-base text-black/70 max-w-sm">
-          This is the name other savers will see. You can change it later in your profile.
+          {t(
+            'onboarding.username.subtitle',
+            'This is the name other savers will see. You can change it later in your profile.'
+          )}
         </p>
 
         <div className="w-full text-left mt-2">
-          <label className="text-black font-normal text-sm block mb-1">Username</label>
+          <label className="text-black font-normal text-sm block mb-1">
+            {t('onboarding.username.label', 'Username')}
+          </label>
           <div className="relative">
             <input
               type="text"
-              placeholder="@username"
+              placeholder={t('onboarding.username.inputPlaceholder', '@username')}
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               onKeyDown={(e) => {
@@ -145,7 +183,7 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
         </div>
 
         <Button type="primary" wFull onPress={handleSubmit} isDisabled={!canSave} isLoading={saving} className="mt-2">
-          Continue
+          {t('common.continue')}
         </Button>
       </div>
     </div>

@@ -2,10 +2,12 @@
 
 import { Button, Card, ScrollShadow } from '@heroui/react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { HorizontalCarouselProps } from './types';
 
 export function HorizontalCarousel<T>({ title, items, renderItem }: HorizontalCarouselProps<T>) {
+  const { t } = useTranslation();
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const [progress, setProgress] = useState(0); // 0..1
   const [atStart, setAtStart] = useState(true);
@@ -106,7 +108,7 @@ export function HorizontalCarousel<T>({ title, items, renderItem }: HorizontalCa
         <h3 className="text-base font-semibold">{title}</h3>
         <div className="flex gap-2">
           <Button
-            aria-label="Scroll left"
+            aria-label={t('rewards.carousel.scrollLeft', 'Scroll left')}
             isIconOnly
             variant="ghost"
             className="rounded-full"
@@ -116,7 +118,7 @@ export function HorizontalCarousel<T>({ title, items, renderItem }: HorizontalCa
             <FiChevronLeft />
           </Button>
           <Button
-            aria-label="Scroll right"
+            aria-label={t('rewards.carousel.scrollRight', 'Scroll right')}
             isIconOnly
             variant="ghost"
             className="rounded-full"

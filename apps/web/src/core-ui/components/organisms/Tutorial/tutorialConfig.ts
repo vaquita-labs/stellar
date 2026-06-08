@@ -23,10 +23,16 @@ export interface TutorialStep {
   id: string;
   /** Qué comportamiento/visual activa el motor. */
   kind: TutorialStepKind;
-  title: string;
-  body: string;
-  /** Texto del botón principal de la tarjeta. */
-  cta: string;
+  /**
+   * Claves i18n del copy (no el texto). El render las traduce con `t(...)` para
+   * que el tutorial reaccione al idioma activo. El texto vive en los diccionarios.
+   */
+  titleKey: string;
+  bodyKey: string;
+  /** Clave i18n del botón principal de la tarjeta ('' = sin botón). */
+  ctaKey: string;
+  /** Valores de interpolación para las claves de arriba (p. ej. { seconds }). */
+  params?: Record<string, string | number>;
   /**
    * Selector CSS del elemento REAL del home a resaltar con el spotlight (recorte
    * en el scrim + anillo pulsante). Si se omite, el paso solo muestra la tarjeta.
@@ -65,9 +71,9 @@ export const formatTutorialMoney = (n: number) =>
  * intenta retirar antes de tiempo dentro del banco) para empujarlo a cancelar.
  */
 export const TUTORIAL_PATIENCE = {
-  title: 'Patience pays off',
-  body: 'Withdraw too early and you lose the interest. Wait for the timer.',
-  cta: 'Got it',
+  titleKey: 'tutorial.patience.title',
+  bodyKey: 'tutorial.patience.body',
+  ctaKey: 'tutorial.patience.cta',
 };
 
 const SPOT_SAVE = `[data-tutorial="${TUTORIAL_ANCHOR_SAVE}"]`;
@@ -77,54 +83,55 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
     kind: 'message',
-    title: 'Meet your vaquita 🐮',
-    body: 'You grow it by saving. Quick demo — no real money.',
-    cta: "Let's go",
+    titleKey: 'tutorial.steps.welcome.title',
+    bodyKey: 'tutorial.steps.welcome.body',
+    ctaKey: 'tutorial.steps.welcome.cta',
   },
   {
     id: 'deposit',
     kind: 'deposit',
     spotlight: SPOT_SAVE,
-    title: 'Make a deposit',
-    body: 'Tap the green Save button and confirm any amount.',
-    cta: 'Tap Save',
+    titleKey: 'tutorial.steps.deposit.title',
+    bodyKey: 'tutorial.steps.deposit.body',
+    ctaKey: 'tutorial.steps.deposit.cta',
   },
 
   {
     id: 'find-deposit',
     kind: 'spotlight',
     spotlight: SPOT_BALANCE,
-    title: 'Find your savings',
-    body: 'Tap your balance up top, then tap your vaquita.',
-    cta: 'Open savings',
+    titleKey: 'tutorial.steps.findDeposit.title',
+    bodyKey: 'tutorial.steps.findDeposit.body',
+    ctaKey: 'tutorial.steps.findDeposit.cta',
   },
   {
     id: 'wait-intro',
     kind: 'message',
-    title: 'But if you wait…',
-    body: `Save for the ${TUTORIAL_GOAL_SECONDS} seconds you chose and you keep the full interest. Let's watch your vaquita.`,
-    cta: `Wait ${TUTORIAL_GOAL_SECONDS}s`,
+    titleKey: 'tutorial.steps.waitIntro.title',
+    bodyKey: 'tutorial.steps.waitIntro.body',
+    ctaKey: 'tutorial.steps.waitIntro.cta',
+    params: { seconds: TUTORIAL_GOAL_SECONDS },
   },
   {
     id: 'waiting',
     kind: 'waiting',
-    title: 'Saving…',
-    body: 'Watch your vaquita while it saves.',
-    cta: '',
+    titleKey: 'tutorial.steps.waiting.title',
+    bodyKey: 'tutorial.steps.waiting.body',
+    ctaKey: '',
   },
   {
     id: 'ready',
     kind: 'spotlight',
     spotlight: SPOT_BALANCE,
-    title: "Time's up! 🎉",
-    body: 'Open your savings again and withdraw with interest.',
-    cta: 'Withdraw now',
+    titleKey: 'tutorial.steps.ready.title',
+    bodyKey: 'tutorial.steps.ready.body',
+    ctaKey: 'tutorial.steps.ready.cta',
   },
   {
     id: 'success',
     kind: 'success',
-    title: 'Nicely done! 🎉',
-    body: 'You got your deposit back plus interest.',
-    cta: 'Enter app',
+    titleKey: 'tutorial.steps.success.title',
+    bodyKey: 'tutorial.steps.success.body',
+    ctaKey: 'tutorial.steps.success.cta',
   },
 ];

@@ -4,6 +4,7 @@ import { Button as HeroButton, Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import {
@@ -39,6 +40,7 @@ const LOCK_SECONDS = Math.round(TUTORIAL_LOCK_MS / 1000);
  * Al terminar persiste `tutorialCompleted` y manda al home.
  */
 export function TutorialExperience() {
+  const { t } = useTranslation();
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { saveProfileFlags } = useRestProfile();
   const queryClient = useQueryClient();
@@ -258,7 +260,7 @@ export function TutorialExperience() {
               }}
               className="w-full rounded-md border border-b-5 border-[#018222] bg-success py-7 font-bold text-black"
             >
-              <span className="text-xl capitalize text-black">Save</span>
+              <span className="text-xl capitalize text-black">{t('tutorial.saveButton', 'Save')}</span>
             </HeroButton>
           </div>
         </div>
@@ -269,11 +271,13 @@ export function TutorialExperience() {
         <div className="pointer-events-none fixed right-3 top-40 z-50 flex items-center gap-1.5 rounded-full border border-black bg-white px-2.5 py-1 shadow-md md:top-28">
           {secondsLeft > 0 ? (
             <>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-black/50">Unlocks</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-black/50">
+                {t('tutorial.timer.unlocks', 'Unlocks')}
+              </span>
               <span className="text-sm font-bold tabular-nums text-black">{secondsLeft}s</span>
             </>
           ) : (
-            <span className="text-sm font-bold text-black">Ready! 🎉</span>
+            <span className="text-sm font-bold text-black">{t('tutorial.timer.ready', 'Ready! 🎉')}</span>
           )}
         </div>
       )}
@@ -353,7 +357,7 @@ export function TutorialExperience() {
           index={index}
           amount={amount}
           interest={interest}
-          primaryLabel={step.cta}
+          primaryLabel={t(step.ctaKey, step.params)}
           primaryDisabled={finishing}
           primaryLoading={finishing}
           onPrimary={onPrimary}

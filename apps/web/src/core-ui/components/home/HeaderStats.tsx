@@ -6,6 +6,7 @@ import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   useApyByLockPeriod,
   useDepositsComplete,
@@ -20,6 +21,7 @@ import { BankAPYModal, StreakModal } from '../organisms';
 import { EarnChip } from './EarnChip';
 
 export const HeaderStats = () => {
+  const { t } = useTranslation();
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const { walletAddress, token, lockPeriod } = useConfigStore();
@@ -63,7 +65,7 @@ export const HeaderStats = () => {
       <div className="w-full px-4 py-3">
         <div className="max-w-xl mx-auto">
           <PageHeader
-            title="Shop"
+            title={t('home.shop.title', 'Shop')}
             onBack={() => {
               setIsEditingMap(false);
               setEditMode(null);
@@ -75,7 +77,7 @@ export const HeaderStats = () => {
                 <div ref={goldCoinRef} className="flex items-center gap-1">
                   <Image
                     src="/icons/global/coin.png"
-                    alt="Gold Coin"
+                    alt={t('home.stats.goldCoinAlt', 'Gold Coin')}
                     width={20}
                     height={20}
                     className="object-contain"
@@ -95,11 +97,11 @@ export const HeaderStats = () => {
     <div className="w-full relative">
       <div className="w-full px-4 pt-4 pb-4 bg-primary rounded-g">
         <div className="max-w-xl mx-auto flex items-center gap-3">
-          <Link href="/profile" aria-label="Profile" className="relative shrink-0">
+          <Link href="/profile" aria-label={t('home.stats.profileAria', 'Profile')} className="relative shrink-0">
             <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center overflow-hidden border border-[#B97204]/30">
               <Image
                 src="/vaquita/vaquita_isotipo.svg"
-                alt="Profile"
+                alt={t('home.stats.profileAlt', 'Profile')}
                 width={42}
                 height={42}
                 className="object-contain"
@@ -111,7 +113,9 @@ export const HeaderStats = () => {
 
           <div className="flex flex-col min-w-0 flex-1">
             <span className="text-sm font-medium text-black/90 truncate">
-              ¡Vamos{firstName ? `, ${firstName}` : ''}! 🐮
+              {firstName
+                ? t('home.stats.greetingNamed', "Let's go, {{name}}! 🐮", { name: firstName })
+                : t('home.stats.greeting', "Let's go! 🐮")}
             </span>
             <button
               type="button"
@@ -151,7 +155,7 @@ export const HeaderStats = () => {
               <>
                 <Image
                   src="/icons/global/streak.png"
-                  alt="Streak"
+                  alt={t('home.stats.streakAlt', 'Streak')}
                   width={20}
                   height={20}
                   className="object-contain"
@@ -170,7 +174,7 @@ export const HeaderStats = () => {
           <div ref={goldCoinRef} className="flex items-center gap-1.5 flex-1 justify-center">
             <Image
               src="/icons/global/coin.png"
-              alt="Gold Coin"
+              alt={t('home.stats.goldCoinAlt', 'Gold Coin')}
               width={20}
               height={20}
               className="object-contain"
@@ -184,7 +188,7 @@ export const HeaderStats = () => {
           <Link href="/profile/summary" className="flex items-center gap-1.5 flex-1 justify-center">
             <Image
               src="/icons/global/star.png"
-              alt="Experience"
+              alt={t('home.stats.experienceAlt', 'Experience')}
               width={20}
               height={20}
               className="object-contain"

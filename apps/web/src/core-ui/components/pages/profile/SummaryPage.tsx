@@ -6,6 +6,7 @@ import { useProfileExperience, useProfileStreak } from '@/core-ui/hooks/profile'
 import { DepositResponseDTO } from '@/core-ui/types';
 import Image from 'next/image';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiPlus, FiTrendingUp } from 'react-icons/fi';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
@@ -28,6 +29,7 @@ interface PanelProps {
  * needing a heavyweight chart library.
  */
 function Panel({ icon, title, subtitle, soon, children }: PanelProps) {
+  const { t } = useTranslation();
   return (
     <section className="rounded-2xl bg-white border border-black border-b-2 p-4 flex flex-col gap-3">
       <header className="flex items-center gap-2.5">
@@ -38,7 +40,7 @@ function Panel({ icon, title, subtitle, soon, children }: PanelProps) {
         </div>
         {soon && (
           <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider bg-primary text-black border border-black border-b-2 rounded-full px-2 py-0.5">
-            Soon
+            {t('common.soon')}
           </span>
         )}
       </header>
@@ -132,6 +134,7 @@ const SAVINGS_GOALS = [
 /* ------------------------------------------------------------------ */
 
 function StreakCalendar() {
+  const { t } = useTranslation();
   const { data: streak, isLoading } = useProfileStreak();
 
   // Render the last 4 full weeks (28 days) ending today. 28 = 4×7, so each grid
@@ -169,7 +172,7 @@ function StreakCalendar() {
                 className={`mx-auto h-9 w-9 rounded-full bg-primary/15 flex items-center justify-center ${
                   isToday ? 'ring-2 ring-black ring-offset-1 ring-offset-white' : ''
                 }`}
-                aria-label={isToday ? 'Today — streak kept' : 'Streak kept'}
+                aria-label={isToday ? t('profilePages.summary.todayStreakKept', 'Today — streak kept') : t('profilePages.summary.streakKept', 'Streak kept')}
               >
                 <Image
                   src="/icons/global/streak.png"
@@ -187,7 +190,7 @@ function StreakCalendar() {
               className={`mx-auto h-9 w-9 rounded-full bg-black/5 flex items-center justify-center ${
                 isToday ? 'ring-2 ring-black ring-offset-1 ring-offset-white' : ''
               }`}
-              aria-label={isToday ? 'Today — streak missed' : 'Streak missed'}
+              aria-label={isToday ? t('profilePages.summary.todayStreakMissed', 'Today — streak missed') : t('profilePages.summary.streakMissed', 'Streak missed')}
             >
               <span className="h-2 w-2 rounded-full bg-black/20" aria-hidden />
             </div>
@@ -196,10 +199,10 @@ function StreakCalendar() {
       </div>
       <div className="flex items-center justify-between rounded-xl bg-primary/10 border border-black/10 px-3 py-2">
         <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">
-          Last 4 weeks
+          {t('profilePages.summary.last4Weeks', 'Last 4 weeks')}
         </span>
         <span className="text-sm font-extrabold text-black tabular-nums">
-          {kept} / {total} days
+          {t('profilePages.summary.keptOutOfDays', '{{kept}} / {{total}} days', { kept, total })}
         </span>
       </div>
     </div>
@@ -207,6 +210,7 @@ function StreakCalendar() {
 }
 
 function DepositsAreaChart() {
+  const { t } = useTranslation();
   const { data, isLoading } = useDepositsComplete();
   const weekly = useMemo(() => buildWeeklyDeposits(data?.deposits ?? []), [data?.deposits]);
 
@@ -253,7 +257,7 @@ function DepositsAreaChart() {
           className="w-full h-40"
           preserveAspectRatio="none"
           role="img"
-          aria-label="Deposits over the last 6 weeks"
+          aria-label={t('profilePages.summary.depositsChartAria', 'Deposits over the last 6 weeks')}
         >
           <defs>
             <linearGradient id="depositsArea" x1="0" y1="0" x2="0" y2="1">
@@ -311,7 +315,7 @@ function DepositsAreaChart() {
       </div>
       <div className="flex items-center justify-between rounded-xl bg-primary/10 border border-black/10 px-3 py-2">
         <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">
-          Last 6 weeks
+          {t('profilePages.summary.last6Weeks', 'Last 6 weeks')}
         </span>
         <span className="text-sm font-extrabold text-black tabular-nums flex items-center gap-1.5">
           <FiTrendingUp className="h-3.5 w-3.5 text-emerald-600" />
@@ -323,6 +327,7 @@ function DepositsAreaChart() {
 }
 
 function XpProgress() {
+  const { t } = useTranslation();
   const { data, isLoading } = useProfileExperience();
   const totalXp = Math.round(data?.experience ?? 0);
   const { level, xpIntoLevel, xpForNextLevel } = useMemo(() => deriveLevel(totalXp), [totalXp]);
@@ -333,7 +338,7 @@ function XpProgress() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
-        <span className="text-2xl font-extrabold text-black tabular-nums">Lvl {level}</span>
+        <span className="text-2xl font-extrabold text-black tabular-nums">{t('profilePages.summary.levelShort', 'Lvl {{level}}', { level })}</span>
         <span className="text-[11px] font-semibold text-gray-500 tabular-nums">
           {xpIntoLevel} / {xpForNextLevel} XP
         </span>
@@ -345,7 +350,7 @@ function XpProgress() {
         />
       </div>
       <div className="flex items-center justify-between text-xs mt-1">
-        <span className="text-gray-600">Total experience</span>
+        <span className="text-gray-600">{t('profilePages.summary.totalExperience', 'Total experience')}</span>
         <span className="font-bold text-black tabular-nums">{totalXp.toLocaleString('en-US')} XP</span>
       </div>
     </div>
@@ -353,6 +358,7 @@ function XpProgress() {
 }
 
 function SavingsGoals() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-3">
       {SAVINGS_GOALS.map((g) => {
@@ -363,8 +369,12 @@ function SavingsGoals() {
             className="rounded-xl bg-primary/10 border border-black/10 p-3 flex flex-col gap-2"
           >
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-extrabold text-black truncate">{g.title}</span>
-              <span className="text-[11px] font-semibold text-gray-500 shrink-0">{g.due}</span>
+              <span className="text-sm font-extrabold text-black truncate">
+                {t(`profilePages.summary.goals.${g.id}.title`, g.title)}
+              </span>
+              <span className="text-[11px] font-semibold text-gray-500 shrink-0">
+                {t(`profilePages.summary.goals.${g.id}.due`, g.due)}
+              </span>
             </div>
             <div className="h-2.5 w-full rounded-full bg-black/10 overflow-hidden">
               <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
@@ -381,7 +391,7 @@ function SavingsGoals() {
         className="mt-1 inline-flex items-center justify-center gap-2 h-11 rounded-md bg-white text-black border border-black border-b-3 text-xs font-bold uppercase tracking-wide hover:bg-white/80 hover:-translate-y-0.5 transition"
       >
         <FiPlus className="h-3.5 w-3.5" />
-        New goal
+        {t('profilePages.summary.newGoal', 'New goal')}
       </button>
     </div>
   );
@@ -392,41 +402,42 @@ function SavingsGoals() {
 /* ------------------------------------------------------------------ */
 
 export function SummaryPage() {
+  const { t } = useTranslation();
   return (
     <MockedSubPageLayout
-      title="Your summary"
-      subtitle="How your saving habit is shaping up."
+      title={t('profilePages.summary.title', 'Your summary')}
+      subtitle={t('profilePages.summary.subtitle', 'How your saving habit is shaping up.')}
       backHref="/profile"
       showSoonBadge={false}
     >
       <Panel
         icon="/icons/global/streak.png"
-        title="Streak history"
-        subtitle="Days you kept the streak"
+        title={t('profilePages.summary.streakHistory', 'Streak history')}
+        subtitle={t('profilePages.summary.streakHistorySub', 'Days you kept the streak')}
       >
         <StreakCalendar />
       </Panel>
 
       <Panel
         icon="/icons/global/coin.png"
-        title="Deposits over time"
-        subtitle="Weekly contributions"
+        title={t('profilePages.summary.depositsOverTime', 'Deposits over time')}
+        subtitle={t('profilePages.summary.depositsOverTimeSub', 'Weekly contributions')}
       >
         <DepositsAreaChart />
       </Panel>
 
       <Panel
         icon="/icons/global/trophy.png"
-        title="XP & level"
-        subtitle="Progress to your next level"
+        title={t('profilePages.summary.xpLevel', 'XP & level')}
+        subtitle={t('profilePages.summary.xpLevelSub', 'Progress to your next level')}
       >
         <XpProgress />
       </Panel>
 
       <Panel
         icon="/icons/global/star.png"
-        title="Savings goals"
-        subtitle="What you're working toward"
+        title={t('profilePages.summary.savingsGoals', 'Savings goals')}
+        subtitle={t('profilePages.summary.savingsGoalsSub', "What you're working toward")}
         soon
       >
         <SavingsGoals />

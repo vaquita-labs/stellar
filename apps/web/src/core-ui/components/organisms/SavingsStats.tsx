@@ -3,11 +3,13 @@
 import { Button, Spinner } from '@heroui/react';
 import Image from 'next/image';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApyByLockPeriod } from '../../hooks';
 import { useConfigStore } from '../../stores';
 import { BankAPYModal } from './BankAPYModal';
 
 export const SavingsStats = () => {
+  const { t } = useTranslation();
   const { lockPeriod, token } = useConfigStore();
   const { data: dataApy, isLoading: isLoadingApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
   const protocolApy = dataApy?.protocolApy ?? 0;
@@ -28,7 +30,7 @@ export const SavingsStats = () => {
           <Spinner size="md" color="accent" />
         ) : (
           <Button onPress={handleBankAPYModal} className="flex items-center gap-2 bg-transparent z-10">
-            <Image src={`/chains/${token?.symbol}.png`} alt="info" width={32} height={32} />
+            <Image src={`/chains/${token?.symbol}.png`} alt={t('deposit.savingsStats.infoAlt', 'info')} width={32} height={32} />
             <span className="text-xl font-bold">{APYTotal} %</span>
           </Button>
         )}

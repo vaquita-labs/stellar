@@ -3,6 +3,7 @@
 import { usePollar } from '@pollar/react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiCheckCircle } from 'react-icons/fi';
 import { Button } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
@@ -27,6 +28,7 @@ const formatAmount = (amount: string) =>
  * o no elegible), se cierra solo via `onDone`.
  */
 export function ClaimRewardModal({ onDone }: ClaimRewardModalProps) {
+  const { t } = useTranslation();
   const { getClient } = usePollar();
 
   const [reward, setReward] = useState<Reward | null>(null);
@@ -77,7 +79,7 @@ export function ClaimRewardModal({ onDone }: ClaimRewardModalProps) {
       await getClient().claimDistributionRule({ ruleId: reward.id });
       setClaimed(true);
     } catch {
-      setError('Could not claim right now. Please try again.');
+      setError(t('rewards.claim.error', 'Could not claim right now. Please try again.'));
     } finally {
       setClaiming(false);
     }
@@ -94,16 +96,16 @@ export function ClaimRewardModal({ onDone }: ClaimRewardModalProps) {
       onOpenChange={() => {}}
       isDismissable={false}
       hideClose
-      title="A gift for you"
+      title={t('rewards.claim.title', 'A gift for you')}
       titleIcon="/icons/global/coin.png"
-      titleIconAlt="gift"
+      titleIconAlt={t('rewards.claim.giftAlt', 'gift')}
       size="sm"
       placement={isDesktop ? 'center' : undefined}
       bodyClassName="flex flex-col items-center gap-4 pb-2 text-center"
       footer={
         claimed ? (
           <Button type="primary" wFull onPress={onDone}>
-            Let&apos;s go
+            {t('rewards.claim.letsGo', "Let's go")}
           </Button>
         ) : (
           <Button
@@ -113,13 +115,14 @@ export function ClaimRewardModal({ onDone }: ClaimRewardModalProps) {
             isLoading={claiming}
             className="bg-success border-[#018222] text-black"
           >
-            Claim {label}
+            {t('rewards.claim.claimButton', 'Claim {{label}}', { label })}
           </Button>
         )
       }
     >
       <div className="relative h-28 w-28">
         <Image src="/vaquita/vaquita_isotipo.svg" alt="Vaquita" fill sizes="112px" className="object-contain" priority />
+        {/* decorative coin overlay */}
         <div className="absolute -bottom-1 -right-1 h-12 w-12">
           <Image src="/icons/global/coin.png" alt="" fill sizes="48px" className="object-contain drop-shadow" />
         </div>
@@ -129,14 +132,14 @@ export function ClaimRewardModal({ onDone }: ClaimRewardModalProps) {
         <>
           <div className="flex items-center gap-2 text-success">
             <FiCheckCircle size={22} />
-            <span className="text-lg font-bold">{label} is on its way</span>
+            <span className="text-lg font-bold">{t('rewards.claim.onItsWay', '{{label}} is on its way', { label })}</span>
           </div>
-          <p className="text-sm text-black/60">Enjoy exploring Vaquita.</p>
+          <p className="text-sm text-black/60">{t('rewards.claim.enjoy', 'Enjoy exploring Vaquita.')}</p>
         </>
       ) : (
         <>
-          <h2 className="text-xl font-bold text-black">{label} for you</h2>
-          <p className="text-sm leading-relaxed text-black/60">A welcome balance to try Vaquita. Claim it to get started.</p>
+          <h2 className="text-xl font-bold text-black">{t('rewards.claim.forYou', '{{label}} for you', { label })}</h2>
+          <p className="text-sm leading-relaxed text-black/60">{t('rewards.claim.welcomeBalance', 'A welcome balance to try Vaquita. Claim it to get started.')}</p>
           {error && <p className="text-sm font-medium text-red-600">{error}</p>}
         </>
       )}
