@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ReactNode, useState } from 'react';
 import { FiHeart, FiMessageCircle } from 'react-icons/fi';
-import { WorldPreviewTile } from './WorldPreviewTile';
+import { MapMiniPreview } from './MapMiniPreview';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -235,7 +235,7 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
     >
       <CardHeader user={user} />
 
-      <WorldPreviewTile caption={`Lv ${user.level}`} />
+      <MapMiniPreview walletAddress={user.walletAddress} caption={`Lv ${user.level}`} />
 
       <div className="flex gap-2">
         <StatBox

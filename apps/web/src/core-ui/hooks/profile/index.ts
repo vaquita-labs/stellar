@@ -8,6 +8,7 @@ export * from './useFollowCounts';
 export * from './useFriendSuggestions';
 export * from './useProfileExperience';
 export * from './useProfileMapObjectsAvailable';
+export * from './useProfileMapObjectsByWallet';
 export * from './useProfileRewards';
 export * from './useProfileStreak';
 export * from './useRedeemAchievementCode';
