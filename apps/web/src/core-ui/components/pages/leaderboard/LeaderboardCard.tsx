@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ReactNode, useState } from 'react';
 import { FiHeart, FiMessageCircle } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 import { MapMiniPreview } from './MapMiniPreview';
 
 /* ------------------------------------------------------------------ */
@@ -88,13 +89,14 @@ function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: string 
 }
 
 function PositionPill({ position }: { position: number }) {
+  const { t } = useTranslation();
   const medal = MEDALS[position];
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border border-black border-b-2 px-2.5 py-0.5 text-xs font-extrabold tabular-nums shrink-0 ${
         position <= 3 ? 'bg-primary text-black' : 'bg-white text-black'
       }`}
-      aria-label={`Position ${position}`}
+      aria-label={t('leaderboard.card.positionLabel', 'Position {{position}}', { position })}
     >
       {medal && <span aria-hidden className="text-sm leading-none">{medal}</span>}
       <span>#{position}</span>
@@ -141,6 +143,7 @@ interface SocialRowProps {
 }
 
 function SocialRow({ username, likes, comments }: SocialRowProps) {
+  const { t } = useTranslation();
   const [liked, setLiked] = useState(false);
   const likeCount = liked ? likes + 1 : likes;
 
@@ -158,7 +161,11 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
 
   const handleComment = (e: React.MouseEvent) => {
     stop(e);
-    toast.success(`Comments on ${username}'s world coming soon`);
+    toast.success(
+      t('leaderboard.card.commentsComingSoon', "Comments on {{username}}'s world coming soon", {
+        username,
+      })
+    );
   };
 
   return (
@@ -167,7 +174,7 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
         type="button"
         onClick={handleLike}
         aria-pressed={liked}
-        aria-label={liked ? 'Unlike' : 'Like'}
+        aria-label={liked ? t('leaderboard.card.unlike', 'Unlike') : t('leaderboard.card.like', 'Like')}
         className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 hover:bg-black/5 transition bg-transparent"
       >
         <FiHeart
@@ -178,7 +185,7 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
       <button
         type="button"
         onClick={handleComment}
-        aria-label="Open comments"
+        aria-label={t('leaderboard.card.openComments', 'Open comments')}
         className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 hover:bg-black/5 transition bg-transparent"
       >
         <FiMessageCircle className="h-4 w-4 text-black" />
@@ -193,6 +200,7 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
 /* ------------------------------------------------------------------ */
 
 function CardHeader({ user }: { user: LeaderboardCardData }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3">
       <Avatar username={user.username} avatarUrl={user.avatarUrl} />
@@ -201,7 +209,7 @@ function CardHeader({ user }: { user: LeaderboardCardData }) {
         <p className="text-sm font-extrabold text-black truncate">{user.username}</p>
         {user.isCurrentUser && (
           <span className="text-[10px] font-bold uppercase tracking-wider bg-black text-white rounded-sm px-1.5 py-0.5 shrink-0">
-            You
+            {t('leaderboard.card.you', 'You')}
           </span>
         )}
       </div>
@@ -221,6 +229,7 @@ function CardHeader({ user }: { user: LeaderboardCardData }) {
  * square — no gradient, no random imagery.
  */
 export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
+  const { t } = useTranslation();
   // Current-user card is filled with a soft primary tint (not just an outline)
   // so "this is you" reads at a glance while scrolling the feed.
   const containerClasses = user.isCurrentUser
@@ -230,12 +239,17 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
   return (
     <Link
       href={`/leaderboard/${user.walletAddress}`}
-      aria-label={`View ${user.username}'s world`}
+      aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", {
+        username: user.username,
+      })}
       className={`group flex flex-col gap-2.5 rounded-3xl p-3 shadow-sm transition hover:-translate-y-0.5 ${containerClasses}`}
     >
       <CardHeader user={user} />
 
-      <MapMiniPreview walletAddress={user.walletAddress} caption={`Lv ${user.level}`} />
+      <MapMiniPreview
+        walletAddress={user.walletAddress}
+        caption={t('leaderboard.card.levelShort', 'Lv {{level}}', { level: user.level })}
+      />
 
       <div className="flex gap-2">
         <StatBox
@@ -249,7 +263,7 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
             />
           }
           value={`${user.streak}`}
-          label="Day streak"
+          label={t('leaderboard.card.dayStreak', 'Day streak')}
         />
         <StatBox
           icon={
@@ -262,7 +276,7 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
             />
           }
           value={`${user.badges}`}
-          label="Badges"
+          label={t('leaderboard.card.badges', 'Badges')}
         />
       </div>
 

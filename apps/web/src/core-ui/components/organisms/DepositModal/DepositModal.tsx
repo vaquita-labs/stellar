@@ -14,11 +14,11 @@ import {
 import { usePollar } from '@pollar/react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { v4 } from 'uuid';
 import { formatTimeDeposit, getQuickAmounts, truncateDecimals } from '../../../helpers';
 import { useAnalytics, useRestDeposit, useTransactions } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
-import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
 import { TokenSymbol } from '../../molecules/MoneyInput/types';
@@ -34,6 +34,7 @@ export function DepositModal({
   simulateLockMs = 5000,
   onSimulatedSuccess,
 }: DepositModalProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [amount, setAmount] = useState<string>('');
   const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useConfigStore();
@@ -43,7 +44,7 @@ export function DepositModal({
   // En modo tutorial el lock es local (no toca el config global) y se ofrece una
   // sola opción de pocos segundos; en modo normal salen los lock periods reales.
   const lockTimeOptions = simulate
-    ? [{ key: simulateLockMs, label: `${Math.round(simulateLockMs / 1000)} seconds`, available: true }]
+    ? [{ key: simulateLockMs, label: t('deposit.modal.lockSeconds', '{{count}} seconds', { count: Math.round(simulateLockMs / 1000) }), available: true }]
     : token?.lockPeriods.map((lockPeriod) => ({
         key: lockPeriod,
         label: formatTimeDeposit(lockPeriod),
@@ -164,7 +165,7 @@ export function DepositModal({
           lockPeriod,
           network: network?.networkName,
         });
-        toast.success(<T>Deposit successful!</T>, {
+        toast.success(t('deposit.toast.successTitle', 'Deposit successful!'), {
           indicator: (
             <Image
               src="/icons/global/coin.png"
@@ -174,8 +175,9 @@ export function DepositModal({
               className="drop-shadow-sm"
             />
           ),
-          description: (
-            <T>Your savings are on their way! This may take a few seconds. Everything will be ready in a moment.</T>
+          description: t(
+            'deposit.toast.successDescription',
+            'Your savings are on their way! This may take a few seconds. Everything will be ready in a moment.',
           ),
           timeout: 6000,
         });
@@ -189,12 +191,12 @@ export function DepositModal({
           network: network?.networkName,
         });
         const poolMsg = parsePoolErrorMessage(lastError);
-        toast.danger(<T>Deposit didn&apos;t go through</T>, {
+        toast.danger(t('deposit.toast.errorTitle', "Deposit didn't go through"), {
           indicator: <Image src="/vaquita/error.svg" alt="" width={32} height={32} />,
           description: poolMsg
-            ? <T>{poolMsg}</T>
+            ? poolMsg
             : lastError instanceof Error
-              ? <T>{lastError.message}</T>
+              ? lastError.message
               : undefined,
           timeout: 3000,
         });
@@ -208,7 +210,7 @@ export function DepositModal({
       open={open}
       onOpenChange={onOpenChange}
       isDismissable={!balanceIsLoading && !isDepositing}
-      title="Deposit"
+      title={t('deposit.modal.title', 'Deposit')}
       titleIcon="/icons/bag.svg"
       titleIconAlt="deposit"
       size="md"
@@ -219,7 +221,7 @@ export function DepositModal({
           className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
           isDisabled={isDisabled || isDepositing}
         >
-          {isDepositing ? <><Spinner size="sm" color="current" /> Processing...</> : 'Deposit'}
+          {isDepositing ? <><Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}</> : t('deposit.modal.title', 'Deposit')}
         </Button>
       }
     >
@@ -230,7 +232,7 @@ export function DepositModal({
             disabledKeys={lockTimeOptions.filter((o) => !o.available).map((o) => o.key.toString())}
             isDisabled={isDepositing || simulate}
           >
-            <Label className="text-black font-normal text-sm">Lock time</Label>
+            <Label className="text-black font-normal text-sm">{t('deposit.modal.lockTime', 'Lock time')}</Label>
             <Select.Trigger className="bg-white border border-black border-b-2 h-14 items-center">
               <Select.Value className="text-black font-medium" />
               <Select.Indicator className="text-black" />
@@ -245,7 +247,7 @@ export function DepositModal({
                 ))}
               </ListBox>
             </Select.Popover>
-            <Description className="text-default-500 text-xs">The funds will be lock in the vault during the selected period.</Description>
+            <Description className="text-default-500 text-xs">{t('deposit.modal.lockDescription', 'The funds will be lock in the vault during the selected period.')}</Description>
           </Select>
 
           <div className="flex flex-col gap-2">

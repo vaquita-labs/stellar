@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface CoinAnimationProps {
   targetPosition: { x: number; y: number } | null;
@@ -11,6 +12,7 @@ interface CoinAnimationProps {
 }
 
 export const CoinAnimation = ({ targetPosition, onComplete, coinCount = 8 }: CoinAnimationProps) => {
+  const { t } = useTranslation();
   const [coins, setCoins] = useState<Array<{ id: number; delay: number }>>([]);
 
   useEffect(() => {
@@ -73,7 +75,7 @@ export const CoinAnimation = ({ targetPosition, onComplete, coinCount = 8 }: Coi
         >
           <Image
             src="/icons/global/coin.png"
-            alt="Coin"
+            alt={t('rewards.coinAnimation.coinAlt', 'Coin')}
             width={40}
             height={40}
             className="object-contain"

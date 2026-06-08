@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiCheckCircle } from 'react-icons/fi';
 import { Button } from '../../atoms';
 import { formatTutorialMoney, TUTORIAL_STEPS, TutorialStep } from './tutorialConfig';
@@ -64,6 +65,7 @@ export function TutorialOverlay({
   onPrimary,
   onSkip,
 }: TutorialOverlayProps) {
+  const { t } = useTranslation();
   const rect = useTargetRect(step.spotlight);
   const finalAmount = amount + interest;
   const isSpotlight = step.kind === 'deposit' || step.kind === 'spotlight';
@@ -141,7 +143,7 @@ export function TutorialOverlay({
 
       {/* Caja de click sobre el botón real: abrir el modal pulsando el botón REAL */}
       {rect && isSpotlight && (
-        <button aria-label={step.cta} onClick={onPrimary} className="absolute cursor-pointer rounded-2xl" style={spotStyle} />
+        <button aria-label={t(step.ctaKey, step.params)} onClick={onPrimary} className="absolute cursor-pointer rounded-2xl" style={spotStyle} />
       )}
 
       {/* Saltar tutorial: abajo, centrado y discreto (también marca el flag). */}
@@ -151,7 +153,7 @@ export function TutorialOverlay({
           disabled={primaryLoading}
           className="pointer-events-auto rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-sm transition hover:text-white disabled:opacity-40"
         >
-          Skip tutorial
+          {t('tutorial.skip', 'Skip tutorial')}
         </button>
       </div>
 
@@ -160,7 +162,7 @@ export function TutorialOverlay({
       {step.kind === 'waiting' && (
         <div className="absolute inset-x-0 bottom-44 flex justify-center px-4">
           <div className="rounded-full border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-black shadow-lg">
-            {step.body}
+            {t(step.bodyKey, step.params)}
           </div>
         </div>
       )}
@@ -194,14 +196,18 @@ export function TutorialOverlay({
               ))}
             </div>
 
-            <h2 className="text-xl font-bold text-black sm:text-2xl">{step.title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-black/70 sm:text-base">{step.body}</p>
+            <h2 className="text-xl font-bold text-black sm:text-2xl">{t(step.titleKey, step.params)}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-black/70 sm:text-base">{t(step.bodyKey, step.params)}</p>
 
             {step.kind === 'warn' && (
               <div className="mt-4 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
                 <FiAlertTriangle className="shrink-0" size={18} />
                 <span>
-                  Keep {formatTutorialMoney(amount)}, lose {formatTutorialMoney(interest)} interest.
+                  {t('tutorial.warn.keepLose', {
+                    defaultValue: 'Keep {{amount}}, lose {{interest}} interest.',
+                    amount: formatTutorialMoney(amount),
+                    interest: formatTutorialMoney(interest),
+                  })}
                 </span>
               </div>
             )}
@@ -209,16 +215,16 @@ export function TutorialOverlay({
             {step.kind === 'success' && (
               <div className="mt-4 rounded-lg border border-black/10 bg-emerald-50 p-3 text-sm">
                 <div className="flex justify-between py-0.5 text-black/70">
-                  <span>Deposit</span>
+                  <span>{t('tutorial.receipt.deposit', 'Deposit')}</span>
                   <span className="tabular-nums">{formatTutorialMoney(amount)}</span>
                 </div>
                 <div className="flex justify-between py-0.5 text-emerald-700">
-                  <span>Interest earned</span>
+                  <span>{t('tutorial.receipt.interestEarned', 'Interest earned')}</span>
                   <span className="tabular-nums">+{formatTutorialMoney(interest)}</span>
                 </div>
                 <div className="mt-1 flex justify-between border-t border-black/10 pt-2 font-bold text-black">
                   <span className="flex items-center gap-1">
-                    <FiCheckCircle className="text-emerald-600" /> You received
+                    <FiCheckCircle className="text-emerald-600" /> {t('tutorial.receipt.youReceived', 'You received')}
                   </span>
                   <span className="tabular-nums">{formatTutorialMoney(finalAmount)}</span>
                 </div>

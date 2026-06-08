@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(false);
@@ -14,6 +15,7 @@ function useMediaQuery(query: string) {
 }
 
 export default function PageOnboarding() {
+  const { t } = useTranslation();
   const isMobile = useMediaQuery('(max-width: 640px)');
   if (isMobile) {
     return (
@@ -27,7 +29,7 @@ export default function PageOnboarding() {
       >
         <iframe
           src="https://demo.arcade.software/O9a6jqOPv9c9fdKlxjID?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
-          title="Learn how to save with Vaquita mobile"
+          title={t('onboarding.demo.titleMobile', 'Learn how to save with Vaquita mobile')}
           frameBorder="0"
           loading="lazy"
           allowFullScreen
@@ -56,7 +58,7 @@ export default function PageOnboarding() {
       >
         <iframe
           src="https://demo.arcade.software/fig4kWFCOkXCO48WunnY?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
-          title="Learn how to save with Vaquita"
+          title={t('onboarding.demo.title', 'Learn how to save with Vaquita')}
           frameBorder="0"
           loading="lazy"
           allowFullScreen

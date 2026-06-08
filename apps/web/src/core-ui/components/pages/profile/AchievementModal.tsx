@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { FiShare2, FiX } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 import {
   useClaimedAchievements,
   useIsMobile,
@@ -63,8 +64,9 @@ type Phase = 'detail' | 'reward' | 'minting' | 'minted';
 /* ------------------------------------------------------------------ */
 
 function VaquitaDots() {
+  const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-2" role="status" aria-label="Claiming reward">
+    <div className="flex items-center gap-2" role="status" aria-label={t('achievements.modal.claimingReward', 'Claiming reward')}>
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}
@@ -82,6 +84,7 @@ function VaquitaDots() {
 /* ------------------------------------------------------------------ */
 
 export function AchievementModal({ achievement, unlocked = false, open, onOpenChange }: AchievementModalProps) {
+  const { t } = useTranslation();
   const { isClaimed } = useClaimedAchievements();
   const { isMinted, getMintTxHash } = useMintedBadges();
   const mintBadgeMutation = useMintBadge();
@@ -133,7 +136,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
         setPhase('reward');
       },
       onError: (err) => {
-        toast.danger('Mint failed', { description: err.message });
+        toast.danger(t('achievements.toast.mintFailed', 'Mint failed'), { description: err.message });
         setPhase('detail');
       },
     });
@@ -142,6 +145,11 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   const claimed = !!achievement && isClaimed(achievement.id);
 
   if (!achievement) return null;
+
+  // Badge copy is backend-served; localize known built-in badges by id, with
+  // the English title/description supplied with the data as the fallback.
+  const title = t(`achievements.items.${achievement.id}.title`, achievement.title);
+  const description = t(`achievements.items.${achievement.id}.description`, achievement.description);
 
   const progressPct = achievement.progress
     ? Math.min(100, Math.round((achievement.progress.current / achievement.progress.target) * 100))
@@ -166,7 +174,9 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   // From the reward reveal, advance to the on-chain confirmation screen.
   const handleContinue = () => setPhase('minted');
 
-  const shareText = `I just unlocked "${achievement.title}" on Vaquita 🐮`;
+  const shareText = t('achievements.share.text', 'I just unlocked "{{title}}" on Vaquita 🐮', {
+    title,
+  });
 
   /**
    * Build the public share URL pointing at `/share/achievement/<id>`. Each
@@ -201,13 +211,13 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
       const nav = navigator as Navigator & {
         share?: (data: ShareData) => Promise<void>;
       };
-      const payload: ShareData = { title: achievement.title, text: shareText, url: shareUrl };
+      const payload: ShareData = { title, text: shareText, url: shareUrl };
       if (nav.share) {
         await nav.share(payload);
         return;
       }
       await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
-      toast.success('Link copied to clipboard');
+      toast.success(t('achievements.toast.linkCopied', 'Link copied to clipboard'));
     } catch (error) {
       // Treat user-cancel as a no-op. Browsers are inconsistent here:
       //  - Chromium / iOS Safari throw a `DOMException` with `name`
@@ -222,7 +232,9 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
       const message = (err?.message ?? '').toLowerCase();
       const isCancel = name === 'AbortError' || message.includes('abort') || message.includes('cancel'); // catches "canceled" and "cancelled"
       if (!isCancel) {
-        toast.danger('Could not share', { description: err?.message ?? 'Unknown error' });
+        toast.danger(t('achievements.toast.couldNotShare', 'Could not share'), {
+          description: err?.message ?? t('achievements.toast.unknownError', 'Unknown error'),
+        });
       }
     } finally {
       setSharing(false);
@@ -260,7 +272,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
           transition={{ delay: 0.1 }}
           className="text-2xl sm:text-3xl font-extrabold text-black text-center"
         >
-          You earned {coinReward} coins!
+          {t('achievements.reward.title', 'You earned {{count}} coins!', { count: coinReward })}
         </motion.h2>
         <motion.p
           initial={{ y: 12, opacity: 0 }}
@@ -268,7 +280,9 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
           transition={{ delay: 0.18 }}
           className="text-sm text-gray-600 text-center max-w-xs"
         >
-          {achievement.title} is now in your trophy room.
+          {t('achievements.reward.subtitle', '{{title}} is now in your trophy room.', {
+            title,
+          })}
         </motion.p>
       </div>
       <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
@@ -278,7 +292,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
           disabled={mintBadgeMutation.isPending}
           className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
         >
-          Continue
+          {t('common.continue')}
         </button>
       </div>
     </motion.div>
@@ -299,7 +313,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
         <Image src={achievement.icon} alt="" fill sizes="128px" className="object-contain grayscale animate-pulse" />
       </div>
       <VaquitaDots />
-      <p className="text-sm font-bold uppercase tracking-wider text-gray-500">Waiting for wallet…</p>
+      <p className="text-sm font-bold uppercase tracking-wider text-gray-500">{t('achievements.minting.waitingForWallet', 'Waiting for wallet…')}</p>
     </motion.div>
   );
 
@@ -334,7 +348,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
             />
             <Image
               src={achievement.icon}
-              alt={achievement.title}
+              alt={title}
               fill
               sizes="(min-width: 640px) 192px, 160px"
               className="relative object-contain drop-shadow-2xl"
@@ -346,7 +360,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
             transition={{ delay: 0.1 }}
             className="text-2xl sm:text-3xl font-extrabold text-black text-center"
           >
-            Badge minted on-chain!
+            {t('achievements.minted.title', 'Badge minted on-chain!')}
           </motion.h2>
           {explorerUrl && shortHash && (
             <motion.a
@@ -368,7 +382,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
             onClick={() => onOpenChange(false)}
             className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
           >
-            Done
+            {t('common.done')}
           </button>
         </div>
       </motion.div>
@@ -406,7 +420,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
             />
             <Image
               src={achievement.icon}
-              alt={achievement.title}
+              alt={title}
               fill
               sizes="(min-width: 640px) 192px, 160px"
               className={`relative object-contain drop-shadow-2xl ${unlocked ? '' : 'grayscale opacity-70'}`}
@@ -423,14 +437,14 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
           )}
 
           <div className="text-center max-w-md flex flex-col items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-black">{achievement.title}</h2>
-            <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">{achievement.description}</p>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-black">{title}</h2>
+            <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">{description}</p>
           </div>
 
           {progressPct !== null && !claimed && (
             <div className="w-full max-w-md flex flex-col gap-1.5 mt-1">
               <div className="flex items-center justify-between text-xs font-semibold text-gray-700">
-                <span>Progress</span>
+                <span>{t('achievements.detail.progress', 'Progress')}</span>
                 <span className="tabular-nums">
                   {Math.floor(achievement.progress!.current)} / {Math.floor(achievement.progress!.target)}
                 </span>
@@ -454,7 +468,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
               onClick={handleClaim}
               className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
             >
-              Claim award
+              {t('achievements.detail.claimAward', 'Claim award')}
             </button>
           </div>
         )}
@@ -469,7 +483,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
               rel="noopener noreferrer"
               className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
             >
-              View transaction on Stellar Expert
+              {t('achievements.detail.viewTransaction', 'View transaction on Stellar Expert')}
             </a>
             <span className="text-xs font-mono text-gray-500">{shortenHash(storedTxHash)}</span>
           </div>
@@ -520,7 +534,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                aria-label="Close"
+                aria-label={t('common.close')}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition"
               >
                 <FiX className="h-5 w-5" />
@@ -536,7 +550,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', stiffness: 320, damping: 18 }}
                   className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white border border-black border-b-2 px-3 text-black"
-                  aria-label={`${goldCoins} gold coins`}
+                  aria-label={t('achievements.modal.goldCoins', '{{count}} gold coins', { count: goldCoins })}
                 >
                   <Image src="/icons/global/coin.png" alt="" width={18} height={18} className="object-contain" />
                   <span className="text-sm font-extrabold tabular-nums">
@@ -548,7 +562,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
                   type="button"
                   onClick={handleNativeShare}
                   disabled={sharing}
-                  aria-label="Share achievement"
+                  aria-label={t('achievements.modal.shareAchievement', 'Share achievement')}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
                 >
                   <FiShare2 className="h-4 w-4" />

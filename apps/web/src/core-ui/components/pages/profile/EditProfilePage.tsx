@@ -4,6 +4,7 @@ import { Spinner, Switch, toast } from '@heroui/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiCamera, FiSave, FiTrash2 } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useProfileData, useRestProfile } from '../../../hooks';
@@ -12,6 +13,7 @@ import { Button } from '../../atoms';
 import { PageLayout } from '../../molecules';
 
 export function EditProfilePage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { walletAddress, network } = useConfigStore();
   const { data, isLoading, refetch } = useProfileData();
@@ -77,11 +79,11 @@ export function EditProfilePage() {
     event.target.value = '';
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast.danger('Please choose an image file');
+      toast.danger(t('profilePages.edit.chooseImageFile', 'Please choose an image file'));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.danger('The image is too large (max 5 MB).');
+      toast.danger(t('profilePages.edit.imageTooLarge', 'The image is too large (max 5 MB).'));
       return;
     }
     if (!walletAddress || uploadingPhoto) return;
@@ -98,17 +100,17 @@ export function EditProfilePage() {
       if (success && avatarUrl) {
         clearPreview();
         setAvatarSrc(avatarUrl);
-        toast.success('Photo updated', { timeout: 2000 });
+        toast.success(t('profilePages.edit.photoUpdated', 'Photo updated'), { timeout: 2000 });
         refetch();
       } else {
         clearPreview();
         setAvatarSrc(prevSrc);
-        toast.danger('Could not update photo', { description: message, timeout: 4000 });
+        toast.danger(t('profilePages.edit.couldNotUpdatePhoto', 'Could not update photo'), { description: message, timeout: 4000 });
       }
     } catch (error) {
       clearPreview();
       setAvatarSrc(prevSrc);
-      toast.danger('Could not update photo', {
+      toast.danger(t('profilePages.edit.couldNotUpdatePhoto', 'Could not update photo'), {
         description: (error as { message?: string })?.message ?? '',
         timeout: 4000,
       });
@@ -126,15 +128,15 @@ export function EditProfilePage() {
       if (success) {
         clearPreview();
         setAvatarSrc(DEFAULT_AVATAR);
-        toast.success('Photo removed', { timeout: 2000 });
+        toast.success(t('profilePages.edit.photoRemoved', 'Photo removed'), { timeout: 2000 });
         refetch();
       } else {
         setAvatarSrc(prevSrc);
-        toast.danger('Could not remove photo', { description: message, timeout: 4000 });
+        toast.danger(t('profilePages.edit.couldNotRemovePhoto', 'Could not remove photo'), { description: message, timeout: 4000 });
       }
     } catch (error) {
       setAvatarSrc(prevSrc);
-      toast.danger('Could not remove photo', {
+      toast.danger(t('profilePages.edit.couldNotRemovePhoto', 'Could not remove photo'), {
         description: (error as { message?: string })?.message ?? '',
         timeout: 4000,
       });
@@ -166,15 +168,15 @@ export function EditProfilePage() {
         flag === 'onboarding' ? { onboardingCompleted: value } : { tutorialCompleted: value };
       const { success, message } = await saveProfileFlags(payload);
       if (success) {
-        toast.success('Preferences updated', { timeout: 2000 });
+        toast.success(t('profilePages.edit.preferencesUpdated', 'Preferences updated'), { timeout: 2000 });
         refetch();
       } else {
         setLocal(prev);
-        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+        toast.danger(t('profilePages.edit.couldNotUpdatePreferences', 'Could not update preferences'), { description: message, timeout: 4000 });
       }
     } catch (error) {
       setLocal(prev);
-      toast.danger('Could not update preferences', {
+      toast.danger(t('profilePages.edit.couldNotUpdatePreferences', 'Could not update preferences'), {
         description: (error as { message?: string })?.message ?? '',
         timeout: 4000,
       });
@@ -200,7 +202,7 @@ export function EditProfilePage() {
       const { success, message, result } = await saveProfile(payload);
 
       if (!success || !result) {
-        toast.danger('Could not save profile', { description: message, timeout: 4000 });
+        toast.danger(t('profilePages.edit.couldNotSaveProfile', 'Could not save profile'), { description: message, timeout: 4000 });
         return;
       }
 
@@ -212,11 +214,11 @@ export function EditProfilePage() {
       const savedAny = result.nickname.saved || result.email.saved;
 
       if (savedAny) {
-        toast.success('Profile saved', { timeout: 2500 });
+        toast.success(t('profilePages.edit.profileSaved', 'Profile saved'), { timeout: 2500 });
         refetch();
       }
       if (fieldErrors.length > 0) {
-        toast.danger('Some changes were not saved', {
+        toast.danger(t('profilePages.edit.someChangesNotSaved', 'Some changes were not saved'), {
           description: fieldErrors.join(' '),
           timeout: 5000,
         });
@@ -224,7 +226,7 @@ export function EditProfilePage() {
       // Stay on the edit page after saving — the success toast + refetch already
       // reflect the saved values, so the user keeps editing without navigating away.
     } catch (error) {
-      toast.danger('Could not save profile', {
+      toast.danger(t('profilePages.edit.couldNotSaveProfile', 'Could not save profile'), {
         description: (error as { message?: string })?.message ?? '',
         timeout: 4000,
       });
@@ -234,14 +236,14 @@ export function EditProfilePage() {
   };
 
   return (
-    <PageLayout title="Edit profile" backHref="/profile/settings">
+    <PageLayout title={t('profilePages.edit.title', 'Edit profile')} backHref="/profile/settings">
         {/* Avatar */}
         <div className="flex flex-col items-center gap-2">
           <div className="relative">
             <button
               type="button"
               onClick={handlePickPhoto}
-              aria-label="Change photo"
+              aria-label={t('profilePages.edit.changePhoto', 'Change photo')}
               className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden border-2 border-black shadow group focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {/* Fallback initials sit behind the image; a loaded photo covers them. */}
@@ -251,7 +253,7 @@ export function EditProfilePage() {
               <Image
                 key={avatarSrc}
                 src={avatarSrc}
-                alt="Profile photo"
+                alt={t('profilePages.edit.profilePhotoAlt', 'Profile photo')}
                 fill
                 sizes="128px"
                 className="object-cover"
@@ -261,7 +263,7 @@ export function EditProfilePage() {
                 unoptimized={avatarSrc.startsWith('blob:') || avatarSrc.startsWith('data:')}
               />
               <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition">
-                Change photo
+                {t('profilePages.edit.changePhoto', 'Change photo')}
               </span>
               {uploadingPhoto && (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -272,7 +274,7 @@ export function EditProfilePage() {
             <button
               type="button"
               onClick={handlePickPhoto}
-              aria-label="Change photo"
+              aria-label={t('profilePages.edit.changePhoto', 'Change photo')}
               className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full border border-black border-b-2 bg-primary text-black hover:bg-primary/80 transition shadow"
             >
               <FiCamera className="h-4 w-4" />
@@ -293,20 +295,20 @@ export function EditProfilePage() {
               className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-red-600 transition disabled:opacity-50"
             >
               <FiTrash2 className="h-3 w-3" />
-              Remove photo
+              {t('profilePages.edit.removePhoto', 'Remove photo')}
             </button>
           ) : (
-            <p className="text-xs text-gray-500">Tap the photo to change it.</p>
+            <p className="text-xs text-gray-500">{t('profilePages.edit.tapToChange', 'Tap the photo to change it.')}</p>
           )}
         </div>
 
         {/* Form */}
         <section className="flex flex-col gap-4">
           <div>
-            <label className="text-black font-medium text-sm block mb-1.5">Nickname</label>
+            <label className="text-black font-medium text-sm block mb-1.5">{t('profilePages.edit.nickname', 'Nickname')}</label>
             <input
               type="text"
-              placeholder="@nickname"
+              placeholder={t('profilePages.edit.nicknamePlaceholder', '@nickname')}
               value={nickname}
               onChange={(e) => {
                 setNickname(e.target.value);
@@ -323,10 +325,10 @@ export function EditProfilePage() {
           </div>
 
           <div>
-            <label className="text-black font-medium text-sm block mb-1.5">Email</label>
+            <label className="text-black font-medium text-sm block mb-1.5">{t('profilePages.edit.email', 'Email')}</label>
             <input
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('profilePages.edit.emailPlaceholder', 'you@example.com')}
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
@@ -346,23 +348,23 @@ export function EditProfilePage() {
           <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-black/30 bg-black/[0.02] p-3">
             <div className="flex items-center justify-between gap-2 px-1">
               <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
-                Profile flags
+                {t('profilePages.edit.profileFlags', 'Profile flags')}
               </span>
               <span className="rounded-full bg-[#39FF14] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-black shadow-[0_0_8px_rgba(57,255,20,0.7)] ring-1 ring-black/20">
-                Testing only
+                {t('profilePages.edit.testingOnly', 'Testing only')}
               </span>
             </div>
             <FlagToggle
-              label="Onboarding completed"
-              description="Mark the initial onboarding flow as done."
+              label={t('profilePages.edit.onboardingCompleted', 'Onboarding completed')}
+              description={t('profilePages.edit.onboardingCompletedDesc', 'Mark the initial onboarding flow as done.')}
               value={onboardingCompleted}
               isDisabled={!walletAddress || isLoading || savingFlag === 'onboarding'}
               isSaving={savingFlag === 'onboarding'}
               onChange={(checked) => handleToggleFlag('onboarding', checked)}
             />
             <FlagToggle
-              label="Tutorial completed"
-              description="Mark the in-app tutorial as done."
+              label={t('profilePages.edit.tutorialCompleted', 'Tutorial completed')}
+              description={t('profilePages.edit.tutorialCompletedDesc', 'Mark the in-app tutorial as done.')}
               value={tutorialCompleted}
               isDisabled={!walletAddress || isLoading || savingFlag === 'tutorial'}
               isSaving={savingFlag === 'tutorial'}
@@ -374,7 +376,7 @@ export function EditProfilePage() {
         {/* Actions */}
         <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-background border-t border-black/10 flex gap-3">
           <Button type="white" onPress={() => router.push('/profile/settings')} isDisabled={saving} wFull>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="primary"
@@ -384,7 +386,7 @@ export function EditProfilePage() {
             startContent={<FiSave className="h-4 w-4" />}
             wFull
           >
-            Save changes
+            {t('profilePages.edit.saveChanges', 'Save changes')}
           </Button>
         </div>
     </PageLayout>
@@ -415,6 +417,7 @@ function FlagToggle({
   isSaving?: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-black border-b-2 bg-white px-3 py-3">
       <span>
@@ -423,7 +426,7 @@ function FlagToggle({
       </span>
       <div className="flex items-center gap-2 shrink-0">
         <span className={`text-xs font-semibold ${value ? 'text-green-600' : 'text-gray-400'}`}>
-          {isSaving ? 'Saving…' : value ? 'On' : 'Off'}
+          {isSaving ? t('common.saving') : value ? t('common.on') : t('common.off')}
         </span>
         <Switch isSelected={value} onChange={onChange} isDisabled={isDisabled} aria-label={label}>
           <Switch.Control>

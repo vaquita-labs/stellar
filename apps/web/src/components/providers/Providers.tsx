@@ -1,6 +1,7 @@
 'use client';
 
 import { AblyProvider } from '@/core-ui/components';
+import { I18nProvider } from '@/core-ui/i18n/I18nProvider';
 import { useVisibility } from '@/core-ui/stores/visibility';
 import { getNetworkEnum } from '@/networks/stellar/kit';
 import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
@@ -75,6 +76,7 @@ export function Providers({ children }: { children: ReactNode }) {
       client={queryClient}
       persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 }}
     >
+      <I18nProvider>
       <PollarProvider
         client={{
           baseUrl: 'https://sdk.api.pollar.xyz',
@@ -94,6 +96,7 @@ export function Providers({ children }: { children: ReactNode }) {
           </ChannelProvider>
         </AblyProvider>
       </PollarProvider>
+      </I18nProvider>
     </PersistQueryClientProvider>
   );
 }

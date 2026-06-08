@@ -4,6 +4,7 @@ import { Button, Card, Modal, toast } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useProfileRewards } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { ShopItem, ShopModalProps } from './types';
@@ -99,6 +100,7 @@ const shopItems: ShopItem[] = [
 ];
 
 export function ShopModal({ open, onOpenChange }: ShopModalProps) {
+  const { t } = useTranslation();
   const { data: profileRewards, refetch } = useProfileRewards();
   const queryClient = useQueryClient();
   const { network, walletAddress } = useConfigStore();
@@ -134,7 +136,12 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
       });
       await refetch();
 
-      toast.success('Purchase successful!', { description: `You've successfully purchased ${selectedItem.name}`, timeout: 4000 });
+      toast.success(t('shop.toast.purchaseSuccessTitle', 'Purchase successful!'), {
+        description: t('shop.toast.purchaseSuccessDescription', "You've successfully purchased {{name}}", {
+          name: t(`shop.items.${selectedItem.id}.name`, selectedItem.name),
+        }),
+        timeout: 4000,
+      });
 
       setConfirmModalOpen(false);
       setSelectedItem(null);
@@ -158,20 +165,20 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
         <Modal.Container size="lg" scroll="inside">
           <Modal.Dialog className="bg-background border border-black max-h-[90vh] flex flex-col">
             <Modal.CloseTrigger>
-              <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+              <Image src="/icons/close-circle.svg" alt={t('shop.modal.closeAlt', 'close')} width={40} height={40} />
             </Modal.CloseTrigger>
           <Modal.Header className="shrink-0">
             <Modal.Heading className="text-black font-bold text-xl">
             <div className="flex items-center justify-start w-full gap-4">
               <div className="flex items-center gap-2">
-                <Image src="/icons/summary/shop.png" alt="shop" width={24} height={24} />
-                <span>Shop</span>
+                <Image src="/icons/summary/shop.png" alt={t('shop.modal.shopAlt', 'shop')} width={24} height={24} />
+                <span>{t('shop.modal.title', 'Shop')}</span>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1">
                   <Image
                     src="/icons/global/coin.png"
-                    alt="Gold Coin"
+                    alt={t('shop.goldCoinAlt', 'Gold Coin')}
                     width={24}
                     height={24}
                     className="object-contain"
@@ -199,7 +206,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
                           {item.image && (
                             <Image
                               src={item.image}
-                              alt={item.name}
+                              alt={t(`shop.items.${item.id}.name`, item.name)}
                               width={48}
                               height={48}
                               className="object-contain shrink-0"
@@ -207,14 +214,14 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
                           )}
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-black text-lg mb-1">{item.name}</h3>
+                              <h3 className="font-bold text-black text-lg mb-1">{t(`shop.items.${item.id}.name`, item.name)}</h3>
                               {item.alwaysAvailable && (
                                 <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">
-                                  Always Available
+                                  {t('shop.badge.alwaysAvailable', 'Always Available')}
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-gray-600">{item.description}</p>
+                            <p className="text-sm text-gray-600">{t(`shop.items.${item.id}.description`, item.description)}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t border-gray-200">
@@ -224,7 +231,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
                             <span className="text-sm font-semibold">{item.price.goldCoins}</span>
                             <Image
                               src="/icons/global/coin.png"
-                              alt="Gold Coin"
+                              alt={t('shop.goldCoinAlt', 'Gold Coin')}
                               width={20}
                               height={20}
                               className="object-contain"
@@ -240,7 +247,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
                             onPress={() => handlePurchaseClick(item)}
                             isDisabled={isDisabled}
                           >
-                            {isDisabled ? 'Insufficient Coins' : 'Buy'}
+                            {isDisabled ? t('shop.button.insufficientCoins', 'Insufficient Coins') : t('shop.button.buy', 'Buy')}
                           </Button>
                         </div>
                       </div>
@@ -259,10 +266,10 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
         <Modal.Container size="sm">
           <Modal.Dialog className="bg-background border border-black">
             <Modal.CloseTrigger>
-              <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+              <Image src="/icons/close-circle.svg" alt={t('shop.modal.closeAlt', 'close')} width={40} height={40} />
             </Modal.CloseTrigger>
           <Modal.Header>
-            <Modal.Heading className="text-black font-bold text-lg">Confirm Purchase</Modal.Heading>
+            <Modal.Heading className="text-black font-bold text-lg">{t('shop.confirm.title', 'Confirm Purchase')}</Modal.Heading>
           </Modal.Header>
           <Modal.Body>
             {selectedItem && (
@@ -271,24 +278,24 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
                   {selectedItem.image && (
                     <Image
                       src={selectedItem.image}
-                      alt={selectedItem.name}
+                      alt={t(`shop.items.${selectedItem.id}.name`, selectedItem.name)}
                       width={48}
                       height={48}
                       className="object-contain shrink-0"
                     />
                   )}
                   <div className="flex-1">
-                    <h3 className="font-bold text-black text-lg mb-1">{selectedItem.name}</h3>
-                    <p className="text-sm text-gray-600">{selectedItem.description}</p>
+                    <h3 className="font-bold text-black text-lg mb-1">{t(`shop.items.${selectedItem.id}.name`, selectedItem.name)}</h3>
+                    <p className="text-sm text-gray-600">{t(`shop.items.${selectedItem.id}.description`, selectedItem.description)}</p>
                   </div>
                 </div>
                 <div className="pt-2 border-t border-gray-200">
-                  <p className="text-sm text-gray-700 mb-2">Price:</p>
+                  <p className="text-sm text-gray-700 mb-2">{t('shop.confirm.priceLabel', 'Price:')}</p>
                   <div className="flex items-center gap-1">
                     <span className="text-sm font-semibold text-black">{selectedItem.price.goldCoins}</span>
                     <Image
                       src="/icons/global/coin.png"
-                      alt="Gold Coin"
+                      alt={t('shop.goldCoinAlt', 'Gold Coin')}
                       width={20}
                       height={20}
                       className="object-contain"
@@ -297,7 +304,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
                 </div>
                 {!isAffordable && !selectedItem.alwaysAvailable && (
                   <p className="text-sm text-red-500 font-semibold">
-                    {`⚠️ You don't have enough coins to purchase this item!`}
+                    {t('shop.confirm.notEnoughCoins', "⚠️ You don't have enough coins to purchase this item!")}
                   </p>
                 )}
               </div>
@@ -309,7 +316,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
               onPress={handleCancelPurchase}
               isDisabled={isPurchasing}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               className={`${
@@ -320,7 +327,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
               onPress={handleConfirmPurchase}
               isDisabled={(!isAffordable && !selectedItem?.alwaysAvailable) || isPurchasing}
             >
-              {isPurchasing ? 'Processing...' : 'Confirm Purchase'}
+              {isPurchasing ? t('shop.button.processing', 'Processing...') : t('shop.confirm.title', 'Confirm Purchase')}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

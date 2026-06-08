@@ -8,37 +8,43 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import { getRpcUrl, getNetworkPassphrase } from './kit';
+import i18n from '@/core-ui/i18n';
 
-const POOL_ERROR_MESSAGES: Record<number, string> = {
-  1: 'Contract not initialized',
-  2: 'Invalid deposit amount',
-  3: 'Deposit ID already exists',
-  4: 'Lock period not supported',
-  5: 'Position not found',
-  6: 'Caller is not the position owner',
-  7: 'Invalid fee value',
-  8: 'Fee exceeds the 20% cap',
-  9: 'Lock period already registered',
-  10: 'Lock period not supported',
-  11: 'Lock period has open positions',
-  12: 'Vault share balance decreased unexpectedly',
-  13: 'Vault returned zero shares',
-  14: 'Vault returned less than principal',
-  15: 'Period data not found',
-  16: 'No deposits in this period',
-  17: 'Deposits are currently paused',
-  18: 'Conservation invariant violated',
-  19: 'Arithmetic overflow',
-  20: 'No upgrade is pending',
-  21: 'Upgrade timelock has not elapsed',
-  22: 'Upgrades have been locked forever',
-  23: 'Cannot change vault while positions are open',
-  24: 'Cannot change token while positions are open',
+// Soroban error code → i18n key (+ English fallback). Kept as keys, NOT
+// pre-translated strings: the translation happens per-call in
+// `parsePoolErrorMessage` so it follows the active language and never runs i18n
+// at module-evaluation time (which would break on the server / be non-reactive).
+const POOL_ERROR_KEYS: Record<number, { key: string; fallback: string }> = {
+  1: { key: 'errors.pool.notInitialized', fallback: 'Contract not initialized' },
+  2: { key: 'errors.pool.invalidDepositAmount', fallback: 'Invalid deposit amount' },
+  3: { key: 'errors.pool.depositIdExists', fallback: 'Deposit ID already exists' },
+  4: { key: 'errors.pool.lockPeriodNotSupported', fallback: 'Lock period not supported' },
+  5: { key: 'errors.pool.positionNotFound', fallback: 'Position not found' },
+  6: { key: 'errors.pool.notPositionOwner', fallback: 'Caller is not the position owner' },
+  7: { key: 'errors.pool.invalidFeeValue', fallback: 'Invalid fee value' },
+  8: { key: 'errors.pool.feeExceedsCap', fallback: 'Fee exceeds the 20% cap' },
+  9: { key: 'errors.pool.lockPeriodAlreadyRegistered', fallback: 'Lock period already registered' },
+  10: { key: 'errors.pool.lockPeriodNotSupported', fallback: 'Lock period not supported' },
+  11: { key: 'errors.pool.lockPeriodHasOpenPositions', fallback: 'Lock period has open positions' },
+  12: { key: 'errors.pool.vaultShareBalanceDecreased', fallback: 'Vault share balance decreased unexpectedly' },
+  13: { key: 'errors.pool.vaultReturnedZeroShares', fallback: 'Vault returned zero shares' },
+  14: { key: 'errors.pool.vaultReturnedLessThanPrincipal', fallback: 'Vault returned less than principal' },
+  15: { key: 'errors.pool.periodDataNotFound', fallback: 'Period data not found' },
+  16: { key: 'errors.pool.noDepositsInPeriod', fallback: 'No deposits in this period' },
+  17: { key: 'errors.pool.depositsPaused', fallback: 'Deposits are currently paused' },
+  18: { key: 'errors.pool.conservationInvariantViolated', fallback: 'Conservation invariant violated' },
+  19: { key: 'errors.pool.arithmeticOverflow', fallback: 'Arithmetic overflow' },
+  20: { key: 'errors.pool.noUpgradePending', fallback: 'No upgrade is pending' },
+  21: { key: 'errors.pool.upgradeTimelockNotElapsed', fallback: 'Upgrade timelock has not elapsed' },
+  22: { key: 'errors.pool.upgradesLockedForever', fallback: 'Upgrades have been locked forever' },
+  23: { key: 'errors.pool.cannotChangeVaultWithOpenPositions', fallback: 'Cannot change vault while positions are open' },
+  24: { key: 'errors.pool.cannotChangeTokenWithOpenPositions', fallback: 'Cannot change token while positions are open' },
 };
 
 /**
  * Parses a Soroban contract error (e.g. "Error(Contract, #17)") into a
- * human-readable message. Returns null if the error is not a VaquitaPoolError.
+ * human-readable message in the active language. Returns null if the error is
+ * not a VaquitaPoolError.
  */
 export function parsePoolErrorMessage(err: unknown): string | null {
   const str =
@@ -50,7 +56,8 @@ export function parsePoolErrorMessage(err: unknown): string | null {
   const match = /Error\(Contract,\s*#(\d+)\)/.exec(str);
   if (!match || !match[1]) return null;
   const code = parseInt(match[1], 10);
-  return POOL_ERROR_MESSAGES[code] ?? null;
+  const entry = POOL_ERROR_KEYS[code];
+  return entry ? i18n.t(entry.key, entry.fallback) : null;
 }
 
 /**

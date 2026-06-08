@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useTranslation } from 'react-i18next';
 import type { Badge } from '../../../data/profile-badges';
 
 type BadgeSize = 'sm' | 'md' | 'lg';
@@ -58,7 +59,11 @@ export function BadgeTile({
   claimable = false,
   loading = false,
 }: BadgeTileProps) {
+  const { t } = useTranslation();
   const s = SIZES[size];
+  // Badge copy comes from a backend-served catalog; localize known built-in
+  // badges by id, falling back to the English title supplied with the data.
+  const title = t(`achievements.items.${badge.id}.title`, badge.title);
   // An achievement only "lights up" once it's been claimed — until then the
   // image stays gray so the pulsing halo + tinted background read as the
   // active "click me" affordance.
@@ -100,7 +105,7 @@ export function BadgeTile({
         />
         <Image
           src={badge.icon}
-          alt={badge.title}
+          alt={title}
           width={s.img.w}
           height={s.img.h}
           className={`relative h-full w-full object-contain drop-shadow-md ${
@@ -110,7 +115,7 @@ export function BadgeTile({
       </span>
       {showTitle && (
         <span className="text-[11px] sm:text-xs font-bold text-black text-center leading-tight mt-1 line-clamp-2">
-          {badge.title}
+          {title}
         </span>
       )}
     </button>

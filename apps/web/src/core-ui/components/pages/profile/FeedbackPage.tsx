@@ -2,6 +2,7 @@
 
 import { toast } from '@heroui/react';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiSend, FiStar } from 'react-icons/fi';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
@@ -17,6 +18,7 @@ type CategoryId = (typeof CATEGORIES)[number]['id'];
 const MAX_LENGTH = 500;
 
 export function FeedbackPage() {
+  const { t } = useTranslation();
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
   const [category, setCategory] = useState<CategoryId>('idea');
@@ -34,21 +36,21 @@ export function FeedbackPage() {
     setRating(0);
     setCategory('idea');
     setMessage('');
-    toast.success('Thanks for the feedback (mock)!', {
-      description: 'We read every message — and we mean it.',
+    toast.success(t('social.feedback.successTitle'), {
+      description: t('social.feedback.successBody'),
       timeout: 3500,
     });
   };
 
   return (
     <MockedSubPageLayout
-      title="Feedback"
-      subtitle="Tell us what's working, what isn't, and what you wish Vaquita did."
+      title={t('social.feedback.title')}
+      subtitle={t('social.feedback.subtitle')}
     >
       {/* Rating */}
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500 px-1">
-          How is your experience?
+          {t('social.feedback.ratingHeading')}
         </h2>
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-black border-b-2 bg-white p-5">
           {[1, 2, 3, 4, 5].map((star) => {
@@ -57,7 +59,7 @@ export function FeedbackPage() {
               <button
                 key={star}
                 type="button"
-                aria-label={`${star} star${star > 1 ? 's' : ''}`}
+                aria-label={t('social.feedback.starLabel', { count: star })}
                 onMouseEnter={() => setHover(star)}
                 onMouseLeave={() => setHover(0)}
                 onClick={() => setRating(star)}
@@ -75,7 +77,7 @@ export function FeedbackPage() {
       {/* Category */}
       <section className="flex flex-col gap-3">
         <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500 px-1">
-          What are you sharing?
+          {t('social.feedback.categoryHeading')}
         </h2>
         <div className="grid grid-cols-2 gap-3">
           {CATEGORIES.map((c) => {
@@ -92,7 +94,7 @@ export function FeedbackPage() {
                 }`}
                 aria-pressed={active}
               >
-                {c.label}
+                {t(`social.feedback.categories.${c.id}`, c.label)}
               </button>
             );
           })}
@@ -103,7 +105,7 @@ export function FeedbackPage() {
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
-            Your message
+            {t('social.feedback.messageHeading')}
           </h2>
           <span className="text-[11px] font-bold text-gray-500 tabular-nums">
             {message.length} / {MAX_LENGTH}
@@ -113,7 +115,7 @@ export function FeedbackPage() {
           value={message}
           onChange={(e) => setMessage(e.target.value.slice(0, MAX_LENGTH))}
           rows={5}
-          placeholder="Type your feedback here…"
+          placeholder={t('social.feedback.messagePlaceholder')}
           className="w-full p-3 rounded-md bg-white border border-black border-b-2 text-sm font-medium text-black placeholder:text-gray-400 outline-none focus:border-primary resize-y min-h-[120px]"
         />
       </section>
@@ -126,7 +128,7 @@ export function FeedbackPage() {
         className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
       >
         <FiSend className="h-4 w-4" />
-        {submitting ? 'Sending…' : 'Send feedback'}
+        {submitting ? t('social.feedback.sending') : t('social.feedback.send')}
       </button>
     </MockedSubPageLayout>
   );

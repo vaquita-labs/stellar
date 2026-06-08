@@ -5,6 +5,7 @@ import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { Card, Spinner } from '@heroui/react';
 import Image from 'next/image';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatTimeDeposit } from '../../../helpers';
 import { useDeposit, useDepositsComplete } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
@@ -20,6 +21,7 @@ const formatAmount = (amount: number, tokenSymbol: string) => {
 type TabId = 'active' | 'withdrawn';
 
 export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps) {
+  const { t } = useTranslation();
   const { walletAddress } = useConfigStore();
   const { data: depositsData, isLoading } = useDepositsComplete(walletAddress);
   const [selectedVaquita, setSelectedVaquita] = useState<DepositResponseDTO | null>(null);
@@ -52,9 +54,9 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
     if (deposits.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Image src="/no_data.svg" alt="No data" width={120} height={120} />
-          <p className="text-gray-500 mt-4">No deposits yet</p>
-          <p className="text-gray-400 text-sm">Make your first deposit to get started</p>
+          <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={120} height={120} />
+          <p className="text-gray-500 mt-4">{t('deposit.list.noDepositsYet', 'No deposits yet')}</p>
+          <p className="text-gray-400 text-sm">{t('deposit.list.makeFirstDeposit', 'Make your first deposit to get started')}</p>
         </div>
       );
     }
@@ -70,7 +72,7 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
               (tab === 'active' ? 'bg-primary text-black' : 'text-default-500 hover:text-black')
             }
           >
-            <span>Active</span>
+            <span>{t('deposit.list.tabActive', 'Active')}</span>
             <span
               className={
                 'min-w-5 px-1.5 rounded-full text-xs font-bold ' +
@@ -88,7 +90,7 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
               (tab === 'withdrawn' ? 'bg-primary text-black' : 'text-default-500 hover:text-black')
             }
           >
-            <span>Withdrawn</span>
+            <span>{t('deposit.list.tabWithdrawn', 'Withdrawn')}</span>
             <span
               className={
                 'min-w-5 px-1.5 rounded-full text-xs font-bold ' +
@@ -104,8 +106,8 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
           <div className="gap-3 flex flex-col mb-4">
             {activeDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Image src="/no_data.svg" alt="No data" width={100} height={100} />
-                <p className="text-gray-500 mt-4">No active deposits</p>
+                <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={100} height={100} />
+                <p className="text-gray-500 mt-4">{t('deposit.list.noActiveDeposits', 'No active deposits')}</p>
               </div>
             ) : (
               activeDeposits.map((deposit) => (
@@ -121,8 +123,8 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
           <div className="gap-2 flex flex-col mb-4">
             {withdrawnDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Image src="/no_data.svg" alt="No data" width={100} height={100} />
-                <p className="text-gray-500 mt-4">No withdrawn deposits</p>
+                <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={100} height={100} />
+                <p className="text-gray-500 mt-4">{t('deposit.list.noWithdrawnDeposits', 'No withdrawn deposits')}</p>
               </div>
             ) : (
               withdrawnDeposits.map((deposit) => {
@@ -151,12 +153,12 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
                             (isEarly ? 'bg-default-500 text-white' : 'bg-success text-white')
                           }
                         >
-                          {isEarly ? 'Withdrawn early' : 'Withdrawn'}
+                          {isEarly ? t('deposit.list.withdrawnEarlyBadge', 'Withdrawn early') : t('deposit.list.withdrawnBadge', 'Withdrawn')}
                         </span>
                       </div>
                       <p className="text-xs text-gray-600 mt-0.5">{formatTimeDeposit(deposit.lockPeriod)}</p>
                       <div className="mt-1.5 pt-1.5 border-t border-black/10 flex items-center justify-between">
-                        <span className="text-xs text-gray-600">{isEarly ? 'Rewards forfeited' : 'Earned'}</span>
+                        <span className="text-xs text-gray-600">{isEarly ? t('deposit.list.rewardsForfeited', 'Rewards forfeited') : t('deposit.list.earned', 'Earned')}</span>
                         <span
                           className={
                             'text-sm font-bold tabular-nums ' +
@@ -184,7 +186,7 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
       onOpenChange={onOpenChange}
       isDismissable={!detail.loading}
       onBack={inDetail && !detail.loading ? backToList : undefined}
-      title={inDetail ? detail.title : 'Your deposits'}
+      title={inDetail ? detail.title : t('deposit.list.title', 'Your deposits')}
       // titleIcon={inDetail ? undefined : '/icons/deposits.svg'}
       titleIconAlt={inDetail ? 'deposit' : 'deposits'}
       size="lg"

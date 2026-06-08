@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
   useClaimedAchievements,
@@ -40,6 +41,7 @@ const SectionHeader = ({
   count?: number;
   href?: string;
 }) => {
+  const { t } = useTranslation();
   const trailing = (
     <span className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-black transition">
       {typeof count === 'number' && <span className="tabular-nums">{count}</span>}
@@ -52,7 +54,7 @@ const SectionHeader = ({
         {title}
       </h2>
       {href ? (
-        <Link href={href} aria-label={`See all ${title}`}>
+        <Link href={href} aria-label={t('profilePages.profile.seeAll', 'See all {{title}}', { title })}>
           {trailing}
         </Link>
       ) : (
@@ -96,6 +98,7 @@ const SummaryItem = ({
 /* ------------------------------------------------------------------ */
 
 export function ProfilePage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { walletAddress, token } = useConfigStore();
   const hideBalance = useHideBalance();
@@ -173,15 +176,18 @@ export function ProfilePage() {
   /* -------------------------------------------------------------- */
   if (!walletAddress) {
     return (
-      <PageLayout title="Profile" backHref="/home">
+      <PageLayout title={t('profilePages.profile.title', 'Profile')} backHref="/home">
         <Card className="border border-default-200/60 bg-white/80 shadow-sm backdrop-blur dark:border-default-100/40 dark:bg-default-50/80">
           <Card.Content className="flex flex-col gap-6 p-6 sm:p-10 text-center">
             <div className="space-y-3">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
-                Connect your wallet
+                {t('profilePages.profile.connectWalletTitle', 'Connect your wallet')}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Access your profile, metrics, and future achievements by connecting your wallet.
+                {t(
+                  'profilePages.profile.connectWalletDescription',
+                  'Access your profile, metrics, and future achievements by connecting your wallet.'
+                )}
               </p>
             </div>
           </Card.Content>
@@ -200,7 +206,7 @@ export function ProfilePage() {
             <ShareProfileQrButton displayName={displayName} handle={handle} />
             <Link
               href="/profile/settings"
-              aria-label="Settings"
+              aria-label={t('profilePages.profile.settingsAria', 'Settings')}
               className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
             >
               <FiSettings className="h-4 w-4" />
@@ -211,7 +217,7 @@ export function ProfilePage() {
           <div className="mt-4 flex flex-col items-center gap-2 text-center">
             <Link
               href="/profile/edit"
-              aria-label="Edit profile"
+              aria-label={t('profilePages.profile.editProfileAria', 'Edit profile')}
               className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-black border-b-4 shadow"
             >
               {profileData?.avatarUrl ? (
@@ -241,7 +247,10 @@ export function ProfilePage() {
               {displayName}
             </h1>
             <p className="text-xs sm:text-sm font-semibold text-black/70">
-              {handle} · joined {joinedLabel}
+              {t('profilePages.profile.handleJoined', '{{handle}} · joined {{joinedLabel}}', {
+                handle,
+                joinedLabel,
+              })}
             </p>
           </div>
         </header>
@@ -249,9 +258,9 @@ export function ProfilePage() {
         {/* Stats row -------------------------------------------------- */}
         <section className="px-4 sm:px-6">
           <div className="flex items-stretch gap-3">
-            <StatPill value={followCounts?.following ?? 0} label="Following" />
+            <StatPill value={followCounts?.following ?? 0} label={t('profilePages.profile.following', 'Following')} />
             <span className="w-px bg-black/10" aria-hidden />
-            <StatPill value={followCounts?.followers ?? 0} label="Followers" />
+            <StatPill value={followCounts?.followers ?? 0} label={t('profilePages.profile.followers', 'Followers')} />
           </div>
         </section>
 
@@ -262,25 +271,25 @@ export function ProfilePage() {
             className="flex items-center justify-center gap-2 w-full h-12 rounded-md bg-white text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide hover:bg-white/80 hover:-translate-y-0.5 transition"
           >
             <FiUserPlus className="h-4 w-4" />
-            Add friends
+            {t('profilePages.profile.addFriends', 'Add friends')}
           </Link>
         </section>
 
 
         <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <SectionHeader title="Summary" href="/profile/summary" />
+          <SectionHeader title={t('profilePages.profile.summary', 'Summary')} href="/profile/summary" />
           {/* Whole white card is the link target — the chevron in the header
               is just the visual cue. No interactive children inside, so a
               plain Link wrap is safe (no nested-anchor warnings). */}
           <Link
             href="/profile/summary"
-            aria-label="See full summary"
+            aria-label={t('profilePages.profile.seeFullSummary', 'See full summary')}
             className="grid grid-cols-2 gap-3 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
           >
             <SummaryItem
               icon={hasActiveStreak ? '/icons/global/streak.png' : '/icons/global/streak_freeze.png'}
-              value={`${totalStreak} days`}
-              label="Streak"
+              value={t('profilePages.profile.daysCount', { count: totalStreak, defaultValue: '{{count}} days' })}
+              label={t('profilePages.profile.streak', 'Streak')}
             />
             <SummaryItem
               icon="/icons/global/coin.png"
@@ -289,17 +298,17 @@ export function ProfilePage() {
                   ? '••••'
                   : `$${activeDepositsTotalAmount.toFixed(2)} ${token?.symbol ?? ''}`.trim()
               }
-              label="Active deposits"
+              label={t('profilePages.profile.activeDeposits', 'Active deposits')}
             />
             <SummaryItem
               icon="/icons/global/coin.png"
               value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              label="Gold"
+              label={t('profilePages.profile.gold', 'Gold')}
             />
             <SummaryItem
               icon="/icons/global/star.png"
               value={`${Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })} XP`}
-              label="Experience"
+              label={t('profilePages.profile.experience', 'Experience')}
             />
           </Link>
         </section>
@@ -307,7 +316,7 @@ export function ProfilePage() {
         {/* Achievements ---------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <SectionHeader
-            title="Achievements"
+            title={t('profilePages.profile.achievements', 'Achievements')}
             count={achievements.filter((b) => b.unlocked).length}
             href="/profile/achievements"
           />
@@ -320,7 +329,7 @@ export function ProfilePage() {
           <div className="relative rounded-2xl bg-white border border-black border-b-2 p-4">
             <Link
               href="/profile/achievements"
-              aria-label="See all achievements"
+              aria-label={t('profilePages.profile.seeAllAchievements', 'See all achievements')}
               className="absolute inset-0 rounded-2xl z-0"
             />
             <div className="relative z-10 grid grid-cols-4 gap-2 sm:gap-4 place-items-center">

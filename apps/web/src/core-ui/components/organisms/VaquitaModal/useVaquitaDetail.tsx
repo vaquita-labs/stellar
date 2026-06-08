@@ -6,12 +6,12 @@ import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import { Button, Spinner, toast } from '@heroui/react';
 import Image from 'next/image';
 import { ReactNode, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { getInterestData } from '../../../helpers';
 import { useApyByLockPeriod, useTransactions, useWithdrawalTime } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { DepositResponseDTO, DepositStatus, DepositWithdrawalState } from '../../../types';
-import { T } from '../../atoms';
 
 const TimeTile = ({ value, label }: { value: number; label: string }) => (
   <div className="flex flex-1 min-w-0 flex-col items-center justify-center bg-white border border-black border-b-2 rounded-md py-2">
@@ -103,6 +103,7 @@ export const useVaquitaDetail = ({
   onSimulatedWithdraw,
   lockClose = false,
 }: UseVaquitaDetailParams): VaquitaDetailView => {
+  const { t } = useTranslation();
   const deposit = vaquita ?? EMPTY_DEPOSIT;
   const [confirming, setConfirming] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -188,7 +189,7 @@ export const useVaquitaDetail = ({
       }
     }
     if (isSuccess) {
-      toast.success(<T>Withdrawal successful!</T>, {
+      toast.success(t('deposit.withdraw.successTitle', 'Withdrawal successful!'), {
         indicator: (
           <Image
             src="/icons/global/coin.png"
@@ -198,20 +199,21 @@ export const useVaquitaDetail = ({
             className="drop-shadow-sm"
           />
         ),
-        description: (
-          <T>Your money is on its way! This may take a few seconds. Everything will be ready in a moment.</T>
+        description: t(
+          'deposit.withdraw.successDescription',
+          'Your money is on its way! This may take a few seconds. Everything will be ready in a moment.',
         ),
         timeout: 6000,
       });
       onClose();
     } else {
       const poolMsg = parsePoolErrorMessage(lastError);
-      toast.danger(<T>Withdrawal didn&apos;t go through</T>, {
+      toast.danger(t('deposit.withdraw.errorTitle', "Withdrawal didn't go through"), {
         indicator: <Image src="/vaquita/error.svg" alt="" width={32} height={32} />,
         description: poolMsg
-          ? <T>{poolMsg}</T>
+          ? poolMsg
           : lastError instanceof Error
-            ? <T>{lastError.message}</T>
+            ? lastError.message
             : undefined,
         timeout: 30000,
       });
@@ -226,7 +228,7 @@ export const useVaquitaDetail = ({
         className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md font-semibold"
         isDisabled={loading || lockClose}
       >
-        {withWithdrawButton ? <T>Cancel</T> : <T>Close</T>}
+        {withWithdrawButton ? t('common.cancel') : t('common.close')}
       </Button>
       {withWithdrawButton && (
         // En tutorial marcamos el botón para que el anillo guía pueda forzar el
@@ -242,7 +244,7 @@ export const useVaquitaDetail = ({
             }
             isDisabled={isDisabled}
           >
-            <T>Withdraw</T>
+            {t('deposit.withdraw.button', 'Withdraw')}
           </Button>
         </div>
       )}
@@ -252,7 +254,7 @@ export const useVaquitaDetail = ({
           isDisabled
         >
           <Spinner size="sm" color="current" />
-          <T>Processing</T>
+          {t('deposit.processingShort', 'Processing')}
         </Button>
       )}
     </div>
@@ -265,7 +267,7 @@ export const useVaquitaDetail = ({
         className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md font-semibold"
         isDisabled={loading}
       >
-        <T>Cancel</T>
+        {t('common.cancel')}
       </Button>
       <Button
         onPress={onWithdraw}
@@ -282,12 +284,12 @@ export const useVaquitaDetail = ({
         {loading ? (
           <>
             <Spinner size="sm" color="current" />
-            <T>Processing...</T>
+            {t('deposit.processing', 'Processing...')}
           </>
         ) : inLockPeriod ? (
-          <T>Withdraw anyway</T>
+          t('deposit.withdraw.withdrawAnyway', 'Withdraw anyway')
         ) : (
-          <T>Claim now</T>
+          t('deposit.withdraw.claimNow', 'Claim now')
         )}
       </Button>
     </div>
@@ -299,15 +301,15 @@ export const useVaquitaDetail = ({
         <div className="flex flex-col items-center gap-2 bg-success-soft border border-success rounded-md p-4 text-center">
           <FiCheckCircle className="w-8 h-8 text-success" />
           <div>
-            <p className="font-bold text-black">Time&apos;s up!</p>
-            <p className="text-sm text-default-600">Your vaquita is ready to claim.</p>
+            <p className="font-bold text-black">{t('deposit.confirm.timesUp', "Time's up!")}</p>
+            <p className="text-sm text-default-600">{t('deposit.confirm.readyToClaim', 'Your vaquita is ready to claim.')}</p>
           </div>
         </div>
       )}
 
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-1 bg-white border border-black border-b-2 rounded-md px-4 py-3">
-          <span className="text-xs font-medium text-default-600 uppercase tracking-wide">You will receive</span>
+          <span className="text-xs font-medium text-default-600 uppercase tracking-wide">{t('deposit.confirm.youWillReceive', 'You will receive')}</span>
           <span className="text-2xl font-bold text-success tabular-nums break-all leading-tight">
             {finalAmount.toFixed(2)} <span className="text-base">{token?.symbol}</span>
           </span>
@@ -315,7 +317,7 @@ export const useVaquitaDetail = ({
 
         {inLockPeriod && (
           <div className="flex flex-col gap-1 bg-white border border-black border-b-2 rounded-md px-4 py-3">
-            <span className="text-xs font-medium text-default-600 uppercase tracking-wide">You will lose</span>
+            <span className="text-xs font-medium text-default-600 uppercase tracking-wide">{t('deposit.confirm.youWillLose', 'You will lose')}</span>
             <span className="text-xl font-bold text-danger tabular-nums break-all leading-tight line-through decoration-2">
               ±{totalInterest.toFixed(2)} <span className="text-base">{token?.symbol}</span>
             </span>
@@ -327,12 +329,12 @@ export const useVaquitaDetail = ({
         <div className="flex items-center justify-center gap-1.5 text-xs text-default-600">
           <FiAlertTriangle className="w-3.5 h-3.5 text-danger shrink-0" />
           <span>
-            Early withdrawal rewards will be{' '}
-            <span className="font-semibold text-danger">forfeited</span>
+            {t('deposit.confirm.earlyWithdrawalPrefix', 'Early withdrawal rewards will be')}{' '}
+            <span className="font-semibold text-danger">{t('deposit.confirm.forfeited', 'forfeited')}</span>
           </span>
         </div>
       ) : (
-        <p className="text-sm text-center text-default-600">Confirm to send the transaction.</p>
+        <p className="text-sm text-center text-default-600">{t('deposit.confirm.sendTransaction', 'Confirm to send the transaction.')}</p>
       )}
     </div>
   );
@@ -341,7 +343,7 @@ export const useVaquitaDetail = ({
     <div className="flex flex-col gap-5">
       <div className="flex items-stretch justify-between gap-2">
         <div className="flex flex-col justify-center border border-black border-b-2 rounded-md px-3 py-1.5">
-          <span className="text-[10px] uppercase tracking-wide text-default-500">Started at</span>
+          <span className="text-[10px] uppercase tracking-wide text-default-500">{t('deposit.detail.startedAt', 'Started at')}</span>
           <span className="text-sm font-semibold text-black tabular-nums">
             {new Date(deposit.createdTimestamp).toLocaleDateString('es-ES', {
               day: '2-digit',
@@ -354,7 +356,7 @@ export const useVaquitaDetail = ({
         <div className="flex items-center gap-2 border border-black border-b-2 rounded-md px-3 py-1.5">
           <FiCalendar className="w-4 h-4 text-black" />
           <span className="text-sm font-semibold text-black">
-            {withdrawalInfo.lockPeriodFormatted} lock
+            {t('deposit.detail.lockSuffix', '{{period}} lock', { period: withdrawalInfo.lockPeriodFormatted })}
           </span>
         </div>
       </div>
@@ -364,14 +366,14 @@ export const useVaquitaDetail = ({
           {deposit.amount.toFixed(2)} {token?.symbol}
         </span>
         <span className="text-sm font-semibold text-success tabular-nums">
-          +{totalInterest.toFixed(2)} {token?.symbol} est.
+          +{totalInterest.toFixed(2)} {token?.symbol} {t('deposit.detail.estAbbrev', 'est.')}
         </span>
       </div>
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className={`text-sm font-bold ${inLockPeriod ? 'text-warning' : 'text-success'}`}>
-            {inLockPeriod ? 'Locked' : 'Ready to withdraw'}
+            {inLockPeriod ? t('deposit.detail.locked', 'Locked') : t('deposit.detail.readyToWithdraw', 'Ready to withdraw')}
           </span>
           <span className="text-xs text-default-500 tabular-nums">
             {Math.round(withdrawalInfo.progress)}%
@@ -387,29 +389,29 @@ export const useVaquitaDetail = ({
         </div>
         {inLockPeriod && (
           <div className="flex gap-2">
-            <TimeTile value={time.days} label="Days" />
-            <TimeTile value={time.hours} label="Hours" />
-            <TimeTile value={time.minutes} label="Min" />
-            <TimeTile value={time.seconds} label="Sec" />
+            <TimeTile value={time.days} label={t('deposit.detail.days', 'Days')} />
+            <TimeTile value={time.hours} label={t('deposit.detail.hours', 'Hours')} />
+            <TimeTile value={time.minutes} label={t('deposit.detail.min', 'Min')} />
+            <TimeTile value={time.seconds} label={t('deposit.detail.sec', 'Sec')} />
           </div>
         )}
       </div>
 
       <div className="flex flex-col gap-1.5 bg-default-50 border border-black/10 rounded-md p-3">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-default-500">Vaquita interest</span>
+          <span className="text-default-500">{t('deposit.detail.vaquitaInterest', 'Vaquita interest')}</span>
           <span className="font-semibold text-primary tabular-nums">
             +{vaquitaInterest.toFixed(2)} {token?.symbol}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-default-500">Protocol interest</span>
+          <span className="text-default-500">{t('deposit.detail.protocolInterest', 'Protocol interest')}</span>
           <span className="font-semibold text-primary tabular-nums">
             +{protocolInterest.toFixed(2)} {token?.symbol}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs border-t border-black/10 pt-1.5 mt-0.5">
-          <span className="font-medium text-black">Total est. earnings</span>
+          <span className="font-medium text-black">{t('deposit.detail.totalEstEarnings', 'Total est. earnings')}</span>
           <span className="font-bold text-success tabular-nums">
             +{totalInterest.toFixed(2)} {token?.symbol}
           </span>
@@ -426,9 +428,9 @@ export const useVaquitaDetail = ({
         <div className="flex items-center gap-3 bg-default-100 border border-black border-b-2 rounded-md px-4 py-3">
           <FiAlertTriangle className="w-5 h-5 text-default-500 shrink-0" />
           <div>
-            <p className="font-bold text-black">Withdrawn early</p>
+            <p className="font-bold text-black">{t('deposit.withdrawn.earlyTitle', 'Withdrawn early')}</p>
             <p className="text-xs text-default-600">
-              You withdrew before the lock ended, so the rewards were forfeited.
+              {t('deposit.withdrawn.earlyDescription', 'You withdrew before the lock ended, so the rewards were forfeited.')}
             </p>
           </div>
         </div>
@@ -436,9 +438,9 @@ export const useVaquitaDetail = ({
         <div className="flex items-center gap-3 bg-success/10 border border-success border-b-2 rounded-md px-4 py-3">
           <FiCheckCircle className="w-5 h-5 text-success shrink-0" />
           <div>
-            <p className="font-bold text-black">Withdrawn on time</p>
+            <p className="font-bold text-black">{t('deposit.withdrawn.onTimeTitle', 'Withdrawn on time')}</p>
             <p className="text-xs text-default-600">
-              You completed the full lock period and kept your rewards.
+              {t('deposit.withdrawn.onTimeDescription', 'You completed the full lock period and kept your rewards.')}
             </p>
           </div>
         </div>
@@ -449,17 +451,17 @@ export const useVaquitaDetail = ({
           {deposit.amount.toFixed(2)} {token?.symbol}
         </span>
         {isEarlyWithdrawn ? (
-          <span className="text-xs text-default-500">Deposited amount returned</span>
+          <span className="text-xs text-default-500">{t('deposit.withdrawn.amountReturned', 'Deposited amount returned')}</span>
         ) : (
           <span className="text-sm font-semibold text-success tabular-nums">
-            +{storedTotal.toFixed(2)} {token?.symbol} earned
+            +{storedTotal.toFixed(2)} {token?.symbol} {t('deposit.withdrawn.earnedSuffix', 'earned')}
           </span>
         )}
       </div>
 
       <div className="flex flex-col gap-1 text-xs text-default-500">
         <div className="flex items-center justify-between">
-          <span>Started at</span>
+          <span>{t('deposit.detail.startedAt', 'Started at')}</span>
           <span className="tabular-nums">
             {new Date(deposit.createdTimestamp).toLocaleDateString('es-ES', {
               day: '2-digit',
@@ -470,7 +472,7 @@ export const useVaquitaDetail = ({
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span>Withdrawn at</span>
+          <span>{t('deposit.detail.withdrawnAt', 'Withdrawn at')}</span>
           <span className="tabular-nums">
             {new Date(withdrawnTimestamp).toLocaleDateString('es-ES', {
               day: '2-digit',
@@ -490,13 +492,17 @@ export const useVaquitaDetail = ({
         onPress={onClose}
         className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md font-semibold"
       >
-        <T>Close</T>
+        {t('common.close')}
       </Button>
     </div>
   );
 
   return {
-    title: isWithdrawn ? 'Your deposit' : isConfirming ? 'Confirm withdrawal' : 'Your deposit',
+    title: isWithdrawn
+      ? t('deposit.detail.title', 'Your deposit')
+      : isConfirming
+        ? t('deposit.confirm.title', 'Confirm withdrawal')
+        : t('deposit.detail.title', 'Your deposit'),
     body: isWithdrawn ? withdrawnBody : isConfirming ? confirmBody : detailBody,
     footer: isWithdrawn ? withdrawnFooter : isConfirming ? confirmFooter : detailsFooter,
     loading,

@@ -5,6 +5,7 @@ import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApyByLockPeriod, useDeposit, useDepositsComplete } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { DepositResponseDTO } from '../../../types';
@@ -23,6 +24,7 @@ export function BankAPYModal({
   onConfirmingChange,
   lockToWithdraw = false,
 }: BankAPYModalProps) {
+  const { t } = useTranslation();
   const { network, lockPeriod, walletAddress, token } = useConfigStore();
   const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
   // APY real por fuente y nombre del mercado de lending (ej. Defindex).
@@ -97,7 +99,7 @@ export function BankAPYModal({
       isDismissable={!detail.loading && !lockToWithdraw}
       hideClose={lockToWithdraw}
       onBack={inDetail && !detail.loading && !lockToWithdraw ? backToList : undefined}
-      title={inDetail ? detail.title : 'Bank Rewards'}
+      title={inDetail ? detail.title : t('deposit.bank.title', 'Bank Rewards')}
       titleIcon={inDetail ? '/icons/bag.svg' : undefined}
       titleIconAlt={inDetail ? 'vaquita' : 'rewards'}
       size="lg"
@@ -116,7 +118,7 @@ export function BankAPYModal({
           <div className="border border-black border-b-2 rounded-xl bg-primary/10 p-4">
             <div className="flex items-center gap-1.5 mb-1">
               <Image src="/icons/bag.svg" alt="bag" width={18} height={18} />
-              <p className="text-xs text-primary font-semibold uppercase tracking-wide">My deposits</p>
+              <p className="text-xs text-primary font-semibold uppercase tracking-wide">{t('deposit.bank.myDeposits', 'My deposits')}</p>
             </div>
             <p className="text-4xl font-bold text-primary leading-tight">
               {activeDepositsTotalAmount.toFixed(2)}
@@ -133,7 +135,7 @@ export function BankAPYModal({
             >
               <div>
                 <p className="text-xs text-success/80 font-semibold uppercase tracking-wide">
-                  Estimated earnings total
+                  {t('deposit.bank.estimatedEarningsTotal', 'Estimated earnings total')}
                 </p>
                 <p className="text-2xl font-bold text-success leading-tight">
                   {totalEstimatedEarnings.toFixed(2)}
@@ -141,7 +143,7 @@ export function BankAPYModal({
                 </p>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-success font-semibold shrink-0">
-                <span>{showEarningsInfo ? 'Hide' : 'Details'}</span>
+                <span>{showEarningsInfo ? t('deposit.bank.hide', 'Hide') : t('deposit.bank.details', 'Details')}</span>
                 <span className={'transition-transform ' + (showEarningsInfo ? 'rotate-180' : '')}>▾</span>
               </div>
             </button>
@@ -151,7 +153,7 @@ export function BankAPYModal({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-                      <span className="text-sm font-medium text-black">Vaquita rewards</span>
+                      <span className="text-sm font-medium text-black">{t('deposit.bank.vaquitaRewards', 'Vaquita rewards')}</span>
                       <span className="text-[10px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded-full">
                         {vaquitaApy.toFixed(2)}% APY
                       </span>
@@ -161,7 +163,7 @@ export function BankAPYModal({
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 ml-5 mt-0.5">
-                    Rewards from the Vaquita community pool, based on your lock period.
+                    {t('deposit.bank.vaquitaRewardsInfo', 'Rewards from the Vaquita community pool, based on your lock period.')}
                   </p>
                 </div>
                 <div className="pt-3 border-t border-black/10">
@@ -169,7 +171,9 @@ export function BankAPYModal({
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-success" />
                       <span className="text-sm font-medium text-black">
-                        {lendingMarketName ? `${lendingMarketName} rewards` : 'Protocol rewards'}
+                        {lendingMarketName
+                          ? t('deposit.bank.marketRewards', '{{market}} rewards', { market: lendingMarketName })
+                          : t('deposit.bank.protocolRewards', 'Protocol rewards')}
                       </span>
                       <span className="text-[10px] font-bold text-success bg-success/15 px-1.5 py-0.5 rounded-full">
                         {protocolApy.toFixed(2)}% APY
@@ -180,11 +184,13 @@ export function BankAPYModal({
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 ml-5 mt-0.5">
-                    Yield from {lendingMarketName || 'the lending protocol'} where your funds are deposited.
+                    {t('deposit.bank.protocolRewardsInfo', 'Yield from {{market}} where your funds are deposited.', {
+                      market: lendingMarketName || t('deposit.bank.theLendingProtocol', 'the lending protocol'),
+                    })}
                   </p>
                 </div>
                 <p className="text-xs text-gray-500 leading-snug pt-3 border-t border-black/10">
-                  These are estimates and update over time — final rewards are confirmed when you withdraw.
+                  {t('deposit.bank.estimatesDisclaimer', 'These are estimates and update over time — final rewards are confirmed when you withdraw.')}
                 </p>
               </div>
             )}
@@ -192,13 +198,13 @@ export function BankAPYModal({
 
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-black">My deposits</h3>
+              <h3 className="text-sm font-bold text-black">{t('deposit.bank.myDeposits', 'My deposits')}</h3>
               <span className="text-xs text-gray-500">({activeDeposits.length})</span>
             </div>
             {activeDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
-                <Image src="/no_data.svg" alt="No data" width={80} height={80} />
-                <p className="text-gray-500 text-sm mt-2">No active deposits</p>
+                <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={80} height={80} />
+                <p className="text-gray-500 text-sm mt-2">{t('deposit.list.noActiveDeposits', 'No active deposits')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -232,7 +238,7 @@ export function BankAPYModal({
                     d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <span className="text-sm font-semibold text-black">How rewards work</span>
+                <span className="text-sm font-semibold text-black">{t('deposit.bank.howRewardsWork', 'How rewards work')}</span>
               </div>
               <span className={'text-black/60 transition-transform ' + (showHowItWorks ? 'rotate-180' : '')}>
                 ▾
@@ -240,18 +246,18 @@ export function BankAPYModal({
             </button>
             {showHowItWorks && (
               <ul className="px-4 pb-4 pt-1 text-sm text-gray-700 space-y-1.5 list-disc list-inside">
-                <li>Your deposit generates yield from multiple sources.</li>
-                <li>Estimated rewards are calculated using the current APY.</li>
-                <li>The APY is dynamic and may fluctuate based on user activity and total deposits.</li>
-                <li>Rewards become claimable only after the saving period ends.</li>
-                <li>Final rewards are confirmed upon withdrawal.</li>
+                <li>{t('deposit.bank.howItWorks1', 'Your deposit generates yield from multiple sources.')}</li>
+                <li>{t('deposit.bank.howItWorks2', 'Estimated rewards are calculated using the current APY.')}</li>
+                <li>{t('deposit.bank.howItWorks3', 'The APY is dynamic and may fluctuate based on user activity and total deposits.')}</li>
+                <li>{t('deposit.bank.howItWorks4', 'Rewards become claimable only after the saving period ends.')}</li>
+                <li>{t('deposit.bank.howItWorks5', 'Final rewards are confirmed upon withdrawal.')}</li>
               </ul>
             )}
           </div>
 
           {network && (
             <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500 pt-1">
-              <span>Network:</span>
+              <span>{t('deposit.bank.network', 'Network:')}</span>
               <span className="font-semibold text-black">{network.networkName}</span>
             </div>
           )}

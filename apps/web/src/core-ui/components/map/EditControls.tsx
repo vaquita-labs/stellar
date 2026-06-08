@@ -2,12 +2,14 @@ import { Html } from '@react-three/drei';
 import { Button } from '@heroui/react';
 import { EditionMode, useMapStore } from '../../stores';
 import { MapObjectType } from '../../types';
+import { useTranslation } from 'react-i18next';
 
 interface EditControlsProps {
   position: [number, number, number];
 }
 
 export const EditControls = ({ position }: EditControlsProps) => {
+  const { t } = useTranslation();
   const updateTile = useMapStore((store) => store.updateTile);
   const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
   const setPickedItem = useMapStore((store) => store.setPickedItem);
@@ -71,14 +73,14 @@ export const EditControls = ({ position }: EditControlsProps) => {
       zIndexRange={[10000, 0]}
     >
       <div className="flex flex-col gap-2">
-        <Button isIconOnly onPress={handleRemove} aria-label="Eliminar" className="bg-transparent">
-          <img src="/icons/edit-controls/remove.svg" alt="Eliminar" width={36} height={36} />
+        <Button isIconOnly onPress={handleRemove} aria-label={t('home.editControls.remove', 'Remove')} className="bg-transparent">
+          <img src="/icons/edit-controls/remove.svg" alt={t('home.editControls.remove', 'Remove')} width={36} height={36} />
         </Button>
-        <Button isIconOnly onPress={handleRotate} aria-label="Girar" className="bg-transparent">
-          <img src="/icons/edit-controls/rotate.svg" alt="Girar" width={36} height={36} />
+        <Button isIconOnly onPress={handleRotate} aria-label={t('home.editControls.rotate', 'Rotate')} className="bg-transparent">
+          <img src="/icons/edit-controls/rotate.svg" alt={t('home.editControls.rotate', 'Rotate')} width={36} height={36} />
         </Button>
-        <Button isIconOnly onPress={handleDone} aria-label="Confirmar" className="bg-transparent">
-          <img src="/icons/edit-controls/done.svg" alt="Confirmar" width={36} height={36} />
+        <Button isIconOnly onPress={handleDone} aria-label={t('common.confirm')} className="bg-transparent">
+          <img src="/icons/edit-controls/done.svg" alt={t('common.confirm')} width={36} height={36} />
         </Button>
       </div>
     </Html>

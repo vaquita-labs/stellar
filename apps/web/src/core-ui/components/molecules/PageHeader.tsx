@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const ICON_SIZE = 28;
 
@@ -23,16 +24,19 @@ interface PageHeaderProps {
   className?: string;
 }
 
-const BackContent = () => (
-  <Image
-    src="/icons/arrow-back.svg"
-    alt="Back"
-    width={ICON_SIZE}
-    height={ICON_SIZE}
-    className="object-contain"
-    priority
-  />
-);
+const BackContent = () => {
+  const { t } = useTranslation();
+  return (
+    <Image
+      src="/icons/arrow-back.svg"
+      alt={t('common.back')}
+      width={ICON_SIZE}
+      height={ICON_SIZE}
+      className="object-contain"
+      priority
+    />
+  );
+};
 
 export function PageHeader({
   title,
@@ -42,18 +46,19 @@ export function PageHeader({
   rightSlot,
   className = '',
 }: PageHeaderProps) {
+  const { t } = useTranslation();
   return (
     <div className={`relative flex items-center justify-center min-h-12 px-14 ${className}`}>
       <div className="absolute left-0 flex items-center">
         {backHref ? (
-          <Link href={backHref} aria-label="Back" className="flex items-center justify-center">
+          <Link href={backHref} aria-label={t('common.back')} className="flex items-center justify-center">
             <BackContent />
           </Link>
         ) : onBack ? (
           <button
             type="button"
             onClick={onBack}
-            aria-label="Back"
+            aria-label={t('common.back')}
             className="flex items-center justify-center bg-transparent"
           >
             <BackContent />

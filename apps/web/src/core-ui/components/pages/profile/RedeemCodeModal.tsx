@@ -4,6 +4,7 @@ import { Modal, toast } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiCamera, FiCheckCircle, FiX } from 'react-icons/fi';
 import { useIsMobile, useRedeemAchievementCode } from '../../../hooks';
 
@@ -30,6 +31,7 @@ const QR_READER_ID = 'redeem-qr-reader';
  * the `reward` phase so the UX matches the regular claim flow.
  */
 export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [phase, setPhase] = useState<Phase>('input');
   const [code, setCode] = useState('');
@@ -111,8 +113,8 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
       );
     } catch (err) {
       console.warn('[redeem] failed to start scanner:', err);
-      toast.danger('Could not start camera', {
-        description: (err as Error)?.message ?? 'Camera access was denied or unavailable.',
+      toast.danger(t('social.redeem.cameraErrorTitle'), {
+        description: (err as Error)?.message ?? t('social.redeem.cameraErrorBody'),
       });
       setPhase('input');
     }
@@ -126,7 +128,9 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
   const handleRedeem = useCallback(async () => {
     const trimmed = code.trim();
     if (!trimmed) {
-      toast.danger('Enter a code', { description: 'Type or scan a code first.' });
+      toast.danger(t('social.redeem.enterCodeTitle'), {
+        description: t('social.redeem.enterCodeBody'),
+      });
       return;
     }
     setPhase('claiming');
@@ -135,8 +139,8 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
       setReward({ coinReward: result?.coinReward ?? 0, achievementKey: result?.achievementKey ?? '' });
       setPhase('reward');
     } catch (err) {
-      const message = (err as Error)?.message ?? 'Unknown error';
-      toast.danger('Could not redeem code', { description: message });
+      const message = (err as Error)?.message ?? t('common.somethingWentWrong');
+      toast.danger(t('social.redeem.redeemErrorTitle'), { description: message });
       setPhase('input');
     }
   }, [code, redeem]);
@@ -159,9 +163,11 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
     >
       <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5">
         <div className="text-center max-w-md flex flex-col items-center gap-2">
-          <h2 className="text-xl sm:text-2xl font-extrabold text-black">Canjear código</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-black">
+            {t('social.redeem.title')}
+          </h2>
           <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-            Ingresa el código de tu evento o evento secreto para reclamar un premio especial.
+            {t('social.redeem.subtitle')}
           </p>
         </div>
 
@@ -169,7 +175,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           type="text"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder="EJ: VAQUITA-LAUNCH-2026"
+          placeholder={t('social.redeem.codePlaceholder')}
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
@@ -182,7 +188,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           className="w-full max-w-md h-11 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-gray-50 text-black border border-black border-b-2 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
         >
           <FiCamera className="h-4 w-4" />
-          Escanear QR
+          {t('social.redeem.scanQr')}
         </button>
       </div>
 
@@ -193,7 +199,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           disabled={!code.trim()}
           className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
-          Reclamar
+          {t('social.redeem.claim')}
         </button>
       </div>
     </motion.div>
@@ -209,7 +215,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
     >
       <div className="flex-1 flex flex-col items-center justify-start px-6 pt-2 gap-3 overflow-y-auto">
         <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mt-1">
-          Apunta la cámara al QR
+          {t('social.redeem.pointCamera')}
         </p>
         <div
           id={QR_READER_ID}
@@ -222,7 +228,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           onClick={() => void handleCancelScan()}
           className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-gray-50 text-black border border-black border-b-2 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
         >
-          Cancelar
+          {t('common.cancel')}
         </button>
       </div>
     </motion.div>
@@ -236,7 +242,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
       exit={{ opacity: 0 }}
       className="flex-1 flex flex-col items-center justify-center gap-6 px-6"
     >
-      <div className="flex items-center gap-2" role="status" aria-label="Redeeming code">
+      <div className="flex items-center gap-2" role="status" aria-label={t('social.redeem.validating')}>
         {[0, 1, 2].map((i) => (
           <motion.span
             key={i}
@@ -246,7 +252,9 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           />
         ))}
       </div>
-      <p className="text-sm font-bold uppercase tracking-wider text-gray-500">Validando código</p>
+      <p className="text-sm font-bold uppercase tracking-wider text-gray-500">
+        {t('social.redeem.validating')}
+      </p>
     </motion.div>
   );
 
@@ -285,7 +293,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           className="text-2xl sm:text-3xl font-extrabold text-black text-center inline-flex items-center gap-2"
         >
           <FiCheckCircle className="h-6 w-6 text-[#58CC02]" aria-hidden />
-          ¡{reward?.coinReward ?? 0} coins!
+          {t('social.redeem.coinsReward', { count: reward?.coinReward ?? 0 })}
         </motion.h2>
         <motion.p
           initial={{ y: 12, opacity: 0 }}
@@ -293,7 +301,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           transition={{ delay: 0.18 }}
           className="text-sm text-gray-600 text-center max-w-xs"
         >
-          Tu logro secreto ya está en tu sala de trofeos.
+          {t('social.redeem.rewardBody')}
         </motion.p>
       </div>
       <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
@@ -302,7 +310,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           onClick={handleClose}
           className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
         >
-          Continuar
+          {t('common.continue')}
         </button>
       </div>
     </motion.div>
@@ -346,7 +354,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
                 type="button"
                 onClick={handleClose}
                 disabled={phase === 'claiming'}
-                aria-label="Close"
+                aria-label={t('common.close')}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition disabled:opacity-50"
               >
                 <FiX className="h-5 w-5" />

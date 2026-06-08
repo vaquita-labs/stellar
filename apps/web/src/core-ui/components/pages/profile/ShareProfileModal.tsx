@@ -4,6 +4,7 @@ import { Modal, toast } from '@heroui/react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiCamera, FiCopy, FiImage, FiShare2, FiUserPlus, FiX } from 'react-icons/fi';
 
 interface ShareProfileModalProps {
@@ -46,15 +47,16 @@ function TabSwitch({
   value: TabKey;
   onChange: (key: TabKey) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       role="tablist"
-      aria-label="QR view"
+      aria-label={t('social.share.tabsLabel')}
       className="inline-flex w-full items-center gap-1 rounded-full border border-black/15 bg-white/70 p-1"
     >
       {([
-        { key: 'mine', label: 'My QR' },
-        { key: 'scan', label: 'Scan QR' },
+        { key: 'mine', label: t('social.share.tabMine') },
+        { key: 'scan', label: t('social.share.tabScan') },
       ] as { key: TabKey; label: string }[]).map((tab) => {
         const active = value === tab.key;
         return (
@@ -93,6 +95,7 @@ interface MyQrViewProps {
  *  Copy action buttons live in the modal's sticky bottom bar, mirroring how
  *  AchievementModal anchors its "Claim award" CTA. */
 function MyQrView({ url, displayName, handle, avatarSrc }: MyQrViewProps) {
+  const { t } = useTranslation();
   const qrSrc = useMemo(() => buildQrSrc(url), [url]);
 
   // When the user has no full name, `displayName` ends up being the same
@@ -125,13 +128,13 @@ function MyQrView({ url, displayName, handle, avatarSrc }: MyQrViewProps) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={qrSrc}
-          alt={`QR code for ${handle}`}
+          alt={t('social.share.qrAlt', { handle })}
           className="block rounded-md h-44 w-44 sm:h-52 sm:w-52"
         />
       </div>
 
       <p className="text-center text-xs text-gray-600 max-w-[16rem] leading-relaxed">
-        Have a friend scan this QR to follow you on Vaquita.
+        {t('social.share.myQrCaption')}
       </p>
     </div>
   );
@@ -150,6 +153,7 @@ type ScanState = 'idle' | 'requesting' | 'scanning' | 'success' | 'denied';
  * so the rest of the flow is testable.
  */
 function ScanQrView({ onScanned }: { onScanned: (handle: string) => void }) {
+  const { t } = useTranslation();
   const [state, setState] = useState<ScanState>('idle');
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -211,10 +215,10 @@ function ScanQrView({ onScanned }: { onScanned: (handle: string) => void }) {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
             <FiCamera className="h-10 w-10 opacity-80" />
             <p className="text-xs font-bold uppercase tracking-wider opacity-80">
-              {state === 'idle' && 'Camera off'}
-              {state === 'requesting' && 'Requesting access…'}
-              {state === 'success' && 'QR detected'}
-              {state === 'denied' && 'Camera blocked'}
+              {state === 'idle' && t('social.share.cameraOff')}
+              {state === 'requesting' && t('social.share.requestingAccess')}
+              {state === 'success' && t('social.share.qrDetected')}
+              {state === 'denied' && t('social.share.cameraBlocked')}
             </p>
           </div>
         )}
@@ -247,7 +251,7 @@ function ScanQrView({ onScanned }: { onScanned: (handle: string) => void }) {
       </div>
 
       <p className="text-center text-xs text-gray-600 max-w-[16rem] leading-relaxed">
-        Point the camera at a vaquero&apos;s QR to follow them instantly.
+        {t('social.share.scanCaption')}
       </p>
 
       {/* Primary action — varies with state */}
@@ -258,7 +262,7 @@ function ScanQrView({ onScanned }: { onScanned: (handle: string) => void }) {
           className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
         >
           <FiCamera className="h-4 w-4" />
-          Start scanning
+          {t('social.share.startScanning')}
         </button>
       )}
       {state === 'denied' && (
@@ -267,13 +271,13 @@ function ScanQrView({ onScanned }: { onScanned: (handle: string) => void }) {
           onClick={startCamera}
           className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-md bg-white text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
         >
-          Try again
+          {t('social.share.tryAgain')}
         </button>
       )}
       {state === 'success' && (
         <div className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-[#DCFFE0] border border-[#9ED36A] py-2.5 text-xs font-extrabold uppercase tracking-wider text-black">
           <FiUserPlus className="h-4 w-4" />
-          Following @demo_vaquero
+          {t('social.share.followingHandle', { handle: '@demo_vaquero' })}
         </div>
       )}
 
@@ -284,7 +288,7 @@ function ScanQrView({ onScanned }: { onScanned: (handle: string) => void }) {
         className="w-full h-10 inline-flex items-center justify-center gap-2 rounded-md bg-white text-gray-400 border border-black/20 text-[11px] font-extrabold uppercase tracking-wider opacity-70 cursor-not-allowed"
       >
         <FiImage className="h-3.5 w-3.5" />
-        Upload from gallery · soon
+        {t('social.share.uploadFromGallery')}
       </button>
     </div>
   );
@@ -302,6 +306,7 @@ export function ShareProfileModal({
   profileUrl,
   avatarSrc = DEFAULT_AVATAR,
 }: ShareProfileModalProps) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('mine');
 
   // Reset to the default tab every time the modal opens.
@@ -318,10 +323,10 @@ export function ShareProfileModal({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Profile link copied');
+      toast.success(t('social.share.linkCopied'));
     } catch (error) {
       const message = (error as { message?: string })?.message ?? '';
-      toast.danger('Could not copy link', { description: message });
+      toast.danger(t('social.share.couldNotCopy'), { description: message });
     }
   };
 
@@ -329,8 +334,8 @@ export function ShareProfileModal({
     try {
       if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
         await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: `${displayName} on Vaquita`,
-          text: `Follow ${displayName} on Vaquita 🐮`,
+          title: t('social.share.shareTitle', { name: displayName }),
+          text: t('social.share.shareText', { name: displayName }),
           url,
         });
         return;
@@ -339,13 +344,13 @@ export function ShareProfileModal({
     } catch (error) {
       const message = (error as { message?: string })?.message ?? '';
       if (message && !message.toLowerCase().includes('abort')) {
-        toast.danger('Could not share', { description: message });
+        toast.danger(t('social.share.couldNotShare'), { description: message });
       }
     }
   };
 
   const handleScanned = (scannedHandle: string) => {
-    toast.success(`Now following ${scannedHandle}`);
+    toast.success(t('social.share.nowFollowing', { handle: scannedHandle }));
   };
 
   /* ---------------------------------------------------------------- */
@@ -372,7 +377,7 @@ export function ShareProfileModal({
         className="p-0! m-0! sm:items-center sm:justify-center sm:p-4!"
       >
         <Modal.Dialog
-          aria-label={tab === 'mine' ? 'Share your profile QR' : 'Scan a profile QR'}
+          aria-label={tab === 'mine' ? t('social.share.dialogLabelMine') : t('social.share.dialogLabelScan')}
           className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-3xl border-0 max-h-dvh sm:max-h-[90vh] sm:max-w-md sm:w-full sm:mx-auto data-[exiting=true]:duration-300"
         >
           <motion.div
@@ -389,7 +394,7 @@ export function ShareProfileModal({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                aria-label="Close"
+                aria-label={t('common.close')}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition"
               >
                 <FiX className="h-5 w-5" />
@@ -437,7 +442,7 @@ export function ShareProfileModal({
                     className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
                   >
                     <FiShare2 className="h-4 w-4" />
-                    Share link
+                    {t('social.share.shareLink')}
                   </button>
                   <button
                     type="button"
@@ -445,7 +450,7 @@ export function ShareProfileModal({
                     className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
                   >
                     <FiCopy className="h-4 w-4" />
-                    Copy link
+                    {t('social.share.copyLink')}
                   </button>
                 </div>
               </div>

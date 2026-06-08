@@ -3,12 +3,13 @@
 import { Button, Description, Label, ListBox, Modal, Select } from '@heroui/react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatTimeDeposit } from '../../../helpers';
 import { useConfigStore } from '../../../stores';
-import { T } from '../../atoms/T';
 import { LockPeriodModalProps } from './types';
 
 export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
+  const { t } = useTranslation();
   const { token, lockPeriod, setLockPeriod } = useConfigStore();
   const lockTimeOptions =
     token?.lockPeriods.map((lockPeriod) => ({
@@ -43,11 +44,11 @@ export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
       <Modal.Container size="md" scroll="inside">
         <Modal.Dialog className="bg-background border border-black max-h-[90vh]">
           <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+            <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />
           </Modal.CloseTrigger>
           <Modal.Header>
             <Modal.Heading className="text-black font-bold text-xl">
-              <T>Select Lock Period</T>
+              {t('deposit.lockModal.title', 'Select Lock Period')}
             </Modal.Heading>
           </Modal.Header>
           <Modal.Body className="py-0 max-h-[60vh] overflow-y-auto">
@@ -58,7 +59,7 @@ export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
                 onChange={(value) => { if (value) setSelectedLockTime(value as string); }}
                 disabledKeys={lockTimeOptions.filter((o) => !o.available).map((o) => o.key.toString())}
               >
-                <Label className="text-black font-normal text-sm"><T>Lock time</T></Label>
+                <Label className="text-black font-normal text-sm">{t('deposit.modal.lockTime', 'Lock time')}</Label>
                 <Select.Trigger className="bg-white border border-black border-b-2 h-14">
                   <Select.Value className="text-black font-medium" />
                   <Select.Indicator className="text-black" />
@@ -73,7 +74,7 @@ export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
                     ))}
                   </ListBox>
                 </Select.Popover>
-                <Description><T>The funds will be held in escrow during the selected period.</T></Description>
+                <Description>{t('deposit.lockModal.escrowDescription', 'The funds will be held in escrow during the selected period.')}</Description>
               </Select>
             </div>
           </Modal.Body>
@@ -83,7 +84,7 @@ export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
               className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md"
               isDisabled={isDisabled}
             >
-              <T>Confirm</T>
+              {t('common.confirm')}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

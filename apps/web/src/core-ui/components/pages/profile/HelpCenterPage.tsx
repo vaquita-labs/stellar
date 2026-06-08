@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiChevronDown, FiMail, FiMessageCircle, FiSearch } from 'react-icons/fi';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
@@ -52,6 +53,7 @@ const FAQS: FaqEntry[] = [
 ];
 
 function AccordionItem({ entry, isOpen, onToggle }: { entry: FaqEntry; isOpen: boolean; onToggle: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="border-b border-gray-200 last:border-b-0">
       <button
@@ -60,21 +62,25 @@ function AccordionItem({ entry, isOpen, onToggle }: { entry: FaqEntry; isOpen: b
         className="w-full flex items-center justify-between gap-3 px-4 py-4 text-left bg-transparent hover:bg-[#FFF7E6] transition"
         aria-expanded={isOpen}
       >
-        <span className="text-[15px] font-extrabold text-black">{entry.q}</span>
+        <span className="text-[15px] font-extrabold text-black">
+          {t(`social.help.faqs.${entry.id}.q`, entry.q)}
+        </span>
         <FiChevronDown
           className={`text-gray-500 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
       {isOpen && (
         <div className="px-4 pb-4 pt-1">
-          <p className="text-sm text-gray-700 leading-relaxed">{entry.a}</p>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            {t(`social.help.faqs.${entry.id}.a`, entry.a)}
+          </p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {entry.tags.map((t) => (
+            {entry.tags.map((tag) => (
               <span
-                key={t}
+                key={tag}
                 className="text-[10px] font-bold uppercase tracking-wide bg-[#DDF4FF] border border-[#84D8FF] text-black rounded-sm px-1.5 py-0.5"
               >
-                {t}
+                {t(`social.help.tags.${tag}`, tag)}
               </span>
             ))}
           </div>
@@ -85,6 +91,7 @@ function AccordionItem({ entry, isOpen, onToggle }: { entry: FaqEntry; isOpen: b
 }
 
 export function HelpCenterPage() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState<string | null>(FAQS[0]?.id ?? null);
 
@@ -101,8 +108,8 @@ export function HelpCenterPage() {
 
   return (
     <MockedSubPageLayout
-      title="Help center"
-      subtitle="Answers to the questions vaqueros ask the most."
+      title={t('social.help.title')}
+      subtitle={t('social.help.subtitle')}
     >
       {/* Search */}
       <div className="relative">
@@ -110,7 +117,7 @@ export function HelpCenterPage() {
         <input
           type="search"
           inputMode="search"
-          placeholder="Search the FAQ…"
+          placeholder={t('social.help.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full h-12 pl-10 pr-3 rounded-md bg-white border border-black border-b-2 text-sm font-medium text-black placeholder:text-gray-400 outline-none focus:border-primary"
@@ -121,8 +128,10 @@ export function HelpCenterPage() {
       <section className="rounded-2xl border border-black border-b-2 bg-white overflow-hidden">
         {filtered.length === 0 ? (
           <div className="p-6 text-center">
-            <p className="text-sm font-bold text-black">No results for &ldquo;{query}&rdquo;</p>
-            <p className="text-xs text-gray-500 mt-1">Try a different keyword or contact us below.</p>
+            <p className="text-sm font-bold text-black">
+              {t('social.help.noResults', { query })}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">{t('social.help.noResultsBody')}</p>
           </div>
         ) : (
           filtered.map((entry) => (
@@ -139,7 +148,7 @@ export function HelpCenterPage() {
       {/* Contact channels */}
       <section className="flex flex-col gap-2">
         <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500 px-1">
-          Still stuck?
+          {t('social.help.stillStuck')}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a
@@ -150,7 +159,9 @@ export function HelpCenterPage() {
               <FiMail className="h-4 w-4" />
             </span>
             <div className="flex flex-col">
-              <span className="text-sm font-extrabold text-black">Email support</span>
+              <span className="text-sm font-extrabold text-black">
+                {t('social.help.emailSupport')}
+              </span>
               <span className="text-xs text-gray-600">hello@vaquita.finance</span>
             </div>
           </a>
@@ -159,8 +170,10 @@ export function HelpCenterPage() {
               <FiMessageCircle className="h-4 w-4" />
             </span>
             <div className="flex flex-col">
-              <span className="text-sm font-extrabold text-black">Live chat</span>
-              <span className="text-xs text-gray-600">Coming soon</span>
+              <span className="text-sm font-extrabold text-black">
+                {t('social.help.liveChat')}
+              </span>
+              <span className="text-xs text-gray-600">{t('social.help.comingSoon')}</span>
             </div>
           </div>
         </div>
