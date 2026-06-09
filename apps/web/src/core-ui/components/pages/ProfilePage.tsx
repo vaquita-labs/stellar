@@ -202,6 +202,24 @@ export function ProfilePage() {
     [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
   );
 
+  // The 4-tile preview prioritises what the user can act on right now:
+  // 1) achievements ready to claim (unlocked, not yet claimed),
+  // 2) otherwise the easiest-to-get locked ones (closest to completion),
+  // 3) already-claimed ones as a last resort so the grid never empties.
+  // Within each bucket we keep the catalog's display order (already easy→hard).
+  const previewBadges = useMemo(() => {
+    const closeness = (b: (typeof achievements)[number]) =>
+      b.progress && b.progress.target > 0 ? b.progress.current / b.progress.target : 0;
+
+    const claimable = achievements.filter((b) => b.unlocked && !isClaimed(b.id));
+    const locked = achievements
+      .filter((b) => !b.unlocked)
+      .sort((a, b) => closeness(b) - closeness(a));
+    const claimed = achievements.filter((b) => b.unlocked && isClaimed(b.id));
+
+    return [...claimable, ...locked, ...claimed].slice(0, 4);
+  }, [achievements, isClaimed]);
+
   /* -------------------------------------------------------------- */
   /* Disconnected state                                              */
   /* -------------------------------------------------------------- */
@@ -374,7 +392,7 @@ export function ProfilePage() {
               className="absolute inset-0 rounded-2xl z-0"
             />
             <div className="relative z-10 grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
-              {achievements.slice(0, 4).map((badge) => (
+              {previewBadges.map((badge) => (
                 <BadgeTile
                   key={badge.id}
                   badge={badge}
