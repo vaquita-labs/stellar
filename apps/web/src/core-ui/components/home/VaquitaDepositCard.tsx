@@ -42,7 +42,7 @@ export const VaquitaDepositCard = ({
     deposit.lockPeriod
   );
 
-  const now = Date.now();
+  const now = deposit.serverTimestamp || Date.now();
   const unlockTimestamp = deposit.createdTimestamp + deposit.lockPeriod;
   const elapsed = Math.max(0, now - deposit.createdTimestamp);
   const progress = Math.min(1, deposit.lockPeriod > 0 ? elapsed / deposit.lockPeriod : 1);
