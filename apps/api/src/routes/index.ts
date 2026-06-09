@@ -7,6 +7,7 @@ import configRoutes from './config/route';
 import depositRoutes from './deposit/route';
 import followRoutes from './follows/route';
 import leaderboardRoutes from './leaderboard/route';
+import notificationRoutes from './notifications/route';
 import profileRoutes from './profile/route';
 import userRoutes from './user/route';
 import walletBadgeRoutes from './wallets/badges.route';
@@ -23,6 +24,7 @@ router.use('/wallets/:wallet/badges', walletBadgeRoutes);
 router.use('/deposit', depositRoutes);
 router.use('/follows', followRoutes);
 router.use('/leaderboard', leaderboardRoutes);
+router.use('/notifications', notificationRoutes);
 router.use('/user', userRoutes);
 
 export default router;

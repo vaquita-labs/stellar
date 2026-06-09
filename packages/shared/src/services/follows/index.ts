@@ -1,6 +1,7 @@
 import { Prisma, prisma } from '@vaquita/db';
 import type { Profile as PrismaProfile } from '@vaquita/db';
 import type { FriendDTO, FriendSuggestionDTO } from '../../types';
+import { notify } from '../notifications';
 import { getStreakData } from '../profile';
 
 // Upper bound on a single search page. Streak is computed per result (deposits +
@@ -148,6 +149,15 @@ export const followProfile = async (followerWallet: string, followeeWallet: stri
 
   try {
     await prisma.follow.create({ data: { followerId: follower.id, followeeId: followee.id } });
+    // Tell the followee. Deduped per edge so follow/unfollow loops don't spam.
+    void notify({
+      walletAddress: followeeWallet,
+      type: 'friend',
+      messageKey: 'newFollower',
+      params: { name: toName(follower) },
+      link: `/leaderboard/${followerWallet}`,
+      dedupeKey: `follow-${follower.id}-${followee.id}`,
+    });
   } catch (error) {
     // P2002 = unique violation: already following, treat as a no-op success.
     if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) {

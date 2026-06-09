@@ -251,6 +251,31 @@ export interface FollowingWalletsResponseDTO {
   following: string[];
 }
 
+export type NotificationTypeDTO = 'deposit' | 'reward' | 'streak' | 'friend' | 'system';
+
+/**
+ * One row of the in-app notifications feed. `messageKey` + `params` map to the
+ * frontend i18n entries (`notificationsCenter.messages.<messageKey>.{title,body}`)
+ * so copy stays translatable; `link` is the in-app route opened on tap ('' = none).
+ */
+export interface NotificationDTO {
+  id: string;
+  type: NotificationTypeDTO;
+  messageKey: string;
+  params: Record<string, string | number>;
+  link: string;
+  read: boolean;
+  /** epoch ms */
+  createdAt: number;
+}
+
+export interface NotificationsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  notifications: NotificationDTO[];
+  unread: number;
+}
+
 /** A list of vaqueros (the viewer's followers or following), for the modal. */
 export interface FriendListResponseDTO {
   networkName: string;

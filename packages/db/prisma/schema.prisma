@@ -177,6 +177,7 @@ model Profile {
   profileAchievements ProfileAchievement[]
   profileMapObjects   ProfileMapObject[]
   profileRewards      ProfileReward[]
+  notifications       Notification[]
 
   // Unidirectional follow graph. `following` are edges where this profile is the
   // follower; `followers` are edges where it is the followee.
@@ -200,6 +201,26 @@ model Follow {
   @@index([followerId], map: "idx_follows_follower")
   @@index([followeeId], map: "idx_follows_followee")
   @@map("follows")
+}
+
+/// In-app notification feed row. `messageKey` + `params` map to frontend i18n
+/// entries (notificationsCenter.messages.*); `link` is the in-app route opened
+/// on tap; `dedupeKey` makes emission idempotent (unique, NULLs allowed).
+model Notification {
+  id         BigInt    @id @default(autoincrement())
+  profileId  Int       @map("profile_id")
+  type       String    @db.VarChar(20)
+  messageKey String    @map("message_key") @db.VarChar(50)
+  params     Json?
+  link       String?   @db.VarChar(300)
+  dedupeKey  String?   @unique(map: "notifications_dedupe_key_key") @map("dedupe_key") @db.VarChar(120)
+  readAt     DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt(sort: Desc)], map: "idx_notifications_profile_created")
+  @@map("notifications")
 }
 
 model ProfileAchievement {

@@ -15,8 +15,9 @@ import {
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
+  useUnreadNotificationsCount,
 } from '../../hooks';
-import { GOLD_COIN, useElementPositionsStore, useHideBalance, useUnreadNotificationsCount } from '../../stores';
+import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
 import { BankAPYModal, CoinsModal, ExperienceModal, StreakModal } from '../organisms';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';

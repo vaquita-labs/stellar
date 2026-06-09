@@ -90,9 +90,11 @@ export function Providers({ children }: { children: ReactNode }) {
         <AblyProvider>
           <Toast.Provider placement="top" />
           <ChannelProvider channelName="deposits-changes">
-            <AppShell isPublicRoute={isPublicRoute} showLoader={showLoader}>
-              {children}
-            </AppShell>
+            <ChannelProvider channelName="notifications-changes">
+              <AppShell isPublicRoute={isPublicRoute} showLoader={showLoader}>
+                {children}
+              </AppShell>
+            </ChannelProvider>
           </ChannelProvider>
         </AblyProvider>
       </PollarProvider>

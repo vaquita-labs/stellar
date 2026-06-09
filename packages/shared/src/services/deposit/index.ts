@@ -3,6 +3,7 @@ import { prisma } from '@vaquita/db';
 import { firstElement } from '../../helpers';
 import { ably } from '../ably';
 import { evaluateBadgeMilestones } from '../badges/badge-monitor';
+import { notify } from '../notifications';
 import { getBadgesContractAddress } from '../project-config';
 import { getBlendInterest, getStellarDepositContractAddress } from '../stellar';
 import {
@@ -100,6 +101,15 @@ export const creteConfirmWithdrawal = async (withdrawal: {
         depositId: withdrawal.depositId,
         transactionEventRaw: withdrawal.transactionEventRaw,
       },
+      include: { deposit: { select: { walletAddress: true, amount: true } } },
+    });
+    void notify({
+      walletAddress: data.deposit.walletAddress,
+      type: 'deposit',
+      messageKey: 'withdrawalCompleted',
+      params: { amount: Number(data.transferAmount ?? data.deposit.amount).toFixed(2) },
+      link: '/profile/wallet',
+      dedupeKey: `withdrawal-confirmed-${data.id}`,
     });
     await broadcastDepositsChange('creteConfirmWithdrawal');
     return { data, error: null };
@@ -221,6 +231,15 @@ export const confirmDepositWithTx = async (depositId: number, depositIdHex: stri
       },
     });
 
+    void notify({
+      walletAddress: data.walletAddress,
+      type: 'deposit',
+      messageKey: 'depositConfirmed',
+      params: { amount: Number(data.amount).toFixed(2) },
+      link: '/home',
+      dedupeKey: `deposit-confirmed-${data.id}`,
+    });
+
     await broadcastDepositsChange('confirmDepositWithTx');
 
     return { data, error: null };
@@ -266,6 +285,14 @@ export const confirmDeposit = async (depositId: number) => {
       where: { id: depositId },
       data: { status: DepositStatus.CONFIRMED, confirmedAt: new Date() },
     });
+    void notify({
+      walletAddress: data.walletAddress,
+      type: 'deposit',
+      messageKey: 'depositConfirmed',
+      params: { amount: Number(data.amount).toFixed(2) },
+      link: '/home',
+      dedupeKey: `deposit-confirmed-${data.id}`,
+    });
     await broadcastDepositsChange('confirmDeposit');
     return { data, error: null };
   } catch (error) {
@@ -279,13 +306,21 @@ export const confirmWithdrawal = async (withdrawalId: number) => {
     const data = await prisma.withdrawal.update({
       where: { id: withdrawalId },
       data: { status: WithdrawalStatus.CONFIRMED, confirmedAt: new Date() },
-      include: { deposit: { select: { walletAddress: true } } },
+      include: { deposit: { select: { walletAddress: true, amount: true } } },
     });
 
     // Fire-and-forget badge evaluation. Non-critical: errors must not affect
     // withdrawal confirmation.
     const wallet = data?.deposit?.walletAddress;
     if (wallet) {
+      void notify({
+        walletAddress: wallet,
+        type: 'deposit',
+        messageKey: 'withdrawalCompleted',
+        params: { amount: Number(data.transferAmount ?? data.deposit.amount).toFixed(2) },
+        link: '/profile/wallet',
+        dedupeKey: `withdrawal-confirmed-${data.id}`,
+      });
       void (async () => {
         try {
           const contractAddress = await getBadgesContractAddress();
