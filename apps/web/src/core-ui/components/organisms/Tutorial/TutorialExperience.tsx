@@ -259,12 +259,14 @@ export function TutorialExperience() {
         }}
       />
 
-      {/* Paso `confirm-deposit`: enfoca SOLO el botón "Deposit" del modal real. */}
+      {/* Paso `confirm-deposit`: enfoca SOLO el botón "Deposit" del modal real.
+          La tarjeta se ancla arriba (pinTop) para no tapar el monto a depositar. */}
       {depositOpen && step.id === 'confirm-deposit' && (
         <TutorialFocusLock
           selector={MODAL_PRIMARY_BTN}
           title={t(step.titleKey, step.params)}
           message={t(step.bodyKey, step.params)}
+          pinTop
           {...dots}
         />
       )}

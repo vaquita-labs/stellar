@@ -20,11 +20,19 @@ interface TutorialFocusLockProps {
   dotIndex?: number;
   /** Total de pasos (para los dots de progreso de la tarjeta guía). */
   dotCount?: number;
+  /**
+   * Ancla la tarjeta guía cerca del borde SUPERIOR del viewport en vez de
+   * pegarla al elemento. Útil cuando el elemento resaltado está abajo (ej. el
+   * botón Deposit) y la tarjeta taparía el contenido que se debe poder ver.
+   */
+  pinTop?: boolean;
 }
 
 const REMEASURE_MS = 200;
 const CARD_GAP = 12;
 const CARD_MAX_PX = 360;
+// Offset desde el borde superior cuando la tarjeta se ancla arriba (pinTop).
+const CARD_TOP_OFFSET = 16;
 
 /**
  * Enfoca un único elemento dentro de un modal ABIERTO sin tocar el modal:
@@ -37,7 +45,7 @@ const CARD_MAX_PX = 360;
  * vivo, así reacciona a la animación de apertura, resize y scroll. Es agnóstico
  * del modal: sirve para depósito, retiro o cualquier otro paso del tutorial.
  */
-export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex, dotCount }: TutorialFocusLockProps) {
+export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex, dotCount, pinTop }: TutorialFocusLockProps) {
   const [rect, setRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
@@ -73,13 +81,19 @@ export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex,
   const cardW = Math.min(CARD_MAX_PX, vw - 24);
   const centerX = (rect.left + rect.right) / 2;
   const cardLeft = Math.min(Math.max(centerX, 12 + cardW / 2), vw - 12 - cardW / 2);
-  const placeAbove = rect.top > 150;
-  const cardStyle = placeAbove
-    ? { left: cardLeft, bottom: vh - top + CARD_GAP, width: cardW }
-    : { left: cardLeft, top: bottom + CARD_GAP, width: cardW };
+  // pinTop: la tarjeta va arriba del todo (no tapa el contenido sobre el botón).
+  const placeAbove = !pinTop && rect.top > 150;
+  const cardStyle = pinTop
+    ? { left: cardLeft, top: CARD_TOP_OFFSET, width: cardW }
+    : placeAbove
+      ? { left: cardLeft, bottom: vh - top + CARD_GAP, width: cardW }
+      : { left: cardLeft, top: bottom + CARD_GAP, width: cardW };
 
   return (
-    <div aria-hidden className="fixed inset-0 z-[9998]">
+    // El wrapper NO captura clicks (pointer-events-none): así el hueco del
+    // elemento enfocado deja pasar el click al elemento real. Solo los cuatro
+    // paneles (pointer-events-auto) bloquean todo lo demás.
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-[9998]">
       {/* Arriba */}
       <div className={panel} style={{ left: 0, right: 0, top: 0, height: top }} />
       {/* Abajo */}

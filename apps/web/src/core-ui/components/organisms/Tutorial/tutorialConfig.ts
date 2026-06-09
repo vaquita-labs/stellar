@@ -127,6 +127,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     titleKey: TUTORIAL_COACH.depositConfirm.title,
     bodyKey: TUTORIAL_COACH.depositConfirm.body,
     ctaKey: '',
+    // Monto fijo de la demo: el modal precarga este monto y queda bloqueado, así
+    // que el mensaje ("Depositarás 3 USDC") coincide con lo que se deposita.
+    params: { amount: TUTORIAL_DEFAULT_AMOUNT, currency: TUTORIAL_CURRENCY },
   },
   {
     id: 'open-bank',

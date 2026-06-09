@@ -36,6 +36,7 @@ export function MoneyInput({
   balanceFormatted = '0',
   onReloadBalance,
   balanceIsLoading,
+  disabled = false,
 }: MoneyInputProps) {
   const { t } = useTranslation();
   const { token, network } = useConfigStore();
@@ -119,12 +120,12 @@ export function MoneyInput({
   return (
     <div className="flex flex-col gap-1 mb-2">
       <label className="text-black font-normal text-sm">{t('ui.moneyInput.label')}</label>
-      <div className={`flex items-center bg-white border border-black border-b-2 h-14 rounded-md px-3 ${error ? 'border-danger' : ''}`}>
+      <div className={`flex items-center bg-white border border-black border-b-2 h-14 rounded-md px-3 ${error ? 'border-danger' : ''} ${disabled ? 'opacity-60' : ''}`}>
         <input
-          disabled={loading}
+          disabled={loading || disabled}
           placeholder="0.0"
           value={value}
-          className="flex-1 min-w-0 text-black font-medium bg-transparent border-0 outline-none h-full text-base placeholder:text-default-400"
+          className="flex-1 min-w-0 text-black font-medium bg-transparent border-0 outline-none h-full text-base placeholder:text-default-400 disabled:cursor-not-allowed"
           onChange={(e) => handleChange(e.target.value)}
           onBlur={normalizeOnBlur}
           onKeyDown={preventKeys}
@@ -135,7 +136,8 @@ export function MoneyInput({
         <label className="sr-only" htmlFor="currency">{t('ui.moneyInput.currency')}</label>
         <select
           value={token?.symbol}
-          className="h-full bg-transparent border-0 outline-none text-black font-medium text-sm pl-2"
+          disabled={disabled}
+          className="h-full bg-transparent border-0 outline-none text-black font-medium text-sm pl-2 disabled:cursor-not-allowed"
           id="currency"
           name="currency"
           onChange={(e) => {
