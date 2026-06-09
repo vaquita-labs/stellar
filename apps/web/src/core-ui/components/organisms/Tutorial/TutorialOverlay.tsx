@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiCheckCircle } from 'react-icons/fi';
 import { Button } from '../../atoms';
+import { TutorialCard } from './TutorialCard';
 import { formatTutorialMoney, TUTORIAL_STEPS, TutorialStep } from './tutorialConfig';
 
 interface TutorialOverlayProps {
@@ -22,23 +23,6 @@ interface TutorialOverlayProps {
 }
 
 const SPOTLIGHT_PAD = 8;
-
-/**
- * Resalta en negro la palabra "demo" dentro del copy de la tarjeta. La palabra
- * es la misma en es/pt/en, así que el match (case-insensitive) cubre todos los
- * idiomas. Devuelve un arreglo de nodos para inyectar en el <p>.
- */
-function highlightDemo(text: string) {
-  return text.split(/(demo)/gi).map((part, i) =>
-    part.toLowerCase() === 'demo' ? (
-      <strong key={i} className="font-semibold text-black">
-        {part}
-      </strong>
-    ) : (
-      part
-    ),
-  );
-}
 
 /**
  * Mide en vivo el rect del elemento real a resaltar. Re-mide en resize/scroll y
@@ -199,64 +183,55 @@ export function TutorialOverlay({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: cardAtTop ? -16 : 16 }}
             transition={{ duration: 0.28 }}
-            className="w-full max-w-md rounded-2xl border-2 border-black bg-white p-5 shadow-2xl sm:p-6"
+            className="w-full max-w-md"
           >
-            {/* Progreso de pasos */}
-            <div className="mb-4 flex items-center gap-2">
-              {TUTORIAL_STEPS.map((s, i) => (
-                <div
-                  key={s.id}
-                  className={`h-2 rounded-full transition-all ${
-                    i === index ? 'w-7 bg-primary' : i < index ? 'w-2 bg-primary/50' : 'w-2 bg-black/15'
-                  }`}
-                />
-              ))}
-            </div>
-
-            <h2 className="text-xl font-bold text-black sm:text-2xl">{t(step.titleKey, step.params)}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-black/70 sm:text-base">{highlightDemo(t(step.bodyKey, step.params))}</p>
-
-            {step.kind === 'warn' && (
-              <div className="mt-4 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
-                <FiAlertTriangle className="shrink-0" size={18} />
-                <span>
-                  {t('tutorial.warn.keepLose', {
-                    defaultValue: 'Keep {{amount}}, lose {{interest}} interest.',
-                    amount: formatTutorialMoney(amount),
-                    interest: formatTutorialMoney(interest),
-                  })}
-                </span>
-              </div>
-            )}
-
-            {step.kind === 'success' && (
-              <div className="mt-4 rounded-lg border border-black/10 bg-emerald-50 p-3 text-sm">
-                <div className="flex justify-between py-0.5 text-black/70">
-                  <span>{t('tutorial.receipt.deposit', 'Deposit')}</span>
-                  <span className="tabular-nums">{formatTutorialMoney(amount)}</span>
-                </div>
-                <div className="flex justify-between py-0.5 text-emerald-700">
-                  <span>{t('tutorial.receipt.interestEarned', 'Interest earned')}</span>
-                  <span className="tabular-nums">+{formatTutorialMoney(interest)}</span>
-                </div>
-                <div className="mt-1 flex justify-between border-t border-black/10 pt-2 font-bold text-black">
-                  <span className="flex items-center gap-1">
-                    <FiCheckCircle className="text-emerald-600" /> {t('tutorial.receipt.youReceived', 'You received')}
+            <TutorialCard
+              dotIndex={index}
+              dotCount={TUTORIAL_STEPS.length}
+              title={t(step.titleKey, step.params)}
+              body={t(step.bodyKey, step.params)}
+              footer={
+                // En pasos con spotlight no hay botón en la tarjeta: se avanza
+                // tocando el botón REAL resaltado. En pasos de mensaje sí.
+                showCta ? (
+                  <Button type="primary" wFull onPress={onPrimary} isDisabled={primaryDisabled} isLoading={primaryLoading}>
+                    {primaryLabel}
+                  </Button>
+                ) : undefined
+              }
+            >
+              {step.kind === 'warn' && (
+                <div className="mt-4 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+                  <FiAlertTriangle className="shrink-0" size={18} />
+                  <span>
+                    {t('tutorial.warn.keepLose', {
+                      defaultValue: 'Keep {{amount}}, lose {{interest}} interest.',
+                      amount: formatTutorialMoney(amount),
+                      interest: formatTutorialMoney(interest),
+                    })}
                   </span>
-                  <span className="tabular-nums">{formatTutorialMoney(finalAmount)}</span>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* En pasos con spotlight no hay botón en la tarjeta: se avanza
-                tocando el botón REAL resaltado. En pasos de mensaje sí. */}
-            {showCta && (
-              <div className="mt-5">
-                <Button type="primary" wFull onPress={onPrimary} isDisabled={primaryDisabled} isLoading={primaryLoading}>
-                  {primaryLabel}
-                </Button>
-              </div>
-            )}
+              {step.kind === 'success' && (
+                <div className="mt-4 rounded-lg border border-black/10 bg-emerald-50 p-3 text-sm">
+                  <div className="flex justify-between py-0.5 text-black/70">
+                    <span>{t('tutorial.receipt.deposit', 'Deposit')}</span>
+                    <span className="tabular-nums">{formatTutorialMoney(amount)}</span>
+                  </div>
+                  <div className="flex justify-between py-0.5 text-emerald-700">
+                    <span>{t('tutorial.receipt.interestEarned', 'Interest earned')}</span>
+                    <span className="tabular-nums">+{formatTutorialMoney(interest)}</span>
+                  </div>
+                  <div className="mt-1 flex justify-between border-t border-black/10 pt-2 font-bold text-black">
+                    <span className="flex items-center gap-1">
+                      <FiCheckCircle className="text-emerald-600" /> {t('tutorial.receipt.youReceived', 'You received')}
+                    </span>
+                    <span className="tabular-nums">{formatTutorialMoney(finalAmount)}</span>
+                  </div>
+                </div>
+              )}
+            </TutorialCard>
           </motion.div>
         </AnimatePresence>
       </div>

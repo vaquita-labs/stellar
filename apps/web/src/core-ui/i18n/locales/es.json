@@ -1230,7 +1230,7 @@
         "title": "¡Muy bien! 🎉"
       },
       "waitIntro": {
-        "body": "Ahorra los {{seconds}} segundos que elegiste y te quedas con todo el interés. Vamos a ver a tu vaquita.",
+        "body": "Espera los {{seconds}}s que te pusiste de objetivo y quédate con todo el interés.",
         "cta": "Esperar {{seconds}}s",
         "title": "Pero si esperas…"
       },
@@ -1250,6 +1250,28 @@
     },
     "warn": {
       "keepLose": "Conservas {{amount}} y pierdes {{interest}} de interés."
+    },
+    "coach": {
+      "depositConfirm": {
+        "title": "Confirma tu depósito",
+        "body": "Toca Depositar para confirmar. Es solo una demo, sin dinero real."
+      },
+      "selectDeposit": {
+        "title": "Encuentra tu depósito",
+        "body": "Selecciona el depósito que acabas de hacer. Recuerda que es un depósito demo."
+      },
+      "withdrawEarly": {
+        "title": "Intenta retirar",
+        "body": "Vamos a intentar retirar antes de que termine el tiempo."
+      },
+      "cancelWait": {
+        "title": "Conserva tu interés",
+        "body": "Si retiras ahora pierdes tu interés. Mejor toca Cancelar y espera."
+      },
+      "claimNow": {
+        "title": "¡Se acabó el tiempo! 🎉",
+        "body": "Retira para recuperar tu depósito más el interés."
+      }
     }
   },
   "ui": {
