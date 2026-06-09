@@ -12,7 +12,6 @@ import {
 } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
-import { ShareProfileQrButton } from '../profile/ShareProfileQrButton';
 import {
   LeaderboardCard,
   LeaderboardCardData,
@@ -256,7 +255,6 @@ export const LeaderboardPage = () => {
   return (
     <PageLayout
       title={t('leaderboard.title', 'Leaderboard')}
-      rightSlot={<ShareProfileQrButton displayName={displayName} handle={handle} />}
       contentClassName="!gap-3"
     >
       <LeaderboardSubHeader
