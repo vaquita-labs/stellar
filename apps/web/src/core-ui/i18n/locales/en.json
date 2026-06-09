@@ -233,7 +233,7 @@
     "bank": {
       "details": "Details",
       "estimatedEarningsTotal": "Estimated earnings total",
-      "estimatesDisclaimer": "These are estimates and update over time — final rewards are confirmed when you withdraw.",
+      "estimatesDisclaimer": "These are estimates and update over time final rewards are confirmed when you withdraw.",
       "hide": "Hide",
       "howItWorks1": "Your deposit generates yield from multiple sources.",
       "howItWorks2": "Estimated rewards are calculated using the current APY.",
@@ -491,11 +491,11 @@
       "you": "You"
     },
     "direction": {
-      "ascending": "Sort ascending — toggle order",
-      "descending": "Sort descending — toggle order"
+      "ascending": "Sort ascending toggle order",
+      "descending": "Sort descending toggle order"
     },
     "empty": {
-      "description": "Be the first to climb the ranks — start a deposit streak and you'll show up here.",
+      "description": "Be the first to climb the ranks start a deposit streak and you'll show up here.",
       "title": "No vaqueros on the board yet"
     },
     "error": {
@@ -774,8 +774,8 @@
       "streakMissed": "Streak missed",
       "subtitle": "How your saving habit is shaping up.",
       "title": "Your summary",
-      "todayStreakKept": "Today — streak kept",
-      "todayStreakMissed": "Today — streak missed",
+      "todayStreakKept": "Today streak kept",
+      "todayStreakMissed": "Today streak missed",
       "totalExperience": "Total experience",
       "xpLevel": "XP & level",
       "xpLevelSub": "Progress to your next level"
@@ -1050,7 +1050,7 @@
       "starLabel_one": "{{count}} star",
       "starLabel_other": "{{count}} stars",
       "subtitle": "Tell us what's working, what isn't, and what you wish Vaquita did.",
-      "successBody": "We read every message — and we mean it.",
+      "successBody": "We read every message and we mean it.",
       "successTitle": "Thanks for the feedback (mock)!",
       "title": "Feedback"
     },
@@ -1076,7 +1076,7 @@
       "emailSupport": "Email support",
       "faqs": {
         "apy": {
-          "a": "Your APY is the underlying protocol APY (e.g. lending markets) plus any Vaquita rewards active for your lock period. The breakdown is shown in the home header — tap your balance to expand it.",
+          "a": "Your APY is the underlying protocol APY (e.g. lending markets) plus any Vaquita rewards active for your lock period. The breakdown is shown in the home header tap your balance to expand it.",
           "q": "How is my APY calculated?"
         },
         "badges": {
@@ -1088,7 +1088,7 @@
           "q": "Does Vaquita hold my money?"
         },
         "streak": {
-          "a": "Every day you visit the app and have at least one active deposit, your streak grows by 1. Miss a day and the streak resets — unless you have a streak-freeze power-up (coming soon).",
+          "a": "Every day you visit the app and have at least one active deposit, your streak grows by 1. Miss a day and the streak resets unless you have a streak-freeze power-up (coming soon).",
           "q": "How do streaks work?"
         },
         "support": {
@@ -1254,7 +1254,7 @@
     "coach": {
       "depositConfirm": {
         "title": "Confirm your deposit",
-        "body": "You'll deposit {{amount}} {{currency}} — it's just a demo, no real money."
+        "body": "You'll deposit {{amount}} {{currency}} it's just a demo, no real money."
       },
       "selectDeposit": {
         "title": "Find your deposit",
