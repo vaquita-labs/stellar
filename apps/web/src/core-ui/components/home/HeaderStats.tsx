@@ -37,8 +37,12 @@ export const HeaderStats = () => {
   const { data: depositsData, isLoading: depositsLoading } = useDepositsComplete(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
-  const { data: apyData, isLoading: apyLoading } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
+  const { isLoading: apyLoading } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
+  const estimatedEarnings = activeDeposits.reduce(
+    (acc, d) => acc + (d.vaquitaInterest ?? 0) + (d.protocolInterest ?? 0) + (d.blendInterest ?? 0),
+    0,
+  );
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -133,7 +137,8 @@ export const HeaderStats = () => {
                   </span>
                   <EarnChip
                     deposits={activeDeposits}
-                    apy={(apyData?.vaquitaApy ?? 0) + (apyData?.protocolApy ?? 0)}
+                    estimatedEarnings={estimatedEarnings}
+                    tokenSymbol={token?.symbol}
                     isLoading={apyLoading || depositsLoading}
                   />
                 </ div>
