@@ -12,7 +12,7 @@ import {
 } from '@/core-ui/hooks/profile';
 import { DepositResponseDTO } from '@/core-ui/types';
 import Image from 'next/image';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronLeft, FiChevronRight, FiTrendingUp } from 'react-icons/fi';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
@@ -97,15 +97,22 @@ function startOfWeek(ms: number): Date {
 // summing amounts per week. Weeks with no deposits stay at 0 so the chart keeps
 // a stable shape. Labels use the week-start date (e.g. "Apr 7").
 const WEEKS = 6;
-function buildWeeklyDeposits(deposits: DepositResponseDTO[]) {
+interface WeekBucket {
+  start: number;
+  week: string;
+  amount: number;
+  count: number;
+}
+function buildWeeklyDeposits(deposits: DepositResponseDTO[]): WeekBucket[] {
   const thisWeek = startOfWeek(Date.now());
-  const buckets = Array.from({ length: WEEKS }, (_, i) => {
+  const buckets: WeekBucket[] = Array.from({ length: WEEKS }, (_, i) => {
     const ws = new Date(thisWeek);
     ws.setDate(ws.getDate() - (WEEKS - 1 - i) * 7);
     return {
       start: ws.getTime(),
       week: ws.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       amount: 0,
+      count: 0,
     };
   });
   const firstStart = buckets[0].start;
@@ -115,7 +122,10 @@ function buildWeeklyDeposits(deposits: DepositResponseDTO[]) {
     if (!ts || ts < firstStart) continue;
     const weekStart = startOfWeek(ts).getTime();
     const bucket = buckets.find((b) => b.start === weekStart);
-    if (bucket) bucket.amount += Number(dep.amount) || 0;
+    if (bucket) {
+      bucket.amount += Number(dep.amount) || 0;
+      bucket.count += 1;
+    }
   }
   return buckets;
 }
@@ -369,20 +379,35 @@ function DepositsAreaChart() {
   // this panel, kept separate from the weekly contribution total below.
   const { activeDepositsTotalAmount } = useMemo(() => getDepositsData(deposits), [deposits]);
 
-  // SVG viewBox is a convenient unitless canvas — we paint at 320×140 logical
-  // units and let CSS scale it responsively via preserveAspectRatio="none".
-  const W = 320;
-  const H = 140;
-  const PADDING_X = 16;
-  const PADDING_TOP = 12;
-  const PADDING_BOTTOM = 22;
-  const innerW = W - PADDING_X * 2;
+  const total = weekly.reduce((acc, d) => acc + d.amount, 0);
+
+  // The SVG is drawn at the container's real pixel width (measured below) so the
+  // viewBox maps 1:1 to screen pixels — no preserveAspectRatio="none" stretching
+  // that would smear circles into ovals and warp the text.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(320);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // The week the user is hovering / has tapped — drives the tooltip. Defaults to
+  // the most recent week so the panel shows something meaningful at rest.
+  const [active, setActive] = useState<number>(weekly.length - 1);
+
+  const H = 170;
+  const PADDING_X = 14;
+  const PADDING_TOP = 18;
+  const PADDING_BOTTOM = 26;
+  const innerW = width - PADDING_X * 2;
   const innerH = H - PADDING_TOP - PADDING_BOTTOM;
   const max = Math.max(...weekly.map((d) => d.amount)) || 1;
-  const total = weekly.reduce((acc, d) => acc + d.amount, 0);
-  // Index of the heaviest week — annotated on the chart so the curve reads as
-  // data, not decoration. Falls back to the last week when nothing was saved.
-  const peakIdx = weekly.reduce((best, d, i, arr) => (d.amount > arr[best].amount ? i : best), 0);
 
   const points = weekly.map((d, i) => {
     const x = PADDING_X + (innerW / (weekly.length - 1)) * i;
@@ -400,46 +425,53 @@ function DepositsAreaChart() {
       return `C ${cx} ${prev.y} ${cx} ${p.y} ${p.x} ${p.y}`;
     })
     .join(' ');
-  const areaPath = `${linePath} L ${points[points.length - 1].x} ${PADDING_TOP + innerH} L ${points[0].x} ${PADDING_TOP + innerH} Z`;
+  const baseline = PADDING_TOP + innerH;
+  const areaPath = `${linePath} L ${points[points.length - 1].x} ${baseline} L ${points[0].x} ${baseline} Z`;
 
   // Three horizontal gridlines at 0 / 50% / max for a "real chart" feel.
-  const gridYs = [PADDING_TOP, PADDING_TOP + innerH / 2, PADDING_TOP + innerH];
+  const gridYs = [PADDING_TOP, PADDING_TOP + innerH / 2, baseline];
+
+  // Map a pointer event to the nearest week so hover/tap snaps to a data point.
+  const pickWeek = (clientX: number, target: SVGSVGElement) => {
+    const rect = target.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const i = Math.round(((x - PADDING_X) / innerW) * (weekly.length - 1));
+    setActive(Math.min(Math.max(i, 0), weekly.length - 1));
+  };
 
   if (isLoading) return <PanelLoading />;
 
-  const peak = points[peakIdx];
+  const ap = points[active];
+  // Clamp the tooltip so it never spills past the chart edges, and flip it below
+  // the point when there isn't room above (e.g. on a tall spike).
+  const TOOLTIP_HALF = 78;
+  const TOOLTIP_H = 58;
+  const tooltipLeft = Math.min(Math.max(ap.x, TOOLTIP_HALF), width - TOOLTIP_HALF);
+  const tooltipTop = ap.y - TOOLTIP_H - 10 >= 0 ? ap.y - TOOLTIP_H - 10 : ap.y + 12;
 
   return (
     <div className="flex flex-col gap-3">
       {/* Hero — real USDC currently saved (distinct from gold coins). */}
-      <div className="flex items-center gap-4 rounded-xl border border-black/10 bg-[#2775CA]/10 px-4 py-3">
-        <div className="relative flex items-center justify-center">
-          <span className="absolute inset-0 rounded-full bg-[#2775CA]/25 blur-xl" aria-hidden />
-          <Image
-            src="/icons/global/usdc.png"
-            alt="USDC"
-            width={44}
-            height={44}
-            className="relative object-contain"
-          />
-        </div>
-        <div className="flex flex-col leading-none">
-          <span className="text-3xl font-extrabold text-black tabular-nums">
-            ${activeDepositsTotalAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}
-          </span>
-          <span className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-            {t('profilePages.summary.usdcCurrentlySaved', 'USDC currently saved')}
-          </span>
-        </div>
+      <div className="flex flex-col gap-1 rounded-xl border border-black/10 bg-[#2775CA]/10 px-4 py-3 leading-none">
+        <span className="text-3xl font-extrabold text-black tabular-nums">
+          ${activeDepositsTotalAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+        </span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+          {t('profilePages.summary.usdcCurrentlySaved', 'USDC currently saved')}
+        </span>
       </div>
 
-      <div className="relative text-[#2775CA]">
+      <div ref={wrapRef} className="relative text-[#2775CA] touch-none select-none">
         <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="w-full h-40"
-          preserveAspectRatio="none"
+          width={width}
+          height={H}
+          viewBox={`0 0 ${width} ${H}`}
+          className="w-full"
+          style={{ height: H }}
           role="img"
           aria-label={t('profilePages.summary.depositsChartAria', 'Deposits over the last 6 weeks')}
+          onPointerMove={(e) => pickWeek(e.clientX, e.currentTarget)}
+          onPointerDown={(e) => pickWeek(e.clientX, e.currentTarget)}
         >
           <defs>
             <linearGradient id="depositsArea" x1="0" y1="0" x2="0" y2="1">
@@ -453,7 +485,7 @@ function DepositsAreaChart() {
             <line
               key={i}
               x1={PADDING_X}
-              x2={W - PADDING_X}
+              x2={width - PADDING_X}
               y1={y}
               y2={y}
               stroke="rgba(0,0,0,0.08)"
@@ -461,62 +493,83 @@ function DepositsAreaChart() {
             />
           ))}
 
-          {/* Area + line, tinted via currentColor so it inherits the USDC blue. */}
-          <g>
-            <path d={areaPath} fill="url(#depositsArea)" />
-            <path
-              d={linePath}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {points.map((p, i) => {
-              const isPeak = i === peakIdx && p.amount > 0;
-              return (
-                <g key={p.week}>
-                  <circle
-                    cx={p.x}
-                    cy={p.y}
-                    r={isPeak ? 5 : 3.5}
-                    fill={isPeak ? 'currentColor' : 'white'}
-                    stroke={isPeak ? 'white' : 'currentColor'}
-                    strokeWidth={isPeak ? 2 : 1.5}
-                  />
-                </g>
-              );
-            })}
-          </g>
+          {/* Vertical guide for the active week. */}
+          <line
+            x1={ap.x}
+            x2={ap.x}
+            y1={PADDING_TOP - 6}
+            y2={baseline}
+            stroke="currentColor"
+            strokeOpacity={0.25}
+            strokeWidth={1.5}
+            strokeDasharray="3 3"
+          />
 
-          {/* Peak-week value callout, drawn above its point. */}
-          {peak.amount > 0 && (
-            <text
-              x={Math.min(Math.max(peak.x, PADDING_X + 14), W - PADDING_X - 14)}
-              y={Math.max(peak.y - 8, 10)}
-              textAnchor="middle"
-              className="fill-[#2775CA]"
-              style={{ fontSize: 10, fontWeight: 800 }}
-            >
-              ${peak.amount.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-            </text>
-          )}
+          {/* Area + line, tinted via currentColor so it inherits the USDC blue. */}
+          <path d={areaPath} fill="url(#depositsArea)" />
+          <path
+            d={linePath}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {points.map((p, i) => {
+            const isActive = i === active;
+            return (
+              <circle
+                key={p.week}
+                cx={p.x}
+                cy={p.y}
+                r={isActive ? 5.5 : 3.5}
+                fill={isActive ? 'currentColor' : 'white'}
+                stroke={isActive ? 'white' : 'currentColor'}
+                strokeWidth={isActive ? 2 : 1.5}
+              />
+            );
+          })}
 
           {/* X-axis week labels (week-start date) */}
-          {points.map((p) => (
+          {points.map((p, i) => (
             <text
               key={`label-${p.week}`}
               x={p.x}
               y={H - 6}
               textAnchor="middle"
-              className="fill-gray-500"
-              style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.04em' }}
+              className={i === active ? 'fill-[#2775CA]' : 'fill-gray-400'}
+              style={{ fontSize: 10, fontWeight: i === active ? 800 : 700, letterSpacing: '0.02em' }}
             >
               {p.week.toUpperCase()}
             </text>
           ))}
         </svg>
+
+        {/* Tooltip — what happened the active week. */}
+        <div
+          className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-xl border border-black/10 bg-white px-3 py-2 shadow-md transition-all duration-100"
+          style={{ left: tooltipLeft, top: tooltipTop }}
+        >
+          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+            {t('profilePages.summary.weekOf', 'Week of {{date}}', { date: ap.week })}
+          </div>
+          {ap.count > 0 ? (
+            <>
+              <div className="text-sm font-extrabold text-black tabular-nums leading-tight">
+                +${ap.amount.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] font-semibold text-[#2775CA]">
+                {t('profilePages.summary.depositsCount', '{{count}} deposits', { count: ap.count })}
+              </div>
+            </>
+          ) : (
+            <div className="text-[11px] font-semibold text-gray-400">
+              {t('profilePages.summary.noDepositsWeek', 'No deposits')}
+            </div>
+          )}
+        </div>
       </div>
+
       <div className="flex items-center justify-between rounded-xl bg-[#2775CA]/10 border border-black/10 px-3 py-2">
         <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">
           {t('profilePages.summary.last6Weeks', 'Last 6 weeks')}

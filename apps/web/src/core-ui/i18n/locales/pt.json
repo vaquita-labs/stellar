@@ -768,7 +768,11 @@
       "xpLevelSub": "Progresso até o próximo nível",
       "goldCoins": "Moedas de ouro",
       "goldCoinsSub": "As moedas que você está ganhando",
-      "usdcCurrentlySaved": "USDC poupado atualmente"
+      "usdcCurrentlySaved": "USDC poupado atualmente",
+      "weekOf": "Semana de {{date}}",
+      "depositsCount_one": "{{count}} depósito",
+      "depositsCount_other": "{{count}} depósitos",
+      "noDepositsWeek": "Sem depósitos"
     }
   },
   "rewards": {
