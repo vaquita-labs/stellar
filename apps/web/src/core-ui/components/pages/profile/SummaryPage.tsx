@@ -427,7 +427,7 @@ export function SummaryPage() {
       </Panel>
 
       <Panel
-        icon="/icons/global/trophy.png"
+        icon="/icons/global/star.png"
         title={t('profilePages.summary.xpLevel', 'XP & level')}
         subtitle={t('profilePages.summary.xpLevelSub', 'Progress to your next level')}
       >
@@ -435,7 +435,7 @@ export function SummaryPage() {
       </Panel>
 
       <Panel
-        icon="/icons/global/star.png"
+        icon="/icons/global/trophy.png"
         title={t('profilePages.summary.savingsGoals', 'Savings goals')}
         subtitle={t('profilePages.summary.savingsGoalsSub', "What you're working toward")}
         soon
