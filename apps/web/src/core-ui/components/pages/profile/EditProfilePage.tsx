@@ -4,10 +4,9 @@ import { Spinner, Switch, toast } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCamera, FiSave, FiTrash2 } from 'react-icons/fi';
-import { truncateMiddle } from '../../../helpers';
 import { useProfileData, useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
@@ -36,7 +35,7 @@ export function EditProfilePage() {
   const initialNickname = (data?.nickname ?? '').trim();
   const initialEmail = (data?.email ?? '').trim();
 
-  const DEFAULT_AVATAR = '/vaquita_working.jpg';
+  const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
   const [nickname, setNickname] = useState<string>(initialNickname);
   const [email, setEmail] = useState<string>(initialEmail);
@@ -168,11 +167,6 @@ export function EditProfilePage() {
   const isDirty = nicknameDirty || emailDirty;
   const canSave = !!walletAddress && isDirty && !saving && !!network;
 
-  const fallbackInitials = useMemo(() => {
-    const base = nickname.trim() || initialNickname || truncateMiddle(walletAddress) || 'VQ';
-    return base.slice(0, 2).toUpperCase();
-  }, [nickname, initialNickname, walletAddress]);
-
   const handleToggleFlag = async (flag: 'onboarding' | 'tutorial', value: boolean) => {
     if (!walletAddress || savingFlag) return;
     const setLocal = flag === 'onboarding' ? setOnboardingCompleted : setTutorialCompleted;
@@ -262,17 +256,15 @@ export function EditProfilePage() {
               aria-label={t('profilePages.edit.changePhoto', 'Change photo')}
               className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden border-2 border-black shadow group focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              {/* Fallback initials sit behind the image; a loaded photo covers them. */}
-              <span className="absolute inset-0 flex items-center justify-center bg-[#FFE8A3] text-2xl font-extrabold text-gray-600">
-                {fallbackInitials}
-              </span>
+              {/* White backdrop sits behind the image; a loaded photo covers it. */}
+              <span className="absolute inset-0 bg-white" />
               <Image
                 key={avatarSrc}
                 src={avatarSrc}
                 alt={t('profilePages.edit.profilePhotoAlt', 'Profile photo')}
                 fill
                 sizes="128px"
-                className="object-cover"
+                className={isCustomPhoto ? 'object-cover' : 'object-contain p-5'}
                 // Local previews (blob:/data:) can't be optimized by the server;
                 // pass them through. Remote MinIO URLs ARE optimized (fetched
                 // server-side → served over https, so no mixed-content block).
