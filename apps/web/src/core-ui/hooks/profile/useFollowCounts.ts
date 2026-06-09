@@ -34,5 +34,12 @@ export const useFollowCounts = () => {
       );
     },
     enabled: !!network?.networkName && !!walletAddress,
+    // Followers change when OTHER users follow you — nothing on this client
+    // invalidates that. The global default (staleTime: Infinity +
+    // refetchOnMount: false + localStorage persistence) would pin the cached
+    // numbers forever, surviving even hard reloads. Refetch on every mount:
+    // the persisted value still renders instantly, then reconciles.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
