@@ -160,6 +160,29 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   // config provider (network.type) — single source of truth across the app.
   const txExplorerUrl = (hash: string) => stellarExpertTxUrl(hash, network?.type);
   const shortenHash = (hash: string) => `${hash.slice(0, 6)}…${hash.slice(-4)}`;
+  // "Mainnet"/"Testnet" are technical proper nouns, identical across locales.
+  const networkLabel = network?.type === 'mainnet' ? 'Mainnet' : 'Testnet';
+
+  // Compact tx row: title + clickable short hash (only the hash is the link) +
+  // a chip flagging which Stellar network the tx lives on.
+  const txHashRow = (hash: string) => (
+    <div className="flex items-center justify-center gap-2 flex-wrap">
+      <span className="text-xs font-semibold text-gray-600">
+        {t('achievements.detail.viewOnStellarExpert', 'View on Stellar Expert')}
+      </span>
+      <a
+        href={txExplorerUrl(hash)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs font-mono font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition"
+      >
+        {shortenHash(hash)}
+      </a>
+      <span className="text-[10px] font-bold uppercase tracking-wide bg-white text-gray-600 border border-black/20 rounded-full px-2 py-0.5">
+        {networkLabel}
+      </span>
+    </div>
+  );
 
   // Tx hash stored server-side for an already-minted badge. Only surfaced in
   // crypto mode, on the detail view of a badge the user previously minted.
@@ -321,9 +344,6 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   /* Phase: minted (on-chain confirmed)                                 */
   /* ------------------------------------------------------------------ */
   const renderMinted = () => {
-    const explorerUrl = mintTxHash ? txExplorerUrl(mintTxHash) : null;
-    const shortHash = mintTxHash ? shortenHash(mintTxHash) : null;
-
     return (
       <motion.div
         key="minted"
@@ -362,18 +382,14 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
           >
             {t('achievements.minted.title', 'Badge minted on-chain!')}
           </motion.h2>
-          {explorerUrl && shortHash && (
-            <motion.a
+          {mintTxHash && (
+            <motion.div
               initial={{ y: 12, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.18 }}
-              href={explorerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-mono text-primary underline underline-offset-2 hover:text-primary/80 transition"
             >
-              {shortHash}
-            </motion.a>
+              {txHashRow(mintTxHash)}
+            </motion.div>
           )}
         </div>
         <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
@@ -474,18 +490,10 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
         )}
 
         {/* Crypto mode: surface the on-chain tx for an already-minted badge.
-            Tapping it opens the transaction on stellar.expert in a new tab. */}
+            Tapping the hash opens the transaction on stellar.expert in a new tab. */}
         {!canClaim && showStoredTx && storedTxHash && (
-          <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10 flex flex-col items-center gap-2">
-            <a
-              href={txExplorerUrl(storedTxHash)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-            >
-              {t('achievements.detail.viewTransaction', 'View transaction on Stellar Expert')}
-            </a>
-            <span className="text-xs font-mono text-gray-500">{shortenHash(storedTxHash)}</span>
+          <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
+            {txHashRow(storedTxHash)}
           </div>
         )}
       </motion.div>

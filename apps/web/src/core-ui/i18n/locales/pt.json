@@ -3,7 +3,7 @@
     "detail": {
       "claimAward": "Resgatar prêmio",
       "progress": "Progresso",
-      "viewTransaction": "Ver transação no Stellar Expert"
+      "viewOnStellarExpert": "Ver no Stellar Expert"
     },
     "items": {
       "beta-tester": {
@@ -275,6 +275,7 @@
       "title": "Seu depósito",
       "totalEstEarnings": "Ganhos est. totais",
       "vaquitaInterest": "Juros da Vaquita",
+      "viewOnStellarExpert": "Ver no Stellar Expert",
       "withdrawnAt": "Sacado em"
     },
     "list": {

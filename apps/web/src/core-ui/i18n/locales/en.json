@@ -3,7 +3,7 @@
     "detail": {
       "claimAward": "Claim award",
       "progress": "Progress",
-      "viewTransaction": "View transaction on Stellar Expert"
+      "viewOnStellarExpert": "View on Stellar Expert"
     },
     "items": {
       "beta-tester": {
@@ -275,6 +275,7 @@
       "title": "Your deposit",
       "totalEstEarnings": "Total est. earnings",
       "vaquitaInterest": "Vaquita interest",
+      "viewOnStellarExpert": "View on Stellar Expert",
       "withdrawnAt": "Withdrawn at"
     },
     "list": {

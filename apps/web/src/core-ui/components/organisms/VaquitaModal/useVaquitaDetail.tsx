@@ -2,6 +2,7 @@
 
 import { useRestWithdrawal } from '@/core-ui/hooks';
 import { isNewDepositHandled } from '@/networks/helpers';
+import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import { Button, Spinner, toast } from '@heroui/react';
 import Image from 'next/image';
@@ -9,7 +10,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { getInterestData } from '../../../helpers';
-import { useApyByLockPeriod, useTransactions, useWithdrawalTime } from '../../../hooks';
+import { useApyByLockPeriod, useProfileData, useTransactions, useWithdrawalTime } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { DepositResponseDTO, DepositStatus, DepositWithdrawalState } from '../../../types';
 
@@ -144,6 +145,33 @@ export const useVaquitaDetail = ({
     (deposit.vaquitaInterest ?? 0) + (deposit.protocolInterest ?? 0) + (deposit.blendInterest ?? 0);
   const withdrawnTimestamp =
     deposit.withdrawals?.[deposit.withdrawals.length - 1]?.confirmedTimestamp || deposit.updatedTimestamp;
+
+  // "Crypto mode" (profile.cryptoSavvy): surface the deposit's on-chain tx as a
+  // stellar.expert link. Guarded to real 64-hex hashes — legacy confirms could
+  // store a `Date.now()` placeholder — and skipped in tutorial mode (no real tx).
+  const { data: profile } = useProfileData();
+  const cryptoMode = profile?.cryptoSavvy ?? false;
+  const txHash = /^[0-9a-f]{64}$/i.test(deposit.transactionHash) ? deposit.transactionHash : null;
+  const showTxHash = cryptoMode && !simulate && !!txHash;
+  const txHashRow = showTxHash && txHash && (
+    <div className="flex items-center justify-between text-xs">
+      <span className="text-default-500">{t('deposit.detail.viewOnStellarExpert', 'View on Stellar Expert')}</span>
+      <span className="flex items-center gap-1.5">
+        <a
+          href={stellarExpertTxUrl(txHash, network?.type)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition"
+        >
+          {`${txHash.slice(0, 6)}…${txHash.slice(-4)}`}
+        </a>
+        {/* "Mainnet"/"Testnet" are technical proper nouns, identical across locales. */}
+        <span className="text-[10px] font-bold uppercase tracking-wide bg-white text-default-500 border border-black/20 rounded-full px-2 py-0.5">
+          {network?.type === 'mainnet' ? 'Mainnet' : 'Testnet'}
+        </span>
+      </span>
+    </div>
+  );
 
   const onWithdraw = async () => {
     if (isDisabled) return;
@@ -419,6 +447,7 @@ export const useVaquitaDetail = ({
             +{totalInterest.toFixed(2)} {token?.symbol}
           </span>
         </div>
+        {txHashRow && <div className="border-t border-black/10 pt-1.5 mt-0.5">{txHashRow}</div>}
       </div>
     </div>
   );
@@ -485,6 +514,7 @@ export const useVaquitaDetail = ({
             })}
           </span>
         </div>
+        {txHashRow}
       </div>
     </div>
   );
