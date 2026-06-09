@@ -137,7 +137,6 @@ export const HeaderStats = () => {
                 priority
               />
             </div>
-            <span className="absolute top-0 right-0 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
           </Link>
 
           <div className="flex flex-col min-w-0 flex-1">
