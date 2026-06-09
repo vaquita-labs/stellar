@@ -2,11 +2,11 @@
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { addUsdcTrustline } from '@/networks/stellar/sorobanTx';
-import { Card, toast } from '@heroui/react';
+import { Card } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
@@ -19,10 +19,8 @@ import {
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
-  useToggleFollow,
   type FollowListKind,
 } from '../../hooks';
-import { getJson } from '../../api/http';
 import { useHideBalance, useConfigStore } from '../../stores';
 import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
@@ -147,38 +145,9 @@ export function ProfilePage() {
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
 
-  // Deep link: /profile?follow=<wallet> — the URL encoded in profile QRs and
-  // share links. Follows the target once the viewer's wallet is ready, then
-  // strips the param so refreshes / back-nav don't re-trigger it.
-  const toggleFollow = useToggleFollow();
-  const followLinkHandledRef = useRef(false);
-  useEffect(() => {
-    if (!walletAddress || followLinkHandledRef.current) return;
-    const target = new URLSearchParams(window.location.search).get('follow')?.trim();
-    if (!target) return;
-    followLinkHandledRef.current = true;
-    router.replace('/profile');
-    if (target.toUpperCase() === walletAddress.toUpperCase()) return;
-    void (async () => {
-      try {
-        // 404 → null: stale or malformed link; fail silently on this page.
-        const profile = await getJson<{ nickname?: string | null }>(
-          `/profile/wallet/${encodeURIComponent(target)}`,
-          [404]
-        );
-        if (!profile) return;
-        await toggleFollow.mutateAsync({ targetWallet: target, isFollowing: false });
-        const nick = profile.nickname?.trim();
-        const followedHandle = nick
-          ? `@${nick.replace(/\s+/g, '')}`
-          : `@vaquero${target.slice(-4)}`;
-        toast.success(t('social.share.nowFollowing', { handle: followedHandle }));
-      } catch {
-        // A broken link shouldn't error the profile page.
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walletAddress, router, t]);
+  // /profile?follow=<wallet> deep links are handled globally by
+  // FollowLinkCapture / PendingFollowConsumer in the (private) layout, so
+  // they survive the signup funnel for unregistered scanners.
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
