@@ -3,8 +3,11 @@ import { useConfigStore } from '@/core-ui/stores';
 import { ProfileStreakResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
-export const useProfileStreak = () => {
-  const { network, walletAddress } = useConfigStore();
+/** Pass a wallet to read another user's streak (e.g. the leaderboard detail
+ *  view); defaults to the connected wallet. */
+export const useProfileStreak = (walletAddressOverride?: string) => {
+  const { network, walletAddress: connectedWallet } = useConfigStore();
+  const walletAddress = walletAddressOverride ?? connectedWallet;
   return useQuery<ProfileStreakResponseDTO>({
     queryKey: ['profile', network?.networkName, walletAddress, 'profile-streak'],
     queryFn: async () => {

@@ -129,6 +129,27 @@ const computeKnownState = (ctx: AchievementsCtx): Record<string, KnownState> => 
   };
 };
 
+/**
+ * Map server badge rows straight to UI badges, trusting the server's
+ * `unlocked` for every row. Used when viewing ANOTHER user's profile (e.g.
+ * the leaderboard detail page), where the client-side signals that
+ * {@link buildAchievements} layers on top (deposits, savings, rank…) aren't
+ * available for that wallet.
+ */
+export const buildServerAchievements = (server: AchievementResponseDTO[] = []): Badge[] =>
+  [...server]
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .map((a) => ({
+      id: a.key,
+      title: a.name,
+      description: a.description,
+      icon: a.icon ?? `${ICONS}/${a.key}.png`,
+      accent: a.accent ?? ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
+      tier: a.tier as Badge['tier'],
+      unlocked: a.unlocked,
+      date: a.claimedAt ?? undefined,
+    }));
+
 export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
   const known = computeKnownState(ctx);
   const server = ctx.extraAchievements ?? [];
