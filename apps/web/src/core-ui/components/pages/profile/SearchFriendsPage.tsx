@@ -108,14 +108,25 @@ export function SearchFriendsPage() {
                 key={v.walletAddress}
                 className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-black border-b-2 bg-white"
               >
-                <div className="h-12 w-12 rounded-full bg-[#FFE7C7] border-2 border-black flex items-center justify-center overflow-hidden shrink-0">
-                  <Image
-                    src={v.avatarUrl || '/vaquita/vaquita_isotipo.svg'}
-                    alt={v.name}
-                    width={40}
-                    height={40}
-                    className="object-contain"
-                  />
+                <div className="relative h-12 w-12 rounded-full bg-[#FFE7C7] border-2 border-black flex items-center justify-center overflow-hidden shrink-0">
+                  {v.avatarUrl ? (
+                    // Real uploaded photo: fill the circle (object-cover), same as ProfilePage.
+                    <Image
+                      src={v.avatarUrl}
+                      alt={v.name}
+                      fill
+                      sizes="48px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src="/vaquita/vaquita_isotipo.svg"
+                      alt={v.name}
+                      width={40}
+                      height={40}
+                      className="object-contain"
+                    />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-extrabold text-black truncate">{v.name}</p>

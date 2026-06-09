@@ -45,14 +45,25 @@ function FriendRow({
         onClick={onNavigate}
         className="flex items-center gap-3 flex-1 min-w-0"
       >
-        <div className="h-11 w-11 rounded-full bg-[#FFE7C7] border border-black/15 flex items-center justify-center overflow-hidden shrink-0">
-          <Image
-            src={friend.avatarUrl || '/vaquita/vaquita_isotipo.svg'}
-            alt={friend.name}
-            width={36}
-            height={36}
-            className="object-contain"
-          />
+        <div className="relative h-11 w-11 rounded-full bg-[#FFE7C7] border border-black/15 flex items-center justify-center overflow-hidden shrink-0">
+          {friend.avatarUrl ? (
+            // Real uploaded photo: fill the circle (object-cover), same as ProfilePage.
+            <Image
+              src={friend.avatarUrl}
+              alt={friend.name}
+              fill
+              sizes="44px"
+              className="object-cover"
+            />
+          ) : (
+            <Image
+              src="/vaquita/vaquita_isotipo.svg"
+              alt={friend.name}
+              width={36}
+              height={36}
+              className="object-contain"
+            />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-extrabold text-black truncate">{friend.name}</p>

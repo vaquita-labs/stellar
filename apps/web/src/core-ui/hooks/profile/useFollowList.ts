@@ -30,5 +30,11 @@ export const useFollowList = (kind: FollowListKind, enabled = true) => {
       return data?.results ?? [];
     },
     enabled: !!network?.networkName && !!walletAddress && enabled,
+    // Same as useFollowCounts: other users mutate this list (someone follows
+    // you), so the global never-stale default would show a persisted snapshot
+    // forever. staleTime: 0 also makes the `enabled` flip (modal open) refetch
+    // instead of trusting the cached entry.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
