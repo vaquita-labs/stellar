@@ -235,11 +235,7 @@ export function FollowListModal({ open, onOpenChange, initialTab }: FollowListMo
         >
           <div className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-background">
-              <span
-                className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`}
-                aria-hidden
-              />
+            <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-3 bg-background">
               <button
                 type="button"
                 onClick={handleClose}
