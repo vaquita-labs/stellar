@@ -47,8 +47,6 @@ export function DailyRewardModal({
       open={open}
       onOpenChange={onOpenChange}
       title={t('rewards.daily.title', 'Daily Reward')}
-      titleIcon="/icons/global/coin.png"
-      titleIconAlt={t('rewards.daily.rewardAlt', 'reward')}
       size="sm"
       isDismissable={!isCollecting}
     >
