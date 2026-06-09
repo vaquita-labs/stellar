@@ -1254,7 +1254,7 @@
     "coach": {
       "depositConfirm": {
         "title": "Confirma tu depósito",
-        "body": "Toca Depositar para confirmar. Es solo una demo, sin dinero real."
+        "body": "Depositarás {{amount}} {{currency}} — es solo una demo, sin dinero real."
       },
       "selectDeposit": {
         "title": "Encuentra tu depósito",

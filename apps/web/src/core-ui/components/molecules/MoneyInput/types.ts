@@ -12,4 +12,6 @@ export interface MoneyInputProps {
   balanceFormatted?: string;
   onReloadBalance?: () => void;
   balanceIsLoading: boolean;
+  /** Bloquea el monto y el cambio de token (ej. tutorial: monto fijo). */
+  disabled?: boolean;
 }

@@ -260,8 +260,10 @@ export function DepositModal({
               onReloadBalance={refreshWalletBalance}
               loading={isDepositing}
               balanceIsLoading={balanceIsLoading}
+              // Tutorial: monto fijo, no se puede editar ni cambiar el token.
+              disabled={simulate}
             />
-            <div className="flex justify-between gap-2">
+            <div className={`flex justify-between gap-2 ${simulate ? 'hidden' : ''}`}>
               {Array.isArray(quickAmounts) &&
                 quickAmounts.map((value: number) => (
                   <Button
