@@ -44,7 +44,7 @@ export interface TutorialStep {
 // --- Parámetros de la simulación (todo lo numérico se ajusta aquí) -----------
 export const TUTORIAL_CURRENCY = 'USDC';
 /** Monto con el que se precarga el input de depósito (el usuario puede cambiarlo). */
-export const TUTORIAL_DEFAULT_AMOUNT = 100;
+export const TUTORIAL_DEFAULT_AMOUNT = 3;
 /** Objetivo de ahorro del ejemplo: segundos de lock antes de poder retirar. */
 export const TUTORIAL_GOAL_SECONDS = 10;
 /** Lock del depósito del tutorial, en ms (lo que consume el modal de retiro). */
