@@ -1,6 +1,7 @@
 'use client';
 
 import { ONE_DAY } from '@/core-ui/config/constants';
+import { deriveLevel } from '@/core-ui/helpers';
 import { useDepositsComplete } from '@/core-ui/hooks';
 import { useProfileExperience, useProfileStreak } from '@/core-ui/hooks/profile';
 import { DepositResponseDTO } from '@/core-ui/types';
@@ -107,21 +108,6 @@ function buildWeeklyDeposits(deposits: DepositResponseDTO[]) {
     if (bucket) bucket.amount += Number(dep.amount) || 0;
   }
   return buckets;
-}
-
-// Derive a level + progress from a single total-XP value. The backend only
-// exposes aggregated `experience`, so the level curve lives here until it does:
-// reaching the next level costs 100 XP, +50 more each level (100, 150, 200 …).
-function deriveLevel(totalXp: number) {
-  let level = 1;
-  let remaining = Math.max(0, Math.floor(totalXp));
-  let xpForNextLevel = 100;
-  while (remaining >= xpForNextLevel && level < 999) {
-    remaining -= xpForNextLevel;
-    level += 1;
-    xpForNextLevel = 100 + (level - 1) * 50;
-  }
-  return { level, xpIntoLevel: remaining, xpForNextLevel };
 }
 
 /* ------------------------------------------------------------------ */
@@ -433,6 +419,7 @@ export function SummaryPage() {
       </Panel>
 
       <Panel
+        id="xp-level"
         icon="/icons/global/star.png"
         title={t('profilePages.summary.xpLevel', 'XP & level')}
         subtitle={t('profilePages.summary.xpLevelSub', 'Progress to your next level')}

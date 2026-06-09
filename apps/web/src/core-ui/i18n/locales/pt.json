@@ -801,6 +801,20 @@
     "coinAnimation": {
       "coinAlt": "Moeda"
     },
+    "coins": {
+      "balanceLabel_one": "{{count}} moeda",
+      "balanceLabel_other": "{{count}} moedas",
+      "coinAlt": "moedas",
+      "description": "As moedas são a moeda do jogo. Ganhe-as poupando e coletando sua recompensa diária, e gaste-as na loja para decorar seu mapa.",
+      "earn": {
+        "daily": "Colete sua recompensa diária",
+        "deposits": "Crie e faça crescer seus depósitos",
+        "streak": "Mantenha sua sequência diária ativa"
+      },
+      "earnTitle": "Formas de ganhar",
+      "title": "Moedas",
+      "viewStats": "Ver estatísticas"
+    },
     "countdown": {
       "comeBackIn": "Muu! Volte em",
       "hrs": "Hrs",
@@ -824,6 +838,15 @@
       "success_one": "Você ganhou {{count}} moeda!",
       "success_other": "Você ganhou {{count}} moedas!",
       "title": "Recompensa diária"
+    },
+    "experience": {
+      "description": "Você ganha XP toda vez que poupa e mantém sua sequência. Alcance novos níveis para mostrar seu progresso de poupança!",
+      "levelLabel": "Nível {{level}}",
+      "levelProgress": "Progresso de nível",
+      "title": "Experiência",
+      "totalExperience": "Experiência total",
+      "viewStats": "Ver estatísticas",
+      "xpAlt": "experiência"
     },
     "mood": {
       "excited": {

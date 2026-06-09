@@ -801,6 +801,20 @@
     "coinAnimation": {
       "coinAlt": "Moneda"
     },
+    "coins": {
+      "balanceLabel_one": "{{count}} moneda",
+      "balanceLabel_other": "{{count}} monedas",
+      "coinAlt": "monedas",
+      "description": "Las monedas son tu moneda del juego. Gánalas ahorrando y recogiendo tu recompensa diaria, y gástalas en la tienda para decorar tu mapa.",
+      "earn": {
+        "daily": "Recoge tu recompensa diaria",
+        "deposits": "Crea y haz crecer tus depósitos",
+        "streak": "Mantén viva tu racha diaria"
+      },
+      "earnTitle": "Formas de ganar",
+      "title": "Monedas",
+      "viewStats": "Ver estadísticas"
+    },
     "countdown": {
       "comeBackIn": "¡Mu! Regresa en",
       "hrs": "Hrs",
@@ -824,6 +838,15 @@
       "success_one": "¡Ganaste {{count}} moneda!",
       "success_other": "¡Ganaste {{count}} monedas!",
       "title": "Recompensa diaria"
+    },
+    "experience": {
+      "description": "Ganas XP cada vez que ahorras y mantienes tu racha. ¡Alcanza nuevos niveles para mostrar tu progreso de ahorro!",
+      "levelLabel": "Nivel {{level}}",
+      "levelProgress": "Progreso de nivel",
+      "title": "Experiencia",
+      "totalExperience": "Experiencia total",
+      "viewStats": "Ver estadísticas",
+      "xpAlt": "experiencia"
     },
     "mood": {
       "excited": {
