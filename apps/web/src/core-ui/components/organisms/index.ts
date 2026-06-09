@@ -22,4 +22,5 @@ export * from './DailyRewardModal';
 export * from './MoodMessageModal';
 export * from './SavingsStats';
 export * from './RequireAuth';
+export * from './FollowDeepLink';
 export * from './OnboardingIntro';

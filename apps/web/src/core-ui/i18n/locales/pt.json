@@ -1278,6 +1278,7 @@
       "ownQr": "Esse é o seu próprio QR — compartilhe com um amigo!",
       "qrAlt": "Código QR de {{handle}}",
       "qrButtonLabel": "Compartilhar QR do perfil",
+      "qrLoadFailed": "Não foi possível carregar o QR. Verifique sua conexão.",
       "qrDetected": "QR detectado",
       "requestingAccess": "Solicitando acesso…",
       "scanAgain": "Escanear de novo",

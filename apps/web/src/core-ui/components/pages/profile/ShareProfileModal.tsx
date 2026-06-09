@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertCircle, FiCamera, FiCopy, FiImage, FiShare2, FiUserPlus, FiX } from 'react-icons/fi';
+import { FiAlertCircle, FiCamera, FiCopy, FiImage, FiLoader, FiShare2, FiUserPlus, FiX } from 'react-icons/fi';
 import { useToggleFollow } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 
@@ -129,7 +129,23 @@ interface MyQrViewProps {
  *  AchievementModal anchors its "Claim award" CTA. */
 function MyQrView({ url, displayName, handle, avatarSrc }: MyQrViewProps) {
   const { t } = useTranslation();
-  const qrSrc = useMemo(() => buildQrSrc(url), [url]);
+  // The QR is a remote image (api.qrserver.com), so it can take a beat (or
+  // fail offline) — show a spinner in the frame until it actually paints.
+  const [qrStatus, setQrStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  // Bumped on retry to cache-bust the failed request.
+  const [qrAttempt, setQrAttempt] = useState(0);
+  const qrImgRef = useRef<HTMLImageElement | null>(null);
+  const qrSrc = useMemo(() => {
+    const base = buildQrSrc(url);
+    return qrAttempt ? `${base}&attempt=${qrAttempt}` : base;
+  }, [url, qrAttempt]);
+
+  // Reset to the spinner whenever the src changes, but recognize images the
+  // browser already has (cached `complete` images may never fire onLoad).
+  useEffect(() => {
+    const img = qrImgRef.current;
+    setQrStatus(img?.complete && img.naturalWidth > 0 ? 'ready' : 'loading');
+  }, [qrSrc]);
 
   // When the user has no full name, `displayName` ends up being the same
   // string as the handle (just without the `@`) — showing both reads as a
@@ -157,13 +173,46 @@ function MyQrView({ url, displayName, handle, avatarSrc }: MyQrViewProps) {
       {/* QR — explicit size classes so the image doesn't stretch with the
           full-screen flex parent. `w-fit` on the frame keeps the white
           padding tight against the QR. */}
-      <div className="rounded-2xl bg-white border-2 border-black border-b-4 p-3 w-fit">
+      <div className="relative rounded-2xl bg-white border-2 border-black border-b-4 p-3 w-fit">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          ref={qrImgRef}
           src={qrSrc}
           alt={t('social.share.qrAlt', { handle })}
-          className="block rounded-md h-44 w-44 sm:h-52 sm:w-52"
+          onLoad={() => setQrStatus('ready')}
+          onError={() => setQrStatus('error')}
+          className={`block rounded-md h-44 w-44 sm:h-52 sm:w-52 transition-opacity ${
+            qrStatus === 'ready' ? 'opacity-100' : 'opacity-0'
+          }`}
         />
+        {qrStatus !== 'ready' && (
+          <div className="absolute inset-3 flex flex-col items-center justify-center gap-2 rounded-md bg-white text-center">
+            {qrStatus === 'loading' ? (
+              <FiLoader
+                className="h-8 w-8 animate-spin text-gray-400"
+                role="status"
+                aria-label={t('common.loading')}
+              />
+            ) : (
+              <>
+                <FiAlertCircle className="h-7 w-7 text-gray-400" />
+                <p className="px-4 text-[11px] font-semibold text-gray-500 leading-snug">
+                  {t('social.share.qrLoadFailed')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQrStatus('loading');
+                    setQrAttempt((n) => n + 1);
+                  }}
+                  className="rounded-md bg-white border border-black border-b-2 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-black hover:-translate-y-0.5 transition"
+                >
+                  {t('social.share.tryAgain')}
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <p className="text-center text-xs text-gray-600 max-w-[16rem] leading-relaxed">
