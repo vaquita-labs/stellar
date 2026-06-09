@@ -3,6 +3,7 @@ import type { Achievement as PrismaAchievement, Profile as PrismaProfile } from 
 import { getCurrentDay } from '../../helpers/date';
 import { ably } from '../ably';
 import { getMintedBadges } from '../badges/claims';
+import { notify } from '../notifications';
 import {
   Achievement,
   type AchievementDocument,
@@ -837,6 +838,30 @@ export const claimAchievement = async (profileId: number, key: Achievement) => {
     >`SELECT * FROM claim_achievement(${profileId}::bigint, ${key}::text)`;
 
     const row = rows[0];
+
+    // Fire-and-forget feed notification — both the claim and redeem endpoints
+    // funnel through here, so this covers every off-chain achievement award.
+    void (async () => {
+      try {
+        const [profile, achievement] = await Promise.all([
+          prisma.profile.findUnique({ where: { id: profileId }, select: { walletAddress: true } }),
+          prisma.achievement.findUnique({ where: { key }, select: { name: true } }),
+        ]);
+        if (profile) {
+          await notify({
+            walletAddress: profile.walletAddress,
+            type: 'reward',
+            messageKey: 'achievementUnlocked',
+            params: { name: achievement?.name ?? key },
+            link: '/profile/achievements',
+            dedupeKey: `achievement-${profileId}-${key}`,
+          });
+        }
+      } catch (err) {
+        console.error('Error notifying achievement claim', { profileId, key }, err);
+      }
+    })();
+
     return {
       success: true as const,
       achievementId: Number(row?.achievement_id ?? 0),

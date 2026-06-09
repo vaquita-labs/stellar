@@ -1,16 +1,18 @@
 'use client';
 
+import { ListBox, Select, Spinner } from '@heroui/react';
+import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ListBox, Select } from '@heroui/react';
 import { FiBell, FiCalendar, FiChevronDown, FiFilter, FiGift, FiTrendingUp, FiUsers, FiZap } from 'react-icons/fi';
 import { TfiBrushAlt } from 'react-icons/tfi';
 import {
   AppNotification,
   NotificationType,
-  useNotificationsStore,
-  useUnreadNotificationsCount,
-} from '../../../stores';
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from '../../../hooks';
 import { PageLayout, WithHydrated } from '../../molecules';
 
 type DateFilter = 'all' | 'today' | 'week' | 'month';
@@ -98,7 +100,7 @@ function NotificationItem({
   onPress: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const { type, messageKey, params, createdAt, read } = notification;
+  const { type, messageKey, params, link, createdAt, read } = notification;
 
   const elapsed = Date.now() - createdAt;
   let timeLabel: string;
@@ -112,6 +114,17 @@ function NotificationItem({
     timeLabel = new Date(createdAt).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' });
   }
 
+  // Unknown keys (e.g. a newer backend) fall back to a generic copy instead of
+  // leaking raw i18n keys.
+  const title = t(`notificationsCenter.messages.${messageKey}.title`, {
+    ...params,
+    defaultValue: t('notificationsCenter.messages.generic.title', 'Notification'),
+  });
+  const body = t(`notificationsCenter.messages.${messageKey}.body`, {
+    ...params,
+    defaultValue: '',
+  });
+
   return (
     <li>
       <button
@@ -119,21 +132,17 @@ function NotificationItem({
         onClick={onPress}
         className={`w-full flex items-start gap-3 px-4 py-3.5 text-left transition-colors ${
           read ? 'bg-white' : 'bg-[#FFF4E5]'
-        }`}
+        } ${link ? 'cursor-pointer hover:bg-[#FFF7E6]' : 'cursor-default'}`}
       >
         <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#DDF4FF] border border-[#84D8FF] text-black shrink-0">
-          {TYPE_ICONS[type]}
+          {TYPE_ICONS[type] ?? <FiBell />}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className={`text-sm text-black truncate ${read ? 'font-semibold' : 'font-bold'}`}>
-              {t(`notificationsCenter.mock.${messageKey}.title`, { ...params })}
-            </p>
+            <p className={`text-sm text-black truncate ${read ? 'font-semibold' : 'font-bold'}`}>{title}</p>
             <span className="shrink-0 text-[11px] text-gray-500">{timeLabel}</span>
           </div>
-          <p className="text-xs text-gray-600">
-            {t(`notificationsCenter.mock.${messageKey}.body`, { ...params })}
-          </p>
+          {body && <p className="text-xs text-gray-600">{body}</p>}
         </div>
         {!read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" />}
       </button>
@@ -143,10 +152,13 @@ function NotificationItem({
 
 export function NotificationsCenterPage() {
   const { t, i18n } = useTranslation();
-  const notifications = useNotificationsStore((s) => s.notifications);
-  const markRead = useNotificationsStore((s) => s.markRead);
-  const markAllRead = useNotificationsStore((s) => s.markAllRead);
-  const unreadCount = useUnreadNotificationsCount();
+  const router = useRouter();
+  const { data, isLoading } = useNotifications();
+  const { mutate: markRead } = useMarkNotificationRead();
+  const { mutate: markAllRead } = useMarkAllNotificationsRead();
+
+  const notifications = useMemo(() => data?.notifications ?? [], [data]);
+  const unreadCount = data?.unread ?? 0;
 
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -182,6 +194,15 @@ export function NotificationsCenterPage() {
     });
   }, [notifications, dateFilter, typeFilter, t, i18n.language]);
 
+  const onNotificationPress = (n: AppNotification) => {
+    if (!n.read) {
+      markRead(n.id);
+    }
+    if (n.link) {
+      router.push(n.link);
+    }
+  };
+
   return (
     <PageLayout
       title={t('notificationsCenter.title', 'Notifications')}
@@ -189,7 +210,7 @@ export function NotificationsCenterPage() {
       rightSlot={
         <button
           type="button"
-          onClick={markAllRead}
+          onClick={() => markAllRead('')}
           disabled={unreadCount === 0}
           aria-label={t('notificationsCenter.markAllRead', 'Mark all as read')}
           title={t('notificationsCenter.markAllRead', 'Mark all as read')}
@@ -221,7 +242,11 @@ export function NotificationsCenterPage() {
           />
         </div>
 
-        {groups.length === 0 ? (
+        {isLoading && !data ? (
+          <div className="flex justify-center py-12">
+            <Spinner size="md" color="current" />
+          </div>
+        ) : groups.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-10 text-center">
             <FiBell className="h-7 w-7 text-gray-400" />
             <p className="text-sm font-semibold text-black">
@@ -237,16 +262,12 @@ export function NotificationsCenterPage() {
               <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1">{label}</h2>
               <ul className="rounded-lg border border-black border-b-2 bg-white overflow-hidden divide-y divide-gray-200">
                 {items.map((n) => (
-                  <NotificationItem key={n.id} notification={n} onPress={() => markRead(n.id)} />
+                  <NotificationItem key={n.id} notification={n} onPress={() => onNotificationPress(n)} />
                 ))}
               </ul>
             </section>
           ))
         )}
-
-        <p className="text-xs text-gray-500 text-center">
-          {t('notificationsCenter.mockNote', 'Notifications are mocked for now. Backend integration coming soon.')}
-        </p>
       </WithHydrated>
     </PageLayout>
   );

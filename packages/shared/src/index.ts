@@ -27,3 +27,4 @@ export * from './services/profile/rules';
 export * from './services/badges';
 export * from './services/leaderboard';
 export * from './services/follows';
+export * from './services/notifications';

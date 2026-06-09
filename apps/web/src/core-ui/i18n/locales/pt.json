@@ -568,49 +568,31 @@
       "yesterday": "Ontem"
     },
     "markAllRead": "Marcar todas como lidas",
-    "mock": {
+    "messages": {
+      "achievementUnlocked": {
+        "body": "Você ganhou o emblema \"{{name}}\". Veja sua coleção.",
+        "title": "Troféu desbloqueado!"
+      },
+      "depositConfirmed": {
+        "body": "Seu depósito de ${{amount}} USDC foi confirmado e já está crescendo.",
+        "title": "Depósito confirmado"
+      },
       "depositUnlocked": {
-        "body": "Um dos seus depósitos chegou à data de desbloqueio.",
-        "title": "Depósito desbloqueado"
+        "body": "Seu depósito de ${{amount}} USDC cumpriu o prazo. Você já pode sacá-lo.",
+        "title": "Suas economias estão desbloqueadas!"
       },
-      "depositYield": {
-        "body": "Suas economias acabaram de ganhar +${{amount}} USDC em recompensas.",
-        "title": "Suas economias geraram recompensas"
+      "generic": {
+        "title": "Notificação"
       },
-      "friendJoined": {
-        "body": "{{name}} acabou de entrar na Vaquita. Diga oi!",
-        "title": "{{name}} entrou na Vaquita"
+      "newFollower": {
+        "body": "{{name}} começou a seguir você. Dê uma olhada na fazenda dele!",
+        "title": "Novo seguidor"
       },
-      "friendSaved": {
-        "body": "{{name}} depositou ${{amount}} USDC em economias.",
-        "title": "{{name}} está economizando"
-      },
-      "goldCoins": {
-        "body": "Você recebeu {{amount}} moedas de ouro. Gaste-as na loja!",
-        "title": "Moedas ganhas"
-      },
-      "levelUp": {
-        "body": "Você alcançou o nível {{level}}. Continue assim!",
-        "title": "Subiu de nível!"
-      },
-      "newFeature": {
-        "body": "Decore sua fazenda com novos itens da loja.",
-        "title": "Novidade na Vaquita"
-      },
-      "streakMilestone": {
-        "body": "Você completou uma sequência de {{days}} dias. Incrível!",
-        "title": "Sequência de {{days}} dias!"
-      },
-      "streakReminder": {
-        "body": "Economize hoje para manter sua sequência viva.",
-        "title": "Não perca sua sequência!"
-      },
-      "welcome": {
-        "body": "Comece a economizar e veja sua fazenda crescer.",
-        "title": "Bem-vindo à Vaquita!"
+      "withdrawalCompleted": {
+        "body": "${{amount}} USDC foram enviados para sua carteira.",
+        "title": "Saque concluído"
       }
     },
-    "mockNote": "As notificações são de teste por enquanto. Integração com o backend em breve.",
     "time": {
       "hoursAgo_one": "há {{count}}h",
       "hoursAgo_other": "há {{count}}h",

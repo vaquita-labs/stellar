@@ -2,7 +2,6 @@ export * from './day-cycle';
 export * from './element-positions';
 export * from './loader';
 export * from './map';
-export * from './notifications';
 export * from './config';
 export * from './privacy';
 export * from './resize';

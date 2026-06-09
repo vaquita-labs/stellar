@@ -568,49 +568,31 @@
       "yesterday": "Yesterday"
     },
     "markAllRead": "Mark all as read",
-    "mock": {
+    "messages": {
+      "achievementUnlocked": {
+        "body": "You earned the \"{{name}}\" badge. Check your collection.",
+        "title": "Trophy unlocked!"
+      },
+      "depositConfirmed": {
+        "body": "Your ${{amount}} USDC deposit is confirmed and already growing.",
+        "title": "Deposit confirmed"
+      },
       "depositUnlocked": {
-        "body": "One of your deposits reached its unlock date.",
-        "title": "Deposit unlocked"
+        "body": "Your ${{amount}} USDC deposit completed its term. You can withdraw it now.",
+        "title": "Your savings are unlocked!"
       },
-      "depositYield": {
-        "body": "Your savings just earned +${{amount}} USDC in rewards.",
-        "title": "Your savings earned rewards"
+      "generic": {
+        "title": "Notification"
       },
-      "friendJoined": {
-        "body": "{{name}} just joined Vaquita. Say hi!",
-        "title": "{{name}} joined Vaquita"
+      "newFollower": {
+        "body": "{{name}} started following you. Take a look at their farm!",
+        "title": "New follower"
       },
-      "friendSaved": {
-        "body": "{{name}} deposited ${{amount}} USDC in savings.",
-        "title": "{{name}} is saving"
-      },
-      "goldCoins": {
-        "body": "You received {{amount}} gold coins. Spend them in the shop!",
-        "title": "Coins earned"
-      },
-      "levelUp": {
-        "body": "You reached level {{level}}. Keep it up!",
-        "title": "Level up!"
-      },
-      "newFeature": {
-        "body": "Decorate your farm with new items from the shop.",
-        "title": "New in Vaquita"
-      },
-      "streakMilestone": {
-        "body": "You completed a {{days}}-day streak. Amazing!",
-        "title": "{{days}}-day streak!"
-      },
-      "streakReminder": {
-        "body": "Save today to keep your streak alive.",
-        "title": "Don't lose your streak!"
-      },
-      "welcome": {
-        "body": "Start saving and watch your farm grow.",
-        "title": "Welcome to Vaquita!"
+      "withdrawalCompleted": {
+        "body": "${{amount}} USDC was sent to your wallet.",
+        "title": "Withdrawal completed"
       }
     },
-    "mockNote": "Notifications are mocked for now. Backend integration coming soon.",
     "time": {
       "hoursAgo_one": "{{count}}h ago",
       "hoursAgo_other": "{{count}}h ago",

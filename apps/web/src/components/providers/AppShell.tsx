@@ -6,6 +6,7 @@ import { useMapStore, useResize } from '@/core-ui/stores';
 import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
 import { ListenDepositsChanges } from './ListenDepositsChanges';
+import { ListenNotificationsChanges } from './ListenNotificationsChanges';
 import { WalletProviderSync } from './WalletProviderSync';
 
 const Main = ({ children, withSidebar }: { children: ReactNode; withSidebar: boolean }) => {
@@ -19,6 +20,7 @@ const Main = ({ children, withSidebar }: { children: ReactNode; withSidebar: boo
         <ProfileDataProvider>{children}</ProfileDataProvider>
       </ConfigProvider>
       <ListenDepositsChanges />
+      <ListenNotificationsChanges />
     </main>
   );
 };
