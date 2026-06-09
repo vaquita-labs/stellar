@@ -3,6 +3,7 @@ import {
   type FollowCountsResponseDTO,
   type FollowResponseDTO,
   type FollowingWalletsResponseDTO,
+  type FriendListResponseDTO,
   type FriendSearchResponseDTO,
   type FriendSuggestionsResponseDTO,
   followProfile,
@@ -10,6 +11,8 @@ import {
   getFollowingWallets,
   getFriendSuggestions,
   getNetworkName,
+  listFollowers,
+  listFollowing,
   searchFriends,
   sendError,
   sendSuccess,
@@ -84,6 +87,46 @@ router.get('/wallet/:walletAddress/following', async (req, res) => {
   } catch (err) {
     req.log.error({ err, walletAddress }, 'Failed to load following list');
     return sendError(res, 'Failed to load following list', err, 500);
+  }
+});
+
+// GET /api/v1/follows/wallet/:walletAddress/following/list
+// Full profiles the viewer follows — powers the /profile "Following" modal tab.
+router.get('/wallet/:walletAddress/following/list', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /follows/.../following/list');
+
+  try {
+    const results = await listFollowing(walletAddress);
+    const payload: FriendListResponseDTO = {
+      networkName: await getNetworkName(),
+      walletAddress,
+      results,
+    };
+    return sendSuccess(res, payload);
+  } catch (err) {
+    req.log.error({ err, walletAddress }, 'Failed to load following list');
+    return sendError(res, 'Failed to load following list', err, 500);
+  }
+});
+
+// GET /api/v1/follows/wallet/:walletAddress/followers/list
+// Full profiles that follow the viewer — powers the /profile "Followers" modal tab.
+router.get('/wallet/:walletAddress/followers/list', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /follows/.../followers/list');
+
+  try {
+    const results = await listFollowers(walletAddress);
+    const payload: FriendListResponseDTO = {
+      networkName: await getNetworkName(),
+      walletAddress,
+      results,
+    };
+    return sendSuccess(res, payload);
+  } catch (err) {
+    req.log.error({ err, walletAddress }, 'Failed to load followers list');
+    return sendError(res, 'Failed to load followers list', err, 500);
   }
 });
 

@@ -19,11 +19,13 @@ import {
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
+  type FollowListKind,
 } from '../../hooks';
 import { useHideBalance, useConfigStore } from '../../stores';
 import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
 import { BadgeTile } from './profile/BadgeTile';
+import { FollowListModal } from './profile/FollowListModal';
 import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
 
 const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
@@ -64,16 +66,41 @@ const SectionHeader = ({
   );
 };
 
-const StatPill = ({ value, label }: { value: React.ReactNode; label: string }) => (
-  <div className="flex flex-col items-center min-w-0 flex-1">
-    <span className="text-lg sm:text-xl font-extrabold text-black tabular-nums leading-none">
-      {value}
-    </span>
-    <span className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
-      {label}
-    </span>
-  </div>
-);
+const StatPill = ({
+  value,
+  label,
+  onPress,
+  ariaLabel,
+}: {
+  value: React.ReactNode;
+  label: string;
+  onPress?: () => void;
+  ariaLabel?: string;
+}) => {
+  const inner = (
+    <>
+      <span className="text-lg sm:text-xl font-extrabold text-black tabular-nums leading-none">
+        {value}
+      </span>
+      <span className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
+        {label}
+      </span>
+    </>
+  );
+  if (onPress) {
+    return (
+      <button
+        type="button"
+        onClick={onPress}
+        aria-label={ariaLabel}
+        className="flex flex-col items-center min-w-0 flex-1 rounded-xl py-1 bg-transparent hover:bg-black/5 transition"
+      >
+        {inner}
+      </button>
+    );
+  }
+  return <div className="flex flex-col items-center min-w-0 flex-1">{inner}</div>;
+};
 
 const SummaryItem = ({
   icon,
@@ -110,6 +137,10 @@ export function ProfilePage() {
   const { data: achievementsData } = useProfileAchievements();
   const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
   const { data: followCounts } = useFollowCounts();
+  const [followModal, setFollowModal] = useState<{ open: boolean; tab: FollowListKind }>({
+    open: false,
+    tab: 'following',
+  });
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
@@ -258,9 +289,19 @@ export function ProfilePage() {
         {/* Stats row -------------------------------------------------- */}
         <section className="px-4 sm:px-6">
           <div className="flex items-stretch gap-3">
-            <StatPill value={followCounts?.following ?? 0} label={t('profilePages.profile.following', 'Following')} />
+            <StatPill
+              value={followCounts?.following ?? 0}
+              label={t('profilePages.profile.following', 'Following')}
+              ariaLabel={t('profilePages.profile.viewFollowing', 'View following')}
+              onPress={() => setFollowModal({ open: true, tab: 'following' })}
+            />
             <span className="w-px bg-black/10" aria-hidden />
-            <StatPill value={followCounts?.followers ?? 0} label={t('profilePages.profile.followers', 'Followers')} />
+            <StatPill
+              value={followCounts?.followers ?? 0}
+              label={t('profilePages.profile.followers', 'Followers')}
+              ariaLabel={t('profilePages.profile.viewFollowers', 'View followers')}
+              onPress={() => setFollowModal({ open: true, tab: 'followers' })}
+            />
           </div>
         </section>
 
@@ -347,6 +388,11 @@ export function ProfilePage() {
         </section>
       </div>
 
+      <FollowListModal
+        open={followModal.open}
+        initialTab={followModal.tab}
+        onOpenChange={(o) => setFollowModal((s) => ({ ...s, open: o }))}
+      />
     </div>
   );
 }

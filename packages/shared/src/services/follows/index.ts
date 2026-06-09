@@ -201,6 +201,82 @@ export const getFollowingWallets = async (viewerWallet: string): Promise<string[
 };
 
 /**
+ * Hydrate a set of profiles into `FriendDTO`s from the viewer's perspective:
+ * live follower counts plus `isFollowing` (does the viewer follow each one).
+ * Streak is skipped (kept 0) — these lists can be long and don't show it.
+ */
+const hydrateFriendList = async (
+  viewerId: number,
+  profiles: PrismaProfile[],
+  allFollowedByViewer: boolean,
+): Promise<FriendDTO[]> => {
+  const ids = profiles.map((p) => p.id);
+  if (!ids.length) return [];
+
+  const followerCounts = await prisma.follow.groupBy({
+    by: ['followeeId'],
+    where: { followeeId: { in: ids } },
+    _count: { _all: true },
+  });
+  const followersById = new Map(followerCounts.map((r) => [r.followeeId, r._count._all]));
+
+  // For the "following" list everyone is followed by definition; for the
+  // "followers" list we resolve which ones the viewer follows back.
+  let followingSet: Set<number>;
+  if (allFollowedByViewer) {
+    followingSet = new Set(ids);
+  } else {
+    const rows = await prisma.follow.findMany({
+      where: { followerId: viewerId, followeeId: { in: ids } },
+      select: { followeeId: true },
+    });
+    followingSet = new Set(rows.map((r) => r.followeeId));
+  }
+
+  return profiles.map((p) =>
+    toFriendDTO(p, {
+      streak: 0,
+      followers: followersById.get(p.id) ?? 0,
+      isFollowing: followingSet.has(p.id),
+    }),
+  );
+};
+
+/** Profiles the viewer follows (newest first), for the /profile "Following" list. */
+export const listFollowing = async (viewerWallet: string): Promise<FriendDTO[]> => {
+  const viewer = await prisma.profile.upsert({
+    where: { walletAddress: viewerWallet },
+    update: {},
+    create: { walletAddress: viewerWallet },
+  });
+
+  const edges = await prisma.follow.findMany({
+    where: { followerId: viewer.id, followee: { deletedAt: null } },
+    select: { followee: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return hydrateFriendList(viewer.id, edges.map((e) => e.followee), true);
+};
+
+/** Profiles that follow the viewer (newest first), for the /profile "Followers" list. */
+export const listFollowers = async (viewerWallet: string): Promise<FriendDTO[]> => {
+  const viewer = await prisma.profile.upsert({
+    where: { walletAddress: viewerWallet },
+    update: {},
+    create: { walletAddress: viewerWallet },
+  });
+
+  const edges = await prisma.follow.findMany({
+    where: { followeeId: viewer.id, follower: { deletedAt: null } },
+    select: { follower: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return hydrateFriendList(viewer.id, edges.map((e) => e.follower), false);
+};
+
+/**
  * Following + follower counts for a wallet (the numbers shown on /profile). The
  * profile is upserted so a brand-new wallet resolves to `{ following: 0,
  * followers: 0 }` instead of erroring.
