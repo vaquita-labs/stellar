@@ -689,10 +689,17 @@
       "daysCount_other": "{{count}} days",
       "editProfileAria": "Edit profile",
       "experience": "Experience",
+      "followListError": "Couldn't load the list. Try again.",
       "followers": "Followers",
+      "followersEmptyBody": "When vaqueros follow you, they'll show up here.",
+      "followersEmptyTitle": "No followers yet",
       "following": "Following",
+      "followingEmptyBody": "Follow vaqueros from the leaderboard to see them here.",
+      "followingEmptyTitle": "Not following anyone yet",
       "gold": "Gold",
       "handleJoined": "{{handle}} · joined {{joinedLabel}}",
+      "viewFollowers": "View followers",
+      "viewFollowing": "View following",
       "seeAll": "See all {{title}}",
       "seeAllAchievements": "See all achievements",
       "seeFullSummary": "See full summary",
@@ -1231,7 +1238,7 @@
         "title": "Saving…"
       },
       "welcome": {
-        "body": "You grow it by saving. Quick demo — no real money.",
+        "body": "You grow it by saving. Quick demo, no real money.",
         "cta": "Let's go",
         "title": "Meet your vaquita 🐮"
       }

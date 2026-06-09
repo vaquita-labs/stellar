@@ -24,6 +24,23 @@ interface TutorialOverlayProps {
 const SPOTLIGHT_PAD = 8;
 
 /**
+ * Resalta en negro la palabra "demo" dentro del copy de la tarjeta. La palabra
+ * es la misma en es/pt/en, así que el match (case-insensitive) cubre todos los
+ * idiomas. Devuelve un arreglo de nodos para inyectar en el <p>.
+ */
+function highlightDemo(text: string) {
+  return text.split(/(demo)/gi).map((part, i) =>
+    part.toLowerCase() === 'demo' ? (
+      <strong key={i} className="font-semibold text-black">
+        {part}
+      </strong>
+    ) : (
+      part
+    ),
+  );
+}
+
+/**
  * Mide en vivo el rect del elemento real a resaltar. Re-mide en resize/scroll y
  * en un intervalo corto, porque el home (canvas 3D, datos async) puede montar
  * o reposicionar el botón tras el primer paint.
@@ -197,7 +214,7 @@ export function TutorialOverlay({
             </div>
 
             <h2 className="text-xl font-bold text-black sm:text-2xl">{t(step.titleKey, step.params)}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-black/70 sm:text-base">{t(step.bodyKey, step.params)}</p>
+            <p className="mt-2 text-sm leading-relaxed text-black/70 sm:text-base">{highlightDemo(t(step.bodyKey, step.params))}</p>
 
             {step.kind === 'warn' && (
               <div className="mt-4 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">

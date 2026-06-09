@@ -216,6 +216,13 @@ export interface FollowingWalletsResponseDTO {
   following: string[];
 }
 
+/** A list of vaqueros (the viewer's followers or following), for the modal. */
+export interface FriendListResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  results: FriendDTO[];
+}
+
 export type MapObject = {
   position: [number, number, number];
   type: MapObjectType;

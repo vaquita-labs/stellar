@@ -2,14 +2,17 @@
 
 import { delJson, postJson } from '@/core-ui/api/http';
 import { useConfigStore } from '@/core-ui/stores';
-import type { FollowResponseDTO, FriendSearchResponseDTO } from '@/core-ui/types';
+import type { FollowCountsResponseDTO, FollowResponseDTO, FriendSearchResponseDTO } from '@/core-ui/types';
 import { type QueryKey, useMutation, useQueryClient } from '@tanstack/react-query';
+import { followCountsKey } from './useFollowCounts';
+import { followListKey } from './useFollowList';
 import { followingWalletsKey } from './useFollowingWallets';
 
 type ToggleVars = { targetWallet: string; isFollowing: boolean };
 type ToggleContext = {
   snapshots: [QueryKey, FriendSearchResponseDTO | undefined][];
   followingSnapshot: string[] | undefined;
+  countsSnapshot: FollowCountsResponseDTO | undefined;
 };
 
 /**
@@ -25,6 +28,9 @@ export const useToggleFollow = () => {
   const networkName = network?.networkName ?? '';
   const searchKey = ['profile', networkName, walletAddress, 'friends-search'] as const;
   const followingKey = followingWalletsKey(network?.networkName, walletAddress ?? undefined);
+  const countsKey = followCountsKey(network?.networkName, walletAddress ?? undefined);
+  const followingListKey = followListKey('following', network?.networkName, walletAddress ?? undefined);
+  const followersListKey = followListKey('followers', network?.networkName, walletAddress ?? undefined);
 
   return useMutation<FollowResponseDTO | null, Error, ToggleVars, ToggleContext>({
     mutationFn: async ({ targetWallet, isFollowing }) => {
@@ -64,15 +70,28 @@ export const useToggleFollow = () => {
         : [...new Set([...base, target])];
       queryClient.setQueryData<string[]>(followingKey, nextFollowing);
 
-      return { snapshots, followingSnapshot };
+      // Bump the viewer's own "following" count (followers is unaffected).
+      const countsSnapshot = queryClient.getQueryData<FollowCountsResponseDTO>(countsKey);
+      if (countsSnapshot) {
+        queryClient.setQueryData<FollowCountsResponseDTO>(countsKey, {
+          ...countsSnapshot,
+          following: Math.max(0, countsSnapshot.following + (isFollowing ? -1 : 1)),
+        });
+      }
+
+      return { snapshots, followingSnapshot, countsSnapshot };
     },
     onError: (_err, _vars, context) => {
       context?.snapshots.forEach(([key, data]) => queryClient.setQueryData(key, data));
       queryClient.setQueryData(followingKey, context?.followingSnapshot);
+      queryClient.setQueryData(countsKey, context?.countsSnapshot);
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: searchKey });
       void queryClient.invalidateQueries({ queryKey: followingKey });
+      void queryClient.invalidateQueries({ queryKey: countsKey });
+      void queryClient.invalidateQueries({ queryKey: followingListKey });
+      void queryClient.invalidateQueries({ queryKey: followersListKey });
     },
   });
 };
