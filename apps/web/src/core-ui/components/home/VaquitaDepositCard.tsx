@@ -8,13 +8,15 @@ import type { TFunction } from 'i18next';
 
 const formatRemaining = (ms: number, t: TFunction) => {
   if (ms <= 0) return t('home.depositCard.ready', 'Ready');
-  const totalMins = Math.floor(ms / 60000);
-  const days = Math.floor(totalMins / 1440);
-  const hours = Math.floor((totalMins % 1440) / 60);
-  const mins = totalMins % 60;
+  const totalSecs = Math.floor(ms / 1000);
+  const days = Math.floor(totalSecs / 86400);
+  const hours = Math.floor((totalSecs % 86400) / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
   if (days > 0) return t('home.depositCard.remainingDays', '{{days}}d {{hours}}h left', { days, hours });
   if (hours > 0) return t('home.depositCard.remainingHours', '{{hours}}h {{mins}}m left', { hours, mins });
-  return t('home.depositCard.remainingMins', '{{mins}}m left', { mins: Math.max(1, mins) });
+  if (mins > 0) return t('home.depositCard.remainingMins', '{{mins}}m left', { mins });
+  return t('home.depositCard.remainingSecs', '{{secs}}s left', { secs: Math.max(1, secs) });
 };
 
 const formatShortDate = (timestamp: number) =>
