@@ -402,7 +402,7 @@ const BadgeFormModal = ({
               Allow tier change
             </Switch>
             <span className="text-xs text-warning-600">
-              Tier is the Soroban mint symbol — changing it can break on-chain minting for this
+              Tier is the Soroban mint symbol changing it can break on-chain minting for this
               badge. Enable only if you know what you&apos;re doing.
             </span>
           </div>

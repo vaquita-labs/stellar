@@ -16,7 +16,11 @@
 // - spotlight→ tarjeta + resalta un botón REAL; se avanza tocándolo (sin botón).
 // - waiting  → tarjeta + (HUD del cronómetro arriba a la derecha); auto-avanza.
 // - success  → tarjeta + recibo + botón final.
-export type TutorialStepKind = 'message' | 'deposit' | 'warn' | 'spotlight' | 'waiting' | 'success';
+// - coach    → NO hay tarjeta centrada (ocurre con un modal real abierto): el
+//              motor oscurece todo menos un elemento y muestra una tarjetita
+//              guía (con los dots de progreso) pegada a él. El `bodyKey` es el
+//              mensaje y `id` decide qué elemento resaltar.
+export type TutorialStepKind = 'message' | 'deposit' | 'warn' | 'spotlight' | 'waiting' | 'success' | 'coach';
 
 export interface TutorialStep {
   /** Id estable (para keys y para depurar). */
@@ -65,20 +69,42 @@ export const TUTORIAL_ANCHOR_WITHDRAW = 'tutorial-withdraw';
 export const formatTutorialMoney = (n: number) =>
   `${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${TUTORIAL_CURRENCY}`;
 
-/**
- * Copy del aviso "Patience pays off". Ya no es un paso propio: se muestra POR
- * ENCIMA de la pantalla de confirmación de retiro anticipado (cuando el usuario
- * intenta retirar antes de tiempo dentro del banco) para empujarlo a cancelar.
- */
-export const TUTORIAL_PATIENCE = {
-  titleKey: 'tutorial.patience.title',
-  bodyKey: 'tutorial.patience.body',
-  ctaKey: 'tutorial.patience.cta',
+// --- Copy de los pasos `coach` (hints DENTRO de los modales reales) -----------
+// Estos pasos NO muestran una tarjeta centrada: el motor (TutorialExperience)
+// resalta un único elemento real por vez y muestra un hint pegado a él
+// (TutorialFocusLock → misma TutorialCard que la narración). Cada uno es un paso
+// más de TUTORIAL_STEPS (su propio punto de progreso), así que llevan título y
+// cuerpo como cualquier otro paso. El texto vive en los diccionarios i18n.
+export const TUTORIAL_COACH = {
+  /** Modal de depósito: confirmar el depósito demo (sobre el botón Deposit). */
+  depositConfirm: { title: 'tutorial.coach.depositConfirm.title', body: 'tutorial.coach.depositConfirm.body' },
+  /** Bank Rewards: elegir la tarjeta del depósito recién hecho. */
+  selectDeposit: { title: 'tutorial.coach.selectDeposit.title', body: 'tutorial.coach.selectDeposit.body' },
+  /** Detalle (bloqueado): intentar retirar antes de tiempo (sobre Withdraw). */
+  withdrawEarly: { title: 'tutorial.coach.withdrawEarly.title', body: 'tutorial.coach.withdrawEarly.body' },
+  /** Confirmación de retiro anticipado: cancelar para esperar (sobre Cancel). */
+  cancelWait: { title: 'tutorial.coach.cancelWait.title', body: 'tutorial.coach.cancelWait.body' },
+  /** Contador en 0: retirar/reclamar con interés (sobre Withdraw / Claim now). */
+  claimNow: { title: 'tutorial.coach.claimNow.title', body: 'tutorial.coach.claimNow.body' },
+};
+
+// Aviso "But if you wait…" que aparece TRAS cancelar el retiro anticipado y
+// ANTES de arrancar el contador. Se monta como tarjeta sobre el detalle (no es
+// un paso aparte). Reutiliza el copy de `waitIntro`.
+export const TUTORIAL_WAIT_NOTICE = {
+  titleKey: 'tutorial.steps.waitIntro.title',
+  bodyKey: 'tutorial.steps.waitIntro.body',
+  ctaKey: 'tutorial.steps.waitIntro.cta',
+  params: { seconds: TUTORIAL_GOAL_SECONDS },
 };
 
 const SPOT_SAVE = `[data-tutorial="${TUTORIAL_ANCHOR_SAVE}"]`;
 const SPOT_BALANCE = `[data-tutorial="${TUTORIAL_ANCHOR_BALANCE}"]`;
 
+// Flujo completo, paso a paso (cada entrada = un punto de progreso). Los pasos
+// `coach` ocurren DENTRO del Bank Rewards / detalle real; su `bodyKey` es el
+// mensajito que se muestra pegado al elemento resaltado. El motor
+// (TutorialExperience) avanza el índice al completar la interacción de cada uno.
 export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
@@ -95,9 +121,15 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     bodyKey: 'tutorial.steps.deposit.body',
     ctaKey: 'tutorial.steps.deposit.cta',
   },
-
   {
-    id: 'find-deposit',
+    id: 'confirm-deposit',
+    kind: 'coach',
+    titleKey: TUTORIAL_COACH.depositConfirm.title,
+    bodyKey: TUTORIAL_COACH.depositConfirm.body,
+    ctaKey: '',
+  },
+  {
+    id: 'open-bank',
     kind: 'spotlight',
     spotlight: SPOT_BALANCE,
     titleKey: 'tutorial.steps.findDeposit.title',
@@ -105,27 +137,32 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     ctaKey: 'tutorial.steps.findDeposit.cta',
   },
   {
-    id: 'wait-intro',
-    kind: 'message',
-    titleKey: 'tutorial.steps.waitIntro.title',
-    bodyKey: 'tutorial.steps.waitIntro.body',
-    ctaKey: 'tutorial.steps.waitIntro.cta',
-    params: { seconds: TUTORIAL_GOAL_SECONDS },
-  },
-  {
-    id: 'waiting',
-    kind: 'waiting',
-    titleKey: 'tutorial.steps.waiting.title',
-    bodyKey: 'tutorial.steps.waiting.body',
+    id: 'select-deposit',
+    kind: 'coach',
+    titleKey: TUTORIAL_COACH.selectDeposit.title,
+    bodyKey: TUTORIAL_COACH.selectDeposit.body,
     ctaKey: '',
   },
   {
-    id: 'ready',
-    kind: 'spotlight',
-    spotlight: SPOT_BALANCE,
-    titleKey: 'tutorial.steps.ready.title',
-    bodyKey: 'tutorial.steps.ready.body',
-    ctaKey: 'tutorial.steps.ready.cta',
+    id: 'withdraw-early',
+    kind: 'coach',
+    titleKey: TUTORIAL_COACH.withdrawEarly.title,
+    bodyKey: TUTORIAL_COACH.withdrawEarly.body,
+    ctaKey: '',
+  },
+  {
+    id: 'cancel-wait',
+    kind: 'coach',
+    titleKey: TUTORIAL_COACH.cancelWait.title,
+    bodyKey: TUTORIAL_COACH.cancelWait.body,
+    ctaKey: '',
+  },
+  {
+    id: 'claim',
+    kind: 'coach',
+    titleKey: TUTORIAL_COACH.claimNow.title,
+    bodyKey: TUTORIAL_COACH.claimNow.body,
+    ctaKey: '',
   },
   {
     id: 'success',

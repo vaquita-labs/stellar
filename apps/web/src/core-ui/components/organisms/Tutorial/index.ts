@@ -1,3 +1,4 @@
+export * from './TutorialCard';
 export * from './TutorialExperience';
 export * from './TutorialOverlay';
 export * from './TutorialRing';

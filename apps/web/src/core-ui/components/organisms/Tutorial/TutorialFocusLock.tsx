@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { TutorialCard } from './TutorialCard';
 
 interface TutorialFocusLockProps {
   /**
@@ -11,22 +12,32 @@ interface TutorialFocusLockProps {
   selector: string;
   /** Padding (px) del recorte alrededor del elemento enfocado. */
   pad?: number;
+  /** Título corto del mensaje guía (opcional). */
+  title?: string;
+  /** Mensaje guía que aparece pegado al elemento (arriba o abajo según el espacio). */
+  message?: string;
+  /** Índice del paso actual (para los dots de progreso de la tarjeta guía). */
+  dotIndex?: number;
+  /** Total de pasos (para los dots de progreso de la tarjeta guía). */
+  dotCount?: number;
 }
 
 const REMEASURE_MS = 200;
+const CARD_GAP = 12;
+const CARD_MAX_PX = 360;
 
 /**
  * Enfoca un único elemento dentro de un modal ABIERTO sin tocar el modal:
  * oscurece y BLOQUEA (pointer-events) todo lo demás con cuatro paneles que
  * rodean al elemento, dejando un hueco por el que solo ese elemento queda
- * visible y clicleable, con un borde parpadeante encima.
+ * visible y clicleable, con un borde parpadeante encima. Si se pasa `message`,
+ * muestra además una tarjetita guía pegada al elemento (arriba o abajo).
  *
- * Se monta por encima de los modales (z muy alto, como TutorialRing) y mide el
- * rect del target en vivo, así reacciona a la animación de apertura, resize y
- * scroll. Es agnóstico del modal: sirve para depósito, retiro o cualquier otro
- * paso del tutorial que deba forzar un único click.
+ * Se monta por encima de los modales (z muy alto) y mide el rect del target en
+ * vivo, así reacciona a la animación de apertura, resize y scroll. Es agnóstico
+ * del modal: sirve para depósito, retiro o cualquier otro paso del tutorial.
  */
-export function TutorialFocusLock({ selector, pad = 6 }: TutorialFocusLockProps) {
+export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex, dotCount }: TutorialFocusLockProps) {
   const [rect, setRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
@@ -55,6 +66,18 @@ export function TutorialFocusLock({ selector, pad = 6 }: TutorialFocusLockProps)
   // menos el hueco del elemento enfocado. Sin blur: solo un scrim oscuro.
   const panel = 'fixed bg-black/60 pointer-events-auto';
 
+  // Posición de la tarjeta guía: centrada sobre el elemento, arriba si hay
+  // espacio (si no, abajo), y clampeada a los bordes del viewport.
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
+  const cardW = Math.min(CARD_MAX_PX, vw - 24);
+  const centerX = (rect.left + rect.right) / 2;
+  const cardLeft = Math.min(Math.max(centerX, 12 + cardW / 2), vw - 12 - cardW / 2);
+  const placeAbove = rect.top > 150;
+  const cardStyle = placeAbove
+    ? { left: cardLeft, bottom: vh - top + CARD_GAP, width: cardW }
+    : { left: cardLeft, top: bottom + CARD_GAP, width: cardW };
+
   return (
     <div aria-hidden className="fixed inset-0 z-[9998]">
       {/* Arriba */}
@@ -73,6 +96,21 @@ export function TutorialFocusLock({ selector, pad = 6 }: TutorialFocusLockProps)
         animate={{ opacity: [0.45, 1, 0.45], scale: [1, 1.015, 1] }}
         transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
       />
+
+      {/* Tarjeta guía pegada al elemento: misma pieza (TutorialCard) que la
+          narración centrada, para que todo el tutorial se vea como un solo
+          componente. Esta variante flota y no captura el click. */}
+      {message && (
+        <motion.div
+          className="pointer-events-none fixed z-[10000] -translate-x-1/2"
+          style={cardStyle}
+          initial={{ opacity: 0, y: placeAbove ? 6 : -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <TutorialCard dotIndex={dotIndex} dotCount={dotCount} title={title} body={message} />
+        </motion.div>
+      )}
     </div>
   );
 }

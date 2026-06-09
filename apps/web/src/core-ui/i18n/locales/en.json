@@ -1230,7 +1230,7 @@
         "title": "Nicely done! 🎉"
       },
       "waitIntro": {
-        "body": "Save for the {{seconds}} seconds you chose and you keep the full interest. Let's watch your vaquita.",
+        "body": "Wait the {{seconds}}s you set as your goal and keep the full interest.",
         "cta": "Wait {{seconds}}s",
         "title": "But if you wait…"
       },
@@ -1250,6 +1250,28 @@
     },
     "warn": {
       "keepLose": "Keep {{amount}}, lose {{interest}} interest."
+    },
+    "coach": {
+      "depositConfirm": {
+        "title": "Confirm your deposit",
+        "body": "Tap Deposit to confirm. It's just a demo no real money."
+      },
+      "selectDeposit": {
+        "title": "Find your deposit",
+        "body": "Select the deposit you just made. Remember, it's a demo deposit."
+      },
+      "withdrawEarly": {
+        "title": "Try a withdrawal",
+        "body": "Let's try to withdraw before the timer ends."
+      },
+      "cancelWait": {
+        "title": "Keep your interest",
+        "body": "Withdraw now and you lose your interest. Tap Cancel and wait instead."
+      },
+      "claimNow": {
+        "title": "Time's up! 🎉",
+        "body": "Withdraw to get your deposit back plus interest."
+      }
     }
   },
   "ui": {

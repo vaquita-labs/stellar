@@ -1230,7 +1230,7 @@
         "title": "Muito bem! 🎉"
       },
       "waitIntro": {
-        "body": "Guarde pelos {{seconds}} segundos que você escolheu e fique com todos os juros. Vamos ver a sua vaquita.",
+        "body": "Espere os {{seconds}}s que você definiu como meta e fique com todos os juros.",
         "cta": "Esperar {{seconds}}s",
         "title": "Mas se você esperar…"
       },
@@ -1250,6 +1250,28 @@
     },
     "warn": {
       "keepLose": "Você mantém {{amount}} e perde {{interest}} de juros."
+    },
+    "coach": {
+      "depositConfirm": {
+        "title": "Confirme seu depósito",
+        "body": "Toque em Depositar para confirmar. É só uma demo, sem dinheiro de verdade."
+      },
+      "selectDeposit": {
+        "title": "Encontre seu depósito",
+        "body": "Selecione o depósito que você acabou de fazer. Lembre-se: é um depósito demo."
+      },
+      "withdrawEarly": {
+        "title": "Tente sacar",
+        "body": "Vamos tentar sacar antes do tempo acabar."
+      },
+      "cancelWait": {
+        "title": "Mantenha seus juros",
+        "body": "Se sacar agora você perde os juros. Toque em Cancelar e espere."
+      },
+      "claimNow": {
+        "title": "Tempo esgotado! 🎉",
+        "body": "Saque para receber seu depósito mais os juros."
+      }
     }
   },
   "ui": {

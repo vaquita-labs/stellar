@@ -3,7 +3,7 @@
 import { Button as HeroButton, Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
@@ -20,7 +20,7 @@ import { BankAPYModal } from '../BankAPYModal';
 import { DepositModal } from '../DepositModal';
 import { TutorialFocusLock } from './TutorialFocusLock';
 import { TutorialOverlay } from './TutorialOverlay';
-import { TutorialPatienceModal } from './TutorialPatienceModal';
+import { TutorialWaitModal } from './TutorialWaitModal';
 import {
   TUTORIAL_ANCHOR_SAVE,
   TUTORIAL_ANCHOR_VAQUITA_CARD,
@@ -31,13 +31,23 @@ import {
   tutorialInterest,
 } from './tutorialConfig';
 
-const LOCK_SECONDS = Math.round(TUTORIAL_LOCK_MS / 1000);
+// Selectores estables de los botones del footer de AppModal (HeroUI). Los usa
+// el focus lock para resaltar el único botón accionable del paso.
+const MODAL_PRIMARY_BTN = '[data-slot="modal-footer"] button';
+// Primer botón del footer = Cancel (en la confirmación de retiro).
+const MODAL_FIRST_BTN = '[data-slot="modal-footer"] button:first-child';
+// Último botón del footer = acción principal (Deposit / Withdraw / Claim).
+const MODAL_LAST_BTN = '[data-slot="modal-footer"] button:last-child';
 
 /**
- * Experiencia del tutorial en `/tutorial`. Recrea el home real y guía paso a
- * paso usando los modales REALES (depósito, Bank Rewards, retiro) en modo
- * simulado, más un cronómetro flotante y la vaquita feliz al cumplir el objetivo.
- * Al terminar persiste `tutorialCompleted` y manda al home.
+ * Experiencia del tutorial en `/tutorial`. Recrea el home real y guía con los
+ * modales REALES (depósito y Bank Rewards/retiro) en modo simulado.
+ *
+ * Flujo compacto: depósito de {@link TUTORIAL_DEFAULT_AMOUNT} → abrir el banco →
+ * tocar la tarjeta → en el detalle se intenta retirar antes de tiempo (aviso
+ * "qué pasa si esperás") → la cuenta regresiva de 10s corre DENTRO del propio
+ * detalle (contador segundo a segundo) → al llegar a 0 se retira con interés →
+ * recibo final → `/home`. No hay pantallas intermedias de espera.
  */
 export function TutorialExperience() {
   const { t } = useTranslation();
@@ -51,29 +61,21 @@ export function TutorialExperience() {
   const [depositOpen, setDepositOpen] = useState(false);
   const [isDepositing, setIsDepositing] = useState(false);
   const [bankOpen, setBankOpen] = useState(false);
-  // El detalle de la vaquita ahora vive INLINE dentro del Bank Rewards (sin un
-  // segundo modal). Esto solo refleja si ese detalle está abierto, para ocultar
-  // el anillo guía y avanzar el paso al volver a la lista.
   const [detailOpen, setDetailOpen] = useState(false);
-  // Aviso "Patience pays off" mostrado SOBRE la pantalla de confirmación de
-  // retiro anticipado (cuando el usuario intenta retirar antes de tiempo).
-  const [showPatience, setShowPatience] = useState(false);
-  // Una vez visto el aviso, dejamos de forzar el toque en Withdraw para que el
-  // usuario pueda cancelar y seguir esperando el timer.
-  const [patienceAcked, setPatienceAcked] = useState(false);
+  // Estamos en la pantalla "Confirm withdrawal" del detalle.
+  const [inConfirm, setInConfirm] = useState(false);
+  // Aviso "But if you wait…", tras cancelar y ANTES de arrancar el contador.
+  const [showWaitIntro, setShowWaitIntro] = useState(false);
   const [finishing, setFinishing] = useState(false);
-  // Momento en que el lock llegó a 0: mostramos la vaquita feliz en el mapa
-  // unos segundos antes de pasar a la pantalla "Time's up".
-  const [celebrating, setCelebrating] = useState(false);
 
   // `depositedAt`: cuándo se hizo el depósito (para "Started at"). `lockStartAt`:
-  // cuándo arranca la cuenta regresiva de 10s (al cerrar el primer vistazo).
+  // cuándo arranca la cuenta regresiva de 10s (al cerrar el aviso de paciencia).
   const [depositedAt, setDepositedAt] = useState<number | null>(null);
   const [lockStartAt, setLockStartAt] = useState<number | null>(null);
   const [now, setNow] = useState(0);
 
-  // Reloj: avanza `now` mientras corre el lock para que el contador del modal y
-  // el HUD bajen de 10 a 0. Date.now() acá es código de app normal.
+  // Reloj: avanza `now` mientras corre el lock para que el contador del detalle
+  // baje de 10 a 0 segundo a segundo. Date.now() acá es código de app normal.
   useEffect(() => {
     if (lockStartAt == null) return;
     setNow(Date.now());
@@ -84,11 +86,12 @@ export function TutorialExperience() {
   const step = TUTORIAL_STEPS[index];
   const interest = tutorialInterest(amount);
   const anyModalOpen = depositOpen || bankOpen;
+  // El lock llegó a 0: el depósito quedó listo para retirar con interés.
+  const lockElapsed = lockStartAt != null && now >= lockStartAt + TUTORIAL_LOCK_MS;
 
-  const secondsLeft =
-    lockStartAt == null ? LOCK_SECONDS : Math.max(0, Math.ceil((lockStartAt + TUTORIAL_LOCK_MS - now) / 1000));
-
-  // Depósito simulado que alimenta el Bank Rewards y el modal de retiro reales.
+  // Depósito simulado que alimenta el Bank Rewards y el detalle reales. Antes de
+  // arrancar el lock el contador está congelado (server == created); al fijar
+  // `lockStartAt` el reloj corre y el detalle baja de 10s a 0.
   const simulatedDeposit = useMemo<DepositResponseDTO>(() => {
     const created = lockStartAt ?? depositedAt ?? 0;
     const server = lockStartAt == null ? created : now;
@@ -117,41 +120,27 @@ export function TutorialExperience() {
 
   const goNext = () => setIndex((i) => Math.min(i + 1, TUTORIAL_STEPS.length - 1));
 
-  // Hace feliz a la vaquita del mapa real: sembramos useDeposits con un depósito
-  // SUCCESS fuera de lock → useVaquitaMood lo lee como 'excited'.
-  const seedHappyVaquita = () => {
-    queryClient.setQueryData(['deposit', 'network', network?.networkName, 'wallet', walletAddress], {
-      deposits: [
-        {
-          id: 0,
-          state: DepositWithdrawalState.DEPOSIT_SUCCESS,
-          amount,
-          tokenSymbol: token?.symbol ?? '',
-          inLockPeriod: false,
-          lockPeriod: TUTORIAL_LOCK_MS,
-          vaquitaContractAddress: token?.vaquitaContractAddress ?? '',
-        },
-      ],
-    });
+  // Abrir el depósito es su propio salto de paso: `deposit` (resalta Save) →
+  // `confirm-deposit` (resalta Deposit dentro del modal). Así cada tarjeta del
+  // flujo es un punto de progreso de TUTORIAL_STEPS, controlado en un solo lugar.
+  const startDeposit = () => {
+    if (step.id !== 'deposit') return;
+    setDepositOpen(true);
+    goNext();
   };
 
-  // Lock a 0 durante la espera: hacemos feliz a la vaquita y marcamos celebración
-  // (el mapa sigue visible para verla) antes de pasar a "Time's up".
+  // Auto-avance del paso `cancel-wait` → `claim` cuando el contador llega a 0.
   useEffect(() => {
-    if (step.id === 'waiting' && lockStartAt != null && now >= lockStartAt + TUTORIAL_LOCK_MS && !celebrating) {
-      setCelebrating(true);
-      seedHappyVaquita();
-    }
+    if (step.id === 'cancel-wait' && lockElapsed) goNext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step.id, now, lockStartAt, celebrating]);
+  }, [step.id, lockElapsed]);
 
-  // Tras unos segundos viendo a la vaquita feliz, mostramos "Time's up".
+  // Si se cierra el modal de depósito sin confirmar, volvemos a `deposit`. En el
+  // éxito el índice ya avanzó a `open-bank` antes de cerrar, así que no aplica.
   useEffect(() => {
-    if (!celebrating) return;
-    const t = window.setTimeout(() => goNext(), 2200);
-    return () => window.clearTimeout(t);
+    if (step.id === 'confirm-deposit' && !depositOpen) setIndex((i) => Math.max(i - 1, 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [celebrating]);
+  }, [step.id, depositOpen]);
 
   const finish = async () => {
     setFinishing(true);
@@ -166,61 +155,35 @@ export function TutorialExperience() {
     router.replace('/home');
   };
 
-  // Cierra el banco y avanza a "But if you wait…". Tras ver el aviso de
-  // paciencia, CUALQUIER salida del detalle/confirmación (X, atrás o Cancel)
-  // debe avanzar el tutorial. Como esas salidas pueden disparar más de un
-  // callback a la vez, el ref evita un doble goNext (que saltaría un paso).
-  const findAdvancedRef = useRef(false);
-  const exitFindDepositToNext = () => {
-    if (step.id !== 'find-deposit' || findAdvancedRef.current) return;
-    findAdvancedRef.current = true;
-    setShowPatience(false);
-    setPatienceAcked(false);
-    setDetailOpen(false);
-    setBankOpen(false);
-    goNext();
+  // Tocar la tarjeta del depósito (en el banco): entra al detalle y, si era el
+  // paso `select-deposit`, avanza a `withdraw-early`.
+  const handleDetailOpenChange = (open: boolean) => {
+    setDetailOpen(open);
+    if (open && step.id === 'select-deposit') goNext();
   };
 
-  // El detalle inline del Bank Rewards se abrió/cerró. Tras ver el aviso, volver
-  // a la lista (atrás / Cancel del detalle) avanza el tutorial.
-  const handleDetailOpenChange = (inDetail: boolean) => {
-    setDetailOpen(inDetail);
-    if (!inDetail && patienceAcked) exitFindDepositToNext();
-  };
-
-  // Cuando el usuario llega a "Confirm withdrawal" intentando retirar antes de
-  // tiempo (paso find-deposit, depósito aún bloqueado) mostramos el aviso de
-  // paciencia encima. En 'ready' el retiro es a tiempo, así que no aplica. Si
-  // sale de la confirmación (Cancel) ya habiendo visto el aviso, avanzamos.
+  // Entrar/salir de "Confirm withdrawal":
+  // - Entrar en `withdraw-early` → avanza a `cancel-wait` (resalta Cancel).
+  // - Salir con Cancel en `cancel-wait` (aún bloqueado) → muestra "But if you
+  //   wait…" antes de arrancar el contador.
   const handleConfirmingChange = (isConfirming: boolean) => {
+    setInConfirm(isConfirming);
     if (isConfirming) {
-      setShowPatience(step.id === 'find-deposit');
+      if (step.id === 'withdraw-early') goNext();
       return;
     }
-    setShowPatience(false);
-    if (patienceAcked) exitFindDepositToNext();
+    if (step.id === 'cancel-wait' && lockStartAt == null) setShowWaitIntro(true);
   };
 
   const onPrimary = () => {
     if (finishing) return;
     switch (step.id) {
       case 'deposit':
-        setDepositOpen(true);
+        startDeposit();
         break;
-      case 'wait-intro': {
-        // Arranca el cronómetro y entra a la espera (mapa visible).
-        const t = Date.now();
-        setLockStartAt(t);
-        setNow(t);
+      case 'open-bank':
+        setBankOpen(true);
         goNext();
-        break;
-      }
-      case 'find-deposit':
-        findAdvancedRef.current = false;
-        setBankOpen(true);
-        break;
-      case 'ready':
-        setBankOpen(true);
         break;
       case 'success':
         void finish();
@@ -230,18 +193,33 @@ export function TutorialExperience() {
     }
   };
 
+  // En el detalle del depósito el modal queda bloqueado: solo se avanza
+  // retirando (no se puede cerrar ni cancelar). La pantalla de confirmación usa
+  // otro footer, donde Cancel sí queda habilitado.
+  const inBankFlow = step.id === 'withdraw-early' || step.id === 'cancel-wait' || step.id === 'claim';
+  const lockToWithdraw = inBankFlow && detailOpen;
+
+  // Resaltes (oscurecer todo menos un elemento + tarjetita guía con dots):
+  // - `select-deposit`: la tarjeta del depósito en el banco.
+  const focusCard = bankOpen && step.id === 'select-deposit' && !detailOpen;
+  // - `withdraw-early`: el botón Withdraw (bloqueado) para intentar retirar.
+  const focusWithdrawEarly = bankOpen && step.id === 'withdraw-early' && detailOpen && !inConfirm;
+  // - `cancel-wait`: Cancel en la confirmación (antes de que arranque el lock).
+  const focusCancel = bankOpen && step.id === 'cancel-wait' && inConfirm && lockStartAt == null;
+  // - `claim`: Withdraw del detalle (listo) y luego "Claim now" en la confirmación.
+  const focusWithdrawReady = bankOpen && step.id === 'claim' && detailOpen && !inConfirm && lockElapsed;
+  const focusClaim = bankOpen && step.id === 'claim' && inConfirm && lockElapsed;
+
+  // Props comunes de los dots de progreso de las tarjetas guía.
+  const dots = { dotIndex: index, dotCount: TUTORIAL_STEPS.length };
+
   return (
     <div className="relative flex h-full w-full flex-col">
       <HeaderStats />
 
       <div className="relative flex-1">
         {lockPeriod !== null && lockPeriod !== undefined ? (
-          <WorldMap
-            walletAddress={walletAddress}
-            worldType={WorldType.FOREST}
-            isAvailable={true}
-            interactionsDisabled
-          />
+          <WorldMap walletAddress={walletAddress} worldType={WorldType.FOREST} isAvailable={true} interactionsDisabled />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <Spinner />
@@ -253,11 +231,9 @@ export function TutorialExperience() {
           <div data-tutorial={TUTORIAL_ANCHOR_SAVE} className="w-full max-w-xl px-2">
             <HeroButton
               size="lg"
-              // Solo abre el depósito en su paso; en la espera el mapa es
-              // interactivo y no queremos que un toque accidental lo dispare.
-              onPress={() => {
-                if (step.id === 'deposit') setDepositOpen(true);
-              }}
+              // Solo abre el depósito en su paso (startDeposit lo verifica); fuera
+              // de él un toque accidental no debe dispararlo.
+              onPress={startDeposit}
               className="w-full rounded-md border border-b-5 border-[#018222] bg-success py-7 font-bold text-black"
             >
               <span className="text-xl capitalize text-black">{t('tutorial.saveButton', 'Save')}</span>
@@ -266,23 +242,7 @@ export function TutorialExperience() {
         </div>
       </div>
 
-      {/* Cronómetro flotante (arriba a la derecha) durante la espera */}
-      {step.id === 'waiting' && (
-        <div className="pointer-events-none fixed right-3 top-40 z-50 flex items-center gap-1.5 rounded-full border border-black bg-white px-2.5 py-1 shadow-md md:top-28">
-          {secondsLeft > 0 ? (
-            <>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-black/50">
-                {t('tutorial.timer.unlocks', 'Unlocks')}
-              </span>
-              <span className="text-sm font-bold tabular-nums text-black">{secondsLeft}s</span>
-            </>
-          ) : (
-            <span className="text-sm font-bold text-black">{t('tutorial.timer.ready', 'Ready! 🎉')}</span>
-          )}
-        </div>
-      )}
-
-      {/* Modal de depósito REAL (simulado): lock único de 10s, monto libre */}
+      {/* Modal de depósito REAL (simulado): lock único de 10s, monto precargado */}
       <DepositModal
         open={depositOpen}
         onOpenChange={() => setDepositOpen(false)}
@@ -299,28 +259,25 @@ export function TutorialExperience() {
         }}
       />
 
-      {/* En el paso de depósito enfocamos SOLO el botón "Deposit": el resto del
-          modal queda difuminado y no clicleable, y el botón parpadea. Reutiliza
-          el selector estable del footer de AppModal (HeroUI). */}
-      {depositOpen && step.id === 'deposit' && (
-        <TutorialFocusLock selector='[data-slot="modal-footer"] button' />
+      {/* Paso `confirm-deposit`: enfoca SOLO el botón "Deposit" del modal real. */}
+      {depositOpen && step.id === 'confirm-deposit' && (
+        <TutorialFocusLock
+          selector={MODAL_PRIMARY_BTN}
+          title={t(step.titleKey, step.params)}
+          message={t(step.bodyKey, step.params)}
+          {...dots}
+        />
       )}
 
-      {/* Bank Rewards REAL con el depósito simulado inyectado. El detalle/retiro
-          se pinta INLINE dentro de este mismo modal (sin un segundo modal). */}
+      {/* Bank Rewards REAL con el depósito simulado: tocar la tarjeta → detalle →
+          Withdraw → confirmación → aviso → esperar el contador → retirar. Todo el
+          retiro (anticipado y final) ocurre INLINE dentro de este modal. */}
       {bankOpen && (
         <BankAPYModal
           open={bankOpen}
           onOpenChange={() => {
-            // Tras ver el aviso, cerrar el banco con la X también avanza.
-            if (step.id === 'find-deposit' && patienceAcked) {
-              exitFindDepositToNext();
-              return;
-            }
             setBankOpen(false);
             setDetailOpen(false);
-            setShowPatience(false);
-            setPatienceAcked(false);
           }}
           injectedDeposits={[simulatedDeposit]}
           simulate
@@ -332,31 +289,69 @@ export function TutorialExperience() {
           }}
           onDetailOpenChange={handleDetailOpenChange}
           onConfirmingChange={handleConfirmingChange}
-          lockToWithdraw={step.id === 'find-deposit' && detailOpen && !patienceAcked}
+          lockToWithdraw={lockToWithdraw}
         />
       )}
 
-      {/* Aviso "Patience pays off" SOBRE la confirmación de retiro anticipado */}
-      {bankOpen && showPatience && (
-        <TutorialPatienceModal
-          amount={amount}
-          interest={interest}
-          onAck={() => {
-            setShowPatience(false);
-            setPatienceAcked(true);
+      {/* Aviso "But if you wait…" tras cancelar: al confirmarlo arranca el
+          contador de 10s dentro del detalle. */}
+      {bankOpen && showWaitIntro && (
+        <TutorialWaitModal
+          onConfirm={() => {
+            setShowWaitIntro(false);
+            const startedAt = Date.now();
+            setLockStartAt(startedAt);
+            setNow(startedAt);
           }}
         />
       )}
 
-      {/* Guía (sin texto): oscurece todo el modal menos la tarjeta del depósito,
-          que queda nítida, clicleable y con borde parpadeante para tocarla. */}
-      {bankOpen && !detailOpen && <TutorialFocusLock selector={`[data-tutorial="${TUTORIAL_ANCHOR_VAQUITA_CARD}"]`} />}
+      {/* select-deposit: oscurece todo menos la tarjeta del depósito. */}
+      {focusCard && (
+        <TutorialFocusLock
+          selector={`[data-tutorial="${TUTORIAL_ANCHOR_VAQUITA_CARD}"]`}
+          title={t(step.titleKey, step.params)}
+          message={t(step.bodyKey, step.params)}
+          {...dots}
+        />
+      )}
 
-      {/* En find-deposit forzamos el toque en Withdraw (para llegar al aviso de
-          paciencia): oscurecemos todo el detalle menos ese botón. Tras verlo
-          dejamos de insistir para que pueda cancelar. */}
-      {bankOpen && detailOpen && step.id === 'find-deposit' && !showPatience && !patienceAcked && (
-        <TutorialFocusLock selector={`[data-tutorial="${TUTORIAL_ANCHOR_WITHDRAW}"]`} />
+      {/* withdraw-early: oscurece todo menos Withdraw (intento de retiro). */}
+      {focusWithdrawEarly && (
+        <TutorialFocusLock
+          selector={`[data-tutorial="${TUTORIAL_ANCHOR_WITHDRAW}"]`}
+          title={t(step.titleKey, step.params)}
+          message={t(step.bodyKey, step.params)}
+          {...dots}
+        />
+      )}
+
+      {/* cancel-wait: oscurece todo menos Cancel en la confirmación. */}
+      {focusCancel && (
+        <TutorialFocusLock
+          selector={MODAL_FIRST_BTN}
+          title={t(step.titleKey, step.params)}
+          message={t(step.bodyKey, step.params)}
+          {...dots}
+        />
+      )}
+
+      {/* claim: oscurece todo menos Withdraw (listo) y luego "Claim now". */}
+      {focusWithdrawReady && (
+        <TutorialFocusLock
+          selector={`[data-tutorial="${TUTORIAL_ANCHOR_WITHDRAW}"]`}
+          title={t(step.titleKey, step.params)}
+          message={t(step.bodyKey, step.params)}
+          {...dots}
+        />
+      )}
+      {focusClaim && (
+        <TutorialFocusLock
+          selector={MODAL_LAST_BTN}
+          title={t(step.titleKey, step.params)}
+          message={t(step.bodyKey, step.params)}
+          {...dots}
+        />
       )}
 
       {/* Capa de coachmarks (oculta mientras hay un modal abierto) */}
