@@ -464,8 +464,8 @@
     "stats": {
       "experienceAlt": "Experience",
       "goldCoinAlt": "Gold Coin",
-      "greeting": "Let's go! 🐮",
-      "greetingNamed": "Let's go, {{name}}! 🐮",
+      "greeting": "Your savings",
+      "greetingNamed": "Your savings, <b>{{name}}</b>",
       "profileAlt": "Profile",
       "profileAria": "Profile",
       "streakAlt": "Streak"

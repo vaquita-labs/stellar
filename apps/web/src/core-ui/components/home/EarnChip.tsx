@@ -23,12 +23,12 @@ export const EarnChip = ({ deposits, estimatedEarnings, tokenSymbol, isLoading, 
     <Wrapper
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className="flex items-center gap-0.5 mt-1.5"
+      className="flex items-center gap-0.5"
     >
       <span className="text-sm font-bold text-[#2f820b] tabular-nums leading-none">
         {isLoading
           ? '—'
-          : `+${(hasDeposits ? estimatedEarnings : 0).toFixed(2)}${tokenSymbol ? ` ${tokenSymbol}` : ''}`}
+          : `+${(hasDeposits ? estimatedEarnings : 0).toFixed(2)}`}
       </span>
       <span className="text-[10px] font-bold text-[#2f820b]/80 leading-none ml-0.5"></span>
     </Wrapper>

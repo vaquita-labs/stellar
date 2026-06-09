@@ -6,7 +6,7 @@ import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import {
   useApyByLockPeriod,
   useDepositsComplete,
@@ -116,10 +116,17 @@ export const HeaderStats = () => {
           </Link>
 
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-sm font-medium text-black/90 truncate">
-              {firstName
-                ? t('home.stats.greetingNamed', "Let's go, {{name}}! 🐮", { name: firstName })
-                : t('home.stats.greeting', "Let's go! 🐮")}
+            <span className="text-sm font-normal text-black/90 truncate">
+              {firstName ? (
+                <Trans
+                  i18nKey="home.stats.greetingNamed"
+                  defaults="Your savings, <b>{{name}}</b>"
+                  values={{ name: firstName }}
+                  components={{ b: <span className="font-bold" /> }}
+                />
+              ) : (
+                t('home.stats.greeting', 'Your savings')
+              )}
             </span>
             <button
               type="button"
@@ -129,11 +136,9 @@ export const HeaderStats = () => {
               {depositsLoading && !depositsData ? (
                 <Spinner size="sm" color="current" />
               ) : (
-                // El anclaje del tutorial va aquí (no en el botón, que ocupa toda
-                // la columna) para que el spotlight bordee solo el saldo + APY.
                 <div data-tutorial="tutorial-balance" className='flex justify-end gap-1.5'>
                   <span className="text-2xl font-bold text-black">
-                    {hideBalance ? '••••' : `$${activeDepositsTotalAmount.toFixed(2)} ${token?.symbol}`}
+                    {hideBalance ? '••••' : `$${activeDepositsTotalAmount.toFixed(2)}`}
                   </span>
                   <EarnChip
                     deposits={activeDeposits}
