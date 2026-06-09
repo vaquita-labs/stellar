@@ -6,6 +6,7 @@ import {
   broadcastProfileChange,
   getAchievementCountsByProfile,
   getActiveDepositSumsByWallet,
+  getExperienceByProfile,
   getNetworkName,
   getProfile,
   getProfileMapObjects,
@@ -13,6 +14,7 @@ import {
   getProjectConfig,
   getRewardByKey,
   getRewardsData,
+  getStreakCountsByProfile,
   prisma,
   REWARD_REASON_DAILY_CHECKIN,
   type Profile,
@@ -677,6 +679,8 @@ router.get('/', async (req, res) => {
 const toProfileByDepositsResponseDTO = (
   badgesByProfileId: Map<number, number>,
   depositSumsByWallet: Map<string, number>,
+  streaksByProfileId: Map<number, number>,
+  experienceByProfileId: Map<number, number>,
 ) =>
   (profile: Profile): ProfileAverageResponseDTO => {
     const wallet = profile.wallet_address ?? '';
@@ -694,6 +698,8 @@ const toProfileByDepositsResponseDTO = (
       timestamp: 0,
       delay: 0,
       badges: badgesByProfileId.get(profile.id) ?? 0,
+      streak: streaksByProfileId.get(profile.id) ?? 0,
+      experience: experienceByProfileId.get(profile.id) ?? 0,
     };
   };
 
@@ -717,9 +723,26 @@ router.get('/by-average-deposits', async (req, res) => {
     req.log.error({ err: depositsError }, 'Failed to compute active deposit sums (degraded — leaderboard amounts will be 0)');
   }
 
+  const { counts: streaksByProfileId, error: streaksError } = await getStreakCountsByProfile();
+  if (streaksError) {
+    req.log.error({ err: streaksError }, 'Failed to compute streaks (degraded — leaderboard will show 0-day streaks)');
+  }
+
+  const { experience: experienceByProfileId, error: experienceError } = await getExperienceByProfile(data);
+  if (experienceError) {
+    req.log.error({ err: experienceError }, 'Failed to compute experience (degraded — leaderboard will show level 1)');
+  }
+
   return sendSuccess(
     res,
-    data.map(toProfileByDepositsResponseDTO(badgesByProfileId, depositSumsByWallet)),
+    data.map(
+      toProfileByDepositsResponseDTO(
+        badgesByProfileId,
+        depositSumsByWallet,
+        streaksByProfileId,
+        experienceByProfileId,
+      ),
+    ),
     '',
   );
 });

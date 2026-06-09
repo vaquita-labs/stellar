@@ -4,12 +4,7 @@ import Image from 'next/image';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProfileAverageResponseDTO } from '@/core-ui/types';
-import {
-  useProfileData,
-  useProfileExperience,
-  useProfilesByAverageDepositsData,
-  useProfileStreak,
-} from '../../../hooks';
+import { useProfileData, useProfilesByAverageDepositsData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
 import {
@@ -19,7 +14,6 @@ import {
   getLeaderboardUsername,
 } from './LeaderboardCard';
 import { LeaderboardSubHeader, SortDirection, SortKey } from './LeaderboardSubHeader';
-import { derivePlaceholderUserStats } from './userStatsPlaceholder';
 
 const SKELETON_ROWS = 3;
 
@@ -155,10 +149,6 @@ function LeaderboardFeed({ rows }: { rows: LeaderboardCardData[] }) {
 
 function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardCardData[] {
   const { walletAddress: currentUserWallet } = useConfigStore();
-  // Real stats for the current user only — every other row falls back to
-  // the deterministic placeholder until the API ships per-user XP/streak.
-  const { data: streakData } = useProfileStreak();
-  const { data: experienceData } = useProfileExperience();
 
   return useMemo(() => {
     const ranked = defaultRank(profiles);
@@ -167,31 +157,28 @@ function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardC
         !!currentUserWallet &&
         currentUserWallet.toLowerCase() === profile.walletAddress.toLowerCase();
 
-      const placeholder = derivePlaceholderUserStats(profile.walletAddress);
-
-      const realStreak = isCurrentUser
-        ? (streakData?.yesterdayStreak ?? 0) + (streakData?.todayStreak ? 1 : 0)
-        : null;
-      const realExperience = isCurrentUser ? experienceData?.experience ?? null : null;
-      // Lightweight "level" derivation from XP: every 100 XP = +1 level.
-      const realLevel =
-        realExperience !== null ? Math.max(1, Math.floor(realExperience / 100) + 1) : null;
+      // Lightweight "level" derivation from the real XP the API now ships per
+      // profile: every 100 XP = +1 level, minimum level 1. Coerce the gamification
+      // fields here so a stale react-query cache from before these fields existed
+      // (global staleTime is Infinity) can't render the literal text "undefined"
+      // in a card before the background refetch lands.
+      const level = Math.max(1, Math.floor((profile.experience ?? 0) / 100) + 1);
 
       return {
         position: index + 1,
         walletAddress: profile.walletAddress,
         username: getLeaderboardUsername(profile.nickname, profile.walletAddress),
         avatarUrl: profile.avatarUrl,
-        level: realLevel ?? placeholder.level,
-        streak: realStreak ?? placeholder.streak,
-        badges: profile.badges,
-        // TODO: Replace with real likes and comments once the API ships thems
+        level,
+        streak: profile.streak ?? 0,
+        badges: profile.badges ?? 0,
+        // TODO: Replace with real likes and comments once the API ships them.
         likesSeed: 0,
         commentsSeed: 0,
         isCurrentUser,
       };
     });
-  }, [profiles, currentUserWallet, streakData, experienceData]);
+  }, [profiles, currentUserWallet]);
 }
 
 /* ------------------------------------------------------------------ */
