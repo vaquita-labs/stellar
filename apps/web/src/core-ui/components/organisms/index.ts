@@ -15,6 +15,8 @@ export * from './Tutorial';
 export * from './ClaimReward';
 export * from './CoinAnimation';
 export * from './StreakModal';
+export * from './CoinsModal';
+export * from './ExperienceModal';
 export * from './ShopModal';
 export * from './DailyRewardModal';
 export * from './MoodMessageModal';

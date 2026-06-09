@@ -801,6 +801,20 @@
     "coinAnimation": {
       "coinAlt": "Coin"
     },
+    "coins": {
+      "balanceLabel_one": "{{count}} coin",
+      "balanceLabel_other": "{{count}} coins",
+      "coinAlt": "coins",
+      "description": "Coins are your in-game currency. Earn them by saving and collecting your daily reward, then spend them in the shop to decorate your map.",
+      "earn": {
+        "daily": "Collect your daily reward",
+        "deposits": "Make and grow your deposits",
+        "streak": "Keep your daily streak alive"
+      },
+      "earnTitle": "Ways to earn",
+      "title": "Coins",
+      "viewStats": "View full stats"
+    },
     "countdown": {
       "comeBackIn": "Moo! Come back in",
       "hrs": "Hrs",
@@ -824,6 +838,15 @@
       "success_one": "You earned {{count}} coin!",
       "success_other": "You earned {{count}} coins!",
       "title": "Daily Reward"
+    },
+    "experience": {
+      "description": "You earn XP every time you save and keep your streak. Reach new levels to show off your saving progress!",
+      "levelLabel": "Level {{level}}",
+      "levelProgress": "Level progress",
+      "title": "Experience",
+      "totalExperience": "Total experience",
+      "viewStats": "View full stats",
+      "xpAlt": "experience"
     },
     "mood": {
       "excited": {

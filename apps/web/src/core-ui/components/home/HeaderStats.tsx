@@ -17,13 +17,15 @@ import {
 } from '../../hooks';
 import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
-import { BankAPYModal, StreakModal } from '../organisms';
+import { BankAPYModal, CoinsModal, ExperienceModal, StreakModal } from '../organisms';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
 import { EarnChip } from './EarnChip';
 
 export const HeaderStats = () => {
   const { t } = useTranslation();
   const [showStreakModal, setShowStreakModal] = useState(false);
+  const [showCoinsModal, setShowCoinsModal] = useState(false);
+  const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const { walletAddress, token, lockPeriod } = useConfigStore();
   const hideBalance = useHideBalance();
@@ -66,7 +68,12 @@ export const HeaderStats = () => {
 
   const firstName = profileData?.nickname || profileData?.fullName?.split(' ')[0] || '';
 
-  const goldCoinRef = useRef<HTMLDivElement>(null);
+  // Callback ref so the coin-animation target can live on either the editing-map
+  // div or the stats-bar button (which opens the coins modal) without a type clash.
+  const goldCoinRef = useRef<HTMLElement | null>(null);
+  const setGoldCoinRef = useCallback((el: HTMLElement | null) => {
+    goldCoinRef.current = el;
+  }, []);
   const setPositions = useElementPositionsStore((store) => store.setPositions);
   useEffect(() => {
     setPositions(GOLD_COIN, () => {
@@ -92,7 +99,7 @@ export const HeaderStats = () => {
             }}
             rightSlot={
               <div className="flex items-center gap-1.5">
-                <div ref={goldCoinRef} className="flex items-center gap-1">
+                <div ref={setGoldCoinRef} className="flex items-center gap-1">
                   <Image
                     src="/icons/global/coin.png"
                     alt={t('home.stats.goldCoinAlt', 'Gold Coin')}
@@ -200,7 +207,12 @@ export const HeaderStats = () => {
 
           <div className="w-px h-4 bg-black/10" />
 
-          <div ref={goldCoinRef} className="flex items-center gap-1.5 flex-1 justify-center">
+          <button
+            ref={setGoldCoinRef}
+            type="button"
+            onClick={() => setShowCoinsModal(true)}
+            className="flex items-center gap-1.5 flex-1 justify-center bg-transparent"
+          >
             <Image
               src="/icons/global/coin.png"
               alt={t('home.stats.goldCoinAlt', 'Gold Coin')}
@@ -210,11 +222,15 @@ export const HeaderStats = () => {
               priority
             />
             <span className="text-sm font-bold text-black tabular-nums">{goldCoins}</span>
-          </div>
+          </button>
 
           <div className="w-px h-4 bg-black/10" />
 
-          <Link href="/profile/summary" className="flex items-center gap-1.5 flex-1 justify-center">
+          <button
+            type="button"
+            onClick={() => setShowExperienceModal(true)}
+            className="flex items-center gap-1.5 flex-1 justify-center bg-transparent"
+          >
             <Image
               src="/icons/global/star.png"
               alt={t('home.stats.experienceAlt', 'Experience')}
@@ -226,11 +242,15 @@ export const HeaderStats = () => {
             <span className="text-sm font-bold text-black tabular-nums">
               {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </span>
-          </Link>
+          </button>
         </div>
       </div>
 
       {showStreakModal && <StreakModal open={showStreakModal} onOpenChange={() => setShowStreakModal(false)} />}
+      {showCoinsModal && <CoinsModal open={showCoinsModal} onOpenChange={() => setShowCoinsModal(false)} coins={goldCoins} />}
+      {showExperienceModal && (
+        <ExperienceModal open={showExperienceModal} onOpenChange={() => setShowExperienceModal(false)} experience={experience} />
+      )}
       {showBankAPYModal && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
     </div>
   );
