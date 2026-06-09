@@ -44,24 +44,20 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
       open={open}
       onOpenChange={onOpenChange}
       title={t('rewards.streak.title', 'Streak')}
-      titleIcon="/icons/global/streak_face.png"
-      titleIconAlt={t('rewards.streak.streakAlt', 'streak')}
       size="md"
     >
       <div className="space-y-6 mb-2">
         {/* Hero — big streak count */}
-        <div className="flex flex-col items-center gap-3 pt-1">
+        <div className="flex flex-col items-center gap-2 pt-1">
           <div className="relative flex items-center justify-center">
-            <span className="absolute inset-0 rounded-full bg-primary/30 blur-xl" aria-hidden />
-            <span className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/15 border border-black border-b-2">
-              <Image
-                src="/icons/global/streak_face.png"
-                alt={t('rewards.streak.streakAlt', 'streak')}
-                width={44}
-                height={44}
-                className="object-contain"
-              />
-            </span>
+            <span className="absolute inset-0 rounded-full bg-primary/30 blur-2xl" aria-hidden />
+            <Image
+              src="/icons/global/streak_face.png"
+              alt={t('rewards.streak.streakAlt', 'streak')}
+              width={72}
+              height={72}
+              className="relative object-contain"
+            />
           </div>
           <div className="text-center">
             <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
@@ -123,12 +119,6 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
               );
             })}
           </div>
-          <p className="mt-1 text-center text-xs text-gray-500">
-            {t(
-              'rewards.streak.weeklyHint',
-              "Get a new tile every time you increase your streak! The colored icons show days you've completed, while gray icons indicate missed days.",
-            )}
-          </p>
         </div>
 
         {/* View full history */}
