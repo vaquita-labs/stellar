@@ -5,7 +5,7 @@ import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
   useApyByLockPeriod,
@@ -18,6 +18,7 @@ import {
 import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
 import { BankAPYModal, StreakModal } from '../organisms';
+import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
 import { EarnChip } from './EarnChip';
 
 export const HeaderStats = () => {
@@ -39,10 +40,23 @@ export const HeaderStats = () => {
   const { data: experienceData } = useProfileExperience();
   const { isLoading: apyLoading } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
-  const estimatedEarnings = activeDeposits.reduce(
-    (acc, d) => acc + (d.vaquitaInterest ?? 0) + (d.protocolInterest ?? 0) + (d.blendInterest ?? 0),
-    0,
-  );
+
+  // Ganancia estimada (proyección a vencimiento) sumada desde cada depósito,
+  // que reporta su estimación según el APY de su propio lock period.
+  const [earningsById, setEarningsById] = useState<Record<number, DepositEarnings>>({});
+  const reportEarnings = useCallback((id: number, earnings: DepositEarnings) => {
+    setEarningsById((prev) => {
+      const current = prev[id];
+      if (current && current.vaquita === earnings.vaquita && current.protocol === earnings.protocol) {
+        return prev;
+      }
+      return { ...prev, [id]: earnings };
+    });
+  }, []);
+  const estimatedEarnings = activeDeposits.reduce((acc, d) => {
+    const earnings = earningsById[d.id];
+    return earnings ? acc + earnings.vaquita + earnings.protocol : acc;
+  }, 0);
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -99,6 +113,10 @@ export const HeaderStats = () => {
 
   return (
     <div className="w-full relative">
+      {/* Reporta la ganancia estimada de cada depósito activo para el EarnChip. */}
+      {activeDeposits.map((d) => (
+        <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
+      ))}
       <div className="w-full px-4 pt-4 pb-4 bg-primary rounded-g">
         <div className="max-w-xl mx-auto flex items-center gap-3">
           <Link href="/profile" aria-label={t('home.stats.profileAria', 'Profile')} className="relative shrink-0">
