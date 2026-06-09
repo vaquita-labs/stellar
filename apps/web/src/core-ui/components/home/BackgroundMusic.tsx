@@ -63,7 +63,6 @@ export function BackgroundMusic() {
 
   return (
     <>
-      <audio ref={audioRef} src="/audio/bg.mp3" preload="auto" />
       <button
         id="music-toggle-button"
         className="absolute top-14 md:top-12 right-16 md:right-24 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center rounded-lg bg-transparent hover:opacity-80 transition-opacity"
