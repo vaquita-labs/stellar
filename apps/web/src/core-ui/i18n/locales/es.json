@@ -541,6 +541,85 @@
   "nav": {
     "primaryAriaLabel": "Principal"
   },
+  "notificationsCenter": {
+    "bellAria": "Notificaciones",
+    "empty": "Aún no hay notificaciones",
+    "emptyFiltered": "Prueba cambiando los filtros para ver más.",
+    "filters": {
+      "date": {
+        "all": "Todas",
+        "month": "Últimos 30 días",
+        "today": "Hoy",
+        "week": "Últimos 7 días"
+      },
+      "dateAria": "Filtrar por fecha",
+      "type": {
+        "all": "Todas",
+        "deposit": "Depósitos",
+        "friend": "Amigos",
+        "reward": "Recompensas",
+        "streak": "Racha",
+        "system": "Novedades"
+      },
+      "typeAria": "Filtrar por tipo"
+    },
+    "groups": {
+      "today": "Hoy",
+      "yesterday": "Ayer"
+    },
+    "markAllRead": "Marcar todas como leídas",
+    "mock": {
+      "depositUnlocked": {
+        "body": "Uno de tus depósitos llegó a su fecha de desbloqueo.",
+        "title": "Depósito desbloqueado"
+      },
+      "depositYield": {
+        "body": "Tus ahorros acaban de ganar +${{amount}} USDC en recompensas.",
+        "title": "Tus ahorros generaron recompensas"
+      },
+      "friendJoined": {
+        "body": "{{name}} acaba de unirse a Vaquita. ¡Salúdale!",
+        "title": "{{name}} se unió a Vaquita"
+      },
+      "friendSaved": {
+        "body": "{{name}} depositó ${{amount}} USDC en ahorros.",
+        "title": "{{name}} está ahorrando"
+      },
+      "goldCoins": {
+        "body": "Recibiste {{amount}} monedas de oro. ¡Gástalas en la tienda!",
+        "title": "Monedas ganadas"
+      },
+      "levelUp": {
+        "body": "Alcanzaste el nivel {{level}}. ¡Sigue así!",
+        "title": "¡Subiste de nivel!"
+      },
+      "newFeature": {
+        "body": "Decora tu granja con nuevos artículos de la tienda.",
+        "title": "Nuevo en Vaquita"
+      },
+      "streakMilestone": {
+        "body": "Completaste una racha de {{days}} días. ¡Increíble!",
+        "title": "¡Racha de {{days}} días!"
+      },
+      "streakReminder": {
+        "body": "Ahorra hoy para mantener tu racha viva.",
+        "title": "¡No pierdas tu racha!"
+      },
+      "welcome": {
+        "body": "Empieza a ahorrar y mira crecer tu granja.",
+        "title": "¡Bienvenido a Vaquita!"
+      }
+    },
+    "mockNote": "Las notificaciones son de prueba por ahora. Pronto se integrarán con el backend.",
+    "time": {
+      "hoursAgo_one": "hace {{count}}h",
+      "hoursAgo_other": "hace {{count}}h",
+      "justNow": "Justo ahora",
+      "minutesAgo_one": "hace {{count}}m",
+      "minutesAgo_other": "hace {{count}}m"
+    },
+    "title": "Notificaciones"
+  },
   "onboarding": {
     "demo": {
       "title": "Aprende a ahorrar con Vaquita",

@@ -541,6 +541,85 @@
   "nav": {
     "primaryAriaLabel": "Primary"
   },
+  "notificationsCenter": {
+    "bellAria": "Notifications",
+    "empty": "No notifications here yet",
+    "emptyFiltered": "Try changing the filters to see more.",
+    "filters": {
+      "date": {
+        "all": "All",
+        "month": "Last 30 days",
+        "today": "Today",
+        "week": "Last 7 days"
+      },
+      "dateAria": "Filter by date",
+      "type": {
+        "all": "All",
+        "deposit": "Deposits",
+        "friend": "Friends",
+        "reward": "Rewards",
+        "streak": "Streak",
+        "system": "News"
+      },
+      "typeAria": "Filter by type"
+    },
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "markAllRead": "Mark all as read",
+    "mock": {
+      "depositUnlocked": {
+        "body": "One of your deposits reached its unlock date.",
+        "title": "Deposit unlocked"
+      },
+      "depositYield": {
+        "body": "Your savings just earned +${{amount}} USDC in rewards.",
+        "title": "Your savings earned rewards"
+      },
+      "friendJoined": {
+        "body": "{{name}} just joined Vaquita. Say hi!",
+        "title": "{{name}} joined Vaquita"
+      },
+      "friendSaved": {
+        "body": "{{name}} deposited ${{amount}} USDC in savings.",
+        "title": "{{name}} is saving"
+      },
+      "goldCoins": {
+        "body": "You received {{amount}} gold coins. Spend them in the shop!",
+        "title": "Coins earned"
+      },
+      "levelUp": {
+        "body": "You reached level {{level}}. Keep it up!",
+        "title": "Level up!"
+      },
+      "newFeature": {
+        "body": "Decorate your farm with new items from the shop.",
+        "title": "New in Vaquita"
+      },
+      "streakMilestone": {
+        "body": "You completed a {{days}}-day streak. Amazing!",
+        "title": "{{days}}-day streak!"
+      },
+      "streakReminder": {
+        "body": "Save today to keep your streak alive.",
+        "title": "Don't lose your streak!"
+      },
+      "welcome": {
+        "body": "Start saving and watch your farm grow.",
+        "title": "Welcome to Vaquita!"
+      }
+    },
+    "mockNote": "Notifications are mocked for now. Backend integration coming soon.",
+    "time": {
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "justNow": "Just now",
+      "minutesAgo_one": "{{count}}m ago",
+      "minutesAgo_other": "{{count}}m ago"
+    },
+    "title": "Notifications"
+  },
   "onboarding": {
     "demo": {
       "title": "Learn how to save with Vaquita",
