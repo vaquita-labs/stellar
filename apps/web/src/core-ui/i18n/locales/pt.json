@@ -765,7 +765,10 @@
       "todayStreakMissed": "Hoje — sequência perdida",
       "totalExperience": "Experiência total",
       "xpLevel": "XP e nível",
-      "xpLevelSub": "Progresso até o próximo nível"
+      "xpLevelSub": "Progresso até o próximo nível",
+      "goldCoins": "Moedas de ouro",
+      "goldCoinsSub": "As moedas que você está ganhando",
+      "usdcCurrentlySaved": "USDC poupado atualmente"
     }
   },
   "rewards": {

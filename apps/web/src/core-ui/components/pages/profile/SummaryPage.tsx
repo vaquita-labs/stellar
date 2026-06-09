@@ -2,8 +2,14 @@
 
 import { ONE_DAY } from '@/core-ui/config/constants';
 import { deriveLevel } from '@/core-ui/helpers';
+import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { useDepositsComplete } from '@/core-ui/hooks';
-import { useProfileData, useProfileExperience, useProfileStreak } from '@/core-ui/hooks/profile';
+import {
+  useProfileData,
+  useProfileExperience,
+  useProfileRewards,
+  useProfileStreak,
+} from '@/core-ui/hooks/profile';
 import { DepositResponseDTO } from '@/core-ui/types';
 import Image from 'next/image';
 import React, { useMemo, useState } from 'react';
@@ -293,10 +299,75 @@ function StreakCalendar() {
   );
 }
 
+// Each way to earn gold coins, paired with the global icon that represents it.
+// Mirrors the CoinsModal so both surfaces describe earning the same way.
+const GOLD_EARN_WAYS = [
+  { key: 'daily', icon: '/icons/global/coin.png' },
+  { key: 'streak', icon: '/icons/global/streak_face.png' },
+  { key: 'deposits', icon: '/icons/global/trophy.png' },
+] as const;
+
+// Gold coins: the in-game currency. Distinct from real USDC savings — this
+// panel shows the current balance plus the ways the player keeps earning them.
+function GoldCoins() {
+  const { t } = useTranslation();
+  const { data, isLoading } = useProfileRewards();
+  const coins = data?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
+
+  if (isLoading) return <PanelLoading />;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Hero — current gold coin balance */}
+      <div className="flex items-center gap-4 rounded-xl bg-primary/10 border border-black/10 px-4 py-3">
+        <div className="relative flex items-center justify-center">
+          <span className="absolute inset-0 rounded-full bg-primary/30 blur-xl" aria-hidden />
+          <Image
+            src="/icons/global/coin.png"
+            alt={t('rewards.coins.coinAlt', 'coins')}
+            width={48}
+            height={48}
+            className="relative object-contain"
+          />
+        </div>
+        <div className="flex flex-col leading-none">
+          <span className="text-3xl font-extrabold text-black tabular-nums">
+            {coins.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </span>
+          <span className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+            {t('rewards.coins.balanceLabel', '{{count}} coins', { count: coins })}
+          </span>
+        </div>
+      </div>
+
+      {/* Ways to earn */}
+      <div className="flex flex-col gap-2.5">
+        <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+          {t('rewards.coins.earnTitle', 'Ways to earn')}
+        </h3>
+        <ul className="flex flex-col gap-2">
+          {GOLD_EARN_WAYS.map(({ key, icon }) => (
+            <li key={key} className="flex items-center gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                <Image src={icon} alt="" width={18} height={18} className="object-contain" />
+              </span>
+              <span className="text-sm text-gray-700">{t(`rewards.coins.earn.${key}`, key)}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function DepositsAreaChart() {
   const { t } = useTranslation();
   const { data, isLoading } = useDepositsComplete();
-  const weekly = useMemo(() => buildWeeklyDeposits(data?.deposits ?? []), [data?.deposits]);
+  const deposits = data?.deposits ?? [];
+  const weekly = useMemo(() => buildWeeklyDeposits(deposits), [deposits]);
+  // Real USDC currently saved (sum of active deposits) — the headline figure for
+  // this panel, kept separate from the weekly contribution total below.
+  const { activeDepositsTotalAmount } = useMemo(() => getDepositsData(deposits), [deposits]);
 
   // SVG viewBox is a convenient unitless canvas — we paint at 320×140 logical
   // units and let CSS scale it responsively via preserveAspectRatio="none".
@@ -309,6 +380,9 @@ function DepositsAreaChart() {
   const innerH = H - PADDING_TOP - PADDING_BOTTOM;
   const max = Math.max(...weekly.map((d) => d.amount)) || 1;
   const total = weekly.reduce((acc, d) => acc + d.amount, 0);
+  // Index of the heaviest week — annotated on the chart so the curve reads as
+  // data, not decoration. Falls back to the last week when nothing was saved.
+  const peakIdx = weekly.reduce((best, d, i, arr) => (d.amount > arr[best].amount ? i : best), 0);
 
   const points = weekly.map((d, i) => {
     const x = PADDING_X + (innerW / (weekly.length - 1)) * i;
@@ -333,9 +407,33 @@ function DepositsAreaChart() {
 
   if (isLoading) return <PanelLoading />;
 
+  const peak = points[peakIdx];
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative">
+      {/* Hero — real USDC currently saved (distinct from gold coins). */}
+      <div className="flex items-center gap-4 rounded-xl border border-black/10 bg-[#2775CA]/10 px-4 py-3">
+        <div className="relative flex items-center justify-center">
+          <span className="absolute inset-0 rounded-full bg-[#2775CA]/25 blur-xl" aria-hidden />
+          <Image
+            src="/icons/global/usdc.png"
+            alt="USDC"
+            width={44}
+            height={44}
+            className="relative object-contain"
+          />
+        </div>
+        <div className="flex flex-col leading-none">
+          <span className="text-3xl font-extrabold text-black tabular-nums">
+            ${activeDepositsTotalAmount.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+          </span>
+          <span className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+            {t('profilePages.summary.usdcCurrentlySaved', 'USDC currently saved')}
+          </span>
+        </div>
+      </div>
+
+      <div className="relative text-[#2775CA]">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full h-40"
@@ -345,8 +443,8 @@ function DepositsAreaChart() {
         >
           <defs>
             <linearGradient id="depositsArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="currentColor" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="currentColor" stopOpacity="0.05" />
+              <stop offset="0%" stopColor="currentColor" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="currentColor" stopOpacity="0.04" />
             </linearGradient>
           </defs>
 
@@ -363,8 +461,8 @@ function DepositsAreaChart() {
             />
           ))}
 
-          {/* Area + line, tinted via currentColor so it inherits the primary. */}
-          <g className="text-primary">
+          {/* Area + line, tinted via currentColor so it inherits the USDC blue. */}
+          <g>
             <path d={areaPath} fill="url(#depositsArea)" />
             <path
               d={linePath}
@@ -374,13 +472,35 @@ function DepositsAreaChart() {
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            {points.map((p) => (
-              <g key={p.week}>
-                <circle cx={p.x} cy={p.y} r={4} fill="white" stroke="black" strokeWidth={1.5} />
-                <circle cx={p.x} cy={p.y} r={1.8} fill="black" />
-              </g>
-            ))}
+            {points.map((p, i) => {
+              const isPeak = i === peakIdx && p.amount > 0;
+              return (
+                <g key={p.week}>
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={isPeak ? 5 : 3.5}
+                    fill={isPeak ? 'currentColor' : 'white'}
+                    stroke={isPeak ? 'white' : 'currentColor'}
+                    strokeWidth={isPeak ? 2 : 1.5}
+                  />
+                </g>
+              );
+            })}
           </g>
+
+          {/* Peak-week value callout, drawn above its point. */}
+          {peak.amount > 0 && (
+            <text
+              x={Math.min(Math.max(peak.x, PADDING_X + 14), W - PADDING_X - 14)}
+              y={Math.max(peak.y - 8, 10)}
+              textAnchor="middle"
+              className="fill-[#2775CA]"
+              style={{ fontSize: 10, fontWeight: 800 }}
+            >
+              ${peak.amount.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            </text>
+          )}
 
           {/* X-axis week labels (week-start date) */}
           {points.map((p) => (
@@ -397,7 +517,7 @@ function DepositsAreaChart() {
           ))}
         </svg>
       </div>
-      <div className="flex items-center justify-between rounded-xl bg-primary/10 border border-black/10 px-3 py-2">
+      <div className="flex items-center justify-between rounded-xl bg-[#2775CA]/10 border border-black/10 px-3 py-2">
         <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">
           {t('profilePages.summary.last6Weeks', 'Last 6 weeks')}
         </span>
@@ -464,11 +584,12 @@ export function SummaryPage() {
       </Panel>
 
       <Panel
+        id="gold-coins"
         icon="/icons/global/coin.png"
-        title={t('profilePages.summary.depositsOverTime', 'Deposits over time')}
-        subtitle={t('profilePages.summary.depositsOverTimeSub', 'Weekly contributions')}
+        title={t('profilePages.summary.goldCoins', 'Gold coins')}
+        subtitle={t('profilePages.summary.goldCoinsSub', "Coins you're earning")}
       >
-        <DepositsAreaChart />
+        <GoldCoins />
       </Panel>
 
       <Panel
@@ -478,6 +599,15 @@ export function SummaryPage() {
         subtitle={t('profilePages.summary.xpLevelSub', 'Progress to your next level')}
       >
         <XpProgress />
+      </Panel>
+
+      <Panel
+        id="usdc-savings"
+        icon="/icons/global/usdc.png"
+        title={t('profilePages.summary.depositsOverTime', 'Deposits over time')}
+        subtitle={t('profilePages.summary.depositsOverTimeSub', 'Weekly contributions')}
+      >
+        <DepositsAreaChart />
       </Panel>
     </MockedSubPageLayout>
   );

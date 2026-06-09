@@ -765,7 +765,10 @@
       "todayStreakMissed": "Today streak missed",
       "totalExperience": "Total experience",
       "xpLevel": "XP & level",
-      "xpLevelSub": "Progress to your next level"
+      "xpLevelSub": "Progress to your next level",
+      "goldCoins": "Gold coins",
+      "goldCoinsSub": "Coins you're earning",
+      "usdcCurrentlySaved": "USDC currently saved"
     }
   },
   "rewards": {
