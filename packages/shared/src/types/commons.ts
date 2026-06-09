@@ -298,6 +298,12 @@ export interface ProfileAverageResponseDTO {
   timestamp: number;
   delay: number;
   badges: number;
+  // Real per-profile gamification signals served by the leaderboard endpoint
+  // (replaced the wallet-hash placeholder). `streak` is the display streak
+  // (yesterdayStreak + today's check-in); `experience` is total XP, from which
+  // the UI derives level (every 100 XP = +1 level).
+  streak: number;
+  experience: number;
 }
 
 export interface UserBalanceResponseDTO {
