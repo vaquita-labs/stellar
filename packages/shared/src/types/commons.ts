@@ -244,6 +244,13 @@ export interface FollowCountsResponseDTO {
   followers: number;
 }
 
+export interface FollowingWalletsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  /** Wallet addresses the viewer currently follows. */
+  following: string[];
+}
+
 export type MapObject = {
   position: [ number, number, number ];
   type: MapObjectType;

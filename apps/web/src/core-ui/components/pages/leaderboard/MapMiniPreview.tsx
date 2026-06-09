@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useMapSnapshot } from './useMapSnapshot';
 
 interface MapMiniPreviewProps {
   walletAddress: string;
-  /** Optional small label (e.g. "LV 3") pinned to the bottom-right. */
+  /** Optional small label (e.g. "LV 3") pinned to the bottom-left. */
   caption?: string;
+  /** Optional badge node (e.g. the rank pill) pinned to the bottom-right. */
+  badge?: ReactNode;
 }
 
 /** Dotted backdrop — the resting/loading state, identical to the old placeholder. */
@@ -32,7 +34,7 @@ function DottedBackdrop() {
  * Lazy: the data + snapshot are only produced once the tile scrolls near the
  * viewport, so a long board stays cheap.
  */
-export function MapMiniPreview({ walletAddress, caption }: MapMiniPreviewProps) {
+export function MapMiniPreview({ walletAddress, caption, badge }: MapMiniPreviewProps) {
   const tileRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -68,10 +70,12 @@ export function MapMiniPreview({ walletAddress, caption }: MapMiniPreviewProps) 
       )}
 
       {caption && (
-        <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
+        <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
           {caption}
         </span>
       )}
+
+      {badge && <div className="absolute bottom-2 right-2">{badge}</div>}
     </div>
   );
 }

@@ -5,6 +5,7 @@ export * from './useProfileAchievements';
 export * from './useProfileDailyCheck';
 export * from './useProfileData';
 export * from './useFollowCounts';
+export * from './useFollowingWallets';
 export * from './useFriendSuggestions';
 export * from './useProfileExperience';
 export * from './useProfileMapObjectsAvailable';
