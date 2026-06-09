@@ -464,8 +464,8 @@
     "stats": {
       "experienceAlt": "Experiência",
       "goldCoinAlt": "Moeda de ouro",
-      "greeting": "Bora lá! 🐮",
-      "greetingNamed": "Bora lá, {{name}}! 🐮",
+      "greeting": "Suas economias",
+      "greetingNamed": "Suas economias, <b>{{name}}</b>",
       "profileAlt": "Perfil",
       "profileAria": "Perfil",
       "streakAlt": "Sequência"
