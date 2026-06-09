@@ -27,6 +27,8 @@ export const useProfilesByAverageDepositsData = () => {
           timestamp: profile?.timestamp ?? 0,
           delay: profile?.delay ?? 0,
           badges: profile?.badges ?? 0,
+          streak: profile?.streak ?? 0,
+          experience: profile?.experience ?? 0,
         };
 
         return p;
@@ -36,5 +38,11 @@ export const useProfilesByAverageDepositsData = () => {
     enabled: !!network?.networkName,
     refetchOnReconnect: true,
     refetchOnWindowFocus: true,
+    // The app's global default is staleTime: Infinity + refetchOnMount: false, so
+    // once cached this list never refreshes on navigation — leaving e.g. a freshly
+    // changed avatar stale until the 5-min interval fires. 'always' forces a fresh
+    // fetch every time the page mounts, so the board reflects the latest profiles
+    // (avatar, nickname, badges) on each visit.
+    refetchOnMount: 'always',
   });
 };

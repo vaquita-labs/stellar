@@ -1,6 +1,7 @@
 'use client';
 
 import { Spinner, Switch, toast } from '@heroui/react';
+import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -18,6 +19,19 @@ export function EditProfilePage() {
   const { walletAddress, network } = useConfigStore();
   const { data, isLoading, refetch } = useProfileData();
   const { saveProfile, saveProfileFlags, uploadAvatar, removeAvatar } = useRestProfile();
+  const queryClient = useQueryClient();
+
+  // The leaderboard (and any other list keyed by ['profiles', ...]) caches each
+  // row's avatarUrl with staleTime: Infinity and refetchOnMount: false, so it
+  // keeps showing the old avatar after a change. `refetchType: 'all'` is required
+  // here: while on this edit page the leaderboard query is unmounted (inactive),
+  // and a plain invalidate only refetches ACTIVE queries — the inactive one would
+  // just be marked stale and, with refetchOnMount: false, never refetch on the way
+  // back. 'all' forces the inactive query to refetch in the background now, so the
+  // fresh URL is already cached when the user returns to /leaderboard.
+  const invalidateProfileLists = () => {
+    void queryClient.invalidateQueries({ queryKey: ['profiles'], refetchType: 'all' });
+  };
 
   const initialNickname = (data?.nickname ?? '').trim();
   const initialEmail = (data?.email ?? '').trim();
@@ -102,6 +116,7 @@ export function EditProfilePage() {
         setAvatarSrc(avatarUrl);
         toast.success(t('profilePages.edit.photoUpdated', 'Photo updated'), { timeout: 2000 });
         refetch();
+        invalidateProfileLists();
       } else {
         clearPreview();
         setAvatarSrc(prevSrc);
@@ -130,6 +145,7 @@ export function EditProfilePage() {
         setAvatarSrc(DEFAULT_AVATAR);
         toast.success(t('profilePages.edit.photoRemoved', 'Photo removed'), { timeout: 2000 });
         refetch();
+        invalidateProfileLists();
       } else {
         setAvatarSrc(prevSrc);
         toast.danger(t('profilePages.edit.couldNotRemovePhoto', 'Could not remove photo'), { description: message, timeout: 4000 });
