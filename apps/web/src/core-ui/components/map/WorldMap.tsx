@@ -110,7 +110,9 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
         }}
-        className="h-dvh"
+        // h-full (not h-dvh): the canvas must track its container, so screens
+        // that stack a header above the map (leaderboard detail) don't scroll.
+        className="h-full"
         key={`${width}_${height}_${JSON.stringify(tiles || [])}`}
       >
         <DayCycleSky />
