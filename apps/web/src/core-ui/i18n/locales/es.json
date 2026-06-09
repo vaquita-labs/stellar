@@ -885,7 +885,8 @@
       "home": "Inicio",
       "leaderboard": "Ranking",
       "profile": "Perfil",
-      "shop": "Tienda"
+      "shop": "Tienda",
+      "soon": "Pronto"
     },
     "notFound": {
       "backHome": "Volver al inicio",

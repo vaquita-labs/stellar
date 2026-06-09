@@ -119,14 +119,15 @@ export const HeaderStats = () => {
             </span>
             <button
               type="button"
-              data-tutorial="tutorial-balance"
               onClick={() => setShowBankAPYModal(true)}
               className="flex items-center gap-2 min-w-0 bg-transparent"
             >
               {depositsLoading && !depositsData ? (
                 <Spinner size="sm" color="current" />
               ) : (
-                <div className='flex justify-end gap-1.5'>
+                // El anclaje del tutorial va aquí (no en el botón, que ocupa toda
+                // la columna) para que el spotlight bordee solo el saldo + APY.
+                <div data-tutorial="tutorial-balance" className='flex justify-end gap-1.5'>
                   <span className="text-2xl font-bold text-black">
                     {hideBalance ? '••••' : `$${activeDepositsTotalAmount.toFixed(2)} ${token?.symbol}`}
                   </span>

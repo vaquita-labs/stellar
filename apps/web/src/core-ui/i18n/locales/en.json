@@ -885,7 +885,8 @@
       "home": "Home",
       "leaderboard": "Leaderboard",
       "profile": "Profile",
-      "shop": "Shop"
+      "shop": "Shop",
+      "soon": "Soon"
     },
     "notFound": {
       "backHome": "Go back to home",

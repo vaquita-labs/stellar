@@ -18,9 +18,9 @@ import { HeaderStats } from '../../home/HeaderStats';
 import { WorldMap } from '../../templates';
 import { BankAPYModal } from '../BankAPYModal';
 import { DepositModal } from '../DepositModal';
+import { TutorialFocusLock } from './TutorialFocusLock';
 import { TutorialOverlay } from './TutorialOverlay';
 import { TutorialPatienceModal } from './TutorialPatienceModal';
-import { TutorialRing } from './TutorialRing';
 import {
   TUTORIAL_ANCHOR_SAVE,
   TUTORIAL_ANCHOR_VAQUITA_CARD,
@@ -299,6 +299,13 @@ export function TutorialExperience() {
         }}
       />
 
+      {/* En el paso de depósito enfocamos SOLO el botón "Deposit": el resto del
+          modal queda difuminado y no clicleable, y el botón parpadea. Reutiliza
+          el selector estable del footer de AppModal (HeroUI). */}
+      {depositOpen && step.id === 'deposit' && (
+        <TutorialFocusLock selector='[data-slot="modal-footer"] button' />
+      )}
+
       {/* Bank Rewards REAL con el depósito simulado inyectado. El detalle/retiro
           se pinta INLINE dentro de este mismo modal (sin un segundo modal). */}
       {bankOpen && (
@@ -341,13 +348,15 @@ export function TutorialExperience() {
         />
       )}
 
-      {/* Guía (sin texto): resalta el depósito para tocarlo dentro del modal */}
-      {bankOpen && !detailOpen && <TutorialRing selector={`[data-tutorial="${TUTORIAL_ANCHOR_VAQUITA_CARD}"]`} />}
+      {/* Guía (sin texto): oscurece todo el modal menos la tarjeta del depósito,
+          que queda nítida, clicleable y con borde parpadeante para tocarla. */}
+      {bankOpen && !detailOpen && <TutorialFocusLock selector={`[data-tutorial="${TUTORIAL_ANCHOR_VAQUITA_CARD}"]`} />}
 
       {/* En find-deposit forzamos el toque en Withdraw (para llegar al aviso de
-          paciencia). Tras verlo dejamos de insistir para que pueda cancelar. */}
+          paciencia): oscurecemos todo el detalle menos ese botón. Tras verlo
+          dejamos de insistir para que pueda cancelar. */}
       {bankOpen && detailOpen && step.id === 'find-deposit' && !showPatience && !patienceAcked && (
-        <TutorialRing selector={`[data-tutorial="${TUTORIAL_ANCHOR_WITHDRAW}"]`} />
+        <TutorialFocusLock selector={`[data-tutorial="${TUTORIAL_ANCHOR_WITHDRAW}"]`} />
       )}
 
       {/* Capa de coachmarks (oculta mientras hay un modal abierto) */}
