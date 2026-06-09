@@ -1,10 +1,11 @@
 'use client';
 
+import { DepositEarnings, DepositEarningsReporter } from '@/core-ui/components/home/DepositEarningsReporter';
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApyByLockPeriod, useDeposit, useDepositsComplete } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
@@ -42,12 +43,32 @@ export function BankAPYModal({
 
   const { deposits, activeDeposits, activeDepositsTotalAmount } = getDepositsData(sourceDeposits);
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
-  // Ganancias acumuladas hasta el momento (no la proyección anual), desglosadas
-  // por su origen para el detalle expandible.
-  const vaquitaEarnings = activeDeposits.reduce((acc, d) => acc + (d.vaquitaInterest ?? 0), 0);
-  const protocolEarnings = activeDeposits.reduce(
-    (acc, d) => acc + (d.protocolInterest ?? 0) + (d.blendInterest ?? 0),
-    0,
+
+  // Ganancia estimada (proyección a vencimiento, la misma que muestra cada
+  // tarjeta de depósito) desglosada por origen. Cada depósito reporta su
+  // estimación según el APY de su propio lock period (ver DepositEarningsReporter),
+  // porque ese APY se obtiene con un hook y no se puede recorrer en bucle aquí.
+  const [earningsById, setEarningsById] = useState<Record<number, DepositEarnings>>({});
+  const reportEarnings = useCallback((id: number, earnings: DepositEarnings) => {
+    setEarningsById((prev) => {
+      const current = prev[id];
+      if (current && current.vaquita === earnings.vaquita && current.protocol === earnings.protocol) {
+        return prev;
+      }
+      return { ...prev, [id]: earnings };
+    });
+  }, []);
+
+  const { vaquitaEarnings, protocolEarnings } = activeDeposits.reduce(
+    (acc, d) => {
+      const earnings = earningsById[d.id];
+      if (earnings) {
+        acc.vaquitaEarnings += earnings.vaquita;
+        acc.protocolEarnings += earnings.protocol;
+      }
+      return acc;
+    },
+    { vaquitaEarnings: 0, protocolEarnings: 0 },
   );
   const totalEstimatedEarnings = vaquitaEarnings + protocolEarnings;
 
@@ -114,6 +135,11 @@ export function BankAPYModal({
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Reporta la ganancia estimada de cada depósito activo para sumar el total. */}
+          {activeDeposits.map((d) => (
+            <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
+          ))}
+
           {/* Métrica principal: total depositado (lo más grande) */}
           <div className="border border-black border-b-2 rounded-xl bg-primary/10 p-4">
             <div className="flex items-center gap-1.5 mb-1">
