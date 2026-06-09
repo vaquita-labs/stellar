@@ -106,7 +106,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
                 size="lg"
                 className="border-2 border-white shadow-lg dark:border-default-100"
               >
-                <Avatar.Image src="/vaquita_working.jpg" />
+                <Avatar.Image src="/vaquita/vaquita_isotipo.svg" className="bg-white object-contain p-2" />
                 <Avatar.Fallback>{displayName.slice(0, 2).toUpperCase()}</Avatar.Fallback>
               </Avatar>
             </Badge>
