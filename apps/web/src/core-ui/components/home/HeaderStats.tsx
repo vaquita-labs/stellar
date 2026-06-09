@@ -130,15 +130,29 @@ export const HeaderStats = () => {
       <div className="w-full px-4 pt-4 pb-4 bg-primary rounded-g">
         <div className="max-w-xl mx-auto flex items-center gap-3">
           <Link href="/profile" aria-label={t('home.stats.profileAria', 'Profile')} className="relative shrink-0">
-            <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center overflow-hidden border border-[#B97204]/30">
-              <Image
-                src="/vaquita/vaquita_isotipo.svg"
-                alt={t('home.stats.profileAlt', 'Profile')}
-                width={42}
-                height={42}
-                className="object-contain"
-                priority
-              />
+            <div className="relative w-14 h-14 rounded-full bg-white flex items-center justify-center overflow-hidden border border-[#B97204]/30">
+              {profileData?.avatarUrl ? (
+                // Real uploaded photo: fill the circle (object-cover). next/image
+                // fetches it server-side and re-serves over https, so an http
+                // MinIO source still renders on an https page.
+                <Image
+                  src={profileData.avatarUrl}
+                  alt={t('home.stats.profileAlt', 'Profile')}
+                  fill
+                  sizes="56px"
+                  className="object-cover"
+                  priority
+                />
+              ) : (
+                <Image
+                  src="/vaquita/vaquita_isotipo.svg"
+                  alt={t('home.stats.profileAlt', 'Profile')}
+                  width={42}
+                  height={42}
+                  className="object-contain"
+                  priority
+                />
+              )}
             </div>
           </Link>
 
