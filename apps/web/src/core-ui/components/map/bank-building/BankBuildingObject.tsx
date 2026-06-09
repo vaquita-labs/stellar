@@ -53,18 +53,30 @@ export default function BankBuildingObject({
       ref={groupRef}
       position={position}
       rotation={rotation}
-      onPointerEnter={(e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        gl.domElement.style.cursor = 'pointer';
-      }}
-      onPointerLeave={(e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        gl.domElement.style.cursor = 'default';
-      }}
-      onClick={(e: ThreeEvent<MouseEvent>) => {
-        e.stopPropagation();
-        onClick?.();
-      }}
+      onPointerEnter={
+        onClick
+          ? (e: ThreeEvent<PointerEvent>) => {
+              e.stopPropagation();
+              gl.domElement.style.cursor = 'pointer';
+            }
+          : undefined
+      }
+      onPointerLeave={
+        onClick
+          ? (e: ThreeEvent<PointerEvent>) => {
+              e.stopPropagation();
+              gl.domElement.style.cursor = 'default';
+            }
+          : undefined
+      }
+      onClick={
+        onClick
+          ? (e: ThreeEvent<MouseEvent>) => {
+              e.stopPropagation();
+              onClick();
+            }
+          : undefined
+      }
     >
       <primitive object={bankBuilding} />
       {goldCoinsToCollect > 0 && (

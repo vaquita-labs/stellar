@@ -328,7 +328,7 @@ export function ProfilePage() {
             className="grid grid-cols-2 gap-3 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
           >
             <SummaryItem
-              icon={hasActiveStreak ? '/icons/global/streak.png' : '/icons/global/streak_freeze.png'}
+              icon={hasActiveStreak ? '/icons/global/streak_face.png' : '/icons/global/streak_freeze_face.png'}
               value={t('profilePages.profile.daysCount', { count: totalStreak, defaultValue: '{{count}} days' })}
               label={t('profilePages.profile.streak', 'Streak')}
             />

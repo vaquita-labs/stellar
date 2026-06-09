@@ -849,6 +849,8 @@
       "cost": "Custo:",
       "current_one": "Sequência atual: {{count}} dia",
       "current_other": "Sequência atual: {{count}} dias",
+      "dayStreakLabel_one": "sequência de {{count}} dia",
+      "dayStreakLabel_other": "sequência de {{count}} dias",
       "description": "Sua sequência representa os dias seguidos de atividade. Mantenha-a para desbloquear recompensas e peças especiais para o seu mapa!",
       "freezeAlt": "congelar",
       "freezeHint": "A Proteção de sequência permite proteger sua sequência por um dia caso não consiga mantê-la. Use com sabedoria para não perder seu progresso!",

@@ -23,7 +23,7 @@ export const StreakButton = () => {
         ) : (
           <>
             <Image
-              src="/icons/global/streak.png"
+              src="/icons/global/streak_face.png"
               alt={t('home.stats.streakAlt', 'Streak')}
               width={typeof window !== 'undefined' && window.innerWidth < 768 ? 24 : 40}
               height={typeof window !== 'undefined' && window.innerWidth < 768 ? 24 : 40}

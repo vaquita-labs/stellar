@@ -183,7 +183,7 @@ export const HeaderStats = () => {
             ) : (
               <>
                 <Image
-                  src="/icons/global/streak.png"
+                  src="/icons/global/streak_face.png"
                   alt={t('home.stats.streakAlt', 'Streak')}
                   width={20}
                   height={20}

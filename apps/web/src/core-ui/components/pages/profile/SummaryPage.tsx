@@ -20,6 +20,8 @@ interface PanelProps {
   subtitle?: string;
   /** Show a small "Soon" pill when the panel is still mocked. */
   soon?: boolean;
+  /** Anchor id so other views (e.g. the streak modal) can deep-link to it. */
+  id?: string;
   children: React.ReactNode;
 }
 
@@ -28,10 +30,13 @@ interface PanelProps {
  * Wraps every metric block so the page reads as a stack of "cards" without
  * needing a heavyweight chart library.
  */
-function Panel({ icon, title, subtitle, soon, children }: PanelProps) {
+function Panel({ icon, title, subtitle, soon, id, children }: PanelProps) {
   const { t } = useTranslation();
   return (
-    <section className="rounded-2xl bg-white border border-black border-b-2 p-4 flex flex-col gap-3">
+    <section
+      id={id}
+      className="rounded-2xl bg-white border border-black border-b-2 p-4 flex flex-col gap-3 scroll-mt-24"
+    >
       <header className="flex items-center gap-2.5">
         <Image src={icon} alt={title} width={28} height={28} className="object-contain" />
         <div className="flex flex-col leading-tight flex-1 min-w-0">
@@ -175,7 +180,7 @@ function StreakCalendar() {
                 aria-label={isToday ? t('profilePages.summary.todayStreakKept', 'Today — streak kept') : t('profilePages.summary.streakKept', 'Streak kept')}
               >
                 <Image
-                  src="/icons/global/streak.png"
+                  src="/icons/global/streak_face.png"
                   alt=""
                   width={22}
                   height={22}
@@ -411,7 +416,8 @@ export function SummaryPage() {
       showSoonBadge={false}
     >
       <Panel
-        icon="/icons/global/streak.png"
+        id="streak-history"
+        icon="/icons/global/streak_face.png"
         title={t('profilePages.summary.streakHistory', 'Streak history')}
         subtitle={t('profilePages.summary.streakHistorySub', 'Days you kept the streak')}
       >
