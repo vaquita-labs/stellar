@@ -69,7 +69,7 @@ function initialsOf(username: string): string {
 /* Sub-components                                                      */
 /* ------------------------------------------------------------------ */
 
-function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: string }) {
+export function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: string }) {
   const palette = AVATAR_PALETTES[hashString(username) % AVATAR_PALETTES.length];
   if (avatarUrl) {
     // next/image fetches the (possibly http) MinIO URL server-side and re-serves
@@ -205,7 +205,7 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
  *  initial state is seeded from the viewer's following-wallets set (so it's
  *  correct on first paint and survives a reload); the toggle mutation patches
  *  that cache optimistically and reconciles on settle. */
-function FollowButton({ username, targetWallet }: { username: string; targetWallet: string }) {
+export function FollowButton({ username, targetWallet }: { username: string; targetWallet: string }) {
   const { t } = useTranslation();
   const toggleFollow = useToggleFollow();
   const { data: followingSet } = useFollowingWallets();

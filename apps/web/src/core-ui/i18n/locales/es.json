@@ -535,6 +535,9 @@
       }
     },
     "title": "Tabla de posiciones",
+    "user": {
+      "noAchievements": "Aún no ha desbloqueado logros"
+    },
     "vaquero": "Vaquero",
     "vaqueroNamed": "Vaquero {{tail}}"
   },

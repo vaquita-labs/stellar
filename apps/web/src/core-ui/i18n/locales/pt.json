@@ -535,6 +535,9 @@
       }
     },
     "title": "Ranking",
+    "user": {
+      "noAchievements": "Ainda não desbloqueou conquistas"
+    },
     "vaquero": "Vaquero",
     "vaqueroNamed": "Vaquero {{tail}}"
   },
