@@ -8,7 +8,7 @@ import { DepositResponseDTO } from '@/core-ui/types';
 import Image from 'next/image';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiPlus, FiTrendingUp } from 'react-icons/fi';
+import { FiTrendingUp } from 'react-icons/fi';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
 /* ------------------------------------------------------------------ */
@@ -109,16 +109,6 @@ function buildWeeklyDeposits(deposits: DepositResponseDTO[]) {
   }
   return buckets;
 }
-
-/* ------------------------------------------------------------------ */
-/* Mocked datasets                                                     */
-/* ------------------------------------------------------------------ */
-
-const SAVINGS_GOALS = [
-  { id: 'g1', title: 'Trip to Cartagena', target: 500, saved: 215, due: 'Dec 2026' },
-  { id: 'g2', title: 'Emergency fund', target: 1000, saved: 320, due: 'Mar 2027' },
-  { id: 'g3', title: 'New laptop', target: 1800, saved: 60, due: 'Aug 2027' },
-];
 
 /* ------------------------------------------------------------------ */
 /* Sub-views                                                           */
@@ -348,46 +338,6 @@ function XpProgress() {
   );
 }
 
-function SavingsGoals() {
-  const { t } = useTranslation();
-  return (
-    <div className="flex flex-col gap-3">
-      {SAVINGS_GOALS.map((g) => {
-        const pct = Math.min(100, (g.saved / g.target) * 100);
-        return (
-          <div
-            key={g.id}
-            className="rounded-xl bg-primary/10 border border-black/10 p-3 flex flex-col gap-2"
-          >
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-extrabold text-black truncate">
-                {t(`profilePages.summary.goals.${g.id}.title`, g.title)}
-              </span>
-              <span className="text-[11px] font-semibold text-gray-500 shrink-0">
-                {t(`profilePages.summary.goals.${g.id}.due`, g.due)}
-              </span>
-            </div>
-            <div className="h-2.5 w-full rounded-full bg-black/10 overflow-hidden">
-              <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
-            </div>
-            <div className="flex items-center justify-between text-[11px] font-semibold tabular-nums">
-              <span className="text-black">${g.saved}</span>
-              <span className="text-gray-500">${g.target}</span>
-            </div>
-          </div>
-        );
-      })}
-      <button
-        type="button"
-        className="mt-1 inline-flex items-center justify-center gap-2 h-11 rounded-md bg-white text-black border border-black border-b-3 text-xs font-bold uppercase tracking-wide hover:bg-white/80 hover:-translate-y-0.5 transition"
-      >
-        <FiPlus className="h-3.5 w-3.5" />
-        {t('profilePages.summary.newGoal', 'New goal')}
-      </button>
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
@@ -425,15 +375,6 @@ export function SummaryPage() {
         subtitle={t('profilePages.summary.xpLevelSub', 'Progress to your next level')}
       >
         <XpProgress />
-      </Panel>
-
-      <Panel
-        icon="/icons/global/trophy.png"
-        title={t('profilePages.summary.savingsGoals', 'Savings goals')}
-        subtitle={t('profilePages.summary.savingsGoalsSub', "What you're working toward")}
-        soon
-      >
-        <SavingsGoals />
       </Panel>
     </MockedSubPageLayout>
   );
