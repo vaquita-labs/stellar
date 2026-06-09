@@ -204,20 +204,21 @@ export function ProfilePage() {
 
   // The 4-tile preview prioritises what the user can act on right now:
   // 1) achievements ready to claim (unlocked, not yet claimed),
-  // 2) otherwise the easiest-to-get locked ones (closest to completion),
-  // 3) already-claimed ones as a last resort so the grid never empties.
+  // 2) then ones already claimed (their earned trophies),
+  // 3) the still-locked ones last, easiest-to-get first (closest to completion),
+  //    so the grid never empties.
   // Within each bucket we keep the catalog's display order (already easy→hard).
   const previewBadges = useMemo(() => {
     const closeness = (b: (typeof achievements)[number]) =>
       b.progress && b.progress.target > 0 ? b.progress.current / b.progress.target : 0;
 
     const claimable = achievements.filter((b) => b.unlocked && !isClaimed(b.id));
+    const claimed = achievements.filter((b) => b.unlocked && isClaimed(b.id));
     const locked = achievements
       .filter((b) => !b.unlocked)
       .sort((a, b) => closeness(b) - closeness(a));
-    const claimed = achievements.filter((b) => b.unlocked && isClaimed(b.id));
 
-    return [...claimable, ...locked, ...claimed].slice(0, 4);
+    return [...claimable, ...claimed, ...locked].slice(0, 4);
   }, [achievements, isClaimed]);
 
   /* -------------------------------------------------------------- */
