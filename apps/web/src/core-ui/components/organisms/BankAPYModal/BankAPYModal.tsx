@@ -1,7 +1,9 @@
 'use client';
 
 import { DepositEarnings, DepositEarningsReporter } from '@/core-ui/components/home/DepositEarningsReporter';
+import { DepositListTab, DepositListTabs } from '@/core-ui/components/home/DepositListTabs';
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
+import { WithdrawnDepositCard } from '@/core-ui/components/home/WithdrawnDepositCard';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
@@ -37,11 +39,12 @@ export function BankAPYModal({
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [showEarningsInfo, setShowEarningsInfo] = useState(false);
   const [selectedVaquita, setSelectedVaquita] = useState<DepositResponseDTO | null>(null);
+  const [tab, setTab] = useState<DepositListTab>('active');
 
   // En modo tutorial mostramos un depósito inyectado en vez de los reales.
   const sourceDeposits = injectedDeposits ?? depositsData?.deposits ?? [];
 
-  const { deposits, activeDeposits, activeDepositsTotalAmount } = getDepositsData(sourceDeposits);
+  const { deposits, activeDeposits, withdrawnDeposits, activeDepositsTotalAmount } = getDepositsData(sourceDeposits);
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
 
   // Ganancia estimada (proyección a vencimiento, la misma que muestra cada
@@ -223,27 +226,52 @@ export function BankAPYModal({
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-black">{t('deposit.bank.myDeposits', 'My deposits')}</h3>
-              <span className="text-xs text-gray-500">({activeDeposits.length})</span>
-            </div>
-            {activeDeposits.length === 0 ? (
+            <h3 className="text-sm font-bold text-black">{t('deposit.bank.myDeposits', 'My deposits')}</h3>
+            {/* Mismos tabs Activos/Retirados que VaquitasListModal; los retirados
+                distinguen retiro a tiempo de retiro anticipado. */}
+            <DepositListTabs
+              tab={tab}
+              onTabChange={setTab}
+              activeCount={activeDeposits.length}
+              withdrawnCount={withdrawnDeposits.length}
+            />
+            {tab === 'active' ? (
+              activeDeposits.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
+                  <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={80} height={80} />
+                  <p className="text-gray-500 text-sm mt-2">{t('deposit.list.noActiveDeposits', 'No active deposits')}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {activeDeposits.map((deposit) => (
+                    <div key={deposit.id} data-tutorial={simulate ? 'tutorial-vaquita-card' : undefined}>
+                      <VaquitaDepositCard
+                        deposit={deposit}
+                        onPress={() => {
+                          setSelectedVaquita(deposit);
+                          onDetailOpenChange?.(true);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : withdrawnDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
                 <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={80} height={80} />
-                <p className="text-gray-500 text-sm mt-2">{t('deposit.list.noActiveDeposits', 'No active deposits')}</p>
+                <p className="text-gray-500 text-sm mt-2">{t('deposit.list.noWithdrawnDeposits', 'No withdrawn deposits')}</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {activeDeposits.map((deposit) => (
-                  <div key={deposit.id} data-tutorial={simulate ? 'tutorial-vaquita-card' : undefined}>
-                    <VaquitaDepositCard
-                      deposit={deposit}
-                      onPress={() => {
-                        setSelectedVaquita(deposit);
-                        onDetailOpenChange?.(true);
-                      }}
-                    />
-                  </div>
+                {withdrawnDeposits.map((deposit) => (
+                  <WithdrawnDepositCard
+                    key={deposit.id}
+                    deposit={deposit}
+                    onPress={() => {
+                      setSelectedVaquita(deposit);
+                      onDetailOpenChange?.(true);
+                    }}
+                  />
                 ))}
               </div>
             )}
