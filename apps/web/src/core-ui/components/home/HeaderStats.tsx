@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { FiBell } from 'react-icons/fi';
 import {
   useApyByLockPeriod,
   useDepositsComplete,
@@ -15,7 +16,7 @@ import {
   useProfileRewards,
   useProfileStreak,
 } from '../../hooks';
-import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
+import { GOLD_COIN, useElementPositionsStore, useHideBalance, useUnreadNotificationsCount } from '../../stores';
 import { PageHeader } from '../molecules';
 import { BankAPYModal, CoinsModal, ExperienceModal, StreakModal } from '../organisms';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
@@ -67,6 +68,7 @@ export const HeaderStats = () => {
   const experience = experienceData?.experience ?? 0;
 
   const firstName = profileData?.nickname || profileData?.fullName?.split(' ')[0] || '';
+  const unreadNotifications = useUnreadNotificationsCount();
 
   // Callback ref so the coin-animation target can live on either the editing-map
   // div or the stats-bar button (which opens the coins modal) without a type clash.
@@ -174,6 +176,19 @@ export const HeaderStats = () => {
               )}
             </button>
           </div>
+
+          <Link
+            href="/notifications"
+            aria-label={t('notificationsCenter.bellAria', 'Notifications')}
+            className="relative shrink-0 w-10 h-10 rounded-full bg-white border border-[#B97204]/30 flex items-center justify-center"
+          >
+            <FiBell className="w-5 h-5 text-black" />
+            {unreadNotifications > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 border border-white text-[10px] font-bold text-white flex items-center justify-center tabular-nums">
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+              </span>
+            )}
+          </Link>
         </div>
       </div>
 

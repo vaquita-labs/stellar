@@ -43,6 +43,8 @@ export function AppShell({
   // Show the bottom navbar on `/profile` itself, but hide it on any deeper
   // profile sub-route (settings, edit, wallet, friends, notifications, …).
   const isProfileSubRoute = pathname?.startsWith('/profile/') ?? false;
+  // The notifications center is a detail screen with its own back button.
+  const isNotificationsRoute = pathname?.startsWith('/notifications') ?? false;
   const isShopRoute = pathname?.startsWith('/shop') ?? false;
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const hideNavigation = isShopRoute || isEditingMap;
@@ -55,7 +57,7 @@ export function AppShell({
     <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
       {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
       <Main withSidebar={!isPublicRoute && !hideNavigation}>{children}</Main>
-      {!isPublicRoute && !isProfileSubRoute && !hideNavigation && <MobileNavigation />}
+      {!isPublicRoute && !isProfileSubRoute && !isNotificationsRoute && !hideNavigation && <MobileNavigation />}
     </div>
   );
 }
