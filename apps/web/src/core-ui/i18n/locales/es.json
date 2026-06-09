@@ -748,27 +748,10 @@
       "depositsChartAria": "Depósitos de las últimas 6 semanas",
       "depositsOverTime": "Depósitos en el tiempo",
       "depositsOverTimeSub": "Aportes semanales",
-      "goals": {
-        "g1": {
-          "due": "Dic 2026",
-          "title": "Viaje a Cartagena"
-        },
-        "g2": {
-          "due": "Mar 2027",
-          "title": "Fondo de emergencia"
-        },
-        "g3": {
-          "due": "Ago 2027",
-          "title": "Laptop nueva"
-        }
-      },
       "keptOutOfDays": "{{kept}} / {{total}} días",
       "last4Weeks": "Últimas 4 semanas",
       "last6Weeks": "Últimas 6 semanas",
       "levelShort": "Nvl {{level}}",
-      "newGoal": "Nueva meta",
-      "savingsGoals": "Metas de ahorro",
-      "savingsGoalsSub": "Lo que estás buscando lograr",
       "streakHistory": "Historial de racha",
       "streakHistorySub": "Días que mantuviste la racha",
       "streakKept": "Racha mantenida",

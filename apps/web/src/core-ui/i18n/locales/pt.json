@@ -748,27 +748,10 @@
       "depositsChartAria": "Depósitos das últimas 6 semanas",
       "depositsOverTime": "Depósitos ao longo do tempo",
       "depositsOverTimeSub": "Aportes semanais",
-      "goals": {
-        "g1": {
-          "due": "Dez 2026",
-          "title": "Viagem a Cartagena"
-        },
-        "g2": {
-          "due": "Mar 2027",
-          "title": "Reserva de emergência"
-        },
-        "g3": {
-          "due": "Ago 2027",
-          "title": "Notebook novo"
-        }
-      },
       "keptOutOfDays": "{{kept}} / {{total}} dias",
       "last4Weeks": "Últimas 4 semanas",
       "last6Weeks": "Últimas 6 semanas",
       "levelShort": "Nvl {{level}}",
-      "newGoal": "Nova meta",
-      "savingsGoals": "Metas de economia",
-      "savingsGoalsSub": "O que você está buscando alcançar",
       "streakHistory": "Histórico de sequência",
       "streakHistorySub": "Dias em que você manteve a sequência",
       "streakKept": "Sequência mantida",

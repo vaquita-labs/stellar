@@ -748,27 +748,10 @@
       "depositsChartAria": "Deposits over the last 6 weeks",
       "depositsOverTime": "Deposits over time",
       "depositsOverTimeSub": "Weekly contributions",
-      "goals": {
-        "g1": {
-          "due": "Dec 2026",
-          "title": "Trip to Cartagena"
-        },
-        "g2": {
-          "due": "Mar 2027",
-          "title": "Emergency fund"
-        },
-        "g3": {
-          "due": "Aug 2027",
-          "title": "New laptop"
-        }
-      },
       "keptOutOfDays": "{{kept}} / {{total}} days",
       "last4Weeks": "Last 4 weeks",
       "last6Weeks": "Last 6 weeks",
       "levelShort": "Lvl {{level}}",
-      "newGoal": "New goal",
-      "savingsGoals": "Savings goals",
-      "savingsGoalsSub": "What you're working toward",
       "streakHistory": "Streak history",
       "streakHistorySub": "Days you kept the streak",
       "streakKept": "Streak kept",
