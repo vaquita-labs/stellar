@@ -134,24 +134,30 @@ export function MoneyInput({
           pattern="[0-9]*[.]?[0-9]*"
         />
         <label className="sr-only" htmlFor="currency">{t('ui.moneyInput.currency')}</label>
-        <select
-          value={token?.symbol}
-          disabled={disabled}
-          className="h-full bg-transparent border-0 outline-none text-black font-medium text-sm pl-2 disabled:cursor-not-allowed"
-          id="currency"
-          name="currency"
-          onChange={(e) => {
-            const tok = tokenSymbols.find((t) => t.symbol === e.target.value);
-            if (tok) onTokenChange(tok);
-            setTimeout(() => setError(validate(value)), 0);
-          }}
-        >
-          {tokenSymbols.map((t) => (
-            <option key={t.symbol} value={t.symbol}>
-              {t.symbol}
-            </option>
-          ))}
-        </select>
+        {tokenSymbols.length <= 1 ? (
+          <span className="h-full flex items-center text-black font-medium text-sm pl-2">
+            {token?.symbol}
+          </span>
+        ) : (
+          <select
+            value={token?.symbol}
+            disabled={disabled}
+            className="h-full bg-transparent border-0 outline-none text-black font-medium text-sm pl-2 disabled:cursor-not-allowed"
+            id="currency"
+            name="currency"
+            onChange={(e) => {
+              const tok = tokenSymbols.find((t) => t.symbol === e.target.value);
+              if (tok) onTokenChange(tok);
+              setTimeout(() => setError(validate(value)), 0);
+            }}
+          >
+            {tokenSymbols.map((t) => (
+              <option key={t.symbol} value={t.symbol}>
+                {t.symbol}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       {error && <span className="text-danger text-xs">{error}</span>}
       <span className="text-xs text-default-400">
