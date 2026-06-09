@@ -725,7 +725,7 @@
           "title": "Lembretes de sequência"
         }
       },
-      "localNote": "Por enquanto as preferências são salvas localmente. A sincronização com o backend chega em breve.",
+      "emailRequired": "Adicione seu e-mail em Editar perfil para ativar.",
       "sections": {
         "activity": {
           "title": "Atividade"

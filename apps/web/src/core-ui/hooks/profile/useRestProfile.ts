@@ -1,6 +1,6 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
-import { ProfileMapObjectsResponseDTO } from '@/core-ui/types';
+import { NotificationPreferences, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
 import { useCallback } from 'react';
 
 export const useRestProfile = () => {
@@ -100,6 +100,29 @@ export const useRestProfile = () => {
     [networkName, walletAddress]
   );
 
+  // Persist notification toggles. Keys are merged server-side, so a single
+  // toggle can be PATCHed on its own; enabling `email` fails with a friendly
+  // message while the profile has no email address.
+  const saveNotificationPreferences = useCallback(
+    async (payload: Partial<NotificationPreferences>) => {
+      const response = await fetch(
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/notification-preferences`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+      const data = await response.json();
+
+      return {
+        success: data?.status === 'success',
+        message: data?.message,
+      };
+    },
+    [networkName, walletAddress]
+  );
+
   const uploadAvatar = useCallback(
     async (file: File) => {
       const form = new FormData();
@@ -183,6 +206,7 @@ export const useRestProfile = () => {
     saveProfile,
     saveProfileFlags,
     saveProfilePreferences,
+    saveNotificationPreferences,
     uploadAvatar,
     removeAvatar,
     checkNicknameAvailability,

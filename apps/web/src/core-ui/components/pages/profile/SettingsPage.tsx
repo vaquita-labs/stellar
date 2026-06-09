@@ -207,7 +207,6 @@ export function SettingsPage() {
       label: t('profilePages.settings.notifications', 'Notifications'),
       description: t('profilePages.settings.notificationsDesc', 'Manage push and email alerts.'),
       href: '/profile/notifications',
-      badge: t('common.soon')
     },
     {
       kind: 'link',

@@ -725,7 +725,7 @@
           "title": "Recordatorios de racha"
         }
       },
-      "localNote": "Por ahora las preferencias se guardan localmente. Pronto llegará la sincronización con el backend.",
+      "emailRequired": "Agrega tu email en Editar perfil para activarlo.",
       "sections": {
         "activity": {
           "title": "Actividad"

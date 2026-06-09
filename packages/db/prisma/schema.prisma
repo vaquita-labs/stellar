@@ -170,6 +170,12 @@ model Profile {
   language      String?   @db.VarChar(10)
   currency      String?   @db.VarChar(10)
 
+  // Per-user notification preferences picked on the Notifications page. JSON
+  // object keyed by toggle id ({ push, email, deposits, streaks, friends }),
+  // each a boolean. NULL until the user changes something (the API serves the
+  // defaults: push/deposits/streaks on, email/friends off).
+  notificationPreferences Json? @map("notification_preferences") @db.JsonB
+
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)

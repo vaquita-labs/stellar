@@ -149,6 +149,22 @@ export type TotalDepositsResponseDTO = {
   };
 };
 
+// Notification toggles offered on the profile Notifications page. `push` and
+// `email` are delivery channels; the rest pick which activity gets notified.
+export type NotificationPreferenceKey = 'push' | 'email' | 'deposits' | 'streaks' | 'friends';
+
+export type NotificationPreferences = Record<NotificationPreferenceKey, boolean>;
+
+// Served whenever the profile row's JSON is NULL (user never changed anything)
+// and used to fill keys missing from a partially-saved object.
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  push: true,
+  email: false,
+  deposits: true,
+  streaks: true,
+  friends: false,
+};
+
 export interface ProfileResponseDTO {
   networkName: string;
   walletAddress: string;
@@ -163,6 +179,9 @@ export interface ProfileResponseDTO {
   // Empty string until the user picks one.
   language: string;
   currency: string;
+  // Always a full object: defaults merged over whatever the user saved. The
+  // `email` channel reads as false while the profile has no email address.
+  notificationPreferences: NotificationPreferences;
   // Account creation timestamp (ISO 8601). Empty string when unknown.
   createdAt: string;
 }
