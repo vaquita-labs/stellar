@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { TutorialCard } from './TutorialCard';
 
 interface TutorialFocusLockProps {
@@ -64,7 +65,7 @@ export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex,
     };
   }, [selector]);
 
-  if (!rect) return null;
+  if (!rect || typeof document === 'undefined') return null;
 
   const top = Math.max(0, rect.top - pad);
   const left = Math.max(0, rect.left - pad);
@@ -89,11 +90,22 @@ export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex,
       ? { left: cardLeft, bottom: vh - top + CARD_GAP, width: cardW }
       : { left: cardLeft, top: bottom + CARD_GAP, width: cardW };
 
-  return (
+  // Se portalea a <body> para quedar por encima del portal del modal de HeroUI
+  // (`.modal__backdrop` es `fixed inset-0 z-50`) y, sobre todo, para escapar del
+  // subárbol que react-aria marca como `inert`. Al abrir un modal, react-aria
+  // (`useModalOverlay` → `ariaHideOutside(..., { shouldUseInert: true })`) pone
+  // `inert` en todo lo que está fuera del modal: eso NO oculta visualmente (el
+  // spotlight se sigue viendo) pero anula los pointer-events, así que sin esto
+  // los paneles no capturan el click y este se filtra a los elementos del modal.
+  //
+  // `data-react-aria-top-layer` es la vía oficial (la usan toasts/top-layer):
+  // react-aria mantiene estos nodos siempre visibles y SIN `inert`, de modo que
+  // los cuatro paneles vuelven a bloquear todo menos el hueco enfocado.
+  return createPortal(
     // El wrapper NO captura clicks (pointer-events-none): así el hueco del
     // elemento enfocado deja pasar el click al elemento real. Solo los cuatro
     // paneles (pointer-events-auto) bloquean todo lo demás.
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-[9998]">
+    <div aria-hidden data-react-aria-top-layer="true" className="pointer-events-none fixed inset-0 z-[9998]">
       {/* Arriba */}
       <div className={panel} style={{ left: 0, right: 0, top: 0, height: top }} />
       {/* Abajo */}
@@ -125,6 +137,7 @@ export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex,
           <TutorialCard dotIndex={dotIndex} dotCount={dotCount} title={title} body={message} />
         </motion.div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }

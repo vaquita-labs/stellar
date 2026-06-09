@@ -308,12 +308,17 @@ export function TutorialExperience() {
         />
       )}
 
+      {/* Todos los hints dentro del banco anclan la tarjeta arriba (pinTop) para
+          no tapar el detalle/montos del modal; el elemento resaltado está
+          abajo/al medio y todo lo demás queda bloqueado por los paneles. */}
+
       {/* select-deposit: oscurece todo menos la tarjeta del depósito. */}
       {focusCard && (
         <TutorialFocusLock
           selector={`[data-tutorial="${TUTORIAL_ANCHOR_VAQUITA_CARD}"]`}
           title={t(step.titleKey, step.params)}
           message={t(step.bodyKey, step.params)}
+          pinTop
           {...dots}
         />
       )}
@@ -324,6 +329,7 @@ export function TutorialExperience() {
           selector={`[data-tutorial="${TUTORIAL_ANCHOR_WITHDRAW}"]`}
           title={t(step.titleKey, step.params)}
           message={t(step.bodyKey, step.params)}
+          pinTop
           {...dots}
         />
       )}
@@ -334,6 +340,7 @@ export function TutorialExperience() {
           selector={MODAL_FIRST_BTN}
           title={t(step.titleKey, step.params)}
           message={t(step.bodyKey, step.params)}
+          pinTop
           {...dots}
         />
       )}
@@ -344,6 +351,7 @@ export function TutorialExperience() {
           selector={`[data-tutorial="${TUTORIAL_ANCHOR_WITHDRAW}"]`}
           title={t(step.titleKey, step.params)}
           message={t(step.bodyKey, step.params)}
+          pinTop
           {...dots}
         />
       )}
@@ -352,6 +360,7 @@ export function TutorialExperience() {
           selector={MODAL_LAST_BTN}
           title={t(step.titleKey, step.params)}
           message={t(step.bodyKey, step.params)}
+          pinTop
           {...dots}
         />
       )}
