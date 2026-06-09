@@ -79,7 +79,7 @@ model Deposit {
   transactionHash        String?   @map("transaction_hash") @db.VarChar(100)
   transactionEventRaw    String?   @map("transaction_event_raw")
   depositIdHex           String?   @map("deposit_id_hex")
-  lockPeriod             Int?      @map("lock_period")
+  lockPeriod             BigInt?   @map("lock_period")
   vaquitaContractAddress String?   @map("vaquita_contract_address")
   confirmedAt            DateTime? @map("confirmed_at") @db.Timestamptz(6)
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

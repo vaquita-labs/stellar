@@ -465,11 +465,16 @@ export default function Page() {
         </div>
       ) : (
         <GenericTable rows={rows as unknown as Record<string, unknown>[]} refetch={refetch}>
-          {(row) => (
-            <Button size="sm" onPress={() => openEdit(byKey.get(String(row.key)))}>
-              Edit
-            </Button>
-          )}
+          {(row) => {
+            // GenericTable passes the parsed row, where each field is
+            // { value, original, truncated } — not the raw value. Recover the key.
+            const key = (row.key as { value?: string } | undefined)?.value ?? String(row.key);
+            return (
+              <Button size="sm" onPress={() => openEdit(byKey.get(key))}>
+                Edit
+              </Button>
+            );
+          }}
         </GenericTable>
       )}
 
