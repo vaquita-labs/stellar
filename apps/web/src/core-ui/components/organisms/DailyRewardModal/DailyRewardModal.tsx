@@ -100,7 +100,7 @@ export function DailyRewardModal({
             </p>
 
             <div className="flex items-center justify-center gap-2 bg-white border border-black border-b-2 rounded-md px-4 py-3 w-full">
-              <Image src="/icons/global/streak.png" alt={t('rewards.daily.streakAlt', 'streak')} width={28} height={28} />
+              <Image src="/icons/global/streak_face.png" alt={t('rewards.daily.streakAlt', 'streak')} width={28} height={28} />
               <span className="text-base font-bold text-black">
                 {t('rewards.daily.activeStreak', 'Active streak: {{count}} day', { count: streakDays })}
               </span>

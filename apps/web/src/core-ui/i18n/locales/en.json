@@ -849,6 +849,8 @@
       "cost": "Cost:",
       "current_one": "Current Streak: {{count}} day",
       "current_other": "Current Streak: {{count}} days",
+      "dayStreakLabel_one": "{{count}} day streak",
+      "dayStreakLabel_other": "{{count}} day streak",
       "description": "Your streak represents consecutive days of activity. Keep it going to unlock rewards and special tiles for your map!",
       "freezeAlt": "freeze",
       "freezeHint": "Streak Freeze allows you to protect your streak for one day if you're unable to maintain it. Use it wisely to prevent losing your progress!",
@@ -862,6 +864,7 @@
       "repairTitle": "Streak Repair",
       "streakAlt": "streak",
       "title": "Streak",
+      "viewHistory": "View full history",
       "weekdays": {
         "Fr": "Fr",
         "Mo": "Mo",

@@ -849,6 +849,8 @@
       "cost": "Costo:",
       "current_one": "Racha actual: {{count}} día",
       "current_other": "Racha actual: {{count}} días",
+      "dayStreakLabel_one": "racha de {{count}} día",
+      "dayStreakLabel_other": "racha de {{count}} días",
       "description": "Tu racha representa los días seguidos de actividad. ¡Mantenla para desbloquear recompensas y losetas especiales para tu mapa!",
       "freezeAlt": "congelar",
       "freezeHint": "La Protección de racha te permite proteger tu racha por un día si no puedes mantenerla. ¡Úsala con cabeza para no perder tu progreso!",
@@ -862,6 +864,7 @@
       "repairTitle": "Reparar racha",
       "streakAlt": "racha",
       "title": "Racha",
+      "viewHistory": "Ver historial completo",
       "weekdays": {
         "Fr": "Vi",
         "Mo": "Lu",

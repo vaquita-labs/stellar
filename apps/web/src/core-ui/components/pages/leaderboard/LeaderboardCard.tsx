@@ -318,7 +318,7 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
         <StatBox
           icon={
             <Image
-              src="/icons/global/streak.png"
+              src="/icons/global/streak_face.png"
               alt=""
               width={24}
               height={24}

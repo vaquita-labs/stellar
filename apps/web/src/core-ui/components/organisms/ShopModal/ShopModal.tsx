@@ -20,7 +20,7 @@ const shopItems: ShopItem[] = [
     price: {
       goldCoins: 1,
     },
-    image: '/icons/summary/streak_freeze.png',
+    image: '/icons/global/streak_freeze_face.png',
     alwaysAvailable: true,
   },
   {
@@ -30,7 +30,7 @@ const shopItems: ShopItem[] = [
     price: {
       goldCoins: 1,
     },
-    image: '/icons/summary/streak_freeze.png',
+    image: '/icons/global/streak_freeze_face.png',
   },
   {
     id: '3',
@@ -39,7 +39,7 @@ const shopItems: ShopItem[] = [
     price: {
       goldCoins: 2,
     },
-    image: '/icons/global/streak.png',
+    image: '/icons/global/streak_face.png',
   },
   {
     id: '4',
