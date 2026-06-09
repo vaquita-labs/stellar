@@ -430,6 +430,7 @@
       "remainingDays": "{{days}}d {{hours}}h left",
       "remainingHours": "{{hours}}h {{mins}}m left",
       "remainingMins": "{{mins}}m left",
+      "remainingSecs": "{{secs}}s left",
       "unlocks": "Unlocks {{date}}"
     },
     "editControls": {

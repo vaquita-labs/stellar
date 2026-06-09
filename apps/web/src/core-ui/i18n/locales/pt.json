@@ -430,6 +430,7 @@
       "remainingDays": "Faltam {{days}}d {{hours}}h",
       "remainingHours": "Faltam {{hours}}h {{mins}}m",
       "remainingMins": "Faltam {{mins}}m",
+      "remainingSecs": "Faltam {{secs}}s",
       "unlocks": "Desbloqueia em {{date}}"
     },
     "editControls": {
