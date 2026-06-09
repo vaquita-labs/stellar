@@ -180,6 +180,27 @@ export const getFollowingCount = async (profileId: number): Promise<number> =>
   prisma.follow.count({ where: { followerId: profileId } });
 
 /**
+ * Wallet addresses the viewer currently follows. Lets per-row Follow buttons
+ * (leaderboard, etc.) resolve their initial state without a per-row request, so
+ * a follow survives a reload. The viewer is upserted so a brand-new wallet
+ * resolves to `[]` instead of erroring.
+ */
+export const getFollowingWallets = async (viewerWallet: string): Promise<string[]> => {
+  const viewer = await prisma.profile.upsert({
+    where: { walletAddress: viewerWallet },
+    update: {},
+    create: { walletAddress: viewerWallet },
+  });
+
+  const rows = await prisma.follow.findMany({
+    where: { followerId: viewer.id },
+    select: { followee: { select: { walletAddress: true } } },
+  });
+
+  return rows.map((r) => r.followee.walletAddress);
+};
+
+/**
  * Following + follower counts for a wallet (the numbers shown on /profile). The
  * profile is upserted so a brand-new wallet resolves to `{ following: 0,
  * followers: 0 }` instead of erroring.

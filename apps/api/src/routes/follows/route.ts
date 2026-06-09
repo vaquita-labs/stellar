@@ -2,10 +2,12 @@ import { Router } from 'express';
 import {
   type FollowCountsResponseDTO,
   type FollowResponseDTO,
+  type FollowingWalletsResponseDTO,
   type FriendSearchResponseDTO,
   type FriendSuggestionsResponseDTO,
   followProfile,
   getFollowCounts,
+  getFollowingWallets,
   getFriendSuggestions,
   getNetworkName,
   searchFriends,
@@ -61,6 +63,27 @@ router.get('/wallet/:walletAddress/counts', async (req, res) => {
   } catch (err) {
     req.log.error({ err, walletAddress }, 'Failed to load follow counts');
     return sendError(res, 'Failed to load follow counts', err, 500);
+  }
+});
+
+// GET /api/v1/follows/wallet/:walletAddress/following
+// Wallet addresses the viewer currently follows. Seeds per-row Follow buttons
+// (e.g. the leaderboard) so a follow survives a reload.
+router.get('/wallet/:walletAddress/following', async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /follows/.../following');
+
+  try {
+    const following = await getFollowingWallets(walletAddress);
+    const payload: FollowingWalletsResponseDTO = {
+      networkName: await getNetworkName(),
+      walletAddress,
+      following,
+    };
+    return sendSuccess(res, payload);
+  } catch (err) {
+    req.log.error({ err, walletAddress }, 'Failed to load following list');
+    return sendError(res, 'Failed to load following list', err, 500);
   }
 });
 

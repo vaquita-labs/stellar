@@ -4,8 +4,9 @@ import { toast } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ReactNode, useState } from 'react';
-import { FiHeart, FiMessageCircle } from 'react-icons/fi';
+import { FiCheck, FiHeart, FiLoader, FiMessageCircle, FiUserPlus } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
+import { useFollowingWallets, useToggleFollow } from '../../../hooks';
 import { MapMiniPreview } from './MapMiniPreview';
 
 /* ------------------------------------------------------------------ */
@@ -196,13 +197,72 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Follow button — optimistic, persists via the /follows API           */
+/* ------------------------------------------------------------------ */
+
+/** Compact follow toggle for a card header. Lives inside the card's anchor,
+ *  so it stops propagation to avoid triggering the card-level navigation. The
+ *  initial state is seeded from the viewer's following-wallets set (so it's
+ *  correct on first paint and survives a reload); the toggle mutation patches
+ *  that cache optimistically and reconciles on settle. */
+function FollowButton({ username, targetWallet }: { username: string; targetWallet: string }) {
+  const { t } = useTranslation();
+  const toggleFollow = useToggleFollow();
+  const { data: followingSet } = useFollowingWallets();
+  const following = followingSet?.has(targetWallet.toLowerCase()) ?? false;
+  const pending = toggleFollow.isPending;
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (pending) return;
+    toggleFollow.mutate({ targetWallet, isFollowing: following });
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={pending}
+      aria-busy={pending}
+      aria-pressed={following}
+      aria-label={
+        following
+          ? t('leaderboard.card.unfollowAria', 'Unfollow {{username}}', { username })
+          : t('leaderboard.card.followAria', 'Follow {{username}}', { username })
+      }
+      className={`inline-flex items-center gap-1 rounded-full border border-black border-b-2 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider shrink-0 transition ${
+        pending ? 'opacity-70 cursor-wait' : 'hover:-translate-y-0.5'
+      } ${
+        following
+          ? 'bg-white text-black hover:bg-white/80'
+          : 'bg-primary text-black hover:bg-primary/80'
+      }`}
+    >
+      {pending ? (
+        <FiLoader className="h-3 w-3 animate-spin" aria-hidden />
+      ) : following ? (
+        <FiCheck className="h-3 w-3" aria-hidden />
+      ) : (
+        <FiUserPlus className="h-3 w-3" aria-hidden />
+      )}
+      <span>
+        {following
+          ? t('leaderboard.card.following', 'Following')
+          : t('leaderboard.card.follow', 'Follow')}
+      </span>
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Card header                                                         */
 /* ------------------------------------------------------------------ */
 
 function CardHeader({ user }: { user: LeaderboardCardData }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <Avatar username={user.username} avatarUrl={user.avatarUrl} />
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
@@ -214,7 +274,9 @@ function CardHeader({ user }: { user: LeaderboardCardData }) {
         )}
       </div>
 
-      <PositionPill position={user.position} />
+      {!user.isCurrentUser && (
+        <FollowButton username={user.username} targetWallet={user.walletAddress} />
+      )}
     </div>
   );
 }
@@ -249,6 +311,7 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
       <MapMiniPreview
         walletAddress={user.walletAddress}
         caption={t('leaderboard.card.levelShort', 'Lv {{level}}', { level: user.level })}
+        badge={<PositionPill position={user.position} />}
       />
 
       <div className="flex gap-2">
