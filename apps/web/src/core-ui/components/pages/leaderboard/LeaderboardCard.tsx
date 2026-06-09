@@ -19,7 +19,7 @@ export type LeaderboardCardData = {
   /** Always the username (nickname or `vaqueroXXXX` fallback) — the wallet
    *  is never surfaced in the UI. */
   username: string;
-  /** Uploaded profile photo URL, or '' to fall back to the initials avatar. */
+  /** Uploaded profile photo URL, or '' to fall back to the default vaquita avatar. */
   avatarUrl?: string;
   level: number;
   streak: number;
@@ -36,41 +36,13 @@ export type LeaderboardCardData = {
 
 const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
-const AVATAR_PALETTES = [
-  'bg-[#FFE7C7] text-[#7A3E00]',
-  'bg-[#DDF4FF] text-[#0A4A6E]',
-  'bg-[#E6F8D9] text-[#2E5A1B]',
-  'bg-[#F6E0FF] text-[#4A2E70]',
-  'bg-[#FFF6C2] text-[#7A5A00]',
-  'bg-[#FFD7D7] text-[#7A1A1A]',
-];
-
-function hashString(str: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-/** Two-letter initials for the username (drops the `@` prefix). */
-function initialsOf(username: string): string {
-  const clean = username.replace(/^@/, '').trim();
-  if (!clean) return 'VQ';
-  const words = clean.split(/[\s_-]+/).filter(Boolean);
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
-  return clean.slice(0, 2).toUpperCase();
-}
+const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
 /* ------------------------------------------------------------------ */
 /* Sub-components                                                      */
 /* ------------------------------------------------------------------ */
 
 export function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: string }) {
-  const palette = AVATAR_PALETTES[hashString(username) % AVATAR_PALETTES.length];
   if (avatarUrl) {
     // next/image fetches the (possibly http) MinIO URL server-side and re-serves
     // it over https, so the photo renders without a mixed-content block.
@@ -81,10 +53,14 @@ export function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: 
     );
   }
   return (
-    <div
-      className={`h-10 w-10 shrink-0 rounded-full border border-black/15 flex items-center justify-center text-sm font-extrabold ${palette}`}
-    >
-      {initialsOf(username)}
+    <div className="h-10 w-10 shrink-0 rounded-full border border-black/15 bg-white flex items-center justify-center overflow-hidden">
+      <Image
+        src={DEFAULT_AVATAR}
+        alt={username}
+        width={32}
+        height={32}
+        className="object-contain"
+      />
     </div>
   );
 }
