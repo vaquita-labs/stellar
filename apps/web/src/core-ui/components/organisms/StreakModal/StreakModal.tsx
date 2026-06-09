@@ -35,7 +35,7 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
   }
 
   const handleViewHistory = () => {
-    onOpenChange(false);
+    onOpenChange();
     router.push('/profile/summary#streak-history');
   };
 
