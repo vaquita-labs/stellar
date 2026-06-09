@@ -13,7 +13,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiLoader } from 'react-icons/fi';
 import { BadgeTile } from '../profile/BadgeTile';
 import { FollowButton, getLeaderboardUsername } from './LeaderboardCard';
 
@@ -45,7 +45,8 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
   const { t } = useTranslation();
   const { walletAddress: viewerWallet } = useConfigStore();
   const { data: profile } = useProfileData(walletAddress);
-  const { data: achievementsData } = useProfileAchievements(walletAddress);
+  const { data: achievementsData, isLoading: achievementsLoading } =
+    useProfileAchievements(walletAddress);
   const { data: experienceData } = useProfileExperience(walletAddress);
   const { data: streakData } = useProfileStreak(walletAddress);
 
@@ -162,8 +163,14 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
               {unlockedBadges.length}
             </span>
           </div>
-          {unlockedBadges.length > 0 ? (
-            <div className="flex gap-2 overflow-x-auto">
+          {/* Fixed h-12 row in every state (loading / badges / empty) so the
+              strip never resizes and the map below doesn't jump. */}
+          {achievementsLoading ? (
+            <div className="flex h-12 items-center justify-center">
+              <FiLoader className="h-4 w-4 animate-spin text-gray-400" aria-hidden />
+            </div>
+          ) : unlockedBadges.length > 0 ? (
+            <div className="flex h-12 items-center gap-2 overflow-x-auto">
               {unlockedBadges.map((badge) => (
                 <div key={badge.id} className="w-12 shrink-0">
                   <BadgeTile badge={badge} size="sm" onPress={() => {}} />
@@ -171,7 +178,7 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
               ))}
             </div>
           ) : (
-            <p className="text-xs font-medium text-gray-500 py-1">
+            <p className="flex h-12 items-center text-xs font-medium text-gray-500">
               {t('leaderboard.user.noAchievements', 'No achievements unlocked yet')}
             </p>
           )}
