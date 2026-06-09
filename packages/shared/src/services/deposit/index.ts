@@ -40,7 +40,8 @@ const toDepositShape = (row: any): Deposit => ({
   status: row.status as DepositStatus,
   // Legacy field: the app is single-network, so every deposit maps to the one config network.
   network_id: SINGLE_NETWORK_ID,
-  lock_period: row.lockPeriod ?? 0,
+  // lock_period is a bigint column (ms); the DTO contract is number, so coerce.
+  lock_period: Number(row.lockPeriod ?? 0),
   token_id: row.tokenId,
   deposit_id_hex: row.depositIdHex ?? '',
   transaction_hash: row.transactionHash ?? '',
