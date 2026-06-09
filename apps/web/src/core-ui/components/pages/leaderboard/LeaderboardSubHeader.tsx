@@ -14,7 +14,7 @@ export type SortKey = 'rank' | 'level' | 'streak' | 'badges';
 export type SortDirection = 'asc' | 'desc';
 
 /** Inline helper for the global PNG glyphs we use in this filter. */
-const GlobalIcon = ({ name, alt }: { name: 'trophy' | 'star' | 'streak' | 'coin'; alt: string }) => (
+const GlobalIcon = ({ name, alt }: { name: 'trophy' | 'star' | 'streak_face' | 'coin' | 'best_position'; alt: string }) => (
   <Image
     src={`/icons/global/${name}.png`}
     alt={alt}
@@ -25,9 +25,9 @@ const GlobalIcon = ({ name, alt }: { name: 'trophy' | 'star' | 'streak' | 'coin'
 );
 
 export const SORT_OPTIONS: { key: SortKey; label: string; icon: ReactNode; hint: string }[] = [
-  { key: 'rank', label: 'Top ranking', icon: <span aria-hidden>🏆</span>, hint: 'Default leaderboard order' },
+  { key: 'rank', label: 'Top ranking', icon: <GlobalIcon name="best_position" alt="" />, hint: 'Default leaderboard order' },
   { key: 'level', label: 'Level', icon: <GlobalIcon name="star" alt="" />, hint: 'Most XP earned' },
-  { key: 'streak', label: 'Streak', icon: <GlobalIcon name="streak" alt="" />, hint: 'Most consecutive days' },
+  { key: 'streak', label: 'Streak', icon: <GlobalIcon name="streak_face" alt="" />, hint: 'Most consecutive days' },
   { key: 'badges', label: 'Badges', icon: <GlobalIcon name="trophy" alt="" />, hint: 'Most achievements unlocked' },
 ];
 
