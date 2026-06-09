@@ -11,9 +11,11 @@ import {
   type BadgeRule,
   type BadgeUnlockType,
   type CatalogAchievementResponseDTO,
+  DEFAULT_NOTIFICATION_PREFERENCES,
   DepositStatus,
   type MapObject,
   MapObjectType,
+  type NotificationPreferences,
   type Profile,
   type ProfileAchievement,
   type ProfileAchievementsResponseDTO,
@@ -57,6 +59,7 @@ const toProfileShape = (p: PrismaProfile): Profile => ({
   crypto_savvy: p.cryptoSavvy ?? false,
   language: p.language ?? null,
   currency: p.currency ?? null,
+  notification_preferences: (p.notificationPreferences as Partial<NotificationPreferences> | null) ?? null,
   created_at: p.createdAt?.toISOString(),
   updated_at: p.updatedAt?.toISOString(),
 });
@@ -436,6 +439,15 @@ export const getMapObjectsAvailableData = async () => {
 
 export const toProfileResponseDTO = (networkName: string, profile: Profile): ProfileResponseDTO => {
 
+  // Defaults merged under whatever the user saved (the column may be NULL or
+  // partial). The email channel requires an email address on the profile, so a
+  // stale `email: true` reads as off after the address is removed.
+  const notificationPreferences: NotificationPreferences = {
+    ...DEFAULT_NOTIFICATION_PREFERENCES,
+    ...(profile.notification_preferences ?? {}),
+  };
+  notificationPreferences.email = notificationPreferences.email && !!profile.email;
+
   return {
     walletAddress: profile?.wallet_address || '',
     networkName,
@@ -448,6 +460,7 @@ export const toProfileResponseDTO = (networkName: string, profile: Profile): Pro
     cryptoSavvy: profile.crypto_savvy ?? false,
     language: profile.language ?? '',
     currency: profile.currency ?? '',
+    notificationPreferences,
     createdAt: profile.created_at ?? '',
   };
 };

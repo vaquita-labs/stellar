@@ -725,7 +725,7 @@
           "title": "Streak reminders"
         }
       },
-      "localNote": "Preferences are stored locally for now. Backend syncing coming soon.",
+      "emailRequired": "Add your email in Edit profile to enable this.",
       "sections": {
         "activity": {
           "title": "Activity"

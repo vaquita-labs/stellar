@@ -4,6 +4,7 @@ import { v4 } from 'uuid';
 import { isStorageConfigured, putAvatar, removeAvatar } from '../../lib/storage';
 import {
   broadcastProfileChange,
+  DEFAULT_NOTIFICATION_PREFERENCES,
   getAchievementCountsByProfile,
   getActiveDepositSumsByWallet,
   getExperienceByProfile,
@@ -17,6 +18,8 @@ import {
   getStreakCountsByProfile,
   prisma,
   REWARD_REASON_DAILY_CHECKIN,
+  type NotificationPreferenceKey,
+  type NotificationPreferences,
   type Profile,
   type ProfileAverageResponseDTO,
   Reward,
@@ -635,6 +638,65 @@ router.patch('/wallet/:walletAddress/preferences', async (req, res) => {
   } catch (err) {
     req.log.error({ err, profileId: profileData.id, data }, 'Failed to update profile preferences');
     return sendError(res, 'Failed to update profile preferences', err, 500);
+  }
+});
+
+// Persist the user's notification toggles ({ push, email, deposits, streaks,
+// friends } booleans, all optional). Provided keys are merged over what's
+// stored, so each toggle PATCHes independently. Enabling the email channel
+// requires an email address on the profile.
+router.patch('/wallet/:walletAddress/notification-preferences', async (req, res) => {
+  const { walletAddress } = req.params;
+  const body = (req.body ?? {}) as Partial<NotificationPreferences>;
+  req.log.info({ walletAddress, ...body }, 'PATCH /profile/.../notification-preferences');
+
+  const keys = Object.keys(DEFAULT_NOTIFICATION_PREFERENCES) as NotificationPreferenceKey[];
+  const updates: Partial<NotificationPreferences> = {};
+  for (const key of keys) {
+    const value = body[key];
+    if (value === undefined) continue;
+    if (typeof value !== 'boolean') {
+      return sendError(res, `${key} must be a boolean.`, null, 400);
+    }
+    updates[key] = value;
+  }
+  if (Object.keys(updates).length === 0) {
+    return sendError(res, 'Provide at least one notification toggle to update.', null, 400);
+  }
+
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
+
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
+    return sendError(res, errorMessage, errors, 404);
+  }
+
+  if (updates.email === true && !profileData.email) {
+    return sendError(res, 'Add an email address to your profile to enable email updates.', null, 400);
+  }
+
+  const notificationPreferences = {
+    ...(profileData.notification_preferences ?? {}),
+    ...updates,
+  };
+
+  try {
+    const result = await prisma.profile.update({
+      where: { id: profileData.id },
+      data: { notificationPreferences },
+    });
+
+    try {
+      await broadcastProfileChange('set-notification-preferences', [ 'profile-data' ]);
+    } catch (err) {
+      req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (set-notification-preferences)');
+    }
+
+    req.log.info({ profileId: profileData.id, ...updates }, 'Profile notification preferences updated');
+    return sendSuccess(res, result);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id, updates }, 'Failed to update profile notification preferences');
+    return sendError(res, 'Failed to update profile notification preferences', err, 500);
   }
 });
 
