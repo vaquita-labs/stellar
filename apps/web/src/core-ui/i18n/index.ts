@@ -50,6 +50,12 @@ if (!i18n.isInitialized) {
     },
     returnNull: false,
   });
+} else {
+  // Fast Refresh re-runs this module but skips init above, which would leave
+  // stale locale JSON in memory until a full reload — re-register the bundles.
+  for (const [lng, ns] of Object.entries(resources)) {
+    i18n.addResourceBundle(lng, 'translation', ns.translation, true, true);
+  }
 }
 
 export default i18n;
