@@ -1180,21 +1180,28 @@
       "title": "Search by name"
     },
     "share": {
+      "addingFriend": "Adding friend…",
       "cameraBlocked": "Camera blocked",
       "cameraOff": "Camera off",
       "copyLink": "Copy link",
       "couldNotCopy": "Could not copy link",
+      "couldNotFollow": "Could not follow that vaquero. Try again.",
       "couldNotShare": "Could not share",
       "dialogLabelMine": "Share your profile QR",
       "dialogLabelScan": "Scan a profile QR",
       "followingHandle": "Following {{handle}}",
+      "invalidQr": "That QR isn't a Vaquita profile.",
       "linkCopied": "Profile link copied",
       "myQrCaption": "Have a friend scan this QR to follow you on Vaquita.",
+      "noQrDetected": "No QR detected",
+      "noQrDetectedBody": "Center the QR in the frame and make sure it has good lighting.",
       "nowFollowing": "Now following {{handle}}",
+      "ownQr": "That's your own QR — share it with a friend!",
       "qrAlt": "QR code for {{handle}}",
       "qrButtonLabel": "Share profile QR",
       "qrDetected": "QR detected",
       "requestingAccess": "Requesting access…",
+      "scanAgain": "Scan again",
       "scanCaption": "Point the camera at a vaquero's QR to follow them instantly.",
       "shareLink": "Share link",
       "shareText": "Follow {{name}} on Vaquita 🐮",
@@ -1204,7 +1211,8 @@
       "tabScan": "Scan QR",
       "tabsLabel": "QR view",
       "tryAgain": "Try again",
-      "uploadFromGallery": "Upload from gallery · soon"
+      "uploadFromGallery": "Upload from gallery · soon",
+      "vaqueroNotFound": "We couldn't find that vaquero."
     }
   },
   "tutorial": {
