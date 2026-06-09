@@ -3,12 +3,12 @@
 import { ONE_DAY } from '@/core-ui/config/constants';
 import { deriveLevel } from '@/core-ui/helpers';
 import { useDepositsComplete } from '@/core-ui/hooks';
-import { useProfileExperience, useProfileStreak } from '@/core-ui/hooks/profile';
+import { useProfileData, useProfileExperience, useProfileStreak } from '@/core-ui/hooks/profile';
 import { DepositResponseDTO } from '@/core-ui/types';
 import Image from 'next/image';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiTrendingUp } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiTrendingUp } from 'react-icons/fi';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
 /* ------------------------------------------------------------------ */
@@ -68,11 +68,15 @@ function PanelLoading() {
 // timestamps are bucketed into integer "day-numbers" of ms / ONE_DAY (UTC).
 const getDayNumber = (ms: number) => Math.ceil(ms / ONE_DAY);
 
-// Weekday letter (Sun-indexed) for a given day-number, taken at the midpoint of
-// its UTC window so it lands squarely inside the day regardless of rounding.
-const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-const weekdayLetter = (dayNumber: number) =>
-  WEEKDAY_LETTERS[new Date((dayNumber - 0.5) * ONE_DAY).getUTCDay()];
+// Day-number for a UTC calendar date (year, 0-based month, day). Inverse of the
+// midpoint convention used above: a UTC midnight maps to floor(ms/ONE_DAY)+1,
+// matching getDayNumber for any instant strictly inside that day's window.
+const dayNumberOfUTC = (year: number, month: number, day: number) =>
+  Math.floor(Date.UTC(year, month, day) / ONE_DAY) + 1;
+
+// Flatten a {year, month} pair into a comparable integer so we can clamp the
+// calendar between the join month and the current month.
+const monthIndex = (year: number, month: number) => year * 12 + month;
 
 // Monday 00:00 (local) of the week containing `ms`.
 function startOfWeek(ms: number): Date {
@@ -115,29 +119,116 @@ function buildWeeklyDeposits(deposits: DepositResponseDTO[]) {
 /* ------------------------------------------------------------------ */
 
 function StreakCalendar() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data: streak, isLoading } = useProfileStreak();
+  const { data: profile } = useProfileData();
 
-  // Render the last 4 full weeks (28 days) ending today. 28 = 4×7, so each grid
-  // column maps to a fixed weekday — letting us label headers from real dates.
-  const { cells, labels, kept, total } = useMemo(() => {
+  const locale = i18n.language || 'en';
+
+  // Calendar months are addressed in UTC so day-numbers line up with the
+  // backend's UTC bucketing regardless of the viewer's timezone.
+  const now = new Date();
+  const currentIdx = monthIndex(now.getUTCFullYear(), now.getUTCMonth());
+
+  // Earliest navigable month is the account creation month; default to the
+  // current month while the profile is still loading or createdAt is unknown.
+  const joinDate = profile?.createdAt ? new Date(profile.createdAt) : null;
+  const joinValid = joinDate && !Number.isNaN(joinDate.getTime());
+  const joinIdx = joinValid
+    ? monthIndex(joinDate!.getUTCFullYear(), joinDate!.getUTCMonth())
+    : currentIdx;
+
+  // Cursor tracks the visible month; starts on the current month and is clamped
+  // to [joinIdx, currentIdx] by the nav buttons below.
+  const [cursor, setCursor] = useState(() => ({
+    year: now.getUTCFullYear(),
+    month: now.getUTCMonth(),
+  }));
+  const cursorIdx = monthIndex(cursor.year, cursor.month);
+  const canPrev = cursorIdx > joinIdx;
+  const canNext = cursorIdx < currentIdx;
+
+  const goPrev = () =>
+    canPrev &&
+    setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { ...c, month: c.month - 1 }));
+  const goNext = () =>
+    canNext &&
+    setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { ...c, month: c.month + 1 }));
+
+  // Monday-start weekday initials, localized. 2024-01-01 is a Monday.
+  const weekdayLabels = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(locale, { weekday: 'narrow', timeZone: 'UTC' });
+    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(Date.UTC(2024, 0, 1 + i))));
+  }, [locale]);
+
+  const monthTitle = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
+        new Date(Date.UTC(cursor.year, cursor.month, 1))
+      ),
+    [locale, cursor.year, cursor.month]
+  );
+
+  // Build the month grid: leading blanks for the first weekday offset
+  // (Monday-start), then one cell per day with its streak/today/future state.
+  const { cells, kept } = useMemo(() => {
     const active = new Set(streak?.days ?? []);
     const todayNumber = getDayNumber(Date.now());
-    const start = todayNumber - 27;
-    const cells = Array.from({ length: 28 }, (_, i) => {
-      const dayNumber = start + i;
-      return { dayNumber, kept: active.has(dayNumber), isToday: dayNumber === todayNumber };
-    });
-    const labels = Array.from({ length: 7 }, (_, c) => weekdayLetter(start + c));
-    return { cells, labels, kept: cells.filter((c) => c.kept).length, total: cells.length };
-  }, [streak?.days]);
+    const joinNumber = joinValid
+      ? dayNumberOfUTC(joinDate!.getUTCFullYear(), joinDate!.getUTCMonth(), joinDate!.getUTCDate())
+      : -Infinity;
+
+    const firstDow = (new Date(Date.UTC(cursor.year, cursor.month, 1)).getUTCDay() + 6) % 7;
+    const daysInMonth = new Date(Date.UTC(cursor.year, cursor.month + 1, 0)).getUTCDate();
+
+    const cells: Array<
+      | { blank: true; key: string }
+      | { blank: false; day: number; dayNumber: number; kept: boolean; isToday: boolean; muted: boolean }
+    > = [];
+    for (let i = 0; i < firstDow; i++) cells.push({ blank: true, key: `blank-${i}` });
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayNumber = dayNumberOfUTC(cursor.year, cursor.month, day);
+      cells.push({
+        blank: false,
+        day,
+        dayNumber,
+        kept: active.has(dayNumber),
+        isToday: dayNumber === todayNumber,
+        muted: dayNumber > todayNumber || dayNumber < joinNumber,
+      });
+    }
+    return { cells, kept: cells.filter((c) => !c.blank && c.kept).length };
+  }, [streak?.days, cursor.year, cursor.month, joinValid, joinDate]);
 
   if (isLoading) return <PanelLoading />;
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Month navigation */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={goPrev}
+          disabled={!canPrev}
+          aria-label={t('profilePages.summary.prevMonth', 'Previous month')}
+          className="h-8 w-8 inline-flex items-center justify-center rounded-full border border-black/10 text-black hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition"
+        >
+          <FiChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-extrabold text-black capitalize">{monthTitle}</span>
+        <button
+          type="button"
+          onClick={goNext}
+          disabled={!canNext}
+          aria-label={t('profilePages.summary.nextMonth', 'Next month')}
+          className="h-8 w-8 inline-flex items-center justify-center rounded-full border border-black/10 text-black hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition"
+        >
+          <FiChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
       <div className="grid grid-cols-7 gap-y-2 gap-x-1 text-center">
-        {labels.map((d, i) => (
+        {weekdayLabels.map((d, i) => (
           <span
             key={`label-${i}`}
             className="text-[10px] font-bold uppercase tracking-wider text-gray-400"
@@ -145,46 +236,58 @@ function StreakCalendar() {
             {d}
           </span>
         ))}
-        {cells.map(({ dayNumber, kept, isToday }) => {
+        {cells.map((cell) => {
+          if (cell.blank) return <div key={cell.key} aria-hidden />;
+          const { day, dayNumber, kept, isToday, muted } = cell;
           if (kept) {
+            // Streak day: bold black number on a solid primary disc.
+            // Same h-9 w-9 footprint as every other cell so numbers stay aligned.
             return (
               <div
                 key={dayNumber}
-                className={`mx-auto h-9 w-9 rounded-full bg-primary/15 flex items-center justify-center ${
+                className={`mx-auto h-9 w-9 rounded-full flex items-center justify-center bg-primary ${
                   isToday ? 'ring-2 ring-black ring-offset-1 ring-offset-white' : ''
                 }`}
-                aria-label={isToday ? t('profilePages.summary.todayStreakKept', 'Today — streak kept') : t('profilePages.summary.streakKept', 'Streak kept')}
+                aria-label={
+                  isToday
+                    ? t('profilePages.summary.todayStreakKept', 'Today — streak kept')
+                    : t('profilePages.summary.streakKept', 'Streak kept')
+                }
               >
-                <Image
-                  src="/icons/global/streak_face.png"
-                  alt=""
-                  width={22}
-                  height={22}
-                  className="object-contain"
-                />
+                <span className="text-xs font-extrabold text-black tabular-nums">{day}</span>
               </div>
             );
           }
+          // Days without a streak get no disc — just the number. Past misses use
+          // a readable dark gray; future / pre-join days stay faint.
           return (
             <div
               key={dayNumber}
-              className={`mx-auto h-9 w-9 rounded-full bg-black/5 flex items-center justify-center ${
+              className={`mx-auto h-9 w-9 rounded-full flex items-center justify-center ${
                 isToday ? 'ring-2 ring-black ring-offset-1 ring-offset-white' : ''
               }`}
-              aria-label={isToday ? t('profilePages.summary.todayStreakMissed', 'Today — streak missed') : t('profilePages.summary.streakMissed', 'Streak missed')}
+              aria-label={
+                isToday
+                  ? t('profilePages.summary.todayStreakMissed', 'Today — streak missed')
+                  : undefined
+              }
             >
-              <span className="h-2 w-2 rounded-full bg-black/20" aria-hidden />
+              <span
+                className={`text-xs tabular-nums ${
+                  muted ? 'font-medium text-gray-300' : 'font-semibold text-gray-700'
+                }`}
+              >
+                {day}
+              </span>
             </div>
           );
         })}
       </div>
       <div className="flex items-center justify-between rounded-xl bg-primary/10 border border-black/10 px-3 py-2">
         <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider">
-          {t('profilePages.summary.last4Weeks', 'Last 4 weeks')}
+          {t('profilePages.summary.streakDaysThisMonth', 'Streak days')}
         </span>
-        <span className="text-sm font-extrabold text-black tabular-nums">
-          {t('profilePages.summary.keptOutOfDays', '{{kept}} / {{total}} days', { kept, total })}
-        </span>
+        <span className="text-sm font-extrabold text-black tabular-nums">{kept}</span>
       </div>
     </div>
   );
