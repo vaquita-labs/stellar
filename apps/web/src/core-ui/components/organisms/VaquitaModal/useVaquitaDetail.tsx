@@ -265,7 +265,10 @@ export const useVaquitaDetail = ({
       <Button
         onPress={() => setConfirming(null)}
         className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md font-semibold"
-        isDisabled={loading}
+        // Tutorial: al reclamar (lock cumplido) bloqueamos Cancel para forzar el
+        // claim. En el retiro anticipado (inLockPeriod) Cancel es el botón guía,
+        // así que sigue habilitado.
+        isDisabled={loading || (lockClose && !inLockPeriod)}
       >
         {t('common.cancel')}
       </Button>

@@ -24,7 +24,7 @@ export function TutorialWaitModal({ onConfirm }: TutorialWaitModalProps) {
       onOpenChange={onConfirm}
       isDismissable={false}
       hideClose
-      placement="top"
+      placement="center"
       size="sm"
       title={t(TUTORIAL_WAIT_NOTICE.titleKey, 'But if you wait…')}
       bodyClassName="flex flex-col gap-4 pb-2"
