@@ -121,7 +121,7 @@
     "toast": {
       "couldNotShare": "Could not share",
       "linkCopied": "Link copied to clipboard",
-      "mintFailed": "Mint failed",
+      "mintFailed": "Couldn't claim your reward",
       "unknownError": "Unknown error"
     }
   },
