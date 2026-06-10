@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { FiArrowLeft, FiGift } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 import { getDepositsData } from '../../../helpers/deposits';
 import {
   useClaimedAchievements,
   useDepositsComplete,
+  useFollowCounts,
   useLeaderboardRank,
   useProfileAchievements,
   useProfileExperience,
@@ -28,6 +30,7 @@ const formatDate = (iso: string) =>
 /* ------------------------------------------------------------------ */
 
 export function AllAchievementsPage() {
+  const { t } = useTranslation();
   // The detail modal needs both the catalog row (for display) and whether the
   // user has met the unlock condition, so it can pick Claim vs progress UI.
   const [selected, setSelected] = useState<{
@@ -43,6 +46,7 @@ export function AllAchievementsPage() {
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
   const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
+  const { data: followCounts } = useFollowCounts();
   // Drives the pulsing "ready to claim" halo on each badge tile. A badge is
   // claimable when the user has met the unlock condition (`badge.unlocked`)
   // but hasn't cashed in the coin reward yet.
@@ -70,8 +74,9 @@ export function AllAchievementsPage() {
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
         leaderboardRank: rankData?.rank ?? undefined,
+        friendsCount: followCounts?.following ?? 0,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank, followCounts?.following]
   );
 
   const earned = achievements.filter((b) => b.unlocked && isClaimed(b.id)).length;
@@ -85,19 +90,19 @@ export function AllAchievementsPage() {
         <header className="relative flex items-center justify-center min-h-10 border-b border-black/10 pb-3">
           <Link
             href="/profile"
-            aria-label="Back"
+            aria-label={t('common.back')}
             className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
           >
             <FiArrowLeft className="h-4 w-4" />
           </Link>
           <h1 className="text-base sm:text-lg font-bold text-gray-500 tracking-wide uppercase">
-            Achievements
+            {t('achievements.page.title', 'Achievements')}
           </h1>
           <button
             type="button"
             onClick={() => setRedeemOpen(true)}
-            aria-label="Redeem code"
-            title="Canjear código"
+            aria-label={t('achievements.page.redeemCode', 'Redeem code')}
+            title={t('achievements.page.redeemCode', 'Redeem code')}
             className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
           >
             <FiGift className="h-4 w-4" />
@@ -107,7 +112,7 @@ export function AllAchievementsPage() {
         {/* Personal records ----------------------------------------- */}
         <section className="flex flex-col gap-3">
           <h2 className="text-base sm:text-lg font-extrabold text-black px-1">
-            Personal records
+            {t('achievements.page.personalRecords', 'Personal records')}
           </h2>
           <PersonalRecords
             totalStreak={totalStreak}
@@ -123,7 +128,7 @@ export function AllAchievementsPage() {
         {/* Awards --------------------------------------------------- */}
         <section className="flex flex-col gap-3">
           <h2 className="text-base sm:text-lg font-extrabold text-black px-1">
-            Awards
+            {t('achievements.page.awards', 'Awards')}
           </h2>
           <div className="rounded-2xl border border-black border-b-2 bg-white p-4 sm:p-6">
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 sm:gap-6 place-items-center">

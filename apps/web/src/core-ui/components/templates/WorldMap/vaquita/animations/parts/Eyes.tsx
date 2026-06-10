@@ -51,7 +51,7 @@ export const Eyes = ({ isCrying = false, isSleeping = false, mood = 'normal' }: 
     );
   }
 
-  if (mood === 'celebrating') {
+  if (mood === 'excited') {
     return (
       <group position={[0, 0, 0]}>
         {/* sparkly star eyes */}
@@ -78,30 +78,6 @@ export const Eyes = ({ isCrying = false, isSleeping = false, mood = 'normal' }: 
         <mesh position={[0.1, 0.08, 0.26]} rotation={[0, 0, Math.PI / 4]} castShadow>
           <boxGeometry args={[0.1, 0.03, 0]} />
           <meshStandardMaterial color="#ffd54a" />
-        </mesh>
-      </group>
-    );
-  }
-
-  if (mood === 'happy') {
-    return (
-      <group position={[0, 0, 0]}>
-        {/* ^ ^ closed-eye smiles */}
-        <mesh position={[-0.1, 0.08, 0.26]} rotation={[0, 0, -0.45]} castShadow>
-          <boxGeometry args={[0.12, 0.04, 0]} />
-          <meshStandardMaterial color="black" />
-        </mesh>
-        <mesh position={[-0.05, 0.08, 0.26]} rotation={[0, 0, 0.45]} castShadow>
-          <boxGeometry args={[0.12, 0.04, 0]} />
-          <meshStandardMaterial color="black" />
-        </mesh>
-        <mesh position={[0.05, 0.08, 0.26]} rotation={[0, 0, -0.45]} castShadow>
-          <boxGeometry args={[0.12, 0.04, 0]} />
-          <meshStandardMaterial color="black" />
-        </mesh>
-        <mesh position={[0.1, 0.08, 0.26]} rotation={[0, 0, 0.45]} castShadow>
-          <boxGeometry args={[0.12, 0.04, 0]} />
-          <meshStandardMaterial color="black" />
         </mesh>
       </group>
     );
@@ -134,30 +110,6 @@ export const Eyes = ({ isCrying = false, isSleeping = false, mood = 'normal' }: 
         <mesh position={[0.1, 0.03, 0.26]} castShadow>
           <boxGeometry args={[0.08, 0.06, 0]} />
           <meshStandardMaterial color="#ff5b8a" />
-        </mesh>
-      </group>
-    );
-  }
-
-  if (mood === 'sick') {
-    return (
-      <group position={[0, 0, 0]}>
-        {/* x x dizzy eyes */}
-        <mesh position={[-0.1, 0.08, 0.26]} rotation={[0, 0, Math.PI / 4]} castShadow>
-          <boxGeometry args={[0.16, 0.03, 0]} />
-          <meshStandardMaterial color="black" />
-        </mesh>
-        <mesh position={[-0.1, 0.08, 0.26]} rotation={[0, 0, -Math.PI / 4]} castShadow>
-          <boxGeometry args={[0.16, 0.03, 0]} />
-          <meshStandardMaterial color="black" />
-        </mesh>
-        <mesh position={[0.1, 0.08, 0.26]} rotation={[0, 0, Math.PI / 4]} castShadow>
-          <boxGeometry args={[0.16, 0.03, 0]} />
-          <meshStandardMaterial color="black" />
-        </mesh>
-        <mesh position={[0.1, 0.08, 0.26]} rotation={[0, 0, -Math.PI / 4]} castShadow>
-          <boxGeometry args={[0.16, 0.03, 0]} />
-          <meshStandardMaterial color="black" />
         </mesh>
       </group>
     );

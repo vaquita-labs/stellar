@@ -11,6 +11,7 @@ export * from './useIntroSeen';
 export * from './useIsAuthenticated';
 export * from './useIsMobile';
 export * from './useLogout';
+export * from './useNotifications';
 export * from './profile';
 export * from './useProfilesByAverageDepositsData';
 export * from './useRestDeposit';

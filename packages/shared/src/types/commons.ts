@@ -149,6 +149,22 @@ export type TotalDepositsResponseDTO = {
   };
 };
 
+// Notification toggles offered on the profile Notifications page. `push` and
+// `email` are delivery channels; the rest pick which activity gets notified.
+export type NotificationPreferenceKey = 'push' | 'email' | 'deposits' | 'streaks' | 'friends';
+
+export type NotificationPreferences = Record<NotificationPreferenceKey, boolean>;
+
+// Served whenever the profile row's JSON is NULL (user never changed anything)
+// and used to fill keys missing from a partially-saved object.
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  push: true,
+  email: false,
+  deposits: true,
+  streaks: true,
+  friends: false,
+};
+
 export interface ProfileResponseDTO {
   networkName: string;
   walletAddress: string;
@@ -163,6 +179,9 @@ export interface ProfileResponseDTO {
   // Empty string until the user picks one.
   language: string;
   currency: string;
+  // Always a full object: defaults merged over whatever the user saved. The
+  // `email` channel reads as false while the profile has no email address.
+  notificationPreferences: NotificationPreferences;
   // Account creation timestamp (ISO 8601). Empty string when unknown.
   createdAt: string;
 }
@@ -244,6 +263,45 @@ export interface FollowCountsResponseDTO {
   followers: number;
 }
 
+export interface FollowingWalletsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  /** Wallet addresses the viewer currently follows. */
+  following: string[];
+}
+
+export type NotificationTypeDTO = 'deposit' | 'reward' | 'streak' | 'friend' | 'system';
+
+/**
+ * One row of the in-app notifications feed. `messageKey` + `params` map to the
+ * frontend i18n entries (`notificationsCenter.messages.<messageKey>.{title,body}`)
+ * so copy stays translatable; `link` is the in-app route opened on tap ('' = none).
+ */
+export interface NotificationDTO {
+  id: string;
+  type: NotificationTypeDTO;
+  messageKey: string;
+  params: Record<string, string | number>;
+  link: string;
+  read: boolean;
+  /** epoch ms */
+  createdAt: number;
+}
+
+export interface NotificationsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  notifications: NotificationDTO[];
+  unread: number;
+}
+
+/** A list of vaqueros (the viewer's followers or following), for the modal. */
+export interface FriendListResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  results: FriendDTO[];
+}
+
 export type MapObject = {
   position: [ number, number, number ];
   type: MapObjectType;
@@ -284,6 +342,12 @@ export interface ProfileAverageResponseDTO {
   timestamp: number;
   delay: number;
   badges: number;
+  // Real per-profile gamification signals served by the leaderboard endpoint
+  // (replaced the wallet-hash placeholder). `streak` is the display streak
+  // (yesterdayStreak + today's check-in); `experience` is total XP, from which
+  // the UI derives level (every 100 XP = +1 level).
+  streak: number;
+  experience: number;
 }
 
 export interface UserBalanceResponseDTO {

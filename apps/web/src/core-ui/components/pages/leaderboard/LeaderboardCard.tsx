@@ -4,8 +4,10 @@ import { toast } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ReactNode, useState } from 'react';
-import { FiHeart, FiMessageCircle } from 'react-icons/fi';
-import { WorldPreviewTile } from './WorldPreviewTile';
+import { FiCheck, FiHeart, FiLoader, FiMessageCircle, FiUserPlus } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
+import { useFollowingWallets, useToggleFollow } from '../../../hooks';
+import { MapMiniPreview } from './MapMiniPreview';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -17,7 +19,7 @@ export type LeaderboardCardData = {
   /** Always the username (nickname or `vaqueroXXXX` fallback) — the wallet
    *  is never surfaced in the UI. */
   username: string;
-  /** Uploaded profile photo URL, or '' to fall back to the initials avatar. */
+  /** Uploaded profile photo URL, or '' to fall back to the default vaquita avatar. */
   avatarUrl?: string;
   level: number;
   streak: number;
@@ -34,41 +36,13 @@ export type LeaderboardCardData = {
 
 const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
-const AVATAR_PALETTES = [
-  'bg-[#FFE7C7] text-[#7A3E00]',
-  'bg-[#DDF4FF] text-[#0A4A6E]',
-  'bg-[#E6F8D9] text-[#2E5A1B]',
-  'bg-[#F6E0FF] text-[#4A2E70]',
-  'bg-[#FFF6C2] text-[#7A5A00]',
-  'bg-[#FFD7D7] text-[#7A1A1A]',
-];
-
-function hashString(str: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-/** Two-letter initials for the username (drops the `@` prefix). */
-function initialsOf(username: string): string {
-  const clean = username.replace(/^@/, '').trim();
-  if (!clean) return 'VQ';
-  const words = clean.split(/[\s_-]+/).filter(Boolean);
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
-  return clean.slice(0, 2).toUpperCase();
-}
+const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
 /* ------------------------------------------------------------------ */
 /* Sub-components                                                      */
 /* ------------------------------------------------------------------ */
 
-function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: string }) {
-  const palette = AVATAR_PALETTES[hashString(username) % AVATAR_PALETTES.length];
+export function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: string }) {
   if (avatarUrl) {
     // next/image fetches the (possibly http) MinIO URL server-side and re-serves
     // it over https, so the photo renders without a mixed-content block.
@@ -79,22 +53,27 @@ function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: string 
     );
   }
   return (
-    <div
-      className={`h-10 w-10 shrink-0 rounded-full border border-black/15 flex items-center justify-center text-sm font-extrabold ${palette}`}
-    >
-      {initialsOf(username)}
+    <div className="h-10 w-10 shrink-0 rounded-full border border-black/15 bg-white flex items-center justify-center overflow-hidden">
+      <Image
+        src={DEFAULT_AVATAR}
+        alt={username}
+        width={32}
+        height={32}
+        className="object-contain"
+      />
     </div>
   );
 }
 
 function PositionPill({ position }: { position: number }) {
+  const { t } = useTranslation();
   const medal = MEDALS[position];
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border border-black border-b-2 px-2.5 py-0.5 text-xs font-extrabold tabular-nums shrink-0 ${
         position <= 3 ? 'bg-primary text-black' : 'bg-white text-black'
       }`}
-      aria-label={`Position ${position}`}
+      aria-label={t('leaderboard.card.positionLabel', 'Position {{position}}', { position })}
     >
       {medal && <span aria-hidden className="text-sm leading-none">{medal}</span>}
       <span>#{position}</span>
@@ -141,6 +120,7 @@ interface SocialRowProps {
 }
 
 function SocialRow({ username, likes, comments }: SocialRowProps) {
+  const { t } = useTranslation();
   const [liked, setLiked] = useState(false);
   const likeCount = liked ? likes + 1 : likes;
 
@@ -158,7 +138,11 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
 
   const handleComment = (e: React.MouseEvent) => {
     stop(e);
-    toast.success(`Comments on ${username}'s world coming soon`);
+    toast.success(
+      t('leaderboard.card.commentsComingSoon', "Comments on {{username}}'s world coming soon", {
+        username,
+      })
+    );
   };
 
   return (
@@ -167,7 +151,7 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
         type="button"
         onClick={handleLike}
         aria-pressed={liked}
-        aria-label={liked ? 'Unlike' : 'Like'}
+        aria-label={liked ? t('leaderboard.card.unlike', 'Unlike') : t('leaderboard.card.like', 'Like')}
         className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 hover:bg-black/5 transition bg-transparent"
       >
         <FiHeart
@@ -178,7 +162,7 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
       <button
         type="button"
         onClick={handleComment}
-        aria-label="Open comments"
+        aria-label={t('leaderboard.card.openComments', 'Open comments')}
         className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 hover:bg-black/5 transition bg-transparent"
       >
         <FiMessageCircle className="h-4 w-4 text-black" />
@@ -189,24 +173,86 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Follow button — optimistic, persists via the /follows API           */
+/* ------------------------------------------------------------------ */
+
+/** Compact follow toggle for a card header. Lives inside the card's anchor,
+ *  so it stops propagation to avoid triggering the card-level navigation. The
+ *  initial state is seeded from the viewer's following-wallets set (so it's
+ *  correct on first paint and survives a reload); the toggle mutation patches
+ *  that cache optimistically and reconciles on settle. */
+export function FollowButton({ username, targetWallet }: { username: string; targetWallet: string }) {
+  const { t } = useTranslation();
+  const toggleFollow = useToggleFollow();
+  const { data: followingSet } = useFollowingWallets();
+  const following = followingSet?.has(targetWallet.toLowerCase()) ?? false;
+  const pending = toggleFollow.isPending;
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (pending) return;
+    toggleFollow.mutate({ targetWallet, isFollowing: following });
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={pending}
+      aria-busy={pending}
+      aria-pressed={following}
+      aria-label={
+        following
+          ? t('leaderboard.card.unfollowAria', 'Unfollow {{username}}', { username })
+          : t('leaderboard.card.followAria', 'Follow {{username}}', { username })
+      }
+      className={`inline-flex items-center gap-1 rounded-full border border-black border-b-2 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider shrink-0 transition ${
+        pending ? 'opacity-70 cursor-wait' : 'hover:-translate-y-0.5'
+      } ${
+        following
+          ? 'bg-white text-black hover:bg-white/80'
+          : 'bg-primary text-black hover:bg-primary/80'
+      }`}
+    >
+      {pending ? (
+        <FiLoader className="h-3 w-3 animate-spin" aria-hidden />
+      ) : following ? (
+        <FiCheck className="h-3 w-3" aria-hidden />
+      ) : (
+        <FiUserPlus className="h-3 w-3" aria-hidden />
+      )}
+      <span>
+        {following
+          ? t('leaderboard.card.following', 'Following')
+          : t('leaderboard.card.follow', 'Follow')}
+      </span>
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Card header                                                         */
 /* ------------------------------------------------------------------ */
 
 function CardHeader({ user }: { user: LeaderboardCardData }) {
+  const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <Avatar username={user.username} avatarUrl={user.avatarUrl} />
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
         <p className="text-sm font-extrabold text-black truncate">{user.username}</p>
         {user.isCurrentUser && (
           <span className="text-[10px] font-bold uppercase tracking-wider bg-black text-white rounded-sm px-1.5 py-0.5 shrink-0">
-            You
+            {t('leaderboard.card.you', 'You')}
           </span>
         )}
       </div>
 
-      <PositionPill position={user.position} />
+      {!user.isCurrentUser && (
+        <FollowButton username={user.username} targetWallet={user.walletAddress} />
+      )}
     </div>
   );
 }
@@ -221,6 +267,7 @@ function CardHeader({ user }: { user: LeaderboardCardData }) {
  * square — no gradient, no random imagery.
  */
 export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
+  const { t } = useTranslation();
   // Current-user card is filled with a soft primary tint (not just an outline)
   // so "this is you" reads at a glance while scrolling the feed.
   const containerClasses = user.isCurrentUser
@@ -230,18 +277,24 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
   return (
     <Link
       href={`/leaderboard/${user.walletAddress}`}
-      aria-label={`View ${user.username}'s world`}
+      aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", {
+        username: user.username,
+      })}
       className={`group flex flex-col gap-2.5 rounded-3xl p-3 shadow-sm transition hover:-translate-y-0.5 ${containerClasses}`}
     >
       <CardHeader user={user} />
 
-      <WorldPreviewTile caption={`Lv ${user.level}`} />
+      <MapMiniPreview
+        walletAddress={user.walletAddress}
+        caption={t('leaderboard.card.levelShort', 'Lv {{level}}', { level: user.level })}
+        badge={<PositionPill position={user.position} />}
+      />
 
       <div className="flex gap-2">
         <StatBox
           icon={
             <Image
-              src="/icons/global/streak.png"
+              src="/icons/global/streak_face.png"
               alt=""
               width={24}
               height={24}
@@ -249,7 +302,7 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
             />
           }
           value={`${user.streak}`}
-          label="Day streak"
+          label={t('leaderboard.card.dayStreak', 'Day streak')}
         />
         <StatBox
           icon={
@@ -262,7 +315,7 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
             />
           }
           value={`${user.badges}`}
-          label="Badges"
+          label={t('leaderboard.card.badges', 'Badges')}
         />
       </div>
 

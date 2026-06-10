@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1062.0",
+    "@stellar/stellar-sdk": "^15.1.0",
     "@vaquita/shared": "workspace:*",
     "ably": "^2.21.0",
     "cors": "^2.8.6",
@@ -19,6 +20,7 @@
     "multer": "^2.1.1",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
+    "sharp": "^0.34.5",
     "uuid": "^14.0.0"
   },
   "devDependencies": {

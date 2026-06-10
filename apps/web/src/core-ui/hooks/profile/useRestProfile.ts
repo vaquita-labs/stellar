@@ -1,6 +1,7 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
+import { authFetch } from '@/networks/stellar/walletSession';
 import { useConfigStore } from '@/core-ui/stores';
-import { ProfileMapObjectsResponseDTO } from '@/core-ui/types';
+import { NotificationPreferences, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
 import { useCallback } from 'react';
 
 export const useRestProfile = () => {
@@ -10,13 +11,14 @@ export const useRestProfile = () => {
 
   const saveNickname = useCallback(
     async (payload: { nickname: string }) => {
-      const response = await fetch(
+      const response = await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/nickname`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        }
+        },
+        walletAddress
       );
       const data = await response.json();
 
@@ -33,13 +35,14 @@ export const useRestProfile = () => {
   // one field can succeed while the other reports a friendly error.
   const saveProfile = useCallback(
     async (payload: { nickname?: string; email?: string }) => {
-      const response = await fetch(
+      const response = await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/profile`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        }
+        },
+        walletAddress
       );
       const data = await response.json();
 
@@ -59,13 +62,14 @@ export const useRestProfile = () => {
 
   const saveProfileFlags = useCallback(
     async (payload: { onboardingCompleted?: boolean; tutorialCompleted?: boolean; cryptoSavvy?: boolean }) => {
-      const response = await fetch(
+      const response = await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/flags`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        }
+        },
+        walletAddress
       );
       const data = await response.json();
 
@@ -82,13 +86,38 @@ export const useRestProfile = () => {
   // back as a failure with a message.
   const saveProfilePreferences = useCallback(
     async (payload: { language?: string; currency?: string }) => {
-      const response = await fetch(
+      const response = await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/preferences`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        }
+        },
+        walletAddress
+      );
+      const data = await response.json();
+
+      return {
+        success: data?.status === 'success',
+        message: data?.message,
+      };
+    },
+    [networkName, walletAddress]
+  );
+
+  // Persist notification toggles. Keys are merged server-side, so a single
+  // toggle can be PATCHed on its own; enabling `email` fails with a friendly
+  // message while the profile has no email address.
+  const saveNotificationPreferences = useCallback(
+    async (payload: Partial<NotificationPreferences>) => {
+      const response = await authFetch(
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/notification-preferences`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        walletAddress
       );
       const data = await response.json();
 
@@ -104,12 +133,13 @@ export const useRestProfile = () => {
     async (file: File) => {
       const form = new FormData();
       form.append('file', file);
-      const response = await fetch(
+      const response = await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/avatar`,
         {
           method: 'POST',
           body: form,
-        }
+        },
+        walletAddress
       );
       const data = await response.json();
 
@@ -123,11 +153,12 @@ export const useRestProfile = () => {
   );
 
   const removeAvatar = useCallback(async () => {
-    const response = await fetch(
+    const response = await authFetch(
       `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/avatar`,
       {
         method: 'DELETE',
-      }
+      },
+      walletAddress
     );
     const data = await response.json();
 
@@ -149,12 +180,13 @@ export const useRestProfile = () => {
   );
 
   const goldDailyCollect = useCallback(async () => {
-    const response = await fetch(
+    const response = await authFetch(
       `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress || ''}/gold-daily-collect`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-      }
+      },
+      walletAddress
     );
     const data = await response.json();
 
@@ -163,13 +195,14 @@ export const useRestProfile = () => {
 
   const saveMapObjects = useCallback(
     async (payload: { objects: ProfileMapObjectsResponseDTO['objects'] }) => {
-      const response = await fetch(
+      const response = await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress || ''}/map-objects`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        }
+        },
+        walletAddress
       );
       const data = await response.json();
 
@@ -183,6 +216,7 @@ export const useRestProfile = () => {
     saveProfile,
     saveProfileFlags,
     saveProfilePreferences,
+    saveNotificationPreferences,
     uploadAvatar,
     removeAvatar,
     checkNicknameAvailability,

@@ -59,16 +59,24 @@ const interpolate = (progress: number) => {
   };
 };
 
+// Renderizar el shadow map cuesta un pase completo de la escena; con la luz
+// moviéndose tan lento basta refrescarlo ~10 veces por segundo en lugar de 60
+// (WorldMap pone gl.shadowMap.autoUpdate = false al crear el canvas).
+const SHADOW_UPDATE_INTERVAL = 0.1;
+
 export const DayCycleSky = () => {
-  const { scene } = useThree();
+  const { scene, gl } = useThree();
   const advance = useDayCycleStore((s) => s.advance);
   const editingObjectPosition = useMapStore((s) => s.editingObjectPosition);
 
   const ambientRef = useRef<THREE.AmbientLight>(null);
   const directionalRef = useRef<THREE.DirectionalLight>(null);
+  const shadowElapsedRef = useRef(0);
 
   const skyColor = useMemo(() => new THREE.Color('#9fd6f5'), []);
-  const fog = useMemo(() => new THREE.Fog('#cfeaf7', 25, 90), []);
+  // La niebla arranca lejos y usa el color del cielo para que el agua del horizonte
+  // se funda con el cielo (horizonte natural, sin franja blanca).
+  const fog = useMemo(() => new THREE.Fog('#9fd6f5', 60, 220), []);
 
   useEffect(() => {
     scene.background = skyColor;
@@ -85,7 +93,9 @@ export const DayCycleSky = () => {
     const values = interpolate(progress);
 
     skyColor.set(values.sky);
-    fog.color.set(values.fog);
+    // La niebla siempre toma el color del cielo para un horizonte sin costura
+    // (el agua lejana se funde con el cielo como en la realidad).
+    fog.color.set(values.sky);
 
     const editDimAmbient = editingObjectPosition ? 0.6 : 1;
     const editDimDirectional = editingObjectPosition ? 0.5 : 1;
@@ -98,6 +108,12 @@ export const DayCycleSky = () => {
       directionalRef.current.color.set(values.sunColor);
       directionalRef.current.position.set(values.sunPos[0], values.sunPos[1], values.sunPos[2]);
     }
+
+    shadowElapsedRef.current += delta;
+    if (shadowElapsedRef.current >= SHADOW_UPDATE_INTERVAL) {
+      shadowElapsedRef.current = 0;
+      gl.shadowMap.needsUpdate = true;
+    }
   });
 
   return (
@@ -108,8 +124,8 @@ export const DayCycleSky = () => {
         castShadow
         intensity={1.2}
         position={[3, 15, -15]}
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
         shadow-camera-far={60}
         shadow-camera-left={-20}
         shadow-camera-right={20}

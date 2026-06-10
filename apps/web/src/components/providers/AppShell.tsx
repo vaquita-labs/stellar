@@ -6,6 +6,7 @@ import { useMapStore, useResize } from '@/core-ui/stores';
 import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
 import { ListenDepositsChanges } from './ListenDepositsChanges';
+import { ListenNotificationsChanges } from './ListenNotificationsChanges';
 import { WalletProviderSync } from './WalletProviderSync';
 
 const Main = ({ children, withSidebar }: { children: ReactNode; withSidebar: boolean }) => {
@@ -19,6 +20,7 @@ const Main = ({ children, withSidebar }: { children: ReactNode; withSidebar: boo
         <ProfileDataProvider>{children}</ProfileDataProvider>
       </ConfigProvider>
       <ListenDepositsChanges />
+      <ListenNotificationsChanges />
     </main>
   );
 };
@@ -43,6 +45,11 @@ export function AppShell({
   // Show the bottom navbar on `/profile` itself, but hide it on any deeper
   // profile sub-route (settings, edit, wallet, friends, notifications, …).
   const isProfileSubRoute = pathname?.startsWith('/profile/') ?? false;
+  // The notifications center is a detail screen with its own back button.
+  const isNotificationsRoute = pathname?.startsWith('/notifications') ?? false;
+  // Another player's world (`/leaderboard/<wallet>`) is a detail screen too —
+  // the header carries its own back button. The leaderboard list keeps the nav.
+  const isLeaderboardDetailRoute = pathname?.startsWith('/leaderboard/') ?? false;
   const isShopRoute = pathname?.startsWith('/shop') ?? false;
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const hideNavigation = isShopRoute || isEditingMap;
@@ -55,7 +62,9 @@ export function AppShell({
     <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
       {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
       <Main withSidebar={!isPublicRoute && !hideNavigation}>{children}</Main>
-      {!isPublicRoute && !isProfileSubRoute && !hideNavigation && <MobileNavigation />}
+      {!isPublicRoute && !isProfileSubRoute && !isNotificationsRoute && !isLeaderboardDetailRoute && !hideNavigation && (
+        <MobileNavigation />
+      )}
     </div>
   );
 }

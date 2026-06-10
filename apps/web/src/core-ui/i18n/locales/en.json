@@ -1,0 +1,1453 @@
+{
+  "achievements": {
+    "detail": {
+      "claimAward": "Claim award",
+      "progress": "Progress",
+      "viewOnStellarExpert": "View on Stellar Expert"
+    },
+    "items": {
+      "beta-tester": {
+        "description": "You joined Vaquita during the beta. Thanks for helping us shape it.",
+        "title": "Beta Tester"
+      },
+      "century-saver": {
+        "description": "Reach a 100-day savings streak. Legendary.",
+        "title": "Century Saver"
+      },
+      "explorer": {
+        "description": "Earn 300 XP across all challenges.",
+        "title": "Explorer"
+      },
+      "first-deposit": {
+        "description": "Made your very first deposit in Vaquita.",
+        "title": "First Deposit"
+      },
+      "first-friend": {
+        "description": "Follow your first fellow vaquero.",
+        "title": "Crew Mate"
+      },
+      "first-place": {
+        "description": "Finish #1 on the monthly leaderboard.",
+        "title": "Gold Medalist"
+      },
+      "month-master": {
+        "description": "Reach a 30-day savings streak.",
+        "title": "Month Master"
+      },
+      "rookie": {
+        "description": "Earn your first 50 XP. Welcome to the herd.",
+        "title": "Rookie"
+      },
+      "savings-baron": {
+        "description": "Reach $10,000 USDC in cumulative deposits.",
+        "title": "Savings Baron"
+      },
+      "savings-starter": {
+        "description": "Reach $100 USDC in cumulative deposits.",
+        "title": "Savings Starter"
+      },
+      "second-place": {
+        "description": "Finish #2 on the monthly leaderboard.",
+        "title": "Silver Medalist"
+      },
+      "streak-master": {
+        "description": "Reach a 50-day savings streak.",
+        "title": "Streak Master"
+      },
+      "third-place": {
+        "description": "Finish in the top 10 on the monthly leaderboard.",
+        "title": "Bronze Medalist"
+      },
+      "trio-saver": {
+        "description": "Keep 3 active deposits running at the same time.",
+        "title": "Triple Threat"
+      },
+      "week-warrior": {
+        "description": "Reach a 7-day savings streak.",
+        "title": "Week Warrior"
+      },
+      "whale": {
+        "description": "Reach 30,000 XP. Now THAT is dedication.",
+        "title": "Vaquita Whale"
+      }
+    },
+    "minted": {
+      "title": "Badge minted on-chain!"
+    },
+    "minting": {
+      "waitingForWallet": "Preparing your reward…"
+    },
+    "mintError": {
+      "alreadyClaimed": "You've already claimed this badge.",
+      "claimExpired": "This claim expired. Please reopen the badge and try again.",
+      "soulbound": "This badge can't be transferred once minted.",
+      "unauthorized": "We couldn't verify this reward. Please try again.",
+      "editionCapReached": "This badge is sold out — no more editions are available.",
+      "paused": "Minting is paused right now. Please try again later.",
+      "notReady": "Badges aren't available right now. Please try again later.",
+      "rejected": "You cancelled the request in your wallet.",
+      "network": "Connection problem. Check your internet and try again.",
+      "generic": "Something went wrong while minting. Please try again."
+    },
+    "modal": {
+      "claimingReward": "Claiming reward",
+      "goldCoins": "{{count}} gold coins",
+      "goldCoins_one": "{{count}} gold coin",
+      "goldCoins_other": "{{count}} gold coins",
+      "shareAchievement": "Share achievement"
+    },
+    "page": {
+      "awards": "Awards",
+      "personalRecords": "Personal records",
+      "redeemCode": "Redeem code",
+      "title": "Achievements"
+    },
+    "reward": {
+      "subtitle": "{{title}} is now in your trophy room.",
+      "title": "You earned {{count}} coins!",
+      "title_one": "You earned {{count}} coin!",
+      "title_other": "You earned {{count}} coins!"
+    },
+    "share": {
+      "cta": "Earn your own on Vaquita",
+      "earnedBy": "earned by @{{username}}",
+      "fallbackTitle": "Achievement · Vaquita",
+      "metaDescription": "Someone just unlocked \"{{title}}\" on Vaquita. {{description}}",
+      "metaDescriptionUser": "@{{username}} just unlocked \"{{title}}\" on Vaquita. {{description}}",
+      "metaTitle": "{{title}} · Vaquita",
+      "text": "I just unlocked \"{{title}}\" on Vaquita 🐮",
+      "unlocked": "Achievement unlocked"
+    },
+    "toast": {
+      "couldNotShare": "Could not share",
+      "linkCopied": "Link copied to clipboard",
+      "mintFailed": "Couldn't claim your reward",
+      "unknownError": "Unknown error"
+    }
+  },
+  "auth": {
+    "legal": {
+      "lastUpdated": "Last updated"
+    },
+    "login": {
+      "logoAlt": "Vaquita Logo",
+      "viewIntroAgain": "View intro again",
+      "welcomeSubtitle": "Sign up to start saving securely",
+      "welcomeTitle": "Welcome"
+    },
+    "privacy": {
+      "changes": {
+        "body": "We will update the “Last updated” date above whenever this policy changes. Material changes will also be announced in the app.",
+        "heading": "6. Changes"
+      },
+      "children": {
+        "body": "Vaquita is not directed at children under 13 and we do not knowingly collect data from them.",
+        "heading": "5. Children"
+      },
+      "choices": {
+        "delete": "Email <a>privacy@vaquita.finance</a> to request deletion of profile data.",
+        "disconnect": "Disconnect your wallet at any time from the Settings screen.",
+        "heading": "4. Your choices",
+        "hideBalance": "Toggle <b>Hide balance</b> in Settings → Privacy settings to mask amounts on screen."
+      },
+      "collect": {
+        "heading": "1. Information we collect",
+        "profile": "<b>Profile data.</b> Optional nickname and email if you choose to provide them.",
+        "usage": "<b>Usage data.</b> Aggregated, non-identifying analytics about which screens you visit, used to improve the app.",
+        "wallet": "<b>Wallet address.</b> When you connect a wallet, we read its public address so we can show your balances and activity."
+      },
+      "contact": {
+        "body": "Questions? Reach us at <a>privacy@vaquita.finance</a>.",
+        "heading": "7. Contact"
+      },
+      "dont": {
+        "custody": "We do not have custody of your funds or private keys.",
+        "heading": "3. What we do NOT do",
+        "sell": "We do not sell your personal data.",
+        "share": "We do not share your wallet address with third-party advertisers."
+      },
+      "intro": "Your privacy matters to us. This Privacy Policy explains what information Vaquita collects, how we use it, and the choices you have.",
+      "title": "Privacy Policy",
+      "use": {
+        "abuse": "To detect abuse and keep the Service safe.",
+        "emails": "To send transactional emails or notifications you opted into.",
+        "heading": "2. How we use information",
+        "operate": "To operate the app, show your savings progress and unlock rewards."
+      }
+    },
+    "terms": {
+      "acceptableUse": {
+        "disrupt": "Attempt to disrupt, reverse-engineer or compromise the Service.",
+        "heading": "5. Acceptable use",
+        "impersonate": "Misrepresent your identity or impersonate others.",
+        "intro": "You agree not to:",
+        "unlawful": "Use the Service for unlawful activity or to evade sanctions."
+      },
+      "changes": {
+        "body": "We may update these Terms from time to time. We will update the “Last updated” date above. Continued use of the Service after changes means you accept the updated Terms.",
+        "heading": "8. Changes"
+      },
+      "contact": {
+        "body": "Questions? Reach us at <a>hello@vaquita.finance</a>.",
+        "heading": "9. Contact"
+      },
+      "disclaimers": {
+        "body": "The Service is provided “as is” without warranties of any kind. To the maximum extent permitted by law, we disclaim liability for indirect, incidental or consequential damages arising from your use of the Service.",
+        "heading": "7. Disclaimers"
+      },
+      "eligibility": {
+        "body": "You must be at least 18 years old and legally able to enter into a contract in your jurisdiction. You are responsible for ensuring that your use of the Service is permitted under local law.",
+        "heading": "2. Eligibility"
+      },
+      "intro": "Welcome to Vaquita. By creating an account, connecting a wallet, or otherwise using the Vaquita app (the “Service”), you agree to these Terms of Service (“Terms”). Please read them carefully.",
+      "ip": {
+        "body": "The Vaquita name, logo, vaquita mascot and in-app artwork are owned by us. You receive a limited, non-transferable license to use the Service for personal, non-commercial purposes.",
+        "heading": "6. Intellectual property"
+      },
+      "risks": {
+        "body": "Cryptocurrencies are volatile and smart-contract protocols carry technical and economic risk. Yields, badges, and in-app rewards are not guaranteed and may change at any time. Do not deposit more than you can afford to lose.",
+        "heading": "4. Risks"
+      },
+      "service": {
+        "body": "Vaquita is a gamified savings experience that lets you deposit funds into self-custody smart-contract vaults on supported blockchains. Vaquita is non-custodial: you control your wallet and your funds at all times.",
+        "heading": "1. The Service"
+      },
+      "title": "Terms of Service",
+      "wallet": {
+        "heading": "3. Your wallet & funds",
+        "irreversible": "Blockchain transactions are irreversible. Always double-check before signing.",
+        "noMove": "Vaquita can never move funds from your wallet on your behalf.",
+        "security": "You are solely responsible for the security of your wallet, keys and recovery phrase."
+      }
+    }
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "continue": "Continue",
+    "delete": "Delete",
+    "done": "Done",
+    "edit": "Edit",
+    "loading": "Loading…",
+    "next": "Next",
+    "off": "Off",
+    "on": "On",
+    "retry": "Retry",
+    "save": "Save",
+    "saving": "Saving…",
+    "selectOption": "Select an option…",
+    "somethingWentWrong": "Something went wrong",
+    "soon": "Soon"
+  },
+  "deposit": {
+    "bank": {
+      "details": "Details",
+      "estimatedEarningsTotal": "Estimated earnings total",
+      "estimatesDisclaimer": "These are estimates and update over time final rewards are confirmed when you withdraw.",
+      "hide": "Hide",
+      "howItWorks1": "Your deposit generates yield from multiple sources.",
+      "howItWorks2": "Estimated rewards are calculated using the current APY.",
+      "howItWorks3": "The APY is dynamic and may fluctuate based on user activity and total deposits.",
+      "howItWorks4": "Rewards become claimable only after the saving period ends.",
+      "howItWorks5": "Final rewards are confirmed upon withdrawal.",
+      "howRewardsWork": "How rewards work",
+      "marketRewards": "{{market}} rewards",
+      "myDeposits": "My deposits",
+      "network": "Network:",
+      "protocolRewards": "Protocol rewards",
+      "protocolRewardsInfo": "Yield from {{market}} where your funds are deposited.",
+      "theLendingProtocol": "the lending protocol",
+      "title": "Bank Rewards",
+      "vaquitaRewards": "Vaquita rewards",
+      "vaquitaRewardsInfo": "Rewards from the Vaquita community pool, based on your lock period."
+    },
+    "confirm": {
+      "earlyWithdrawalPrefix": "Early withdrawal rewards will be",
+      "forfeited": "forfeited",
+      "readyToClaim": "Your vaquita is ready to claim.",
+      "sendTransaction": "Confirm to send the transaction.",
+      "timesUp": "Time's up!",
+      "title": "Confirm withdrawal",
+      "youWillLose": "You will lose",
+      "youWillReceive": "You will receive"
+    },
+    "detail": {
+      "days": "Days",
+      "estAbbrev": "est.",
+      "hours": "Hours",
+      "lockSuffix": "{{period}} lock",
+      "locked": "Locked",
+      "min": "Min",
+      "protocolInterest": "Protocol interest",
+      "readyToWithdraw": "Ready to withdraw",
+      "sec": "Sec",
+      "startedAt": "Started at",
+      "title": "Your deposit",
+      "totalEstEarnings": "Total est. earnings",
+      "vaquitaInterest": "Vaquita interest",
+      "viewOnStellarExpert": "View on Stellar Expert",
+      "withdrawnAt": "Withdrawn at"
+    },
+    "list": {
+      "earned": "Earned",
+      "makeFirstDeposit": "Make your first deposit to get started",
+      "noActiveDeposits": "No active deposits",
+      "noData": "No data",
+      "noDepositsYet": "No deposits yet",
+      "noWithdrawnDeposits": "No withdrawn deposits",
+      "rewardsForfeited": "Rewards forfeited",
+      "tabActive": "Active",
+      "tabWithdrawn": "Withdrawn",
+      "title": "Your deposits",
+      "withdrawnBadge": "Withdrawn",
+      "withdrawnEarlyBadge": "Withdrawn early"
+    },
+    "lockModal": {
+      "escrowDescription": "The funds will be held in escrow during the selected period.",
+      "title": "Select Lock Period"
+    },
+    "modal": {
+      "lockDescription": "The funds will be lock in the vault during the selected period.",
+      "lockSeconds": "{{count}} seconds",
+      "lockTime": "Lock time",
+      "title": "Deposit"
+    },
+    "panel": {
+      "paused": "Deposits are temporarily paused"
+    },
+    "processing": "Processing...",
+    "processingShort": "Processing",
+    "savingsStats": {
+      "infoAlt": "info"
+    },
+    "toast": {
+      "errorTitle": "Deposit didn't go through",
+      "successDescription": "Your savings are on their way! This may take a few seconds. Everything will be ready in a moment.",
+      "successTitle": "Deposit successful!"
+    },
+    "withdraw": {
+      "button": "Withdraw",
+      "claimNow": "Claim now",
+      "errorTitle": "Withdrawal didn't go through",
+      "successDescription": "Your money is on its way! This may take a few seconds. Everything will be ready in a moment.",
+      "successTitle": "Withdrawal successful!",
+      "withdrawAnyway": "Withdraw anyway"
+    },
+    "withdrawn": {
+      "amountReturned": "Deposited amount returned",
+      "earlyDescription": "You withdrew before the lock ended, so the rewards were forfeited.",
+      "earlyTitle": "Withdrawn early",
+      "earnedSuffix": "earned",
+      "onTimeDescription": "You completed the full lock period and kept your rewards.",
+      "onTimeTitle": "Withdrawn on time"
+    }
+  },
+  "errors": {
+    "pool": {
+      "arithmeticOverflow": "Arithmetic overflow",
+      "cannotChangeTokenWithOpenPositions": "Cannot change token while positions are open",
+      "cannotChangeVaultWithOpenPositions": "Cannot change vault while positions are open",
+      "conservationInvariantViolated": "Conservation invariant violated",
+      "depositIdExists": "Deposit ID already exists",
+      "depositsPaused": "Deposits are currently paused",
+      "feeExceedsCap": "Fee exceeds the 20% cap",
+      "invalidDepositAmount": "Invalid deposit amount",
+      "invalidFeeValue": "Invalid fee value",
+      "lockPeriodAlreadyRegistered": "Lock period already registered",
+      "lockPeriodHasOpenPositions": "Lock period has open positions",
+      "lockPeriodNotSupported": "Lock period not supported",
+      "noDepositsInPeriod": "No deposits in this period",
+      "noUpgradePending": "No upgrade is pending",
+      "notInitialized": "Contract not initialized",
+      "notPositionOwner": "Caller is not the position owner",
+      "periodDataNotFound": "Period data not found",
+      "positionNotFound": "Position not found",
+      "upgradeTimelockNotElapsed": "Upgrade timelock has not elapsed",
+      "upgradesLockedForever": "Upgrades have been locked forever",
+      "vaultReturnedLessThanPrincipal": "Vault returned less than principal",
+      "vaultReturnedZeroShares": "Vault returned zero shares",
+      "vaultShareBalanceDecreased": "Vault share balance decreased unexpectedly"
+    }
+  },
+  "home": {
+    "catalog": {
+      "always": "Always",
+      "biome": {
+        "any": "any",
+        "desert": "desert",
+        "forest": "forest",
+        "mountain": "mountain",
+        "plains": "plains"
+      },
+      "buy": "Buy",
+      "goldAlt": "Gold",
+      "invalidOfferDesc": "Enter at least 1 gold coin.",
+      "invalidOfferTitle": "Invalid offer",
+      "itemFallback": "Item",
+      "items": {
+        "fountain": {
+          "description": "A stunning fountain to enhance your map",
+          "name": "Decorative Fountain"
+        },
+        "golden-statue": {
+          "description": "A prestigious golden statue for your collection",
+          "name": "Golden Statue"
+        },
+        "streak-freeze": {
+          "description": "Protect your streak for one day if you cannot maintain it",
+          "name": "Streak Freeze"
+        },
+        "tile-pack": {
+          "description": "Pack of 5 exclusive tiles for your map",
+          "name": "Tile Pack"
+        },
+        "tree": {
+          "description": "A beautiful tree to decorate your map. Always available!",
+          "name": "Tree"
+        }
+      },
+      "makeOffer": "Make offer",
+      "notEnoughCoinsDesc": "Your offer exceeds your balance.",
+      "notEnoughCoinsTitle": "Not enough coins",
+      "offerSubmittedDesc": "Offered {{gold}} gold for {{name}}",
+      "offerSubmittedTitle": "Offer submitted!",
+      "price": "Price",
+      "processing": "Processing...",
+      "purchaseSuccessDesc": "You've successfully purchased {{name}}",
+      "purchaseSuccessTitle": "Purchase successful!",
+      "rarity": {
+        "common": "common",
+        "epic": "epic",
+        "legendary": "legendary",
+        "rare": "rare"
+      },
+      "sending": "Sending...",
+      "submitOffer": "Submit offer",
+      "type": {
+        "decoration": "decoration",
+        "expansion": "expansion",
+        "utility": "utility"
+      },
+      "youHave": "You have {{count}}",
+      "yourOffer": "Your offer"
+    },
+    "coinsChip": {
+      "goldCoinAlt": "Gold Coin"
+    },
+    "depositCard": {
+      "earnings": "Earnings",
+      "locked": "Locked",
+      "ready": "Ready",
+      "remainingDays": "{{days}}d {{hours}}h left",
+      "remainingHours": "{{hours}}h {{mins}}m left",
+      "remainingMins": "{{mins}}m left",
+      "remainingSecs": "{{secs}}s left",
+      "unlocks": "Unlocks {{date}}"
+    },
+    "editControls": {
+      "remove": "Remove",
+      "rotate": "Rotate"
+    },
+    "exitEdit": {
+      "body": "You have unsaved changes. Are you sure you want to exit edit mode?",
+      "discard": "Discard changes",
+      "saveAndExit": "Save and exit",
+      "title": "Exit edit mode?"
+    },
+    "music": {
+      "low": "Low volume",
+      "mute": "Mute music",
+      "normal": "Normal volume",
+      "veryLow": "Very low volume"
+    },
+    "objectList": {
+      "empty": "Your collection is empty.",
+      "emptyAlt": "Empty",
+      "emptyHint": "Buy items from the catalog to start collecting!"
+    },
+    "placeHint": {
+      "cancelAria": "Cancel placement",
+      "tapToPlace": "Tap the map to place"
+    },
+    "shop": {
+      "title": "Shop"
+    },
+    "stats": {
+      "experienceAlt": "Experience",
+      "goldCoinAlt": "Gold Coin",
+      "greeting": "Your savings",
+      "greetingNamed": "Your savings, <b>{{name}}</b>",
+      "profileAlt": "Profile",
+      "profileAria": "Profile",
+      "streakAlt": "Streak"
+    },
+    "totalDeposits": {
+      "bagAlt": "Total deposits"
+    }
+  },
+  "leaderboard": {
+    "card": {
+      "badges": "Badges",
+      "commentsComingSoon": "Comments on {{username}}'s world coming soon",
+      "dayStreak": "Day streak",
+      "follow": "Follow",
+      "followAria": "Follow {{username}}",
+      "following": "Following",
+      "levelShort": "Lv {{level}}",
+      "like": "Like",
+      "openComments": "Open comments",
+      "positionLabel": "Position {{position}}",
+      "unfollowAria": "Unfollow {{username}}",
+      "unlike": "Unlike",
+      "viewWorld": "View {{username}}'s world",
+      "you": "You"
+    },
+    "direction": {
+      "ascending": "Sort ascending toggle order",
+      "descending": "Sort descending toggle order"
+    },
+    "empty": {
+      "description": "Be the first to climb the ranks start a deposit streak and you'll show up here.",
+      "title": "No vaqueros on the board yet"
+    },
+    "error": {
+      "title": "Couldn't load the leaderboard"
+    },
+    "filter": {
+      "heading": "Filter by",
+      "label": "Filter by metric"
+    },
+    "loadingLabel": "Loading leaderboard",
+    "noResults": {
+      "description": "Try a different username or clear the search.",
+      "title": "No vaqueros match “{{query}}”"
+    },
+    "search": {
+      "clear": "Clear search",
+      "label": "Search vaqueros",
+      "placeholder": "Search vaqueros by username"
+    },
+    "sortOptions": {
+      "badges": {
+        "hint": "Most achievements unlocked",
+        "label": "Badges"
+      },
+      "level": {
+        "hint": "Most XP earned",
+        "label": "Level"
+      },
+      "rank": {
+        "hint": "Default leaderboard order",
+        "label": "Top ranking"
+      },
+      "streak": {
+        "hint": "Most consecutive days",
+        "label": "Streak"
+      }
+    },
+    "title": "Leaderboard",
+    "user": {
+      "joined": "Joined {{joinedLabel}}",
+      "noAchievements": "No achievements unlocked yet"
+    },
+    "vaquero": "Vaquero",
+    "vaqueroNamed": "Vaquero {{tail}}"
+  },
+  "nav": {
+    "primaryAriaLabel": "Primary"
+  },
+  "notificationsCenter": {
+    "bellAria": "Notifications",
+    "empty": "No notifications here yet",
+    "emptyFiltered": "Try changing the filters to see more.",
+    "filters": {
+      "date": {
+        "all": "All",
+        "month": "Last 30 days",
+        "today": "Today",
+        "week": "Last 7 days"
+      },
+      "dateAria": "Filter by date",
+      "type": {
+        "all": "All",
+        "deposit": "Deposits",
+        "friend": "Friends",
+        "reward": "Rewards",
+        "streak": "Streak",
+        "system": "News"
+      },
+      "typeAria": "Filter by type"
+    },
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "markAllRead": "Mark all as read",
+    "messages": {
+      "achievementUnlocked": {
+        "body": "You earned the \"{{name}}\" badge. Check your collection.",
+        "title": "Trophy unlocked!"
+      },
+      "depositConfirmed": {
+        "body": "Your ${{amount}} USDC deposit is confirmed and already growing.",
+        "title": "Deposit confirmed"
+      },
+      "depositUnlocked": {
+        "body": "Your ${{amount}} USDC deposit completed its term. You can withdraw it now.",
+        "title": "Your savings are unlocked!"
+      },
+      "generic": {
+        "title": "Notification"
+      },
+      "newFollower": {
+        "body": "{{name}} started following you. Take a look at their farm!",
+        "title": "New follower"
+      },
+      "withdrawalCompleted": {
+        "body": "${{amount}} USDC was sent to your wallet.",
+        "title": "Withdrawal completed"
+      }
+    },
+    "time": {
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "justNow": "Just now",
+      "minutesAgo_one": "{{count}}m ago",
+      "minutesAgo_other": "{{count}}m ago"
+    },
+    "title": "Notifications"
+  },
+  "onboarding": {
+    "demo": {
+      "title": "Learn how to save with Vaquita",
+      "titleMobile": "Learn how to save with Vaquita mobile"
+    },
+    "intro": {
+      "goToSlide": "Go to slide {{number}}",
+      "letsStart": "Let's start",
+      "skip": "Skip",
+      "slides": {
+        "rewards": {
+          "description": "Keep your daily streak alive, unlock achievements and climb the leaderboard while you build a healthy savings habit.",
+          "imageAlt": "Trophy",
+          "title": "Rewards & achievements"
+        },
+        "saveEarn": {
+          "description": "Deposit and generate real yield. The more you save, the more your vaquita thrives and the more coins you collect.",
+          "imageAlt": "Vaquita coin",
+          "title": "Save & earn"
+        },
+        "welcome": {
+          "description": "Vaquita is your gamified savings app on Stellar. Save money, take care of your vaquita and watch your world grow.",
+          "imageAlt": "Vaquita",
+          "title": "Welcome to Vaquita"
+        }
+      }
+    },
+    "username": {
+      "helperAvailable": "@{{name}} is available",
+      "helperChecking": "Checking availability…",
+      "helperDefault": "Shown as @{{name}}",
+      "helperError": "Could not check availability, try again",
+      "helperShort": "At least {{count}} characters",
+      "helperTaken": "@{{name}} is already taken",
+      "inputPlaceholder": "@username",
+      "label": "Username",
+      "placeholderName": "username",
+      "saveErrorToast": "Could not save username",
+      "savedToast": "Username saved",
+      "subtitle": "This is the name other savers will see. You can change it later in your profile.",
+      "title": "Choose your username"
+    }
+  },
+  "profile": {
+    "preferences": {
+      "autoplaySounds": "Autoplay sound effects",
+      "autoplaySoundsDescription": "Play the moo and coin sounds during interactions.",
+      "cryptoModeDescription": "How much blockchain detail Vaquita shows you. Saved to your profile.",
+      "cryptoModeTitle": "Crypto mode",
+      "currencyDescription": "Used to display your balances and rewards.",
+      "currencyTitle": "Currency",
+      "displayTitle": "Display",
+      "hapticFeedback": "Haptic feedback",
+      "hapticFeedbackDescription": "Vibrate on key actions on supported devices.",
+      "iKnowCrypto": "I know crypto",
+      "iKnowCryptoDescription": "Show raw on-chain details (wallet addresses, tx hashes, network terms) instead of simplified copy.",
+      "languageDescription": "The language Vaquita uses to talk to you.",
+      "languageTitle": "Language",
+      "reduceMotion": "Reduce motion",
+      "reduceMotionDescription": "Disable bouncy animations across the app.",
+      "subtitle": "Language, currency and display options. Language and currency are saved to your profile.",
+      "title": "Preferences",
+      "updateError": "Could not update preferences",
+      "updated": "Preferences updated"
+    }
+  },
+  "profilePages": {
+    "edit": {
+      "changePhoto": "Change photo",
+      "chooseImageFile": "Please choose a JPG, PNG, WEBP or GIF image",
+      "couldNotRemovePhoto": "Could not remove photo",
+      "couldNotSaveProfile": "Could not save profile",
+      "couldNotUpdatePhoto": "Could not update photo",
+      "couldNotUpdatePreferences": "Could not update preferences",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "imageTooLarge": "The image is too large (max 5 MB).",
+      "nickname": "Nickname",
+      "nicknamePlaceholder": "@nickname",
+      "onboardingCompleted": "Onboarding completed",
+      "onboardingCompletedDesc": "Mark the initial onboarding flow as done.",
+      "photoRemoved": "Photo removed",
+      "photoRequirements": "JPG, PNG, WEBP or GIF · max 5 MB",
+      "photoUpdated": "Photo updated",
+      "preferencesUpdated": "Preferences updated",
+      "profileFlags": "Profile flags",
+      "profilePhotoAlt": "Profile photo",
+      "profileSaved": "Profile saved",
+      "removePhoto": "Remove photo",
+      "saveChanges": "Save changes",
+      "someChangesNotSaved": "Some changes were not saved",
+      "tapToChange": "Tap the photo to change it.",
+      "testingOnly": "Testing only",
+      "title": "Edit profile",
+      "tutorialCompleted": "Tutorial completed",
+      "tutorialCompletedDesc": "Mark the in-app tutorial as done."
+    },
+    "notifications": {
+      "items": {
+        "deposits": {
+          "description": "When your savings earn rewards.",
+          "title": "Deposits & yield"
+        },
+        "email": {
+          "description": "Get a weekly summary by email.",
+          "title": "Email updates"
+        },
+        "friends": {
+          "description": "Friends joining or saving.",
+          "title": "Friends activity"
+        },
+        "push": {
+          "description": "Receive alerts on this device.",
+          "title": "Push notifications"
+        },
+        "streaks": {
+          "description": "Daily reminder to keep your streak.",
+          "title": "Streak reminders"
+        }
+      },
+      "emailRequired": "Add your email in Edit profile to enable this.",
+      "sections": {
+        "activity": {
+          "title": "Activity"
+        },
+        "channels": {
+          "title": "Channels"
+        }
+      },
+      "title": "Notifications"
+    },
+    "privacy": {
+      "hideBalanceDesc": "Mask your active deposits and totals on the profile and home screens. Toggle it off any time to see them again.",
+      "hideBalanceTitle": "Hide my balance",
+      "storedOnDevice": "Stored on this device",
+      "storedOnDeviceDesc": "Privacy preferences are saved locally and don't sync to other devices yet. We'll add cross-device sync once accounts ship.",
+      "subtitle": "Decide how much of your activity is visible on this device.",
+      "title": "Privacy settings",
+      "visibility": "Visibility"
+    },
+    "profile": {
+      "achievements": "Achievements",
+      "activeDeposits": "Active deposits",
+      "addFriends": "Add friends",
+      "connectWalletDescription": "Access your profile, metrics, and future achievements by connecting your wallet.",
+      "connectWalletTitle": "Connect your wallet",
+      "daysCount_one": "{{count}} day",
+      "daysCount_other": "{{count}} days",
+      "editProfileAria": "Edit profile",
+      "experience": "Experience",
+      "followListError": "Couldn't load the list. Try again.",
+      "followers": "Followers",
+      "followersEmptyBody": "When vaqueros follow you, they'll show up here.",
+      "followersEmptyTitle": "No followers yet",
+      "following": "Following",
+      "followingEmptyBody": "Follow vaqueros from the leaderboard to see them here.",
+      "followingEmptyTitle": "Not following anyone yet",
+      "gold": "Gold",
+      "handleJoined": "{{handle}} · joined {{joinedLabel}}",
+      "viewFollowers": "View followers",
+      "viewFollowing": "View following",
+      "seeAll": "See all {{title}}",
+      "seeAllAchievements": "See all achievements",
+      "seeFullSummary": "See full summary",
+      "settingsAria": "Settings",
+      "streak": "Streak",
+      "summary": "Summary",
+      "title": "Profile"
+    },
+    "records": {
+      "activeDeposits": "Active deposits",
+      "ariaLabel": "Personal records",
+      "awardsEarned": "Awards earned",
+      "dayStreak": "Day streak",
+      "daysValue_one": "{{formatted}} day",
+      "daysValue_other": "{{formatted}} days",
+      "goldCoins": "Gold coins",
+      "totalXp": "Total XP"
+    },
+    "settings": {
+      "accountSection": "Account",
+      "feedback": "Feedback",
+      "feedbackDesc": "Tell us what you think.",
+      "help": "Help center",
+      "helpDesc": "FAQ and account support.",
+      "notifications": "Notifications",
+      "notificationsDesc": "Manage push and email alerts.",
+      "preferences": "Preferences",
+      "preferencesDesc": "Language, currency and display options.",
+      "privacy": "Privacy settings",
+      "privacyDesc": "Hide your balance on the profile and home screens.",
+      "privacyDescHidden": "Balance hidden on this device.",
+      "privacyPolicy": "Privacy policy",
+      "profile": "Profile",
+      "profileDesc": "Edit your nickname and avatar.",
+      "signOut": "Sign out",
+      "signOutConfirmDesc": "Are you sure you want to sign out?",
+      "signOutConfirmTitle": "Sign out?",
+      "supportSection": "Support",
+      "terms": "Terms",
+      "title": "Settings",
+      "wallet": "Wallet",
+      "walletDesc": "View address, send and receive funds."
+    },
+    "summary": {
+      "depositsChartAria": "Deposits over the last 6 weeks",
+      "depositsOverTime": "Deposits over time",
+      "depositsOverTimeSub": "Weekly contributions",
+      "keptOutOfDays": "{{kept}} / {{total}} days",
+      "last4Weeks": "Last 4 weeks",
+      "last6Weeks": "Last 6 weeks",
+      "levelShort": "Lvl {{level}}",
+      "nextMonth": "Next month",
+      "prevMonth": "Previous month",
+      "streakDaysThisMonth": "Streak days",
+      "streakHistory": "Streak history",
+      "streakHistorySub": "Days you kept the streak",
+      "streakKept": "Streak kept",
+      "streakMissed": "Streak missed",
+      "subtitle": "How your saving habit is shaping up.",
+      "title": "Summary",
+      "todayStreakKept": "Today streak kept",
+      "todayStreakMissed": "Today streak missed",
+      "totalExperience": "Total experience",
+      "xpLevel": "XP & level",
+      "xpLevelSub": "Progress to your next level",
+      "goldCoins": "Gold coins",
+      "goldCoinsSub": "Coins you're earning",
+      "usdcCurrentlySaved": "USDC currently saved",
+      "weekOf": "Week of {{date}}",
+      "depositsCount_one": "{{count}} deposit",
+      "depositsCount_other": "{{count}} deposits",
+      "noDepositsWeek": "No deposits"
+    }
+  },
+  "rewards": {
+    "carousel": {
+      "scrollLeft": "Scroll left",
+      "scrollRight": "Scroll right"
+    },
+    "claim": {
+      "claimButton": "Claim {{label}}",
+      "enjoy": "Enjoy exploring Vaquita.",
+      "error": "Could not claim right now. Please try again.",
+      "forYou": "{{label}} for you",
+      "giftAlt": "gift",
+      "letsGo": "Let's go",
+      "onItsWay": "{{label}} is on its way",
+      "title": "A gift for you",
+      "welcomeBalance": "A welcome balance to try Vaquita. Claim it to get started."
+    },
+    "coinAnimation": {
+      "coinAlt": "Coin"
+    },
+    "coins": {
+      "balanceLabel_one": "{{count}} coin",
+      "balanceLabel_other": "{{count}} coins",
+      "coinAlt": "coins",
+      "description": "Coins are your in-game currency. Earn them by saving and collecting your daily reward, then spend them in the shop to decorate your map.",
+      "earn": {
+        "daily": "Collect your daily reward",
+        "deposits": "Make and grow your deposits",
+        "streak": "Keep your daily streak alive"
+      },
+      "earnTitle": "Ways to earn",
+      "title": "Coins",
+      "viewStats": "View full stats"
+    },
+    "countdown": {
+      "comeBackIn": "Moo! Come back in",
+      "hrs": "Hrs",
+      "min": "Min",
+      "sec": "Sec"
+    },
+    "daily": {
+      "activeStreak_one": "Active streak: {{count}} day",
+      "activeStreak_other": "Active streak: {{count}} days",
+      "coinsAlt": "coins",
+      "collectButton": "Collect +{{count}}",
+      "confirmSubtitle_one": "Collect your daily coin and keep your streak alive.",
+      "confirmSubtitle_other": "Collect your daily coin and keep your streak alive.",
+      "confirmTitle": "Your vaquita has a reward for you!",
+      "greatButton": "Awesome!",
+      "rewardAlt": "reward",
+      "streakAlt": "streak",
+      "successHint": "Keep saving to maintain your streak and level up.",
+      "successWithXp_one": "You earned {{count}} coin and {{xp}} XP!",
+      "successWithXp_other": "You earned {{count}} coins and {{xp}} XP!",
+      "success_one": "You earned {{count}} coin!",
+      "success_other": "You earned {{count}} coins!",
+      "title": "Daily Reward"
+    },
+    "experience": {
+      "description": "You earn XP every time you save and keep your streak. Reach new levels to show off your saving progress!",
+      "levelLabel": "Level {{level}}",
+      "levelProgress": "Level progress",
+      "title": "Experience",
+      "totalExperience": "Total experience",
+      "viewStats": "View full stats",
+      "xpAlt": "experience"
+    },
+    "mood": {
+      "excited": {
+        "cta": "Got it",
+        "message": "One of your deposits reached its goal or your daily reward is ready! Time to celebrate!"
+      },
+      "loved": {
+        "cta": "Got it",
+        "message": "You have active deposits earning interest. Keep it up!"
+      },
+      "normal": {
+        "cta": "Got it",
+        "message": "All good for now."
+      },
+      "sad": {
+        "cta": "Got it",
+        "message": "You made an early withdrawal. Deposit again to cheer her up!"
+      },
+      "title": "Your vaquita's status"
+    },
+    "streak": {
+      "available": "Available: {{remaining}}/{{total}}",
+      "cost": "Cost:",
+      "current_one": "Current Streak: {{count}} day",
+      "current_other": "Current Streak: {{count}} days",
+      "dayStreakLabel_one": "{{count}} day streak",
+      "dayStreakLabel_other": "{{count}} day streak",
+      "description": "Your streak represents consecutive days of activity. Keep it going to unlock rewards and special tiles for your map!",
+      "freezeAlt": "freeze",
+      "freezeHint": "Streak Freeze allows you to protect your streak for one day if you're unable to maintain it. Use it wisely to prevent losing your progress!",
+      "freezeTitle": "Streak Freeze",
+      "repairButton": "Repair streak",
+      "repairDays_one": "{{count}} day",
+      "repairDays_other": "{{count}} days",
+      "repairHint": "This feature helps you recover from a broken streak, but remember: maintaining your streak daily is the best way to maximize your rewards!",
+      "repairIntro": "If you've lost your streak, you can restore it back to",
+      "repairOutro": "using Streak Repair.",
+      "repairTitle": "Streak Repair",
+      "streakAlt": "streak",
+      "title": "Streak",
+      "viewHistory": "View full history",
+      "weekdays": {
+        "Fr": "Fr",
+        "Mo": "Mo",
+        "Sa": "Sa",
+        "Su": "Su",
+        "Th": "Th",
+        "Tu": "Tu",
+        "We": "We"
+      },
+      "weeklyHint": "Get a new tile every time you increase your streak! The colored icons show days you've completed, while gray icons indicate missed days.",
+      "weeklyProgress": "Weekly Progress"
+    }
+  },
+  "shell": {
+    "loader": {
+      "alt": "logo"
+    },
+    "logo": {
+      "alt": "Vaquiland Logo"
+    },
+    "nav": {
+      "home": "Home",
+      "leaderboard": "Leaderboard",
+      "profile": "Profile",
+      "shop": "Shop",
+      "soon": "Soon"
+    },
+    "notFound": {
+      "backHome": "Go back to home",
+      "imageAlt": "Error",
+      "message": "Oops! Page not found"
+    }
+  },
+  "shop": {
+    "badge": {
+      "always": "Always",
+      "alwaysAvailable": "Always Available"
+    },
+    "biome": {
+      "any": "Any",
+      "desert": "Desert",
+      "forest": "Forest",
+      "mountain": "Mountain",
+      "ocean": "Ocean",
+      "plains": "Plains"
+    },
+    "button": {
+      "buy": "Buy",
+      "insufficientCoins": "Insufficient Coins",
+      "processing": "Processing..."
+    },
+    "confirm": {
+      "notEnoughCoins": "⚠️ You don't have enough coins to purchase this item!",
+      "priceLabel": "Price:",
+      "title": "Confirm Purchase"
+    },
+    "detail": {
+      "buy": "Buy",
+      "fallbackTitle": "Item",
+      "makeOffer": "Make offer",
+      "priceLabel": "Price",
+      "processing": "Processing...",
+      "sending": "Sending...",
+      "submitOffer": "Submit offer",
+      "youHave": "You have {{count}}",
+      "yourOffer": "Your offer"
+    },
+    "filters": {
+      "apply": "Apply",
+      "biome": "Biome",
+      "clear": "Clear",
+      "clearAll": "Clear all",
+      "rarity": "Rarity",
+      "title": "Filters",
+      "type": "Type"
+    },
+    "goldCoinAlt": "Gold Coin",
+    "items": {
+      "1": {
+        "description": "A beautiful tree to decorate your map. Always available!",
+        "name": "Tree"
+      },
+      "2": {
+        "description": "Protect your streak for one day if you cannot maintain it",
+        "name": "Streak Freeze"
+      },
+      "3": {
+        "description": "Restore your streak up to 7 days",
+        "name": "Streak Repair"
+      },
+      "4": {
+        "description": "Pack of 5 exclusive tiles for your map",
+        "name": "Tile Pack"
+      },
+      "5": {
+        "description": "Premium theme to customize your experience",
+        "name": "Premium Theme"
+      },
+      "6": {
+        "description": "Double your daily rewards for 24 hours",
+        "name": "Energy Boost"
+      },
+      "7": {
+        "description": "Increases your chance of getting rare rewards",
+        "name": "Lucky Charm"
+      },
+      "8": {
+        "description": "Unlock additional space for your map",
+        "name": "Map Expansion"
+      },
+      "9": {
+        "description": "A stunning fountain to enhance your map",
+        "name": "Decorative Fountain"
+      },
+      "10": {
+        "description": "A prestigious golden statue for your collection",
+        "name": "Golden Statue"
+      }
+    },
+    "modal": {
+      "closeAlt": "close",
+      "shopAlt": "shop",
+      "title": "Shop"
+    },
+    "page": {
+      "clearSearch": "Clear search",
+      "closeAlt": "close",
+      "filters": "Filters",
+      "noItems": "No items match your filters.",
+      "price": "Price",
+      "searchPlaceholder": "Search items...",
+      "shopAlt": "shop",
+      "title": "Shop"
+    },
+    "rarity": {
+      "common": "Common",
+      "epic": "Epic",
+      "legendary": "Legendary",
+      "rare": "Rare"
+    },
+    "toast": {
+      "invalidOfferDescription": "Enter at least 1 gold coin.",
+      "invalidOfferTitle": "Invalid offer",
+      "notEnoughCoinsDescription": "Your offer exceeds your balance.",
+      "notEnoughCoinsTitle": "Not enough coins",
+      "offerSubmittedDescription": "Offered {{gold}} gold for {{name}}",
+      "offerSubmittedTitle": "Offer submitted!",
+      "purchaseSuccessDescription": "You've successfully purchased {{name}}",
+      "purchaseSuccessTitle": "Purchase successful!"
+    },
+    "type": {
+      "boost": "Boost",
+      "decoration": "Decoration",
+      "expansion": "Expansion",
+      "theme": "Theme",
+      "utility": "Utility"
+    }
+  },
+  "social": {
+    "contacts": {
+      "foundCount_one": "{{count}} found",
+      "foundCount_other": "{{count}} found",
+      "invite": "Invite",
+      "invited": "Invited",
+      "invitedToast": "Invite sent to {{name}} (mock)",
+      "listHeading": "Contacts",
+      "noMatchesBody": "Try a different name.",
+      "noMatchesTitle": "No matches",
+      "removedToast": "Removed {{name}} (mock)",
+      "searchPlaceholder": "Search by name or handle…",
+      "subtitle": "Browse vaqueros you already know and invite them to save with you.",
+      "title": "Choose from contacts"
+    },
+    "feedback": {
+      "categories": {
+        "bug": "A bug",
+        "idea": "A feature idea",
+        "love": "I love it",
+        "other": "Something else"
+      },
+      "categoryHeading": "What are you sharing?",
+      "messageHeading": "Your message",
+      "messagePlaceholder": "Type your feedback here…",
+      "ratingHeading": "How is your experience?",
+      "send": "Send feedback",
+      "sending": "Sending…",
+      "starLabel_one": "{{count}} star",
+      "starLabel_other": "{{count}} stars",
+      "subtitle": "Tell us what's working, what isn't, and what you wish Vaquita did.",
+      "successBody": "We read every message and we mean it.",
+      "successTitle": "Thanks for the feedback (mock)!",
+      "title": "Feedback"
+    },
+    "friends": {
+      "chooseFromContacts": "Choose from contacts",
+      "couldNotShare": "Could not share",
+      "dismissSuggestion": "Dismiss suggestion",
+      "emptyBody": "Check back soon for new vaqueros to follow.",
+      "emptyTitle": "No suggestions right now",
+      "follow": "Follow",
+      "followedBy": "Followed by",
+      "following": "Following",
+      "linkCopied": "Follow link copied to clipboard",
+      "searchByName": "Search by name",
+      "shareFollowLink": "Share follow link",
+      "shareText": "Follow me on Vaquita 🐮",
+      "suggestedForYou": "Suggested for you",
+      "suggestionsTitle": "Friend suggestions",
+      "title": "Find your friends"
+    },
+    "help": {
+      "comingSoon": "Coming soon",
+      "emailSupport": "Email support",
+      "faqs": {
+        "apy": {
+          "a": "Your APY is the underlying protocol APY (e.g. lending markets) plus any Vaquita rewards active for your lock period. The breakdown is shown in the home header tap your balance to expand it.",
+          "q": "How is my APY calculated?"
+        },
+        "badges": {
+          "a": "Each month we issue badges to vaqueros who completed savings goals. The current-month badge is shown bright; past months that you missed appear locked.",
+          "q": "What are monthly badges?"
+        },
+        "custody": {
+          "a": "No. Vaquita is fully non-custodial. Your funds live in smart contracts and only you, with your wallet keys, can move them. We never see or touch your private keys.",
+          "q": "Does Vaquita hold my money?"
+        },
+        "streak": {
+          "a": "Every day you visit the app and have at least one active deposit, your streak grows by 1. Miss a day and the streak resets unless you have a streak-freeze power-up (coming soon).",
+          "q": "How do streaks work?"
+        },
+        "support": {
+          "a": "Email us at hello@vaquita.finance and we'll get back within 48 hours. Once Feedback ships, you'll be able to send messages right from the app.",
+          "q": "How do I contact support?"
+        },
+        "what-is": {
+          "a": "Vaquita is a non-custodial savings app that lets you deposit funds into audited DeFi vaults on supported blockchains. We add gamification (streaks, badges, XP) to help you stick to your saving goals.",
+          "q": "What is Vaquita?"
+        },
+        "withdraw": {
+          "a": "If you chose a flexible lock period (0 days), yes. Locked deposits release after their term ends. Withdrawing before the term is not supported in this version.",
+          "q": "Can I withdraw my money anytime?"
+        }
+      },
+      "liveChat": "Live chat",
+      "noResults": "No results for “{{query}}”",
+      "noResultsBody": "Try a different keyword or contact us below.",
+      "searchPlaceholder": "Search the FAQ…",
+      "stillStuck": "Still stuck?",
+      "subtitle": "Answers to the questions vaqueros ask the most.",
+      "tags": {
+        "apy": "apy",
+        "gamification": "gamification",
+        "getting started": "getting started",
+        "security": "security",
+        "streaks": "streaks",
+        "support": "support",
+        "wallet": "wallet",
+        "withdrawals": "withdrawals",
+        "yield": "yield"
+      },
+      "title": "Help center"
+    },
+    "redeem": {
+      "cameraErrorBody": "Camera access was denied or unavailable.",
+      "cameraErrorTitle": "Could not start camera",
+      "claim": "Claim",
+      "codePlaceholder": "E.G: VAQUITA-LAUNCH-2026",
+      "coinsReward_one": "{{count}} coin!",
+      "coinsReward_other": "{{count}} coins!",
+      "enterCodeBody": "Type or scan a code first.",
+      "enterCodeTitle": "Enter a code",
+      "pointCamera": "Point the camera at the QR",
+      "redeemErrorTitle": "Could not redeem code",
+      "rewardBody": "Your secret achievement is already in your trophy room.",
+      "scanQr": "Scan QR",
+      "subtitle": "Enter your event or secret-event code to claim a special reward.",
+      "title": "Redeem code",
+      "validating": "Validating code"
+    },
+    "search": {
+      "errorBody": "Check your connection and try again.",
+      "errorTitle": "Couldn’t load vaqueros",
+      "follow": "Follow",
+      "followers_one": "{{count}} follower",
+      "followers_other": "{{count}} followers",
+      "following": "Following",
+      "levelBadge": "Lvl {{level}}",
+      "noMatchBody": "Double-check the name or try the @handle.",
+      "noMatchQuery": "No vaqueros match “{{query}}”",
+      "noneYetBody": "Check back soon.",
+      "noneYetTitle": "No vaqueros to show yet",
+      "placeholder": "Try “rafaela” or “@camilo”…",
+      "popularHeading": "Popular vaqueros",
+      "resultsHeading": "Results",
+      "searching": "Searching",
+      "subtitle": "Find other vaqueros by their name or @handle.",
+      "title": "Search by name"
+    },
+    "share": {
+      "addingFriend": "Adding friend…",
+      "cameraBlocked": "Camera blocked",
+      "cameraOff": "Camera off",
+      "copyLink": "Copy link",
+      "couldNotCopy": "Could not copy link",
+      "couldNotFollow": "Could not follow that vaquero. Try again.",
+      "couldNotShare": "Could not share",
+      "dialogLabelMine": "Share your profile QR",
+      "dialogLabelScan": "Scan a profile QR",
+      "followingHandle": "Following {{handle}}",
+      "invalidQr": "That QR isn't a Vaquita profile.",
+      "linkCopied": "Profile link copied",
+      "myQrCaption": "Have a friend scan this QR to follow you on Vaquita.",
+      "noQrDetected": "No QR detected",
+      "noQrDetectedBody": "Center the QR in the frame and make sure it has good lighting.",
+      "nowFollowing": "Now following {{handle}}",
+      "ownQr": "That's your own QR — share it with a friend!",
+      "qrAlt": "QR code for {{handle}}",
+      "qrButtonLabel": "Share profile QR",
+      "qrLoadFailed": "Couldn't load the QR. Check your connection.",
+      "qrDetected": "QR detected",
+      "requestingAccess": "Requesting access…",
+      "scanAgain": "Scan again",
+      "scanCaption": "Point the camera at a vaquero's QR to follow them instantly.",
+      "shareLink": "Share link",
+      "shareText": "Follow {{name}} on Vaquita 🐮",
+      "shareTitle": "{{name}} on Vaquita",
+      "startScanning": "Start scanning",
+      "tabMine": "My QR",
+      "tabScan": "Scan QR",
+      "tabsLabel": "QR view",
+      "tryAgain": "Try again",
+      "uploadFromGallery": "Upload from gallery · soon",
+      "vaqueroNotFound": "We couldn't find that vaquero."
+    }
+  },
+  "tutorial": {
+    "modal": {
+      "closeAlt": "close",
+      "iframeTitle": "Learn how to save with Vaquita",
+      "iframeTitleMobile": "Learn how to save with Vaquita mobile",
+      "imageAlt": "Vaquita Tutorial",
+      "welcomeSubtitle": "Discover how to grow your savings in a smart and fun way",
+      "welcomeTitle": "Welcome to Vaquita!"
+    },
+    "patience": {
+      "body": "Withdraw too early and you lose the interest. Wait for the timer.",
+      "cta": "Got it",
+      "title": "Patience pays off"
+    },
+    "receipt": {
+      "deposit": "Deposit",
+      "interestEarned": "Interest earned",
+      "youReceived": "You received"
+    },
+    "saveButton": "Save",
+    "skip": "Skip tutorial",
+    "steps": {
+      "deposit": {
+        "body": "Tap the green Save button and confirm any amount.",
+        "cta": "Tap Save",
+        "title": "Make a deposit"
+      },
+      "findDeposit": {
+        "body": "Tap your balance up top, then tap your vaquita.",
+        "cta": "Open savings",
+        "title": "Find your savings"
+      },
+      "ready": {
+        "body": "Open your savings again and withdraw with interest.",
+        "cta": "Withdraw now",
+        "title": "Time's up! 🎉"
+      },
+      "success": {
+        "body": "You got your deposit back plus interest.",
+        "cta": "Enter app",
+        "title": "Nicely done! 🎉"
+      },
+      "waitIntro": {
+        "body": "Wait the {{seconds}}s you set as your goal and keep the full interest.",
+        "cta": "Wait {{seconds}}s",
+        "title": "But if you wait…"
+      },
+      "waiting": {
+        "body": "Watch your vaquita while it saves.",
+        "title": "Saving…"
+      },
+      "welcome": {
+        "body": "You grow it by saving. Quick demo, no real money.",
+        "cta": "Let's go",
+        "title": "Meet your vaquita 🐮"
+      }
+    },
+    "timer": {
+      "ready": "Ready! 🎉",
+      "unlocks": "Unlocks"
+    },
+    "warn": {
+      "keepLose": "Keep {{amount}}, lose {{interest}} interest."
+    },
+    "coach": {
+      "depositConfirm": {
+        "title": "Confirm your deposit",
+        "body": "You'll deposit {{amount}} {{currency}} it's just a demo, no real money."
+      },
+      "selectDeposit": {
+        "title": "Find your deposit",
+        "body": "Select the deposit you just made. Remember, it's a demo deposit."
+      },
+      "withdrawEarly": {
+        "title": "Try a withdrawal",
+        "body": "Let's try to withdraw before the timer ends."
+      },
+      "cancelWait": {
+        "title": "Keep your interest",
+        "body": "Withdraw now and you lose your interest. Tap Cancel and wait instead."
+      },
+      "claimNow": {
+        "title": "Time's up! 🎉",
+        "body": "Withdraw to get your deposit back plus interest."
+      }
+    }
+  },
+  "ui": {
+    "cloud": {
+      "alt": "cloud"
+    },
+    "moneyInput": {
+      "currency": "Currency",
+      "invalidNumber": "Invalid number",
+      "label": "Amount to deposit",
+      "max": "Max {{max}}",
+      "maxDecimals_one": "Max {{count}} decimal",
+      "maxDecimals_other": "Max {{count}} decimals",
+      "min": "Min {{min}}",
+      "totalBalance": "Total balance: ${{balance}}"
+    },
+    "table": {
+      "action": "Action",
+      "exportCsv": "Export CSV",
+      "filterByPlaceholder": "Filter by {{field}}",
+      "filters": "Filters",
+      "fullValue": "Full value",
+      "highlightBy": "Highlight by {{field}}",
+      "noActiveFilters": "No active filters",
+      "refresh": "Refresh",
+      "searchPlaceholder": "Search all fields...",
+      "sortBy": "Sort by {{field}}",
+      "tableLabel": "Table"
+    }
+  },
+  "wallet": {
+    "editProfile": {
+      "guest": "Guest",
+      "nicknameError": "Error on saving nickname",
+      "nicknameLabel": "Nickname",
+      "nicknameSaved": "Nickname saved",
+      "saveChanges": "Save changes",
+      "shownAs": "Shown as: @{{name}}",
+      "title": "Edit Profile",
+      "walletLabel": "Wallet"
+    },
+    "page": {
+      "address": "Address",
+      "addressCopied": "Address copied",
+      "balance": "Balance",
+      "copied": "Copied",
+      "copyAddress": "Copy address",
+      "copyError": "Could not copy",
+      "getAssets": "Get assets",
+      "network": "Network",
+      "receive": "Receive",
+      "selfCustodyDescription": "Vaquita never holds your keys. On-chain transfers will be enabled in an upcoming release.",
+      "selfCustodyTitle": "Self-custody wallet",
+      "send": "Send",
+      "title": "Wallet",
+      "transferAssets": "Transfer assets"
+    },
+    "profile": {
+      "addFriends": "Add friends",
+      "copied": "Copied",
+      "copyAddress": "Copy address",
+      "copyAddressAria": "Copy wallet address",
+      "disconnectWallet": "Disconnect wallet",
+      "editProfile": "Edit profile",
+      "nicknameLabel": "Nickname",
+      "saveChanges": "Save changes",
+      "title": "Profile",
+      "walletLabel": "Wallet"
+    }
+  }
+}

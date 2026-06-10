@@ -12,38 +12,52 @@ import {
   toast,
 } from '@heroui/react';
 import { usePollar } from '@pollar/react';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { v4 } from 'uuid';
 import { formatTimeDeposit, getQuickAmounts, truncateDecimals } from '../../../helpers';
 import { useAnalytics, useRestDeposit, useTransactions } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
-import { T } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
 import { TokenSymbol } from '../../molecules/MoneyInput/types';
-import { TestnetUSDCNotice } from '../TestnetUSDCNotice';
 import { DepositModalProps } from './types';
 
-export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing }: DepositModalProps) {
+export function DepositModal({
+  open,
+  onOpenChange,
+  isDepositing,
+  setIsDepositing,
+  simulate = false,
+  initialAmount,
+  simulateLockMs = 5000,
+  onSimulatedSuccess,
+}: DepositModalProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [amount, setAmount] = useState<string>('');
   const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useConfigStore();
   const { createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactions();
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
-  const lockTimeOptions =
-    token?.lockPeriods.map((lockPeriod) => ({
-      key: lockPeriod,
-      label: formatTimeDeposit(lockPeriod),
-      available: lockPeriod >= 0,
-    })) || [];
+  // En modo tutorial el lock es local (no toca el config global) y se ofrece una
+  // sola opción de pocos segundos; en modo normal salen los lock periods reales.
+  const lockTimeOptions = simulate
+    ? [{ key: simulateLockMs, label: t('deposit.modal.lockSeconds', '{{count}} seconds', { count: Math.round(simulateLockMs / 1000) }), available: true }]
+    : token?.lockPeriods.map((lockPeriod) => ({
+        key: lockPeriod,
+        label: formatTimeDeposit(lockPeriod),
+        available: lockPeriod >= 0,
+      })) || [];
+  const effectiveLockPeriod = simulate ? simulateLockMs : lockPeriod;
   const amountNum = Number(amount);
   const isDisabled =
     !amount ||
     amount === '' ||
     amountNum <= 0 ||
     isNaN(amountNum) ||
-    !lockPeriod ||
+    !effectiveLockPeriod ||
     !network ||
     !token ||
     !transactionDeposit;
@@ -63,6 +77,10 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
   useEffect(() => {
     setAmount('');
   }, [token?.symbol]);
+  // En modo tutorial precargamos el monto de ejemplo al abrir.
+  useEffect(() => {
+    if (open && initialAmount != null) setAmount(initialAmount);
+  }, [open, initialAmount]);
   useEffect(() => {
     if (open && walletAddress) void refreshWalletBalance();
   }, [open, walletAddress, refreshWalletBalance]);
@@ -70,7 +88,20 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
   if (!mounted) return null;
 
   const handleDeposit = async (amount: number) => {
-    if (!isDisabled) {
+    if (isDisabled) return;
+
+    // Modo tutorial: misma UI, pero sin transacción real. Simulamos una breve
+    // confirmación y avisamos al orquestador del tutorial.
+    if (simulate) {
+      setIsDepositing(true);
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setIsDepositing(false);
+      onOpenChange();
+      onSimulatedSuccess?.(amount, effectiveLockPeriod);
+      return;
+    }
+
+    {
       setIsDepositing(true);
       let lastError: unknown = null;
 
@@ -134,8 +165,20 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           lockPeriod,
           network: network?.networkName,
         });
-        toast.success(<T>Deposit sent successfully</T>, {
-          description: <T>If you see a vaquita blinking, it is your deposit that is still being confirmed.</T>,
+        toast.success(t('deposit.toast.successTitle', 'Deposit successful!'), {
+          indicator: (
+            <Image
+              src="/icons/global/coin.png"
+              alt=""
+              width={30}
+              height={30}
+              className="drop-shadow-sm"
+            />
+          ),
+          description: t(
+            'deposit.toast.successDescription',
+            'Your savings are on their way! This may take a few seconds. Everything will be ready in a moment.',
+          ),
           timeout: 6000,
         });
         onOpenChange();
@@ -148,11 +191,12 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           network: network?.networkName,
         });
         const poolMsg = parsePoolErrorMessage(lastError);
-        toast.danger(<T>Unsuccessful deposit</T>, {
+        toast.danger(t('deposit.toast.errorTitle', "Deposit didn't go through"), {
+          indicator: <Image src="/vaquita/error.svg" alt="" width={32} height={32} />,
           description: poolMsg
-            ? <T>{poolMsg}</T>
+            ? poolMsg
             : lastError instanceof Error
-              ? <T>{lastError.message}</T>
+              ? lastError.message
               : undefined,
           timeout: 3000,
         });
@@ -166,7 +210,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
       open={open}
       onOpenChange={onOpenChange}
       isDismissable={!balanceIsLoading && !isDepositing}
-      title="Deposit"
+      title={t('deposit.modal.title', 'Deposit')}
       titleIcon="/icons/bag.svg"
       titleIconAlt="deposit"
       size="md"
@@ -177,21 +221,18 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
           className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
           isDisabled={isDisabled || isDepositing}
         >
-          {isDepositing ? <><Spinner size="sm" color="current" /> Processing...</> : 'Deposit'}
+          {isDepositing ? <><Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}</> : t('deposit.modal.title', 'Deposit')}
         </Button>
       }
     >
-          {!!network && !!token && (
-            <TestnetUSDCNotice networkName={network.networkName} tokenContract={token.contractAddress} />
-          )}
           <Select
             isRequired
-            value={lockPeriod.toString()}
-            onChange={(value) => { if (value) setLockPeriod(parseInt(value as string)); }}
+            value={effectiveLockPeriod.toString()}
+            onChange={(value) => { if (value && !simulate) setLockPeriod(parseInt(value as string)); }}
             disabledKeys={lockTimeOptions.filter((o) => !o.available).map((o) => o.key.toString())}
-            isDisabled={isDepositing}
+            isDisabled={isDepositing || simulate}
           >
-            <Label className="text-black font-normal text-sm">Lock time</Label>
+            <Label className="text-black font-normal text-sm">{t('deposit.modal.lockTime', 'Lock time')}</Label>
             <Select.Trigger className="bg-white border border-black border-b-2 h-14 items-center">
               <Select.Value className="text-black font-medium" />
               <Select.Indicator className="text-black" />
@@ -206,7 +247,7 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
                 ))}
               </ListBox>
             </Select.Popover>
-            <Description className="text-default-500 text-xs">The funds will be lock in the vault during the selected period.</Description>
+            <Description className="text-default-500 text-xs">{t('deposit.modal.lockDescription', 'The funds will be lock in the vault during the selected period.')}</Description>
           </Select>
 
           <div className="flex flex-col gap-2">
@@ -219,8 +260,10 @@ export function DepositModal({ open, onOpenChange, isDepositing, setIsDepositing
               onReloadBalance={refreshWalletBalance}
               loading={isDepositing}
               balanceIsLoading={balanceIsLoading}
+              // Tutorial: monto fijo, no se puede editar ni cambiar el token.
+              disabled={simulate}
             />
-            <div className="flex justify-between gap-2">
+            <div className={`flex justify-between gap-2 ${simulate ? 'hidden' : ''}`}>
               {Array.isArray(quickAmounts) &&
                 quickAmounts.map((value: number) => (
                   <Button

@@ -5,7 +5,8 @@ export const getDepositsData = (_deposits: DepositResponseDTO[]) => {
     .filter(
       (deposit) =>
         deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS ||
-        deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS
+        deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS ||
+        deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY
     )
     .sort((a, b) => b.createdTimestamp - a.createdTimestamp);
 
@@ -13,8 +14,14 @@ export const getDepositsData = (_deposits: DepositResponseDTO[]) => {
     .filter((deposit) => deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS)
     .sort((a, b) => b.createdTimestamp - a.createdTimestamp);
 
+  // Retirados: tanto los que completaron el lock como los retirados antes
+  // (early), para poder ver el detalle de lo ganado o perdido.
   const withdrawnDeposits = deposits
-    .filter((deposit) => deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS)
+    .filter(
+      (deposit) =>
+        deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS ||
+        deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY
+    )
     .sort((a, b) => b.createdTimestamp - a.createdTimestamp);
 
   const activeDepositsTotalAmount = activeDeposits.reduce((acc, deposit) => acc + deposit.amount, 0);

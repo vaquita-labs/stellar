@@ -5,8 +5,10 @@ import { useConfigStore } from '@/core-ui/stores';
 import { Button, Spinner } from '@heroui/react';
 import Image from 'next/image';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const TotalDepositsButton = () => {
+  const { t } = useTranslation();
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const { walletAddress, token } = useConfigStore();
 
@@ -25,7 +27,7 @@ export const TotalDepositsButton = () => {
           <>
             <Image
               src="/icons/summary/bag.png"
-              alt="bag"
+              alt={t('home.totalDeposits.bagAlt', 'Total deposits')}
               width={typeof window !== 'undefined' && window.innerWidth < 768 ? 24 : 40}
               height={typeof window !== 'undefined' && window.innerWidth < 768 ? 24 : 40}
               className="object-contain"

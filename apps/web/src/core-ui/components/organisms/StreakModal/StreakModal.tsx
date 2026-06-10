@@ -2,8 +2,10 @@
 
 import { getCurrentDay } from '@/core-ui/helpers';
 import { useProfileStreak } from '@/core-ui/hooks';
-import { Button } from '@heroui/react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
+import { FiChevronRight } from 'react-icons/fi';
 import { ONE_DAY } from '../../../config/constants';
 import { AppModal } from '../../molecules/AppModal';
 import { StreakModalProps } from './types';
@@ -11,9 +13,9 @@ import { StreakModalProps } from './types';
 const DATES_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 export function StreakModal({ open, onOpenChange }: StreakModalProps) {
+  const { t } = useTranslation();
+  const router = useRouter();
   const { data } = useProfileStreak();
-  const streakFreeze = { used: 0, total: 1 };
-  const streakRepair = { canRestoreTo: 1, cost: 0 };
 
   const currentStreak = (data?.yesterdayStreak || 0) + (data?.todayStreak ? 1 : 0);
 
@@ -32,116 +34,103 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
     day++;
   }
 
+  const handleViewHistory = () => {
+    onOpenChange();
+    router.push('/profile/summary#streak-history');
+  };
+
   return (
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      title="Streak"
-      titleIcon="/icons/global/streak.png"
-      titleIconAlt="streak"
+      title={t('rewards.streak.title', 'Streak')}
       size="md"
     >
-          <div className="space-y-6 mb-4">
-            {/* Streak Status Section */}
-            <div className="space-y-4">
-              <div className="text-center space-y-2">
-                <h2 className="text-xl font-bold text-black flex items-center justify-center gap-2">
-                  <Image src="/icons/global/streak.png" alt="streak" width={28} height={28} />
-                  Current Streak: {currentStreak} days
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Your streak represents consecutive days of activity. Keep it going to unlock rewards and special tiles for your map!
-                </p>
-              </div>
+      <div className="space-y-6 mb-2">
+        {/* Hero — big streak count */}
+        <div className="flex flex-col items-center gap-2 pt-1">
+          <div className="relative flex items-center justify-center">
+            <span className="absolute inset-0 rounded-full bg-primary/30 blur-2xl" aria-hidden />
+            <Image
+              src="/icons/global/streak_face.png"
+              alt={t('rewards.streak.streakAlt', 'streak')}
+              width={72}
+              height={72}
+              className="relative object-contain"
+            />
+          </div>
+          <div className="text-center">
+            <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
+              {currentStreak}
             </div>
-
-            {/* Weekly Progress Section */}
-            <div className="space-y-3 border border-black border-b-2 rounded-md p-4 bg-white">
-              <h3 className="font-bold text-black text-sm mb-2">Weekly Progress</h3>
-              <div className="flex justify-between items-center">
-                {weeklyProgress.map(({ future, completed, day, isToday }, index) => (
-                  <div key={index} className="flex flex-col items-center gap-2">
-                    <span className={`text-xs font-medium ${isToday ? 'text-primary' : 'text-gray-600'}`}>{day}</span>
-                    {future ? (
-                      <div className="w-6 h-6 rounded-full bg-gray-200 border border-gray-300" />
-                    ) : (
-                      <Image
-                        src="/icons/global/streak.png"
-                        alt="streak"
-                        width={24}
-                        height={24}
-                        className="w-6 h-6"
-                        style={completed ? {} : { filter: 'grayscale(100%)' }}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 text-center mt-3">
-                Get a new tile every time you increase your streak! The colored icons show days you&apos;ve completed, while gray icons indicate missed days.
-              </p>
-            </div>
-
-            {/* Streak Freeze Section */}
-            <div className="space-y-3">
-              <h3 className="font-bold text-black text-sm">Streak Freeze</h3>
-              <div className="border border-black border-b-2 rounded-md p-4 bg-white space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-black font-semibold">
-                    Available: {streakFreeze.total - streakFreeze.used}/{streakFreeze.total}
-                  </span>
-                  <Image
-                    src="/icons/summary/streak_freeze.png"
-                    alt="freeze"
-                    width={24}
-                    height={24}
-                    className="w-6 h-6"
-                  />
-                </div>
-                <p className="text-xs text-gray-600">
-                  Streak Freeze allows you to protect your streak for one day if you&apos;re unable to maintain it. Use it wisely to prevent losing your progress!
-                </p>
-              </div>
-            </div>
-
-            {/* Streak Repair Section */}
-            <div className="space-y-3">
-              <h3 className="font-bold text-black text-sm">Streak Repair</h3>
-              <div className="border border-black border-b-2 rounded-md p-4 bg-white space-y-3">
-                <p className="text-sm text-black">
-                  If you&apos;ve lost your streak, you can restore it back to <span className="font-semibold">{streakRepair.canRestoreTo} days</span>
-                  <Image
-                    src="/icons/global/streak.png"
-                    alt="streak"
-                    width={16}
-                    height={16}
-                    className="inline-block ml-1 w-4 h-4"
-                  />
-                  using Streak Repair.
-                </p>
-                <div className="text-sm text-gray-600 space-y-2">
-                  <div>
-                    <span className="font-semibold text-black">Cost:</span>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span>{streakRepair.cost}</span>
-                      <Image src="/icons/global/streak.png" alt="streak" width={16} height={16} className="w-4 h-4" />
-                      <span className="text-purple-600">+ 1</span>
-                      <Image src="/icons/global/streak.png" alt="streak" width={16} height={16} className="w-4 h-4" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    This feature helps you recover from a broken streak, but remember: maintaining your streak daily is the best way to maximize your rewards!
-                  </p>
-                </div>
-                <Button
-                  className="w-full bg-transparent border border-black border-b-2 text-black font-semibold rounded-md hover:bg-gray-100"
-                  size="lg"
-                >
-                  Repair streak
-                </Button>
-              </div>
+            <div className="mt-1 text-sm font-semibold text-gray-500">
+              {t('rewards.streak.dayStreakLabel', '{{count}} day streak', { count: currentStreak })}
             </div>
           </div>
+          <p className="max-w-xs text-center text-sm text-gray-600">
+            {t(
+              'rewards.streak.description',
+              'Your streak represents consecutive days of activity. Keep it going to unlock rewards and special tiles for your map!',
+            )}
+          </p>
+        </div>
+
+        {/* Weekly Progress Section */}
+        <div className="space-y-3 rounded-2xl border border-black border-b-2 bg-white p-4">
+          <h3 className="text-sm font-bold text-black">{t('rewards.streak.weeklyProgress', 'Weekly Progress')}</h3>
+          <div className="grid grid-cols-7 gap-x-1 gap-y-2 text-center">
+            {weeklyProgress.map(({ day, isToday }, index) => (
+              <span
+                key={`label-${index}`}
+                className={`text-[10px] font-bold uppercase tracking-wider ${isToday ? 'text-primary' : 'text-gray-400'}`}
+              >
+                {day ? t(`rewards.streak.weekdays.${day}`, day) : ''}
+              </span>
+            ))}
+            {weeklyProgress.map(({ future, completed, isToday }, index) => {
+              if (future) {
+                return (
+                  <div
+                    key={`cell-${index}`}
+                    className="mx-auto h-9 w-9 rounded-full border border-dashed border-gray-300 bg-gray-100/60"
+                    aria-hidden
+                  />
+                );
+              }
+              return (
+                <div
+                  key={`cell-${index}`}
+                  className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full ${
+                    completed ? 'bg-primary/15' : 'bg-black/5'
+                  } ${isToday ? 'ring-2 ring-black ring-offset-1 ring-offset-white' : ''}`}
+                >
+                  {completed ? (
+                    <Image
+                      src="/icons/global/streak_face.png"
+                      alt={t('rewards.streak.streakAlt', 'streak')}
+                      width={22}
+                      height={22}
+                      className="object-contain"
+                    />
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-black/20" aria-hidden />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* View full history */}
+        <button
+          type="button"
+          onClick={handleViewHistory}
+          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-black border-b-2 bg-white py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-gray-50"
+        >
+          {t('rewards.streak.viewHistory', 'View full history')}
+          <FiChevronRight className="h-4 w-4" />
+        </button>
+      </div>
     </AppModal>
   );
 }

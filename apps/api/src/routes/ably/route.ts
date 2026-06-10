@@ -34,9 +34,10 @@ async function issueTokenRequest(req: Request, res: Response, capability: NonNul
  * Capabilities scoped to what the web app uses. Deliberately NO `subscribe` on
  * `logs`: clients only mirror their own console there, they must not be able to
  * read other clients' logs.
- *   - `logs`              → publish (console mirroring)
- *   - `register-customer` → publish + subscribe (session registration)
- *   - `deposits-changes`  → subscribe (deposit cache invalidation)
+ *   - `logs`                  → publish (console mirroring)
+ *   - `register-customer`     → publish + subscribe (session registration)
+ *   - `deposits-changes`      → subscribe (deposit cache invalidation)
+ *   - `notifications-changes` → subscribe (notification feed invalidation)
  *
  * 200 TokenRequest · 500 ABLY_KEY missing / generation failed
  */
@@ -46,6 +47,7 @@ router.get('/token', async (req, res) => {
     logs: ['publish'],
     'register-customer': ['publish', 'subscribe'],
     'deposits-changes': ['subscribe'],
+    'notifications-changes': ['subscribe'],
   });
 });
 

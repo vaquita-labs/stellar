@@ -4,6 +4,7 @@ import { Popover } from '@heroui/react';
 import Image from 'next/image';
 import { ReactNode } from 'react';
 import { FiArrowDown, FiArrowUp, FiCheck, FiFilter, FiSearch, FiX } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 
 /* ------------------------------------------------------------------ */
 /* Sort options                                                        */
@@ -13,7 +14,7 @@ export type SortKey = 'rank' | 'level' | 'streak' | 'badges';
 export type SortDirection = 'asc' | 'desc';
 
 /** Inline helper for the global PNG glyphs we use in this filter. */
-const GlobalIcon = ({ name, alt }: { name: 'trophy' | 'star' | 'streak' | 'coin'; alt: string }) => (
+const GlobalIcon = ({ name, alt }: { name: 'trophy' | 'star' | 'streak_face' | 'coin' | 'best_position'; alt: string }) => (
   <Image
     src={`/icons/global/${name}.png`}
     alt={alt}
@@ -24,9 +25,9 @@ const GlobalIcon = ({ name, alt }: { name: 'trophy' | 'star' | 'streak' | 'coin'
 );
 
 export const SORT_OPTIONS: { key: SortKey; label: string; icon: ReactNode; hint: string }[] = [
-  { key: 'rank', label: 'Top ranking', icon: <span aria-hidden>🏆</span>, hint: 'Default leaderboard order' },
+  { key: 'rank', label: 'Top ranking', icon: <GlobalIcon name="best_position" alt="" />, hint: 'Default leaderboard order' },
   { key: 'level', label: 'Level', icon: <GlobalIcon name="star" alt="" />, hint: 'Most XP earned' },
-  { key: 'streak', label: 'Streak', icon: <GlobalIcon name="streak" alt="" />, hint: 'Most consecutive days' },
+  { key: 'streak', label: 'Streak', icon: <GlobalIcon name="streak_face" alt="" />, hint: 'Most consecutive days' },
   { key: 'badges', label: 'Badges', icon: <GlobalIcon name="trophy" alt="" />, hint: 'Most achievements unlocked' },
 ];
 
@@ -41,6 +42,7 @@ function SearchInput({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="relative flex-1 min-w-0">
       <FiSearch
@@ -50,17 +52,17 @@ function SearchInput({
       <input
         type="search"
         inputMode="search"
-        placeholder="Search vaqueros by username"
+        placeholder={t('leaderboard.search.placeholder', 'Search vaqueros by username')}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full h-9 pl-9 pr-8 rounded-full bg-white border border-black border-b-2 text-sm font-medium text-black placeholder:text-gray-400 outline-none focus:border-primary"
-        aria-label="Search vaqueros"
+        aria-label={t('leaderboard.search.label', 'Search vaqueros')}
       />
       {value && (
         <button
           type="button"
           onClick={() => onChange('')}
-          aria-label="Clear search"
+          aria-label={t('leaderboard.search.clear', 'Clear search')}
           className="absolute right-1.5 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition"
         >
           <FiX className="h-3 w-3 text-black" />
@@ -81,13 +83,14 @@ function FilterDropdown({
   value: SortKey;
   onChange: (key: SortKey) => void;
 }) {
+  const { t } = useTranslation();
   const active = value !== 'rank';
   return (
     <Popover>
       <Popover.Trigger>
         <button
           type="button"
-          aria-label="Filter by metric"
+          aria-label={t('leaderboard.filter.label', 'Filter by metric')}
           className={`relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black border-b-2 transition ${
             active ? 'bg-primary text-black' : 'bg-white text-black hover:bg-white/80'
           }`}
@@ -105,7 +108,7 @@ function FilterDropdown({
         <Popover.Dialog className="bg-white rounded-2xl border border-black border-b-2 p-2 w-64 shadow-md">
           <div className="px-2 py-1.5">
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">
-              Filter by
+              {t('leaderboard.filter.heading', 'Filter by')}
             </p>
           </div>
           <ul className="flex flex-col gap-0.5">
@@ -125,10 +128,10 @@ function FilterDropdown({
                     </span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm font-extrabold text-black truncate">
-                        {opt.label}
+                        {t(`leaderboard.sortOptions.${opt.key}.label`, opt.label)}
                       </span>
                       <span className="block text-[10px] text-gray-500 truncate">
-                        {opt.hint}
+                        {t(`leaderboard.sortOptions.${opt.key}.hint`, opt.hint)}
                       </span>
                     </span>
                     {selected && <FiCheck className="h-4 w-4 text-black shrink-0" />}
@@ -154,12 +157,17 @@ function DirectionToggle({
   value: SortDirection;
   onChange: (dir: SortDirection) => void;
 }) {
+  const { t } = useTranslation();
   const isDesc = value === 'desc';
   return (
     <button
       type="button"
       onClick={() => onChange(isDesc ? 'asc' : 'desc')}
-      aria-label={`Sort ${isDesc ? 'descending' : 'ascending'} — toggle order`}
+      aria-label={
+        isDesc
+          ? t('leaderboard.direction.descending', 'Sort descending — toggle order')
+          : t('leaderboard.direction.ascending', 'Sort ascending — toggle order')
+      }
       aria-pressed={isDesc}
       className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
     >

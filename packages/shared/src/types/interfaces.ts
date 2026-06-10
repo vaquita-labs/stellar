@@ -1,4 +1,4 @@
-import { type Achievement, type DepositStatus, DepositWithdrawalState, Reward, WithdrawalStatus } from './commons';
+import { type Achievement, type DepositStatus, DepositWithdrawalState, type NotificationPreferences, Reward, WithdrawalStatus } from './commons';
 
 export interface Token {
   id: number,
@@ -80,6 +80,8 @@ export interface Profile {
   crypto_savvy: boolean,
   language?: string | null,
   currency?: string | null,
+  // Raw JSON column: only holds the keys the user has touched (may be partial).
+  notification_preferences?: Partial<NotificationPreferences> | null,
   created_at?: string,
   updated_at?: string,
 }

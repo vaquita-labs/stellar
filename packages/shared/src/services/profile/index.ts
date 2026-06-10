@@ -3,6 +3,7 @@ import type { Achievement as PrismaAchievement, Profile as PrismaProfile } from 
 import { getCurrentDay } from '../../helpers/date';
 import { ably } from '../ably';
 import { getMintedBadges } from '../badges/claims';
+import { notify } from '../notifications';
 import {
   Achievement,
   type AchievementDocument,
@@ -10,9 +11,11 @@ import {
   type BadgeRule,
   type BadgeUnlockType,
   type CatalogAchievementResponseDTO,
+  DEFAULT_NOTIFICATION_PREFERENCES,
   DepositStatus,
   type MapObject,
   MapObjectType,
+  type NotificationPreferences,
   type Profile,
   type ProfileAchievement,
   type ProfileAchievementsResponseDTO,
@@ -56,6 +59,7 @@ const toProfileShape = (p: PrismaProfile): Profile => ({
   crypto_savvy: p.cryptoSavvy ?? false,
   language: p.language ?? null,
   currency: p.currency ?? null,
+  notification_preferences: (p.notificationPreferences as Partial<NotificationPreferences> | null) ?? null,
   created_at: p.createdAt?.toISOString(),
   updated_at: p.updatedAt?.toISOString(),
 });
@@ -308,6 +312,28 @@ export const getRewardsData = async (profileData: Profile) => {
   };
 };
 
+/**
+ * Walk a set of check-in day-numbers backwards from today to derive the two
+ * streak figures the UI surfaces: `yesterdayStreak` (consecutive completed days
+ * ending yesterday) and `todayStreak` (whether today's check-in is done). Shared
+ * by the single-profile {@link getStreakData} and the batch
+ * {@link getStreakCountsByProfile} so both count a streak identically.
+ */
+const streakFromDaySet = (
+  daysSet: Set<number>,
+): { yesterdayStreak: number; todayStreak: boolean } => {
+  const todayDay = getCurrentDay(new Date());
+  let streak = 0;
+  let d = todayDay - 1;
+
+  while (daysSet.has(d)) {
+    streak++;
+    d--;
+  }
+
+  return { yesterdayStreak: streak, todayStreak: daysSet.has(todayDay) };
+};
+
 export const getStreakData = async (profileData: Profile) => {
   // A day counts for the streak only if the user collected their daily check-in
   // coin that day — a gold-coin reward stamped with the 'daily-checkin' reason.
@@ -327,23 +353,58 @@ export const getStreakData = async (profileData: Profile) => {
     daysSet.add(getCurrentDay(new Date(reward.createdAt ?? 0)));
   }
 
-  const todayDay = getCurrentDay(new Date());
-  let streak = 0;
-  let d = todayDay - 1;
-
-  while (daysSet.has(d)) {
-    streak++;
-    d--;
-  }
+  const { yesterdayStreak, todayStreak } = streakFromDaySet(daysSet);
 
   return {
     success: true,
     errorMessage: '',
     errors: [],
-    yesterdayStreak: streak,
-    todayStreak: daysSet.has(todayDay),
+    yesterdayStreak,
+    todayStreak,
     days: Array.from(daysSet),
   };
+};
+
+/**
+ * Single-query rollup of every profile's current streak for the leaderboard —
+ * the batch analogue of {@link getStreakData}. One read of the daily-checkin
+ * gold-coin ledger, bucketed into a per-profile day-set, then the same backward
+ * walk as the single-profile path. The surfaced number is `yesterdayStreak` plus
+ * today's check-in, matching what the streak UI shows. The GROUP BY happens in JS
+ * (like {@link getAchievementCountsByProfile}) so the whole leaderboard costs one
+ * query instead of an N+1 of per-profile streak reads.
+ */
+export const getStreakCountsByProfile = async (): Promise<{
+  counts: Map<number, number>;
+  error: unknown;
+}> => {
+  const counts = new Map<number, number>();
+  try {
+    const rows = await prisma.profileReward.findMany({
+      where: { reason: REWARD_REASON_DAILY_CHECKIN, reward: { key: Reward.GOLD_COIN } },
+      select: { profileId: true, createdAt: true },
+    });
+
+    const daysByProfile = new Map<number, Set<number>>();
+    for (const row of rows) {
+      let daysSet = daysByProfile.get(row.profileId);
+      if (!daysSet) {
+        daysSet = new Set<number>();
+        daysByProfile.set(row.profileId, daysSet);
+      }
+      daysSet.add(getCurrentDay(new Date(row.createdAt ?? 0)));
+    }
+
+    for (const [profileId, daysSet] of daysByProfile) {
+      const { yesterdayStreak, todayStreak } = streakFromDaySet(daysSet);
+      counts.set(profileId, yesterdayStreak + (todayStreak ? 1 : 0));
+    }
+
+    return { counts, error: null };
+  } catch (error) {
+    console.error('Error on getStreakCountsByProfile', error);
+    return { counts, error };
+  }
 };
 
 export const getMapObjectsAvailableData = async () => {
@@ -378,6 +439,15 @@ export const getMapObjectsAvailableData = async () => {
 
 export const toProfileResponseDTO = (networkName: string, profile: Profile): ProfileResponseDTO => {
 
+  // Defaults merged under whatever the user saved (the column may be NULL or
+  // partial). The email channel requires an email address on the profile, so a
+  // stale `email: true` reads as off after the address is removed.
+  const notificationPreferences: NotificationPreferences = {
+    ...DEFAULT_NOTIFICATION_PREFERENCES,
+    ...(profile.notification_preferences ?? {}),
+  };
+  notificationPreferences.email = notificationPreferences.email && !!profile.email;
+
   return {
     walletAddress: profile?.wallet_address || '',
     networkName,
@@ -390,6 +460,7 @@ export const toProfileResponseDTO = (networkName: string, profile: Profile): Pro
     cryptoSavvy: profile.crypto_savvy ?? false,
     language: profile.language ?? '',
     currency: profile.currency ?? '',
+    notificationPreferences,
     createdAt: profile.created_at ?? '',
   };
 };
@@ -409,6 +480,66 @@ export const getCheckinExperience = async (profileId: number): Promise<number> =
   } catch (error) {
     console.warn('error on getCheckinExperience', error);
     return 0;
+  }
+};
+
+/**
+ * Single-pass rollup of every profile's total XP for the leaderboard — the batch
+ * analogue of {@link toProfileExperienceResponseDTO}. Combines the same two
+ * sources with one read each: the persisted check-in XP (`experience` reward)
+ * keyed by profile, and the deposit-derived XP (`sqrt(amount) * sqrt(hours)`)
+ * summed per wallet then folded onto the owning profile. Avoids the per-profile
+ * N+1 the single-profile endpoint would incur across the whole leaderboard.
+ */
+export const getExperienceByProfile = async (
+  profiles: Profile[],
+): Promise<{ experience: Map<number, number>; error: unknown }> => {
+  const experience = new Map<number, number>();
+  try {
+    // Check-in XP: sum every persisted `experience` reward amount per profile.
+    const xpRows = await prisma.profileReward.findMany({
+      where: { reward: { key: Reward.EXPERIENCE } },
+      select: { profileId: true, amount: true },
+    });
+    for (const row of xpRows) {
+      experience.set(row.profileId, (experience.get(row.profileId) ?? 0) + Number(row.amount ?? 0));
+    }
+
+    // Deposit-derived XP: identical formula to the single-profile path, summed
+    // per wallet from the live active deposits (confirmed on-chain, not withdrawn).
+    const deposits = await prisma.deposit.findMany({
+      where: { deletedAt: null, status: DepositStatus.CONFIRMED },
+      select: {
+        walletAddress: true,
+        amount: true,
+        transactionHash: true,
+        depositIdHex: true,
+        createdAt: true,
+        withdrawals: { select: { id: true } },
+      },
+    });
+    const now = Date.now();
+    const depositXpByWallet = new Map<string, number>();
+    for (const d of deposits) {
+      if (!d.transactionHash || !d.depositIdHex || d.withdrawals.length > 0) {
+        continue;
+      }
+      const timeElapsed = Math.max(now - (d.createdAt?.getTime() ?? 0), 0);
+      const xp = Math.sqrt(Number(d.amount ?? 0)) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
+      depositXpByWallet.set(d.walletAddress, (depositXpByWallet.get(d.walletAddress) ?? 0) + xp);
+    }
+
+    for (const profile of profiles) {
+      const depositXp = depositXpByWallet.get(profile.wallet_address ?? '');
+      if (depositXp) {
+        experience.set(profile.id, (experience.get(profile.id) ?? 0) + depositXp);
+      }
+    }
+
+    return { experience, error: null };
+  } catch (error) {
+    console.error('Error on getExperienceByProfile', error);
+    return { experience, error };
   }
 };
 
@@ -720,6 +851,30 @@ export const claimAchievement = async (profileId: number, key: Achievement) => {
     >`SELECT * FROM claim_achievement(${profileId}::bigint, ${key}::text)`;
 
     const row = rows[0];
+
+    // Fire-and-forget feed notification — both the claim and redeem endpoints
+    // funnel through here, so this covers every off-chain achievement award.
+    void (async () => {
+      try {
+        const [profile, achievement] = await Promise.all([
+          prisma.profile.findUnique({ where: { id: profileId }, select: { walletAddress: true } }),
+          prisma.achievement.findUnique({ where: { key }, select: { name: true } }),
+        ]);
+        if (profile) {
+          await notify({
+            walletAddress: profile.walletAddress,
+            type: 'reward',
+            messageKey: 'achievementUnlocked',
+            params: { name: achievement?.name ?? key },
+            link: '/profile/achievements',
+            dedupeKey: `achievement-${profileId}-${key}`,
+          });
+        }
+      } catch (err) {
+        console.error('Error notifying achievement claim', { profileId, key }, err);
+      }
+    })();
+
     return {
       success: true as const,
       achievementId: Number(row?.achievement_id ?? 0),

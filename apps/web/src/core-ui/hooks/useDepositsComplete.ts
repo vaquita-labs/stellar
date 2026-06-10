@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { clientEnv } from '../config/clientEnv';
-import { ONE_MINUTE } from '../config/constants';
 import { useConfigStore } from '../stores';
 import { DepositResponseDTO, TotalDepositsResponseDTO } from '../types';
 
@@ -59,7 +58,8 @@ export const useDepositsComplete = (_walletAddress?: string) => {
         };
       }
     },
-    refetchInterval: ONE_MINUTE * 5,
+    // No polling: deposit data only changes on deposit/withdraw, which the
+    // Ably `deposits-changes` channel invalidates (see ListenDepositsChanges).
     enabled: !!network?.networkName && !!walletAddress,
   });
 };

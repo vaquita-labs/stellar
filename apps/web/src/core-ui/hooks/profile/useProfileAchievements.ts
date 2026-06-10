@@ -3,8 +3,11 @@ import { useConfigStore } from '@/core-ui/stores';
 import type { ProfileAchievementsResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
-export const useProfileAchievements = () => {
-  const { network, walletAddress } = useConfigStore();
+/** Pass a wallet to read another user's badges (e.g. the leaderboard detail
+ *  view); defaults to the connected wallet. */
+export const useProfileAchievements = (walletAddressOverride?: string) => {
+  const { network, walletAddress: connectedWallet } = useConfigStore();
+  const walletAddress = walletAddressOverride ?? connectedWallet;
   return useQuery<ProfileAchievementsResponseDTO>({
     queryKey: ['profile', network?.networkName, walletAddress, 'profile-achievements'],
     queryFn: async () => {
@@ -22,5 +25,9 @@ export const useProfileAchievements = () => {
       return dto;
     },
     enabled: !!network?.networkName && !!walletAddress,
+    // El catálogo de badges se edita desde el admin: refetcheamos al montar
+    // (en background, sin spinner) para reflejar esos cambios al entrar.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };

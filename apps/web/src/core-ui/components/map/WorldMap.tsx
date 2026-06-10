@@ -7,13 +7,13 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
-import { useMapStore, useConfigStore, useResizeStore, useSyncMapObjects } from '../../stores';
+import { useMapStore, useConfigStore, useSyncMapObjects } from '../../stores';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
 import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
 import { MapObjects } from '../templates/WorldMap/map/MapObjects';
 import { SceneCamera } from '../templates/WorldMap/map/SceneCamera';
 import { SceneControls } from '../templates/WorldMap/map/SceneControls';
-// import { CloudSkybox } from './CloudSkybox';
+import { WaterBackground } from '../templates/WorldMap/map/WaterBackground';
 import { DayCycleSky } from './DayCycleSky';
 import { EditGrid } from './EditGrid';
 import { Ground } from './Ground';
@@ -38,21 +38,22 @@ interface MapProps {
   isLeaderboard?: boolean | false;
   worldType: WorldType;
   isAvailable: boolean;
+  /** Tutorial: solo mover/ver el mapa; los clicks de objetos se ignoran. */
+  interactionsDisabled?: boolean;
 }
 
-export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
+export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false }: MapProps) => {
   const router = useRouter();
   const isEditMode = useMapStore((store) => store.editMode);
-  const { tiles, currentTiles } = useMapStore();
+  const currentTiles = useMapStore((store) => store.currentTiles);
   useSyncMapObjects();
   const [showVaquitasListModal, setShowVaquitasListModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
   const [dailyRewardExperience, setDailyRewardExperience] = useState(0);
   const [showMoodModal, setShowMoodModal] = useState(false);
-  const { walletAddress: userWalletAddress } = useConfigStore((store) => store);
+  const userWalletAddress = useConfigStore((store) => store.walletAddress);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
-  const { height, width } = useResizeStore((store) => store);
   const { mood, canCollect, goldCoinsToCollect, experienceToCollect } = useVaquitaMood();
   const { data: streak } = useProfileStreak();
   const { goldDailyCollect } = useRestProfile();
@@ -61,22 +62,26 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
   const currentStreakDays = (streak?.yesterdayStreak ?? 0) + (streak?.todayStreak ? 1 : 0);
 
   const handleBarnClick = () => {
+    if (interactionsDisabled) return;
     if (userWalletAddress) {
       setShowVaquitasListModal(true);
     }
   };
 
   const handleBankClick = () => {
+    if (interactionsDisabled) return;
     if (userWalletAddress) {
       setShowVaquitasListModal(true);
     }
   };
 
   const handleLeaderBoardClick = () => {
+    if (interactionsDisabled) return;
     router.push('/leaderboard');
   };
 
   const handleVaquitaClick = () => {
+    if (interactionsDisabled) return;
     if (canCollect) {
       setDailyRewardCoins(goldCoinsToCollect);
       setDailyRewardExperience(experienceToCollect);
@@ -100,20 +105,27 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
         camera={{ fov: 50 }}
         shadows
         gl={{ antialias: true }}
+        dpr={[1, 2]}
         onCreated={({ gl }) => {
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          // El shadow map no se re-renderiza solo cada frame: DayCycleSky lo
+          // marca needsUpdate a intervalos (la luz se mueve muy lento).
+          gl.shadowMap.autoUpdate = false;
+          gl.shadowMap.needsUpdate = true;
         }}
-        className="h-dvh"
-        key={`${width}_${height}_${JSON.stringify(tiles || [])}`}
+        // h-full (not h-dvh): the canvas must track its container, so screens
+        // that stack a header above the map (leaderboard detail) don't scroll.
+        className="h-full"
       >
-        {/* TODO: Check this later, maybe we can remove it */}
-        {/* <CloudSkybox /> */}
-        {/* <Waterfall mapObjects={currentTiles} worldType={worldType} /> */}
         <DayCycleSky />
-        <SceneCamera center={center} />
+        {/* Montar la cámara solo cuando hay tiles: se inicializa una única vez
+            y debe hacerlo con el centro real del mapa (antes lo garantizaba el
+            remount del Canvas via key; ese remount ya no existe). */}
+        {currentTiles.length > 0 && <SceneCamera center={center} />}
         <EditGrid />
         {/* <FloatingIslandBase /> */}
+        <WaterBackground worldType={worldType} />
         <Ground mapObjects={currentTiles} worldType={worldType} />
         {!isEditMode && (
           <MapObjects
@@ -132,12 +144,6 @@ export const WorldMap = ({ isAvailable, worldType }: MapProps) => {
             </Text>
           </Billboard>
         )}
-        {/* TODO: Check this later */}
-        {/*<VaquitasInstanced*/}
-        {/*  deposits={deposits}*/}
-        {/*  onSelect={(vaquita) => setSelectedCow(vaquita)}*/}
-        {/*  tokenSymbol={tokenSymbol}*/}
-        {/*/>*/}
         <SceneControls center={center} />
         <SpotlightPositionUpdater />
         <TileSpotlightUpdater />

@@ -4,6 +4,7 @@ import { Switch } from '@heroui/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FiBell,
   FiChevronRight,
@@ -160,6 +161,7 @@ const formatDate = (iso: string) => {
 };
 
 export function SettingsPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const logout = useLogout();
   const { reset } = useConfigStore();
@@ -186,45 +188,44 @@ export function SettingsPage() {
       kind: 'link',
       key: 'preferences',
       icon: <FiSliders />,
-      label: 'Preferences',
-      description: 'Language, currency and display options.',
+      label: t('profilePages.settings.preferences', 'Preferences'),
+      description: t('profilePages.settings.preferencesDesc', 'Language, currency and display options.'),
       href: '/profile/preferences',
     },
     {
       kind: 'link',
       key: 'profile',
       icon: <FiEdit3 />,
-      label: 'Profile',
-      description: 'Edit your nickname and avatar.',
+      label: t('profilePages.settings.profile', 'Profile'),
+      description: t('profilePages.settings.profileDesc', 'Edit your nickname and avatar.'),
       href: '/profile/edit',
     },
     {
       kind: 'link',
       key: 'notifications',
       icon: <FiBell />,
-      label: 'Notifications',
-      description: 'Manage push and email alerts.',
+      label: t('profilePages.settings.notifications', 'Notifications'),
+      description: t('profilePages.settings.notificationsDesc', 'Manage push and email alerts.'),
       href: '/profile/notifications',
-      badge: 'soon'
     },
     {
       kind: 'link',
       key: 'wallet',
       icon: <FiCreditCard />,
-      label: 'Wallet',
-      description: 'View address, send and receive funds.',
+      label: t('profilePages.settings.wallet', 'Wallet'),
+      description: t('profilePages.settings.walletDesc', 'View address, send and receive funds.'),
       href: '/profile/wallet',
     },
     {
       kind: 'link',
       key: 'privacy',
       icon: <FiEyeOff />,
-      label: 'Privacy settings',
+      label: t('profilePages.settings.privacy', 'Privacy settings'),
       description: hideBalance
-        ? 'Balance hidden on this device.'
-        : 'Hide your balance on the profile and home screens.',
+        ? t('profilePages.settings.privacyDescHidden', 'Balance hidden on this device.')
+        : t('profilePages.settings.privacyDesc', 'Hide your balance on the profile and home screens.'),
       href: '/profile/privacy-settings',
-      badge: 'soon'
+      badge: t('common.soon')
     },
   ];
 
@@ -233,19 +234,19 @@ export function SettingsPage() {
       kind: 'link',
       key: 'help',
       icon: <FiHelpCircle />,
-      label: 'Help center',
-      description: 'FAQ and account support.',
+      label: t('profilePages.settings.help', 'Help center'),
+      description: t('profilePages.settings.helpDesc', 'FAQ and account support.'),
       href: '/profile/help',
-      badge: 'Soon',
+      badge: t('common.soon'),
     },
     {
       kind: 'link',
       key: 'feedback',
       icon: <FiMessageCircle />,
-      label: 'Feedback',
-      description: 'Tell us what you think.',
+      label: t('profilePages.settings.feedback', 'Feedback'),
+      description: t('profilePages.settings.feedbackDesc', 'Tell us what you think.'),
       href: '/profile/feedback',
-      badge: 'Soon',
+      badge: t('common.soon'),
     },
   ];
 
@@ -256,19 +257,19 @@ export function SettingsPage() {
           {/* Duolingo-style header: muted title centered, Done on the right */}
           <header className="relative flex items-center justify-center min-h-10 border-b border-black/10 pb-3">
             <h1 className="text-base sm:text-lg font-bold text-gray-500 tracking-wide uppercase">
-              Settings
+              {t('profilePages.settings.title', 'Settings')}
             </h1>
             <button
               type="button"
               onClick={() => router.push('/profile')}
               className="absolute right-0 text-sm font-extrabold text-primary hover:text-primary/80 transition uppercase tracking-wider bg-transparent"
             >
-              Done
+              {t('common.done')}
             </button>
           </header>
 
-          <Section title="Account" rows={accountRows} />
-          <Section title="Support" rows={supportRows} />
+          <Section title={t('profilePages.settings.accountSection', 'Account')} rows={accountRows} />
+          <Section title={t('profilePages.settings.supportSection', 'Support')} rows={supportRows} />
 
           {/* Sign out */}
           <div className="pt-1">
@@ -279,7 +280,7 @@ export function SettingsPage() {
               isDisabled={isDisconnecting}
               wFull
             >
-              Sign out
+              {t('profilePages.settings.signOut', 'Sign out')}
             </Button>
           </div>
 
@@ -290,13 +291,13 @@ export function SettingsPage() {
                 href="/terms"
                 className="text-xs font-extrabold uppercase tracking-wider text-primary hover:text-primary/80 transition"
               >
-                Terms
+                {t('profilePages.settings.terms', 'Terms')}
               </Link>
               <Link
                 href="/privacy"
                 className="text-xs font-extrabold uppercase tracking-wider text-primary hover:text-primary/80 transition"
               >
-                Privacy policy
+                {t('profilePages.settings.privacyPolicy', 'Privacy policy')}
               </Link>
             </div>
           </div>
@@ -306,11 +307,11 @@ export function SettingsPage() {
       <ConfirmDialog
         isOpen={confirmLogout}
         onOpenChange={setConfirmLogout}
-        title="Sign out?"
-        description="Are you sure you want to sign out?"
+        title={t('profilePages.settings.signOutConfirmTitle', 'Sign out?')}
+        description={t('profilePages.settings.signOutConfirmDesc', 'Are you sure you want to sign out?')}
         icon={<FiLogOut className="h-5 w-5" />}
         status="danger"
-        confirmLabel="Sign out"
+        confirmLabel={t('profilePages.settings.signOut', 'Sign out')}
         onConfirm={handleDisconnect}
         isConfirming={isDisconnecting}
       />

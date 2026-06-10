@@ -3,6 +3,8 @@
 import { Modal } from '@heroui/react';
 import Image from 'next/image';
 import { ReactNode } from 'react';
+import { FiArrowLeft } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 
 export type AppModalSize = 'sm' | 'md' | 'lg';
 
@@ -16,6 +18,15 @@ export interface AppModalProps {
   children: ReactNode;
   footer?: ReactNode;
   isDismissable?: boolean;
+  /** Oculta la X de cerrar (ej. tutorial: el modal solo se cierra por su acción). */
+  hideClose?: boolean;
+  /**
+   * Si se define, muestra una flecha "atrás" a la izquierda del título. Sirve
+   * para navegar dentro del mismo modal (lista → detalle) sin abrir otro.
+   */
+  onBack?: () => void;
+  /** Posición vertical del modal. Por defecto el comportamiento de HeroUI. */
+  placement?: 'auto' | 'top' | 'center' | 'bottom';
   bodyClassName?: string;
   dialogClassName?: string;
 }
@@ -37,9 +48,13 @@ export function AppModal({
   children,
   footer,
   isDismissable = true,
+  hideClose = false,
+  onBack,
+  placement,
   bodyClassName,
   dialogClassName,
 }: AppModalProps) {
+  const { t } = useTranslation();
   return (
     <Modal.Backdrop
       isOpen={open}
@@ -47,7 +62,7 @@ export function AppModal({
       onOpenChange={(o) => { if (!o) onOpenChange(); }}
       className={SLOW_EXIT}
     >
-      <Modal.Container size={size} scroll="inside" className="px-0! py-3! sm:p-10!">
+      <Modal.Container size={size} scroll="inside" placement={placement} className="px-0! py-3! sm:p-10!">
         <Modal.Dialog
           className={
             'bg-background border border-black ' +
@@ -58,17 +73,29 @@ export function AppModal({
           }
         >
           <Modal.Header className="flex-row! items-center gap-3 px-5 sm:px-6 pt-4 pb-3 border-b border-black/10">
+            {onBack ? (
+              <button
+                type="button"
+                aria-label={t('common.back')}
+                onClick={onBack}
+                className="flex items-center justify-center w-7 h-7 -ml-1 rounded-full border border-black border-b-2 bg-white text-black hover:bg-default-100 active:translate-y-0.5 transition-all shrink-0"
+              >
+                <FiArrowLeft className="w-4 h-4" />
+              </button>
+            ) : null}
             {titleIcon ? (
               <Image src={titleIcon} alt={titleIconAlt} width={22} height={22} />
             ) : null}
             <Modal.Heading className="text-black font-bold text-base flex-1 min-w-0 truncate">
               {title}
             </Modal.Heading>
-            <Modal.CloseTrigger
-              aria-label="Close"
-              className='bg-primary text-black text-sm border-[0.5] border-black'
-            >
-            </Modal.CloseTrigger>
+            {!hideClose && (
+              <Modal.CloseTrigger
+                aria-label={t('common.close')}
+                className='bg-primary text-black text-sm border-[0.5] border-black'
+              >
+              </Modal.CloseTrigger>
+            )}
           </Modal.Header>
           <Modal.Body
             className={

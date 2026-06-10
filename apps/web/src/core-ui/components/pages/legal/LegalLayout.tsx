@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiArrowLeft } from 'react-icons/fi';
 
 interface LegalLayoutProps {
@@ -24,6 +25,7 @@ const formatDate = (iso: string) => {
 };
 
 export function LegalLayout({ title, lastUpdated, backHref = '/profile/settings', children }: LegalLayoutProps) {
+  const { t } = useTranslation();
   return (
     <div className="h-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-8 flex flex-col gap-6 pb-16">
@@ -31,7 +33,7 @@ export function LegalLayout({ title, lastUpdated, backHref = '/profile/settings'
         <header className="relative flex items-center justify-center min-h-10 border-b border-black/10 pb-3">
           <Link
             href={backHref}
-            aria-label="Back"
+            aria-label={t('common.back')}
             className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
           >
             <FiArrowLeft className="h-4 w-4" />
@@ -41,7 +43,7 @@ export function LegalLayout({ title, lastUpdated, backHref = '/profile/settings'
 
         {/* Last updated meta */}
         <div className="flex items-center justify-between rounded-2xl bg-white border border-black border-b-2 px-4 py-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Last updated</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">{t('auth.legal.lastUpdated')}</span>
           <span className="text-sm font-bold text-black tabular-nums">{formatDate(lastUpdated)}</span>
         </div>
 

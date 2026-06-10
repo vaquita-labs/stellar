@@ -3,6 +3,7 @@
 import { Modal, toast } from '@heroui/react';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiSave } from 'react-icons/fi';
 import { truncateMiddle } from '../../helpers';
 import { useRestProfile } from '../../hooks';
@@ -15,6 +16,7 @@ interface EditProfileModalProps {
 }
 
 export function EditProfileModal({ isOpen, onClose, currentNickname }: EditProfileModalProps) {
+  const { t } = useTranslation();
   const { network, walletAddress } = useConfigStore();
   const { saveNickname } = useRestProfile();
   const [nickname, setNickname] = useState<string>(currentNickname);
@@ -25,7 +27,7 @@ export function EditProfileModal({ isOpen, onClose, currentNickname }: EditProfi
     setSaving(false);
   }, [currentNickname, isOpen]);
 
-  const displayName = nickname.trim() ? nickname.trim() : truncateMiddle(walletAddress) || 'Guest';
+  const displayName = nickname.trim() ? nickname.trim() : truncateMiddle(walletAddress) || t('wallet.editProfile.guest');
   const isDirty = nickname.trim() !== currentNickname;
   const canSave = !!walletAddress && isDirty && !saving && !!network;
 
@@ -35,13 +37,13 @@ export function EditProfileModal({ isOpen, onClose, currentNickname }: EditProfi
       try {
         const { success, message } = await saveNickname({ nickname });
         if (success) {
-          toast.success('Nickname saved', { timeout: 4000 });
+          toast.success(t('wallet.editProfile.nicknameSaved'), { timeout: 4000 });
           onClose();
         } else {
-          toast.danger('Error on saving nickname', { description: message, timeout: 4000 });
+          toast.danger(t('wallet.editProfile.nicknameError'), { description: message, timeout: 4000 });
         }
       } catch (error) {
-        toast.danger('Error on saving nickname', { description: (error as { message: string })?.message ?? '', timeout: 4000 });
+        toast.danger(t('wallet.editProfile.nicknameError'), { description: (error as { message: string })?.message ?? '', timeout: 4000 });
       }
       setSaving(false);
     }
@@ -57,15 +59,15 @@ export function EditProfileModal({ isOpen, onClose, currentNickname }: EditProfi
       <Modal.Container size="sm">
         <Modal.Dialog className="bg-background border border-black">
           <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+            <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />
           </Modal.CloseTrigger>
           <Modal.Header>
-            <Modal.Heading className="text-black font-bold text-lg">Edit Profile</Modal.Heading>
+            <Modal.Heading className="text-black font-bold text-lg">{t('wallet.editProfile.title')}</Modal.Heading>
           </Modal.Header>
           <Modal.Body>
           <div className="space-y-4">
             <div>
-              <label className="text-black font-normal text-sm block mb-1">Nickname</label>
+              <label className="text-black font-normal text-sm block mb-1">{t('wallet.editProfile.nicknameLabel')}</label>
               <input
                 type="text"
                 placeholder="@nickname"
@@ -75,10 +77,10 @@ export function EditProfileModal({ isOpen, onClose, currentNickname }: EditProfi
                 disabled={!walletAddress}
                 className="w-full bg-white border border-black border-b-2 h-14 px-3 text-black font-medium rounded-sm outline-none disabled:opacity-50"
               />
-              <p className="text-xs pl-2 text-gray-600 mt-1">Shown as: @{displayName}</p>
+              <p className="text-xs pl-2 text-gray-600 mt-1">{t('wallet.editProfile.shownAs', { name: displayName })}</p>
             </div>
             <div>
-              <label className="text-black font-normal text-sm block mb-1">Wallet</label>
+              <label className="text-black font-normal text-sm block mb-1">{t('wallet.editProfile.walletLabel')}</label>
               <input
                 type="text"
                 value={truncateMiddle(walletAddress)}
@@ -95,7 +97,7 @@ export function EditProfileModal({ isOpen, onClose, currentNickname }: EditProfi
             disabled={saving}
             className="px-4 py-2 rounded-md bg-gray-200 text-black text-sm font-semibold hover:bg-gray-300 transition disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleSubmit}
@@ -105,12 +107,12 @@ export function EditProfileModal({ isOpen, onClose, currentNickname }: EditProfi
             {saving ? (
               <>
                 <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                Saving...
+                {t('common.saving')}
               </>
             ) : (
               <>
                 <FiSave className="w-4 h-4" />
-                Save changes
+                {t('wallet.editProfile.saveChanges')}
               </>
             )}
           </button>
