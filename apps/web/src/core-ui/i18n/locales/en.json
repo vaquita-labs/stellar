@@ -75,7 +75,7 @@
       "title": "Badge minted on-chain!"
     },
     "minting": {
-      "waitingForWallet": "Waiting for wallet…"
+      "waitingForWallet": "Preparing your reward…"
     },
     "mintError": {
       "alreadyClaimed": "You've already claimed this badge.",
