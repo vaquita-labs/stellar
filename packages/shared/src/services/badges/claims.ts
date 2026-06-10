@@ -147,6 +147,14 @@ export async function getActiveBadgeClaim(
   return claim ? toBadgeClaimRecord(claim) : null;
 }
 
+export async function getActiveBadgeClaimsForWallet(walletAddress: string): Promise<BadgeClaimRecord[]> {
+  const claims = await prisma.badgeClaim.findMany({
+    where: { walletAddress, supersededAt: null, deletedAt: null },
+    orderBy: { createdAt: 'desc' },
+  });
+  return claims.map(toBadgeClaimRecord);
+}
+
 export async function storeBadgeClaim(claim: {
   walletAddress: string;
   badgeType: string;
@@ -203,11 +211,13 @@ export async function confirmBadgeClaim(
   badgeType: string,
   cycleId: number,
   transactionHash: string,
-): Promise<void> {
-  await prisma.badgeClaim.updateMany({
+): Promise<BadgeClaimRecord | null> {
+  const updated = await prisma.badgeClaim.updateMany({
     where: { walletAddress, badgeType, cycleId, supersededAt: null },
     data: { confirmedAt: new Date(), transactionHash },
   });
+  if (updated.count === 0) return null;
+  return getActiveBadgeClaim(walletAddress, badgeType, cycleId);
 }
 
 export interface MintedBadge {

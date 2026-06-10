@@ -1,8 +1,13 @@
 import { Router } from 'express';
 import {
+  enrichLeaderboardRows,
+  getAchievementCountsByProfile,
+  getExperienceByProfile,
   getLastClosedCycleId,
   getLeaderboard,
   getLeaderboardRankForWallet,
+  getProfiles,
+  getStreakCountsByProfile,
   parseLeaderboardCycleQuery,
   sendError,
   sendSuccess,
@@ -56,13 +61,40 @@ router.get('/', async (req, res) => {
     req.log.info({ cycleId, cycleStatus }, 'GET /leaderboard');
 
     const rows = await getLeaderboard(cycleId);
+    const { data: profiles, error: profilesError } = await getProfiles();
+    if (profilesError) {
+      req.log.error({ err: profilesError }, 'Failed to load profile metadata for leaderboard');
+      return sendError(res, 'Failed to load profile metadata for leaderboard', profilesError, 500);
+    }
+
+    const [
+      { counts: badgesByProfileId, error: badgesError },
+      { counts: streaksByProfileId, error: streaksError },
+      { experience: experienceByProfileId, error: experienceError },
+    ] = await Promise.all([
+      getAchievementCountsByProfile(),
+      getStreakCountsByProfile(),
+      getExperienceByProfile(profiles),
+    ]);
+
+    if (badgesError) {
+      req.log.error({ err: badgesError }, 'Failed to fetch badge counts for leaderboard');
+    }
+    if (streaksError) {
+      req.log.error({ err: streaksError }, 'Failed to fetch streak counts for leaderboard');
+    }
+    if (experienceError) {
+      req.log.error({ err: experienceError }, 'Failed to fetch experience for leaderboard');
+    }
+
     return sendSuccess(
       res,
-      rows.map((row, index) => ({
-        position: index + 1,
-        ...row,
+      enrichLeaderboardRows(
+        rows,
+        profiles,
+        { badgesByProfileId, streaksByProfileId, experienceByProfileId },
         cycleStatus,
-      })),
+      ),
       '',
     );
   } catch (err: any) {

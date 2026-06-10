@@ -4,6 +4,11 @@ import { ProfileAverageResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 import { ONE_MINUTE } from '../config/constants';
 
+/**
+ * @deprecated The leaderboard now reads `/api/v1/leaderboard` via
+ * `useLeaderboardData`. Keep this hook only for compatibility with older
+ * profile-average views.
+ */
 export const useProfilesByAverageDepositsData = () => {
   const { network } = useConfigStore();
   return useQuery<ProfileAverageResponseDTO[]>({

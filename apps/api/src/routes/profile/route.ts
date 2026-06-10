@@ -800,6 +800,8 @@ const toProfileByDepositsResponseDTO = (
 
 router.get('/by-average-deposits', async (req, res) => {
   req.log.info('GET /profile/by-average-deposits');
+  res.setHeader('Deprecation', 'true');
+  res.setHeader('Link', '</api/v1/leaderboard>; rel="successor-version"');
 
   const { data, error } = await getProfiles();
 

@@ -1,32 +1,34 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
-import type { ClaimAchievementResponseDTO } from '@/core-ui/types';
+import { authFetch } from '@/networks/stellar/walletSession';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+type RedeemAchievementCodeResponse = {
+  achievementKey: string;
+  coinReward: number;
+};
 
 /**
  * Mutation that redeems a code for a hidden / code-gated achievement.
  *
- * The server side checks (in order): code exists → user hasn't claimed it →
- * insert ledger + reward in one tx. On success the same three queries used by
- * the regular claim flow get invalidated so the UI updates without a manual
- * refetch:
- *  - `profile-achievements` → the badge appears in the list as claimed.
- *  - `profile-rewards`      → gold-coin balance bumps by `coinReward`.
- *  - `profile-experience`   → if XP ever derives from coin rewards.
+ * The server validates the code and creates/returns a pending mint voucher.
+ * Rewards are granted later by `/mint` after the on-chain mint succeeds.
  */
 export const useRedeemAchievementCode = () => {
   const queryClient = useQueryClient();
   const { network, walletAddress } = useConfigStore();
 
-  return useMutation<ClaimAchievementResponseDTO, Error, string>({
+  return useMutation<RedeemAchievementCodeResponse, Error, string>({
     mutationFn: async (code) => {
-      const response = await fetch(
+      if (!walletAddress) throw new Error('No connected wallet');
+      const response = await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/wallets/${walletAddress}/badges/redeem`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code }),
         },
+        walletAddress,
       );
 
       const body = await response.json().catch(() => null);
@@ -36,18 +38,12 @@ export const useRedeemAchievementCode = () => {
         throw new Error(message);
       }
 
-      return body.data as ClaimAchievementResponseDTO;
+      return body.data as RedeemAchievementCodeResponse;
     },
     onSuccess: () => {
       const networkName = network?.networkName;
       void queryClient.invalidateQueries({
         queryKey: ['profile', networkName, walletAddress, 'profile-achievements'],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ['profile', networkName, walletAddress, 'profile-rewards'],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ['profile', networkName, walletAddress, 'profile-experience'],
       });
     },
   });

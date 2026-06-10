@@ -183,19 +183,23 @@ export function verifySessionToken(token: string | null | undefined): string | n
 }
 
 /**
- * Route middleware for endpoints keyed by `:walletAddress`: the request must
- * carry `Authorization: Bearer <session token>` whose wallet matches the param.
+ * Route middleware for endpoints keyed by `:walletAddress` or `:wallet`: the
+ * request must carry `Authorization: Bearer <session token>` whose wallet
+ * matches the route param.
  */
-export const requireWalletSession: RequestHandler<{ walletAddress: string }> = (req, res, next) => {
+const requireWalletSessionForParam =
+  (paramName: 'walletAddress' | 'wallet'): RequestHandler =>
+  (req, res, next) => {
   const header = req.headers.authorization ?? '';
   const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
   const wallet = verifySessionToken(token);
+  const routeWallet = req.params[paramName];
 
-  if (wallet && wallet === req.params.walletAddress) return next();
+  if (wallet && wallet === routeWallet) return next();
 
   if (!isWalletAuthEnforced) {
     req.log.warn(
-      { walletAddress: req.params.walletAddress, hasToken: Boolean(token), tokenWallet: wallet },
+      { walletAddress: routeWallet, hasToken: Boolean(token), tokenWallet: wallet },
       'WALLET_AUTH_ENFORCE=false — letting unauthenticated mutation through',
     );
     return next();
@@ -205,6 +209,12 @@ export const requireWalletSession: RequestHandler<{ walletAddress: string }> = (
     sendError(res, 'Authentication required.', null, 401);
     return;
   }
-  req.log.warn({ tokenWallet: wallet, walletAddress: req.params.walletAddress }, 'Session wallet does not match route wallet');
+  req.log.warn({ tokenWallet: wallet, walletAddress: routeWallet }, 'Session wallet does not match route wallet');
   sendError(res, 'You are not allowed to modify this profile.', null, 403);
 };
+
+export const requireWalletSession: RequestHandler<{ walletAddress: string }> =
+  requireWalletSessionForParam('walletAddress');
+
+export const requireWalletParamSession: RequestHandler<{ wallet: string }> =
+  requireWalletSessionForParam('wallet');

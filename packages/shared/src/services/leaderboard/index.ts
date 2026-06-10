@@ -1,4 +1,5 @@
 import { prisma } from '@vaquita/db';
+import type { Profile } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Cycle duration config
@@ -126,6 +127,46 @@ export interface LeaderboardRow {
   cycleId: number;
   cycleStart: number;     // unix ms
   cycleEnd: number;       // unix ms
+}
+
+export interface EnrichedLeaderboardRow extends LeaderboardRow {
+  position: number;
+  nickname: string;
+  avatarUrl: string;
+  badges: number;
+  streak: number;
+  experience: number;
+  cycleStatus: LeaderboardCycleStatus;
+}
+
+export interface LeaderboardProfileRollups {
+  badgesByProfileId: Map<number, number>;
+  streaksByProfileId: Map<number, number>;
+  experienceByProfileId: Map<number, number>;
+}
+
+export function enrichLeaderboardRows(
+  rows: LeaderboardRow[],
+  profiles: Profile[],
+  rollups: LeaderboardProfileRollups,
+  cycleStatus: LeaderboardCycleStatus,
+): EnrichedLeaderboardRow[] {
+  const profilesByWallet = new Map(profiles.map((profile) => [profile.wallet_address?.toLowerCase() ?? '', profile]));
+
+  return rows.map((row, index) => {
+    const profile = profilesByWallet.get(row.walletAddress.toLowerCase());
+
+    return {
+      position: index + 1,
+      ...row,
+      nickname: profile?.nickname ?? '',
+      avatarUrl: profile?.avatar_url ?? '',
+      badges: profile ? (rollups.badgesByProfileId.get(profile.id) ?? 0) : 0,
+      streak: profile ? (rollups.streaksByProfileId.get(profile.id) ?? 0) : 0,
+      experience: profile ? (rollups.experienceByProfileId.get(profile.id) ?? 0) : 0,
+      cycleStatus,
+    };
+  });
 }
 
 /**
