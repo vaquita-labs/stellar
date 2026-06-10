@@ -121,7 +121,7 @@
     "toast": {
       "couldNotShare": "No se pudo compartir",
       "linkCopied": "Enlace copiado al portapapeles",
-      "mintFailed": "Falló la acuñación",
+      "mintFailed": "No se pudo reclamar el premio",
       "unknownError": "Error desconocido"
     }
   },
