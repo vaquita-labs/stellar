@@ -75,7 +75,7 @@
       "title": "Selo cunhado na blockchain!"
     },
     "minting": {
-      "waitingForWallet": "Aguardando a carteira…"
+      "waitingForWallet": "Preparando seu prêmio…"
     },
     "mintError": {
       "alreadyClaimed": "Você já resgatou este selo.",

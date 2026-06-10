@@ -75,7 +75,7 @@
       "title": "¡Insignia acuñada en la blockchain!"
     },
     "minting": {
-      "waitingForWallet": "Esperando la wallet…"
+      "waitingForWallet": "Preparando tu premio…"
     },
     "mintError": {
       "alreadyClaimed": "Ya reclamaste esta insignia.",
