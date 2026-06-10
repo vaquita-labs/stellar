@@ -202,8 +202,9 @@ export function ProfilePage() {
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
         leaderboardRank: rankData?.rank ?? undefined,
+        friendsCount: followCounts?.following ?? 0,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank, followCounts?.following]
   );
 
   // The 4-tile preview prioritises what the user can act on right now:
