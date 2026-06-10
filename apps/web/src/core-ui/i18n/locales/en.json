@@ -77,6 +77,18 @@
     "minting": {
       "waitingForWallet": "Waiting for wallet…"
     },
+    "mintError": {
+      "alreadyClaimed": "You've already claimed this badge.",
+      "claimExpired": "This claim expired. Please reopen the badge and try again.",
+      "soulbound": "This badge can't be transferred once minted.",
+      "unauthorized": "We couldn't verify this reward. Please try again.",
+      "editionCapReached": "This badge is sold out — no more editions are available.",
+      "paused": "Minting is paused right now. Please try again later.",
+      "notReady": "Badges aren't available right now. Please try again later.",
+      "rejected": "You cancelled the request in your wallet.",
+      "network": "Connection problem. Check your internet and try again.",
+      "generic": "Something went wrong while minting. Please try again."
+    },
     "modal": {
       "claimingReward": "Claiming reward",
       "goldCoins": "{{count}} gold coins",

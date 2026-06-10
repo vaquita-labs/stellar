@@ -77,6 +77,18 @@
     "minting": {
       "waitingForWallet": "Esperando la wallet…"
     },
+    "mintError": {
+      "alreadyClaimed": "Ya reclamaste esta insignia.",
+      "claimExpired": "Este reclamo expiró. Vuelve a abrir la insignia e inténtalo de nuevo.",
+      "soulbound": "Esta insignia no se puede transferir una vez acuñada.",
+      "unauthorized": "No pudimos verificar este premio. Inténtalo de nuevo.",
+      "editionCapReached": "Esta insignia está agotada — no quedan ediciones disponibles.",
+      "paused": "La acuñación está pausada en este momento. Inténtalo más tarde.",
+      "notReady": "Las insignias no están disponibles en este momento. Inténtalo más tarde.",
+      "rejected": "Cancelaste la solicitud en tu wallet.",
+      "network": "Problema de conexión. Revisa tu internet e inténtalo de nuevo.",
+      "generic": "Algo salió mal al acuñar. Inténtalo de nuevo."
+    },
     "modal": {
       "claimingReward": "Reclamando premio",
       "goldCoins": "{{count}} monedas de oro",
