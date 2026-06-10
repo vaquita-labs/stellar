@@ -27,5 +27,8 @@ export const useProfileStreak = (walletAddressOverride?: string) => {
       return profile;
     },
     enabled: !!network?.networkName && !!walletAddress,
+    // Reset diario por tiempo: refetch al montar para reflejar el rollover.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };

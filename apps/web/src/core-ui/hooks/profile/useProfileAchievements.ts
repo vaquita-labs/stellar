@@ -25,5 +25,9 @@ export const useProfileAchievements = (walletAddressOverride?: string) => {
       return dto;
     },
     enabled: !!network?.networkName && !!walletAddress,
+    // El catálogo de badges se edita desde el admin: refetcheamos al montar
+    // (en background, sin spinner) para reflejar esos cambios al entrar.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
