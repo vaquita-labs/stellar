@@ -350,6 +350,22 @@ export interface ProfileAverageResponseDTO {
   experience: number;
 }
 
+export interface LeaderboardResponseDTO {
+  position: number;
+  walletAddress: string;
+  nickname: string;
+  avatarUrl: string;
+  badges: number;
+  streak: number;
+  experience: number;
+  score: number;
+  activeAmount: number;
+  cycleId: number;
+  cycleStart: number;
+  cycleEnd: number;
+  cycleStatus: 'current' | 'last_closed' | 'historical';
+}
+
 export interface UserBalanceResponseDTO {
   balances: {
     balance: number;
@@ -405,6 +421,9 @@ export interface AchievementResponseDTO {
   /** On-chain mint transaction hash, or null when not minted. Lets clients link
    *  an already-minted badge to its stellar.expert tx without a re-mint. */
   transactionHash: string | null;
+  claimState: 'locked' | 'claimable' | 'pending_mint' | 'claimed' | 'minted';
+  claimCycleId: number | null;
+  awardCycleId: number | null;
   /** Catalog visual metadata, embedded so logged-in views need only this list.
    *  `icon` may be a relative path or an absolute (admin-uploaded) URL. */
   icon: string | null;

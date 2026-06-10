@@ -9,7 +9,6 @@ import {
   useClaimedAchievements,
   useDepositsComplete,
   useFollowCounts,
-  useLeaderboardRank,
   useProfileAchievements,
   useProfileExperience,
   useProfileRewards,
@@ -45,7 +44,6 @@ export function AllAchievementsPage() {
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
-  const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
   const { data: followCounts } = useFollowCounts();
   // Drives the pulsing "ready to claim" halo on each badge tile. A badge is
   // claimable when the user has met the unlock condition (`badge.unlocked`)
@@ -73,10 +71,9 @@ export function AllAchievementsPage() {
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
-        leaderboardRank: rankData?.rank ?? undefined,
         friendsCount: followCounts?.following ?? 0,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank, followCounts?.following]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, followCounts?.following]
   );
 
   const earned = achievements.filter((b) => b.unlocked && isClaimed(b.id)).length;
@@ -138,8 +135,7 @@ export function AllAchievementsPage() {
                   badge={badge}
                   size="lg"
                   showTitle
-                  claimable={badge.unlocked && !isClaimed(badge.id)}
-                  loading={rankLoading && ['first-place', 'second-place', 'third-place'].includes(badge.id)}
+                  claimable={(badge.claimState === 'pending_mint' || badge.unlocked) && !isClaimed(badge.id)}
                   onPress={() => setSelected({ achievement: badge, unlocked: badge.unlocked })}
                 />
               ))}

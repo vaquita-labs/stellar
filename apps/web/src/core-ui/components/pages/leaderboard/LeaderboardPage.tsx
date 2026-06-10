@@ -3,8 +3,8 @@
 import Image from 'next/image';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ProfileAverageResponseDTO } from '@/core-ui/types';
-import { useProfileData, useProfilesByAverageDepositsData } from '../../../hooks';
+import { LeaderboardResponseDTO } from '@/core-ui/types';
+import { useLeaderboardData, useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
 import {
@@ -20,18 +20,6 @@ const SKELETON_ROWS = 3;
 /* ------------------------------------------------------------------ */
 /* Ranking + filtering                                                 */
 /* ------------------------------------------------------------------ */
-
-/**
- * Default ordering — by internal average deposits. Never shown in UI; once
- * the backend ranks by XP this collapses to `(a, b) => b.xp - a.xp`.
- */
-function defaultRank(profiles: ProfileAverageResponseDTO[]): ProfileAverageResponseDTO[] {
-  return [...profiles].sort((a, b) => {
-    const avgA = a.count !== 0 ? a.totalSums / a.count : 0;
-    const avgB = b.count !== 0 ? b.totalSums / b.count : 0;
-    return avgB - avgA;
-  });
-}
 
 /** Apply the user-selected sort + direction to a list of cards.
  *  Rows arrive already in descending rank order, so `rank + desc` is a no-op
@@ -147,38 +135,37 @@ function LeaderboardFeed({ rows }: { rows: LeaderboardCardData[] }) {
 /* Row builder                                                         */
 /* ------------------------------------------------------------------ */
 
-function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardCardData[] {
+function useLeaderboardRows(rows: LeaderboardResponseDTO[]): LeaderboardCardData[] {
   const { walletAddress: currentUserWallet } = useConfigStore();
 
   return useMemo(() => {
-    const ranked = defaultRank(profiles);
-    return ranked.map((profile, index) => {
+    return rows.map((row) => {
       const isCurrentUser =
         !!currentUserWallet &&
-        currentUserWallet.toLowerCase() === profile.walletAddress.toLowerCase();
+        currentUserWallet.toLowerCase() === row.walletAddress.toLowerCase();
 
       // Lightweight "level" derivation from the real XP the API now ships per
       // profile: every 100 XP = +1 level, minimum level 1. Coerce the gamification
       // fields here so a stale react-query cache from before these fields existed
       // (global staleTime is Infinity) can't render the literal text "undefined"
       // in a card before the background refetch lands.
-      const level = Math.max(1, Math.floor((profile.experience ?? 0) / 100) + 1);
+      const level = Math.max(1, Math.floor((row.experience ?? 0) / 100) + 1);
 
       return {
-        position: index + 1,
-        walletAddress: profile.walletAddress,
-        username: getLeaderboardUsername(profile.nickname, profile.walletAddress),
-        avatarUrl: profile.avatarUrl,
+        position: row.position,
+        walletAddress: row.walletAddress,
+        username: getLeaderboardUsername(row.nickname, row.walletAddress),
+        avatarUrl: row.avatarUrl,
         level,
-        streak: profile.streak ?? 0,
-        badges: profile.badges ?? 0,
+        streak: row.streak ?? 0,
+        badges: row.badges ?? 0,
         // TODO: Replace with real likes and comments once the API ships them.
         likesSeed: 0,
         commentsSeed: 0,
         isCurrentUser,
       };
     });
-  }, [profiles, currentUserWallet]);
+  }, [rows, currentUserWallet]);
 }
 
 /* ------------------------------------------------------------------ */
@@ -216,8 +203,8 @@ function useCurrentUserIdentity() {
 
 export const LeaderboardPage = () => {
   const { t } = useTranslation();
-  const { data: profiles = [], isLoading, error } = useProfilesByAverageDepositsData();
-  const rankedRows = useLeaderboardRows(profiles);
+  const { data: leaderboardRows = [], isLoading, error } = useLeaderboardData();
+  const rankedRows = useLeaderboardRows(leaderboardRows);
 
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [direction, setDirection] = useState<SortDirection>('desc');

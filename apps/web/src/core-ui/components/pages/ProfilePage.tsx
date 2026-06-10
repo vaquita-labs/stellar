@@ -13,7 +13,6 @@ import {
   useClaimedAchievements,
   useDepositsComplete,
   useFollowCounts,
-  useLeaderboardRank,
   useProfileAchievements,
   useProfileData,
   useProfileExperience,
@@ -135,7 +134,6 @@ export function ProfilePage() {
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
-  const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
   const { data: followCounts } = useFollowCounts();
   const [followModal, setFollowModal] = useState<{ open: boolean; tab: FollowListKind }>({
     open: false,
@@ -201,10 +199,9 @@ export function ProfilePage() {
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
-        leaderboardRank: rankData?.rank ?? undefined,
         friendsCount: followCounts?.following ?? 0,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank, followCounts?.following]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, followCounts?.following]
   );
 
   // The 4-tile preview prioritises what the user can act on right now:
@@ -402,8 +399,7 @@ export function ProfilePage() {
                 <BadgeTile
                   key={badge.id}
                   badge={badge}
-                  claimable={badge.unlocked && !isClaimed(badge.id)}
-                  loading={rankLoading && ['first-place', 'second-place', 'third-place'].includes(badge.id)}
+                  claimable={(badge.claimState === 'pending_mint' || badge.unlocked) && !isClaimed(badge.id)}
                   onPress={() => router.push('/profile/achievements')}
                 />
               ))}

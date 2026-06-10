@@ -39,6 +39,7 @@ export type AchievementDetail = {
   progress?: { current: number; target: number };
   /** Background color for the icon container. */
   accent?: string;
+  claimState?: 'locked' | 'claimable' | 'pending_mint' | 'claimed' | 'minted';
 };
 
 interface AchievementModalProps {
