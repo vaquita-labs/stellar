@@ -77,6 +77,18 @@
     "minting": {
       "waitingForWallet": "Aguardando a carteira…"
     },
+    "mintError": {
+      "alreadyClaimed": "Você já resgatou este selo.",
+      "claimExpired": "Este resgate expirou. Reabra o selo e tente novamente.",
+      "soulbound": "Este selo não pode ser transferido depois de cunhado.",
+      "unauthorized": "Não foi possível verificar este prêmio. Tente novamente.",
+      "editionCapReached": "Este selo esgotou — não há mais edições disponíveis.",
+      "paused": "A cunhagem está pausada no momento. Tente novamente mais tarde.",
+      "notReady": "Os selos não estão disponíveis no momento. Tente novamente mais tarde.",
+      "rejected": "Você cancelou a solicitação na sua carteira.",
+      "network": "Problema de conexão. Verifique sua internet e tente novamente.",
+      "generic": "Algo deu errado ao cunhar. Tente novamente."
+    },
     "modal": {
       "claimingReward": "Resgatando prêmio",
       "goldCoins": "{{count}} moedas de ouro",

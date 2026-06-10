@@ -16,6 +16,7 @@ import {
 } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
+import { parseBadgeMintError } from '@/networks/stellar/badgeErrors';
 
 /**
  * Mocked username used to personalize the share link. Replace with a real
@@ -136,7 +137,13 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
         setPhase('reward');
       },
       onError: (err) => {
-        toast.danger(t('achievements.toast.mintFailed', 'Mint failed'), { description: err.message });
+        // Keep the raw HostError for debugging, but never show it to the user —
+        // collapse it to a friendly, localized reason instead.
+        console.error('[mintBadge] failed', err);
+        const reason = parseBadgeMintError(err);
+        toast.danger(t('achievements.toast.mintFailed', 'Mint failed'), {
+          description: t(`achievements.mintError.${reason}`),
+        });
         setPhase('detail');
       },
     });
