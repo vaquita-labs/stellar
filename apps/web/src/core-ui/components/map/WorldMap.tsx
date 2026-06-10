@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
-import { useMapStore, useConfigStore, useResizeStore, useSyncMapObjects } from '../../stores';
+import { useMapStore, useConfigStore, useSyncMapObjects } from '../../stores';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
 import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
 import { MapObjects } from '../templates/WorldMap/map/MapObjects';
@@ -45,16 +45,15 @@ interface MapProps {
 export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false }: MapProps) => {
   const router = useRouter();
   const isEditMode = useMapStore((store) => store.editMode);
-  const { tiles, currentTiles } = useMapStore();
+  const currentTiles = useMapStore((store) => store.currentTiles);
   useSyncMapObjects();
   const [showVaquitasListModal, setShowVaquitasListModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
   const [dailyRewardExperience, setDailyRewardExperience] = useState(0);
   const [showMoodModal, setShowMoodModal] = useState(false);
-  const { walletAddress: userWalletAddress } = useConfigStore((store) => store);
+  const userWalletAddress = useConfigStore((store) => store.walletAddress);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
-  const { height, width } = useResizeStore((store) => store);
   const { mood, canCollect, goldCoinsToCollect, experienceToCollect } = useVaquitaMood();
   const { data: streak } = useProfileStreak();
   const { goldDailyCollect } = useRestProfile();
@@ -106,17 +105,24 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
         camera={{ fov: 50 }}
         shadows
         gl={{ antialias: true }}
+        dpr={[1, 2]}
         onCreated={({ gl }) => {
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          // El shadow map no se re-renderiza solo cada frame: DayCycleSky lo
+          // marca needsUpdate a intervalos (la luz se mueve muy lento).
+          gl.shadowMap.autoUpdate = false;
+          gl.shadowMap.needsUpdate = true;
         }}
         // h-full (not h-dvh): the canvas must track its container, so screens
         // that stack a header above the map (leaderboard detail) don't scroll.
         className="h-full"
-        key={`${width}_${height}_${JSON.stringify(tiles || [])}`}
       >
         <DayCycleSky />
-        <SceneCamera center={center} />
+        {/* Montar la cámara solo cuando hay tiles: se inicializa una única vez
+            y debe hacerlo con el centro real del mapa (antes lo garantizaba el
+            remount del Canvas via key; ese remount ya no existe). */}
+        {currentTiles.length > 0 && <SceneCamera center={center} />}
         <EditGrid />
         {/* <FloatingIslandBase /> */}
         <WaterBackground worldType={worldType} />
