@@ -110,6 +110,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.1062.0
         version: 3.1062.0
+      '@stellar/stellar-sdk':
+        specifier: ^15.1.0
+        version: 15.1.0
       '@vaquita/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -134,6 +137,9 @@ importers:
       pino-http:
         specifier: ^11.0.0
         version: 11.0.0
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       uuid:
         specifier: ^14.0.0
         version: 14.0.0
@@ -228,10 +234,10 @@ importers:
         version: link:../../packages/ui
       '@vercel/analytics':
         specifier: ^2.0.1
-        version: 2.0.1(next@16.2.7(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+        version: 2.0.1(next@16.2.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       '@vercel/speed-insights':
         specifier: ^2.0.0
-        version: 2.0.0(next@16.2.7(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+        version: 2.0.0(next@16.2.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
       ably:
         specifier: ^2.21.0
         version: 2.21.0(bufferutil@4.1.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(utf-8-validate@6.0.6)
@@ -7609,8 +7615,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@img/colour@1.1.0':
-    optional: true
+  '@img/colour@1.1.0': {}
 
   '@img/sharp-darwin-arm64@0.34.5':
     optionalDependencies:
@@ -9741,7 +9746,7 @@ snapshots:
 
   '@stellar/stellar-sdk@14.2.0':
     dependencies:
-      '@stellar/stellar-base': 14.0.1
+      '@stellar/stellar-base': 14.1.0
       axios: 1.17.0
       bignumber.js: 9.3.1
       eventsource: 2.0.2
@@ -10502,12 +10507,12 @@ snapshots:
       '@use-gesture/core': 10.3.1
       react: 19.2.7
 
-  '@vercel/analytics@2.0.1(next@16.2.7(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@vercel/analytics@2.0.1(next@16.2.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     optionalDependencies:
       next: 16.2.7(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
 
-  '@vercel/speed-insights@2.0.0(next@16.2.7(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
+  '@vercel/speed-insights@2.0.0(next@16.2.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)':
     optionalDependencies:
       next: 16.2.7(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
@@ -14220,7 +14225,6 @@ snapshots:
       '@img/sharp-win32-arm64': 0.34.5
       '@img/sharp-win32-ia32': 0.34.5
       '@img/sharp-win32-x64': 0.34.5
-    optional: true
 
   shebang-command@2.0.0:
     dependencies:

@@ -676,7 +676,7 @@
   "profilePages": {
     "edit": {
       "changePhoto": "Change photo",
-      "chooseImageFile": "Please choose an image file",
+      "chooseImageFile": "Please choose a JPG, PNG, WEBP or GIF image",
       "couldNotRemovePhoto": "Could not remove photo",
       "couldNotSaveProfile": "Could not save profile",
       "couldNotUpdatePhoto": "Could not update photo",
@@ -689,6 +689,7 @@
       "onboardingCompleted": "Onboarding completed",
       "onboardingCompletedDesc": "Mark the initial onboarding flow as done.",
       "photoRemoved": "Photo removed",
+      "photoRequirements": "JPG, PNG, WEBP or GIF · max 5 MB",
       "photoUpdated": "Photo updated",
       "preferencesUpdated": "Preferences updated",
       "profileFlags": "Profile flags",
