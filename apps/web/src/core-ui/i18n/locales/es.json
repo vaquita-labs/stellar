@@ -120,7 +120,7 @@
     "login": {
       "logoAlt": "Logo de Vaquita",
       "viewIntroAgain": "Ver la intro de nuevo",
-      "welcomeSubtitle": "Conecta tu wallet para empezar a ahorrar de forma segura",
+      "welcomeSubtitle": "Regístrate para empezar a ahorrar de forma segura",
       "welcomeTitle": "Bienvenido"
     },
     "privacy": {
@@ -856,7 +856,7 @@
       "letsGo": "¡Vamos!",
       "onItsWay": "{{label}} ya viene en camino",
       "title": "Un regalo para ti",
-      "welcomeBalance": "Un saldo de bienvenida para probar Vaquita. Recláchalo para empezar."
+      "welcomeBalance": "Un saldo de bienvenida para probar Vaquita. Reclámalos para empezar."
     },
     "coinAnimation": {
       "coinAlt": "Moneda"

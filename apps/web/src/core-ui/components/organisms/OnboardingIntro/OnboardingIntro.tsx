@@ -1,9 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../atoms';
+
+// Minimum horizontal travel (px) for a touch to count as a swipe.
+const SWIPE_THRESHOLD = 50;
 
 interface Slide {
   id: string;
@@ -63,8 +66,32 @@ export function OnboardingIntro({ onFinish }: OnboardingIntroProps) {
     setIndex((prev) => Math.max(0, prev - 1));
   };
 
+  const goToNext = () => setIndex((prev) => Math.min(SLIDES.length - 1, prev + 1));
+
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+
+    if (deltaX > SWIPE_THRESHOLD) {
+      goToNext();
+    } else if (deltaX < -SWIPE_THRESHOLD) {
+      handleBack();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-background px-6 py-10 sm:py-14">
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-background px-6 py-10 sm:py-14"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Skip */}
       <div className="w-full max-w-md flex justify-end">
         <button
