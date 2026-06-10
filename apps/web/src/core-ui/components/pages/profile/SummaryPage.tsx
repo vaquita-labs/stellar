@@ -15,7 +15,7 @@ import Image from 'next/image';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronLeft, FiChevronRight, FiTrendingUp } from 'react-icons/fi';
-import { MockedSubPageLayout } from './MockedSubPageLayout';
+import { PageLayout } from '../../molecules/PageLayout';
 
 /* ------------------------------------------------------------------ */
 /* Shared shell                                                        */
@@ -621,12 +621,7 @@ function XpProgress() {
 export function SummaryPage() {
   const { t } = useTranslation();
   return (
-    <MockedSubPageLayout
-      title={t('profilePages.summary.title', 'Your summary')}
-      subtitle={t('profilePages.summary.subtitle', 'How your saving habit is shaping up.')}
-      backHref="/profile"
-      showSoonBadge={false}
-    >
+    <PageLayout title={t('profilePages.summary.title', 'Summary')} backHref="/profile">
       <Panel
         id="streak-history"
         icon="/icons/global/streak_face.png"
@@ -662,6 +657,6 @@ export function SummaryPage() {
       >
         <DepositsAreaChart />
       </Panel>
-    </MockedSubPageLayout>
+    </PageLayout>
   );
 }
