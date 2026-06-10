@@ -21,6 +21,7 @@ export function HomePage() {
   const isEditingMap = useMapStore((store) => store.isEditingMap);
   const setIsEditingMap = useMapStore((store) => store.setIsEditingMap);
   const setEditMode = useMapStore((store) => store.setEditMode);
+  const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
 
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const [coinAnimationTarget, setCoinAnimationTarget] = useState<{ x: number; y: number } | null>(null);
@@ -50,10 +51,11 @@ export function HomePage() {
   const handleEditPanelsClose = () => {
     setIsEditingMap(false);
     setEditMode(null);
+    setEditingObjectPosition(null);
   };
 
   return (
-    <div className="h-full w-full flex flex-col relative">
+    <div className="h-full w-full flex flex-col relative overflow-hidden min-h-0">
       <HeaderStats />
       <PlaceModeHint />
       {/* <BackgroundMusic /> */}
@@ -65,7 +67,7 @@ export function HomePage() {
       />
       {/* create a component that shows total days  */}
       {lockPeriod !== null && lockPeriod !== undefined && (
-        <div className="relative flex-1 flex items-stretch">
+        <div className="relative flex-1 flex items-stretch min-h-0">
           <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div

@@ -23,5 +23,9 @@ export const useProfileDailyCheck = () => {
       return rewards;
     },
     enabled: !!network?.networkName && !!walletAddress,
+    // Reset diario por tiempo: refetch al montar para no quedar con el estado
+    // de ayer si la app quedó abierta cruzando medianoche.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };

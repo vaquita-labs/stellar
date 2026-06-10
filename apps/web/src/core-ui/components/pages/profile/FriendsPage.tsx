@@ -6,6 +6,7 @@ import { toast } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FiArrowLeft,
   FiBookOpen,
@@ -35,6 +36,7 @@ function ActionRow({
   disabled?: boolean;
   soon?: boolean;
 }) {
+  const { t } = useTranslation();
   const inner = (
     <div
       className={`flex items-center gap-3 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white transition ${
@@ -47,7 +49,7 @@ function ActionRow({
       <p className="text-[15px] font-extrabold text-black flex-1 min-w-0 truncate">{label}</p>
       {soon && (
         <span className="text-[10px] font-bold uppercase tracking-wider bg-primary text-black border border-black border-b-2 rounded-full px-2.5 py-0.5 shrink-0">
-          Soon
+          {t('common.soon')}
         </span>
       )}
       <FiChevronRight className="text-gray-500 shrink-0" />
@@ -76,12 +78,13 @@ function SuggestionCard({
   onToggleFollow: () => void;
   onDismiss: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="relative shrink-0 w-40 sm:w-44 rounded-2xl border border-black border-b-2 bg-white p-3 flex flex-col items-center gap-2">
       <button
         type="button"
         onClick={onDismiss}
-        aria-label="Dismiss suggestion"
+        aria-label={t('social.friends.dismissSuggestion')}
         className="absolute top-2 right-2 h-6 w-6 inline-flex items-center justify-center rounded-full text-gray-500 hover:text-black hover:bg-black/5 transition bg-transparent"
       >
         <FiX className="h-3.5 w-3.5" />
@@ -102,10 +105,11 @@ function SuggestionCard({
         <p className="text-[11px] text-gray-500 leading-tight mt-0.5 line-clamp-2">
           {suggestion.followedBy ? (
             <>
-              Followed by <span className="font-semibold text-gray-600">{suggestion.followedBy}</span>
+              {t('social.friends.followedBy')}{' '}
+              <span className="font-semibold text-gray-600">{suggestion.followedBy}</span>
             </>
           ) : (
-            'Suggested for you'
+            t('social.friends.suggestedForYou')
           )}
         </p>
       </div>
@@ -123,7 +127,7 @@ function SuggestionCard({
         }`}
       >
         {loading && <FiLoader className="h-3 w-3 animate-spin" />}
-        {followed ? 'Following' : 'Follow'}
+        {followed ? t('social.friends.following') : t('social.friends.follow')}
       </button>
     </div>
   );
@@ -134,6 +138,7 @@ function SuggestionCard({
 /* ------------------------------------------------------------------ */
 
 export function FriendsPage() {
+  const { t } = useTranslation();
   const { data, isLoading } = useFriendSuggestions();
   const toggleFollow = useToggleFollow();
 
@@ -146,7 +151,7 @@ export function FriendsPage() {
 
   const handleShareLink = async () => {
     const url = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
-    const text = 'Follow me on Vaquita 🐮';
+    const text = t('social.friends.shareText');
     try {
       if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
         await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
@@ -157,11 +162,11 @@ export function FriendsPage() {
         return;
       }
       await navigator.clipboard.writeText(`${text} — ${url}`);
-      toast.success('Follow link copied to clipboard');
+      toast.success(t('social.friends.linkCopied'));
     } catch (error) {
       const message = (error as { message?: string })?.message ?? '';
       if (message && !message.toLowerCase().includes('abort')) {
-        toast.danger('Could not share', { description: message });
+        toast.danger(t('social.friends.couldNotShare'), { description: message });
       }
     }
   };
@@ -209,13 +214,13 @@ export function FriendsPage() {
         <header className="relative flex items-center justify-center h-9">
           <Link
             href="/profile"
-            aria-label="Back"
+            aria-label={t('common.back')}
             className="absolute left-0 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
           >
             <FiArrowLeft className="h-4 w-4" />
           </Link>
           <h1 className="text-lg sm:text-xl font-extrabold text-black tracking-tight">
-            Find your friends
+            {t('social.friends.title')}
           </h1>
         </header>
 
@@ -223,18 +228,18 @@ export function FriendsPage() {
         <section className="flex flex-col gap-3">
           <ActionRow
             icon={<FiBookOpen className="h-5 w-5" />}
-            label="Choose from contacts"
+            label={t('social.friends.chooseFromContacts')}
             href="/profile/friends/contacts"
             soon
           />
           <ActionRow
             icon={<FiSearch className="h-5 w-5" />}
-            label="Search by name"
+            label={t('social.friends.searchByName')}
             href="/profile/friends/search"
           />
           <ActionRow
             icon={<FiShare2 className="h-5 w-5" />}
-            label="Share follow link"
+            label={t('social.friends.shareFollowLink')}
             onPress={handleShareLink}
           />
         </section>
@@ -242,7 +247,9 @@ export function FriendsPage() {
         {/* Friend suggestions */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-base sm:text-lg font-extrabold text-black">Friend suggestions</h2>
+            <h2 className="text-base sm:text-lg font-extrabold text-black">
+              {t('social.friends.suggestionsTitle')}
+            </h2>
           </div>
 
           {isLoading ? (
@@ -256,8 +263,10 @@ export function FriendsPage() {
             </div>
           ) : visibleSuggestions.length === 0 ? (
             <div className="rounded-2xl border border-black border-b-2 bg-white p-6 text-center">
-              <p className="text-sm font-semibold text-black">No suggestions right now</p>
-              <p className="text-xs text-gray-500 mt-1">Check back soon for new vaqueros to follow.</p>
+              <p className="text-sm font-semibold text-black">
+                {t('social.friends.emptyTitle')}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">{t('social.friends.emptyBody')}</p>
             </div>
           ) : (
             // Bleed the carousel out to the viewport edges and re-add the page
@@ -266,7 +275,7 @@ export function FriendsPage() {
             // half-cropped behind the page padding.
             <div
               className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-px-4 sm:scroll-px-6 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full snap-x snap-mandatory"
-              aria-label="Friend suggestions"
+              aria-label={t('social.friends.suggestionsTitle')}
             >
               {visibleSuggestions.map((s) => (
                 <div key={s.walletAddress} className="snap-start">

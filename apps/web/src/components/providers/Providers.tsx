@@ -1,6 +1,7 @@
 'use client';
 
 import { AblyProvider } from '@/core-ui/components';
+import { I18nProvider } from '@/core-ui/i18n/I18nProvider';
 import { useVisibility } from '@/core-ui/stores/visibility';
 import { getNetworkEnum } from '@/networks/stellar/kit';
 import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
@@ -8,7 +9,9 @@ import { Toast } from '@heroui/react';
 import { PollarProvider } from '@pollar/react';
 import '@pollar/react/styles.css';
 import { createStellarWalletsKitBundle } from '@pollar/stellar-wallets-kit-adapter/picker';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { ChannelProvider } from 'ably/react';
 import { ReactNode, useState } from 'react';
 import { AppShell } from './AppShell';
@@ -34,10 +37,46 @@ export function Providers({ children }: { children: ReactNode }) {
   // Single QueryClient per app session — created lazily so it isn't shared
   // across requests/StrictMode remounts, and lifted to the top so react-query
   // is available everywhere below.
-  const [queryClient] = useState(() => new QueryClient());
+  //
+  // Data is treated as fresh until explicitly invalidated (e.g. the Ably
+  // `deposits-changes` channel after a deposit/withdraw, or the profile
+  // invalidation after the daily check-in). This avoids spinners on reload /
+  // tab focus — values render instantly from the persisted cache and only
+  // refetch when something actually changed.
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: Infinity,
+            gcTime: 1000 * 60 * 60 * 24, // 24h — keep entries around for persistence
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+            refetchOnMount: false,
+          },
+        },
+      })
+  );
+
+  // Persist the cache to localStorage so reloads show the last known values
+  // immediately instead of flashing a spinner. SSR-safe: falls back to a noop
+  // store when `window` is unavailable.
+  const [persister] = useState(() =>
+    createSyncStoragePersister({
+      key: 'vaquita-rq-cache',
+      storage:
+        typeof window !== 'undefined'
+          ? window.localStorage
+          : { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    })
+  );
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 }}
+    >
+      <I18nProvider>
       <PollarProvider
         client={{
           baseUrl: 'https://sdk.api.pollar.xyz',
@@ -51,12 +90,15 @@ export function Providers({ children }: { children: ReactNode }) {
         <AblyProvider>
           <Toast.Provider placement="top" />
           <ChannelProvider channelName="deposits-changes">
-            <AppShell isPublicRoute={isPublicRoute} showLoader={showLoader}>
-              {children}
-            </AppShell>
+            <ChannelProvider channelName="notifications-changes">
+              <AppShell isPublicRoute={isPublicRoute} showLoader={showLoader}>
+                {children}
+              </AppShell>
+            </ChannelProvider>
           </ChannelProvider>
         </AblyProvider>
       </PollarProvider>
-    </QueryClientProvider>
+      </I18nProvider>
+    </PersistQueryClientProvider>
   );
 }

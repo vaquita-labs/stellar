@@ -2,11 +2,12 @@
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { addUsdcTrustline } from '@/networks/stellar/sorobanTx';
-import { Card, toast } from '@heroui/react';
+import { Card } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
   useClaimedAchievements,
@@ -18,11 +19,13 @@ import {
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
+  type FollowListKind,
 } from '../../hooks';
 import { useHideBalance, useConfigStore } from '../../stores';
 import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
 import { BadgeTile } from './profile/BadgeTile';
+import { FollowListModal } from './profile/FollowListModal';
 import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
 
 const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
@@ -40,6 +43,7 @@ const SectionHeader = ({
   count?: number;
   href?: string;
 }) => {
+  const { t } = useTranslation();
   const trailing = (
     <span className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-black transition">
       {typeof count === 'number' && <span className="tabular-nums">{count}</span>}
@@ -52,7 +56,7 @@ const SectionHeader = ({
         {title}
       </h2>
       {href ? (
-        <Link href={href} aria-label={`See all ${title}`}>
+        <Link href={href} aria-label={t('profilePages.profile.seeAll', 'See all {{title}}', { title })}>
           {trailing}
         </Link>
       ) : (
@@ -62,16 +66,41 @@ const SectionHeader = ({
   );
 };
 
-const StatPill = ({ value, label }: { value: React.ReactNode; label: string }) => (
-  <div className="flex flex-col items-center min-w-0 flex-1">
-    <span className="text-lg sm:text-xl font-extrabold text-black tabular-nums leading-none">
-      {value}
-    </span>
-    <span className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
-      {label}
-    </span>
-  </div>
-);
+const StatPill = ({
+  value,
+  label,
+  onPress,
+  ariaLabel,
+}: {
+  value: React.ReactNode;
+  label: string;
+  onPress?: () => void;
+  ariaLabel?: string;
+}) => {
+  const inner = (
+    <>
+      <span className="text-lg sm:text-xl font-extrabold text-black tabular-nums leading-none">
+        {value}
+      </span>
+      <span className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
+        {label}
+      </span>
+    </>
+  );
+  if (onPress) {
+    return (
+      <button
+        type="button"
+        onClick={onPress}
+        aria-label={ariaLabel}
+        className="flex flex-col items-center min-w-0 flex-1 rounded-xl py-1 bg-transparent hover:bg-black/5 transition"
+      >
+        {inner}
+      </button>
+    );
+  }
+  return <div className="flex flex-col items-center min-w-0 flex-1">{inner}</div>;
+};
 
 const SummaryItem = ({
   icon,
@@ -96,6 +125,7 @@ const SummaryItem = ({
 /* ------------------------------------------------------------------ */
 
 export function ProfilePage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { walletAddress, token } = useConfigStore();
   const hideBalance = useHideBalance();
@@ -107,9 +137,17 @@ export function ProfilePage() {
   const { data: achievementsData } = useProfileAchievements();
   const { data: rankData, isLoading: rankLoading } = useLeaderboardRank();
   const { data: followCounts } = useFollowCounts();
+  const [followModal, setFollowModal] = useState<{ open: boolean; tab: FollowListKind }>({
+    open: false,
+    tab: 'following',
+  });
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
+
+  // /profile?follow=<wallet> deep links are handled globally by
+  // FollowLinkCapture / PendingFollowConsumer in the (private) layout, so
+  // they survive the signup funnel for unregistered scanners.
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -164,24 +202,47 @@ export function ProfilePage() {
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
         leaderboardRank: rankData?.rank ?? undefined,
+        friendsCount: followCounts?.following ?? 0,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, rankData?.rank, followCounts?.following]
   );
+
+  // The 4-tile preview prioritises what the user can act on right now:
+  // 1) achievements ready to claim (unlocked, not yet claimed),
+  // 2) then ones already claimed (their earned trophies),
+  // 3) the still-locked ones last, easiest-to-get first (closest to completion),
+  //    so the grid never empties.
+  // Within each bucket we keep the catalog's display order (already easy→hard).
+  const previewBadges = useMemo(() => {
+    const closeness = (b: (typeof achievements)[number]) =>
+      b.progress && b.progress.target > 0 ? b.progress.current / b.progress.target : 0;
+
+    const claimable = achievements.filter((b) => b.unlocked && !isClaimed(b.id));
+    const claimed = achievements.filter((b) => b.unlocked && isClaimed(b.id));
+    const locked = achievements
+      .filter((b) => !b.unlocked)
+      .sort((a, b) => closeness(b) - closeness(a));
+
+    return [...claimable, ...claimed, ...locked].slice(0, 4);
+  }, [achievements, isClaimed]);
 
   /* -------------------------------------------------------------- */
   /* Disconnected state                                              */
   /* -------------------------------------------------------------- */
   if (!walletAddress) {
     return (
-      <PageLayout title="Profile" backHref="/home">
+      <PageLayout title={t('profilePages.profile.title', 'Profile')} backHref="/home">
         <Card className="border border-default-200/60 bg-white/80 shadow-sm backdrop-blur dark:border-default-100/40 dark:bg-default-50/80">
           <Card.Content className="flex flex-col gap-6 p-6 sm:p-10 text-center">
             <div className="space-y-3">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
-                Connect your wallet
+                {t('profilePages.profile.connectWalletTitle', 'Connect your wallet')}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Access your profile, metrics, and future achievements by connecting your wallet.
+                {t(
+                  'profilePages.profile.connectWalletDescription',
+                  'Access your profile, metrics, and future achievements by connecting your wallet.'
+                )}
               </p>
             </div>
           </Card.Content>
@@ -200,7 +261,7 @@ export function ProfilePage() {
             <ShareProfileQrButton displayName={displayName} handle={handle} />
             <Link
               href="/profile/settings"
-              aria-label="Settings"
+              aria-label={t('profilePages.profile.settingsAria', 'Settings')}
               className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
             >
               <FiSettings className="h-4 w-4" />
@@ -211,7 +272,7 @@ export function ProfilePage() {
           <div className="mt-4 flex flex-col items-center gap-2 text-center">
             <Link
               href="/profile/edit"
-              aria-label="Edit profile"
+              aria-label={t('profilePages.profile.editProfileAria', 'Edit profile')}
               className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-black border-b-4 shadow"
             >
               {profileData?.avatarUrl ? (
@@ -241,7 +302,10 @@ export function ProfilePage() {
               {displayName}
             </h1>
             <p className="text-xs sm:text-sm font-semibold text-black/70">
-              {handle} · joined {joinedLabel}
+              {t('profilePages.profile.handleJoined', '{{handle}} · joined {{joinedLabel}}', {
+                handle,
+                joinedLabel,
+              })}
             </p>
           </div>
         </header>
@@ -249,9 +313,19 @@ export function ProfilePage() {
         {/* Stats row -------------------------------------------------- */}
         <section className="px-4 sm:px-6">
           <div className="flex items-stretch gap-3">
-            <StatPill value={followCounts?.following ?? 0} label="Following" />
+            <StatPill
+              value={followCounts?.following ?? 0}
+              label={t('profilePages.profile.following', 'Following')}
+              ariaLabel={t('profilePages.profile.viewFollowing', 'View following')}
+              onPress={() => setFollowModal({ open: true, tab: 'following' })}
+            />
             <span className="w-px bg-black/10" aria-hidden />
-            <StatPill value={followCounts?.followers ?? 0} label="Followers" />
+            <StatPill
+              value={followCounts?.followers ?? 0}
+              label={t('profilePages.profile.followers', 'Followers')}
+              ariaLabel={t('profilePages.profile.viewFollowers', 'View followers')}
+              onPress={() => setFollowModal({ open: true, tab: 'followers' })}
+            />
           </div>
         </section>
 
@@ -262,25 +336,25 @@ export function ProfilePage() {
             className="flex items-center justify-center gap-2 w-full h-12 rounded-md bg-white text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide hover:bg-white/80 hover:-translate-y-0.5 transition"
           >
             <FiUserPlus className="h-4 w-4" />
-            Add friends
+            {t('profilePages.profile.addFriends', 'Add friends')}
           </Link>
         </section>
 
 
         <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <SectionHeader title="Summary" href="/profile/summary" />
+          <SectionHeader title={t('profilePages.profile.summary', 'Summary')} href="/profile/summary" />
           {/* Whole white card is the link target — the chevron in the header
               is just the visual cue. No interactive children inside, so a
               plain Link wrap is safe (no nested-anchor warnings). */}
           <Link
             href="/profile/summary"
-            aria-label="See full summary"
+            aria-label={t('profilePages.profile.seeFullSummary', 'See full summary')}
             className="grid grid-cols-2 gap-3 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
           >
             <SummaryItem
-              icon={hasActiveStreak ? '/icons/global/streak.png' : '/icons/global/streak_freeze.png'}
-              value={`${totalStreak} days`}
-              label="Streak"
+              icon={hasActiveStreak ? '/icons/global/streak_face.png' : '/icons/global/streak_freeze_face.png'}
+              value={t('profilePages.profile.daysCount', { count: totalStreak, defaultValue: '{{count}} days' })}
+              label={t('profilePages.profile.streak', 'Streak')}
             />
             <SummaryItem
               icon="/icons/global/coin.png"
@@ -289,17 +363,17 @@ export function ProfilePage() {
                   ? '••••'
                   : `$${activeDepositsTotalAmount.toFixed(2)} ${token?.symbol ?? ''}`.trim()
               }
-              label="Active deposits"
+              label={t('profilePages.profile.activeDeposits', 'Active deposits')}
             />
             <SummaryItem
               icon="/icons/global/coin.png"
               value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              label="Gold"
+              label={t('profilePages.profile.gold', 'Gold')}
             />
             <SummaryItem
               icon="/icons/global/star.png"
               value={`${Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })} XP`}
-              label="Experience"
+              label={t('profilePages.profile.experience', 'Experience')}
             />
           </Link>
         </section>
@@ -307,7 +381,7 @@ export function ProfilePage() {
         {/* Achievements ---------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <SectionHeader
-            title="Achievements"
+            title={t('profilePages.profile.achievements', 'Achievements')}
             count={achievements.filter((b) => b.unlocked).length}
             href="/profile/achievements"
           />
@@ -320,11 +394,11 @@ export function ProfilePage() {
           <div className="relative rounded-2xl bg-white border border-black border-b-2 p-4">
             <Link
               href="/profile/achievements"
-              aria-label="See all achievements"
+              aria-label={t('profilePages.profile.seeAllAchievements', 'See all achievements')}
               className="absolute inset-0 rounded-2xl z-0"
             />
             <div className="relative z-10 grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
-              {achievements.slice(0, 4).map((badge) => (
+              {previewBadges.map((badge) => (
                 <BadgeTile
                   key={badge.id}
                   badge={badge}
@@ -338,6 +412,11 @@ export function ProfilePage() {
         </section>
       </div>
 
+      <FollowListModal
+        open={followModal.open}
+        initialTab={followModal.tab}
+        onOpenChange={(o) => setFollowModal((s) => ({ ...s, open: o }))}
+      />
     </div>
   );
 }

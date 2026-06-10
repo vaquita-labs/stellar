@@ -6,6 +6,7 @@ import { MapObjectType, WorldType } from '@/core-ui/types';
 import { ThreeEvent, useThree } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { composeBuildingRotation } from './buildingRotations';
 
 interface LeaderBoardProps {
   position: [number, number, number];
@@ -13,7 +14,7 @@ interface LeaderBoardProps {
   rotation?: [number, number, number];
 }
 
-export default function Leaderboard({ position, onClick }: LeaderBoardProps) {
+export default function Leaderboard({ position, onClick, rotation: userRotation }: LeaderBoardProps) {
   const { gl } = useThree();
   const groupRef = useRef<THREE.Group>(null);
   const font = useFont();
@@ -26,22 +27,37 @@ export default function Leaderboard({ position, onClick }: LeaderBoardProps) {
     );
   }, [font, position]);
 
+  const rotation = composeBuildingRotation(MapObjectType.LEADERBOARD, userRotation);
+
   return (
     <group
       ref={groupRef}
       position={position}
-      onPointerEnter={(e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        gl.domElement.style.cursor = 'pointer';
-      }}
-      onPointerLeave={(e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        gl.domElement.style.cursor = 'default';
-      }}
-      onClick={(e: ThreeEvent<MouseEvent>) => {
-        e.stopPropagation();
-        onClick?.();
-      }}
+      rotation={rotation}
+      onPointerEnter={
+        onClick
+          ? (e: ThreeEvent<PointerEvent>) => {
+              e.stopPropagation();
+              gl.domElement.style.cursor = 'pointer';
+            }
+          : undefined
+      }
+      onPointerLeave={
+        onClick
+          ? (e: ThreeEvent<PointerEvent>) => {
+              e.stopPropagation();
+              gl.domElement.style.cursor = 'default';
+            }
+          : undefined
+      }
+      onClick={
+        onClick
+          ? (e: ThreeEvent<MouseEvent>) => {
+              e.stopPropagation();
+              onClick();
+            }
+          : undefined
+      }
     >
       <primitive object={group} />
     </group>

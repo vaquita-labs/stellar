@@ -21,5 +21,8 @@ export const useFriendSuggestions = (limit = 5) => {
       return data ?? { networkName: network?.networkName ?? '', suggestions: [] };
     },
     enabled: !!network?.networkName && !!walletAddress,
+    // Las sugerencias cambian cuando entran otros usuarios: refetch al montar.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };

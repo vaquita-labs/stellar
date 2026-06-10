@@ -2,6 +2,7 @@ import { useProfileData, useRestProfile } from '@/core-ui/hooks';
 import { Avatar, Modal, Tooltip } from '@heroui/react';
 import Image from 'next/image';
 import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiCheck, FiCopy, FiEdit3, FiLogOut, FiSave, FiUserPlus } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useConfigStore } from '../../../stores';
@@ -20,6 +21,7 @@ const LogoByType: Record<string, ReactNode> = {
 };
 
 export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress }: ProfileModalProps) => {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [nickname, setNickname] = useState('');
@@ -30,11 +32,11 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
   const currentNickname = data?.nickname ?? '';
   const trimmedNickname = useMemo(() => nickname.trim(), [nickname]);
   const displayName = useMemo(() => {
-    if (isLoading) return 'Cargando...';
+    if (isLoading) return t('common.loading');
     if (trimmedNickname) return `@${trimmedNickname}`;
     if (currentNickname) return `@${currentNickname}`;
     return truncateMiddle(walletAddress) || 'Vaquita';
-  }, [currentNickname, isLoading, trimmedNickname, walletAddress]);
+  }, [currentNickname, isLoading, trimmedNickname, walletAddress, t]);
   const walletDisplay = useMemo(() => truncateMiddle(walletAddress), [walletAddress]);
   const isDirty = trimmedNickname !== currentNickname && !!trimmedNickname;
   const canSave = !!walletAddress && !!network?.networkName && isDirty && !saving;
@@ -92,10 +94,10 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
       <Modal.Container size="sm">
         <Modal.Dialog className="bg-background border border-black">
           <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+            <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />
           </Modal.CloseTrigger>
           <Modal.Header>
-            <Modal.Heading className="text-black font-bold text-lg">Profile</Modal.Heading>
+            <Modal.Heading className="text-black font-bold text-lg">{t('wallet.profile.title')}</Modal.Heading>
           </Modal.Header>
           <Modal.Body>
           <div className="flex flex-col items-center gap-2 ">
@@ -104,7 +106,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
                 size="lg"
                 className="border-2 border-white shadow-lg dark:border-default-100"
               >
-                <Avatar.Image src="/vaquita_working.jpg" />
+                <Avatar.Image src="/vaquita/vaquita_isotipo.svg" className="bg-white object-contain p-2" />
                 <Avatar.Fallback>{displayName.slice(0, 2).toUpperCase()}</Avatar.Fallback>
               </Avatar>
             </Badge>
@@ -119,13 +121,13 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
                     <button
                       onClick={() => copyToClipboard(walletAddress)}
                       className="rounded-full border border-default-200 p-2 transition hover:-translate-y-0.5 hover:bg-gray-100 dark:border-default-100 dark:hover:bg-default-100"
-                      aria-label="Copiar dirección de la wallet"
+                      aria-label={t('wallet.profile.copyAddressAria')}
                     >
                       {copied ? <FiCheck className="h-4 w-4 text-emerald-500" /> : <FiCopy className="h-4 w-4" />}
                     </button>
                   </Tooltip.Trigger>
                   <Tooltip.Content>
-                    {copied ? 'Copiado' : 'Copiar dirección'}
+                    {copied ? t('wallet.profile.copied') : t('wallet.profile.copyAddress')}
                   </Tooltip.Content>
                 </Tooltip>
               </div>
@@ -134,7 +136,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
           {isEditing ? (
             <div className="gap-2 flex flex-col">
               <div>
-                <label className="text-black font-normal text-sm block mb-1">Nickname</label>
+                <label className="text-black font-normal text-sm block mb-1">{t('wallet.profile.nicknameLabel')}</label>
                 <input
                   type="text"
                   placeholder="@nickname"
@@ -146,7 +148,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
                 />
               </div>
               <div>
-                <label className="text-black font-normal text-sm block mb-1">Wallet</label>
+                <label className="text-black font-normal text-sm block mb-1">{t('wallet.profile.walletLabel')}</label>
                 <input
                   type="text"
                   value={walletDisplay}
@@ -158,13 +160,13 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
             </div>
           ) : (
             <div className="flex w-full flex-row gap-3 md:flex-row md:justify-center">
-              <Badge content="Soon">
+              <Badge content={t('common.soon')}>
                 <Button startContent={<FiUserPlus />} isDisabled>
-                  Add friends
+                  {t('wallet.profile.addFriends')}
                 </Button>
               </Badge>
               <Button startContent={<FiEdit3 />} type="secondary" onPress={handleStartEditing} isDisabled={isLoading}>
-                Edit profile
+                {t('wallet.profile.editProfile')}
               </Button>
             </div>
           )}
@@ -177,7 +179,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
                 disabled={saving}
                 className="px-4 py-2 rounded-md bg-gray-200 text-black text-sm font-semibold hover:bg-gray-300 transition disabled:opacity-50"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSave}
@@ -187,12 +189,12 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
                 {saving ? (
                   <>
                     <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                    Saving...
+                    {t('common.saving')}
                   </>
                 ) : (
                   <>
                     <FiSave className="w-4 h-4" />
-                    Save changes
+                    {t('wallet.profile.saveChanges')}
                   </>
                 )}
               </button>
@@ -200,7 +202,7 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
           )}
           {handleLogout && !isEditing && (
             <Button type="danger" startContent={<FiLogOut className="h-4 w-4" />} onPress={handleLogout} wFull>
-              Disconnect wallet
+              {t('wallet.profile.disconnectWallet')}
             </Button>
           )}
           </Modal.Footer>

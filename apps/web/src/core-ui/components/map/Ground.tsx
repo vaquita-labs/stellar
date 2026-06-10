@@ -1,12 +1,13 @@
 import { useFont } from '@/core-ui/hooks';
 import { useThree } from '@react-three/fiber';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { EditionMode, useMapStore } from '../../stores';
 import { MapObject, MapObjectType } from '../../types';
+import { composeBuildingRotation } from './buildingRotations';
 import { EditableObjectGroup } from './EditableObjectGroup';
 import { EditControls } from './EditControls';
-import { getObjectGroup, objectSelectDown, objectSelectUp } from './helpers';
+import { disposeObject, getObjectGroup, objectSelectDown, objectSelectUp } from './helpers';
 import { getBankGroup, getBarnGroup, getBushGroup, getGrassGroup, getLeaderboardGroup } from './objects';
 import { getRoadGroup, getRockGroup, getTreeGroup, getWaterGroup } from './objects/';
 import { GroundProps } from './types';
@@ -87,10 +88,15 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
     },
     [editMode, updateTile, pickedObject, isReplaceablePosition, setEditingObjectPosition, editingObjectPosition]
   );
-  return (
-    <group name="ground" ref={groundRef}>
-      {mapObjects.map((mapObject) => {
-        const { type, position, variant, rotation } = mapObject;
+  const hasEditMode = !!editMode;
+
+  // Construir los grupos de Three.js es caro (cada builder crea geometrías y
+  // materiales nuevos). Se memoiza para que los re-renders del componente
+  // (hover, posición de edición, etc.) no reconstruyan el mapa entero.
+  const builtTiles = useMemo(() => {
+    return mapObjects
+      .map((mapObject) => {
+        const { type, position } = mapObject;
         let object: THREE.Group | THREE.Object3D | null = null;
         if (type === MapObjectType.WATER) {
           object = getWaterGroup({ ...mapObject, position: [0, position[1], 0] }, worldType);
@@ -104,13 +110,13 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
           object = getTreeGroup({ ...mapObject, position: [0, position[1], 0] }, worldType);
         } else if (type === MapObjectType.ROAD) {
           object = getRoadGroup({ ...mapObject, position: [0, position[1], 0] }, worldType);
-        } else if (type === MapObjectType.BANK && !!editMode) {
+        } else if (type === MapObjectType.BANK && hasEditMode) {
           object = getBankGroup({ ...mapObject, position: [0, position[1], 0] }, worldType, font);
-        } else if (type === MapObjectType.LEADERBOARD && !!editMode) {
+        } else if (type === MapObjectType.LEADERBOARD && hasEditMode) {
           object = getLeaderboardGroup({ ...mapObject, position: [0, position[1], 0] }, worldType, font);
-        } else if (type === MapObjectType.BARN && !!editMode) {
+        } else if (type === MapObjectType.BARN && hasEditMode) {
           object = getBarnGroup({ ...mapObject, position: [0, position[1], 0] }, worldType);
-        } else if (type === MapObjectType.EMPTY && !!editMode) {
+        } else if (type === MapObjectType.EMPTY && hasEditMode) {
           // Crear un plano invisible para que los espacios EMPTY sean clickeables en modo edición
           const planeGeometry = new THREE.PlaneGeometry(1, 1);
           const planeMaterial = new THREE.MeshBasicMaterial({
@@ -122,8 +128,43 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
           object.rotation.x = -Math.PI / 2;
           object.position.y = position[1];
         }
+        return object ? { mapObject, object } : null;
+      })
+      .filter((entry): entry is { mapObject: MapObject; object: THREE.Object3D } => entry !== null);
+  }, [mapObjects, worldType, hasEditMode, font]);
 
-        if (!object) return null;
+  // Liberar geometrías/materiales del set anterior cuando el mapa se
+  // reconstruye o el componente se desmonta.
+  useEffect(() => {
+    const objects = builtTiles.map((entry) => entry.object);
+    return () => {
+      objects.forEach(disposeObject);
+    };
+  }, [builtTiles]);
+
+  // Preview del objeto a colocar en modo ADD (sigue el puntero por ref).
+  const pickedPreviewObject = useMemo(() => {
+    if (!pickedObject || editMode !== EditionMode.ADD) return null;
+    return getObjectGroup(
+      {
+        type: pickedObject.type,
+        variant: pickedObject.variant,
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+      },
+      worldType
+    );
+  }, [pickedObject, editMode, worldType]);
+
+  useEffect(() => {
+    if (!pickedPreviewObject) return;
+    return () => disposeObject(pickedPreviewObject);
+  }, [pickedPreviewObject]);
+
+  return (
+    <group name="ground" ref={groundRef}>
+      {builtTiles.map(({ mapObject, object }) => {
+        const { type, position, variant, rotation } = mapObject;
 
         const isEditing = !!(
           editingObjectPosition &&
@@ -135,10 +176,18 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
         const isBlocked = !!editingObjectPosition && !isEditing;
 
         // Asegurar que rotation sea un array válido
-        const currentRotation: [number, number, number] =
+        const userRotation: [number, number, number] =
           rotation && Array.isArray(rotation) && rotation.length === 3
             ? [rotation[0] || 0, rotation[1] || 0, rotation[2] || 0]
             : [0, 0, 0];
+
+        // Los edificios especiales tienen una orientación base; el resto usa la rotación tal cual.
+        // Así en edición miran igual que en el mapa normal (misma fuente de verdad).
+        const isSpecialBuilding =
+          type === MapObjectType.BANK || type === MapObjectType.LEADERBOARD || type === MapObjectType.BARN;
+        const currentRotation: [number, number, number] = isSpecialBuilding
+          ? composeBuildingRotation(type, userRotation)
+          : userRotation;
 
         // El key debe ser estable basado solo en posición, tipo y variant, NO en rotación
         // para evitar que React cree un nuevo componente cuando cambia la rotación
@@ -217,22 +266,12 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
           </EditableObjectGroup>
         );
       })}
-      {pickedObject && editMode === EditionMode.ADD && !editingObjectPosition && (
+      {pickedPreviewObject && !editingObjectPosition && (
         <group ref={pickedObjectGroupRef} rotation={[0, 0, 0]} position={[0, 0, 0]}>
-          <primitive
-            object={getObjectGroup(
-              {
-                type: pickedObject.type,
-                variant: pickedObject.variant,
-                position: [0, 0, 0],
-                rotation: [0, 0, 0],
-              },
-              worldType
-            )}
-          />
+          <primitive object={pickedPreviewObject} />
         </group>
       )}
-      {editingObjectPosition && <EditControls position={editingObjectPosition} />}
+      {editMode !== null && editingObjectPosition && <EditControls position={editingObjectPosition} />}
     </group>
   );
 };

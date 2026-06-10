@@ -402,7 +402,7 @@ const BadgeFormModal = ({
               Allow tier change
             </Switch>
             <span className="text-xs text-warning-600">
-              Tier is the Soroban mint symbol — changing it can break on-chain minting for this
+              Tier is the Soroban mint symbol changing it can break on-chain minting for this
               badge. Enable only if you know what you&apos;re doing.
             </span>
           </div>
@@ -465,11 +465,16 @@ export default function Page() {
         </div>
       ) : (
         <GenericTable rows={rows as unknown as Record<string, unknown>[]} refetch={refetch}>
-          {(row) => (
-            <Button size="sm" onPress={() => openEdit(byKey.get(String(row.key)))}>
-              Edit
-            </Button>
-          )}
+          {(row) => {
+            // GenericTable passes the parsed row, where each field is
+            // { value, original, truncated } — not the raw value. Recover the key.
+            const key = (row.key as { value?: string } | undefined)?.value ?? String(row.key);
+            return (
+              <Button size="sm" onPress={() => openEdit(byKey.get(key))}>
+                Edit
+              </Button>
+            );
+          }}
         </GenericTable>
       )}
 

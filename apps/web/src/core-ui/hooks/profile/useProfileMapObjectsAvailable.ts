@@ -29,5 +29,9 @@ export const useProfileMapObjectsAvailable = () => {
       return profile;
     },
     enabled: !!network?.networkName && !!walletAddress,
+    // Precios/stock de la tienda se editan desde el admin: refetch al montar
+    // para reflejar esos cambios sin esperar a una compra.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };

@@ -5,6 +5,7 @@ import { MapObjectType, WorldType } from '@/core-ui/types';
 import { ThreeEvent, useThree } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { composeBuildingRotation } from './buildingRotations';
 
 interface BarnBuildingProps {
   position: [number, number, number];
@@ -13,7 +14,7 @@ interface BarnBuildingProps {
   rotation?: [number, number, number];
 }
 
-export default function BarnBuilding({ position, onClick, rotation = [0, 4.7, 0] }: BarnBuildingProps) {
+export default function BarnBuilding({ position, onClick, rotation: userRotation }: BarnBuildingProps) {
   const { gl } = useThree();
   const groupRef = useRef<THREE.Group>(null);
 
@@ -23,24 +24,38 @@ export default function BarnBuilding({ position, onClick, rotation = [0, 4.7, 0]
     [position]
   );
 
+  // Orientación base del granero (4.7) + giro del usuario, para que coincida con el modo edición.
+  const rotation = composeBuildingRotation(MapObjectType.BARN, userRotation);
+
   return (
     <group
       ref={groupRef}
       position={position}
-      // rotation is 4.7 because the barn is in the ground and 0 generated a awful visual effect
       rotation={rotation}
-      onPointerEnter={(e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        gl.domElement.style.cursor = 'pointer';
-      }}
-      onPointerLeave={(e: ThreeEvent<PointerEvent>) => {
-        e.stopPropagation();
-        gl.domElement.style.cursor = 'default';
-      }}
-      onClick={(e: ThreeEvent<MouseEvent>) => {
-        e.stopPropagation();
-        onClick?.();
-      }}
+      onPointerEnter={
+        onClick
+          ? (e: ThreeEvent<PointerEvent>) => {
+              e.stopPropagation();
+              gl.domElement.style.cursor = 'pointer';
+            }
+          : undefined
+      }
+      onPointerLeave={
+        onClick
+          ? (e: ThreeEvent<PointerEvent>) => {
+              e.stopPropagation();
+              gl.domElement.style.cursor = 'default';
+            }
+          : undefined
+      }
+      onClick={
+        onClick
+          ? (e: ThreeEvent<MouseEvent>) => {
+              e.stopPropagation();
+              onClick();
+            }
+          : undefined
+      }
     >
       <primitive object={barnBuilding} />
     </group>

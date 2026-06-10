@@ -3,13 +3,14 @@
 import { isStellarNetwork } from '@/networks/stellar';
 import { Button as HeroButton } from '@heroui/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAnalytics, useIsPoolPaused } from '../../hooks';
 import { useMapStore, useConfigStore } from '../../stores';
-import { T } from '../atoms';
 import { DepositModal } from './DepositModal';
 import { VaquitasListModal } from './VaquitasListModal';
 
 export function DepositPanel() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isVaquitasListOpen, setIsVaquitasListOpen] = useState(false);
   const [ isDepositing, setIsDepositing ] = useState(false);
@@ -32,7 +33,7 @@ export function DepositPanel() {
     >
       {isStellar && isPaused && (
         <p className="text-sm text-warning font-semibold">
-          <T>Deposits are temporarily paused</T>
+          {t('deposit.panel.paused', 'Deposits are temporarily paused')}
         </p>
       )}
       <div className="w-full max-w-xl px-2">
@@ -54,7 +55,7 @@ export function DepositPanel() {
           className={`bg-success border-[#018222] py-7 text-black font-bold w-full border border-b-5 rounded-md`}
         >
           <span className="text-xl text-black capitalize">
-            {isDepositing ? <T>Processing...</T> : <T>Save</T>}
+            {isDepositing ? t('deposit.processing', 'Processing...') : t('common.save')}
           </span>
         </HeroButton>
       </div>

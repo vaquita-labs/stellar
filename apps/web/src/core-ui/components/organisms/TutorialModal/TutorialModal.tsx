@@ -5,6 +5,7 @@ import { Button, Modal } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface TutorialModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface TutorialModalProps {
 }
 
 export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(0);
   const isMobile = useIsMobile();
 
@@ -35,7 +37,7 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
       <Modal.Container size="full">
         <Modal.Dialog className="bg-transparent m-0 p-0">
           <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt="close" width={52} height={52} className="sm:w-10 sm:h-10" />
+            <Image src="/icons/close-circle.svg" alt={t('tutorial.modal.closeAlt', 'close')} width={52} height={52} className="sm:w-10 sm:h-10" />
           </Modal.CloseTrigger>
           <Modal.Body className="p-0 flex items-center justify-center min-h-screen overflow-y-auto">
           <AnimatePresence mode="wait">
@@ -65,7 +67,7 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
                 >
                   <Image
                     src="/vaquita/tutorial.png"
-                    alt="Vaquita Tutorial"
+                    alt={t('tutorial.modal.imageAlt', 'Vaquita Tutorial')}
                     width={200}
                     height={200}
                     className="drop-shadow-2xl"
@@ -78,9 +80,11 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
                   transition={{ delay: 0.3, duration: 0.6 }}
                   className="text-center space-y-4"
                 >
-                  <h2 className="text-3xl font-bold text-white drop-shadow-lg">Welcome to Vaquita!</h2>
+                  <h2 className="text-3xl font-bold text-white drop-shadow-lg">
+                    {t('tutorial.modal.welcomeTitle', 'Welcome to Vaquita!')}
+                  </h2>
                   <p className="text-lg text-white/90 drop-shadow-md max-w-md">
-                    Discover how to grow your savings in a smart and fun way
+                    {t('tutorial.modal.welcomeSubtitle', 'Discover how to grow your savings in a smart and fun way')}
                   </p>
                 </motion.div>
 
@@ -94,7 +98,7 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
                     className="bg-primary text-black font-semibold px-8 py-3 rounded-lg hover:bg-white/90 transition-colors"
                     size="lg"
                   >
-                    Next
+                    {t('common.next')}
                   </Button>
                 </motion.div>
               </motion.div>
@@ -120,7 +124,7 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
                     >
                       <iframe
                         src="https://demo.arcade.software/O9a6jqOPv9c9fdKlxjID?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
-                        title="Learn how to save with Vaquita mobile"
+                        title={t('tutorial.modal.iframeTitleMobile', 'Learn how to save with Vaquita mobile')}
                         frameBorder="0"
                         loading="lazy"
                         allowFullScreen
@@ -149,7 +153,7 @@ export function TutorialModal({ isOpen, onClose }: TutorialModalProps) {
                     >
                       <iframe
                         src="https://demo.arcade.software/fig4kWFCOkXCO48WunnY?embed&embed_mobile=inline&embed_desktop=inline&show_copy_link=true"
-                        title="Learn how to save with Vaquita"
+                        title={t('tutorial.modal.iframeTitle', 'Learn how to save with Vaquita')}
                         frameBorder="0"
                         loading="lazy"
                         allowFullScreen

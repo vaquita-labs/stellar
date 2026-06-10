@@ -13,11 +13,9 @@ interface HeadProps {
 }
 
 const MOOD_BLUSH: Partial<Record<VaquitaMood, string>> = {
-  happy: '#ff8aa1',
-  celebrating: '#ffb347',
+  excited: '#ffb347',
   loved: '#ff7099',
   sad: '#9bb3d0',
-  sick: '#9bd0a3',
 };
 
 export const Head = ({
@@ -62,7 +60,7 @@ export const Head = ({
       </group>
 
       {/* Mouth — varies by mood */}
-      {showMouth && mood === 'celebrating' && (
+      {showMouth && mood === 'excited' && (
         <group position={[0, -0.22, 0.36]}>
           {/* open laughing mouth */}
           <mesh position={[0, -0.02, 0]} castShadow>
@@ -72,22 +70,6 @@ export const Head = ({
           <mesh position={[0, -0.04, 0.001]} castShadow>
             <boxGeometry args={[0.14, 0.05, 0]} />
             <meshStandardMaterial color="#ff7796" />
-          </mesh>
-        </group>
-      )}
-      {showMouth && mood === 'happy' && (
-        <group position={[0, -0.22, 0.36]}>
-          <mesh position={[-0.07, -0.02, 0]} rotation={[0, 0, -0.5]} castShadow>
-            <boxGeometry args={[0.1, 0.03, 0]} />
-            <meshStandardMaterial color="black" />
-          </mesh>
-          <mesh position={[0.07, -0.02, 0]} rotation={[0, 0, 0.5]} castShadow>
-            <boxGeometry args={[0.1, 0.03, 0]} />
-            <meshStandardMaterial color="black" />
-          </mesh>
-          <mesh position={[0, -0.05, 0]} castShadow>
-            <boxGeometry args={[0.12, 0.03, 0]} />
-            <meshStandardMaterial color="black" />
           </mesh>
         </group>
       )}
@@ -111,22 +93,6 @@ export const Head = ({
           </mesh>
           <mesh position={[0.06, -0.04, 0]} rotation={[0, 0, -0.5]} castShadow>
             <boxGeometry args={[0.1, 0.03, 0]} />
-            <meshStandardMaterial color="black" />
-          </mesh>
-        </group>
-      )}
-      {showMouth && mood === 'sick' && (
-        <group position={[0, -0.22, 0.36]}>
-          <mesh position={[0, 0, 0]} castShadow>
-            <boxGeometry args={[0.18, 0.04, 0]} />
-            <meshStandardMaterial color="black" />
-          </mesh>
-          <mesh position={[-0.05, -0.04, 0]} castShadow>
-            <boxGeometry args={[0.04, 0.04, 0]} />
-            <meshStandardMaterial color="black" />
-          </mesh>
-          <mesh position={[0.05, -0.04, 0]} castShadow>
-            <boxGeometry args={[0.04, 0.04, 0]} />
             <meshStandardMaterial color="black" />
           </mesh>
         </group>

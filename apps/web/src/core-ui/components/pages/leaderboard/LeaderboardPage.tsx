@@ -2,16 +2,11 @@
 
 import Image from 'next/image';
 import { useDeferredValue, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ProfileAverageResponseDTO } from '@/core-ui/types';
-import {
-  useProfileData,
-  useProfileExperience,
-  useProfilesByAverageDepositsData,
-  useProfileStreak,
-} from '../../../hooks';
+import { useProfileData, useProfilesByAverageDepositsData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
-import { ShareProfileQrButton } from '../profile/ShareProfileQrButton';
 import {
   LeaderboardCard,
   LeaderboardCardData,
@@ -19,7 +14,6 @@ import {
   getLeaderboardUsername,
 } from './LeaderboardCard';
 import { LeaderboardSubHeader, SortDirection, SortKey } from './LeaderboardSubHeader';
-import { derivePlaceholderUserStats } from './userStatsPlaceholder';
 
 const SKELETON_ROWS = 3;
 
@@ -73,8 +67,13 @@ function filterRows(rows: LeaderboardCardData[], query: string): LeaderboardCard
 /* ------------------------------------------------------------------ */
 
 function LoadingState() {
+  const { t } = useTranslation();
   return (
-    <ul className="flex flex-col gap-3" aria-busy="true" aria-label="Loading leaderboard">
+    <ul
+      className="flex flex-col gap-3"
+      aria-busy="true"
+      aria-label={t('leaderboard.loadingLabel', 'Loading leaderboard')}
+    >
       {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
         <li key={i}>
           <LeaderboardCardSkeleton />
@@ -85,30 +84,44 @@ function LoadingState() {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-black/10 bg-white p-8 text-center">
       <Image src="/vaquita/error.svg" alt="" width={140} height={140} />
-      <p className="text-base font-extrabold text-black">No vaqueros on the board yet</p>
+      <p className="text-base font-extrabold text-black">
+        {t('leaderboard.empty.title', 'No vaqueros on the board yet')}
+      </p>
       <p className="text-xs text-gray-500 max-w-xs">
-        Be the first to climb the ranks — start a deposit streak and you&apos;ll show up here.
+        {t(
+          'leaderboard.empty.description',
+          "Be the first to climb the ranks — start a deposit streak and you'll show up here."
+        )}
       </p>
     </div>
   );
 }
 
 function NoResults({ query }: { query: string }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-3xl border border-black/10 bg-white p-6 text-center">
-      <p className="text-sm font-extrabold text-black">No vaqueros match &ldquo;{query}&rdquo;</p>
-      <p className="mt-1 text-xs text-gray-500">Try a different username or clear the search.</p>
+      <p className="text-sm font-extrabold text-black">
+        {t('leaderboard.noResults.title', 'No vaqueros match “{{query}}”', { query })}
+      </p>
+      <p className="mt-1 text-xs text-gray-500">
+        {t('leaderboard.noResults.description', 'Try a different username or clear the search.')}
+      </p>
     </div>
   );
 }
 
 function ErrorState({ message }: { message: string }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-3xl border border-red-300 bg-red-50 p-6 text-center">
-      <p className="text-sm font-extrabold text-red-700">Couldn&apos;t load the leaderboard</p>
+      <p className="text-sm font-extrabold text-red-700">
+        {t('leaderboard.error.title', "Couldn't load the leaderboard")}
+      </p>
       <p className="mt-1 text-xs text-red-700/80 break-words">{message}</p>
     </div>
   );
@@ -136,10 +149,6 @@ function LeaderboardFeed({ rows }: { rows: LeaderboardCardData[] }) {
 
 function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardCardData[] {
   const { walletAddress: currentUserWallet } = useConfigStore();
-  // Real stats for the current user only — every other row falls back to
-  // the deterministic placeholder until the API ships per-user XP/streak.
-  const { data: streakData } = useProfileStreak();
-  const { data: experienceData } = useProfileExperience();
 
   return useMemo(() => {
     const ranked = defaultRank(profiles);
@@ -148,31 +157,28 @@ function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardC
         !!currentUserWallet &&
         currentUserWallet.toLowerCase() === profile.walletAddress.toLowerCase();
 
-      const placeholder = derivePlaceholderUserStats(profile.walletAddress);
-
-      const realStreak = isCurrentUser
-        ? (streakData?.yesterdayStreak ?? 0) + (streakData?.todayStreak ? 1 : 0)
-        : null;
-      const realExperience = isCurrentUser ? experienceData?.experience ?? null : null;
-      // Lightweight "level" derivation from XP: every 100 XP = +1 level.
-      const realLevel =
-        realExperience !== null ? Math.max(1, Math.floor(realExperience / 100) + 1) : null;
+      // Lightweight "level" derivation from the real XP the API now ships per
+      // profile: every 100 XP = +1 level, minimum level 1. Coerce the gamification
+      // fields here so a stale react-query cache from before these fields existed
+      // (global staleTime is Infinity) can't render the literal text "undefined"
+      // in a card before the background refetch lands.
+      const level = Math.max(1, Math.floor((profile.experience ?? 0) / 100) + 1);
 
       return {
         position: index + 1,
         walletAddress: profile.walletAddress,
         username: getLeaderboardUsername(profile.nickname, profile.walletAddress),
         avatarUrl: profile.avatarUrl,
-        level: realLevel ?? placeholder.level,
-        streak: realStreak ?? placeholder.streak,
-        badges: profile.badges,
-        // TODO: Replace with real likes and comments once the API ships thems
+        level,
+        streak: profile.streak ?? 0,
+        badges: profile.badges ?? 0,
+        // TODO: Replace with real likes and comments once the API ships them.
         likesSeed: 0,
         commentsSeed: 0,
         isCurrentUser,
       };
     });
-  }, [profiles, currentUserWallet, streakData, experienceData]);
+  }, [profiles, currentUserWallet]);
 }
 
 /* ------------------------------------------------------------------ */
@@ -180,6 +186,7 @@ function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardC
 /* ------------------------------------------------------------------ */
 
 function useCurrentUserIdentity() {
+  const { t } = useTranslation();
   const { walletAddress } = useConfigStore();
   const { data: profileData } = useProfileData();
 
@@ -188,9 +195,12 @@ function useCurrentUserIdentity() {
     if (nickname) return nickname;
     const full = profileData?.fullName?.trim();
     if (full) return full;
-    if (walletAddress) return `Vaquero ${walletAddress.slice(-4).toUpperCase()}`;
-    return 'Vaquero';
-  }, [profileData?.nickname, profileData?.fullName, walletAddress]);
+    if (walletAddress)
+      return t('leaderboard.vaqueroNamed', 'Vaquero {{tail}}', {
+        tail: walletAddress.slice(-4).toUpperCase(),
+      });
+    return t('leaderboard.vaquero', 'Vaquero');
+  }, [profileData?.nickname, profileData?.fullName, walletAddress, t]);
 
   const handle = useMemo(
     () => getLeaderboardUsername(profileData?.nickname, walletAddress ?? ''),
@@ -205,6 +215,7 @@ function useCurrentUserIdentity() {
 /* ------------------------------------------------------------------ */
 
 export const LeaderboardPage = () => {
+  const { t } = useTranslation();
   const { data: profiles = [], isLoading, error } = useProfilesByAverageDepositsData();
   const rankedRows = useLeaderboardRows(profiles);
 
@@ -230,8 +241,7 @@ export const LeaderboardPage = () => {
 
   return (
     <PageLayout
-      title="Leaderboard"
-      rightSlot={<ShareProfileQrButton displayName={displayName} handle={handle} />}
+      title={t('leaderboard.title', 'Leaderboard')}
       contentClassName="!gap-3"
     >
       <LeaderboardSubHeader

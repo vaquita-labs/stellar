@@ -44,6 +44,9 @@ export const pollarAdapter: WalletAdapter = {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('pollar:session');
       window.localStorage.removeItem('pollar:walletType');
+      // Drop the Vaquita API wallet-session token too (key kept literal instead
+      // of importing walletSession.ts to avoid a circular import).
+      window.localStorage.removeItem('vaquita-wallet-session');
     }
     binding = null;
   },

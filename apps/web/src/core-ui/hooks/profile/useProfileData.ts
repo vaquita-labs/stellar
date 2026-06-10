@@ -1,10 +1,14 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
-import { ProfileResponseDTO } from '@/core-ui/types';
+import { DEFAULT_NOTIFICATION_PREFERENCES, ProfileResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
-export const useProfileData = () => {
-  const { network, walletAddress } = useConfigStore();
+/** Pass a wallet to read another user's profile (e.g. the leaderboard detail
+ *  view); defaults to the connected wallet. Query keys match either way, so
+ *  the cache is shared with the own-profile reads. */
+export const useProfileData = (walletAddressOverride?: string) => {
+  const { network, walletAddress: connectedWallet } = useConfigStore();
+  const walletAddress = walletAddressOverride ?? connectedWallet;
   return useQuery<ProfileResponseDTO>({
     queryKey: ['profile', network?.networkName, walletAddress, 'profile-data'],
     queryFn: async () => {
@@ -25,6 +29,10 @@ export const useProfileData = () => {
         cryptoSavvy: data?.data?.cryptoSavvy ?? false,
         language: data?.data?.language ?? '',
         currency: data?.data?.currency ?? '',
+        notificationPreferences: {
+          ...DEFAULT_NOTIFICATION_PREFERENCES,
+          ...(data?.data?.notificationPreferences ?? {}),
+        },
         createdAt: data?.data?.createdAt ?? '',
       };
 

@@ -1,0 +1,1453 @@
+{
+  "achievements": {
+    "detail": {
+      "claimAward": "Reclamar premio",
+      "progress": "Progreso",
+      "viewOnStellarExpert": "Ver en Stellar Expert"
+    },
+    "items": {
+      "beta-tester": {
+        "description": "Te uniste a Vaquita durante la beta. ¡Gracias por ayudarnos a darle forma!",
+        "title": "Beta Tester"
+      },
+      "century-saver": {
+        "description": "Alcanza una racha de ahorro de 100 días. Legendario.",
+        "title": "Ahorrador Centenario"
+      },
+      "explorer": {
+        "description": "Gana 300 XP en todos los desafíos.",
+        "title": "Explorador"
+      },
+      "first-deposit": {
+        "description": "Hiciste tu primer depósito en Vaquita.",
+        "title": "Primer Depósito"
+      },
+      "first-friend": {
+        "description": "Sigue a tu primer vaquero.",
+        "title": "Compañero de Manada"
+      },
+      "first-place": {
+        "description": "Termina #1 en la tabla mensual.",
+        "title": "Medallista de Oro"
+      },
+      "month-master": {
+        "description": "Alcanza una racha de ahorro de 30 días.",
+        "title": "Maestro del Mes"
+      },
+      "rookie": {
+        "description": "Gana tus primeros 50 XP. Bienvenido al rebaño.",
+        "title": "Novato"
+      },
+      "savings-baron": {
+        "description": "Acumula $10.000 USDC en depósitos.",
+        "title": "Barón del Ahorro"
+      },
+      "savings-starter": {
+        "description": "Acumula $100 USDC en depósitos.",
+        "title": "Ahorrador Principiante"
+      },
+      "second-place": {
+        "description": "Termina #2 en la tabla mensual.",
+        "title": "Medallista de Plata"
+      },
+      "streak-master": {
+        "description": "Alcanza una racha de ahorro de 50 días.",
+        "title": "Maestro de la Racha"
+      },
+      "third-place": {
+        "description": "Termina en el top 10 de la tabla mensual.",
+        "title": "Medallista de Bronce"
+      },
+      "trio-saver": {
+        "description": "Mantén 3 depósitos activos al mismo tiempo.",
+        "title": "Triple Amenaza"
+      },
+      "week-warrior": {
+        "description": "Alcanza una racha de ahorro de 7 días.",
+        "title": "Guerrero de la Semana"
+      },
+      "whale": {
+        "description": "Alcanza los 30.000 XP. ¡ESO sí que es dedicación!",
+        "title": "Vaquita Ballena"
+      }
+    },
+    "minted": {
+      "title": "¡Insignia acuñada en la blockchain!"
+    },
+    "minting": {
+      "waitingForWallet": "Preparando tu premio…"
+    },
+    "mintError": {
+      "alreadyClaimed": "Ya reclamaste esta insignia.",
+      "claimExpired": "Este reclamo expiró. Vuelve a abrir la insignia e inténtalo de nuevo.",
+      "soulbound": "Esta insignia no se puede transferir una vez acuñada.",
+      "unauthorized": "No pudimos verificar este premio. Inténtalo de nuevo.",
+      "editionCapReached": "Esta insignia está agotada — no quedan ediciones disponibles.",
+      "paused": "La acuñación está pausada en este momento. Inténtalo más tarde.",
+      "notReady": "Las insignias no están disponibles en este momento. Inténtalo más tarde.",
+      "rejected": "Cancelaste la solicitud en tu wallet.",
+      "network": "Problema de conexión. Revisa tu internet e inténtalo de nuevo.",
+      "generic": "Algo salió mal al acuñar. Inténtalo de nuevo."
+    },
+    "modal": {
+      "claimingReward": "Reclamando premio",
+      "goldCoins": "{{count}} monedas de oro",
+      "goldCoins_one": "{{count}} moneda de oro",
+      "goldCoins_other": "{{count}} monedas de oro",
+      "shareAchievement": "Compartir logro"
+    },
+    "page": {
+      "awards": "Premios",
+      "personalRecords": "Récords personales",
+      "redeemCode": "Canjear código",
+      "title": "Logros"
+    },
+    "reward": {
+      "subtitle": "{{title}} ya está en tu sala de trofeos.",
+      "title": "¡Ganaste {{count}} monedas!",
+      "title_one": "¡Ganaste {{count}} moneda!",
+      "title_other": "¡Ganaste {{count}} monedas!"
+    },
+    "share": {
+      "cta": "Gana el tuyo en Vaquita",
+      "earnedBy": "logrado por @{{username}}",
+      "fallbackTitle": "Logro · Vaquita",
+      "metaDescription": "Alguien acaba de desbloquear \"{{title}}\" en Vaquita. {{description}}",
+      "metaDescriptionUser": "@{{username}} acaba de desbloquear \"{{title}}\" en Vaquita. {{description}}",
+      "metaTitle": "{{title}} · Vaquita",
+      "text": "¡Acabo de desbloquear \"{{title}}\" en Vaquita 🐮",
+      "unlocked": "Logro desbloqueado"
+    },
+    "toast": {
+      "couldNotShare": "No se pudo compartir",
+      "linkCopied": "Enlace copiado al portapapeles",
+      "mintFailed": "No se pudo reclamar el premio",
+      "unknownError": "Error desconocido"
+    }
+  },
+  "auth": {
+    "legal": {
+      "lastUpdated": "Última actualización"
+    },
+    "login": {
+      "logoAlt": "Logo de Vaquita",
+      "viewIntroAgain": "Ver la intro de nuevo",
+      "welcomeSubtitle": "Regístrate para empezar a ahorrar de forma segura",
+      "welcomeTitle": "Bienvenido"
+    },
+    "privacy": {
+      "changes": {
+        "body": "Actualizaremos la fecha de “Última actualización” de arriba cada vez que esta política cambie. Los cambios importantes también se anunciarán en la app.",
+        "heading": "6. Cambios"
+      },
+      "children": {
+        "body": "Vaquita no está dirigida a menores de 13 años y no recopilamos datos de ellos a sabiendas.",
+        "heading": "5. Menores de edad"
+      },
+      "choices": {
+        "delete": "Escríbenos a <a>privacy@vaquita.finance</a> para solicitar la eliminación de los datos de tu perfil.",
+        "disconnect": "Desconecta tu wallet en cualquier momento desde la pantalla de Ajustes.",
+        "heading": "4. Tus opciones",
+        "hideBalance": "Activa <b>Ocultar saldo</b> en Ajustes → Configuración de privacidad para ocultar los montos en pantalla."
+      },
+      "collect": {
+        "heading": "1. Información que recopilamos",
+        "profile": "<b>Datos de perfil.</b> Apodo y correo opcionales, si decides proporcionarlos.",
+        "usage": "<b>Datos de uso.</b> Analíticas agregadas y no identificables sobre qué pantallas visitas, que usamos para mejorar la app.",
+        "wallet": "<b>Dirección de la wallet.</b> Cuando conectas una wallet, leemos su dirección pública para poder mostrarte tus saldos y actividad."
+      },
+      "contact": {
+        "body": "¿Tienes preguntas? Escríbenos a <a>privacy@vaquita.finance</a>.",
+        "heading": "7. Contacto"
+      },
+      "dont": {
+        "custody": "No tenemos la custodia de tus fondos ni de tus llaves privadas.",
+        "heading": "3. Lo que NO hacemos",
+        "sell": "No vendemos tus datos personales.",
+        "share": "No compartimos la dirección de tu wallet con anunciantes externos."
+      },
+      "intro": "Tu privacidad nos importa. Esta Política de Privacidad explica qué información recopila Vaquita, cómo la usamos y las opciones que tienes.",
+      "title": "Política de Privacidad",
+      "use": {
+        "abuse": "Para detectar abusos y mantener seguro el Servicio.",
+        "emails": "Para enviar correos transaccionales o notificaciones a las que te suscribiste.",
+        "heading": "2. Cómo usamos la información",
+        "operate": "Para operar la app, mostrar tu progreso de ahorro y desbloquear recompensas."
+      }
+    },
+    "terms": {
+      "acceptableUse": {
+        "disrupt": "Intentar interrumpir, hacer ingeniería inversa o comprometer el Servicio.",
+        "heading": "5. Uso aceptable",
+        "impersonate": "Falsear tu identidad o hacerte pasar por otras personas.",
+        "intro": "Te comprometes a no:",
+        "unlawful": "Usar el Servicio para actividades ilícitas o para evadir sanciones."
+      },
+      "changes": {
+        "body": "Podemos actualizar estos Términos de vez en cuando. Actualizaremos la fecha de “Última actualización” de arriba. El uso continuado del Servicio tras los cambios significa que aceptas los Términos actualizados.",
+        "heading": "8. Cambios"
+      },
+      "contact": {
+        "body": "¿Tienes preguntas? Escríbenos a <a>hello@vaquita.finance</a>.",
+        "heading": "9. Contacto"
+      },
+      "disclaimers": {
+        "body": "El Servicio se ofrece “tal cual”, sin garantías de ningún tipo. En la máxima medida permitida por la ley, no asumimos responsabilidad por daños indirectos, incidentales o consecuentes derivados de tu uso del Servicio.",
+        "heading": "7. Avisos legales"
+      },
+      "eligibility": {
+        "body": "Debes tener al menos 18 años y capacidad legal para celebrar un contrato en tu jurisdicción. Eres responsable de asegurarte de que tu uso del Servicio esté permitido por la ley local.",
+        "heading": "2. Elegibilidad"
+      },
+      "intro": "Bienvenido a Vaquita. Al crear una cuenta, conectar una wallet o usar de cualquier otra forma la app de Vaquita (el “Servicio”), aceptas estos Términos del Servicio (los “Términos”). Por favor, léelos con atención.",
+      "ip": {
+        "body": "El nombre de Vaquita, el logo, la mascota vaquita y las ilustraciones dentro de la app nos pertenecen. Recibes una licencia limitada e intransferible para usar el Servicio con fines personales y no comerciales.",
+        "heading": "6. Propiedad intelectual"
+      },
+      "risks": {
+        "body": "Las criptomonedas son volátiles y los protocolos de contratos inteligentes conllevan riesgos técnicos y económicos. Los rendimientos, las insignias y las recompensas dentro de la app no están garantizados y pueden cambiar en cualquier momento. No deposites más de lo que puedas permitirte perder.",
+        "heading": "4. Riesgos"
+      },
+      "service": {
+        "body": "Vaquita es una experiencia de ahorro gamificada que te permite depositar fondos en bóvedas de contratos inteligentes de autocustodia en las blockchains compatibles. Vaquita no tiene custodia: tú controlas tu wallet y tus fondos en todo momento.",
+        "heading": "1. El Servicio"
+      },
+      "title": "Términos del Servicio",
+      "wallet": {
+        "heading": "3. Tu wallet y tus fondos",
+        "irreversible": "Las transacciones en blockchain son irreversibles. Verifica siempre dos veces antes de firmar.",
+        "noMove": "Vaquita nunca puede mover fondos de tu wallet en tu nombre.",
+        "security": "Eres el único responsable de la seguridad de tu wallet, tus llaves y tu frase de recuperación."
+      }
+    }
+  },
+  "common": {
+    "back": "Atrás",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "continue": "Continuar",
+    "delete": "Eliminar",
+    "done": "Listo",
+    "edit": "Editar",
+    "loading": "Cargando…",
+    "next": "Siguiente",
+    "off": "Desactivado",
+    "on": "Activado",
+    "retry": "Reintentar",
+    "save": "Ahorrar",
+    "saving": "Guardando…",
+    "selectOption": "Elegí una opción…",
+    "somethingWentWrong": "Algo salió mal",
+    "soon": "Pronto"
+  },
+  "deposit": {
+    "bank": {
+      "details": "Detalles",
+      "estimatedEarningsTotal": "Ganancias estimadas totales",
+      "estimatesDisclaimer": "Son estimaciones y se actualizan con el tiempo — las recompensas finales se confirman al retirar.",
+      "hide": "Ocultar",
+      "howItWorks1": "Tu depósito genera rendimiento de varias fuentes.",
+      "howItWorks2": "Las recompensas estimadas se calculan con el APY actual.",
+      "howItWorks3": "El APY es dinámico y puede variar según la actividad de los usuarios y el total depositado.",
+      "howItWorks4": "Las recompensas se pueden reclamar solo cuando termina el periodo de ahorro.",
+      "howItWorks5": "Las recompensas finales se confirman al retirar.",
+      "howRewardsWork": "Cómo funcionan las recompensas",
+      "marketRewards": "Recompensas de {{market}}",
+      "myDeposits": "Mis depósitos",
+      "network": "Red:",
+      "protocolRewards": "Recompensas del protocolo",
+      "protocolRewardsInfo": "Rendimiento de {{market}} donde están depositados tus fondos.",
+      "theLendingProtocol": "el protocolo de préstamos",
+      "title": "Recompensas del Banco",
+      "vaquitaRewards": "Recompensas de Vaquita",
+      "vaquitaRewardsInfo": "Recompensas del fondo comunitario de Vaquita, según tu periodo de bloqueo."
+    },
+    "confirm": {
+      "earlyWithdrawalPrefix": "Las recompensas por retiro anticipado se",
+      "forfeited": "perderán",
+      "readyToClaim": "Tu vaquita está lista para reclamar.",
+      "sendTransaction": "Confirma para enviar la transacción.",
+      "timesUp": "¡Se acabó el tiempo!",
+      "title": "Confirmar retiro",
+      "youWillLose": "Vas a perder",
+      "youWillReceive": "Vas a recibir"
+    },
+    "detail": {
+      "days": "Días",
+      "estAbbrev": "est.",
+      "hours": "Horas",
+      "lockSuffix": "{{period}} de bloqueo",
+      "locked": "Bloqueado",
+      "min": "Min",
+      "protocolInterest": "Interés del protocolo",
+      "readyToWithdraw": "Listo para retirar",
+      "sec": "Seg",
+      "startedAt": "Iniciado el",
+      "title": "Tu depósito",
+      "totalEstEarnings": "Ganancias est. totales",
+      "vaquitaInterest": "Interés de Vaquita",
+      "viewOnStellarExpert": "Ver en Stellar Expert",
+      "withdrawnAt": "Retirado el"
+    },
+    "list": {
+      "earned": "Ganado",
+      "makeFirstDeposit": "Haz tu primer depósito para comenzar",
+      "noActiveDeposits": "No hay depósitos activos",
+      "noData": "Sin datos",
+      "noDepositsYet": "Todavía no tienes depósitos",
+      "noWithdrawnDeposits": "No hay depósitos retirados",
+      "rewardsForfeited": "Recompensas perdidas",
+      "tabActive": "Activos",
+      "tabWithdrawn": "Retirados",
+      "title": "Tus depósitos",
+      "withdrawnBadge": "Retirado",
+      "withdrawnEarlyBadge": "Retirado antes"
+    },
+    "lockModal": {
+      "escrowDescription": "Los fondos quedarán en custodia durante el periodo seleccionado.",
+      "title": "Elige el periodo de bloqueo"
+    },
+    "modal": {
+      "lockDescription": "Los fondos quedarán bloqueados en la bóveda durante el periodo seleccionado.",
+      "lockSeconds": "{{count}} segundos",
+      "lockTime": "Tiempo de bloqueo",
+      "title": "Depositar"
+    },
+    "panel": {
+      "paused": "Los depósitos están pausados temporalmente"
+    },
+    "processing": "Procesando...",
+    "processingShort": "Procesando",
+    "savingsStats": {
+      "infoAlt": "info"
+    },
+    "toast": {
+      "errorTitle": "El depósito no se completó",
+      "successDescription": "¡Tus ahorros van en camino! Puede tardar unos segundos. Todo estará listo en un momento.",
+      "successTitle": "¡Depósito exitoso!"
+    },
+    "withdraw": {
+      "button": "Retirar",
+      "claimNow": "Reclamar ahora",
+      "errorTitle": "El retiro no se completó",
+      "successDescription": "¡Tu dinero va en camino! Puede tardar unos segundos. Todo estará listo en un momento.",
+      "successTitle": "¡Retiro exitoso!",
+      "withdrawAnyway": "Retirar de todos modos"
+    },
+    "withdrawn": {
+      "amountReturned": "Monto depositado devuelto",
+      "earlyDescription": "Retiraste antes de que terminara el bloqueo, así que se perdieron las recompensas.",
+      "earlyTitle": "Retirado anticipadamente",
+      "earnedSuffix": "ganados",
+      "onTimeDescription": "Completaste todo el periodo de bloqueo y conservaste tus recompensas.",
+      "onTimeTitle": "Retirado a tiempo"
+    }
+  },
+  "errors": {
+    "pool": {
+      "arithmeticOverflow": "Desbordamiento aritmético",
+      "cannotChangeTokenWithOpenPositions": "No se puede cambiar el token mientras haya posiciones abiertas",
+      "cannotChangeVaultWithOpenPositions": "No se puede cambiar el vault mientras haya posiciones abiertas",
+      "conservationInvariantViolated": "Se violó la invariante de conservación",
+      "depositIdExists": "El ID de depósito ya existe",
+      "depositsPaused": "Los depósitos están pausados por ahora",
+      "feeExceedsCap": "La comisión supera el límite del 20%",
+      "invalidDepositAmount": "Monto de depósito no válido",
+      "invalidFeeValue": "Valor de comisión no válido",
+      "lockPeriodAlreadyRegistered": "El periodo de bloqueo ya está registrado",
+      "lockPeriodHasOpenPositions": "El periodo de bloqueo tiene posiciones abiertas",
+      "lockPeriodNotSupported": "Periodo de bloqueo no admitido",
+      "noDepositsInPeriod": "No hay depósitos en este periodo",
+      "noUpgradePending": "No hay ninguna actualización pendiente",
+      "notInitialized": "El contrato no está inicializado",
+      "notPositionOwner": "Quien llama no es el dueño de la posición",
+      "periodDataNotFound": "No se encontraron datos del periodo",
+      "positionNotFound": "No se encontró la posición",
+      "upgradeTimelockNotElapsed": "El tiempo de espera de la actualización aún no terminó",
+      "upgradesLockedForever": "Las actualizaciones quedaron bloqueadas para siempre",
+      "vaultReturnedLessThanPrincipal": "El vault devolvió menos que el capital",
+      "vaultReturnedZeroShares": "El vault devolvió cero participaciones",
+      "vaultShareBalanceDecreased": "El saldo de participaciones del vault disminuyó de forma inesperada"
+    }
+  },
+  "home": {
+    "catalog": {
+      "always": "Siempre",
+      "biome": {
+        "any": "cualquiera",
+        "desert": "desierto",
+        "forest": "bosque",
+        "mountain": "montaña",
+        "plains": "llanura"
+      },
+      "buy": "Comprar",
+      "goldAlt": "Oro",
+      "invalidOfferDesc": "Ingresa al menos 1 moneda de oro.",
+      "invalidOfferTitle": "Oferta no válida",
+      "itemFallback": "Artículo",
+      "items": {
+        "fountain": {
+          "description": "Una fuente impresionante para realzar tu mapa",
+          "name": "Fuente decorativa"
+        },
+        "golden-statue": {
+          "description": "Una prestigiosa estatua dorada para tu colección",
+          "name": "Estatua dorada"
+        },
+        "streak-freeze": {
+          "description": "Protege tu racha un día si no puedes mantenerla",
+          "name": "Congelar racha"
+        },
+        "tile-pack": {
+          "description": "Paquete de 5 losetas exclusivas para tu mapa",
+          "name": "Paquete de losetas"
+        },
+        "tree": {
+          "description": "Un hermoso árbol para decorar tu mapa. ¡Siempre disponible!",
+          "name": "Árbol"
+        }
+      },
+      "makeOffer": "Hacer oferta",
+      "notEnoughCoinsDesc": "Tu oferta supera tu saldo.",
+      "notEnoughCoinsTitle": "No tienes suficientes monedas",
+      "offerSubmittedDesc": "Ofreciste {{gold}} de oro por {{name}}",
+      "offerSubmittedTitle": "¡Oferta enviada!",
+      "price": "Precio",
+      "processing": "Procesando...",
+      "purchaseSuccessDesc": "Compraste {{name}} con éxito",
+      "purchaseSuccessTitle": "¡Compra exitosa!",
+      "rarity": {
+        "common": "común",
+        "epic": "épico",
+        "legendary": "legendario",
+        "rare": "raro"
+      },
+      "sending": "Enviando...",
+      "submitOffer": "Enviar oferta",
+      "type": {
+        "decoration": "decoración",
+        "expansion": "expansión",
+        "utility": "utilidad"
+      },
+      "youHave": "Tienes {{count}}",
+      "yourOffer": "Tu oferta"
+    },
+    "coinsChip": {
+      "goldCoinAlt": "Moneda de oro"
+    },
+    "depositCard": {
+      "earnings": "Ganancias",
+      "locked": "Bloqueado",
+      "ready": "Listo",
+      "remainingDays": "Faltan {{days}}d {{hours}}h",
+      "remainingHours": "Faltan {{hours}}h {{mins}}m",
+      "remainingMins": "Faltan {{mins}}m",
+      "remainingSecs": "Faltan {{secs}}s",
+      "unlocks": "Se desbloquea el {{date}}"
+    },
+    "editControls": {
+      "remove": "Eliminar",
+      "rotate": "Girar"
+    },
+    "exitEdit": {
+      "body": "Tienes cambios sin guardar. ¿Seguro que quieres salir del modo edición?",
+      "discard": "Descartar cambios",
+      "saveAndExit": "Guardar y salir",
+      "title": "¿Salir del modo edición?"
+    },
+    "music": {
+      "low": "Volumen bajo",
+      "mute": "Silenciar música",
+      "normal": "Volumen normal",
+      "veryLow": "Volumen muy bajo"
+    },
+    "objectList": {
+      "empty": "Tu colección está vacía.",
+      "emptyAlt": "Vacío",
+      "emptyHint": "¡Compra artículos del catálogo para empezar a coleccionar!"
+    },
+    "placeHint": {
+      "cancelAria": "Cancelar colocación",
+      "tapToPlace": "Toca el mapa para colocar"
+    },
+    "shop": {
+      "title": "Tienda"
+    },
+    "stats": {
+      "experienceAlt": "Experiencia",
+      "goldCoinAlt": "Moneda de oro",
+      "greeting": "Tus ahorros",
+      "greetingNamed": "Tus ahorros, <b>{{name}}</b>",
+      "profileAlt": "Perfil",
+      "profileAria": "Perfil",
+      "streakAlt": "Racha"
+    },
+    "totalDeposits": {
+      "bagAlt": "Depósitos totales"
+    }
+  },
+  "leaderboard": {
+    "card": {
+      "badges": "Insignias",
+      "commentsComingSoon": "Los comentarios en el mundo de {{username}} llegan pronto",
+      "dayStreak": "Días de racha",
+      "follow": "Seguir",
+      "followAria": "Seguir a {{username}}",
+      "following": "Siguiendo",
+      "levelShort": "Nv {{level}}",
+      "like": "Me gusta",
+      "openComments": "Abrir comentarios",
+      "positionLabel": "Posición {{position}}",
+      "unfollowAria": "Dejar de seguir a {{username}}",
+      "unlike": "Quitar me gusta",
+      "viewWorld": "Ver el mundo de {{username}}",
+      "you": "Tú"
+    },
+    "direction": {
+      "ascending": "Ordenar de menor a mayor — cambiar orden",
+      "descending": "Ordenar de mayor a menor — cambiar orden"
+    },
+    "empty": {
+      "description": "Sé el primero en escalar posiciones: empieza una racha de depósitos y aparecerás aquí.",
+      "title": "Aún no hay vaqueros en la tabla"
+    },
+    "error": {
+      "title": "No pudimos cargar la tabla de posiciones"
+    },
+    "filter": {
+      "heading": "Filtrar por",
+      "label": "Filtrar por métrica"
+    },
+    "loadingLabel": "Cargando la tabla de posiciones",
+    "noResults": {
+      "description": "Prueba con otro nombre de usuario o borra la búsqueda.",
+      "title": "Ningún vaquero coincide con “{{query}}”"
+    },
+    "search": {
+      "clear": "Borrar búsqueda",
+      "label": "Buscar vaqueros",
+      "placeholder": "Busca vaqueros por nombre de usuario"
+    },
+    "sortOptions": {
+      "badges": {
+        "hint": "Más logros desbloqueados",
+        "label": "Insignias"
+      },
+      "level": {
+        "hint": "Más XP ganada",
+        "label": "Nivel"
+      },
+      "rank": {
+        "hint": "Orden predeterminado de la tabla",
+        "label": "Mejor posición"
+      },
+      "streak": {
+        "hint": "Más días consecutivos",
+        "label": "Racha"
+      }
+    },
+    "title": "Tabla de posiciones",
+    "user": {
+      "joined": "Se unió el {{joinedLabel}}",
+      "noAchievements": "Aún no ha desbloqueado logros"
+    },
+    "vaquero": "Vaquero",
+    "vaqueroNamed": "Vaquero {{tail}}"
+  },
+  "nav": {
+    "primaryAriaLabel": "Principal"
+  },
+  "notificationsCenter": {
+    "bellAria": "Notificaciones",
+    "empty": "Aún no hay notificaciones",
+    "emptyFiltered": "Prueba cambiando los filtros para ver más.",
+    "filters": {
+      "date": {
+        "all": "Todas",
+        "month": "Últimos 30 días",
+        "today": "Hoy",
+        "week": "Últimos 7 días"
+      },
+      "dateAria": "Filtrar por fecha",
+      "type": {
+        "all": "Todas",
+        "deposit": "Depósitos",
+        "friend": "Amigos",
+        "reward": "Recompensas",
+        "streak": "Racha",
+        "system": "Novedades"
+      },
+      "typeAria": "Filtrar por tipo"
+    },
+    "groups": {
+      "today": "Hoy",
+      "yesterday": "Ayer"
+    },
+    "markAllRead": "Marcar todas como leídas",
+    "messages": {
+      "achievementUnlocked": {
+        "body": "Ganaste la insignia \"{{name}}\". Mira tu colección.",
+        "title": "¡Trofeo desbloqueado!"
+      },
+      "depositConfirmed": {
+        "body": "Tu depósito de ${{amount}} USDC está confirmado y ya está creciendo.",
+        "title": "Depósito confirmado"
+      },
+      "depositUnlocked": {
+        "body": "Tu depósito de ${{amount}} USDC cumplió su plazo. Ya puedes retirarlo.",
+        "title": "¡Tus ahorros están desbloqueados!"
+      },
+      "generic": {
+        "title": "Notificación"
+      },
+      "newFollower": {
+        "body": "{{name}} empezó a seguirte. ¡Mira su granja!",
+        "title": "Nuevo seguidor"
+      },
+      "withdrawalCompleted": {
+        "body": "Se enviaron ${{amount}} USDC a tu billetera.",
+        "title": "Retiro completado"
+      }
+    },
+    "time": {
+      "hoursAgo_one": "hace {{count}}h",
+      "hoursAgo_other": "hace {{count}}h",
+      "justNow": "Justo ahora",
+      "minutesAgo_one": "hace {{count}}m",
+      "minutesAgo_other": "hace {{count}}m"
+    },
+    "title": "Notificaciones"
+  },
+  "onboarding": {
+    "demo": {
+      "title": "Aprende a ahorrar con Vaquita",
+      "titleMobile": "Aprende a ahorrar con Vaquita en el móvil"
+    },
+    "intro": {
+      "goToSlide": "Ir a la diapositiva {{number}}",
+      "letsStart": "¡Empecemos!",
+      "skip": "Omitir",
+      "slides": {
+        "rewards": {
+          "description": "Mantén viva tu racha diaria, desbloquea logros y escala en la tabla de líderes mientras creas un hábito de ahorro saludable.",
+          "imageAlt": "Trofeo",
+          "title": "Recompensas y logros"
+        },
+        "saveEarn": {
+          "description": "Deposita y genera rendimiento real. Cuanto más ahorras, más prospera tu vaquita y más monedas juntas.",
+          "imageAlt": "Moneda de Vaquita",
+          "title": "Ahorra y gana"
+        },
+        "welcome": {
+          "description": "Vaquita es tu app de ahorro gamificado en Stellar. Ahorra dinero, cuida a tu vaquita y mira cómo crece tu mundo.",
+          "imageAlt": "Vaquita",
+          "title": "Te damos la bienvenida a Vaquita"
+        }
+      }
+    },
+    "username": {
+      "helperAvailable": "@{{name}} está disponible",
+      "helperChecking": "Verificando disponibilidad…",
+      "helperDefault": "Se mostrará como @{{name}}",
+      "helperError": "No pudimos verificar la disponibilidad, inténtalo de nuevo",
+      "helperShort": "Al menos {{count}} caracteres",
+      "helperTaken": "@{{name}} ya está en uso",
+      "inputPlaceholder": "@usuario",
+      "label": "Nombre de usuario",
+      "placeholderName": "usuario",
+      "saveErrorToast": "No pudimos guardar el nombre de usuario",
+      "savedToast": "Nombre de usuario guardado",
+      "subtitle": "Este es el nombre que verán otros ahorradores. Puedes cambiarlo más tarde en tu perfil.",
+      "title": "Elige tu nombre de usuario"
+    }
+  },
+  "profile": {
+    "preferences": {
+      "autoplaySounds": "Reproducir efectos de sonido",
+      "autoplaySoundsDescription": "Reproducir los sonidos del muu y las monedas durante las interacciones.",
+      "cryptoModeDescription": "Cuánto detalle de blockchain te muestra Vaquita. Se guarda en tu perfil.",
+      "cryptoModeTitle": "Modo cripto",
+      "currencyDescription": "Se usa para mostrar tus saldos y recompensas.",
+      "currencyTitle": "Moneda",
+      "displayTitle": "Visualización",
+      "hapticFeedback": "Vibración háptica",
+      "hapticFeedbackDescription": "Vibrar en acciones clave en dispositivos compatibles.",
+      "iKnowCrypto": "Sé de cripto",
+      "iKnowCryptoDescription": "Mostrar detalles on-chain (direcciones de wallet, hashes de transacción, términos de red) en lugar de textos simplificados.",
+      "languageDescription": "El idioma que Vaquita usa para hablarte.",
+      "languageTitle": "Idioma",
+      "reduceMotion": "Reducir movimiento",
+      "reduceMotionDescription": "Desactivar las animaciones con rebote en toda la app.",
+      "subtitle": "Idioma, moneda y opciones de visualización. El idioma y la moneda se guardan en tu perfil.",
+      "title": "Preferencias",
+      "updateError": "No se pudieron actualizar las preferencias",
+      "updated": "Preferencias actualizadas"
+    }
+  },
+  "profilePages": {
+    "edit": {
+      "changePhoto": "Cambiar foto",
+      "chooseImageFile": "Elige una imagen JPG, PNG, WEBP o GIF",
+      "couldNotRemovePhoto": "No se pudo eliminar la foto",
+      "couldNotSaveProfile": "No se pudo guardar el perfil",
+      "couldNotUpdatePhoto": "No se pudo actualizar la foto",
+      "couldNotUpdatePreferences": "No se pudieron actualizar las preferencias",
+      "email": "Correo",
+      "emailPlaceholder": "tu@ejemplo.com",
+      "imageTooLarge": "La imagen es muy grande (máx. 5 MB).",
+      "nickname": "Apodo",
+      "nicknamePlaceholder": "@apodo",
+      "onboardingCompleted": "Onboarding completado",
+      "onboardingCompletedDesc": "Marca el flujo de onboarding inicial como completado.",
+      "photoRemoved": "Foto eliminada",
+      "photoRequirements": "JPG, PNG, WEBP o GIF · máx. 5 MB",
+      "photoUpdated": "Foto actualizada",
+      "preferencesUpdated": "Preferencias actualizadas",
+      "profileFlags": "Flags del perfil",
+      "profilePhotoAlt": "Foto de perfil",
+      "profileSaved": "Perfil guardado",
+      "removePhoto": "Quitar foto",
+      "saveChanges": "Guardar cambios",
+      "someChangesNotSaved": "Algunos cambios no se guardaron",
+      "tapToChange": "Toca la foto para cambiarla.",
+      "testingOnly": "Solo pruebas",
+      "title": "Editar perfil",
+      "tutorialCompleted": "Tutorial completado",
+      "tutorialCompletedDesc": "Marca el tutorial de la app como completado."
+    },
+    "notifications": {
+      "items": {
+        "deposits": {
+          "description": "Cuando tus ahorros generan recompensas.",
+          "title": "Depósitos y rendimiento"
+        },
+        "email": {
+          "description": "Recibe un resumen semanal por correo.",
+          "title": "Novedades por correo"
+        },
+        "friends": {
+          "description": "Amigos que se unen o ahorran.",
+          "title": "Actividad de amigos"
+        },
+        "push": {
+          "description": "Recibe alertas en este dispositivo.",
+          "title": "Notificaciones push"
+        },
+        "streaks": {
+          "description": "Recordatorio diario para mantener tu racha.",
+          "title": "Recordatorios de racha"
+        }
+      },
+      "emailRequired": "Agrega tu email en Editar perfil para activarlo.",
+      "sections": {
+        "activity": {
+          "title": "Actividad"
+        },
+        "channels": {
+          "title": "Canales"
+        }
+      },
+      "title": "Notificaciones"
+    },
+    "privacy": {
+      "hideBalanceDesc": "Oculta tus depósitos activos y totales en las pantallas de perfil e inicio. Desactívalo cuando quieras para verlos de nuevo.",
+      "hideBalanceTitle": "Ocultar mi saldo",
+      "storedOnDevice": "Guardado en este dispositivo",
+      "storedOnDeviceDesc": "Las preferencias de privacidad se guardan localmente y aún no se sincronizan con otros dispositivos. Agregaremos la sincronización entre dispositivos cuando estén listas las cuentas.",
+      "subtitle": "Decide cuánto de tu actividad se ve en este dispositivo.",
+      "title": "Privacidad",
+      "visibility": "Visibilidad"
+    },
+    "profile": {
+      "achievements": "Logros",
+      "activeDeposits": "Depósitos activos",
+      "addFriends": "Agregar amigos",
+      "connectWalletDescription": "Accede a tu perfil, tus métricas y tus próximos logros conectando tu wallet.",
+      "connectWalletTitle": "Conecta tu wallet",
+      "daysCount_one": "{{count}} día",
+      "daysCount_other": "{{count}} días",
+      "editProfileAria": "Editar perfil",
+      "experience": "Experiencia",
+      "followListError": "No se pudo cargar la lista. Inténtalo de nuevo.",
+      "followers": "Seguidores",
+      "followersEmptyBody": "Cuando otros vaqueros te sigan, aparecerán aquí.",
+      "followersEmptyTitle": "Aún no tienes seguidores",
+      "following": "Siguiendo",
+      "followingEmptyBody": "Sigue vaqueros desde la tabla de posiciones para verlos aquí.",
+      "followingEmptyTitle": "Todavía no sigues a nadie",
+      "gold": "Oro",
+      "handleJoined": "{{handle}} · se unió el {{joinedLabel}}",
+      "viewFollowers": "Ver seguidores",
+      "viewFollowing": "Ver seguidos",
+      "seeAll": "Ver todo {{title}}",
+      "seeAllAchievements": "Ver todos los logros",
+      "seeFullSummary": "Ver resumen completo",
+      "settingsAria": "Ajustes",
+      "streak": "Racha",
+      "summary": "Resumen",
+      "title": "Perfil"
+    },
+    "records": {
+      "activeDeposits": "Depósitos activos",
+      "ariaLabel": "Récords personales",
+      "awardsEarned": "Premios ganados",
+      "dayStreak": "Racha de días",
+      "daysValue_one": "{{formatted}} día",
+      "daysValue_other": "{{formatted}} días",
+      "goldCoins": "Monedas de oro",
+      "totalXp": "XP total"
+    },
+    "settings": {
+      "accountSection": "Cuenta",
+      "feedback": "Comentarios",
+      "feedbackDesc": "Cuéntanos qué piensas.",
+      "help": "Centro de ayuda",
+      "helpDesc": "Preguntas frecuentes y soporte de cuenta.",
+      "notifications": "Notificaciones",
+      "notificationsDesc": "Gestiona las alertas push y por correo.",
+      "preferences": "Preferencias",
+      "preferencesDesc": "Idioma, moneda y opciones de visualización.",
+      "privacy": "Privacidad",
+      "privacyDesc": "Oculta tu saldo en las pantallas de perfil e inicio.",
+      "privacyDescHidden": "Saldo oculto en este dispositivo.",
+      "privacyPolicy": "Política de privacidad",
+      "profile": "Perfil",
+      "profileDesc": "Edita tu apodo y tu avatar.",
+      "signOut": "Cerrar sesión",
+      "signOutConfirmDesc": "¿Seguro que quieres cerrar sesión?",
+      "signOutConfirmTitle": "¿Cerrar sesión?",
+      "supportSection": "Soporte",
+      "terms": "Términos",
+      "title": "Ajustes",
+      "wallet": "Wallet",
+      "walletDesc": "Ver dirección, enviar y recibir fondos."
+    },
+    "summary": {
+      "depositsChartAria": "Depósitos de las últimas 6 semanas",
+      "depositsOverTime": "Depósitos en el tiempo",
+      "depositsOverTimeSub": "Aportes semanales",
+      "keptOutOfDays": "{{kept}} / {{total}} días",
+      "last4Weeks": "Últimas 4 semanas",
+      "last6Weeks": "Últimas 6 semanas",
+      "levelShort": "Nvl {{level}}",
+      "nextMonth": "Mes siguiente",
+      "prevMonth": "Mes anterior",
+      "streakDaysThisMonth": "Días de racha",
+      "streakHistory": "Historial de racha",
+      "streakHistorySub": "Días que mantuviste la racha",
+      "streakKept": "Racha mantenida",
+      "streakMissed": "Racha perdida",
+      "subtitle": "Cómo va creciendo tu hábito de ahorro.",
+      "title": "Resumen",
+      "todayStreakKept": "Hoy — racha mantenida",
+      "todayStreakMissed": "Hoy — racha perdida",
+      "totalExperience": "Experiencia total",
+      "xpLevel": "XP y nivel",
+      "xpLevelSub": "Avance hacia tu próximo nivel",
+      "goldCoins": "Monedas de oro",
+      "goldCoinsSub": "Las monedas que estás ganando",
+      "usdcCurrentlySaved": "USDC ahorrado actualmente",
+      "weekOf": "Semana del {{date}}",
+      "depositsCount_one": "{{count}} depósito",
+      "depositsCount_other": "{{count}} depósitos",
+      "noDepositsWeek": "Sin depósitos"
+    }
+  },
+  "rewards": {
+    "carousel": {
+      "scrollLeft": "Desplazar a la izquierda",
+      "scrollRight": "Desplazar a la derecha"
+    },
+    "claim": {
+      "claimButton": "Reclamar {{label}}",
+      "enjoy": "Disfruta explorando Vaquita.",
+      "error": "No se pudo reclamar ahora. Inténtalo de nuevo.",
+      "forYou": "{{label}} para ti",
+      "giftAlt": "regalo",
+      "letsGo": "¡Vamos!",
+      "onItsWay": "{{label}} ya viene en camino",
+      "title": "Un regalo para ti",
+      "welcomeBalance": "Un saldo de bienvenida para probar Vaquita. Reclámalos para empezar."
+    },
+    "coinAnimation": {
+      "coinAlt": "Moneda"
+    },
+    "coins": {
+      "balanceLabel_one": "{{count}} moneda",
+      "balanceLabel_other": "{{count}} monedas",
+      "coinAlt": "monedas",
+      "description": "Las monedas son tu moneda del juego. Gánalas ahorrando y recogiendo tu recompensa diaria, y gástalas en la tienda para decorar tu mapa.",
+      "earn": {
+        "daily": "Recoge tu recompensa diaria",
+        "deposits": "Crea y haz crecer tus depósitos",
+        "streak": "Mantén viva tu racha diaria"
+      },
+      "earnTitle": "Formas de ganar",
+      "title": "Monedas",
+      "viewStats": "Ver estadísticas"
+    },
+    "countdown": {
+      "comeBackIn": "¡Mu! Regresa en",
+      "hrs": "Hrs",
+      "min": "Min",
+      "sec": "Seg"
+    },
+    "daily": {
+      "activeStreak_one": "Racha activa: {{count}} día",
+      "activeStreak_other": "Racha activa: {{count}} días",
+      "coinsAlt": "monedas",
+      "collectButton": "Recoger +{{count}}",
+      "confirmSubtitle_one": "¡Recoge tu moneda diaria y mantén viva tu racha!",
+      "confirmSubtitle_other": "¡Recoge tu moneda diaria y mantén viva tu racha!",
+      "confirmTitle": "¡Tu vaquita tiene una recompensa para ti!",
+      "greatButton": "¡Genial!",
+      "rewardAlt": "recompensa",
+      "streakAlt": "racha",
+      "successHint": "Sigue ahorrando para mantener tu racha y subir de nivel.",
+      "successWithXp_one": "¡Ganaste {{count}} moneda y {{xp}} XP!",
+      "successWithXp_other": "¡Ganaste {{count}} monedas y {{xp}} XP!",
+      "success_one": "¡Ganaste {{count}} moneda!",
+      "success_other": "¡Ganaste {{count}} monedas!",
+      "title": "Recompensa diaria"
+    },
+    "experience": {
+      "description": "Ganas XP cada vez que ahorras y mantienes tu racha. ¡Alcanza nuevos niveles para mostrar tu progreso de ahorro!",
+      "levelLabel": "Nivel {{level}}",
+      "levelProgress": "Progreso de nivel",
+      "title": "Experiencia",
+      "totalExperience": "Experiencia total",
+      "viewStats": "Ver estadísticas",
+      "xpAlt": "experiencia"
+    },
+    "mood": {
+      "excited": {
+        "cta": "Entendido",
+        "message": "¡Uno de tus depósitos llegó a su objetivo o tienes tu recompensa diaria lista! ¡A celebrar!"
+      },
+      "loved": {
+        "cta": "Entendido",
+        "message": "Tienes depósitos activos generando intereses. ¡Sigue así!"
+      },
+      "normal": {
+        "cta": "Entendido",
+        "message": "Todo en orden por ahora."
+      },
+      "sad": {
+        "cta": "Entendido",
+        "message": "Hiciste un retiro anticipado. ¡Vuelve a depositar para alegrarla!"
+      },
+      "title": "Estado de tu vaquita"
+    },
+    "streak": {
+      "available": "Disponibles: {{remaining}}/{{total}}",
+      "cost": "Costo:",
+      "current_one": "Racha actual: {{count}} día",
+      "current_other": "Racha actual: {{count}} días",
+      "dayStreakLabel_one": "racha de {{count}} día",
+      "dayStreakLabel_other": "racha de {{count}} días",
+      "description": "Tu racha representa los días seguidos de actividad. ¡Mantenla para desbloquear recompensas y losetas especiales para tu mapa!",
+      "freezeAlt": "congelar",
+      "freezeHint": "La Protección de racha te permite proteger tu racha por un día si no puedes mantenerla. ¡Úsala con cabeza para no perder tu progreso!",
+      "freezeTitle": "Protección de racha",
+      "repairButton": "Reparar racha",
+      "repairDays_one": "{{count}} día",
+      "repairDays_other": "{{count}} días",
+      "repairHint": "Esta función te ayuda a recuperarte de una racha rota, pero recuerda: mantener tu racha cada día es la mejor forma de aprovechar tus recompensas al máximo.",
+      "repairIntro": "Si perdiste tu racha, puedes restaurarla hasta",
+      "repairOutro": "usando Reparar racha.",
+      "repairTitle": "Reparar racha",
+      "streakAlt": "racha",
+      "title": "Racha",
+      "viewHistory": "Ver historial completo",
+      "weekdays": {
+        "Fr": "Vi",
+        "Mo": "Lu",
+        "Sa": "Sa",
+        "Su": "Do",
+        "Th": "Ju",
+        "Tu": "Ma",
+        "We": "Mi"
+      },
+      "weeklyHint": "¡Consigue una loseta nueva cada vez que aumentas tu racha! Los íconos a color muestran los días que completaste, y los grises indican los días que te saltaste.",
+      "weeklyProgress": "Progreso semanal"
+    }
+  },
+  "shell": {
+    "loader": {
+      "alt": "logo"
+    },
+    "logo": {
+      "alt": "Logo de Vaquiland"
+    },
+    "nav": {
+      "home": "Inicio",
+      "leaderboard": "Ranking",
+      "profile": "Perfil",
+      "shop": "Tienda",
+      "soon": "Pronto"
+    },
+    "notFound": {
+      "backHome": "Volver al inicio",
+      "imageAlt": "Error",
+      "message": "¡Ups! No encontramos esta página"
+    }
+  },
+  "shop": {
+    "badge": {
+      "always": "Siempre",
+      "alwaysAvailable": "Siempre disponible"
+    },
+    "biome": {
+      "any": "Cualquiera",
+      "desert": "Desierto",
+      "forest": "Bosque",
+      "mountain": "Montaña",
+      "ocean": "Océano",
+      "plains": "Llanuras"
+    },
+    "button": {
+      "buy": "Comprar",
+      "insufficientCoins": "Monedas insuficientes",
+      "processing": "Procesando..."
+    },
+    "confirm": {
+      "notEnoughCoins": "⚠️ ¡No tienes suficientes monedas para comprar este artículo!",
+      "priceLabel": "Precio:",
+      "title": "Confirmar compra"
+    },
+    "detail": {
+      "buy": "Comprar",
+      "fallbackTitle": "Artículo",
+      "makeOffer": "Hacer oferta",
+      "priceLabel": "Precio",
+      "processing": "Procesando...",
+      "sending": "Enviando...",
+      "submitOffer": "Enviar oferta",
+      "youHave": "Tienes {{count}}",
+      "yourOffer": "Tu oferta"
+    },
+    "filters": {
+      "apply": "Aplicar",
+      "biome": "Bioma",
+      "clear": "Limpiar",
+      "clearAll": "Limpiar todo",
+      "rarity": "Rareza",
+      "title": "Filtros",
+      "type": "Tipo"
+    },
+    "goldCoinAlt": "Moneda de oro",
+    "items": {
+      "1": {
+        "description": "Un hermoso árbol para decorar tu mapa. ¡Siempre disponible!",
+        "name": "Árbol"
+      },
+      "2": {
+        "description": "Protege tu racha por un día si no puedes mantenerla",
+        "name": "Congelar racha"
+      },
+      "3": {
+        "description": "Restaura tu racha hasta por 7 días",
+        "name": "Reparar racha"
+      },
+      "4": {
+        "description": "Paquete de 5 casillas exclusivas para tu mapa",
+        "name": "Paquete de casillas"
+      },
+      "5": {
+        "description": "Tema premium para personalizar tu experiencia",
+        "name": "Tema premium"
+      },
+      "6": {
+        "description": "Duplica tus recompensas diarias durante 24 horas",
+        "name": "Impulso de energía"
+      },
+      "7": {
+        "description": "Aumenta tu probabilidad de obtener recompensas raras",
+        "name": "Amuleto de la suerte"
+      },
+      "8": {
+        "description": "Desbloquea espacio adicional para tu mapa",
+        "name": "Expansión de mapa"
+      },
+      "9": {
+        "description": "Una fuente espectacular para realzar tu mapa",
+        "name": "Fuente decorativa"
+      },
+      "10": {
+        "description": "Una prestigiosa estatua dorada para tu colección",
+        "name": "Estatua dorada"
+      }
+    },
+    "modal": {
+      "closeAlt": "cerrar",
+      "shopAlt": "tienda",
+      "title": "Tienda"
+    },
+    "page": {
+      "clearSearch": "Limpiar búsqueda",
+      "closeAlt": "cerrar",
+      "filters": "Filtros",
+      "noItems": "Ningún artículo coincide con tus filtros.",
+      "price": "Precio",
+      "searchPlaceholder": "Buscar artículos...",
+      "shopAlt": "tienda",
+      "title": "Tienda"
+    },
+    "rarity": {
+      "common": "Común",
+      "epic": "Épico",
+      "legendary": "Legendario",
+      "rare": "Raro"
+    },
+    "toast": {
+      "invalidOfferDescription": "Ingresa al menos 1 moneda de oro.",
+      "invalidOfferTitle": "Oferta no válida",
+      "notEnoughCoinsDescription": "Tu oferta supera tu saldo.",
+      "notEnoughCoinsTitle": "Monedas insuficientes",
+      "offerSubmittedDescription": "Ofreciste {{gold}} de oro por {{name}}",
+      "offerSubmittedTitle": "¡Oferta enviada!",
+      "purchaseSuccessDescription": "Compraste {{name}} con éxito",
+      "purchaseSuccessTitle": "¡Compra exitosa!"
+    },
+    "type": {
+      "boost": "Potenciador",
+      "decoration": "Decoración",
+      "expansion": "Expansión",
+      "theme": "Tema",
+      "utility": "Utilidad"
+    }
+  },
+  "social": {
+    "contacts": {
+      "foundCount_one": "{{count}} encontrado",
+      "foundCount_other": "{{count}} encontrados",
+      "invite": "Invitar",
+      "invited": "Invitado",
+      "invitedToast": "Invitación enviada a {{name}} (simulación)",
+      "listHeading": "Contactos",
+      "noMatchesBody": "Prueba con otro nombre.",
+      "noMatchesTitle": "Sin resultados",
+      "removedToast": "Se quitó a {{name}} (simulación)",
+      "searchPlaceholder": "Busca por nombre o usuario…",
+      "subtitle": "Explora vaqueros que ya conoces e invítalos a ahorrar contigo.",
+      "title": "Elegir de contactos"
+    },
+    "feedback": {
+      "categories": {
+        "bug": "Un error",
+        "idea": "Una idea de función",
+        "love": "Me encanta",
+        "other": "Otra cosa"
+      },
+      "categoryHeading": "¿Qué nos quieres contar?",
+      "messageHeading": "Tu mensaje",
+      "messagePlaceholder": "Escribe aquí tus comentarios…",
+      "ratingHeading": "¿Cómo es tu experiencia?",
+      "send": "Enviar comentarios",
+      "sending": "Enviando…",
+      "starLabel_one": "{{count}} estrella",
+      "starLabel_other": "{{count}} estrellas",
+      "subtitle": "Cuéntanos qué funciona, qué no y qué te gustaría que Vaquita hiciera.",
+      "successBody": "Leemos cada mensaje, y lo decimos en serio.",
+      "successTitle": "¡Gracias por tus comentarios (simulación)!",
+      "title": "Comentarios"
+    },
+    "friends": {
+      "chooseFromContacts": "Elegir de contactos",
+      "couldNotShare": "No se pudo compartir",
+      "dismissSuggestion": "Descartar sugerencia",
+      "emptyBody": "Vuelve pronto para descubrir nuevos vaqueros a quién seguir.",
+      "emptyTitle": "No hay sugerencias por ahora",
+      "follow": "Seguir",
+      "followedBy": "Seguido por",
+      "following": "Siguiendo",
+      "linkCopied": "Enlace para seguirte copiado al portapapeles",
+      "searchByName": "Buscar por nombre",
+      "shareFollowLink": "Compartir enlace para seguirte",
+      "shareText": "Sígueme en Vaquita 🐮",
+      "suggestedForYou": "Sugerido para ti",
+      "suggestionsTitle": "Sugerencias de amigos",
+      "title": "Encuentra a tus amigos"
+    },
+    "help": {
+      "comingSoon": "Muy pronto",
+      "emailSupport": "Soporte por correo",
+      "faqs": {
+        "apy": {
+          "a": "Tu APY es el APY base del protocolo (por ejemplo, mercados de préstamos) más cualquier recompensa de Vaquita activa durante tu periodo de bloqueo. El desglose aparece en el encabezado de inicio: toca tu saldo para expandirlo.",
+          "q": "¿Cómo se calcula mi APY?"
+        },
+        "badges": {
+          "a": "Cada mes entregamos insignias a los vaqueros que cumplieron sus metas de ahorro. La insignia del mes actual se muestra brillante; los meses pasados que te perdiste aparecen bloqueados.",
+          "q": "¿Qué son las insignias mensuales?"
+        },
+        "custody": {
+          "a": "No. Vaquita es totalmente no custodial. Tus fondos viven en contratos inteligentes y solo tú, con las llaves de tu billetera, puedes moverlos. Nunca vemos ni tocamos tus llaves privadas.",
+          "q": "¿Vaquita guarda mi dinero?"
+        },
+        "streak": {
+          "a": "Cada día que entras a la app y tienes al menos un depósito activo, tu racha sube en 1. Si te saltas un día la racha se reinicia, a menos que tengas un congelador de racha (próximamente).",
+          "q": "¿Cómo funcionan las rachas?"
+        },
+        "support": {
+          "a": "Escríbenos a hello@vaquita.finance y te responderemos en menos de 48 horas. Cuando lancemos Comentarios, podrás enviar mensajes directamente desde la app.",
+          "q": "¿Cómo contacto a soporte?"
+        },
+        "what-is": {
+          "a": "Vaquita es una app de ahorro no custodial que te permite depositar fondos en bóvedas DeFi auditadas en las blockchains compatibles. Añadimos gamificación (rachas, insignias, XP) para ayudarte a cumplir tus metas de ahorro.",
+          "q": "¿Qué es Vaquita?"
+        },
+        "withdraw": {
+          "a": "Si elegiste un periodo de bloqueo flexible (0 días), sí. Los depósitos bloqueados se liberan al terminar su plazo. Retirar antes del plazo no está disponible en esta versión.",
+          "q": "¿Puedo retirar mi dinero cuando quiera?"
+        }
+      },
+      "liveChat": "Chat en vivo",
+      "noResults": "Sin resultados para “{{query}}”",
+      "noResultsBody": "Prueba con otra palabra o contáctanos abajo.",
+      "searchPlaceholder": "Busca en las preguntas frecuentes…",
+      "stillStuck": "¿Sigues con dudas?",
+      "subtitle": "Respuestas a las preguntas que más hacen los vaqueros.",
+      "tags": {
+        "apy": "apy",
+        "gamification": "gamificación",
+        "getting started": "primeros pasos",
+        "security": "seguridad",
+        "streaks": "rachas",
+        "support": "soporte",
+        "wallet": "billetera",
+        "withdrawals": "retiros",
+        "yield": "rendimiento"
+      },
+      "title": "Centro de ayuda"
+    },
+    "redeem": {
+      "cameraErrorBody": "Se denegó el acceso a la cámara o no está disponible.",
+      "cameraErrorTitle": "No se pudo iniciar la cámara",
+      "claim": "Reclamar",
+      "codePlaceholder": "EJ: VAQUITA-LAUNCH-2026",
+      "coinsReward_one": "¡{{count}} moneda!",
+      "coinsReward_other": "¡{{count}} monedas!",
+      "enterCodeBody": "Primero escribe o escanea un código.",
+      "enterCodeTitle": "Ingresa un código",
+      "pointCamera": "Apunta la cámara al QR",
+      "redeemErrorTitle": "No se pudo canjear el código",
+      "rewardBody": "Tu logro secreto ya está en tu sala de trofeos.",
+      "scanQr": "Escanear QR",
+      "subtitle": "Ingresa el código de tu evento o evento secreto para reclamar un premio especial.",
+      "title": "Canjear código",
+      "validating": "Validando código"
+    },
+    "search": {
+      "errorBody": "Revisa tu conexión e inténtalo de nuevo.",
+      "errorTitle": "No se pudieron cargar los vaqueros",
+      "follow": "Seguir",
+      "followers_one": "{{count}} seguidor",
+      "followers_other": "{{count}} seguidores",
+      "following": "Siguiendo",
+      "levelBadge": "Nvl {{level}}",
+      "noMatchBody": "Verifica el nombre o prueba con el @usuario.",
+      "noMatchQuery": "Ningún vaquero coincide con “{{query}}”",
+      "noneYetBody": "Vuelve pronto.",
+      "noneYetTitle": "Aún no hay vaqueros para mostrar",
+      "placeholder": "Prueba con “rafaela” o “@camilo”…",
+      "popularHeading": "Vaqueros populares",
+      "resultsHeading": "Resultados",
+      "searching": "Buscando",
+      "subtitle": "Encuentra a otros vaqueros por su nombre o @usuario.",
+      "title": "Buscar por nombre"
+    },
+    "share": {
+      "addingFriend": "Agregando amigo…",
+      "cameraBlocked": "Cámara bloqueada",
+      "cameraOff": "Cámara apagada",
+      "copyLink": "Copiar enlace",
+      "couldNotCopy": "No se pudo copiar el enlace",
+      "couldNotFollow": "No se pudo seguir a ese vaquero. Intenta de nuevo.",
+      "couldNotShare": "No se pudo compartir",
+      "dialogLabelMine": "Comparte el QR de tu perfil",
+      "dialogLabelScan": "Escanea un QR de perfil",
+      "followingHandle": "Siguiendo a {{handle}}",
+      "invalidQr": "Ese QR no es un perfil de Vaquita.",
+      "linkCopied": "Enlace del perfil copiado",
+      "myQrCaption": "Pídele a un amigo que escanee este QR para seguirte en Vaquita.",
+      "noQrDetected": "No se detectó ningún QR",
+      "noQrDetectedBody": "Centra el QR en el marco y asegúrate de que tenga buena luz.",
+      "nowFollowing": "Ahora sigues a {{handle}}",
+      "ownQr": "¡Ese es tu propio QR! Compártelo con un amigo.",
+      "qrAlt": "Código QR de {{handle}}",
+      "qrButtonLabel": "Compartir QR del perfil",
+      "qrLoadFailed": "No se pudo cargar el QR. Revisa tu conexión.",
+      "qrDetected": "QR detectado",
+      "requestingAccess": "Solicitando acceso…",
+      "scanAgain": "Escanear de nuevo",
+      "scanCaption": "Apunta la cámara al QR de un vaquero para seguirlo al instante.",
+      "shareLink": "Compartir enlace",
+      "shareText": "Sigue a {{name}} en Vaquita 🐮",
+      "shareTitle": "{{name}} en Vaquita",
+      "startScanning": "Empezar a escanear",
+      "tabMine": "Mi QR",
+      "tabScan": "Escanear QR",
+      "tabsLabel": "Vista del QR",
+      "tryAgain": "Intentar de nuevo",
+      "uploadFromGallery": "Subir desde la galería · pronto",
+      "vaqueroNotFound": "No encontramos a ese vaquero."
+    }
+  },
+  "tutorial": {
+    "modal": {
+      "closeAlt": "cerrar",
+      "iframeTitle": "Aprende a ahorrar con Vaquita",
+      "iframeTitleMobile": "Aprende a ahorrar con Vaquita en el celular",
+      "imageAlt": "Tutorial de Vaquita",
+      "welcomeSubtitle": "Descubre cómo hacer crecer tus ahorros de forma inteligente y divertida",
+      "welcomeTitle": "¡Bienvenido a Vaquita!"
+    },
+    "patience": {
+      "body": "Si retiras antes de tiempo, pierdes el interés. Espera a que termine el temporizador.",
+      "cta": "Entendido",
+      "title": "La paciencia tiene premio"
+    },
+    "receipt": {
+      "deposit": "Depósito",
+      "interestEarned": "Interés ganado",
+      "youReceived": "Recibiste"
+    },
+    "saveButton": "Ahorrar",
+    "skip": "Saltar tutorial",
+    "steps": {
+      "deposit": {
+        "body": "Toca el botón verde Ahorrar y confirma el monto que quieras.",
+        "cta": "Toca Ahorrar",
+        "title": "Haz un depósito"
+      },
+      "findDeposit": {
+        "body": "Toca tu saldo arriba y luego toca tu vaquita.",
+        "cta": "Ver ahorros",
+        "title": "Encuentra tus ahorros"
+      },
+      "ready": {
+        "body": "Abre tus ahorros de nuevo y retira con interés.",
+        "cta": "Retirar ahora",
+        "title": "¡Se acabó el tiempo! 🎉"
+      },
+      "success": {
+        "body": "Recuperaste tu depósito más el interés.",
+        "cta": "Entrar a la app",
+        "title": "¡Muy bien! 🎉"
+      },
+      "waitIntro": {
+        "body": "Espera los {{seconds}}s que te pusiste de objetivo y quédate con todo el interés.",
+        "cta": "Esperar {{seconds}}s",
+        "title": "Pero si esperas…"
+      },
+      "waiting": {
+        "body": "Mira a tu vaquita mientras ahorra.",
+        "title": "Ahorrando…"
+      },
+      "welcome": {
+        "body": "La haces crecer ahorrando. Demo rápida, sin dinero real.",
+        "cta": "¡Vamos!",
+        "title": "Conoce a tu vaquita 🐮"
+      }
+    },
+    "timer": {
+      "ready": "¡Listo! 🎉",
+      "unlocks": "Se desbloquea"
+    },
+    "warn": {
+      "keepLose": "Conservas {{amount}} y pierdes {{interest}} de interés."
+    },
+    "coach": {
+      "depositConfirm": {
+        "title": "Confirma tu depósito",
+        "body": "Depositarás {{amount}} {{currency}} — es solo una demo, sin dinero real."
+      },
+      "selectDeposit": {
+        "title": "Encuentra tu depósito",
+        "body": "Selecciona el depósito que acabas de hacer. Recuerda que es un depósito demo."
+      },
+      "withdrawEarly": {
+        "title": "Intenta retirar",
+        "body": "Vamos a intentar retirar antes de que termine el tiempo."
+      },
+      "cancelWait": {
+        "title": "Conserva tu interés",
+        "body": "Si retiras ahora pierdes tu interés. Mejor toca Cancelar y espera."
+      },
+      "claimNow": {
+        "title": "¡Se acabó el tiempo! 🎉",
+        "body": "Retira para recuperar tu depósito más el interés."
+      }
+    }
+  },
+  "ui": {
+    "cloud": {
+      "alt": "nube"
+    },
+    "moneyInput": {
+      "currency": "Moneda",
+      "invalidNumber": "Número inválido",
+      "label": "Monto a depositar",
+      "max": "Máximo {{max}}",
+      "maxDecimals_one": "Máximo {{count}} decimal",
+      "maxDecimals_other": "Máximo {{count}} decimales",
+      "min": "Mínimo {{min}}",
+      "totalBalance": "Saldo total: ${{balance}}"
+    },
+    "table": {
+      "action": "Acción",
+      "exportCsv": "Exportar CSV",
+      "filterByPlaceholder": "Filtrar por {{field}}",
+      "filters": "Filtros",
+      "fullValue": "Valor completo",
+      "highlightBy": "Resaltar por {{field}}",
+      "noActiveFilters": "No hay filtros activos",
+      "refresh": "Actualizar",
+      "searchPlaceholder": "Buscar en todos los campos...",
+      "sortBy": "Ordenar por {{field}}",
+      "tableLabel": "Tabla"
+    }
+  },
+  "wallet": {
+    "editProfile": {
+      "guest": "Invitado",
+      "nicknameError": "Hubo un error al guardar el apodo",
+      "nicknameLabel": "Apodo",
+      "nicknameSaved": "¡Apodo guardado!",
+      "saveChanges": "Guardar cambios",
+      "shownAs": "Se mostrará como: @{{name}}",
+      "title": "Editar perfil",
+      "walletLabel": "Wallet"
+    },
+    "page": {
+      "address": "Dirección",
+      "addressCopied": "¡Dirección copiada!",
+      "balance": "Saldo",
+      "copied": "¡Copiada!",
+      "copyAddress": "Copiar dirección",
+      "copyError": "No se pudo copiar",
+      "getAssets": "Recibe activos",
+      "network": "Red",
+      "receive": "Recibir",
+      "selfCustodyDescription": "Vaquita nunca guarda tus llaves. Las transferencias on-chain estarán disponibles muy pronto.",
+      "selfCustodyTitle": "Wallet de autocustodia",
+      "send": "Enviar",
+      "title": "Wallet",
+      "transferAssets": "Transfiere activos"
+    },
+    "profile": {
+      "addFriends": "Agregar amigos",
+      "copied": "¡Copiado!",
+      "copyAddress": "Copiar dirección",
+      "copyAddressAria": "Copiar dirección de la wallet",
+      "disconnectWallet": "Desconectar wallet",
+      "editProfile": "Editar perfil",
+      "nicknameLabel": "Apodo",
+      "saveChanges": "Guardar cambios",
+      "title": "Perfil",
+      "walletLabel": "Wallet"
+    }
+  }
+}

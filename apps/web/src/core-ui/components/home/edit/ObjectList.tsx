@@ -7,8 +7,10 @@ import { EditionMode, ObjectItem, useMapStore } from '@/core-ui/stores';
 import { Canvas } from '@react-three/fiber';
 import Image from 'next/image';
 import { memo, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 function ObjectListCmp() {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { data } = useProfileMapObjectsAvailable();
   const currentTiles = useMapStore((store) => store.currentTiles);
@@ -49,9 +51,9 @@ function ObjectListCmp() {
   if (objects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-8 gap-2">
-        <Image src="/icons/summary/bag.png" alt="empty" width={48} height={48} className="opacity-60" />
-        <p className="text-sm text-gray-600">Your collection is empty.</p>
-        <p className="text-xs text-gray-500">Buy items from the catalog to start collecting!</p>
+        <Image src="/icons/summary/bag.png" alt={t('home.objectList.emptyAlt', 'Empty')} width={48} height={48} className="opacity-60" />
+        <p className="text-sm text-gray-600">{t('home.objectList.empty', 'Your collection is empty.')}</p>
+        <p className="text-xs text-gray-500">{t('home.objectList.emptyHint', 'Buy items from the catalog to start collecting!')}</p>
       </div>
     );
   }

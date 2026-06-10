@@ -6,12 +6,10 @@ import { useRef } from 'react';
 import * as THREE from 'three';
 import { VaquitaMood } from '@/core-ui/types';
 
-const MOOD_EMOJI: Record<VaquitaMood, string | null> = {
-  happy: '✨',
-  celebrating: '🎉',
-  loved: '❤️',
-  sad: '😢',
-  sick: '🤒',
+const MOOD_IMAGE: Record<VaquitaMood, string | null> = {
+  excited: '/vaquita/moods/excited.png',
+  loved: '/vaquita/moods/loved.png',
+  sad: '/vaquita/moods/sad.png',
   normal: null,
 };
 
@@ -21,14 +19,14 @@ interface MoodBubbleProps {
 
 export const MoodBubble = ({ mood }: MoodBubbleProps) => {
   const groupRef = useRef<THREE.Group>(null);
-  const emoji = MOOD_EMOJI[mood];
+  const image = MOOD_IMAGE[mood];
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     groupRef.current.position.y = 1.05 + Math.sin(clock.elapsedTime * 2.5) * 0.05;
   });
 
-  if (!emoji) return null;
+  if (!image) return null;
 
   return (
     <group ref={groupRef} position={[0, 1.05, 0]}>
@@ -49,13 +47,18 @@ export const MoodBubble = ({ mood }: MoodBubbleProps) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 36,
-            lineHeight: 1,
             boxShadow: '0 3px 0 rgba(0,0,0,0.15)',
             userSelect: 'none',
+            overflow: 'hidden',
           }}
         >
-          <span>{emoji}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={image}
+            alt={mood}
+            draggable={false}
+            style={{ width: 48, height: 48, objectFit: 'contain' }}
+          />
           <span
             style={{
               position: 'absolute',

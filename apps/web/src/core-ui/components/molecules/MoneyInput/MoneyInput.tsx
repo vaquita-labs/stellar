@@ -3,6 +3,7 @@
 import { useConfigStore } from '@/core-ui/stores';
 import { useMemo, useState } from 'react';
 import { IoMdSync } from 'react-icons/io';
+import { useTranslation } from 'react-i18next';
 import { MoneyInputProps, TokenSymbol } from './types';
 
 const TOKEN_RULES: Record<TokenSymbol, { min?: number; max?: number; maxDecimals: number }> = {
@@ -35,7 +36,9 @@ export function MoneyInput({
   balanceFormatted = '0',
   onReloadBalance,
   balanceIsLoading,
+  disabled = false,
 }: MoneyInputProps) {
+  const { t } = useTranslation();
   const { token, network } = useConfigStore();
   const tokenSymbols = network?.tokens ?? [];
 
@@ -46,20 +49,20 @@ export function MoneyInput({
 
   const validate = (next: string) => {
     if (next === '') return null;
-    if (!rx.test(next)) return `Max ${rules.maxDecimals} decimals`;
+    if (!rx.test(next)) return t('ui.moneyInput.maxDecimals', { count: rules.maxDecimals });
 
     const n = Number(next);
-    if (!Number.isFinite(n)) return 'Invalid number';
+    if (!Number.isFinite(n)) return t('ui.moneyInput.invalidNumber');
 
     if (rules.min !== undefined && n < rules.min) {
-      return `Min ${rules.min}`;
+      return t('ui.moneyInput.min', { min: rules.min });
     }
 
     if (rules.max !== undefined && n > rules.max) {
-      return `Max ${rules.max.toLocaleString()}`;
+      return t('ui.moneyInput.max', { max: rules.max.toLocaleString() });
     }
 
-    if (n > cap) return `Max ${cap.toLocaleString()}`;
+    if (n > cap) return t('ui.moneyInput.max', { max: cap.toLocaleString() });
 
     return null;
   };
@@ -116,13 +119,13 @@ export function MoneyInput({
 
   return (
     <div className="flex flex-col gap-1 mb-2">
-      <label className="text-black font-normal text-sm">Amount to deposit</label>
-      <div className={`flex items-center bg-white border border-black border-b-2 h-14 rounded-md px-3 ${error ? 'border-danger' : ''}`}>
+      <label className="text-black font-normal text-sm">{t('ui.moneyInput.label')}</label>
+      <div className={`flex items-center bg-white border border-black border-b-2 h-14 rounded-md px-3 ${error ? 'border-danger' : ''} ${disabled ? 'opacity-60' : ''}`}>
         <input
-          disabled={loading}
+          disabled={loading || disabled}
           placeholder="0.0"
           value={value}
-          className="flex-1 min-w-0 text-black font-medium bg-transparent border-0 outline-none h-full text-base placeholder:text-default-400"
+          className="flex-1 min-w-0 text-black font-medium bg-transparent border-0 outline-none h-full text-base placeholder:text-default-400 disabled:cursor-not-allowed"
           onChange={(e) => handleChange(e.target.value)}
           onBlur={normalizeOnBlur}
           onKeyDown={preventKeys}
@@ -130,28 +133,35 @@ export function MoneyInput({
           inputMode="decimal"
           pattern="[0-9]*[.]?[0-9]*"
         />
-        <label className="sr-only" htmlFor="currency">Currency</label>
-        <select
-          value={token?.symbol}
-          className="h-full bg-transparent border-0 outline-none text-black font-medium text-sm pl-2"
-          id="currency"
-          name="currency"
-          onChange={(e) => {
-            const tok = tokenSymbols.find((t) => t.symbol === e.target.value);
-            if (tok) onTokenChange(tok);
-            setTimeout(() => setError(validate(value)), 0);
-          }}
-        >
-          {tokenSymbols.map((t) => (
-            <option key={t.symbol} value={t.symbol}>
-              {t.symbol}
-            </option>
-          ))}
-        </select>
+        <label className="sr-only" htmlFor="currency">{t('ui.moneyInput.currency')}</label>
+        {tokenSymbols.length <= 1 ? (
+          <span className="h-full flex items-center text-black font-medium text-sm pl-2">
+            {token?.symbol}
+          </span>
+        ) : (
+          <select
+            value={token?.symbol}
+            disabled={disabled}
+            className="h-full bg-transparent border-0 outline-none text-black font-medium text-sm pl-2 disabled:cursor-not-allowed"
+            id="currency"
+            name="currency"
+            onChange={(e) => {
+              const tok = tokenSymbols.find((t) => t.symbol === e.target.value);
+              if (tok) onTokenChange(tok);
+              setTimeout(() => setError(validate(value)), 0);
+            }}
+          >
+            {tokenSymbols.map((t) => (
+              <option key={t.symbol} value={t.symbol}>
+                {t.symbol}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       {error && <span className="text-danger text-xs">{error}</span>}
       <span className="text-xs text-default-400">
-        Total balance: ${balanceFormatted}{' '}
+        {t('ui.moneyInput.totalBalance', { balance: balanceFormatted })}{' '}
         <IoMdSync
           className={`inline h-4 w-4 cursor-pointer text-gray-500 hover:text-black transition ${
             balanceIsLoading ? 'animate-spin text-black' : ''

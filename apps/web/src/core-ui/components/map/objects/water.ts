@@ -23,7 +23,8 @@ export const getWaterGroup = ({ position: [x, , z] }: MapObject, worldType: Worl
     new THREE.MeshLambertMaterial({ color: palette.water })
   );
 
-  mesh.receiveShadow = false;
+  mesh.castShadow = true; // el bloque de agua proyecta sombra sobre el océano de abajo
+  mesh.receiveShadow = true; // y recibe la sombra del pasto/árboles que la rodean
   mesh.position.set(x, getY_0(height), z);
 
   return mesh;

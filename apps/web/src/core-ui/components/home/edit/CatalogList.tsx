@@ -4,6 +4,7 @@ import { Button, Modal, toast } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useProfileRewards } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { ShopItem } from '../../organisms/ShopModal/types';
@@ -14,7 +15,7 @@ const catalogItems: ShopItem[] = [
     name: 'Tree',
     description: 'A beautiful tree to decorate your map. Always available!',
     price: { goldCoins: 1 },
-    image: '/icons/summary/streak_freeze.png',
+    image: '/icons/global/streak_freeze_face.png',
     alwaysAvailable: true,
     biome: 'forest',
     type: 'decoration',
@@ -25,7 +26,7 @@ const catalogItems: ShopItem[] = [
     name: 'Streak Freeze',
     description: 'Protect your streak for one day if you cannot maintain it',
     price: { goldCoins: 1 },
-    image: '/icons/summary/streak_freeze.png',
+    image: '/icons/global/streak_freeze_face.png',
     biome: 'any',
     type: 'utility',
     rarity: 'common',
@@ -70,6 +71,7 @@ const rarityBadge: Record<NonNullable<ShopItem['rarity']>, string> = {
 };
 
 export function CatalogList() {
+  const { t } = useTranslation();
   const { data: profileRewards, refetch } = useProfileRewards();
   const queryClient = useQueryClient();
   const { network, walletAddress } = useConfigStore();
@@ -102,8 +104,10 @@ export function CatalogList() {
         queryKey: ['profile', network?.networkName, walletAddress, 'profile-rewards'],
       });
       await refetch();
-      toast.success('Purchase successful!', {
-        description: `You've successfully purchased ${detailItem.name}`,
+      toast.success(t('home.catalog.purchaseSuccessTitle', 'Purchase successful!'), {
+        description: t('home.catalog.purchaseSuccessDesc', "You've successfully purchased {{name}}", {
+          name: t(`home.catalog.items.${detailItem.id}.name`, detailItem.name),
+        }),
         timeout: 4000,
       });
       closeDetail();
@@ -118,18 +122,27 @@ export function CatalogList() {
     if (!detailItem || isOffering) return;
     const gold = Number(offerGold) || 0;
     if (gold <= 0) {
-      toast.danger('Invalid offer', { description: 'Enter at least 1 gold coin.', timeout: 3000 });
+      toast.danger(t('home.catalog.invalidOfferTitle', 'Invalid offer'), {
+        description: t('home.catalog.invalidOfferDesc', 'Enter at least 1 gold coin.'),
+        timeout: 3000,
+      });
       return;
     }
     if (gold > goldCoins) {
-      toast.danger('Not enough coins', { description: 'Your offer exceeds your balance.', timeout: 3000 });
+      toast.danger(t('home.catalog.notEnoughCoinsTitle', 'Not enough coins'), {
+        description: t('home.catalog.notEnoughCoinsDesc', 'Your offer exceeds your balance.'),
+        timeout: 3000,
+      });
       return;
     }
     setIsOffering(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 600));
-      toast.success('Offer submitted!', {
-        description: `Offered ${gold} gold for ${detailItem.name}`,
+      toast.success(t('home.catalog.offerSubmittedTitle', 'Offer submitted!'), {
+        description: t('home.catalog.offerSubmittedDesc', 'Offered {{gold}} gold for {{name}}', {
+          gold,
+          name: t(`home.catalog.items.${detailItem.id}.name`, detailItem.name),
+        }),
         timeout: 4000,
       });
       closeDetail();
@@ -161,17 +174,17 @@ export function CatalogList() {
                   <span
                     className={`absolute top-1 left-1 text-[9px] font-bold uppercase tracking-wide border rounded-sm px-1 py-0.5 ${rarityBadge[item.rarity]}`}
                   >
-                    {item.rarity}
+                    {t(`home.catalog.rarity.${item.rarity}`, item.rarity)}
                   </span>
                 )}
                 {item.image && (
-                  <Image src={item.image} alt={item.name} width={64} height={64} className="object-contain" />
+                  <Image src={item.image} alt={t(`home.catalog.items.${item.id}.name`, item.name)} width={64} height={64} className="object-contain" />
                 )}
               </div>
-              <span className="text-xs font-bold text-black truncate">{item.name}</span>
+              <span className="text-xs font-bold text-black truncate">{t(`home.catalog.items.${item.id}.name`, item.name)}</span>
               <div className="flex items-center gap-2 mt-auto">
                 <div className="flex items-center gap-1">
-                  <Image src="/icons/global/coin.png" alt="Gold" width={14} height={14} className="object-contain" />
+                  <Image src="/icons/global/coin.png" alt={t('home.catalog.goldAlt', 'Gold')} width={14} height={14} className="object-contain" />
                   <span className="text-xs font-bold text-black">{item.price.goldCoins}</span>
                 </div>
               </div>
@@ -184,59 +197,59 @@ export function CatalogList() {
         <Modal.Container size="md">
           <Modal.Dialog className="bg-background border border-black">
             <Modal.CloseTrigger>
-              <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
+              <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />
             </Modal.CloseTrigger>
             <Modal.Header>
-              <Modal.Heading className="text-black font-bold text-lg">{detailItem?.name ?? 'Item'}</Modal.Heading>
+              <Modal.Heading className="text-black font-bold text-lg">{detailItem ? t(`home.catalog.items.${detailItem.id}.name`, detailItem.name) : t('home.catalog.itemFallback', 'Item')}</Modal.Heading>
             </Modal.Header>
             <Modal.Body>
               {detailItem && (
                 <div className="space-y-4">
                   <div className="w-full aspect-square max-h-56 bg-[#FFF7E6] border border-black/10 rounded-md flex items-center justify-center overflow-hidden">
                     {detailItem.image && (
-                      <Image src={detailItem.image} alt={detailItem.name} width={160} height={160} className="object-contain" />
+                      <Image src={detailItem.image} alt={t(`home.catalog.items.${detailItem.id}.name`, detailItem.name)} width={160} height={160} className="object-contain" />
                     )}
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     {detailItem.rarity && (
                       <span className={`text-[11px] font-bold uppercase border rounded-sm px-2 py-0.5 ${rarityBadge[detailItem.rarity]}`}>
-                        {detailItem.rarity}
+                        {t(`home.catalog.rarity.${detailItem.rarity}`, detailItem.rarity)}
                       </span>
                     )}
                     {detailItem.type && (
                       <span className="text-[11px] font-semibold uppercase bg-[#DDF4FF] text-black border border-[#84D8FF] rounded-sm px-2 py-0.5">
-                        {detailItem.type}
+                        {t(`home.catalog.type.${detailItem.type}`, detailItem.type)}
                       </span>
                     )}
                     {detailItem.biome && (
                       <span className="text-[11px] font-semibold uppercase bg-[#FFF7E6] text-black border border-[#B97204]/40 rounded-sm px-2 py-0.5">
-                        {detailItem.biome}
+                        {t(`home.catalog.biome.${detailItem.biome}`, detailItem.biome)}
                       </span>
                     )}
                     {detailItem.alwaysAvailable && (
                       <span className="text-[11px] font-bold uppercase bg-green-100 text-green-800 border border-green-300 rounded-sm px-2 py-0.5">
-                        Always
+                        {t('home.catalog.always', 'Always')}
                       </span>
                     )}
                   </div>
 
-                  <p className="text-sm text-gray-700">{detailItem.description}</p>
+                  <p className="text-sm text-gray-700">{t(`home.catalog.items.${detailItem.id}.description`, detailItem.description)}</p>
 
                   <div className="pt-2 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Price</p>
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">{t('home.catalog.price', 'Price')}</p>
                     <div className="flex items-center gap-1">
-                      <Image src="/icons/global/coin.png" alt="Gold" width={24} height={24} className="object-contain" />
+                      <Image src="/icons/global/coin.png" alt={t('home.catalog.goldAlt', 'Gold')} width={24} height={24} className="object-contain" />
                       <span className="text-lg font-bold text-black">{detailItem.price.goldCoins}</span>
                     </div>
                   </div>
 
                   {offerMode && (
                     <div className="pt-2 border-t border-gray-200 space-y-3">
-                      <p className="text-xs text-gray-500 uppercase font-semibold">Your offer</p>
+                      <p className="text-xs text-gray-500 uppercase font-semibold">{t('home.catalog.yourOffer', 'Your offer')}</p>
                       <div className="flex flex-col gap-1 min-w-0">
                         <div className="flex items-center gap-2 bg-white border border-black rounded-md px-2 py-1.5">
-                          <Image src="/icons/global/coin.png" alt="Gold" width={20} height={20} className="object-contain shrink-0" />
+                          <Image src="/icons/global/coin.png" alt={t('home.catalog.goldAlt', 'Gold')} width={20} height={20} className="object-contain shrink-0" />
                           <input
                             type="text"
                             inputMode="numeric"
@@ -247,7 +260,7 @@ export function CatalogList() {
                             className="flex-1 min-w-0 w-full bg-transparent text-sm text-black outline-none"
                           />
                         </div>
-                        <p className="text-[11px] text-gray-500 px-1">You have {goldCoins}</p>
+                        <p className="text-[11px] text-gray-500 px-1">{t('home.catalog.youHave', 'You have {{count}}', { count: goldCoins })}</p>
                       </div>
                     </div>
                   )}
@@ -265,14 +278,14 @@ export function CatalogList() {
                     }}
                     isDisabled={isOffering}
                   >
-                    Back
+                    {t('common.back')}
                   </Button>
                   <Button
                     className="bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00] rounded-md"
                     onPress={handleMakeOffer}
                     isDisabled={isOffering}
                   >
-                    {isOffering ? 'Sending...' : 'Submit offer'}
+                    {isOffering ? t('home.catalog.sending', 'Sending...') : t('home.catalog.submitOffer', 'Submit offer')}
                   </Button>
                 </>
               ) : (
@@ -282,7 +295,7 @@ export function CatalogList() {
                     onPress={() => setOfferMode(true)}
                     isDisabled={isPurchasing}
                   >
-                    Make offer
+                    {t('home.catalog.makeOffer', 'Make offer')}
                   </Button>
                   <Button
                     className={`${
@@ -293,7 +306,7 @@ export function CatalogList() {
                     onPress={handleBuy}
                     isDisabled={(!detailAffordable && !detailItem?.alwaysAvailable) || isPurchasing}
                   >
-                    {isPurchasing ? 'Processing...' : 'Buy'}
+                    {isPurchasing ? t('home.catalog.processing', 'Processing...') : t('home.catalog.buy', 'Buy')}
                   </Button>
                 </>
               )}

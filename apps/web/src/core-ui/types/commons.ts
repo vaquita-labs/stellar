@@ -118,6 +118,21 @@ export type TotalDepositsResponseDTO = {
   };
 };
 
+// Notification toggles offered on the profile Notifications page. `push` and
+// `email` are delivery channels; the rest pick which activity gets notified.
+export type NotificationPreferenceKey = 'push' | 'email' | 'deposits' | 'streaks' | 'friends';
+
+export type NotificationPreferences = Record<NotificationPreferenceKey, boolean>;
+
+// Mirrors the API defaults — used while the profile query is loading.
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  push: true,
+  email: false,
+  deposits: true,
+  streaks: true,
+  friends: false,
+};
+
 export interface ProfileResponseDTO {
   networkName: string;
   walletAddress: string;
@@ -132,6 +147,9 @@ export interface ProfileResponseDTO {
   // Empty string until the user picks one.
   language: string;
   currency: string;
+  // Always a full object: the API merges defaults over whatever the user saved
+  // and forces the email channel off while the profile has no email address.
+  notificationPreferences: NotificationPreferences;
   // Account creation timestamp (ISO 8601). Empty string when unknown.
   createdAt: string;
 }
@@ -209,6 +227,20 @@ export interface FollowCountsResponseDTO {
   followers: number;
 }
 
+export interface FollowingWalletsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  /** Wallet addresses the viewer currently follows. */
+  following: string[];
+}
+
+/** A list of vaqueros (the viewer's followers or following), for the modal. */
+export interface FriendListResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  results: FriendDTO[];
+}
+
 export type MapObject = {
   position: [number, number, number];
   type: MapObjectType;
@@ -245,6 +277,12 @@ export interface ProfileAverageResponseDTO {
   timestamp: number;
   delay: number;
   badges: number;
+  // Real per-profile gamification signals served by the leaderboard endpoint
+  // (replaced the wallet-hash placeholder). `streak` is the display streak
+  // (yesterdayStreak + today's check-in); `experience` is total XP, from which
+  // the UI derives level (every 100 XP = +1 level).
+  streak: number;
+  experience: number;
 }
 
 export interface RewardResponseDTO {

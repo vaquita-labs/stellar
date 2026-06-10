@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import multer from 'multer';
+import sharp from 'sharp';
 import { v4 } from 'uuid';
 import { isStorageConfigured, putAvatar, removeAvatar } from '../../lib/storage';
+import { requireWalletSession } from '../../lib/walletAuth';
 import {
   broadcastProfileChange,
+  DEFAULT_NOTIFICATION_PREFERENCES,
   getAchievementCountsByProfile,
   getActiveDepositSumsByWallet,
+  getExperienceByProfile,
   getNetworkName,
   getProfile,
   getProfileMapObjects,
@@ -13,8 +17,11 @@ import {
   getProjectConfig,
   getRewardByKey,
   getRewardsData,
+  getStreakCountsByProfile,
   prisma,
   REWARD_REASON_DAILY_CHECKIN,
+  type NotificationPreferenceKey,
+  type NotificationPreferences,
   type Profile,
   type ProfileAverageResponseDTO,
   Reward,
@@ -37,16 +44,40 @@ const router = Router();
 // here, we validate it and forward the bytes to MinIO. `memoryStorage` keeps the
 // file in a Buffer (avatars are small); the 5 MB cap is enforced by multer.
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
-const AVATAR_MIME_EXT: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-};
+const AVATAR_ALLOWED_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const avatarUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: AVATAR_MAX_BYTES, files: 1 },
 }).single('file');
+
+// The client-declared mimetype is attacker-controlled, so we never store the
+// uploaded bytes verbatim. sharp must actually DECODE the pixels and we store
+// its re-encoded output instead — a non-image (HTML, script, polyglot) fails to
+// decode, and re-encoding drops anything that isn't pixels (EXIF/GPS, ICC,
+// embedded payloads). `limitInputPixels` rejects decompression bombs (tiny
+// files that inflate to enormous bitmaps), and the format check stops content
+// sharp can rasterize but we don't accept as an avatar (e.g. SVG).
+const AVATAR_MAX_DIMENSION = 512;
+const AVATAR_MAX_INPUT_PIXELS = 8192 * 8192;
+const AVATAR_DECODED_FORMATS = new Set(['jpeg', 'png', 'webp', 'gif']);
+
+async function processAvatarImage(
+  input: Buffer,
+  declaredMime: string,
+): Promise<{ body: Buffer; contentType: string; ext: string }> {
+  const animated = declaredMime === 'image/gif' || declaredMime === 'image/webp';
+  const image = sharp(input, { animated, limitInputPixels: AVATAR_MAX_INPUT_PIXELS });
+  const metadata = await image.metadata(); // throws when the bytes are not a decodable image
+  if (!metadata.format || !AVATAR_DECODED_FORMATS.has(metadata.format)) {
+    throw new Error(`Decoded format not allowed: ${metadata.format ?? 'unknown'}`);
+  }
+  const body = await image
+    .rotate() // bake in EXIF orientation before metadata is stripped
+    .resize(AVATAR_MAX_DIMENSION, AVATAR_MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 85 })
+    .toBuffer();
+  return { body, contentType: 'image/webp', ext: 'webp' };
+}
 
 router.get('/wallet/:walletAddress', async (req, res) => {
   const { walletAddress } = req.params;
@@ -153,7 +184,7 @@ router.get('/wallet/:walletAddress/map-objects', async (req, res) => {
   return sendSuccess(res, await toProfileMapObjectsResponseDTO(await getNetworkName(), profileData));
 });
 
-router.post('/wallet/:walletAddress/map-objects', async (req, res) => {
+router.post('/wallet/:walletAddress/map-objects', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
   const { objects } = req.body ?? {};
   req.log.info({ walletAddress, objectsCount: Array.isArray(objects) ? objects.length : undefined }, 'POST /profile/.../map-objects');
@@ -193,7 +224,7 @@ router.get('/wallet/:walletAddress/map-objects-available', async (req, res) => {
   return sendSuccess(res, await toProfileMapObjectsAvailableResponseDTO(await getNetworkName(), profileData));
 });
 
-router.post('/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
+router.post('/wallet/:walletAddress/gold-daily-collect', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
   req.log.info({ walletAddress }, 'POST /profile/.../gold-daily-collect');
 
@@ -281,7 +312,7 @@ router.post('/wallet/:walletAddress/gold-daily-collect', async (req, res) => {
   });
 });
 
-router.post('/wallet/:walletAddress/nickname', async (req, res) => {
+router.post('/wallet/:walletAddress/nickname', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
   const nickname = req.body?.nickname ?? '';
   req.log.info({ walletAddress, nickname }, 'POST /profile/.../nickname');
@@ -330,7 +361,7 @@ router.post('/wallet/:walletAddress/nickname', async (req, res) => {
 // message next to whichever field failed.
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-router.patch('/wallet/:walletAddress/profile', async (req, res) => {
+router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
   const body = req.body ?? {};
   const hasNickname = typeof body.nickname === 'string';
@@ -431,7 +462,7 @@ const runAvatarUpload = (req: Parameters<typeof avatarUpload>[0], res: Parameter
     avatarUpload(req, res, (err: unknown) => (err ? reject(err) : resolve()));
   });
 
-router.post('/wallet/:walletAddress/avatar', async (req, res) => {
+router.post('/wallet/:walletAddress/avatar', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
   req.log.info({ walletAddress }, 'POST /profile/.../avatar');
 
@@ -453,9 +484,16 @@ router.post('/wallet/:walletAddress/avatar', async (req, res) => {
     return sendError(res, 'No image file was provided.', null, 400);
   }
 
-  const ext = AVATAR_MIME_EXT[file.mimetype];
-  if (!ext) {
+  if (!AVATAR_ALLOWED_MIMES.has(file.mimetype)) {
     return sendError(res, 'Unsupported image type. Use JPG, PNG, WEBP or GIF.', null, 400);
+  }
+
+  let processed: { body: Buffer; contentType: string; ext: string };
+  try {
+    processed = await processAvatarImage(file.buffer, file.mimetype);
+  } catch (err) {
+    req.log.warn({ err, walletAddress, mimetype: file.mimetype, size: file.size }, 'Avatar rejected: file is not a valid image');
+    return sendError(res, 'The file is not a valid image. Use JPG, PNG, WEBP or GIF.', null, 400);
   }
 
   const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
@@ -466,8 +504,8 @@ router.post('/wallet/:walletAddress/avatar', async (req, res) => {
   }
 
   try {
-    const key = `${profileData.id}/${v4()}.${ext}`;
-    const { url } = await putAvatar({ key, body: file.buffer, contentType: file.mimetype });
+    const key = `${profileData.id}/${v4()}.${processed.ext}`;
+    const { url } = await putAvatar({ key, body: processed.body, contentType: processed.contentType });
 
     const previousKey = profileData.avatar_key ?? null;
 
@@ -493,7 +531,7 @@ router.post('/wallet/:walletAddress/avatar', async (req, res) => {
   }
 });
 
-router.delete('/wallet/:walletAddress/avatar', async (req, res) => {
+router.delete('/wallet/:walletAddress/avatar', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
   req.log.info({ walletAddress }, 'DELETE /profile/.../avatar');
 
@@ -528,7 +566,7 @@ router.delete('/wallet/:walletAddress/avatar', async (req, res) => {
   }
 });
 
-router.patch('/wallet/:walletAddress/flags', async (req, res) => {
+router.patch('/wallet/:walletAddress/flags', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
   const { onboardingCompleted, tutorialCompleted, cryptoSavvy } = req.body ?? {};
   req.log.info({ walletAddress, onboardingCompleted, tutorialCompleted, cryptoSavvy }, 'PATCH /profile/.../flags');
@@ -574,7 +612,7 @@ router.patch('/wallet/:walletAddress/flags', async (req, res) => {
 // Persist the user's display preferences (language / currency). Each value must
 // be the `id` of an option offered by the active project config — anything else
 // is rejected so we never store a selection the UI can't render.
-router.patch('/wallet/:walletAddress/preferences', async (req, res) => {
+router.patch('/wallet/:walletAddress/preferences', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
   const { language, currency } = req.body ?? {};
   req.log.info({ walletAddress, language, currency }, 'PATCH /profile/.../preferences');
@@ -636,6 +674,65 @@ router.patch('/wallet/:walletAddress/preferences', async (req, res) => {
   }
 });
 
+// Persist the user's notification toggles ({ push, email, deposits, streaks,
+// friends } booleans, all optional). Provided keys are merged over what's
+// stored, so each toggle PATCHes independently. Enabling the email channel
+// requires an email address on the profile.
+router.patch('/wallet/:walletAddress/notification-preferences', requireWalletSession, async (req, res) => {
+  const { walletAddress } = req.params;
+  const body = (req.body ?? {}) as Partial<NotificationPreferences>;
+  req.log.info({ walletAddress, ...body }, 'PATCH /profile/.../notification-preferences');
+
+  const keys = Object.keys(DEFAULT_NOTIFICATION_PREFERENCES) as NotificationPreferenceKey[];
+  const updates: Partial<NotificationPreferences> = {};
+  for (const key of keys) {
+    const value = body[key];
+    if (value === undefined) continue;
+    if (typeof value !== 'boolean') {
+      return sendError(res, `${key} must be a boolean.`, null, 400);
+    }
+    updates[key] = value;
+  }
+  if (Object.keys(updates).length === 0) {
+    return sendError(res, 'Provide at least one notification toggle to update.', null, 400);
+  }
+
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
+
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
+    return sendError(res, errorMessage, errors, 404);
+  }
+
+  if (updates.email === true && !profileData.email) {
+    return sendError(res, 'Add an email address to your profile to enable email updates.', null, 400);
+  }
+
+  const notificationPreferences = {
+    ...(profileData.notification_preferences ?? {}),
+    ...updates,
+  };
+
+  try {
+    const result = await prisma.profile.update({
+      where: { id: profileData.id },
+      data: { notificationPreferences },
+    });
+
+    try {
+      await broadcastProfileChange('set-notification-preferences', [ 'profile-data' ]);
+    } catch (err) {
+      req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (set-notification-preferences)');
+    }
+
+    req.log.info({ profileId: profileData.id, ...updates }, 'Profile notification preferences updated');
+    return sendSuccess(res, result);
+  } catch (err) {
+    req.log.error({ err, profileId: profileData.id, updates }, 'Failed to update profile notification preferences');
+    return sendError(res, 'Failed to update profile notification preferences', err, 500);
+  }
+});
+
 router.get('/nickname-available', async (req, res) => {
   const nickname = String(req.query?.nickname ?? '').trim();
   req.log.info({ nickname }, 'GET /profile/nickname-available');
@@ -677,6 +774,8 @@ router.get('/', async (req, res) => {
 const toProfileByDepositsResponseDTO = (
   badgesByProfileId: Map<number, number>,
   depositSumsByWallet: Map<string, number>,
+  streaksByProfileId: Map<number, number>,
+  experienceByProfileId: Map<number, number>,
 ) =>
   (profile: Profile): ProfileAverageResponseDTO => {
     const wallet = profile.wallet_address ?? '';
@@ -694,6 +793,8 @@ const toProfileByDepositsResponseDTO = (
       timestamp: 0,
       delay: 0,
       badges: badgesByProfileId.get(profile.id) ?? 0,
+      streak: streaksByProfileId.get(profile.id) ?? 0,
+      experience: experienceByProfileId.get(profile.id) ?? 0,
     };
   };
 
@@ -707,19 +808,44 @@ router.get('/by-average-deposits', async (req, res) => {
     return sendError(res, 'Failed to list profiles', error, 500);
   }
 
-  const { counts: badgesByProfileId, error: badgesError } = await getAchievementCountsByProfile();
+  // The four rollups are independent of each other (each helper catches its own
+  // errors and returns a degraded empty result), so run them concurrently — the
+  // endpoint costs the slowest query instead of the sum of all four.
+  const [
+    { counts: badgesByProfileId, error: badgesError },
+    { sums: depositSumsByWallet, error: depositsError },
+    { counts: streaksByProfileId, error: streaksError },
+    { experience: experienceByProfileId, error: experienceError },
+  ] = await Promise.all([
+    getAchievementCountsByProfile(),
+    getActiveDepositSumsByWallet(),
+    getStreakCountsByProfile(),
+    getExperienceByProfile(data),
+  ]);
+
   if (badgesError) {
     req.log.error({ err: badgesError }, 'Failed to fetch badge counts (degraded — leaderboard will show 0 badges)');
   }
-
-  const { sums: depositSumsByWallet, error: depositsError } = await getActiveDepositSumsByWallet();
   if (depositsError) {
     req.log.error({ err: depositsError }, 'Failed to compute active deposit sums (degraded — leaderboard amounts will be 0)');
+  }
+  if (streaksError) {
+    req.log.error({ err: streaksError }, 'Failed to compute streaks (degraded — leaderboard will show 0-day streaks)');
+  }
+  if (experienceError) {
+    req.log.error({ err: experienceError }, 'Failed to compute experience (degraded — leaderboard will show level 1)');
   }
 
   return sendSuccess(
     res,
-    data.map(toProfileByDepositsResponseDTO(badgesByProfileId, depositSumsByWallet)),
+    data.map(
+      toProfileByDepositsResponseDTO(
+        badgesByProfileId,
+        depositSumsByWallet,
+        streaksByProfileId,
+        experienceByProfileId,
+      ),
+    ),
     '',
   );
 });

@@ -2,7 +2,9 @@
 
 import { ListBox, Select, Switch, toast } from '@heroui/react';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FiChevronDown, FiLoader } from 'react-icons/fi';
+import i18n, { isSupportedLanguage } from '../../../i18n';
 import { useProfileData, useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
@@ -31,6 +33,7 @@ function OptionSelect({
   ariaLabel: string;
   isSaving?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2 px-1">
@@ -41,7 +44,7 @@ function OptionSelect({
         {isSaving && (
           <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 shrink-0">
             <FiLoader className="animate-spin" />
-            Saving…
+            {t('common.saving')}
           </span>
         )}
       </div>
@@ -62,7 +65,7 @@ function OptionSelect({
                 ? options.find((o) => o.id === String(selected.key))
                 : options.find((o) => o.id === value);
               if (!opt) {
-                return <span className="text-sm text-gray-400">Select an option…</span>;
+                return <span className="text-sm text-gray-400">{t('common.selectOption')}</span>;
               }
               return (
                 <div className="flex flex-col items-start min-w-0">
@@ -123,11 +126,12 @@ function ToggleRow({
   showSoon?: boolean;
   onChange: (v: boolean) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <label className="relative flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white cursor-pointer hover:bg-[#FFF7E6] transition">
       {showSoon && (
         <span className="absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wide bg-primary text-black border border-black rounded-sm px-1.5 py-0.5">
-          Soon
+          {t('common.soon')}
         </span>
       )}
       <div className="flex flex-col min-w-0">
@@ -159,6 +163,7 @@ function PersistedToggleRow({
   isSaving?: boolean;
   onChange: (v: boolean) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white">
       <div className="flex flex-col min-w-0">
@@ -167,7 +172,7 @@ function PersistedToggleRow({
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <span className={`text-xs font-semibold ${value ? 'text-green-600' : 'text-gray-400'}`}>
-          {isSaving ? 'Saving…' : value ? 'On' : 'Off'}
+          {isSaving ? t('common.saving') : value ? t('common.on') : t('common.off')}
         </span>
         <Switch isSelected={value} onChange={onChange} isDisabled={isDisabled} aria-label={label}>
           <Switch.Control>
@@ -180,6 +185,7 @@ function PersistedToggleRow({
 }
 
 export function PreferencesPage() {
+  const { t } = useTranslation();
   const { walletAddress, network } = useConfigStore();
   const { data, isLoading, refetch } = useProfileData();
   const { saveProfileFlags, saveProfilePreferences } = useRestProfile();
@@ -238,15 +244,15 @@ export function PreferencesPage() {
     try {
       const { success, message } = await saveProfileFlags({ cryptoSavvy: value });
       if (success) {
-        toast.success('Preferences updated', { timeout: 2000 });
+        toast.success(t('profile.preferences.updated'), { timeout: 2000 });
         refetch();
       } else {
         setCryptoSavvy(prev);
-        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+        toast.danger(t('profile.preferences.updateError'), { description: message, timeout: 4000 });
       }
     } catch (error) {
       setCryptoSavvy(prev);
-      toast.danger('Could not update preferences', {
+      toast.danger(t('profile.preferences.updateError'), {
         description: (error as { message?: string })?.message ?? '',
         timeout: 4000,
       });
@@ -259,20 +265,25 @@ export function PreferencesPage() {
     if (!walletAddress || savingLanguage || value === language) return;
     const prev = language;
     setLanguage(value); // optimistic; reverted on failure
+    // Switch the UI language immediately for instant feedback; the profile
+    // refetch below makes it the persisted source of truth.
+    if (isSupportedLanguage(value)) void i18n.changeLanguage(value);
     setSavingLanguage(true);
     try {
       const { success, message } = await saveProfilePreferences({ language: value });
       if (success) {
         // Keep the loader on through the reload, not just the save request.
         await refetch();
-        toast.success('Preferences updated', { timeout: 2000 });
+        toast.success(t('profile.preferences.updated'), { timeout: 2000 });
       } else {
         setLanguage(prev);
-        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+        if (isSupportedLanguage(prev)) void i18n.changeLanguage(prev);
+        toast.danger(t('profile.preferences.updateError'), { description: message, timeout: 4000 });
       }
     } catch (error) {
       setLanguage(prev);
-      toast.danger('Could not update preferences', {
+      if (isSupportedLanguage(prev)) void i18n.changeLanguage(prev);
+      toast.danger(t('profile.preferences.updateError'), {
         description: (error as { message?: string })?.message ?? '',
         timeout: 4000,
       });
@@ -291,14 +302,14 @@ export function PreferencesPage() {
       if (success) {
         // Keep the loader on through the reload, not just the save request.
         await refetch();
-        toast.success('Preferences updated', { timeout: 2000 });
+        toast.success(t('profile.preferences.updated'), { timeout: 2000 });
       } else {
         setCurrency(prev);
-        toast.danger('Could not update preferences', { description: message, timeout: 4000 });
+        toast.danger(t('profile.preferences.updateError'), { description: message, timeout: 4000 });
       }
     } catch (error) {
       setCurrency(prev);
-      toast.danger('Could not update preferences', {
+      toast.danger(t('profile.preferences.updateError'), {
         description: (error as { message?: string })?.message ?? '',
         timeout: 4000,
       });
@@ -309,42 +320,42 @@ export function PreferencesPage() {
 
   return (
     <MockedSubPageLayout
-      title="Preferences"
-      subtitle="Language, currency and display options. Language and currency are saved to your profile."
+      title={t('profile.preferences.title')}
+      subtitle={t('profile.preferences.subtitle')}
       showSoonBadge={false}
     >
       <OptionSelect
-        title="Language"
-        description="The language Vaquita uses to talk to you."
+        title={t('profile.preferences.languageTitle')}
+        description={t('profile.preferences.languageDescription')}
         options={languages}
         value={language}
         onChange={handleSelectLanguage}
-        ariaLabel="Language"
+        ariaLabel={t('profile.preferences.languageTitle')}
         isSaving={savingLanguage}
       />
 
       <OptionSelect
-        title="Currency"
-        description="Used to display your balances and rewards."
+        title={t('profile.preferences.currencyTitle')}
+        description={t('profile.preferences.currencyDescription')}
         options={currencies}
         value={currency}
         onChange={handleSelectCurrency}
-        ariaLabel="Currency"
+        ariaLabel={t('profile.preferences.currencyTitle')}
         isSaving={savingCurrency}
       />
 
       <section className="flex flex-col gap-2">
         <div className="flex flex-col gap-0.5 px-1">
           <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
-            Crypto mode
+            {t('profile.preferences.cryptoModeTitle')}
           </h2>
           <p className="text-xs text-gray-500">
-            How much blockchain detail Vaquita shows you. Saved to your profile.
+            {t('profile.preferences.cryptoModeDescription')}
           </p>
         </div>
         <PersistedToggleRow
-          label="I know crypto"
-          description="Show raw on-chain details (wallet addresses, tx hashes, network terms) instead of simplified copy."
+          label={t('profile.preferences.iKnowCrypto')}
+          description={t('profile.preferences.iKnowCryptoDescription')}
           value={cryptoSavvy}
           isDisabled={!walletAddress || isLoading || savingCryptoSavvy}
           isSaving={savingCryptoSavvy}
@@ -354,26 +365,26 @@ export function PreferencesPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500 px-1">
-          Display
+          {t('profile.preferences.displayTitle')}
         </h2>
         <div className="flex flex-col gap-3">
           <ToggleRow
-            label="Reduce motion"
-            description="Disable bouncy animations across the app."
+            label={t('profile.preferences.reduceMotion')}
+            description={t('profile.preferences.reduceMotionDescription')}
             value={reducedMotion}
             showSoon
             onChange={setReducedMotion}
           />
           <ToggleRow
-            label="Haptic feedback"
-            description="Vibrate on key actions on supported devices."
+            label={t('profile.preferences.hapticFeedback')}
+            description={t('profile.preferences.hapticFeedbackDescription')}
             value={hapticFeedback}
             showSoon
             onChange={setHapticFeedback}
           />
           <ToggleRow
-            label="Autoplay sound effects"
-            description="Play the moo and coin sounds during interactions."
+            label={t('profile.preferences.autoplaySounds')}
+            description={t('profile.preferences.autoplaySoundsDescription')}
             value={autoplaySounds}
             showSoon
             onChange={setAutoplaySounds}

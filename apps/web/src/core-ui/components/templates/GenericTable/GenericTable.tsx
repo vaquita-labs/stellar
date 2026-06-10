@@ -15,6 +15,7 @@ import { saveAs } from 'file-saver';
 import Papa from 'papaparse';
 import { useEffect, useMemo, useState } from 'react';
 import { IoMdCheckmarkCircleOutline } from 'react-icons/io';
+import { useTranslation } from 'react-i18next';
 import { truncateMiddle } from '../../../helpers';
 import { useConfigStore } from '../../../stores';
 import { GenericTableProps } from './types';
@@ -30,6 +31,7 @@ const getValue = (value: any) => {
 };
 
 export function GenericTable({ rows, refetch, children }: GenericTableProps) {
+  const { t } = useTranslation();
   const { network } = useConfigStore();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedValue, setExpandedValue] = useState<string | null>(null);
@@ -132,27 +134,27 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
   return (
     <div className="h-full w-full left-0 overflow-auto bg-background">
       <div className="flex items-center gap-4 mb-2 flex-wrap">
-        <Button onPress={() => setIsOpen(true)}>Filtros</Button>
+        <Button onPress={() => setIsOpen(true)}>{t('ui.table.filters')}</Button>
         <Button variant="ghost" onPress={() => refetch()}>
-          Refrescar
+          {t('ui.table.refresh')}
         </Button>
         <Button variant="ghost" onPress={handleExportCSV}>
-          Exportar CSV
+          {t('ui.table.exportCsv')}
         </Button>
         <Input
-          placeholder="Buscar en todos los campos..."
+          placeholder={t('ui.table.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-xs"
         />
         <div className="text-sm text-gray-600 truncate" style={{ maxWidth: 'calc(100vw - 200px)' }}>
-          {activeFiltersSummary || 'No hay filtros activos'}
+          {activeFiltersSummary || t('ui.table.noActiveFilters')}
         </div>
       </div>
       <Modal.Backdrop isOpen={isOpen} onOpenChange={setIsOpen}>
         <Modal.Container scroll="inside">
           <Modal.Dialog>
-            <Modal.Header><Modal.Heading>Filtros</Modal.Heading></Modal.Header>
+            <Modal.Header><Modal.Heading>{t('ui.table.filters')}</Modal.Heading></Modal.Header>
             <Modal.Body
               className="flex flex-col gap-2"
               onKeyDown={(e) => {
@@ -166,7 +168,7 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
                 <div key={key} className="flex flex-col gap-1">
                   <label className="text-sm font-medium">{key}</label>
                   <Input
-                    placeholder={`Filtrar por ${key}`}
+                    placeholder={t('ui.table.filterByPlaceholder', { field: key })}
                     value={filters[key] || ''}
                     onChange={(e) => setFilters((prev) => ({ ...prev, [key]: e.target.value }))}
                   />
@@ -174,13 +176,13 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
               ))}
             </Modal.Body>
             <Modal.Footer>
-              <Button onPress={() => setIsOpen(false)}>Cerrar</Button>
+              <Button onPress={() => setIsOpen(false)}>{t('common.close')}</Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
 
-      <Table aria-label="Tabla" className="w-full" style={{ tableLayout: 'auto' }}>
+      <Table aria-label={t('ui.table.tableLabel')} className="w-full" style={{ tableLayout: 'auto' }}>
         <TableHeader>
           <TableColumn key="select">
             <input
@@ -230,8 +232,8 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
                         alignItems: 'center',
                         gap: '0.25rem',
                       }}
-                      aria-label={`Ordenar por ${key}`}
-                      title={`Ordenar por ${key}`}
+                      aria-label={t('ui.table.sortBy', { field: key })}
+                      title={t('ui.table.sortBy', { field: key })}
                     >
                       <span>{key.toUpperCase()}</span>
                       <span aria-hidden="true">{arrow}</span>
@@ -239,7 +241,7 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
                   </TableColumn>
                 );
               }),
-              ...(children ? [<TableColumn key="action">Action</TableColumn>] : []),
+              ...(children ? [<TableColumn key="action">{t('ui.table.action')}</TableColumn>] : []),
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ] as any
           }
@@ -285,7 +287,7 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
                               highlight?.key === key && item[key]?.value === highlight?.value ? 'opacity-100' : ''
                             }`}
                             style={{ height: 'min-content' }}
-                            title={`Resaltar por ${key}`}
+                            title={t('ui.table.highlightBy', { field: key })}
                           >
                             {/* <CheckIcon className="h-4 w-4 text-green-600" /> */}
                             <IoMdCheckmarkCircleOutline className="h-4 w-4 text-green-600" />
@@ -306,12 +308,12 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
       <Modal.Backdrop isOpen={!!expandedValue} onOpenChange={(o) => { if (!o) setExpandedValue(null); }}>
         <Modal.Container scroll="inside">
           <Modal.Dialog>
-            <Modal.Header><Modal.Heading>Valor completo</Modal.Heading></Modal.Header>
+            <Modal.Header><Modal.Heading>{t('ui.table.fullValue')}</Modal.Heading></Modal.Header>
             <Modal.Body>
               <pre className="whitespace-pre-wrap break-all text-sm">{expandedValue}</pre>
             </Modal.Body>
             <Modal.Footer>
-              <Button onPress={() => setExpandedValue(null)}>Cerrar</Button>
+              <Button onPress={() => setExpandedValue(null)}>{t('common.close')}</Button>
             </Modal.Footer>
           </Modal.Dialog>
         </Modal.Container>

@@ -15,7 +15,9 @@ export function RequireAuth({ children }: RequireAuthProps) {
 
   useEffect(() => {
     if (!isAuthenticated && pathname !== '/login') {
-      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+      // Keep the query string so deep links (e.g. ?follow=) survive the
+      // login round-trip.
+      router.push(`/login?redirect=${encodeURIComponent(pathname + window.location.search)}`);
     }
   }, [isAuthenticated, router, pathname]);
 

@@ -78,6 +78,19 @@ export const objectSelectDown = (threeObject: THREE.Object3D<THREE.Object3DEvent
   }
 };
 
+// Libera geometrías y materiales de un grupo construido con los builders de
+// objects/*. Sin esto, cada reconstrucción del mapa deja recursos huérfanos
+// en la GPU (los builders crean geometry/material nuevos por mesh).
+export const disposeObject = (object: THREE.Object3D) => {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry?.dispose();
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    materials.forEach((material) => material?.dispose());
+  });
+};
+
 export const getObjectGroup = (mapObject: MapObject, worldType: WorldType) => {
   if (mapObject.type === MapObjectType.WATER) {
     return getWaterGroup(mapObject, worldType);
@@ -101,6 +114,11 @@ export const getObjectGroup = (mapObject: MapObject, worldType: WorldType) => {
   return getGrassGroup(mapObject, worldType);
 };
 export function getMapCenter(tiles: ProfileMapObjectsResponseDTO['objects']) {
+  // Sin tiles (aún no llega el API) devolvemos un centro válido: Math.min()
+  // de un array vacío es Infinity y rompería cámara y controles con NaN.
+  if (tiles.length === 0) {
+    return [0, -2, 0] as [number, number, number];
+  }
   const xPositions = tiles.map((tile) => tile.position[0]);
   const zPositions = tiles.map((tile) => tile.position[2]);
 
