@@ -12,6 +12,12 @@ import { useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { PageLayout } from '../../molecules';
 
+// Mirrors the server-side allowlist and size cap (apps/api profile avatar
+// route) — the API re-validates and re-encodes regardless, this just gives the
+// user instant feedback before uploading.
+const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+
 export function EditProfilePage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -91,11 +97,11 @@ export function EditProfilePage() {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.danger(t('profilePages.edit.chooseImageFile', 'Please choose an image file'));
+    if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+      toast.danger(t('profilePages.edit.chooseImageFile', 'Please choose a JPG, PNG, WEBP or GIF image'));
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > AVATAR_MAX_BYTES) {
       toast.danger(t('profilePages.edit.imageTooLarge', 'The image is too large (max 5 MB).'));
       return;
     }
@@ -290,7 +296,7 @@ export function EditProfilePage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept={AVATAR_ALLOWED_TYPES.join(',')}
               className="hidden"
               onChange={handlePhotoChange}
             />
@@ -308,6 +314,7 @@ export function EditProfilePage() {
           ) : (
             <p className="text-xs text-gray-500">{t('profilePages.edit.tapToChange', 'Tap the photo to change it.')}</p>
           )}
+          <p className="text-xs text-gray-400">{t('profilePages.edit.photoRequirements', 'JPG, PNG, WEBP or GIF · max 5 MB')}</p>
         </div>
 
         {/* Form */}
