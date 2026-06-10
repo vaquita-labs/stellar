@@ -808,22 +808,30 @@ router.get('/by-average-deposits', async (req, res) => {
     return sendError(res, 'Failed to list profiles', error, 500);
   }
 
-  const { counts: badgesByProfileId, error: badgesError } = await getAchievementCountsByProfile();
+  // The four rollups are independent of each other (each helper catches its own
+  // errors and returns a degraded empty result), so run them concurrently — the
+  // endpoint costs the slowest query instead of the sum of all four.
+  const [
+    { counts: badgesByProfileId, error: badgesError },
+    { sums: depositSumsByWallet, error: depositsError },
+    { counts: streaksByProfileId, error: streaksError },
+    { experience: experienceByProfileId, error: experienceError },
+  ] = await Promise.all([
+    getAchievementCountsByProfile(),
+    getActiveDepositSumsByWallet(),
+    getStreakCountsByProfile(),
+    getExperienceByProfile(data),
+  ]);
+
   if (badgesError) {
     req.log.error({ err: badgesError }, 'Failed to fetch badge counts (degraded — leaderboard will show 0 badges)');
   }
-
-  const { sums: depositSumsByWallet, error: depositsError } = await getActiveDepositSumsByWallet();
   if (depositsError) {
     req.log.error({ err: depositsError }, 'Failed to compute active deposit sums (degraded — leaderboard amounts will be 0)');
   }
-
-  const { counts: streaksByProfileId, error: streaksError } = await getStreakCountsByProfile();
   if (streaksError) {
     req.log.error({ err: streaksError }, 'Failed to compute streaks (degraded — leaderboard will show 0-day streaks)');
   }
-
-  const { experience: experienceByProfileId, error: experienceError } = await getExperienceByProfile(data);
   if (experienceError) {
     req.log.error({ err: experienceError }, 'Failed to compute experience (degraded — leaderboard will show level 1)');
   }

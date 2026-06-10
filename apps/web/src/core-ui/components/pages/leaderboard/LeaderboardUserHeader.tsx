@@ -9,6 +9,8 @@ import {
   useProfileStreak,
 } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
+import { ProfileAverageResponseDTO } from '@/core-ui/types';
+import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ReactNode, useMemo } from 'react';
@@ -43,16 +45,40 @@ function StatChip({ icon, value, label }: { icon: ReactNode; value: string; labe
  */
 export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string }) {
   const { t } = useTranslation();
-  const { walletAddress: viewerWallet } = useConfigStore();
+  const { walletAddress: viewerWallet, network } = useConfigStore();
+  const queryClient = useQueryClient();
   const { data: profile } = useProfileData(walletAddress);
   const { data: achievementsData, isLoading: achievementsLoading } =
     useProfileAchievements(walletAddress);
   const { data: experienceData } = useProfileExperience(walletAddress);
   const { data: streakData } = useProfileStreak(walletAddress);
 
-  const username = getLeaderboardUsername(profile?.nickname, walletAddress);
-  const { level } = deriveLevel(experienceData?.experience ?? 0);
-  const streak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
+  // Snapshot of this wallet's row from the already-cached leaderboard list. The
+  // user almost always lands here from the list, so nickname/avatar/XP/streak
+  // are known before the per-wallet queries resolve — render those immediately
+  // instead of placeholders, then let the fresh per-wallet data take over.
+  const listRow = useMemo(
+    () =>
+      queryClient
+        .getQueryData<ProfileAverageResponseDTO[]>([
+          'profiles',
+          'network',
+          network?.networkName,
+          'by-average-deposits',
+        ])
+        ?.find((row) => row.walletAddress === walletAddress),
+    [queryClient, network?.networkName, walletAddress],
+  );
+
+  const nickname = profile ? profile.nickname : listRow?.nickname;
+  const avatarUrl = profile ? profile.avatarUrl : listRow?.avatarUrl;
+  const username = getLeaderboardUsername(nickname, walletAddress);
+  const { level } = deriveLevel(
+    experienceData ? experienceData.experience : (listRow?.experience ?? 0),
+  );
+  const streak = streakData
+    ? (streakData.yesterdayStreak || 0) + (streakData.todayStreak ? 1 : 0)
+    : (listRow?.streak ?? 0);
   const isOwnProfile = viewerWallet?.toLowerCase() === walletAddress.toLowerCase();
 
   const joinedLabel = useMemo(() => {
@@ -84,11 +110,11 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
           </Link>
 
           <div className="relative h-14 w-14 shrink-0 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-black border-b-4 shadow">
-            {profile?.avatarUrl ? (
+            {avatarUrl ? (
               // next/image fetches the (possibly http) MinIO URL server-side
               // and re-serves it over https, so the photo always renders.
               <Image
-                src={profile.avatarUrl}
+                src={avatarUrl}
                 alt={username}
                 fill
                 sizes="56px"
@@ -160,7 +186,9 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
               {t('profilePages.profile.achievements', 'Achievements')}
             </h2>
             <span className="text-xs font-extrabold text-black tabular-nums">
-              {unlockedBadges.length}
+              {/* While badges load, show the count the list already knows so the
+                  number doesn't flash 0 → N. */}
+              {achievementsData ? unlockedBadges.length : (listRow?.badges ?? 0)}
             </span>
           </div>
           {/* Fixed h-12 row in every state (loading / badges / empty) so the
