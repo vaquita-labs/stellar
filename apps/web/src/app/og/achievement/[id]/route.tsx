@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { ImageResponse } from 'next/og';
 import type { NextRequest } from 'next/server';
 import { getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
@@ -39,6 +41,46 @@ const OG_SIZE = { width: 1200, height: 630 } as const;
 const STORY_SIZE = { width: 1080, height: 1920 } as const;
 const DEFAULT_ACCENT = 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)';
 
+const MIME_BY_EXT: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+};
+
+/**
+ * Resolve an image to a base64 data URI so satori never has to fetch it over
+ * HTTP. Self-fetching the public origin fails in deployed containers (hairpin
+ * DNS / proxy TLS), which silently dropped the badge icon from the card.
+ *
+ * Local assets (`/icons/...`) are read straight from `public/`; absolute URLs
+ * (admin-created badges on object storage) are fetched and inlined. Returns
+ * null on any failure — the card renders without the image instead of 500ing.
+ */
+async function loadImageDataUri(src: string, origin: string): Promise<string | null> {
+  try {
+    if (src.startsWith('/')) {
+      const clean = src.split(/[?#]/)[0];
+      const publicDir = path.join(process.cwd(), 'public');
+      const filePath = path.normalize(path.join(publicDir, clean));
+      // Catalog data can come from the backend — never let it escape public/.
+      if (!filePath.startsWith(publicDir + path.sep)) return null;
+      const buf = await readFile(filePath);
+      const mime = MIME_BY_EXT[path.extname(clean).toLowerCase()] ?? 'image/png';
+      return `data:${mime};base64,${buf.toString('base64')}`;
+    }
+    const res = await fetch(new URL(src, origin));
+    if (!res.ok) return null;
+    const mime = res.headers.get('content-type')?.split(';')[0]?.trim() || 'image/png';
+    const buf = Buffer.from(await res.arrayBuffer());
+    return `data:${mime};base64,${buf.toString('base64')}`;
+  } catch {
+    return null;
+  }
+}
+
 const formatDate = (iso: string | null): string | null => {
   if (!iso) return null;
   const d = new Date(iso);
@@ -65,11 +107,11 @@ export async function GET(
   const date = formatDate(url.searchParams.get('date'));
   const story = url.searchParams.get('format') === 'story';
 
-  // Absolute origin so `<img src>` resolves correctly when satori fetches
-  // the asset during render. `req.nextUrl.origin` honors the deployed host.
   const origin = req.nextUrl.origin;
-  const iconUrl = new URL(achievement.icon, origin).toString();
-  const logoUrl = new URL('/vaquita/vaquita_isotipo.svg', origin).toString();
+  const [iconUrl, logoUrl] = await Promise.all([
+    loadImageDataUri(achievement.icon, origin),
+    loadImageDataUri('/vaquita/vaquita_isotipo.svg', origin),
+  ]);
   const accent = achievement.accent ?? DEFAULT_ACCENT;
 
   const size = story ? STORY_SIZE : OG_SIZE;
@@ -87,10 +129,10 @@ export async function GET(
         pill: 34,
         kicker: 34,
         title: 92,
+        earnedBy: 38,
         desc: 42,
         descMax: 840,
         footer: 52,
-        footerByline: 40,
         logo: 80,
       }
     : {
@@ -103,10 +145,10 @@ export async function GET(
         pill: 20,
         kicker: 20,
         title: 60,
+        earnedBy: 24,
         desc: 26,
         descMax: 560,
         footer: 36,
-        footerByline: 28,
         logo: 56,
       };
 
@@ -182,14 +224,16 @@ export async function GET(
                   filter: 'blur(40px)',
                 }}
               />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={iconUrl}
-                alt={achievement.title}
-                width={dims.icon}
-                height={dims.icon}
-                style={{ position: 'relative', objectFit: 'contain' }}
-              />
+              {iconUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={iconUrl}
+                  alt={achievement.title}
+                  width={dims.icon}
+                  height={dims.icon}
+                  style={{ position: 'relative', objectFit: 'contain' }}
+                />
+              )}
             </div>
 
             {/* Text block */}
@@ -248,6 +292,20 @@ export async function GET(
                 {achievement.title}
               </div>
 
+              {/* Earned-by byline — mirrors the share landing page */}
+              {username && (
+                <div
+                  style={{
+                    display: 'flex',
+                    fontSize: dims.earnedBy,
+                    fontWeight: 600,
+                    color: '#374151',
+                  }}
+                >
+                  earned by @{username}
+                </div>
+              )}
+
               {/* Description */}
               <div
                 style={{
@@ -277,24 +335,13 @@ export async function GET(
               justifyContent: 'center',
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logoUrl} alt="" width={dims.logo} height={dims.logo} />
+            {logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="" width={dims.logo} height={dims.logo} />
+            )}
             <div style={{ display: 'flex', fontSize: dims.footer, fontWeight: 900, color: '#000000' }}>
               Vaquita
             </div>
-            {username && (
-              <div
-                style={{
-                  display: 'flex',
-                  fontSize: dims.footerByline,
-                  fontWeight: 600,
-                  color: '#6B7280',
-                  marginLeft: 8,
-                }}
-              >
-                · @{username}
-              </div>
-            )}
           </div>
         </div>
       </div>

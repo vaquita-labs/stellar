@@ -4,7 +4,8 @@ import { Modal, toast } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { FiShare2, FiX } from 'react-icons/fi';
+import { FiCopy, FiDownload, FiShare2, FiX } from 'react-icons/fi';
+import { FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
 import { useTranslation } from 'react-i18next';
 import {
   useClaimedAchievements,
@@ -101,6 +102,16 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   const goldCoins = rewardsData?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
   const [phase, setPhase] = useState<Phase>('detail');
   const [sharing, setSharing] = useState(false);
+  // In-modal sheet listing explicit share targets (X, WhatsApp, copy,
+  // download) — the OS share sheet orders apps by usage and can't be
+  // influenced from the web, so the targets we care about get buttons.
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  // Web Share availability is a client-only fact — resolve it after mount so
+  // the server and hydration passes render the same tree.
+  const [canNativeShare, setCanNativeShare] = useState(false);
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function');
+  }, []);
   const [mintTxHash, setMintTxHash] = useState<string | null>(null);
   // Real coin reward returned by the mint flow's off-chain claim step; drives
   // the "You earned N coins!" reveal shown after a successful mint.
@@ -111,6 +122,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   useEffect(() => {
     if (open) {
       setPhase('detail');
+      setShareMenuOpen(false);
       setMintTxHash(null);
       setCoinReward(0);
       mintBadgeMutation.reset();
@@ -315,6 +327,83 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
       setSharing(false);
     }
   };
+
+  /* ------------------------------------------------------------------ */
+  /* Explicit share targets (share-menu sheet)                           */
+  /* ------------------------------------------------------------------ */
+
+  // X and WhatsApp have no way to receive a file from the web — their web
+  // intents take text + URL only; the receiving side unfurls the image from
+  // the share page's OG metadata.
+  const handleShareToX = () => {
+    const shareUrl = buildShareUrl();
+    const intent = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(intent, '_blank', 'noopener,noreferrer');
+    setShareMenuOpen(false);
+  };
+
+  const handleShareToWhatsApp = () => {
+    const shareUrl = buildShareUrl();
+    const intent = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+    window.open(intent, '_blank', 'noopener,noreferrer');
+    setShareMenuOpen(false);
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${shareText} ${buildShareUrl()}`);
+      toast.success(t('achievements.toast.linkCopied', 'Link copied to clipboard'));
+    } catch {
+      toast.danger(t('achievements.toast.couldNotShare', 'Could not share'));
+    }
+    setShareMenuOpen(false);
+  };
+
+  const handleDownloadImage = async () => {
+    const file = await (shareFileRef.current ?? Promise.resolve(null));
+    if (!file) {
+      toast.danger(t('achievements.share.imageNotReady', 'Image not ready yet, try again'));
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = file.name;
+    anchor.click();
+    URL.revokeObjectURL(objectUrl);
+    setShareMenuOpen(false);
+  };
+
+  const shareMenuOptions: { key: string; label: string; icon: React.ReactNode; onClick: () => void }[] = [
+    ...(canNativeShare
+      ? [
+          {
+            key: 'native',
+            label: t('achievements.share.shareImage', 'Share image…'),
+            icon: <FiShare2 className="h-5 w-5" />,
+            onClick: () => {
+              setShareMenuOpen(false);
+              void handleNativeShare();
+            },
+          },
+        ]
+      : []),
+    // "X" and "WhatsApp" are proper nouns — no i18n needed.
+    { key: 'x', label: 'X', icon: <FaXTwitter className="h-5 w-5" />, onClick: handleShareToX },
+    { key: 'whatsapp', label: 'WhatsApp', icon: <FaWhatsapp className="h-5 w-5" />, onClick: handleShareToWhatsApp },
+    {
+      key: 'download',
+      label: t('achievements.share.downloadImage', 'Download image'),
+      icon: <FiDownload className="h-5 w-5" />,
+      onClick: () => void handleDownloadImage(),
+    },
+    {
+      key: 'copy',
+      label: t('achievements.share.copyLink', 'Copy link'),
+      icon: <FiCopy className="h-5 w-5" />,
+      onClick: () => void handleCopyLink(),
+    },
+  ];
 
   /* ------------------------------------------------------------------ */
   /* Phase: reward reveal                                                */
@@ -588,7 +677,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
             animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
             exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}
+            className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
               <button
@@ -620,7 +709,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
               ) : showHeaderShare ? (
                 <button
                   type="button"
-                  onClick={handleNativeShare}
+                  onClick={() => setShareMenuOpen(true)}
                   disabled={sharing}
                   aria-label={t('achievements.modal.shareAchievement', 'Share achievement')}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
@@ -637,6 +726,46 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
               {phase === 'minting' && renderMinting()}
               {phase === 'minted' && renderMinted()}
               {phase === 'detail' && renderDetail()}
+            </AnimatePresence>
+
+            {/* Share-menu sheet: explicit targets layered over the modal */}
+            <AnimatePresence>
+              {shareMenuOpen && (
+                <div className="absolute inset-0 z-20 flex flex-col justify-end overflow-hidden rounded-t-3xl">
+                  <motion.button
+                    type="button"
+                    aria-label={t('common.close')}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShareMenuOpen(false)}
+                    className="absolute inset-0 bg-black/40"
+                  />
+                  <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                    className="relative bg-background rounded-t-3xl border-t border-black px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-2"
+                  >
+                    <p className="text-xs font-extrabold uppercase tracking-wider text-gray-600 text-center pb-1">
+                      {t('achievements.share.menuTitle', 'Share badge')}
+                    </p>
+                    {shareMenuOptions.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={option.onClick}
+                        disabled={sharing}
+                        className="h-12 w-full inline-flex items-center gap-3 rounded-md bg-white border border-black border-b-2 px-4 text-sm font-bold text-black hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
+                      >
+                        {option.icon}
+                        {option.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                </div>
+              )}
             </AnimatePresence>
           </motion.div>
         </Modal.Dialog>
