@@ -109,8 +109,13 @@
       "title_other": "You earned {{count}} coins!"
     },
     "share": {
+      "copyLink": "Copy link",
       "cta": "Earn your own on Vaquita",
+      "downloadImage": "Download image",
       "earnedBy": "earned by @{{username}}",
+      "imageNotReady": "Image not ready yet, try again",
+      "menuTitle": "Share badge",
+      "shareImage": "Share image…",
       "fallbackTitle": "Achievement · Vaquita",
       "metaDescription": "Someone just unlocked \"{{title}}\" on Vaquita. {{description}}",
       "metaDescriptionUser": "@{{username}} just unlocked \"{{title}}\" on Vaquita. {{description}}",
