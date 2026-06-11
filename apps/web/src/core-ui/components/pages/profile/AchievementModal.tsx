@@ -16,6 +16,7 @@ import {
   useProfileRewards,
 } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { ACHIEVEMENT_CARD_VERSION } from '../../../data/achievement-catalog';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 import { parseBadgeMintError } from '@/networks/stellar/badgeErrors';
 
@@ -169,7 +170,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
       shareFileRef.current = null;
       return;
     }
-    const qs = new URLSearchParams({ format: 'story' });
+    const qs = new URLSearchParams({ format: 'story', v: ACHIEVEMENT_CARD_VERSION });
     if (username) qs.set('u', username);
     if (achievement.date) qs.set('date', achievement.date);
     shareFileRef.current = fetch(`/og/achievement/${achievement.id}?${qs.toString()}`)

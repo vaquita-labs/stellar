@@ -13,6 +13,15 @@ import { clientEnv } from '@/core-ui/config/clientEnv';
  * streak, unlocked state, …). The OG route and the public share page resolve a
  * badge by `id` without dragging a fake `AchievementsCtx` through them.
  */
+/**
+ * Cache-buster for the OG/share card image URLs. The `/og/achievement/[id]`
+ * response is cached as immutable (browser + CDN) keyed by the full URL, so
+ * visual changes to the card would never reach users on a stable URL. The
+ * value is stamped per build in next.config.ts (commit SHA or build
+ * timestamp), so every deploy rolls it automatically — no manual bumping.
+ */
+export const ACHIEVEMENT_CARD_VERSION = process.env.NEXT_PUBLIC_CARD_VERSION ?? 'dev';
+
 export type CatalogAchievement = {
   id: string;
   title: string;

@@ -41,6 +41,28 @@ const OG_SIZE = { width: 1200, height: 630 } as const;
 const STORY_SIZE = { width: 1080, height: 1920 } as const;
 const DEFAULT_ACCENT = 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)';
 
+/**
+ * Rubik — the app's UI font (`--font-sans` in globals.css) — embedded so the
+ * card typography matches the in-app badge view exactly. Satori only takes
+ * ttf/otf/woff (no woff2); the .woff files live in `public/fonts/` (copied
+ * from @fontsource/rubik) so they ship inside the standalone Docker image.
+ * Weights mirror the Tailwind classes used in-app: 400 body, 600 semibold
+ * byline, 800 extrabold headings.
+ */
+const FONT_WEIGHTS = [400, 600, 800] as const;
+let fontsPromise: Promise<{ name: string; data: Buffer; weight: 400 | 600 | 800; style: 'normal' }[]> | null = null;
+const loadFonts = () => {
+  fontsPromise ??= Promise.all(
+    FONT_WEIGHTS.map(async (weight) => ({
+      name: 'Rubik',
+      data: await readFile(path.join(process.cwd(), 'public', 'fonts', `rubik-latin-${weight}-normal.woff`)),
+      weight,
+      style: 'normal' as const,
+    })),
+  );
+  return fontsPromise;
+};
+
 const MIME_BY_EXT: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -108,9 +130,10 @@ export async function GET(
   const story = url.searchParams.get('format') === 'story';
 
   const origin = req.nextUrl.origin;
-  const [iconUrl, logoUrl] = await Promise.all([
+  const [iconUrl, logoUrl, fonts] = await Promise.all([
     loadImageDataUri(achievement.icon, origin),
     loadImageDataUri('/vaquita/vaquita_isotipo.svg', origin),
+    loadFonts(),
   ]);
   const accent = achievement.accent ?? DEFAULT_ACCENT;
 
@@ -166,7 +189,7 @@ export async function GET(
           backgroundImage:
             'radial-gradient(circle at 20% 20%, rgba(255, 214, 74, 0.25), transparent 60%), radial-gradient(circle at 80% 80%, rgba(245, 161, 97, 0.18), transparent 55%)',
           padding: dims.outerPad,
-          fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+          fontFamily: 'Rubik, sans-serif',
         }}
       >
         {/* Card */}
@@ -283,7 +306,7 @@ export async function GET(
                 style={{
                   display: 'flex',
                   fontSize: dims.title,
-                  fontWeight: 900,
+                  fontWeight: 800,
                   color: '#000000',
                   textAlign: story ? 'center' : 'left',
                   lineHeight: 1.05,
@@ -339,7 +362,7 @@ export async function GET(
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logoUrl} alt="" width={dims.logo} height={dims.logo} />
             )}
-            <div style={{ display: 'flex', fontSize: dims.footer, fontWeight: 900, color: '#000000' }}>
+            <div style={{ display: 'flex', fontSize: dims.footer, fontWeight: 800, color: '#000000' }}>
               Vaquita
             </div>
           </div>
@@ -348,6 +371,7 @@ export async function GET(
     ),
     {
       ...size,
+      fonts,
       headers: {
         // Long edge cache: the OG image is deterministic for a given (id, u,
         // date, format) tuple. Bumping the design only requires deploying —
