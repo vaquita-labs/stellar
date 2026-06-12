@@ -22,10 +22,12 @@ const UPGRADES_LOCKED: Symbol = symbol_short!("upg_lock");
 /// Topic: ("deposit", caller)  Data: DepositEvent
 #[contracttype]
 pub struct DepositEvent {
+    pub owner: Address,
     pub deposit_id: String,
     pub token: Address,
     pub amount: i128,
     pub shares: i128,
+    pub lock_period: u64,
 }
 
 /// Typed payload for a withdraw event.
@@ -38,12 +40,14 @@ pub struct DepositEvent {
 ///               WHERE matured → completed (held-to-maturity) withdrawals only.
 #[contracttype]
 pub struct WithdrawEvent {
+    pub owner: Address,
     pub deposit_id: String,
     pub token: Address,
     pub amount: i128,
     pub reward: i128,
     pub early_fee: i128,
     pub matured: bool,
+    pub lock_period: u64,
 }
 
 pub fn emit_deposit(
@@ -53,14 +57,17 @@ pub fn emit_deposit(
     token: Address,
     amount: i128,
     shares: i128,
+    lock_period: u64,
 ) {
     env.events().publish(
-        (DEPOSIT, caller),
+        (DEPOSIT, caller.clone()),
         DepositEvent {
+            owner: caller,
             deposit_id,
             token,
             amount,
             shares,
+            lock_period,
         },
     );
 }
@@ -271,16 +278,19 @@ pub fn emit_withdraw(
     reward: i128,
     early_fee: i128,
     matured: bool,
+    lock_period: u64,
 ) {
     env.events().publish(
-        (WITHDRAW, caller),
+        (WITHDRAW, caller.clone()),
         WithdrawEvent {
+            owner: caller,
             deposit_id,
             token,
             amount,
             reward,
             early_fee,
             matured,
+            lock_period,
         },
     );
 }
