@@ -107,8 +107,10 @@ fn deposit_event_payload() {
     let dep = String::from_str(&e, "d1");
     pool.deposit(&alice, &dep, &amount, &LOCK_7D);
     let ev = DepositEvent::try_from_val(&e, &last_val(&e)).unwrap();
+    assert_eq!(ev.owner, alice);
     assert_eq!(ev.amount, amount);
     assert_eq!(ev.deposit_id, dep);
+    assert_eq!(ev.lock_period, LOCK_7D);
 }
 
 // ---- WithdrawEvent ----
@@ -124,10 +126,12 @@ fn withdraw_event_payload() {
     pool.deposit(&alice, &dep, &1_000_000i128, &LOCK_7D);
     pool.withdraw(&alice, &dep);
     let ev = WithdrawEvent::try_from_val(&e, &last_val(&e)).unwrap();
+    assert_eq!(ev.owner, alice);
     assert_eq!(ev.deposit_id, dep);
     assert_eq!(ev.reward, 0);
     assert_eq!(ev.early_fee, 0);
     assert!(!ev.matured, "withdrawn before finalization_time → not matured");
+    assert_eq!(ev.lock_period, LOCK_7D);
 }
 
 #[test]
@@ -143,6 +147,7 @@ fn withdraw_event_matured_flag() {
     let ev = WithdrawEvent::try_from_val(&e, &last_val(&e)).unwrap();
     assert_eq!(ev.early_fee, 0);
     assert!(ev.matured, "withdrawn at/after finalization_time → matured");
+    assert_eq!(ev.lock_period, LOCK_7D);
 }
 
 // ---- EarlyWithdrawalFeeUpdatedEvent ----
