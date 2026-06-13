@@ -33,8 +33,8 @@
  *   DUNE_API_KEY="..."                       # dune.com -> Settings -> API
  *   DUNE_NAMESPACE="vaquitaprotocol"         # your Dune user/team handle
  *   VAQUITA_CONTRACTS="dev=C...,stage=C..."  # env=contractId, comma-separated
- *   DUNE_REFRESH_QUERY_IDS="123,456,..."     # optional: dashboard query IDs to
- *                                            # re-run (10s apart) after an insert
+ *   DUNE_REFRESH_QUERY_IDS="123,456,..."     # optional: dashboard query IDs to re-run after an insert
+ *   DUNE_REFRESH_DELAY_MS="60000"            # optional: delay between query refreshes
  *   npx tsx stellar_testnet_to_dune_vaquita_pool_events.ts
  */
 
@@ -95,7 +95,7 @@ const DUNE_REFRESH_QUERY_IDS: string[] = (process.env.DUNE_REFRESH_QUERY_IDS ?? 
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
-const REFRESH_DELAY_MS = 10_000; // space executions 10s apart (free-tier friendly)
+const REFRESH_DELAY_MS = Number(process.env.DUNE_REFRESH_DELAY_MS ?? 60_000);
 
 // ----------------------------- Types -----------------------------------------
 type DuneColumnType = "varchar" | "integer" | "double" | "boolean" | "timestamp";
@@ -384,11 +384,14 @@ async function insertRows(rows: EventRow[]): Promise<void> {
   console.log(`Inserted ${rows.length} new events.`);
 }
 
-/** Re-run the saved dashboard queries (one at a time, spaced 10s apart) so the
+/** Re-run the saved dashboard queries (one at a time, spaced apart) so the
  *  panels show the just-inserted data. Uses the free engine to minimise credits.
  *  Best-effort: a failed refresh logs a warning but never fails the ingest. */
 async function refreshDashboard(queryIds: string[]): Promise<void> {
-  console.log(`Refreshing ${queryIds.length} dashboard quer${queryIds.length === 1 ? "y" : "ies"} (10s apart)...`);
+  console.log(
+    `Refreshing ${queryIds.length} dashboard quer${queryIds.length === 1 ? "y" : "ies"} ` +
+      `(${Math.round(REFRESH_DELAY_MS / 1000)}s apart)...`
+  );
   for (let i = 0; i < queryIds.length; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, REFRESH_DELAY_MS));
     const id = queryIds[i];
