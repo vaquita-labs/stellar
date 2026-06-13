@@ -31,6 +31,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: pnpm
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       # Persist the high-water-mark between scheduled runs.
       # The dashboard queries also de-dupe by event_id, so a rare cache miss
@@ -43,16 +47,9 @@ jobs:
           restore-keys: dune-ingest-state-
 
       - name: Install dependencies
-        working-directory: analytics
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: pnpm install --frozen-lockfile
 
       - name: Run incremental ingest
-        working-directory: analytics
         env:
           DUNE_API_KEY: ${{ secrets.DUNE_API_KEY }}
           DUNE_NAMESPACE: ${{ secrets.DUNE_NAMESPACE }}
@@ -61,4 +58,4 @@ jobs:
           # Optional: dashboard query IDs to re-run after an insert (repo variable),
           # e.g. "7652901,7653540,...". Leave unset to skip the refresh.
           DUNE_REFRESH_QUERY_IDS: ${{ vars.DUNE_REFRESH_QUERY_IDS }}
-        run: npm run ingest
+        run: pnpm --filter vaquita-analytics ingest
