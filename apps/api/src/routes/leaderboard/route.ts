@@ -1,8 +1,14 @@
 import { Router } from 'express';
 import {
+  enrichLeaderboardRows,
+  getAchievementCountsByProfile,
+  getExperienceByProfile,
   getLastClosedCycleId,
   getLeaderboard,
   getLeaderboardRankForWallet,
+  getProfiles,
+  getStreakCountsByProfile,
+  parseLeaderboardCycleQuery,
   sendError,
   sendSuccess,
 } from '@vaquita/shared';
@@ -40,30 +46,63 @@ router.get('/rank', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/v1/leaderboard?cycle=YYYYMM
+// GET /api/v1/leaderboard?cycle=current|last_closed|YYYYMM
 // ---------------------------------------------------------------------------
 
 /**
  * Returns the ranked leaderboard for a cycle.
- * Pass cycle=0 (or omit) for a live leaderboard ending at now.
+ * Omit cycle or pass cycle=current for the current open configured cycle.
  *
- * 200 [ { walletAddress, score, activeAmount, cycleStart, cycleEnd } ]
+ * 200 [ { position, walletAddress, score, activeAmount, cycleId, cycleStart, cycleEnd, cycleStatus } ]
  */
 router.get('/', async (req, res) => {
-  const cycleIdRaw = req.query.cycle;
-  const cycleId = cycleIdRaw ? Number(cycleIdRaw) : 0;
-
-  if (!Number.isInteger(cycleId) || cycleId < 0) {
-    return sendError(res, 'cycle must be a non-negative integer (YYYYMM)', null, 400);
-  }
-
-  req.log.info({ cycleId }, 'GET /leaderboard');
-
   try {
+    const { cycleId, cycleStatus } = await parseLeaderboardCycleQuery(req.query.cycle);
+    req.log.info({ cycleId, cycleStatus }, 'GET /leaderboard');
+
     const rows = await getLeaderboard(cycleId);
-    return sendSuccess(res, rows, '');
+    const { data: profiles, error: profilesError } = await getProfiles();
+    if (profilesError) {
+      req.log.error({ err: profilesError }, 'Failed to load profile metadata for leaderboard');
+      return sendError(res, 'Failed to load profile metadata for leaderboard', profilesError, 500);
+    }
+
+    const [
+      { counts: badgesByProfileId, error: badgesError },
+      { counts: streaksByProfileId, error: streaksError },
+      { experience: experienceByProfileId, error: experienceError },
+    ] = await Promise.all([
+      getAchievementCountsByProfile(),
+      getStreakCountsByProfile(),
+      getExperienceByProfile(profiles),
+    ]);
+
+    if (badgesError) {
+      req.log.error({ err: badgesError }, 'Failed to fetch badge counts for leaderboard');
+    }
+    if (streaksError) {
+      req.log.error({ err: streaksError }, 'Failed to fetch streak counts for leaderboard');
+    }
+    if (experienceError) {
+      req.log.error({ err: experienceError }, 'Failed to fetch experience for leaderboard');
+    }
+
+    return sendSuccess(
+      res,
+      enrichLeaderboardRows(
+        rows,
+        profiles,
+        { badgesByProfileId, streaksByProfileId, experienceByProfileId },
+        cycleStatus,
+      ),
+      '',
+    );
   } catch (err: any) {
-    req.log.error({ err, cycleId }, 'Leaderboard query failed');
+    if (err?.message === 'cycle must be current, last_closed, or a positive integer cycle id') {
+      return sendError(res, err.message, null, 400);
+    }
+
+    req.log.error({ err, cycle: req.query.cycle }, 'Leaderboard query failed');
     return sendError(res, err?.message ?? 'Leaderboard query failed', err, 500);
   }
 });

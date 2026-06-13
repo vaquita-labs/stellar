@@ -2,7 +2,8 @@ import { Prisma, prisma } from '@vaquita/db';
 import type { Achievement as PrismaAchievement, Profile as PrismaProfile } from '@vaquita/db';
 import { getCurrentDay } from '../../helpers/date';
 import { ably } from '../ably';
-import { getMintedBadges } from '../badges/claims';
+import { getActiveBadgeClaimsForWallet, getMintedBadges } from '../badges/claims';
+import { getLastClosedCycleId, getLeaderboardRankForWallet } from '../leaderboard';
 import { notify } from '../notifications';
 import {
   Achievement,
@@ -996,11 +997,13 @@ export const toProfileAchievementsResponseDTO = async (
   // One set of DB calls feeds both the catalog AND the per-row eligibility
   // computation below. computeEligibilitySignals reuses the deposit-signals
   // helper so this isn't free, but it's bounded — a small handful of queries.
-  const [allRes, claimedRes, signals, minted] = await Promise.all([
+  const [allRes, claimedRes, signals, minted, activeClaims, awardCycleId] = await Promise.all([
     getAllAchievements(),
     getClaimedAchievements(profile.id),
     computeEligibilitySignals(profile),
     getMintedBadges(profile.wallet_address),
+    getActiveBadgeClaimsForWallet(profile.wallet_address),
+    getLastClosedCycleId(),
   ]);
 
   const claimedById = new Map<number, ProfileAchievement>(
@@ -1011,13 +1014,36 @@ export const toProfileAchievementsResponseDTO = async (
   // Keep the tx hash alongside so clients can link an already-minted badge to
   // its stellar.expert transaction without triggering a re-mint.
   const mintedByKey = new Map(minted.map((m) => [m.badge_type, m.transaction_hash]));
+  const activeClaimByKey = new Map(activeClaims.map((claim) => [claim.badge_type, claim]));
+  const leaderboardRank = await getLeaderboardRankForWallet(profile.wallet_address, awardCycleId);
 
   const achievements: AchievementResponseDTO[] = allRes.data
     // Hide secret achievements until the user actually claims them — the
     // catalog endpoint must not leak the existence of redeem-code badges.
-    .filter((a) => !a.hidden || claimedById.has(a.id))
+    .filter((a) => !a.hidden || claimedById.has(a.id) || activeClaimByKey.has(a.key))
     .map((a) => {
       const claim = claimedById.get(a.id);
+      const pendingClaim = activeClaimByKey.get(a.key);
+      const mintedForKey = mintedByKey.has(a.key);
+      const exactRank: Record<string, number> = { 'first-place': 1, 'second-place': 2 };
+      const cycleRankEligible =
+        a.key === Achievement.THIRD_PLACE
+          ? leaderboardRank !== null && leaderboardRank >= 3 && leaderboardRank <= 10
+          : leaderboardRank === exactRank[a.key];
+      const eligible =
+        a.unlock_type === 'cycle_rank'
+          ? cycleRankEligible && !claim
+          : isAchievementEligible(a, signals);
+      const claimState = mintedForKey
+        ? 'minted'
+        : claim
+          ? 'claimed'
+          : pendingClaim
+            ? 'pending_mint'
+            : eligible
+              ? 'claimable'
+              : 'locked';
+
       return {
         key: a.key as Achievement,
         name: a.name,
@@ -1027,11 +1053,14 @@ export const toProfileAchievementsResponseDTO = async (
         // `unlocked` is true if eligibility OR claim — claim implies the user
         // was eligible at the time, so flipping it to true here keeps the tile
         // showing as "earned" even if the eligibility rule later tightens.
-        unlocked: !!claim || isAchievementEligible(a, signals),
+        unlocked: !!claim || !!pendingClaim || eligible || mintedForKey,
         claimedAt: claim?.claimed_at ?? null,
-        minted: mintedByKey.has(a.key),
+        minted: mintedForKey,
         // Empty string from getMintedBadges (unconfirmed/missing) normalizes to null.
         transactionHash: mintedByKey.get(a.key) || null,
+        claimState,
+        claimCycleId: pendingClaim?.cycle_id ?? null,
+        awardCycleId: a.unlock_type === 'cycle_rank' ? awardCycleId : null,
         icon: a.icon ?? null,
         accent: a.accent ?? null,
         displayOrder: a.display_order ?? 0,

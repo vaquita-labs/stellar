@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCamera, FiCheckCircle, FiX } from 'react-icons/fi';
-import { useIsMobile, useRedeemAchievementCode } from '../../../hooks';
+import { useIsMobile, useMintBadge, useRedeemAchievementCode } from '../../../hooks';
 
 interface RedeemCodeModalProps {
   open: boolean;
@@ -37,6 +37,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
   const [code, setCode] = useState('');
   const [reward, setReward] = useState<{ coinReward: number; achievementKey: string } | null>(null);
   const redeem = useRedeemAchievementCode();
+  const mintBadge = useMintBadge();
 
   // Keep a ref to the live Html5QrcodeScanner so we can clear() it from any
   // exit path (manual cancel, successful scan, modal close, unmount). The
@@ -136,14 +137,17 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
     setPhase('claiming');
     try {
       const result = await redeem.mutateAsync(trimmed);
-      setReward({ coinReward: result?.coinReward ?? 0, achievementKey: result?.achievementKey ?? '' });
+      const achievementKey = result?.achievementKey ?? '';
+      if (!achievementKey) throw new Error(t('common.somethingWentWrong'));
+      const minted = await mintBadge.mutateAsync(achievementKey);
+      setReward({ coinReward: minted.coinReward, achievementKey });
       setPhase('reward');
     } catch (err) {
       const message = (err as Error)?.message ?? t('common.somethingWentWrong');
       toast.danger(t('social.redeem.redeemErrorTitle'), { description: message });
       setPhase('input');
     }
-  }, [code, redeem]);
+  }, [code, mintBadge, redeem, t]);
 
   const handleClose = useCallback(() => {
     onOpenChange(false);

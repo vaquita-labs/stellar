@@ -8,13 +8,13 @@
  * Each environment tracks its own ingest cursor independently.
  *
  * Tailored to the VaquitaPool contract's events:
- *   deposit   topic ("deposit", caller)   data { deposit_id, token, amount, shares }
+ *   deposit   topic ("deposit", caller)   data { deposit_id, token, amount, shares, lock_period? }
  *   withdraw  topic ("withdraw", caller)   data { deposit_id, token, amount, reward, early_fee, matured }
  *   fees_wth  topic ("fees_wth",)          data { admin, amount }      (penalties swept)
  *   (plus init, rewards, fee_upd, lp_add, lp_rm, upg_*, etc. — captured generically)
  *
  * Shapes each event into typed columns so the dashboard SQL is trivial:
- *   environment, event_name, caller, deposit_id, amount, reward (+ raw topics/value json).
+ *   environment, event_name, caller, deposit_id, amount, reward, lock_period (+ raw topics/value json).
  *
  * WHY THIS EXISTS: Dune indexes Stellar MAINNET only — there is no testnet in its
  * catalog. So a testnet contract must be ingested via Dune "bring your own data".
@@ -26,7 +26,7 @@
  * POST /v1/uploads/:namespace/:table/insert. The legacy /v1/table/* paths
  * are deprecated and removed after 2026-03-01.
  *
- * REQUIRES: Node 18+ (built-in fetch). Run:  npx tsx stellar_testnet_to_dune_vaquita.ts
+ * REQUIRES: Node 18+ (built-in fetch). Run:  npx tsx stellar_testnet_to_dune_vaquita_pool_events.ts
  *
  * USAGE: put these in analytics/.env (auto-loaded via dotenv) or export them;
  * CI passes them as real env vars (no .env present, dotenv is a no-op there):
@@ -35,7 +35,7 @@
  *   VAQUITA_CONTRACTS="dev=C...,stage=C..."  # env=contractId, comma-separated
  *   DUNE_REFRESH_QUERY_IDS="123,456,..."     # optional: dashboard query IDs to
  *                                            # re-run (10s apart) after an insert
- *   npx tsx stellar_testnet_to_dune_vaquita.ts
+ *   npx tsx stellar_testnet_to_dune_vaquita_pool_events.ts
  */
 
 import "dotenv/config"; // load analytics/.env before reading process.env (no-op if absent, e.g. in CI)
@@ -44,7 +44,7 @@ import process from "node:process";
 
 // ----------------------------- CONFIG ----------------------------------------
 const RPC_URL = process.env.VAQUITA_RPC_URL ?? "https://soroban-testnet.stellar.org";
-const TABLE_NAME = "vaquita_events"; // queryable as dune.<namespace>.vaquita_events
+const TABLE_NAME = "vaquita_pool_events"; // queryable as dune.<namespace>.vaquita_pool_events
 const STATE_FILE = "dune_ingest_state.json";
 const PAGE_LIMIT = 200;
 const DECIMALS = 7; // Stellar assets use 7 decimals; confirm against your blend_token.
@@ -150,6 +150,7 @@ const COLUMNS = [
   "caller",
   "deposit_id",
   "amount",
+  "lock_period",
   "reward",
   "early_fee",
   "matured",
@@ -170,6 +171,7 @@ const SCHEMA: SchemaColumn[] = [
   { name: "caller", type: "varchar", nullable: true }, // topic[1] address (deposit/withdraw)
   { name: "deposit_id", type: "varchar", nullable: true }, // data.deposit_id (join key)
   { name: "amount", type: "double", nullable: true }, // deposit=principal, withdraw=payout, fees_wth=swept
+  { name: "lock_period", type: "integer", nullable: true }, // deposit selected period in seconds, if emitted/available
   { name: "reward", type: "double", nullable: true }, // withdraw only
   { name: "early_fee", type: "double", nullable: true }, // withdraw: penalty charged (also 0 if early w/ no interest)
   { name: "matured", type: "boolean", nullable: true }, // withdraw: true = held to maturity (completed cycle)
@@ -324,6 +326,7 @@ function flatten(events: StellarEvent[], environment: string): EventRow[] {
       caller: hasCaller ? String(topics[1] ?? "") : "",
       deposit_id: data.deposit_id != null ? String(data.deposit_id) : "",
       amount: data.amount != null ? scaled(data.amount) : "",
+      lock_period: data.lock_period != null ? String(data.lock_period) : data.period != null ? String(data.period) : "",
       reward: data.reward != null ? scaled(data.reward) : "",
       early_fee: data.early_fee != null ? scaled(data.early_fee) : "",
       matured: typeof data.matured === "boolean" ? String(data.matured) : "",

@@ -7,7 +7,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const STELLAR_ADDRESS_KEY = 'swk:address';
-const PUBLIC_ROUTES = ['/login', '/terms', '/privacy'];
+// `/share` hosts the public achievement landing pages — visitors arriving from
+// a shared link must never hit the auth gate or see the app chrome (nav/sidebar).
+const PUBLIC_ROUTES = ['/login', '/terms', '/privacy', '/share'];
 
 /**
  * Owns the auth-gate decision: hydrates the persisted wallet address, waits for

@@ -3,10 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "ingest": "tsx scripts/stellar_testnet_to_dune_vaquita.ts",
+    "ingest": "tsx scripts/stellar_testnet_to_dune_vaquita_pool_events.ts",
+    "create:pool-events": "tsx scripts/create_vaquita_pool_events_from_dune.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@vaquita/db": "workspace:*",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {

@@ -11,8 +11,8 @@ import type { AchievementDetail } from '../components/pages/profile/AchievementM
  * admin-editable catalog fields per row. {@link FALLBACK_BADGE_META} renders the
  * built-in set while that list loads, so the grid never flashes empty.
  *
- * Per-user PROGRESS + unlock for the built-in milestone keys is still computed
- * client-side from live signals (streak, deposits, XP, savings, rank) — see
+ * Per-user PROGRESS + unlock for non-medal built-in milestone keys is still computed
+ * client-side from live signals (streak, deposits, XP, savings) — see
  * {@link computeKnownState}. Badges that come from the backend but aren't in
  * that known set (admin-created rule badges, redeem-code badges) take their
  * `unlocked` state straight from the server response.
@@ -41,7 +41,7 @@ export type AchievementsCtx = {
   totalSavedAmount?: number;
   /** Number of friends followed. `undefined` while social is not shipped. */
   friendsCount?: number;
-  /** 1-based leaderboard rank; `undefined` means "not on the board". */
+  /** @deprecated Medal eligibility comes from the backend badge response. */
   leaderboardRank?: number;
   /** Server-derived: true when the user's profile was created before the
    *  Beta Tester cutoff (see `BETA_TESTER_CUTOFF` in @vaquita/shared). */
@@ -104,7 +104,6 @@ const computeKnownState = (ctx: AchievementsCtx): Record<string, KnownState> => 
   const isBetaTester = ctx.isBetaTester ?? false;
   const savings = ctx.totalSavedAmount ?? 0;
   const friends = ctx.friendsCount ?? 0;
-  const rank = ctx.leaderboardRank;
   const exp = ctx.experience;
   const streak = ctx.totalStreak;
   const deposits = ctx.totalDeposits;
@@ -123,9 +122,6 @@ const computeKnownState = (ctx: AchievementsCtx): Record<string, KnownState> => 
     whale: { progress: { current: Math.min(exp, 30000), target: 30000 }, unlocked: exp >= 30000 },
     'savings-baron': { progress: { current: Math.min(Math.floor(savings), 10000), target: 10000 }, unlocked: savings >= 10000 },
     'century-saver': { progress: { current: Math.min(streak, 100), target: 100 }, unlocked: streak >= 100 },
-    'third-place': { unlocked: rank != null && rank >= 3 && rank <= 10 },
-    'second-place': { unlocked: rank === 2 },
-    'first-place': { unlocked: rank === 1 },
   };
 };
 
@@ -146,7 +142,8 @@ export const buildServerAchievements = (server: AchievementResponseDTO[] = []): 
       icon: a.icon ?? `${ICONS}/${a.key}.png`,
       accent: a.accent ?? ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
       tier: a.tier as Badge['tier'],
-      unlocked: a.unlocked,
+      unlocked: a.unlocked || a.claimState === 'pending_mint',
+      claimState: a.claimState,
       date: a.claimedAt ?? undefined,
     }));
 
@@ -187,9 +184,10 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
         icon: a.icon ?? `${ICONS}/${a.key}.png`,
         accent: a.accent ?? ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
         tier: a.tier as Badge['tier'],
+        claimState: a.claimState,
       };
 
-      if (k) {
+      if (k && a.claimState !== 'pending_mint' && a.claimState !== 'minted' && a.claimState !== 'claimed') {
         return {
           ...base,
           progress: k.progress,
@@ -200,7 +198,7 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
 
       return {
         ...base,
-        unlocked: a.unlocked,
+        unlocked: a.unlocked || a.claimState === 'pending_mint',
         date: a.claimedAt ?? undefined,
       };
     });
