@@ -152,7 +152,15 @@ impl VaquitaPool {
         accounting::add_principal(&env, amount)?;
 
         positions::extend_instance(&env);
-        events::emit_deposit(&env, caller, deposit_id, blend_token, amount, shares);
+        events::emit_deposit(
+            &env,
+            caller,
+            deposit_id,
+            blend_token,
+            amount,
+            shares,
+            period,
+        );
         Ok(())
     }
 
@@ -263,6 +271,7 @@ impl VaquitaPool {
             reward,
             early_fee_amount,
             matured,
+            position.lock_period,
         );
         Ok(())
     }

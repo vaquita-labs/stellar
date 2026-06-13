@@ -109,8 +109,13 @@
       "title_other": "¡Ganaste {{count}} monedas!"
     },
     "share": {
+      "copyLink": "Copiar enlace",
       "cta": "Gana el tuyo en Vaquita",
+      "downloadImage": "Descargar imagen",
       "earnedBy": "logrado por @{{username}}",
+      "imageNotReady": "La imagen aún no está lista, intenta de nuevo",
+      "menuTitle": "Compartir insignia",
+      "shareImage": "Compartir imagen…",
       "fallbackTitle": "Logro · Vaquita",
       "metaDescription": "Alguien acaba de desbloquear \"{{title}}\" en Vaquita. {{description}}",
       "metaDescriptionUser": "@{{username}} acaba de desbloquear \"{{title}}\" en Vaquita. {{description}}",

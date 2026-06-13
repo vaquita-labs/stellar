@@ -3,13 +3,14 @@
 import { buildServerAchievements } from '@/core-ui/data/profile-badges';
 import { deriveLevel } from '@/core-ui/helpers';
 import {
+  leaderboardQueryKey,
   useProfileAchievements,
   useProfileData,
   useProfileExperience,
   useProfileStreak,
 } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { ProfileAverageResponseDTO } from '@/core-ui/types';
+import { LeaderboardResponseDTO } from '@/core-ui/types';
 import { useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -60,12 +61,7 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
   const listRow = useMemo(
     () =>
       queryClient
-        .getQueryData<ProfileAverageResponseDTO[]>([
-          'profiles',
-          'network',
-          network?.networkName,
-          'by-average-deposits',
-        ])
+        .getQueryData<LeaderboardResponseDTO[]>(leaderboardQueryKey(network?.networkName))
         ?.find((row) => row.walletAddress === walletAddress),
     [queryClient, network?.networkName, walletAddress],
   );

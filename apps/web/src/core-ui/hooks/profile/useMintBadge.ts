@@ -1,17 +1,16 @@
 'use client';
 
-import { claimAchievement, confirmMint, fetchSignedClaim, refreshSignedClaim } from '@/core-ui/api/achievements';
+import { confirmMint, fetchSignedClaim, refreshSignedClaim } from '@/core-ui/api/achievements';
 import { useConfigStore } from '@/core-ui/stores';
 import { mintBadge } from '@/networks/stellar/sorobanTx';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 /**
  * Mutation that runs the full badge mint flow:
- * 1. Claim achievement off-chain (idempotent — 409 is silently ignored)
- * 2. Fetch signed claim from the API
- * 3. Refresh signature if expired
- * 4. Call mintBadge via Pollar (wallet prompt)
- * 5. Confirm the mint on the server
+ * 1. Fetch/create a signed claim from the API
+ * 2. Refresh signature if expired
+ * 3. Call mintBadge via Pollar (wallet prompt)
+ * 4. Confirm the mint on the server, which finalizes rewards
  */
 export const useMintBadge = () => {
   const queryClient = useQueryClient();
@@ -26,15 +25,10 @@ export const useMintBadge = () => {
       }
       if (!walletAddress) throw new Error('No connected wallet');
 
-      // Step 1: claim achievement off-chain (idempotent — null means already claimed)
-      const claimed = await claimAchievement(walletAddress, badgeType);
-      const coinReward: number = claimed?.coinReward ?? 0;
-
-      // Step 2: fetch signed claim
       let claim = await fetchSignedClaim(walletAddress, badgeType);
       if (!claim) throw new Error('Failed to fetch badge claim');
 
-      // Step 3: refresh if signature expired
+      // Step 2: refresh if signature expired
       const nowUnix = Math.floor(Date.now() / 1000);
       if (claim.expiry <= nowUnix) {
         const refreshed = await refreshSignedClaim({
@@ -46,7 +40,7 @@ export const useMintBadge = () => {
         claim = refreshed;
       }
 
-      // Step 4: mint on-chain via Pollar — use tier (Soroban Symbol) not the key
+      // Step 3: mint on-chain via Pollar — use tier (Soroban Symbol) not the key
       const { hash } = await mintBadge({
         address: walletAddress,
         badgeContractId: badgesContractAddress,
@@ -56,15 +50,15 @@ export const useMintBadge = () => {
         signature: claim.signature,
       });
 
-      // Step 5: confirm on server
-      await confirmMint({
+      // Step 4: confirm on server and receive the finalized reward
+      const finalized = await confirmMint({
         badge_type: badgeType,
         wallet: walletAddress,
         cycle_id: claim.cycle_id,
         transaction_hash: hash,
       });
 
-      return { hash, coinReward };
+      return { hash, coinReward: finalized?.coinReward ?? 0 };
     },
     onSuccess: () => {
       // `minted` is folded into the profile-achievements list, so invalidating
@@ -74,6 +68,9 @@ export const useMintBadge = () => {
       });
       void queryClient.invalidateQueries({
         queryKey: ['profile', networkName, walletAddress, 'profile-rewards'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['profile', networkName, walletAddress, 'profile-experience'],
       });
     },
   });

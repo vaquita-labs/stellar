@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
+import { ACHIEVEMENT_CARD_VERSION, getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
 
 /**
  * Public share page for achievements. Two jobs:
@@ -66,11 +66,17 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   if (!achievement) return { title: 'Achievement · Vaquita' };
 
   const origin = await resolveOrigin();
-  const ogQuery = new URLSearchParams();
-  if (u) ogQuery.set('u', u);
-  if (date) ogQuery.set('date', date);
-  const qs = ogQuery.toString();
-  const ogImageUrl = `${origin}/og/achievement/${id}${qs ? `?${qs}` : ''}`;
+  const pageQuery = new URLSearchParams();
+  if (u) pageQuery.set('u', u);
+  if (date) pageQuery.set('date', date);
+  const qs = pageQuery.toString();
+
+  // `v` busts browser/CDN caches when the card design changes — the OG route
+  // itself ignores it. Only the image URL carries it; the canonical page URL
+  // stays version-free.
+  const ogQuery = new URLSearchParams(pageQuery);
+  ogQuery.set('v', ACHIEVEMENT_CARD_VERSION);
+  const ogImageUrl = `${origin}/og/achievement/${id}?${ogQuery.toString()}`;
 
   const achievementTitle = achievement.title;
   const achievementDescription = achievement.description;

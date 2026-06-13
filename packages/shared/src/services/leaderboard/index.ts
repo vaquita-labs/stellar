@@ -1,4 +1,5 @@
 import { prisma } from '@vaquita/db';
+import type { Profile } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Cycle duration config
@@ -19,17 +20,28 @@ export async function getCycleDurationMs(): Promise<number | null> {
 // Cycle boundary helpers
 // ---------------------------------------------------------------------------
 
+export type LeaderboardCycleStatus = 'current' | 'last_closed' | 'historical';
+
+export interface ResolvedLeaderboardCycle {
+  cycleId: number;
+  cycleStatus: LeaderboardCycleStatus;
+}
+
+const calendarCycleId = (date: Date): number => date.getUTCFullYear() * 100 + (date.getUTCMonth() + 1);
+
 /**
  * Converts a cycle ID to UTC start/end millisecond timestamps.
  *
  * - 6-digit YYYYMM → production monthly cycle
- * - 10-digit Unix epoch seconds → test fixed-duration cycle (requires cycle_duration_ms)
+ * - Unix epoch seconds → test fixed-duration cycle (requires cycle_duration_ms)
  */
 export async function cycleIdToBoundaries(cycleId: number): Promise<{ cycleStart: number; cycleEnd: number }> {
-  if (cycleId < 1_000_000_000) {
+  const year = Math.floor(cycleId / 100);
+  const month = cycleId % 100; // 1-based
+  const isCalendarCycleId = cycleId >= 100_000 && cycleId <= 999_999 && year >= 1970 && month >= 1 && month <= 12;
+
+  if (isCalendarCycleId) {
     // YYYYMM format
-    const year = Math.floor(cycleId / 100);
-    const month = cycleId % 100; // 1-based
     return {
       cycleStart: Date.UTC(year, month - 1, 1),
       cycleEnd:   Date.UTC(year, month,     1),
@@ -39,6 +51,21 @@ export async function cycleIdToBoundaries(cycleId: number): Promise<{ cycleStart
   const durationMs = (await getCycleDurationMs()) ?? 30 * 24 * 60 * 60 * 1000;
   const cycleStart = cycleId * 1000;
   return { cycleStart, cycleEnd: cycleStart + durationMs };
+}
+
+/**
+ * Returns the cycle ID for the currently open configured cycle.
+ *
+ * - Without cycle_duration_ms: current UTC calendar month as YYYYMM.
+ * - With cycle_duration_ms: the start (epoch-seconds) of the active fixed cycle.
+ */
+export async function getCurrentCycleId(): Promise<number> {
+  const durationMs = await getCycleDurationMs();
+  if (!durationMs) return calendarCycleId(new Date());
+
+  const durationS = durationMs / 1000;
+  const nowS = Math.floor(Date.now() / 1000);
+  return Math.floor(nowS / durationS) * durationS;
 }
 
 /**
@@ -62,6 +89,33 @@ export async function getLastClosedCycleId(): Promise<number> {
   return currentCycleStart - durationS; // previous cycle start in seconds
 }
 
+/**
+ * Parses the public leaderboard cycle query modes:
+ * omitted/current, last_closed, or an explicit positive cycle ID.
+ */
+export async function parseLeaderboardCycleQuery(value: unknown): Promise<ResolvedLeaderboardCycle> {
+  const raw = Array.isArray(value) ? value[0] : value;
+
+  if (raw == null || raw === '' || raw === 'current') {
+    return { cycleId: await getCurrentCycleId(), cycleStatus: 'current' };
+  }
+
+  if (raw === 'last_closed') {
+    return { cycleId: await getLastClosedCycleId(), cycleStatus: 'last_closed' };
+  }
+
+  if (typeof raw !== 'string' && typeof raw !== 'number') {
+    throw new Error('cycle must be current, last_closed, or a positive integer cycle id');
+  }
+
+  const cycleId = Number(raw);
+  if (!Number.isInteger(cycleId) || cycleId <= 0) {
+    throw new Error('cycle must be current, last_closed, or a positive integer cycle id');
+  }
+
+  return { cycleId, cycleStatus: 'historical' };
+}
+
 // ---------------------------------------------------------------------------
 // Leaderboard query
 // ---------------------------------------------------------------------------
@@ -70,8 +124,49 @@ export interface LeaderboardRow {
   walletAddress: string;
   score: number;          // USDC×seconds (closed + open at query time)
   activeAmount: number;   // total USDC in currently active deposits
+  cycleId: number;
   cycleStart: number;     // unix ms
   cycleEnd: number;       // unix ms
+}
+
+export interface EnrichedLeaderboardRow extends LeaderboardRow {
+  position: number;
+  nickname: string;
+  avatarUrl: string;
+  badges: number;
+  streak: number;
+  experience: number;
+  cycleStatus: LeaderboardCycleStatus;
+}
+
+export interface LeaderboardProfileRollups {
+  badgesByProfileId: Map<number, number>;
+  streaksByProfileId: Map<number, number>;
+  experienceByProfileId: Map<number, number>;
+}
+
+export function enrichLeaderboardRows(
+  rows: LeaderboardRow[],
+  profiles: Profile[],
+  rollups: LeaderboardProfileRollups,
+  cycleStatus: LeaderboardCycleStatus,
+): EnrichedLeaderboardRow[] {
+  const profilesByWallet = new Map(profiles.map((profile) => [profile.wallet_address?.toLowerCase() ?? '', profile]));
+
+  return rows.map((row, index) => {
+    const profile = profilesByWallet.get(row.walletAddress.toLowerCase());
+
+    return {
+      position: index + 1,
+      ...row,
+      nickname: profile?.nickname ?? '',
+      avatarUrl: profile?.avatar_url ?? '',
+      badges: profile ? (rollups.badgesByProfileId.get(profile.id) ?? 0) : 0,
+      streak: profile ? (rollups.streaksByProfileId.get(profile.id) ?? 0) : 0,
+      experience: profile ? (rollups.experienceByProfileId.get(profile.id) ?? 0) : 0,
+      cycleStatus,
+    };
+  });
 }
 
 /**
@@ -87,7 +182,7 @@ export async function getLeaderboard(
 ): Promise<LeaderboardRow[]> {
   const { cycleStart, cycleEnd: rawEnd } = await cycleIdToBoundaries(cycleId);
   const now = Date.now();
-  const cycleEnd = cycleId === 0 ? now : rawEnd;
+  const cycleEnd = cycleStart <= now && rawEnd > now ? now : rawEnd;
 
   // Fetch all confirmed deposits that overlap [cycleStart, cycleEnd)
   const deposits = await prisma.deposit.findMany({
@@ -151,6 +246,7 @@ export async function getLeaderboard(
     walletAddress,
     score: v.score,
     activeAmount: v.activeAmount,
+    cycleId,
     cycleStart,
     cycleEnd,
   }));

@@ -3,8 +3,9 @@
 import { Modal, toast } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
-import { FiShare2, FiX } from 'react-icons/fi';
+import { useEffect, useRef, useState } from 'react';
+import { FiCopy, FiDownload, FiShare2, FiX } from 'react-icons/fi';
+import { FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
 import { useTranslation } from 'react-i18next';
 import {
   useClaimedAchievements,
@@ -15,16 +16,9 @@ import {
   useProfileRewards,
 } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { ACHIEVEMENT_CARD_VERSION } from '../../../data/achievement-catalog';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 import { parseBadgeMintError } from '@/networks/stellar/badgeErrors';
-
-/**
- * Mocked username used to personalize the share link. Replace with a real
- * value when the user/profile hook exposes one (e.g. `useProfile().username`).
- * The OG endpoint reads it from the `u` query param and prints it on the
- * card; if it's empty the card still renders, just without the byline.
- */
-const MOCK_USERNAME = 'vaquero';
 
 export type AchievementDetail = {
   id: string;
@@ -39,6 +33,7 @@ export type AchievementDetail = {
   progress?: { current: number; target: number };
   /** Background color for the icon container. */
   accent?: string;
+  claimState?: 'locked' | 'claimable' | 'pending_mint' | 'claimed' | 'minted';
 };
 
 interface AchievementModalProps {
@@ -95,6 +90,9 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   // gates the stellar.expert link shown for already-minted badges.
   const { data: profile } = useProfileData();
   const cryptoMode = profile?.cryptoSavvy ?? false;
+  // Printed on the shared card ("· @nickname") and forwarded on the share
+  // link. Empty is fine — the card just renders without the byline.
+  const username = profile?.nickname?.trim() ?? '';
   // Drives whether we render the full-screen bottom-sheet (phone-sized) or
   // the compact centered dialog (everything wider than the Tailwind `sm`
   // breakpoint). Server-render returns `false`, matching the desktop shell
@@ -105,6 +103,16 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   const goldCoins = rewardsData?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
   const [phase, setPhase] = useState<Phase>('detail');
   const [sharing, setSharing] = useState(false);
+  // In-modal sheet listing explicit share targets (X, WhatsApp, copy,
+  // download) — the OS share sheet orders apps by usage and can't be
+  // influenced from the web, so the targets we care about get buttons.
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  // Web Share availability is a client-only fact — resolve it after mount so
+  // the server and hydration passes render the same tree.
+  const [canNativeShare, setCanNativeShare] = useState(false);
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function');
+  }, []);
   const [mintTxHash, setMintTxHash] = useState<string | null>(null);
   // Real coin reward returned by the mint flow's off-chain claim step; drives
   // the "You earned N coins!" reveal shown after a successful mint.
@@ -115,6 +123,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   useEffect(() => {
     if (open) {
       setPhase('detail');
+      setShareMenuOpen(false);
       setMintTxHash(null);
       setCoinReward(0);
       mintBadgeMutation.reset();
@@ -150,6 +159,29 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   };
 
   const claimed = !!achievement && isClaimed(achievement.id);
+
+  // Warm the story-format (9:16) share image while the user looks at the
+  // modal, so the share tap can attach it instantly. Fetching on demand is
+  // not an option: Safari revokes the user gesture (transient activation)
+  // if `navigator.share` runs more than a few seconds after the tap.
+  const shareFileRef = useRef<Promise<File | null> | null>(null);
+  useEffect(() => {
+    if (!open || !achievement || !claimed) {
+      shareFileRef.current = null;
+      return;
+    }
+    const qs = new URLSearchParams({ format: 'story', v: ACHIEVEMENT_CARD_VERSION });
+    if (username) qs.set('u', username);
+    if (achievement.date) qs.set('date', achievement.date);
+    shareFileRef.current = fetch(`/og/achievement/${achievement.id}?${qs.toString()}`)
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return new File([blob], `vaquita-achievement-${achievement.id}.png`, { type: 'image/png' });
+      })
+      .catch(() => null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, claimed, username, achievement?.id, achievement?.date]);
 
   if (!achievement) return null;
 
@@ -221,18 +253,27 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   const buildShareUrl = (): string => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
     const qs = new URLSearchParams();
-    if (MOCK_USERNAME) qs.set('u', MOCK_USERNAME);
+    if (username) qs.set('u', username);
     if (achievement.date) qs.set('date', achievement.date);
     const query = qs.toString();
     return `${origin}/share/achievement/${achievement.id}${query ? `?${query}` : ''}`;
   };
 
   /**
-   * Native share — hand text + the public share URL to the OS share sheet.
-   * Receiving apps (X, WhatsApp, Telegram, …) fetch the URL's OG metadata
-   * and render the image inline, so the post lands image-rich without us
-   * ever shipping a PNG. Falls back to clipboard when the Web Share API
-   * isn't available (older desktop browsers).
+   * Native share — three tiers, best supported one wins:
+   *
+   *  1. Web Share Level 2 (mobile): attach the pre-fetched 9:16 badge PNG as
+   *     a `File` alongside text + the public URL. Image-first targets
+   *     (Instagram Stories/feed, camera roll) receive the actual card;
+   *     link-first targets (X, WhatsApp, Telegram) still unfurl the URL's
+   *     OG image server-side.
+   *  2. Web Share Level 1: text + URL only — receiving apps render the image
+   *     from the URL's OG metadata.
+   *  3. Clipboard (older desktop browsers): copy text + URL.
+   *
+   * The file wait is capped well under Safari's ~5 s transient-activation
+   * window; if the prefetch hasn't landed yet we degrade to link-only
+   * rather than risk a NotAllowedError.
    */
   const handleNativeShare = async () => {
     setSharing(true);
@@ -240,10 +281,27 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
       const shareUrl = buildShareUrl();
       const nav = navigator as Navigator & {
         share?: (data: ShareData) => Promise<void>;
+        canShare?: (data: ShareData) => boolean;
       };
-      const payload: ShareData = { title, text: shareText, url: shareUrl };
       if (nav.share) {
-        await nav.share(payload);
+        const file = await Promise.race([
+          shareFileRef.current ?? Promise.resolve(null),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
+        ]);
+        // Validate the exact payload — some browsers accept files but reject
+        // the files+url combination, and canShare is the only way to know.
+        const filePayload: ShareData = { files: file ? [file] : [], title, text: shareText, url: shareUrl };
+        if (file && nav.canShare?.(filePayload)) {
+          await nav.share(filePayload);
+          return;
+        }
+        if (file && nav.canShare?.({ files: [file], title, text: shareText })) {
+          // url is the unsupported member — share the image with the link
+          // folded into the text so it isn't lost.
+          await nav.share({ files: [file], title, text: `${shareText} ${shareUrl}` });
+          return;
+        }
+        await nav.share({ title, text: shareText, url: shareUrl });
         return;
       }
       await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
@@ -270,6 +328,83 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
       setSharing(false);
     }
   };
+
+  /* ------------------------------------------------------------------ */
+  /* Explicit share targets (share-menu sheet)                           */
+  /* ------------------------------------------------------------------ */
+
+  // X and WhatsApp have no way to receive a file from the web — their web
+  // intents take text + URL only; the receiving side unfurls the image from
+  // the share page's OG metadata.
+  const handleShareToX = () => {
+    const shareUrl = buildShareUrl();
+    const intent = `https://x.com/intent/post?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(intent, '_blank', 'noopener,noreferrer');
+    setShareMenuOpen(false);
+  };
+
+  const handleShareToWhatsApp = () => {
+    const shareUrl = buildShareUrl();
+    const intent = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+    window.open(intent, '_blank', 'noopener,noreferrer');
+    setShareMenuOpen(false);
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${shareText} ${buildShareUrl()}`);
+      toast.success(t('achievements.toast.linkCopied', 'Link copied to clipboard'));
+    } catch {
+      toast.danger(t('achievements.toast.couldNotShare', 'Could not share'));
+    }
+    setShareMenuOpen(false);
+  };
+
+  const handleDownloadImage = async () => {
+    const file = await (shareFileRef.current ?? Promise.resolve(null));
+    if (!file) {
+      toast.danger(t('achievements.share.imageNotReady', 'Image not ready yet, try again'));
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = file.name;
+    anchor.click();
+    URL.revokeObjectURL(objectUrl);
+    setShareMenuOpen(false);
+  };
+
+  const shareMenuOptions: { key: string; label: string; icon: React.ReactNode; onClick: () => void }[] = [
+    ...(canNativeShare
+      ? [
+          {
+            key: 'native',
+            label: t('achievements.share.shareImage', 'Share image…'),
+            icon: <FiShare2 className="h-5 w-5" />,
+            onClick: () => {
+              setShareMenuOpen(false);
+              void handleNativeShare();
+            },
+          },
+        ]
+      : []),
+    // "X" and "WhatsApp" are proper nouns — no i18n needed.
+    { key: 'x', label: 'X', icon: <FaXTwitter className="h-5 w-5" />, onClick: handleShareToX },
+    { key: 'whatsapp', label: 'WhatsApp', icon: <FaWhatsapp className="h-5 w-5" />, onClick: handleShareToWhatsApp },
+    {
+      key: 'download',
+      label: t('achievements.share.downloadImage', 'Download image'),
+      icon: <FiDownload className="h-5 w-5" />,
+      onClick: () => void handleDownloadImage(),
+    },
+    {
+      key: 'copy',
+      label: t('achievements.share.copyLink', 'Copy link'),
+      icon: <FiCopy className="h-5 w-5" />,
+      onClick: () => void handleCopyLink(),
+    },
+  ];
 
   /* ------------------------------------------------------------------ */
   /* Phase: reward reveal                                                */
@@ -543,7 +678,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
             animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
             exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}
+            className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
               <button
@@ -575,7 +710,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
               ) : showHeaderShare ? (
                 <button
                   type="button"
-                  onClick={handleNativeShare}
+                  onClick={() => setShareMenuOpen(true)}
                   disabled={sharing}
                   aria-label={t('achievements.modal.shareAchievement', 'Share achievement')}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
@@ -592,6 +727,46 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
               {phase === 'minting' && renderMinting()}
               {phase === 'minted' && renderMinted()}
               {phase === 'detail' && renderDetail()}
+            </AnimatePresence>
+
+            {/* Share-menu sheet: explicit targets layered over the modal */}
+            <AnimatePresence>
+              {shareMenuOpen && (
+                <div className="absolute inset-0 z-20 flex flex-col justify-end overflow-hidden rounded-t-3xl">
+                  <motion.button
+                    type="button"
+                    aria-label={t('common.close')}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShareMenuOpen(false)}
+                    className="absolute inset-0 bg-black/40"
+                  />
+                  <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                    className="relative bg-background rounded-t-3xl border-t border-black px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-2"
+                  >
+                    <p className="text-xs font-extrabold uppercase tracking-wider text-gray-600 text-center pb-1">
+                      {t('achievements.share.menuTitle', 'Share badge')}
+                    </p>
+                    {shareMenuOptions.map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={option.onClick}
+                        disabled={sharing}
+                        className="h-12 w-full inline-flex items-center gap-3 rounded-md bg-white border border-black border-b-2 px-4 text-sm font-bold text-black hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
+                      >
+                        {option.icon}
+                        {option.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                </div>
+              )}
             </AnimatePresence>
           </motion.div>
         </Modal.Dialog>

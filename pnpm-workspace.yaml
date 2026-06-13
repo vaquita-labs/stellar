@@ -4,6 +4,7 @@ packages:
   - 'apps/job-deposits'
   - 'apps/web'
   - 'apps/admin'
+  - 'analytics'
   - 'packages/*'
 allowBuilds:
   '@heroui/shared-utils': true
