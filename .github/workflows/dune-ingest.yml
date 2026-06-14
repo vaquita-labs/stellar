@@ -28,13 +28,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: pnpm
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
 
       # Persist the high-water-mark between scheduled runs.
       # The dashboard queries also de-dupe by event_id, so a rare cache miss
