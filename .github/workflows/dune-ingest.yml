@@ -28,13 +28,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: pnpm
-
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
 
       # Persist the high-water-mark between scheduled runs.
       # The dashboard queries also de-dupe by event_id, so a rare cache miss
@@ -60,4 +61,6 @@ jobs:
           DUNE_REFRESH_QUERY_IDS: ${{ vars.DUNE_REFRESH_QUERY_IDS }}
           # Optional: milliseconds between dashboard query refreshes. Defaults to 60000.
           DUNE_REFRESH_DELAY_MS: ${{ vars.DUNE_REFRESH_DELAY_MS }}
+          # Optional: milliseconds before retrying a Dune 402 free-engine limit. Defaults to 60000.
+          DUNE_REFRESH_RETRY_DELAY_MS: ${{ vars.DUNE_REFRESH_RETRY_DELAY_MS }}
         run: pnpm --filter vaquita-analytics ingest

@@ -95,7 +95,16 @@ const DUNE_REFRESH_QUERY_IDS: string[] = (process.env.DUNE_REFRESH_QUERY_IDS ?? 
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
-const REFRESH_DELAY_MS = Number(process.env.DUNE_REFRESH_DELAY_MS ?? 60_000);
+
+function positiveIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback;
+}
+
+const REFRESH_DELAY_MS = positiveIntEnv("DUNE_REFRESH_DELAY_MS", 60_000);
+const REFRESH_RETRY_DELAY_MS = positiveIntEnv("DUNE_REFRESH_RETRY_DELAY_MS", 60_000);
 
 // ----------------------------- Types -----------------------------------------
 type DuneColumnType = "varchar" | "integer" | "double" | "boolean" | "timestamp";
@@ -384,24 +393,42 @@ async function insertRows(rows: EventRow[]): Promise<void> {
   console.log(`Inserted ${rows.length} new events.`);
 }
 
+async function executeDashboardQuery(queryId: string): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(`${DUNE_EXECUTE_BASE}/${queryId}/execute`, {
+      method: "POST",
+      headers: duneHeaders("application/json"),
+      body: JSON.stringify({ performance: "free" }),
+    });
+    const text = await res.text();
+    console.log(`  query ${queryId}: ${res.status} ${text}`);
+
+    if (res.status !== 402) return;
+
+    console.warn(
+      `  query ${queryId}: Dune free engine is at the parallel execution limit; ` +
+        `retrying in ${Math.round(REFRESH_RETRY_DELAY_MS / 1000)}s (attempt ${attempt + 1})...`
+    );
+    await new Promise((r) => setTimeout(r, REFRESH_RETRY_DELAY_MS));
+  }
+}
+
 /** Re-run the saved dashboard queries (one at a time, spaced apart) so the
  *  panels show the just-inserted data. Uses the free engine to minimise credits.
+ *  Dune may return HTTP 402 when the free engine already has three parallel
+ *  executions; retry that query until it is accepted, then continue.
  *  Best-effort: a failed refresh logs a warning but never fails the ingest. */
 async function refreshDashboard(queryIds: string[]): Promise<void> {
   console.log(
     `Refreshing ${queryIds.length} dashboard quer${queryIds.length === 1 ? "y" : "ies"} ` +
-      `(${Math.round(REFRESH_DELAY_MS / 1000)}s apart)...`
+      `(${Math.round(REFRESH_DELAY_MS / 1000)}s apart, ` +
+      `${Math.round(REFRESH_RETRY_DELAY_MS / 1000)}s retry delay on 402)...`
   );
   for (let i = 0; i < queryIds.length; i++) {
     if (i > 0) await new Promise((r) => setTimeout(r, REFRESH_DELAY_MS));
     const id = queryIds[i];
     try {
-      const res = await fetch(`${DUNE_EXECUTE_BASE}/${id}/execute`, {
-        method: "POST",
-        headers: duneHeaders("application/json"),
-        body: JSON.stringify({ performance: "free" }),
-      });
-      console.log(`  query ${id}: ${res.status} ${await res.text()}`);
+      await executeDashboardQuery(id);
     } catch (err) {
       console.warn(`  query ${id} refresh failed: ${err instanceof Error ? err.message : err}`);
     }
