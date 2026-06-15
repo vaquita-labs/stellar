@@ -314,7 +314,8 @@ router.post('/wallet/:walletAddress/gold-daily-collect', requireWalletSession, a
 
 router.post('/wallet/:walletAddress/nickname', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
-  const nickname = req.body?.nickname ?? '';
+  // Nicknames are always stored lowercase so "JUAN", "Juan" and "juan" are the same user.
+  const nickname = String(req.body?.nickname ?? '').trim().toLowerCase();
   req.log.info({ walletAddress, nickname }, 'POST /profile/.../nickname');
 
   const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
@@ -325,8 +326,9 @@ router.post('/wallet/:walletAddress/nickname', requireWalletSession, async (req,
   }
 
   try {
+    // Case-insensitive match so "Juan", "JUAN" and "juan" can't coexist as separate users.
     const existing = await prisma.profile.findFirst({
-      where: { nickname, id: { not: profileData.id } },
+      where: { nickname: { equals: nickname, mode: 'insensitive' }, id: { not: profileData.id } },
       select: { id: true },
     });
 
@@ -387,14 +389,16 @@ router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req,
 
   // --- Nickname ---
   if (hasNickname) {
-    const nickname = String(body.nickname).trim();
+    // Always stored lowercase so "JUAN", "Juan" and "juan" are the same user.
+    const nickname = String(body.nickname).trim().toLowerCase();
     if (!nickname) {
       result.nickname.error = 'Please enter a nickname.';
     } else if (nickname.length > 50) {
       result.nickname.error = 'That nickname is too long (max 50 characters).';
     } else {
+      // Case-insensitive match so "Juan", "JUAN" and "juan" can't coexist as separate users.
       const taken = await prisma.profile.findFirst({
-        where: { nickname, id: { not: profileData.id }, deletedAt: null },
+        where: { nickname: { equals: nickname, mode: 'insensitive' }, id: { not: profileData.id }, deletedAt: null },
         select: { id: true },
       });
       if (taken) {
@@ -734,7 +738,7 @@ router.patch('/wallet/:walletAddress/notification-preferences', requireWalletSes
 });
 
 router.get('/nickname-available', async (req, res) => {
-  const nickname = String(req.query?.nickname ?? '').trim();
+  const nickname = String(req.query?.nickname ?? '').trim().toLowerCase();
   req.log.info({ nickname }, 'GET /profile/nickname-available');
 
   if (!nickname) {
@@ -742,8 +746,9 @@ router.get('/nickname-available', async (req, res) => {
   }
 
   try {
+    // Case-insensitive match so "Juan", "JUAN" and "juan" are treated as the same user.
     const existing = await prisma.profile.findFirst({
-      where: { nickname },
+      where: { nickname: { equals: nickname, mode: 'insensitive' } },
       select: { id: true },
     });
     return sendSuccess(res, { available: !existing });
