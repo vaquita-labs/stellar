@@ -30,7 +30,6 @@ export const VaquitaModalContent = ({
       onOpenChange={loading ? () => {} : onClose}
       isDismissable={!loading}
       title={title}
-      titleIcon="/icons/bag.svg"
       titleIconAlt="vaquita"
       size="sm"
       bodyClassName="flex flex-col gap-5 pb-6"
