@@ -154,7 +154,7 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
               type="text"
               placeholder={t('onboarding.username.inputPlaceholder', '@username')}
               value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
+              onChange={(e) => setNickname(e.target.value.toLowerCase())}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSubmit();
               }}

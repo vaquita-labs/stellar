@@ -552,6 +552,88 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   /* ------------------------------------------------------------------ */
   const renderDetail = () => {
     const canClaim = unlocked && !claimed && !!network?.badgesContractAddress;
+
+    // Once claimed, the badge is shareable — so the modal becomes a faithful
+    // preview of the social card the user will actually post: white surface,
+    // black border, "Achievement unlocked" kicker, "earned by @user" byline
+    // and the Vaquita lockup, mirroring `/share/achievement/[id]` and the OG
+    // image 1:1. Anything that is NOT printed on that card (e.g. the on-chain
+    // tx hash for crypto-mode users) lives OUTSIDE the white border, below it.
+    if (claimed) {
+      return (
+        <motion.div
+          key="detail"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="flex-1 flex flex-col items-center justify-center gap-4 px-5 py-4 overflow-y-auto"
+        >
+          {/* Share preview — kept identical to the shared card so what the user
+              sees is exactly what gets posted. */}
+          <motion.div
+            initial={{ scale: 0.96, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+            className="relative w-full max-w-sm mx-auto rounded-3xl bg-white border border-black border-b-2 shadow-lg"
+          >
+            <div className="flex flex-col items-center text-center px-6 pt-7 pb-6 gap-3">
+              <div className="relative flex h-40 w-40 items-center justify-center">
+                <span
+                  aria-hidden
+                  className="absolute inset-4 rounded-full blur-2xl opacity-50"
+                  style={{
+                    background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
+                  }}
+                />
+                <Image
+                  src={achievement.icon}
+                  alt={title}
+                  fill
+                  sizes="160px"
+                  className="relative object-contain drop-shadow-md"
+                />
+              </div>
+
+              {achievement.date && (
+                <span className="inline-flex items-center text-[11px] font-bold uppercase tracking-wider bg-primary/30 text-[#7A3E00] rounded-full px-3 py-1">
+                  {formatDate(achievement.date)}
+                </span>
+              )}
+
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-primary">
+                {t('achievements.share.unlocked', 'Achievement unlocked')}
+              </p>
+              <h2 className="text-2xl font-extrabold text-black leading-tight">{title}</h2>
+              {username && (
+                <p className="text-sm font-semibold text-gray-700">
+                  {t('achievements.share.earnedBy', 'earned by @{{username}}', { username })}
+                </p>
+              )}
+              <p className="text-sm text-gray-600 leading-snug max-w-[18rem]">{description}</p>
+
+              <div className="mt-3 flex items-center gap-2 border-t border-black/10 pt-4 w-full justify-center">
+                <Image
+                  src="/vaquita/vaquita_isotipo.svg"
+                  alt=""
+                  width={40}
+                  height={40}
+                  className="object-contain"
+                />
+                <span className="text-base font-extrabold tracking-tight text-black">Vaquita</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Crypto mode: on-chain tx for an already-minted badge. It is NOT
+              part of the shared image, so it sits below the white card as extra
+              info. Tapping the hash opens the transaction on stellar.expert. */}
+          {showStoredTx && storedTxHash && (
+            <div className="w-full max-w-sm mx-auto">{txHashRow(storedTxHash)}</div>
+          )}
+        </motion.div>
+      );
+    }
+
     return (
       <motion.div
         key="detail"
@@ -628,14 +710,6 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
             >
               {t('achievements.detail.claimAward', 'Claim award')}
             </button>
-          </div>
-        )}
-
-        {/* Crypto mode: surface the on-chain tx for an already-minted badge.
-            Tapping the hash opens the transaction on stellar.expert in a new tab. */}
-        {!canClaim && showStoredTx && storedTxHash && (
-          <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
-            {txHashRow(storedTxHash)}
           </div>
         )}
       </motion.div>
