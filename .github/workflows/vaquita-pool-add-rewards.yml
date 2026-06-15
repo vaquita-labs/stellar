@@ -1,0 +1,136 @@
+name: Vaquita Pool Add Rewards
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "VaquitaPool deployment to fund"
+        required: true
+        type: choice
+        options:
+          - dev
+      lock_period:
+        description: "Lock period passed to add_rewards, in seconds"
+        required: true
+        type: string
+      reward_amount:
+        description: "Raw token amount passed to add_rewards, using token decimals"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  STELLAR_CLI_VERSION: "25.1.0"
+  STELLAR_NETWORK: testnet
+
+jobs:
+  add-rewards:
+    name: Add rewards to dev pool
+    runs-on: ubuntu-latest
+    concurrency:
+      group: vaquita-pool-add-rewards-${{ inputs.target_environment }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Stellar CLI
+        run: |
+          set -euo pipefail
+          case "$(uname -m)" in
+            x86_64) triple=x86_64-unknown-linux-gnu ;;
+            aarch64) triple=aarch64-unknown-linux-gnu ;;
+            *) echo "unsupported runner architecture: $(uname -m)"; exit 1 ;;
+          esac
+          ver="${STELLAR_CLI_VERSION}"
+          url="https://github.com/stellar/stellar-cli/releases/download/v${ver}/stellar-cli-${ver}-${triple}.tar.gz"
+          curl -fsSL "$url" | tar xz
+          mkdir -p "${HOME}/.local/bin"
+          install -m 755 stellar "${HOME}/.local/bin/stellar"
+          rm -f stellar
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          stellar version
+
+      - name: Resolve dev contract
+        id: contract
+        env:
+          TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+          VAQUITA_CONTRACTS_SECRET: ${{ secrets.VAQUITA_CONTRACTS }}
+          VAQUITA_CONTRACTS_VARIABLE: ${{ vars.VAQUITA_CONTRACTS }}
+        run: |
+          set -euo pipefail
+
+          if [ "${TARGET_ENVIRONMENT}" != "dev" ]; then
+            echo "Only the dev environment is enabled for this workflow." >&2
+            exit 1
+          fi
+
+          contracts="${VAQUITA_CONTRACTS_SECRET:-${VAQUITA_CONTRACTS_VARIABLE:-}}"
+          if [ -z "${contracts}" ]; then
+            echo "Set VAQUITA_CONTRACTS as a repo secret or variable, e.g. dev=C...,staging=C..." >&2
+            exit 1
+          fi
+
+          contract_id="$(
+            printf '%s' "${contracts}" |
+              tr ',' '\n' |
+              awk -F= -v env="${TARGET_ENVIRONMENT}" '
+                {
+                  key=$1
+                  value=$2
+                  gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
+                  gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+                  if (key == env) {
+                    print value
+                    exit
+                  }
+                }
+              '
+          )"
+
+          if [ -z "${contract_id}" ]; then
+            echo "No ${TARGET_ENVIRONMENT}=... entry found in VAQUITA_CONTRACTS." >&2
+            exit 1
+          fi
+
+          if ! printf '%s' "${contract_id}" | grep -Eq '^C[A-Z2-7]{55}$'; then
+            echo "Resolved contract id for ${TARGET_ENVIRONMENT} does not look like a Stellar contract id." >&2
+            exit 1
+          fi
+
+          echo "contract_id=${contract_id}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved ${TARGET_ENVIRONMENT} VaquitaPool contract: ${contract_id}"
+
+      - name: Add rewards
+        env:
+          CONTRACT_ID: ${{ steps.contract.outputs.contract_id }}
+          LOCK_PERIOD: ${{ inputs.lock_period }}
+          REWARD_AMOUNT: ${{ inputs.reward_amount }}
+          VAQUITA_POOL_ADMIN_SECRET_KEY: ${{ secrets.VAQUITA_POOL_ADMIN_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${VAQUITA_POOL_ADMIN_SECRET_KEY}" ]; then
+            echo "Set the VAQUITA_POOL_ADMIN_SECRET_KEY repo secret to the dev pool admin secret key." >&2
+            exit 1
+          fi
+          echo "::add-mask::${VAQUITA_POOL_ADMIN_SECRET_KEY}"
+
+          for value_name in LOCK_PERIOD REWARD_AMOUNT; do
+            value="$(eval "printf '%s' \"\${${value_name}}\"")"
+            if ! printf '%s' "${value}" | grep -Eq '^[1-9][0-9]*$'; then
+              echo "${value_name} must be a positive integer." >&2
+              exit 1
+            fi
+          done
+
+          stellar contract invoke \
+            --id "${CONTRACT_ID}" \
+            --source "${VAQUITA_POOL_ADMIN_SECRET_KEY}" \
+            --network "${STELLAR_NETWORK}" \
+            -- \
+            add_rewards \
+            --period "${LOCK_PERIOD}" \
+            --reward_amount "${REWARD_AMOUNT}"
