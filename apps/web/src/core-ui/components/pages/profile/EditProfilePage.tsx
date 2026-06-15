@@ -326,7 +326,7 @@ export function EditProfilePage() {
               placeholder={t('profilePages.edit.nicknamePlaceholder', '@nickname')}
               value={nickname}
               onChange={(e) => {
-                setNickname(e.target.value);
+                setNickname(e.target.value.toLowerCase());
                 if (nicknameError) setNicknameError('');
               }}
               maxLength={50}

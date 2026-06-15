@@ -124,7 +124,6 @@ export function BankAPYModal({
       hideClose={lockToWithdraw}
       onBack={inDetail && !detail.loading && !lockToWithdraw ? backToList : undefined}
       title={inDetail ? detail.title : t('deposit.bank.title', 'Bank Rewards')}
-      titleIcon={inDetail ? '/icons/bag.svg' : undefined}
       titleIconAlt={inDetail ? 'vaquita' : 'rewards'}
       size="lg"
       bodyClassName={inDetail ? 'flex flex-col gap-5 pb-6' : undefined}

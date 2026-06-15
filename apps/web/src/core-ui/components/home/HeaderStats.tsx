@@ -20,6 +20,7 @@ import {
 import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
 import { BankAPYModal, CoinsModal, ExperienceModal, StreakModal } from '../organisms';
+import { DailyRewardChest } from './DailyRewardChest';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
 import { EarnChip } from './EarnChip';
 
@@ -207,7 +208,7 @@ export const HeaderStats = () => {
         </div>
       </div>
 
-      <div className="absolute left-0 right-0 -bottom-10 px-4 z-20 pointer-events-none">
+      <div className="absolute left-0 right-0 -bottom-10 px-2 z-20 pointer-events-none">
         <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-1.5  pointer-events-auto">
           <button
             type="button"
@@ -272,6 +273,10 @@ export const HeaderStats = () => {
               {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </span>
           </button>
+
+          <div className="w-px h-4 bg-black/10" />
+
+          <DailyRewardChest />
         </div>
       </div>
 
