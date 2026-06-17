@@ -747,8 +747,9 @@ router.get('/nickname-available', async (req, res) => {
 
   try {
     // Case-insensitive match so "Juan", "JUAN" and "juan" are treated as the same user.
+    // Soft-deleted profiles don't reserve their nickname (matches the PATCH uniqueness check).
     const existing = await prisma.profile.findFirst({
-      where: { nickname: { equals: nickname, mode: 'insensitive' } },
+      where: { nickname: { equals: nickname, mode: 'insensitive' }, deletedAt: null },
       select: { id: true },
     });
     return sendSuccess(res, { available: !existing });
