@@ -385,22 +385,46 @@ const BadgeFormModal = ({
         </div>
 
         <div className="flex gap-6">
-          <Switch isSelected={form.enabled} onChange={(v: boolean) => set('enabled', v)}>
-            Enabled
-          </Switch>
-          <Switch isSelected={form.hidden} onChange={(v: boolean) => set('hidden', v)}>
-            Hidden (until claimed)
-          </Switch>
+          <div className="flex items-center gap-2">
+            <Switch
+              isSelected={form.enabled}
+              onChange={(v: boolean) => set('enabled', v)}
+              aria-label="Enabled"
+            >
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+            </Switch>
+            <span className="text-sm text-black">Enabled</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              isSelected={form.hidden}
+              onChange={(v: boolean) => set('hidden', v)}
+              aria-label="Hidden (until claimed)"
+            >
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+            </Switch>
+            <span className="text-sm text-black">Hidden (until claimed)</span>
+          </div>
         </div>
 
         {isEdit && editing && form.tier !== editing.tier && (
           <div className="flex flex-col gap-1 rounded-medium bg-warning-50 p-3">
-            <Switch
-              isSelected={form.allowTierChange}
-              onChange={(v: boolean) => set('allowTierChange', v)}
-            >
-              Allow tier change
-            </Switch>
+            <div className="flex items-center gap-2">
+              <Switch
+                isSelected={form.allowTierChange}
+                onChange={(v: boolean) => set('allowTierChange', v)}
+                aria-label="Allow tier change"
+              >
+                <Switch.Control>
+                  <Switch.Thumb />
+                </Switch.Control>
+              </Switch>
+              <span className="text-sm text-black">Allow tier change</span>
+            </div>
             <span className="text-xs text-warning-600">
               Tier is the Soroban mint symbol changing it can break on-chain minting for this
               badge. Enable only if you know what you&apos;re doing.
