@@ -61,23 +61,141 @@ ORDER BY hour;
 
 
 -- ============================================================
--- PANEL 3 — COMPLETED CYCLES  (positions held to maturity)   Visualization: Counter
---   A cycle "completes" when a position is withdrawn at/after maturity. The
---   contract sets `matured` on the withdraw event, so filter on that directly.
---   (Don't use early_fee = 0 — that's also true for an early exit that earned
---    no interest, so it would over-count.)
+-- PANEL 3 — COMPLETED CYCLES BY LOCK PERIOD
+--   Visualization: Grouped bar chart
+--   x = lock_period, y = completed_cycles, series = status
+--
+--   Shows both completed deposits that are still active and completed deposits
+--   already withdrawn after maturity. The active-completed cutoff is the latest
+--   ingested event timestamp, not wall-clock now, so re-running the same table
+--   snapshot gives stable results.
 -- ============================================================
 WITH ev AS (
-  SELECT environment, event_name, matured
+  SELECT
+    environment,
+    event_id,
+    ledger,
+    event_name,
+    caller,
+    deposit_id,
+    lock_period,
+    matured,
+    ledger_closed_at
   FROM (
-    SELECT *, row_number() OVER (PARTITION BY event_id ORDER BY ledger) AS rn
+    SELECT
+      *,
+      row_number() OVER (
+        PARTITION BY event_id
+        ORDER BY
+          CASE WHEN lock_period IS NULL THEN 1 ELSE 0 END,
+          CASE WHEN matured IS NULL THEN 1 ELSE 0 END,
+          ledger,
+          ledger_closed_at,
+          environment,
+          event_name,
+          caller,
+          deposit_id
+      ) AS rn
     FROM dune.<handle>.vaquita_pool_events
     WHERE environment LIKE '{{environment}}'
-  ) WHERE rn = 1
+  )
+  WHERE rn = 1
+),
+as_of AS (
+  SELECT max(ledger_closed_at) AS cutoff_time
+  FROM ev
+),
+sequenced AS (
+  SELECT
+    *,
+    SUM(CASE WHEN event_name = 'deposit' THEN 1 ELSE 0 END) OVER (
+      PARTITION BY environment, caller, deposit_id
+      ORDER BY ledger, event_id
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS cycle_no
+  FROM ev
+  WHERE event_name IN ('deposit', 'withdraw')
+    AND deposit_id <> ''
+),
+deposits AS (
+  SELECT
+    environment,
+    caller,
+    deposit_id,
+    cycle_no,
+    TRY_CAST(lock_period AS bigint) AS lock_period_seconds,
+    ledger_closed_at
+  FROM sequenced
+  WHERE event_name = 'deposit'
+),
+withdrawals AS (
+  SELECT
+    environment,
+    caller,
+    deposit_id,
+    cycle_no,
+    bool_or(matured) AS matured
+  FROM sequenced
+  WHERE event_name = 'withdraw'
+    AND cycle_no > 0
+  GROUP BY 1, 2, 3, 4
+),
+completed_positions AS (
+  SELECT
+    d.lock_period_seconds,
+    'Completed not withdrawn' AS status
+  FROM deposits d
+  CROSS JOIN as_of a
+  LEFT JOIN withdrawals w
+    ON w.environment = d.environment
+   AND w.caller = d.caller
+   AND w.deposit_id = d.deposit_id
+   AND w.cycle_no = d.cycle_no
+  WHERE w.deposit_id IS NULL
+    AND d.lock_period_seconds IS NOT NULL
+    AND a.cutoff_time IS NOT NULL
+    AND date_add('second', CAST(d.lock_period_seconds AS integer), d.ledger_closed_at) <= a.cutoff_time
+
+  UNION ALL
+
+  SELECT
+    d.lock_period_seconds,
+    'Matured withdrawn' AS status
+  FROM deposits d
+  INNER JOIN withdrawals w
+    ON w.environment = d.environment
+   AND w.caller = d.caller
+   AND w.deposit_id = d.deposit_id
+   AND w.cycle_no = d.cycle_no
+  WHERE d.lock_period_seconds IS NOT NULL
+    AND w.matured
+),
+periods AS (
+  SELECT * FROM (
+    VALUES
+      (604800, '7 days', 1),
+      (7776000, '3 months', 2),
+      (15552000, '6 months', 3)
+  ) AS t(lock_period_seconds, lock_period, sort_order)
+),
+statuses AS (
+  SELECT * FROM (
+    VALUES
+      ('Completed not withdrawn', 1),
+      ('Matured withdrawn', 2)
+  ) AS t(status, status_order)
 )
-SELECT count(*) AS completed_cycles
-FROM ev
-WHERE event_name = 'withdraw' AND matured;
+SELECT
+  p.lock_period,
+  s.status,
+  COUNT(c.lock_period_seconds) AS completed_cycles
+FROM periods p
+CROSS JOIN statuses s
+LEFT JOIN completed_positions c
+  ON c.lock_period_seconds = p.lock_period_seconds
+ AND c.status = s.status
+GROUP BY p.lock_period, p.sort_order, s.status, s.status_order
+ORDER BY p.sort_order, s.status_order;
 
 
 -- ============================================================
@@ -99,8 +217,10 @@ WHERE event_name = 'withdraw';
 
 
 -- ============================================================
--- PANEL 5 — ACTIVE VS MATURED DEPOSITS BY LOCK PERIOD     Visualization: Grouped bar chart
+-- PANEL 5 — DEPOSIT STATUS BY LOCK PERIOD     Visualization: Grouped bar chart
 --   x = lock_period, y = deposits, series = status
+--   Per period, Active + Matured withdrawn + Early withdrawn = total deposits
+--   whose lock_period is known.
 --
 --   `lock_period` is stored in seconds. Historical rows in
 --   dune.<handle>.vaquita_pool_events are enriched from the app database; new
@@ -119,7 +239,20 @@ WITH ev AS (
     matured,
     ledger_closed_at
   FROM (
-    SELECT *, row_number() OVER (PARTITION BY event_id ORDER BY ledger) AS rn
+    SELECT
+      *,
+      row_number() OVER (
+        PARTITION BY event_id
+        ORDER BY
+          CASE WHEN lock_period IS NULL THEN 1 ELSE 0 END,
+          CASE WHEN matured IS NULL THEN 1 ELSE 0 END,
+          ledger,
+          ledger_closed_at,
+          environment,
+          event_name,
+          caller,
+          deposit_id
+      ) AS rn
     FROM dune.<handle>.vaquita_pool_events
     WHERE environment LIKE '{{environment}}'
   )
@@ -129,7 +262,7 @@ sequenced AS (
   SELECT
     *,
     SUM(CASE WHEN event_name = 'deposit' THEN 1 ELSE 0 END) OVER (
-      PARTITION BY environment, deposit_id
+      PARTITION BY environment, caller, deposit_id
       ORDER BY ledger, event_id
       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
     ) AS cycle_no
@@ -140,6 +273,7 @@ sequenced AS (
 deposits AS (
   SELECT
     environment,
+    caller,
     deposit_id,
     cycle_no,
     TRY_CAST(lock_period AS bigint) AS lock_period_seconds,
@@ -150,23 +284,28 @@ deposits AS (
 withdrawals AS (
   SELECT
     environment,
+    caller,
     deposit_id,
     cycle_no,
     bool_or(matured) AS matured
   FROM sequenced
   WHERE event_name = 'withdraw'
     AND cycle_no > 0
-  GROUP BY 1, 2, 3
+  GROUP BY 1, 2, 3, 4
 ),
 positions AS (
   SELECT
     d.lock_period_seconds,
     d.amount,
-    COALESCE(w.matured, false) AS matured,
-    CASE WHEN w.deposit_id IS NULL THEN true ELSE false END AS active
+    CASE
+      WHEN w.deposit_id IS NULL THEN 'Active'
+      WHEN COALESCE(w.matured, false) THEN 'Matured withdrawn'
+      ELSE 'Early withdrawn'
+    END AS status
   FROM deposits d
   LEFT JOIN withdrawals w
     ON w.environment = d.environment
+   AND w.caller = d.caller
    AND w.deposit_id = d.deposit_id
    AND w.cycle_no = d.cycle_no
 ),
@@ -182,7 +321,8 @@ statuses AS (
   SELECT * FROM (
     VALUES
       ('Active', 1),
-      ('Matured', 2)
+      ('Matured withdrawn', 2),
+      ('Early withdrawn', 3)
   ) AS t(status, status_order)
 )
 SELECT
@@ -194,10 +334,6 @@ FROM periods p
 CROSS JOIN statuses s
 LEFT JOIN positions pos
   ON pos.lock_period_seconds = p.lock_period_seconds
- AND (
-   (s.status = 'Active' AND pos.active)
-   OR
-   (s.status = 'Matured' AND pos.matured)
- )
+ AND pos.status = s.status
 GROUP BY p.lock_period, p.sort_order, s.status, s.status_order
 ORDER BY p.sort_order, s.status_order;
