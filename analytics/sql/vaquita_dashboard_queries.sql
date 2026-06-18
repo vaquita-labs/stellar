@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Deliverable 2.3 — VaquitaPool 5-panel Dune dashboard  (FINAL)
--- Table: dune.<handle>.vaquita_pool_events   (replace <handle> with your Dune handle)
+-- Table: dune.vaquitaprotocol0178.vaquita_pool_events
 --
 -- Each block = one Dune query -> one visualization -> one panel.
 -- The shared `ev` CTE de-dupes by event_id so re-inserts never double-count.
@@ -20,7 +20,7 @@ WITH ev AS (
   SELECT environment, event_name, caller, deposit_id, amount, reward, early_fee, ledger, ledger_closed_at
   FROM (
     SELECT *, row_number() OVER (PARTITION BY event_id ORDER BY ledger) AS rn
-    FROM dune.<handle>.vaquita_pool_events
+    FROM dune.vaquitaprotocol0178.vaquita_pool_events
     WHERE environment LIKE '{{environment}}'
   ) WHERE rn = 1
 )
@@ -44,7 +44,7 @@ WITH ev AS (
   SELECT environment, event_name, amount, ledger_closed_at
   FROM (
     SELECT *, row_number() OVER (PARTITION BY event_id ORDER BY ledger) AS rn
-    FROM dune.<handle>.vaquita_pool_events
+    FROM dune.vaquitaprotocol0178.vaquita_pool_events
     WHERE environment LIKE '{{environment}}'
   ) WHERE rn = 1
 ),
@@ -96,7 +96,7 @@ WITH ev AS (
           caller,
           deposit_id
       ) AS rn
-    FROM dune.<handle>.vaquita_pool_events
+    FROM dune.vaquitaprotocol0178.vaquita_pool_events
     WHERE environment LIKE '{{environment}}'
   )
   WHERE rn = 1
@@ -207,7 +207,7 @@ WITH ev AS (
   SELECT environment, event_name, caller, deposit_id, amount, reward, early_fee, ledger, ledger_closed_at
   FROM (
     SELECT *, row_number() OVER (PARTITION BY event_id ORDER BY ledger) AS rn
-    FROM dune.<handle>.vaquita_pool_events
+    FROM dune.vaquitaprotocol0178.vaquita_pool_events
     WHERE environment LIKE '{{environment}}'
   ) WHERE rn = 1
 )
@@ -223,7 +223,7 @@ WHERE event_name = 'withdraw';
 --   whose lock_period is known.
 --
 --   `lock_period` is stored in seconds. Historical rows in
---   dune.<handle>.vaquita_pool_events are enriched from the app database; new
+--   dune.vaquitaprotocol0178.vaquita_pool_events are enriched from the app database; new
 --   contract deployments emit it directly in the event payload.
 -- ============================================================
 WITH ev AS (
@@ -253,7 +253,7 @@ WITH ev AS (
           caller,
           deposit_id
       ) AS rn
-    FROM dune.<handle>.vaquita_pool_events
+    FROM dune.vaquitaprotocol0178.vaquita_pool_events
     WHERE environment LIKE '{{environment}}'
   )
   WHERE rn = 1
