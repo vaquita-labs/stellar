@@ -219,8 +219,8 @@ WHERE event_name = 'withdraw';
 -- ============================================================
 -- PANEL 5 — DEPOSIT STATUS BY LOCK PERIOD     Visualization: Grouped bar chart
 --   x = lock_period, y = deposits, series = status
---   Per period, Active + Matured withdrawn + Early withdrawn = total deposits
---   whose lock_period is known.
+--   Per period, Historical total = Active + Matured withdrawn + Early withdrawn
+--   for deposits whose lock_period is known.
 --
 --   `lock_period` is stored in seconds. Historical rows in
 --   dune.vaquitaprotocol0178.vaquita_pool_events are enriched from the app database; new
@@ -322,18 +322,19 @@ statuses AS (
     VALUES
       ('Active', 1),
       ('Matured withdrawn', 2),
-      ('Early withdrawn', 3)
+      ('Early withdrawn', 3),
+      ('Historical total', 4)
   ) AS t(status, status_order)
 )
 SELECT
   p.lock_period,
   s.status,
-  COUNT(pos.amount) AS deposits,
+  COUNT(pos.lock_period_seconds) AS deposits,
   COALESCE(SUM(pos.amount), 0) AS amount
 FROM periods p
 CROSS JOIN statuses s
 LEFT JOIN positions pos
   ON pos.lock_period_seconds = p.lock_period_seconds
- AND pos.status = s.status
+ AND (s.status = 'Historical total' OR pos.status = s.status)
 GROUP BY p.lock_period, p.sort_order, s.status, s.status_order
 ORDER BY p.sort_order, s.status_order;
