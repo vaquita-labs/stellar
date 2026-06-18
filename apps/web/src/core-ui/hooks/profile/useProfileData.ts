@@ -39,5 +39,12 @@ export const useProfileData = (walletAddressOverride?: string) => {
       return profile;
     },
     enabled: !!network?.networkName && !!walletAddress,
+    // Show the persisted profile instantly, but revalidate on mount / focus /
+    // reconnect so values changed in the backend replace the stale cache
+    // (overrides the global staleTime: Infinity + refetch* false defaults).
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };
