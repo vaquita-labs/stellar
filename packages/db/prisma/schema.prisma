@@ -136,6 +136,9 @@ model Config {
   // UI languages offered in the Preferences page. Each entry is
   // `{ id, label, hint? }`, e.g. `{ "id": "en", "label": "English", "hint": "United States" }`.
   languages             Json     @default("[]")
+  // Reconciliation cursors and last-run summaries keyed by job and contract ID.
+  // Used by mainnet chain-event repair workflows; dry runs must not advance it.
+  reconciliationState    Json     @default("{}") @map("reconciliation_state")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)

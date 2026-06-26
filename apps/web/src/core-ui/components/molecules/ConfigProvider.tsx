@@ -54,6 +54,12 @@ export const ConfigProvider = ({ children }: { children: ReactNode }) => {
       const json = await response.json();
       return transformConfig(json.data);
     },
+    // Render the last known options instantly from the persisted cache, but
+    // treat them as immediately stale so we revalidate on mount / focus /
+    // reconnect and swap in any backend changes (overrides the global
+    // staleTime: Infinity, which would otherwise make these no-ops).
+    staleTime: 0,
+    refetchOnMount: 'always',
     refetchInterval: ONE_MINUTE * 5,
     refetchOnReconnect: true,
     refetchOnWindowFocus: true,

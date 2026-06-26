@@ -865,6 +865,7 @@
       "scrollRight": "Rolar para a direita"
     },
     "claim": {
+      "activateButton": "Ativar trustline de {{asset}}",
       "claimButton": "Resgatar {{label}}",
       "enjoy": "Aproveite para explorar a Vaquita.",
       "error": "Não foi possível resgatar agora. Tente de novo.",
@@ -872,7 +873,11 @@
       "giftAlt": "presente",
       "letsGo": "Vamos lá!",
       "onItsWay": "{{label}} já está a caminho",
+      "reconnectButton": "Reconectar carteira",
+      "reconnectHint": "Sua carteira foi desconectada deste site. Reconecte-a para continuar.",
       "title": "Um presente para você",
+      "trustlineError": "Não foi possível ativar o trustline. Tente de novo.",
+      "trustlineNeeded": "Primeiro ative o trustline de {{asset}} para que sua carteira possa recebê-lo.",
       "welcomeBalance": "Um saldo de boas-vindas para você experimentar a Vaquita. Resgate para começar."
     },
     "coinAnimation": {
