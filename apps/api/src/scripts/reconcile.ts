@@ -226,7 +226,7 @@ const main = async () => {
 
   const artifact = {
     workflow_name: `local-reconcile-${options.network}`,
-    phase: 'reconciliation_dry_run',
+    phase: options.dryRun ? 'reconciliation_dry_run' : 'reconciliation_repair',
     environment: process.env.GITHUB_ENVIRONMENT ?? process.env.NODE_ENV ?? 'local',
     network: options.network,
     network_passphrase: options.networkPassphrase,
