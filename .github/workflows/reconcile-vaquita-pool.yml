@@ -165,19 +165,19 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
           if [ -f "${artifact}" ]; then
-            node <<'NODE' >> "${GITHUB_STEP_SUMMARY}"
-            const fs = require('node:fs');
-            const artifact = JSON.parse(fs.readFileSync(`artifacts/reconciliation-${process.env.TARGET_ENVIRONMENT}.json`, 'utf8'));
-            const counts = artifact.counts ?? {};
-            console.log(`- Range: ${artifact.startLedger} to ${artifact.endLedger} (${artifact.range_source})`);
-            console.log(`- Dry run: ${artifact.dryRun}`);
-            console.log(`- Advance cursor: ${artifact.advanceCursor}`);
-            console.log(`- Cursor behavior: ${artifact.cursorBehavior}`);
-            console.log(`- Scanned events: ${counts.scannedEvents ?? 0}`);
-            console.log(`- Planned deposit repairs: ${counts.plannedDepositRepairs ?? 0}`);
-            console.log(`- Planned withdrawal repairs: ${counts.plannedWithdrawalRepairs ?? 0}`);
-            console.log(`- Ambiguous events: ${counts.ambiguousEvents ?? 0}`);
-            NODE
+            node -e '
+              const fs = require("node:fs");
+              const artifact = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const counts = artifact.counts ?? {};
+              console.log(`- Range: ${artifact.startLedger} to ${artifact.endLedger} (${artifact.range_source})`);
+              console.log(`- Dry run: ${artifact.dryRun}`);
+              console.log(`- Advance cursor: ${artifact.advanceCursor}`);
+              console.log(`- Cursor behavior: ${artifact.cursorBehavior}`);
+              console.log(`- Scanned events: ${counts.scannedEvents ?? 0}`);
+              console.log(`- Planned deposit repairs: ${counts.plannedDepositRepairs ?? 0}`);
+              console.log(`- Planned withdrawal repairs: ${counts.plannedWithdrawalRepairs ?? 0}`);
+              console.log(`- Ambiguous events: ${counts.ambiguousEvents ?? 0}`);
+            ' "${artifact}" >> "${GITHUB_STEP_SUMMARY}"
           else
             echo "- Artifact: not created; inspect logs for failure before reconciliation completed." >> "${GITHUB_STEP_SUMMARY}"
           fi
@@ -189,6 +189,7 @@ jobs:
           name: reconciliation-${{ matrix.environment }}-${{ github.run_id }}
           path: artifacts/reconciliation-${{ matrix.environment }}.json
           if-no-files-found: warn
+          retention-days: 30
 
   manual-reconciliation:
     name: Manual reconciliation (${{ inputs.target_environment }})
@@ -270,19 +271,19 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
           if [ -f "${artifact}" ]; then
-            node <<'NODE' >> "${GITHUB_STEP_SUMMARY}"
-            const fs = require('node:fs');
-            const artifact = JSON.parse(fs.readFileSync(`artifacts/reconciliation-${process.env.TARGET_ENVIRONMENT}.json`, 'utf8'));
-            const counts = artifact.counts ?? {};
-            console.log(`- Range: ${artifact.startLedger} to ${artifact.endLedger} (${artifact.range_source})`);
-            console.log(`- Dry run: ${artifact.dryRun}`);
-            console.log(`- Advance cursor: ${artifact.advanceCursor}`);
-            console.log(`- Cursor behavior: ${artifact.cursorBehavior}`);
-            console.log(`- Scanned events: ${counts.scannedEvents ?? 0}`);
-            console.log(`- Planned deposit repairs: ${counts.plannedDepositRepairs ?? 0}`);
-            console.log(`- Planned withdrawal repairs: ${counts.plannedWithdrawalRepairs ?? 0}`);
-            console.log(`- Ambiguous events: ${counts.ambiguousEvents ?? 0}`);
-            NODE
+            node -e '
+              const fs = require("node:fs");
+              const artifact = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              const counts = artifact.counts ?? {};
+              console.log(`- Range: ${artifact.startLedger} to ${artifact.endLedger} (${artifact.range_source})`);
+              console.log(`- Dry run: ${artifact.dryRun}`);
+              console.log(`- Advance cursor: ${artifact.advanceCursor}`);
+              console.log(`- Cursor behavior: ${artifact.cursorBehavior}`);
+              console.log(`- Scanned events: ${counts.scannedEvents ?? 0}`);
+              console.log(`- Planned deposit repairs: ${counts.plannedDepositRepairs ?? 0}`);
+              console.log(`- Planned withdrawal repairs: ${counts.plannedWithdrawalRepairs ?? 0}`);
+              console.log(`- Ambiguous events: ${counts.ambiguousEvents ?? 0}`);
+            ' "${artifact}" >> "${GITHUB_STEP_SUMMARY}"
           else
             echo "- Artifact: not created; inspect logs for failure before reconciliation completed." >> "${GITHUB_STEP_SUMMARY}"
           fi
@@ -294,3 +295,4 @@ jobs:
           name: reconciliation-${{ inputs.target_environment }}-${{ github.run_id }}
           path: artifacts/reconciliation-${{ inputs.target_environment }}.json
           if-no-files-found: warn
+          retention-days: 30
