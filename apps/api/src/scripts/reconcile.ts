@@ -2,15 +2,15 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { rpc } from '@stellar/stellar-sdk';
+import { prisma } from '@vaquita/db';
+import { getProjectConfig } from '@vaquita/shared/services/project-config/index';
 import {
   createPrismaReconciliationDependencies,
-  getProjectConfig,
-  prisma,
   resolveReconciliationLedgerRange,
   runReconciliation,
   type RawReconciliationEvent,
   type ReconciliationRunInput,
-} from '@vaquita/shared';
+} from '@vaquita/shared/services/reconciliation/index';
 
 type CliOptions = {
   fromLedger: number | null;
