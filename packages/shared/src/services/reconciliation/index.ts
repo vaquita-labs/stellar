@@ -16,6 +16,7 @@ import type {
 
 export * from './matcher';
 export * from './parser';
+export * from './range';
 export * from './state';
 export * from './types';
 

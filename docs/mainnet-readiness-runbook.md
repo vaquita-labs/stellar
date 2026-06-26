@@ -158,6 +158,15 @@ Append later:
 - Dry-run behavior: reads the cursor but does not apply DB repairs and does not advance `config.reconciliation_state`.
 - Artifact shape: JSON includes scanned range, parsed events, parse issues, planned deposit repairs, planned withdrawal repairs, ambiguous events, skipped events, counts, and cursor before/after behavior.
 - Scheduled workflow design: use GitHub Actions `environment:` to bind each run to the selected `dev`, `staging`, or `prod` Environment. Use a repository-level allowlist such as `RECONCILIATION_SCHEDULE_ENVIRONMENTS=dev,staging` plus per-Environment `RECONCILIATION_ENABLED=true|false` to control which scheduled jobs actually run.
+- Workflow: `.github/workflows/reconcile-vaquita-pool.yml`.
+- Schedule: hourly at minute 0.
+- Manual dispatch inputs: `target_environment`, `dry_run`, optional `from_ledger`, optional `to_ledger`, and `advance_cursor`.
+- Scheduled run behavior:
+  - Planner job reads repository variable `RECONCILIATION_SCHEDULE_ENVIRONMENTS`.
+  - Scheduled matrix includes only allowed environments.
+  - Each matrix job binds `environment: <env>` and checks that Environment's `RECONCILIATION_ENABLED=true` before checkout/install/RPC/DB work.
+  - Scheduled jobs pass `--advance-cursor=true`; cursor advancement still happens only when `RECONCILIATION_DRY_RUN=false` because the CLI never advances cursors during dry runs.
+- Pause procedure: remove the environment from `RECONCILIATION_SCHEDULE_ENVIRONMENTS` for a repo-level stop, or set that Environment's `RECONCILIATION_ENABLED=false` for an environment-level stop.
 - First scheduled run artifact link and summary.
 - Ambiguous-event review notes.
 
