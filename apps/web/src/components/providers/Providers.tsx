@@ -48,7 +48,7 @@ export function Providers({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: Infinity,
+            staleTime: 1000 * 60 * 60 * 24,
             gcTime: 1000 * 60 * 60 * 24, // 24h — keep entries around for persistence
             refetchOnWindowFocus: false,
             refetchOnReconnect: false,
