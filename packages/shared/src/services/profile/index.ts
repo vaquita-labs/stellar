@@ -1021,6 +1021,16 @@ export const toProfileAchievementsResponseDTO = async (
     // Hide secret achievements until the user actually claims them — the
     // catalog endpoint must not leak the existence of redeem-code badges.
     .filter((a) => !a.hidden || claimedById.has(a.id) || activeClaimByKey.has(a.key))
+    // Drop retired (disabled) badges, but keep any the user already earned so a
+    // soft-delete (`enabled = false`) never strips a badge someone already
+    // owns, has pending, or minted on-chain.
+    .filter(
+      (a) =>
+        a.enabled !== false ||
+        claimedById.has(a.id) ||
+        activeClaimByKey.has(a.key) ||
+        mintedByKey.has(a.key),
+    )
     .map((a) => {
       const claim = claimedById.get(a.id);
       const pendingClaim = activeClaimByKey.get(a.key);

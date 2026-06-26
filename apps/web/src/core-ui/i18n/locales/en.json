@@ -865,6 +865,7 @@
       "scrollRight": "Scroll right"
     },
     "claim": {
+      "activateButton": "Activate {{asset}} trustline",
       "claimButton": "Claim {{label}}",
       "enjoy": "Enjoy exploring Vaquita.",
       "error": "Could not claim right now. Please try again.",
@@ -872,7 +873,11 @@
       "giftAlt": "gift",
       "letsGo": "Let's go",
       "onItsWay": "{{label}} is on its way",
+      "reconnectButton": "Reconnect wallet",
+      "reconnectHint": "Your wallet got disconnected from this site. Reconnect it to continue.",
       "title": "A gift for you",
+      "trustlineError": "Could not activate the trustline. Please try again.",
+      "trustlineNeeded": "First activate the {{asset}} trustline so your wallet can receive it.",
       "welcomeBalance": "A welcome balance to try Vaquita. Claim it to get started."
     },
     "coinAnimation": {
