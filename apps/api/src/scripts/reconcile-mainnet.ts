@@ -6,14 +6,15 @@ import {
   createPrismaReconciliationDependencies,
   getProjectConfig,
   prisma,
+  resolveReconciliationLedgerRange,
   runReconciliation,
   type RawReconciliationEvent,
   type ReconciliationRunInput,
 } from '@vaquita/shared';
 
 type CliOptions = {
-  startLedger: number;
-  endLedger: number;
+  fromLedger: number | null;
+  toLedger: number | null;
   network: string;
   dryRun: boolean;
   advanceCursor: boolean;
@@ -21,6 +22,8 @@ type CliOptions = {
   rpcUrl: string;
   networkPassphrase: string;
   contractIds: string[];
+  overlapLedgers: number;
+  fallbackLookbackLedgers: number;
   artifactPath: string | null;
 };
 
@@ -45,6 +48,22 @@ const readBoolean = (name: string, fallback: boolean): boolean => {
 const readLedger = (name: string): number => {
   const value = readFlag(name);
   const parsed = value ? Number(value) : NaN;
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new Error(`--${name} must be a non-negative integer`);
+  }
+  return parsed;
+};
+
+const readOptionalLedger = (name: string): number | null => {
+  const value = readFlag(name);
+  if (value === null) return null;
+  return readLedger(name);
+};
+
+const readPositiveInteger = (name: string, fallback: number, envName?: string): number => {
+  const value = readFlag(name) ?? (envName ? process.env[envName] : process.env[name.replaceAll('-', '_').toUpperCase()]);
+  if (value === null || value === undefined || value === '') return fallback;
+  const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 0) {
     throw new Error(`--${name} must be a non-negative integer`);
   }
@@ -117,13 +136,15 @@ const resolveOptions = async (): Promise<CliOptions> => {
     throw new Error('Missing network passphrase. Provide --network-passphrase, STELLAR_NETWORK_PASSPHRASE, or project config.');
   }
 
-  const startLedger = readLedger('start-ledger');
-  const endLedger = readLedger('end-ledger');
-  if (endLedger < startLedger) throw new Error('--end-ledger must be greater than or equal to --start-ledger');
+  const fromLedger = readOptionalLedger('start-ledger') ?? readOptionalLedger('from-ledger');
+  const toLedger = readOptionalLedger('end-ledger') ?? readOptionalLedger('to-ledger');
+  if (fromLedger !== null && toLedger !== null && toLedger < fromLedger) {
+    throw new Error('--end-ledger/--to-ledger must be greater than or equal to --start-ledger/--from-ledger');
+  }
 
   return {
-    startLedger,
-    endLedger,
+    fromLedger,
+    toLedger,
     network: inferNetwork(),
     dryRun: readBoolean('dry-run', true),
     advanceCursor: readBoolean('advance-cursor', false),
@@ -131,8 +152,16 @@ const resolveOptions = async (): Promise<CliOptions> => {
     rpcUrl,
     networkPassphrase,
     contractIds,
+    overlapLedgers: readPositiveInteger('overlap-ledgers', 20, 'RECONCILIATION_OVERLAP_LEDGERS'),
+    fallbackLookbackLedgers: readPositiveInteger('fallback-lookback-ledgers', 500, 'RECONCILIATION_FALLBACK_LOOKBACK_LEDGERS'),
     artifactPath: readFlag('artifact') ?? process.env.RECONCILIATION_ARTIFACT_PATH ?? null,
   };
+};
+
+const fetchLatestLedger = async (rpcUrl: string): Promise<number> => {
+  const server = new rpc.Server(rpcUrl);
+  const latest = await server.getLatestLedger();
+  return Number(latest.sequence);
 };
 
 const fetchEvents = (rpcUrl: string) => async (input: ReconciliationRunInput): Promise<RawReconciliationEvent[]> => {
@@ -167,13 +196,25 @@ const main = async () => {
   loadDotEnvIfPresent();
   const options = await resolveOptions();
   const deps = createPrismaReconciliationDependencies(prisma);
+  const cursorState = await deps.loadState();
+  const latestLedger = options.toLedger ?? await fetchLatestLedger(options.rpcUrl);
+  const range = resolveReconciliationLedgerRange({
+    state: cursorState,
+    job: options.job,
+    contractIds: options.contractIds,
+    latestLedger,
+    overlapLedgers: options.overlapLedgers,
+    fallbackLookbackLedgers: options.fallbackLookbackLedgers,
+    ...(options.fromLedger !== null ? { fromLedger: options.fromLedger } : {}),
+    ...(options.toLedger !== null ? { toLedger: options.toLedger } : {}),
+  });
 
   const result = await runReconciliation(
     {
       job: options.job,
       contractIds: options.contractIds,
-      startLedger: options.startLedger,
-      endLedger: options.endLedger,
+      startLedger: range.startLedger,
+      endLedger: range.endLedger,
       dryRun: options.dryRun,
       advanceCursor: options.advanceCursor,
     },
@@ -192,6 +233,10 @@ const main = async () => {
     commit_sha: process.env.GITHUB_SHA ?? null,
     run_id: process.env.GITHUB_RUN_ID ?? null,
     actor: process.env.GITHUB_ACTOR ?? process.env.USER ?? null,
+    range_source: range.source,
+    latest_ledger: latestLedger,
+    overlap_ledgers: options.overlapLedgers,
+    fallback_lookback_ledgers: options.fallbackLookbackLedgers,
     ...result,
   };
 

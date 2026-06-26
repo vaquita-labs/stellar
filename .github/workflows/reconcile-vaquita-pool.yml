@@ -1,0 +1,292 @@
+name: Reconcile VaquitaPool Events
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: GitHub Environment to use for secrets and vars
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      dry_run:
+        description: Report repairs without mutating deposits, withdrawals, or cursor state
+        required: true
+        type: boolean
+        default: true
+      from_ledger:
+        description: Optional start ledger for a bounded manual run
+        required: false
+        type: string
+      to_ledger:
+        description: Optional end ledger for a bounded manual run
+        required: false
+        type: string
+      advance_cursor:
+        description: Advance cursor after a successful non-dry-run
+        required: true
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 * * * *"
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "11.5.2"
+
+jobs:
+  plan-scheduled-environments:
+    name: Plan scheduled environments
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    outputs:
+      has_environments: ${{ steps.plan.outputs.has_environments }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - name: Build environment matrix
+        id: plan
+        env:
+          RECONCILIATION_SCHEDULE_ENVIRONMENTS: ${{ vars.RECONCILIATION_SCHEDULE_ENVIRONMENTS }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const supported = new Set(['dev', 'staging', 'prod']);
+          const allowlist = (process.env.RECONCILIATION_SCHEDULE_ENVIRONMENTS ?? '')
+            .split(',')
+            .map((value) => value.trim())
+            .filter((value) => supported.has(value));
+
+          const include = [...new Set(allowlist)].map((environment) => ({ environment }));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `has_environments=${include.length > 0 ? 'true' : 'false'}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({ include })}\n`);
+          console.log(`scheduled environments: ${include.map((item) => item.environment).join(', ') || '<none>'}`);
+          NODE
+
+  scheduled-reconciliation:
+    name: Scheduled reconciliation (${{ matrix.environment }})
+    needs: plan-scheduled-environments
+    if: github.event_name == 'schedule' && needs.plan-scheduled-environments.outputs.has_environments == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ matrix.environment }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan-scheduled-environments.outputs.matrix) }}
+    concurrency:
+      group: reconciliation-${{ matrix.environment }}
+      cancel-in-progress: false
+    env:
+      TARGET_ENVIRONMENT: ${{ matrix.environment }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
+      STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
+      VAQUITA_POOL_CONTRACT_ID: ${{ vars.VAQUITA_POOL_CONTRACT_ID }}
+      RECONCILIATION_ENABLED: ${{ vars.RECONCILIATION_ENABLED }}
+      RECONCILIATION_DRY_RUN: ${{ vars.RECONCILIATION_DRY_RUN }}
+      RECONCILIATION_OVERLAP_LEDGERS: ${{ vars.RECONCILIATION_OVERLAP_LEDGERS }}
+      RECONCILIATION_FALLBACK_LOOKBACK_LEDGERS: ${{ vars.RECONCILIATION_FALLBACK_LOOKBACK_LEDGERS }}
+    steps:
+      - name: Check environment gate
+        id: gate
+        run: |
+          set -euo pipefail
+          if [ "${RECONCILIATION_ENABLED:-false}" != "true" ]; then
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+            echo "Reconciliation disabled for ${TARGET_ENVIRONMENT}."
+            exit 0
+          fi
+          echo "should_run=true" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout
+        if: steps.gate.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        if: steps.gate.outputs.should_run == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        if: steps.gate.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.gate.outputs.should_run == 'true'
+        run: CI=true pnpm install --frozen-lockfile
+
+      - name: Run scheduled reconciliation
+        if: steps.gate.outputs.should_run == 'true'
+        id: reconcile
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+
+          case "${TARGET_ENVIRONMENT}" in
+            prod) script="reconcile:mainnet" ;;
+            staging) script="reconcile:testnet" ;;
+            *) script="reconcile:devnet" ;;
+          esac
+
+          dry_run="${RECONCILIATION_DRY_RUN:-true}"
+          overlap="${RECONCILIATION_OVERLAP_LEDGERS:-20}"
+          fallback="${RECONCILIATION_FALLBACK_LOOKBACK_LEDGERS:-500}"
+          artifact="artifacts/reconciliation-${TARGET_ENVIRONMENT}.json"
+
+          pnpm --filter @vaquita/api "${script}" -- \
+            --dry-run="${dry_run}" \
+            --advance-cursor=true \
+            --overlap-ledgers="${overlap}" \
+            --fallback-lookback-ledgers="${fallback}" \
+            --artifact "${artifact}"
+
+      - name: Write Step Summary
+        if: always() && steps.gate.outputs.should_run == 'true'
+        run: |
+          set -euo pipefail
+          artifact="artifacts/reconciliation-${TARGET_ENVIRONMENT}.json"
+          {
+            echo "## VaquitaPool reconciliation"
+            echo
+            echo "- Environment: ${TARGET_ENVIRONMENT}"
+            echo "- Trigger: ${GITHUB_EVENT_NAME}"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          if [ -f "${artifact}" ]; then
+            node <<'NODE' >> "${GITHUB_STEP_SUMMARY}"
+            const fs = require('node:fs');
+            const artifact = JSON.parse(fs.readFileSync(`artifacts/reconciliation-${process.env.TARGET_ENVIRONMENT}.json`, 'utf8'));
+            const counts = artifact.counts ?? {};
+            console.log(`- Range: ${artifact.startLedger} to ${artifact.endLedger} (${artifact.range_source})`);
+            console.log(`- Dry run: ${artifact.dryRun}`);
+            console.log(`- Advance cursor: ${artifact.advanceCursor}`);
+            console.log(`- Cursor behavior: ${artifact.cursorBehavior}`);
+            console.log(`- Scanned events: ${counts.scannedEvents ?? 0}`);
+            console.log(`- Planned deposit repairs: ${counts.plannedDepositRepairs ?? 0}`);
+            console.log(`- Planned withdrawal repairs: ${counts.plannedWithdrawalRepairs ?? 0}`);
+            console.log(`- Ambiguous events: ${counts.ambiguousEvents ?? 0}`);
+            NODE
+          else
+            echo "- Artifact: not created; inspect logs for failure before reconciliation completed." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload reconciliation artifact
+        if: always() && steps.gate.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconciliation-${{ matrix.environment }}-${{ github.run_id }}
+          path: artifacts/reconciliation-${{ matrix.environment }}.json
+          if-no-files-found: warn
+
+  manual-reconciliation:
+    name: Manual reconciliation (${{ inputs.target_environment }})
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment }}
+    concurrency:
+      group: reconciliation-${{ inputs.target_environment }}
+      cancel-in-progress: false
+    env:
+      TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
+      STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
+      VAQUITA_POOL_CONTRACT_ID: ${{ vars.VAQUITA_POOL_CONTRACT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: CI=true pnpm install --frozen-lockfile
+
+      - name: Run manual reconciliation
+        id: reconcile
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          ADVANCE_CURSOR: ${{ inputs.advance_cursor }}
+          FROM_LEDGER: ${{ inputs.from_ledger }}
+          TO_LEDGER: ${{ inputs.to_ledger }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+
+          case "${TARGET_ENVIRONMENT}" in
+            prod) script="reconcile:mainnet" ;;
+            staging) script="reconcile:testnet" ;;
+            *) script="reconcile:devnet" ;;
+          esac
+
+          args=(
+            "--dry-run=${DRY_RUN}"
+            "--advance-cursor=${ADVANCE_CURSOR}"
+            "--artifact=artifacts/reconciliation-${TARGET_ENVIRONMENT}.json"
+          )
+          if [ -n "${FROM_LEDGER}" ]; then
+            args+=("--from-ledger=${FROM_LEDGER}")
+          fi
+          if [ -n "${TO_LEDGER}" ]; then
+            args+=("--to-ledger=${TO_LEDGER}")
+          fi
+
+          pnpm --filter @vaquita/api "${script}" -- "${args[@]}"
+
+      - name: Write Step Summary
+        if: always()
+        run: |
+          set -euo pipefail
+          artifact="artifacts/reconciliation-${TARGET_ENVIRONMENT}.json"
+          {
+            echo "## VaquitaPool reconciliation"
+            echo
+            echo "- Environment: ${TARGET_ENVIRONMENT}"
+            echo "- Trigger: ${GITHUB_EVENT_NAME}"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          if [ -f "${artifact}" ]; then
+            node <<'NODE' >> "${GITHUB_STEP_SUMMARY}"
+            const fs = require('node:fs');
+            const artifact = JSON.parse(fs.readFileSync(`artifacts/reconciliation-${process.env.TARGET_ENVIRONMENT}.json`, 'utf8'));
+            const counts = artifact.counts ?? {};
+            console.log(`- Range: ${artifact.startLedger} to ${artifact.endLedger} (${artifact.range_source})`);
+            console.log(`- Dry run: ${artifact.dryRun}`);
+            console.log(`- Advance cursor: ${artifact.advanceCursor}`);
+            console.log(`- Cursor behavior: ${artifact.cursorBehavior}`);
+            console.log(`- Scanned events: ${counts.scannedEvents ?? 0}`);
+            console.log(`- Planned deposit repairs: ${counts.plannedDepositRepairs ?? 0}`);
+            console.log(`- Planned withdrawal repairs: ${counts.plannedWithdrawalRepairs ?? 0}`);
+            console.log(`- Ambiguous events: ${counts.ambiguousEvents ?? 0}`);
+            NODE
+          else
+            echo "- Artifact: not created; inspect logs for failure before reconciliation completed." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload reconciliation artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconciliation-${{ inputs.target_environment }}-${{ github.run_id }}
+          path: artifacts/reconciliation-${{ inputs.target_environment }}.json
+          if-no-files-found: warn
