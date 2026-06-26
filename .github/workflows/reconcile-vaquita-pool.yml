@@ -82,6 +82,8 @@ jobs:
       cancel-in-progress: false
     env:
       TARGET_ENVIRONMENT: ${{ matrix.environment }}
+      NODE_ENV: production
+      PORT: "3100"
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
       STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
@@ -198,6 +200,8 @@ jobs:
       cancel-in-progress: false
     env:
       TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+      NODE_ENV: production
+      PORT: "3100"
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
       STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
