@@ -29,14 +29,23 @@ export type CreateVaultResponse = {
 };
 
 export type SendResponse = {
-  status: string;
+  status?: string;
+  success?: boolean;
   txHash: string;
   returnValue?: string;
+  result?: {
+    type?: string;
+    value?: string | null;
+  };
   resultXdr?: string;
   resultMetaXdr?: string;
   envelopeXdr?: string;
   ledger?: number;
   createdAt?: string;
+  latestLedger?: number;
+  latestLedgerCloseTime?: string;
+  feeBump?: boolean;
+  feeCharged?: string;
 };
 
 export class DefindexApi {
@@ -90,10 +99,12 @@ export class DefindexApi {
   }
 
   async send(signedXdr: string): Promise<SendResponse> {
+    console.log(`     send body: {"xdr":"<redacted ${signedXdr.length} chars>"}`);
     const res = await this.request<SendResponse>("POST", "/send", { xdr: signedXdr });
-    if (res.status !== "SUCCESS") {
+    const submitted = res.success === true || res.status === "SUCCESS";
+    if (!submitted) {
       throw new Error(
-        `/send returned non-success status "${res.status}". txHash=${res.txHash ?? "<none>"}`,
+        `/send returned non-success response. success=${String(res.success)} status=${res.status ?? "<unset>"} txHash=${res.txHash ?? "<none>"} body=${JSON.stringify(res)}`,
       );
     }
     if (!res.txHash) {
