@@ -1,8 +1,13 @@
 import type { Config } from "./config.js";
 
 export type CreateVaultRequest = {
-  roles: Record<"0" | "1" | "2" | "3", string>;
-  vault_fee_bps: number;
+  roles: {
+    emergencyManager: string;
+    feeReceiver: string;
+    manager: string;
+    rebalanceManager: string;
+  };
+  vaultFee: number;
   assets: Array<{
     address: string;
     strategies: Array<{
@@ -12,7 +17,8 @@ export type CreateVaultRequest = {
     }>;
   }>;
   soroswap_router: string;
-  name_symbol: { name: string; symbol: string };
+  name: string;
+  symbol: string;
   upgradable: boolean;
   caller: string;
 };
@@ -100,12 +106,12 @@ export class DefindexApi {
 export function buildCreateVaultRequest(cfg: Config): CreateVaultRequest {
   return {
     roles: {
-      "0": cfg.roles.emergencyManager,
-      "1": cfg.roles.vaultFeeReceiver,
-      "2": cfg.roles.manager,
-      "3": cfg.roles.rebalanceManager,
+      emergencyManager: cfg.roles.emergencyManager,
+      feeReceiver: cfg.roles.vaultFeeReceiver,
+      manager: cfg.roles.manager,
+      rebalanceManager: cfg.roles.rebalanceManager,
     },
-    vault_fee_bps: cfg.vault.feeBps,
+    vaultFee: cfg.vault.feeBps,
     assets: [
       {
         address: cfg.assets.usdc,
@@ -119,7 +125,8 @@ export function buildCreateVaultRequest(cfg: Config): CreateVaultRequest {
       },
     ],
     soroswap_router: cfg.assets.soroswapRouter,
-    name_symbol: { name: cfg.vault.name, symbol: cfg.vault.symbol },
+    name: cfg.vault.name,
+    symbol: cfg.vault.symbol,
     upgradable: cfg.vault.upgradable,
     caller: cfg.deployer.public,
   };
