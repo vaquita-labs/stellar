@@ -75,17 +75,24 @@ flow, signs locally, submits, and writes a JSON artifact containing the public
 deployment inputs, vault ID, transaction hash, explorer links, and
 `manual_rewire_required=true`.
 
-## Role mapping
+## DeFindex request mapping
 
-The DeFindex factory takes a `roles` map keyed by integer. This script wires
-them as follows (matching the on-chain storage keys seen in vault metadata):
+The DeFindex factory takes named role fields and top-level vault metadata. This
+script wires them as follows:
 
-| Key | Role               | Env var                      |
-| --- | ------------------ | ---------------------------- |
-| 0   | EmergencyManager   | `EMERGENCY_MANAGER_ADDRESS`  |
-| 1   | VaultFeeReceiver   | `VAULT_FEE_RECEIVER_ADDRESS` |
-| 2   | Manager            | `MANAGER_ADDRESS`            |
-| 3   | RebalanceManager   | `REBALANCE_MANAGER_ADDRESS`  |
+| Request field                    | Env var                       |
+| -------------------------------- | ----------------------------- |
+| `roles.emergencyManager`         | `EMERGENCY_MANAGER_ADDRESS`   |
+| `roles.feeReceiver`              | `VAULT_FEE_RECEIVER_ADDRESS`  |
+| `roles.manager`                  | `MANAGER_ADDRESS`             |
+| `roles.rebalanceManager`         | `REBALANCE_MANAGER_ADDRESS`   |
+| `vaultFeeBps`                    | `VAULT_FEE_BPS`               |
+| `name`                           | `VAULT_NAME`                  |
+| `symbol`                         | `VAULT_SYMBOL`                |
+| `assets[0].address`              | `USDC_CONTRACT_ADDRESS`       |
+| `assets[0].strategies[0].address`| `BLEND_USDC_STRATEGY_ADDRESS` |
+| `assets[0].strategies[0].name`   | `BLEND_USDC_STRATEGY_NAME`    |
+| `caller`                         | `DEPLOYER_PUBLIC_KEY`         |
 
 ## Safety notes
 

@@ -78,7 +78,6 @@ describe("buildVaultDeploymentArtifact", () => {
         assets: {
           usdc: "CUSDC",
           blendUsdcStrategy: { address: "CBLEND", name: "blend_usdc" },
-          soroswapRouter: "CSOROSWAP",
         },
       },
       phase: "deploy_vault",

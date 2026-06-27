@@ -10,6 +10,9 @@ on:
         default: deploy_vault
         options:
           - deploy_vault
+          - deploy_pool
+          - deploy_badges
+          - smoke
       github_environment:
         description: Protected GitHub Environment containing deployment secrets and vars
         required: true
@@ -31,7 +34,19 @@ on:
           - validate_only
           - execute
       confirm_execute:
-        description: Type DEPLOY_VAULT when execution_mode=execute
+        description: Type DEPLOY_VAULT, DEPLOY_POOL, DEPLOY_BADGES, or RUN_SMOKE when execution_mode=execute
+        required: false
+        type: string
+      defindex_vault_id:
+        description: Explicit DeFindex vault contract ID for deploy_pool and smoke
+        required: false
+        type: string
+      pool_contract_id:
+        description: Explicit VaquitaPool contract ID for smoke
+        required: false
+        type: string
+      badges_contract_id:
+        description: Explicit VaquitaBadges contract ID for smoke
         required: false
         type: string
 
@@ -41,6 +56,7 @@ permissions:
 env:
   NODE_VERSION: "22"
   PNPM_VERSION: "11.5.2"
+  STELLAR_CLI_VERSION: "25.1.0"
 
 jobs:
   deploy-vault:
@@ -72,7 +88,6 @@ jobs:
       BLEND_USDC_STRATEGY_ADDRESS: ${{ vars.BLEND_USDC_STRATEGY_ADDRESS }}
       BLEND_USDC_STRATEGY_NAME: ${{ vars.BLEND_USDC_STRATEGY_NAME }}
       USDC_CONTRACT_ADDRESS: ${{ vars.USDC_CONTRACT_ADDRESS }}
-      SOROSWAP_ROUTER_ADDRESS: ${{ vars.SOROSWAP_ROUTER_ADDRESS }}
     steps:
       - name: Confirm irreversible execution
         run: |
@@ -148,5 +163,326 @@ jobs:
         with:
           name: defindex-vault-${{ inputs.github_environment }}-${{ github.run_id }}
           path: artifacts/defindex-vault-${{ inputs.github_environment }}.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  contract-phases:
+    name: Contract phase ${{ inputs.phase }} (${{ inputs.github_environment }}, ${{ inputs.execution_mode }})
+    if: github.event_name == 'workflow_dispatch' && inputs.phase != 'deploy_vault'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.github_environment }}
+    concurrency:
+      group: mainnet-deployment-${{ inputs.github_environment }}-${{ inputs.phase }}
+      cancel-in-progress: false
+    env:
+      DEPLOYMENT_ENVIRONMENT: ${{ inputs.github_environment }}
+      PHASE: ${{ inputs.phase }}
+      EXECUTION_MODE: ${{ inputs.execution_mode }}
+      NETWORK: ${{ inputs.network }}
+      STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
+      STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
+      POOL_DEPLOYER_SECRET_KEY: ${{ secrets.POOL_DEPLOYER_SECRET_KEY }}
+      BADGES_DEPLOYER_SECRET_KEY: ${{ secrets.BADGES_DEPLOYER_SECRET_KEY }}
+      POOL_ADMIN_ADDRESS: ${{ vars.POOL_ADMIN_ADDRESS }}
+      POOL_USDC_CONTRACT_ADDRESS: ${{ vars.POOL_USDC_CONTRACT_ADDRESS || vars.USDC_CONTRACT_ADDRESS }}
+      POOL_DEFINDEX_VAULT_ID: ${{ inputs.defindex_vault_id }}
+      POOL_LOCK_PERIODS: ${{ vars.POOL_LOCK_PERIODS }}
+      POOL_EARLY_WITHDRAWAL_FEE_BPS: ${{ vars.POOL_EARLY_WITHDRAWAL_FEE_BPS }}
+      POOL_UPGRADE_TIMELOCK_SECS: ${{ vars.POOL_UPGRADE_TIMELOCK_SECS }}
+      BADGES_ADMIN_ADDRESS: ${{ vars.BADGES_ADMIN_ADDRESS }}
+      BADGES_SIGNING_KEY: ${{ vars.BADGES_SIGNING_KEY }}
+      BADGES_UPGRADE_TIMELOCK_SECS: ${{ vars.BADGES_UPGRADE_TIMELOCK_SECS }}
+      SMOKE_SOURCE_ACCOUNT: ${{ vars.SMOKE_SOURCE_ACCOUNT }}
+      SMOKE_POOL_CONTRACT_ID: ${{ inputs.pool_contract_id }}
+      SMOKE_BADGES_CONTRACT_ID: ${{ inputs.badges_contract_id }}
+      SMOKE_DEFINDEX_VAULT_ID: ${{ inputs.defindex_vault_id }}
+      DEPLOYMENT_ARTIFACT_PATH: artifacts/${{ inputs.phase }}-${{ inputs.github_environment }}.json
+    steps:
+      - name: Confirm guarded phase
+        run: |
+          set -euo pipefail
+          case "${PHASE}" in
+            deploy_pool) expected="DEPLOY_POOL" ;;
+            deploy_badges) expected="DEPLOY_BADGES" ;;
+            smoke) expected="RUN_SMOKE" ;;
+            *) echo "Unsupported phase: ${PHASE}"; exit 1 ;;
+          esac
+          if [ "${EXECUTION_MODE}" = "execute" ] && [ "${{ inputs.confirm_execute }}" != "${expected}" ]; then
+            echo "execution_mode=execute for ${PHASE} requires confirm_execute=${expected}"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Stellar CLI
+        run: |
+          set -euo pipefail
+          case "$(uname -m)" in
+            x86_64) triple=x86_64-unknown-linux-gnu ;;
+            aarch64) triple=aarch64-unknown-linux-gnu ;;
+            *) echo "unsupported runner architecture: $(uname -m)"; exit 1 ;;
+          esac
+          ver="${STELLAR_CLI_VERSION}"
+          url="https://github.com/stellar/stellar-cli/releases/download/v${ver}/stellar-cli-${ver}-${triple}.tar.gz"
+          curl -fsSL "$url" | tar xz
+          mkdir -p "${HOME}/.local/bin"
+          install -m 755 stellar "${HOME}/.local/bin/stellar"
+          rm -f stellar
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          stellar version
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            contracts
+
+      - name: Build requested contract WASM
+        if: inputs.phase == 'deploy_pool' || inputs.phase == 'deploy_badges'
+        working-directory: contracts
+        run: |
+          set -euo pipefail
+          if [ "${PHASE}" = "deploy_pool" ]; then
+            make build
+          elif [ "${PHASE}" = "deploy_badges" ]; then
+            make build-badges
+          fi
+
+      - name: Run contract phase
+        id: contract_phase
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+
+          pool_wasm="contracts/target/wasm32v1-none/release/vaquita_pool.wasm"
+          badges_wasm="contracts/target/wasm32v1-none/release/vaquita_badges.wasm"
+          pool_wasm_hash=""
+          badges_wasm_hash=""
+          pool_contract_id=""
+          badges_contract_id=""
+          pool_tx_hash=""
+          badges_tx_hash=""
+          smoke_status="not_run"
+          smoke_output=""
+
+          require_env() {
+            name="$1"
+            value="${!name:-}"
+            if [ -z "${value}" ]; then
+              echo "Missing required environment variable: ${name}"
+              exit 1
+            fi
+          }
+
+          extract_contract_id() {
+            grep -Eo 'C[A-Z2-7]{55}' | tail -1 || true
+          }
+
+          extract_tx_hash() {
+            grep -Eo '[0-9a-fA-F]{64}' | tail -1 | tr '[:upper:]' '[:lower:]' || true
+          }
+
+          if [ "${PHASE}" = "deploy_pool" ]; then
+            require_env POOL_ADMIN_ADDRESS
+            require_env POOL_USDC_CONTRACT_ADDRESS
+            require_env POOL_DEFINDEX_VAULT_ID
+            require_env POOL_LOCK_PERIODS
+            require_env POOL_EARLY_WITHDRAWAL_FEE_BPS
+            require_env POOL_UPGRADE_TIMELOCK_SECS
+            [ -f "${pool_wasm}" ] || { echo "Missing pool WASM: ${pool_wasm}"; exit 1; }
+            pool_wasm_hash="$(sha256sum "${pool_wasm}" | awk '{print $1}')"
+
+            if [ "${EXECUTION_MODE}" = "execute" ]; then
+              require_env POOL_DEPLOYER_SECRET_KEY
+              require_env STELLAR_RPC_URL
+              require_env STELLAR_NETWORK_PASSPHRASE
+              set +e
+              deploy_output="$(stellar contract deploy \
+                --source-account "${POOL_DEPLOYER_SECRET_KEY}" \
+                --rpc-url "${STELLAR_RPC_URL}" \
+                --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" \
+                --wasm "${pool_wasm}" \
+                --alias vaquita_pool \
+                -- \
+                --admin "${POOL_ADMIN_ADDRESS}" \
+                --blend_token "${POOL_USDC_CONTRACT_ADDRESS}" \
+                --defindex_vault_address "${POOL_DEFINDEX_VAULT_ID}" \
+                --lock_periods "[${POOL_LOCK_PERIODS}]" \
+                --early_withdrawal_fee_bps "${POOL_EARLY_WITHDRAWAL_FEE_BPS}" \
+                --upgrade_timelock_secs "${POOL_UPGRADE_TIMELOCK_SECS}" 2>&1)"
+              status=$?
+              set -e
+              echo "${deploy_output}"
+              if [ "${status}" -ne 0 ]; then exit "${status}"; fi
+              pool_contract_id="$(printf '%s\n' "${deploy_output}" | extract_contract_id)"
+              pool_tx_hash="$(printf '%s\n' "${deploy_output}" | extract_tx_hash)"
+            fi
+          elif [ "${PHASE}" = "deploy_badges" ]; then
+            require_env BADGES_ADMIN_ADDRESS
+            require_env BADGES_SIGNING_KEY
+            require_env BADGES_UPGRADE_TIMELOCK_SECS
+            [ -f "${badges_wasm}" ] || { echo "Missing badges WASM: ${badges_wasm}"; exit 1; }
+            badges_wasm_hash="$(sha256sum "${badges_wasm}" | awk '{print $1}')"
+
+            if [ "${EXECUTION_MODE}" = "execute" ]; then
+              require_env BADGES_DEPLOYER_SECRET_KEY
+              require_env STELLAR_RPC_URL
+              require_env STELLAR_NETWORK_PASSPHRASE
+              set +e
+              deploy_output="$(stellar contract deploy \
+                --source-account "${BADGES_DEPLOYER_SECRET_KEY}" \
+                --rpc-url "${STELLAR_RPC_URL}" \
+                --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" \
+                --wasm "${badges_wasm}" \
+                --alias vaquita_badges \
+                -- \
+                --admin "${BADGES_ADMIN_ADDRESS}" \
+                --signing_key "${BADGES_SIGNING_KEY}" \
+                --upgrade_timelock_secs "${BADGES_UPGRADE_TIMELOCK_SECS}" 2>&1)"
+              status=$?
+              set -e
+              echo "${deploy_output}"
+              if [ "${status}" -ne 0 ]; then exit "${status}"; fi
+              badges_contract_id="$(printf '%s\n' "${deploy_output}" | extract_contract_id)"
+              badges_tx_hash="$(printf '%s\n' "${deploy_output}" | extract_tx_hash)"
+            fi
+          elif [ "${PHASE}" = "smoke" ]; then
+            require_env SMOKE_SOURCE_ACCOUNT
+            require_env SMOKE_POOL_CONTRACT_ID
+            require_env SMOKE_BADGES_CONTRACT_ID
+            require_env SMOKE_DEFINDEX_VAULT_ID
+            smoke_status="validated"
+            if [ "${EXECUTION_MODE}" = "execute" ]; then
+              smoke_status="success"
+              require_env STELLAR_RPC_URL
+              require_env STELLAR_NETWORK_PASSPHRASE
+              smoke_output="${smoke_output}\npool.version=$(stellar contract invoke --id "${SMOKE_POOL_CONTRACT_ID}" --source-account "${SMOKE_SOURCE_ACCOUNT}" --rpc-url "${STELLAR_RPC_URL}" --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" --send no -- version)"
+              smoke_output="${smoke_output}\npool.is_paused=$(stellar contract invoke --id "${SMOKE_POOL_CONTRACT_ID}" --source-account "${SMOKE_SOURCE_ACCOUNT}" --rpc-url "${STELLAR_RPC_URL}" --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" --send no -- is_paused)"
+              smoke_output="${smoke_output}\nbadges.version=$(stellar contract invoke --id "${SMOKE_BADGES_CONTRACT_ID}" --source-account "${SMOKE_SOURCE_ACCOUNT}" --rpc-url "${STELLAR_RPC_URL}" --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" --send no -- version)"
+              smoke_output="${smoke_output}\nbadges.is_paused=$(stellar contract invoke --id "${SMOKE_BADGES_CONTRACT_ID}" --source-account "${SMOKE_SOURCE_ACCOUNT}" --rpc-url "${STELLAR_RPC_URL}" --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" --send no -- is_paused)"
+              printf '%b\n' "${smoke_output}"
+            fi
+          fi
+
+          export pool_wasm_hash
+          export badges_wasm_hash
+          export pool_contract_id
+          export badges_contract_id
+          export pool_tx_hash
+          export badges_tx_hash
+          export smoke_status
+          export smoke_output
+
+          node - <<'NODE'
+          const crypto = require('node:crypto');
+          const fs = require('node:fs');
+          const phase = process.env.PHASE;
+          const network = process.env.NETWORK;
+          const explorerNetwork = network === 'mainnet' ? 'public' : 'testnet';
+          const host = `https://stellar.expert/explorer/${explorerNetwork}`;
+          const nonEmpty = (value) => value && value.length > 0 ? value : null;
+          const contractUrl = (id) => id ? `${host}/contract/${id}` : null;
+          const txUrl = (hash) => hash ? `${host}/tx/${hash}` : null;
+          const fingerprint = (value) => value && value.length > 0
+            ? { sha256: crypto.createHash('sha256').update(value).digest('hex'), length: value.length }
+            : null;
+          const artifact = {
+            workflow_name: process.env.GITHUB_WORKFLOW ?? 'Mainnet Deployment',
+            phase,
+            execution_mode: process.env.EXECUTION_MODE,
+            environment: process.env.DEPLOYMENT_ENVIRONMENT,
+            network,
+            commit_sha: process.env.GITHUB_SHA,
+            run_id: process.env.GITHUB_RUN_ID,
+            actor: process.env.GITHUB_ACTOR,
+            wasm_hashes: {
+              pool: nonEmpty(process.env.pool_wasm_hash),
+              badges: nonEmpty(process.env.badges_wasm_hash),
+            },
+            contract_ids: {
+              pool: nonEmpty(process.env.pool_contract_id) ?? nonEmpty(process.env.SMOKE_POOL_CONTRACT_ID),
+              badges: nonEmpty(process.env.badges_contract_id) ?? nonEmpty(process.env.SMOKE_BADGES_CONTRACT_ID),
+              defindex_vault: nonEmpty(process.env.POOL_DEFINDEX_VAULT_ID) ?? nonEmpty(process.env.SMOKE_DEFINDEX_VAULT_ID),
+            },
+            transaction_hashes: {
+              pool: nonEmpty(process.env.pool_tx_hash),
+              badges: nonEmpty(process.env.badges_tx_hash),
+            },
+            explorer_links: {
+              pool_contract: contractUrl(nonEmpty(process.env.pool_contract_id) ?? nonEmpty(process.env.SMOKE_POOL_CONTRACT_ID)),
+              badges_contract: contractUrl(nonEmpty(process.env.badges_contract_id) ?? nonEmpty(process.env.SMOKE_BADGES_CONTRACT_ID)),
+              defindex_vault: contractUrl(nonEmpty(process.env.POOL_DEFINDEX_VAULT_ID) ?? nonEmpty(process.env.SMOKE_DEFINDEX_VAULT_ID)),
+              pool_transaction: txUrl(nonEmpty(process.env.pool_tx_hash)),
+              badges_transaction: txUrl(nonEmpty(process.env.badges_tx_hash)),
+            },
+            operator_inputs: {
+              pool_admin: nonEmpty(process.env.POOL_ADMIN_ADDRESS),
+              pool_token: nonEmpty(process.env.POOL_USDC_CONTRACT_ADDRESS),
+              pool_defindex_vault_id: nonEmpty(process.env.POOL_DEFINDEX_VAULT_ID),
+              pool_lock_periods: nonEmpty(process.env.POOL_LOCK_PERIODS),
+              pool_early_withdrawal_fee_bps: nonEmpty(process.env.POOL_EARLY_WITHDRAWAL_FEE_BPS),
+              pool_upgrade_timelock_secs: nonEmpty(process.env.POOL_UPGRADE_TIMELOCK_SECS),
+              badges_admin: nonEmpty(process.env.BADGES_ADMIN_ADDRESS),
+              badges_signing_key_fingerprint: fingerprint(process.env.BADGES_SIGNING_KEY),
+              badges_upgrade_timelock_secs: nonEmpty(process.env.BADGES_UPGRADE_TIMELOCK_SECS),
+            },
+            smoke_checks: {
+              status: process.env.smoke_status ?? 'not_run',
+              output: process.env.smoke_output ?? '',
+            },
+            manual_rewire_required: true,
+            no_automatic_rewire: true,
+            created_at: new Date().toISOString(),
+          };
+          fs.writeFileSync(process.env.DEPLOYMENT_ARTIFACT_PATH, `${JSON.stringify(artifact, null, 2)}\n`);
+          NODE
+
+      - name: Write Step Summary
+        if: always()
+        run: |
+          set -euo pipefail
+          artifact="${DEPLOYMENT_ARTIFACT_PATH}"
+          {
+            echo "## Contract deployment phase"
+            echo
+            echo "- Phase: ${PHASE}"
+            echo "- Environment: ${DEPLOYMENT_ENVIRONMENT}"
+            echo "- Network: ${NETWORK}"
+            echo "- Execution mode: ${EXECUTION_MODE}"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- Manual rewire still required: true"
+            echo
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          if [ -f "${artifact}" ]; then
+            node -e '
+              const fs = require("node:fs");
+              const a = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              console.log(`- Pool WASM hash: ${a.wasm_hashes.pool ?? "<n/a>"}`);
+              console.log(`- Badges WASM hash: ${a.wasm_hashes.badges ?? "<n/a>"}`);
+              console.log(`- Pool contract: ${a.contract_ids.pool ?? "<not deployed>"}`);
+              console.log(`- Badges contract: ${a.contract_ids.badges ?? "<not deployed>"}`);
+              console.log(`- DeFindex vault: ${a.contract_ids.defindex_vault ?? "<not provided>"}`);
+              console.log(`- Pool tx hash: ${a.transaction_hashes.pool ?? "<not submitted>"}`);
+              console.log(`- Badges tx hash: ${a.transaction_hashes.badges ?? "<not submitted>"}`);
+              console.log(`- Smoke status: ${a.smoke_checks.status}`);
+            ' "${artifact}" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "- Artifact: not created; inspect logs for failure." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload contract phase artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.phase }}-${{ inputs.github_environment }}-${{ github.run_id }}
+          path: artifacts/${{ inputs.phase }}-${{ inputs.github_environment }}.json
           if-no-files-found: warn
           retention-days: 30
