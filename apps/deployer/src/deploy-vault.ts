@@ -96,36 +96,13 @@ export function validateDeploymentContext(args: {
 }): void {
   const deploymentEnvironment =
     args.env.DEPLOYMENT_ENVIRONMENT ?? args.env.GITHUB_ENVIRONMENT;
-  const dopplerConfig = args.env.DOPPLER_CONFIG;
   const selected = deploymentEnvironment?.toLowerCase();
-  const mainnetEnvironments = new Set(["mainnet", "prod", "production"]);
+  const allowedDeploymentEnvironments = new Set(["dev", "staging", "prod"]);
 
-  if (args.network === "mainnet") {
-    if (selected && !mainnetEnvironments.has(selected)) {
-      throw new Error(
-        `Refusing to proceed: NETWORK=mainnet but DEPLOYMENT_ENVIRONMENT="${deploymentEnvironment}". Select a mainnet/prod GitHub Environment.`,
-      );
-    }
-
-    if (!selected && dopplerConfig !== "mainnet") {
-      throw new Error(
-        `Refusing to proceed: NETWORK=mainnet but no mainnet GitHub Environment or DOPPLER_CONFIG=mainnet was detected.`,
-      );
-    }
-  }
-
-  if (args.network === "testnet") {
-    if (selected && mainnetEnvironments.has(selected)) {
-      throw new Error(
-        `Refusing to proceed: NETWORK=testnet but DEPLOYMENT_ENVIRONMENT="${deploymentEnvironment}". Config mismatch.`,
-      );
-    }
-
-    if (dopplerConfig === "mainnet") {
-      throw new Error(
-        "Refusing to proceed: NETWORK=testnet but DOPPLER_CONFIG=mainnet. Config mismatch.",
-      );
-    }
+  if (selected && !allowedDeploymentEnvironments.has(selected)) {
+    throw new Error(
+      `Refusing to proceed: DEPLOYMENT_ENVIRONMENT="${deploymentEnvironment}" is not one of dev, staging, or prod.`,
+    );
   }
 }
 
