@@ -63,7 +63,6 @@ const RawConfig = z.object({
   BLEND_USDC_STRATEGY_ADDRESS: StellarContract,
   BLEND_USDC_STRATEGY_NAME: z.string().min(1).default("blend_usdc"),
   USDC_CONTRACT_ADDRESS: StellarContract,
-  SOROSWAP_ROUTER_ADDRESS: StellarContract,
 });
 
 export type Config = {
@@ -94,7 +93,6 @@ export type Config = {
   assets: {
     usdc: string;
     blendUsdcStrategy: { address: string; name: string };
-    soroswapRouter: string;
   };
 };
 
@@ -140,7 +138,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         address: c.BLEND_USDC_STRATEGY_ADDRESS,
         name: c.BLEND_USDC_STRATEGY_NAME,
       },
-      soroswapRouter: c.SOROSWAP_ROUTER_ADDRESS,
     },
   };
 }

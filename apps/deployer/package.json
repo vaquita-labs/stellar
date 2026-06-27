@@ -9,6 +9,7 @@
   },
   "scripts": {
     "deploy:vault": "tsx src/index.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "tsc"
   },
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@types/node": "^25.9.1",
     "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }
