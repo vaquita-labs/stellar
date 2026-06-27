@@ -1,7 +1,17 @@
 import { loadConfig } from "./config.js";
 import { DefindexApi, DefindexApiError } from "./defindex-api.js";
-import { signTransactionXdr, extractVaultAddress } from "./sign.js";
 import { writeVaultIdToDoppler } from "./doppler.js";
+import {
+  buildVaultDeploymentArtifact,
+  createAndSubmitVault,
+  getDeploymentContext,
+  getExecutionMode,
+  shouldWriteVaultIdToDoppler,
+  validateDeploymentContext,
+  writeDeploymentArtifact,
+  type DopplerWriteResult,
+  type VaultDeploymentResult,
+} from "./deploy-vault.js";
 
 /**
  * Load .env as a fallback for local runs. Vars already present in the
@@ -28,8 +38,13 @@ const log = {
 async function main(): Promise<void> {
   loadDotEnvIfPresent();
   const cfg = loadConfig();
+  const executionMode = getExecutionMode(process.env);
+  const context = getDeploymentContext(process.env);
+  validateDeploymentContext({ network: cfg.network.name, env: process.env });
 
   console.log("vaquita vault deployer");
+  console.log(`  mode:     ${executionMode}`);
+  console.log(`  env:      ${context.environment}`);
   console.log(`  network:  ${cfg.network.name}`);
   console.log(`  api:      ${cfg.api.baseUrl}`);
   console.log(`  deployer: ${cfg.deployer.public}`);
@@ -44,66 +59,100 @@ async function main(): Promise<void> {
   console.log(`    strategy:            ${cfg.assets.blendUsdcStrategy.address} (name="${cfg.assets.blendUsdcStrategy.name}")`);
   console.log(`    soroswap_router:     ${cfg.assets.soroswapRouter}`);
 
-  const dopplerConfig = process.env.DOPPLER_CONFIG;
-  if (cfg.network.name === "mainnet" && dopplerConfig !== "mainnet") {
-    throw new Error(
-      `Refusing to proceed: NETWORK=mainnet but DOPPLER_CONFIG="${dopplerConfig ?? "<unset>"}". Run under \`doppler run --config mainnet\` to deploy to mainnet.`,
-    );
-  }
-  if (cfg.network.name === "testnet" && dopplerConfig && dopplerConfig === "mainnet") {
-    throw new Error(
-      `Refusing to proceed: NETWORK=testnet but DOPPLER_CONFIG=mainnet. Config mismatch.`,
-    );
-  }
-
-  const api = new DefindexApi(cfg);
-
-  log.step(1, "GET /health");
-  await api.health();
-  log.ok("DeFindex API is reachable");
-
-  log.step(2, "POST /factory/create-vault");
-  const created = await api.createVault();
-  log.ok(`received unsigned XDR (${created.xdr.length} chars, simulation=${created.simulation_result ?? "<n/a>"})`);
-
-  log.step(3, "sign XDR locally");
-  const signedXdr = signTransactionXdr(
-    created.xdr,
-    cfg.deployer.secret,
-    cfg.network.passphrase,
-  );
-  log.ok("signed with deployer key (secret never left this process)");
-
-  log.step(4, "POST /send");
-  const sent = await api.send(signedXdr);
-  log.ok(`tx submitted: status=${sent.status} txHash=${sent.txHash}`);
-  if (sent.ledger) log.info(`ledger: ${sent.ledger}`);
-
-  log.step(5, "extract vault address from returnValue");
-  if (!sent.returnValue) {
-    throw new Error(`/send response is missing returnValue; cannot determine vault address. Full response: ${JSON.stringify(sent)}`);
-  }
-  const vaultAddress = extractVaultAddress(sent.returnValue);
-  log.ok(`vault contract: ${vaultAddress}`);
-
-  log.step(6, "write VAULT_ID back to Doppler");
-  const written = writeVaultIdToDoppler(vaultAddress);
-  if (written.ok) {
-    log.ok(`doppler secrets set VAULT_ID=${vaultAddress} --project ${written.project} --config ${written.config}`);
+  let result: VaultDeploymentResult;
+  if (executionMode === "validate_only") {
+    log.step(1, "validate configuration only");
+    log.ok("configuration and deployment context are valid");
+    result = {
+      status: "validated",
+      vaultId: null,
+      txHash: null,
+      explorerTxUrl: null,
+      explorerVaultUrl: null,
+    };
   } else {
-    log.warn(written.reason);
-    log.warn(`VAULT_ID=${vaultAddress} was NOT written to Doppler. Set it manually if required.`);
+    const api = new DefindexApi(cfg);
+
+    log.step(1, "GET /health");
+    log.step(2, "POST /factory/create-vault");
+    log.step(3, "sign XDR locally");
+    log.step(4, "POST /send");
+    log.step(5, "extract vault address from returnValue");
+    result = await createAndSubmitVault({
+      api,
+      cfg,
+      onCreateVault: (created) => {
+        log.ok(
+          `received unsigned XDR (${created.xdr.length} chars, simulation=${created.simulation_result ?? "<n/a>"})`,
+        );
+        log.ok("signed with deployer key (secret never left this process)");
+      },
+      onSend: (sent) => {
+        log.ok(`tx submitted: status=${sent.status} txHash=${sent.txHash}`);
+        if (sent.ledger) log.info(`ledger: ${sent.ledger}`);
+      },
+    });
+    log.ok(`vault contract: ${result.vaultId}`);
   }
 
-  const explorerHost =
-    cfg.network.name === "mainnet" ? "https://stellar.expert/explorer/public"
-    : "https://stellar.expert/explorer/testnet";
+  let doppler: DopplerWriteResult = {
+    attempted: false,
+    status: "skipped",
+    reason: "validate-only mode or no vault ID yet",
+  };
+  if (executionMode === "execute" && result.status === "success") {
+    log.step(6, "handle VAULT_ID Doppler writeback");
+    if (shouldWriteVaultIdToDoppler(process.env)) {
+      const written = writeVaultIdToDoppler(result.vaultId);
+      doppler = written.ok
+        ? {
+            attempted: true,
+            status: "written",
+            project: written.project,
+            config: written.config,
+          }
+        : { attempted: true, status: "failed", reason: written.reason };
+      if (written.ok) {
+        log.ok(
+          `doppler secrets set VAULT_ID=${result.vaultId} --project ${written.project} --config ${written.config}`,
+        );
+      } else {
+        log.warn(written.reason);
+        log.warn(
+          `VAULT_ID=${result.vaultId} was NOT written to Doppler. Set it manually if required.`,
+        );
+      }
+    } else {
+      doppler = {
+        attempted: false,
+        status: "skipped",
+        reason: "WRITE_VAULT_ID_TO_DOPPLER=false",
+      };
+      log.ok("Doppler writeback skipped by WRITE_VAULT_ID_TO_DOPPLER=false");
+    }
+  }
+
+  const artifact = buildVaultDeploymentArtifact({
+    cfg,
+    phase: "deploy_vault",
+    executionMode,
+    context,
+    result,
+    doppler,
+  });
+
+  if (process.env.DEPLOYMENT_ARTIFACT_PATH) {
+    writeDeploymentArtifact(process.env.DEPLOYMENT_ARTIFACT_PATH, artifact);
+    log.ok(`deployment artifact written: ${process.env.DEPLOYMENT_ARTIFACT_PATH}`);
+  }
 
   console.log("\nsummary");
-  console.log(`  vault:    ${vaultAddress}`);
-  console.log(`  tx_hash:  ${sent.txHash}`);
-  console.log(`  explorer: ${explorerHost}/tx/${sent.txHash}`);
-  console.log(`  explorer: ${explorerHost}/contract/${vaultAddress}`);
+  console.log(`  status:   ${artifact.status}`);
+  console.log(`  vault:    ${artifact.vault_id ?? "<not created>"}`);
+  console.log(`  tx_hash:  ${artifact.tx_hash ?? "<not submitted>"}`);
+  console.log(`  rewire:   manual rewire still required`);
+  if (artifact.explorer_tx_url) console.log(`  explorer: ${artifact.explorer_tx_url}`);
+  if (artifact.explorer_vault_url) console.log(`  explorer: ${artifact.explorer_vault_url}`);
 }
 
 main().catch((err: unknown) => {

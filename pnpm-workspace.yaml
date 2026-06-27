@@ -1,5 +1,6 @@
 packages:
   - 'apps/api'
+  - 'apps/deployer'
   - 'apps/listener'
   - 'apps/job-deposits'
   - 'apps/web'
