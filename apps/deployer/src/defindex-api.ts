@@ -11,7 +11,6 @@ export type CreateVaultRequest = {
       paused: boolean;
     }>;
   }>;
-  soroswap_router: string;
   name_symbol: { name: string; symbol: string };
   upgradable: boolean;
   caller: string;
@@ -66,31 +65,7 @@ export class DefindexApi {
   }
 
   async createVault(): Promise<CreateVaultResponse> {
-    const body: CreateVaultRequest = {
-      roles: {
-        "0": this.cfg.roles.emergencyManager,
-        "1": this.cfg.roles.vaultFeeReceiver,
-        "2": this.cfg.roles.manager,
-        "3": this.cfg.roles.rebalanceManager,
-      },
-      vault_fee_bps: this.cfg.vault.feeBps,
-      assets: [
-        {
-          address: this.cfg.assets.usdc,
-          strategies: [
-            {
-              address: this.cfg.assets.blendUsdcStrategy.address,
-              name: this.cfg.assets.blendUsdcStrategy.name,
-              paused: false,
-            },
-          ],
-        },
-      ],
-      soroswap_router: this.cfg.assets.soroswapRouter,
-      name_symbol: { name: this.cfg.vault.name, symbol: this.cfg.vault.symbol },
-      upgradable: this.cfg.vault.upgradable,
-      caller: this.cfg.deployer.public,
-    };
+    const body = buildCreateVaultRequest(this.cfg);
 
     const res = await this.request<CreateVaultResponse>(
       "POST",
@@ -119,6 +94,33 @@ export class DefindexApi {
     }
     return res;
   }
+}
+
+export function buildCreateVaultRequest(cfg: Config): CreateVaultRequest {
+  return {
+    roles: {
+      "0": cfg.roles.emergencyManager,
+      "1": cfg.roles.vaultFeeReceiver,
+      "2": cfg.roles.manager,
+      "3": cfg.roles.rebalanceManager,
+    },
+    vault_fee_bps: cfg.vault.feeBps,
+    assets: [
+      {
+        address: cfg.assets.usdc,
+        strategies: [
+          {
+            address: cfg.assets.blendUsdcStrategy.address,
+            name: cfg.assets.blendUsdcStrategy.name,
+            paused: false,
+          },
+        ],
+      },
+    ],
+    name_symbol: { name: cfg.vault.name, symbol: cfg.vault.symbol },
+    upgradable: cfg.vault.upgradable,
+    caller: cfg.deployer.public,
+  };
 }
 
 export class DefindexApiError extends Error {

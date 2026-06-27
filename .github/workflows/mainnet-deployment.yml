@@ -1,0 +1,151 @@
+name: Mainnet Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Deployment phase to run
+        required: true
+        type: choice
+        default: deploy_vault
+        options:
+          - deploy_vault
+      github_environment:
+        description: Protected GitHub Environment containing deployment secrets and vars
+        required: true
+        type: environment
+      network:
+        description: Stellar network for this phase
+        required: true
+        type: choice
+        default: testnet
+        options:
+          - testnet
+          - mainnet
+      execution_mode:
+        description: Validate config only, or execute the irreversible vault creation
+        required: true
+        type: choice
+        default: validate_only
+        options:
+          - validate_only
+          - execute
+      confirm_execute:
+        description: Type DEPLOY_VAULT when execution_mode=execute
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "11.5.2"
+
+jobs:
+  deploy-vault:
+    name: DeFindex vault (${{ inputs.github_environment }}, ${{ inputs.execution_mode }})
+    if: github.event_name == 'workflow_dispatch' && inputs.phase == 'deploy_vault'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.github_environment }}
+    concurrency:
+      group: mainnet-deployment-${{ inputs.github_environment }}-deploy-vault
+      cancel-in-progress: false
+    env:
+      DEPLOYMENT_ENVIRONMENT: ${{ inputs.github_environment }}
+      DEPLOYER_VALIDATE_ONLY: ${{ inputs.execution_mode == 'validate_only' && 'true' || 'false' }}
+      DEPLOYMENT_ARTIFACT_PATH: artifacts/defindex-vault-${{ inputs.github_environment }}.json
+      WRITE_VAULT_ID_TO_DOPPLER: "false"
+      NETWORK: ${{ inputs.network }}
+      DEFINDEX_API_KEY: ${{ secrets.DEFINDEX_API_KEY }}
+      DEFINDEX_API_URL: ${{ vars.DEFINDEX_API_URL }}
+      DEPLOYER_SECRET_KEY: ${{ secrets.DEPLOYER_SECRET_KEY }}
+      DEPLOYER_PUBLIC_KEY: ${{ vars.DEPLOYER_PUBLIC_KEY }}
+      EMERGENCY_MANAGER_ADDRESS: ${{ vars.EMERGENCY_MANAGER_ADDRESS }}
+      VAULT_FEE_RECEIVER_ADDRESS: ${{ vars.VAULT_FEE_RECEIVER_ADDRESS }}
+      MANAGER_ADDRESS: ${{ vars.MANAGER_ADDRESS }}
+      REBALANCE_MANAGER_ADDRESS: ${{ vars.REBALANCE_MANAGER_ADDRESS }}
+      VAULT_NAME: ${{ vars.VAULT_NAME }}
+      VAULT_SYMBOL: ${{ vars.VAULT_SYMBOL }}
+      VAULT_FEE_BPS: ${{ vars.VAULT_FEE_BPS }}
+      VAULT_UPGRADABLE: ${{ vars.VAULT_UPGRADABLE }}
+      BLEND_USDC_STRATEGY_ADDRESS: ${{ vars.BLEND_USDC_STRATEGY_ADDRESS }}
+      BLEND_USDC_STRATEGY_NAME: ${{ vars.BLEND_USDC_STRATEGY_NAME }}
+      USDC_CONTRACT_ADDRESS: ${{ vars.USDC_CONTRACT_ADDRESS }}
+    steps:
+      - name: Confirm irreversible execution
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.execution_mode }}" = "execute" ] && [ "${{ inputs.confirm_execute }}" != "DEPLOY_VAULT" ]; then
+            echo "execution_mode=execute requires confirm_execute=DEPLOY_VAULT"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: CI=true pnpm install --frozen-lockfile
+
+      - name: Run deploy_vault phase
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          pnpm --filter @vaquita/deployer deploy:vault
+
+      - name: Write Step Summary
+        if: always()
+        run: |
+          set -euo pipefail
+          artifact="${DEPLOYMENT_ARTIFACT_PATH}"
+          {
+            echo "## DeFindex vault deployment"
+            echo
+            echo "- Phase: deploy_vault"
+            echo "- Environment: ${DEPLOYMENT_ENVIRONMENT}"
+            echo "- Network: ${NETWORK}"
+            echo "- Execution mode: ${{ inputs.execution_mode }}"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- Manual rewire still required: true"
+            echo
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          if [ -f "${artifact}" ]; then
+            node -e '
+              const fs = require("node:fs");
+              const artifact = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              console.log(`- Artifact status: ${artifact.status}`);
+              console.log(`- Vault ID: ${artifact.vault_id ?? "<not created>"}`);
+              console.log(`- Transaction hash: ${artifact.tx_hash ?? "<not submitted>"}`);
+              console.log(`- Deployer public key: ${artifact.deployer_public_key}`);
+              console.log(`- Vault config: ${artifact.vault.name} (${artifact.vault.symbol}), fee=${artifact.vault.feeBps}bps, upgradable=${artifact.vault.upgradable}`);
+              console.log(`- USDC contract: ${artifact.assets.usdc}`);
+              console.log(`- Blend strategy: ${artifact.assets.blendUsdcStrategy.address} (${artifact.assets.blendUsdcStrategy.name})`);
+              console.log(`- Doppler writeback: ${artifact.doppler.status}`);
+              if (artifact.explorer_tx_url) console.log(`- Transaction explorer: ${artifact.explorer_tx_url}`);
+              if (artifact.explorer_vault_url) console.log(`- Vault explorer: ${artifact.explorer_vault_url}`);
+            ' "${artifact}" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "- Artifact: not created; inspect logs for validation or deploy failure." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload deployment artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: defindex-vault-${{ inputs.github_environment }}-${{ github.run_id }}
+          path: artifacts/defindex-vault-${{ inputs.github_environment }}.json
+          if-no-files-found: warn
+          retention-days: 30
