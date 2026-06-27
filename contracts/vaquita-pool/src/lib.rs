@@ -187,12 +187,8 @@ impl VaquitaPool {
             .ok_or(VaquitaPoolError::NotInitialized)?;
         let contract_address = env.current_contract_address();
 
-        let gross = vault_adapter::withdraw_from_vault(
-            &env,
-            &defindex_vault_address,
-            position.shares,
-            position.amount,
-        )?;
+        let gross =
+            vault_adapter::withdraw_from_vault(&env, &defindex_vault_address, position.shares)?;
 
         let interest = if gross > position.amount {
             arithmetic::checked_sub(gross, position.amount)?
@@ -498,10 +494,7 @@ impl VaquitaPool {
         Ok(())
     }
 
-    pub fn update_upgrade_timelock_secs(
-        env: Env,
-        new_secs: u64,
-    ) -> Result<(), VaquitaPoolError> {
+    pub fn update_upgrade_timelock_secs(env: Env, new_secs: u64) -> Result<(), VaquitaPoolError> {
         upgrade::update_upgrade_timelock_secs(&env, new_secs)?;
         positions::extend_instance(&env);
         Ok(())
