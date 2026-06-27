@@ -72,7 +72,6 @@ jobs:
       BLEND_USDC_STRATEGY_ADDRESS: ${{ vars.BLEND_USDC_STRATEGY_ADDRESS }}
       BLEND_USDC_STRATEGY_NAME: ${{ vars.BLEND_USDC_STRATEGY_NAME }}
       USDC_CONTRACT_ADDRESS: ${{ vars.USDC_CONTRACT_ADDRESS }}
-      SOROSWAP_ROUTER_ADDRESS: ${{ vars.SOROSWAP_ROUTER_ADDRESS }}
     steps:
       - name: Confirm irreversible execution
         run: |
