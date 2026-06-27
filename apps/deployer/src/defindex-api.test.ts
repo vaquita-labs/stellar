@@ -41,12 +41,12 @@ describe("buildCreateVaultRequest", () => {
   it("builds the DeFindex vault request with the USDC asset and Blend USDC strategy", () => {
     expect(buildCreateVaultRequest(config())).toMatchObject({
       roles: {
-        "0": roleAddress,
-        "1": roleAddress,
-        "2": roleAddress,
-        "3": roleAddress,
+        emergencyManager: roleAddress,
+        feeReceiver: roleAddress,
+        manager: roleAddress,
+        rebalanceManager: roleAddress,
       },
-      vault_fee_bps: 100,
+      vaultFee: 100,
       assets: [
         {
           address: "CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU",
@@ -60,10 +60,13 @@ describe("buildCreateVaultRequest", () => {
         },
       ],
       soroswap_router: "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-      name_symbol: { name: "BlendUsdc", symbol: "BUSDC" },
+      name: "BlendUsdc",
+      symbol: "BUSDC",
       upgradable: true,
       caller: roleAddress,
     });
+    expect(buildCreateVaultRequest(config())).not.toHaveProperty("name_symbol");
+    expect(buildCreateVaultRequest(config())).not.toHaveProperty("vault_fee_bps");
   });
 
   it("uses the mainnet Blend USDC autocompound fixed strategy address from config", () => {
