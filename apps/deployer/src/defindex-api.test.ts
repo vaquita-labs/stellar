@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildCreateVaultRequest } from "./defindex-api.js";
+import { DefindexApi, buildCreateVaultRequest } from "./defindex-api.js";
 import type { Config } from "./config.js";
 
 const roleAddress = "GDDPTHEUN2BPZGZZXLU77YRQA6M5YT4ESXRNRZTA6Y72IRCPOQK4GFAF";
@@ -99,5 +99,44 @@ describe("buildCreateVaultRequest", () => {
         ],
       },
     ]);
+  });
+});
+
+describe("DefindexApi.send", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("accepts the documented success=true send response", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          txHash: "75bf15f7948773d88735c47734b0ac15dbe181d941b401a72b4705259023105e",
+          success: true,
+          result: { type: "Address", value: "CVAULT" },
+          ledger: 123,
+          createdAt: "2026-06-27T00:00:00.000Z",
+          latestLedger: 124,
+          latestLedgerCloseTime: "2026-06-27T00:00:05.000Z",
+          feeBump: true,
+          feeCharged: "100",
+        }),
+    } as Response);
+
+    const api = new DefindexApi(config());
+    await expect(api.send("signed-xdr")).resolves.toMatchObject({
+      success: true,
+      txHash: "75bf15f7948773d88735c47734b0ac15dbe181d941b401a72b4705259023105e",
+      result: { value: "CVAULT" },
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.defindex.io/send?network=testnet",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ xdr: "signed-xdr" }),
+      }),
+    );
   });
 });

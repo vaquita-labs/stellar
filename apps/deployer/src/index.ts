@@ -72,22 +72,22 @@ async function main(): Promise<void> {
   } else {
     const api = new DefindexApi(cfg);
 
-    log.step(1, "GET /health");
-    log.step(2, "POST /factory/create-vault");
-    log.step(3, "sign XDR locally");
-    log.step(4, "POST /send");
-    log.step(5, "extract vault address from returnValue");
     result = await createAndSubmitVault({
       api,
       cfg,
+      onStep: log.step,
       onCreateVault: (created) => {
         log.ok(
           `received unsigned XDR (${created.xdr.length} chars, simulation=${created.simulation_result ?? "<n/a>"})`,
         );
+      },
+      onSigned: () => {
         log.ok("signed with deployer key (secret never left this process)");
       },
       onSend: (sent) => {
-        log.ok(`tx submitted: status=${sent.status} txHash=${sent.txHash}`);
+        log.ok(
+          `tx submitted: success=${String(sent.success)} status=${sent.status ?? "<unset>"} txHash=${sent.txHash}`,
+        );
         if (sent.ledger) log.info(`ledger: ${sent.ledger}`);
       },
     });
