@@ -6,7 +6,7 @@ use crate::test::mock_defindex_vault::{
     MockDeFindexVault, MockDeFindexVaultArgs, MockDeFindexVaultClient,
 };
 use crate::test::{assert_approx_eq_rel, test_calculate_reward, EnvTestUtils};
-use crate::{Period, VaquitaPool, VaquitaPoolClient};
+use crate::{accounting, Period, VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
 use soroban_sdk::{Address, Env, String, Vec};
@@ -222,7 +222,7 @@ fn calculate_reward_returns_zero_when_no_deposits() {
 }
 
 #[test]
-fn vault_loss_reverts_with_less_than_principal() {
+fn vault_loss_realizes_less_than_principal() {
     let e = Env::default();
     let (_, alice, _, _, _, pool, vault, tok) = deploy_pool(&e);
 
@@ -235,11 +235,53 @@ fn vault_loss_reverts_with_less_than_principal() {
     vault.test_set_withdraw_adjustment(&loss);
 
     e.jump_time(LOCK_7D + 1);
-    let result = pool.try_withdraw(&alice, &dep);
-    assert_eq!(
-        result,
-        Err(Ok(VaquitaPoolError::VaultReturnedLessThanPrincipal))
+    pool.withdraw(&alice, &dep);
+    assert_eq!(tok.balance(&alice), principal + loss);
+}
+
+#[test]
+fn accounting_helpers_report_underflow_and_overflow() {
+    let e = Env::default();
+    e.cost_estimate().budget().reset_unlimited();
+    e.set_default_info();
+
+    let admin = Address::generate(&e);
+    let usdc = e.register_stellar_asset_contract_v2(admin.clone());
+    let vault = e.register(
+        MockDeFindexVault,
+        MockDeFindexVaultArgs::__constructor(&usdc.address()),
     );
+    let lp: Vec<u64> = Vec::from_array(&e, [LOCK_7D]);
+    let pool_id = e.register(
+        VaquitaPool,
+        (admin, usdc.address(), vault, lp, 0i128, 172800u64),
+    );
+
+    e.as_contract(&pool_id, || {
+        accounting::add_principal(&e, i128::MAX).unwrap();
+        assert_eq!(
+            accounting::add_principal(&e, 1),
+            Err(VaquitaPoolError::ArithmeticOverflow)
+        );
+        accounting::sub_principal(&e, i128::MAX).unwrap();
+        accounting::sub_principal(&e, i128::MAX).unwrap();
+        assert_eq!(
+            accounting::sub_principal(&e, 2),
+            Err(VaquitaPoolError::ArithmeticOverflow)
+        );
+
+        accounting::add_reward_pool(&e, i128::MAX).unwrap();
+        assert_eq!(
+            accounting::add_reward_pool(&e, 1),
+            Err(VaquitaPoolError::ArithmeticOverflow)
+        );
+        accounting::sub_reward_pool(&e, i128::MAX).unwrap();
+        accounting::sub_reward_pool(&e, i128::MAX).unwrap();
+        assert_eq!(
+            accounting::sub_reward_pool(&e, 2),
+            Err(VaquitaPoolError::ArithmeticOverflow)
+        );
+    });
 }
 
 // ---- Helper for tests that need a pool but want to control auth independently ----
