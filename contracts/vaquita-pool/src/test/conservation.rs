@@ -6,11 +6,10 @@
 //! Tests cover:
 //! - vault returning exactly principal (succeeds)
 //! - vault returning principal + interest (succeeds, interest accounted)
-//! - vault returning less than principal (VaultReturnedLessThanPrincipal)
+//! - vault returning less than principal (loss is realized)
 //! - storage-corrupted invariant (ConservationInvariantViolated)
 //! - property test: 100+ sequences over bounded state space
 
-use crate::error::VaquitaPoolError;
 use crate::test::mock_defindex_vault::{
     MockDeFindexVault, MockDeFindexVaultArgs, MockDeFindexVaultClient,
 };
@@ -99,7 +98,7 @@ fn vault_returns_principal_plus_interest_succeeds() {
 }
 
 #[test]
-fn vault_returns_less_than_principal_reverts() {
+fn vault_returns_less_than_principal_realizes_loss() {
     let e = Env::default();
     let (_, pool, vault, tok, _) = deploy(&e, &[LOCK_7D]);
 
@@ -109,11 +108,9 @@ fn vault_returns_less_than_principal_reverts() {
     vault.test_set_withdraw_adjustment(&-10_000i128);
 
     e.jump_time(LOCK_7D + 1);
-    let result = pool.try_withdraw(&alice, &String::from_str(&e, "d1"));
-    assert_eq!(
-        result,
-        Err(Ok(VaquitaPoolError::VaultReturnedLessThanPrincipal))
-    );
+    pool.withdraw(&alice, &String::from_str(&e, "d1"));
+    assert_eq!(tok.balance(&alice), 90_000i128);
+    assert!(pool.try_check_solvency().is_ok());
 }
 
 // ---- Unit: corrupted state triggers conservation check ----

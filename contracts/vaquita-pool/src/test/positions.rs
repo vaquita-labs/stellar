@@ -3,7 +3,8 @@
 
 use crate::test::mock_defindex_vault::{MockDeFindexVault, MockDeFindexVaultArgs};
 use crate::test::EnvTestUtils;
-use crate::{VaquitaPool, VaquitaPoolClient};
+use crate::types::Position;
+use crate::{positions, VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
 use soroban_sdk::{Address, Env, String, Vec};
@@ -94,4 +95,54 @@ fn outstanding_count_tracks_open_positions() {
     assert!(pool.get_position(&id1).is_none());
     assert!(pool.get_position(&id2).is_some());
     assert!(pool.get_position(&id3).is_some());
+}
+
+#[test]
+fn positions_helpers_cover_default_and_ttl_paths() {
+    let e = Env::default();
+    e.cost_estimate().budget().reset_unlimited();
+    e.set_default_info();
+
+    let admin = Address::generate(&e);
+    let owner = Address::generate(&e);
+    let usdc = e.register_stellar_asset_contract_v2(admin.clone());
+    let vault = e.register(
+        MockDeFindexVault,
+        MockDeFindexVaultArgs::__constructor(&usdc.address()),
+    );
+    let lp: Vec<u64> = Vec::from_array(&e, [LOCK_7D]);
+    let contract = e.register(
+        VaquitaPool,
+        (admin, usdc.address(), vault, lp, 0i128, 172800u64),
+    );
+    let id = String::from_str(&e, "helper");
+
+    e.as_contract(&contract, || {
+        assert_eq!(positions::outstanding_count(&e), 0);
+        assert_eq!(positions::outstanding_count_for_period(&e, LOCK_7D), 0);
+        assert!(!positions::exists(&e, &id));
+
+        positions::extend_ttl(&e, &id);
+        positions::remove(&e, &id, LOCK_7D);
+        assert_eq!(positions::outstanding_count(&e), 0);
+        assert_eq!(positions::outstanding_count_for_period(&e, LOCK_7D), 0);
+
+        let position = Position {
+            owner,
+            amount: 123,
+            shares: 120,
+            finalization_time: 456,
+            lock_period: LOCK_7D,
+        };
+        positions::set(&e, &id, &position);
+        assert!(positions::exists(&e, &id));
+        assert_eq!(positions::outstanding_count(&e), 1);
+        assert_eq!(positions::outstanding_count_for_period(&e, LOCK_7D), 1);
+
+        positions::extend_ttl(&e, &id);
+        positions::remove(&e, &id, LOCK_7D);
+        assert!(!positions::exists(&e, &id));
+        assert_eq!(positions::outstanding_count(&e), 0);
+        assert_eq!(positions::outstanding_count_for_period(&e, LOCK_7D), 0);
+    });
 }
