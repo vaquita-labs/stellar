@@ -57,7 +57,6 @@ async function main(): Promise<void> {
   console.log(`  assets:`);
   console.log(`    usdc:                ${cfg.assets.usdc}`);
   console.log(`    strategy:            ${cfg.assets.blendUsdcStrategy.address} (name="${cfg.assets.blendUsdcStrategy.name}")`);
-  console.log(`    soroswap_router:     ${cfg.assets.soroswapRouter}`);
 
   let result: VaultDeploymentResult;
   if (executionMode === "validate_only") {

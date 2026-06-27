@@ -86,13 +86,12 @@ script wires them as follows:
 | `roles.feeReceiver`              | `VAULT_FEE_RECEIVER_ADDRESS`  |
 | `roles.manager`                  | `MANAGER_ADDRESS`             |
 | `roles.rebalanceManager`         | `REBALANCE_MANAGER_ADDRESS`   |
-| `vaultFee`                       | `VAULT_FEE_BPS`               |
+| `vaultFeeBps`                    | `VAULT_FEE_BPS`               |
 | `name`                           | `VAULT_NAME`                  |
 | `symbol`                         | `VAULT_SYMBOL`                |
 | `assets[0].address`              | `USDC_CONTRACT_ADDRESS`       |
 | `assets[0].strategies[0].address`| `BLEND_USDC_STRATEGY_ADDRESS` |
 | `assets[0].strategies[0].name`   | `BLEND_USDC_STRATEGY_NAME`    |
-| `soroswap_router`                | `SOROSWAP_ROUTER_ADDRESS`     |
 | `caller`                         | `DEPLOYER_PUBLIC_KEY`         |
 
 ## Safety notes

@@ -7,7 +7,7 @@ export type CreateVaultRequest = {
     manager: string;
     rebalanceManager: string;
   };
-  vaultFee: number;
+  vaultFeeBps: number;
   assets: Array<{
     address: string;
     strategies: Array<{
@@ -16,7 +16,6 @@ export type CreateVaultRequest = {
       paused: boolean;
     }>;
   }>;
-  soroswap_router: string;
   name: string;
   symbol: string;
   upgradable: boolean;
@@ -73,6 +72,7 @@ export class DefindexApi {
 
   async createVault(): Promise<CreateVaultResponse> {
     const body = buildCreateVaultRequest(this.cfg);
+    console.log(`     create-vault body: ${JSON.stringify(body)}`);
 
     const res = await this.request<CreateVaultResponse>(
       "POST",
@@ -111,7 +111,7 @@ export function buildCreateVaultRequest(cfg: Config): CreateVaultRequest {
       manager: cfg.roles.manager,
       rebalanceManager: cfg.roles.rebalanceManager,
     },
-    vaultFee: cfg.vault.feeBps,
+    vaultFeeBps: cfg.vault.feeBps,
     assets: [
       {
         address: cfg.assets.usdc,
@@ -124,7 +124,6 @@ export function buildCreateVaultRequest(cfg: Config): CreateVaultRequest {
         ],
       },
     ],
-    soroswap_router: cfg.assets.soroswapRouter,
     name: cfg.vault.name,
     symbol: cfg.vault.symbol,
     upgradable: cfg.vault.upgradable,

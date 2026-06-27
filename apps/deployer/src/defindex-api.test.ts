@@ -31,7 +31,6 @@ function config(overrides: Partial<Config> = {}): Config {
         address: "CALLOM5I7XLQPPOPQMYAHUWW4N7O3JKT42KQ4ASEEVBXDJQNJOALFSUY",
         name: "test_strategy_blend_usdc",
       },
-      soroswapRouter: "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
     },
     ...overrides,
   };
@@ -46,7 +45,7 @@ describe("buildCreateVaultRequest", () => {
         manager: roleAddress,
         rebalanceManager: roleAddress,
       },
-      vaultFee: 100,
+      vaultFeeBps: 100,
       assets: [
         {
           address: "CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU",
@@ -59,14 +58,16 @@ describe("buildCreateVaultRequest", () => {
           ],
         },
       ],
-      soroswap_router: "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
       name: "BlendUsdc",
       symbol: "BUSDC",
       upgradable: true,
       caller: roleAddress,
     });
     expect(buildCreateVaultRequest(config())).not.toHaveProperty("name_symbol");
+    expect(buildCreateVaultRequest(config())).not.toHaveProperty("vault_fee");
+    expect(buildCreateVaultRequest(config())).not.toHaveProperty("vaultFee");
     expect(buildCreateVaultRequest(config())).not.toHaveProperty("vault_fee_bps");
+    expect(buildCreateVaultRequest(config())).not.toHaveProperty("soroswap_router");
   });
 
   it("uses the mainnet Blend USDC autocompound fixed strategy address from config", () => {
@@ -82,7 +83,6 @@ describe("buildCreateVaultRequest", () => {
             address: "CDB2WMKQQNVZMEBY7Q7GZ5C7E7IAFSNMZ7GGVD6WKTCEWK7XOIAVZSAP",
             name: "blend_usdc_autocompound_fixed_strategy",
           },
-          soroswapRouter: "CSOROSWAPMAINNET",
         },
       }),
     );
