@@ -13,40 +13,35 @@ const baseEnv = {
 };
 
 describe("validateDeploymentContext", () => {
-  it("allows mainnet when the selected deployment environment is mainnet", () => {
+  it.each([
+    ["dev", "testnet"],
+    ["dev", "mainnet"],
+    ["staging", "testnet"],
+    ["staging", "mainnet"],
+    ["prod", "testnet"],
+    ["prod", "mainnet"],
+  ] as const)("allows %s deployments on %s", (environment, network) => {
     expect(() =>
       validateDeploymentContext({
-        network: "mainnet",
+        network,
         env: {
           ...baseEnv,
-          DEPLOYMENT_ENVIRONMENT: "mainnet",
+          DEPLOYMENT_ENVIRONMENT: environment,
         },
       }),
     ).not.toThrow();
   });
 
-  it("refuses mainnet when neither GitHub Environment nor Doppler says mainnet", () => {
-    expect(() =>
-      validateDeploymentContext({
-        network: "mainnet",
-        env: {
-          ...baseEnv,
-          DEPLOYMENT_ENVIRONMENT: "dev",
-        },
-      }),
-    ).toThrow(/NETWORK=mainnet/);
-  });
-
-  it("refuses testnet when the selected deployment environment is mainnet", () => {
+  it("refuses unknown deployment environments", () => {
     expect(() =>
       validateDeploymentContext({
         network: "testnet",
         env: {
           ...baseEnv,
-          DEPLOYMENT_ENVIRONMENT: "mainnet",
+          DEPLOYMENT_ENVIRONMENT: "preview",
         },
       }),
-    ).toThrow(/NETWORK=testnet/);
+    ).toThrow(/dev, staging, or prod/);
   });
 });
 

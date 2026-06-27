@@ -98,11 +98,10 @@ script wires them as follows:
 
 - `DEPLOYER_SECRET_KEY` is only read into memory for `tx.sign(...)` and is
   never logged or sent over the network.
-- The script refuses to run if `NETWORK` is `mainnet` but the selected GitHub
-  Environment is not `mainnet`, `prod`, or `production`. For local Doppler runs
-  without a GitHub Environment, `DOPPLER_CONFIG=mainnet` is still required.
-- The script refuses to run `NETWORK=testnet` under a mainnet/prod selected
-  environment.
+- The selected deployment environment may be `dev`, `staging`, or `prod`, and
+  each environment may target either `NETWORK=testnet` or `NETWORK=mainnet`.
+  GitHub Environment secrets and vars are the source of truth for whether a
+  given environment/network pair is safe to execute.
 - GitHub Actions sets `WRITE_VAULT_ID_TO_DOPPLER=false`; CI does not require a
   Doppler token and does not update runtime app config.
 - Idempotency is NOT guaranteed: each run creates a fresh vault. The previous
