@@ -215,6 +215,7 @@ Required GitHub Environment variables:
 - `BLEND_USDC_STRATEGY_ADDRESS`
 - `BLEND_USDC_STRATEGY_NAME`
 - `USDC_CONTRACT_ADDRESS`
+- `SOROSWAP_ROUTER_ADDRESS`
 
 Mainnet Blend USDC strategy values:
 
@@ -228,7 +229,7 @@ Before running mainnet:
 - Confirm `DEPLOYER_PUBLIC_KEY` matches `DEPLOYER_SECRET_KEY`; the deployer refuses mismatches.
 - Review all role addresses.
 - Review `VAULT_FEE_BPS` and `VAULT_UPGRADABLE`.
-- Review USDC and Blend USDC strategy addresses.
+- Review USDC, Blend USDC strategy, and Soroswap router addresses.
 - Select `network=mainnet`; the deployer refuses unsafe mainnet/environment mismatches.
 - Confirm CI does not need a Doppler token. The workflow sets `WRITE_VAULT_ID_TO_DOPPLER=false`.
 
