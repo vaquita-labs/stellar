@@ -215,7 +215,6 @@ Required GitHub Environment variables:
 - `BLEND_USDC_STRATEGY_ADDRESS`
 - `BLEND_USDC_STRATEGY_NAME`
 - `USDC_CONTRACT_ADDRESS`
-- `SOROSWAP_ROUTER_ADDRESS`
 
 Mainnet Blend USDC strategy values:
 
@@ -229,7 +228,7 @@ Before running mainnet:
 - Confirm `DEPLOYER_PUBLIC_KEY` matches `DEPLOYER_SECRET_KEY`; the deployer refuses mismatches.
 - Review all role addresses.
 - Review `VAULT_FEE_BPS` and `VAULT_UPGRADABLE`.
-- Review USDC, Blend USDC strategy, and Soroswap router addresses.
+- Review USDC and Blend USDC strategy addresses.
 - Select `network=mainnet`; the deployer refuses unsafe mainnet/environment mismatches.
 - Confirm CI does not need a Doppler token. The workflow sets `WRITE_VAULT_ID_TO_DOPPLER=false`.
 
@@ -266,14 +265,54 @@ Scope guard:
 - The pool deploy phase must not infer stale values from runtime app config.
 - The pool deploy phase must not perform app rewire or user deposit/withdraw tests.
 
-Append later:
+Workflow:
 
-- Workflow phase name.
-- Required constructor values.
-- WASM hash.
-- Pool contract ID.
-- Deployment transaction hash and Stellar Expert link.
-- Artifact path and Step Summary link.
+- File: `.github/workflows/mainnet-deployment.yml`.
+- Manual phase: `deploy_pool`.
+- Default mode: `validate_only`.
+- Irreversible mode: `execute`, with `confirm_execute=DEPLOY_POOL`.
+- Required dispatch input: `defindex_vault_id`.
+- Artifact: `artifacts/deploy_pool-<selected GitHub Environment>.json`.
+- Artifact retention: 30 days.
+
+Required GitHub Environment secret:
+
+- `POOL_DEPLOYER_SECRET_KEY`
+
+Required GitHub Environment variables:
+
+- `STELLAR_RPC_URL`
+- `STELLAR_NETWORK_PASSPHRASE`
+- `POOL_ADMIN_ADDRESS`
+- `POOL_USDC_CONTRACT_ADDRESS` or `USDC_CONTRACT_ADDRESS`
+- `POOL_LOCK_PERIODS`
+- `POOL_EARLY_WITHDRAWAL_FEE_BPS`
+- `POOL_UPGRADE_TIMELOCK_SECS`
+
+Constructor value notes:
+
+- `defindex_vault_id` must come from the reviewed DeFindex vault artifact.
+- `POOL_USDC_CONTRACT_ADDRESS` is passed as the pool `blend_token` constructor value.
+- `POOL_LOCK_PERIODS` is a comma-separated list of second values, without brackets; the workflow wraps it as `[<values>]` for the Stellar CLI.
+- `POOL_EARLY_WITHDRAWAL_FEE_BPS` is basis points.
+- `POOL_UPGRADE_TIMELOCK_SECS` is seconds.
+
+Before running mainnet:
+
+- Confirm the selected GitHub Environment is protected with required reviewers.
+- Run `deploy_pool` in `validate_only` mode first.
+- Review the pool WASM hash in the artifact.
+- Confirm the vault ID input matches the approved `deploy_vault` artifact.
+- Confirm token, admin, lock period, fee, and timelock values match the release plan.
+- Select `network=mainnet`.
+
+After pool deploy:
+
+- Capture the pool contract ID from the Step Summary and artifact.
+- Capture the deployment transaction hash and Stellar Expert link when emitted by the Stellar CLI.
+- Save the artifact link in the release artifact table below.
+- Do not update Supabase app config, GitHub repo variables, API, web, or admin configuration yet.
+- Provide the pool contract ID to the later `smoke` phase.
 
 ### VaquitaBadges
 
@@ -289,14 +328,49 @@ Scope guard:
 - The badges deploy phase must not mint production badges.
 - The badges deploy phase must not update API/runtime badge contract configuration automatically.
 
-Append later:
+Workflow:
 
-- Workflow phase name.
-- Required constructor values.
-- WASM hash.
-- Badges contract ID.
-- Deployment transaction hash and Stellar Expert link.
-- Artifact path and Step Summary link.
+- File: `.github/workflows/mainnet-deployment.yml`.
+- Manual phase: `deploy_badges`.
+- Default mode: `validate_only`.
+- Irreversible mode: `execute`, with `confirm_execute=DEPLOY_BADGES`.
+- Artifact: `artifacts/deploy_badges-<selected GitHub Environment>.json`.
+- Artifact retention: 30 days.
+
+Required GitHub Environment secret:
+
+- `BADGES_DEPLOYER_SECRET_KEY`
+
+Required GitHub Environment variables:
+
+- `STELLAR_RPC_URL`
+- `STELLAR_NETWORK_PASSPHRASE`
+- `BADGES_ADMIN_ADDRESS`
+- `BADGES_SIGNING_KEY`
+- `BADGES_UPGRADE_TIMELOCK_SECS`
+
+Constructor value notes:
+
+- `BADGES_ADMIN_ADDRESS` is the contract admin address.
+- `BADGES_SIGNING_KEY` is the 32-byte backend signer verifying key expected by the contract, not a signing seed.
+- The workflow artifact records only a SHA-256 fingerprint and length for `BADGES_SIGNING_KEY`.
+- `BADGES_UPGRADE_TIMELOCK_SECS` is seconds.
+
+Before running mainnet:
+
+- Confirm the selected GitHub Environment is protected with required reviewers.
+- Run `deploy_badges` in `validate_only` mode first.
+- Review the badges WASM hash in the artifact.
+- Confirm admin, signing key, and timelock values match the release plan.
+- Select `network=mainnet`.
+
+After badges deploy:
+
+- Capture the badges contract ID from the Step Summary and artifact.
+- Capture the deployment transaction hash and Stellar Expert link when emitted by the Stellar CLI.
+- Save the artifact link in the release artifact table below.
+- Do not update runtime badge contract configuration yet.
+- Provide the badges contract ID to the later `smoke` phase.
 
 ## Smoke Checks
 
@@ -312,13 +386,36 @@ Scope guard:
 - Mainnet smoke checks must not perform user deposits, user withdrawals, badge mints, reward funding, or config rewiring.
 - Passing smoke checks only means the deployed contracts are ready for manual rewire review.
 
-Append later:
+Workflow:
 
-- Read-only smoke command or workflow phase.
-- Expected pool values and observed values.
-- Expected badges values and observed values.
-- Smoke artifact path and Step Summary link.
-- Follow-up findings.
+- File: `.github/workflows/mainnet-deployment.yml`.
+- Manual phase: `smoke`.
+- Default mode: `validate_only`.
+- Execution mode: `execute`, with `confirm_execute=RUN_SMOKE`.
+- Required dispatch inputs: `pool_contract_id`, `badges_contract_id`, and `defindex_vault_id`.
+- Artifact: `artifacts/smoke-<selected GitHub Environment>.json`.
+- Artifact retention: 30 days.
+
+Required GitHub Environment variables:
+
+- `STELLAR_RPC_URL`
+- `STELLAR_NETWORK_PASSPHRASE`
+- `SMOKE_SOURCE_ACCOUNT`
+
+Read-only checks:
+
+- `VaquitaPool.version` using `stellar contract invoke --send no`.
+- `VaquitaPool.is_paused` using `stellar contract invoke --send no`.
+- `VaquitaBadges.version` using `stellar contract invoke --send no`.
+- `VaquitaBadges.is_paused` using `stellar contract invoke --send no`.
+
+Review guidance:
+
+- Confirm every provided contract ID matches the deployment artifacts from the same release.
+- Confirm the smoke artifact has `manual_rewire_required=true` and `no_automatic_rewire=true`.
+- Confirm no user deposit, withdrawal, badge mint, reward funding, Supabase update, or GitHub variable update happened in the run.
+- Save the smoke artifact link in the release artifact table below.
+- Any mismatch should stop the release before manual rewire.
 
 ## Manual Rewire Is Separate
 

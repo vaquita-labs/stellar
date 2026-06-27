@@ -200,28 +200,38 @@ export function writeDeploymentArtifact(
 export async function createAndSubmitVault(args: {
   api: DefindexApi;
   cfg: Config;
+  onStep?: (n: number, message: string) => void;
   onCreateVault?: (created: CreateVaultResponse) => void;
+  onSigned?: (signedXdr: string) => void;
   onSend?: (sent: SendResponse) => void;
 }): Promise<VaultDeploymentResult> {
+  args.onStep?.(1, "GET /health");
   await args.api.health();
+  args.onStep?.(2, "POST /factory/create-vault");
   const created = await args.api.createVault();
   args.onCreateVault?.(created);
 
+  args.onStep?.(3, "sign XDR locally");
   const signedXdr = signTransactionXdr(
     created.xdr,
     args.cfg.deployer.secret,
     args.cfg.network.passphrase,
   );
+  args.onSigned?.(signedXdr);
 
+  args.onStep?.(4, "POST /send");
   const sent = await args.api.send(signedXdr);
   args.onSend?.(sent);
-  if (!sent.returnValue) {
+  args.onStep?.(5, "extract vault address from returnValue");
+
+  const returnValue = sent.returnValue ?? sent.result?.value ?? undefined;
+  if (!returnValue) {
     throw new Error(
-      `/send response is missing returnValue; cannot determine vault address. Full response: ${JSON.stringify(sent)}`,
+      `/send succeeded but response is missing returnValue/result.value; cannot determine vault address. txHash=${sent.txHash}. Full response: ${JSON.stringify(sent)}`,
     );
   }
 
-  const vaultId = extractVaultAddress(sent.returnValue);
+  const vaultId = extractVaultAddress(returnValue);
   return {
     status: "success",
     vaultId,
