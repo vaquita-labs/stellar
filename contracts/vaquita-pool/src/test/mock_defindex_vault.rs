@@ -3,6 +3,7 @@
 //!
 //! Matches the public interface of the real DeFindex vault (single-asset mode):
 //!   - `deposit(amounts_desired, amounts_min, from, invest) -> (amounts, shares, allocations)`
+//!   - `get_asset_amounts_per_shares(vault_shares) -> amounts`
 //!   - `withdraw(withdraw_shares, min_amounts_out, from) -> amounts`
 //!
 //! Shares are minted 1:1 with the deposited amount, so a position's `shares`
@@ -122,7 +123,7 @@ impl MockDeFindexVault {
     pub fn withdraw(
         env: Env,
         withdraw_shares: i128,
-        _min_amounts_out: Vec<i128>,
+        min_amounts_out: Vec<i128>,
         from: Address,
     ) -> Vec<i128> {
         let current_shares: i128 = env
@@ -148,12 +149,25 @@ impl MockDeFindexVault {
         if payout <= 0 {
             panic!("Invalid payout");
         }
+        let min_amount = min_amounts_out.get_unchecked(0);
+        if payout < min_amount {
+            panic!("Insufficient output amount");
+        }
         token.transfer(&env.current_contract_address(), &from, &payout);
         env.events().publish(
             (ASSET, Symbol::new(&env, "withdraw")),
             (withdraw_shares, from),
         );
         vec![&env, payout]
+    }
+
+    pub fn get_asset_amounts_per_shares(env: Env, vault_shares: i128) -> Vec<i128> {
+        let adjustment: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::WithdrawAdjustment)
+            .unwrap_or(0);
+        vec![&env, vault_shares.saturating_add(adjustment)]
     }
 
     pub fn balance(env: Env, id: Address) -> i128 {

@@ -53,17 +53,19 @@ pub fn deposit_into_vault(
 }
 
 /// Withdraw `shares` from the DeFindex vault on behalf of the pool contract.
-/// `min_amount` is forwarded as the per-asset minimum so the vault reverts if
-/// it would return less than principal. The adapter also asserts `gross >=
-/// min_amount` after the call as defense-in-depth.
+/// DeFindex shares can redeem to more or less than the original principal due
+/// to strategy accounting, fees, rounding, or losses. Preview the current asset
+/// amount for the shares and use that value as the vault minimum so we redeem
+/// the position's actual share value instead of assuming shares == principal.
 pub fn withdraw_from_vault(
     env: &Env,
     defindex_vault_address: &Address,
     shares: i128,
-    min_amount: i128,
 ) -> Result<i128, VaquitaPoolError> {
     let contract_address = env.current_contract_address();
     let defindex_vault_client = DeFindexVaultClient::new(env, defindex_vault_address);
+    let preview_amounts = defindex_vault_client.get_asset_amounts_per_shares(&shares);
+    let min_amount = preview_amounts.get_unchecked(0);
     let withdrawn_amounts =
         defindex_vault_client.withdraw(&shares, &vec![env, min_amount], &contract_address);
     let gross = withdrawn_amounts.get_unchecked(0);
