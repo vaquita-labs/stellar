@@ -186,14 +186,67 @@ Scope guard:
 - CI should use GitHub Environment secrets and variables for protected mainnet values.
 - Doppler support may remain for local/manual paths, but CI should not require broad Doppler access.
 
-Append later:
+Workflow:
 
-- Workflow phase name.
-- Required GitHub Environment secrets and variables.
-- Mainnet preflight checklist.
-- DeFindex vault ID.
-- Deployment transaction hash and Stellar Expert link.
-- Artifact path and Step Summary link.
+- File: `.github/workflows/mainnet-deployment.yml`.
+- Manual phase: `deploy_vault`.
+- Default mode: `validate_only`.
+- Irreversible mode: `execute`, with `confirm_execute=DEPLOY_VAULT`.
+- Artifact: `artifacts/defindex-vault-<selected GitHub Environment>.json`.
+- Artifact retention: 30 days.
+
+Required GitHub Environment secrets:
+
+- `DEFINDEX_API_KEY`
+- `DEPLOYER_SECRET_KEY`
+
+Required GitHub Environment variables:
+
+- `DEFINDEX_API_URL`
+- `DEPLOYER_PUBLIC_KEY`
+- `EMERGENCY_MANAGER_ADDRESS`
+- `VAULT_FEE_RECEIVER_ADDRESS`
+- `MANAGER_ADDRESS`
+- `REBALANCE_MANAGER_ADDRESS`
+- `VAULT_NAME`
+- `VAULT_SYMBOL`
+- `VAULT_FEE_BPS`
+- `VAULT_UPGRADABLE`
+- `BLEND_USDC_STRATEGY_ADDRESS`
+- `BLEND_USDC_STRATEGY_NAME`
+- `USDC_CONTRACT_ADDRESS`
+- `SOROSWAP_ROUTER_ADDRESS`
+
+Mainnet Blend USDC strategy values:
+
+- `BLEND_USDC_STRATEGY_ADDRESS=CDB2WMKQQNVZMEBY7Q7GZ5C7E7IAFSNMZ7GGVD6WKTCEWK7XOIAVZSAP`
+- `BLEND_USDC_STRATEGY_NAME=blend_usdc_autocompound_fixed_strategy`
+
+Before running mainnet:
+
+- Confirm the selected GitHub Environment is protected with required reviewers.
+- Run `deploy_vault` in `validate_only` mode first.
+- Confirm `DEPLOYER_PUBLIC_KEY` matches `DEPLOYER_SECRET_KEY`; the deployer refuses mismatches.
+- Review all role addresses.
+- Review `VAULT_FEE_BPS` and `VAULT_UPGRADABLE`.
+- Review USDC, Blend USDC strategy, and Soroswap router addresses.
+- Select `network=mainnet`; the deployer refuses unsafe mainnet/environment mismatches.
+- Confirm CI does not need a Doppler token. The workflow sets `WRITE_VAULT_ID_TO_DOPPLER=false`.
+
+After vault deploy:
+
+- Capture `vault_id` from the Step Summary and uploaded artifact.
+- Capture `tx_hash` from the Step Summary and uploaded artifact.
+- Open the Stellar Expert vault and transaction links from the artifact.
+- Save the artifact link in the release artifact table below.
+- Do not update Supabase app config yet.
+- Provide the vault ID to the later VaquitaPool deployment phase.
+
+Rollback/abort:
+
+- Vault creation is irreversible once the signed transaction is submitted.
+- App cutover has not happened until the later manual rewire phase updates runtime config.
+- If validation fails, stop and fix GitHub Environment secrets/vars before attempting `execute`.
 
 ## Contract Deployment
 
