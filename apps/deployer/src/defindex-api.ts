@@ -11,6 +11,7 @@ export type CreateVaultRequest = {
       paused: boolean;
     }>;
   }>;
+  soroswap_router: string;
   name_symbol: { name: string; symbol: string };
   upgradable: boolean;
   caller: string;
@@ -117,6 +118,7 @@ export function buildCreateVaultRequest(cfg: Config): CreateVaultRequest {
         ],
       },
     ],
+    soroswap_router: cfg.assets.soroswapRouter,
     name_symbol: { name: cfg.vault.name, symbol: cfg.vault.symbol },
     upgradable: cfg.vault.upgradable,
     caller: cfg.deployer.public,
