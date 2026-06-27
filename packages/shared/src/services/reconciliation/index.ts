@@ -12,6 +12,7 @@ import type {
   ReconciliationRunInput,
   ReconciliationRunOutput,
   ReconciliationState,
+  ReconciliationTokenRecord,
 } from './types';
 
 export * from './matcher';
@@ -23,6 +24,7 @@ export * from './types';
 export interface ReconciliationDependencies {
   fetchEvents: (input: ReconciliationRunInput) => Promise<RawReconciliationEvent[]>;
   loadDeposits: (events: NormalizedReconciliationEvent[], contractIds: string[]) => Promise<ReconciliationDepositRecord[]>;
+  loadTokens: (events: NormalizedReconciliationEvent[], contractIds: string[]) => Promise<ReconciliationTokenRecord[]>;
   loadState: () => Promise<ReconciliationState>;
   saveState: (state: ReconciliationState) => Promise<void>;
   applyDepositRepair: (repair: ReconciliationRunOutput['plannedDepositRepairs'][number]) => Promise<void>;
@@ -62,8 +64,11 @@ export const runReconciliation = async (
     const { parsed, issues } = parseVaquitaPoolEvents(rawEvents);
     return { parsedEvents: parsed, parseIssues: issues };
   })();
-  const deposits = await deps.loadDeposits(parsedEvents, input.contractIds);
-  const match = matchReconciliationEvents(parsedEvents, deposits);
+  const [deposits, tokens] = await Promise.all([
+    deps.loadDeposits(parsedEvents, input.contractIds),
+    deps.loadTokens(parsedEvents, input.contractIds),
+  ]);
+  const match = matchReconciliationEvents(parsedEvents, deposits, tokens);
 
   let appliedDepositRepairs = 0;
   let appliedWithdrawalRepairs = 0;
@@ -89,7 +94,9 @@ export const runReconciliation = async (
   );
   const newest = lastEvent(parsedEvents);
   const runAt = deps.now().toISOString();
-  const shouldAdvance = !input.dryRun && input.advanceCursor;
+  const hasAmbiguousEvents = match.ambiguousEvents.length > 0;
+  const shouldAdvance = !input.dryRun && input.advanceCursor && !hasAmbiguousEvents;
+  const shouldRecordBlocked = !input.dryRun && input.advanceCursor && hasAmbiguousEvents;
   const cursorAfter = shouldAdvance
     ? updateReconciliationState(cursorBefore, input.job, input.contractIds, {
         lastProcessedLedger: newest?.ledger ?? input.endLedger,
@@ -99,15 +106,30 @@ export const runReconciliation = async (
         errorSummary: null,
         counts,
       })
+    : shouldRecordBlocked
+      ? updateReconciliationState(cursorBefore, input.job, input.contractIds, {
+          lastProcessedLedger: null,
+          lastProcessedEventId: null,
+          runAt,
+          success: false,
+          errorSummary: `Cursor advancement blocked by ${match.ambiguousEvents.length} ambiguous event(s)`,
+          counts,
+        })
     : cursorBefore;
 
-  if (shouldAdvance) {
+  if (shouldAdvance || shouldRecordBlocked) {
     await deps.saveState(cursorAfter);
   }
 
+  const cursorBehavior = shouldAdvance
+    ? 'advanced'
+    : shouldRecordBlocked
+      ? 'blocked_ambiguous'
+      : 'read_only';
+
   return {
     ...input,
-    cursorBehavior: shouldAdvance ? 'advanced' : 'read_only',
+    cursorBehavior,
     cursorBefore,
     cursorAfter,
     counts,
@@ -119,7 +141,7 @@ export const runReconciliation = async (
 
 export const createPrismaReconciliationDependencies = (
   prisma: any,
-): Pick<ReconciliationDependencies, 'loadDeposits' | 'loadState' | 'saveState' | 'applyDepositRepair' | 'applyWithdrawalRepair' | 'now'> => {
+): Pick<ReconciliationDependencies, 'loadDeposits' | 'loadTokens' | 'loadState' | 'saveState' | 'applyDepositRepair' | 'applyWithdrawalRepair' | 'now'> => {
   let configId: number | null = null;
 
   return {
@@ -167,7 +189,64 @@ export const createPrismaReconciliationDependencies = (
         },
       });
     },
-    applyDepositRepair: async ({ depositDbId, event }) => {
+    loadTokens: async (events, contractIds) => {
+      const tokenContracts = [...new Set(events.map((event) => event.token))];
+      if (tokenContracts.length === 0 && contractIds.length === 0) return [];
+
+      return prisma.token.findMany({
+        where: {
+          deletedAt: null,
+          OR: [
+            ...(tokenContracts.length > 0 ? [{ contractAddress: { in: tokenContracts } }] : []),
+            ...(contractIds.length > 0 ? [{ vaquitaContractAddress: { in: contractIds } }] : []),
+          ],
+        },
+        select: {
+          id: true,
+          contractAddress: true,
+          vaquitaContractAddress: true,
+          decimals: true,
+          lockPeriods: true,
+        },
+      });
+    },
+    applyDepositRepair: async (repair) => {
+      if (repair.type === 'create_deposit') {
+        const ledgerClosedAt = repair.event.ledgerClosedAt ? new Date(repair.event.ledgerClosedAt) : null;
+        const confirmedAt = ledgerClosedAt && Number.isFinite(ledgerClosedAt.getTime()) ? ledgerClosedAt : new Date();
+        const existing = await prisma.deposit.findFirst({
+          where: {
+            depositIdHex: repair.event.depositId,
+            vaquitaContractAddress: repair.event.contractId,
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+        if (existing) return;
+
+        const data = {
+          status: DepositStatus.CONFIRMED,
+          walletAddress: repair.event.owner,
+          tokenId: repair.tokenId,
+          amount: repair.amount,
+          transactionHash: repair.event.txHash,
+          transactionEventRaw: JSON.stringify(repair.event.raw),
+          depositIdHex: repair.event.depositId,
+          lockPeriod: BigInt(repair.lockPeriodMs),
+          vaquitaContractAddress: repair.event.contractId,
+          createdAt: confirmedAt,
+          confirmedAt,
+        };
+
+        try {
+          await prisma.deposit.create({ data });
+        } catch (error: any) {
+          if (error?.code !== 'P2002') throw error;
+        }
+        return;
+      }
+
+      const { depositDbId, event } = repair;
       await prisma.deposit.update({
         where: { id: depositDbId },
         data: {

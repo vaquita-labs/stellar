@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { DepositStatus, WithdrawalStatus } from '../../types';
 import { matchReconciliationEvents } from './matcher';
-import type { NormalizedDepositEvent, NormalizedWithdrawEvent, ReconciliationDepositRecord } from './types';
+import type {
+  NormalizedDepositEvent,
+  NormalizedWithdrawEvent,
+  ReconciliationDepositRecord,
+  ReconciliationTokenRecord,
+} from './types';
 
 const depositEvent = (overrides: Partial<NormalizedDepositEvent> = {}): NormalizedDepositEvent => ({
   kind: 'deposit',
@@ -51,6 +56,15 @@ const dbDeposit = (overrides: Partial<ReconciliationDepositRecord> = {}): Reconc
   ...overrides,
 });
 
+const dbToken = (overrides: Partial<ReconciliationTokenRecord> = {}): ReconciliationTokenRecord => ({
+  id: 7,
+  contractAddress: 'CTOKEN',
+  vaquitaContractAddress: 'CCONTRACT',
+  decimals: 7,
+  lockPeriods: [604800000n],
+  ...overrides,
+});
+
 describe('reconciliation matcher', () => {
   it('plans an unambiguous deposit confirmation', () => {
     const result = matchReconciliationEvents([depositEvent()], [dbDeposit()]);
@@ -72,11 +86,51 @@ describe('reconciliation matcher', () => {
     expect(result.skippedEvents).toEqual([event]);
   });
 
-  it('reports missing DB records as ambiguous', () => {
+  it('plans creating a confirmed deposit for a safe missing DB record', () => {
+    const result = matchReconciliationEvents([depositEvent({ amountRaw: '50000000' })], [], [dbToken()]);
+
+    expect(result.plannedDepositRepairs).toEqual([
+      expect.objectContaining({
+        type: 'create_deposit',
+        tokenId: 7,
+        amount: '5',
+        lockPeriodMs: 604800000,
+      }),
+    ]);
+    expect(result.ambiguousEvents).toEqual([]);
+  });
+
+  it('keeps missing deposit records ambiguous when the token is unknown', () => {
     const result = matchReconciliationEvents([depositEvent()], []);
 
     expect(result.ambiguousEvents).toEqual([
-      expect.objectContaining({ reason: 'missing_deposit', candidateDepositIds: [] }),
+      expect.objectContaining({ reason: 'unknown_token', candidateDepositIds: [] }),
+    ]);
+  });
+
+  it('keeps missing deposit records ambiguous when the token pool address does not match the event contract', () => {
+    const result = matchReconciliationEvents([depositEvent()], [], [
+      dbToken({ vaquitaContractAddress: 'COTHERPOOL' }),
+    ]);
+
+    expect(result.ambiguousEvents).toEqual([
+      expect.objectContaining({ reason: 'contract_mismatch', candidateDepositIds: [] }),
+    ]);
+  });
+
+  it('keeps missing deposit records ambiguous when the event amount is malformed', () => {
+    const result = matchReconciliationEvents([depositEvent({ amountRaw: 'not-a-number' })], [], [dbToken()]);
+
+    expect(result.ambiguousEvents).toEqual([
+      expect.objectContaining({ reason: 'malformed_amount', candidateDepositIds: [] }),
+    ]);
+  });
+
+  it('keeps missing deposit records ambiguous when the lock period is unsupported', () => {
+    const result = matchReconciliationEvents([depositEvent({ lockPeriod: 2592000 })], [], [dbToken()]);
+
+    expect(result.ambiguousEvents).toEqual([
+      expect.objectContaining({ reason: 'unsupported_lock_period', candidateDepositIds: [] }),
     ]);
   });
 

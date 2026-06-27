@@ -76,11 +76,29 @@ export interface ReconciliationDepositRecord {
   withdrawals: ReconciliationWithdrawalRecord[];
 }
 
-export interface PlannedDepositRepair {
+export interface ReconciliationTokenRecord {
+  id: number;
+  contractAddress: string | null;
+  vaquitaContractAddress: string | null;
+  decimals: number | null;
+  lockPeriods: Array<number | bigint>;
+}
+
+export interface PlannedConfirmDepositRepair {
   type: 'confirm_deposit';
   depositDbId: number;
   event: NormalizedDepositEvent;
 }
+
+export interface PlannedCreateDepositRepair {
+  type: 'create_deposit';
+  tokenId: number;
+  amount: string;
+  lockPeriodMs: number;
+  event: NormalizedDepositEvent;
+}
+
+export type PlannedDepositRepair = PlannedConfirmDepositRepair | PlannedCreateDepositRepair;
 
 export interface PlannedWithdrawalRepair {
   type: 'confirm_withdrawal' | 'create_confirmed_withdrawal';
@@ -92,7 +110,15 @@ export interface PlannedWithdrawalRepair {
 export interface AmbiguousReconciliationEvent {
   kind: ReconciliationEventKind;
   event: NormalizedReconciliationEvent;
-  reason: 'missing_deposit' | 'duplicate_deposits' | 'wallet_mismatch' | 'contract_mismatch' | 'duplicate_withdrawals';
+  reason:
+    | 'missing_deposit'
+    | 'duplicate_deposits'
+    | 'wallet_mismatch'
+    | 'contract_mismatch'
+    | 'duplicate_withdrawals'
+    | 'unknown_token'
+    | 'malformed_amount'
+    | 'unsupported_lock_period';
   candidateDepositIds: number[];
   candidateWithdrawalIds?: number[];
 }
@@ -144,7 +170,7 @@ export interface ReconciliationRunOutput {
   endLedger: number;
   dryRun: boolean;
   advanceCursor: boolean;
-  cursorBehavior: 'not_read' | 'read_only' | 'advanced';
+  cursorBehavior: 'not_read' | 'read_only' | 'advanced' | 'blocked_ambiguous';
   cursorBefore: ReconciliationState;
   cursorAfter: ReconciliationState;
   counts: ReconciliationCounts;
