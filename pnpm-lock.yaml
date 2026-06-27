@@ -132,6 +132,9 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^15.1.0
         version: 15.1.0
+      '@vaquita/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@vaquita/shared':
         specifier: workspace:*
         version: link:../../packages/shared

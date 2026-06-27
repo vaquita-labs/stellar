@@ -2,15 +2,15 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { rpc } from '@stellar/stellar-sdk';
+import { prisma } from '@vaquita/db';
+import { getProjectConfig } from '@vaquita/shared/services/project-config/index';
 import {
   createPrismaReconciliationDependencies,
-  getProjectConfig,
-  prisma,
   resolveReconciliationLedgerRange,
   runReconciliation,
   type RawReconciliationEvent,
   type ReconciliationRunInput,
-} from '@vaquita/shared';
+} from '@vaquita/shared/services/reconciliation/index';
 
 type CliOptions = {
   fromLedger: number | null;
@@ -226,7 +226,7 @@ const main = async () => {
 
   const artifact = {
     workflow_name: `local-reconcile-${options.network}`,
-    phase: 'reconciliation_dry_run',
+    phase: options.dryRun ? 'reconciliation_dry_run' : 'reconciliation_repair',
     environment: process.env.GITHUB_ENVIRONMENT ?? process.env.NODE_ENV ?? 'local',
     network: options.network,
     network_passphrase: options.networkPassphrase,
