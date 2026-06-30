@@ -1,6 +1,7 @@
 export * from './AchievementModal';
 export * from './AllAchievementsPage';
 export * from './BadgeTile';
+export * from './BridgeUsdcModal';
 export * from './ChooseContactsPage';
 export * from './EditProfilePage';
 export * from './FeedbackPage';

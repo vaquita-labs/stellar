@@ -3,12 +3,14 @@
 import { usePollar } from '@pollar/react';
 import { toast } from '@heroui/react';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import React, { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiCheck, FiCopy, FiDownload, FiEye, FiSend, FiShield } from 'react-icons/fi';
+import { FiCheck, FiCopy, FiDownload, FiEye, FiRepeat, FiSend, FiShield } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
+import { BridgeUsdcModal } from './BridgeUsdcModal';
 
 const LogoByType: Record<string, ReactNode> = {
   Stellar: <Image src="/chains/stellar.png" alt="Stellar" width={20} height={20} className="rounded-sm" />,
@@ -16,8 +18,10 @@ const LogoByType: Record<string, ReactNode> = {
 
 export function WalletPage() {
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
   const { walletAddress, network } = useConfigStore();
   const { openWalletBalanceModal, openSendModal, openReceiveModal } = usePollar();
+  const [bridgeOpen, setBridgeOpen] = useState(searchParams.get('bridge') === '1');
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -96,6 +100,17 @@ export function WalletPage() {
             <span className="text-sm font-semibold">{t('wallet.page.send')}</span>
             <span className="text-xs text-gray-500">{t('wallet.page.transferAssets')}</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setBridgeOpen(true)}
+            className="relative col-span-2 w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black hover:bg-[#F5FBFF] transition"
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EAFBEA] border border-[#018222]">
+              <FiRepeat className="w-6 h-6" />
+            </span>
+            <span className="text-sm font-semibold">{t('wallet.bridge.title', 'Bridge USDC')}</span>
+            <span className="text-xs text-gray-500">{t('wallet.bridge.subtitle', 'Move USDC between EVM and Stellar')}</span>
+          </button>
         </section>
 
         <section className="rounded-lg border border-black border-b-2 bg-white p-4 sm:p-5 flex items-start gap-3">
@@ -109,6 +124,11 @@ export function WalletPage() {
             </p>
           </div>
         </section>
+        <BridgeUsdcModal
+          open={bridgeOpen}
+          onOpenChange={() => setBridgeOpen(false)}
+          stellarWallet={walletAddress}
+        />
     </PageLayout>
   );
 }
