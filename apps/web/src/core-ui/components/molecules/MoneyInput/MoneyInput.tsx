@@ -37,12 +37,14 @@ export function MoneyInput({
   onReloadBalance,
   balanceIsLoading,
   disabled = false,
+  min,
 }: MoneyInputProps) {
   const { t } = useTranslation();
   const { token, network } = useConfigStore();
   const tokenSymbols = network?.tokens ?? [];
 
-  const rules = (token && TOKEN_RULES[token?.symbol as TokenSymbol]) ?? { min: 0, max: 0, maxDecimals: 0 };
+  const baseRules = (token && TOKEN_RULES[token?.symbol as TokenSymbol]) ?? { min: 0, max: 0, maxDecimals: 0 };
+  const rules = min !== undefined ? { ...baseRules, min } : baseRules;
   const rx = useMemo(() => buildRegex(rules.maxDecimals), [rules.maxDecimals]);
 
   const [error, setError] = useState<string | null>(null);
