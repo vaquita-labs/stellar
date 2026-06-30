@@ -63,6 +63,12 @@ export const useBridgeTransfers = () => {
     return readData<BridgeTransfer[]>(response);
   }, []);
 
+  const listCompletedTransfers = useCallback(async (wallet: string) => {
+    if (!wallet) return [];
+    const response = await fetch(apiUrl(`/transfers/history?wallet=${encodeURIComponent(wallet)}`));
+    return readData<BridgeTransfer[]>(response);
+  }, []);
+
   const createTransfer = useCallback(async (payload: {
     direction: BridgeDirection;
     sourceNetwork: BridgeNetworkKey;
@@ -117,5 +123,13 @@ export const useBridgeTransfers = () => {
     return readData<BridgeTransfer>(response);
   }, []);
 
-  return { listTransfers, createTransfer, attachSourceTx, refreshTransfer, attachDestinationTx, getFeeQuote };
+  return {
+    listTransfers,
+    listCompletedTransfers,
+    createTransfer,
+    attachSourceTx,
+    refreshTransfer,
+    attachDestinationTx,
+    getFeeQuote,
+  };
 };

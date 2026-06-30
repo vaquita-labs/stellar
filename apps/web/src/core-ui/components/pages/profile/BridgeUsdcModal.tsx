@@ -7,6 +7,7 @@ import {
   buildEvmToStellarBurnTx,
 } from '@/networks/evm/cctp';
 import { useEffect, useMemo, useState } from 'react';
+import { FiCheckCircle } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import {
   type BridgeDirection,
@@ -53,32 +54,32 @@ const evmChainConfig: Partial<Record<BridgeNetworkKey, { chainIdHex: string; usd
 };
 
 const statusLabel: Record<string, string> = {
-  source_awaiting_signature: 'Waiting for source transaction',
-  source_confirming: 'Confirming source transaction',
-  attestation_pending: 'Waiting for Circle attestation',
-  ready_to_complete: 'Ready to complete',
-  destination_awaiting_signature: 'Waiting for destination transaction',
-  destination_confirming: 'Confirming destination transaction',
+  source_awaiting_signature: 'Ready to send',
+  source_confirming: 'Sending from your wallet',
+  attestation_pending: 'Confirming deposit',
+  ready_to_complete: 'Sending funds to Stellar',
+  destination_awaiting_signature: 'Preparing receive step',
+  destination_confirming: 'Confirming receive step',
   completed: 'Completed',
   failed: 'Failed',
   cancelled: 'Cancelled',
-  needs_review: 'Needs review',
+  needs_review: 'Needs a look',
 };
 
 const bridgeProgressByStatus: Record<string, { current: number; total: number; detail: string }> = {
-  source_awaiting_signature: { current: 1, total: 5, detail: 'Approve and burn USDC on the source chain' },
-  source_confirming: { current: 2, total: 5, detail: 'Source burn is confirming' },
-  attestation_pending: { current: 3, total: 5, detail: 'Circle is preparing the attestation' },
-  ready_to_complete: { current: 4, total: 5, detail: 'Vaquita is relaying the Stellar receive step' },
-  destination_awaiting_signature: { current: 4, total: 5, detail: 'Destination transaction is waiting to be submitted' },
-  destination_confirming: { current: 4, total: 5, detail: 'Destination transaction is confirming' },
-  completed: { current: 5, total: 5, detail: 'USDC arrived on the destination chain' },
-  failed: { current: 5, total: 5, detail: 'Transfer failed and needs support review' },
+  source_awaiting_signature: { current: 1, total: 5, detail: 'Approve USDC, then send it from your wallet' },
+  source_confirming: { current: 2, total: 5, detail: 'Your send transaction is confirming' },
+  attestation_pending: { current: 3, total: 5, detail: 'Circle is checking the transfer' },
+  ready_to_complete: { current: 4, total: 5, detail: 'Vaquita is finishing the receive step on Stellar' },
+  destination_awaiting_signature: { current: 4, total: 5, detail: 'Receive step is getting ready' },
+  destination_confirming: { current: 4, total: 5, detail: 'Receive step is confirming' },
+  completed: { current: 5, total: 5, detail: 'USDC arrived' },
+  failed: { current: 5, total: 5, detail: 'Transfer failed and needs support' },
   cancelled: { current: 5, total: 5, detail: 'Transfer was cancelled' },
-  needs_review: { current: 5, total: 5, detail: 'Transfer needs support review' },
+  needs_review: { current: 5, total: 5, detail: 'Transfer needs support' },
 };
 
-const progressFor = (status: string) => bridgeProgressByStatus[status] ?? { current: 1, total: 5, detail: 'Transfer is being prepared' };
+const progressFor = (status: string) => bridgeProgressByStatus[status] ?? { current: 1, total: 5, detail: 'Getting your transfer ready' };
 const isTransferInProgress = (status: string) => !['completed', 'failed', 'cancelled', 'needs_review'].includes(status);
 
 const balanceOfCallData = (address: string) =>
@@ -123,12 +124,13 @@ interface BridgeUsdcModalProps {
 
 export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsdcModalProps) {
   const { t } = useTranslation();
-  const { listTransfers, createTransfer, attachSourceTx, getFeeQuote } = useBridgeTransfers();
+  const { listTransfers, listCompletedTransfers, createTransfer, attachSourceTx, getFeeQuote } = useBridgeTransfers();
   const [direction, setDirection] = useState<BridgeDirection>('evm_to_stellar');
   const [evmNetwork, setEvmNetwork] = useState<BridgeNetworkKey>('ethereum-sepolia');
   const [evmWallet, setEvmWallet] = useState('');
   const [amount, setAmount] = useState('');
   const [transfers, setTransfers] = useState<BridgeTransfer[]>([]);
+  const [completedTransfers, setCompletedTransfers] = useState<BridgeTransfer[]>([]);
   const [evmUsdcBalanceRaw, setEvmUsdcBalanceRaw] = useState<bigint | null>(null);
   const [evmAllowanceRaw, setEvmAllowanceRaw] = useState<bigint | null>(null);
   const [evmBalanceError, setEvmBalanceError] = useState('');
@@ -157,18 +159,26 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
   const bridgeActionLabel = direction === 'evm_to_stellar'
     ? needsEvmApproval
       ? 'Approve USDC'
-      : 'Burn and bridge USDC'
-    : 'Create resumable transfer';
+      : 'Send USDC'
+    : 'Start transfer';
   const currentWallets = useMemo(
     () => [stellarWallet, evmWallet].filter(Boolean),
     [stellarWallet, evmWallet],
   );
 
   const reload = async () => {
-    const lists = await Promise.all(currentWallets.map((wallet) => listTransfers(wallet)));
-    const byId = new Map<string, BridgeTransfer>();
-    lists.flat().forEach((transfer) => byId.set(transfer.id, transfer));
-    setTransfers([...byId.values()]);
+    const [activeLists, completedLists] = await Promise.all([
+      Promise.all(currentWallets.map((wallet) => listTransfers(wallet))),
+      Promise.all(currentWallets.map((wallet) => listCompletedTransfers(wallet))),
+    ]);
+    const activeById = new Map<string, BridgeTransfer>();
+    const completedById = new Map<string, BridgeTransfer>();
+    activeLists.flat().forEach((transfer) => activeById.set(transfer.id, transfer));
+    completedLists.flat().forEach((transfer) => completedById.set(transfer.id, transfer));
+    setTransfers([...activeById.values()]);
+    setCompletedTransfers([...completedById.values()]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 3));
   };
 
   useEffect(() => {
@@ -188,7 +198,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
 
   const connectEvm = async () => {
     if (!window.ethereum) {
-      toast.danger(t('wallet.bridge.noInjectedWallet', 'No injected EVM wallet found'));
+      toast.danger(t('wallet.bridge.noInjectedWallet', 'No EVM wallet found'));
       return;
     }
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' }) as string[];
@@ -208,7 +218,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
       if (!chainIdsMatch(currentChainId, chain.chainIdHex)) {
         setEvmUsdcBalanceRaw(null);
         setEvmChainMismatch(true);
-        setEvmBalanceError(`Switch wallet network to ${selectedEvmLabel} (${chain.chainIdHex}); wallet reports ${currentChainId}`);
+        setEvmBalanceError(`Switch your wallet to ${selectedEvmLabel}`);
         return;
       }
 
@@ -225,19 +235,19 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
       setEvmUsdcBalanceRaw(BigInt(balance));
     } catch (error) {
       setEvmUsdcBalanceRaw(null);
-      setEvmBalanceError(error instanceof Error ? error.message : 'Could not read USDC balance');
+      setEvmBalanceError(error instanceof Error ? error.message : 'Could not read your USDC balance');
     } finally {
       setEvmBalanceLoading(false);
     }
   };
 
   const assertSelectedEvmChain = async (network: BridgeNetworkKey) => {
-    if (!window.ethereum) throw new Error('No injected EVM wallet found');
+    if (!window.ethereum) throw new Error('No EVM wallet found');
     const chain = evmChainConfig[network];
     if (!chain) throw new Error(`Unsupported EVM network: ${network}`);
     const currentChainId = await window.ethereum.request({ method: 'eth_chainId' }) as string;
     if (!chainIdsMatch(currentChainId, chain.chainIdHex)) {
-      throw new Error(`Switch wallet network to ${network} (${chain.chainIdHex}); wallet reports ${currentChainId}`);
+      throw new Error(`Switch your wallet to ${network}`);
     }
   };
 
@@ -272,7 +282,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
   };
 
   const waitForEvmReceipt = async (txHash: string) => {
-    if (!window.ethereum) throw new Error('No injected EVM wallet found');
+    if (!window.ethereum) throw new Error('No EVM wallet found');
     for (let attempt = 0; attempt < 90; attempt += 1) {
       const receipt = await window.ethereum.request({
         method: 'eth_getTransactionReceipt',
@@ -291,7 +301,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
 
   const switchEvmNetwork = async () => {
     if (!window.ethereum) {
-      toast.danger(t('wallet.bridge.noInjectedWallet', 'No injected EVM wallet found'));
+      toast.danger(t('wallet.bridge.noInjectedWallet', 'No EVM wallet found'));
       return;
     }
     const chain = evmChainConfig[evmNetwork];
@@ -372,7 +382,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
       }) as string;
       await waitForEvmReceipt(approvalHash);
       setEvmAllowanceRaw(await readEvmAllowance(evmNetwork, evmWallet));
-      toast.success(t('wallet.bridge.approvalReady', 'USDC approval confirmed. You can now burn and bridge.'));
+      toast.success(t('wallet.bridge.approvalReady', 'USDC approval confirmed. You can now send.'));
       return;
     }
     const transfer = await createDraftTransfer();
@@ -380,15 +390,15 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
   });
 
   const signEvmSourceBurnFor = async (transfer: BridgeTransfer) => {
-    if (!window.ethereum) throw new Error('No injected EVM wallet found');
+    if (!window.ethereum) throw new Error('No EVM wallet found');
     if (transfer.direction !== 'evm_to_stellar') {
-      throw new Error('Live EVM source signing is only available for EVM to Stellar transfers');
+      throw new Error('This send step is only available for EVM to Stellar transfers');
     }
     if (transfer.status !== 'source_awaiting_signature') {
-      throw new Error('Source transaction is already attached or no longer awaiting signature');
+      throw new Error('This transfer already has a send transaction');
     }
     if (transfer.sourceWallet.toLowerCase() !== evmWallet.toLowerCase()) {
-      throw new Error('Connected EVM wallet does not match the transfer source wallet');
+      throw new Error('Connected wallet does not match the wallet you send from');
     }
 
     await assertSelectedEvmChain(transfer.sourceNetwork);
@@ -396,7 +406,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
     const amountRaw = BigInt(transfer.amountRaw);
     const allowance = await readEvmAllowance(transfer.sourceNetwork, transfer.sourceWallet);
     if (allowance === null || allowance < amountRaw) {
-      throw new Error('USDC allowance is not approved yet');
+      throw new Error('USDC is not approved yet');
     }
 
     const burn = buildEvmToStellarBurnTx({
@@ -426,7 +436,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      title={t('wallet.bridge.title', 'Bridge USDC')}
+      title={t('wallet.bridge.title', 'Send USDC')}
       size="lg"
       bodyClassName="flex flex-col gap-4 pb-6"
     >
@@ -436,17 +446,17 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
             className={`rounded-md border border-black border-b-2 ${direction === 'evm_to_stellar' ? 'bg-primary' : 'bg-white'} text-black`}
             onPress={() => setDirection('evm_to_stellar')}
           >
-            EVM → Stellar
+            To Stellar
           </Button>
           <Button
             className={`rounded-md border border-black border-b-2 ${direction === 'stellar_to_evm' ? 'bg-primary' : 'bg-white'} text-black`}
             onPress={() => setDirection('stellar_to_evm')}
           >
-            Stellar → EVM
+            From Stellar
           </Button>
         </div>
         <label className="flex flex-col gap-1 text-sm font-semibold text-black">
-          EVM chain
+          Choose blockchain you send from
           <select
             className="h-11 rounded-md border border-black border-b-2 bg-white px-3 text-sm"
             value={evmNetwork}
@@ -459,7 +469,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
         </label>
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
           <label className="flex flex-col gap-1 text-sm font-semibold text-black">
-            EVM wallet
+            Wallet you send from
             <input
               value={evmWallet}
               onChange={(event) => setEvmWallet(event.target.value)}
@@ -484,12 +494,12 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
         <div className="flex items-center justify-between gap-3 rounded-md bg-[#F5FBFF] p-3 text-xs text-gray-700">
           <span>
             {evmBalanceLoading
-              ? `Checking ${selectedEvmLabel} USDC balance...`
+              ? `Checking your ${selectedEvmLabel} USDC...`
               : evmBalanceError
                 ? evmBalanceError
                 : evmUsdcBalanceRaw !== null
-                  ? `${selectedEvmLabel} USDC balance: ${rawUsdcToHuman(evmUsdcBalanceRaw)} USDC`
-                  : 'Connect an EVM wallet to check USDC balance'}
+                  ? `${selectedEvmLabel} USDC available: ${rawUsdcToHuman(evmUsdcBalanceRaw)} USDC`
+                  : 'Connect your wallet to check USDC'}
           </span>
           <div className="flex shrink-0 items-center gap-3">
             {evmChainMismatch ? (
@@ -505,34 +515,30 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
           </div>
         </div>
         {!hasEnoughEvmUsdc ? (
-          <p className="text-xs font-semibold text-danger">Amount exceeds the selected EVM wallet USDC balance.</p>
+          <p className="text-xs font-semibold text-danger">Amount is higher than your available USDC.</p>
         ) : null}
         {direction === 'evm_to_stellar' && amountRaw ? (
           <p className="rounded-md bg-[#FFF8D7] p-3 text-xs text-gray-700">
             {evmAllowanceLoading
               ? 'Checking USDC approval...'
               : needsEvmApproval
-                ? 'Step 1 of 2: approve USDC first. After the approval confirms, click again to burn and bridge.'
-                : 'Step 2 of 2: approval is ready. The next wallet prompt will burn and bridge USDC.'}
+                ? 'Step 1 of 2: approve USDC. Once it confirms, come back here to send.'
+                : 'Step 2 of 2: approval is ready. The next wallet prompt sends your USDC.'}
           </p>
         ) : null}
         <div className="rounded-md bg-[#F5FBFF] p-3 text-xs text-gray-700">
-          <p>Source: {sourceNetwork} · {sourceWallet || 'connect wallet'}</p>
-          <p>Destination: {destinationNetwork} · {destinationWallet || 'connect wallet'}</p>
+          <p>Sending from: {sourceNetwork} · {sourceWallet || 'connect wallet'}</p>
+          <p>Receiving on: {destinationNetwork} · {destinationWallet || 'connect wallet'}</p>
         </div>
         <Button isDisabled={!canCreate || loading || evmChainMismatch} onPress={startEvmToStellarBridge} className="rounded-md border border-black border-b-2 bg-success text-black font-bold">
           {bridgeActionLabel}
         </Button>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-bold text-black">Active transfers</h3>
-        {transfers.length === 0 ? (
-          <p className="rounded-lg border border-black border-b-2 bg-white p-4 text-sm text-gray-600">
-            No active bridge transfers yet.
-          </p>
-        ) : (
-          transfers.map((transfer) => {
+      {transfers.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <h3 className="text-sm font-bold text-black">In progress</h3>
+          {transfers.map((transfer) => {
             const progress = progressFor(transfer.status);
             return (
               <article
@@ -569,9 +575,32 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
                 {transfer.errorReason ? <p className="mt-2 text-xs text-danger">{transfer.errorReason}</p> : null}
               </article>
             );
-          })
-        )}
-      </section>
+          })}
+        </section>
+      ) : null}
+
+      {completedTransfers.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <h3 className="text-sm font-bold text-black">Recent sends</h3>
+          {completedTransfers.map((transfer) => (
+            <article
+              key={transfer.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-black border-b-2 bg-white p-4 text-sm"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#018222] bg-[#E9FBEF] text-[#018222]">
+                  <FiCheckCircle className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="font-bold text-black">{transfer.amount} USDC</p>
+                  <p className="mt-1 text-xs text-gray-600">{transfer.sourceNetwork} → {transfer.destinationNetwork}</p>
+                </div>
+              </div>
+              <p className="shrink-0 text-xs font-semibold text-[#018222]">Completed</p>
+            </article>
+          ))}
+        </section>
+      ) : null}
     </AppModal>
   );
 }

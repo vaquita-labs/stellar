@@ -45,6 +45,7 @@ export interface BridgeTransferRepository {
   getById(id: string): Promise<BridgeTransferRecord | null>;
   findBySourceTxHash(sourceTxHash: string): Promise<BridgeTransferRecord | null>;
   listActiveForWallet(walletAddress: string): Promise<BridgeTransferRecord[]>;
+  listRecentCompletedForWallet(walletAddress: string, limit: number): Promise<BridgeTransferRecord[]>;
   update(id: string, patch: Partial<BridgeTransferRecord>): Promise<BridgeTransferRecord>;
 }
 
@@ -230,3 +231,9 @@ export const listActiveBridgeTransfers = (
   repo: BridgeTransferRepository,
   walletAddress: string,
 ): Promise<BridgeTransferRecord[]> => repo.listActiveForWallet(walletAddress);
+
+export const listRecentCompletedBridgeTransfers = (
+  repo: BridgeTransferRepository,
+  walletAddress: string,
+  limit = 3,
+): Promise<BridgeTransferRecord[]> => repo.listRecentCompletedForWallet(walletAddress, limit);

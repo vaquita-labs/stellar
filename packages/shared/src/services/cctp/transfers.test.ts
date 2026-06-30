@@ -4,6 +4,7 @@ import {
   attachBridgeDestinationTx,
   createBridgeTransfer,
   listActiveBridgeTransfers,
+  listRecentCompletedBridgeTransfers,
   refreshBridgeTransfer,
   type BridgeTransferRecord,
   type BridgeTransferRepository,
@@ -12,6 +13,7 @@ import {
 class MemoryBridgeTransferRepository implements BridgeTransferRepository {
   private rows = new Map<string, BridgeTransferRecord>();
   private nextId = 1;
+  private updateTick = 1;
 
   async create(input: Omit<BridgeTransferRecord, 'id' | 'createdAt' | 'updatedAt'>) {
     const now = new Date('2026-06-29T00:00:00.000Z');
@@ -36,10 +38,21 @@ class MemoryBridgeTransferRepository implements BridgeTransferRepository {
     );
   }
 
+  async listRecentCompletedForWallet(walletAddress: string, limit: number) {
+    return [...this.rows.values()]
+      .filter(
+        (row) =>
+          [row.sourceWallet, row.destinationWallet].includes(walletAddress) &&
+          row.status === 'completed',
+      )
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .slice(0, limit);
+  }
+
   async update(id: string, patch: Partial<BridgeTransferRecord>) {
     const row = this.rows.get(id);
     if (!row) throw new Error(`Missing row ${id}`);
-    const updated = { ...row, ...patch, id, updatedAt: new Date('2026-06-29T00:01:00.000Z') };
+    const updated = { ...row, ...patch, id, updatedAt: new Date(`2026-06-29T00:${String(this.updateTick++).padStart(2, '0')}:00.000Z`) };
     this.rows.set(id, updated);
     return updated;
   }
@@ -180,5 +193,28 @@ describe('bridge transfer tracker', () => {
     expect(completedAgain).toEqual(completed);
     await expect(attachBridgeSourceTx(repo, ready.id, { sourceTxHash: '0xother' }))
       .rejects.toThrow(/terminal/i);
+  });
+
+  it('lists the latest completed transfers for wallet history', async () => {
+    const repo = new MemoryBridgeTransferRepository();
+    const wallet = '0x1111111111111111111111111111111111111111';
+
+    for (const amount of ['1', '2', '3', '4']) {
+      const transfer = await createBridgeTransfer(repo, {
+        direction: 'evm_to_stellar',
+        sourceNetwork: 'base-sepolia',
+        destinationNetwork: 'stellar-testnet',
+        sourceWallet: wallet,
+        destinationWallet: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+        amount,
+      });
+      await attachBridgeDestinationTx(repo, transfer.id, { destinationTxHash: `0xdestination${amount}` });
+    }
+
+    await expect(listRecentCompletedBridgeTransfers(repo, wallet, 3)).resolves.toMatchObject([
+      { amount: '4', status: 'completed' },
+      { amount: '3', status: 'completed' },
+      { amount: '2', status: 'completed' },
+    ]);
   });
 });
