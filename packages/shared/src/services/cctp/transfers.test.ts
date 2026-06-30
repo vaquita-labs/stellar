@@ -127,8 +127,32 @@ describe('bridge transfer tracker', () => {
       status: 'ready_to_complete',
       cctpMessage: '0xraw-message',
       cctpAttestation: '0xattestation',
+      errorReason: null,
     });
     await expect(listActiveBridgeTransfers(repo, transfer.sourceWallet)).resolves.toHaveLength(1);
+  });
+
+  it('keeps pending attestation rows active while surfacing Circle delay reasons', async () => {
+    const repo = new MemoryBridgeTransferRepository();
+    const transfer = await createBridgeTransfer(repo, {
+      direction: 'evm_to_stellar',
+      sourceNetwork: 'base-sepolia',
+      destinationNetwork: 'stellar-testnet',
+      sourceWallet: '0x1111111111111111111111111111111111111111',
+      destinationWallet: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+      amount: '1',
+    });
+    await attachBridgeSourceTx(repo, transfer.id, { sourceTxHash: '0xsource' });
+
+    const pending = await refreshBridgeTransfer(repo, transfer.id, async () => ({
+      status: 'pending',
+      errorReason: 'Circle Iris pending: insufficient_fee',
+    }));
+
+    expect(pending).toMatchObject({
+      status: 'attestation_pending',
+      errorReason: 'Circle Iris pending: insufficient_fee',
+    });
   });
 
   it('keeps destination tx attach idempotent and blocks terminal mutation', async () => {

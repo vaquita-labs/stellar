@@ -4,9 +4,11 @@ import {
   attachBridgeSourceTx,
   bridgeCreateSchema,
   bridgeDestinationTxSchema,
+  bridgeFeeQuerySchema,
   bridgeListQuerySchema,
   bridgeSourceTxSchema,
   createBridgeTransfer,
+  fetchCircleCctpFeeQuote,
   fetchCircleCctpAttestation,
   listActiveBridgeTransfers,
   prismaBridgeTransferRepository,
@@ -52,6 +54,23 @@ router.get('/transfers', asyncHandler(async (req, res) => {
 
   const transfers = await listActiveBridgeTransfers(prismaBridgeTransferRepository, parsed.data.wallet);
   return sendSuccess(res, transfers, '');
+}));
+
+router.get('/fees', asyncHandler(async (req, res) => {
+  const parsed = bridgeFeeQuerySchema.safeParse(req.query);
+  if (!parsed.success) return sendError(res, 'Invalid bridge fee query', parsed.error.format(), 400);
+
+  try {
+    const quote = await fetchCircleCctpFeeQuote({
+      sourceNetwork: parsed.data.sourceNetwork,
+      destinationNetwork: parsed.data.destinationNetwork,
+      amountRaw: BigInt(parsed.data.amountRaw),
+      finalityThreshold: parsed.data.finalityThreshold,
+    });
+    return sendSuccess(res, quote, 'bridge fee quote');
+  } catch (err) {
+    return sendError(res, (err as Error)?.message ?? 'Could not fetch bridge fee quote', err, 400);
+  }
 }));
 
 router.post('/transfers/:id/source-tx', asyncHandler(async (req, res) => {

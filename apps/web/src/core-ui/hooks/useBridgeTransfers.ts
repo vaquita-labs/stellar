@@ -40,6 +40,12 @@ export interface BridgeTransfer {
   updatedAt: string;
 }
 
+export interface BridgeFeeQuote {
+  finalityThreshold: number;
+  minimumFeeBps: number;
+  maxFeeRaw: string;
+}
+
 const apiUrl = (path: string) => `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/bridge${path}`;
 
 const readData = async <T>(response: Response): Promise<T> => {
@@ -82,6 +88,21 @@ export const useBridgeTransfers = () => {
     return readData<BridgeTransfer>(response);
   }, []);
 
+  const getFeeQuote = useCallback(async (payload: {
+    sourceNetwork: BridgeNetworkKey;
+    destinationNetwork: BridgeNetworkKey;
+    amountRaw: string;
+  }) => {
+    const params = new URLSearchParams({
+      sourceNetwork: payload.sourceNetwork,
+      destinationNetwork: payload.destinationNetwork,
+      amountRaw: payload.amountRaw,
+      finalityThreshold: '1000',
+    });
+    const response = await fetch(apiUrl(`/fees?${params.toString()}`));
+    return readData<BridgeFeeQuote>(response);
+  }, []);
+
   const refreshTransfer = useCallback(async (id: string) => {
     const response = await fetch(apiUrl(`/transfers/${id}/refresh`), { method: 'POST' });
     return readData<BridgeTransfer>(response);
@@ -96,5 +117,5 @@ export const useBridgeTransfers = () => {
     return readData<BridgeTransfer>(response);
   }, []);
 
-  return { listTransfers, createTransfer, attachSourceTx, refreshTransfer, attachDestinationTx };
+  return { listTransfers, createTransfer, attachSourceTx, refreshTransfer, attachDestinationTx, getFeeQuote };
 };

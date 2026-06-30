@@ -21,3 +21,10 @@ export const bridgeDestinationTxSchema = z.object({
 export const bridgeListQuerySchema = z.object({
   wallet: z.string().min(1),
 });
+
+export const bridgeFeeQuerySchema = z.object({
+  sourceNetwork: z.enum(['ethereum', 'ethereum-sepolia', 'base', 'base-sepolia', 'stellar', 'stellar-testnet']),
+  destinationNetwork: z.enum(['ethereum', 'ethereum-sepolia', 'base', 'base-sepolia', 'stellar', 'stellar-testnet']),
+  amountRaw: z.string().regex(/^\d+$/),
+  finalityThreshold: z.coerce.number().int().default(1000),
+});

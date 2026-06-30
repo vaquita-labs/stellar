@@ -163,7 +163,12 @@ export const refreshBridgeTransfer = async (
   if (row.status !== 'attestation_pending') return row;
 
   const result = await getAttestation(row);
-  if (result.status === 'pending') return row;
+  if (result.status === 'pending') {
+    if (result.errorReason && result.errorReason !== row.errorReason) {
+      return repo.update(id, { errorReason: result.errorReason });
+    }
+    return row;
+  }
   if (result.status === 'failed') {
     return repo.update(id, {
       status: 'needs_review',
@@ -181,6 +186,7 @@ export const refreshBridgeTransfer = async (
     status: 'ready_to_complete',
     cctpMessage: result.message,
     cctpAttestation: result.attestation,
+    errorReason: null,
   });
 };
 
