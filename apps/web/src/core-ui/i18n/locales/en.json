@@ -1433,6 +1433,23 @@
     },
     "fiat": {
       "authenticated": "Connected to Anclap",
+      "history": {
+        "connect": "Connect your wallet first.",
+        "deposit": "Deposit",
+        "details": "Details",
+        "empty": "No history loaded yet — tap Refresh.",
+        "none": "No transactions yet.",
+        "phase": {
+          "completed": "Completed",
+          "processing": "Anchor processing",
+          "started": "Started",
+          "userTransfer": "User transfer"
+        },
+        "refresh": "Refresh",
+        "refreshing": "Refreshing…",
+        "title": "Transaction history",
+        "withdraw": "Withdraw"
+      },
       "receive": {
         "authOk": "Authenticated with Anclap (JWT obtained).",
         "cta": "Continue",
@@ -1451,19 +1468,25 @@
         "waitingHint": "Complete the deposit on Anclap. We are waiting for the ARS to be credited…"
       },
       "send": {
+        "arsReceived": "≈ {{amount}} ARS swapped",
         "authOk": "Authenticated with Anclap (JWT obtained).",
         "cta": "Send",
         "insufficient": "Insufficient USDC balance.",
         "jwtPreview": "JWT:",
+        "openAnclap": "Open Anclap",
         "processing": "Processing…",
         "reconnect": "Reconnect wallet",
         "stepChallenge": "SEP-10 · Request challenge",
         "stepSign": "SEP-10 · Sign (wallet)",
         "stepSwap": "Swap USDC → ARS",
         "stepToken": "SEP-10 · Get Anclap JWT",
+        "stepSettled": "Wait for Anclap confirmation",
         "stepTrustline": "Activate ARS trustline",
         "stepWithdraw": "SEP-24 · Start withdrawal",
-        "title": "Send fiat (ARS)"
+        "settled": "Withdrawal completed on Anclap.",
+        "title": "Send fiat (ARS)",
+        "waitingHint": "Complete the withdrawal on Anclap. We are waiting for the confirmation…",
+        "withdrawStarted": "Withdrawal started — continue on Anclap."
       }
     },
     "page": {
