@@ -15,6 +15,9 @@ export interface Upstream {
 
 export class AnclapError extends Error {}
 
+/** Polling abortado a propósito (ej. el usuario cerró el modal). No es un error real. */
+export class AnclapCancelled extends AnclapError {}
+
 // Forma de la transacción SEP-24 que nos interesa para el seguimiento.
 export interface SepTransaction {
   id: string;
@@ -25,6 +28,8 @@ export interface SepTransaction {
   amount_fee?: string;
   message?: string;
   more_info_url?: string;
+  started_at?: string;
+  completed_at?: string;
   [k: string]: unknown;
 }
 
@@ -184,6 +189,17 @@ export function useAnclap() {
     [callProxy],
   );
 
+  /** Historial SEP-24 del asset (deposit + withdraw) para la cuenta autenticada. */
+  const getTransactions = useCallback(
+    async (assetCode: string, jwt: string): Promise<SepTransaction[]> => {
+      const data = await callProxy('GET', `/api/anclap/sep24/transactions?asset_code=${encodeURIComponent(assetCode)}`, {
+        jwt,
+      });
+      return (data.body as { transactions?: SepTransaction[] } | undefined)?.transactions ?? [];
+    },
+    [callProxy],
+  );
+
   /**
    * Hace polling de la transacción hasta que Anclap la marca `completed`
    * (los ARS ya están on-chain) o cae en un estado terminal de error.
@@ -205,7 +221,7 @@ export function useAnclap() {
       const start = Date.now();
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        if (shouldStop?.()) throw new AnclapError('Seguimiento cancelado.');
+        if (shouldStop?.()) throw new AnclapCancelled('Seguimiento cancelado.');
         const tx = await getTransaction(id, jwt);
         onStatus?.(tx?.status, tx);
         if (tx?.status === COMPLETED) return tx;
@@ -290,6 +306,7 @@ export function useAnclap() {
     accountHasTrustline,
     ensureTrustline,
     getTransaction,
+    getTransactions,
     waitForCompletion,
     quoteStrictSend,
     swap,
