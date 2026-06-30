@@ -95,6 +95,35 @@ model Deposit {
   @@map("deposits")
 }
 
+model BridgeTransfer {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  direction            String    @db.VarChar(32)
+  sourceNetwork        String    @map("source_network") @db.VarChar(40)
+  destinationNetwork   String    @map("destination_network") @db.VarChar(40)
+  sourceWallet         String    @map("source_wallet") @db.VarChar(128)
+  destinationWallet    String    @map("destination_wallet") @db.VarChar(128)
+  amount               String    @db.VarChar(80)
+  amountRaw            String    @map("amount_raw") @db.VarChar(80)
+  status               String    @default("source_awaiting_signature") @db.VarChar(40)
+  sourceTxHash         String?   @unique(map: "bridge_transfers_source_tx_unique") @map("source_tx_hash") @db.VarChar(128)
+  destinationTxHash    String?   @map("destination_tx_hash") @db.VarChar(128)
+  messageHash          String?   @map("message_hash") @db.VarChar(128)
+  cctpMessage          String?   @map("cctp_message")
+  cctpAttestation      String?   @map("cctp_attestation")
+  errorReason          String?   @map("error_reason")
+  retryCount           Int       @default(0) @map("retry_count")
+  lastPolledAt         DateTime? @map("last_polled_at") @db.Timestamptz(6)
+  processingLeaseUntil DateTime? @map("processing_lease_until") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([sourceWallet], map: "idx_bridge_transfers_source_wallet")
+  @@index([destinationWallet], map: "idx_bridge_transfers_destination_wallet")
+  @@index([status, updatedAt], map: "idx_bridge_transfers_status_updated")
+  @@map("bridge_transfers")
+}
+
 model MapObject {
   id        BigInt    @id @default(autoincrement())
   type      String?   @default("")

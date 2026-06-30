@@ -13,6 +13,7 @@ import {
 } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 } from 'uuid';
@@ -291,6 +292,15 @@ export function DepositModal({
                 MAX
               </Button>
             </div>
+            {!simulate && (
+              <Link
+                href="/profile/wallet?bridge=1"
+                className="text-center text-xs font-semibold text-black underline underline-offset-2"
+                onClick={onOpenChange}
+              >
+                {t('wallet.bridge.depositHelper', 'Need Stellar USDC? Bridge from Base or Ethereum')}
+              </Link>
+            )}
           </div>
     </AppModal>
   );
