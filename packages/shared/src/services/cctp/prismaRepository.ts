@@ -66,6 +66,19 @@ export const prismaBridgeTransferRepository: BridgeTransferRepository = {
     return row.map(toRecord);
   },
 
+  async listRecentCompletedForWallet(walletAddress, limit) {
+    const row = await prisma.bridgeTransfer.findMany({
+      where: {
+        deletedAt: null,
+        status: 'completed',
+        OR: [{ sourceWallet: walletAddress }, { destinationWallet: walletAddress }],
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+    });
+    return row.map(toRecord);
+  },
+
   async update(id, patch) {
     const row = await prisma.bridgeTransfer.update({
       where: { id },

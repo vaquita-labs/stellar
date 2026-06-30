@@ -43,6 +43,7 @@ const repositoryForQueue = (
   getById: async (id) => claimedRows.get(id) ?? null,
   findBySourceTxHash: async () => null,
   listActiveForWallet: async () => [],
+  listRecentCompletedForWallet: async () => [],
   update: async (id, patch) => {
     const row = claimedRows.get(id);
     if (!row) throw new Error(`Bridge transfer not found: ${id}`);

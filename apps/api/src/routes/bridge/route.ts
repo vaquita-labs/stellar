@@ -11,6 +11,7 @@ import {
   fetchCircleCctpFeeQuote,
   fetchCircleCctpAttestation,
   listActiveBridgeTransfers,
+  listRecentCompletedBridgeTransfers,
   prismaBridgeTransferRepository,
   refreshBridgeTransfer,
   sendError,
@@ -53,6 +54,18 @@ router.get('/transfers', asyncHandler(async (req, res) => {
   if (!parsed.success) return sendError(res, 'Invalid bridge transfer query', parsed.error.format(), 400);
 
   const transfers = await listActiveBridgeTransfers(prismaBridgeTransferRepository, parsed.data.wallet);
+  return sendSuccess(res, transfers, '');
+}));
+
+router.get('/transfers/history', asyncHandler(async (req, res) => {
+  const parsed = bridgeListQuerySchema.safeParse(req.query);
+  if (!parsed.success) return sendError(res, 'Invalid bridge transfer query', parsed.error.format(), 400);
+
+  const transfers = await listRecentCompletedBridgeTransfers(
+    prismaBridgeTransferRepository,
+    parsed.data.wallet,
+    3,
+  );
   return sendSuccess(res, transfers, '');
 }));
 
