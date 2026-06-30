@@ -4,21 +4,20 @@ import {
   Contract,
   Keypair,
   nativeToScVal,
-  Networks,
   rpc,
   scValToNative,
   TransactionBuilder,
   xdr,
 } from '@stellar/stellar-sdk';
-
-const DEFAULT_SOROBAN_RPC = 'https://soroban-testnet.stellar.org';
+import { resolveNetworkPassphrase } from '../stellar/passphrase';
+import { resolveSorobanRpcUrl } from '../stellar/rpc';
 
 function getRpcUrl(): string {
-  return process.env.STELLAR_TESTNET_SOROBAN_RPC ?? DEFAULT_SOROBAN_RPC;
+  return resolveSorobanRpcUrl();
 }
 
 function getNetworkPassphrase(): string {
-  return process.env.STELLAR_NETWORK_PASSPHRASE ?? Networks.TESTNET;
+  return resolveNetworkPassphrase();
 }
 
 async function simulateCall(contractId: string, method: string, ...args: xdr.ScVal[]) {
