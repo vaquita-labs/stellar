@@ -95,7 +95,7 @@ export const parseVaquitaPoolEvent = (
   event: RawReconciliationEvent,
 ): { event: NormalizedReconciliationEvent | null; issue: ReconciliationParseIssue | null } => {
   const base = baseFields(event);
-  if ('error' in base) return { event: null, issue: base.error };
+  if ('error' in base) return { event: null, issue: base.error ?? null };
 
   const owner = asString(base.value.owner) ?? base.caller;
   const depositId = asString(base.value.deposit_id ?? base.value.depositId);
