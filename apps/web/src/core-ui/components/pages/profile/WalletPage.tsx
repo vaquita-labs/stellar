@@ -6,10 +6,13 @@ import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import React, { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiCheck, FiCopy, FiDownload, FiEye, FiRepeat, FiSend, FiShield } from 'react-icons/fi';
+import { FiArrowDownLeft, FiArrowUpRight, FiCheck, FiCopy, FiDownload, FiEye, FiSend, FiShield, FiRepeat} from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
+import { useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
+import { ReceiveFiatModal } from '../../organisms/FiatModals/ReceiveFiatModal';
+import { SendFiatModal } from '../../organisms/FiatModals/SendFiatModal';
 import { BridgeUsdcModal } from './BridgeUsdcModal';
 
 const LogoByType: Record<string, ReactNode> = {
@@ -20,9 +23,13 @@ export function WalletPage() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const { walletAddress, network } = useConfigStore();
+  const { data: profile } = useProfileData();
+  const cryptoMode = profile?.cryptoSavvy ?? false;
   const { openWalletBalanceModal, openSendModal, openReceiveModal } = usePollar();
   const [bridgeOpen, setBridgeOpen] = useState(searchParams.get('bridge') === '1');
   const [copied, setCopied] = useState(false);
+  const [sendFiatOpen, setSendFiatOpen] = useState(false);
+  const [receiveFiatOpen, setReceiveFiatOpen] = useState(false);
 
   const handleCopy = async () => {
     if (!walletAddress) return;
@@ -77,6 +84,7 @@ export function WalletPage() {
           </div>
         </section>
 
+        {cryptoMode && (
         <section className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -112,6 +120,32 @@ export function WalletPage() {
             <span className="text-xs text-gray-500">{t('wallet.bridge.subtitle', 'Move USDC between EVM and Stellar')}</span>
           </button>
         </section>
+        )}
+
+        <section className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setReceiveFiatOpen(true)}
+            className="relative w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black hover:bg-[#F5FBFF] transition"
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E8FBE9] border border-[#84E89B]">
+              <FiArrowDownLeft className="w-6 h-6" />
+            </span>
+            <span className="text-sm font-semibold">{t('wallet.page.receiveFiat', 'Receive fiat')}</span>
+            <span className="text-xs text-gray-500">{t('wallet.page.buyArs', 'Buy ARS')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSendFiatOpen(true)}
+            className="relative w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black hover:bg-[#F5FBFF] transition"
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E8FBE9] border border-[#84E89B]">
+              <FiArrowUpRight className="w-6 h-6" />
+            </span>
+            <span className="text-sm font-semibold">{t('wallet.page.sendFiat', 'Send fiat')}</span>
+            <span className="text-xs text-gray-500">{t('wallet.page.sellArs', 'Sell to ARS')}</span>
+          </button>
+        </section>
 
         <section className="rounded-lg border border-black border-b-2 bg-white p-4 sm:p-5 flex items-start gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#FFF7E6] border border-primary text-black shrink-0">
@@ -129,6 +163,8 @@ export function WalletPage() {
           onOpenChange={() => setBridgeOpen(false)}
           stellarWallet={walletAddress}
         />
+        <SendFiatModal open={sendFiatOpen} onOpenChange={() => setSendFiatOpen(false)} />
+        <ReceiveFiatModal open={receiveFiatOpen} onOpenChange={() => setReceiveFiatOpen(false)} />
     </PageLayout>
   );
 }
