@@ -17,6 +17,7 @@ type EvmToStellarBurnInput = {
   sourceNetwork: BridgeNetworkKey;
   destinationNetwork: BridgeNetworkKey;
   amount: bigint;
+  maxFee?: bigint;
   forwardRecipientStrkey: string;
 };
 
@@ -157,6 +158,7 @@ export const buildErc20ApproveTx = (
 export const buildEvmToStellarBurnTx = ({
   sourceNetwork,
   amount,
+  maxFee = 0n,
   forwardRecipientStrkey,
 }: EvmToStellarBurnInput): EvmTxRequest => {
   const config = evmConfig(sourceNetwork);
@@ -168,7 +170,7 @@ export const buildEvmToStellarBurnTx = ({
     bytes32Word(forwarderBytes32),
     addressWord(config.usdcAddress),
     bytes32Word(forwarderBytes32),
-    uintWord(0),
+    uintWord(maxFee),
     uintWord(CCTP_FAST_FINALITY_THRESHOLD),
     uintWord(8 * 32),
   ].join('');
