@@ -14,4 +14,6 @@ export interface MoneyInputProps {
   balanceIsLoading: boolean;
   /** Bloquea el monto y el cambio de token (ej. tutorial: monto fijo). */
   disabled?: boolean;
+  /** Sobrescribe el mínimo por defecto del token (ej. fiat send: 0.1). */
+  min?: number;
 }
