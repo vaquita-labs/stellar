@@ -1,7 +1,8 @@
 'use client';
 
 import { ASSETS } from '@/networks/anclap/anclap';
-import { AnclapError, assetParam, useAnclap } from '@/networks/anclap/useAnclap';
+import { useAnclapAuthStore } from '@/networks/anclap/anclapAuth';
+import { AnclapCancelled, AnclapError, assetParam, useAnclap } from '@/networks/anclap/useAnclap';
 import { Button, Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
@@ -10,6 +11,7 @@ import { FiExternalLink } from 'react-icons/fi';
 import { AppModal } from '../../molecules/AppModal';
 import { FiatAuthBadge } from './FiatAuthBadge';
 import { FiatStepList, StepStatus } from './FiatStepList';
+import { FiatTxHistory } from './FiatTxHistory';
 
 interface ReceiveFiatModalProps {
   open: boolean;
@@ -42,6 +44,7 @@ export function ReceiveFiatModal({ open, onOpenChange }: ReceiveFiatModalProps) 
   const { t } = useTranslation();
   const { walletAddress, refreshAssets, walletType, login } = usePollar();
   const { authenticate, ensureTrustline, startInteractive, waitForCompletion, swap } = useAnclap();
+  const setSharedJwt = useAnclapAuthStore((s) => s.setJwt);
 
   const [busy, setBusy] = useState(false);
   const [waiting, setWaiting] = useState(false);
@@ -104,6 +107,7 @@ export function ReceiveFiatModal({ open, onOpenChange }: ReceiveFiatModalProps) 
       });
       mark('token', 'done');
       setJwt(jwtToken);
+      setSharedJwt(jwtToken);
 
       // 3) SEP-24: iniciar depósito interactivo y abrir Anclap en otra pestaña.
       mark('deposit', 'running');
@@ -137,6 +141,7 @@ export function ReceiveFiatModal({ open, onOpenChange }: ReceiveFiatModalProps) 
       setUsdcReceived(quotedOut);
       toast.success(t('wallet.fiat.receive.swapDone', 'Converted to USDC — done!'));
     } catch (e) {
+      if (e instanceof AnclapCancelled) return;
       const msg = e instanceof AnclapError || e instanceof Error ? e.message : String(e);
       setError(msg);
       setSteps((prev) => {
@@ -248,6 +253,8 @@ export function ReceiveFiatModal({ open, onOpenChange }: ReceiveFiatModalProps) 
         </a>
       )}
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+
+      <FiatTxHistory assetCode={ARS} kind="deposit" jwt={jwt} />
     </AppModal>
   );
 }
