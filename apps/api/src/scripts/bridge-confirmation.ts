@@ -3,7 +3,7 @@ import { prisma } from '@vaquita/db';
 import {
   prismaBridgeConfirmationQueue,
   runBridgeConfirmationBatch,
-} from '@vaquita/shared';
+} from '@vaquita/shared/services/cctp/index';
 
 const readPositiveInteger = (name: string, fallback: number): number => {
   const value = process.env[name];

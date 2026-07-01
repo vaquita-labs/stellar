@@ -15,6 +15,7 @@ WORKDIR /repo
 RUN corepack enable
 
 ENV NODE_ENV=production
+ENV PORT=3100
 
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/api/node_modules ./apps/api/node_modules
