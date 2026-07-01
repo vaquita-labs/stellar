@@ -2,7 +2,7 @@
 
 import { ASSETS } from '@/networks/anclap/anclap';
 import { useAnclapAuthStore } from '@/networks/anclap/anclapAuth';
-import { AnclapCancelled, AnclapError, assetParam, useAnclap } from '@/networks/anclap/useAnclap';
+import { AnclapCancelled, AnclapError, assetParam, SepTransaction, useAnclap } from '@/networks/anclap/useAnclap';
 import { Button, Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
@@ -22,13 +22,16 @@ interface SendFiatModalProps {
   onOpenChange: () => void;
 }
 
-type StepKey = 'trustline' | 'swap' | 'challenge' | 'sign' | 'token' | 'withdraw' | 'settled';
+type StepKey = 'trustline' | 'swap' | 'challenge' | 'sign' | 'token' | 'withdraw' | 'transfer' | 'settled';
 
-const IMPLEMENTED: StepKey[] = ['trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'settled'];
+const IMPLEMENTED: StepKey[] = ['trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'transfer', 'settled'];
 
 const ARS = 'ARS';
 const USDC = 'USDC';
 const MIN_USDC = 0.1;
+
+// Estados terminales de una tx SEP-24 (no hay nada que reanudar).
+const FAILED = new Set(['error', 'refunded', 'expired', 'no_market', 'too_small', 'too_large']);
 
 const INITIAL_STEPS: Record<StepKey, StepStatus> = {
   trustline: 'idle',
@@ -37,6 +40,7 @@ const INITIAL_STEPS: Record<StepKey, StepStatus> = {
   sign: 'idle',
   token: 'idle',
   withdraw: 'idle',
+  transfer: 'idle',
   settled: 'idle',
 };
 
@@ -44,7 +48,15 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
   const { t } = useTranslation();
   const { token, setToken } = useConfigStore();
   const { walletAddress, walletBalance, refreshWalletBalance, refreshAssets, walletType, login } = usePollar();
-  const { authenticate, ensureTrustline, swap, startInteractive, waitForCompletion } = useAnclap();
+  const {
+    authenticate,
+    ensureTrustline,
+    swap,
+    startInteractive,
+    waitForCompletion,
+    waitForWithdrawInstructions,
+    sendToAnchor,
+  } = useAnclap();
   const setSharedJwt = useAnclapAuthStore((s) => s.setJwt);
 
   const [amount, setAmount] = useState('');
@@ -95,6 +107,49 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
 
   const mark = (key: StepKey, status: StepStatus) => setSteps((prev) => ({ ...prev, [key]: status }));
 
+  // Tramo final del off-ramp (compartido por el envío nuevo y el "continuar"
+  // desde el historial): espera a que el usuario complete el form en Anclap,
+  // paga los ARS on-chain a la cuenta del anchor con el memo, y espera la
+  // confirmación del retiro.
+  const finishWithdrawal = async (id: string, jwtToken: string, arsFallback?: string) => {
+    if (!walletAddress) return;
+    // 1) Esperar a que Anclap publique la cuenta destino + memo del retiro.
+    mark('transfer', 'running');
+    setWaiting(true);
+    const ready = await waitForWithdrawInstructions(id, jwtToken, {
+      shouldStop: () => !openRef.current,
+      onStatus: (status) => setWaitStatus(status ?? null),
+    });
+    setWaiting(false);
+
+    // 2) Enviar los ARS on-chain al anchor (salvo que ya esté completado).
+    if (ready.status !== 'completed') {
+      if (!ready.withdraw_anchor_account) {
+        throw new AnclapError('Anclap no informó la cuenta destino del retiro.');
+      }
+      await sendToAnchor({
+        from: walletAddress,
+        assetCode: ARS,
+        issuer: ASSETS[ARS].issuer,
+        amount: ready.amount_in ?? arsFallback ?? '0',
+        anchorAccount: ready.withdraw_anchor_account,
+        memo: ready.withdraw_memo,
+        memoType: ready.withdraw_memo_type,
+      });
+    }
+    mark('transfer', 'done');
+
+    // 3) Esperar a que Anclap marque el retiro como completado.
+    mark('settled', 'running');
+    setWaiting(true);
+    await waitForCompletion(id, jwtToken, {
+      shouldStop: () => !openRef.current,
+      onStatus: (status) => setWaitStatus(status ?? null),
+    });
+    setWaiting(false);
+    mark('settled', 'done');
+  };
+
   const handleSend = async () => {
     if (isDisabled || !walletAddress) return;
     setBusy(true);
@@ -120,7 +175,10 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
         sendAmount: amount,
         dest: assetParam(ARS, ASSETS[ARS].issuer),
       });
-      setArsReceived(arsAmount);
+      // Anclap opera fiat con 2 decimales: mandamos el retiro truncado a 2
+      // (nunca por encima de lo que quedó on-chain tras el swap).
+      const arsWithdraw = truncateDecimals(Number(arsAmount), 2).toFixed(2);
+      setArsReceived(arsWithdraw);
       mark('swap', 'done');
 
       // 3) SEP-10: challenge -> firmar (wallet) -> JWT.
@@ -144,22 +202,15 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
       const { id, url } = await startInteractive('withdraw', jwtToken, {
         asset_code: ARS,
         account: walletAddress,
-        amount: arsAmount,
+        amount: arsWithdraw,
       });
       setInteractiveUrl(url);
       window.open(url, '_blank', 'noopener,noreferrer');
       mark('withdraw', 'done');
       toast.success(t('wallet.fiat.send.withdrawStarted', 'Withdrawal started — continue on Anclap.'));
 
-      // 5) Esperar a que Anclap marque el retiro como completado.
-      mark('settled', 'running');
-      setWaiting(true);
-      await waitForCompletion(id, jwtToken, {
-        shouldStop: () => !openRef.current,
-        onStatus: (status) => setWaitStatus(status ?? null),
-      });
-      setWaiting(false);
-      mark('settled', 'done');
+      // 5) Transferir los ARS al anchor y esperar la confirmación del retiro.
+      await finishWithdrawal(id, jwtToken, arsWithdraw);
       toast.success(t('wallet.fiat.send.settled', 'Withdrawal completed on Anclap.'));
     } catch (e) {
       // Cancelación (el usuario cerró el modal durante la espera): no es error.
@@ -182,6 +233,58 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     }
   };
 
+  // Continúa una tx del historial: hidrata el stepper con su estado y, si el
+  // retiro sigue en curso, reanuda el polling hasta que Anclap lo confirme.
+  const resumeTx = async (tx: SepTransaction, tokenJwt: string) => {
+    if (busy || !walletAddress) return;
+    const failed = tx.status ? FAILED.has(tx.status) : false;
+    const done = tx.status === 'completed';
+
+    setError(failed ? tx.message ?? tx.status ?? null : null);
+    setShowReconnect(false);
+    setAmount('');
+    setArsReceived(tx.amount_in ?? tx.amount_out ?? null);
+    setInteractiveUrl(tx.more_info_url ?? null);
+    setWaitStatus(tx.status ?? null);
+    setJwt(tokenJwt);
+    setSharedJwt(tokenJwt);
+    // Los pasos previos al retiro ya ocurrieron (la tx existe en Anclap).
+    setSteps({
+      trustline: 'done',
+      swap: 'done',
+      challenge: 'done',
+      sign: 'done',
+      token: 'done',
+      withdraw: 'done',
+      transfer: done ? 'done' : failed ? 'error' : 'running',
+      settled: done ? 'done' : failed ? 'error' : 'idle',
+    });
+    if (done || failed) return; // terminal: sólo mostramos el estado
+
+    setBusy(true);
+    try {
+      // Reanuda el tramo final: si aún falta el form en Anclap, se espera; luego
+      // paga los ARS al anchor y espera la confirmación.
+      await finishWithdrawal(tx.id, tokenJwt, tx.amount_in ?? undefined);
+      toast.success(t('wallet.fiat.send.settled', 'Withdrawal completed on Anclap.'));
+    } catch (e) {
+      if (e instanceof AnclapCancelled) return;
+      const msg = e instanceof AnclapError || e instanceof Error ? e.message : String(e);
+      setError(msg);
+      setSteps((prev) => {
+        const next = { ...prev };
+        (Object.keys(next) as StepKey[]).forEach((k) => {
+          if (next[k] === 'running') next[k] = 'error';
+        });
+        return next;
+      });
+      if (walletType) setShowReconnect(true);
+    } finally {
+      setWaiting(false);
+      setBusy(false);
+    }
+  };
+
   const handleReconnect = () => {
     if (!walletType) return;
     setError(null);
@@ -196,9 +299,10 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     sign: t('wallet.fiat.send.stepSign', 'SEP-10 · Sign (wallet)'),
     token: t('wallet.fiat.send.stepToken', 'SEP-10 · Get Anclap JWT'),
     withdraw: t('wallet.fiat.send.stepWithdraw', 'SEP-24 · Start withdrawal'),
+    transfer: t('wallet.fiat.send.stepTransfer', 'Send ARS to Anclap'),
     settled: t('wallet.fiat.send.stepSettled', 'Wait for Anclap confirmation'),
   };
-  const order: StepKey[] = ['trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'settled'];
+  const order: StepKey[] = ['trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'transfer', 'settled'];
 
   return (
     <AppModal
@@ -286,7 +390,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
       )}
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
-      <FiatTxHistory assetCode={ARS} kind="withdrawal" jwt={jwt} />
+      <FiatTxHistory assetCode={ARS} kind="withdrawal" jwt={jwt} onResume={resumeTx} />
     </AppModal>
   );
 }

@@ -29,7 +29,7 @@ export function WalletPage() {
   const [bridgeOpen, setBridgeOpen] = useState(searchParams.get('bridge') === '1');
   const [copied, setCopied] = useState(false);
   const [sendFiatOpen, setSendFiatOpen] = useState(false);
-  const [receiveFiatOpen, setReceiveFiatOpen] = useState(false);
+  const [receiveFiatOpen, setReceiveFiatOpen] = useState(searchParams.get('onramp') === '1');
 
   const handleCopy = async () => {
     if (!walletAddress) return;
