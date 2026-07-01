@@ -1,7 +1,8 @@
 'use client';
 
-import { getHorizonUrl } from '@/networks/stellar/kit';
+import { getHorizonUrl, getNetworkPassphrase } from '@/networks/stellar/kit';
 import { usePollar } from '@pollar/react';
+import { Asset, BASE_FEE, Horizon, Memo, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 import { useCallback } from 'react';
 
 // El proxy responde siempre { url, method, status, ok, body } (UpstreamResult).
@@ -30,7 +31,47 @@ export interface SepTransaction {
   more_info_url?: string;
   started_at?: string;
   completed_at?: string;
+  // Instrucciones de transferencia del retiro (SEP-24 withdraw): aparecen cuando
+  // el usuario completa el formulario interactivo. El pago on-chain de los ARS
+  // debe ir a `withdraw_anchor_account` con este memo.
+  withdraw_anchor_account?: string;
+  withdraw_memo?: string;
+  withdraw_memo_type?: string;
   [k: string]: unknown;
+}
+
+// Opciones comunes del polling de una transacción SEP-24.
+interface PollOpts {
+  onStatus?: (status: string | undefined, tx: SepTransaction | undefined) => void;
+  shouldStop?: () => boolean;
+  intervalMs?: number;
+  timeoutMs?: number;
+}
+
+// base64 -> hex (browser, sin depender del global Buffer). El memo hash de
+// Anclap viene en base64 y `Memo.hash` acepta un hex string de 32 bytes.
+function base64ToHex(b64: string): string {
+  const bin = atob(b64);
+  let hex = '';
+  for (let i = 0; i < bin.length; i++) hex += bin.charCodeAt(i).toString(16).padStart(2, '0');
+  return hex;
+}
+
+// Construye el Memo del pago al anchor según el tipo que informó Anclap.
+function buildAnchorMemo(value?: string, type?: string): Memo | undefined {
+  if (!value || !type || type === 'none') return undefined;
+  switch (type) {
+    case 'text':
+      return Memo.text(value);
+    case 'id':
+      return Memo.id(value);
+    case 'hash':
+      return Memo.hash(base64ToHex(value));
+    case 'return':
+      return Memo.return(base64ToHex(value));
+    default:
+      return undefined;
+  }
 }
 
 // Estados terminales "buenos" / "malos" del flujo SEP-24.
@@ -65,7 +106,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * tanto el off-ramp (withdraw) como el on-ramp (deposit) lo reutilicen.
  */
 export function useAnclap() {
-  const { signTx, setTrustline, buildAndSignAndSubmitTx } = usePollar();
+  const { signTx, submitTx, setTrustline, buildAndSignAndSubmitTx } = usePollar();
 
   // Llama a un Route Handler propio y devuelve el sobre Upstream; tira
   // AnclapError con el detalle si el proxy o Anclap responden mal.
@@ -201,21 +242,16 @@ export function useAnclap() {
   );
 
   /**
-   * Hace polling de la transacción hasta que Anclap la marca `completed`
-   * (los ARS ya están on-chain) o cae en un estado terminal de error.
-   * `shouldStop` permite abortar (ej. el modal se cerró). `onStatus` reporta
-   * cada lectura para refrescar la UI.
+   * Núcleo de polling: consulta la tx hasta que `isDone` se cumple o cae en un
+   * estado terminal de error. `shouldStop` permite abortar (ej. el modal se
+   * cerró). `onStatus` reporta cada lectura para refrescar la UI.
    */
-  const waitForCompletion = useCallback(
+  const pollTransaction = useCallback(
     async (
       id: string,
       jwt: string,
-      opts: {
-        onStatus?: (status: string | undefined, tx: SepTransaction | undefined) => void;
-        shouldStop?: () => boolean;
-        intervalMs?: number;
-        timeoutMs?: number;
-      } = {},
+      isDone: (tx: SepTransaction | undefined) => boolean,
+      opts: PollOpts = {},
     ): Promise<SepTransaction> => {
       const { onStatus, shouldStop, intervalMs = 6000, timeoutMs = 15 * 60 * 1000 } = opts;
       const start = Date.now();
@@ -224,17 +260,82 @@ export function useAnclap() {
         if (shouldStop?.()) throw new AnclapCancelled('Seguimiento cancelado.');
         const tx = await getTransaction(id, jwt);
         onStatus?.(tx?.status, tx);
-        if (tx?.status === COMPLETED) return tx;
         if (tx?.status && FAILED_STATES.has(tx.status)) {
           throw new AnclapError(tx.message ?? `La transacción terminó en estado "${tx.status}".`);
         }
+        if (isDone(tx)) return tx as SepTransaction;
         if (Date.now() - start > timeoutMs) {
-          throw new AnclapError('Se agotó el tiempo esperando la acreditación. Volvé a intentar más tarde.');
+          throw new AnclapError('Se agotó el tiempo esperando a Anclap. Volvé a intentar más tarde.');
         }
         await sleep(intervalMs);
       }
     },
     [getTransaction],
+  );
+
+  /** Polling hasta que la tx queda `completed` (los ARS ya están on-chain). */
+  const waitForCompletion = useCallback(
+    (id: string, jwt: string, opts: PollOpts = {}): Promise<SepTransaction> =>
+      pollTransaction(id, jwt, (tx) => tx?.status === COMPLETED, opts),
+    [pollTransaction],
+  );
+
+  /**
+   * Polling hasta que Anclap publica las instrucciones de transferencia del
+   * retiro (cuenta destino + memo), lo que ocurre cuando el usuario completa el
+   * formulario interactivo (status `pending_user_transfer_start`).
+   */
+  const waitForWithdrawInstructions = useCallback(
+    (id: string, jwt: string, opts: PollOpts = {}): Promise<SepTransaction> =>
+      pollTransaction(id, jwt, (tx) => tx?.status === COMPLETED || !!tx?.withdraw_anchor_account, opts),
+    [pollTransaction],
+  );
+
+  /**
+   * Paga on-chain el retiro SEP-24: envía `amount` del asset a la cuenta del
+   * anchor con el memo que indicó Anclap, para que acredite el fiat. Firma con
+   * la wallet (Pollar) y lo somete a la red.
+   */
+  const sendToAnchor = useCallback(
+    async (args: {
+      from: string;
+      assetCode: string;
+      issuer: string;
+      amount: string;
+      anchorAccount: string;
+      memo?: string;
+      memoType?: string;
+    }): Promise<{ hash?: string }> => {
+      const { from, assetCode, issuer, amount, anchorAccount, memo, memoType } = args;
+      const server = new Horizon.Server(getHorizonUrl());
+      const source = await server.loadAccount(from);
+      const builder = new TransactionBuilder(source, {
+        fee: BASE_FEE,
+        networkPassphrase: getNetworkPassphrase(),
+      })
+        .addOperation(
+          Operation.payment({
+            destination: anchorAccount,
+            asset: new Asset(assetCode, issuer),
+            amount,
+          }),
+        )
+        .setTimeout(180);
+      const anchorMemo = buildAnchorMemo(memo, memoType);
+      if (anchorMemo) builder.addMemo(anchorMemo);
+      const xdr = builder.build().toXDR();
+
+      const signed = await signTx(xdr);
+      if (signed.status !== 'signed') {
+        throw new AnclapError(signed.details ?? 'No se pudo firmar el pago al anchor.');
+      }
+      const outcome = await submitTx(signed.signedXdr);
+      if (outcome.status === 'error') {
+        throw new AnclapError(outcome.details ?? outcome.resultCode ?? 'El pago al anchor falló.');
+      }
+      return { hash: outcome.hash };
+    },
+    [signTx, submitTx],
   );
 
   // ----- Swap on-chain (path payment strict send) vía Pollar -----
@@ -307,7 +408,10 @@ export function useAnclap() {
     ensureTrustline,
     getTransaction,
     getTransactions,
+    pollTransaction,
     waitForCompletion,
+    waitForWithdrawInstructions,
+    sendToAnchor,
     quoteStrictSend,
     swap,
   };
