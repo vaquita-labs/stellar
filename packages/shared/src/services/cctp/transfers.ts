@@ -100,6 +100,9 @@ const assertTransferShape = (input: CreateBridgeTransferInput) => {
   if (input.sourceNetwork === input.destinationNetwork) {
     throw new Error('Source and destination networks must differ');
   }
+  if (sourceNetwork.environment !== destinationNetwork.environment) {
+    throw new Error('Source and destination CCTP environments must match');
+  }
 };
 
 const assertMutable = (row: BridgeTransferRecord) => {
