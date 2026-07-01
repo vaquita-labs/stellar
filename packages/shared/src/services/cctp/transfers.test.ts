@@ -102,6 +102,19 @@ describe('bridge transfer tracker', () => {
     })).rejects.toThrow(/source network must be stellar/i);
   });
 
+  it('rejects mainnet to testnet route mismatches before signing', async () => {
+    const repo = new MemoryBridgeTransferRepository();
+
+    await expect(createBridgeTransfer(repo, {
+      direction: 'evm_to_stellar',
+      sourceNetwork: 'base',
+      destinationNetwork: 'stellar-testnet',
+      sourceWallet: '0x1111111111111111111111111111111111111111',
+      destinationWallet: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+      amount: '1',
+    })).rejects.toThrow(/environments must match/i);
+  });
+
   it('creates resumable transfers and advances through attestation readiness', async () => {
     const repo = new MemoryBridgeTransferRepository();
     const transfer = await createBridgeTransfer(repo, {

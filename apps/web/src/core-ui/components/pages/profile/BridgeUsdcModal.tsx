@@ -81,6 +81,8 @@ const bridgeProgressByStatus: Record<string, { current: number; total: number; d
 
 const progressFor = (status: string) => bridgeProgressByStatus[status] ?? { current: 1, total: 5, detail: 'Getting your transfer ready' };
 const isTransferInProgress = (status: string) => !['completed', 'failed', 'cancelled', 'needs_review'].includes(status);
+const stellarNetworkForEvm = (network: BridgeNetworkKey): BridgeNetworkKey =>
+  network === 'ethereum' || network === 'base' ? 'stellar' : 'stellar-testnet';
 
 const balanceOfCallData = (address: string) =>
   `0x70a08231000000000000000000000000${address.replace(/^0x/, '').toLowerCase()}`;
@@ -139,8 +141,9 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
   const [evmAllowanceLoading, setEvmAllowanceLoading] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const sourceNetwork = direction === 'evm_to_stellar' ? evmNetwork : 'stellar-testnet';
-  const destinationNetwork = direction === 'evm_to_stellar' ? 'stellar-testnet' : evmNetwork;
+  const pairedStellarNetwork = stellarNetworkForEvm(evmNetwork);
+  const sourceNetwork = direction === 'evm_to_stellar' ? evmNetwork : pairedStellarNetwork;
+  const destinationNetwork = direction === 'evm_to_stellar' ? pairedStellarNetwork : evmNetwork;
   const sourceWallet = direction === 'evm_to_stellar' ? evmWallet : stellarWallet;
   const destinationWallet = direction === 'evm_to_stellar' ? stellarWallet : evmWallet;
   const selectedEvmLabel = evmOptions.find((option) => option.key === evmNetwork)?.label ?? evmNetwork;
