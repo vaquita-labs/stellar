@@ -1,6 +1,7 @@
 'use client';
 
 import { isNewDepositHandled } from '@/networks/helpers';
+import { directBlendMainnetSupply } from '@/networks/stellar/blendDirect';
 import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
 import {
   Button,
@@ -74,6 +75,14 @@ export function DepositModal({
   const balanceFormatted = tokenBalance ? truncateDecimals(Number(tokenBalance.available), 5) : 0;
   const balanceIsLoading = walletBalance.step === 'loading';
   const quickAmounts = getQuickAmounts(token?.symbol ?? '');
+  const canDirectBlendDeposit =
+    !simulate &&
+    network?.type === 'mainnet' &&
+    token?.symbol?.toUpperCase() === 'USDC' &&
+    !!walletAddress &&
+    !!amount &&
+    amountNum > 0 &&
+    !isNaN(amountNum);
 
   useEffect(() => {
     setAmount('');
@@ -206,6 +215,46 @@ export function DepositModal({
     }
   };
 
+  const handleDirectBlendDeposit = async () => {
+    if (!canDirectBlendDeposit || !token) return;
+    setIsDepositing(true);
+    try {
+      trackUserAction('direct_blend_deposit_attempted', {
+        amount: amountNum,
+        token: token.symbol,
+        network: network?.networkName,
+      });
+      const { hash } = await directBlendMainnetSupply({
+        address: walletAddress,
+        amount,
+        decimals: token.decimals,
+      });
+      trackConversion('direct_blend_deposit_successful', amountNum, token.symbol);
+      toast.success(t('deposit.toast.directBlendSuccessTitle', 'Blend deposit submitted'), {
+        description: t(
+          'deposit.toast.directBlendSuccessDescription',
+          'Your USDC was sent directly to Blend. This emergency path is not tracked as a Vaquita lock.',
+        ),
+        timeout: 6000,
+      });
+      console.info('[direct-blend-deposit] submitted', { hash });
+      onOpenChange();
+    } catch (error) {
+      trackError('direct_blend_deposit_failed', {
+        amount: amountNum,
+        token: token?.symbol,
+        network: network?.networkName,
+      });
+      toast.danger(t('deposit.toast.errorTitle', "Deposit didn't go through"), {
+        indicator: <Image src="/vaquita/error.svg" alt="" width={32} height={32} />,
+        description: error instanceof Error ? error.message : undefined,
+        timeout: 5000,
+      });
+    } finally {
+      setIsDepositing(false);
+    }
+  };
+
   return (
     <AppModal
       open={open}
@@ -217,13 +266,24 @@ export function DepositModal({
       size="md"
       bodyClassName="flex flex-col gap-4 pb-6"
       footer={
-        <Button
-          onPress={() => handleDeposit(Number(amount))}
-          className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
-          isDisabled={isDisabled || isDepositing}
-        >
-          {isDepositing ? <><Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}</> : t('deposit.modal.title', 'Deposit')}
-        </Button>
+        <div className="flex w-full flex-col gap-2">
+          <Button
+            onPress={() => handleDeposit(Number(amount))}
+            className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
+            isDisabled={isDisabled || isDepositing}
+          >
+            {isDepositing ? <><Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}</> : t('deposit.modal.title', 'Deposit')}
+          </Button>
+          {network?.type === 'mainnet' ? (
+            <Button
+              onPress={handleDirectBlendDeposit}
+              className="w-full rounded-md border border-black border-b-2 bg-white px-4 py-5 font-bold text-black"
+              isDisabled={!canDirectBlendDeposit || isDepositing}
+            >
+              {isDepositing ? <><Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}</> : t('deposit.modal.directBlend', 'Deposit directly to Blend')}
+            </Button>
+          ) : null}
+        </div>
       }
     >
           <Select
