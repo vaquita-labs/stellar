@@ -2,7 +2,6 @@ import {
   Account,
   BASE_FEE,
   Keypair,
-  Networks,
   Operation,
   StrKey,
   Transaction,
@@ -10,7 +9,7 @@ import {
 } from '@stellar/stellar-sdk';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import type { RequestHandler } from 'express';
-import { sendError } from '@vaquita/shared';
+import { resolveNetworkPassphrase, sendError } from '@vaquita/shared';
 import { logger } from './logger';
 
 /**
@@ -42,7 +41,11 @@ import { logger } from './logger';
  *  - AUTH_SESSION_SECRET     HMAC key for session tokens. Ephemeral if unset
  *                            (restarts log everyone out — fine in dev).
  *  - AUTH_HOME_DOMAIN        manage_data key label (default: vaquita.app).
- *  - STELLAR_NETWORK_PASSPHRASE  defaults to TESTNET, same as packages/shared.
+ *  - STELLAR_NETWORK         REQUIRED (mainnet|testnet); the passphrase is
+ *                            derived from it. The API refuses to start if it is
+ *                            unset (see resolveNetworkPassphrase) so it can
+ *                            never silently verify mainnet signatures against
+ *                            the testnet hash.
  *  - WALLET_AUTH_ENFORCE     set to 'false' to log instead of reject (escape
  *                            hatch while rolling out, e.g. if a wallet type
  *                            turns out unable to sign challenges).
@@ -52,7 +55,9 @@ const CHALLENGE_TIMEOUT_SECONDS = 300;
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 const HOME_DOMAIN = process.env.AUTH_HOME_DOMAIN ?? 'vaquita.app';
-const NETWORK_PASSPHRASE = process.env.STELLAR_NETWORK_PASSPHRASE || Networks.TESTNET;
+// Resolved at module load: a misconfigured network throws here, failing API
+// startup with a clear error instead of silently defaulting to testnet.
+const NETWORK_PASSPHRASE = resolveNetworkPassphrase();
 
 export const isWalletAuthEnforced = process.env.WALLET_AUTH_ENFORCE !== 'false';
 

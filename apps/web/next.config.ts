@@ -3,6 +3,12 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Dev-only: Next 16 blocks requests to its internal dev assets (/_next/*,
+  // HMR websocket) coming from any origin other than localhost. When the app is
+  // served through Caddy at https://app.local.vaquita.fi the client chunks never
+  // load, React never hydrates, and the app hangs on the loader. Allowlisting
+  // the proxied host lets those dev requests through. No effect on prod builds.
+  allowedDevOrigins: ['app.local.vaquita.fi'],
   env: {
     // Cache-buster for the immutable OG/share card images: every `next build`
     // stamps a fresh value (or the commit SHA when CI provides one), so a
