@@ -6,6 +6,7 @@ import {
   buildErc20ApproveTx,
   buildEvmToStellarBurnTx,
 } from '@/networks/evm/cctp';
+import { getStellarNetwork } from '@/networks/stellar/kit';
 import { useEffect, useMemo, useState } from 'react';
 import { FiCheckCircle } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
@@ -33,6 +34,9 @@ const evmOptions: { key: BridgeNetworkKey; label: string }[] = [
   { key: 'base', label: 'Base' },
   { key: 'ethereum', label: 'Ethereum' },
 ];
+const testnetEvmOptions = evmOptions.filter((option) => option.key === 'ethereum-sepolia' || option.key === 'base-sepolia');
+const mainnetEvmOptions = evmOptions.filter((option) => option.key === 'base' || option.key === 'ethereum');
+const defaultEvmNetwork = (): BridgeNetworkKey => getStellarNetwork() === 'mainnet' ? 'base' : 'ethereum-sepolia';
 
 const evmChainConfig: Partial<Record<BridgeNetworkKey, { chainIdHex: string; usdc: `0x${string}` }>> = {
   'base-sepolia': {
@@ -128,7 +132,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
   const { t } = useTranslation();
   const { listTransfers, listCompletedTransfers, createTransfer, attachSourceTx, getFeeQuote } = useBridgeTransfers();
   const [direction, setDirection] = useState<BridgeDirection>('evm_to_stellar');
-  const [evmNetwork, setEvmNetwork] = useState<BridgeNetworkKey>('ethereum-sepolia');
+  const [evmNetwork, setEvmNetwork] = useState<BridgeNetworkKey>(defaultEvmNetwork);
   const [evmWallet, setEvmWallet] = useState('');
   const [amount, setAmount] = useState('');
   const [transfers, setTransfers] = useState<BridgeTransfer[]>([]);
@@ -141,6 +145,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
   const [evmAllowanceLoading, setEvmAllowanceLoading] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const availableEvmOptions = getStellarNetwork() === 'mainnet' ? mainnetEvmOptions : testnetEvmOptions;
   const pairedStellarNetwork = stellarNetworkForEvm(evmNetwork);
   const sourceNetwork = direction === 'evm_to_stellar' ? evmNetwork : pairedStellarNetwork;
   const destinationNetwork = direction === 'evm_to_stellar' ? pairedStellarNetwork : evmNetwork;
@@ -168,6 +173,12 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
     () => [stellarWallet, evmWallet].filter(Boolean),
     [stellarWallet, evmWallet],
   );
+
+  useEffect(() => {
+    if (!availableEvmOptions.some((option) => option.key === evmNetwork)) {
+      setEvmNetwork(availableEvmOptions[0]?.key ?? 'ethereum-sepolia');
+    }
+  }, [availableEvmOptions, evmNetwork]);
 
   const reload = async () => {
     const [activeLists, completedLists] = await Promise.all([
@@ -465,7 +476,7 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
             value={evmNetwork}
             onChange={(event) => setEvmNetwork(event.target.value as BridgeNetworkKey)}
           >
-            {evmOptions.map((option) => (
+            {availableEvmOptions.map((option) => (
               <option key={option.key} value={option.key}>{option.label}</option>
             ))}
           </select>
