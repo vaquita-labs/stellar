@@ -1447,12 +1447,14 @@
         },
         "refresh": "Refresh",
         "refreshing": "Refreshing…",
+        "resumeHint": "Tap a transaction to continue where you left off.",
         "title": "Transaction history",
         "withdraw": "Withdraw"
       },
       "receive": {
         "authOk": "Authenticated with Anclap (JWT obtained).",
         "cta": "Continue",
+        "depositHelper": "Only have Argentine pesos? Deposit with ARS",
         "depositStarted": "Deposit started — continue on Anclap.",
         "description": "Buy ARS with Anclap and receive it in your wallet, then we convert it to USDC automatically.",
         "jwtPreview": "JWT:",
@@ -1481,6 +1483,7 @@
         "stepSwap": "Swap USDC → ARS",
         "stepToken": "SEP-10 · Get Anclap JWT",
         "stepSettled": "Wait for Anclap confirmation",
+        "stepTransfer": "Send ARS to Anclap",
         "stepTrustline": "Activate ARS trustline",
         "stepWithdraw": "SEP-24 · Start withdrawal",
         "settled": "Withdrawal completed on Anclap.",
