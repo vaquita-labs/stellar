@@ -3,10 +3,12 @@ import { stellarWalletsKit } from '@pollar/stellar-wallets-kit-adapter';
 
 export type StellarNetwork = 'mainnet' | 'testnet';
 
-// Única fuente de verdad de la red: se deriva del prefijo de la Pollar
-// publishable key (pub_mainnet_… -> mainnet, pub_testnet_… -> testnet). Ya no
-// existe una env separada para la red de Stellar.
 export function getStellarNetwork(): StellarNetwork {
+  const configuredNetwork = process.env.NEXT_PUBLIC_STELLAR_NETWORK?.toLowerCase();
+  if (configuredNetwork === 'mainnet' || configuredNetwork === 'testnet') {
+    return configuredNetwork;
+  }
+
   const key = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY ?? '';
   return key.startsWith('pub_mainnet_') ? 'mainnet' : 'testnet';
 }
