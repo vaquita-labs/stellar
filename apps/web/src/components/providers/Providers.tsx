@@ -3,7 +3,7 @@
 import { AblyProvider } from '@/core-ui/components';
 import { I18nProvider } from '@/core-ui/i18n/I18nProvider';
 import { useVisibility } from '@/core-ui/stores/visibility';
-import { getNetworkEnum } from '@/networks/stellar/kit';
+import { getNetworkEnum, getStellarNetwork } from '@/networks/stellar/kit';
 import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
 import { Toast } from '@heroui/react';
 import { PollarProvider } from '@pollar/react';
@@ -20,8 +20,7 @@ import { useConsoleToAbly } from './useConsoleToAbly';
 import { useViewportVh } from './useViewportVh';
 
 const POLLAR_API_KEY = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY ?? '';
-const POLLAR_NETWORK =
-  (process.env.NEXT_PUBLIC_STELLAR_NETWORK ?? 'testnet').toLowerCase() === 'public' ? 'mainnet' : 'testnet';
+const POLLAR_NETWORK = getStellarNetwork();
 
 const bundle = createStellarWalletsKitBundle({
   network: getNetworkEnum(),
@@ -33,6 +32,7 @@ export function Providers({ children }: { children: ReactNode }) {
   useViewportVh();
   useConsoleToAbly();
   const { isPublicRoute, showLoader } = useAuthGate();
+  console.log('Providers')
 
   // Single QueryClient per app session — created lazily so it isn't shared
   // across requests/StrictMode remounts, and lifted to the top so react-query

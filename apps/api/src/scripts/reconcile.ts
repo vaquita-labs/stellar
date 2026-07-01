@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import { rpc } from '@stellar/stellar-sdk';
 import { prisma } from '@vaquita/db';
 import { getProjectConfig } from '@vaquita/shared/services/project-config/index';
+import { passphraseForNetwork } from '@vaquita/shared/services/stellar/passphrase';
 import {
   createPrismaReconciliationDependencies,
   resolveReconciliationLedgerRange,
@@ -108,7 +109,7 @@ const resolveOptions = async (): Promise<CliOptions> => {
   const envSingleContractId = splitList(process.env.VAQUITA_POOL_CONTRACT_ID);
   const needsProjectConfig =
     explicitContractIds.length === 0 ||
-    (!readFlag('network-passphrase') && !process.env.STELLAR_NETWORK_PASSPHRASE);
+    (!readFlag('network-passphrase') && !process.env.STELLAR_NETWORK);
   const projectConfig = needsProjectConfig ? await getProjectConfig() : null;
   const projectContractIds = projectConfig?.tokens.map((token) => token.vaquitaContractAddress).filter(Boolean) ?? [];
   const contractIds = firstNonEmptyList(
@@ -120,7 +121,7 @@ const resolveOptions = async (): Promise<CliOptions> => {
 
   const networkPassphrase =
     readFlag('network-passphrase') ??
-    process.env.STELLAR_NETWORK_PASSPHRASE ??
+    passphraseForNetwork(process.env.STELLAR_NETWORK) ??
     projectConfig?.networkPassphrase ??
     '';
 
@@ -133,7 +134,7 @@ const resolveOptions = async (): Promise<CliOptions> => {
     throw new Error('Missing Stellar RPC URL. Provide --rpc-url, STELLAR_RPC_URL, or MAINNET_STELLAR_RPC_URL.');
   }
   if (!networkPassphrase) {
-    throw new Error('Missing network passphrase. Provide --network-passphrase, STELLAR_NETWORK_PASSPHRASE, or project config.');
+    throw new Error('Missing network passphrase. Provide --network-passphrase, STELLAR_NETWORK (mainnet|testnet), or project config.');
   }
 
   const fromLedger = readOptionalLedger('start-ledger') ?? readOptionalLedger('from-ledger');

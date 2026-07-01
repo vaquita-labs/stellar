@@ -3,5 +3,7 @@ export * from './blend';
 export * from './defindexApy';
 export * from './defindexVault';
 export * from './stellar-sdk';
+export * from './passphrase';
+export * from './rpc';
 export * from './events';
 export * from './poolErrors';
