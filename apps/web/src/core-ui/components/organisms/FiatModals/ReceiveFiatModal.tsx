@@ -2,7 +2,7 @@
 
 import { ASSETS } from '@/networks/anclap/anclap';
 import { useAnclapAuthStore } from '@/networks/anclap/anclapAuth';
-import { AnclapCancelled, AnclapError, assetParam, useAnclap } from '@/networks/anclap/useAnclap';
+import { AnclapCancelled, AnclapError, assetParam, SepTransaction, useAnclap } from '@/networks/anclap/useAnclap';
 import { Button, Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
@@ -24,6 +24,9 @@ const IMPLEMENTED: StepKey[] = ['trustline', 'challenge', 'sign', 'token', 'depo
 
 const ARS = 'ARS';
 const USDC = 'USDC';
+
+// Estados terminales de una tx SEP-24 (no hay nada que reanudar).
+const FAILED = new Set(['error', 'refunded', 'expired', 'no_market', 'too_small', 'too_large']);
 
 const INITIAL_STEPS: Record<StepKey, StepStatus> = {
   trustline: 'idle',
@@ -158,6 +161,80 @@ export function ReceiveFiatModal({ open, onOpenChange }: ReceiveFiatModalProps) 
     }
   };
 
+  // Continúa una tx del historial: hidrata el stepper, reanuda el polling de la
+  // acreditación (si sigue en curso) y termina el swap ARS -> USDC.
+  // Nota: si el depósito ya estaba `completed` y el swap se hizo en una sesión
+  // previa, este intento fallará al no haber ARS suficientes (no duplica).
+  const resumeTx = async (tx: SepTransaction, tokenJwt: string) => {
+    if (busy || !walletAddress) return;
+    const account = walletAddress;
+    const failed = tx.status ? FAILED.has(tx.status) : false;
+    const credited = tx.status === 'completed';
+
+    setError(failed ? tx.message ?? tx.status ?? null : null);
+    setShowReconnect(false);
+    setUsdcReceived(null);
+    setInteractiveUrl(tx.more_info_url ?? null);
+    setWaitStatus(tx.status ?? null);
+    setJwt(tokenJwt);
+    setSharedJwt(tokenJwt);
+    // Trustline + SEP-10 + inicio del depósito ya ocurrieron (la tx existe).
+    setSteps({
+      trustline: 'done',
+      challenge: 'done',
+      sign: 'done',
+      token: 'done',
+      deposit: 'done',
+      credit: credited ? 'done' : failed ? 'error' : 'running',
+      swap: 'idle',
+    });
+    if (failed) return; // terminal con error: nada que reanudar
+
+    setBusy(true);
+    try {
+      // 1) Esperar (o confirmar) la acreditación de ARS on-chain.
+      let creditedTx = tx;
+      if (!credited) {
+        setWaiting(true);
+        creditedTx = await waitForCompletion(tx.id, tokenJwt, {
+          shouldStop: () => !openRef.current,
+          onStatus: (status) => setWaitStatus(status ?? null),
+        });
+        setWaiting(false);
+        mark('credit', 'done');
+      }
+      const arsAmount = creditedTx.amount_out ?? creditedTx.amount_in;
+      if (!arsAmount) throw new AnclapError('La transacción no informó el monto acreditado (amount_out).');
+
+      // 2) Swap ARS -> USDC para terminar el flujo donde quedó.
+      mark('swap', 'running');
+      const { quotedOut } = await swap({
+        account,
+        send: assetParam(ARS, ASSETS[ARS].issuer),
+        sendAmount: arsAmount,
+        dest: assetParam(USDC, ASSETS[USDC].issuer),
+      });
+      mark('swap', 'done');
+      setUsdcReceived(quotedOut);
+      toast.success(t('wallet.fiat.receive.swapDone', 'Converted to USDC — done!'));
+    } catch (e) {
+      if (e instanceof AnclapCancelled) return;
+      const msg = e instanceof AnclapError || e instanceof Error ? e.message : String(e);
+      setError(msg);
+      setSteps((prev) => {
+        const next = { ...prev };
+        (Object.keys(next) as StepKey[]).forEach((k) => {
+          if (next[k] === 'running') next[k] = 'error';
+        });
+        return next;
+      });
+      if (walletType) setShowReconnect(true);
+    } finally {
+      setWaiting(false);
+      setBusy(false);
+    }
+  };
+
   const handleReconnect = () => {
     if (!walletType) return;
     setError(null);
@@ -254,7 +331,7 @@ export function ReceiveFiatModal({ open, onOpenChange }: ReceiveFiatModalProps) 
       )}
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
-      <FiatTxHistory assetCode={ARS} kind="deposit" jwt={jwt} />
+      <FiatTxHistory assetCode={ARS} kind="deposit" jwt={jwt} onResume={resumeTx} />
     </AppModal>
   );
 }
