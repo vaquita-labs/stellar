@@ -6,7 +6,7 @@ import { useRef } from 'react';
 import { Group } from 'three';
 import { EditionMode, useMapStore } from '../../../stores';
 import { MapObjectType, WorldType } from '../../../types';
-import { getObjectGroup } from '../../map/helpers';
+import { getObjectGroup } from '../../map/tiles/registry';
 
 type ObjectListObjectCardProps = {
   used: number;

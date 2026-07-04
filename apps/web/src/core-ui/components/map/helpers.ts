@@ -1,18 +1,16 @@
-import { getBankGroup, getBarnGroup, getLeaderboardGroup } from '@/core-ui/components/map/objects';
-import { getBushGroup } from '@/core-ui/components/map/objects/bush';
-import { getGrassGroup } from '@/core-ui/components/map/objects/grass';
-import { getRoadGroup } from '@/core-ui/components/map/objects/road';
-import { getRockGroup } from '@/core-ui/components/map/objects/rock';
-import { getTreeGroup } from '@/core-ui/components/map/objects/tree';
-import { getWaterGroup } from '@/core-ui/components/map/objects/water';
-import { TILE_HEIGHT } from '@/core-ui/components/templates/WorldMap/vaquita/constants';
-import { MapObject, MapObjectType, ProfileMapObjectsResponseDTO, WorldType } from '@/core-ui/types';
+import { MapObject, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
 import * as THREE from 'three';
+import { TILE_HEIGHT } from './constants';
 
+// Utilidades de Three.js compartidas por los builders de tiles/objects y los
+// edificios. La creación de objetos por tipo vive en tiles/registry.ts.
+
+/** Centro Y de una caja de `height` cuyo tope queda al nivel del suelo (y=0). */
 export const getY_0 = (height: number) => {
   return -TILE_HEIGHT + height / 2;
 };
 
+/** Centro Y de una caja de `height` apoyada sobre el suelo (y=0). */
 export const getY_1 = (height: number) => {
   return height / 2;
 };
@@ -25,24 +23,6 @@ export const getAddMesh =
     mesh.position.set(pos[0], pos[1], pos[2]);
     group.add(mesh);
   };
-
-export const objectScaleUp = (threeObject: THREE.Object3D | undefined | null, mapObject: MapObject) => {
-  if (threeObject && 'scale' in threeObject) {
-    threeObject.scale.set(1.2, 1.2, 1.2);
-  }
-  if (threeObject && 'position' in threeObject) {
-    threeObject.position.y = (mapObject?.position?.[1] || 0) + 0.02;
-  }
-};
-
-export const objectScaleDown = (threeObject: THREE.Object3D | undefined | null, mapObject: MapObject | undefined) => {
-  if (threeObject && 'scale' in threeObject) {
-    threeObject.scale.set(1, 1, 1);
-  }
-  if (threeObject && 'position' in threeObject && mapObject?.position) {
-    threeObject.position.y = mapObject.position?.[1] || 0;
-  }
-};
 
 export const objectSelectUp = (threeObject: THREE.Object3D<THREE.Object3DEventMap>, color = '#22c55e') => {
   const mesh = threeObject as THREE.Mesh;
@@ -79,48 +59,29 @@ export const objectSelectDown = (threeObject: THREE.Object3D<THREE.Object3DEvent
 };
 
 // Libera geometrías y materiales de un grupo construido con los builders de
-// objects/*. Sin esto, cada reconstrucción del mapa deja recursos huérfanos
-// en la GPU (los builders crean geometry/material nuevos por mesh).
+// tiles/objects/*. Sin esto, cada reconstrucción del mapa deja recursos
+// huérfanos en la GPU. Las geometrías del cache compartido (recipe.ts) se
+// saltan: viven durante toda la sesión y las reusan todos los tiles.
 export const disposeObject = (object: THREE.Object3D) => {
   object.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh) return;
-    mesh.geometry?.dispose();
+    if (!mesh.geometry?.userData?.shared) {
+      mesh.geometry?.dispose();
+    }
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     materials.forEach((material) => material?.dispose());
   });
 };
 
-export const getObjectGroup = (mapObject: MapObject, worldType: WorldType) => {
-  if (mapObject.type === MapObjectType.WATER) {
-    return getWaterGroup(mapObject, worldType);
-  } else if (mapObject.type === MapObjectType.ROCK) {
-    return getRockGroup(mapObject, worldType);
-  } else if (mapObject.type === MapObjectType.GRASS) {
-    return getGrassGroup(mapObject, worldType);
-  } else if (mapObject.type === MapObjectType.BUSH) {
-    return getBushGroup(mapObject, worldType);
-  } else if (mapObject.type === MapObjectType.TREE) {
-    return getTreeGroup(mapObject, worldType);
-  } else if (mapObject.type === MapObjectType.ROAD) {
-    return getRoadGroup(mapObject, worldType);
-  } else if (mapObject.type === MapObjectType.BANK) {
-    return getBankGroup(mapObject, worldType, null);
-  } else if (mapObject.type === MapObjectType.LEADERBOARD) {
-    return getLeaderboardGroup(mapObject, worldType, null);
-  } else if (mapObject.type === MapObjectType.BARN) {
-    return getBarnGroup(mapObject, worldType);
-  }
-  return getGrassGroup(mapObject, worldType);
-};
 export function getMapCenter(tiles: ProfileMapObjectsResponseDTO['objects']) {
   // Sin tiles (aún no llega el API) devolvemos un centro válido: Math.min()
   // de un array vacío es Infinity y rompería cámara y controles con NaN.
   if (tiles.length === 0) {
     return [0, -2, 0] as [number, number, number];
   }
-  const xPositions = tiles.map((tile) => tile.position[0]);
-  const zPositions = tiles.map((tile) => tile.position[2]);
+  const xPositions = tiles.map((tile: MapObject) => tile.position[0]);
+  const zPositions = tiles.map((tile: MapObject) => tile.position[2]);
 
   const centerX = (Math.min(...xPositions) + Math.max(...xPositions)) / 2;
   const centerZ = (Math.min(...zPositions) + Math.max(...zPositions)) / 2;

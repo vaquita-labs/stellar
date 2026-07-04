@@ -1,5 +1,5 @@
-import { composeBuildingRotation } from '@/core-ui/components/map/buildingRotations';
-import { getObjectGroup } from '@/core-ui/components/map/helpers';
+import { composeBuildingRotation } from '@/core-ui/components/map/tiles/buildingRotations';
+import { getObjectGroup } from '@/core-ui/components/map/tiles/registry';
 import { MapObject, MapObjectType, WorldType } from '@/core-ui/types';
 import * as THREE from 'three';
 
