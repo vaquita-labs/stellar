@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LeaderboardResponseDTO } from '@/core-ui/types';
 import { useLeaderboardData, useProfileData } from '../../../hooks';
@@ -16,38 +16,21 @@ import {
 import { LeaderboardSubHeader, SortDirection, SortKey } from './LeaderboardSubHeader';
 
 const SKELETON_ROWS = 3;
+const SEARCH_DEBOUNCE_MS = 350;
 
 /* ------------------------------------------------------------------ */
-/* Ranking + filtering                                                 */
+/* Debounced value                                                     */
 /* ------------------------------------------------------------------ */
 
-/** Apply the user-selected sort + direction to a list of cards.
- *  Rows arrive already in descending rank order, so `rank + desc` is a no-op
- *  and `rank + asc` simply reverses the list. */
-function sortRows(
-  rows: LeaderboardCardData[],
-  key: SortKey,
-  direction: SortDirection
-): LeaderboardCardData[] {
-  if (key === 'rank') {
-    return direction === 'desc' ? rows : [...rows].reverse();
-  }
-  const accessor: Record<Exclude<SortKey, 'rank'>, (r: LeaderboardCardData) => number> = {
-    level: (r) => r.level,
-    streak: (r) => r.streak,
-    badges: (r) => r.badges,
-  };
-  const get = accessor[key];
-  return [...rows].sort((a, b) =>
-    direction === 'desc' ? get(b) - get(a) : get(a) - get(b)
-  );
-}
-
-/** Case-insensitive substring match on the username. */
-function filterRows(rows: LeaderboardCardData[], query: string): LeaderboardCardData[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return rows;
-  return rows.filter((r) => r.username.toLowerCase().includes(q));
+/** Debounce the search text before it becomes a server query param, so we
+ *  don't fire one request per keystroke. */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(id);
+  }, [value, delayMs]);
+  return debounced;
 }
 
 /* ------------------------------------------------------------------ */
@@ -116,18 +99,75 @@ function ErrorState({ message }: { message: string }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Infinite-scroll sentinel                                            */
+/* ------------------------------------------------------------------ */
+
+/** Invisible marker below the feed — when it scrolls into view (with a
+ *  viewport of margin to prefetch early), ask for the next page. */
+function LoadMoreSentinel({
+  onVisible,
+  disabled,
+}: {
+  onVisible: () => void;
+  disabled: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const onVisibleRef = useRef(onVisible);
+  onVisibleRef.current = onVisible;
+
+  useEffect(() => {
+    if (disabled) return;
+    const node = ref.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) onVisibleRef.current();
+      },
+      { rootMargin: '600px 0px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [disabled]);
+
+  return <div ref={ref} aria-hidden className="h-px" />;
+}
+
+/* ------------------------------------------------------------------ */
 /* Feed                                                                */
 /* ------------------------------------------------------------------ */
 
-function LeaderboardFeed({ rows }: { rows: LeaderboardCardData[] }) {
+function LeaderboardFeed({
+  rows,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
+}: {
+  rows: LeaderboardCardData[];
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onLoadMore: () => void;
+}) {
+  const { t } = useTranslation();
   return (
-    <ul className="flex flex-col gap-3">
-      {rows.map((row) => (
-        <li key={row.walletAddress}>
-          <LeaderboardCard user={row} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-3">
+        {rows.map((row) => (
+          <li key={row.walletAddress}>
+            <LeaderboardCard user={row} />
+          </li>
+        ))}
+        {isFetchingNextPage && (
+          <li aria-label={t('leaderboard.loadingMore', 'Loading more vaqueros')}>
+            <LeaderboardCardSkeleton />
+          </li>
+        )}
+      </ul>
+      <LoadMoreSentinel
+        onVisible={onLoadMore}
+        disabled={!hasNextPage || isFetchingNextPage}
+      />
+    </>
   );
 }
 
@@ -203,27 +243,51 @@ function useCurrentUserIdentity() {
 
 export const LeaderboardPage = () => {
   const { t } = useTranslation();
-  const { data: leaderboardRows = [], isLoading, error } = useLeaderboardData();
-  const rankedRows = useLeaderboardRows(leaderboardRows);
 
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [direction, setDirection] = useState<SortDirection>('desc');
   const [query, setQuery] = useState('');
-  const deferredQuery = useDeferredValue(query);
+  const debouncedQuery = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
+
+  // Search + sort + pagination all happen server-side now: each view is its
+  // own infinite query, and pages arrive already filtered/ordered globally.
+  const {
+    data,
+    isLoading,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    isPlaceholderData,
+    fetchNextPage,
+  } = useLeaderboardData({ search: debouncedQuery, sort: sortKey, direction });
+
+  const leaderboardRows = useMemo(
+    () => data?.pages.flatMap((page) => page.rows) ?? [],
+    [data]
+  );
+  const rankedRows = useLeaderboardRows(leaderboardRows);
 
   const { displayName, handle } = useCurrentUserIdentity();
-
-  const visibleRows = useMemo(
-    () => filterRows(sortRows(rankedRows, sortKey, direction), deferredQuery),
-    [rankedRows, sortKey, direction, deferredQuery]
-  );
 
   const renderFeed = () => {
     if (isLoading) return <LoadingState />;
     if (error) return <ErrorState message={`${error}`} />;
-    if (rankedRows.length === 0) return <EmptyState />;
-    if (visibleRows.length === 0) return <NoResults query={query} />;
-    return <LeaderboardFeed rows={visibleRows} />;
+    if (rankedRows.length === 0) {
+      return debouncedQuery ? <NoResults query={debouncedQuery} /> : <EmptyState />;
+    }
+    return (
+      // While a new view (search/sort change) resolves, the previous list stays
+      // visible but dimmed; the sentinel is disabled so we don't page the
+      // placeholder view by accident.
+      <div className={isPlaceholderData ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
+        <LeaderboardFeed
+          rows={rankedRows}
+          hasNextPage={!!hasNextPage && !isPlaceholderData}
+          isFetchingNextPage={isFetchingNextPage}
+          onLoadMore={fetchNextPage}
+        />
+      </div>
+    );
   };
 
   return (

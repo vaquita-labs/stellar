@@ -169,6 +169,127 @@ export function enrichLeaderboardRows(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Pagination / server-side view (search + sort + slice)
+// ---------------------------------------------------------------------------
+
+export type LeaderboardSortKey = 'rank' | 'level' | 'streak' | 'badges';
+export type LeaderboardSortDirection = 'asc' | 'desc';
+
+export interface LeaderboardPageParams {
+  limit: number;
+  offset: number;
+  search: string;
+  sort: LeaderboardSortKey;
+  direction: LeaderboardSortDirection;
+}
+
+export interface LeaderboardPage {
+  rows: EnrichedLeaderboardRow[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+export const LEADERBOARD_DEFAULT_PAGE_SIZE = 20;
+export const LEADERBOARD_MAX_PAGE_SIZE = 100;
+
+const LEADERBOARD_SORT_KEYS: LeaderboardSortKey[] = ['rank', 'level', 'streak', 'badges'];
+
+const firstQueryValue = (value: unknown): unknown => (Array.isArray(value) ? value[0] : value);
+
+const parseBoundedInt = (value: unknown, fallback: number, min: number, max: number): number => {
+  const raw = firstQueryValue(value);
+  if (raw == null || raw === '') return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n)) return fallback;
+  return Math.min(Math.max(n, min), max);
+};
+
+/**
+ * Parses the paging/view query params of GET /leaderboard. Every param is
+ * optional and clamped, so any junk in the URL degrades to the default view
+ * instead of a 400 — the cycle param stays the only validated input.
+ */
+export function parseLeaderboardPageQuery(query: {
+  limit?: unknown;
+  offset?: unknown;
+  search?: unknown;
+  sort?: unknown;
+  direction?: unknown;
+}): LeaderboardPageParams {
+  const rawSearch = firstQueryValue(query.search);
+  const rawSort = firstQueryValue(query.sort);
+  const rawDirection = firstQueryValue(query.direction);
+
+  return {
+    limit: parseBoundedInt(query.limit, LEADERBOARD_DEFAULT_PAGE_SIZE, 1, LEADERBOARD_MAX_PAGE_SIZE),
+    offset: parseBoundedInt(query.offset, 0, 0, Number.MAX_SAFE_INTEGER),
+    search: typeof rawSearch === 'string' ? rawSearch.trim() : '',
+    sort: LEADERBOARD_SORT_KEYS.includes(rawSort as LeaderboardSortKey)
+      ? (rawSort as LeaderboardSortKey)
+      : 'rank',
+    direction: rawDirection === 'asc' ? 'asc' : 'desc',
+  };
+}
+
+/** Mirrors the web client's display-handle fallback (`@vaquero<tail>`) so a
+ *  search for what the card literally shows still matches profiles without a
+ *  nickname. */
+const leaderboardSearchHaystack = (row: EnrichedLeaderboardRow): string => {
+  const nickname = (row.nickname ?? '').trim().toLowerCase();
+  const wallet = row.walletAddress.toLowerCase();
+  const fallbackHandle = `vaquero${wallet.slice(-4)}`;
+  return `${nickname} ${nickname.replace(/\s+/g, '')} ${wallet} ${fallbackHandle}`;
+};
+
+/**
+ * Applies the user-facing view (search → sort → page slice) over the fully
+ * enriched, rank-ordered leaderboard. Rows keep their original `position`
+ * (true rank) regardless of the sort metric, matching the previous client-side
+ * behaviour. Sorting happens before slicing so infinite-scroll pages of a
+ * non-rank sort stay globally consistent.
+ */
+export function paginateLeaderboardRows(
+  rows: EnrichedLeaderboardRow[],
+  params: LeaderboardPageParams,
+): LeaderboardPage {
+  const { limit, offset, search, sort, direction } = params;
+
+  let view = rows;
+
+  if (search) {
+    const q = search.toLowerCase().replace(/^@/, '');
+    view = view.filter((row) => leaderboardSearchHaystack(row).includes(q));
+  }
+
+  if (sort === 'rank') {
+    if (direction === 'asc') view = [...view].reverse();
+  } else {
+    const accessor: Record<Exclude<LeaderboardSortKey, 'rank'>, (r: EnrichedLeaderboardRow) => number> = {
+      level: (r) => r.experience,
+      streak: (r) => r.streak,
+      badges: (r) => r.badges,
+    };
+    const get = accessor[sort];
+    const sign = direction === 'desc' ? -1 : 1;
+    // Stable tiebreak on rank so equal metrics keep leaderboard order.
+    view = [...view].sort((a, b) => sign * (get(a) - get(b)) || a.position - b.position);
+  }
+
+  const total = view.length;
+  const pageRows = view.slice(offset, offset + limit);
+
+  return {
+    rows: pageRows,
+    total,
+    limit,
+    offset,
+    hasMore: offset + pageRows.length < total,
+  };
+}
+
 /**
  * Computes USDC×seconds leaderboard for a given cycle.
  * Pass cycleId=0 to compute a live leaderboard ending at now.

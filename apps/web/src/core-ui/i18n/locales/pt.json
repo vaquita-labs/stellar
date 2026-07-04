@@ -525,6 +525,7 @@
       "label": "Filtrar por métrica"
     },
     "loadingLabel": "Carregando o ranking",
+    "loadingMore": "Carregando mais vaqueros",
     "noResults": {
       "description": "Tente outro nome de usuário ou limpe a busca.",
       "title": "Nenhum vaquero corresponde a “{{query}}”"
