@@ -1,6 +1,6 @@
 'use client';
 
-import { buildServerAchievements } from '@/core-ui/data/profile-badges';
+import { buildServerAchievements, type Badge } from '@/core-ui/data/profile-badges';
 import { deriveLevel } from '@/core-ui/helpers';
 import {
   LeaderboardPageDTO,
@@ -14,10 +14,11 @@ import { useConfigStore } from '@/core-ui/stores';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiArrowLeft, FiLoader } from 'react-icons/fi';
 import { BadgeTile } from '../profile/BadgeTile';
+import { LeaderboardBadgeModal } from './LeaderboardBadgeModal';
 import { FollowButton, getLeaderboardUsername } from './LeaderboardCard';
 
 const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
@@ -98,6 +99,15 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
     () => buildServerAchievements(achievementsData?.achievements).filter((b) => b.unlocked),
     [achievementsData?.achievements],
   );
+
+  // Detalle read-only del logro clickeado. El hash del mint sale de la misma
+  // respuesta de achievements de ESTE perfil (campo transactionHash).
+  const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
+  const selectedTxHash = useMemo(() => {
+    if (!selectedBadge) return null;
+    const row = achievementsData?.achievements?.find((a) => a.key === selectedBadge.id);
+    return row?.minted && row.transactionHash ? row.transactionHash : null;
+  }, [selectedBadge, achievementsData?.achievements]);
 
   return (
     <div className="w-full shrink-0 flex flex-col gap-2 pb-2">
@@ -204,7 +214,7 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
             <div className="flex h-12 items-center gap-2 overflow-x-auto">
               {unlockedBadges.map((badge) => (
                 <div key={badge.id} className="w-12 shrink-0">
-                  <BadgeTile badge={badge} size="sm" onPress={() => {}} />
+                  <BadgeTile badge={badge} size="sm" onPress={() => setSelectedBadge(badge)} />
                 </div>
               ))}
             </div>
@@ -215,6 +225,15 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
           )}
         </div>
       </div>
+
+      <LeaderboardBadgeModal
+        badge={selectedBadge}
+        txHash={selectedTxHash}
+        open={!!selectedBadge}
+        onOpenChange={(open) => {
+          if (!open) setSelectedBadge(null);
+        }}
+      />
     </div>
   );
 }

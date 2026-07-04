@@ -51,6 +51,7 @@ export const useDeposit = (depositId: number) => {
           serverTimestamp: data?.data?.serverTimestamp || 0,
           confirmedTimestamp: data?.data?.confirmedTimestamp || 0,
           inLockPeriod: data?.data?.inLockPeriod || 0,
+          fetchedAtTimestamp: Date.now(),
         };
         return deposit;
       } catch (error) {

@@ -42,11 +42,13 @@ interface MapProps {
   interactionsDisabled?: boolean;
 }
 
-export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false }: MapProps) => {
+export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDisabled = false }: MapProps) => {
   const router = useRouter();
   const isEditMode = useMapStore((store) => store.editMode);
   const currentTiles = useMapStore((store) => store.currentTiles);
-  const { isLoaded: mapLoaded } = useSyncMapObjects();
+  // Con walletAddress (vista de leaderboard) se carga el mapa de ESE perfil;
+  // sin él, el del usuario logueado.
+  const { isLoaded: mapLoaded } = useSyncMapObjects(walletAddress);
   const [showVaquitasListModal, setShowVaquitasListModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
@@ -54,6 +56,11 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
   const [showMoodModal, setShowMoodModal] = useState(false);
   const userWalletAddress = useConfigStore((store) => store.walletAddress);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
+
+  // Mapa de otro jugador (vista de leaderboard): la vaquita es solo decorativa.
+  // El humor y el modal de estado son datos del ESPECTADOR y no tienen sentido
+  // sobre la vaquita de otra persona.
+  const isOwnMap = !walletAddress || walletAddress === userWalletAddress;
   const { mood, canCollect, goldCoinsToCollect, experienceToCollect } = useVaquitaMood();
   const { data: streak } = useProfileStreak();
   const { goldDailyCollect } = useRestProfile();
@@ -136,7 +143,13 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
             hasWallet={!!userWalletAddress}
           />
         )}
-        {!isEditMode && <Vaquita vaquita={PLACEHOLDER_VAQUITA} mood={mood} onSelect={handleVaquitaClick} />}
+        {!isEditMode && (
+          <Vaquita
+            vaquita={PLACEHOLDER_VAQUITA}
+            mood={isOwnMap ? mood : 'normal'}
+            onSelect={isOwnMap ? handleVaquitaClick : undefined}
+          />
+        )}
         {!isAvailable && (
           <Billboard>
             <Text fontWeight="bold" position={[0, 1, 3]} fontSize={2} color="black" anchorX="center" anchorY="middle">

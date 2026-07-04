@@ -3,6 +3,7 @@ import { useApyByLockPeriod } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
 import { Card } from '@heroui/react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -44,12 +45,26 @@ export const VaquitaDepositCard = ({
     deposit.lockPeriod
   );
 
-  const now = deposit.serverTimestamp || Date.now();
+  // La lista de depósitos se cachea (staleTime Infinity + localStorage), así
+  // que `serverTimestamp`/`inLockPeriod` quedan congelados al momento del
+  // fetch. El "ahora" real se deriva sumando el tiempo transcurrido en el
+  // cliente desde ese fetch, y el estado bloqueado se recalcula del tiempo.
+  const [clientNow, setClientNow] = useState(() => Date.now());
+  const now =
+    deposit.serverTimestamp && deposit.fetchedAtTimestamp
+      ? deposit.serverTimestamp + (clientNow - deposit.fetchedAtTimestamp)
+      : clientNow;
   const unlockTimestamp = deposit.createdTimestamp + deposit.lockPeriod;
   const elapsed = Math.max(0, now - deposit.createdTimestamp);
   const progress = Math.min(1, deposit.lockPeriod > 0 ? elapsed / deposit.lockPeriod : 1);
   const remainingMs = Math.max(0, unlockTimestamp - now);
-  const isLocked = deposit.inLockPeriod;
+  const isLocked = deposit.inLockPeriod && remainingMs > 0;
+
+  useEffect(() => {
+    if (!isLocked) return;
+    const id = setInterval(() => setClientNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isLocked]);
   const isInteractive = !!onPress;
 
   const cardClasses = isLocked
