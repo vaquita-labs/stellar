@@ -120,5 +120,7 @@ export const useSyncMapObjects = () => {
     setTiles(JSON.parse(objectsString));
   }, [objectsString, setTiles]);
 
-  return { refetch };
+  // isLoaded distingue "el mapa está vacío" de "todavía no llegó el API":
+  // con mapas que arrancan vacíos, currentTiles.length ya no sirve para eso.
+  return { refetch, isLoaded: data !== undefined };
 };

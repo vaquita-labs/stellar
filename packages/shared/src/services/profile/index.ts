@@ -26,13 +26,14 @@ import {
   type ProfileResponseDTO,
   type ProfileRewardsResponseDTO,
   type ProfileStreakResponseDTO,
+  type PurchaseMapItemResponseDTO,
   Reward,
   type RewardDocument,
   type RewardResponseDTO,
 } from '../../types';
 import { getRewardsConfig } from '../project-config';
-import { REWARD_REASON_DAILY_CHECKIN } from './constants';
-import { friendlyStandardMap } from './map-template';
+import { REWARD_REASON_DAILY_CHECKIN, REWARD_REASON_SHOP_PURCHASE } from './constants';
+import { friendlyStandardMap, mapTemplateInventory } from './map-template';
 import { evaluateRule } from './rules';
 
 // ---------------------------------------------------------------------------
@@ -425,6 +426,8 @@ export const getMapObjectsAvailableData = async () => {
           variant: variant as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7,
           price: Math.max(objectPrices[i] || 0, 0),
           itemsAvailable: Math.max(objectFreeItems[i] || 0, 0),
+          // El inventario por perfil se suma en toProfileMapObjectsAvailableResponseDTO.
+          owned: 0,
         });
       }
     }
@@ -625,6 +628,20 @@ export const getProfileMapObjects = async (profile: Profile) => {
     },
   });
 
+  // Cada objeto del template queda respaldado en el inventario del perfil,
+  // así quitarlo del mapa lo devuelve a su colección (los objetos del mapa
+  // son bienes del usuario, no decorado descartable).
+  try {
+    await prisma.profileMapItem.createMany({
+      data: mapTemplateInventory().map((item) => ({ profileId: profile.id, ...item })),
+      skipDuplicates: true,
+    });
+  } catch (error) {
+    // El mapa ya se creó; sin respaldo el usuario solo pierde el retorno a
+    // colección de lo inicial. No bloquea la creación del perfil.
+    console.error('Error seeding map template inventory', error);
+  }
+
   return {
     success: true,
     errorMessage: '',
@@ -651,10 +668,114 @@ export const toProfileMapObjectsAvailableResponseDTO = async (networkName: strin
 
   const { objects } = await getMapObjectsAvailableData();
 
+  // Inventario del usuario: lo comprado/otorgado se suma a los freeItems
+  // globales del catálogo para formar lo colocable.
+  const ownedRows = await prisma.profileMapItem.findMany({ where: { profileId: profile.id } });
+  const ownedByItem = new Map<string, number>();
+  for (const row of ownedRows) {
+    ownedByItem.set(`${row.type}|${row.variant}`, row.quantity);
+  }
+
+  const merged = objects.map((object) => {
+    const key = `${object.type}|${object.variant}`;
+    const owned = ownedByItem.get(key) ?? 0;
+    ownedByItem.delete(key);
+    return { ...object, owned, itemsAvailable: object.itemsAvailable + owned };
+  });
+
+  // Ítems del inventario que no están (o ya no están) en el catálogo — p. ej.
+  // el kit inicial o regalos retirados de la venta. No son comprables
+  // (price 0) pero sí colocables, y al quitarlos del mapa vuelven acá.
+  for (const [key, owned] of ownedByItem) {
+    if (owned <= 0) continue;
+    const [type, variant] = key.split('|');
+    merged.push({
+      type: type as MapObjectType,
+      variant: Number(variant) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7,
+      price: 0,
+      itemsAvailable: owned,
+      owned,
+    });
+  }
+
   return {
     walletAddress: profile?.wallet_address || '',
     networkName,
-    objects,
+    objects: merged,
+  };
+};
+
+/**
+ * Compra de un ítem del catálogo de mapa: valida el precio contra el catálogo
+ * global (map_objects) y el saldo de monedas contra el ledger, y en una
+ * transacción registra el gasto (fila negativa de Gold Coin, reason
+ * 'shop-purchase') e incrementa el inventario del perfil.
+ */
+export const purchaseMapItem = async (
+  profileData: Profile,
+  type: MapObjectType,
+  variant: number,
+  quantity: number,
+): Promise<{ success: boolean; errorMessage: string; status: number; purchase?: PurchaseMapItemResponseDTO }> => {
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 50) {
+    return { success: false, errorMessage: 'Invalid quantity', status: 400 };
+  }
+
+  const { objects } = await getMapObjectsAvailableData();
+  const catalogItem = objects.find((object) => object.type === type && object.variant === variant);
+  if (!catalogItem) {
+    return { success: false, errorMessage: 'Item not found in catalog', status: 404 };
+  }
+  if (catalogItem.price <= 0) {
+    return { success: false, errorMessage: 'Item is not for sale', status: 400 };
+  }
+
+  const totalPrice = catalogItem.price * quantity;
+
+  const rewardsResponse = await getRewardsData(profileData);
+  if (!rewardsResponse.success) {
+    return { success: false, errorMessage: 'Could not resolve gold balance', status: 500 };
+  }
+  const goldBalance = rewardsResponse.rewards.find((reward) => reward.key === Reward.GOLD_COIN)?.amount ?? 0;
+  if (goldBalance < totalPrice) {
+    return { success: false, errorMessage: 'Not enough gold coins', status: 400 };
+  }
+
+  const { data: goldReward, error: goldRewardError } = await getRewardByKey(Reward.GOLD_COIN);
+  if (goldRewardError || !goldReward) {
+    return { success: false, errorMessage: 'Gold coin reward not configured', status: 500 };
+  }
+
+  // Atómico: el gasto y el ítem se registran juntos. (El chequeo de saldo de
+  // arriba no es serializable con compras concurrentes; para el volumen actual
+  // un sobregiro puntual es aceptable y quedaría auditado en el ledger.)
+  const [, itemRow] = await prisma.$transaction([
+    prisma.profileReward.create({
+      data: {
+        profileId: profileData.id,
+        rewardId: BigInt(goldReward.id),
+        amount: -totalPrice,
+        reason: REWARD_REASON_SHOP_PURCHASE,
+      },
+    }),
+    prisma.profileMapItem.upsert({
+      where: { profileId_type_variant: { profileId: profileData.id, type, variant } },
+      create: { profileId: profileData.id, type, variant, quantity },
+      update: { quantity: { increment: quantity } },
+    }),
+  ]);
+
+  return {
+    success: true,
+    errorMessage: '',
+    status: 200,
+    purchase: {
+      type,
+      variant,
+      quantity,
+      owned: itemRow.quantity,
+      goldBalance: goldBalance - totalPrice,
+    },
   };
 };
 

@@ -225,3 +225,24 @@ export const friendlyStandardMap: ProfileMapObjectsResponseDTO['objects'] = [
   { position: [ 12, 0, 13 ], type: MapObjectType.WATER, variant: 0, rotation: [ 0, 0, 0 ] },
   { position: [ 13, 0, 13 ], type: MapObjectType.WATER, variant: 0, rotation: [ 0, 0, 0 ] },
 ];
+
+/**
+ * Inventario que respalda cada objeto del template inicial: todo lo que está
+ * en el mapa es un bien del usuario, así quitarlo del mapa lo devuelve a su
+ * colección en vez de perderse. Derivado del template para no quedar fuera
+ * de sync al editarlo.
+ */
+export const mapTemplateInventory = (): Array<{ type: string; variant: number; quantity: number }> => {
+  const counts = new Map<string, { type: string; variant: number; quantity: number }>();
+  for (const { type, variant } of friendlyStandardMap) {
+    if (type === MapObjectType.EMPTY) continue;
+    const key = `${type}|${variant}`;
+    const entry = counts.get(key);
+    if (entry) {
+      entry.quantity += 1;
+    } else {
+      counts.set(key, { type, variant, quantity: 1 });
+    }
+  }
+  return Array.from(counts.values());
+};

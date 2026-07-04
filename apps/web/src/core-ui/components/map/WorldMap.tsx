@@ -46,7 +46,7 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
   const router = useRouter();
   const isEditMode = useMapStore((store) => store.editMode);
   const currentTiles = useMapStore((store) => store.currentTiles);
-  useSyncMapObjects();
+  const { isLoaded: mapLoaded } = useSyncMapObjects();
   const [showVaquitasListModal, setShowVaquitasListModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
@@ -119,10 +119,10 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
         className="h-full"
       >
         <DayCycleSky />
-        {/* Montar la cámara solo cuando hay tiles: se inicializa una única vez
-            y debe hacerlo con el centro real del mapa (antes lo garantizaba el
-            remount del Canvas via key; ese remount ya no existe). */}
-        {currentTiles.length > 0 && <SceneCamera center={center} />}
+        {/* Montar la cámara cuando el mapa ya cargó (aunque venga vacío — los
+            perfiles nuevos arrancan sin tiles): se inicializa una única vez y
+            debe hacerlo con el centro real (o el centro de la grilla). */}
+        {mapLoaded && <SceneCamera center={center} />}
         <EditGrid />
         {/* <FloatingIslandBase /> */}
         <WaterBackground worldType={worldType} />

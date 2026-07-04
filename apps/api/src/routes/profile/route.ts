@@ -18,7 +18,9 @@ import {
   getRewardByKey,
   getRewardsData,
   getStreakCountsByProfile,
+  MapObjectType,
   prisma,
+  purchaseMapItem,
   REWARD_REASON_DAILY_CHECKIN,
   type NotificationPreferenceKey,
   type NotificationPreferences,
@@ -203,7 +205,9 @@ router.post('/wallet/:walletAddress/map-objects', requireWalletSession, async (r
       where: { id: profileMapObjects.id },
       data: { objects },
     });
-    return sendSuccess(res, result);
+    // No devolver la fila cruda de Prisma: su `id` BigInt rompe JSON.stringify
+    // (el update quedaba guardado pero la respuesta salía 500).
+    return sendSuccess(res, { id: Number(result.id), objects: result.objects });
   } catch (err) {
     req.log.error({ err, profileMapObjectsId: profileMapObjects.id }, 'Failed to update map objects');
     return sendError(res, 'Failed to update map objects', err, 500);
@@ -222,6 +226,44 @@ router.get('/wallet/:walletAddress/map-objects-available', async (req, res) => {
   }
 
   return sendSuccess(res, await toProfileMapObjectsAvailableResponseDTO(await getNetworkName(), profileData));
+});
+
+router.post('/wallet/:walletAddress/map-items/purchase', requireWalletSession, async (req, res) => {
+  const { walletAddress } = req.params;
+  const { type, variant, quantity } = req.body ?? {};
+  req.log.info({ walletAddress, type, variant, quantity }, 'POST /profile/.../map-items/purchase');
+
+  if (typeof type !== 'string' || !Object.values(MapObjectType).includes(type as MapObjectType)) {
+    return sendError(res, 'Invalid item type', null, 400);
+  }
+  if (!Number.isInteger(variant) || variant < 0 || variant > 100) {
+    return sendError(res, 'Invalid item variant', null, 400);
+  }
+
+  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
+  if (!success || !profileData) {
+    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved for purchase');
+    return sendError(res, errorMessage ?? 'Profile not resolved', errors, 404);
+  }
+
+  try {
+    const result = await purchaseMapItem(profileData, type as MapObjectType, variant, quantity ?? 1);
+    if (!result.success || !result.purchase) {
+      return sendError(res, result.errorMessage, null, result.status);
+    }
+
+    try {
+      await broadcastProfileChange('map-item-purchased', ['profile-rewards', 'profile-map-objects-available']);
+    } catch (err) {
+      req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (map-item-purchased)');
+      // La compra ya se registró; el cliente reconcilia en el siguiente fetch.
+    }
+
+    return sendSuccess(res, result.purchase);
+  } catch (err) {
+    req.log.error({ err, walletAddress, type, variant }, 'Failed to purchase map item');
+    return sendError(res, 'Failed to purchase item', err, 500);
+  }
 });
 
 router.post('/wallet/:walletAddress/gold-daily-collect', requireWalletSession, async (req, res) => {
