@@ -20,6 +20,14 @@ const toName = (p: PrismaProfile): string =>
   p.nickname?.trim() ||
   `${p.walletAddress.slice(0, 4)}…${p.walletAddress.slice(-4)}`;
 
+/**
+ * A profile is suggestable only if it has a real display name (nickname or full
+ * name). Wallet-only rows — auto-upserted every time a wallet hits the API —
+ * would otherwise show up in "Friend suggestions" as raw addresses.
+ */
+const hasDisplayName = (p: Pick<PrismaProfile, 'nickname' | 'fullName'>): boolean =>
+  Boolean(p.fullName?.trim() || p.nickname?.trim());
+
 const toFriendDTO = (
   p: PrismaProfile,
   extra: { streak: number; followers: number; isFollowing: boolean },
@@ -329,22 +337,43 @@ export const getFriendSuggestions = async ({
     create: { walletAddress: viewerWallet },
   });
 
-  // 1st degree: who the viewer already follows.
-  const following = await prisma.follow.findMany({
-    where: { followerId: viewer.id },
-    select: { followeeId: true },
-  });
+  // 1st degree: who the viewer already follows. Dismissals: cards the viewer
+  // explicitly closed with the "X" — never offer those again.
+  const [following, dismissals] = await Promise.all([
+    prisma.follow.findMany({
+      where: { followerId: viewer.id },
+      select: { followeeId: true },
+    }),
+    prisma.followSuggestionDismissal.findMany({
+      where: { viewerId: viewer.id },
+      select: { dismissedId: true },
+    }),
+  ]);
   const firstDegreeIds = following.map((f) => f.followeeId);
 
-  // Everyone we never want to suggest: the viewer and the people they follow.
-  const excluded = new Set<number>([viewer.id, ...firstDegreeIds]);
+  // Everyone we never want to suggest: the viewer, the people they follow, and
+  // the suggestions they dismissed.
+  const excluded = new Set<number>([
+    viewer.id,
+    ...firstDegreeIds,
+    ...dismissals.map((d) => d.dismissedId),
+  ]);
 
   // Friends-of-friends: edges from the viewer's friends to people the viewer
   // doesn't already follow. Rank a candidate by how many of the viewer's friends
   // follow them, and remember one connector for the "Followed by …" label.
   const fofEdges = firstDegreeIds.length
     ? await prisma.follow.findMany({
-        where: { followerId: { in: firstDegreeIds }, followeeId: { notIn: [...excluded] } },
+        where: {
+          followerId: { in: firstDegreeIds },
+          followeeId: { notIn: [...excluded] },
+          // Only real profiles: alive and with a nickname/full name set, so the
+          // rail never shows a raw wallet address.
+          followee: {
+            deletedAt: null,
+            OR: [{ nickname: { not: null } }, { fullName: { not: null } }],
+          },
+        },
         select: { followerId: true, followeeId: true },
       })
     : [];
@@ -368,7 +397,9 @@ export const getFriendSuggestions = async ({
     const excludedArr = [...excluded];
     const randoms = await prisma.$queryRaw<{ id: number }[]>`
       SELECT id FROM profiles
-      WHERE deleted_at IS NULL AND id <> ALL(${excludedArr}::int[])
+      WHERE deleted_at IS NULL
+        AND id <> ALL(${excludedArr}::int[])
+        AND (NULLIF(TRIM(nickname), '') IS NOT NULL OR NULLIF(TRIM(full_name), '') IS NOT NULL)
       ORDER BY random()
       LIMIT ${need}
     `;
@@ -399,7 +430,9 @@ export const getFriendSuggestions = async ({
   const suggestions = chosenIds
     .map((id): FriendSuggestionDTO | null => {
       const p = profileById.get(id);
-      if (!p) return null;
+      // Last-resort guard: never emit a card that would render as a raw wallet
+      // (e.g. a whitespace-only nickname slips past the SQL/Prisma filters).
+      if (!p || !hasDisplayName(p)) return null;
       const connectorId = connectorById.get(id);
       const followedBy = connectorId ? connectorNameById.get(connectorId) ?? '' : '';
       return {
@@ -410,4 +443,37 @@ export const getFriendSuggestions = async ({
     .filter((s): s is FriendSuggestionDTO => s !== null);
 
   return { success: true, errors: [] as unknown[], errorMessage: '', suggestions };
+};
+
+/**
+ * Persist a "not interested" mark: the viewer closed `dismissedWallet`'s card on
+ * the Friend-suggestions rail, so `getFriendSuggestions` stops offering that
+ * profile. Idempotent (unique pair upsert). The viewer is upserted like every
+ * other follows entrypoint; the dismissed profile must exist.
+ */
+export const dismissFriendSuggestion = async (viewerWallet: string, dismissedWallet: string) => {
+  if (viewerWallet === dismissedWallet) {
+    return { success: false, errorMessage: 'You cannot dismiss yourself.', errors: [] as unknown[] };
+  }
+
+  const [viewer, dismissed] = await Promise.all([
+    prisma.profile.upsert({
+      where: { walletAddress: viewerWallet },
+      update: {},
+      create: { walletAddress: viewerWallet },
+    }),
+    prisma.profile.findFirst({ where: { walletAddress: dismissedWallet, deletedAt: null } }),
+  ]);
+
+  if (!dismissed) {
+    return { success: false, errorMessage: 'That vaquero could not be found.', errors: [] as unknown[] };
+  }
+
+  await prisma.followSuggestionDismissal.upsert({
+    where: { viewerId_dismissedId: { viewerId: viewer.id, dismissedId: dismissed.id } },
+    update: {},
+    create: { viewerId: viewer.id, dismissedId: dismissed.id },
+  });
+
+  return { success: true, errorMessage: '', errors: [] as unknown[] };
 };

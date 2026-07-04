@@ -1,5 +1,6 @@
 import { formatTime, formatTimeDeposit } from '@/core-ui/helpers';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DepositResponseDTO } from '../types';
 
 interface WithdrawalTimeInfo {
@@ -12,6 +13,7 @@ interface WithdrawalTimeInfo {
 }
 
 export const useWithdrawalTime = (vaquita: DepositResponseDTO): WithdrawalTimeInfo => {
+  const { i18n } = useTranslation();
   return useMemo(() => {
     // `serverTimestamp` queda congelado al momento del fetch (la lista se
     // cachea con staleTime Infinity); si sabemos cuándo se fetcheó, sumamos el
@@ -34,5 +36,5 @@ export const useWithdrawalTime = (vaquita: DepositResponseDTO): WithdrawalTimeIn
       lockPeriodFormatted: formatTimeDeposit(vaquita.lockPeriod),
       progress,
     };
-  }, [vaquita.createdTimestamp, vaquita.lockPeriod, vaquita.serverTimestamp, vaquita.fetchedAtTimestamp]);
+  }, [vaquita.createdTimestamp, vaquita.lockPeriod, vaquita.serverTimestamp, vaquita.fetchedAtTimestamp, i18n.language]);
 };

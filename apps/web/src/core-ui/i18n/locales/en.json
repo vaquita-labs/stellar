@@ -244,7 +244,17 @@
     "saving": "Saving…",
     "selectOption": "Select an option…",
     "somethingWentWrong": "Something went wrong",
-    "soon": "Soon"
+    "soon": "Soon",
+    "time": {
+      "day_one": "1 day",
+      "day_other": "{{count}} days",
+      "hour_one": "1 hour",
+      "hour_other": "{{count}} hours",
+      "minute_one": "1 minute",
+      "minute_other": "{{count}} minutes",
+      "month_one": "1 month",
+      "month_other": "{{count}} months"
+    }
   },
   "deposit": {
     "bank": {
@@ -297,12 +307,19 @@
     },
     "list": {
       "earned": "Earned",
+      "filterAll": "All",
+      "filterEarly": "Early",
+      "filterOnTime": "On time",
       "makeFirstDeposit": "Make your first deposit to get started",
       "noActiveDeposits": "No active deposits",
       "noData": "No data",
       "noDepositsYet": "No deposits yet",
       "noWithdrawnDeposits": "No withdrawn deposits",
       "rewardsForfeited": "Rewards forfeited",
+      "sortAmount": "Highest amount",
+      "sortNewest": "Newest first",
+      "sortOldest": "Oldest first",
+      "sortUnlock": "Unlocks soonest",
       "tabActive": "Active",
       "tabWithdrawn": "Withdrawn",
       "title": "Your deposits",
@@ -875,7 +892,14 @@
       "terms": "Terms",
       "title": "Settings",
       "wallet": "Wallet",
-      "walletDesc": "View address, send and receive funds."
+      "walletDesc": "View address, send and receive funds.",
+      "installApp": "Install app",
+      "installAppDesc": "Add Vaquita to your home screen.",
+      "installIosTitle": "Install Vaquita",
+      "installIosIntro": "Add Vaquita to your home screen to open it like an app:",
+      "installIosStep1": "Tap the Share button in your browser.",
+      "installIosStep2": "Scroll down and tap \"Add to Home Screen\".",
+      "installIosStep3": "Tap \"Add\" to confirm."
     },
     "summary": {
       "depositsChartAria": "Deposits over the last 6 weeks",

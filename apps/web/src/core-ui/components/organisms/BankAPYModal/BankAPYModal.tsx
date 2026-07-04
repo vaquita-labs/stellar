@@ -1,6 +1,7 @@
 'use client';
 
 import { DepositEarnings, DepositEarningsReporter } from '@/core-ui/components/home/DepositEarningsReporter';
+import { useDepositListControls } from '@/core-ui/components/home/DepositListControls';
 import { DepositListTab, DepositListTabs } from '@/core-ui/components/home/DepositListTabs';
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
 import { WithdrawnDepositCard } from '@/core-ui/components/home/WithdrawnDepositCard';
@@ -45,6 +46,12 @@ export function BankAPYModal({
 
   const { deposits, activeDeposits, withdrawnDeposits, activeDepositsTotalAmount } = getDepositsData(sourceDeposits);
   const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
+
+  const { controls, filteredActiveDeposits, filteredWithdrawnDeposits } = useDepositListControls({
+    tab,
+    activeDeposits,
+    withdrawnDeposits,
+  });
 
   // Ganancia estimada (proyección a vencimiento, la misma que muestra cada
   // tarjeta de depósito) desglosada por origen. Cada depósito reporta su
@@ -232,15 +239,16 @@ export function BankAPYModal({
               activeCount={activeDeposits.length}
               withdrawnCount={withdrawnDeposits.length}
             />
+            {(tab === 'active' ? activeDeposits : withdrawnDeposits).length > 0 && controls}
             {tab === 'active' ? (
-              activeDeposits.length === 0 ? (
+              filteredActiveDeposits.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
                   <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={80} height={80} />
                   <p className="text-gray-500 text-sm mt-2">{t('deposit.list.noActiveDeposits', 'No active deposits')}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {activeDeposits.map((deposit) => (
+                  {filteredActiveDeposits.map((deposit) => (
                     <div key={deposit.id} data-tutorial={simulate ? 'tutorial-vaquita-card' : undefined}>
                       <VaquitaDepositCard
                         deposit={deposit}
@@ -253,14 +261,14 @@ export function BankAPYModal({
                   ))}
                 </div>
               )
-            ) : withdrawnDeposits.length === 0 ? (
+            ) : filteredWithdrawnDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
                 <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={80} height={80} />
                 <p className="text-gray-500 text-sm mt-2">{t('deposit.list.noWithdrawnDeposits', 'No withdrawn deposits')}</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {withdrawnDeposits.map((deposit) => (
+                {filteredWithdrawnDeposits.map((deposit) => (
                   <WithdrawnDepositCard
                     key={deposit.id}
                     deposit={deposit}

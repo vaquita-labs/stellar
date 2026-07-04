@@ -172,7 +172,9 @@ export function TutorialOverlay({
           spotlight se ubica arriba/abajo para no tapar el botón resaltado. */}
       {step.kind !== 'waiting' && (
       <div
-        className={`absolute inset-x-0 flex justify-center px-4 ${
+        // pointer-events-none: sin spotlight el contenedor ocupa toda la
+        // pantalla y taparía el botón "Saltar tutorial"; solo la tarjeta clickea.
+        className={`pointer-events-none absolute inset-x-0 flex justify-center px-4 ${
           !rect ? 'inset-y-0 items-center' : cardAtTop ? 'top-6 sm:top-10' : 'bottom-28'
         }`}
       >
@@ -183,7 +185,7 @@ export function TutorialOverlay({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: cardAtTop ? -16 : 16 }}
             transition={{ duration: 0.28 }}
-            className="w-full max-w-md"
+            className="pointer-events-auto w-full max-w-md"
           >
             <TutorialCard
               dotIndex={index}

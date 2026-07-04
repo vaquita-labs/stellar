@@ -86,14 +86,14 @@ export const VaquitaDepositCard = ({
             {formatAmount(deposit.amount, deposit.tokenSymbol)}
           </p>
           {isLocked ? (
-            <span className="inline-flex items-center gap-1 shrink-0 bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 shrink-0 bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded-[6px] border border-black border-b-2">
               <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 1a4 4 0 0 0-4 4v3H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1V5a4 4 0 0 0-4-4Zm2 7V5a2 2 0 1 0-4 0v3h4Z" clipRule="evenodd" />
               </svg>
               {t('home.depositCard.locked', 'Locked')}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 shrink-0 bg-success text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 shrink-0 bg-success text-white text-[10px] font-bold px-2 py-0.5 rounded-[6px] border border-black border-b-2">
               <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 0 1 0 1.414l-8 8a1 1 0 0 1-1.414 0l-4-4a1 1 0 1 1 1.414-1.414L8 12.586l7.293-7.293a1 1 0 0 1 1.414 0Z" clipRule="evenodd" />
               </svg>

@@ -244,7 +244,17 @@
     "saving": "Salvando…",
     "selectOption": "Escolha uma opção…",
     "somethingWentWrong": "Algo deu errado",
-    "soon": "Em breve"
+    "soon": "Em breve",
+    "time": {
+      "day_one": "1 dia",
+      "day_other": "{{count}} dias",
+      "hour_one": "1 hora",
+      "hour_other": "{{count}} horas",
+      "minute_one": "1 minuto",
+      "minute_other": "{{count}} minutos",
+      "month_one": "1 mês",
+      "month_other": "{{count}} meses"
+    }
   },
   "deposit": {
     "bank": {
@@ -297,12 +307,19 @@
     },
     "list": {
       "earned": "Ganho",
+      "filterAll": "Todos",
+      "filterEarly": "Antecipados",
+      "filterOnTime": "No prazo",
       "makeFirstDeposit": "Faça seu primeiro depósito para começar",
       "noActiveDeposits": "Nenhum depósito ativo",
       "noData": "Sem dados",
       "noDepositsYet": "Você ainda não tem depósitos",
       "noWithdrawnDeposits": "Nenhum depósito sacado",
       "rewardsForfeited": "Recompensas perdidas",
+      "sortAmount": "Maior valor",
+      "sortNewest": "Mais recentes",
+      "sortOldest": "Mais antigos",
+      "sortUnlock": "Desbloqueio mais próximo",
       "tabActive": "Ativos",
       "tabWithdrawn": "Sacados",
       "title": "Seus depósitos",
@@ -875,7 +892,14 @@
       "terms": "Termos",
       "title": "Configurações",
       "wallet": "Wallet",
-      "walletDesc": "Ver endereço, enviar e receber fundos."
+      "walletDesc": "Ver endereço, enviar e receber fundos.",
+      "installApp": "Instalar o app",
+      "installAppDesc": "Adicione a Vaquita à sua tela inicial.",
+      "installIosTitle": "Instalar a Vaquita",
+      "installIosIntro": "Adicione a Vaquita à sua tela inicial para abri-la como um app:",
+      "installIosStep1": "Toque no botão Compartilhar no seu navegador.",
+      "installIosStep2": "Role para baixo e toque em \"Adicionar à Tela de Início\".",
+      "installIosStep3": "Toque em \"Adicionar\" para confirmar."
     },
     "summary": {
       "depositsChartAria": "Depósitos das últimas 6 semanas",

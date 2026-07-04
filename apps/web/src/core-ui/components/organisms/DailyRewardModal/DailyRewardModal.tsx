@@ -52,8 +52,8 @@ export function DailyRewardModal({
     >
       <div className="flex flex-col items-center text-center gap-5 py-2">
         <div className="flex items-center justify-center gap-3">
-          <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={56} height={56} priority />
           <span className="text-4xl font-bold text-black">+{coinsToCollect}</span>
+          <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={56} height={56} priority />
         </div>
 
         {hasExperience && (

@@ -204,22 +204,26 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
               {achievementsData ? unlockedBadges.length : (listRow?.badges ?? 0)}
             </span>
           </div>
-          {/* Fixed h-12 row in every state (loading / badges / empty) so the
-              strip never resizes and the map below doesn't jump. */}
+          {/* Fixed h-14 row in every state (loading / badges / empty) so the
+              strip never resizes and the map below doesn't jump. The badges
+              get a 48px lane at the top and the horizontal scrollbar gets its
+              own lane underneath (pb-1 + overflow-y-hidden) — without it the
+              bar paints over the medals and, by eating 4px of the row, spawns
+              a phantom vertical scrollbar on the right. */}
           {achievementsLoading ? (
-            <div className="flex h-12 items-center justify-center">
+            <div className="flex h-14 items-center justify-center">
               <FiLoader className="h-4 w-4 animate-spin text-gray-400" aria-hidden />
             </div>
           ) : unlockedBadges.length > 0 ? (
-            <div className="flex h-12 items-center gap-2 overflow-x-auto">
+            <div className="flex h-14 items-start gap-3 overflow-x-auto overflow-y-hidden pb-1 snap-x">
               {unlockedBadges.map((badge) => (
-                <div key={badge.id} className="w-12 shrink-0">
+                <div key={badge.id} className="w-12 shrink-0 snap-start">
                   <BadgeTile badge={badge} size="sm" onPress={() => setSelectedBadge(badge)} />
                 </div>
               ))}
             </div>
           ) : (
-            <p className="flex h-12 items-center text-xs font-medium text-gray-500">
+            <p className="flex h-14 items-center text-xs font-medium text-gray-500">
               {t('leaderboard.user.noAchievements', 'No achievements unlocked yet')}
             </p>
           )}
