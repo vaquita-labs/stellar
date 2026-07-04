@@ -2,10 +2,11 @@
 
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Group } from 'three';
 import { EditionMode, useMapStore } from '../../../stores';
 import { MapObjectType, WorldType } from '../../../types';
+import { disposeObject } from '../../map/helpers';
 import { getObjectGroup } from '../../map/tiles/registry';
 
 type ObjectListObjectCardProps = {
@@ -39,15 +40,21 @@ export function ObjectListObjectCard({
   const remaining = Math.max(itemsAvailable - used, 0);
   const isAvailable = remaining > 0;
 
+  // Construir el preview una sola vez por (type, variant) y liberarlo al
+  // desmontar; antes se creaba un grupo nuevo (geometrías+materiales) en cada
+  // render de la card sin dispose.
+  const previewObject = useMemo(
+    () => getObjectGroup({ type, position: [0, 0, 0], variant, rotation: [0, 0, 0] }, WorldType.FOREST),
+    [type, variant]
+  );
+  useEffect(() => {
+    return () => disposeObject(previewObject);
+  }, [previewObject]);
+
   return (
     <group position={position} onClick={onClick}>
       <group ref={rotatingRef} position={[0, 0.55, 0]} scale={isSelected ? 1.1 : 1}>
-        <primitive
-          object={getObjectGroup(
-            { type, position: [0, 0, 0], variant, rotation: [0, 0, 0] },
-            WorldType.FOREST
-          )}
-        />
+        <primitive object={previewObject} />
       </group>
 
       {/* Top-right count badge */}

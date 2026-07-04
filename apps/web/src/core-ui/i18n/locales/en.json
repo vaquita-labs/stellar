@@ -525,6 +525,7 @@
       "label": "Filter by metric"
     },
     "loadingLabel": "Loading leaderboard",
+    "loadingMore": "Loading more vaqueros",
     "noResults": {
       "description": "Try a different username or clear the search.",
       "title": "No vaqueros match “{{query}}”"

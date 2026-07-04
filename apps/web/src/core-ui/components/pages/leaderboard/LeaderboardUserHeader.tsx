@@ -3,15 +3,15 @@
 import { buildServerAchievements } from '@/core-ui/data/profile-badges';
 import { deriveLevel } from '@/core-ui/helpers';
 import {
-  leaderboardQueryKey,
+  LeaderboardPageDTO,
+  leaderboardQueryPrefix,
   useProfileAchievements,
   useProfileData,
   useProfileExperience,
   useProfileStreak,
 } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { LeaderboardResponseDTO } from '@/core-ui/types';
-import { useQueryClient } from '@tanstack/react-query';
+import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ReactNode, useMemo } from 'react';
@@ -54,17 +54,24 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
   const { data: experienceData } = useProfileExperience(walletAddress);
   const { data: streakData } = useProfileStreak(walletAddress);
 
-  // Snapshot of this wallet's row from the already-cached leaderboard list. The
+  // Snapshot of this wallet's row from the already-cached leaderboard feed. The
   // user almost always lands here from the list, so nickname/avatar/XP/streak
   // are known before the per-wallet queries resolve — render those immediately
   // instead of placeholders, then let the fresh per-wallet data take over.
-  const listRow = useMemo(
-    () =>
-      queryClient
-        .getQueryData<LeaderboardResponseDTO[]>(leaderboardQueryKey(network?.networkName))
-        ?.find((row) => row.walletAddress === walletAddress),
-    [queryClient, network?.networkName, walletAddress],
-  );
+  // The feed is an infinite query (possibly several cached views: search/sort
+  // variants), so scan every cached view's pages for the wallet.
+  const listRow = useMemo(() => {
+    const views = queryClient.getQueriesData<InfiniteData<LeaderboardPageDTO>>({
+      queryKey: leaderboardQueryPrefix(network?.networkName),
+    });
+    for (const [, data] of views) {
+      for (const page of data?.pages ?? []) {
+        const row = page.rows.find((r) => r.walletAddress === walletAddress);
+        if (row) return row;
+      }
+    }
+    return undefined;
+  }, [queryClient, network?.networkName, walletAddress]);
 
   const nickname = profile ? profile.nickname : listRow?.nickname;
   const avatarUrl = profile ? profile.avatarUrl : listRow?.avatarUrl;
