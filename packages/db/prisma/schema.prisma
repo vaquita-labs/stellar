@@ -223,6 +223,10 @@ model Profile {
   following Follow[] @relation("following")
   followers Follow[] @relation("followers")
 
+  // "Friend suggestions" cards this profile dismissed / was dismissed from.
+  suggestionDismissals FollowSuggestionDismissal[] @relation("suggestionDismissals")
+  dismissedBy          FollowSuggestionDismissal[] @relation("dismissedBy")
+
   @@map("profiles")
 }
 
@@ -240,6 +244,23 @@ model Follow {
   @@index([followerId], map: "idx_follows_follower")
   @@index([followeeId], map: "idx_follows_followee")
   @@map("follows")
+}
+
+/// "Not interested" mark on the Friend-suggestions rail: `viewer` dismissed the
+/// `dismissed` profile's card, so suggestions never offer that profile to that
+/// viewer again (a follow-then-unfollow can still resurface them — acceptable).
+model FollowSuggestionDismissal {
+  id          Int      @id @default(autoincrement())
+  viewerId    Int      @map("viewer_id")
+  dismissedId Int      @map("dismissed_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  viewer    Profile @relation("suggestionDismissals", fields: [viewerId], references: [id], onDelete: Cascade)
+  dismissed Profile @relation("dismissedBy", fields: [dismissedId], references: [id], onDelete: Cascade)
+
+  @@unique([viewerId, dismissedId], map: "follow_suggestion_dismissals_unique_pair")
+  @@index([viewerId], map: "idx_follow_suggestion_dismissals_viewer")
+  @@map("follow_suggestion_dismissals")
 }
 
 /// In-app notification feed row. `messageKey` + `params` map to frontend i18n

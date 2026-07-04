@@ -1,3 +1,4 @@
+export * from './useDismissSuggestion';
 export * from './useFollowCounts';
 export * from './useFollowList';
 export * from './useFollowingWallets';

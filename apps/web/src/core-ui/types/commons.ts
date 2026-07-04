@@ -227,6 +227,11 @@ export interface FriendSuggestionsResponseDTO {
   suggestions: FriendSuggestionDTO[];
 }
 
+export interface SuggestionDismissResponseDTO {
+  viewerWallet: string;
+  dismissedWallet: string;
+}
+
 export interface FollowCountsResponseDTO {
   networkName: string;
   walletAddress: string;

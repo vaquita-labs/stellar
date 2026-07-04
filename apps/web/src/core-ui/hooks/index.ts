@@ -8,6 +8,7 @@ export * from './useDeposits';
 export * from './useDepositsComplete';
 export * from './useFont';
 export * from './useHasHydrated';
+export * from './useInstallApp';
 export * from './useIntroSeen';
 export * from './useLeaderboardData';
 export * from './useIsAuthenticated';

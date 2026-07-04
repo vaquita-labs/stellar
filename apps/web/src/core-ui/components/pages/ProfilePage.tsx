@@ -384,17 +384,19 @@ export function ProfilePage() {
           />
           {/* The badge tiles are real <button>s, so we can't wrap the card in
               an <a> without invalid nesting. Instead, we place an absolute
-              Link layer behind the grid (catches clicks on the padding and
-              gaps), and have each tile's onPress push to the same route so
-              clicking a badge image also takes the user to the trophy room
-              — claiming happens there, not from the profile preview. */}
-          <div className="relative rounded-2xl bg-white border border-black border-b-2 p-4">
+              Link layer behind the grid, and have each tile's onPress push to
+              the same route so clicking a badge image also takes the user to
+              the trophy room — claiming happens there, not from the profile
+              preview. The grid layer is pointer-events-none (tiles re-enable
+              their own) so padding/gap hovers and clicks reach the Link
+              instead of dying on the grid wrapper. */}
+          <div className="relative rounded-2xl bg-white border border-black border-b-2 p-4 transition hover:-translate-y-0.5">
             <Link
               href="/profile/achievements"
               aria-label={t('profilePages.profile.seeAllAchievements', 'See all achievements')}
               className="absolute inset-0 rounded-2xl z-0"
             />
-            <div className="relative z-10 grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
+            <div className="pointer-events-none relative z-10 grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
               {previewBadges.map((badge) => (
                 <BadgeTile
                   key={badge.id}

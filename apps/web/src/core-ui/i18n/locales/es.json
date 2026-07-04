@@ -244,7 +244,17 @@
     "saving": "Guardando…",
     "selectOption": "Elegí una opción…",
     "somethingWentWrong": "Algo salió mal",
-    "soon": "Pronto"
+    "soon": "Pronto",
+    "time": {
+      "day_one": "1 día",
+      "day_other": "{{count}} días",
+      "hour_one": "1 hora",
+      "hour_other": "{{count}} horas",
+      "minute_one": "1 minuto",
+      "minute_other": "{{count}} minutos",
+      "month_one": "1 mes",
+      "month_other": "{{count}} meses"
+    }
   },
   "deposit": {
     "bank": {
@@ -297,12 +307,19 @@
     },
     "list": {
       "earned": "Ganado",
+      "filterAll": "Todos",
+      "filterEarly": "Anticipados",
+      "filterOnTime": "A tiempo",
       "makeFirstDeposit": "Haz tu primer depósito para comenzar",
       "noActiveDeposits": "No hay depósitos activos",
       "noData": "Sin datos",
       "noDepositsYet": "Todavía no tienes depósitos",
       "noWithdrawnDeposits": "No hay depósitos retirados",
       "rewardsForfeited": "Recompensas perdidas",
+      "sortAmount": "Mayor monto",
+      "sortNewest": "Más recientes",
+      "sortOldest": "Más antiguos",
+      "sortUnlock": "Próximos a desbloquear",
       "tabActive": "Activos",
       "tabWithdrawn": "Retirados",
       "title": "Tus depósitos",
@@ -875,7 +892,14 @@
       "terms": "Términos",
       "title": "Ajustes",
       "wallet": "Wallet",
-      "walletDesc": "Ver dirección, enviar y recibir fondos."
+      "walletDesc": "Ver dirección, enviar y recibir fondos.",
+      "installApp": "Instalar la app",
+      "installAppDesc": "Agrega Vaquita a tu pantalla de inicio.",
+      "installIosTitle": "Instalar Vaquita",
+      "installIosIntro": "Agrega Vaquita a tu pantalla de inicio para abrirla como una app:",
+      "installIosStep1": "Toca el botón Compartir en tu navegador.",
+      "installIosStep2": "Desliza hacia abajo y toca \"Agregar a pantalla de inicio\".",
+      "installIosStep3": "Toca \"Agregar\" para confirmar."
     },
     "summary": {
       "depositsChartAria": "Depósitos de las últimas 6 semanas",

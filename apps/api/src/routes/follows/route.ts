@@ -6,6 +6,8 @@ import {
   type FriendListResponseDTO,
   type FriendSearchResponseDTO,
   type FriendSuggestionsResponseDTO,
+  type SuggestionDismissResponseDTO,
+  dismissFriendSuggestion,
   followProfile,
   getFollowCounts,
   getFollowingWallets,
@@ -149,6 +151,31 @@ router.get('/wallet/:walletAddress/suggestions', async (req, res) => {
   } catch (err) {
     req.log.error({ err, walletAddress }, 'Failed to load friend suggestions');
     return sendError(res, 'Failed to load friend suggestions', err, 500);
+  }
+});
+
+// POST /api/v1/follows/wallet/:walletAddress/suggestions/dismiss  body: { targetWallet }
+// "Not interested": persists the dismissal so the suggestions rail never offers
+// `targetWallet` to this viewer again. Idempotent.
+router.post('/wallet/:walletAddress/suggestions/dismiss', async (req, res) => {
+  const { walletAddress } = req.params;
+  const targetWallet = String(req.body?.targetWallet ?? '').trim();
+  req.log.info({ walletAddress, targetWallet }, 'POST /follows/.../suggestions/dismiss');
+
+  if (!targetWallet) {
+    return sendError(res, 'A targetWallet is required.', null, 400);
+  }
+
+  try {
+    const { success, errorMessage } = await dismissFriendSuggestion(walletAddress, targetWallet);
+    if (!success) {
+      return sendError(res, errorMessage, null, 400);
+    }
+    const payload: SuggestionDismissResponseDTO = { viewerWallet: walletAddress, dismissedWallet: targetWallet };
+    return sendSuccess(res, payload);
+  } catch (err) {
+    req.log.error({ err, walletAddress, targetWallet }, 'Failed to dismiss suggestion');
+    return sendError(res, 'Failed to dismiss suggestion', err, 500);
   }
 });
 
