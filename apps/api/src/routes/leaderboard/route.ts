@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  findLeaderboardRowForWallet,
   getEnrichedLeaderboard,
   getLastClosedCycleId,
   getLeaderboardRankForWallet,
@@ -45,6 +46,7 @@ router.get('/rank', async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /api/v1/leaderboard?cycle=current|last_closed|YYYYMM
 //   &limit=20&offset=0&search=&sort=rank|level|streak|badges&direction=asc|desc
+//   &me=G...
 // ---------------------------------------------------------------------------
 
 /**
@@ -52,22 +54,31 @@ router.get('/rank', async (req, res) => {
  * applied server-side (before slicing) so infinite-scroll pages stay globally
  * consistent. Omit cycle or pass cycle=current for the current open cycle.
  *
+ * Pass `me=<wallet>` to also get that wallet's own row (`me`, with its true
+ * rank regardless of the search/sort view) so the client can pin the viewer's
+ * position without paging to it. `me` is null when the wallet isn't on the
+ * board. Costs one array scan over the already-cached enriched board.
+ *
  * The enriched board is cached ~30s per cycle (shared across all viewers and
  * pages), so scrolling through pages costs one DB computation per window, not
  * one per request. Filtering/sorting/slicing happen per-request on the cached
  * array.
  *
- * 200 { rows: [ { position, walletAddress, nickname, ... } ], total, limit, offset, hasMore }
+ * 200 { rows: [ { position, walletAddress, nickname, ... } ], total, limit, offset, hasMore, me }
  */
 router.get('/', async (req, res) => {
   try {
     const { cycleId, cycleStatus } = await parseLeaderboardCycleQuery(req.query.cycle);
     const pageParams = parseLeaderboardPageQuery(req.query);
+    const meWallet = typeof req.query.me === 'string' ? req.query.me.trim() : '';
     req.log.info({ cycleId, cycleStatus, ...pageParams }, 'GET /leaderboard');
 
     const enriched = await getEnrichedLeaderboard(cycleId, cycleStatus);
 
-    return sendSuccess(res, paginateLeaderboardRows(enriched, pageParams), '');
+    const page = paginateLeaderboardRows(enriched, pageParams);
+    if (meWallet) page.me = findLeaderboardRowForWallet(enriched, meWallet);
+
+    return sendSuccess(res, page, '');
   } catch (err: any) {
     if (err?.message === 'cycle must be current, last_closed, or a positive integer cycle id') {
       return sendError(res, err.message, null, 400);

@@ -575,6 +575,9 @@
       "description": "Prueba con otro nombre de usuario o borra la búsqueda.",
       "title": "Ningún vaquero coincide con “{{query}}”"
     },
+    "pinned": {
+      "goToPosition": "Ir a tu posición"
+    },
     "search": {
       "clear": "Borrar búsqueda",
       "label": "Buscar vaqueros",

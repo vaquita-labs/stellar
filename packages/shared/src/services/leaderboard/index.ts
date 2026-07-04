@@ -190,6 +190,9 @@ export interface LeaderboardPage {
   limit: number;
   offset: number;
   hasMore: boolean;
+  /** The requester's own row (true rank, independent of the search/sort view),
+   *  when a `me` wallet was passed and it is on the board. */
+  me?: EnrichedLeaderboardRow | null;
 }
 
 export const LEADERBOARD_DEFAULT_PAGE_SIZE = 20;
@@ -288,6 +291,18 @@ export function paginateLeaderboardRows(
     offset,
     hasMore: offset + pageRows.length < total,
   };
+}
+
+/**
+ * Finds a wallet's enriched row (with its true rank `position`) in the full
+ * board. Case-insensitive so the client can pass the wallet as stored locally.
+ */
+export function findLeaderboardRowForWallet(
+  rows: EnrichedLeaderboardRow[],
+  walletAddress: string,
+): EnrichedLeaderboardRow | null {
+  const needle = walletAddress.toLowerCase();
+  return rows.find((row) => row.walletAddress.toLowerCase() === needle) ?? null;
 }
 
 /**

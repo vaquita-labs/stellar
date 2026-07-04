@@ -575,6 +575,9 @@
       "description": "Tente outro nome de usuário ou limpe a busca.",
       "title": "Nenhum vaquero corresponde a “{{query}}”"
     },
+    "pinned": {
+      "goToPosition": "Ir para a sua posição"
+    },
     "search": {
       "clear": "Limpar busca",
       "label": "Buscar vaqueros",
