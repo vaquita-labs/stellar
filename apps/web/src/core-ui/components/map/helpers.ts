@@ -1,6 +1,6 @@
 import { MapObject, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
 import * as THREE from 'three';
-import { TILE_HEIGHT } from './constants';
+import { MAP_SIZE, TILE_HEIGHT } from './constants';
 
 // Utilidades de Three.js compartidas por los builders de tiles/objects y los
 // edificios. La creación de objetos por tipo vive en tiles/registry.ts.
@@ -75,10 +75,11 @@ export const disposeObject = (object: THREE.Object3D) => {
 };
 
 export function getMapCenter(tiles: ProfileMapObjectsResponseDTO['objects']) {
-  // Sin tiles (aún no llega el API) devolvemos un centro válido: Math.min()
-  // de un array vacío es Infinity y rompería cámara y controles con NaN.
+  // Sin tiles (mapa nuevo vacío, o aún no llega el API): centro de la grilla
+  // de edición, así la cámara apunta al lugar donde se colocan los bloques.
+  // (Math.min() de un array vacío es Infinity y rompería cámara y controles.)
   if (tiles.length === 0) {
-    return [0, -2, 0] as [number, number, number];
+    return [(MAP_SIZE - 1) / 2, -2, (MAP_SIZE - 1) / 2] as [number, number, number];
   }
   const xPositions = tiles.map((tile: MapObject) => tile.position[0]);
   const zPositions = tiles.map((tile: MapObject) => tile.position[2]);

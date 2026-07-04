@@ -9,6 +9,8 @@ interface ExitEditModeModalProps {
   onOpenChange: (open: boolean) => void;
   handleDiscard: (e: PressEvent) => void;
   handleConfirmExit: (e: PressEvent) => void;
+  /** Guardado en curso: botones bloqueados y spinner en "Guardar y salir". */
+  isSaving?: boolean;
 }
 
 export const ExitEditModeModal = ({
@@ -16,18 +18,32 @@ export const ExitEditModeModal = ({
   onOpenChange,
   handleDiscard,
   handleConfirmExit,
+  isSaving = false,
 }: ExitEditModeModalProps) => {
   const { t } = useTranslation();
   return (
-    <Modal.Backdrop isOpen={isOpen} onOpenChange={onOpenChange}>
+    <Modal.Backdrop
+      isOpen={isOpen}
+      onOpenChange={(open) => {
+        // No permitir cerrar el modal mientras se está guardando.
+        if (isSaving) return;
+        onOpenChange(open);
+      }}
+    >
       <Modal.Container size="sm">
         <Modal.Dialog className="bg-background border border-black">
           <Modal.CloseTrigger>
             <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />
           </Modal.CloseTrigger>
-          <Modal.Body className="pt-8 pb-4">
+          {/* Header con Heading como el resto de los modales de la app: así el
+              CloseTrigger se posiciona/renderiza igual que en todos lados. */}
+          <Modal.Header>
+            <Modal.Heading className="text-black font-bold text-xl">
+              {t('home.exitEdit.title', 'Exit edit mode?')}
+            </Modal.Heading>
+          </Modal.Header>
+          <Modal.Body className="pb-4">
             <div className="flex flex-col items-center gap-4">
-              <h3 className="text-xl font-bold text-black dark:text-white text-center">{t('home.exitEdit.title', 'Exit edit mode?')}</h3>
               <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -50,10 +66,12 @@ export const ExitEditModeModal = ({
             </div>
           </Modal.Body>
           <Modal.Footer className="flex flex-col-reverse gap-2 pb-6 px-4 [&>*]:w-full">
-            <Button onPress={handleDiscard} type="white">
+            <Button onPress={handleDiscard} type="white" isDisabled={isSaving}>
               {t('home.exitEdit.discard', 'Discard changes')}
             </Button>
-            <Button onPress={handleConfirmExit}>{t('home.exitEdit.saveAndExit', 'Save and exit')}</Button>
+            <Button onPress={handleConfirmExit} isLoading={isSaving} aria-label={t('home.exitEdit.saveAndExit', 'Save and exit')}>
+              {t('home.exitEdit.saveAndExit', 'Save and exit')}
+            </Button>
           </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>

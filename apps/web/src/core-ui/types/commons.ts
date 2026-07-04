@@ -259,10 +259,23 @@ export interface ProfileMapObjectsAvailableResponseDTO {
   walletAddress: string;
   objects: {
     price: number;
+    /** Unidades colocables: freeItems del catálogo + compradas por el usuario. */
     itemsAvailable: number;
+    /** Unidades compradas por el usuario (subset de itemsAvailable). */
+    owned: number;
     type: MapObjectType;
     variant: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
   }[];
+}
+
+export interface PurchaseMapItemResponseDTO {
+  type: MapObjectType;
+  variant: number;
+  quantity: number;
+  /** Unidades del ítem que el usuario posee tras la compra. */
+  owned: number;
+  /** Saldo de monedas tras la compra. */
+  goldBalance: number;
 }
 
 export interface ProfileAverageResponseDTO {

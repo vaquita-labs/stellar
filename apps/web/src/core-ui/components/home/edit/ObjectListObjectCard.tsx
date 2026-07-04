@@ -3,11 +3,13 @@
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Group } from 'three';
 import { EditionMode, useMapStore } from '../../../stores';
 import { MapObjectType, WorldType } from '../../../types';
 import { disposeObject } from '../../map/helpers';
 import { getObjectGroup } from '../../map/tiles/registry';
+import { getMapItemName } from './mapItemNames';
 
 type ObjectListObjectCardProps = {
   used: number;
@@ -26,6 +28,7 @@ export function ObjectListObjectCard({
   onClick,
   used,
 }: ObjectListObjectCardProps) {
+  const { t } = useTranslation();
   const rotatingRef = useRef<Group>(null);
   const selectedItem = useMapStore((store) => store.pickedObject);
   const editMode = useMapStore((store) => store.editMode);
@@ -76,7 +79,7 @@ export function ObjectListObjectCard({
             className="text-xs font-bold text-black truncate max-w-full text-center bg-white/90 rounded-full px-2 py-0.5 border border-black/10"
             style={{ textWrap: 'nowrap' }}
           >
-            {type} <span className="text-gray-500 font-normal">v{variant + 1}</span>
+            {getMapItemName(t, type, variant)}
           </div>
         </div>
       </Html>

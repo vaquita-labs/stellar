@@ -436,7 +436,50 @@
         "utility": "utility"
       },
       "youHave": "You have {{count}}",
-      "yourOffer": "Your offer"
+      "yourOffer": "Your offer",
+      "empty": "The catalog is empty right now.",
+      "emptyHint": "Come back soon for new items!",
+      "placeableHint": "After buying you can place it anywhere on your map, move it or remove it.",
+      "placeNowTitle": "Place it now?",
+      "placeNowDesc": "{{name}} is now in your collection. You can place it on your map right away.",
+      "placeNow": "Place now",
+      "keepForLater": "Keep in collection",
+      "purchaseErrorTitle": "Purchase failed",
+      "purchaseErrorDesc": "Try again.",
+      "objects": {
+        "tree": {
+          "default": "Tree",
+          "0": "Tree",
+          "4": "Palm tree"
+        },
+        "rock": {
+          "default": "Rock",
+          "3": "Rocky terrain"
+        },
+        "bush": {
+          "default": "Bush",
+          "0": "Bush"
+        },
+        "grass": {
+          "default": "Grass",
+          "0": "Grass tile"
+        },
+        "water": {
+          "default": "Water"
+        },
+        "road": {
+          "default": "Road"
+        },
+        "bank": {
+          "default": "Bank"
+        },
+        "barn": {
+          "default": "Barn"
+        },
+        "leaderboard": {
+          "default": "Podium"
+        }
+      }
     },
     "coinsChip": {
       "goldCoinAlt": "Gold Coin"
@@ -459,7 +502,9 @@
       "body": "You have unsaved changes. Are you sure you want to exit edit mode?",
       "discard": "Discard changes",
       "saveAndExit": "Save and exit",
-      "title": "Exit edit mode?"
+      "title": "Exit edit mode?",
+      "saveErrorTitle": "Could not save your map",
+      "saveErrorDesc": "Check your connection and try again."
     },
     "music": {
       "low": "Low volume",

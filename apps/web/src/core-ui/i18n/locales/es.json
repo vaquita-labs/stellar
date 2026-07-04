@@ -436,7 +436,50 @@
         "utility": "utilidad"
       },
       "youHave": "Tienes {{count}}",
-      "yourOffer": "Tu oferta"
+      "yourOffer": "Tu oferta",
+      "empty": "El catálogo está vacío por ahora.",
+      "emptyHint": "¡Vuelve pronto para ver nuevos artículos!",
+      "placeableHint": "Después de comprarlo puedes colocarlo donde quieras en tu mapa, moverlo o quitarlo.",
+      "placeNowTitle": "¿Colocarlo ahora?",
+      "placeNowDesc": "{{name}} ya está en tu colección. Puedes colocarlo en tu mapa ahora mismo.",
+      "placeNow": "Colocar ahora",
+      "keepForLater": "Guardar en colección",
+      "purchaseErrorTitle": "No se pudo comprar",
+      "purchaseErrorDesc": "Inténtalo de nuevo.",
+      "objects": {
+        "tree": {
+          "default": "Árbol",
+          "0": "Árbol",
+          "4": "Palmera"
+        },
+        "rock": {
+          "default": "Roca",
+          "3": "Terreno rocoso"
+        },
+        "bush": {
+          "default": "Arbusto",
+          "0": "Arbusto"
+        },
+        "grass": {
+          "default": "Pasto",
+          "0": "Terreno de pasto"
+        },
+        "water": {
+          "default": "Agua"
+        },
+        "road": {
+          "default": "Camino"
+        },
+        "bank": {
+          "default": "Banco"
+        },
+        "barn": {
+          "default": "Granero"
+        },
+        "leaderboard": {
+          "default": "Podio"
+        }
+      }
     },
     "coinsChip": {
       "goldCoinAlt": "Moneda de oro"
@@ -459,7 +502,9 @@
       "body": "Tienes cambios sin guardar. ¿Seguro que quieres salir del modo edición?",
       "discard": "Descartar cambios",
       "saveAndExit": "Guardar y salir",
-      "title": "¿Salir del modo edición?"
+      "title": "¿Salir del modo edición?",
+      "saveErrorTitle": "No se pudo guardar tu mapa",
+      "saveErrorDesc": "Revisa tu conexión e inténtalo de nuevo."
     },
     "music": {
       "low": "Volumen bajo",
