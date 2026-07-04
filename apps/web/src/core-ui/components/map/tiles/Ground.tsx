@@ -4,11 +4,12 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { EditionMode, useMapStore } from '@/core-ui/stores';
 import { MapObject, MapObjectType } from '@/core-ui/types';
-import { composeBuildingRotation } from './buildingRotations';
+import { composeBuildingRotation, isBuildingType } from '../buildings/registry';
 import { EditableObjectGroup } from '../edit/EditableObjectGroup';
 import { EditControls } from '../edit/EditControls';
 import { disposeObject, objectSelectDown, objectSelectUp } from '../helpers';
 import { buildTileObject, EDIT_ONLY_TYPES, getObjectGroup } from './registry';
+import { buildStaticWorld, disposeStaticWorld } from './staticWorld';
 import { GroundProps } from '../types';
 
 export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) => {
@@ -92,15 +93,25 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
   // Construir los grupos de Three.js es caro (cada builder crea geometrías y
   // materiales nuevos). Se memoiza para que los re-renders del componente
   // (hover, posición de edición, etc.) no reconstruyan el mapa entero.
+  // Modo normal: el terreno es 100% estático y sin interacción, así que se
+  // renderiza como un conjunto de InstancedMesh (~10-20 draw calls en vez de
+  // cientos). Al entrar en edición se reconstruye tile por tile (abajo).
+  const staticWorld = useMemo(() => {
+    if (hasEditMode) return null;
+    return buildStaticWorld(mapObjects, worldType);
+  }, [mapObjects, worldType, hasEditMode]);
+
+  useEffect(() => {
+    if (!staticWorld) return;
+    return () => disposeStaticWorld(staticWorld);
+  }, [staticWorld]);
+
+  // Modo edición: cada tile es un grupo individual e interactivo.
   const builtTiles = useMemo(() => {
+    if (!hasEditMode) return [];
     return mapObjects
       .map((mapObject) => {
-        const { type, position } = mapObject;
-        // Los edificios y los EMPTY solo se materializan en modo edición; en
-        // modo normal los renderizan los componentes React de buildings/.
-        if (EDIT_ONLY_TYPES.has(type) && !hasEditMode) {
-          return null;
-        }
+        const { position } = mapObject;
         // El grupo se construye en el origen (la posición la aplica el
         // EditableObjectGroup que lo envuelve).
         const object = buildTileObject({ ...mapObject, position: [0, position[1], 0] }, { worldType, font });
@@ -139,6 +150,7 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
 
   return (
     <group name="ground" ref={groundRef}>
+      {staticWorld && <primitive object={staticWorld} />}
       {builtTiles.map(({ mapObject, object }) => {
         const { type, position, variant, rotation } = mapObject;
 
@@ -157,11 +169,9 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
             ? [rotation[0] || 0, rotation[1] || 0, rotation[2] || 0]
             : [0, 0, 0];
 
-        // Los edificios especiales tienen una orientación base; el resto usa la rotación tal cual.
+        // Los edificios tienen una orientación base; el resto usa la rotación tal cual.
         // Así en edición miran igual que en el mapa normal (misma fuente de verdad).
-        const isSpecialBuilding =
-          type === MapObjectType.BANK || type === MapObjectType.LEADERBOARD || type === MapObjectType.BARN;
-        const currentRotation: [number, number, number] = isSpecialBuilding
+        const currentRotation: [number, number, number] = isBuildingType(type)
           ? composeBuildingRotation(type, userRotation)
           : userRotation;
 
