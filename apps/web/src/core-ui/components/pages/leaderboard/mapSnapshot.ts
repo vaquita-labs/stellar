@@ -1,5 +1,5 @@
+import { composeBuildingRotation, isBuildingType } from '@/core-ui/components/map/buildings/registry';
 import { disposeObject } from '@/core-ui/components/map/helpers';
-import { composeBuildingRotation } from '@/core-ui/components/map/tiles/buildingRotations';
 import { getObjectGroup } from '@/core-ui/components/map/tiles/registry';
 import { MapObject, MapObjectType, WorldType } from '@/core-ui/types';
 import * as THREE from 'three';
@@ -17,12 +17,6 @@ const BASE_H = 270; // 16:9
 const ISO_DIRECTION = new THREE.Vector3(1, 1.15, 1).normalize();
 /** Match MapMiniPreview's framing: fill the tile, crop the diamond tips. */
 const FILL = 1.4;
-const SPECIAL_BUILDINGS: MapObjectType[] = [
-  MapObjectType.BANK,
-  MapObjectType.BARN,
-  MapObjectType.LEADERBOARD,
-];
-
 let renderer: THREE.WebGLRenderer | null = null;
 let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
@@ -97,7 +91,7 @@ function renderSnapshot(objects: MapObject[], worldType: WorldType): string {
       Array.isArray(o.rotation) && o.rotation.length === 3
         ? [o.rotation[0] || 0, o.rotation[1] || 0, o.rotation[2] || 0]
         : [0, 0, 0];
-    const rotation = SPECIAL_BUILDINGS.includes(o.type)
+    const rotation = isBuildingType(o.type)
       ? composeBuildingRotation(o.type, userRotation)
       : userRotation;
     const wrapper = new THREE.Group();

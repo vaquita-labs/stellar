@@ -1,12 +1,10 @@
 import { MapObject, MapObjectType, WorldType } from '@/core-ui/types';
 import * as THREE from 'three';
-import { Font } from 'three/examples/jsm/loaders/FontLoader.js';
+import { BUILDINGS } from '../buildings/registry';
+import { BuildContext, ObjectBuilder } from '../types';
 import {
-  getBankGroup,
-  getBarnGroup,
   getBushGroup,
   getGrassGroup,
-  getLeaderboardGroup,
   getRoadGroup,
   getRockGroup,
   getTreeGroup,
@@ -16,16 +14,9 @@ import {
 // ---------------------------------------------------------------------------
 // Registro único tipo → builder. Cualquier código que necesite materializar
 // un tile (Ground, previews del catálogo, snapshot del leaderboard) pasa por
-// acá; para agregar un tipo nuevo se agrega UNA entrada.
+// acá. Los tiles simples se registran abajo; los edificios vienen del registro
+// de buildings/registry.tsx (una sola fuente para geometría + componente).
 // ---------------------------------------------------------------------------
-
-export interface BuildContext {
-  worldType: WorldType;
-  /** Fuente para los edificios con texto 3D (banco, podio). */
-  font?: Font | null;
-}
-
-type ObjectBuilder = (mapObject: MapObject, ctx: BuildContext) => THREE.Object3D;
 
 // Plano invisible para que los tiles EMPTY sean clickeables en modo edición.
 const getEmptyHitPlane: ObjectBuilder = ({ position }) => {
@@ -38,6 +29,10 @@ const getEmptyHitPlane: ObjectBuilder = ({ position }) => {
   return plane;
 };
 
+const buildingBuilders = Object.fromEntries(
+  Object.entries(BUILDINGS).map(([type, definition]) => [type, definition.build])
+) as Partial<Record<MapObjectType, ObjectBuilder>>;
+
 const BUILDERS: Partial<Record<MapObjectType, ObjectBuilder>> = {
   [MapObjectType.WATER]: (o, { worldType }) => getWaterGroup(o, worldType),
   [MapObjectType.ROCK]: (o, { worldType }) => getRockGroup(o, worldType),
@@ -45,19 +40,15 @@ const BUILDERS: Partial<Record<MapObjectType, ObjectBuilder>> = {
   [MapObjectType.BUSH]: (o, { worldType }) => getBushGroup(o, worldType),
   [MapObjectType.TREE]: (o, { worldType }) => getTreeGroup(o, worldType),
   [MapObjectType.ROAD]: (o, { worldType }) => getRoadGroup(o, worldType),
-  [MapObjectType.BANK]: (o, { worldType, font }) => getBankGroup(o, worldType, font ?? null),
-  [MapObjectType.LEADERBOARD]: (o, { worldType, font }) => getLeaderboardGroup(o, worldType, font ?? null),
-  [MapObjectType.BARN]: (o, { worldType }) => getBarnGroup(o, worldType),
+  ...buildingBuilders,
   [MapObjectType.EMPTY]: getEmptyHitPlane,
 };
 
 // Tipos que Ground solo materializa en modo edición: en modo normal los
-// edificios los renderizan los componentes React de buildings/ (con monedas e
+// edificios los renderizan los componentes React de buildings/ (con extras e
 // interacción) y los EMPTY directamente no se dibujan.
 export const EDIT_ONLY_TYPES: ReadonlySet<MapObjectType> = new Set([
-  MapObjectType.BANK,
-  MapObjectType.LEADERBOARD,
-  MapObjectType.BARN,
+  ...(Object.keys(BUILDINGS) as MapObjectType[]),
   MapObjectType.EMPTY,
 ]);
 

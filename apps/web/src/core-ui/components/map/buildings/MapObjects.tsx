@@ -1,9 +1,7 @@
-// MapObjects.tsx
 import { useMapStore } from '@/core-ui/stores';
-import { MapObjectType, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
-import BankBuilding from './BankBuilding';
-import BarnBuilding from './BarnBuilding';
-import Leaderboard from './Leaderboard';
+import { ProfileMapObjectsResponseDTO } from '@/core-ui/types';
+import { Building } from './Building';
+import { BUILDINGS } from './registry';
 
 interface MapObjectsProps {
   objects: ProfileMapObjectsResponseDTO['objects'];
@@ -15,25 +13,28 @@ interface MapObjectsProps {
   hasWallet?: boolean;
 }
 
-export const MapObjects = ({ objects, hasWallet }: MapObjectsProps) => {
+// Renderiza los edificios del mapa en modo normal (en modo edición los
+// materializa Ground con los mismos builders). Qué es un edificio y cómo se
+// dibuja vive en registry.tsx: agregar uno nuevo no requiere tocar este archivo.
+export const MapObjects = ({ objects }: MapObjectsProps) => {
   const editMode = useMapStore((store) => store.editMode);
 
-  return objects.map(({ position, type, rotation }, index) => {
-    // NOTE: onClick handlers temporalmente desactivados para que el banco, la granja
-    // y el podio no sean clicleables (sin cursor pointer). Reactivar pasando de nuevo
-    // onBankClick / onBarnClick / onLeaderBoardClick cuando se quieran habilitar.
-    if (type === MapObjectType.BANK && !editMode) {
-      return <BankBuilding key={position.join(',') + index} position={position} rotation={rotation} />;
-    }
-    if (type === MapObjectType.BARN && !editMode) {
-      return (
-        <BarnBuilding key={position.join(',') + index} position={position} rotation={rotation} hasWallet={hasWallet} />
-      );
-    }
+  if (editMode) return null;
 
-    if (type === MapObjectType.LEADERBOARD && !editMode) {
-      return <Leaderboard key={position.join(',') + index} position={position} rotation={rotation} />;
-    }
-    return null;
+  // NOTE: onClick handlers temporalmente desactivados para que el banco, la granja
+  // y el podio no sean clickeables (sin cursor pointer). Reactivar pasando `onClick`
+  // al <Building> según el tipo cuando se quieran habilitar.
+  return objects.map(({ position, type, rotation }, index) => {
+    const definition = BUILDINGS[type];
+    if (!definition) return null;
+    return (
+      <Building
+        key={position.join(',') + index}
+        type={type}
+        definition={definition}
+        position={position}
+        rotation={rotation}
+      />
+    );
   });
 };
