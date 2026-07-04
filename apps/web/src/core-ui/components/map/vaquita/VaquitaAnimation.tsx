@@ -1,9 +1,9 @@
 'use client';
 
 import { DepositWithdrawalState, VaquitaAnimationState, VaquitaMood } from '../../../types';
-import SleepingAnimation from '../../templates/WorldMap/vaquita/animations/SleepingAnimation';
-import WalkingAnimation from '../../templates/WorldMap/vaquita/animations/WalkingAnimation';
-import WorkingAnimation from '../../templates/WorldMap/vaquita/animations/WorkingAnimation';
+import SleepingAnimation from './animations/SleepingAnimation';
+import WalkingAnimation from './animations/WalkingAnimation';
+import WorkingAnimation from './animations/WorkingAnimation';
 
 interface VaquitaProps {
   status: DepositWithdrawalState;

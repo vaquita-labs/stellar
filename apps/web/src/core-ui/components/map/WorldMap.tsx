@@ -10,17 +10,17 @@ import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
 import { useMapStore, useConfigStore, useSyncMapObjects } from '../../stores';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
 import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
-import { MapObjects } from '../templates/WorldMap/map/MapObjects';
-import { SceneCamera } from '../templates/WorldMap/map/SceneCamera';
-import { SceneControls } from '../templates/WorldMap/map/SceneControls';
-import { WaterBackground } from '../templates/WorldMap/map/WaterBackground';
-import { DayCycleSky } from './DayCycleSky';
-import { EditGrid } from './EditGrid';
-import { Ground } from './Ground';
+import { MapObjects } from './buildings/MapObjects';
+import { SceneCamera } from './scene/SceneCamera';
+import { SceneControls } from './scene/SceneControls';
+import { WaterBackground } from './scene/WaterBackground';
+import { DayCycleSky } from './scene/DayCycleSky';
+import { EditGrid } from './edit/EditGrid';
+import { Ground } from './tiles/Ground';
 import { getMapCenter } from './helpers';
-import { ObjectGlow } from './ObjectGlow';
-import { SpotlightPositionUpdater } from './SpotlightPositionUpdater';
-import { TileSpotlightUpdater } from './TileSpotlightUpdater';
+import { ObjectGlow } from './edit/ObjectGlow';
+import { SpotlightPositionUpdater } from './edit/SpotlightPositionUpdater';
+import { TileSpotlightUpdater } from './edit/TileSpotlightUpdater';
 import { Vaquita } from './vaquita';
 
 const PLACEHOLDER_VAQUITA: DepositSummaryResponseDTO = {
