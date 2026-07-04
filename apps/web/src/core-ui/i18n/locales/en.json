@@ -575,6 +575,9 @@
       "description": "Try a different username or clear the search.",
       "title": "No vaqueros match “{{query}}”"
     },
+    "pinned": {
+      "goToPosition": "Go to your position"
+    },
     "search": {
       "clear": "Clear search",
       "label": "Search vaqueros",

@@ -22,6 +22,9 @@ export interface LeaderboardPageDTO {
   limit: number;
   offset: number;
   hasMore: boolean;
+  /** The viewer's own row (true rank, independent of the search/sort view),
+   *  or null when the viewer isn't on the board / isn't connected. */
+  me: LeaderboardResponseDTO | null;
 }
 
 /** Prefix shared by every leaderboard view (any cycle/search/sort) — use it to
@@ -32,7 +35,9 @@ export const leaderboardQueryPrefix = (networkName: string | undefined) =>
 export const leaderboardQueryKey = (
   networkName: string | undefined,
   { cycle = 'current', search = '', sort = 'rank', direction = 'desc' }: LeaderboardViewParams = {},
-) => [...leaderboardQueryPrefix(networkName), cycle, { search, sort, direction }] as const;
+  // Part of the key so switching wallets can't serve another viewer's `me` row.
+  viewerWallet = '',
+) => [...leaderboardQueryPrefix(networkName), cycle, { search, sort, direction, viewerWallet }] as const;
 
 const toLeaderboardRow = (row: LeaderboardResponseDTO): LeaderboardResponseDTO => ({
   position: row?.position ?? 0,
@@ -56,11 +61,16 @@ const toLeaderboardRow = (row: LeaderboardResponseDTO): LeaderboardResponseDTO =
  * reports `hasMore`/`offset` for the next fetch.
  */
 export const useLeaderboardData = (params: LeaderboardViewParams = {}) => {
-  const { network } = useConfigStore();
+  const { network, walletAddress } = useConfigStore();
   const { cycle = 'current', search = '', sort = 'rank', direction = 'desc' } = params;
+  const viewerWallet = walletAddress ?? '';
 
   return useInfiniteQuery({
-    queryKey: leaderboardQueryKey(network?.networkName, { cycle, search, sort, direction }),
+    queryKey: leaderboardQueryKey(
+      network?.networkName,
+      { cycle, search, sort, direction },
+      viewerWallet,
+    ),
     queryFn: async ({ pageParam }): Promise<LeaderboardPageDTO> => {
       const url = new URL(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/leaderboard`);
       url.searchParams.set('cycle', cycle);
@@ -69,6 +79,9 @@ export const useLeaderboardData = (params: LeaderboardViewParams = {}) => {
       if (search) url.searchParams.set('search', search);
       if (sort !== 'rank') url.searchParams.set('sort', sort);
       if (direction !== 'desc') url.searchParams.set('direction', direction);
+      // Ask the API for the viewer's own row too, so the page can pin "you are
+      // #N" without paging the feed down to that position.
+      if (viewerWallet) url.searchParams.set('me', viewerWallet);
 
       const response = await fetch(url);
       const data = await response.json();
@@ -80,6 +93,7 @@ export const useLeaderboardData = (params: LeaderboardViewParams = {}) => {
         limit: page?.limit ?? LEADERBOARD_PAGE_SIZE,
         offset: page?.offset ?? 0,
         hasMore: page?.hasMore ?? false,
+        me: page?.me ? toLeaderboardRow(page.me) : null,
       };
     },
     initialPageParam: 0,
