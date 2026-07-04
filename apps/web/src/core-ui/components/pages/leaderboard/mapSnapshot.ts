@@ -1,3 +1,4 @@
+import { disposeObject } from '@/core-ui/components/map/helpers';
 import { composeBuildingRotation } from '@/core-ui/components/map/tiles/buildingRotations';
 import { getObjectGroup } from '@/core-ui/components/map/tiles/registry';
 import { MapObject, MapObjectType, WorldType } from '@/core-ui/types';
@@ -83,18 +84,6 @@ function fitCamera(cam: THREE.PerspectiveCamera, target: THREE.Object3D) {
   }
 }
 
-function disposeGroup(group: THREE.Object3D) {
-  group.traverse((child) => {
-    const mesh = child as THREE.Mesh;
-    if (mesh.isMesh) {
-      mesh.geometry?.dispose();
-      const mat = mesh.material;
-      if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
-      else mat?.dispose();
-    }
-  });
-}
-
 function renderSnapshot(objects: MapObject[], worldType: WorldType): string {
   ensureRenderer();
 
@@ -124,7 +113,7 @@ function renderSnapshot(objects: MapObject[], worldType: WorldType): string {
   const url = renderer!.domElement.toDataURL('image/png');
 
   scene!.remove(root);
-  disposeGroup(root);
+  disposeObject(root);
   return url;
 }
 

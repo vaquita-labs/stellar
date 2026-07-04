@@ -64,7 +64,12 @@ export const EDIT_ONLY_TYPES: ReadonlySet<MapObjectType> = new Set([
 export const buildTileObject = (mapObject: MapObject, ctx: BuildContext): THREE.Object3D | null =>
   BUILDERS[mapObject.type]?.(mapObject, ctx) ?? null;
 
-// Igual que buildTileObject pero con fallback a GRASS para tipos desconocidos.
+// Igual que buildTileObject pero con fallback a GRASS para tipos desconocidos
+// y para EMPTY (cuyo builder es un plano invisible que solo sirve en edición).
 // Lo usan los previews (catálogo de edición, snapshot del leaderboard).
-export const getObjectGroup = (mapObject: MapObject, worldType: WorldType): THREE.Object3D =>
-  buildTileObject(mapObject, { worldType }) ?? getGrassGroup(mapObject, worldType);
+export const getObjectGroup = (mapObject: MapObject, worldType: WorldType): THREE.Object3D => {
+  if (mapObject.type === MapObjectType.EMPTY) {
+    return getGrassGroup(mapObject, worldType);
+  }
+  return buildTileObject(mapObject, { worldType }) ?? getGrassGroup(mapObject, worldType);
+};
