@@ -30,6 +30,9 @@ export const useProfileMapObjectsByWallet = (walletAddress?: string, enabled = t
             type: object?.type || MapObjectType.EMPTY,
             variant: object?.variant || 0,
             position: object?.position || [0, 0, 0],
+            // Sin esto las rotaciones guardadas (edificios girados en modo
+            // edición) se perdían en cada recarga del mapa.
+            rotation: object?.rotation || [0, 0, 0],
           })
         ),
       };

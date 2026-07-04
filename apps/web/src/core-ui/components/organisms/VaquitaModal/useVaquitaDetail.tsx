@@ -430,7 +430,16 @@ export const useVaquitaDetail = ({
 
       <div className="flex flex-col gap-1.5 bg-default-50 border border-black/10 rounded-md p-3">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-default-500">{t('deposit.detail.vaquitaInterest', 'Vaquita interest')}</span>
+          <span className="flex items-center gap-1.5">
+            <span className="text-default-500">{t('deposit.detail.vaquitaInterest', 'Vaquita interest')}</span>
+            {/* APY del lock period de ESTE depósito (dataApy ya se pide por depósito);
+                el agregado del Bank Rewards no puede mostrarlo porque mezcla locks. */}
+            {dataApy && (
+              <span className="text-[10px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                {dataApy.vaquitaApy.toFixed(2)}% APY
+              </span>
+            )}
+          </span>
           <span className="font-semibold text-primary tabular-nums">
             +{vaquitaInterest.toFixed(2)} {token?.symbol}
           </span>

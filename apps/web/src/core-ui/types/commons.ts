@@ -101,6 +101,13 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   updatedTimestamp: number;
   serverTimestamp: number;
   confirmedTimestamp: number;
+  /**
+   * Client clock (`Date.now()`) at the moment the deposit was fetched. The
+   * deposits list is cached (staleTime Infinity + localStorage), so
+   * `serverTimestamp` freezes at fetch time; live "now" must be derived as
+   * `serverTimestamp + (Date.now() - fetchedAtTimestamp)`.
+   */
+  fetchedAtTimestamp?: number;
 }
 
 export type TotalDepositsResponseDTO = {

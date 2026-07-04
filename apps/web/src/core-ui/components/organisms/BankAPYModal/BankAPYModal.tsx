@@ -33,7 +33,6 @@ export function BankAPYModal({
   // APY real por fuente y nombre del mercado de lending (ej. Defindex).
   const { data: dataApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
   const lendingMarketName = dataApy?.lendingMarketName ?? '';
-  const vaquitaApy = dataApy?.vaquitaApy ?? 0;
   const protocolApy = dataApy?.protocolApy ?? 0;
 
   const [showHowItWorks, setShowHowItWorks] = useState(false);
@@ -181,10 +180,9 @@ export function BankAPYModal({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+                      {/* Sin chip de APY: cada depósito tiene su propio lock period (y por
+                          tanto su propio APY de Vaquita) — se muestra en el detalle del depósito. */}
                       <span className="text-sm font-medium text-black">{t('deposit.bank.vaquitaRewards', 'Vaquita rewards')}</span>
-                      <span className="text-[10px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded-full">
-                        {vaquitaApy.toFixed(2)}% APY
-                      </span>
                     </div>
                     <span className="text-sm font-bold text-black tabular-nums">
                       +{vaquitaEarnings.toFixed(2)} {tokenSymbol}
