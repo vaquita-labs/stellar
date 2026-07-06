@@ -34,7 +34,7 @@ export const WithdrawnDepositCard = ({
           </p>
           <span
             className={
-              'shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ' +
+              'shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-[6px] border border-black border-b-2 ' +
               (isEarly ? 'bg-default-500 text-white' : 'bg-success text-white')
             }
           >

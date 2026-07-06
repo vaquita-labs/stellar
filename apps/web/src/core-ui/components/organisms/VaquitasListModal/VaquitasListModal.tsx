@@ -1,5 +1,6 @@
 'use client';
 
+import { useDepositListControls } from '@/core-ui/components/home/DepositListControls';
 import { DepositListTab, DepositListTabs } from '@/core-ui/components/home/DepositListTabs';
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
 import { WithdrawnDepositCard } from '@/core-ui/components/home/WithdrawnDepositCard';
@@ -23,6 +24,12 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
   const [tab, setTab] = useState<DepositListTab>('active');
 
   const { deposits, activeDeposits, withdrawnDeposits } = getDepositsData(depositsData?.deposits ?? []);
+
+  const { controls, filteredActiveDeposits, filteredWithdrawnDeposits } = useDepositListControls({
+    tab,
+    activeDeposits,
+    withdrawnDeposits,
+  });
 
   // Detalle dentro del MISMO modal. La lista ya trae la vaquita completa, así
   // que el detalle se pinta al instante con esos datos (sin spinner). Dejamos
@@ -64,15 +71,17 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
           withdrawnCount={withdrawnDeposits.length}
         />
 
+        {(tab === 'active' ? activeDeposits : withdrawnDeposits).length > 0 && controls}
+
         {tab === 'active' ? (
           <div className="gap-3 flex flex-col mb-4">
-            {activeDeposits.length === 0 ? (
+            {filteredActiveDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={100} height={100} />
                 <p className="text-gray-500 mt-4">{t('deposit.list.noActiveDeposits', 'No active deposits')}</p>
               </div>
             ) : (
-              activeDeposits.map((deposit) => (
+              filteredActiveDeposits.map((deposit) => (
                 <VaquitaDepositCard
                   key={deposit.id}
                   deposit={deposit}
@@ -83,13 +92,13 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
           </div>
         ) : (
           <div className="gap-2 flex flex-col mb-4">
-            {withdrawnDeposits.length === 0 ? (
+            {filteredWithdrawnDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={100} height={100} />
                 <p className="text-gray-500 mt-4">{t('deposit.list.noWithdrawnDeposits', 'No withdrawn deposits')}</p>
               </div>
             ) : (
-              withdrawnDeposits.map((deposit) => (
+              filteredWithdrawnDeposits.map((deposit) => (
                 <WithdrawnDepositCard
                   key={deposit.id}
                   deposit={deposit}

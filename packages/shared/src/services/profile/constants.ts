@@ -6,6 +6,13 @@
 export const REWARD_REASON_DAILY_CHECKIN = 'daily-checkin';
 
 /**
+ * `profiles_rewards.reason` value stamped on the NEGATIVE gold-coin rows that
+ * pay for shop purchases (map items). The gold balance is the sum of the
+ * ledger, so spending is just a negative entry — auditable per purchase.
+ */
+export const REWARD_REASON_SHOP_PURCHASE = 'shop-purchase';
+
+/**
  * Beta Tester eligibility window. Profiles whose `created_at` is on or before
  * this date qualify for the Beta Tester badge. Hard-coded for v1 — when we
  * graduate the badge system to a generic eligibility table this constant

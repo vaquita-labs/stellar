@@ -4,6 +4,7 @@ type Hex = `0x${string}`;
 
 type EvmNetworkConfig = {
   tokenMessengerV2: Hex;
+  messageTransmitterV2: Hex;
   usdcAddress: Hex;
   cctpForwarder: string;
 };
@@ -21,30 +22,41 @@ type EvmToStellarBurnInput = {
   forwardRecipientStrkey: string;
 };
 
+type EvmReceiveMessageInput = {
+  destinationNetwork: BridgeNetworkKey;
+  message: Hex;
+  attestation: Hex;
+};
+
 const CCTP_DOMAIN_STELLAR = 27;
 const CCTP_FAST_FINALITY_THRESHOLD = 1000;
 const ERC20_ALLOWANCE_SELECTOR = '0xdd62ed3e';
 const ERC20_APPROVE_SELECTOR = '0x095ea7b3';
 const DEPOSIT_FOR_BURN_WITH_HOOK_SELECTOR = '0x779b432d';
+const RECEIVE_MESSAGE_SELECTOR = '0x57ecfd28';
 
 const EVM_CCTP_CONFIG: Partial<Record<BridgeNetworkKey, EvmNetworkConfig>> = {
   ethereum: {
     tokenMessengerV2: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+    messageTransmitterV2: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
     usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     cctpForwarder: 'CBZL2IH7F6BIDAA3WBNXYKIXSATJGMSW7K5P5MJ6STX5RXN47TZJDF5T',
   },
   'ethereum-sepolia': {
     tokenMessengerV2: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
+    messageTransmitterV2: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
     usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
     cctpForwarder: 'CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ',
   },
   base: {
     tokenMessengerV2: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+    messageTransmitterV2: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
     usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     cctpForwarder: 'CBZL2IH7F6BIDAA3WBNXYKIXSATJGMSW7K5P5MJ6STX5RXN47TZJDF5T',
   },
   'base-sepolia': {
     tokenMessengerV2: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
+    messageTransmitterV2: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
     usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     cctpForwarder: 'CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ',
   },
@@ -127,6 +139,12 @@ const dynamicBytesWords = (value: string) => {
   return `${uintWord(byteLength)}${hex.padEnd(paddedLength, '0')}`;
 };
 
+const dynamicBytesArgLength = (value: string) => {
+  const hex = strip0x(value);
+  const byteLength = hex.length / 2;
+  return 32 + Math.ceil(byteLength / 32) * 32;
+};
+
 const evmConfig = (network: BridgeNetworkKey) => {
   const config = EVM_CCTP_CONFIG[network];
   if (!config) throw new Error(`Missing EVM CCTP config for ${network}`);
@@ -178,5 +196,19 @@ export const buildEvmToStellarBurnTx = ({
   return {
     to: config.tokenMessengerV2,
     data: `${DEPOSIT_FOR_BURN_WITH_HOOK_SELECTOR}${staticWords}${dynamicBytesWords(hookData)}`,
+  };
+};
+
+export const buildEvmReceiveMessageTx = ({
+  destinationNetwork,
+  message,
+  attestation,
+}: EvmReceiveMessageInput): EvmTxRequest => {
+  const config = evmConfig(destinationNetwork);
+  const messageOffset = 2 * 32;
+  const attestationOffset = messageOffset + dynamicBytesArgLength(message);
+  return {
+    to: config.messageTransmitterV2,
+    data: `${RECEIVE_MESSAGE_SELECTOR}${uintWord(messageOffset)}${uintWord(attestationOffset)}${dynamicBytesWords(message)}${dynamicBytesWords(attestation)}`,
   };
 };

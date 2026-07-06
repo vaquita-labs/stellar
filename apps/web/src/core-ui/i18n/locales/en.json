@@ -244,7 +244,17 @@
     "saving": "Saving…",
     "selectOption": "Select an option…",
     "somethingWentWrong": "Something went wrong",
-    "soon": "Soon"
+    "soon": "Soon",
+    "time": {
+      "day_one": "1 day",
+      "day_other": "{{count}} days",
+      "hour_one": "1 hour",
+      "hour_other": "{{count}} hours",
+      "minute_one": "1 minute",
+      "minute_other": "{{count}} minutes",
+      "month_one": "1 month",
+      "month_other": "{{count}} months"
+    }
   },
   "deposit": {
     "bank": {
@@ -297,12 +307,19 @@
     },
     "list": {
       "earned": "Earned",
+      "filterAll": "All",
+      "filterEarly": "Early",
+      "filterOnTime": "On time",
       "makeFirstDeposit": "Make your first deposit to get started",
       "noActiveDeposits": "No active deposits",
       "noData": "No data",
       "noDepositsYet": "No deposits yet",
       "noWithdrawnDeposits": "No withdrawn deposits",
       "rewardsForfeited": "Rewards forfeited",
+      "sortAmount": "Highest amount",
+      "sortNewest": "Newest first",
+      "sortOldest": "Oldest first",
+      "sortUnlock": "Unlocks soonest",
       "tabActive": "Active",
       "tabWithdrawn": "Withdrawn",
       "title": "Your deposits",
@@ -436,7 +453,50 @@
         "utility": "utility"
       },
       "youHave": "You have {{count}}",
-      "yourOffer": "Your offer"
+      "yourOffer": "Your offer",
+      "empty": "The catalog is empty right now.",
+      "emptyHint": "Come back soon for new items!",
+      "placeableHint": "After buying you can place it anywhere on your map, move it or remove it.",
+      "placeNowTitle": "Place it now?",
+      "placeNowDesc": "{{name}} is now in your collection. You can place it on your map right away.",
+      "placeNow": "Place now",
+      "keepForLater": "Keep in collection",
+      "purchaseErrorTitle": "Purchase failed",
+      "purchaseErrorDesc": "Try again.",
+      "objects": {
+        "tree": {
+          "default": "Tree",
+          "0": "Tree",
+          "4": "Palm tree"
+        },
+        "rock": {
+          "default": "Rock",
+          "3": "Rocky terrain"
+        },
+        "bush": {
+          "default": "Bush",
+          "0": "Bush"
+        },
+        "grass": {
+          "default": "Grass",
+          "0": "Grass tile"
+        },
+        "water": {
+          "default": "Water"
+        },
+        "road": {
+          "default": "Road"
+        },
+        "bank": {
+          "default": "Bank"
+        },
+        "barn": {
+          "default": "Barn"
+        },
+        "leaderboard": {
+          "default": "Podium"
+        }
+      }
     },
     "coinsChip": {
       "goldCoinAlt": "Gold Coin"
@@ -459,7 +519,9 @@
       "body": "You have unsaved changes. Are you sure you want to exit edit mode?",
       "discard": "Discard changes",
       "saveAndExit": "Save and exit",
-      "title": "Exit edit mode?"
+      "title": "Exit edit mode?",
+      "saveErrorTitle": "Could not save your map",
+      "saveErrorDesc": "Check your connection and try again."
     },
     "music": {
       "low": "Low volume",
@@ -525,9 +587,13 @@
       "label": "Filter by metric"
     },
     "loadingLabel": "Loading leaderboard",
+    "loadingMore": "Loading more vaqueros",
     "noResults": {
       "description": "Try a different username or clear the search.",
       "title": "No vaqueros match “{{query}}”"
+    },
+    "pinned": {
+      "goToPosition": "Go to your position"
     },
     "search": {
       "clear": "Clear search",
@@ -826,7 +892,14 @@
       "terms": "Terms",
       "title": "Settings",
       "wallet": "Wallet",
-      "walletDesc": "View address, send and receive funds."
+      "walletDesc": "View address, send and receive funds.",
+      "installApp": "Install app",
+      "installAppDesc": "Add Vaquita to your home screen.",
+      "installIosTitle": "Install Vaquita",
+      "installIosIntro": "Add Vaquita to your home screen to open it like an app:",
+      "installIosStep1": "Tap the Share button in your browser.",
+      "installIosStep2": "Scroll down and tap \"Add to Home Screen\".",
+      "installIosStep3": "Tap \"Add\" to confirm."
     },
     "summary": {
       "depositsChartAria": "Deposits over the last 6 weeks",

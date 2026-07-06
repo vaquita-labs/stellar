@@ -1,14 +1,12 @@
 import { Router } from 'express';
 import {
-  enrichLeaderboardRows,
-  getAchievementCountsByProfile,
-  getExperienceByProfile,
+  findLeaderboardRowForWallet,
+  getEnrichedLeaderboard,
   getLastClosedCycleId,
-  getLeaderboard,
   getLeaderboardRankForWallet,
-  getProfiles,
-  getStreakCountsByProfile,
+  paginateLeaderboardRows,
   parseLeaderboardCycleQuery,
+  parseLeaderboardPageQuery,
   sendError,
   sendSuccess,
 } from '@vaquita/shared';
@@ -47,56 +45,40 @@ router.get('/rank', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/leaderboard?cycle=current|last_closed|YYYYMM
+//   &limit=20&offset=0&search=&sort=rank|level|streak|badges&direction=asc|desc
+//   &me=G...
 // ---------------------------------------------------------------------------
 
 /**
- * Returns the ranked leaderboard for a cycle.
- * Omit cycle or pass cycle=current for the current open configured cycle.
+ * Returns one page of the ranked leaderboard for a cycle. Search + sort are
+ * applied server-side (before slicing) so infinite-scroll pages stay globally
+ * consistent. Omit cycle or pass cycle=current for the current open cycle.
  *
- * 200 [ { position, walletAddress, score, activeAmount, cycleId, cycleStart, cycleEnd, cycleStatus } ]
+ * Pass `me=<wallet>` to also get that wallet's own row (`me`, with its true
+ * rank regardless of the search/sort view) so the client can pin the viewer's
+ * position without paging to it. `me` is null when the wallet isn't on the
+ * board. Costs one array scan over the already-cached enriched board.
+ *
+ * The enriched board is cached ~30s per cycle (shared across all viewers and
+ * pages), so scrolling through pages costs one DB computation per window, not
+ * one per request. Filtering/sorting/slicing happen per-request on the cached
+ * array.
+ *
+ * 200 { rows: [ { position, walletAddress, nickname, ... } ], total, limit, offset, hasMore, me }
  */
 router.get('/', async (req, res) => {
   try {
     const { cycleId, cycleStatus } = await parseLeaderboardCycleQuery(req.query.cycle);
-    req.log.info({ cycleId, cycleStatus }, 'GET /leaderboard');
+    const pageParams = parseLeaderboardPageQuery(req.query);
+    const meWallet = typeof req.query.me === 'string' ? req.query.me.trim() : '';
+    req.log.info({ cycleId, cycleStatus, ...pageParams }, 'GET /leaderboard');
 
-    const rows = await getLeaderboard(cycleId);
-    const { data: profiles, error: profilesError } = await getProfiles();
-    if (profilesError) {
-      req.log.error({ err: profilesError }, 'Failed to load profile metadata for leaderboard');
-      return sendError(res, 'Failed to load profile metadata for leaderboard', profilesError, 500);
-    }
+    const enriched = await getEnrichedLeaderboard(cycleId, cycleStatus);
 
-    const [
-      { counts: badgesByProfileId, error: badgesError },
-      { counts: streaksByProfileId, error: streaksError },
-      { experience: experienceByProfileId, error: experienceError },
-    ] = await Promise.all([
-      getAchievementCountsByProfile(),
-      getStreakCountsByProfile(),
-      getExperienceByProfile(profiles),
-    ]);
+    const page = paginateLeaderboardRows(enriched, pageParams);
+    if (meWallet) page.me = findLeaderboardRowForWallet(enriched, meWallet);
 
-    if (badgesError) {
-      req.log.error({ err: badgesError }, 'Failed to fetch badge counts for leaderboard');
-    }
-    if (streaksError) {
-      req.log.error({ err: streaksError }, 'Failed to fetch streak counts for leaderboard');
-    }
-    if (experienceError) {
-      req.log.error({ err: experienceError }, 'Failed to fetch experience for leaderboard');
-    }
-
-    return sendSuccess(
-      res,
-      enrichLeaderboardRows(
-        rows,
-        profiles,
-        { badgesByProfileId, streaksByProfileId, experienceByProfileId },
-        cycleStatus,
-      ),
-      '',
-    );
+    return sendSuccess(res, page, '');
   } catch (err: any) {
     if (err?.message === 'cycle must be current, last_closed, or a positive integer cycle id') {
       return sendError(res, err.message, null, 400);

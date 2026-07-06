@@ -113,6 +113,39 @@ describe('bridge confirmation worker', () => {
     });
   });
 
+  it('leaves ready Stellar to EVM transfers for browser wallet completion', async () => {
+    const queue = new MemoryQueue();
+    queue.rows[0] = {
+      ...queue.rows[0]!,
+      direction: 'stellar_to_evm',
+      sourceNetwork: 'stellar-testnet',
+      destinationNetwork: 'base-sepolia',
+      sourceWallet: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+      destinationWallet: '0x1111111111111111111111111111111111111111',
+      status: 'ready_to_complete',
+      cctpMessage: '0xmessage',
+      cctpAttestation: '0xattestation',
+    };
+
+    const result = await runBridgeConfirmationBatch({
+      queue,
+      batchSize: 1,
+      relayDestination: async () => {
+        throw new Error('stellar to evm should not be server-relayed');
+      },
+      getAttestation: async () => {
+        throw new Error('ready transfers should not poll attestation');
+      },
+    });
+
+    expect(result).toEqual({ claimed: 1, refreshed: 0, relayed: 0, ready: 1, needsReview: 0, stale: 0 });
+    expect(queue.rows[0]).toMatchObject({
+      status: 'ready_to_complete',
+      destinationTxHash: null,
+      errorReason: null,
+    });
+  });
+
   it('moves relay failures to needs review with a support-readable reason', async () => {
     const queue = new MemoryQueue();
     queue.rows[0] = {

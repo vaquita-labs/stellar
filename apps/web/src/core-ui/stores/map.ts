@@ -1,7 +1,8 @@
-import { useProfileMapObjects } from '@/core-ui/hooks/profile/useProfileMapObjects';
+import { useProfileMapObjectsByWallet } from '@/core-ui/hooks/profile/useProfileMapObjectsByWallet';
 import { MapObject, MapObjectType, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
 import { useEffect } from 'react';
 import { create } from 'zustand';
+import { useConfigStore } from './config';
 
 export type ObjectItem = {
   type: MapObjectType;
@@ -110,8 +111,14 @@ export const useMapStore = create<MapStoreType>((set, get) => ({
   setTileCorners: (corners) => set({ tileCorners: corners }),
 }));
 
-export const useSyncMapObjects = () => {
-  const { data, refetch } = useProfileMapObjects();
+/**
+ * Sincroniza el store del mapa con los tiles de un perfil. Sin argumento usa
+ * el usuario logueado; con `walletAddress` carga el mapa de OTRO perfil (vista
+ * de leaderboard) — la vaquita y el render usan el mismo store en ambos casos.
+ */
+export const useSyncMapObjects = (walletAddress?: string) => {
+  const ownWalletAddress = useConfigStore((s) => s.walletAddress);
+  const { data, refetch } = useProfileMapObjectsByWallet(walletAddress || ownWalletAddress);
   const setTiles = useMapStore((s) => s.setTiles);
 
   const objectsString = JSON.stringify(data?.objects || []);
@@ -120,5 +127,7 @@ export const useSyncMapObjects = () => {
     setTiles(JSON.parse(objectsString));
   }, [objectsString, setTiles]);
 
-  return { refetch };
+  // isLoaded distingue "el mapa está vacío" de "todavía no llegó el API":
+  // con mapas que arrancan vacíos, currentTiles.length ya no sirve para eso.
+  return { refetch, isLoaded: data !== undefined };
 };

@@ -1,4 +1,4 @@
-import { MAP_SIZE } from '@/core-ui/components/templates/WorldMap/vaquita/constants';
+import { MAP_SIZE } from '@/core-ui/components/map/constants';
 import { MapStoreType } from '@/core-ui/stores';
 import { MapObjectType } from '@/core-ui/types';
 

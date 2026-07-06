@@ -1,6 +1,9 @@
 'use client';
 
 import { AblyProvider } from '@/core-ui/components';
+// Side-effect import: registers the `beforeinstallprompt` listener at bundle
+// evaluation, before the browser fires the (single) install event.
+import '@/core-ui/hooks/useInstallApp';
 import { I18nProvider } from '@/core-ui/i18n/I18nProvider';
 import { useVisibility } from '@/core-ui/stores/visibility';
 import { getNetworkEnum, getStellarNetwork } from '@/networks/stellar/kit';

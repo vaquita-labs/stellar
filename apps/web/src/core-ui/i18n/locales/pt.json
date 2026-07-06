@@ -244,7 +244,17 @@
     "saving": "Salvando…",
     "selectOption": "Escolha uma opção…",
     "somethingWentWrong": "Algo deu errado",
-    "soon": "Em breve"
+    "soon": "Em breve",
+    "time": {
+      "day_one": "1 dia",
+      "day_other": "{{count}} dias",
+      "hour_one": "1 hora",
+      "hour_other": "{{count}} horas",
+      "minute_one": "1 minuto",
+      "minute_other": "{{count}} minutos",
+      "month_one": "1 mês",
+      "month_other": "{{count}} meses"
+    }
   },
   "deposit": {
     "bank": {
@@ -297,12 +307,19 @@
     },
     "list": {
       "earned": "Ganho",
+      "filterAll": "Todos",
+      "filterEarly": "Antecipados",
+      "filterOnTime": "No prazo",
       "makeFirstDeposit": "Faça seu primeiro depósito para começar",
       "noActiveDeposits": "Nenhum depósito ativo",
       "noData": "Sem dados",
       "noDepositsYet": "Você ainda não tem depósitos",
       "noWithdrawnDeposits": "Nenhum depósito sacado",
       "rewardsForfeited": "Recompensas perdidas",
+      "sortAmount": "Maior valor",
+      "sortNewest": "Mais recentes",
+      "sortOldest": "Mais antigos",
+      "sortUnlock": "Desbloqueio mais próximo",
       "tabActive": "Ativos",
       "tabWithdrawn": "Sacados",
       "title": "Seus depósitos",
@@ -436,7 +453,50 @@
         "utility": "utilidade"
       },
       "youHave": "Você tem {{count}}",
-      "yourOffer": "Sua oferta"
+      "yourOffer": "Sua oferta",
+      "empty": "O catálogo está vazio por enquanto.",
+      "emptyHint": "Volte em breve para ver novos itens!",
+      "placeableHint": "Depois de comprar, você pode colocá-lo em qualquer lugar do seu mapa, movê-lo ou removê-lo.",
+      "placeNowTitle": "Colocar agora?",
+      "placeNowDesc": "{{name}} já está na sua coleção. Você pode colocá-lo no seu mapa agora mesmo.",
+      "placeNow": "Colocar agora",
+      "keepForLater": "Guardar na coleção",
+      "purchaseErrorTitle": "Não foi possível comprar",
+      "purchaseErrorDesc": "Tente novamente.",
+      "objects": {
+        "tree": {
+          "default": "Árvore",
+          "0": "Árvore",
+          "4": "Palmeira"
+        },
+        "rock": {
+          "default": "Rocha",
+          "3": "Terreno rochoso"
+        },
+        "bush": {
+          "default": "Arbusto",
+          "0": "Arbusto"
+        },
+        "grass": {
+          "default": "Grama",
+          "0": "Terreno de grama"
+        },
+        "water": {
+          "default": "Água"
+        },
+        "road": {
+          "default": "Estrada"
+        },
+        "bank": {
+          "default": "Banco"
+        },
+        "barn": {
+          "default": "Celeiro"
+        },
+        "leaderboard": {
+          "default": "Pódio"
+        }
+      }
     },
     "coinsChip": {
       "goldCoinAlt": "Moeda de ouro"
@@ -459,7 +519,9 @@
       "body": "Você tem alterações não salvas. Tem certeza de que deseja sair do modo de edição?",
       "discard": "Descartar alterações",
       "saveAndExit": "Salvar e sair",
-      "title": "Sair do modo de edição?"
+      "title": "Sair do modo de edição?",
+      "saveErrorTitle": "Não foi possível salvar seu mapa",
+      "saveErrorDesc": "Verifique sua conexão e tente novamente."
     },
     "music": {
       "low": "Volume baixo",
@@ -525,9 +587,13 @@
       "label": "Filtrar por métrica"
     },
     "loadingLabel": "Carregando o ranking",
+    "loadingMore": "Carregando mais vaqueros",
     "noResults": {
       "description": "Tente outro nome de usuário ou limpe a busca.",
       "title": "Nenhum vaquero corresponde a “{{query}}”"
+    },
+    "pinned": {
+      "goToPosition": "Ir para a sua posição"
     },
     "search": {
       "clear": "Limpar busca",
@@ -826,7 +892,14 @@
       "terms": "Termos",
       "title": "Configurações",
       "wallet": "Wallet",
-      "walletDesc": "Ver endereço, enviar e receber fundos."
+      "walletDesc": "Ver endereço, enviar e receber fundos.",
+      "installApp": "Instalar o app",
+      "installAppDesc": "Adicione a Vaquita à sua tela inicial.",
+      "installIosTitle": "Instalar a Vaquita",
+      "installIosIntro": "Adicione a Vaquita à sua tela inicial para abri-la como um app:",
+      "installIosStep1": "Toque no botão Compartilhar no seu navegador.",
+      "installIosStep2": "Role para baixo e toque em \"Adicionar à Tela de Início\".",
+      "installIosStep3": "Toque em \"Adicionar\" para confirmar."
     },
     "summary": {
       "depositsChartAria": "Depósitos das últimas 6 semanas",

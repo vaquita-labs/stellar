@@ -18,7 +18,7 @@ const TabButton = ({
     onClick={onPress}
     className={
       'flex-1 flex items-center justify-center gap-2 rounded-[6px] py-2 text-sm font-bold transition-colors ' +
-      (active ? 'bg-primary text-black' : 'text-default-500 hover:text-black')
+      (active ? 'bg-primary text-black' : 'text-default-500 hover:text-black hover:bg-black/5')
     }
   >
     <span>{label}</span>
@@ -50,7 +50,7 @@ export const DepositListTabs = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <div className="flex gap-1 p-1 bg-white border border-black border-b-2 rounded-md">
+    <div className="flex gap-1 p-1 bg-background border border-black border-b-2 rounded-md">
       <TabButton
         active={tab === 'active'}
         label={t('deposit.list.tabActive', 'Active')}
