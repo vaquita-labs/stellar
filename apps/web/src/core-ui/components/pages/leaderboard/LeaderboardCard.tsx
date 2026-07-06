@@ -65,7 +65,7 @@ export function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: 
   );
 }
 
-function PositionPill({ position }: { position: number }) {
+export function PositionPill({ position }: { position: number }) {
   const { t } = useTranslation();
   const medal = MEDALS[position];
   return (

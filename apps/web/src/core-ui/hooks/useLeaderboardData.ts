@@ -1,43 +1,110 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
 import { LeaderboardResponseDTO } from '@/core-ui/types';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { ONE_MINUTE } from '../config/constants';
 
-export const leaderboardQueryKey = (networkName?: string, cycle = 'current') => [
-  'leaderboard',
-  'network',
-  networkName,
-  cycle,
-] as const;
+export const LEADERBOARD_PAGE_SIZE = 20;
 
-export const useLeaderboardData = (cycle = 'current') => {
-  const { network } = useConfigStore();
+export type LeaderboardSortKey = 'rank' | 'level' | 'streak' | 'badges';
+export type LeaderboardSortDirection = 'asc' | 'desc';
 
-  return useQuery<LeaderboardResponseDTO[]>({
-    queryKey: leaderboardQueryKey(network?.networkName, cycle),
-    queryFn: async () => {
-      const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/leaderboard?cycle=${encodeURIComponent(cycle)}`,
-      );
+export interface LeaderboardViewParams {
+  cycle?: string;
+  search?: string;
+  sort?: LeaderboardSortKey;
+  direction?: LeaderboardSortDirection;
+}
+
+export interface LeaderboardPageDTO {
+  rows: LeaderboardResponseDTO[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+  /** The viewer's own row (true rank, independent of the search/sort view),
+   *  or null when the viewer isn't on the board / isn't connected. */
+  me: LeaderboardResponseDTO | null;
+}
+
+/** Prefix shared by every leaderboard view (any cycle/search/sort) — use it to
+ *  match all cached leaderboard queries at once. */
+export const leaderboardQueryPrefix = (networkName: string | undefined) =>
+  ['leaderboard', 'network', networkName] as const;
+
+export const leaderboardQueryKey = (
+  networkName: string | undefined,
+  { cycle = 'current', search = '', sort = 'rank', direction = 'desc' }: LeaderboardViewParams = {},
+  // Part of the key so switching wallets can't serve another viewer's `me` row.
+  viewerWallet = '',
+) => [...leaderboardQueryPrefix(networkName), cycle, { search, sort, direction, viewerWallet }] as const;
+
+const toLeaderboardRow = (row: LeaderboardResponseDTO): LeaderboardResponseDTO => ({
+  position: row?.position ?? 0,
+  walletAddress: row?.walletAddress ?? '',
+  nickname: row?.nickname ?? '',
+  avatarUrl: row?.avatarUrl ?? '',
+  badges: row?.badges ?? 0,
+  streak: row?.streak ?? 0,
+  experience: row?.experience ?? 0,
+  score: row?.score ?? 0,
+  activeAmount: row?.activeAmount ?? 0,
+  cycleId: row?.cycleId ?? 0,
+  cycleStart: row?.cycleStart ?? 0,
+  cycleEnd: row?.cycleEnd ?? 0,
+  cycleStatus: row?.cycleStatus ?? 'current',
+});
+
+/**
+ * Infinite-scroll leaderboard feed. The API paginates server-side (search +
+ * sort included, so every loaded page is globally consistent) and each page
+ * reports `hasMore`/`offset` for the next fetch.
+ */
+export const useLeaderboardData = (params: LeaderboardViewParams = {}) => {
+  const { network, walletAddress } = useConfigStore();
+  const { cycle = 'current', search = '', sort = 'rank', direction = 'desc' } = params;
+  const viewerWallet = walletAddress ?? '';
+
+  return useInfiniteQuery({
+    queryKey: leaderboardQueryKey(
+      network?.networkName,
+      { cycle, search, sort, direction },
+      viewerWallet,
+    ),
+    queryFn: async ({ pageParam }): Promise<LeaderboardPageDTO> => {
+      const url = new URL(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/leaderboard`);
+      url.searchParams.set('cycle', cycle);
+      url.searchParams.set('limit', String(LEADERBOARD_PAGE_SIZE));
+      url.searchParams.set('offset', String(pageParam));
+      if (search) url.searchParams.set('search', search);
+      if (sort !== 'rank') url.searchParams.set('sort', sort);
+      if (direction !== 'desc') url.searchParams.set('direction', direction);
+      // Ask the API for the viewer's own row too, so the page can pin "you are
+      // #N" without paging the feed down to that position.
+      if (viewerWallet) url.searchParams.set('me', viewerWallet);
+
+      const response = await fetch(url);
       const data = await response.json();
+      const page = data?.data;
 
-      return (data?.data ?? []).map((row: LeaderboardResponseDTO) => ({
-        position: row?.position ?? 0,
-        walletAddress: row?.walletAddress ?? '',
-        nickname: row?.nickname ?? '',
-        avatarUrl: row?.avatarUrl ?? '',
-        badges: row?.badges ?? 0,
-        streak: row?.streak ?? 0,
-        experience: row?.experience ?? 0,
-        score: row?.score ?? 0,
-        activeAmount: row?.activeAmount ?? 0,
-        cycleId: row?.cycleId ?? 0,
-        cycleStart: row?.cycleStart ?? 0,
-        cycleEnd: row?.cycleEnd ?? 0,
-        cycleStatus: row?.cycleStatus ?? 'current',
-      }));
+      return {
+        rows: (page?.rows ?? []).map(toLeaderboardRow),
+        total: page?.total ?? 0,
+        limit: page?.limit ?? LEADERBOARD_PAGE_SIZE,
+        offset: page?.offset ?? 0,
+        hasMore: page?.hasMore ?? false,
+        me: page?.me ? toLeaderboardRow(page.me) : null,
+      };
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.offset + lastPage.rows.length : undefined,
+    // Switching search/sort/direction is a new query key; keep showing the
+    // previous view (slightly dimmed by the page) instead of flashing
+    // skeletons while the new one loads.
+    placeholderData: keepPreviousData,
+    // Note: on an infinite query this refetches every loaded page in sequence,
+    // which keeps deep scrolls consistent at the cost of one request per page.
     refetchInterval: ONE_MINUTE * 5,
     enabled: !!network?.networkName,
     refetchOnReconnect: true,

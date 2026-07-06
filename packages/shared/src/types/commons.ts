@@ -256,6 +256,11 @@ export interface FriendSuggestionsResponseDTO {
   suggestions: FriendSuggestionDTO[];
 }
 
+export interface SuggestionDismissResponseDTO {
+  viewerWallet: string;
+  dismissedWallet: string;
+}
+
 export interface FollowCountsResponseDTO {
   networkName: string;
   walletAddress: string;
@@ -320,10 +325,23 @@ export interface ProfileMapObjectsAvailableResponseDTO {
   walletAddress: string;
   objects: {
     price: number;
+    /** Placeable units: global freeItems + units purchased by this profile. */
     itemsAvailable: number;
+    /** Units purchased by this profile (subset of itemsAvailable). */
+    owned: number;
     type: MapObjectType;
     variant: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
   }[];
+}
+
+export interface PurchaseMapItemResponseDTO {
+  type: MapObjectType;
+  variant: number;
+  quantity: number;
+  /** Units of this item the profile owns after the purchase. */
+  owned: number;
+  /** Gold-coin balance after the purchase. */
+  goldBalance: number;
 }
 
 export interface ProfileAverageResponseDTO {

@@ -107,7 +107,6 @@ export function DesktopSidebar() {
   const pathname = usePathname();
   const handleShopClick = useShopNavHandler();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
-  const soonLabel = t('shell.nav.soon', 'Soon');
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 border-r-2 border-[#B97204] z-10">
@@ -120,7 +119,9 @@ export function DesktopSidebar() {
           <ul className="flex flex-col gap-2">
             {navItems.map(({ id, href, icon, label }) => {
               const isShop = href === '/shop';
-              const isActive = isShop ? false : pathname.startsWith(href);
+              // La tienda no navega: abre el modo edición del mapa en /home,
+              // así que se marca activa mientras se está editando.
+              const isActive = isShop ? isEditingMap : pathname.startsWith(href);
               return (
                 <li key={href}>
                   <NavLink
@@ -128,8 +129,6 @@ export function DesktopSidebar() {
                     icon={icon}
                     label={t(`shell.nav.${id}`, label)}
                     isActive={isActive}
-                    locked={isShop}
-                    soonLabel={soonLabel}
                     onClick={isShop ? handleShopClick : undefined}
                   />
                 </li>
@@ -146,13 +145,15 @@ export function MobileNavigation() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const handleShopClick = useShopNavHandler();
-  const soonLabel = t('shell.nav.soon', 'Soon');
+  const isEditingMap = useMapStore((s) => s.isEditingMap);
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 h-16 flex justify-around items-center z-10 bg-background w-full rounded-t-lg backdrop-blur-xl shadow-[0_-10px_30px_rgba(15,23,42,0.18)]">
       {navItems.map(({ id, href, icon, label }) => {
         const isShop = href === '/shop';
-        const isActive = isShop ? false : pathname.startsWith(href);
+        // La tienda no navega: abre el modo edición del mapa en /home,
+        // así que se marca activa mientras se está editando.
+        const isActive = isShop ? isEditingMap : pathname.startsWith(href);
         return (
           <NavLink
             key={href}
@@ -161,8 +162,6 @@ export function MobileNavigation() {
             label={t(`shell.nav.${id}`, label)}
             isActive={isActive}
             isMobile
-            locked={isShop}
-            soonLabel={soonLabel}
             onClick={isShop ? handleShopClick : undefined}
           />
         );

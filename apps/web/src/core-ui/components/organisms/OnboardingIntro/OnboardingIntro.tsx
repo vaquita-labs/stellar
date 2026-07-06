@@ -68,29 +68,42 @@ export function OnboardingIntro({ onFinish }: OnboardingIntroProps) {
 
   const goToNext = () => setIndex((prev) => Math.min(SLIDES.length - 1, prev + 1));
 
-  const touchStartX = useRef<number | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+
+  const handleTouchCancel = () => {
+    touchStart.current = null;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-    touchStartX.current = null;
+    if (touchStart.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStart.current.x;
+    const deltaY = e.changedTouches[0].clientY - touchStart.current.y;
+    touchStart.current = null;
 
-    if (deltaX > SWIPE_THRESHOLD) {
+    // Ignore taps and mostly-vertical gestures.
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY)) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      // Swipe left → next slide
       goToNext();
-    } else if (deltaX < -SWIPE_THRESHOLD) {
+    } else {
+      // Swipe right → previous slide
       handleBack();
     }
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-background px-6 py-10 sm:py-14"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-background px-6 py-10 sm:py-14 touch-pan-y select-none overscroll-contain"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
     >
       {/* Skip */}
       <div className="w-full max-w-md flex justify-end">

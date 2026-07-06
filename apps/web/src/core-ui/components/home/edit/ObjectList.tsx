@@ -1,7 +1,7 @@
 'use client';
 
 import { ObjectListObjectCard } from '@/core-ui/components/home/edit/ObjectListObjectCard';
-import { SceneLighting } from '@/core-ui/components/templates/WorldMap/map/SceneLighting';
+import { SceneLighting } from '@/core-ui/components/map/scene/SceneLighting';
 import { useIsMobile, useProfileMapObjectsAvailable } from '@/core-ui/hooks';
 import { EditionMode, ObjectItem, useMapStore } from '@/core-ui/stores';
 import { Canvas } from '@react-three/fiber';

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildErc20AllowanceCall,
   buildErc20ApproveTx,
+  buildEvmReceiveMessageTx,
   buildEvmToStellarBurnTx,
   CCTP_FAST_FINALITY_THRESHOLD,
 } from './evm';
@@ -42,5 +43,21 @@ describe('EVM CCTP transaction builders', () => {
     expect(tx.data.toLowerCase()).toContain('1c7d4b196cb0c7b01d743fbc6116a902379c7238'.padStart(64, '0'));
     expect(tx.data.toLowerCase()).toContain(stellarStrkeyToBytes32('CA66Q2WFBND6V4UEB7RD4SAXSVIWMD6RA4X3U32ELVFGXV5PJK4T4VSZ').slice(2));
     expect(tx.data.toLowerCase()).toContain(buildCctpForwarderHookData('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF').slice(2));
+  });
+
+  it('builds a destination receiveMessage transaction for Stellar to EVM completion', () => {
+    const tx = buildEvmReceiveMessageTx({
+      destinationNetwork: 'base-sepolia',
+      message: '0x1234',
+      attestation: '0xabcd',
+    });
+
+    expect(tx.to).toBe('0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275');
+    expect(tx.data).toMatch(/^0x57ecfd28/);
+    expect(tx.data).toContain('40'.padStart(64, '0'));
+    expect(tx.data).toContain('80'.padStart(64, '0'));
+    expect(tx.data).toContain('02'.padStart(64, '0'));
+    expect(tx.data).toContain('1234'.padEnd(64, '0'));
+    expect(tx.data).toContain('abcd'.padEnd(64, '0'));
   });
 });

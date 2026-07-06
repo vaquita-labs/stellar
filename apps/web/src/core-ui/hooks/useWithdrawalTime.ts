@@ -1,5 +1,6 @@
 import { formatTime, formatTimeDeposit } from '@/core-ui/helpers';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DepositResponseDTO } from '../types';
 
 interface WithdrawalTimeInfo {
@@ -12,8 +13,15 @@ interface WithdrawalTimeInfo {
 }
 
 export const useWithdrawalTime = (vaquita: DepositResponseDTO): WithdrawalTimeInfo => {
+  const { i18n } = useTranslation();
   return useMemo(() => {
-    const currentTime = vaquita.serverTimestamp;
+    // `serverTimestamp` queda congelado al momento del fetch (la lista se
+    // cachea con staleTime Infinity); si sabemos cuándo se fetcheó, sumamos el
+    // tiempo transcurrido en el cliente para obtener el "ahora" real. Sin
+    // `fetchedAtTimestamp` (tutorial/simulado) se usa tal cual, como antes.
+    const currentTime = vaquita.fetchedAtTimestamp
+      ? vaquita.serverTimestamp + (Date.now() - vaquita.fetchedAtTimestamp)
+      : vaquita.serverTimestamp;
     const finalizationTime = vaquita.createdTimestamp + vaquita.lockPeriod;
     const timeRemaining = Math.floor(Math.max(0, finalizationTime - currentTime) / 1000);
     const canWithdraw = timeRemaining === 0;
@@ -28,5 +36,5 @@ export const useWithdrawalTime = (vaquita: DepositResponseDTO): WithdrawalTimeIn
       lockPeriodFormatted: formatTimeDeposit(vaquita.lockPeriod),
       progress,
     };
-  }, [vaquita.createdTimestamp, vaquita.lockPeriod, vaquita.serverTimestamp]);
+  }, [vaquita.createdTimestamp, vaquita.lockPeriod, vaquita.serverTimestamp, vaquita.fetchedAtTimestamp, i18n.language]);
 };

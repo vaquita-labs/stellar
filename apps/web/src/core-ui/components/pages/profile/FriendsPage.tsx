@@ -1,6 +1,6 @@
 'use client';
 
-import { useFriendSuggestions, useToggleFollow } from '@/core-ui/hooks';
+import { useDismissSuggestion, useFriendSuggestions, useToggleFollow } from '@/core-ui/hooks';
 import type { FriendSuggestionDTO } from '@/core-ui/types';
 import { toast } from '@heroui/react';
 import Image from 'next/image';
@@ -141,13 +141,12 @@ export function FriendsPage() {
   const { t } = useTranslation();
   const { data, isLoading } = useFriendSuggestions();
   const toggleFollow = useToggleFollow();
+  const dismissSuggestion = useDismissSuggestion();
 
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [following, setFollowing] = useState<Set<string>>(new Set());
   const [pendingWallet, setPendingWallet] = useState<string | null>(null);
 
-  const suggestions = data?.suggestions ?? [];
-  const visibleSuggestions = suggestions.filter((s) => !dismissed.has(s.walletAddress));
+  const visibleSuggestions = data?.suggestions ?? [];
 
   const handleShareLink = async () => {
     const url = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
@@ -197,13 +196,9 @@ export function FriendsPage() {
     );
   };
 
-  const dismiss = (wallet: string) => {
-    setDismissed((prev) => {
-      const next = new Set(prev);
-      next.add(wallet);
-      return next;
-    });
-  };
+  // "Not interested": the hook removes the card optimistically, persists the
+  // dismissal (survives F5), and refetches the rail to backfill a fresh one.
+  const dismiss = (wallet: string) => dismissSuggestion.mutate(wallet);
 
   return (
     <div className="h-full overflow-y-auto bg-background">

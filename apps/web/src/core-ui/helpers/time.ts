@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { ONE_DAY } from '../config/constants';
 
 export async function withTimeout<T>(p: Promise<T>, ms: number, tag = 'op'): Promise<T> {
@@ -14,7 +15,7 @@ export async function withTimeout<T>(p: Promise<T>, ms: number, tag = 'op'): Pro
 }
 
 export const formatTime = (seconds: number): string => {
-  if (seconds === 0) return 'Ready to withdraw';
+  if (seconds === 0) return i18n.t('deposit.detail.readyToWithdraw', 'Ready to withdraw');
 
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
@@ -41,13 +42,13 @@ export const formatTimeDeposit = (milliseconds: number): string => {
   const remainingSeconds = seconds % 60;
 
   if (months > 0) {
-    return `${months === 1 ? '1 month' : `${months} months`}`;
+    return i18n.t('common.time.month', { count: months });
   } else if (days > 0) {
-    return `${days === 1 ? '1 day' : `${days} days`}`;
+    return i18n.t('common.time.day', { count: days });
   } else if (hours > 0) {
-    return `${hours === 1 ? '1 hour' : `${hours} hours`}`;
+    return i18n.t('common.time.hour', { count: hours });
   } else if (minutes > 0) {
-    return `${minutes === 1 ? '1 minute' : `${minutes} minutes`}`;
+    return i18n.t('common.time.minute', { count: minutes });
   } else {
     return `${remainingSeconds}s`;
   }

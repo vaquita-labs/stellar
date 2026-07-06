@@ -231,18 +231,30 @@ export const Vaquita = ({ vaquita, onSelect, headLabel, mood = 'normal' }: Vaqui
     onSelect?.(vaquita);
   };
 
+  // Sin onSelect la vaquita es decorativa (mapa de otro jugador): sin click,
+  // sin cursor pointer y sin agrandarse al hover.
+  const interactive = !!onSelect;
+
   return (
     <group
       ref={ref}
-      onClick={handleClick}
-      onPointerOver={() => {
-        setScale(0.6);
-        gl.domElement.style.cursor = 'pointer';
-      }}
-      onPointerOut={() => {
-        setScale(0.5);
-        gl.domElement.style.cursor = 'default';
-      }}
+      onClick={interactive ? handleClick : undefined}
+      onPointerOver={
+        interactive
+          ? () => {
+              setScale(0.6);
+              gl.domElement.style.cursor = 'pointer';
+            }
+          : undefined
+      }
+      onPointerOut={
+        interactive
+          ? () => {
+              setScale(0.5);
+              gl.domElement.style.cursor = 'default';
+            }
+          : undefined
+      }
     >
       <VaquitaAnimation
         status={vaquita.state}

@@ -8,22 +8,28 @@ type BadgeSize = 'sm' | 'md' | 'lg';
 
 const SIZES: Record<
   BadgeSize,
-  { wrap: string; img: { w: number; h: number }; glowInset: string }
+  { wrap: string; img: { w: number; h: number }; glowInset: string; glowBlur: string }
 > = {
+  // sm renders inside dense horizontal strips (~48px tiles), so its halo blur
+  // must stay smaller than the tile — blur-2xl (40px) bleeds onto neighbors
+  // and makes adjacent medals read as overlapping.
   sm: {
     wrap: 'max-w-[72px] sm:max-w-[80px]',
     img: { w: 128, h: 128 },
     glowInset: 'inset-2',
+    glowBlur: 'blur-md',
   },
   md: {
     wrap: 'max-w-[88px] sm:max-w-[104px]',
     img: { w: 160, h: 160 },
     glowInset: 'inset-2',
+    glowBlur: 'blur-2xl',
   },
   lg: {
     wrap: 'max-w-[140px] sm:max-w-[160px]',
     img: { w: 240, h: 240 },
     glowInset: 'inset-3',
+    glowBlur: 'blur-2xl',
   },
 };
 
@@ -77,7 +83,7 @@ export function BadgeTile({
     <button
       type="button"
       onClick={onPress}
-      className={`group flex flex-col items-center gap-1.5 bg-transparent focus:outline-none w-full cursor-pointer ${loading ? 'opacity-50 animate-pulse pointer-events-none' : ''}`}
+      className={`group flex flex-col items-center gap-1.5 bg-transparent focus:outline-none w-full cursor-pointer ${loading ? 'opacity-50 animate-pulse pointer-events-none' : 'pointer-events-auto'}`}
     >
       <span
         className={`relative flex aspect-square w-full ${s.wrap} items-center justify-center transition group-hover:-translate-y-0.5 ${wrapFilter}`}
@@ -98,7 +104,7 @@ export function BadgeTile({
             pulsing when the badge is ready to claim, otherwise a subtle glow. */}
         <span
           aria-hidden
-          className={`absolute ${s.glowInset} rounded-full blur-2xl ${
+          className={`absolute ${s.glowInset} rounded-full ${s.glowBlur} ${
             claimable ? 'opacity-90 animate-pulse' : 'opacity-50'
           }`}
           style={{ background: badge.accent ?? '#F5A161' }}

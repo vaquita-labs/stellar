@@ -1,7 +1,9 @@
 'use client';
 
+import { toast } from '@heroui/react';
 import { AnimatePresence, motion, PanInfo } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRestProfile } from '../../../hooks';
 import { EditionMode, useMapStore, useSyncMapObjects } from '../../../stores';
 import { CatalogList } from './CatalogList';
@@ -38,6 +40,7 @@ const enterTransition = {
 };
 
 export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
+  const { t } = useTranslation();
   const setEditMode = useMapStore((store) => store.setEditMode);
   const pickedObject = useMapStore((store) => store.pickedObject);
   const setPickedItem = useMapStore((store) => store.setPickedItem);
@@ -50,6 +53,7 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
   const setIsEditingMap = useMapStore((store) => store.setIsEditingMap);
   const sheetRef = useRef<HTMLDivElement>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(open);
   const [activeTab, setActiveTab] = useState<EditTab>('catalog');
   const { saveMapObjects } = useRestProfile();
@@ -103,10 +107,28 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
   };
 
   const handleConfirmExit = async () => {
-    await saveMapObjects({ objects: currentTiles });
-    await refetch();
-    setShowConfirmDialog(false);
-    handleClose();
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const result = await saveMapObjects({ objects: currentTiles });
+      if (result?.status !== 'success') {
+        throw new Error(result?.message || 'Save failed');
+      }
+      await refetch();
+      setShowConfirmDialog(false);
+      handleClose();
+    } catch (error) {
+      // El modal queda abierto para reintentar; los cambios locales no se pierden.
+      toast.danger(t('home.exitEdit.saveErrorTitle', 'Could not save your map'), {
+        description:
+          error instanceof Error && error.message !== 'Save failed'
+            ? error.message
+            : t('home.exitEdit.saveErrorDesc', 'Check your connection and try again.'),
+        timeout: 4000,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDiscard = () => {
@@ -124,6 +146,7 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
         onOpenChange={setShowConfirmDialog}
         handleConfirmExit={handleConfirmExit}
         handleDiscard={handleDiscard}
+        isSaving={isSaving}
       />
 
       <AnimatePresence>

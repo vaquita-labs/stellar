@@ -1,53 +1,38 @@
 'use client';
 
 import Image from 'next/image';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LeaderboardResponseDTO } from '@/core-ui/types';
 import { useLeaderboardData, useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
 import {
+  Avatar,
   LeaderboardCard,
   LeaderboardCardData,
   LeaderboardCardSkeleton,
+  PositionPill,
   getLeaderboardUsername,
 } from './LeaderboardCard';
 import { LeaderboardSubHeader, SortDirection, SortKey } from './LeaderboardSubHeader';
 
 const SKELETON_ROWS = 3;
+const SEARCH_DEBOUNCE_MS = 350;
 
 /* ------------------------------------------------------------------ */
-/* Ranking + filtering                                                 */
+/* Debounced value                                                     */
 /* ------------------------------------------------------------------ */
 
-/** Apply the user-selected sort + direction to a list of cards.
- *  Rows arrive already in descending rank order, so `rank + desc` is a no-op
- *  and `rank + asc` simply reverses the list. */
-function sortRows(
-  rows: LeaderboardCardData[],
-  key: SortKey,
-  direction: SortDirection
-): LeaderboardCardData[] {
-  if (key === 'rank') {
-    return direction === 'desc' ? rows : [...rows].reverse();
-  }
-  const accessor: Record<Exclude<SortKey, 'rank'>, (r: LeaderboardCardData) => number> = {
-    level: (r) => r.level,
-    streak: (r) => r.streak,
-    badges: (r) => r.badges,
-  };
-  const get = accessor[key];
-  return [...rows].sort((a, b) =>
-    direction === 'desc' ? get(b) - get(a) : get(a) - get(b)
-  );
-}
-
-/** Case-insensitive substring match on the username. */
-function filterRows(rows: LeaderboardCardData[], query: string): LeaderboardCardData[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return rows;
-  return rows.filter((r) => r.username.toLowerCase().includes(q));
+/** Debounce the search text before it becomes a server query param, so we
+ *  don't fire one request per keystroke. */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(id);
+  }, [value, delayMs]);
+  return debounced;
 }
 
 /* ------------------------------------------------------------------ */
@@ -116,18 +101,179 @@ function ErrorState({ message }: { message: string }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Infinite-scroll sentinel                                            */
+/* ------------------------------------------------------------------ */
+
+/** Invisible marker below the feed — when it scrolls into view (with a
+ *  viewport of margin to prefetch early), ask for the next page. */
+function LoadMoreSentinel({
+  onVisible,
+  disabled,
+}: {
+  onVisible: () => void;
+  disabled: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const onVisibleRef = useRef(onVisible);
+  onVisibleRef.current = onVisible;
+
+  useEffect(() => {
+    if (disabled) return;
+    const node = ref.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) onVisibleRef.current();
+      },
+      { rootMargin: '600px 0px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [disabled]);
+
+  return <div ref={ref} aria-hidden className="h-px" />;
+}
+
+/* ------------------------------------------------------------------ */
+/* Own-row tracking — drives the pinned "you are #N" bar               */
+/* ------------------------------------------------------------------ */
+
+type OwnRowStatus = 'visible' | 'above' | 'below';
+
+/**
+ * Watches the viewer's own card in the feed. While the card is off-screen the
+ * pinned bar shows (above → stuck to the top, below → stuck to the bottom);
+ * once the card scrolls into view the bar hides — your row "integrates" into
+ * the list. When the own card isn't even loaded yet (deep rank), it must be
+ * further down the feed, so the status defaults to 'below'.
+ */
+function useOwnRowTracking() {
+  const [status, setStatus] = useState<OwnRowStatus>('below');
+  const nodeRef = useRef<HTMLLIElement | null>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Callback ref: fires on mount/unmount of the own card, including when a
+  // search/sort view swaps which rendered row (if any) is the viewer's.
+  const ownRowRef = useCallback((node: HTMLLIElement | null) => {
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    nodeRef.current = node;
+    if (!node) {
+      setStatus('below');
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStatus('visible');
+        } else {
+          const rootTop = entry.rootBounds?.top ?? 0;
+          setStatus(entry.boundingClientRect.top < rootTop ? 'above' : 'below');
+        }
+      },
+      // "Reached your position" = a meaningful chunk of the card on screen,
+      // not just its border grazing the edge.
+      { threshold: 0.35 }
+    );
+    observer.observe(node);
+    observerRef.current = observer;
+  }, []);
+
+  useEffect(() => () => observerRef.current?.disconnect(), []);
+
+  const scrollToOwnRow = useCallback(() => {
+    nodeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, []);
+
+  return { status, ownRowRef, scrollToOwnRow };
+}
+
+/** Slim pinned bar with the viewer's live rank. Tapping it scrolls the feed to
+ *  the real card when that card is already loaded; otherwise it's a no-op. */
+function PinnedOwnRow({
+  row,
+  side,
+  onPress,
+}: {
+  row: { position: number; username: string; avatarUrl?: string; level: number; streak: number };
+  side: 'above' | 'below';
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    // Sticky inside the page's scroll container. The bottom variant clears the
+    // mobile fixed bottom nav (h-16); desktop uses a sidebar, so bottom-4 works.
+    <div className={`sticky z-20 ${side === 'above' ? 'top-2' : 'bottom-[4.5rem] md:bottom-4'}`}>
+      <button
+        type="button"
+        onClick={onPress}
+        aria-label={t('leaderboard.pinned.goToPosition', 'Go to your position')}
+        className="w-full flex items-center gap-2 rounded-2xl border-2 border-black border-b-4 bg-primary px-3 py-2 shadow-lg transition hover:-translate-y-0.5"
+      >
+        <PositionPill position={row.position} />
+        <Avatar username={row.username} avatarUrl={row.avatarUrl} />
+        <span className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="text-sm font-extrabold text-black truncate">{row.username}</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider bg-black text-white rounded-sm px-1.5 py-0.5 shrink-0">
+            {t('leaderboard.card.you', 'You')}
+          </span>
+        </span>
+        <span className="text-xs font-extrabold text-black tabular-nums shrink-0">
+          {t('leaderboard.card.levelShort', 'Lv {{level}}', { level: row.level })}
+        </span>
+        <span className="flex items-center gap-1 shrink-0">
+          <Image
+            src="/icons/global/streak_face.png"
+            alt=""
+            width={16}
+            height={16}
+            className="object-contain"
+          />
+          <span className="text-xs font-extrabold text-black tabular-nums">{row.streak}</span>
+        </span>
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Feed                                                                */
 /* ------------------------------------------------------------------ */
 
-function LeaderboardFeed({ rows }: { rows: LeaderboardCardData[] }) {
+function LeaderboardFeed({
+  rows,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
+  ownRowRef,
+}: {
+  rows: LeaderboardCardData[];
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onLoadMore: () => void;
+  ownRowRef?: (node: HTMLLIElement | null) => void;
+}) {
+  const { t } = useTranslation();
   return (
-    <ul className="flex flex-col gap-3">
-      {rows.map((row) => (
-        <li key={row.walletAddress}>
-          <LeaderboardCard user={row} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-3">
+        {rows.map((row) => (
+          <li key={row.walletAddress} ref={row.isCurrentUser ? ownRowRef : undefined}>
+            <LeaderboardCard user={row} />
+          </li>
+        ))}
+        {isFetchingNextPage && (
+          <li aria-label={t('leaderboard.loadingMore', 'Loading more vaqueros')}>
+            <LeaderboardCardSkeleton />
+          </li>
+        )}
+      </ul>
+      <LoadMoreSentinel
+        onVisible={onLoadMore}
+        disabled={!hasNextPage || isFetchingNextPage}
+      />
+    </>
   );
 }
 
@@ -203,27 +349,77 @@ function useCurrentUserIdentity() {
 
 export const LeaderboardPage = () => {
   const { t } = useTranslation();
-  const { data: leaderboardRows = [], isLoading, error } = useLeaderboardData();
-  const rankedRows = useLeaderboardRows(leaderboardRows);
 
   const [sortKey, setSortKey] = useState<SortKey>('rank');
   const [direction, setDirection] = useState<SortDirection>('desc');
   const [query, setQuery] = useState('');
-  const deferredQuery = useDeferredValue(query);
+  const debouncedQuery = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
+
+  // Search + sort + pagination all happen server-side now: each view is its
+  // own infinite query, and pages arrive already filtered/ordered globally.
+  const {
+    data,
+    isLoading,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    isPlaceholderData,
+    fetchNextPage,
+  } = useLeaderboardData({ search: debouncedQuery, sort: sortKey, direction });
+
+  const leaderboardRows = useMemo(
+    () => data?.pages.flatMap((page) => page.rows) ?? [],
+    [data]
+  );
+  const rankedRows = useLeaderboardRows(leaderboardRows);
 
   const { displayName, handle } = useCurrentUserIdentity();
 
-  const visibleRows = useMemo(
-    () => filterRows(sortRows(rankedRows, sortKey, direction), deferredQuery),
-    [rankedRows, sortKey, direction, deferredQuery]
-  );
+  // Pinned own-position bar: the API ships the viewer's row (`me`) with every
+  // page; it shows stuck to an edge until the real card scrolls into view.
+  const { status: ownRowStatus, ownRowRef, scrollToOwnRow } = useOwnRowTracking();
+  const myRow = data?.pages?.[0]?.me ?? null;
+  const pinnedRow = useMemo(() => {
+    if (!myRow) return null;
+    return {
+      position: myRow.position,
+      username: getLeaderboardUsername(myRow.nickname, myRow.walletAddress),
+      avatarUrl: myRow.avatarUrl,
+      // Same XP → level derivation as the feed cards, so both always agree.
+      level: Math.max(1, Math.floor((myRow.experience ?? 0) / 100) + 1),
+      streak: myRow.streak ?? 0,
+    };
+  }, [myRow]);
+  // Only pin over a browsable feed — searching shows a filtered view where a
+  // floating global rank would just get in the way of the results.
+  const showPinned =
+    !!pinnedRow &&
+    !debouncedQuery &&
+    !isLoading &&
+    !error &&
+    rankedRows.length > 0 &&
+    ownRowStatus !== 'visible';
 
   const renderFeed = () => {
     if (isLoading) return <LoadingState />;
     if (error) return <ErrorState message={`${error}`} />;
-    if (rankedRows.length === 0) return <EmptyState />;
-    if (visibleRows.length === 0) return <NoResults query={query} />;
-    return <LeaderboardFeed rows={visibleRows} />;
+    if (rankedRows.length === 0) {
+      return debouncedQuery ? <NoResults query={debouncedQuery} /> : <EmptyState />;
+    }
+    return (
+      // While a new view (search/sort change) resolves, the previous list stays
+      // visible but dimmed; the sentinel is disabled so we don't page the
+      // placeholder view by accident.
+      <div className={isPlaceholderData ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
+        <LeaderboardFeed
+          rows={rankedRows}
+          hasNextPage={!!hasNextPage && !isPlaceholderData}
+          isFetchingNextPage={isFetchingNextPage}
+          onLoadMore={fetchNextPage}
+          ownRowRef={ownRowRef}
+        />
+      </div>
+    );
   };
 
   return (
@@ -239,7 +435,15 @@ export const LeaderboardPage = () => {
         direction={direction}
         onDirectionChange={setDirection}
       />
+      {/* The bar lives before the feed when your row is above the viewport and
+          after it when below, so `sticky` pins it to the matching edge. */}
+      {showPinned && ownRowStatus === 'above' && pinnedRow && (
+        <PinnedOwnRow row={pinnedRow} side="above" onPress={scrollToOwnRow} />
+      )}
       {renderFeed()}
+      {showPinned && ownRowStatus === 'below' && pinnedRow && (
+        <PinnedOwnRow row={pinnedRow} side="below" onPress={scrollToOwnRow} />
+      )}
     </PageLayout>
   );
 };

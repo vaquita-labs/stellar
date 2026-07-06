@@ -20,6 +20,7 @@ export const useProfileMapObjectsAvailable = () => {
           (object: ProfileMapObjectsAvailableResponseDTO['objects'][number]) => ({
             price: object?.price || 0,
             itemsAvailable: object?.itemsAvailable || 0,
+            owned: object?.owned || 0,
             type: object?.type || MapObjectType.EMPTY,
             variant: object?.variant || 0,
           })

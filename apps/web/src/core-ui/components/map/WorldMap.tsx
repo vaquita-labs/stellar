@@ -10,17 +10,17 @@ import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
 import { useMapStore, useConfigStore, useSyncMapObjects } from '../../stores';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
 import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
-import { MapObjects } from '../templates/WorldMap/map/MapObjects';
-import { SceneCamera } from '../templates/WorldMap/map/SceneCamera';
-import { SceneControls } from '../templates/WorldMap/map/SceneControls';
-import { WaterBackground } from '../templates/WorldMap/map/WaterBackground';
-import { DayCycleSky } from './DayCycleSky';
-import { EditGrid } from './EditGrid';
-import { Ground } from './Ground';
+import { MapObjects } from './buildings/MapObjects';
+import { SceneCamera } from './scene/SceneCamera';
+import { SceneControls } from './scene/SceneControls';
+import { WaterBackground } from './scene/WaterBackground';
+import { DayCycleSky } from './scene/DayCycleSky';
+import { EditGrid } from './edit/EditGrid';
+import { Ground } from './tiles/Ground';
 import { getMapCenter } from './helpers';
-import { ObjectGlow } from './ObjectGlow';
-import { SpotlightPositionUpdater } from './SpotlightPositionUpdater';
-import { TileSpotlightUpdater } from './TileSpotlightUpdater';
+import { ObjectGlow } from './edit/ObjectGlow';
+import { SpotlightPositionUpdater } from './edit/SpotlightPositionUpdater';
+import { TileSpotlightUpdater } from './edit/TileSpotlightUpdater';
 import { Vaquita } from './vaquita';
 
 const PLACEHOLDER_VAQUITA: DepositSummaryResponseDTO = {
@@ -42,11 +42,13 @@ interface MapProps {
   interactionsDisabled?: boolean;
 }
 
-export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false }: MapProps) => {
+export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDisabled = false }: MapProps) => {
   const router = useRouter();
   const isEditMode = useMapStore((store) => store.editMode);
   const currentTiles = useMapStore((store) => store.currentTiles);
-  useSyncMapObjects();
+  // Con walletAddress (vista de leaderboard) se carga el mapa de ESE perfil;
+  // sin él, el del usuario logueado.
+  const { isLoaded: mapLoaded } = useSyncMapObjects(walletAddress);
   const [showVaquitasListModal, setShowVaquitasListModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
@@ -54,6 +56,11 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
   const [showMoodModal, setShowMoodModal] = useState(false);
   const userWalletAddress = useConfigStore((store) => store.walletAddress);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
+
+  // Mapa de otro jugador (vista de leaderboard): la vaquita es solo decorativa.
+  // El humor y el modal de estado son datos del ESPECTADOR y no tienen sentido
+  // sobre la vaquita de otra persona.
+  const isOwnMap = !walletAddress || walletAddress === userWalletAddress;
   const { mood, canCollect, goldCoinsToCollect, experienceToCollect } = useVaquitaMood();
   const { data: streak } = useProfileStreak();
   const { goldDailyCollect } = useRestProfile();
@@ -119,10 +126,10 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
         className="h-full"
       >
         <DayCycleSky />
-        {/* Montar la cámara solo cuando hay tiles: se inicializa una única vez
-            y debe hacerlo con el centro real del mapa (antes lo garantizaba el
-            remount del Canvas via key; ese remount ya no existe). */}
-        {currentTiles.length > 0 && <SceneCamera center={center} />}
+        {/* Montar la cámara cuando el mapa ya cargó (aunque venga vacío — los
+            perfiles nuevos arrancan sin tiles): se inicializa una única vez y
+            debe hacerlo con el centro real (o el centro de la grilla). */}
+        {mapLoaded && <SceneCamera center={center} />}
         <EditGrid />
         {/* <FloatingIslandBase /> */}
         <WaterBackground worldType={worldType} />
@@ -136,7 +143,13 @@ export const WorldMap = ({ isAvailable, worldType, interactionsDisabled = false 
             hasWallet={!!userWalletAddress}
           />
         )}
-        {!isEditMode && <Vaquita vaquita={PLACEHOLDER_VAQUITA} mood={mood} onSelect={handleVaquitaClick} />}
+        {!isEditMode && (
+          <Vaquita
+            vaquita={PLACEHOLDER_VAQUITA}
+            mood={isOwnMap ? mood : 'normal'}
+            onSelect={isOwnMap ? handleVaquitaClick : undefined}
+          />
+        )}
         {!isAvailable && (
           <Billboard>
             <Text fontWeight="bold" position={[0, 1, 3]} fontSize={2} color="black" anchorX="center" anchorY="middle">

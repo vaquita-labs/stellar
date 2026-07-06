@@ -18,6 +18,7 @@ export const useDepositsComplete = (_walletAddress?: string) => {
 
         const data = await response.json();
 
+        const fetchedAtTimestamp = Date.now();
         const deposits = ((data?.data?.deposits ?? []) as DepositResponseDTO[]).map((deposit) => {
           const data: DepositResponseDTO = {
             transactionHash: deposit.transactionHash,
@@ -43,6 +44,7 @@ export const useDepositsComplete = (_walletAddress?: string) => {
             serverTimestamp: deposit.serverTimestamp || 0,
             confirmedTimestamp: deposit.confirmedTimestamp || 0,
             inLockPeriod: deposit.inLockPeriod,
+            fetchedAtTimestamp,
           };
           return data;
         });

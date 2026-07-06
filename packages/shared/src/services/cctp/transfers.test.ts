@@ -80,6 +80,49 @@ describe('bridge transfer tracker', () => {
     });
   });
 
+  it('accepts the local happy-flow Stellar testnet to Base Sepolia payload', async () => {
+    const repo = new MemoryBridgeTransferRepository();
+
+    const transfer = await createBridgeTransfer(repo, {
+      direction: 'stellar_to_evm',
+      sourceNetwork: 'stellar-testnet',
+      destinationNetwork: 'base-sepolia',
+      sourceWallet: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+      destinationWallet: '0x1111111111111111111111111111111111111111',
+      amount: '1.234567',
+    });
+
+    expect(transfer).toMatchObject({
+      direction: 'stellar_to_evm',
+      sourceNetwork: 'stellar-testnet',
+      destinationNetwork: 'base-sepolia',
+      amountRaw: '1234567',
+      status: 'source_awaiting_signature',
+    });
+  });
+
+  it('rejects invalid Stellar source and EVM destination wallets before Stellar signing', async () => {
+    const repo = new MemoryBridgeTransferRepository();
+
+    await expect(createBridgeTransfer(repo, {
+      direction: 'stellar_to_evm',
+      sourceNetwork: 'stellar-testnet',
+      destinationNetwork: 'base-sepolia',
+      sourceWallet: 'not-stellar',
+      destinationWallet: '0x1111111111111111111111111111111111111111',
+      amount: '1',
+    })).rejects.toThrow(/invalid source stellar wallet/i);
+
+    await expect(createBridgeTransfer(repo, {
+      direction: 'stellar_to_evm',
+      sourceNetwork: 'stellar-testnet',
+      destinationNetwork: 'base-sepolia',
+      sourceWallet: 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
+      destinationWallet: 'not-evm',
+      amount: '1',
+    })).rejects.toThrow(/invalid destination evm wallet/i);
+  });
+
   it('rejects direction and network family mismatches before signing', async () => {
     const repo = new MemoryBridgeTransferRepository();
 
