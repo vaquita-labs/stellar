@@ -71,6 +71,10 @@ export const runBridgeConfirmationBatch = async ({
 
   for (const transfer of claimed) {
     if (transfer.status === 'ready_to_complete') {
+      if (transfer.direction !== 'evm_to_stellar') {
+        ready += 1;
+        continue;
+      }
       try {
         const { destinationTxHash } = await relayDestination(transfer);
         const updated = await attachBridgeDestinationTx(repo, transfer.id, { destinationTxHash });

@@ -22,9 +22,16 @@ export interface EvmToStellarBurnInput {
   minFinalityThreshold?: number;
 }
 
+export interface EvmReceiveMessageInput {
+  destinationNetwork: CctpNetworkKey;
+  message: Hex;
+  attestation: Hex;
+}
+
 const ERC20_ALLOWANCE_SELECTOR = '0xdd62ed3e';
 const ERC20_APPROVE_SELECTOR = '0x095ea7b3';
 const DEPOSIT_FOR_BURN_WITH_HOOK_SELECTOR = '0x779b432d';
+const RECEIVE_MESSAGE_SELECTOR = '0x57ecfd28';
 export const CCTP_FAST_FINALITY_THRESHOLD = 1000;
 
 const strip0x = (value: string) => value.replace(/^0x/i, '');
@@ -50,6 +57,12 @@ const dynamicBytesWords = (value: string) => {
   return `${uintWord(byteLength)}${hex.padEnd(paddedLength, '0')}`;
 };
 
+const dynamicBytesArgLength = (value: string) => {
+  const hex = strip0x(value);
+  const byteLength = hex.length / 2;
+  return 32 + Math.ceil(byteLength / 32) * 32;
+};
+
 const networkConfig = (networkKey: CctpNetworkKey) => {
   const config = CCTP_NETWORKS[networkKey];
   if (!config) throw new Error(`Unsupported CCTP network: ${networkKey}`);
@@ -66,6 +79,18 @@ const sourceEvmConfig = (networkKey: CctpNetworkKey) => {
   return { ...config, tokenMessengerV2, usdcAddress } satisfies CctpNetworkConfig & {
     tokenMessengerV2: Hex;
     usdcAddress: Hex;
+  };
+};
+
+const destinationEvmConfig = (networkKey: CctpNetworkKey) => {
+  const config = networkConfig(networkKey);
+  if (config.family !== 'evm') throw new Error(`Destination network must be EVM: ${networkKey}`);
+  const { messageTransmitterV2 } = config;
+  if (!messageTransmitterV2) {
+    throw new Error(`Missing EVM MessageTransmitterV2 config for ${networkKey}`);
+  }
+  return { ...config, messageTransmitterV2 } satisfies CctpNetworkConfig & {
+    messageTransmitterV2: Hex;
   };
 };
 
@@ -124,5 +149,19 @@ export const buildEvmToStellarBurnTx = ({
   return {
     to: source.tokenMessengerV2,
     data: `${DEPOSIT_FOR_BURN_WITH_HOOK_SELECTOR}${staticWords}${dynamicBytesWords(hookData)}`,
+  };
+};
+
+export const buildEvmReceiveMessageTx = ({
+  destinationNetwork,
+  message,
+  attestation,
+}: EvmReceiveMessageInput): EvmTxRequest => {
+  const destination = destinationEvmConfig(destinationNetwork);
+  const messageOffset = 2 * 32;
+  const attestationOffset = messageOffset + dynamicBytesArgLength(message);
+  return {
+    to: destination.messageTransmitterV2,
+    data: `${RECEIVE_MESSAGE_SELECTOR}${uintWord(messageOffset)}${uintWord(attestationOffset)}${dynamicBytesWords(message)}${dynamicBytesWords(attestation)}`,
   };
 };
