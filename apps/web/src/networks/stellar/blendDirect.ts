@@ -3,7 +3,7 @@ import { rpc, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
 import { getNetworkPassphrase, getRpcUrl, getStellarNetwork } from './kit';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 
-const DEFAULT_BLEND_MAINNET_POOL = 'CCCCIQSDILITHMM7PBSLVDT5MISSY7R26MNZXCX4H7J5JQ5FPIYOGYFS';
+const DEFAULT_BLEND_MAINNET_POOL = 'CAJJZSGMMM3PD7N33TAPHGBUGTB43OC73HVIK2L2G6BNGGGYOSSYBXBD';
 const DEFAULT_BLEND_MAINNET_USDC = 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75';
 
 const toBaseUnits = (input: string, decimals: number): bigint => {

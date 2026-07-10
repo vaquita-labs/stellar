@@ -575,6 +575,9 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
   };
 
   const statusLabelFor = (transfer: BridgeTransfer) => {
+    if (transfer.status === 'source_awaiting_signature' && transfer.direction === 'stellar_to_evm') {
+      return stellarApprovedTransferIds.has(transfer.id) ? 'Ready to burn' : 'Approve Stellar USDC';
+    }
     if (transfer.status === 'ready_to_complete' && transfer.direction === 'stellar_to_evm') {
       return `Ready on ${labelForNetwork(transfer.destinationNetwork)}`;
     }
@@ -582,6 +585,14 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
   };
 
   const progressDetailFor = (transfer: BridgeTransfer) => {
+    if (transfer.status === 'source_awaiting_signature' && transfer.direction === 'stellar_to_evm') {
+      return stellarApprovedTransferIds.has(transfer.id)
+        ? 'Now sign the Stellar burn that starts the bridge'
+        : 'First approve Circle to spend this Stellar USDC amount';
+    }
+    if (transfer.status === 'source_confirming' && transfer.direction === 'stellar_to_evm') {
+      return 'Waiting for the Stellar burn to confirm';
+    }
     if (transfer.status === 'ready_to_complete' && transfer.direction === 'stellar_to_evm') {
       return 'Use your EVM wallet to receive the funds';
     }
