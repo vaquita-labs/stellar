@@ -226,6 +226,75 @@
       }
     }
   },
+  "cards": {
+    "actions": {
+      "customize": "Personalizar",
+      "customizeDesc": "Colores y stickers",
+      "detailsDesc": "Número y CVV",
+      "freeze": "Congelar tarjeta",
+      "freezeDesc": "Bloquéala temporalmente",
+      "hideDetails": "Ocultar datos",
+      "showDetails": "Mostrar datos",
+      "showPin": "Ver PIN",
+      "showPinDesc": "Para cajeros y tiendas",
+      "unfreeze": "Descongelar tarjeta",
+      "unfreezeDesc": "Actívala de nuevo"
+    },
+    "activity": {
+      "daysAgo_one": "Hace {{count}} día",
+      "daysAgo_other": "Hace {{count}} días",
+      "title": "Actividad reciente",
+      "today": "Hoy",
+      "topUp": "Recarga de tarjeta",
+      "yesterday": "Ayer"
+    },
+    "cardHolder": "Titular",
+    "copyError": "No se pudo copiar",
+    "copyNumber": "Copiar número de tarjeta",
+    "customize": {
+      "color": "Color",
+      "noSticker": "Sin sticker",
+      "sticker": "Sticker",
+      "title": "Personaliza tu tarjeta"
+    },
+    "cvv": "CVV",
+    "defaultHolder": "Miembro Vaquita",
+    "demo": {
+      "description": "La tarjeta Vaquita llegará muy pronto. Todo lo que ves aquí es una vista previa: aún no existe una tarjeta real.",
+      "title": "Vista previa"
+    },
+    "frozenLabel": "Tarjeta congelada",
+    "frozenToast": "Tarjeta congelada. Nadie puede usarla.",
+    "numberCopied": "Número de tarjeta copiado",
+    "pin": {
+      "hide": "Ocultar PIN",
+      "show": "Mostrar PIN",
+      "title": "PIN de la tarjeta",
+      "warning": "Nunca compartas tu PIN con nadie. Vaquita nunca te lo pedirá."
+    },
+    "places": {
+      "atm": "Retiros en cajeros",
+      "atmDesc": "Saca efectivo en cajeros de todo el mundo.",
+      "contactless": "Pagos sin contacto",
+      "contactlessDesc": "Agrégala a Apple Pay o Google Pay.",
+      "online": "Compras online",
+      "onlineDesc": "Paga en tus tiendas y apps favoritas.",
+      "subscriptions": "Suscripciones",
+      "subscriptionsDesc": "Streaming, juegos y más.",
+      "title": "Dónde puedes usarla"
+    },
+    "themes": {
+      "berry": "Cereza",
+      "meadow": "Pradera",
+      "night": "Noche",
+      "sky": "Cielo",
+      "vaquita": "Vaquita"
+    },
+    "title": "Mi tarjeta",
+    "unfrozenToast": "Tarjeta descongelada. ¡Lista para usar!",
+    "validThru": "Vence",
+    "virtual": "Virtual"
+  },
   "common": {
     "back": "Atrás",
     "cancel": "Cancelar",
@@ -1064,6 +1133,7 @@
       "alt": "Logo de Vaquiland"
     },
     "nav": {
+      "cards": "Tarjetas",
       "home": "Inicio",
       "leaderboard": "Ranking",
       "profile": "Perfil",

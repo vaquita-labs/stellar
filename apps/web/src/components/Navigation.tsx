@@ -11,6 +11,7 @@ import { Logo } from './Logo';
 const navItems = [
   { id: 'home', href: '/home', icon: '/icons/navigation/home.png', label: 'Home' },
   { id: 'shop', href: '/shop', icon: '/icons/navigation/shop.png', label: 'Shop' },
+  { id: 'cards', href: '/cards', icon: '/icons/navigation/cards.png', label: 'Cards' },
   { id: 'leaderboard', href: '/leaderboard', icon: '/icons/navigation/leaderboard.png', label: 'Leaderboard' },
   // { href: "/pools", icon: "/icons/pools.svg", label: "Pools" },
   { id: 'profile', href: '/profile', icon: '/icons/navigation/profile.png', label: 'Profile' },

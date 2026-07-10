@@ -226,6 +226,75 @@
       }
     }
   },
+  "cards": {
+    "actions": {
+      "customize": "Customize",
+      "customizeDesc": "Colors and stickers",
+      "detailsDesc": "Number and CVV",
+      "freeze": "Freeze card",
+      "freezeDesc": "Block it temporarily",
+      "hideDetails": "Hide details",
+      "showDetails": "Show details",
+      "showPin": "View PIN",
+      "showPinDesc": "For ATMs and stores",
+      "unfreeze": "Unfreeze card",
+      "unfreezeDesc": "Enable it again"
+    },
+    "activity": {
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago",
+      "title": "Recent activity",
+      "today": "Today",
+      "topUp": "Card top-up",
+      "yesterday": "Yesterday"
+    },
+    "cardHolder": "Card holder",
+    "copyError": "Couldn't copy",
+    "copyNumber": "Copy card number",
+    "customize": {
+      "color": "Color",
+      "noSticker": "No sticker",
+      "sticker": "Sticker",
+      "title": "Customize your card"
+    },
+    "cvv": "CVV",
+    "defaultHolder": "Vaquita member",
+    "demo": {
+      "description": "The Vaquita card is coming soon. Everything you see here is a preview — no real card exists yet.",
+      "title": "Sneak peek"
+    },
+    "frozenLabel": "Card frozen",
+    "frozenToast": "Card frozen. No one can use it.",
+    "numberCopied": "Card number copied",
+    "pin": {
+      "hide": "Hide PIN",
+      "show": "Show PIN",
+      "title": "Card PIN",
+      "warning": "Never share your PIN with anyone. Vaquita will never ask you for it."
+    },
+    "places": {
+      "atm": "ATM withdrawals",
+      "atmDesc": "Get cash at ATMs worldwide.",
+      "contactless": "Contactless payments",
+      "contactlessDesc": "Add it to Apple Pay or Google Pay.",
+      "online": "Online purchases",
+      "onlineDesc": "Pay in your favorite stores and apps.",
+      "subscriptions": "Subscriptions",
+      "subscriptionsDesc": "Streaming, gaming and more.",
+      "title": "Where you can use it"
+    },
+    "themes": {
+      "berry": "Berry",
+      "meadow": "Meadow",
+      "night": "Night",
+      "sky": "Sky",
+      "vaquita": "Vaquita"
+    },
+    "title": "My card",
+    "unfrozenToast": "Card unfrozen. Ready to use!",
+    "validThru": "Valid thru",
+    "virtual": "Virtual"
+  },
   "common": {
     "back": "Back",
     "cancel": "Cancel",
@@ -1064,6 +1133,7 @@
       "alt": "Vaquiland Logo"
     },
     "nav": {
+      "cards": "Cards",
       "home": "Home",
       "leaderboard": "Leaderboard",
       "profile": "Profile",
