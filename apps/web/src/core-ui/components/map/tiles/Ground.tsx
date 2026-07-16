@@ -7,7 +7,7 @@ import { MapObject, MapObjectType } from '@/core-ui/types';
 import { composeBuildingRotation, isBuildingType } from '../buildings/registry';
 import { EditableObjectGroup } from '../edit/EditableObjectGroup';
 import { EditControls } from '../edit/EditControls';
-import { disposeObject, objectSelectDown, objectSelectUp } from '../helpers';
+import { disposeObject, makeNeighborTypeLookup, objectSelectDown, objectSelectUp } from '../helpers';
 import { buildTileObject, EDIT_ONLY_TYPES, getObjectGroup } from './registry';
 import { buildStaticWorld, disposeStaticWorld } from './staticWorld';
 import { GroundProps } from '../types';
@@ -109,12 +109,16 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
   // Modo edición: cada tile es un grupo individual e interactivo.
   const builtTiles = useMemo(() => {
     if (!hasEditMode) return [];
+    const neighborTypeAt = makeNeighborTypeLookup(mapObjects);
     return mapObjects
       .map((mapObject) => {
         const { position } = mapObject;
         // El grupo se construye en el origen (la posición la aplica el
         // EditableObjectGroup que lo envuelve).
-        const object = buildTileObject({ ...mapObject, position: [0, position[1], 0] }, { worldType, font });
+        const object = buildTileObject(
+          { ...mapObject, position: [0, position[1], 0] },
+          { worldType, font, tileXZ: [position[0], position[2]], neighborTypeAt }
+        );
         return object ? { mapObject, object } : null;
       })
       .filter((entry): entry is { mapObject: MapObject; object: THREE.Object3D } => entry !== null);
