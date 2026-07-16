@@ -5,9 +5,11 @@ import { WorldType } from '@/core-ui/types';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 
-// Azul de agua más saturado y distinto del cielo para que se note el "sobre agua".
+// Océano de la misma familia que el agua de los tiles (palette.water) para
+// que no se lean dos aguas distintas, pero un paso más profundo y aún
+// distinto del cielo para que se note el "sobre agua".
 const waterColors = {
-  [WorldType.FOREST]: '#2FA7DE',
+  [WorldType.FOREST]: '#5FB9E2',
   [WorldType.DESERT]: '#2E8FD6',
   [WorldType.VOLCANO]: '#E0791A',
 };
