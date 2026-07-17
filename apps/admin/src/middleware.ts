@@ -18,7 +18,7 @@ export async function middleware(req: NextRequest) {
     // Already authenticated users skip the login screen.
     if (authed) {
       const url = req.nextUrl.clone();
-      url.pathname = '/admin';
+      url.pathname = '/';
       url.search = '';
       return NextResponse.redirect(url);
     }
