@@ -28,7 +28,7 @@ function LoginForm() {
       }
       // Only honour same-origin relative paths to avoid open-redirects.
       const from = params.get('from');
-      router.replace(from && from.startsWith('/') ? from : '/admin');
+      router.replace(from && from.startsWith('/') ? from : '/');
       router.refresh();
     } catch {
       setError('Something went wrong. Please try again.');

@@ -23,6 +23,15 @@ function adminSecretOk(req: NextRequest): boolean {
 
 const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
 
+// The `cycle_duration_ms` column is a BigInt (values like 30 days in ms overflow
+// int4), so Prisma returns it as a JS bigint — which JSON.stringify cannot
+// serialize. Narrow it back to a number for the JSON response; the client
+// contract stays `number | null`.
+const serializeConfig = <T extends { cycleDurationMs: bigint | number | null }>(config: T) => ({
+  ...config,
+  cycleDurationMs: config.cycleDurationMs == null ? null : Number(config.cycleDurationMs),
+});
+
 // Currencies and languages are both fiat/UI display options shown on the web
 // app's Preferences page, stored on the singleton config row as Json arrays of
 // `{ id, label, hint? }`.
@@ -95,7 +104,7 @@ const updateSchema = z.object({
 export async function GET(req: NextRequest) {
   if (!adminSecretOk(req)) return forbidden();
   const config = await prisma.config.findFirst({ orderBy: { id: 'asc' } });
-  return NextResponse.json({ data: { config: config ?? emptyConfig } });
+  return NextResponse.json({ data: { config: serializeConfig(config ?? emptyConfig) } });
 }
 
 // PATCH /api/config — upsert the singleton. Creates the row if it
@@ -134,14 +143,14 @@ export async function PATCH(req: NextRequest) {
         origins: data.origins ?? [],
         networkPassphrase: data.networkPassphrase ?? null,
         badgesContractAddress: data.badgesContractAddress ?? null,
-        cycleDurationMs: data.cycleDurationMs ?? null,
+        cycleDurationMs: data.cycleDurationMs == null ? null : BigInt(data.cycleDurationMs),
         dailyGoldCoins: data.dailyGoldCoins ?? 1,
         dailyCheckinExperience: data.dailyCheckinExperience ?? 0,
         currencies: data.currencies ?? [],
         languages: data.languages ?? [],
       },
     });
-    return NextResponse.json({ data: { config } });
+    return NextResponse.json({ data: { config: serializeConfig(config) } });
   }
 
   const config = await prisma.config.update({
@@ -158,8 +167,8 @@ export async function PATCH(req: NextRequest) {
       ...(data.dailyCheckinExperience !== undefined ? { dailyCheckinExperience: data.dailyCheckinExperience } : {}),
       networkPassphrase: data.networkPassphrase,
       badgesContractAddress: data.badgesContractAddress,
-      cycleDurationMs: data.cycleDurationMs,
+      cycleDurationMs: data.cycleDurationMs == null ? null : BigInt(data.cycleDurationMs),
     },
   });
-  return NextResponse.json({ data: { config } });
+  return NextResponse.json({ data: { config: serializeConfig(config) } });
 }

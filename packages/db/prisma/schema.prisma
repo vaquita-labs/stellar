@@ -151,7 +151,7 @@ model Config {
   // Fixed leaderboard cycle duration in milliseconds. `null` = production
   // calendar-month cycles; a positive value enables fixed-duration test cycles.
   // Replaces the old CYCLE_DURATION_MS env var.
-  cycleDurationMs       Int?     @map("cycle_duration_ms")
+  cycleDurationMs       BigInt?  @map("cycle_duration_ms")
   // Gold coins granted per daily check-in. Replaces the hard-coded
   // DAILY_GOLD_COINS constant; read live from this column on every check-in.
   dailyGoldCoins        Int      @default(1) @map("daily_gold_coins")
