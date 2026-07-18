@@ -314,6 +314,7 @@
       "noActiveDeposits": "No active deposits",
       "noData": "No data",
       "noDepositsYet": "No deposits yet",
+      "noReadyDeposits": "No deposits ready to withdraw",
       "noWithdrawnDeposits": "No withdrawn deposits",
       "rewardsForfeited": "Rewards forfeited",
       "sortAmount": "Highest amount",
