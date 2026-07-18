@@ -1,6 +1,7 @@
 'use client';
 
 import { TILE_HEIGHT } from '@/core-ui/components/map/constants';
+import { getFallStreaksTexture } from '@/core-ui/components/map/tiles/objects/water';
 import { getPalette } from '@/core-ui/components/map/tiles/palette';
 import { WAVE_MOTION } from '@/core-ui/components/map/tiles/recipe';
 import { WorldType } from '@/core-ui/types';
@@ -12,6 +13,9 @@ import * as THREE from 'three';
 // note) y ciclo lento. El signo alterna cresta/valle vía el atributo aWave.
 const WAVE_MOTION_AMPLITUDE = 0.012;
 const WAVE_MOTION_SPEED = 1.3;
+// Vetas de las cascadas cayendo MUY lento (el ciclo de la textura abarca 3
+// alturas de cara: 0.013 ≈ cruzar una cara cada ~25 s).
+const FALL_STREAK_SPEED = 0.013;
 
 interface WaterBackgroundProps {
   worldType?: WorldType;
@@ -20,6 +24,9 @@ interface WaterBackgroundProps {
 export const WaterBackground = ({ worldType = WorldType.FOREST }: WaterBackgroundProps) => {
   useFrame(({ clock }) => {
     WAVE_MOTION.value = Math.sin(clock.elapsedTime * WAVE_MOTION_SPEED) * WAVE_MOTION_AMPLITUDE;
+    // offset.y creciente = el patrón de trazos baja; RepeatWrapping lo
+    // envuelve (desaparecen al pie y reaparecen arriba).
+    getFallStreaksTexture().offset.y = clock.elapsedTime * FALL_STREAK_SPEED;
   });
 
   const waterMesh = useMemo(() => {
