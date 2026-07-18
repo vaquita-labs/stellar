@@ -1,6 +1,6 @@
 'use client';
 
-import { useDepositListControls } from '@/core-ui/components/home/DepositListControls';
+import { isDepositLocked, useDepositListControls } from '@/core-ui/components/home/DepositListControls';
 import { DepositListTab, DepositListTabs } from '@/core-ui/components/home/DepositListTabs';
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
 import { WithdrawnDepositCard } from '@/core-ui/components/home/WithdrawnDepositCard';
@@ -16,14 +16,18 @@ import { AppModal } from '../../molecules/AppModal';
 import { useVaquitaDetail } from '../VaquitaModal';
 import { VaquitasListModalProps } from './types';
 
-export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps) {
+export function VaquitasListModal({ open, onOpenChange, readyToWithdrawOnly = false }: VaquitasListModalProps) {
   const { t } = useTranslation();
   const { walletAddress } = useConfigStore();
   const { data: depositsData, isLoading } = useDepositsComplete(walletAddress);
   const [selectedVaquita, setSelectedVaquita] = useState<DepositResponseDTO | null>(null);
   const [tab, setTab] = useState<DepositListTab>('active');
 
-  const { deposits, activeDeposits, withdrawnDeposits } = getDepositsData(depositsData?.deposits ?? []);
+  const { deposits, activeDeposits: allActiveDeposits, withdrawnDeposits } = getDepositsData(depositsData?.deposits ?? []);
+  // En modo retiro solo interesan los depósitos activos ya desbloqueados.
+  const activeDeposits = readyToWithdrawOnly
+    ? allActiveDeposits.filter((deposit) => !isDepositLocked(deposit))
+    : allActiveDeposits;
 
   const { controls, filteredActiveDeposits, filteredWithdrawnDeposits } = useDepositListControls({
     tab,
@@ -64,21 +68,28 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
     }
     return (
       <div className="flex flex-col gap-4">
-        <DepositListTabs
-          tab={tab}
-          onTabChange={setTab}
-          activeCount={activeDeposits.length}
-          withdrawnCount={withdrawnDeposits.length}
-        />
+        {/* En modo retiro no hay tabs ni filtros: solo la lista de listos para retirar. */}
+        {!readyToWithdrawOnly && (
+          <DepositListTabs
+            tab={tab}
+            onTabChange={setTab}
+            activeCount={activeDeposits.length}
+            withdrawnCount={withdrawnDeposits.length}
+          />
+        )}
 
-        {(tab === 'active' ? activeDeposits : withdrawnDeposits).length > 0 && controls}
+        {!readyToWithdrawOnly && (tab === 'active' ? activeDeposits : withdrawnDeposits).length > 0 && controls}
 
         {tab === 'active' ? (
           <div className="gap-3 flex flex-col mb-4">
             {filteredActiveDeposits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={100} height={100} />
-                <p className="text-gray-500 mt-4">{t('deposit.list.noActiveDeposits', 'No active deposits')}</p>
+                <p className="text-gray-500 mt-4">
+                  {readyToWithdrawOnly
+                    ? t('deposit.list.noReadyDeposits', 'No deposits ready to withdraw')
+                    : t('deposit.list.noActiveDeposits', 'No active deposits')}
+                </p>
               </div>
             ) : (
               filteredActiveDeposits.map((deposit) => (
@@ -118,7 +129,13 @@ export function VaquitasListModal({ open, onOpenChange }: VaquitasListModalProps
       onOpenChange={onOpenChange}
       isDismissable={!detail.loading}
       onBack={inDetail && !detail.loading ? backToList : undefined}
-      title={inDetail ? detail.title : t('deposit.list.title', 'Your deposits')}
+      title={
+        inDetail
+          ? detail.title
+          : readyToWithdrawOnly
+            ? t('deposit.withdraw.button', 'Withdraw')
+            : t('deposit.list.title', 'Your deposits')
+      }
       // titleIcon={inDetail ? undefined : '/icons/deposits.svg'}
       titleIconAlt={inDetail ? 'deposit' : 'deposits'}
       size="lg"

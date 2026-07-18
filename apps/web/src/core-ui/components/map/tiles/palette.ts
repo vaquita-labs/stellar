@@ -12,6 +12,8 @@ export interface WorldPalette {
   dirtDark: string;
   // tiles simples
   water: string;
+  /** mar de fondo (WaterBackground) y falda de olas contra el acantilado */
+  ocean: string;
   /** espuma de la cascada (vetas de la cortina y motas al pie) */
   foam: string;
   road: string;
@@ -64,9 +66,11 @@ export const WORLD_PALETTES: Record<WorldType, WorldPalette> = {
     ...COMMON,
     grassTop: '#A1CD5A',
     grassTopAlt: '#AAD666',
-    dirt: '#9B7653',
-    dirtDark: '#7E5F42',
+    // mismo tono que las rocas, para que acantilados y piedras sean una familia
+    dirt: '#A4876A',
+    dirtDark: '#8B7355',
     water: '#7DCBEC',
+    ocean: '#5FB9E2',
     foam: '#EDF8FC',
     treeTerrain: '#C35838',
     bushTerrain: '#C6E646',
@@ -78,6 +82,7 @@ export const WORLD_PALETTES: Record<WorldType, WorldPalette> = {
     dirt: '#D9B36A',
     dirtDark: '#B8924F',
     water: '#4DB8E8',
+    ocean: '#2E8FD6',
     foam: '#EDF8FC',
     treeTerrain: '#8B6F47',
     bushTerrain: '#FFB24A',
@@ -89,6 +94,7 @@ export const WORLD_PALETTES: Record<WorldType, WorldPalette> = {
     dirt: '#3E2F2D',
     dirtDark: '#2C2120',
     water: '#FF9C1C',
+    ocean: '#E0791A',
     foam: '#FFDD9E',
     treeTerrain: '#C2583B',
     bushTerrain: '#7B4F50',
