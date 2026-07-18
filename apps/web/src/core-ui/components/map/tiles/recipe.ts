@@ -548,9 +548,15 @@ export const addTerrainTile = (group: THREE.Group, x: number, z: number, color: 
     for (const [bit, sideA, sideB, rotation] of corners) {
       if (!isExposed(sideA) || !isExposed(sideB)) continue;
       cornerMask |= bit;
+      // deep (cordón de flotación + trozo de agua) en toda esquina con un
+      // lado al vacío — incluidas las bocas de cascada, para que la línea de
+      // abajo doble la curva igual que en las esquinas de pura tierra.
       cornerArcs.push({ rotation, deep: isVoid(sideA) || isVoid(sideB) });
       // La costa dobla contra agua: el agua rellena la esquina recortada.
-      if (sideA === MapObjectType.WATER || sideB === MapObjectType.WATER) {
+      // Solo en esquinas interiores (agua+tierra): en las bocas de cascada
+      // (agua+vacío) el relleno quedaba expuesto como un triángulo de agua
+      // superpuesto a la tierra.
+      if ((sideA === MapObjectType.WATER || sideB === MapObjectType.WATER) && !isVoid(sideA) && !isVoid(sideB)) {
         fillers.push({ rotation, color: palette.water });
       }
     }
