@@ -1,6 +1,16 @@
-import { MapObject, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
+import { MapObject, MapObjectType, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
 import * as THREE from 'three';
 import { MAP_SIZE, TILE_HEIGHT } from './constants';
+
+// Lookup (x,z) → tipo de tile para el BuildContext.neighborTypeAt: pasto y
+// agua lo usan para dibujar el contorno del mapa solo en lados expuestos.
+export const makeNeighborTypeLookup = (mapObjects: MapObject[]): ((x: number, z: number) => MapObjectType | undefined) => {
+  const types = new Map<string, MapObjectType>();
+  for (const mapObject of mapObjects) {
+    types.set(`${mapObject.position[0]}|${mapObject.position[2]}`, mapObject.type);
+  }
+  return (x, z) => types.get(`${x}|${z}`);
+};
 
 // Utilidades de Three.js compartidas por los builders de tiles/objects y los
 // edificios. La creación de objetos por tipo vive en tiles/registry.ts.

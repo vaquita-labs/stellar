@@ -21,8 +21,18 @@ export const DailyRewardChest = () => {
   const { goldDailyCollect } = useRestProfile();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  // Snapshot al abrir el modal: al reclamar se invalida ['profile'] y el
+  // daily-check refetchea con amountToCollect=0, así que si el modal leyera el
+  // valor vivo la pantalla de éxito diría "+0 coins".
+  const [rewardSnapshot, setRewardSnapshot] = useState({ coins: 0, experience: 0 });
 
   const streakDays = (streak?.yesterdayStreak ?? 0) + (streak?.todayStreak ? 1 : 0);
+
+  const handleOpen = () => {
+    if (!canCollect) return;
+    setRewardSnapshot({ coins: goldCoinsToCollect, experience: experienceToCollect });
+    setShowModal(true);
+  };
 
   const handleCollect = async () => {
     await goldDailyCollect();
@@ -34,7 +44,7 @@ export const DailyRewardChest = () => {
       <motion.button
         type="button"
         aria-label={t('home.dailyReward.chestAria', 'Daily reward')}
-        onClick={() => canCollect && setShowModal(true)}
+        onClick={handleOpen}
         disabled={!canCollect}
         className="flex items-center justify-center flex-1 bg-transparent disabled:cursor-default"
         animate={canCollect ? { y: [0, -3, 0] } : { y: 0 }}
@@ -73,8 +83,8 @@ export const DailyRewardChest = () => {
         <DailyRewardModal
           open={showModal}
           onOpenChange={() => setShowModal(false)}
-          coinsToCollect={goldCoinsToCollect}
-          experienceToCollect={experienceToCollect}
+          coinsToCollect={rewardSnapshot.coins}
+          experienceToCollect={rewardSnapshot.experience}
           streakDays={streakDays}
           onCollect={handleCollect}
         />
