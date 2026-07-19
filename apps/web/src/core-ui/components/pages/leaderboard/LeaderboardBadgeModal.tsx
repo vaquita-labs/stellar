@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import type { Badge } from '../../../data/profile-badges';
 import { useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 
 interface LeaderboardBadgeModalProps {
   badge: Badge | null;
@@ -45,8 +46,8 @@ export function LeaderboardBadgeModal({ badge, txHash, open, onOpenChange }: Lea
   const networkLabel = network?.type === 'mainnet' ? 'Mainnet' : 'Testnet';
 
   return (
-    <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(false); }}>
-      <Modal.Container size="sm">
+    <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(false); }} className={SHEET_BACKDROP_ANIMATION}>
+      <Modal.Container size="sm" className={SHEET_CONTAINER_ANIMATION}>
         <Modal.Dialog className="bg-background border border-black">
           <Modal.CloseTrigger>
             <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />

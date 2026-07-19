@@ -9,6 +9,7 @@ import { useIsMobile, useProfileMapObjectsAvailable, useProfileRewards, usePurch
 import { EditionMode, useMapStore } from '../../../stores';
 import { MapObjectType } from '../../../types';
 import { SceneLighting } from '../../map/scene/SceneLighting';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 import { CatalogObjectCard } from './CatalogObjectCard';
 import { getMapItemName } from './mapItemNames';
 
@@ -130,8 +131,8 @@ export function CatalogList() {
       </div>
 
       {/* Detalle + compra */}
-      <Modal.Backdrop isOpen={!!detailItem} onOpenChange={(o) => { if (!o) closeDetail(); }}>
-        <Modal.Container size="md">
+      <Modal.Backdrop isOpen={!!detailItem} onOpenChange={(o) => { if (!o) closeDetail(); }} className={SHEET_BACKDROP_ANIMATION}>
+        <Modal.Container size="md" className={SHEET_CONTAINER_ANIMATION}>
           <Modal.Dialog className="bg-background border border-black">
             <Modal.CloseTrigger>
               <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />
@@ -182,8 +183,8 @@ export function CatalogList() {
       </Modal.Backdrop>
 
       {/* Post-compra: colocar ahora o dejar en la colección */}
-      <Modal.Backdrop isOpen={!!placementItem} onOpenChange={(o) => { if (!o) setPlacementItem(null); }}>
-        <Modal.Container size="md">
+      <Modal.Backdrop isOpen={!!placementItem} onOpenChange={(o) => { if (!o) setPlacementItem(null); }} className={SHEET_BACKDROP_ANIMATION}>
+        <Modal.Container size="md" className={SHEET_CONTAINER_ANIMATION}>
           <Modal.Dialog className="bg-background border border-black">
             <Modal.Header>
               <Modal.Heading className="text-black font-bold text-lg">

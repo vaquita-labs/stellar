@@ -44,6 +44,15 @@ body {
     flex-direction: column;
 }
 
+/* El backdrop del modal NO puede animar su opacity al salir: el container (el
+   sheet) es hijo suyo en el DOM y hereda el fade → el modal se desvanece antes
+   de terminar de bajar. Se atenúa solo el color de fondo. */
+@keyframes modal-backdrop-out {
+    to {
+        background-color: transparent;
+    }
+}
+
 /* Onboarding slide fade-in */
 @keyframes fadeIn {
     from {
