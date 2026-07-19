@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import { v4 } from 'uuid';
+import { isNicknameAllowed } from '../../lib/nicknamePolicy';
 import { isStorageConfigured, putAvatar, removeAvatar } from '../../lib/storage';
 import { requireWalletSession } from '../../lib/walletAuth';
 import {
@@ -360,6 +361,11 @@ router.post('/wallet/:walletAddress/nickname', requireWalletSession, async (req,
   const nickname = String(req.body?.nickname ?? '').trim().toLowerCase();
   req.log.info({ walletAddress, nickname }, 'POST /profile/.../nickname');
 
+  if (!isNicknameAllowed(nickname)) {
+    req.log.warn({ walletAddress, nickname }, 'Nickname rejected by moderation policy');
+    return sendError(res, 'That nickname is not allowed.', null, 422);
+  }
+
   const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
@@ -437,6 +443,9 @@ router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req,
       result.nickname.error = 'Please enter a nickname.';
     } else if (nickname.length > 50) {
       result.nickname.error = 'That nickname is too long (max 50 characters).';
+    } else if (!isNicknameAllowed(nickname)) {
+      req.log.warn({ walletAddress, nickname }, 'Nickname rejected by moderation policy');
+      result.nickname.error = 'That nickname is not allowed.';
     } else {
       // Case-insensitive match so "Juan", "JUAN" and "juan" can't coexist as separate users.
       const taken = await prisma.profile.findFirst({
@@ -785,6 +794,12 @@ router.get('/nickname-available', async (req, res) => {
 
   if (!nickname) {
     return sendSuccess(res, { available: false });
+  }
+
+  // Moderated names report a distinct reason so the UI can say "not allowed"
+  // instead of the misleading "already taken".
+  if (!isNicknameAllowed(nickname)) {
+    return sendSuccess(res, { available: false, reason: 'not-allowed' });
   }
 
   try {
