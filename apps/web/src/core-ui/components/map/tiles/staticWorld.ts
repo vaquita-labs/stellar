@@ -1,6 +1,7 @@
 import { MapObject, WorldType } from '@/core-ui/types';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { makeNeighborTypeLookup } from '../helpers';
 import { buildTileObject, EDIT_ONLY_TYPES } from './registry';
 
 // ---------------------------------------------------------------------------
@@ -42,10 +43,14 @@ export const buildStaticWorld = (
   // 1. Construir cada tile como siempre y posicionarlo en su lugar del mundo
   //    (misma matemática que aplica EditableObjectGroup en modo edición).
   const source = new THREE.Group();
+  const neighborTypeAt = makeNeighborTypeLookup(mapObjects);
   for (const mapObject of mapObjects) {
     if (EDIT_ONLY_TYPES.has(mapObject.type)) continue;
     const { position, rotation } = mapObject;
-    const object = buildTileObject({ ...mapObject, position: [0, position[1], 0] }, { worldType });
+    const object = buildTileObject(
+      { ...mapObject, position: [0, position[1], 0] },
+      { worldType, tileXZ: [position[0], position[2]], neighborTypeAt }
+    );
     if (!object) continue;
 
     const userRotation: [number, number, number] =

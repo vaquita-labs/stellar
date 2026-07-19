@@ -12,7 +12,10 @@ import type { Profile } from '../../types';
  */
 export async function getCycleDurationMs(): Promise<number | null> {
   const config = await prisma.config.findFirst({ select: { cycleDurationMs: true } });
-  const n = config?.cycleDurationMs;
+  // Postgres column is BigInt → Prisma returns a JS bigint; narrow to number
+  // (cycle durations in ms fit comfortably inside a safe integer).
+  const raw = config?.cycleDurationMs;
+  const n = raw == null ? null : Number(raw);
   return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
 }
 
