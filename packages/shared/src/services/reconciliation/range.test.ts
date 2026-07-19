@@ -41,6 +41,9 @@ describe('resolveReconciliationLedgerRange', () => {
       startLedger: 1200,
       endLedger: 1300,
       source: 'manual',
+      clamped: false,
+      requestedStartLedger: 1200,
+      requestedEndLedger: 1300,
     });
   });
 
@@ -56,6 +59,9 @@ describe('resolveReconciliationLedgerRange', () => {
       startLedger: 875,
       endLedger: 2000,
       source: 'cursor',
+      clamped: false,
+      requestedStartLedger: 875,
+      requestedEndLedger: 2000,
     });
   });
 
@@ -71,6 +77,9 @@ describe('resolveReconciliationLedgerRange', () => {
       startLedger: 1900,
       endLedger: 2000,
       source: 'fallback',
+      clamped: false,
+      requestedStartLedger: 1900,
+      requestedEndLedger: 2000,
     });
   });
 
@@ -87,6 +96,97 @@ describe('resolveReconciliationLedgerRange', () => {
       startLedger: 1500,
       endLedger: 2000,
       source: 'manual',
+      clamped: false,
+      requestedStartLedger: 1500,
+      requestedEndLedger: 2000,
+    });
+  });
+
+  it('clamps a cursor start below the RPC retention window up to the oldest retained ledger', () => {
+    expect(resolveReconciliationLedgerRange({
+      state,
+      job: 'devnet-pool-events',
+      contractIds: ['CCONTRACT1', 'CCONTRACT2'],
+      latestLedger: 2000,
+      oldestLedger: 1500,
+      overlapLedgers: 25,
+      fallbackLookbackLedgers: 100,
+    })).toEqual({
+      startLedger: 1500,
+      endLedger: 2000,
+      source: 'cursor',
+      clamped: true,
+      requestedStartLedger: 875,
+      requestedEndLedger: 2000,
+    });
+  });
+
+  it('clamps a manual start below the RPC retention window', () => {
+    expect(resolveReconciliationLedgerRange({
+      state,
+      job: 'devnet-pool-events',
+      contractIds: ['CCONTRACT1'],
+      latestLedger: 2000,
+      oldestLedger: 1500,
+      overlapLedgers: 25,
+      fallbackLookbackLedgers: 100,
+      fromLedger: 100,
+      toLedger: 1800,
+    })).toEqual({
+      startLedger: 1500,
+      endLedger: 1800,
+      source: 'manual',
+      clamped: true,
+      requestedStartLedger: 100,
+      requestedEndLedger: 1800,
+    });
+  });
+
+  it('clamps an end beyond the RPC head down to the latest ledger', () => {
+    expect(resolveReconciliationLedgerRange({
+      state,
+      job: 'devnet-pool-events',
+      contractIds: ['CCONTRACT1'],
+      latestLedger: 2000,
+      oldestLedger: 1500,
+      overlapLedgers: 25,
+      fallbackLookbackLedgers: 100,
+      fromLedger: 1600,
+      toLedger: 5000,
+    })).toEqual({
+      startLedger: 1600,
+      endLedger: 2000,
+      source: 'manual',
+      clamped: true,
+      requestedStartLedger: 1600,
+      requestedEndLedger: 5000,
+    });
+  });
+
+  it('restarts from the fallback window when the cursor sits beyond the RPC head', () => {
+    const resetState: ReconciliationState = {
+      'devnet-pool-events': {
+        CCONTRACT1: {
+          ...state['devnet-pool-events']!.CCONTRACT1!,
+          lastProcessedLedger: 3900000,
+        },
+      },
+    };
+    expect(resolveReconciliationLedgerRange({
+      state: resetState,
+      job: 'devnet-pool-events',
+      contractIds: ['CCONTRACT1'],
+      latestLedger: 2000,
+      oldestLedger: 1500,
+      overlapLedgers: 25,
+      fallbackLookbackLedgers: 100,
+    })).toEqual({
+      startLedger: 1900,
+      endLedger: 2000,
+      source: 'fallback',
+      clamped: true,
+      requestedStartLedger: 3899975,
+      requestedEndLedger: 2000,
     });
   });
 });

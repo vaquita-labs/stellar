@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { runReconciliation, type ReconciliationDependencies } from './index';
+import { DepositStatus } from '../../types';
 import type { RawReconciliationEvent, ReconciliationState } from './types';
 
 const cursor = (ledger: number): ReconciliationState => ({
@@ -83,7 +84,41 @@ describe('runReconciliation', () => {
     expect(applied).toEqual([
       expect.objectContaining({ type: 'create_deposit', amount: '5', lockPeriodMs: 604800000 }),
     ]);
-    expect(savedStates[0]?.['devnet-pool-events']?.CCONTRACT?.lastProcessedLedger).toBe(100);
+    expect(savedStates[0]?.['devnet-pool-events']?.CCONTRACT?.lastProcessedLedger).toBe(110);
+  });
+
+  it('advances the cursor to the scanned end even when the only event is an already-applied one', async () => {
+    const savedStates: ReconciliationState[] = [];
+
+    const result = await runReconciliation(
+      {
+        job: 'devnet-pool-events',
+        contractIds: ['CCONTRACT'],
+        startLedger: 80,
+        endLedger: 110,
+        dryRun: false,
+        advanceCursor: true,
+      },
+      deps({
+        loadState: async () => cursor(100),
+        loadDeposits: async () => [{
+          id: 1,
+          walletAddress: 'GOWNER',
+          depositIdHex: 'dep-1',
+          status: DepositStatus.CONFIRMED,
+          transactionHash: 'tx-1',
+          vaquitaContractAddress: 'CCONTRACT',
+          withdrawals: [],
+        }],
+        saveState: async (state) => {
+          savedStates.push(state);
+        },
+      }),
+    );
+
+    expect(result.cursorBehavior).toBe('advanced');
+    expect(result.counts.skippedEvents).toBe(1);
+    expect(savedStates[0]?.['devnet-pool-events']?.CCONTRACT?.lastProcessedLedger).toBe(110);
   });
 
   it('blocks cursor advancement when unresolved ambiguous events remain', async () => {
