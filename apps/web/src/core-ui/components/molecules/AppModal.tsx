@@ -55,11 +55,11 @@ const SCROLLBAR_CLASSES =
 export const MODAL_EXIT_MS = 250;
 
 export const SHEET_BACKDROP_ANIMATION =
-  'data-[entering=true]:duration-300 ' +
-  // Salida: el container es hijo del backdrop, así que un fade-out normal
-  // (opacity del elemento) desvanecería el sheet mientras baja. En su lugar
-  // se reemplaza la animación por modal-backdrop-out (globals.css), que solo
-  // atenúa el background-color y deja a los hijos 100% opacos.
+  // El container es hijo del backdrop, así que un fade normal (opacity del
+  // elemento) desvanecería también al sheet mientras se desliza. En ambas
+  // direcciones se reemplaza la animación por keyframes de globals.css que
+  // solo atenúan el background-color y dejan a los hijos 100% opacos.
+  'data-[entering=true]:animate-[modal-backdrop-in_300ms_ease-out] ' +
   'data-[exiting=true]:animate-[modal-backdrop-out_250ms_ease-out_forwards]';
 export const SHEET_CONTAINER_ANIMATION =
   'data-[entering=true]:duration-300 data-[entering=true]:ease-out ' +
