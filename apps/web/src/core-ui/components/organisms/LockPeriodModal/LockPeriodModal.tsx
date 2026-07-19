@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatTimeDeposit } from '../../../helpers';
 import { useConfigStore } from '../../../stores';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 import { LockPeriodModalProps } from './types';
 
 export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
@@ -40,8 +41,8 @@ export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
   const isDisabled = !selectedLockTime;
 
   return (
-    <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(); }}>
-      <Modal.Container size="md" scroll="inside">
+    <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(); }} className={SHEET_BACKDROP_ANIMATION}>
+      <Modal.Container size="md" scroll="inside" className={SHEET_CONTAINER_ANIMATION}>
         <Modal.Dialog className="bg-background border border-black max-h-[90vh]">
           <Modal.CloseTrigger>
             <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
+import { useModalPresence } from '../molecules/AppModal';
 import { DailyRewardModal } from '../organisms';
 
 /**
@@ -21,6 +22,7 @@ export const DailyRewardChest = () => {
   const { goldDailyCollect } = useRestProfile();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const modalMounted = useModalPresence(showModal);
   // Snapshot al abrir el modal: al reclamar se invalida ['profile'] y el
   // daily-check refetchea con amountToCollect=0, así que si el modal leyera el
   // valor vivo la pantalla de éxito diría "+0 coins".
@@ -79,7 +81,7 @@ export const DailyRewardChest = () => {
         </span>
       </motion.button>
 
-      {showModal && (
+      {modalMounted && (
         <DailyRewardModal
           open={showModal}
           onOpenChange={() => setShowModal(false)}
