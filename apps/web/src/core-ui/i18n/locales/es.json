@@ -621,8 +621,11 @@
     },
     "title": "Tabla de posiciones",
     "user": {
+      "backToLeaderboard": "Volver al leaderboard",
       "joined": "Se unió el {{joinedLabel}}",
-      "noAchievements": "Aún no ha desbloqueado logros"
+      "noAchievements": "Aún no ha desbloqueado logros",
+      "notFound": "No encontramos a @{{username}}",
+      "notFoundHint": "Puede que la cuenta haya cambiado su nombre de usuario o ya no exista."
     },
     "vaquero": "Vaquero",
     "vaqueroNamed": "Vaquero {{tail}}"

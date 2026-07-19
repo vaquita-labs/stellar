@@ -46,7 +46,9 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
       try {
         const { available, reason } = await checkNicknameAvailability(trimmed);
         if (requestId !== requestIdRef.current) return; // respuesta obsoleta
-        setStatus(available ? 'available' : reason === 'not-allowed' ? 'blocked' : 'taken');
+        // 'invalid-format' can only happen if something slips past the input
+        // sanitizer — surface it as "not allowed" rather than "taken".
+        setStatus(available ? 'available' : reason ? 'blocked' : 'taken');
       } catch {
         if (requestId !== requestIdRef.current) return;
         setStatus('error');
@@ -163,7 +165,9 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
               type="text"
               placeholder={t('onboarding.username.inputPlaceholder', '@username')}
               value={nickname}
-              onChange={(e) => setNickname(e.target.value.toLowerCase())}
+              // Usernames double as the public profile URL (/leaderboard/<name>),
+              // so only URL-safe lowercase survives typing: a-z, 0-9 and _.
+              onChange={(e) => setNickname(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSubmit();
               }}
