@@ -350,7 +350,9 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           {/* El slide de entrada/salida lo hace el Modal.Container (SHEET_*);
               framer-motion acá no sirve: su `exit` nunca corre sin AnimatePresence. */}
           <div className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
+            {/* Header — solo la X, a la derecha como en el resto de los
+                modales de la app. */}
+            <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-3">
               <button
                 type="button"
                 onClick={handleClose}
@@ -360,11 +362,6 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
               >
                 <FiX className="h-5 w-5" />
               </button>
-              <span
-                className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`}
-                aria-hidden
-              />
-              <span className="w-10" />
             </div>
 
             <AnimatePresence mode="wait" initial={false}>

@@ -621,8 +621,11 @@
     },
     "title": "Leaderboard",
     "user": {
+      "backToLeaderboard": "Back to leaderboard",
       "joined": "Joined {{joinedLabel}}",
-      "noAchievements": "No achievements unlocked yet"
+      "noAchievements": "No achievements unlocked yet",
+      "notFound": "We couldn't find @{{username}}",
+      "notFoundHint": "The account may have changed its username or no longer exists."
     },
     "vaquero": "Vaquero",
     "vaqueroNamed": "Vaquero {{tail}}"

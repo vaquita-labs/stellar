@@ -233,6 +233,34 @@ export const getProfile = async (walletAddress: string) => {
   }
 };
 
+/**
+ * Resolve a profile by its public username (nickname). Read-only — never
+ * creates. Case-insensitive because old rows predate the lowercase-on-save
+ * rule. Returns `profileData: null` when no live profile owns the nickname.
+ */
+export const getProfileByNickname = async (nickname: string) => {
+  try {
+    const profile = await prisma.profile.findFirst({
+      where: { nickname: { equals: nickname, mode: 'insensitive' }, deletedAt: null },
+    });
+
+    return {
+      success: true,
+      errorMessage: '',
+      errors: [] as unknown,
+      profileData: profile ? toProfileShape(profile) : null,
+    };
+  } catch (error) {
+    console.error('Error on getProfileByNickname', error);
+    return {
+      success: false,
+      errorMessage: 'Failed to resolve profile',
+      errors: error,
+      profileData: null as Profile | null,
+    };
+  }
+};
+
 export const getRewardsData = async (profileData: Profile) => {
 
   const { data: rewardData, error } = await getRewardByKey(Reward.GOLD_COIN);

@@ -22,7 +22,14 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
   const editingObjectPosition = useMapStore((store) => store.editingObjectPosition);
   const groundRef = useRef<THREE.Group>(null);
   const pickedObjectGroupRef = useRef<THREE.Group>(null);
+  // Posición "x,z" del objeto recién colocado, para animar su entrada (saltito).
+  // Se limpia después de cada render: solo el render que sigue a la colocación lo ve.
+  const justPlacedKeyRef = useRef<string | null>(null);
   const font = useFont();
+
+  useEffect(() => {
+    justPlacedKeyRef.current = null;
+  });
 
   const handlePlaceItem = useCallback(
     (position: [number, number, number], rotation: [number, number, number], mapObject?: MapObject) => {
@@ -67,10 +74,17 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
           position,
           rotation: rotation || [0, 0, 0],
         });
+        justPlacedKeyRef.current = `${x},${z}`;
 
         // Activar modo de edición para mostrar los botones flotantes
         setEditingObjectPosition(position);
       } else if (editMode === EditionMode.SELECT && mapObject) {
+        // Los tiles EMPTY son solo un plano invisible para poder clickear al
+        // colocar en modo ADD: ahí no hay nada que editar/quitar/rotar.
+        if (mapObject.type === MapObjectType.EMPTY) {
+          return;
+        }
+
         // Si hay un objeto en edición, NO permitir seleccionar otro hasta que se complete la acción
         if (editingObjectPosition) {
           const [editX, , editZ] = editingObjectPosition;
@@ -187,6 +201,7 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
             position={position}
             rotation={currentRotation}
             isEditing={isEditing}
+            spawnAnimation={justPlacedKeyRef.current === `${position[0]},${position[2]}`}
             onClick={
               !!editMode && !isBlocked
                 ? (e) => {
@@ -225,7 +240,9 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
                             ? 'copy'
                             : 'not-allowed'
                           : editMode === EditionMode.SELECT
-                            ? 'pointer'
+                            ? type !== MapObjectType.EMPTY
+                              ? 'pointer'
+                              : 'default'
                             : 'default';
                     pickedObjectGroupRef.current?.position.set(position[0], position[1], position[2]);
                   }

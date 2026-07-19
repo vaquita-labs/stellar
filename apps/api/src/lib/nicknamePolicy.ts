@@ -16,6 +16,16 @@
 // before matching, so "pör̃no" and "PUTA" are covered. Extend the lists freely —
 // entries must be lowercase, unaccented.
 
+// Nicknames double as the public profile URL segment (/leaderboard/<nickname>),
+// so the charset is restricted to URL-safe lowercase: letters, digits and
+// underscore, 3-32 chars. No spaces, no accents, no symbols.
+export const NICKNAME_FORMAT_REGEX = /^[a-z0-9_]{3,32}$/;
+
+/** True when the (already lowercased/trimmed) nickname is URL-safe. */
+export function isNicknameFormatValid(nickname: string): boolean {
+  return NICKNAME_FORMAT_REGEX.test(nickname);
+}
+
 const BLOCKED_SUBSTRINGS = [
   // sexual / porn
   'porn', 'xxx', 'hentai', 'blowjob', 'dildo', 'onlyfans',

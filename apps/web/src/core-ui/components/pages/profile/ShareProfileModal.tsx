@@ -620,10 +620,9 @@ export function ShareProfileModal({
           className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-3xl border-0 max-h-dvh sm:max-h-[90vh] sm:max-w-md sm:w-full sm:mx-auto"
         >
           <div className="flex flex-col h-full min-h-dvh w-full sm:min-h-0 sm:h-auto sm:max-h-[90vh]">
-            {/* Header — X on the left, drag handle in the middle, spacer on
-                the right to keep the handle visually centered. Mirrors the
-                AchievementModal top bar. */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
+            {/* Header — solo la X, a la derecha como en el resto de los
+                modales de la app (AppModal / FollowListModal). */}
+            <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-3">
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
@@ -632,8 +631,6 @@ export function ShareProfileModal({
               >
                 <FiX className="h-5 w-5" />
               </button>
-              <span className="h-1.5 w-12 rounded-full bg-black/15 sm:hidden" aria-hidden />
-              <span className="w-10" aria-hidden />
             </div>
 
             {/* Tab switch — bounded width so it doesn't stretch on tablets. */}

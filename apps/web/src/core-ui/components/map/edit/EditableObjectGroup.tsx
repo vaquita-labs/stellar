@@ -9,22 +9,67 @@ interface EditableObjectGroupProps {
   position: [number, number, number];
   rotation?: [number, number, number];
   isEditing: boolean;
+  /** Anima la entrada del objeto (pop + saltito) al montarse. Solo se lee en el mount. */
+  spawnAnimation?: boolean;
   onClick?: EventHandlers['onClick'];
   onPointerEnter?: EventHandlers['onPointerEnter'];
   onPointerLeave?: EventHandlers['onPointerLeave'];
   children: ReactNode;
 }
 
+const SPAWN_DURATION = 0.45; // segundos
+const SPAWN_START_SCALE = 0.5;
+const SPAWN_HOP_HEIGHT = 0.4; // unidades de mundo
+
+// Ease-out con rebote (overshoot) para que el scale "pase de largo" y se asiente.
+const easeOutBack = (t: number) => {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+};
+
 export const EditableObjectGroup = ({
   position,
   rotation = [0, 0, 0],
   isEditing,
+  spawnAnimation = false,
   onClick,
   onPointerEnter,
   onPointerLeave,
   children,
 }: EditableObjectGroupProps) => {
   const groupRef = useRef<THREE.Group>(null);
+  const spawnGroupRef = useRef<THREE.Group>(null);
+  // Estado de la animación de entrada; se captura una sola vez en el mount para
+  // que re-renders posteriores (rotación, hover) no la reinicien ni la corten.
+  const spawnStateRef = useRef<{ elapsed: number } | null>(spawnAnimation ? { elapsed: 0 } : null);
+
+  useFrame((_, delta) => {
+    const spawn = spawnStateRef.current;
+    const spawnGroup = spawnGroupRef.current;
+    if (!spawn || !spawnGroup) return;
+
+    spawn.elapsed += delta;
+    const t = Math.min(spawn.elapsed / SPAWN_DURATION, 1);
+
+    const scale = SPAWN_START_SCALE + (1 - SPAWN_START_SCALE) * easeOutBack(t);
+    spawnGroup.scale.setScalar(scale);
+    // Saltito: sube y baja siguiendo media onda de seno.
+    spawnGroup.position.y = SPAWN_HOP_HEIGHT * Math.sin(Math.PI * t);
+
+    if (t >= 1) {
+      spawnGroup.scale.setScalar(1);
+      spawnGroup.position.y = 0;
+      spawnStateRef.current = null;
+    }
+  });
+
+  // Arrancar chiquito antes del primer frame para evitar un flash a escala completa.
+  useEffect(() => {
+    if (spawnStateRef.current && spawnGroupRef.current) {
+      spawnGroupRef.current.scale.setScalar(SPAWN_START_SCALE);
+    }
+  }, []);
   const originalColorsRef = useRef<Map<THREE.Material, THREE.Color>>(new Map());
   const originalEmissiveRef = useRef<Map<THREE.Material, THREE.Color>>(new Map());
 
@@ -188,7 +233,7 @@ export const EditableObjectGroup = ({
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
     >
-      {children}
+      <group ref={spawnGroupRef}>{children}</group>
     </group>
   );
 };
