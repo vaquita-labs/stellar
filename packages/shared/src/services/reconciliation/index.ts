@@ -99,7 +99,7 @@ export const runReconciliation = async (
   const shouldRecordBlocked = !input.dryRun && input.advanceCursor && hasAmbiguousEvents;
   const cursorAfter = shouldAdvance
     ? updateReconciliationState(cursorBefore, input.job, input.contractIds, {
-        lastProcessedLedger: newest?.ledger ?? input.endLedger,
+        lastProcessedLedger: input.endLedger,
         lastProcessedEventId: newest?.eventId ?? null,
         runAt,
         success: true,
