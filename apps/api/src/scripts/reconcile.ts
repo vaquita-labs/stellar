@@ -159,10 +159,13 @@ const resolveOptions = async (): Promise<CliOptions> => {
   };
 };
 
-const fetchLatestLedger = async (rpcUrl: string): Promise<number> => {
+const fetchLedgerBounds = async (rpcUrl: string): Promise<{ oldestLedger: number; latestLedger: number }> => {
   const server = new rpc.Server(rpcUrl);
-  const latest = await server.getLatestLedger();
-  return Number(latest.sequence);
+  const health = await server.getHealth();
+  return {
+    oldestLedger: Number(health.oldestLedger),
+    latestLedger: Number(health.latestLedger),
+  };
 };
 
 const fetchEvents = (rpcUrl: string) => async (input: ReconciliationRunInput): Promise<RawReconciliationEvent[]> => {
@@ -198,17 +201,26 @@ const main = async () => {
   const options = await resolveOptions();
   const deps = createPrismaReconciliationDependencies(prisma);
   const cursorState = await deps.loadState();
-  const latestLedger = options.toLedger ?? await fetchLatestLedger(options.rpcUrl);
+  const { oldestLedger, latestLedger } = await fetchLedgerBounds(options.rpcUrl);
   const range = resolveReconciliationLedgerRange({
     state: cursorState,
     job: options.job,
     contractIds: options.contractIds,
     latestLedger,
+    oldestLedger,
     overlapLedgers: options.overlapLedgers,
     fallbackLookbackLedgers: options.fallbackLookbackLedgers,
     ...(options.fromLedger !== null ? { fromLedger: options.fromLedger } : {}),
     ...(options.toLedger !== null ? { toLedger: options.toLedger } : {}),
   });
+
+  if (range.clamped) {
+    console.error(
+      `reconciliation range clamped to RPC retention window ${oldestLedger}-${latestLedger}: ` +
+        `requested ${range.requestedStartLedger}-${range.requestedEndLedger}, using ${range.startLedger}-${range.endLedger}. ` +
+        'Ledgers outside the retained window were skipped.',
+    );
+  }
 
   const result = await runReconciliation(
     {
@@ -235,6 +247,10 @@ const main = async () => {
     run_id: process.env.GITHUB_RUN_ID ?? null,
     actor: process.env.GITHUB_ACTOR ?? process.env.USER ?? null,
     range_source: range.source,
+    range_clamped: range.clamped,
+    requested_start_ledger: range.requestedStartLedger,
+    requested_end_ledger: range.requestedEndLedger,
+    oldest_ledger: oldestLedger,
     latest_ledger: latestLedger,
     overlap_ledgers: options.overlapLedgers,
     fallback_lookback_ledgers: options.fallbackLookbackLedgers,
