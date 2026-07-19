@@ -15,6 +15,9 @@ export const EditControls = ({ position }: EditControlsProps) => {
   const setPickedItem = useMapStore((store) => store.setPickedItem);
   const setEditMode = useMapStore((store) => store.setEditMode);
   const getTileAt = useMapStore((store) => store.getTileAt);
+  const editMode = useMapStore((store) => store.editMode);
+  const pickedObject = useMapStore((store) => store.pickedObject);
+  const currentTiles = useMapStore((store) => store.currentTiles);
 
   const handleRemove = () => {
     updateTile(position, {
@@ -57,8 +60,23 @@ export const EditControls = ({ position }: EditControlsProps) => {
 
   const handleDone = () => {
     setEditingObjectPosition(null);
-    // Volver al estado base: deseleccionar el item picado y salir de ADD mode.
-    // Esto re-expande el bottom sheet para que el usuario vea el catálogo de nuevo.
+
+    // Si el usuario está colocando un item del que todavía le quedan unidades,
+    // mantenerlo seleccionado en modo ADD para poder colocar varios seguidos
+    // sin volver a abrir la colección.
+    if (editMode === EditionMode.ADD && pickedObject) {
+      const used = currentTiles.reduce(
+        (sum, tile) => sum + +(tile.type === pickedObject.type && tile.variant === pickedObject.variant),
+        0
+      );
+      if (used < pickedObject.itemsAvailable) {
+        return;
+      }
+    }
+
+    // Sin unidades restantes (o editando un objeto existente): volver al estado
+    // base, deseleccionar el item picado y salir de ADD mode. Esto re-expande
+    // el bottom sheet para que el usuario vea el catálogo de nuevo.
     setPickedItem(null);
     setEditMode(EditionMode.SELECT);
   };

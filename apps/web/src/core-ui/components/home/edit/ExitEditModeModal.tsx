@@ -3,6 +3,7 @@ import { Modal } from '@heroui/react';
 import { PressEvent } from '@react-types/shared';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 
 interface ExitEditModeModalProps {
   isOpen: boolean;
@@ -29,8 +30,9 @@ export const ExitEditModeModal = ({
         if (isSaving) return;
         onOpenChange(open);
       }}
+      className={SHEET_BACKDROP_ANIMATION}
     >
-      <Modal.Container size="sm">
+      <Modal.Container size="sm" className={SHEET_CONTAINER_ANIMATION}>
         <Modal.Dialog className="bg-background border border-black">
           <Modal.CloseTrigger>
             <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />

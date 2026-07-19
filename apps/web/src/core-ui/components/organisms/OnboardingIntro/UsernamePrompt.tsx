@@ -14,7 +14,7 @@ interface UsernamePromptProps {
 
 const MIN_LENGTH = 3;
 
-type AvailabilityStatus = 'idle' | 'short' | 'checking' | 'available' | 'taken' | 'error';
+type AvailabilityStatus = 'idle' | 'short' | 'checking' | 'available' | 'taken' | 'blocked' | 'error';
 
 export function UsernamePrompt({ onDone }: UsernamePromptProps) {
   const { t } = useTranslation();
@@ -44,9 +44,9 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
 
     const timeout = setTimeout(async () => {
       try {
-        const available = await checkNicknameAvailability(trimmed);
+        const { available, reason } = await checkNicknameAvailability(trimmed);
         if (requestId !== requestIdRef.current) return; // respuesta obsoleta
-        setStatus(available ? 'available' : 'taken');
+        setStatus(available ? 'available' : reason === 'not-allowed' ? 'blocked' : 'taken');
       } catch {
         if (requestId !== requestIdRef.current) return;
         setStatus('error');
@@ -110,6 +110,11 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
           }),
           className: 'text-error',
         };
+      case 'blocked':
+        return {
+          text: t('onboarding.username.helperBlocked', 'That username is not allowed'),
+          className: 'text-error',
+        };
       case 'error':
         return {
           text: t('onboarding.username.helperError', 'Could not check availability, try again'),
@@ -126,7 +131,11 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
   })();
 
   const borderColor =
-    status === 'available' ? 'border-success' : status === 'taken' || status === 'error' ? 'border-error' : 'border-black';
+    status === 'available'
+      ? 'border-success'
+      : status === 'taken' || status === 'blocked' || status === 'error'
+        ? 'border-error'
+        : 'border-black';
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 py-10">
@@ -172,7 +181,7 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
                   <FiCheck className="w-4 h-4" strokeWidth={3} />
                 </span>
               )}
-              {(status === 'taken' || status === 'error') && (
+              {(status === 'taken' || status === 'blocked' || status === 'error') && (
                 <span className="flex items-center justify-center w-6 h-6 rounded-full bg-error text-white">
                   <FiX className="w-4 h-4" strokeWidth={3} />
                 </span>

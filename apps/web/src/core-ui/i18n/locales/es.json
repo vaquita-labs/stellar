@@ -720,6 +720,7 @@
     },
     "username": {
       "helperAvailable": "@{{name}} está disponible",
+      "helperBlocked": "Ese nombre de usuario no está permitido",
       "helperChecking": "Verificando disponibilidad…",
       "helperDefault": "Se mostrará como @{{name}}",
       "helperError": "No pudimos verificar la disponibilidad, inténtalo de nuevo",

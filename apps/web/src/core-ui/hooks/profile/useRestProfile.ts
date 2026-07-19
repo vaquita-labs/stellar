@@ -169,12 +169,15 @@ export const useRestProfile = () => {
   }, [networkName, walletAddress]);
 
   const checkNicknameAvailability = useCallback(
-    async (nickname: string): Promise<boolean> => {
+    async (nickname: string): Promise<{ available: boolean; reason?: 'not-allowed' }> => {
       const response = await fetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/nickname-available?nickname=${encodeURIComponent(nickname)}`
       );
       const data = await response.json();
-      return data?.data?.available === true;
+      return {
+        available: data?.data?.available === true,
+        reason: data?.data?.reason === 'not-allowed' ? 'not-allowed' : undefined,
+      };
     },
     [networkName]
   );
