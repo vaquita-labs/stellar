@@ -36,7 +36,14 @@ const SCROLLBAR_CLASSES =
   '[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent ' +
   '[&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full';
 
-const SLOW_EXIT = 'data-[exiting=true]:duration-300';
+/**
+ * La animación de salida de HeroUI vive en el backdrop y en el container (el
+ * dialog no anima). La duración debe aplicarse a AMBOS o el que termine antes
+ * "reaparece" (fill-mode none) mientras el otro sigue animando → parpadeo.
+ * fill-mode-forwards congela el último frame hasta que React Aria desmonta.
+ */
+const SLOW_EXIT =
+  'data-[exiting=true]:duration-300 data-[exiting=true]:fill-mode-forwards';
 
 export function AppModal({
   open,
@@ -62,13 +69,17 @@ export function AppModal({
       onOpenChange={(o) => { if (!o) onOpenChange(); }}
       className={SLOW_EXIT}
     >
-      <Modal.Container size={size} scroll="inside" placement={placement} className="px-0! py-3! sm:p-10!">
+      <Modal.Container
+        size={size}
+        scroll="inside"
+        placement={placement}
+        className={'px-0! py-3! sm:p-10! ' + SLOW_EXIT}
+      >
         <Modal.Dialog
           className={
             'bg-background border border-black ' +
             'max-h-[85dvh] sm:max-h-[90vh] ' +
             'rounded-2xl p-0! ' +
-            SLOW_EXIT + ' ' +
             (dialogClassName ?? '')
           }
         >

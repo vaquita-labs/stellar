@@ -34,11 +34,11 @@ const buildingBuilders = Object.fromEntries(
 ) as Partial<Record<MapObjectType, ObjectBuilder>>;
 
 const BUILDERS: Partial<Record<MapObjectType, ObjectBuilder>> = {
-  [MapObjectType.WATER]: (o, { worldType }) => getWaterGroup(o, worldType),
-  [MapObjectType.ROCK]: (o, { worldType }) => getRockGroup(o, worldType),
-  [MapObjectType.GRASS]: (o, { worldType }) => getGrassGroup(o, worldType),
-  [MapObjectType.BUSH]: (o, { worldType }) => getBushGroup(o, worldType),
-  [MapObjectType.TREE]: (o, { worldType }) => getTreeGroup(o, worldType),
+  [MapObjectType.WATER]: (o, ctx) => getWaterGroup(o, ctx),
+  [MapObjectType.ROCK]: (o, ctx) => getRockGroup(o, ctx),
+  [MapObjectType.GRASS]: (o, ctx) => getGrassGroup(o, ctx),
+  [MapObjectType.BUSH]: (o, ctx) => getBushGroup(o, ctx),
+  [MapObjectType.TREE]: (o, ctx) => getTreeGroup(o, ctx),
   [MapObjectType.ROAD]: (o, { worldType }) => getRoadGroup(o, worldType),
   ...buildingBuilders,
   [MapObjectType.EMPTY]: getEmptyHitPlane,
@@ -60,7 +60,7 @@ export const buildTileObject = (mapObject: MapObject, ctx: BuildContext): THREE.
 // Lo usan los previews (catálogo de edición, snapshot del leaderboard).
 export const getObjectGroup = (mapObject: MapObject, worldType: WorldType): THREE.Object3D => {
   if (mapObject.type === MapObjectType.EMPTY) {
-    return getGrassGroup(mapObject, worldType);
+    return getGrassGroup(mapObject, { worldType });
   }
-  return buildTileObject(mapObject, { worldType }) ?? getGrassGroup(mapObject, worldType);
+  return buildTileObject(mapObject, { worldType }) ?? getGrassGroup(mapObject, { worldType });
 };
