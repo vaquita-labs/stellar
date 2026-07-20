@@ -326,10 +326,12 @@ export function EditProfilePage() {
               placeholder={t('profilePages.edit.nicknamePlaceholder', '@nickname')}
               value={nickname}
               onChange={(e) => {
-                setNickname(e.target.value.toLowerCase());
+                // Usernames double as the public profile URL (/leaderboard/<name>),
+                // so only URL-safe lowercase survives typing: a-z, 0-9 and _.
+                setNickname(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
                 if (nicknameError) setNicknameError('');
               }}
-              maxLength={50}
+              maxLength={32}
               disabled={!walletAddress || isLoading}
               aria-invalid={!!nicknameError}
               className={`w-full bg-white border border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none disabled:opacity-50 ${

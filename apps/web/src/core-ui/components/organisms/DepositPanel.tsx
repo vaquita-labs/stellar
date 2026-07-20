@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnalytics, useIsPoolPaused } from '../../hooks';
 import { useMapStore, useConfigStore } from '../../stores';
+import { useModalPresence } from '../molecules/AppModal';
 import { DepositModal } from './DepositModal';
 import { VaquitasListModal } from './VaquitasListModal';
 
@@ -13,6 +14,7 @@ export function DepositPanel() {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isVaquitasListOpen, setIsVaquitasListOpen] = useState(false);
+  const isVaquitasListMounted = useModalPresence(isVaquitasListOpen);
   const [ isDepositing, setIsDepositing ] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { trackUserAction } = useAnalytics();
@@ -83,7 +85,7 @@ export function DepositPanel() {
         isDepositing={isDepositing}
         setIsDepositing={setIsDepositing}
       />
-      {isVaquitasListOpen && (
+      {isVaquitasListMounted && (
         <VaquitasListModal
           open={isVaquitasListOpen}
           onOpenChange={() => setIsVaquitasListOpen(false)}

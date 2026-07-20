@@ -621,8 +621,11 @@
     },
     "title": "Ranking",
     "user": {
+      "backToLeaderboard": "Voltar ao leaderboard",
       "joined": "Entrou em {{joinedLabel}}",
-      "noAchievements": "Ainda não desbloqueou conquistas"
+      "noAchievements": "Ainda não desbloqueou conquistas",
+      "notFound": "Não encontramos @{{username}}",
+      "notFoundHint": "A conta pode ter mudado o nome de usuário ou não existe mais."
     },
     "vaquero": "Vaquero",
     "vaqueroNamed": "Vaquero {{tail}}"
@@ -720,6 +723,7 @@
     },
     "username": {
       "helperAvailable": "@{{name}} está disponível",
+      "helperBlocked": "Esse nome de usuário não é permitido",
       "helperChecking": "Verificando disponibilidade…",
       "helperDefault": "Exibido como @{{name}}",
       "helperError": "Não foi possível verificar a disponibilidade, tente novamente",

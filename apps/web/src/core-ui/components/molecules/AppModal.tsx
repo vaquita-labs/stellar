@@ -2,7 +2,7 @@
 
 import { Modal } from '@heroui/react';
 import Image from 'next/image';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { FiArrowLeft } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 
@@ -37,13 +37,59 @@ const SCROLLBAR_CLASSES =
   '[&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full';
 
 /**
- * La animación de salida de HeroUI vive en el backdrop y en el container (el
- * dialog no anima). La duración debe aplicarse a AMBOS o el que termine antes
+ * Animación tipo "bottom sheet" compartida por todos los modales: el container
+ * entra deslizándose desde abajo y sale hacia abajo por el mismo recorrido,
+ * mientras el backdrop solo hace fade. Son utilidades de tw-animate-css, que ya
+ * viene incluido por @heroui/styles (no hay dependencia nueva).
+ *
+ * La animación de HeroUI vive en el backdrop y en el container (el dialog no
+ * anima). La duración debe coincidir en AMBOS o el que termine antes
  * "reaparece" (fill-mode none) mientras el otro sigue animando → parpadeo.
  * fill-mode-forwards congela el último frame hasta que React Aria desmonta.
+ * zoom/fade en 100 anulan el zoom+fade default de HeroUI: slide puro, el sheet
+ * se mantiene opaco mientras se mueve.
+ *
+ * Exportadas para reutilizarlas en otros overlays (drawers, popovers a futuro).
  */
-const SLOW_EXIT =
-  'data-[exiting=true]:duration-300 data-[exiting=true]:fill-mode-forwards';
+/** Debe coincidir con el duration-250 de las clases de salida de abajo. */
+export const MODAL_EXIT_MS = 250;
+
+export const SHEET_BACKDROP_ANIMATION =
+  // El container es hijo del backdrop, así que un fade normal (opacity del
+  // elemento) desvanecería también al sheet mientras se desliza. En ambas
+  // direcciones se reemplaza la animación por keyframes de globals.css que
+  // solo atenúan el background-color y dejan a los hijos 100% opacos.
+  'data-[entering=true]:animate-[modal-backdrop-in_300ms_ease-out] ' +
+  'data-[exiting=true]:animate-[modal-backdrop-out_250ms_ease-out_forwards]';
+export const SHEET_CONTAINER_ANIMATION =
+  'data-[entering=true]:duration-300 data-[entering=true]:ease-out ' +
+  'data-[entering=true]:slide-in-from-bottom-full data-[entering=true]:zoom-in-100 data-[entering=true]:fade-in-100 ' +
+  'data-[exiting=true]:duration-250 data-[exiting=true]:ease-in ' +
+  'data-[exiting=true]:slide-out-to-bottom-full data-[exiting=true]:zoom-out-100 data-[exiting=true]:fade-out-100 ' +
+  'data-[exiting=true]:fill-mode-forwards';
+
+/**
+ * Mantiene montado un modal montado condicionalmente hasta que termina la
+ * animación de salida. Sin esto, `{show && <XxxModal/>}` desmonta de golpe y
+ * el modal desaparece sin deslizarse. Uso:
+ *   const mounted = useModalPresence(show);
+ *   {mounted && <XxxModal open={show} ... />}
+ * Se usa este patrón (y no montar siempre) cuando el modal hace fetch al
+ * montarse y no queremos dispararlo hasta que el usuario lo abra.
+ */
+export function useModalPresence(open: boolean, exitMs: number = MODAL_EXIT_MS): boolean {
+  const [mounted, setMounted] = useState(open);
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      return;
+    }
+    // Margen extra para que React Aria termine de desmontar sin cortar el último frame.
+    const id = setTimeout(() => setMounted(false), exitMs + 50);
+    return () => clearTimeout(id);
+  }, [open, exitMs]);
+  return mounted;
+}
 
 export function AppModal({
   open,
@@ -67,13 +113,13 @@ export function AppModal({
       isOpen={open}
       isDismissable={isDismissable}
       onOpenChange={(o) => { if (!o) onOpenChange(); }}
-      className={SLOW_EXIT}
+      className={SHEET_BACKDROP_ANIMATION}
     >
       <Modal.Container
         size={size}
         scroll="inside"
         placement={placement}
-        className={'px-0! py-3! sm:p-10! ' + SLOW_EXIT}
+        className={'px-0! py-3! sm:p-10! ' + SHEET_CONTAINER_ANIMATION}
       >
         <Modal.Dialog
           className={

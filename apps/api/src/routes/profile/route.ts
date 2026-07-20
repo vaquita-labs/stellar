@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
 import { v4 } from 'uuid';
+import { isNicknameAllowed, isNicknameFormatValid } from '../../lib/nicknamePolicy';
 import { isStorageConfigured, putAvatar, removeAvatar } from '../../lib/storage';
 import { requireWalletSession } from '../../lib/walletAuth';
 import {
@@ -12,6 +13,7 @@ import {
   getExperienceByProfile,
   getNetworkName,
   getProfile,
+  getProfileByNickname,
   getProfileMapObjects,
   getProfiles,
   getProjectConfig,
@@ -360,6 +362,16 @@ router.post('/wallet/:walletAddress/nickname', requireWalletSession, async (req,
   const nickname = String(req.body?.nickname ?? '').trim().toLowerCase();
   req.log.info({ walletAddress, nickname }, 'POST /profile/.../nickname');
 
+  if (!isNicknameFormatValid(nickname)) {
+    req.log.warn({ walletAddress, nickname }, 'Nickname rejected by format policy');
+    return sendError(res, 'Nicknames must be 3-32 lowercase letters, numbers or underscores.', null, 422);
+  }
+
+  if (!isNicknameAllowed(nickname)) {
+    req.log.warn({ walletAddress, nickname }, 'Nickname rejected by moderation policy');
+    return sendError(res, 'That nickname is not allowed.', null, 422);
+  }
+
   const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
   if (!success || !profileData) {
@@ -435,8 +447,11 @@ router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req,
     const nickname = String(body.nickname).trim().toLowerCase();
     if (!nickname) {
       result.nickname.error = 'Please enter a nickname.';
-    } else if (nickname.length > 50) {
-      result.nickname.error = 'That nickname is too long (max 50 characters).';
+    } else if (!isNicknameFormatValid(nickname)) {
+      result.nickname.error = 'Nicknames must be 3-32 lowercase letters, numbers or underscores.';
+    } else if (!isNicknameAllowed(nickname)) {
+      req.log.warn({ walletAddress, nickname }, 'Nickname rejected by moderation policy');
+      result.nickname.error = 'That nickname is not allowed.';
     } else {
       // Case-insensitive match so "Juan", "JUAN" and "juan" can't coexist as separate users.
       const taken = await prisma.profile.findFirst({
@@ -787,6 +802,16 @@ router.get('/nickname-available', async (req, res) => {
     return sendSuccess(res, { available: false });
   }
 
+  // Distinct reasons so the UI can explain WHY instead of the misleading
+  // "already taken": bad charset/length vs moderated name.
+  if (!isNicknameFormatValid(nickname)) {
+    return sendSuccess(res, { available: false, reason: 'invalid-format' });
+  }
+
+  if (!isNicknameAllowed(nickname)) {
+    return sendSuccess(res, { available: false, reason: 'not-allowed' });
+  }
+
   try {
     // Case-insensitive match so "Juan", "JUAN" and "juan" are treated as the same user.
     // Soft-deleted profiles don't reserve their nickname (matches the PATCH uniqueness check).
@@ -799,6 +824,32 @@ router.get('/nickname-available', async (req, res) => {
     req.log.error({ err, nickname }, 'Failed to check nickname availability');
     return sendError(res, 'Failed to check nickname availability', err, 500);
   }
+});
+
+// Resolves a public username (nickname) to its profile. Backs the
+// /leaderboard/<username> page: the client resolves the URL segment to a
+// wallet here and then reuses every existing per-wallet query. Lookup is
+// case-insensitive (nicknames are stored lowercase, but old links may vary).
+router.get('/nickname/:nickname', async (req, res) => {
+  const nickname = String(req.params.nickname ?? '').trim().toLowerCase();
+  req.log.info({ nickname }, 'GET /profile/nickname/:nickname');
+
+  if (!nickname) {
+    return sendError(res, 'Missing nickname', null, 400);
+  }
+
+  const { success, errors, errorMessage, profileData } = await getProfileByNickname(nickname);
+
+  if (!success) {
+    req.log.error({ errors, errorMessage, nickname }, 'Failed to resolve nickname');
+    return sendError(res, errorMessage, errors, 500);
+  }
+
+  if (!profileData) {
+    return sendError(res, 'Profile not found', null, 404);
+  }
+
+  return sendSuccess(res, toProfileResponseDTO(await getNetworkName(), profileData));
 });
 
 router.get('/', async (req, res) => {

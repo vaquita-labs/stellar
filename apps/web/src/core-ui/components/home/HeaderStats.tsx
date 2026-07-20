@@ -19,6 +19,7 @@ import {
 } from '../../hooks';
 import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
+import { useModalPresence } from '../molecules/AppModal';
 import { BankAPYModal, CoinsModal, ExperienceModal, StreakModal } from '../organisms';
 import { DailyRewardChest } from './DailyRewardChest';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
@@ -30,6 +31,11 @@ export const HeaderStats = () => {
   const [showCoinsModal, setShowCoinsModal] = useState(false);
   const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
+  // Mantienen el modal montado mientras corre la animación de salida.
+  const streakModalMounted = useModalPresence(showStreakModal);
+  const coinsModalMounted = useModalPresence(showCoinsModal);
+  const experienceModalMounted = useModalPresence(showExperienceModal);
+  const bankAPYModalMounted = useModalPresence(showBankAPYModal);
   const { walletAddress, token, lockPeriod } = useConfigStore();
   const hideBalance = useHideBalance();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
@@ -280,12 +286,12 @@ export const HeaderStats = () => {
         </div>
       </div>
 
-      {showStreakModal && <StreakModal open={showStreakModal} onOpenChange={() => setShowStreakModal(false)} />}
-      {showCoinsModal && <CoinsModal open={showCoinsModal} onOpenChange={() => setShowCoinsModal(false)} coins={goldCoins} />}
-      {showExperienceModal && (
+      {streakModalMounted && <StreakModal open={showStreakModal} onOpenChange={() => setShowStreakModal(false)} />}
+      {coinsModalMounted && <CoinsModal open={showCoinsModal} onOpenChange={() => setShowCoinsModal(false)} coins={goldCoins} />}
+      {experienceModalMounted && (
         <ExperienceModal open={showExperienceModal} onOpenChange={() => setShowExperienceModal(false)} experience={experience} />
       )}
-      {showBankAPYModal && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
+      {bankAPYModalMounted && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
     </div>
   );
 };

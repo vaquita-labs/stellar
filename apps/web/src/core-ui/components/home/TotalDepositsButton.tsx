@@ -1,6 +1,7 @@
 import { BankAPYModal } from '@/core-ui/components';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { useDepositsComplete } from '@/core-ui/hooks';
+import { useModalPresence } from '@/core-ui/components/molecules/AppModal';
 import { useConfigStore } from '@/core-ui/stores';
 import { Button, Spinner } from '@heroui/react';
 import Image from 'next/image';
@@ -10,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 export const TotalDepositsButton = () => {
   const { t } = useTranslation();
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
+  const bankAPYModalMounted = useModalPresence(showBankAPYModal);
   const { walletAddress, token } = useConfigStore();
 
   const { data, isLoading, isRefetching } = useDepositsComplete(walletAddress);
@@ -39,7 +41,7 @@ export const TotalDepositsButton = () => {
           </>
         )}
       </Button>
-      {showBankAPYModal && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
+      {bankAPYModalMounted && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
     </>
   );
 };

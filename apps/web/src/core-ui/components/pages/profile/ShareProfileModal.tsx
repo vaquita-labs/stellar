@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiCamera, FiCopy, FiImage, FiLoader, FiShare2, FiUserPlus, FiX } from 'react-icons/fi';
 import { useToggleFollow } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 
 interface ShareProfileModalProps {
   open: boolean;
@@ -594,6 +595,10 @@ export function ShareProfileModal({
    * anchored CTA bar at the bottom. `aria-label` on the Dialog silences
    * the React Aria "Dialog must have a title" warning that otherwise
    * triggered an extra commit-time re-render (visible as a close flicker).
+   *
+   * El slide entra/sale por las SHEET_* de AppModal (el container anima, el
+   * backdrop solo atenúa su color). No usar framer-motion acá: su `exit`
+   * nunca corre porque React Aria desmonta sin AnimatePresence.
    */
   return (
     <Modal.Backdrop
@@ -602,29 +607,22 @@ export function ShareProfileModal({
       onOpenChange={(o) => {
         if (!o) onOpenChange(false);
       }}
-      className="bg-black/70 backdrop-blur-sm data-[exiting=true]:duration-300"
+      className={'bg-black/70 backdrop-blur-sm ' + SHEET_BACKDROP_ANIMATION}
     >
       <Modal.Container
         size="full"
         placement="bottom"
         scroll="inside"
-        className="p-0! m-0! sm:items-center sm:justify-center sm:p-4!"
+        className={'p-0! m-0! sm:items-center sm:justify-center sm:p-4! ' + SHEET_CONTAINER_ANIMATION}
       >
         <Modal.Dialog
           aria-label={tab === 'mine' ? t('social.share.dialogLabelMine') : t('social.share.dialogLabelScan')}
-          className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-3xl border-0 max-h-dvh sm:max-h-[90vh] sm:max-w-md sm:w-full sm:mx-auto data-[exiting=true]:duration-300"
+          className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-3xl border-0 max-h-dvh sm:max-h-[90vh] sm:max-w-md sm:w-full sm:mx-auto"
         >
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className="flex flex-col h-full min-h-dvh w-full sm:min-h-0 sm:h-auto sm:max-h-[90vh]"
-          >
-            {/* Header — X on the left, drag handle in the middle, spacer on
-                the right to keep the handle visually centered. Mirrors the
-                AchievementModal top bar. */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
+          <div className="flex flex-col h-full min-h-dvh w-full sm:min-h-0 sm:h-auto sm:max-h-[90vh]">
+            {/* Header — solo la X, a la derecha como en el resto de los
+                modales de la app (AppModal / FollowListModal). */}
+            <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-3">
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
@@ -633,8 +631,6 @@ export function ShareProfileModal({
               >
                 <FiX className="h-5 w-5" />
               </button>
-              <span className="h-1.5 w-12 rounded-full bg-black/15 sm:hidden" aria-hidden />
-              <span className="w-10" aria-hidden />
             </div>
 
             {/* Tab switch — bounded width so it doesn't stretch on tablets. */}
@@ -689,7 +685,7 @@ export function ShareProfileModal({
                 </div>
               </div>
             )}
-          </motion.div>
+          </div>
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>
