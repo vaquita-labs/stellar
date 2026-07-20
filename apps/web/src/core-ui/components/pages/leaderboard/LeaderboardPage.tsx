@@ -300,6 +300,7 @@ function useLeaderboardRows(rows: LeaderboardResponseDTO[]): LeaderboardCardData
       return {
         position: row.position,
         walletAddress: row.walletAddress,
+        nickname: (row.nickname ?? '').trim(),
         username: getLeaderboardUsername(row.nickname, row.walletAddress),
         avatarUrl: row.avatarUrl,
         level,

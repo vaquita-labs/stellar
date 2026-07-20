@@ -99,11 +99,12 @@ export const searchFriends = async ({
     : [];
   const followingSet = new Set(followingRows.map((r) => r.followeeId));
 
-  // Follower counts for the whole result set (single grouped query).
+  // Follower counts for the whole result set (single grouped query). Deleted
+  // followers don't count.
   const followerCounts = ids.length
     ? await prisma.follow.groupBy({
         by: ['followeeId'],
-        where: { followeeId: { in: ids } },
+        where: { followeeId: { in: ids }, follower: { deletedAt: null } },
         _count: { _all: true },
       })
     : [];
@@ -181,9 +182,12 @@ export const followProfile = async (followerWallet: string, followeeWallet: stri
  * non-existent edge is a no-op success.
  */
 export const unfollowProfile = async (followerWallet: string, followeeWallet: string) => {
+  // The followee lookup deliberately ignores `deletedAt`: an edge pointing at a
+  // soft-deleted profile must still be removable, otherwise it lingers forever
+  // (it's hidden from the Following list but a user may still hold the URL).
   const [follower, followee] = await Promise.all([
     prisma.profile.findFirst({ where: { walletAddress: followerWallet, deletedAt: null } }),
-    prisma.profile.findFirst({ where: { walletAddress: followeeWallet, deletedAt: null } }),
+    prisma.profile.findFirst({ where: { walletAddress: followeeWallet } }),
   ]);
 
   if (follower && followee) {
@@ -195,7 +199,7 @@ export const unfollowProfile = async (followerWallet: string, followeeWallet: st
 
 /** How many profiles this profile follows — drives the FIRST_FRIEND signal. */
 export const getFollowingCount = async (profileId: number): Promise<number> =>
-  prisma.follow.count({ where: { followerId: profileId } });
+  prisma.follow.count({ where: { followerId: profileId, followee: { deletedAt: null } } });
 
 /**
  * Wallet addresses the viewer currently follows. Lets per-row Follow buttons
@@ -211,7 +215,7 @@ export const getFollowingWallets = async (viewerWallet: string): Promise<string[
   });
 
   const rows = await prisma.follow.findMany({
-    where: { followerId: viewer.id },
+    where: { followerId: viewer.id, followee: { deletedAt: null } },
     select: { followee: { select: { walletAddress: true } } },
   });
 
@@ -233,7 +237,7 @@ const hydrateFriendList = async (
 
   const followerCounts = await prisma.follow.groupBy({
     by: ['followeeId'],
-    where: { followeeId: { in: ids } },
+    where: { followeeId: { in: ids }, follower: { deletedAt: null } },
     _count: { _all: true },
   });
   const followersById = new Map(followerCounts.map((r) => [r.followeeId, r._count._all]));
@@ -308,9 +312,12 @@ export const getFollowCounts = async (
     create: { walletAddress },
   });
 
+  // Only count edges whose counterpart is alive — otherwise soft-deleting a
+  // profile leaves phantom counts (the /profile header says "1 following" while
+  // the Following list, which filters deleted profiles, renders empty).
   const [following, followers] = await Promise.all([
-    prisma.follow.count({ where: { followerId: profile.id } }),
-    prisma.follow.count({ where: { followeeId: profile.id } }),
+    prisma.follow.count({ where: { followerId: profile.id, followee: { deletedAt: null } } }),
+    prisma.follow.count({ where: { followeeId: profile.id, follower: { deletedAt: null } } }),
   ]);
 
   return { following, followers };
@@ -422,7 +429,7 @@ export const getFriendSuggestions = async ({
 
   const followerCounts = await prisma.follow.groupBy({
     by: ['followeeId'],
-    where: { followeeId: { in: chosenIds } },
+    where: { followeeId: { in: chosenIds }, follower: { deletedAt: null } },
     _count: { _all: true },
   });
   const followersById = new Map(followerCounts.map((r) => [r.followeeId, r._count._all]));

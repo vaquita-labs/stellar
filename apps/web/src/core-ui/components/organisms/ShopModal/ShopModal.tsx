@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileRewards } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 import { ShopItem, ShopModalProps } from './types';
 
 // Shop items data — single-currency (gold). Prices were rebalanced from the
@@ -161,8 +162,8 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
 
   return (
     <>
-      <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(); }}>
-        <Modal.Container size="lg" scroll="inside">
+      <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(); }} className={SHEET_BACKDROP_ANIMATION}>
+        <Modal.Container size="lg" scroll="inside" className={SHEET_CONTAINER_ANIMATION}>
           <Modal.Dialog className="bg-background border border-black max-h-[90vh] flex flex-col">
             <Modal.CloseTrigger>
               <Image src="/icons/close-circle.svg" alt={t('shop.modal.closeAlt', 'close')} width={40} height={40} />
@@ -262,8 +263,8 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
     </Modal.Backdrop>
 
       {/* Confirmation Modal */}
-      <Modal.Backdrop isOpen={confirmModalOpen} onOpenChange={setConfirmModalOpen}>
-        <Modal.Container size="sm">
+      <Modal.Backdrop isOpen={confirmModalOpen} onOpenChange={setConfirmModalOpen} className={SHEET_BACKDROP_ANIMATION}>
+        <Modal.Container size="sm" className={SHEET_CONTAINER_ANIMATION}>
           <Modal.Dialog className="bg-background border border-black">
             <Modal.CloseTrigger>
               <Image src="/icons/close-circle.svg" alt={t('shop.modal.closeAlt', 'close')} width={40} height={40} />

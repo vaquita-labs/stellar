@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useProfileRewards } from '../../hooks';
 import { useConfigStore } from '../../stores';
 import { PageHeader } from '../molecules';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../molecules/AppModal';
 import { ShopItem, ShopItemBiome, ShopItemRarity, ShopItemType } from '../organisms/ShopModal/types';
 
 type SortOption = 'price-asc' | 'price-desc';
@@ -410,8 +411,8 @@ export function ShopPage() {
         )}
       </div>
 
-      <Modal.Backdrop isOpen={!!detailItem} onOpenChange={(o) => { if (!o) closeDetail(); }}>
-        <Modal.Container size="md">
+      <Modal.Backdrop isOpen={!!detailItem} onOpenChange={(o) => { if (!o) closeDetail(); }} className={SHEET_BACKDROP_ANIMATION}>
+        <Modal.Container size="md" className={SHEET_CONTAINER_ANIMATION}>
           <Modal.Dialog className="bg-background border border-black">
             <Modal.CloseTrigger>
               <Image src="/icons/close-circle.svg" alt={t('shop.page.closeAlt', 'close')} width={40} height={40} />

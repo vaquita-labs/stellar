@@ -6,6 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { useAnalytics, useDeposits } from '../../hooks';
 import { EditionMode, useLoading, useMapStore, useConfigStore } from '../../stores';
 import { WorldType } from '../../types';
+import { useModalPresence } from '../molecules/AppModal';
 import { BankAPYModal, CoinAnimation, DepositPanel, TutorialModal } from '../organisms';
 import { WorldMap } from '../templates';
 import { BackgroundMusic } from './BackgroundMusic';
@@ -24,6 +25,7 @@ export function HomePage() {
   const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
 
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
+  const bankAPYModalMounted = useModalPresence(showBankAPYModal);
   const [coinAnimationTarget, setCoinAnimationTarget] = useState<{ x: number; y: number } | null>(null);
 
   // Track page view when component mounts
@@ -113,7 +115,7 @@ export function HomePage() {
         <TutorialModal isOpen={isTutorialModalOpen} onClose={() => setIsTutorialModalOpen(false)} />
       )}
 
-      {showBankAPYModal && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
+      {bankAPYModalMounted && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
 
       {/* {showStreakModal && <StreakModal open={showStreakModal} onOpenChange={() => setShowStreakModal(false)} />} */}
 
