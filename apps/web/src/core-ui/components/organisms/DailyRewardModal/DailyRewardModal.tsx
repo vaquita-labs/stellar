@@ -51,16 +51,18 @@ export function DailyRewardModal({
       isDismissable={!isCollecting}
     >
       <div className="flex flex-col items-center text-center gap-5 py-2">
-        <div className="flex items-center justify-center gap-3">
-          <span className="text-4xl font-bold text-black">+{coinsToCollect}</span>
-          <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={56} height={56} priority />
-        </div>
-
-        {hasExperience && (
-          <div className="flex items-center justify-center gap-2 rounded-full bg-white border border-black border-b-2 px-3 py-1">
-            <span className="text-base font-bold text-black">+{experienceToCollect} XP</span>
+        {/* Las monedas son el premio principal; el XP va como nota secundaria
+            debajo para no competir con dos bloques del mismo peso visual. */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-4xl font-bold text-black">+{coinsToCollect}</span>
+            <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={56} height={56} priority />
           </div>
-        )}
+
+          {hasExperience && (
+            <span className="text-sm font-medium text-gray-500 tabular-nums">+{experienceToCollect} XP</span>
+          )}
+        </div>
 
         {step === 'confirm' ? (
           <>

@@ -87,6 +87,47 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const ctaClasses =
     'w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black disabled:opacity-50';
 
+  // --- Paso: método ----------------------------------------------------------
+  // Banco va primero a propósito: el público objetivo no es web3 y "sacar la
+  // plata al banco" es la salida que entiende sin explicación. "Wallet" queda
+  // segundo para quien sí maneja cripto.
+  const methodStep = (
+    <>
+      <button
+        type="button"
+        onClick={onOfframp}
+        className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
+      >
+        <BsBank2 className="w-6 h-6 text-black shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-bold text-black">
+            {t('withdraw.method.bank.title', 'Bank')}
+          </span>
+          <span className="block text-xs text-gray-500">
+            {t('withdraw.method.bank.subtitle', 'Withdraw to your bank account')}
+          </span>
+        </span>
+        <FiChevronRight className="w-5 h-5 text-black shrink-0" />
+      </button>
+      <button
+        type="button"
+        onClick={() => setStep('amount')}
+        className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
+      >
+        <FiCreditCard className="w-6 h-6 text-black shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-bold text-black">
+            {t('withdraw.method.wallet.title', 'Wallet')}
+          </span>
+          <span className="block text-xs text-gray-500">
+            {t('withdraw.method.wallet.subtitle', 'Withdraw to a crypto wallet')}
+          </span>
+        </span>
+        <FiChevronRight className="w-5 h-5 text-black shrink-0" />
+      </button>
+    </>
+  );
+
   // --- Paso: monto -----------------------------------------------------------
   const amountStep = (
     <div className="flex flex-col gap-4">
@@ -242,6 +283,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   );
 
   const STEP_CONTENT: Record<WithdrawStep, React.ReactNode> = {
+    method: methodStep,
     amount: amountStep,
     account: accountStep,
     addWallet: (
