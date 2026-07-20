@@ -493,3 +493,17 @@ export enum MapObjectType {
   LEADERBOARD = 'leaderboard',
   EMPTY = 'empty',
 }
+
+/** A payout wallet the user saved for the withdraw flow. */
+export interface SavedWalletResponseDTO {
+  id: string;
+  label: string;
+  address: string;
+  network: string;
+  createdTimestamp: number;
+  updatedTimestamp: number;
+}
+
+export interface SavedWalletsResponseDTO {
+  savedWallets: SavedWalletResponseDTO[];
+}

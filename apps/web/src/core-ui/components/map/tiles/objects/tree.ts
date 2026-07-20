@@ -56,10 +56,21 @@ const roundTree = (trunk: string, leaf: string): BoxSpec[] => [
   { ...TOON, size: [0.6, 0.58, 0.6], at: [0, 0.3, 0], color: leaf, bevel: 0.09, outline: LEAF_OUTLINE },
 ];
 
-/** Árbol de copa doble (asimétrico). */
+/**
+ * Árbol de copa doble (asimétrico). La copa chica NO se entierra en la grande:
+ * cuelga justo debajo de su borde con un hueco menor que el grosor del hull,
+ * que lo llena de negro y dibuja la línea de unión entre copas (mismo truco
+ * que TRUNK_LIFT — enterradas no hay silueta).
+ */
 const doubleCrownTree = (trunk: string, leaf: string): BoxSpec[] => [
-  ...roundTree(trunk, leaf),
-  { ...TOON, size: [0.4, 0.45, 0.45], at: [0.22, 0.12, 0.18], color: leaf, bevel: 0.08, outline: LEAF_OUTLINE },
+  ...toonTrunk(trunk, 0.62),
+  // copa principal un poco más chica que la de roundTree y arrancando más
+  // arriba (y=0.08), para que la secundaria — pegada bajo su borde — quede
+  // alta sin agrandar el árbol.
+  { ...TOON, size: [0.56, 0.48, 0.56], at: [0, 0.32, 0], color: leaf, bevel: 0.09, outline: LEAF_OUTLINE },
+  // tope en y=0.072: hueco de 0.008 < outline con la principal, que el hull
+  // llena de negro dibujando la línea de unión entre copas.
+  { ...TOON, size: [0.42, 0.3, 0.42], at: [0.24, -0.078, 0.2], color: leaf, bevel: 0.08, outline: LEAF_OUTLINE },
 ];
 
 /** Cactus chico con dos brazos. */

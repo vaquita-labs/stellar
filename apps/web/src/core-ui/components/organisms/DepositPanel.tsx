@@ -7,14 +7,19 @@ import { useTranslation } from 'react-i18next';
 import { useAnalytics, useIsPoolPaused } from '../../hooks';
 import { useMapStore, useConfigStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
-import { DepositModal } from './DepositModal';
-import { VaquitasListModal } from './VaquitasListModal';
+import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
+import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
+import { WithdrawModal } from './WithdrawModal';
 
 export function DepositPanel() {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const [isVaquitasListOpen, setIsVaquitasListOpen] = useState(false);
-  const isVaquitasListMounted = useModalPresence(isVaquitasListOpen);
+  const [isMethodOpen, setIsMethodOpen] = useState(false);
+  const [isCountryOpen, setIsCountryOpen] = useState(false);
+  const [isReceiveFiatOpen, setIsReceiveFiatOpen] = useState(false);
+  const isReceiveFiatMounted = useModalPresence(isReceiveFiatOpen);
+  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+  const isWithdrawMounted = useModalPresence(isWithdrawOpen);
   const [ isDepositing, setIsDepositing ] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { trackUserAction } = useAnalytics();
@@ -50,7 +55,7 @@ export function DepositPanel() {
                 token: token?.symbol || null,
                 network: network?.networkName || null,
               });
-              setIsVaquitasListOpen(true);
+              setIsWithdrawOpen(true);
             }
           }}
           className={`bg-white border-black py-7 text-black font-bold flex-1 border border-b-5 rounded-md`}
@@ -69,7 +74,7 @@ export function DepositPanel() {
                 lockPeriod,
                 network: network?.networkName || null,
               });
-              setIsOpen(true);
+              setIsMethodOpen(true);
             }
           }}
           className={`bg-success border-[#018222] py-7 text-black font-bold flex-1 border border-b-5 rounded-md`}
@@ -79,17 +84,74 @@ export function DepositPanel() {
           </span>
         </HeroButton>
       </div>
+      <DepositMethodModal
+        open={isMethodOpen}
+        onOpenChange={() => setIsMethodOpen(false)}
+        onContinue={() => {
+          setIsMethodOpen(false);
+          setIsOpen(true);
+        }}
+        onOnramp={() => {
+          setIsMethodOpen(false);
+          setIsCountryOpen(true);
+        }}
+      />
+      <CountryPickerModal
+        open={isCountryOpen}
+        onOpenChange={() => setIsCountryOpen(false)}
+        onBack={() => {
+          setIsCountryOpen(false);
+          setIsMethodOpen(true);
+        }}
+        onSelect={(countryCode) => {
+          trackUserAction('deposit_onramp_opened', {
+            country: countryCode,
+            network: network?.networkName || null,
+          });
+          setIsCountryOpen(false);
+          setIsReceiveFiatOpen(true);
+        }}
+      />
       <DepositModal
         open={isOpen}
         onOpenChange={() => setIsOpen(false)}
         isDepositing={isDepositing}
         setIsDepositing={setIsDepositing}
       />
-      {isVaquitasListMounted && (
-        <VaquitasListModal
-          open={isVaquitasListOpen}
-          onOpenChange={() => setIsVaquitasListOpen(false)}
-          readyToWithdrawOnly
+      {isReceiveFiatMounted && (
+        <ReceiveFiatModal
+          open={isReceiveFiatOpen}
+          onOpenChange={() => setIsReceiveFiatOpen(false)}
+          onBack={() => {
+            setIsReceiveFiatOpen(false);
+            setIsCountryOpen(true);
+          }}
+        />
+      )}
+      {isWithdrawMounted && (
+        <WithdrawModal
+          open={isWithdrawOpen}
+          onOpenChange={() => setIsWithdrawOpen(false)}
+          onSubmit={async ({ amount, wallet }) => {
+            // TODO(withdraw): PLACEHOLDER — no mueve fondos.
+            //
+            // El retiro real todavía no existe para este flujo. El contrato
+            // (contracts/vaquita-pool/src/lib.rs:168) expone
+            // `withdraw(caller, deposit_id)`: retira la posición ENTERA y paga
+            // siempre a quien firma, así que no admite ni el monto parcial que
+            // se teclea acá ni la dirección de destino elegida. La API
+            // (apps/api/src/routes/deposit/route.ts:142) tampoco lee `amount`.
+            //
+            // Este stub solo simula la demora para poder ver los estados de
+            // loading y éxito. Reemplazar por la mutación real cuando se defina
+            // de dónde salen los fondos.
+            console.warn('[withdraw] placeholder submit', { amount, wallet });
+            trackUserAction('withdraw_submitted', {
+              amount,
+              network: network?.networkName || null,
+            });
+            await new Promise((resolve) => setTimeout(resolve, 1800));
+          }}
         />
       )}
     </div>

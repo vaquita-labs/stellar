@@ -1,5 +1,7 @@
 import { composeBuildingRotation, isBuildingType } from '@/core-ui/components/map/buildings/registry';
+import { TILE_HEIGHT } from '@/core-ui/components/map/constants';
 import { disposeObject } from '@/core-ui/components/map/helpers';
+import { getPalette } from '@/core-ui/components/map/tiles/palette';
 import { getObjectGroup } from '@/core-ui/components/map/tiles/registry';
 import { MapObject, MapObjectType, WorldType } from '@/core-ui/types';
 import * as THREE from 'three';
@@ -17,9 +19,12 @@ const BASE_H = 270; // 16:9
 const ISO_DIRECTION = new THREE.Vector3(1, 1.15, 1).normalize();
 /** Match MapMiniPreview's framing: fill the tile, crop the diamond tips. */
 const FILL = 1.4;
+/** Half-size of the ocean plane; the camera far plane must reach past it. */
+const OCEAN_EXTENT = 500;
 let renderer: THREE.WebGLRenderer | null = null;
 let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
+let ocean: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial> | null = null;
 
 function ensureRenderer() {
   if (renderer) return;
@@ -33,6 +38,18 @@ function ensureRenderer() {
   dir.position.set(8, 16, 8);
   scene.add(dir);
   scene.add(new THREE.HemisphereLight(0xffffff, 0xb08d57, 0.45));
+
+  // The sea is NOT part of the player's objects — the live map adds it as
+  // WaterBackground. Same plane here (opaque: nothing renders beneath it in
+  // the snapshot), so the island floats on water instead of the card color.
+  // Color is set per snapshot from the world palette in renderSnapshot.
+  ocean = new THREE.Mesh(
+    new THREE.PlaneGeometry(OCEAN_EXTENT * 2, OCEAN_EXTENT * 2),
+    new THREE.MeshLambertMaterial({ side: THREE.DoubleSide })
+  );
+  ocean.rotation.x = -Math.PI / 2;
+  ocean.position.y = -TILE_HEIGHT * 0.85; // same water level as WaterBackground
+  scene.add(ocean);
 
   camera = new THREE.PerspectiveCamera(14, BASE_W / BASE_H, 0.1, 1000);
 }
@@ -52,7 +69,9 @@ function fitCamera(cam: THREE.PerspectiveCamera, target: THREE.Object3D) {
     cam.position.copy(center).addScaledVector(ISO_DIRECTION, distance);
     cam.lookAt(center);
     cam.near = Math.max(0.1, distance - radius * 2);
-    cam.far = distance + radius * 2;
+    // Far enough to keep the surrounding ocean plane inside the frustum —
+    // clipping it at the island's bounds punched transparent holes in the sea.
+    cam.far = distance + Math.max(radius * 2, OCEAN_EXTENT * 1.5);
     cam.updateProjectionMatrix();
     cam.updateMatrixWorld();
   };
@@ -100,6 +119,8 @@ function renderSnapshot(objects: MapObject[], worldType: WorldType): string {
     wrapper.add(group);
     root.add(wrapper);
   }
+
+  ocean!.material.color.set(getPalette(worldType).ocean);
 
   scene!.add(root);
   fitCamera(camera!, root);
