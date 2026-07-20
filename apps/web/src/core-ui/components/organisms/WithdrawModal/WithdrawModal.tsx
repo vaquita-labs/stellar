@@ -300,6 +300,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   };
 
   const STEP_TITLE: Record<WithdrawStep, string> = {
+    method: t('withdraw.method.title', 'Select method'),
     amount: t('deposit.withdraw.button', 'Withdraw'),
     account: t('withdraw.selectAccount', 'Select account'),
     addWallet: t('withdraw.addMethod', 'Add method'),
