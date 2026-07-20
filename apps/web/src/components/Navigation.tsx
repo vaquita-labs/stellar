@@ -13,7 +13,6 @@ const navItems = [
   { id: 'shop', href: '/shop', icon: '/icons/navigation/shop.png', label: 'Shop' },
   { id: 'leaderboard', href: '/leaderboard', icon: '/icons/navigation/leaderboard.png', label: 'Leaderboard' },
   // { href: "/pools", icon: "/icons/pools.svg", label: "Pools" },
-  { id: 'profile', href: '/profile', icon: '/icons/navigation/profile.png', label: 'Profile' },
 ];
 
 function NavLink({

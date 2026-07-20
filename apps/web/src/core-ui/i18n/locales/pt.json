@@ -365,6 +365,31 @@
       "earnedSuffix": "ganhos",
       "onTimeDescription": "Você completou todo o período de bloqueio e manteve suas recompensas.",
       "onTimeTitle": "Sacado no prazo"
+    },
+    "method": {
+      "continue": "Já tenho USDC, continuar",
+      "country": {
+        "comingSoon": "Em breve",
+        "noResults": "Nenhum país encontrado",
+        "search": "Buscar país",
+        "title": "Selecione seu país"
+      },
+      "onramp": {
+        "subtitle": "Deposite com pesos argentinos (ARS)",
+        "title": "Onramp"
+      },
+      "title": "Selecione o método",
+      "wallet": {
+        "subtitle": "Deposite de uma wallet cripto",
+        "title": "Wallet"
+      },
+      "walletDetails": {
+        "accountLabel": "Conta da Vaquita",
+        "copy": "Copiar endereço",
+        "onlyUsdc": "Envie apenas USDC na Stellar!",
+        "title": "Detalhes da wallet",
+        "warning": "Certifique-se de enviar USDC pela rede Stellar para este endereço exato. Fundos enviados por outra rede podem ser perdidos."
+      }
     }
   },
   "errors": {
@@ -545,11 +570,14 @@
     "stats": {
       "experienceAlt": "Experiência",
       "goldCoinAlt": "Moeda de ouro",
-      "greeting": "Suas economias",
-      "greetingNamed": "Suas economias, <b>{{name}}</b>",
       "profileAlt": "Perfil",
       "profileAria": "Perfil",
-      "streakAlt": "Sequência"
+      "streakAlt": "Sequência",
+      "apyAria": "Detalhe dos ganhos",
+      "boostAria": "Boost de indicações",
+      "earnings": {
+        "title": "Seus ganhos"
+      }
     },
     "totalDeposits": {
       "bagAlt": "Depósitos totais"
@@ -986,13 +1014,10 @@
       "activeStreak_other": "Sequência ativa: {{count}} dias",
       "coinsAlt": "moedas",
       "collectButton": "Coletar +{{count}}",
-      "confirmSubtitle_one": "Pegue sua moeda diária e mantenha sua sequência viva!",
-      "confirmSubtitle_other": "Pegue sua moeda diária e mantenha sua sequência viva!",
-      "confirmTitle": "Sua vaquita tem uma recompensa para você!",
+      "confirmTitle": "Um presente da sua vaquita!",
       "greatButton": "Show!",
       "rewardAlt": "recompensa",
       "streakAlt": "sequência",
-      "successHint": "Continue economizando para manter sua sequência e subir de nível.",
       "successWithXp_one": "Você ganhou {{count}} moeda e {{xp}} XP!",
       "successWithXp_other": "Você ganhou {{count}} moedas e {{xp}} XP!",
       "success_one": "Você ganhou {{count}} moeda!",
@@ -1536,6 +1561,55 @@
       "saveChanges": "Salvar alterações",
       "title": "Perfil",
       "walletLabel": "Wallet"
+    }
+  },
+  "referrals": {
+    "activeReferrals": "Indicações ativas",
+    "apyBonus": "Bônus de APY",
+    "description": "Ganhe recompensas recorrentes enquanto seus amigos poupam. Cada indicação ativa soma APY extra sobre a sua taxa base.",
+    "earningsLabel": "Ganhos por indicações",
+    "invite": "Convidar amigos",
+    "nextTier": "Convide mais {{count}} para chegar a +{{bonus}}% APY",
+    "pendingEarnings": "Ganhos pendentes por indicações",
+    "shareText": "Poupe comigo na Vaquita e ganhe recompensas. Use o meu código {{code}}",
+    "tiersTitle": "Níveis de boost",
+    "title": "Indicações",
+    "totalEarnings": "Ganhos totais por indicações",
+    "yourCode": "Seu código de indicação",
+    "tierLabel_one": "{{count}} indicação ativa",
+    "tierLabel_other": "{{count}} indicações ativas"
+  },
+  "withdraw": {
+    "addMethod": "Adicionar método",
+    "addWallet": {
+      "addressField": "Endereço",
+      "addressPlaceholder": "Endereço de destino",
+      "cta": "Adicionar uma carteira",
+      "error": "Não foi possível salvar a carteira",
+      "labelField": "Nome",
+      "labelPlaceholder": "ex. Minha exchange",
+      "networkHint": "Este endereço precisa ser da rede {{network}}.",
+      "save": "Salvar carteira"
+    },
+    "amountLabel": "Valor",
+    "available": "Disponível",
+    "confirm": {
+      "title": "Confirmar saque"
+    },
+    "confirmCta": "Confirmar",
+    "error": {
+      "generic": "Algo deu errado"
+    },
+    "methodLabel": "Método",
+    "methodWallet": "Carteira",
+    "noWallets": "Você ainda não tem carteiras salvas",
+    "processing": "Processando saque...",
+    "processingHint": "Isso pode levar alguns segundos.",
+    "review": "Revisar",
+    "selectAccount": "Selecionar conta",
+    "success": {
+      "subtitle": "Seu dinheiro está a caminho de {{label}}.",
+      "title": "Saque enviado!"
     }
   }
 }

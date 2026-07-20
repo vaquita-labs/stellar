@@ -10,7 +10,7 @@ import { useModalPresence } from '../molecules/AppModal';
 import { DailyRewardModal } from '../organisms';
 
 /**
- * Cofre de recompensa diaria que vive sobre el mapa, al lado de la barra de
+ * Cofre de recompensa diaria que flota sobre el cielo, debajo de la barra de
  * stats. Cuando hay algo para reclamar (`canCollect`) muestra el cofre brillante
  * con un leve movimiento arriba/abajo e invita a tocarlo; si no, queda apagado y
  * quieto. Comparte el mismo flujo de reclamo que el click en la vaquita.
@@ -48,8 +48,8 @@ export const DailyRewardChest = () => {
         aria-label={t('home.dailyReward.chestAria', 'Daily reward')}
         onClick={handleOpen}
         disabled={!canCollect}
-        className="flex items-center justify-center flex-1 bg-transparent disabled:cursor-default"
-        animate={canCollect ? { y: [0, -3, 0] } : { y: 0 }}
+        className="flex items-center justify-center bg-transparent disabled:cursor-default"
+        animate={canCollect ? { y: [0, -6, 0] } : { y: 0 }}
         transition={
           canCollect
             ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' }
@@ -60,7 +60,7 @@ export const DailyRewardChest = () => {
           {canCollect && (
             <motion.span
               aria-hidden
-              className="absolute inset-0 m-auto h-7 w-7 rounded-full bg-amber-400 blur-md"
+              className="absolute inset-0 m-auto h-10 w-10 rounded-full bg-amber-400 blur-md"
               animate={{ opacity: [0.35, 0.9, 0.35], scale: [0.8, 1.3, 0.8] }}
               transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
             />
@@ -68,13 +68,13 @@ export const DailyRewardChest = () => {
           <Image
             src={canCollect ? '/icons/global/shiny_chest.png' : '/icons/global/chest.png'}
             alt={t('home.dailyReward.chestAlt', 'Chest')}
-            width={26}
-            height={26}
+            width={40}
+            height={40}
             className="relative object-contain"
             priority
             style={
               canCollect
-                ? { filter: 'drop-shadow(0 0 5px rgba(251, 191, 36, 0.95))' }
+                ? { filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.95))' }
                 : { filter: 'grayscale(70%)', opacity: 0.6 }
             }
           />

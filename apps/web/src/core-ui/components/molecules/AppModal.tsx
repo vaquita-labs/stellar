@@ -25,6 +25,13 @@ export interface AppModalProps {
    * para navegar dentro del mismo modal (lista → detalle) sin abrir otro.
    */
   onBack?: () => void;
+  /**
+   * Centra el título respecto al modal completo. Sin esto el título es un
+   * `flex-1` entre los controles, así que con `onBack` queda desplazado a la
+   * derecha (el control izquierdo ocupa más que la X). Con esto se posiciona en
+   * absoluto sobre el header, así el centro no depende de qué controles haya.
+   */
+  centerTitle?: boolean;
   /** Posición vertical del modal. Por defecto el comportamiento de HeroUI. */
   placement?: 'auto' | 'top' | 'center' | 'bottom';
   bodyClassName?: string;
@@ -103,6 +110,7 @@ export function AppModal({
   isDismissable = true,
   hideClose = false,
   onBack,
+  centerTitle = false,
   placement,
   bodyClassName,
   dialogClassName,
@@ -130,29 +138,62 @@ export function AppModal({
           }
         >
           <Modal.Header className="flex-row! items-center gap-3 px-5 sm:px-6 pt-4 pb-3 border-b border-black/10">
-            {onBack ? (
-              <button
-                type="button"
-                aria-label={t('common.back')}
-                onClick={onBack}
-                className="flex items-center justify-center w-7 h-7 -ml-1 rounded-full border border-black border-b-2 bg-white text-black hover:bg-default-100 active:translate-y-0.5 transition-all shrink-0"
-              >
-                <FiArrowLeft className="w-4 h-4" />
-              </button>
-            ) : null}
-            {titleIcon ? (
-              <Image src={titleIcon} alt={titleIconAlt} width={22} height={22} />
-            ) : null}
-            <Modal.Heading className="text-black font-bold text-base flex-1 min-w-0 truncate">
+            {/* Con centerTitle los dos costados ocupan el mismo ancho, así el
+                título (flex-1 centrado) queda centrado respecto al modal y no
+                respecto al espacio que sobra. Sin él, el layout es el de
+                siempre: título a la izquierda pegado a su ícono. */}
+            {centerTitle ? (
+              <div className="w-7 shrink-0 flex items-center">
+                {onBack ? (
+                  <button
+                    type="button"
+                    aria-label={t('common.back')}
+                    onClick={onBack}
+                    className="flex items-center justify-center w-7 h-7 rounded-full border border-black border-b-2 bg-white text-black hover:bg-default-100 active:translate-y-0.5 transition-all"
+                  >
+                    <FiArrowLeft className="w-4 h-4" />
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <>
+                {onBack ? (
+                  <button
+                    type="button"
+                    aria-label={t('common.back')}
+                    onClick={onBack}
+                    className="flex items-center justify-center w-7 h-7 -ml-1 rounded-full border border-black border-b-2 bg-white text-black hover:bg-default-100 active:translate-y-0.5 transition-all shrink-0"
+                  >
+                    <FiArrowLeft className="w-4 h-4" />
+                  </button>
+                ) : null}
+                {titleIcon ? (
+                  <Image src={titleIcon} alt={titleIconAlt} width={22} height={22} />
+                ) : null}
+              </>
+            )}
+            <Modal.Heading
+              className={
+                'text-black font-bold text-base flex-1 min-w-0 truncate ' +
+                (centerTitle ? 'text-center' : '')
+              }
+            >
               {title}
             </Modal.Heading>
-            {!hideClose && (
-              <Modal.CloseTrigger
-                aria-label={t('common.close')}
-                className='bg-primary text-black text-sm border-[0.5] border-black'
-              >
-              </Modal.CloseTrigger>
-            )}
+            {!hideClose &&
+              (centerTitle ? (
+                <div className="w-7 shrink-0 flex justify-end">
+                  <Modal.CloseTrigger
+                    aria-label={t('common.close')}
+                    className="bg-primary text-black text-sm border-[0.5] border-black"
+                  />
+                </div>
+              ) : (
+                <Modal.CloseTrigger
+                  aria-label={t('common.close')}
+                  className="bg-primary text-black text-sm border-[0.5] border-black"
+                />
+              ))}
           </Modal.Header>
           <Modal.Body
             className={

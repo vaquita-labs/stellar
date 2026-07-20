@@ -365,6 +365,31 @@
       "earnedSuffix": "earned",
       "onTimeDescription": "You completed the full lock period and kept your rewards.",
       "onTimeTitle": "Withdrawn on time"
+    },
+    "method": {
+      "continue": "I already have USDC, continue",
+      "country": {
+        "comingSoon": "Coming soon",
+        "noResults": "No countries found",
+        "search": "Search country",
+        "title": "Select your country"
+      },
+      "onramp": {
+        "subtitle": "Deposit with Argentine pesos (ARS)",
+        "title": "Onramp"
+      },
+      "title": "Select method",
+      "wallet": {
+        "subtitle": "Deposit from a crypto wallet",
+        "title": "Wallet"
+      },
+      "walletDetails": {
+        "accountLabel": "Vaquita account",
+        "copy": "Copy address",
+        "onlyUsdc": "Only send USDC on Stellar!",
+        "title": "Wallet details",
+        "warning": "Make sure to send USDC on the Stellar network to this exact address. Funds sent on another network may be lost."
+      }
     }
   },
   "errors": {
@@ -545,11 +570,14 @@
     "stats": {
       "experienceAlt": "Experience",
       "goldCoinAlt": "Gold Coin",
-      "greeting": "Your savings",
-      "greetingNamed": "Your savings, <b>{{name}}</b>",
       "profileAlt": "Profile",
       "profileAria": "Profile",
-      "streakAlt": "Streak"
+      "streakAlt": "Streak",
+      "apyAria": "Earnings breakdown",
+      "boostAria": "Referral boost",
+      "earnings": {
+        "title": "Your earnings"
+      }
     },
     "totalDeposits": {
       "bagAlt": "Total deposits"
@@ -986,13 +1014,10 @@
       "activeStreak_other": "Active streak: {{count}} days",
       "coinsAlt": "coins",
       "collectButton": "Collect +{{count}}",
-      "confirmSubtitle_one": "Collect your daily coin and keep your streak alive.",
-      "confirmSubtitle_other": "Collect your daily coin and keep your streak alive.",
-      "confirmTitle": "Your vaquita has a reward for you!",
+      "confirmTitle": "A gift from your vaquita!",
       "greatButton": "Awesome!",
       "rewardAlt": "reward",
       "streakAlt": "streak",
-      "successHint": "Keep saving to maintain your streak and level up.",
       "successWithXp_one": "You earned {{count}} coin and {{xp}} XP!",
       "successWithXp_other": "You earned {{count}} coins and {{xp}} XP!",
       "success_one": "You earned {{count}} coin!",
@@ -1543,7 +1568,7 @@
         "stepDeposit": "SEP-24 · Start deposit",
         "stepSwap": "Convert ARS → USDC",
         "swapDone": "Converted to USDC — done!",
-        "title": "Receive fiat (ARS)",
+        "title": "Argentina (ARS)",
         "usdcReceived": "≈ {{amount}} USDC received",
         "waitingHint": "Complete the deposit on Anclap. We are waiting for the ARS to be credited…"
       },
@@ -1601,6 +1626,55 @@
       "saveChanges": "Save changes",
       "title": "Profile",
       "walletLabel": "Wallet"
+    }
+  },
+  "referrals": {
+    "activeReferrals": "Active referrals",
+    "apyBonus": "APY Bonus",
+    "description": "Earn recurring rewards as your friends save. Each active referral adds extra APY on top of your base rate.",
+    "earningsLabel": "Referral earnings",
+    "invite": "Invite friends",
+    "nextTier": "Invite {{count}} more to reach +{{bonus}}% APY",
+    "pendingEarnings": "Pending referral earnings",
+    "shareText": "Save with me on Vaquita and earn rewards. Use my code {{code}}",
+    "tiersTitle": "Boost tiers",
+    "title": "Referrals",
+    "totalEarnings": "Total referral earnings",
+    "yourCode": "Your referral code",
+    "tierLabel_one": "{{count}} active referral",
+    "tierLabel_other": "{{count}} active referrals"
+  },
+  "withdraw": {
+    "addMethod": "Add method",
+    "addWallet": {
+      "addressField": "Address",
+      "addressPlaceholder": "Destination address",
+      "cta": "Add a wallet",
+      "error": "Could not save the wallet",
+      "labelField": "Name",
+      "labelPlaceholder": "e.g. My exchange",
+      "networkHint": "This address must be on the {{network}} network.",
+      "save": "Save wallet"
+    },
+    "amountLabel": "Amount",
+    "available": "Available",
+    "confirm": {
+      "title": "Confirm withdrawal"
+    },
+    "confirmCta": "Confirm",
+    "error": {
+      "generic": "Something went wrong"
+    },
+    "methodLabel": "Method",
+    "methodWallet": "Wallet",
+    "noWallets": "You have no saved wallets yet",
+    "processing": "Processing withdrawal...",
+    "processingHint": "This may take a few seconds.",
+    "review": "Review",
+    "selectAccount": "Select account",
+    "success": {
+      "subtitle": "Your funds are on their way to {{label}}.",
+      "title": "Withdrawal sent!"
     }
   }
 }

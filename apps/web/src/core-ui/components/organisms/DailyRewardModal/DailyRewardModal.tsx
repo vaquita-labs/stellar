@@ -65,12 +65,7 @@ export function DailyRewardModal({
         {step === 'confirm' ? (
           <>
             <p className="text-lg font-semibold text-black">
-              {t('rewards.daily.confirmTitle', 'Your vaquita has a reward for you!')}
-            </p>
-            <p className="text-sm text-gray-600">
-              {t('rewards.daily.confirmSubtitle', 'Collect your daily coin and keep your streak alive.', {
-                count: coinsToCollect,
-              })}
+              {t('rewards.daily.confirmTitle', 'A gift from your vaquita!')}
             </p>
 
             <Button
@@ -103,10 +98,6 @@ export function DailyRewardModal({
                 {t('rewards.daily.activeStreak', 'Active streak: {{count}} day', { count: streakDays })}
               </span>
             </div>
-
-            <p className="text-sm text-gray-600">
-              {t('rewards.daily.successHint', 'Keep saving to maintain your streak and level up.')}
-            </p>
 
             <Button
               onPress={onOpenChange}

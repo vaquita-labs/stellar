@@ -1,0 +1,91 @@
+{
+  "$comment": "Blocked nickname terms, consumed by nicknamePolicy.ts. Two matching modes: 'substrings' match ANYWHERE in the collapsed nickname (separators removed, leetspeak undone) — only put terms here that never appear inside an innocent name. 'words' match only as a whole token or as the entire nickname — use for terms that DO live inside real names ('sex' in essex, 'anal' in analia, 'fag' in fagundes, 'dick' in dickson). All entries lowercase ASCII, no accents (input is accent-stripped before matching). Categories are for maintenance only — they are all flattened at load.",
+
+  "substrings": {
+    "sexual_en": [
+      "porn", "xxx", "hentai", "blowjob", "handjob", "rimjob", "deepthroat",
+      "cumshot", "creampie", "bukkake", "gangbang", "dildo", "buttplug",
+      "onlyfans", "camgirl", "camwhore", "stripclub", "milf", "gilf",
+      "cocksucker", "dickhead", "asshole", "jackoff", "jerkoff", "analsex",
+      "fuck", "motherfuck", "clusterfuck", "titfuck", "fingering"
+    ],
+    "sexual_es": [
+      "chupapija", "chupaverga", "chupapito", "chupamela", "chupenla",
+      "garchar", "garchando", "garche", "malcogida", "malcogido",
+      "tragaleche", "sacaleche", "vergudo", "vergon"
+    ],
+    "sexual_pt": [
+      "punheta", "punheteiro", "siririca", "boquete", "boqueteira",
+      "arrombad", "vaitomarnocu", "tomarnocu",
+      "vaisefoder", "vaitefoder", "filhodaputa", "filhadaputa", "putaria"
+    ],
+    "insult_compound_es": [
+      "hijodeputa", "hijadeputa", "hijueputa", "hideputa",
+      "conchatumadre", "conchetumadre", "concheputamadre", "laconchadetumadre",
+      "comemierda", "cagondemierda", "demierda", "lamemierda",
+      "cornudo", "cagador"
+    ],
+    "slurs_hate": [
+      "nigg", "faggot", "wetback", "towelhead", "raghead", "tranny",
+      "nazi", "hitler", "swastika", "esvastica", "kukluxklan",
+      "whitepower", "heilhitler", "siegheil", "holocaust",
+      "negrodemierda", "sudaca"
+    ],
+    "abuse_violence": [
+      "pedofil", "pedoph", "pedobear", "childlover", "lolicon",
+      "incest", "incesto", "zoofil", "bestialit",
+      "violador", "violadora", "violacion", "estuprador", "estupro",
+      "terrorist", "terrorista", "schoolshooter"
+    ]
+  },
+
+  "words": {
+    "en": [
+      "sex", "sexy", "anal", "dick", "cock", "penis", "vagina", "pussy",
+      "cum", "jizz", "semen", "tits", "boobs", "boob", "nude", "nudes",
+      "whore", "slut", "hoe", "bitch", "cunt", "twat", "fag", "wank",
+      "wanker", "rape", "rapist", "molest", "shit", "ass", "arse",
+      "orgasm", "horny", "kinky", "fetish", "bdsm", "escort", "stripper"
+    ],
+    "es": [
+      "porno", "sexo", "sexual", "puta", "puto", "putas", "putos",
+      "putita", "putito", "putinha", "reputa", "reputo",
+      "mierda", "verga", "vergas", "pija", "pijas", "pijudo", "poronga",
+      "pene", "penes", "concha", "conchas", "conchuda", "conchudo",
+      "culo", "culos", "culito", "culona", "culon", "teta", "tetas",
+      "tetona", "paja", "pajero", "pajera", "pajita",
+      "trolo", "trola", "sorete", "pelotudo", "pelotuda", "boludo", "boluda",
+      "forro", "forra", "choto", "chota", "chupala", "chupalo",
+      "coger", "cogida", "cogido", "follar", "follador", "folladora",
+      "marica", "maricon", "maricones", "joto", "culero", "culera",
+      "cabron", "cabrona", "chingar", "chingada", "chingado", "chingon",
+      "pendejo", "pendeja", "malparido", "malparida", "gonorrea",
+      "pichula", "culiao", "culiado", "culiar", "mamon", "mamona",
+      "cachondo", "cachonda", "tetazas", "nalgas", "nalgona",
+      "prostituta", "prostituto", "zorra", "zorron", "golfa",
+      "mogolico", "mogolica", "retrasado", "retrasada", "subnormal"
+    ],
+    "pt": [
+      "caralho", "buceta", "bucetas", "bucetinha", "porra", "foda",
+      "fodase", "foder", "fodido", "fodida", "fudido", "fudida",
+      "merda", "bosta", "viado", "veado", "bicha", "bichona",
+      "piroca", "caceta", "cacete", "cuzao", "cuzinho", "babaca",
+      "otario", "otaria", "arrombado", "arrombada", "corno",
+      "vadia", "vadias", "vagabunda", "vagabundo", "safado", "safada",
+      "tesao", "tarado", "tarada", "xoxota", "xereca", "grelo",
+      "peitos", "peituda", "bunda", "bundao", "bunduda",
+      "prostituta", "puteiro", "trepada", "trepar", "gozada", "gozar",
+      "desgracado", "desgracada", "escroto", "escrota",
+      "idiota", "imbecil", "retardado", "retardada"
+    ],
+    "reserved_impersonation": [
+      "admin", "admins", "administrator", "administrador", "administradora",
+      "moderator", "moderador", "moderadora", "mod", "mods",
+      "support", "soporte", "suporte", "helpdesk", "official", "oficial",
+      "staff", "root", "system", "sysadmin", "superuser", "webmaster",
+      "vaquita", "vaquitaapp", "vaquitaofficial", "vaquitaoficial",
+      "vaquitasupport", "vaquitateam",
+      "giveaway", "airdrop", "freemoney", "freeusdc"
+    ]
+  }
+}

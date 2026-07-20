@@ -71,6 +71,16 @@ body {
     }
 }
 
+/* La cruz del toast de HeroUI está posicionada en absoluto con top: 10px, así
+   que queda por encima del eje del indicador y del texto. 14px = los 12px de
+   padding del toast + los 2px que sobran entre el botón (20px) y la fila de
+   contenido (24px), de modo que quede centrada con el indicador aunque el
+   toast crezca con una descripción. */
+.toast .toast__close-button {
+    top: 14px;
+    right: 12px;
+}
+
 /* Custom Scrollbar Styles */
 ::-webkit-scrollbar {
     width: 4px;

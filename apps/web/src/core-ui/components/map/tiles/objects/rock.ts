@@ -48,11 +48,16 @@ const rockRecipe = (slabHeight: number, pillarHeight: number | undefined, color:
     },
   ];
   if (pillarHeight !== undefined) {
-    const pillar = pillarHeight * TILE_HEIGHT;
+    // El pilar NO atraviesa la losa: apoya sobre su tope con un hueco menor
+    // que el hull, que lo llena de negro y dibuja la línea de base del pilar
+    // sobre la losa (enterrado, el inverted hull no genera silueta).
+    const gap = 0.008;
+    const bottom = slab + LIFT + gap;
+    const top = pillarHeight * TILE_HEIGHT + LIFT;
     specs.push({
       ...TOON,
-      size: [TILE_SIZE * 0.4, pillar, TILE_SIZE * 0.4],
-      at: [-0.2, pillar / 2 + LIFT, -0.2],
+      size: [TILE_SIZE * 0.4, top - bottom, TILE_SIZE * 0.4],
+      at: [-0.2, (bottom + top) / 2, -0.2],
       color,
       bevel: 0.06,
       outline: OUTLINE,
