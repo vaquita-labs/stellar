@@ -1,6 +1,6 @@
 import * as Ably from 'ably';
 import { type Request, type Response, Router } from 'express';
-import { requireAdminSecret } from '../admin/route';
+import { requireAdminSecret } from '../../lib/adminSecret';
 
 const router = Router();
 

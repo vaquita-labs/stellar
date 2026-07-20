@@ -56,6 +56,9 @@ importers:
       '@vaquita/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@vaquita/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@vaquita/ui':
         specifier: workspace:*
         version: link:../../packages/ui

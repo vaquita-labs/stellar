@@ -19,6 +19,7 @@
     "@types/file-saver": "^2.0.7",
     "@types/papaparse": "^5.5.2",
     "@vaquita/db": "workspace:*",
+    "@vaquita/shared": "workspace:*",
     "@vaquita/ui": "workspace:*",
     "ably": "^2.21.0",
     "file-saver": "^2.0.5",
