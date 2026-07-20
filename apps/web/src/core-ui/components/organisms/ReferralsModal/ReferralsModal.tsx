@@ -57,25 +57,25 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
       key: 'active',
       icon: <FiUsers className="w-4 h-4 text-gray-500" />,
       label: t('referrals.activeReferrals', 'Active referrals'),
-      value: <span className="text-sm font-bold text-black tabular-nums">{activeReferrals}</span>,
+      value: <span className="text-xs font-bold text-black tabular-nums">{activeReferrals}</span>,
     },
     {
       key: 'bonus',
       icon: <FiZap className="w-4 h-4 text-[#8b5cf6]" />,
       label: t('referrals.apyBonus', 'APY Bonus'),
-      value: <span className="text-sm font-bold text-[#7c3aed] tabular-nums">+{apyBonus.toFixed(2)}%</span>,
+      value: <span className="text-xs font-bold text-[#7c3aed] tabular-nums">+{apyBonus.toFixed(2)}%</span>,
     },
     {
       key: 'total',
       icon: <FiUsers className="w-4 h-4 text-gray-500" />,
       label: t('referrals.totalEarnings', 'Total referral earnings'),
-      value: <span className="text-sm font-bold text-black tabular-nums">${totalEarnings.toFixed(2)}</span>,
+      value: <span className="text-xs font-bold text-black tabular-nums">${totalEarnings.toFixed(2)}</span>,
     },
     {
       key: 'pending',
       icon: <FiClock className="w-4 h-4 text-gray-500" />,
       label: t('referrals.pendingEarnings', 'Pending referral earnings'),
-      value: <span className="text-sm font-bold text-black tabular-nums">${pendingEarnings.toFixed(2)}</span>,
+      value: <span className="text-xs font-bold text-black tabular-nums">${pendingEarnings.toFixed(2)}</span>,
     },
   ];
 
@@ -85,6 +85,7 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
       onOpenChange={onOpenChange}
       title={t('referrals.title', 'Referrals')}
       size="md"
+      fullScreen
       footer={
         <button
           type="button"
@@ -98,14 +99,14 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
     >
       <div className="space-y-4 mb-2">
         {/* Hero — ganancias por referidos */}
-        <div className="rounded-xl border border-black border-b-2 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] px-4 py-5 text-white">
-          <div className="text-4xl font-extrabold leading-none tabular-nums">${totalEarnings.toFixed(2)}</div>
-          <div className="mt-1 text-sm font-semibold text-white/80">
+        <div className="rounded-xl border border-black border-b-2 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] px-4 py-4 text-white">
+          <div className="text-3xl font-extrabold leading-none tabular-nums">${totalEarnings.toFixed(2)}</div>
+          <div className="mt-1 text-xs font-semibold text-white/80">
             {t('referrals.earningsLabel', 'Referral earnings')}
           </div>
         </div>
 
-        <p className="text-sm text-gray-600 leading-relaxed">
+        <p className="text-xs text-gray-600 leading-relaxed">
           {t(
             'referrals.description',
             'Earn recurring rewards as your friends save. Each active referral adds extra APY on top of your base rate.',
@@ -115,10 +116,10 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
         {/* Métricas */}
         <div className="divide-y divide-black/10 rounded-xl border border-black border-b-2 bg-white">
           {stats.map(({ key, icon, label, value }) => (
-            <div key={key} className="flex items-center justify-between gap-3 px-4 py-3">
+            <div key={key} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="flex items-center gap-2 min-w-0">
                 {icon}
-                <span className="text-sm text-gray-700 truncate">{label}</span>
+                <span className="text-xs text-gray-700 truncate">{label}</span>
               </div>
               {value}
             </div>
@@ -127,13 +128,13 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
 
         {/* Tramos de bonus */}
         <div className="rounded-xl border border-black border-b-2 bg-white p-4 space-y-3">
-          <h3 className="text-sm font-bold text-black">{t('referrals.tiersTitle', 'Boost tiers')}</h3>
+          <h3 className="text-xs font-bold text-black uppercase tracking-wide">{t('referrals.tiersTitle', 'Boost tiers')}</h3>
           <ul className="space-y-2">
             {REFERRAL_TIERS.map((tier) => {
               const reached = activeReferrals >= tier.referrals;
               return (
                 <li key={tier.referrals} className="flex items-center justify-between gap-3">
-                  <span className={'text-sm ' + (reached ? 'font-bold text-black' : 'text-gray-600')}>
+                  <span className={'text-xs ' + (reached ? 'font-bold text-black' : 'text-gray-600')}>
                     {t('referrals.tierLabel', {
                       count: tier.referrals,
                       defaultValue_one: '{{count}} active referral',
@@ -142,7 +143,7 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
                   </span>
                   <span
                     className={
-                      'rounded-md px-2 py-0.5 text-xs font-bold tabular-nums ' +
+                      'rounded-md px-2 py-0.5 text-[11px] font-bold tabular-nums ' +
                       (reached ? 'bg-[#7c3aed]/15 text-[#7c3aed]' : 'bg-black/5 text-gray-500')
                     }
                   >
@@ -164,7 +165,7 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
 
         {/* Código */}
         <div className="space-y-2">
-          <p className="text-sm font-bold text-black">{t('referrals.yourCode', 'Your referral code')}</p>
+          <p className="text-xs font-bold text-black uppercase tracking-wide">{t('referrals.yourCode', 'Your referral code')}</p>
           <button
             type="button"
             onClick={copyCode}

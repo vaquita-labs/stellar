@@ -64,9 +64,9 @@ export function AmountKeypad({
           disabled={disabled}
           onClick={() => press(key)}
           aria-label={key === 'del' ? 'delete' : key}
-          className="flex items-center justify-center h-14 rounded-lg text-2xl font-bold text-black transition active:translate-y-0.5 hover:bg-black/5 disabled:opacity-40 disabled:pointer-events-none"
+          className="flex items-center justify-center h-11 rounded-lg text-xl font-bold text-black transition active:translate-y-0.5 hover:bg-black/5 disabled:opacity-40 disabled:pointer-events-none"
         >
-          {key === 'del' ? <FiDelete className="w-6 h-6" /> : key}
+          {key === 'del' ? <FiDelete className="w-5 h-5" /> : key}
         </button>
       ))}
     </div>

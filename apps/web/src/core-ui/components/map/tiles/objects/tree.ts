@@ -68,9 +68,23 @@ const doubleCrownTree = (trunk: string, leaf: string): BoxSpec[] => [
   // arriba (y=0.08), para que la secundaria — pegada bajo su borde — quede
   // alta sin agrandar el árbol.
   { ...TOON, size: [0.56, 0.48, 0.56], at: [0, 0.32, 0], color: leaf, bevel: 0.09, outline: LEAF_OUTLINE },
-  // tope en y=0.072: hueco de 0.008 < outline con la principal, que el hull
-  // llena de negro dibujando la línea de unión entre copas.
-  { ...TOON, size: [0.42, 0.3, 0.42], at: [0.24, -0.078, 0.2], color: leaf, bevel: 0.08, outline: LEAF_OUTLINE },
+  // copa secundaria metida bajo el borde +x de la principal, EN CONTACTO
+  // (tope 0.085 apenas dentro de la copa, que arranca en 0.08): con un hueco
+  // de aire la ranura se veía verde iluminada desde un lado y como un agujero
+  // negro desde el otro. Solo bajo un eje (no diagonal) para que la costura
+  // sea un segmento recto.
+  { ...TOON, size: [0.42, 0.3, 0.42], at: [0.26, -0.065, 0.06], color: leaf, bevel: 0.08, outline: LEAF_OUTLINE },
+  // costura: placa negra al ras del tope de la copa chica (hundida 0.001),
+  // cruzando el borde de la principal y asomando hasta x=0.30 — desde
+  // cualquier ángulo se lee como la línea de unión pintada al pie de la copa.
+  {
+    size: [0.11, 0.006, 0.3],
+    at: [0.245, 0.087, 0.06],
+    color: OUTLINE_COLOR,
+    material: 'basic',
+    castShadow: false,
+    receiveShadow: false,
+  },
 ];
 
 /** Cactus chico con dos brazos. */

@@ -9,17 +9,22 @@ import { useMapStore, useConfigStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
+import { SendFiatModal } from './FiatModals/SendFiatModal';
 import { WithdrawModal } from './WithdrawModal';
 
 export function DepositPanel() {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMethodOpen, setIsMethodOpen] = useState(false);
-  const [isCountryOpen, setIsCountryOpen] = useState(false);
+  // El picker de país lo comparten depósito (on-ramp) y retiro (off-ramp): el
+  // flujo activo decide a qué modal se sigue y a cuál vuelve el back.
+  const [countryFlow, setCountryFlow] = useState<'deposit' | 'withdraw' | null>(null);
   const [isReceiveFiatOpen, setIsReceiveFiatOpen] = useState(false);
   const isReceiveFiatMounted = useModalPresence(isReceiveFiatOpen);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const isWithdrawMounted = useModalPresence(isWithdrawOpen);
+  const [isSendFiatOpen, setIsSendFiatOpen] = useState(false);
+  const isSendFiatMounted = useModalPresence(isSendFiatOpen);
   const [ isDepositing, setIsDepositing ] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { trackUserAction } = useAnalytics();
@@ -93,23 +98,27 @@ export function DepositPanel() {
         }}
         onOnramp={() => {
           setIsMethodOpen(false);
-          setIsCountryOpen(true);
+          setCountryFlow('deposit');
         }}
       />
       <CountryPickerModal
-        open={isCountryOpen}
-        onOpenChange={() => setIsCountryOpen(false)}
+        open={countryFlow !== null}
+        onOpenChange={() => setCountryFlow(null)}
         onBack={() => {
-          setIsCountryOpen(false);
-          setIsMethodOpen(true);
+          const flow = countryFlow;
+          setCountryFlow(null);
+          if (flow === 'withdraw') setIsWithdrawOpen(true);
+          else setIsMethodOpen(true);
         }}
         onSelect={(countryCode) => {
-          trackUserAction('deposit_onramp_opened', {
+          const flow = countryFlow;
+          trackUserAction(flow === 'withdraw' ? 'withdraw_offramp_opened' : 'deposit_onramp_opened', {
             country: countryCode,
             network: network?.networkName || null,
           });
-          setIsCountryOpen(false);
-          setIsReceiveFiatOpen(true);
+          setCountryFlow(null);
+          if (flow === 'withdraw') setIsSendFiatOpen(true);
+          else setIsReceiveFiatOpen(true);
         }}
       />
       <DepositModal
@@ -124,7 +133,7 @@ export function DepositPanel() {
           onOpenChange={() => setIsReceiveFiatOpen(false)}
           onBack={() => {
             setIsReceiveFiatOpen(false);
-            setIsCountryOpen(true);
+            setCountryFlow('deposit');
           }}
         />
       )}
@@ -132,6 +141,10 @@ export function DepositPanel() {
         <WithdrawModal
           open={isWithdrawOpen}
           onOpenChange={() => setIsWithdrawOpen(false)}
+          onOfframp={() => {
+            setIsWithdrawOpen(false);
+            setCountryFlow('withdraw');
+          }}
           onSubmit={async ({ amount, wallet }) => {
             // TODO(withdraw): PLACEHOLDER — no mueve fondos.
             //
@@ -153,6 +166,9 @@ export function DepositPanel() {
             await new Promise((resolve) => setTimeout(resolve, 1800));
           }}
         />
+      )}
+      {isSendFiatMounted && (
+        <SendFiatModal open={isSendFiatOpen} onOpenChange={() => setIsSendFiatOpen(false)} />
       )}
     </div>
   );

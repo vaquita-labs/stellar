@@ -25,15 +25,14 @@ export interface AppModalProps {
    * para navegar dentro del mismo modal (lista → detalle) sin abrir otro.
    */
   onBack?: () => void;
-  /**
-   * Centra el título respecto al modal completo. Sin esto el título es un
-   * `flex-1` entre los controles, así que con `onBack` queda desplazado a la
-   * derecha (el control izquierdo ocupa más que la X). Con esto se posiciona en
-   * absoluto sobre el header, así el centro no depende de qué controles haya.
-   */
-  centerTitle?: boolean;
   /** Posición vertical del modal. Por defecto el comportamiento de HeroUI. */
   placement?: 'auto' | 'top' | 'center' | 'bottom';
+  /**
+   * Ocupa toda la pantalla (sin márgenes ni esquinas redondeadas), para
+   * contenidos que son una pantalla completa y no una hoja sobre el home.
+   * Mantiene la misma animación de entrada/salida desde abajo.
+   */
+  fullScreen?: boolean;
   bodyClassName?: string;
   dialogClassName?: string;
 }
@@ -110,8 +109,8 @@ export function AppModal({
   isDismissable = true,
   hideClose = false,
   onBack,
-  centerTitle = false,
   placement,
+  fullScreen = false,
   bodyClassName,
   dialogClassName,
 }: AppModalProps) {
@@ -127,73 +126,51 @@ export function AppModal({
         size={size}
         scroll="inside"
         placement={placement}
-        className={'px-0! py-3! sm:p-10! ' + SHEET_CONTAINER_ANIMATION}
+        className={
+          (fullScreen ? 'p-0! ' : 'px-0! py-3! sm:p-10! ') + SHEET_CONTAINER_ANIMATION
+        }
       >
         <Modal.Dialog
           className={
-            'bg-background border border-black ' +
-            'max-h-[85dvh] sm:max-h-[90vh] ' +
-            'rounded-2xl p-0! ' +
+            'bg-background ' +
+            (fullScreen
+              ? 'h-dvh max-h-dvh w-full max-w-none rounded-none border-0 '
+              : 'border border-black max-h-[85dvh] sm:max-h-[90vh] rounded-2xl ') +
+            'p-0! ' +
             (dialogClassName ?? '')
           }
         >
-          <Modal.Header className="flex-row! items-center gap-3 px-5 sm:px-6 pt-4 pb-3 border-b border-black/10">
-            {/* Con centerTitle los dos costados ocupan el mismo ancho, así el
-                título (flex-1 centrado) queda centrado respecto al modal y no
-                respecto al espacio que sobra. Sin él, el layout es el de
-                siempre: título a la izquierda pegado a su ícono. */}
-            {centerTitle ? (
-              <div className="w-7 shrink-0 flex items-center">
-                {onBack ? (
-                  <button
-                    type="button"
-                    aria-label={t('common.back')}
-                    onClick={onBack}
-                    className="flex items-center justify-center w-7 h-7 rounded-full border border-black border-b-2 bg-white text-black hover:bg-default-100 active:translate-y-0.5 transition-all"
-                  >
-                    <FiArrowLeft className="w-4 h-4" />
-                  </button>
-                ) : null}
-              </div>
-            ) : (
-              <>
-                {onBack ? (
-                  <button
-                    type="button"
-                    aria-label={t('common.back')}
-                    onClick={onBack}
-                    className="flex items-center justify-center w-7 h-7 -ml-1 rounded-full border border-black border-b-2 bg-white text-black hover:bg-default-100 active:translate-y-0.5 transition-all shrink-0"
-                  >
-                    <FiArrowLeft className="w-4 h-4" />
-                  </button>
-                ) : null}
-                {titleIcon ? (
-                  <Image src={titleIcon} alt={titleIconAlt} width={22} height={22} />
-                ) : null}
-              </>
-            )}
-            <Modal.Heading
-              className={
-                'text-black font-bold text-base flex-1 min-w-0 truncate ' +
-                (centerTitle ? 'text-center' : '')
-              }
-            >
-              {title}
+          <Modal.Header className="flex-row! items-center gap-2 px-5 sm:px-6 pt-4 pb-3 border-b border-black/10">
+            {/* Los dos costados son contenedores del MISMO ancho (uno con el
+                back, otro con la X), así el título —flex-1 centrado en medio—
+                queda centrado respecto al modal y no respecto al espacio que
+                sobra, sin importar qué controles haya a los lados. */}
+            <div className="w-9 shrink-0 flex items-center justify-start">
+              {onBack ? (
+                <button
+                  type="button"
+                  aria-label={t('common.back')}
+                  onClick={onBack}
+                  className="flex items-center justify-center w-8 h-8 rounded-full border border-black border-b-2 bg-white text-black hover:bg-default-100 active:translate-y-0.5 transition-all"
+                >
+                  <FiArrowLeft className="w-4 h-4" />
+                </button>
+              ) : null}
+            </div>
+            <Modal.Heading className="flex-1 min-w-0 flex items-center justify-center gap-2 text-black font-bold text-base text-center">
+              {titleIcon ? (
+                <Image src={titleIcon} alt={titleIconAlt} width={22} height={22} className="shrink-0" />
+              ) : null}
+              <span className="truncate">{title}</span>
             </Modal.Heading>
-            {!hideClose &&
-              (centerTitle ? (
-                <div className="w-7 shrink-0 flex justify-end">
-                  <Modal.CloseTrigger
-                    aria-label={t('common.close')}
-                    className="bg-primary text-black text-sm border-[0.5] border-black"
-                  />
-                </div>
-              ) : (
+            <div className="w-9 shrink-0 flex items-center justify-end">
+              {!hideClose && (
                 <Modal.CloseTrigger
                   aria-label={t('common.close')}
                   className="bg-primary text-black text-sm border-[0.5] border-black"
                 />
-              ))}
+              )}
+            </div>
           </Modal.Header>
           <Modal.Body
             className={

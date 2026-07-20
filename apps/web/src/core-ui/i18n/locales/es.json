@@ -375,8 +375,8 @@
         "title": "Selecciona tu país"
       },
       "onramp": {
-        "subtitle": "Deposita con pesos argentinos (ARS)",
-        "title": "Onramp"
+        "subtitle": "Depositá con tu moneda local",
+        "title": "Banco"
       },
       "title": "Selecciona el método",
       "wallet": {
@@ -995,7 +995,7 @@
       "coinAlt": "monedas",
       "description": "Las monedas son tu moneda del juego. Gánalas ahorrando y recogiendo tu recompensa diaria, y gástalas en la tienda para decorar tu mapa.",
       "earn": {
-        "daily": "Recoge tu recompensa diaria",
+        "daily": "Reclama tu recompensa diaria",
         "deposits": "Crea y haz crecer tus depósitos",
         "streak": "Mantén viva tu racha diaria"
       },
@@ -1013,13 +1013,11 @@
       "activeStreak_one": "Racha activa: {{count}} día",
       "activeStreak_other": "Racha activa: {{count}} días",
       "coinsAlt": "monedas",
-      "collectButton": "Recoger +{{count}}",
-      "confirmTitle": "¡Un regalo de tu vaquita!",
+      "collectButton": "Reclamar",
+      "confirmTitle": "Tu vaquita guardó esto para ti hoy.",
       "greatButton": "¡Genial!",
       "rewardAlt": "recompensa",
       "streakAlt": "racha",
-      "successWithXp_one": "¡Ganaste {{count}} moneda y {{xp}} XP!",
-      "successWithXp_other": "¡Ganaste {{count}} monedas y {{xp}} XP!",
       "success_one": "¡Ganaste {{count}} moneda!",
       "success_other": "¡Ganaste {{count}} monedas!",
       "title": "Recompensa diaria"
@@ -1403,6 +1401,7 @@
       "tabMine": "Mi QR",
       "tabScan": "Escanear QR",
       "tabsLabel": "Vista del QR",
+      "title": "Compartir perfil",
       "tryAgain": "Intentar de nuevo",
       "uploadFromGallery": "Subir desde la galería · pronto",
       "vaqueroNotFound": "No encontramos a ese vaquero."
@@ -1664,6 +1663,17 @@
     "confirmCta": "Confirmar",
     "error": {
       "generic": "Algo salió mal"
+    },
+    "method": {
+      "title": "Elegir método",
+      "bank": {
+        "title": "Banco",
+        "subtitle": "Retirá a tu cuenta bancaria"
+      },
+      "wallet": {
+        "title": "Wallet",
+        "subtitle": "Retirá a una wallet cripto"
+      }
     },
     "methodLabel": "Método",
     "methodWallet": "Wallet",
