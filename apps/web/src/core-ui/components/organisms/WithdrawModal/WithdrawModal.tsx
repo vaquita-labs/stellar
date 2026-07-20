@@ -4,9 +4,10 @@ import { isDepositLocked } from '@/core-ui/components/home/DepositListControls';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { Button, Spinner } from '@heroui/react';
-import { motion } from 'framer-motion';
+import { motion, useAnimationControls } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BsBank2 } from 'react-icons/bs';
 import { FiCheck, FiChevronRight, FiCreditCard, FiPlus } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
 import { useDepositsComplete } from '../../../hooks';
@@ -40,6 +41,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const [amount, setAmount] = useState('');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Se enciende cuando el usuario intenta revisar un monto mayor al disponible:
+  // pinta el número en rojo y dispara el temblor. Se apaga al seguir tecleando.
+  const [overBalance, setOverBalance] = useState(false);
+  const amountControls = useAnimationControls();
 
   // Saldo retirable = depósitos activos ya desbloqueados. Mismo criterio que la
   // lista de retiro (`isDepositLocked`), para que el techo del teclado coincida
@@ -57,6 +62,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       setStep('method');
       setAmount('');
       setError(null);
+      setOverBalance(false);
     }
   }, [open]);
 
@@ -69,7 +75,32 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
   const selectedWallet = savedWallets.find((w) => w.id === selectedWalletId) ?? null;
   const numericAmount = Number(amount || '0');
-  const canReview = numericAmount > 0 && numericAmount <= available && !!selectedWallet;
+  // El botón se habilita con cualquier monto > 0. Ni exceder el saldo ni la
+  // falta de wallet lo deshabilitan: se resuelven al presionar Review, así el
+  // usuario recibe feedback (rojo + temblor) en vez de un botón muerto.
+  const canReview = numericAmount > 0;
+
+  const shakeAmount = () => {
+    setOverBalance(true);
+    // Temblor corto de izquierda a derecha; vuelve a 0 al terminar.
+    void amountControls.start({
+      x: [0, -8, 8, -6, 6, -3, 3, 0],
+      transition: { duration: 0.45, ease: 'easeInOut' },
+    });
+  };
+
+  const handleReview = () => {
+    if (numericAmount > available) {
+      shakeAmount();
+      return;
+    }
+    // Monto válido pero sin destino: llevar a elegir/crear wallet.
+    if (!selectedWallet) {
+      setStep('account');
+      return;
+    }
+    setStep('confirm');
+  };
 
   const handleConfirm = async () => {
     if (!selectedWallet) return;
@@ -132,10 +163,15 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const amountStep = (
     <div className="flex flex-col gap-4">
       <div className="text-center pt-1">
-        <p className={`text-5xl font-bold ${amount === '' ? 'text-gray-400' : 'text-black'}`}>
+        <motion.p
+          animate={amountControls}
+          className={`text-4xl font-bold ${
+            overBalance ? 'text-danger' : amount === '' ? 'text-gray-400' : 'text-black'
+          }`}
+        >
           {displayAmount(amount)}
-        </p>
-        <p className="text-sm text-gray-500 mt-1">
+        </motion.p>
+        <p className={`text-xs mt-1 ${overBalance ? 'text-danger font-semibold' : 'text-gray-500'}`}>
           {t('withdraw.available', 'Available')}: ${available.toFixed(2)}
         </p>
       </div>
@@ -165,7 +201,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         <HiOutlineSelector className="w-5 h-5 text-black shrink-0" />
       </button>
 
-      <AmountKeypad value={amount} onValueChange={setAmount} maxDecimals={2} max={available} />
+      <AmountKeypad
+        value={amount}
+        onValueChange={(next) => {
+          setAmount(next);
+          if (overBalance) setOverBalance(false);
+        }}
+        maxDecimals={2}
+      />
     </div>
   );
 
@@ -311,6 +354,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
   // El back de cada paso. `processing` no vuelve atrás: la transacción ya salió.
   const BACK_TARGET: Partial<Record<WithdrawStep, WithdrawStep>> = {
+    amount: 'method',
     account: 'amount',
     addWallet: 'account',
     confirm: 'amount',
@@ -319,7 +363,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
   const footer =
     step === 'amount' ? (
-      <Button onPress={() => setStep('confirm')} isDisabled={!canReview} className={ctaClasses}>
+      <Button onPress={handleReview} isDisabled={!canReview} className={ctaClasses}>
         {t('withdraw.review', 'Review')}
       </Button>
     ) : step === 'confirm' ? (
@@ -337,13 +381,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       open={open}
       onOpenChange={onOpenChange}
       title={STEP_TITLE[step]}
-      centerTitle
       size="md"
       // Durante la transacción el sheet no se puede cerrar ni volver atrás.
       isDismissable={step !== 'processing'}
       hideClose={step === 'processing'}
       onBack={backTarget ? () => setStep(backTarget) : undefined}
-      bodyClassName="flex flex-col gap-3 pb-2"
+      // Sin footer el body es lo último del sheet, así que necesita el respiro
+      // que normalmente aporta el footer; con footer alcanza un padding chico.
+      bodyClassName={'flex flex-col gap-3 ' + (footer ? 'pb-2' : 'pb-6')}
       footer={footer}
     >
       {STEP_CONTENT[step]}

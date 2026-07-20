@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
   useClaimedAchievements,
   useDepositsComplete,
@@ -258,16 +258,9 @@ export function ProfilePage() {
             <Link
               href="/home"
               aria-label={t('common.back')}
-              className="flex items-center justify-center"
+              className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
             >
-              <Image
-                src="/icons/arrow-back.svg"
-                alt={t('common.back')}
-                width={28}
-                height={28}
-                className="object-contain"
-                priority
-              />
+              <FiChevronLeft className="h-5 w-5" />
             </Link>
             <div className="flex items-center gap-2">
               <ShareProfileQrButton displayName={displayName} handle={handle} />

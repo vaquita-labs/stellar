@@ -30,6 +30,7 @@ import {
   useReferralBoost,
 } from '../organisms';
 import { DailyRewardChest } from './DailyRewardChest';
+import { MapQuickActions } from './MapQuickActions';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
 
 export const HeaderStats = () => {
@@ -203,7 +204,7 @@ export const HeaderStats = () => {
               ) : (
                 <span
                   data-tutorial="tutorial-balance"
-                  className="text-2xl font-bold text-black tabular-nums leading-none truncate"
+                  className="text-xl font-bold text-black tabular-nums leading-none truncate"
                 >
                   {hideBalance ? '••••' : `$${formattedBalance}`}
                 </span>
@@ -212,15 +213,15 @@ export const HeaderStats = () => {
 
             {/* APY base (verde) y boost de referidos (morado): cada uno abre su
                 propia explicación. */}
-            <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <button
                 type="button"
                 onClick={() => setShowEarningsModal(true)}
                 aria-label={t('home.stats.apyAria', 'Earnings breakdown')}
-                className="flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 bg-transparent"
+                className="flex items-center gap-0.5 bg-transparent shrink-0"
               >
-                <FiArrowUpRight className="w-3 h-3 text-[#2f820b]" />
-                <span className="text-xs font-bold text-[#2f820b] tabular-nums leading-none">
+                <FiArrowUpRight className="w-3 h-3 text-[#0a5c2e] shrink-0" />
+                <span className="text-xs font-bold text-[#0a5c2e] tabular-nums leading-none whitespace-nowrap">
                   {apyLoading ? '—' : `${baseApy.toFixed(2)}% APY`}
                 </span>
               </button>
@@ -229,10 +230,10 @@ export const HeaderStats = () => {
                 type="button"
                 onClick={() => setShowReferralsModal(true)}
                 aria-label={t('home.stats.boostAria', 'Referral boost')}
-                className="flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 bg-transparent"
+                className="flex items-center gap-0.5 bg-transparent shrink-0"
               >
-                <FiZap className="w-3 h-3 text-[#7c3aed]" />
-                <span className="text-xs font-bold text-[#7c3aed] tabular-nums leading-none">
+                <FiZap className="w-3 h-3 text-[#5b1eb5] shrink-0" />
+                <span className="text-xs font-bold text-[#5b1eb5] tabular-nums leading-none whitespace-nowrap">
                   {apyBonus.toFixed(2)}%
                 </span>
               </button>
@@ -322,11 +323,13 @@ export const HeaderStats = () => {
         </div>
       </div>
 
-      {/* El cofre vive suelto sobre el cielo, debajo de la barra de stats, para
-          que el movimiento al haber recompensa se note sin apretar el pill. */}
-      <div className="absolute right-4 -bottom-24 z-20 pointer-events-none">
-        <div className="pointer-events-auto">
+      {/* Cofre + accesos rápidos flotan sueltos sobre el cielo, apilados a la
+          derecha del mapa. Se anclan por `top` para que la columna crezca hacia
+          abajo (cofre arriba, tienda y leaderboard debajo) sin mover el cofre. */}
+      <div className="absolute right-4 top-full mt-12 z-20 pointer-events-none">
+        <div className="flex flex-col items-center gap-3 pointer-events-auto">
           <DailyRewardChest />
+          <MapQuickActions />
         </div>
       </div>
 

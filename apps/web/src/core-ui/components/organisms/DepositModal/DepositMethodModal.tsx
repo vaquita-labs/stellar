@@ -4,13 +4,13 @@ import { Button, toast } from '@heroui/react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BsBank2 } from 'react-icons/bs';
 import {
   FiAlertCircle,
   FiCheck,
   FiChevronRight,
   FiCopy,
   FiCreditCard,
-  FiDollarSign,
 } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useProfileData } from '../../../hooks';
@@ -81,7 +81,6 @@ export function DepositMethodModal({
           ? t('deposit.method.title', 'Select method')
           : t('deposit.method.walletDetails.title', 'Wallet details')
       }
-      centerTitle
       size="md"
       onBack={isMethod ? undefined : () => setStep('method')}
       bodyClassName="flex flex-col gap-3 pb-2"
@@ -109,6 +108,24 @@ export function DepositMethodModal({
     >
       {isMethod ? (
         <>
+          {/* Banco va primero: el público objetivo no es web3 y fondear desde
+              el banco es la vía que entiende sin explicación. */}
+          <button
+            type="button"
+            onClick={onOnramp}
+            className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
+          >
+            <BsBank2 className="w-6 h-6 text-black shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-bold text-black">
+                {t('deposit.method.onramp.title', 'Bank')}
+              </span>
+              <span className="block text-xs text-gray-500">
+                {t('deposit.method.onramp.subtitle', 'Deposit with your local currency')}
+              </span>
+            </span>
+            <FiChevronRight className="w-5 h-5 text-black shrink-0" />
+          </button>
           <button
             type="button"
             onClick={() => setStep('wallet')}
@@ -121,22 +138,6 @@ export function DepositMethodModal({
               </span>
               <span className="block text-xs text-gray-500">
                 {t('deposit.method.wallet.subtitle', 'Deposit from a crypto wallet')}
-              </span>
-            </span>
-            <FiChevronRight className="w-5 h-5 text-black shrink-0" />
-          </button>
-          <button
-            type="button"
-            onClick={onOnramp}
-            className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
-          >
-            <FiDollarSign className="w-6 h-6 text-black shrink-0" />
-            <span className="flex-1 min-w-0">
-              <span className="block text-sm font-bold text-black">
-                {t('deposit.method.onramp.title', 'Onramp')}
-              </span>
-              <span className="block text-xs text-gray-500">
-                {t('deposit.method.onramp.subtitle', 'Deposit with Argentine pesos (ARS)')}
               </span>
             </span>
             <FiChevronRight className="w-5 h-5 text-black shrink-0" />

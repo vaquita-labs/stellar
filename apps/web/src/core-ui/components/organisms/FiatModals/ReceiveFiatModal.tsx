@@ -268,7 +268,6 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
       isDismissable={!busy || waiting}
       // Durante una firma o el swap, volver atrás dejaría el flujo a medias.
       onBack={onBack && !busy ? onBack : undefined}
-      centerTitle={!!onBack}
       title={t('wallet.fiat.receive.title', 'Argentina (ARS)')}
       size="md"
       bodyClassName="flex flex-col gap-4 pb-6"

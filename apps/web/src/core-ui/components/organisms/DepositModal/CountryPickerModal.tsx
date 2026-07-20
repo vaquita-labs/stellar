@@ -69,7 +69,6 @@ export function CountryPickerModal({
       open={open}
       onOpenChange={onOpenChange}
       onBack={onBack}
-      centerTitle
       title={t('deposit.method.country.title', 'Select your country')}
       size="md"
       bodyClassName="flex flex-col gap-3 pb-4"

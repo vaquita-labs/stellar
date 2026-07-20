@@ -375,8 +375,8 @@
         "title": "Select your country"
       },
       "onramp": {
-        "subtitle": "Deposit with Argentine pesos (ARS)",
-        "title": "Onramp"
+        "subtitle": "Deposit with your local currency",
+        "title": "Bank"
       },
       "title": "Select method",
       "wallet": {
@@ -995,7 +995,7 @@
       "coinAlt": "coins",
       "description": "Coins are your in-game currency. Earn them by saving and collecting your daily reward, then spend them in the shop to decorate your map.",
       "earn": {
-        "daily": "Collect your daily reward",
+        "daily": "Claim your daily reward",
         "deposits": "Make and grow your deposits",
         "streak": "Keep your daily streak alive"
       },
@@ -1013,13 +1013,11 @@
       "activeStreak_one": "Active streak: {{count}} day",
       "activeStreak_other": "Active streak: {{count}} days",
       "coinsAlt": "coins",
-      "collectButton": "Collect +{{count}}",
-      "confirmTitle": "A gift from your vaquita!",
+      "collectButton": "Claim",
+      "confirmTitle": "Your vaquita saved this for you today.",
       "greatButton": "Awesome!",
       "rewardAlt": "reward",
       "streakAlt": "streak",
-      "successWithXp_one": "You earned {{count}} coin and {{xp}} XP!",
-      "successWithXp_other": "You earned {{count}} coins and {{xp}} XP!",
       "success_one": "You earned {{count}} coin!",
       "success_other": "You earned {{count}} coins!",
       "title": "Daily Reward"
@@ -1403,6 +1401,7 @@
       "tabMine": "My QR",
       "tabScan": "Scan QR",
       "tabsLabel": "QR view",
+      "title": "Share profile",
       "tryAgain": "Try again",
       "uploadFromGallery": "Upload from gallery · soon",
       "vaqueroNotFound": "We couldn't find that vaquero."
@@ -1664,6 +1663,17 @@
     "confirmCta": "Confirm",
     "error": {
       "generic": "Something went wrong"
+    },
+    "method": {
+      "title": "Select method",
+      "bank": {
+        "title": "Bank",
+        "subtitle": "Withdraw to your bank account"
+      },
+      "wallet": {
+        "title": "Wallet",
+        "subtitle": "Withdraw to a crypto wallet"
+      }
     },
     "methodLabel": "Method",
     "methodWallet": "Wallet",
