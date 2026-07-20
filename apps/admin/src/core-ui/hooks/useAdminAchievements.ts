@@ -53,6 +53,8 @@ export interface AchievementPayload {
   allowTierChange?: boolean;
 }
 
+// The admin secret guard lives server-side in the route handler; we still echo
+// the secret header so the check passes when ADMIN_SECRET is configured.
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
   ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET
@@ -60,7 +62,8 @@ const adminHeaders = (): HeadersInit => ({
     : {}),
 });
 
-const ACHIEVEMENTS_URL = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/admin/achievements`;
+// Same-origin route handler inside this admin app — no NEXT_PUBLIC_SERVICES_URL.
+const ACHIEVEMENTS_URL = '/api/admin/achievements';
 
 /** List the full catalog (incl. disabled/hidden), admin view. */
 export const useAdminAchievements = () =>

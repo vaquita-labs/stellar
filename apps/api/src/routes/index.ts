@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import ablyRoutes from './ably/route';
-import adminRoutes from './admin/route';
 import authRoutes from './auth/route';
 import badgeRoutes from './badge/route';
 import badgeCatalogRoutes from './badges/route';
@@ -17,7 +16,6 @@ import walletBadgeRoutes from './wallets/badges.route';
 const router = Router();
 
 router.use('/ably', ablyRoutes);
-router.use('/admin', adminRoutes);
 router.use('/auth', authRoutes);
 router.use('/badge', badgeRoutes);
 router.use('/badges', badgeCatalogRoutes);
