@@ -71,7 +71,12 @@ export const HeaderStats = () => {
   const reportEarnings = useCallback((id: number, earnings: DepositEarnings) => {
     setEarningsById((prev) => {
       const current = prev[id];
-      if (current && current.vaquita === earnings.vaquita && current.protocol === earnings.protocol) {
+      if (
+        current &&
+        current.vaquita === earnings.vaquita &&
+        current.protocol === earnings.protocol &&
+        current.ratePerMs === earnings.ratePerMs
+      ) {
         return prev;
       }
       return { ...prev, [id]: earnings };
@@ -94,12 +99,38 @@ export const HeaderStats = () => {
   const baseApy = (apyData?.vaquitaApy ?? 0) + (apyData?.protocolApy ?? 0);
   const { apyBonus } = useReferralBoost(walletAddress);
 
-  // El saldo se muestra completo (sin recortar a 2 decimales) porque el rendimiento
-  // se acumula en fracciones que el usuario quiere ver moverse.
-  const formattedBalance = activeDepositsTotalAmount.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
+  // Saldo en vivo: capital + interés devengado hasta "ahora". Cada depósito
+  // reporta cuánto rinde por milisegundo, así que el contador avanza en el
+  // cliente sin volver a pedirle nada al servidor. Tick corto para que los
+  // últimos decimales se vean moverse.
+  const [clientNow, setClientNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setClientNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, []);
+
+  const accruedInterest = activeDeposits.reduce((acc, d) => {
+    const earnings = earningsById[d.id];
+    if (!earnings) return acc;
+    // Igual que en la card: la lista viene cacheada, así que el "ahora" real se
+    // deriva del reloj del servidor + lo transcurrido desde el fetch.
+    const now =
+      d.serverTimestamp && d.fetchedAtTimestamp
+        ? d.serverTimestamp + (clientNow - d.fetchedAtTimestamp)
+        : clientNow;
+    const elapsed = Math.max(0, now - d.createdTimestamp);
+    return acc + Math.min(earnings.maxInterest, earnings.ratePerMs * elapsed);
+  }, 0);
+
+  // Seis decimales fijos, todos del mismo tamaño: los últimos corren solos a
+  // medida que se devenga el rendimiento.
+  const liveBalance = activeDepositsTotalAmount + accruedInterest;
+  const formattedBalance = liveBalance.toLocaleString(undefined, {
+    minimumFractionDigits: 6,
     maximumFractionDigits: 6,
   });
+
+  const displayName = profileData?.nickname || profileData?.fullName || '';
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -165,7 +196,7 @@ export const HeaderStats = () => {
       {activeDeposits.map((d) => (
         <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
       ))}
-      <div className="w-full px-4 pt-4 pb-4 bg-primary rounded-g">
+      <div className="w-full px-4 pt-3 pb-3 bg-primary rounded-g">
         <div className="max-w-xl mx-auto flex items-center gap-3">
           <Link href="/profile" aria-label={t('home.stats.profileAria', 'Profile')} className="relative shrink-0">
             <div className="relative w-14 h-14 rounded-full bg-white flex items-center justify-center overflow-hidden border border-[#B97204]/30">
@@ -195,6 +226,13 @@ export const HeaderStats = () => {
           </Link>
 
           <div className="flex flex-col min-w-0 flex-1 gap-1">
+            {/* Saludo traducido + el username con @, sin negrita. Si todavía no
+                hay perfil no se renderiza para no reservar una línea vacía. */}
+            {displayName && (
+              <p className="text-xs text-black/70 leading-none truncate">
+                {t('home.stats.greeting', 'Hi,')} @{displayName}
+              </p>
+            )}
             <button
               type="button"
               onClick={() => setShowBankAPYModal(true)}
@@ -205,7 +243,7 @@ export const HeaderStats = () => {
               ) : (
                 <span
                   data-tutorial="tutorial-balance"
-                  className="text-xl font-bold text-black tabular-nums leading-none truncate"
+                  className="text-lg font-bold text-black tabular-nums leading-none truncate"
                 >
                   {hideBalance ? '••••' : `$${formattedBalance}`}
                 </span>
@@ -219,9 +257,11 @@ export const HeaderStats = () => {
                 type="button"
                 onClick={() => setShowEarningsModal(true)}
                 aria-label={t('home.stats.apyAria', 'Earnings breakdown')}
-                className="flex items-center gap-0.5 bg-transparent shrink-0"
+                className="flex items-center gap-1 bg-transparent shrink-0"
               >
-                <FiArrowUpRight className="w-3 h-3 text-[#0a5c2e] shrink-0" />
+                {/* -ml compensa el aire interno del glifo: así la fila arranca
+                    ópticamente en la misma vertical que el "$" del saldo. */}
+                <FiArrowUpRight className="w-3.5 h-3.5 -ml-[3px] text-[#0a5c2e] shrink-0" />
                 <span className="text-xs font-bold text-[#0a5c2e] tabular-nums leading-none whitespace-nowrap">
                   {apyLoading ? '—' : `${baseApy.toFixed(2)}% APY`}
                 </span>
@@ -231,9 +271,9 @@ export const HeaderStats = () => {
                 type="button"
                 onClick={() => setShowReferralsModal(true)}
                 aria-label={t('home.stats.boostAria', 'Referral boost')}
-                className="flex items-center gap-0.5 bg-transparent shrink-0"
+                className="flex items-center gap-1 bg-transparent shrink-0"
               >
-                <FiZap className="w-3 h-3 text-[#5b1eb5] shrink-0" />
+                <FiZap className="w-3.5 h-3.5 text-[#5b1eb5] shrink-0" />
                 <span className="text-xs font-bold text-[#5b1eb5] tabular-nums leading-none whitespace-nowrap">
                   {apyBonus.toFixed(2)}%
                 </span>
