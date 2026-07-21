@@ -183,15 +183,16 @@ export const buildCctpForwarderHookData = (forwardRecipientStrkey: string): Hex 
   return `0x${bytesToHex(hookData)}`;
 };
 
-export const humanUsdcToCctpAmount = (amount: string | number): bigint => {
+export const humanUsdcToCctpAmount = (amount: string | number, decimals: 6 | 7 = 6): bigint => {
   const value = String(amount).trim();
   if (!/^\d+(\.\d+)?$/.test(value)) throw new Error(`Invalid USDC amount: ${value}`);
 
   const parts = value.split('.');
   const whole = parts[0] ?? '0';
   const fractional = parts[1] ?? '';
-  const sixDecimals = fractional.padEnd(6, '0').slice(0, 6);
-  return BigInt(whole) * 1_000_000n + BigInt(sixDecimals || '0');
+  const paddedDecimals = fractional.padEnd(decimals, '0').slice(0, decimals);
+  const scale = 10n ** BigInt(decimals);
+  return BigInt(whole) * scale + BigInt(paddedDecimals || '0');
 };
 
 export const cctpAmountToHumanUsdc = (amount: bigint | number | string): string => {
