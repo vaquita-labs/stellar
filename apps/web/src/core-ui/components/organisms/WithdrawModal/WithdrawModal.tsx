@@ -19,6 +19,7 @@ import { AppModal } from '../../molecules/AppModal';
 import { AddWalletForm } from './AddWalletForm';
 import { WalletRow } from './WalletRow';
 import { WithdrawModalProps, WithdrawStep } from './types';
+import { PressableButton } from '../../molecules/PressableButton';
 
 /** Formatea el monto tecleado tal cual lo escribe el usuario ('' → $0.00, '1.' → $1.). */
 function displayAmount(raw: string) {
@@ -147,20 +148,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     }
   };
 
-  const ctaClasses =
-    'w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black disabled:opacity-50';
-
   // --- Paso: método ----------------------------------------------------------
   // Banco va primero a propósito: el público objetivo no es web3 y "sacar la
   // plata al banco" es la salida que entiende sin explicación. "Wallet" queda
   // segundo para quien sí maneja cripto.
   const methodStep = (
     <>
-      <button
-        type="button"
-        onClick={onOfframp}
-        className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
-      >
+      <PressableButton variant="white" size="row"
+        onClick={onOfframp}>
         <BsBank2 className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-bold text-black">
@@ -171,12 +166,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           </span>
         </span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />
-      </button>
-      <button
-        type="button"
-        onClick={() => setStep('amount')}
-        className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
-      >
+      </PressableButton>
+      <PressableButton variant="white" size="row"
+        onClick={() => setStep('amount')}>
         <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-bold text-black">
@@ -187,7 +179,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           </span>
         </span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />
-      </button>
+      </PressableButton>
     </>
   );
 
@@ -217,8 +209,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         </button>
       </div>
 
-      <button
-        type="button"
+      <PressableButton variant="white" size="row" className="active:bg-[#EAF4FF] touch-pan-x select-none"
         onClick={() => {
           if (swipedRef.current) {
             swipedRef.current = false;
@@ -241,9 +232,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         }}
         onWheel={(e) => {
           if (Math.abs(e.deltaY) > 10) cycleWallet(e.deltaY > 0 ? 1 : -1);
-        }}
-        className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left transition hover:bg-[#F5FBFF] active:bg-[#EAF4FF] touch-pan-x select-none"
-      >
+        }}>
         <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
           {selectedWallet ? (
@@ -271,7 +260,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         ) : (
           <HiOutlineSelector className="w-5 h-5 text-black shrink-0" />
         )}
-      </button>
+      </PressableButton>
 
       <AmountKeypad
         value={amount}
@@ -325,17 +314,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
       <div className="border-t border-black/10 my-1" />
 
-      <button
-        type="button"
-        onClick={() => setStep('addWallet')}
-        className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
-      >
+      <PressableButton variant="white" size="row"
+        onClick={() => setStep('addWallet')}>
         <FiPlus className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 text-sm font-bold text-black">
           {t('withdraw.addMethod', 'Add method')}
         </span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />
-      </button>
+      </PressableButton>
     </div>
   );
 
@@ -440,17 +426,17 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
   const footer =
     step === 'amount' ? (
-      <Button onPress={handleReview} isDisabled={!canReview} className={ctaClasses}>
+      <PressableButton variant="success" size="cta" onClick={handleReview} disabled={!canReview}>
         {t('withdraw.review', 'Review')}
-      </Button>
+      </PressableButton>
     ) : step === 'confirm' ? (
-      <Button onPress={handleConfirm} className={ctaClasses}>
+      <PressableButton variant="success" size="cta" onClick={handleConfirm}>
         {t('withdraw.confirmCta', 'Confirm')}
-      </Button>
+      </PressableButton>
     ) : step === 'success' ? (
-      <Button onPress={onOpenChange} className={ctaClasses}>
+      <PressableButton variant="success" size="cta" onClick={onOpenChange}>
         {t('common.done', 'Done')}
-      </Button>
+      </PressableButton>
     ) : undefined;
 
   return (

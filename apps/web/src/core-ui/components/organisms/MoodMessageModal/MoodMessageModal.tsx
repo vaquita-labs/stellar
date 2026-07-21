@@ -6,6 +6,7 @@ import { VaquitaMood } from '@/core-ui/types';
 import { AppModal } from '../../molecules/AppModal';
 import { DailyCheckCountdown } from './DailyCheckCountdown';
 import { MoodMessageModalProps } from './types';
+import { PressableButton } from '../../molecules/PressableButton';
 
 const MOOD_COPY: Record<VaquitaMood, { image: string; message: string; cta: string }> = {
   excited: {
@@ -46,13 +47,9 @@ export function MoodMessageModal({ open, onOpenChange, mood }: MoodMessageModalP
         <img src={copy.image} alt={mood} className="w-32 h-32 object-contain" draggable={false} />
         <p className="text-base text-black">{t(`rewards.mood.${mood}.message`, copy.message)}</p>
         <DailyCheckCountdown />
-        <Button
-          onPress={onOpenChange}
-          className="w-full bg-primary text-black border border-black border-b-2 font-semibold rounded-md"
-          size="lg"
-        >
+        <PressableButton variant="primary" size="cta" onClick={onOpenChange}>
           {t(`rewards.mood.${mood}.cta`, copy.cta)}
-        </Button>
+        </PressableButton>
       </div>
     </AppModal>
   );

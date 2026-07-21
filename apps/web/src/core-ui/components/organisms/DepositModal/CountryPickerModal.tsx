@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight, FiSearch } from 'react-icons/fi';
 import { AppModal } from '../../molecules/AppModal';
+import { PressableButton } from '../../molecules/PressableButton';
 
 interface CountryPickerModalProps {
   open: boolean;
@@ -88,16 +89,13 @@ export function CountryPickerModal({
       <div className="flex flex-col gap-2">
         {results.map((country) =>
           country.available ? (
-            <button
+            <PressableButton variant="white" size="row"
               key={country.code}
-              type="button"
-              onClick={() => onSelect(country.code)}
-              className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
-            >
+              onClick={() => onSelect(country.code)}>
               <span className="text-2xl leading-none shrink-0">{country.flag}</span>
               <span className="flex-1 min-w-0 text-sm font-bold text-black">{country.name}</span>
               <FiChevronRight className="w-5 h-5 text-black shrink-0" />
-            </button>
+            </PressableButton>
           ) : (
             <div
               key={country.code}

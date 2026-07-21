@@ -6,13 +6,13 @@ import React, { useEffect, useState } from 'react';
 import { useAnalytics, useDeposits } from '../../hooks';
 import { EditionMode, useGameClockSynced, useLoading, useMapStore, useConfigStore } from '../../stores';
 import { WorldType } from '../../types';
-import { LoaderScreen } from '../molecules';
 import { useModalPresence } from '../molecules/AppModal';
 import { BankAPYModal, CoinAnimation, DepositPanel, TutorialModal } from '../organisms';
 import { WorldMap } from '../templates';
 import { BackgroundMusic } from './BackgroundMusic';
 import { EditPanels } from './edit';
 import { HeaderStats } from './HeaderStats';
+import { HomeSkeleton } from './HomeSkeleton';
 import { PlaceModeHint } from './PlaceModeHint';
 
 export function HomePage() {
@@ -64,9 +64,11 @@ export function HomePage() {
   };
 
   // Gate: sin la hora confirmada no se muestra el mapa/reloj (misma pantalla de
-  // carga que usan ConfigProvider / ProfileDataProvider).
+  // carga que usan ConfigProvider / ProfileDataProvider). Nunca se queda
+  // colgado acá: si GET /time falla, GameClockSync marca el reloj como listo
+  // con la hora local (fallbackGameClock) y sigue reintentando por atrás.
   if (!clockReady) {
-    return <LoaderScreen withImage />;
+    return <HomeSkeleton />;
   }
 
   return (

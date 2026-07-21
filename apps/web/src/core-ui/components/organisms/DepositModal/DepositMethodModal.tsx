@@ -16,6 +16,7 @@ import { truncateMiddle } from '../../../helpers';
 import { useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
+import { PressableButton } from '../../molecules/PressableButton';
 
 interface DepositMethodModalProps {
   open: boolean;
@@ -86,23 +87,16 @@ export function DepositMethodModal({
       bodyClassName="flex flex-col gap-3 pb-2"
       footer={
         isMethod ? (
-          <Button
-            onPress={onContinue}
-            className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
-          >
+          <PressableButton variant="success" size="cta" onClick={onContinue}>
             {t('deposit.method.continue', 'I already have USDC, continue')}
-          </Button>
+          </PressableButton>
         ) : (
-          <Button
-            onPress={handleCopy}
-            isDisabled={!walletAddress}
-            className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
-          >
+          <PressableButton variant="success" size="cta" onClick={handleCopy} disabled={!walletAddress}>
             {copied ? <FiCheck className="w-5 h-5" /> : <FiCopy className="w-5 h-5" />}
             {copied
               ? t('wallet.page.copied')
               : t('deposit.method.walletDetails.copy', 'Copy address')}
-          </Button>
+          </PressableButton>
         )
       }
     >
@@ -110,11 +104,8 @@ export function DepositMethodModal({
         <>
           {/* Banco va primero: el público objetivo no es web3 y fondear desde
               el banco es la vía que entiende sin explicación. */}
-          <button
-            type="button"
-            onClick={onOnramp}
-            className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
-          >
+          <PressableButton variant="white" size="row"
+            onClick={onOnramp}>
             <BsBank2 className="w-6 h-6 text-black shrink-0" />
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-black">
@@ -125,12 +116,9 @@ export function DepositMethodModal({
               </span>
             </span>
             <FiChevronRight className="w-5 h-5 text-black shrink-0" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setStep('wallet')}
-            className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
-          >
+          </PressableButton>
+          <PressableButton variant="white" size="row"
+            onClick={() => setStep('wallet')}>
             <FiCreditCard className="w-6 h-6 text-black shrink-0" />
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-black">
@@ -141,7 +129,7 @@ export function DepositMethodModal({
               </span>
             </span>
             <FiChevronRight className="w-5 h-5 text-black shrink-0" />
-          </button>
+          </PressableButton>
         </>
       ) : (
         <>

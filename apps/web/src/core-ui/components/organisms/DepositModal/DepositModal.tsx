@@ -25,6 +25,7 @@ import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
 import { TokenSymbol } from '../../molecules/MoneyInput/types';
 import { DepositModalProps } from './types';
+import { PressableButton } from '../../molecules/PressableButton';
 
 export function DepositModal({
   open,
@@ -267,21 +268,23 @@ export function DepositModal({
       bodyClassName="flex flex-col gap-4 pb-6"
       footer={
         <div className="flex w-full flex-col gap-2">
-          <Button
-            onPress={() => handleDeposit(Number(amount))}
-            className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
-            isDisabled={isDisabled || isDepositing}
+          <PressableButton
+            variant="success"
+            size="cta"
+            onClick={() => handleDeposit(Number(amount))}
+            disabled={isDisabled || isDepositing}
           >
             {isDepositing ? <><Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}</> : t('deposit.modal.title', 'Deposit')}
-          </Button>
+          </PressableButton>
           {network?.type === 'mainnet' ? (
-            <Button
-              onPress={handleDirectBlendDeposit}
-              className="w-full rounded-md border border-black border-b-2 bg-white px-4 py-5 font-bold text-black"
-              isDisabled={!canDirectBlendDeposit || isDepositing}
+            <PressableButton
+              variant="white"
+              size="cta"
+              onClick={handleDirectBlendDeposit}
+              disabled={!canDirectBlendDeposit || isDepositing}
             >
               {isDepositing ? <><Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}</> : t('deposit.modal.directBlend', 'Deposit directly to Blend')}
-            </Button>
+            </PressableButton>
           ) : null}
         </div>
       }

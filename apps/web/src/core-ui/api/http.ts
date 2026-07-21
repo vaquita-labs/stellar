@@ -16,6 +16,14 @@ type ApiInit = RequestInit & {
    * ("already done") is an expected, non-error outcome.
    */
   okStatuses?: number[];
+  /**
+   * Aborta la petición pasados N ms. `fetch` no tiene timeout propio: sin esto
+   * una request que queda colgada (API reiniciándose, red muerta) nunca
+   * resuelve ni rechaza, y quien la espera se queda esperando para siempre.
+   * Opt-in a propósito: las llamadas on-chain pueden tardar mucho y no deben
+   * cortarse. Úsalo en las que gatean el render.
+   */
+  timeoutMs?: number;
 };
 
 /**
@@ -25,16 +33,30 @@ type ApiInit = RequestInit & {
  * (or `null` when the body has none / the status is in `okStatuses`).
  */
 export async function apiFetch<T>(path: string, init: ApiInit = {}): Promise<T | null> {
-  const { okStatuses = [], ...rest } = init;
-  const response = await fetch(`${API_BASE}${path}`, rest);
-  const body: ApiEnvelope<T> | null = await response.json().catch(() => null);
+  const { okStatuses = [], timeoutMs, ...rest } = init;
 
-  if (!response.ok) {
-    if (okStatuses.includes(response.status)) return null;
-    throw new Error(body?.message ?? body?.error ?? `Request failed (${response.status})`);
+  // Sin `timeoutMs` se conserva el comportamiento anterior (sin límite). Con él
+  // se aborta la request y el `await` rechaza, para que quien la espera pueda
+  // reintentar o seguir con un fallback en vez de colgarse.
+  const controller = timeoutMs ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...rest,
+      ...(controller ? { signal: rest.signal ?? controller.signal } : {}),
+    });
+    const body: ApiEnvelope<T> | null = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      if (okStatuses.includes(response.status)) return null;
+      throw new Error(body?.message ?? body?.error ?? `Request failed (${response.status})`);
+    }
+
+    return body?.data ?? null;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
-
-  return body?.data ?? null;
 }
 
 /** GET helper that unwraps `data`. */

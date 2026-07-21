@@ -59,6 +59,22 @@ export function syncGameClock(params: {
   useGameClockStore.getState().sync(params);
 }
 
+/**
+ * Desbloquea el reloj SIN servidor, con los defaults locales (offset 0 → hora
+ * del dispositivo, día de 20 min, ancla epoch). Se llama cuando GET /time falla
+ * o tarda demasiado: la hora es lo primero que carga y gatea toda la home, así
+ * que un fallo de red no puede dejar la app en la pantalla de carga. El desfase
+ * contra el servidor es de milisegundos (el reloj del dispositivo), no de
+ * horas, y el próximo reintento exitoso lo corrige.
+ *
+ * No pisa una sincronización real ya hecha: si `synced` es true, no hace nada.
+ */
+export function fallbackGameClock(): void {
+  const { synced, sync } = useGameClockStore.getState();
+  if (synced) return;
+  sync({ serverTimeMs: Date.now() });
+}
+
 /** True una vez que el reloj se alineó con el servidor. Versión imperativa. */
 export const isGameClockSynced = (): boolean => useGameClockStore.getState().synced;
 

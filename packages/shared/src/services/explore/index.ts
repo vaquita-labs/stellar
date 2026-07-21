@@ -202,8 +202,14 @@ export const getExploreFeed = async ({
 
   const pageRows = candidates.slice(skip, skip + take);
 
+  // Heart counts are re-read for THIS page instead of being served from the
+  // 30s pool cache: the heart is the card's interactive element, so a user who
+  // likes a map and reloads must see the number move. It's one indexed groupBy
+  // over ≤`take` ids, so it doesn't undo the point of the cache.
+  const freshLikes = await getMapLikeCountsByProfile(pageRows.map((row) => row.id));
+
   return {
-    rows: pageRows.map(({ id: _id, ...row }) => row),
+    rows: pageRows.map(({ id, ...row }) => ({ ...row, mapLikes: freshLikes.get(id) ?? 0 })),
     total: candidates.length,
     limit: take,
     offset: skip,

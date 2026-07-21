@@ -1,7 +1,6 @@
 'use client';
 
 import { isStellarNetwork } from '@/networks/stellar';
-import { Button as HeroButton } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnalytics, useIsPoolPaused } from '../../hooks';
@@ -11,6 +10,7 @@ import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositM
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
 import { SendFiatModal } from './FiatModals/SendFiatModal';
 import { WithdrawModal } from './WithdrawModal';
+import { PressableButton } from '../molecules/PressableButton';
 
 export function DepositPanel() {
   const { t } = useTranslation();
@@ -49,10 +49,12 @@ export function DepositPanel() {
         </p>
       )}
       <div className="w-full max-w-xl px-1 flex gap-1">
-        <HeroButton
-          size="lg"
-          isDisabled={disabled}
-          onPress={() => {
+        <PressableButton
+          variant="white"
+          size="cta"
+          className="flex-1 h-12 py-0"
+          disabled={disabled}
+          onClick={() => {
             if (!walletAddress) {
               trackUserAction('withdraw_attempted_no_wallet');
             } else {
@@ -63,14 +65,15 @@ export function DepositPanel() {
               setIsWithdrawOpen(true);
             }
           }}
-          className={`bg-white border-[#E3DAC9] py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
         >
           <span className="text-xl text-black capitalize font-medium">{t('deposit.withdraw.button', 'Withdraw')}</span>
-        </HeroButton>
-        <HeroButton
-          size="lg"
-          isDisabled={disabled}
-          onPress={() => {
+        </PressableButton>
+        <PressableButton
+          variant="success"
+          size="cta"
+          className="flex-1 h-12 py-0"
+          disabled={disabled}
+          onClick={() => {
             if (!walletAddress) {
               trackUserAction('deposit_attempted_no_wallet');
             } else {
@@ -82,12 +85,11 @@ export function DepositPanel() {
               setIsMethodOpen(true);
             }
           }}
-          className={`bg-success border-black py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
         >
           <span className="text-xl text-black capitalize font-medium">
-            {isDepositing ? t('deposit.processing', 'Processing...') : t('common.save')}
+            {isDepositing ? t('deposit.processing', 'Processing...') : t('deposit.panel.deposit', 'Deposit')}
           </span>
-        </HeroButton>
+        </PressableButton>
       </div>
       <DepositMethodModal
         open={isMethodOpen}

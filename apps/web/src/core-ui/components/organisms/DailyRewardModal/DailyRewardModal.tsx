@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
 import { DailyRewardModalProps } from './types';
+import { PressableButton } from '../../molecules/PressableButton';
 
 // Pantallas del modal:
 //  - confirm: cofre cerrado + "mantener presionado" (no revela el monto).
@@ -113,21 +114,13 @@ export function DailyRewardModal({
   // y racha; la pantalla inicial se avanza manteniendo presionado el cofre.
   const footer =
     step === 'reward' ? (
-      <Button
-        onPress={() => setStep('streak')}
-        className="w-full bg-primary text-black border border-black border-b-2 font-semibold rounded-md"
-        size="lg"
-      >
+      <PressableButton variant="primary" size="cta" onClick={() => setStep('streak')}>
         {t('rewards.daily.nextButton', 'Next')}
-      </Button>
+      </PressableButton>
     ) : step === 'streak' ? (
-      <Button
-        onPress={onOpenChange}
-        className="w-full bg-primary text-black border border-black border-b-2 font-semibold rounded-md"
-        size="lg"
-      >
+      <PressableButton variant="primary" size="cta" onClick={onOpenChange}>
         {t('rewards.daily.doneButton', 'Done')}
-      </Button>
+      </PressableButton>
     ) : undefined;
 
   return (

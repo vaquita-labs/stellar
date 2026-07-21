@@ -1,14 +1,13 @@
 'use client';
 
-import { MapObject, WorldType } from '@/core-ui/types';
+import { MapObject } from '@/core-ui/types';
 import * as THREE from 'three';
-import { BoxGeometry, MeshLambertMaterial } from 'three';
+import { MeshLambertMaterial } from 'three';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
-import { Font } from 'three/examples/jsm/loaders/FontLoader.js';
-import { TILE_HEIGHT, TILE_SIZE } from '@/core-ui/components/map/constants';
-import { getAddMesh, getY_0 } from '../../helpers';
+import { BuildContext } from '../../types';
 
-export function getBankGroup(_: MapObject, __: WorldType, font: Font | null) {
+export function getBankGroup(_: MapObject, ctx: BuildContext) {
+  const font = ctx.font ?? null;
   const baseY = 0;
   const buildingGroup = new THREE.Group();
 
@@ -21,8 +20,8 @@ export function getBankGroup(_: MapObject, __: WorldType, font: Font | null) {
   const whiteMaterial = new MeshLambertMaterial({ color: '#E8E8E8' }); // Blanco para letras
   const blackMaterial = new MeshLambertMaterial({ color: '#1A1A1A' }); // Negro para entrada
 
-  const addMesh = getAddMesh(buildingGroup);
-  addMesh(new BoxGeometry(TILE_SIZE, TILE_HEIGHT, TILE_SIZE), baseGrayMaterial, [0, getY_0(TILE_HEIGHT), 0]);
+  // Sin bloque de terreno propio: el tile de pasto sobre el que se apoya lo
+  // agrega withGrassTerrain (buildings/registry), igual que el resto del mapa.
 
   // Base/Plataforma (escalones)
   const baseStep2 = new THREE.Mesh(new THREE.BoxGeometry(1, 0.1, 1), baseGrayMaterial);

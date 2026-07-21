@@ -8,6 +8,7 @@ import { formatTimeDeposit } from '../../../helpers';
 import { useConfigStore } from '../../../stores';
 import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 import { LockPeriodModalProps } from './types';
+import { PressableButton } from '../../molecules/PressableButton';
 
 export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
   const { t } = useTranslation();
@@ -80,13 +81,9 @@ export function LockPeriodModal({ open, onOpenChange }: LockPeriodModalProps) {
             </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button
-              onPress={handleConfirm}
-              className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md"
-              isDisabled={isDisabled}
-            >
+            <PressableButton variant="success" size="cta" onClick={handleConfirm} disabled={isDisabled}>
               {t('common.confirm')}
-            </Button>
+            </PressableButton>
           </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>

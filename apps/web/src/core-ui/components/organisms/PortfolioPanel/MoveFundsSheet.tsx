@@ -1,13 +1,14 @@
 'use client';
 
 import { formatUsd } from '@/core-ui/helpers/numbers';
-import { Button, Spinner } from '@heroui/react';
+import { Spinner } from '@heroui/react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiArrowRight, FiCheck, FiRepeat } from 'react-icons/fi';
 import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
+import { PressableButton } from '../../molecules/PressableButton';
 import { getAllocationStyle } from './allocationStyles';
 import { Allocation, MoveFundsStep } from './types';
 
@@ -170,9 +171,6 @@ export function MoveFundsSheet({
     }
   };
 
-  const ctaClasses =
-    'w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black disabled:opacity-50';
-
   /** Pastilla de un lado del movimiento: plazo + capital disponible ahí. */
   const sidePill = (side: 'from' | 'to') => {
     const allocation = side === 'from' ? from : to;
@@ -313,17 +311,17 @@ export function MoveFundsSheet({
 
   const footer =
     step === 'amount' ? (
-      <Button onPress={handleReview} isDisabled={!canReview} className={ctaClasses}>
+      <PressableButton variant="success" size="cta" onClick={handleReview} disabled={!canReview}>
         {t('withdraw.review', 'Review')}
-      </Button>
+      </PressableButton>
     ) : step === 'confirm' ? (
-      <Button onPress={handleConfirm} className={ctaClasses}>
+      <PressableButton variant="success" size="cta" onClick={handleConfirm}>
         {t('common.confirm', 'Confirm')}
-      </Button>
+      </PressableButton>
     ) : step === 'success' ? (
-      <Button onPress={onOpenChange} className={ctaClasses}>
+      <PressableButton variant="success" size="cta" onClick={onOpenChange}>
         {t('common.done', 'Done')}
-      </Button>
+      </PressableButton>
     ) : undefined;
 
   return (

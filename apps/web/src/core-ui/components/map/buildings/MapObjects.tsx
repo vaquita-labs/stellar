@@ -1,5 +1,7 @@
 import { useMapStore } from '@/core-ui/stores';
 import { ProfileMapObjectsResponseDTO } from '@/core-ui/types';
+import { useMemo } from 'react';
+import { makeNeighborTypeLookup } from '../helpers';
 import { Building } from './Building';
 import { BUILDINGS } from './registry';
 
@@ -18,6 +20,9 @@ interface MapObjectsProps {
 // dibuja vive en registry.tsx: agregar uno nuevo no requiere tocar este archivo.
 export const MapObjects = ({ objects }: MapObjectsProps) => {
   const editMode = useMapStore((store) => store.editMode);
+  // Lo consume el tile de pasto bajo cada edificio para saber qué lados van
+  // con contorno de costa (misma info que usa Ground en modo edición).
+  const neighborTypeAt = useMemo(() => makeNeighborTypeLookup(objects), [objects]);
 
   if (editMode) return null;
 
@@ -34,6 +39,7 @@ export const MapObjects = ({ objects }: MapObjectsProps) => {
         definition={definition}
         position={position}
         rotation={rotation}
+        neighborTypeAt={neighborTypeAt}
       />
     );
   });

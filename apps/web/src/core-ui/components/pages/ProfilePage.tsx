@@ -73,7 +73,7 @@ const StatPill = ({
   ariaLabel,
 }: {
   value: React.ReactNode;
-  label: string;
+  label: React.ReactNode;
   onPress?: () => void;
   ariaLabel?: string;
 }) => {
@@ -82,7 +82,7 @@ const StatPill = ({
       <span className="text-lg sm:text-xl font-extrabold text-black tabular-nums leading-none">
         {value}
       </span>
-      <span className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
+      <span className="mt-1 inline-flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
         {label}
       </span>
     </>
@@ -359,16 +359,17 @@ export function ProfilePage() {
               onPress={() => setFollowModal({ open: true, tab: 'followers' })}
             />
             <span className="w-px bg-black/10" aria-hidden />
-            {/* Hearts the user's 3D world collected — not a follower metric, so
-                it gets the icon to set it apart from the two counts beside it. */}
+            {/* Likes the user's 3D world collected. The heart rides with the
+                label, not the number, so all three counts sit on one baseline
+                and the icon reads as part of the caption. */}
             <StatPill
-              value={
-                <span className="inline-flex items-center gap-1">
-                  <FiHeart className="h-4 w-4 fill-red-500 text-red-500" aria-hidden />
-                  {mapLikes ?? 0}
-                </span>
+              value={mapLikes ?? 0}
+              label={
+                <>
+                  <FiHeart className="h-3.5 w-3.5" aria-hidden />
+                  {t('profilePages.profile.mapLikes', 'Likes')}
+                </>
               }
-              label={t('profilePages.profile.mapLikes', 'Hearts')}
             />
           </div>
         </section>
@@ -387,6 +388,8 @@ export function ProfilePage() {
           <ShareProfileQrButton
             displayName={displayName}
             handle={handle}
+            avatarConfig={profileData?.avatarConfig}
+            avatarSeed={profileData?.walletAddress || walletAddress || ''}
             className="h-12 w-12 rounded-md !bg-white hover:-translate-y-0.5 border-b-3"
           />
         </section>

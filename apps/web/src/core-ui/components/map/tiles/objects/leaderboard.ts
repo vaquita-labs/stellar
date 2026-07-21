@@ -21,7 +21,8 @@ export function getLeaderboardGroup(_: MapObject, __: WorldType, font: Font | nu
   const matTrophy = new THREE.MeshLambertMaterial({ color: '#f1c40f' }); // copa
 
   const addMesh = getAddMesh(bankGroup);
-  addMesh(new BoxGeometry(TILE_SIZE, TILE_HEIGHT, TILE_SIZE), matBase, [0, getY_0(TILE_HEIGHT), 0]);
+  // Sin bloque de terreno propio: el tile de pasto lo agrega withGrassTerrain
+  // (buildings/registry), igual que el resto del mapa.
 
   // === Plataforma ===
   const platform = new THREE.Mesh(new THREE.BoxGeometry(1, 0.06, 0.8), matBase);

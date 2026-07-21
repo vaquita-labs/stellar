@@ -8,6 +8,7 @@ import { MdContentPaste } from 'react-icons/md';
 import { useIsMobile } from '../../../hooks';
 import { SavedWallet, useCreateSavedWallet } from '../../../hooks/useSavedWallets';
 import { useConfigStore } from '../../../stores';
+import { PressableButton } from '../../molecules/PressableButton';
 
 interface AddWalletFormProps {
   onCreated: (wallet: SavedWallet) => void;
@@ -184,14 +185,10 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
         <p className="text-sm text-error font-semibold">{error}</p>
       ) : null}
 
-      <Button
-        onPress={handleSubmit}
-        isDisabled={!canSubmit}
-        className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black disabled:opacity-50"
-      >
+      <PressableButton variant="success" size="cta" onClick={handleSubmit} disabled={!canSubmit}>
         {createWallet.isPending ? <Spinner size="sm" color="current" /> : null}
         {t('withdraw.addWallet.save', 'Save wallet')}
-      </Button>
+      </PressableButton>
     </div>
   );
 }

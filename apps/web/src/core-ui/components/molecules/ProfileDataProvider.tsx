@@ -3,7 +3,7 @@
 import { useIsAuthenticated, useProfileData } from '@/core-ui/hooks';
 import { useLoading } from '@/core-ui/stores';
 import { ReactNode } from 'react';
-import { LoaderScreen } from './LoaderScreen';
+import { BootLoader } from './BootLoader';
 
 /**
  * Profile-data gate. Once a wallet is connected the user's profile becomes a
@@ -28,7 +28,7 @@ export const ProfileDataProvider = ({ children }: { children: ReactNode }) => {
   useLoading('profile', blocking);
 
   if (blocking) {
-    return <LoaderScreen withImage />;
+    return <BootLoader />;
   }
 
   return children;

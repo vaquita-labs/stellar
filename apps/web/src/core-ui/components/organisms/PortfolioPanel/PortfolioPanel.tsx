@@ -5,7 +5,7 @@ import { formatUsd } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
@@ -14,6 +14,7 @@ import { AllocationDetailSheet } from './AllocationDetailSheet';
 import { MoveFundsSheet } from './MoveFundsSheet';
 import { getAllocationStyle } from './allocationStyles';
 import { Allocation, PortfolioPanelProps } from './types';
+import { PressableButton } from '../../molecules/PressableButton';
 
 /**
  * Pantalla completa de inversión que abre el chip de APY del header. Muestra el
@@ -87,6 +88,12 @@ export function PortfolioPanel({
 
   const detailAllocation = allocations.find((a) => a.lockPeriod === detailLockPeriod) ?? null;
   const detailIndex = allocations.findIndex((a) => a.lockPeriod === detailLockPeriod);
+  // Al cerrar, detailLockPeriod vuelve a null antes de que termine la animación
+  // de salida. Retenemos el último plazo para que el sheet siga teniendo qué
+  // renderizar mientras se va, y no desaparezca de golpe.
+  const lastDetailRef = useRef<{ allocation: Allocation; index: number } | null>(null);
+  if (detailAllocation) lastDetailRef.current = { allocation: detailAllocation, index: detailIndex };
+  const detailView = detailAllocation ? { allocation: detailAllocation, index: detailIndex } : lastDetailRef.current;
 
   const openMove = (toLockPeriod: number | null) => {
     setMoveToLockPeriod(toLockPeriod);
@@ -191,12 +198,9 @@ export function PortfolioPanel({
               {allocations.map((allocation, index) => {
                 const style = getAllocationStyle(index);
                 return (
-                  <button
+                  <PressableButton variant="white" size="row"
                     key={allocation.lockPeriod}
-                    type="button"
-                    onClick={() => setDetailLockPeriod(allocation.lockPeriod)}
-                    className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left transition hover:bg-[#F5FBFF]"
-                  >
+                    onClick={() => setDetailLockPeriod(allocation.lockPeriod)}>
                     <span className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${style.chip}`}>
                       {style.icon}
                     </span>
@@ -212,7 +216,7 @@ export function PortfolioPanel({
                       {allocation.apy.toFixed(2)}%
                     </span>
                     <FiChevronRight className="w-5 h-5 text-black shrink-0" />
-                  </button>
+                  </PressableButton>
                 );
               })}
             </div>
@@ -220,15 +224,15 @@ export function PortfolioPanel({
         </div>
       </AppModal>
 
-      {detailMounted && detailAllocation ? (
+      {detailMounted && detailView ? (
         <AllocationDetailSheet
           open={detailLockPeriod !== null}
           onOpenChange={() => setDetailLockPeriod(null)}
-          allocation={detailAllocation}
-          style={getAllocationStyle(detailIndex)}
+          allocation={detailView.allocation}
+          style={getAllocationStyle(detailView.index)}
           tokenSymbol={tokenSymbol}
           canManage={canManage}
-          onManage={() => openMove(detailAllocation.lockPeriod)}
+          onManage={() => openMove(detailView.allocation.lockPeriod)}
         />
       ) : null}
 
