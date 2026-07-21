@@ -67,6 +67,7 @@ const STANDALONE_CTX = (worldType: WorldType): BuildContext => ({
   worldType,
   tileXZ: [0, 0],
   neighborTypeAt: () => MapObjectType.EMPTY,
+  dryEdges: true,
 });
 
 export const getObjectGroup = (mapObject: MapObject, worldType: WorldType): THREE.Object3D => {

@@ -331,7 +331,7 @@ export function DepositMethodModal({
         <PressableButton
           variant="success"
           size="cta"
-          className="py-3.5"
+          className="py-2.5!"
           onClick={handleReview}
           disabled={!canReview}
         >
@@ -350,7 +350,7 @@ export function DepositMethodModal({
         ) : null}
       </div>
     ) : step === 'confirm' ? (
-      <PressableButton variant="success" size="cta" className="py-3.5" onClick={handleConfirm}>
+      <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleConfirm}>
         {t('deposit.blend.cta', 'Deposit to Blend')}
       </PressableButton>
     ) : step === 'success' ? (

@@ -22,9 +22,16 @@ export interface BuildContext {
   /**
    * Tipo del tile en (x,z), o undefined si no hay tile (fuera de la isla).
    * Permite a pasto/agua dibujar el contorno del mapa solo en los lados
-   * expuestos. Los previews (catálogo, snapshot) no lo pasan: sin contorno.
+   * expuestos. Los previews (catálogo, snapshot) declaran todos los vecinos
+   * vacíos: el tile va suelto y se delinea por los cuatro lados.
    */
   neighborTypeAt?: (x: number, z: number) => MapObjectType | undefined;
+  /**
+   * Contorno sin las piezas de agua (falda del acantilado, línea de flotación
+   * y relleno de esquinas). Para los previews, donde el tile se apoya sobre un
+   * fondo plano y no sobre el mar.
+   */
+  dryEdges?: boolean;
 }
 
 export type ObjectBuilder = (mapObject: MapObject, ctx: BuildContext) => THREE.Object3D;

@@ -1325,7 +1325,14 @@ export const toProfileAchievementsResponseDTO = async (
 
 export const getAchievementByCode = async (code: string) => {
   try {
-    const row = await prisma.achievement.findFirst({ where: { code, deletedAt: null } });
+    // Case-insensitive a propósito: el input del modal de canje se PINTA en
+    // mayúsculas (clase CSS `uppercase`) pero manda lo que el usuario tecleó,
+    // así que un código guardado en minúsculas ('starmaker') no matcheaba y el
+    // usuario veía "código inválido" con el código correcto en pantalla.
+    // También cubre los QR y a quien lo escriba a mano como se le ocurra.
+    const row = await prisma.achievement.findFirst({
+      where: { code: { equals: code, mode: 'insensitive' }, deletedAt: null },
+    });
     return { data: row ? toAchievementDoc(row) : null, error: null };
   } catch (error) {
     console.error('Error on getAchievementByCode', error);
