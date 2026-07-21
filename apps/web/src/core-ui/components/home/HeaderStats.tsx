@@ -256,7 +256,10 @@ export const HeaderStats = () => {
         </div>
       </div>
 
-      <div className="absolute left-0 right-0 -bottom-12 px-2 z-20 pointer-events-none">
+      {/* Offsets en px fijos (no las clases rem de Tailwind) para que la
+          distancia al bloque naranja sea la misma en todos los dispositivos,
+          aunque el usuario tenga el tamaño de fuente del sistema agrandado. */}
+      <div className="absolute left-0 right-0 -bottom-[36px] px-2 z-20 pointer-events-none">
         <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white/60 backdrop-blur-md rounded-lg px-3 py-1.5  pointer-events-auto">
           <button
             type="button"
@@ -324,25 +327,19 @@ export const HeaderStats = () => {
         </div>
       </div>
 
-      {/* Reloj de la hora local real, DEBAJO del pill de stats (mt-14 lo baja
-          por debajo de la barra para que no la tape en móvil). Va en el mismo
-          contenedor centrado max-w-xl y alineado a su borde izquierdo, así en
-          escritorio queda junto a la barra y no se va a la esquina.
-          El ciclo de luz del mapa sigue esta misma hora, así que coinciden. */}
-      <div className="absolute left-0 right-0 top-full mt-14 px-2 z-20 pointer-events-none">
-        <div className="max-w-xl mx-auto flex">
+      {/* Fila flotante sobre el cielo, anclada al borde inferior del bloque
+          naranja (top-full) con un offset en px fijos: 36px que ocupa el pill
+          de stats + 4px de aire. Reloj a la izquierda (el ciclo de luz del mapa
+          sigue esta misma hora) y accesos rápidos + cofre a la derecha, ambos
+          en el mismo contenedor centrado max-w-xl para que arranquen a la misma
+          altura y a la misma distancia del naranja en cualquier pantalla.
+          La columna derecha es solo móvil: en escritorio vive en el sidebar. */}
+      <div className="absolute left-0 right-0 top-full mt-[40px] px-2 z-20 pointer-events-none">
+        <div className="max-w-xl mx-auto flex items-start justify-between gap-2">
           <div className="pointer-events-auto">
             <MapClock />
           </div>
-        </div>
-      </div>
-
-      {/* Accesos rápidos + cofre flotan sueltos sobre el cielo, apilados a la
-          derecha del mapa: tienda arriba, luego leaderboard y el cofre al final.
-          Solo en móvil: en escritorio esto vive en el sidebar (no se duplica). */}
-      <div className="absolute left-0 right-0 top-full mt-12 px-2 z-20 pointer-events-none md:hidden">
-        <div className="max-w-xl mx-auto flex justify-end">
-          <div className="flex flex-col items-center gap-2 pointer-events-auto">
+          <div className="flex flex-col items-center gap-2 pointer-events-auto md:hidden">
             <MapQuickActions />
             <DailyRewardChest />
           </div>
