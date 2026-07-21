@@ -32,6 +32,9 @@ type FormState = {
   // non-negative integers on submit.
   dailyGoldCoins: string;
   dailyCheckinExperience: string;
+  // Duración de un día del reloj de juego, en segundos reales. String mientras
+  // se edita; se parsea a entero al guardar.
+  gameDayLengthSeconds: string;
   // Edited inline as a list of rows; each blank-hint row stores hint: ''.
   currencies: Option[];
   languages: Option[];
@@ -45,6 +48,7 @@ const emptyForm = (): FormState => ({
   cycleDurationMs: '',
   dailyGoldCoins: '0',
   dailyCheckinExperience: '0',
+  gameDayLengthSeconds: '1200',
   currencies: [],
   languages: [],
 });
@@ -61,6 +65,7 @@ const formFromConfig = (c: ProjectConfig): FormState => ({
   cycleDurationMs: c.cycleDurationMs != null ? String(c.cycleDurationMs) : '',
   dailyGoldCoins: String(c.dailyGoldCoins ?? 0),
   dailyCheckinExperience: String(c.dailyCheckinExperience ?? 0),
+  gameDayLengthSeconds: String(c.gameDayLengthSeconds ?? 1200),
   currencies: toRows(c.currencies),
   languages: toRows(c.languages),
 });
@@ -207,6 +212,7 @@ export default function Page() {
     cycleDurationMs: form.cycleDurationMs.trim() ? Number(form.cycleDurationMs.trim()) : null,
     dailyGoldCoins: form.dailyGoldCoins.trim() ? Number(form.dailyGoldCoins.trim()) : 0,
     dailyCheckinExperience: form.dailyCheckinExperience.trim() ? Number(form.dailyCheckinExperience.trim()) : 0,
+    gameDayLengthSeconds: form.gameDayLengthSeconds.trim() ? Number(form.gameDayLengthSeconds.trim()) : 1200,
     currencies: buildOptions(form.currencies),
     languages: buildOptions(form.languages),
   });
@@ -247,6 +253,13 @@ export default function Page() {
       const xp = Number(form.dailyCheckinExperience.trim());
       if (!Number.isInteger(xp) || xp < 0) {
         addDangerToast('Invalid daily experience', 'Daily check-in experience must be a non-negative whole number.');
+        return;
+      }
+    }
+    if (form.gameDayLengthSeconds.trim()) {
+      const secs = Number(form.gameDayLengthSeconds.trim());
+      if (!Number.isInteger(secs) || secs < 1) {
+        addDangerToast('Invalid game day length', 'Game day length must be a positive whole number of seconds.');
         return;
       }
     }
@@ -342,6 +355,14 @@ export default function Page() {
             placeholder="Experience granted per daily check-in (0 disables it)"
             value={form.dailyCheckinExperience}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('dailyCheckinExperience', e.target.value)}
+          />
+
+          <Input
+            label="Game day length (seconds)"
+            type="number"
+            placeholder="Real seconds per full in-game day (e.g. 1200 = 20 min, 600 = 10 min)"
+            value={form.gameDayLengthSeconds}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('gameDayLengthSeconds', e.target.value)}
           />
 
           <Textarea

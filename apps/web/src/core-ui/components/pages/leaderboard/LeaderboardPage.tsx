@@ -426,6 +426,7 @@ export const LeaderboardPage = () => {
   return (
     <PageLayout
       title={t('leaderboard.title', 'Leaderboard')}
+      backHref="/home"
       contentClassName="!gap-3"
     >
       <LeaderboardSubHeader

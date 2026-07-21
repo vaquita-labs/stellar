@@ -1,6 +1,6 @@
 'use client';
 
-import { DesktopSidebar, MobileNavigation } from '@/components';
+import { DesktopSidebar } from '@/components';
 import { ConfigProvider, LoaderScreen, ProfileDataProvider } from '@/core-ui/components';
 import { useMapStore, useResize } from '@/core-ui/stores';
 import { usePathname } from 'next/navigation';
@@ -42,14 +42,9 @@ export function AppShell({
   const { ref } = useResize();
   const pathname = usePathname();
 
-  // Show the bottom navbar on `/profile` itself, but hide it on any deeper
-  // profile sub-route (settings, edit, wallet, friends, notifications, …).
-  const isProfileSubRoute = pathname?.startsWith('/profile/') ?? false;
-  // The notifications center is a detail screen with its own back button.
-  const isNotificationsRoute = pathname?.startsWith('/notifications') ?? false;
-  // Another player's world (`/leaderboard/<wallet>`) is a detail screen too —
-  // the header carries its own back button. The leaderboard list keeps the nav.
-  const isLeaderboardDetailRoute = pathname?.startsWith('/leaderboard/') ?? false;
+  // The bottom mobile navbar was removed: Shop and Leaderboard now live as
+  // floating actions under the daily-reward chest on the home map. The desktop
+  // sidebar stays, hidden while editing the map or on the /shop route.
   const isShopRoute = pathname?.startsWith('/shop') ?? false;
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const hideNavigation = isShopRoute || isEditingMap;
@@ -62,9 +57,6 @@ export function AppShell({
     <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
       {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
       <Main withSidebar={!isPublicRoute && !hideNavigation}>{children}</Main>
-      {!isPublicRoute && !isProfileSubRoute && !isNotificationsRoute && !isLeaderboardDetailRoute && !hideNavigation && (
-        <MobileNavigation />
-      )}
     </div>
   );
 }

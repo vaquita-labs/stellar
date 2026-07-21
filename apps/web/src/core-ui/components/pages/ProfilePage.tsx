@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
   useClaimedAchievements,
   useDepositsComplete,
@@ -253,16 +253,25 @@ export function ProfilePage() {
       <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-6">
         {/* Hero banner ------------------------------------------------ */}
         <header className="relative bg-primary px-4 sm:px-6 pt-5 pb-12 rounded-b-3xl border-b-2 border-black/10">
-          {/* Top action row — Profile is reachable from the nav, so no back button. */}
-          <div className="flex items-center justify-end gap-2">
-            <ShareProfileQrButton displayName={displayName} handle={handle} />
+          {/* Top action row — back on the left, actions on the right. */}
+          <div className="flex items-center justify-between gap-2">
             <Link
-              href="/profile/settings"
-              aria-label={t('profilePages.profile.settingsAria', 'Settings')}
+              href="/home"
+              aria-label={t('common.back')}
               className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
             >
-              <FiSettings className="h-4 w-4" />
+              <FiChevronLeft className="h-5 w-5" />
             </Link>
+            <div className="flex items-center gap-2">
+              <ShareProfileQrButton displayName={displayName} handle={handle} />
+              <Link
+                href="/profile/settings"
+                aria-label={t('profilePages.profile.settingsAria', 'Settings')}
+                className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
+              >
+                <FiSettings className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
 
           {/* Avatar + name */}

@@ -95,6 +95,8 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
     setEditMode(null);
     setPickedItem(null);
     setEditingObjectPosition(null);
+    // No dejar una colocación pendiente colgada entre sesiones de edición.
+    useMapStore.getState().setPendingPlacement(null);
     onOpenChange();
   };
 

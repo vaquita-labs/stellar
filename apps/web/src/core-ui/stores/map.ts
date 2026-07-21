@@ -35,6 +35,14 @@ export type MapStoreType = {
   setSelectedObject: (item: ObjectItem | null) => void;
   editingObjectPosition: [number, number, number] | null;
   setEditingObjectPosition: (position: [number, number, number] | null) => void;
+  /**
+   * Colocación pendiente de confirmar (modo ADD): guarda qué había en la celda
+   * antes de colocar, para poder revertirla si se cancela sin confirmar.
+   * `previous: null` = la celda no tenía entrada (expansión).
+   */
+  pendingPlacement: { position: [number, number, number]; previous: MapObject | null } | null;
+  setPendingPlacement: (pending: { position: [number, number, number]; previous: MapObject | null } | null) => void;
+  revertPendingPlacement: () => void;
   screenPosition: { x: number; y: number } | null;
   setScreenPosition: (position: { x: number; y: number } | null) => void;
   tileCorners: { x: number; y: number }[] | null;
@@ -105,6 +113,20 @@ export const useMapStore = create<MapStoreType>((set, get) => ({
   setSelectedObject: (item) => set({ selectedObject: item }),
   editingObjectPosition: null,
   setEditingObjectPosition: (position) => set({ editingObjectPosition: position }),
+  pendingPlacement: null,
+  setPendingPlacement: (pending) => set({ pendingPlacement: pending }),
+  revertPendingPlacement: () => {
+    set((state) => {
+      const pending = state.pendingPlacement;
+      if (!pending) return {};
+      const [x, , z] = pending.position;
+      const withoutCell = state.currentTiles.filter((tile) => tile.position[0] !== x || tile.position[2] !== z);
+      return {
+        currentTiles: pending.previous ? [...withoutCell, pending.previous] : withoutCell,
+        pendingPlacement: null,
+      };
+    });
+  },
   screenPosition: null,
   setScreenPosition: (position) => set({ screenPosition: position }),
   tileCorners: null,

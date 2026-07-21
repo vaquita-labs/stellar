@@ -1,15 +1,15 @@
 'use client';
 
 import { getJson } from '@/core-ui/api/http';
-import { Modal, toast } from '@heroui/react';
+import { toast } from '@heroui/react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertCircle, FiCamera, FiCopy, FiImage, FiLoader, FiShare2, FiUserPlus, FiX } from 'react-icons/fi';
+import { FiAlertCircle, FiCamera, FiCopy, FiImage, FiLoader, FiShare2, FiUserPlus } from 'react-icons/fi';
 import { useToggleFollow } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
-import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
+import { AppModal } from '../../molecules/AppModal';
 
 interface ShareProfileModalProps {
   open: boolean;
@@ -589,105 +589,49 @@ export function ShareProfileModal({
   };
 
   /* ---------------------------------------------------------------- */
-  /* Bottom-sheet layout — same pattern as `AchievementModal`. The dialog
-   * fills the screen from the bottom edge, with rounded top corners, an
-   * X-on-left + drag-handle-center header, centered content, and an
-   * anchored CTA bar at the bottom. `aria-label` on the Dialog silences
-   * the React Aria "Dialog must have a title" warning that otherwise
-   * triggered an extra commit-time re-render (visible as a close flicker).
-   *
-   * El slide entra/sale por las SHEET_* de AppModal (el container anima, el
-   * backdrop solo atenúa su color). No usar framer-motion acá: su `exit`
-   * nunca corre porque React Aria desmonta sin AnimatePresence.
-   */
+  /* Usa el AppModal compartido para que el marco (hoja con borde, header con
+   * título centrado + X, footer anclado y la misma animación de entrada/salida)
+   * sea idéntico al resto de los modales de la app. El QR / cámara y las tabs
+   * viven en el body; las acciones de compartir/copiar, en el footer de la
+   * pestaña "Mi QR". */
   return (
-    <Modal.Backdrop
-      isOpen={open}
-      isDismissable
-      onOpenChange={(o) => {
-        if (!o) onOpenChange(false);
-      }}
-      className={'bg-black/70 backdrop-blur-sm ' + SHEET_BACKDROP_ANIMATION}
-    >
-      <Modal.Container
-        size="full"
-        placement="bottom"
-        scroll="inside"
-        className={'p-0! m-0! sm:items-center sm:justify-center sm:p-4! ' + SHEET_CONTAINER_ANIMATION}
-      >
-        <Modal.Dialog
-          aria-label={tab === 'mine' ? t('social.share.dialogLabelMine') : t('social.share.dialogLabelScan')}
-          className="bg-background m-0! p-0! rounded-t-3xl sm:rounded-3xl border-0 max-h-dvh sm:max-h-[90vh] sm:max-w-md sm:w-full sm:mx-auto"
-        >
-          <div className="flex flex-col h-full min-h-dvh w-full sm:min-h-0 sm:h-auto sm:max-h-[90vh]">
-            {/* Header — solo la X, a la derecha como en el resto de los
-                modales de la app (AppModal / FollowListModal). */}
-            <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-3">
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                aria-label={t('common.close')}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition"
-              >
-                <FiX className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Tab switch — bounded width so it doesn't stretch on tablets. */}
-            <div className="px-5 sm:px-10 pb-2">
-              <div className="max-w-md mx-auto">
-                <TabSwitch value={tab} onChange={setTab} />
-              </div>
-            </div>
-
-            {/* Centered content area — matches AchievementModal exactly. No
-                custom overflow / fixed height: when the content exceeds the
-                viewport, `Modal.Container scroll="inside"` makes the whole
-                modal scroll. Stacking a hand-rolled overflow scroller here
-                was forcing a layout recompute during the close animation,
-                which read on screen as a flicker. */}
-            <div className="flex-1 flex flex-col items-center justify-center px-6 pb-4">
-              <div className="w-full max-w-md">
-                {tab === 'mine' ? (
-                  <MyQrView
-                    url={url}
-                    displayName={displayName}
-                    handle={handle}
-                    avatarSrc={avatarSrc}
-                  />
-                ) : (
-                  <ScanQrView ownWallet={walletAddress ?? null} onFollowed={handleFollowed} />
-                )}
-              </div>
-            </div>
-
-            {/* Anchored bottom CTA bar — only on the "My QR" tab. The scan
-                view manages its own state-dependent buttons inline. */}
-            {tab === 'mine' && (
-              <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
-                <div className="max-w-md mx-auto flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={handleNativeShare}
-                    className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-                  >
-                    <FiShare2 className="h-4 w-4" />
-                    {t('social.share.shareLink')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-                  >
-                    <FiCopy className="h-4 w-4" />
-                    {t('social.share.copyLink')}
-                  </button>
-                </div>
-              </div>
-            )}
+    <AppModal
+      open={open}
+      onOpenChange={() => onOpenChange(false)}
+      title={t('social.share.title', 'Share profile')}
+      size="md"
+      bodyClassName="flex flex-col gap-4 pb-5"
+      footer={
+        tab === 'mine' ? (
+          <div className="flex w-full flex-col gap-2">
+            <button
+              type="button"
+              onClick={handleNativeShare}
+              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+            >
+              <FiShare2 className="h-4 w-4" />
+              {t('social.share.shareLink')}
+            </button>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+            >
+              <FiCopy className="h-4 w-4" />
+              {t('social.share.copyLink')}
+            </button>
           </div>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+        ) : undefined
+      }
+    >
+      <TabSwitch value={tab} onChange={setTab} />
+      <div className="flex-1 flex flex-col items-center justify-center">
+        {tab === 'mine' ? (
+          <MyQrView url={url} displayName={displayName} handle={handle} avatarSrc={avatarSrc} />
+        ) : (
+          <ScanQrView ownWallet={walletAddress ?? null} onFollowed={handleFollowed} />
+        )}
+      </div>
+    </AppModal>
   );
 }

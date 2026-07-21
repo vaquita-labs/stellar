@@ -88,17 +88,44 @@ const toAchievementDoc = (a: PrismaAchievement): AchievementDocument => ({
 });
 
 /**
- * Lean active-deposit signals for XP / eligibility. Reads deposits by wallet
- * (single-network: `network_id` was dropped) and replicates the
- * `DEPOSIT_SUCCESS` rule from the deposit service without pulling in the full
- * token-network DTO machinery (that lives in the deposit domain).
+ * XP a deposit has generated: `sqrt(amount) * sqrt(hours the money was working)`.
  *
- * A deposit is "active" (DEPOSIT_SUCCESS) when it is confirmed on-chain
- * (`status='confirmed'` + tx hash + deposit id) and has no withdrawal rows yet.
+ * `endTimestamp` is what makes XP monotonic. While a deposit is active it is
+ * `now`, so XP keeps growing. Once withdrawn it freezes at the withdrawal
+ * instant instead of dropping to zero — the XP the money earned while it was
+ * committed stays earned, it just stops accruing. Without this, withdrawing
+ * silently deleted XP and could re-lock an already-earned badge.
  */
-const getActiveDepositSignalsByWallet = async (
+export const depositExperience = (
+  amount: number,
+  createdTimestamp: number,
+  endTimestamp: number,
+): number => {
+  const timeElapsed = Math.max(endTimestamp - createdTimestamp, 0);
+  return Math.sqrt(amount || 0) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
+};
+
+/** When a deposit stopped accruing XP: its first withdrawal, or `null` if still active. */
+const withdrawnAt = (withdrawals: { createdAt: Date | null }[]): number | null => {
+  if (withdrawals.length === 0) return null;
+  const stamps = withdrawals.map((w) => w.createdAt?.getTime() ?? 0).filter((t) => t > 0);
+  return stamps.length > 0 ? Math.min(...stamps) : null;
+};
+
+/**
+ * Deposit signals for XP / eligibility. Reads deposits by wallet (single-network:
+ * `network_id` was dropped) and replicates the `DEPOSIT_SUCCESS` rule from the
+ * deposit service without pulling in the full token-network DTO machinery (that
+ * lives in the deposit domain).
+ *
+ * A deposit counts as confirmed on-chain when `status='confirmed'` with a tx hash
+ * and deposit id. `active` distinguishes "still in the vault" (no withdrawal) from
+ * "withdrawn" — active drives balance-style signals, while *every* confirmed
+ * deposit contributes XP (frozen at withdrawal for the withdrawn ones).
+ */
+const getDepositSignalsByWallet = async (
   walletAddress: string,
-): Promise<{ amount: number; createdTimestamp: number }[]> => {
+): Promise<{ amount: number; createdTimestamp: number; endTimestamp: number; active: boolean }[]> => {
   const deposits = await prisma.deposit.findMany({
     where: { walletAddress, deletedAt: null },
     select: {
@@ -107,22 +134,24 @@ const getActiveDepositSignalsByWallet = async (
       transactionHash: true,
       depositIdHex: true,
       createdAt: true,
-      withdrawals: { select: { id: true } },
+      withdrawals: { select: { createdAt: true } },
     },
   });
 
+  const now = Date.now();
   return deposits
     .filter(
-      (d) =>
-        d.status === DepositStatus.CONFIRMED &&
-        !!d.transactionHash &&
-        !!d.depositIdHex &&
-        d.withdrawals.length === 0,
+      (d) => d.status === DepositStatus.CONFIRMED && !!d.transactionHash && !!d.depositIdHex,
     )
-    .map((d) => ({
-      amount: Number(d.amount ?? 0),
-      createdTimestamp: d.createdAt?.getTime() ?? 0,
-    }));
+    .map((d) => {
+      const closedAt = withdrawnAt(d.withdrawals);
+      return {
+        amount: Number(d.amount ?? 0),
+        createdTimestamp: d.createdAt?.getTime() ?? 0,
+        endTimestamp: closedAt ?? now,
+        active: closedAt === null,
+      };
+    });
 };
 
 export const getProfiles = async () => {
@@ -538,7 +567,9 @@ export const getExperienceByProfile = async (
     }
 
     // Deposit-derived XP: identical formula to the single-profile path, summed
-    // per wallet from the live active deposits (confirmed on-chain, not withdrawn).
+    // per wallet. Withdrawn deposits still count — their XP is frozen at the
+    // withdrawal instant (see {@link depositExperience}) rather than dropped, so
+    // leaderboard XP is monotonic just like the profile endpoint.
     const deposits = await prisma.deposit.findMany({
       where: { deletedAt: null, status: DepositStatus.CONFIRMED },
       select: {
@@ -547,17 +578,20 @@ export const getExperienceByProfile = async (
         transactionHash: true,
         depositIdHex: true,
         createdAt: true,
-        withdrawals: { select: { id: true } },
+        withdrawals: { select: { createdAt: true } },
       },
     });
     const now = Date.now();
     const depositXpByWallet = new Map<string, number>();
     for (const d of deposits) {
-      if (!d.transactionHash || !d.depositIdHex || d.withdrawals.length > 0) {
+      if (!d.transactionHash || !d.depositIdHex) {
         continue;
       }
-      const timeElapsed = Math.max(now - (d.createdAt?.getTime() ?? 0), 0);
-      const xp = Math.sqrt(Number(d.amount ?? 0)) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
+      const xp = depositExperience(
+        Number(d.amount ?? 0),
+        d.createdAt?.getTime() ?? 0,
+        withdrawnAt(d.withdrawals) ?? now,
+      );
       depositXpByWallet.set(d.walletAddress, (depositXpByWallet.get(d.walletAddress) ?? 0) + xp);
     }
 
@@ -578,10 +612,9 @@ export const getExperienceByProfile = async (
 export const toProfileExperienceResponseDTO = async (networkName: string, profile: Profile): Promise<ProfileExperienceResponseDTO> => {
   let experience = 0;
   try {
-    const deposits = await getActiveDepositSignalsByWallet(profile.wallet_address);
+    const deposits = await getDepositSignalsByWallet(profile.wallet_address);
     for (const deposit of deposits) {
-      const timeElapsed = Math.max(Date.now() - deposit.createdTimestamp, 0);
-      experience += Math.sqrt(deposit.amount || 0) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
+      experience += depositExperience(deposit.amount, deposit.createdTimestamp, deposit.endTimestamp);
     }
   } catch (error) {
     console.warn('error on toProfileExperienceResponseDTO', error);
@@ -1026,15 +1059,28 @@ export const computeEligibilitySignals = async (
   let activeAmount = 0;
   let experience = 0;
   try {
-    const deposits = await getActiveDepositSignalsByWallet(profile.wallet_address);
+    const deposits = await getDepositSignalsByWallet(profile.wallet_address);
     for (const deposit of deposits) {
-      activeDeposits++;
-      activeAmount += deposit.amount || 0;
-      const timeElapsed = Math.max(Date.now() - deposit.createdTimestamp, 0);
-      experience += Math.sqrt(deposit.amount || 0) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
+      // Balance-style signals count only money still in the vault...
+      if (deposit.active) {
+        activeDeposits++;
+        activeAmount += deposit.amount || 0;
+      }
+      // ...but XP is earned history: withdrawn deposits keep what they accrued.
+      experience += depositExperience(deposit.amount, deposit.createdTimestamp, deposit.endTimestamp);
     }
   } catch (error) {
     console.warn('[eligibility] failed to load deposits', error);
+  }
+
+  // Check-in XP is part of the XP the user is shown (see
+  // toProfileExperienceResponseDTO), so a rule like "earn 300 XP" must evaluate
+  // the same total — otherwise the profile says 306 XP while the badge rule sees
+  // only the deposit share and stays locked.
+  try {
+    experience += await getCheckinExperience(profile.id);
+  } catch (error) {
+    console.warn('[eligibility] failed to load check-in experience', error);
   }
 
   let streakCount = 0;
@@ -1084,6 +1130,65 @@ export const isAchievementEligible = (
   return evaluateRule(achievement.rule, signals);
 };
 
+// ---------------------------------------------------------------------------
+// Unlock latch — a badge is never un-earned.
+//
+// Every rule signal can go down: withdraw a deposit and `activeDeposits` /
+// `activeAmount` drop, miss a day and `streakCount` resets, unfollow and
+// `friendsCount` falls. Evaluating the live rule alone therefore re-locked
+// badges the user had already been shown as earned. The latch records the first
+// moment a profile satisfied a rule, and eligibility is read as
+// `liveRule(signals) OR latched` — the rule can only ever open it.
+// ---------------------------------------------------------------------------
+
+/** Achievement ids this profile has ever satisfied the rule for. */
+export const getUnlockedAchievementIds = async (profileId: number): Promise<Set<string>> => {
+  try {
+    const rows = await prisma.profileAchievementUnlock.findMany({
+      where: { profileId },
+      select: { achievementId: true },
+    });
+    return new Set(rows.map((row) => String(row.achievementId)));
+  } catch (error) {
+    console.warn('[eligibility] failed to load unlock latches', error);
+    return new Set<string>();
+  }
+};
+
+/**
+ * Record that this profile now satisfies these badges' rules. Idempotent —
+ * `skipDuplicates` keeps the original `unlocked_at` so the latch always reflects
+ * the *first* time the badge was earned. Best-effort: a failure here must never
+ * break the catalog response, it just means the latch is written on a later read.
+ */
+export const latchAchievementUnlocks = async (
+  profileId: number,
+  achievementIds: bigint[],
+): Promise<void> => {
+  if (achievementIds.length === 0) return;
+  try {
+    await prisma.profileAchievementUnlock.createMany({
+      data: achievementIds.map((achievementId) => ({ profileId, achievementId })),
+      skipDuplicates: true,
+    });
+  } catch (error) {
+    console.warn('[eligibility] failed to persist unlock latches', error);
+  }
+};
+
+/**
+ * Eligibility for a rule badge, latch included: true when the live rule passes
+ * now **or** when it passed at any point in the past. Use this instead of
+ * {@link isAchievementEligible} anywhere a user-facing decision is made (catalog
+ * rows, voucher issuance, mint finalization) so the answer can never regress.
+ */
+export const isAchievementUnlocked = (
+  achievement: AchievementDocument,
+  signals: EligibilitySignals,
+  latched: Set<string>,
+): boolean =>
+  isAchievementEligible(achievement, signals) || latched.has(String(achievement.id));
+
 export const toProfileAchievementsResponseDTO = async (
   networkName: string,
   profile: Profile,
@@ -1091,14 +1196,20 @@ export const toProfileAchievementsResponseDTO = async (
   // One set of DB calls feeds both the catalog AND the per-row eligibility
   // computation below. computeEligibilitySignals reuses the deposit-signals
   // helper so this isn't free, but it's bounded — a small handful of queries.
-  const [allRes, claimedRes, signals, minted, activeClaims, awardCycleId] = await Promise.all([
+  const [allRes, claimedRes, signals, minted, activeClaims, awardCycleId, latched] = await Promise.all([
     getAllAchievements(),
     getClaimedAchievements(profile.id),
     computeEligibilitySignals(profile),
     getMintedBadges(profile.wallet_address),
     getActiveBadgeClaimsForWallet(profile.wallet_address),
     getLastClosedCycleId(),
+    getUnlockedAchievementIds(profile.id),
   ]);
+
+  // This read is where a newly-met rule gets latched: anything eligible right now
+  // that isn't on record yet is persisted below, so the unlock survives the
+  // signal falling back down later.
+  const newlyUnlocked: bigint[] = [];
 
   const claimedById = new Map<number, ProfileAchievement>(
     claimedRes.data.map((row) => [row.achievement_id, row]),
@@ -1134,10 +1245,13 @@ export const toProfileAchievementsResponseDTO = async (
         a.key === Achievement.THIRD_PLACE
           ? leaderboardRank !== null && leaderboardRank >= 3 && leaderboardRank <= 10
           : leaderboardRank === exactRank[a.key];
+      if (isAchievementEligible(a, signals) && !latched.has(String(a.id))) {
+        newlyUnlocked.push(BigInt(a.id));
+      }
       const eligible =
         a.unlock_type === 'cycle_rank'
           ? cycleRankEligible && !claim
-          : isAchievementEligible(a, signals);
+          : isAchievementUnlocked(a, signals, latched);
       const claimState = mintedForKey
         ? 'minted'
         : claim
@@ -1170,6 +1284,8 @@ export const toProfileAchievementsResponseDTO = async (
         displayOrder: a.display_order ?? 0,
       };
     });
+
+  await latchAchievementUnlocks(profile.id, newlyUnlocked);
 
   return {
     walletAddress: profile?.wallet_address || '',

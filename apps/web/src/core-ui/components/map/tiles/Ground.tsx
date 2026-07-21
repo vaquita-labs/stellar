@@ -18,6 +18,7 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
   const isReplaceablePosition = useMapStore((store) => store.isReplaceablePosition);
   const pickedObject = useMapStore((store) => store.pickedObject);
   const updateTile = useMapStore((store) => store.updateTile);
+  const setPendingPlacement = useMapStore((store) => store.setPendingPlacement);
   const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
   const editingObjectPosition = useMapStore((store) => store.editingObjectPosition);
   const groundRef = useRef<THREE.Group>(null);
@@ -68,6 +69,9 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
           return;
         }
 
+        // Guardar qué había en la celda: si se cancela sin confirmar, la
+        // colocación se revierte (revertPendingPlacement).
+        setPendingPlacement({ position, previous: useMapStore.getState().getTileAt(x, z) ?? null });
         updateTile(position, {
           variant: pickedObject.variant,
           type: pickedObject.type,
@@ -100,7 +104,7 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
         setEditingObjectPosition(position);
       }
     },
-    [editMode, updateTile, pickedObject, isReplaceablePosition, setEditingObjectPosition, editingObjectPosition]
+    [editMode, updateTile, pickedObject, isReplaceablePosition, setEditingObjectPosition, editingObjectPosition, setPendingPlacement]
   );
   const hasEditMode = !!editMode;
 
@@ -202,6 +206,13 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
             rotation={currentRotation}
             isEditing={isEditing}
             spawnAnimation={justPlacedKeyRef.current === `${position[0]},${position[2]}`}
+            // Los tiles de terreno emergen desde abajo: el pop los encoge y
+            // expone paredes/líneas de costa vecinas durante la animación.
+            spawnStyle={
+              type === MapObjectType.GRASS || type === MapObjectType.WATER || type === MapObjectType.ROAD
+                ? 'rise'
+                : 'pop'
+            }
             onClick={
               !!editMode && !isBlocked
                 ? (e) => {

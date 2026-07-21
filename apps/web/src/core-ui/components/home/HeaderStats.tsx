@@ -6,8 +6,8 @@ import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
-import { FiBell } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
+import { FiArrowUpRight, FiBell, FiZap } from 'react-icons/fi';
 import {
   useApyByLockPeriod,
   useDepositsComplete,
@@ -20,10 +20,19 @@ import {
 import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
 import { useModalPresence } from '../molecules/AppModal';
-import { BankAPYModal, CoinsModal, ExperienceModal, StreakModal } from '../organisms';
+import {
+  BankAPYModal,
+  CoinsModal,
+  EarningsModal,
+  ExperienceModal,
+  ReferralsModal,
+  StreakModal,
+  useReferralBoost,
+} from '../organisms';
 import { DailyRewardChest } from './DailyRewardChest';
+import { MapClock } from './MapClock';
+import { MapQuickActions } from './MapQuickActions';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
-import { EarnChip } from './EarnChip';
 
 export const HeaderStats = () => {
   const { t } = useTranslation();
@@ -31,11 +40,15 @@ export const HeaderStats = () => {
   const [showCoinsModal, setShowCoinsModal] = useState(false);
   const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
+  const [showEarningsModal, setShowEarningsModal] = useState(false);
+  const [showReferralsModal, setShowReferralsModal] = useState(false);
   // Mantienen el modal montado mientras corre la animación de salida.
   const streakModalMounted = useModalPresence(showStreakModal);
   const coinsModalMounted = useModalPresence(showCoinsModal);
   const experienceModalMounted = useModalPresence(showExperienceModal);
   const bankAPYModalMounted = useModalPresence(showBankAPYModal);
+  const earningsModalMounted = useModalPresence(showEarningsModal);
+  const referralsModalMounted = useModalPresence(showReferralsModal);
   const { walletAddress, token, lockPeriod } = useConfigStore();
   const hideBalance = useHideBalance();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
@@ -49,7 +62,7 @@ export const HeaderStats = () => {
   const { data: depositsData, isLoading: depositsLoading } = useDepositsComplete(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
-  const { isLoading: apyLoading } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
+  const { data: apyData, isLoading: apyLoading } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
 
   // Ganancia estimada (proyección a vencimiento) sumada desde cada depósito,
@@ -64,10 +77,29 @@ export const HeaderStats = () => {
       return { ...prev, [id]: earnings };
     });
   }, []);
-  const estimatedEarnings = activeDeposits.reduce((acc, d) => {
-    const earnings = earningsById[d.id];
-    return earnings ? acc + earnings.vaquita + earnings.protocol : acc;
-  }, 0);
+  const { vaquitaEarnings, protocolEarnings } = activeDeposits.reduce(
+    (acc, d) => {
+      const earnings = earningsById[d.id];
+      if (earnings) {
+        acc.vaquitaEarnings += earnings.vaquita;
+        acc.protocolEarnings += earnings.protocol;
+      }
+      return acc;
+    },
+    { vaquitaEarnings: 0, protocolEarnings: 0 },
+  );
+
+  // APY base (lo que rinde el ahorro hoy) y boost de referidos, que se suma
+  // aparte porque tiene su propia pantalla y su propio color en el header.
+  const baseApy = (apyData?.vaquitaApy ?? 0) + (apyData?.protocolApy ?? 0);
+  const { apyBonus } = useReferralBoost(walletAddress);
+
+  // El saldo se muestra completo (sin recortar a 2 decimales) porque el rendimiento
+  // se acumula en fracciones que el usuario quiere ver moverse.
+  const formattedBalance = activeDepositsTotalAmount.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  });
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -75,7 +107,6 @@ export const HeaderStats = () => {
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
   const experience = experienceData?.experience ?? 0;
 
-  const firstName = profileData?.nickname || profileData?.fullName?.split(' ')[0] || '';
   const unreadNotifications = useUnreadNotificationsCount();
 
   // Callback ref so the coin-animation target can live on either the editing-map
@@ -130,7 +161,7 @@ export const HeaderStats = () => {
 
   return (
     <div className="w-full relative">
-      {/* Reporta la ganancia estimada de cada depósito activo para el EarnChip. */}
+      {/* Reporta la ganancia estimada de cada depósito activo para el desglose. */}
       {activeDeposits.map((d) => (
         <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
       ))}
@@ -163,48 +194,59 @@ export const HeaderStats = () => {
             </div>
           </Link>
 
-          <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-sm font-normal text-black/90 truncate">
-              {firstName ? (
-                <Trans
-                  i18nKey="home.stats.greetingNamed"
-                  defaults="Your savings, <b>{{name}}</b>"
-                  values={{ name: firstName }}
-                  components={{ b: <span className="font-bold" /> }}
-                />
-              ) : (
-                t('home.stats.greeting', 'Your savings')
-              )}
-            </span>
+          <div className="flex flex-col min-w-0 flex-1 gap-1">
             <button
               type="button"
               onClick={() => setShowBankAPYModal(true)}
-              className="flex items-center gap-2 min-w-0 bg-transparent"
+              className="flex items-center min-w-0 bg-transparent text-left"
             >
               {depositsLoading && !depositsData ? (
                 <Spinner size="sm" color="current" />
               ) : (
-                <div data-tutorial="tutorial-balance" className='flex justify-end gap-1.5'>
-                  <span className="text-2xl font-bold text-black">
-                    {hideBalance ? '••••' : `$${activeDepositsTotalAmount.toFixed(2)}`}
-                  </span>
-                  <EarnChip
-                    deposits={activeDeposits}
-                    estimatedEarnings={estimatedEarnings}
-                    tokenSymbol={token?.symbol}
-                    isLoading={apyLoading || depositsLoading}
-                  />
-                </ div>
+                <span
+                  data-tutorial="tutorial-balance"
+                  className="text-xl font-bold text-black tabular-nums leading-none truncate"
+                >
+                  {hideBalance ? '••••' : `$${formattedBalance}`}
+                </span>
               )}
             </button>
+
+            {/* APY base (verde) y boost de referidos (morado): cada uno abre su
+                propia explicación. */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <button
+                type="button"
+                onClick={() => setShowEarningsModal(true)}
+                aria-label={t('home.stats.apyAria', 'Earnings breakdown')}
+                className="flex items-center gap-0.5 bg-transparent shrink-0"
+              >
+                <FiArrowUpRight className="w-3 h-3 text-[#0a5c2e] shrink-0" />
+                <span className="text-xs font-bold text-[#0a5c2e] tabular-nums leading-none whitespace-nowrap">
+                  {apyLoading ? '—' : `${baseApy.toFixed(2)}% APY`}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowReferralsModal(true)}
+                aria-label={t('home.stats.boostAria', 'Referral boost')}
+                className="flex items-center gap-0.5 bg-transparent shrink-0"
+              >
+                <FiZap className="w-3 h-3 text-[#5b1eb5] shrink-0" />
+                <span className="text-xs font-bold text-[#5b1eb5] tabular-nums leading-none whitespace-nowrap">
+                  {apyBonus.toFixed(2)}%
+                </span>
+              </button>
+            </div>
           </div>
 
           <Link
             href="/notifications"
             aria-label={t('notificationsCenter.bellAria', 'Notifications')}
-            className="relative shrink-0 w-10 h-10 rounded-full bg-white border border-[#B97204]/30 flex items-center justify-center"
+            className="relative shrink-0 self-start w-8 h-8 rounded-full bg-white border border-[#B97204]/30 flex items-center justify-center"
           >
-            <FiBell className="w-5 h-5 text-black" />
+            <FiBell className="w-4 h-4 text-black" />
             {unreadNotifications > 0 && (
               <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 border border-white text-[10px] font-bold text-white flex items-center justify-center tabular-nums">
                 {unreadNotifications > 9 ? '9+' : unreadNotifications}
@@ -214,8 +256,8 @@ export const HeaderStats = () => {
         </div>
       </div>
 
-      <div className="absolute left-0 right-0 -bottom-10 px-2 z-20 pointer-events-none">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-1.5  pointer-events-auto">
+      <div className="absolute left-0 right-0 -bottom-12 px-2 z-20 pointer-events-none">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white/60 backdrop-blur-md rounded-lg px-3 py-1.5  pointer-events-auto">
           <button
             type="button"
             onClick={() => setShowStreakModal(true)}
@@ -234,7 +276,7 @@ export const HeaderStats = () => {
                   priority
                   style={hasActiveStreak ? {} : { filter: 'grayscale(100%)' }}
                 />
-                <span className="text-sm font-bold text-black tabular-nums">
+                <span className="text-xs font-bold text-black tabular-nums">
                   {totalStreak}
                 </span>
               </>
@@ -257,7 +299,7 @@ export const HeaderStats = () => {
               className="object-contain"
               priority
             />
-            <span className="text-sm font-bold text-black tabular-nums">{goldCoins}</span>
+            <span className="text-xs font-bold text-black tabular-nums">{goldCoins}</span>
           </button>
 
           <div className="w-px h-4 bg-black/10" />
@@ -275,13 +317,32 @@ export const HeaderStats = () => {
               className="object-contain"
               priority
             />
-            <span className="text-sm font-bold text-black tabular-nums">
+            <span className="text-xs font-bold text-black tabular-nums">
               {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </span>
           </button>
+        </div>
+      </div>
 
-          <div className="w-px h-4 bg-black/10" />
+      {/* Reloj de la hora local real, DEBAJO del pill de stats (mt-14 lo baja
+          por debajo de la barra para que no la tape en móvil). Va en el mismo
+          contenedor centrado max-w-xl y alineado a su borde izquierdo, así en
+          escritorio queda junto a la barra y no se va a la esquina.
+          El ciclo de luz del mapa sigue esta misma hora, así que coinciden. */}
+      <div className="absolute left-0 right-0 top-full mt-14 px-2 z-20 pointer-events-none">
+        <div className="max-w-xl mx-auto flex">
+          <div className="pointer-events-auto">
+            <MapClock />
+          </div>
+        </div>
+      </div>
 
+      {/* Accesos rápidos + cofre flotan sueltos sobre el cielo, apilados a la
+          derecha del mapa: tienda arriba, luego leaderboard y el cofre al final.
+          Solo en móvil: en escritorio esto vive en el sidebar (no se duplica). */}
+      <div className="absolute right-4 top-full mt-12 z-20 pointer-events-none md:hidden">
+        <div className="flex flex-col items-center gap-2 pointer-events-auto">
+          <MapQuickActions />
           <DailyRewardChest />
         </div>
       </div>
@@ -292,6 +353,20 @@ export const HeaderStats = () => {
         <ExperienceModal open={showExperienceModal} onOpenChange={() => setShowExperienceModal(false)} experience={experience} />
       )}
       {bankAPYModalMounted && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
+      {earningsModalMounted && (
+        <EarningsModal
+          open={showEarningsModal}
+          onOpenChange={() => setShowEarningsModal(false)}
+          vaquitaEarnings={vaquitaEarnings}
+          protocolEarnings={protocolEarnings}
+          protocolApy={apyData?.protocolApy ?? 0}
+          lendingMarketName={apyData?.lendingMarketName}
+          tokenSymbol={token?.symbol}
+        />
+      )}
+      {referralsModalMounted && (
+        <ReferralsModal open={showReferralsModal} onOpenChange={() => setShowReferralsModal(false)} />
+      )}
     </div>
   );
 };
