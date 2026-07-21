@@ -340,10 +340,12 @@ export const HeaderStats = () => {
       {/* Accesos rápidos + cofre flotan sueltos sobre el cielo, apilados a la
           derecha del mapa: tienda arriba, luego leaderboard y el cofre al final.
           Solo en móvil: en escritorio esto vive en el sidebar (no se duplica). */}
-      <div className="absolute right-4 top-full mt-12 z-20 pointer-events-none md:hidden">
-        <div className="flex flex-col items-center gap-2 pointer-events-auto">
-          <MapQuickActions />
-          <DailyRewardChest />
+      <div className="absolute left-0 right-0 top-full mt-12 px-2 z-20 pointer-events-none md:hidden">
+        <div className="max-w-xl mx-auto flex justify-end">
+          <div className="flex flex-col items-center gap-2 pointer-events-auto">
+            <MapQuickActions />
+            <DailyRewardChest />
+          </div>
         </div>
       </div>
 
