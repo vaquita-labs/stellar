@@ -13,6 +13,8 @@ import {
   type ReconciliationRunInput,
 } from '@vaquita/shared/services/reconciliation/index';
 
+import { logger } from '../lib/logger';
+
 type CliOptions = {
   fromLedger: number | null;
   toLedger: number | null;
@@ -215,10 +217,21 @@ const main = async () => {
   });
 
   if (range.clamped) {
-    console.error(
-      `reconciliation range clamped to RPC retention window ${oldestLedger}-${latestLedger}: ` +
-        `requested ${range.requestedStartLedger}-${range.requestedEndLedger}, using ${range.startLedger}-${range.endLedger}. ` +
-        'Ledgers outside the retained window were skipped.',
+    logger.warn(
+      {
+        event: 'reconciliation_range_clamped',
+        job: options.job,
+        network: options.network,
+        range_source: range.source,
+        oldest_ledger: oldestLedger,
+        latest_ledger: latestLedger,
+        requested_start_ledger: range.requestedStartLedger,
+        requested_end_ledger: range.requestedEndLedger,
+        start_ledger: range.startLedger,
+        end_ledger: range.endLedger,
+        skipped_ledgers: Math.max(0, range.startLedger - range.requestedStartLedger),
+      },
+      'reconciliation range clamped to RPC retention window — skipped ledgers are unrecoverable from RPC events',
     );
   }
 
