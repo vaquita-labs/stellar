@@ -1667,7 +1667,6 @@
       "networkHint": "Esta dirección tiene que ser de la red {{network}}.",
       "paste": "Pegar",
       "pasteInvalid": "Eso no parece una dirección válida de {{network}}",
-      "pasteManual": "Pegá la dirección en el campo",
       "save": "Guardar wallet"
     },
     "amountLabel": "Monto",

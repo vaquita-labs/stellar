@@ -1,3 +1,4 @@
+import { sfxPlace } from '@/core-ui/helpers/sfx';
 import { useFont } from '@/core-ui/hooks';
 import { useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -79,6 +80,7 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
           rotation: rotation || [0, 0, 0],
         });
         justPlacedKeyRef.current = `${x},${z}`;
+        sfxPlace();
 
         // Activar modo de edición para mostrar los botones flotantes
         setEditingObjectPosition(position);

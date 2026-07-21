@@ -11,7 +11,7 @@ import { DailyRewardModalProps } from './types';
 // Pantallas del modal:
 //  - confirm: cofre cerrado + "mantener presionado" (no revela el monto).
 //  - reward:  cofre abierto + monedas ganadas + botón "Siguiente".
-//  - streak:  fuego + racha actual + botón "Listo" (cierra).
+//  - streak:  llama + racha actual + botón "Listo" (cierra).
 type Step = 'confirm' | 'reward' | 'streak';
 
 // Cuánto hay que mantener presionado el cofre para abrirlo (ms). El anillo de
@@ -29,7 +29,6 @@ export function DailyRewardModal({
   const [step, setStep] = useState<Step>('confirm');
   const [isHolding, setIsHolding] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0); // 0..100
-  const [isCollecting, setIsCollecting] = useState(false);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef(0);
   // Se pone en true al llegar al 100% del hold y evita que un pointerup tardío
@@ -50,34 +49,28 @@ export function DailyRewardModal({
       setStep('confirm');
       setIsHolding(false);
       setHoldProgress(0);
-      setIsCollecting(false);
       completingRef.current = false;
     }
     return stopRaf;
   }, [open, stopRaf]);
 
-  // Al llegar al 100% del hold: dispara el collect. Mientras la red responde el
-  // cofre sigue cerrado y agitándose (no revelamos el premio hasta el éxito).
-  const completeHold = useCallback(async () => {
+  // Al completar el hold pasamos AL INSTANTE a la pantalla de premio: el monto
+  // ya lo conocemos (coinsToCollect), así que no esperamos a la red. El collect
+  // corre en segundo plano; si falla, volvemos al cofre cerrado para reintentar.
+  const completeHold = useCallback(() => {
     stopRaf();
-    setIsCollecting(true);
-    try {
-      await onCollect();
-      setStep('reward');
-      setIsHolding(false);
-    } catch (err) {
+    setIsHolding(false);
+    setStep('reward');
+    onCollect().catch((err) => {
       console.error('DailyRewardModal collect', err);
-      // Falló: volvemos al cofre cerrado para que pueda reintentar.
-      setIsHolding(false);
+      setStep('confirm');
       setHoldProgress(0);
       completingRef.current = false;
-    } finally {
-      setIsCollecting(false);
-    }
+    });
   }, [onCollect, stopRaf]);
 
   const startHold = useCallback(() => {
-    if (step !== 'confirm' || isCollecting || isHolding) return;
+    if (step !== 'confirm' || isHolding) return;
     setIsHolding(true);
     startRef.current = performance.now();
     const tick = () => {
@@ -86,31 +79,51 @@ export function DailyRewardModal({
       setHoldProgress(progress);
       if (progress >= 100) {
         completingRef.current = true;
-        void completeHold();
+        completeHold();
         return;
       }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [step, isCollecting, isHolding, completeHold]);
+  }, [step, isHolding, completeHold]);
 
   // Soltar (o sacar el dedo/cursor) antes de completar: cancela y reinicia el
   // anillo. Si ya se disparó el collect (completingRef) no se toca nada.
   const cancelHold = useCallback(() => {
-    if (completingRef.current || !isHolding || isCollecting) return;
+    if (completingRef.current || !isHolding) return;
     stopRaf();
     setIsHolding(false);
     setHoldProgress(0);
-  }, [isHolding, isCollecting, stopRaf]);
+  }, [isHolding, stopRaf]);
 
   // El modal ocupa toda la pantalla desde que se empieza a abrir el cofre y en
   // todas las pantallas de premio/racha.
-  const expanded = step !== 'confirm' || isHolding || isCollecting;
-  const busy = isHolding || isCollecting;
+  const expanded = step !== 'confirm' || isHolding;
 
   const ringDeg = holdProgress * 3.6;
   const chestPx = expanded ? 176 : 104;
   const ringPx = chestPx + 64;
+
+  // El botón vive en el footer (anclado abajo). Solo en las pantallas de premio
+  // y racha; la pantalla inicial se avanza manteniendo presionado el cofre.
+  const footer =
+    step === 'reward' ? (
+      <Button
+        onPress={() => setStep('streak')}
+        className="w-full bg-primary text-black border border-black border-b-2 font-semibold rounded-md"
+        size="lg"
+      >
+        {t('rewards.daily.nextButton', 'Next')}
+      </Button>
+    ) : step === 'streak' ? (
+      <Button
+        onPress={onOpenChange}
+        className="w-full bg-primary text-black border border-black border-b-2 font-semibold rounded-md"
+        size="lg"
+      >
+        {t('rewards.daily.doneButton', 'Done')}
+      </Button>
+    ) : undefined;
 
   return (
     <AppModal
@@ -119,16 +132,17 @@ export function DailyRewardModal({
       title={t('rewards.daily.title', 'Daily Reward')}
       size="sm"
       fullScreen={expanded}
+      footer={footer}
       // Una vez abierto el cofre solo se avanza/cierra con los botones: nada de
-      // backdrop ni X en las pantallas de premio/racha (ni mientras carga).
-      isDismissable={step === 'confirm' && !busy}
-      hideClose={step !== 'confirm' || busy}
+      // backdrop ni X en las pantallas de premio/racha (ni mientras se abre).
+      isDismissable={step === 'confirm' && !isHolding}
+      hideClose={step !== 'confirm' || isHolding}
     >
       <div
         className={
           'select-none ' +
           (expanded
-            ? 'flex flex-col items-center justify-center text-center gap-7 min-h-[70dvh] py-8'
+            ? 'flex flex-col items-center justify-center text-center gap-7 min-h-[68dvh] py-6'
             : 'flex flex-col items-center text-center gap-6 py-4')
         }
       >
@@ -170,28 +184,31 @@ export function DailyRewardModal({
               <span className="text-4xl font-bold text-black">+{coinsToCollect}</span>
               <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={56} height={56} priority draggable={false} className="pointer-events-none" />
             </motion.div>
-
-            <Button
-              onPress={() => setStep('streak')}
-              className="w-full max-w-xs bg-primary text-black border border-black border-b-2 font-semibold rounded-md"
-              size="lg"
-            >
-              {t('rewards.daily.nextButton', 'Next')}
-            </Button>
           </>
         ) : step === 'streak' ? (
           <>
-            <motion.span
+            <motion.div
               initial={{ scale: 0.5, opacity: 0, rotate: -8 }}
               animate={{ scale: 1, opacity: 1, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 220, damping: 14 }}
-              className="text-8xl leading-none"
-              style={{ filter: 'drop-shadow(0 0 18px rgba(251, 146, 60, 0.8))' }}
-              role="img"
-              aria-label={t('rewards.daily.streakAlt', 'streak')}
+              className="relative flex items-center justify-center"
             >
-              🔥
-            </motion.span>
+              <span
+                aria-hidden
+                className="absolute inset-0 m-auto rounded-full bg-orange-400 blur-2xl opacity-60"
+                style={{ width: 120, height: 120 }}
+              />
+              <Image
+                src="/icons/global/streak_face.png"
+                alt={t('rewards.daily.streakAlt', 'streak')}
+                width={140}
+                height={140}
+                priority
+                draggable={false}
+                className="relative pointer-events-none"
+                style={{ filter: 'drop-shadow(0 0 16px rgba(251, 146, 60, 0.75))' }}
+              />
+            </motion.div>
 
             <motion.p
               initial={{ opacity: 0, y: 6 }}
@@ -205,14 +222,6 @@ export function DailyRewardModal({
             <p className="text-sm font-normal text-gray-600">
               {t('rewards.daily.streakSubtitle', 'Come back tomorrow to keep it going.')}
             </p>
-
-            <Button
-              onPress={onOpenChange}
-              className="w-full max-w-xs bg-primary text-black border border-black border-b-2 font-semibold rounded-md"
-              size="lg"
-            >
-              {t('rewards.daily.doneButton', 'Done')}
-            </Button>
           </>
         ) : (
           <>
@@ -226,7 +235,6 @@ export function DailyRewardModal({
               onPointerLeave={cancelHold}
               onPointerCancel={cancelHold}
               onContextMenu={(e) => e.preventDefault()}
-              disabled={isCollecting}
               className="relative flex items-center justify-center rounded-full bg-transparent touch-none select-none"
               style={{
                 width: ringPx,
@@ -242,7 +250,7 @@ export function DailyRewardModal({
                 aria-hidden
                 className="absolute inset-0 rounded-full transition-opacity"
                 style={{
-                  opacity: busy ? 1 : 0,
+                  opacity: isHolding ? 1 : 0,
                   background: `conic-gradient(#f59e0b ${ringDeg}deg, rgba(0,0,0,0.08) ${ringDeg}deg)`,
                   WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px))',
                   mask: 'radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px))',
@@ -253,15 +261,15 @@ export function DailyRewardModal({
               <span
                 aria-hidden
                 className="absolute inset-0 m-auto rounded-full bg-amber-400 blur-2xl transition-opacity"
-                style={{ width: chestPx, height: chestPx, opacity: busy ? 0.7 : 0.35 }}
+                style={{ width: chestPx, height: chestPx, opacity: isHolding ? 0.7 : 0.35 }}
               />
 
               {/* El cofre cerrado se agita mientras se mantiene presionado. */}
               <motion.span
                 className="relative inline-flex"
-                animate={busy ? { rotate: [-3, 3, -3], scale: [1, 1.05, 1] } : { rotate: 0, scale: 1 }}
+                animate={isHolding ? { rotate: [-3, 3, -3], scale: [1, 1.05, 1] } : { rotate: 0, scale: 1 }}
                 transition={
-                  busy
+                  isHolding
                     ? { duration: 0.16, repeat: Infinity, ease: 'easeInOut' }
                     : { duration: 0.2 }
                 }
@@ -281,20 +289,20 @@ export function DailyRewardModal({
 
             <AnimatePresence mode="wait">
               <motion.p
-                key={busy ? 'opening' : 'idle'}
+                key={isHolding ? 'opening' : 'idle'}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.2 }}
                 className="text-base font-semibold text-black"
               >
-                {busy
+                {isHolding
                   ? t('rewards.daily.opening', 'Opening…')
                   : t('rewards.daily.holdToOpen', 'Hold to open')}
               </motion.p>
             </AnimatePresence>
 
-            {!busy && (
+            {!isHolding && (
               <p className="text-sm font-normal text-gray-600">
                 {t('rewards.daily.confirmTitle', 'Your vaquita saved this for you today.')}
               </p>
