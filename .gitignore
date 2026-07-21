@@ -28,3 +28,5 @@ issues/**
 CLAUDE.md
 agents/
 ralph/
+
+snapshot.sql

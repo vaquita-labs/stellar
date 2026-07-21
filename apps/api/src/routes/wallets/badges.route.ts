@@ -356,6 +356,37 @@ router.get(
     }
     const cycleId = resolved.cycleId;
 
+    // Self-heal: the badge may already be minted on-chain while the DB never
+    // recorded it — the POST /:key/mint confirm can fail after the on-chain mint
+    // landed (a 401 across cluster instances, a network blip, a closed tab). In
+    // that state the on-chain slot Claimed(symbol, cycle, wallet) is already
+    // taken, so issuing another voucher only leads to a re-mint that reverts with
+    // AlreadyClaimed (#2). Detect it, reconcile the DB from the chain, and tell
+    // the client it is already minted instead of handing out a doomed voucher.
+    const alreadyMinted = await contractHasClaimed(badgesContractAddress, wallet, contractSymbol, cycleId);
+    if (alreadyMinted) {
+      // has_claimed is boolean-only, so the original mint tx hash is not available
+      // here; it is display-only (confirmedAt is what marks a badge minted for
+      // getMintedBadges), so we record a sentinel. Both writes are idempotent.
+      const confirmed = await confirmBadgeClaim(wallet, badgeType, cycleId, 'reconciled-onchain');
+      const finalize = await claimAchievement(profileData.id, achievement.key as Achievement);
+      req.log.warn(
+        { badgeType, wallet, cycleId, reconciledClaim: Boolean(confirmed), finalizeOk: finalize.success },
+        'Voucher requested for an already-minted badge — reconciled DB from chain',
+      );
+      await broadcastProfileChange('achievement-claimed', [
+        'profile-achievements',
+        'profile-rewards',
+        'profile-experience',
+      ]).catch((err) => req.log.error({ err, wallet, badgeType }, 'Broadcast failed after voucher reconcile'));
+      return lifecycleError(
+        res,
+        409,
+        'ALREADY_MINTED',
+        'This badge is already minted on-chain — your profile has been updated.',
+      );
+    }
+
     // Return existing unexpired active claim if present
     const existing = await getActiveBadgeClaim(wallet, badgeType, cycleId);
     if (existing) {

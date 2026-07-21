@@ -10,6 +10,12 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
 });
 
+// NOTE: API-service-only secrets (AUTH_SESSION_SECRET, BADGE_SIGNING_SEED) are
+// intentionally NOT validated here. This schema is the shared base; the
+// bridge-worker deploy runs from a separate image + env and must not be forced
+// to carry API secrets it never uses. Those live in apps/api/src/config/env.ts,
+// loaded only by the API entrypoint.
+
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
