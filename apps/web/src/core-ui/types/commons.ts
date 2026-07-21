@@ -1,5 +1,7 @@
 // Shared across frontend and backend
 
+import type { AvatarConfig } from '@vaquita/avatar';
+
 export enum WithdrawalStatus {
   INITIATED = 'initiated',
   CONFIRMED = 'confirmed',
@@ -146,7 +148,10 @@ export interface ProfileResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved by the
+   *  API — a profile that never opened the editor gets a stable wallet-seeded
+   *  avatar, so the client never needs a fallback of its own. */
+  avatarConfig: AvatarConfig;
   onboardingCompleted: boolean;
   tutorialCompleted: boolean;
   cryptoSavvy: boolean;
@@ -195,7 +200,10 @@ export interface FriendDTO {
   handle: string;
   nickname: string;
   fullName: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved by the
+   *  API — a profile that never opened the editor gets a stable wallet-seeded
+   *  avatar, so the client never needs a fallback of its own. */
+  avatarConfig: AvatarConfig;
   level: number;
   streak: number;
   followers: number;
@@ -294,7 +302,10 @@ export interface ProfileAverageResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved by the
+   *  API — a profile that never opened the editor gets a stable wallet-seeded
+   *  avatar, so the client never needs a fallback of its own. */
+  avatarConfig: AvatarConfig;
   walletAddress: string;
   totalSums: number;
   lastSum: number;
@@ -314,7 +325,10 @@ export interface LeaderboardResponseDTO {
   position: number;
   walletAddress: string;
   nickname: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved by the
+   *  API — a profile that never opened the editor gets a stable wallet-seeded
+   *  avatar, so the client never needs a fallback of its own. */
+  avatarConfig: AvatarConfig;
   badges: number;
   streak: number;
   experience: number;

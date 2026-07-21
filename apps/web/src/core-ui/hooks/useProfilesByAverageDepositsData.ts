@@ -1,3 +1,4 @@
+import { resolveAvatarConfig } from '@vaquita/avatar';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
 import { ProfileAverageResponseDTO } from '@/core-ui/types';
@@ -24,7 +25,7 @@ export const useProfilesByAverageDepositsData = () => {
           email: profile?.email ?? '',
           fullName: profile?.fullName ?? '',
           nickname: profile?.nickname ?? '',
-          avatarUrl: profile?.avatarUrl ?? '',
+          avatarConfig: resolveAvatarConfig(profile?.avatarConfig, profile?.walletAddress ?? ''),
           walletAddress: profile?.walletAddress ?? '',
           totalSums: profile?.totalSums ?? 0,
           lastSum: profile?.lastSum ?? 0,

@@ -492,21 +492,21 @@
       "purchaseErrorDesc": "Tente novamente.",
       "objects": {
         "tree": {
-          "default": "Árvore",
           "0": "Árvore",
-          "4": "Palmeira"
+          "4": "Palmeira",
+          "default": "Árvore"
         },
         "rock": {
-          "default": "Rocha",
-          "3": "Terreno rochoso"
+          "3": "Terreno rochoso",
+          "default": "Rocha"
         },
         "bush": {
-          "default": "Arbusto",
-          "0": "Arbusto"
+          "0": "Arbusto",
+          "default": "Arbusto"
         },
         "grass": {
-          "default": "Grama",
-          "0": "Terreno de grama"
+          "0": "Terreno de grama",
+          "default": "Grama"
         },
         "water": {
           "default": "Água"
@@ -574,12 +574,9 @@
       "profileAlt": "Perfil",
       "profileAria": "Perfil",
       "streakAlt": "Sequência",
-      "apyAria": "Detalhe dos ganhos",
+      "apyAria": "Portfólio",
       "boostAria": "Boost de indicações",
-      "greeting": "Olá,",
-      "earnings": {
-        "title": "Seus ganhos"
-      }
+      "greeting": "Olá,"
     },
     "totalDeposits": {
       "bagAlt": "Depósitos totais"
@@ -799,31 +796,112 @@
     }
   },
   "profilePages": {
+    "avatar": {
+      "title": "Editar avatar",
+      "save": "Salvar avatar",
+      "saved": "Avatar salvo",
+      "couldNotSave": "Não foi possível salvar seu avatar",
+      "randomize": "Surpreenda-me",
+      "colorGeneric": "Cor",
+      "category": {
+        "skin": "Pele",
+        "background": "Fundo",
+        "clothes": "Roupa",
+        "eyes": "Olhos",
+        "mouth": "Boca",
+        "facialHair": "Barba",
+        "hair": "Cabelo",
+        "earrings": "Brincos",
+        "glasses": "Óculos",
+        "hat": "Chapéu"
+      },
+      "color": {
+        "skin": "Tom de pele",
+        "background": "Cor de fundo",
+        "clothes": "Cor da roupa",
+        "hair": "Cor do cabelo",
+        "facialHair": "Cor da barba",
+        "earrings": "Metal"
+      },
+      "part": {
+        "eyes": {
+          "normal": "Normal",
+          "wink": "Piscadinha",
+          "happy": "Feliz",
+          "lashes": "Cílios"
+        },
+        "mouth": {
+          "smile": "Sorriso",
+          "grin": "Sorrisão",
+          "neutral": "Neutra"
+        },
+        "hair": {
+          "none": "Careca",
+          "buzz": "Raspado",
+          "short": "Curto",
+          "wavy": "Ondulado",
+          "curly": "Cacheado",
+          "afro": "Afro",
+          "bangs": "Franja",
+          "long": "Longo",
+          "ponytail": "Rabo de cavalo",
+          "bun": "Coque",
+          "braids": "Tranças"
+        },
+        "facialHair": {
+          "none": "Nenhuma",
+          "moustache": "Bigode",
+          "goatee": "Cavanhaque",
+          "beard": "Barba",
+          "full": "Barba cheia"
+        },
+        "earrings": {
+          "none": "Nenhum",
+          "studs": "Tarraxas",
+          "hoops": "Argolas",
+          "drops": "Pingentes",
+          "feathers": "Penas"
+        },
+        "glasses": {
+          "none": "Nenhum",
+          "round": "Redondos",
+          "square": "Quadrados",
+          "sunglasses": "De sol"
+        },
+        "hat": {
+          "none": "Nenhum",
+          "cap": "Boné",
+          "beanie": "Gorro",
+          "chullo": "Chullo",
+          "flower": "Flor",
+          "crown": "Coroa"
+        },
+        "clothes": {
+          "turtleneck": "Gola alta",
+          "tee": "Camiseta",
+          "hoodie": "Moletom",
+          "shirt": "Camisa",
+          "sweater": "Suéter"
+        }
+      }
+    },
     "edit": {
-      "changePhoto": "Trocar foto",
-      "chooseImageFile": "Escolha uma imagem JPG, PNG, WEBP ou GIF",
-      "couldNotRemovePhoto": "Não foi possível remover a foto",
+      "avatarAlt": "Seu avatar",
       "couldNotSaveProfile": "Não foi possível salvar o perfil",
-      "couldNotUpdatePhoto": "Não foi possível atualizar a foto",
       "couldNotUpdatePreferences": "Não foi possível atualizar as preferências",
+      "editAvatar": "Editar avatar",
+      "editAvatarHint": "Escolha seu cabelo, roupa, óculos e mais.",
       "email": "E-mail",
       "emailPlaceholder": "voce@exemplo.com",
-      "imageTooLarge": "A imagem é muito grande (máx. 5 MB).",
       "nickname": "Apelido",
       "nicknamePlaceholder": "@apelido",
       "onboardingCompleted": "Onboarding concluído",
       "onboardingCompletedDesc": "Marque o fluxo de onboarding inicial como concluído.",
-      "photoRemoved": "Foto removida",
-      "photoRequirements": "JPG, PNG, WEBP ou GIF · máx. 5 MB",
-      "photoUpdated": "Foto atualizada",
       "preferencesUpdated": "Preferências atualizadas",
       "profileFlags": "Flags do perfil",
-      "profilePhotoAlt": "Foto de perfil",
       "profileSaved": "Perfil salvo",
-      "removePhoto": "Remover foto",
       "saveChanges": "Salvar alterações",
       "someChangesNotSaved": "Algumas alterações não foram salvas",
-      "tapToChange": "Toque na foto para trocá-la.",
       "testingOnly": "Apenas testes",
       "title": "Editar perfil",
       "tutorialCompleted": "Tutorial concluído",
@@ -880,6 +958,7 @@
       "connectWalletTitle": "Conecte sua wallet",
       "daysCount_one": "{{count}} dia",
       "daysCount_other": "{{count}} dias",
+      "editAvatarAria": "Editar seu avatar",
       "editProfileAria": "Editar perfil",
       "experience": "Experiência",
       "followListError": "Não foi possível carregar a lista. Tente novamente.",
@@ -891,15 +970,15 @@
       "followingEmptyTitle": "Você ainda não segue ninguém",
       "gold": "Ouro",
       "handleJoined": "{{handle}} · entrou em {{joinedLabel}}",
-      "viewFollowers": "Ver seguidores",
-      "viewFollowing": "Ver seguindo",
       "seeAll": "Ver tudo de {{title}}",
       "seeAllAchievements": "Ver todas as conquistas",
       "seeFullSummary": "Ver resumo completo",
       "settingsAria": "Configurações",
       "streak": "Sequência",
       "summary": "Resumo",
-      "title": "Perfil"
+      "title": "Perfil",
+      "viewFollowers": "Ver seguidores",
+      "viewFollowing": "Ver seguindo"
     },
     "records": {
       "activeDeposits": "Depósitos ativos",
@@ -1735,6 +1814,39 @@
     },
     "user": {
       "back": "Voltar a explorar"
+    }
+  },
+  "portfolio": {
+    "title": "Portfólio",
+    "blendedApy": "Seu APY · combinado",
+    "totalBalance": "Saldo total",
+    "allocation": "Distribuição",
+    "manage": "Gerenciar distribuição",
+    "rewards": "Recompensas",
+    "empty": "Ainda não há prazos de poupança disponíveis.",
+    "detail": {
+      "description": "Descrição",
+      "descriptionText": "Os fundos guardados por {{period}} recebem uma parcela maior do fundo de recompensas da Vaquita. Quanto mais longo o prazo, maior o APY.",
+      "withdrawPeriod": "Período de saque",
+      "vaquitaApy": "APY do fundo da Vaquita",
+      "marketApy": "APY de {{market}}",
+      "tokenNote": "Os saldos são exibidos em {{token}}."
+    },
+    "move": {
+      "title": "Mover fundos",
+      "confirmTitle": "Confirmar movimentação",
+      "from": "De",
+      "to": "Para",
+      "swapAria": "Inverter direção",
+      "yourApy": "Seu APY",
+      "amount": "Valor",
+      "movePair": "Mover",
+      "apyChange": "Mudança de APY",
+      "processing": "Movendo fundos...",
+      "success": {
+        "title": "Fundos movidos!",
+        "subtitle": "${{amount}} movidos de {{from}} para {{to}}."
+      }
     }
   }
 }

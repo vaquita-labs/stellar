@@ -1,9 +1,6 @@
+import { normalizeAvatarConfig, resolveAvatarConfig } from '@vaquita/avatar';
 import { Router } from 'express';
-import multer from 'multer';
-import sharp from 'sharp';
-import { v4 } from 'uuid';
 import { isNicknameAllowed, isNicknameFormatValid } from '../../lib/nicknamePolicy';
-import { isStorageConfigured, putAvatar, removeAvatar } from '../../lib/storage';
 import { requireWalletSession } from '../../lib/walletAuth';
 import {
   broadcastProfileChange,
@@ -44,44 +41,12 @@ const router = Router();
 // Single-network: the network is implicit (one `config` row). Routes are keyed
 // by wallet only — the legacy /network/:networkName prefix was removed.
 
-// Avatar uploads are proxied through the API: the browser POSTs the raw file
-// here, we validate it and forward the bytes to MinIO. `memoryStorage` keeps the
-// file in a Buffer (avatars are small); the 5 MB cap is enforced by multer.
-const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
-const AVATAR_ALLOWED_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-const avatarUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: AVATAR_MAX_BYTES, files: 1 },
-}).single('file');
-
-// The client-declared mimetype is attacker-controlled, so we never store the
-// uploaded bytes verbatim. sharp must actually DECODE the pixels and we store
-// its re-encoded output instead — a non-image (HTML, script, polyglot) fails to
-// decode, and re-encoding drops anything that isn't pixels (EXIF/GPS, ICC,
-// embedded payloads). `limitInputPixels` rejects decompression bombs (tiny
-// files that inflate to enormous bitmaps), and the format check stops content
-// sharp can rasterize but we don't accept as an avatar (e.g. SVG).
-const AVATAR_MAX_DIMENSION = 512;
-const AVATAR_MAX_INPUT_PIXELS = 8192 * 8192;
-const AVATAR_DECODED_FORMATS = new Set(['jpeg', 'png', 'webp', 'gif']);
-
-async function processAvatarImage(
-  input: Buffer,
-  declaredMime: string,
-): Promise<{ body: Buffer; contentType: string; ext: string }> {
-  const animated = declaredMime === 'image/gif' || declaredMime === 'image/webp';
-  const image = sharp(input, { animated, limitInputPixels: AVATAR_MAX_INPUT_PIXELS });
-  const metadata = await image.metadata(); // throws when the bytes are not a decodable image
-  if (!metadata.format || !AVATAR_DECODED_FORMATS.has(metadata.format)) {
-    throw new Error(`Decoded format not allowed: ${metadata.format ?? 'unknown'}`);
-  }
-  const body = await image
-    .rotate() // bake in EXIF orientation before metadata is stripped
-    .resize(AVATAR_MAX_DIMENSION, AVATAR_MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 85 })
-    .toBuffer();
-  return { body, contentType: 'image/webp', ext: 'webp' };
-}
+// NOTE: the profile avatar is a character built from the @vaquita/avatar
+// catalog, never an uploaded image. There is deliberately no upload endpoint,
+// no object storage and no image processing in this service — a profile picture
+// can only ever be a set of catalog ids, which removes the whole class of
+// user-supplied-binary risks (polyglots, decompression bombs, EXIF, CSAM
+// moderation) from the product.
 
 router.get('/wallet/:walletAddress', async (req, res) => {
   const { walletAddress } = req.params;
@@ -516,46 +481,25 @@ router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req,
   return sendSuccess(res, result);
 });
 
-// Runs the multer middleware as a promise so we can validate inside the async
-// handler and surface upload errors (e.g. file too large) as clean JSON.
-const runAvatarUpload = (req: Parameters<typeof avatarUpload>[0], res: Parameters<typeof avatarUpload>[1]) =>
-  new Promise<void>((resolve, reject) => {
-    avatarUpload(req, res, (err: unknown) => (err ? reject(err) : resolve()));
-  });
-
-router.post('/wallet/:walletAddress/avatar', requireWalletSession, async (req, res) => {
+/**
+ * Save the user's character avatar.
+ *
+ * The body is a set of catalog ids + palette indices — never an image.
+ * `normalizeAvatarConfig` is the whole validation story: it keeps only keys the
+ * catalog knows, replaces unknown part ids with that category's default and
+ * clamps colour indices into their palette, so what lands in the DB is always
+ * renderable and can never carry attacker-controlled markup.
+ */
+router.put('/wallet/:walletAddress/avatar', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
-  req.log.info({ walletAddress }, 'POST /profile/.../avatar');
+  req.log.info({ walletAddress }, 'PUT /profile/.../avatar');
 
-  if (!isStorageConfigured) {
-    req.log.error('Avatar upload attempted but MinIO storage is not configured');
-    return sendError(res, 'Photo uploads are not available right now.', null, 503);
+  const body = req.body ?? {};
+  if (typeof body !== 'object' || Array.isArray(body)) {
+    return sendError(res, 'Invalid avatar configuration.', null, 400);
   }
 
-  try {
-    await runAvatarUpload(req, res);
-  } catch (err) {
-    const tooLarge = (err as { code?: string })?.code === 'LIMIT_FILE_SIZE';
-    req.log.warn({ err, walletAddress }, 'Avatar upload rejected by multer');
-    return sendError(res, tooLarge ? 'The image is too large (max 5 MB).' : 'Could not read the uploaded file.', null, 400);
-  }
-
-  const file = (req as unknown as { file?: { buffer: Buffer; mimetype: string; size: number } }).file;
-  if (!file) {
-    return sendError(res, 'No image file was provided.', null, 400);
-  }
-
-  if (!AVATAR_ALLOWED_MIMES.has(file.mimetype)) {
-    return sendError(res, 'Unsupported image type. Use JPG, PNG, WEBP or GIF.', null, 400);
-  }
-
-  let processed: { body: Buffer; contentType: string; ext: string };
-  try {
-    processed = await processAvatarImage(file.buffer, file.mimetype);
-  } catch (err) {
-    req.log.warn({ err, walletAddress, mimetype: file.mimetype, size: file.size }, 'Avatar rejected: file is not a valid image');
-    return sendError(res, 'The file is not a valid image. Use JPG, PNG, WEBP or GIF.', null, 400);
-  }
+  const avatarConfig = normalizeAvatarConfig(body);
 
   const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
 
@@ -565,65 +509,22 @@ router.post('/wallet/:walletAddress/avatar', requireWalletSession, async (req, r
   }
 
   try {
-    const key = `${profileData.id}/${v4()}.${processed.ext}`;
-    const { url } = await putAvatar({ key, body: processed.body, contentType: processed.contentType });
-
-    const previousKey = profileData.avatar_key ?? null;
-
-    const result = await prisma.profile.update({
+    await prisma.profile.update({
       where: { id: profileData.id },
-      data: { avatarUrl: url, avatarKey: key },
+      data: { avatarConfig },
     });
 
-    // Replace = delete the object we just superseded, after the DB points at the new one.
-    if (previousKey && previousKey !== key) await removeAvatar(previousKey);
-
     try {
-      await broadcastProfileChange('set-avatar', [ 'profile-data' ]);
+      await broadcastProfileChange('set-avatar', ['profile-data']);
     } catch (err) {
       req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (set-avatar)');
     }
 
-    req.log.info({ profileId: profileData.id, key }, 'Avatar updated');
-    return sendSuccess(res, { avatarUrl: result.avatarUrl });
+    req.log.info({ profileId: profileData.id }, 'Avatar updated');
+    return sendSuccess(res, { avatarConfig });
   } catch (err) {
-    req.log.error({ err, profileId: profileData.id }, 'Failed to upload avatar');
-    return sendError(res, 'Failed to upload photo', err, 500);
-  }
-});
-
-router.delete('/wallet/:walletAddress/avatar', requireWalletSession, async (req, res) => {
-  const { walletAddress } = req.params;
-  req.log.info({ walletAddress }, 'DELETE /profile/.../avatar');
-
-  const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
-
-  if (!success || !profileData) {
-    req.log.error({ errors, errorMessage, walletAddress }, 'Profile not resolved');
-    return sendError(res, errorMessage, errors, 404);
-  }
-
-  try {
-    const previousKey = profileData.avatar_key ?? null;
-
-    await prisma.profile.update({
-      where: { id: profileData.id },
-      data: { avatarUrl: null, avatarKey: null },
-    });
-
-    if (previousKey) await removeAvatar(previousKey);
-
-    try {
-      await broadcastProfileChange('set-avatar', [ 'profile-data' ]);
-    } catch (err) {
-      req.log.error({ err, profileId: profileData.id }, 'Failed to broadcast profile change (remove-avatar)');
-    }
-
-    req.log.info({ profileId: profileData.id }, 'Avatar removed');
-    return sendSuccess(res, { avatarUrl: '' });
-  } catch (err) {
-    req.log.error({ err, profileId: profileData.id }, 'Failed to remove avatar');
-    return sendError(res, 'Failed to remove photo', err, 500);
+    req.log.error({ err, profileId: profileData.id }, 'Failed to save avatar');
+    return sendError(res, 'Failed to save avatar', err, 500);
   }
 });
 
@@ -884,7 +785,7 @@ const toProfileByDepositsResponseDTO = (
       email: profile.email ?? '',
       fullName: profile.full_name ?? '',
       nickname: profile.nickname ?? '',
-      avatarUrl: profile.avatar_url ?? '',
+      avatarConfig: resolveAvatarConfig(profile.avatar_config, wallet),
       walletAddress: wallet,
       totalSums: sum,
       lastSum: sum,

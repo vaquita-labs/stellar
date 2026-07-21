@@ -1,3 +1,4 @@
+import { resolveAvatarConfig, type AvatarConfig } from '@vaquita/avatar';
 import { prisma } from '@vaquita/db';
 import {
   getAchievementCountsByProfile,
@@ -33,7 +34,10 @@ export const EXPLORE_MAX_PAGE_SIZE = 50;
 export interface ExploreProfileRow {
   walletAddress: string;
   nickname: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved
+   *  server-side — a profile that never opened the editor gets a stable
+   *  wallet-seeded avatar, so clients never have to guess a fallback. */
+  avatarConfig: AvatarConfig;
   badges: number;
   streak: number;
   experience: number;
@@ -91,7 +95,7 @@ async function buildExplorePool(): Promise<ExploreCandidate[]> {
       id: profile.id,
       walletAddress: profile.wallet_address ?? '',
       nickname: profile.nickname ?? '',
-      avatarUrl: profile.avatar_url ?? '',
+      avatarConfig: resolveAvatarConfig(profile.avatar_config, profile.wallet_address),
       badges: badgesByProfileId.get(profile.id) ?? 0,
       streak: streaksByProfileId.get(profile.id) ?? 0,
       experience: experienceByProfileId.get(profile.id) ?? 0,

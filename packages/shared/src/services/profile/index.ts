@@ -1,3 +1,4 @@
+import { resolveAvatarConfig } from '@vaquita/avatar';
 import { Prisma, prisma } from '@vaquita/db';
 import type { Achievement as PrismaAchievement, Profile as PrismaProfile } from '@vaquita/db';
 import { getCurrentDay } from '../../helpers/date';
@@ -54,8 +55,7 @@ const toProfileShape = (p: PrismaProfile): Profile => ({
   full_name: p.fullName ?? '',
   nickname: p.nickname ?? '',
   wallet_address: p.walletAddress,
-  avatar_url: p.avatarUrl ?? null,
-  avatar_key: p.avatarKey ?? null,
+  avatar_config: p.avatarConfig ?? null,
   onboarding_completed: p.onboardingCompleted ?? false,
   tutorial_completed: p.tutorialCompleted ?? false,
   crypto_savvy: p.cryptoSavvy ?? false,
@@ -515,7 +515,7 @@ export const toProfileResponseDTO = (networkName: string, profile: Profile): Pro
     email: profile.email ?? '',
     fullName: profile.full_name ?? '',
     nickname: profile.nickname ?? '',
-    avatarUrl: profile.avatar_url ?? '',
+    avatarConfig: resolveAvatarConfig(profile.avatar_config, profile.wallet_address),
     onboardingCompleted: profile.onboarding_completed ?? false,
     tutorialCompleted: profile.tutorial_completed ?? false,
     cryptoSavvy: profile.crypto_savvy ?? false,

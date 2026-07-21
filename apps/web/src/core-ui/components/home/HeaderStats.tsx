@@ -23,12 +23,13 @@ import { useModalPresence } from '../molecules/AppModal';
 import {
   BankAPYModal,
   CoinsModal,
-  EarningsModal,
   ExperienceModal,
+  PortfolioPanel,
   ReferralsModal,
   StreakModal,
   useReferralBoost,
 } from '../organisms';
+import { VaquitaAvatarCircle } from '../avatar/VaquitaAvatar';
 import { DailyRewardChest } from './DailyRewardChest';
 import { MapClock } from './MapClock';
 import { MapQuickActions } from './MapQuickActions';
@@ -40,14 +41,14 @@ export const HeaderStats = () => {
   const [showCoinsModal, setShowCoinsModal] = useState(false);
   const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
-  const [showEarningsModal, setShowEarningsModal] = useState(false);
+  const [showPortfolioPanel, setShowPortfolioPanel] = useState(false);
   const [showReferralsModal, setShowReferralsModal] = useState(false);
   // Mantienen el modal montado mientras corre la animación de salida.
   const streakModalMounted = useModalPresence(showStreakModal);
   const coinsModalMounted = useModalPresence(showCoinsModal);
   const experienceModalMounted = useModalPresence(showExperienceModal);
   const bankAPYModalMounted = useModalPresence(showBankAPYModal);
-  const earningsModalMounted = useModalPresence(showEarningsModal);
+  const portfolioPanelMounted = useModalPresence(showPortfolioPanel);
   const referralsModalMounted = useModalPresence(showReferralsModal);
   const { walletAddress, token, lockPeriod } = useConfigStore();
   const hideBalance = useHideBalance();
@@ -199,30 +200,12 @@ export const HeaderStats = () => {
       <div className="w-full px-4 pt-3 pb-3 bg-primary rounded-g">
         <div className="max-w-xl mx-auto flex items-center gap-3">
           <Link href="/profile" aria-label={t('home.stats.profileAria', 'Profile')} className="relative shrink-0">
-            <div className="relative w-14 h-14 rounded-full bg-white flex items-center justify-center overflow-hidden border border-[#B97204]/30">
-              {profileData?.avatarUrl ? (
-                // Real uploaded photo: fill the circle (object-cover). next/image
-                // fetches it server-side and re-serves over https, so an http
-                // MinIO source still renders on an https page.
-                <Image
-                  src={profileData.avatarUrl}
-                  alt={t('home.stats.profileAlt', 'Profile')}
-                  fill
-                  sizes="56px"
-                  className="object-cover"
-                  priority
-                />
-              ) : (
-                <Image
-                  src="/vaquita/vaquita_isotipo.svg"
-                  alt={t('home.stats.profileAlt', 'Profile')}
-                  width={42}
-                  height={42}
-                  className="object-contain"
-                  priority
-                />
-              )}
-            </div>
+            <VaquitaAvatarCircle
+              config={profileData?.avatarConfig}
+              seed={profileData?.walletAddress || walletAddress || ''}
+              alt={t('home.stats.profileAlt', 'Profile')}
+              className="h-14 w-14 border-[#B97204]/30"
+            />
           </Link>
 
           <div className="flex flex-col min-w-0 flex-1 gap-1">
@@ -255,14 +238,20 @@ export const HeaderStats = () => {
             <div className="flex items-center gap-2.5 min-w-0">
               <button
                 type="button"
-                onClick={() => setShowEarningsModal(true)}
-                aria-label={t('home.stats.apyAria', 'Earnings breakdown')}
+                onClick={() => setShowPortfolioPanel(true)}
+                aria-label={t('home.stats.apyAria', 'Portfolio')}
                 className="flex items-center gap-1 bg-transparent shrink-0"
               >
                 {/* -ml compensa el aire interno del glifo: así la fila arranca
                     ópticamente en la misma vertical que el "$" del saldo. */}
-                <FiArrowUpRight className="w-3.5 h-3.5 -ml-[3px] text-[#0a5c2e] shrink-0" />
-                <span className="text-xs font-bold text-[#0a5c2e] tabular-nums leading-none whitespace-nowrap">
+                <FiArrowUpRight className="w-3.5 h-3.5 -ml-[3px] text-success shrink-0" />
+                {/* Contorno negro fino: el verde de marca tiene casi la misma
+                    luminancia que el naranja del header, así que sin borde el
+                    texto se lava. paint-order deja el trazo debajo del relleno
+                    para no adelgazar el glifo. */}
+                <span
+                  className="text-xs font-bold text-success tabular-nums leading-none whitespace-nowrap [-webkit-text-stroke:0.6px_#262626] [paint-order:stroke_fill]"
+                >
                   {apyLoading ? '—' : `${baseApy.toFixed(2)}% APY`}
                 </span>
               </button>
@@ -273,8 +262,8 @@ export const HeaderStats = () => {
                 aria-label={t('home.stats.boostAria', 'Referral boost')}
                 className="flex items-center gap-1 bg-transparent shrink-0"
               >
-                <FiZap className="w-3.5 h-3.5 text-[#5b1eb5] shrink-0" />
-                <span className="text-xs font-bold text-[#5b1eb5] tabular-nums leading-none whitespace-nowrap">
+                <FiZap className="w-3.5 h-3.5 text-[#45169B] shrink-0" />
+                <span className="text-xs font-bold text-[#45169B] tabular-nums leading-none whitespace-nowrap">
                   {apyBonus.toFixed(2)}%
                 </span>
               </button>
@@ -392,10 +381,10 @@ export const HeaderStats = () => {
         <ExperienceModal open={showExperienceModal} onOpenChange={() => setShowExperienceModal(false)} experience={experience} />
       )}
       {bankAPYModalMounted && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
-      {earningsModalMounted && (
-        <EarningsModal
-          open={showEarningsModal}
-          onOpenChange={() => setShowEarningsModal(false)}
+      {portfolioPanelMounted && (
+        <PortfolioPanel
+          open={showPortfolioPanel}
+          onOpenChange={() => setShowPortfolioPanel(false)}
           vaquitaEarnings={vaquitaEarnings}
           protocolEarnings={protocolEarnings}
           protocolApy={apyData?.protocolApy ?? 0}

@@ -1,47 +1,26 @@
 'use client';
 
-import { Spinner, Switch, toast } from '@heroui/react';
-import { useQueryClient } from '@tanstack/react-query';
-import Image from 'next/image';
+import { Switch, toast } from '@heroui/react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiCamera, FiSave, FiTrash2 } from 'react-icons/fi';
+import { FiChevronRight, FiSave } from 'react-icons/fi';
 import { useProfileData, useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { PageLayout } from '../../molecules';
-
-// Mirrors the server-side allowlist and size cap (apps/api profile avatar
-// route) — the API re-validates and re-encodes regardless, this just gives the
-// user instant feedback before uploading.
-const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+import { VaquitaAvatar } from '../../avatar/VaquitaAvatar';
 
 export function EditProfilePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const { walletAddress, network } = useConfigStore();
   const { data, isLoading, refetch } = useProfileData();
-  const { saveProfile, saveProfileFlags, uploadAvatar, removeAvatar } = useRestProfile();
-  const queryClient = useQueryClient();
-
-  // The leaderboard (and any other list keyed by ['profiles', ...]) caches each
-  // row's avatarUrl with staleTime: Infinity and refetchOnMount: false, so it
-  // keeps showing the old avatar after a change. `refetchType: 'all'` is required
-  // here: while on this edit page the leaderboard query is unmounted (inactive),
-  // and a plain invalidate only refetches ACTIVE queries — the inactive one would
-  // just be marked stale and, with refetchOnMount: false, never refetch on the way
-  // back. 'all' forces the inactive query to refetch in the background now, so the
-  // fresh URL is already cached when the user returns to /leaderboard.
-  const invalidateProfileLists = () => {
-    void queryClient.invalidateQueries({ queryKey: ['profiles'], refetchType: 'all' });
-  };
+  const { saveProfile, saveProfileFlags } = useRestProfile();
 
   const initialNickname = (data?.nickname ?? '').trim();
   const initialEmail = (data?.email ?? '').trim();
-
-  const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
   const [nickname, setNickname] = useState<string>(initialNickname);
   const [email, setEmail] = useState<string>(initialEmail);
@@ -51,10 +30,6 @@ export function EditProfilePage() {
   const [tutorialCompleted, setTutorialCompleted] = useState(false);
   const [savingFlag, setSavingFlag] = useState<null | 'onboarding' | 'tutorial'>(null);
   const [saving, setSaving] = useState(false);
-  const [avatarSrc, setAvatarSrc] = useState<string>(DEFAULT_AVATAR);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     setNickname(initialNickname);
@@ -68,105 +43,6 @@ export function EditProfilePage() {
     setOnboardingCompleted(data?.onboardingCompleted ?? false);
     setTutorialCompleted(data?.tutorialCompleted ?? false);
   }, [data?.onboardingCompleted, data?.tutorialCompleted]);
-
-  // Reflect the persisted avatar. Skip while a freshly-picked local preview is
-  // showing (objectUrlRef set) so a background refetch can't clobber it.
-  useEffect(() => {
-    if (objectUrlRef.current) return;
-    setAvatarSrc(data?.avatarUrl ? data.avatarUrl : DEFAULT_AVATAR);
-  }, [data?.avatarUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    };
-  }, []);
-
-  const handlePickPhoto = () => {
-    fileInputRef.current?.click();
-  };
-
-  const clearPreview = () => {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
-    }
-  };
-
-  const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
-      toast.danger(t('profilePages.edit.chooseImageFile', 'Please choose a JPG, PNG, WEBP or GIF image'));
-      return;
-    }
-    if (file.size > AVATAR_MAX_BYTES) {
-      toast.danger(t('profilePages.edit.imageTooLarge', 'The image is too large (max 5 MB).'));
-      return;
-    }
-    if (!walletAddress || uploadingPhoto) return;
-
-    // Show the picked file immediately while the upload is in flight.
-    clearPreview();
-    const previewUrl = URL.createObjectURL(file);
-    objectUrlRef.current = previewUrl;
-    const prevSrc = avatarSrc;
-    setAvatarSrc(previewUrl);
-    setUploadingPhoto(true);
-    try {
-      const { success, message, avatarUrl } = await uploadAvatar(file);
-      if (success && avatarUrl) {
-        clearPreview();
-        setAvatarSrc(avatarUrl);
-        toast.success(t('profilePages.edit.photoUpdated', 'Photo updated'), { timeout: 2000 });
-        refetch();
-        invalidateProfileLists();
-      } else {
-        clearPreview();
-        setAvatarSrc(prevSrc);
-        toast.danger(t('profilePages.edit.couldNotUpdatePhoto', 'Could not update photo'), { description: message, timeout: 4000 });
-      }
-    } catch (error) {
-      clearPreview();
-      setAvatarSrc(prevSrc);
-      toast.danger(t('profilePages.edit.couldNotUpdatePhoto', 'Could not update photo'), {
-        description: (error as { message?: string })?.message ?? '',
-        timeout: 4000,
-      });
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
-  const handleResetPhoto = async () => {
-    if (!walletAddress || uploadingPhoto) return;
-    const prevSrc = avatarSrc;
-    setUploadingPhoto(true);
-    try {
-      const { success, message } = await removeAvatar();
-      if (success) {
-        clearPreview();
-        setAvatarSrc(DEFAULT_AVATAR);
-        toast.success(t('profilePages.edit.photoRemoved', 'Photo removed'), { timeout: 2000 });
-        refetch();
-        invalidateProfileLists();
-      } else {
-        setAvatarSrc(prevSrc);
-        toast.danger(t('profilePages.edit.couldNotRemovePhoto', 'Could not remove photo'), { description: message, timeout: 4000 });
-      }
-    } catch (error) {
-      setAvatarSrc(prevSrc);
-      toast.danger(t('profilePages.edit.couldNotRemovePhoto', 'Could not remove photo'), {
-        description: (error as { message?: string })?.message ?? '',
-        timeout: 4000,
-      });
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
-  const isCustomPhoto = avatarSrc !== DEFAULT_AVATAR;
 
   const nicknameDirty = nickname.trim() !== initialNickname;
   const emailDirty = email.trim() !== initialEmail;
@@ -253,69 +129,32 @@ export function EditProfilePage() {
 
   return (
     <PageLayout title={t('profilePages.edit.title', 'Edit profile')} backHref="/profile/settings">
-        {/* Avatar */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handlePickPhoto}
-              aria-label={t('profilePages.edit.changePhoto', 'Change photo')}
-              className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden border-2 border-black shadow group focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {/* White backdrop sits behind the image; a loaded photo covers it. */}
-              <span className="absolute inset-0 bg-white" />
-              <Image
-                key={avatarSrc}
-                src={avatarSrc}
-                alt={t('profilePages.edit.profilePhotoAlt', 'Profile photo')}
-                fill
-                sizes="128px"
-                className={isCustomPhoto ? 'object-cover' : 'object-contain p-5'}
-                // Local previews (blob:/data:) can't be optimized by the server;
-                // pass them through. Remote MinIO URLs ARE optimized (fetched
-                // server-side → served over https, so no mixed-content block).
-                unoptimized={avatarSrc.startsWith('blob:') || avatarSrc.startsWith('data:')}
-              />
-              <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition">
-                {t('profilePages.edit.changePhoto', 'Change photo')}
-              </span>
-              {uploadingPhoto && (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/50">
-                  <Spinner size="sm" color="current" />
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={handlePickPhoto}
-              aria-label={t('profilePages.edit.changePhoto', 'Change photo')}
-              className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full border border-black border-b-2 bg-primary text-black hover:bg-primary/80 transition shadow"
-            >
-              <FiCamera className="h-4 w-4" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={AVATAR_ALLOWED_TYPES.join(',')}
-              className="hidden"
-              onChange={handlePhotoChange}
+        {/* Avatar — a character, never a photo. Editing it is a whole screen of
+            its own, so this is just a preview that links there. */}
+        <Link
+          href="/profile/avatar"
+          className="flex items-center gap-4 rounded-2xl border border-black border-b-2 bg-white p-3 transition hover:-translate-y-0.5"
+        >
+          <span className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-black border-b-2 bg-white [&_svg]:h-full [&_svg]:w-full">
+            <VaquitaAvatar
+              config={data?.avatarConfig}
+              seed={data?.walletAddress || walletAddress || ''}
+              crop="head"
+              background
+              alt={t('profilePages.edit.avatarAlt', 'Your avatar')}
+              className="block h-full w-full"
             />
-          </div>
-          {isCustomPhoto ? (
-            <button
-              type="button"
-              onClick={handleResetPhoto}
-              disabled={uploadingPhoto || !walletAddress}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-red-600 transition disabled:opacity-50"
-            >
-              <FiTrash2 className="h-3 w-3" />
-              {t('profilePages.edit.removePhoto', 'Remove photo')}
-            </button>
-          ) : (
-            <p className="text-xs text-gray-500">{t('profilePages.edit.tapToChange', 'Tap the photo to change it.')}</p>
-          )}
-          <p className="text-xs text-gray-400">{t('profilePages.edit.photoRequirements', 'JPG, PNG, WEBP or GIF · max 5 MB')}</p>
-        </div>
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-extrabold text-black">
+              {t('profilePages.edit.editAvatar', 'Edit avatar')}
+            </span>
+            <span className="block text-xs text-gray-500">
+              {t('profilePages.edit.editAvatarHint', 'Choose your hair, clothes, glasses and more.')}
+            </span>
+          </span>
+          <FiChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
+        </Link>
 
         {/* Form */}
         <section className="flex flex-col gap-4">

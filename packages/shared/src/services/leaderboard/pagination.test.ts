@@ -7,12 +7,13 @@ import {
   paginateLeaderboardRows,
   parseLeaderboardPageQuery,
 } from './index';
+import { defaultAvatarConfig } from '@vaquita/avatar';
 
 const row = (overrides: Partial<EnrichedLeaderboardRow>): EnrichedLeaderboardRow => ({
   position: 1,
   walletAddress: 'GA',
   nickname: '',
-  avatarUrl: '',
+  avatarConfig: defaultAvatarConfig(),
   badges: 0,
   streak: 0,
   experience: 0,

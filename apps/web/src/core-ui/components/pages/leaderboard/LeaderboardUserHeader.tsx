@@ -17,11 +17,11 @@ import { useRouter } from 'next/navigation';
 import { ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiArrowLeft, FiLoader } from 'react-icons/fi';
+import { VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
 import { BadgeTile } from '../profile/BadgeTile';
 import { LeaderboardBadgeModal } from './LeaderboardBadgeModal';
 import { FollowButton, getLeaderboardUsername } from './LeaderboardCard';
 
-const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
 /** Slim stat chip mirroring the leaderboard card's StatBox. */
 function StatChip({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
@@ -77,7 +77,7 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
   }, [queryClient, network?.networkName, walletAddress]);
 
   const nickname = profile ? profile.nickname : listRow?.nickname;
-  const avatarUrl = profile ? profile.avatarUrl : listRow?.avatarUrl;
+  const avatarConfig = profile ? profile.avatarConfig : listRow?.avatarConfig;
   const username = getLeaderboardUsername(nickname, walletAddress);
   const { level } = deriveLevel(
     experienceData ? experienceData.experience : (listRow?.experience ?? 0),
@@ -137,29 +137,12 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
             <FiArrowLeft className="h-4 w-4" />
           </button>
 
-          <div className="relative h-14 w-14 shrink-0 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-black border-b-4 shadow">
-            {avatarUrl ? (
-              // next/image fetches the (possibly http) MinIO URL server-side
-              // and re-serves it over https, so the photo always renders.
-              <Image
-                src={avatarUrl}
-                alt={username}
-                fill
-                sizes="56px"
-                className="object-cover"
-                priority
-              />
-            ) : (
-              <Image
-                src={DEFAULT_AVATAR}
-                alt={username}
-                width={48}
-                height={48}
-                className="object-contain"
-                priority
-              />
-            )}
-          </div>
+          <VaquitaAvatarCircle
+            config={avatarConfig}
+            seed={walletAddress}
+            alt={username}
+            className="h-14 w-14 border-2 border-b-4 shadow"
+          />
 
           <div className="flex-1 min-w-0">
             <p className="text-base font-extrabold text-black tracking-tight truncate">

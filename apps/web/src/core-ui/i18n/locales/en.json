@@ -492,21 +492,21 @@
       "purchaseErrorDesc": "Try again.",
       "objects": {
         "tree": {
-          "default": "Tree",
           "0": "Tree",
-          "4": "Palm tree"
+          "4": "Palm tree",
+          "default": "Tree"
         },
         "rock": {
-          "default": "Rock",
-          "3": "Rocky terrain"
+          "3": "Rocky terrain",
+          "default": "Rock"
         },
         "bush": {
-          "default": "Bush",
-          "0": "Bush"
+          "0": "Bush",
+          "default": "Bush"
         },
         "grass": {
-          "default": "Grass",
-          "0": "Grass tile"
+          "0": "Grass tile",
+          "default": "Grass"
         },
         "water": {
           "default": "Water"
@@ -574,12 +574,9 @@
       "profileAlt": "Profile",
       "profileAria": "Profile",
       "streakAlt": "Streak",
-      "apyAria": "Earnings breakdown",
+      "apyAria": "Portfolio",
       "boostAria": "Referral boost",
-      "greeting": "Hi,",
-      "earnings": {
-        "title": "Your earnings"
-      }
+      "greeting": "Hi,"
     },
     "totalDeposits": {
       "bagAlt": "Total deposits"
@@ -799,31 +796,112 @@
     }
   },
   "profilePages": {
+    "avatar": {
+      "title": "Edit avatar",
+      "save": "Save avatar",
+      "saved": "Avatar saved",
+      "couldNotSave": "Could not save your avatar",
+      "randomize": "Surprise me",
+      "colorGeneric": "Color",
+      "category": {
+        "skin": "Skin",
+        "background": "Background",
+        "clothes": "Clothes",
+        "eyes": "Eyes",
+        "mouth": "Mouth",
+        "facialHair": "Facial hair",
+        "hair": "Hair",
+        "earrings": "Earrings",
+        "glasses": "Glasses",
+        "hat": "Headwear"
+      },
+      "color": {
+        "skin": "Skin tone",
+        "background": "Background colour",
+        "clothes": "Clothing colour",
+        "hair": "Hair colour",
+        "facialHair": "Facial hair colour",
+        "earrings": "Metal"
+      },
+      "part": {
+        "eyes": {
+          "normal": "Normal",
+          "wink": "Wink",
+          "happy": "Happy",
+          "lashes": "Lashes"
+        },
+        "mouth": {
+          "smile": "Smile",
+          "grin": "Grin",
+          "neutral": "Neutral"
+        },
+        "hair": {
+          "none": "Bald",
+          "buzz": "Buzz cut",
+          "short": "Short",
+          "wavy": "Wavy",
+          "curly": "Curly",
+          "afro": "Afro",
+          "bangs": "Bangs",
+          "long": "Long",
+          "ponytail": "Ponytail",
+          "bun": "Bun",
+          "braids": "Braids"
+        },
+        "facialHair": {
+          "none": "None",
+          "moustache": "Moustache",
+          "goatee": "Goatee",
+          "beard": "Beard",
+          "full": "Full beard"
+        },
+        "earrings": {
+          "none": "None",
+          "studs": "Studs",
+          "hoops": "Hoops",
+          "drops": "Drops",
+          "feathers": "Feathers"
+        },
+        "glasses": {
+          "none": "None",
+          "round": "Round",
+          "square": "Square",
+          "sunglasses": "Sunglasses"
+        },
+        "hat": {
+          "none": "None",
+          "cap": "Cap",
+          "beanie": "Beanie",
+          "chullo": "Chullo",
+          "flower": "Flower",
+          "crown": "Crown"
+        },
+        "clothes": {
+          "turtleneck": "Turtleneck",
+          "tee": "T-shirt",
+          "hoodie": "Hoodie",
+          "shirt": "Shirt",
+          "sweater": "Sweater"
+        }
+      }
+    },
     "edit": {
-      "changePhoto": "Change photo",
-      "chooseImageFile": "Please choose a JPG, PNG, WEBP or GIF image",
-      "couldNotRemovePhoto": "Could not remove photo",
+      "avatarAlt": "Your avatar",
       "couldNotSaveProfile": "Could not save profile",
-      "couldNotUpdatePhoto": "Could not update photo",
       "couldNotUpdatePreferences": "Could not update preferences",
+      "editAvatar": "Edit avatar",
+      "editAvatarHint": "Choose your hair, clothes, glasses and more.",
       "email": "Email",
       "emailPlaceholder": "you@example.com",
-      "imageTooLarge": "The image is too large (max 5 MB).",
       "nickname": "Nickname",
       "nicknamePlaceholder": "@nickname",
       "onboardingCompleted": "Onboarding completed",
       "onboardingCompletedDesc": "Mark the initial onboarding flow as done.",
-      "photoRemoved": "Photo removed",
-      "photoRequirements": "JPG, PNG, WEBP or GIF · max 5 MB",
-      "photoUpdated": "Photo updated",
       "preferencesUpdated": "Preferences updated",
       "profileFlags": "Profile flags",
-      "profilePhotoAlt": "Profile photo",
       "profileSaved": "Profile saved",
-      "removePhoto": "Remove photo",
       "saveChanges": "Save changes",
       "someChangesNotSaved": "Some changes were not saved",
-      "tapToChange": "Tap the photo to change it.",
       "testingOnly": "Testing only",
       "title": "Edit profile",
       "tutorialCompleted": "Tutorial completed",
@@ -880,6 +958,7 @@
       "connectWalletTitle": "Connect your wallet",
       "daysCount_one": "{{count}} day",
       "daysCount_other": "{{count}} days",
+      "editAvatarAria": "Edit your avatar",
       "editProfileAria": "Edit profile",
       "experience": "Experience",
       "followListError": "Couldn't load the list. Try again.",
@@ -891,15 +970,15 @@
       "followingEmptyTitle": "Not following anyone yet",
       "gold": "Gold",
       "handleJoined": "{{handle}} · joined {{joinedLabel}}",
-      "viewFollowers": "View followers",
-      "viewFollowing": "View following",
       "seeAll": "See all {{title}}",
       "seeAllAchievements": "See all achievements",
       "seeFullSummary": "See full summary",
       "settingsAria": "Settings",
       "streak": "Streak",
       "summary": "Summary",
-      "title": "Profile"
+      "title": "Profile",
+      "viewFollowers": "View followers",
+      "viewFollowing": "View following"
     },
     "records": {
       "activeDeposits": "Active deposits",
@@ -1800,6 +1879,39 @@
     },
     "user": {
       "back": "Back to explore"
+    }
+  },
+  "portfolio": {
+    "title": "Portfolio",
+    "blendedApy": "Your APY · blended",
+    "totalBalance": "Total balance",
+    "allocation": "Allocation",
+    "manage": "Manage allocations",
+    "rewards": "Rewards",
+    "empty": "No saving terms available yet.",
+    "detail": {
+      "description": "Description",
+      "descriptionText": "Funds saved for {{period}} earn a bigger share of the Vaquita reward pool. The longer the term, the higher the APY.",
+      "withdrawPeriod": "Withdraw period",
+      "vaquitaApy": "Vaquita pool APY",
+      "marketApy": "{{market}} APY",
+      "tokenNote": "Balances are shown in {{token}}."
+    },
+    "move": {
+      "title": "Move funds",
+      "confirmTitle": "Confirm move",
+      "from": "From",
+      "to": "To",
+      "swapAria": "Swap direction",
+      "yourApy": "Your APY",
+      "amount": "Amount",
+      "movePair": "Move",
+      "apyChange": "APY change",
+      "processing": "Moving funds...",
+      "success": {
+        "title": "Funds moved!",
+        "subtitle": "${{amount}} moved from {{from}} to {{to}}."
+      }
     }
   }
 }

@@ -15,6 +15,13 @@ export const formatAmount = (amount: number, tokenSymbol: string) => {
   return `${amount.toFixed(2)} ${tokenSymbol}`;
 };
 
+/**
+ * Monto en dólares con separador de miles: $3,806.22. Los saldos del portfolio
+ * pueden tener cuatro cifras o más y sin separador se leen mal de un vistazo.
+ */
+export const formatUsd = (amount: number) =>
+  `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 export const formatDate = (timestamp: number) => {
   return new Date(timestamp).toLocaleDateString('en-US', {
     year: 'numeric',

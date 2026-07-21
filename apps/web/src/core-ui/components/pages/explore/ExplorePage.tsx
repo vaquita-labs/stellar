@@ -85,7 +85,7 @@ function useExploreCards(rows: ExploreProfileDTO[]): LeaderboardCardData[] {
         walletAddress: row.walletAddress,
         nickname: (row.nickname ?? '').trim(),
         username: getLeaderboardUsername(row.nickname, row.walletAddress),
-        avatarUrl: row.avatarUrl,
+        avatarConfig: row.avatarConfig,
         level: Math.max(1, Math.floor((row.experience ?? 0) / 100) + 1),
         streak: row.streak ?? 0,
         badges: row.badges ?? 0,

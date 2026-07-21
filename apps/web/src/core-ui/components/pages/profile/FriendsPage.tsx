@@ -4,9 +4,9 @@ import { PageHeader } from '@/core-ui/components/molecules/PageHeader';
 import { useDismissSuggestion, useFriendSuggestions, useToggleFollow } from '@/core-ui/hooks';
 import type { FriendSuggestionDTO } from '@/core-ui/types';
 import { toast } from '@heroui/react';
-import Image from 'next/image';
 import Link from 'next/link';
 import React, { useState } from 'react';
+import { VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
 import { useTranslation } from 'react-i18next';
 import {
   FiBookOpen,
@@ -90,15 +90,12 @@ function SuggestionCard({
         <FiX className="h-3.5 w-3.5" />
       </button>
 
-      <div className="h-16 w-16 rounded-full bg-[#FFE7C7] border-2 border-black border-b-4 flex items-center justify-center overflow-hidden mt-1">
-        <Image
-          src={suggestion.avatarUrl || '/vaquita/vaquita_isotipo.svg'}
-          alt={suggestion.name}
-          width={56}
-          height={56}
-          className="object-contain"
-        />
-      </div>
+      <VaquitaAvatarCircle
+        config={suggestion.avatarConfig}
+        seed={suggestion.walletAddress}
+        alt={suggestion.name}
+        className="mt-1 h-16 w-16 border-2 border-b-4"
+      />
 
       <div className="text-center min-w-0 w-full px-1">
         <p className="text-sm font-extrabold text-black truncate">{suggestion.name}</p>

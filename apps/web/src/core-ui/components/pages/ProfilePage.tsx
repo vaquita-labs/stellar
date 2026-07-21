@@ -1,5 +1,6 @@
 'use client';
 
+import { paletteColor, resolveAvatarConfig } from '@vaquita/avatar';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { addUsdcTrustline } from '@/networks/stellar/sorobanTx';
 import { Card } from '@heroui/react';
@@ -23,11 +24,10 @@ import {
 import { useHideBalance, useConfigStore } from '../../stores';
 import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
+import { VaquitaAvatar } from '../avatar/VaquitaAvatar';
 import { BadgeTile } from './profile/BadgeTile';
 import { FollowListModal } from './profile/FollowListModal';
 import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
-
-const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
 /* ------------------------------------------------------------------ */
 /* Sub-components                                                      */
@@ -184,6 +184,17 @@ export function ProfilePage() {
     });
   }, [profileData?.createdAt]);
 
+  // The banner floods the full page width with the avatar's own background
+  // colour, so the character reads as part of the header instead of sitting in
+  // a coloured box that stops at the artwork's edges.
+  const bannerBackground = useMemo(() => {
+    const config = resolveAvatarConfig(
+      profileData?.avatarConfig,
+      profileData?.walletAddress || walletAddress || ''
+    );
+    return paletteColor('background', config['backgroundColor'] as number);
+  }, [profileData?.avatarConfig, profileData?.walletAddress, walletAddress]);
+
   const betaTester = useMemo(
     () => achievementsData?.achievements?.find((a) => a.key === 'beta-tester'),
     [achievementsData?.achievements]
@@ -252,69 +263,66 @@ export function ProfilePage() {
     <div className="h-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-6">
         {/* Hero banner ------------------------------------------------ */}
-        <header className="relative bg-primary px-4 sm:px-6 pt-5 pb-12 rounded-b-3xl border-b-2 border-black/10">
-          {/* Top action row — back on the left, actions on the right. */}
-          <div className="flex items-center justify-between gap-2">
-            <Link
-              href="/home"
-              aria-label={t('common.back')}
-              className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
-            >
-              <FiChevronLeft className="h-5 w-5" />
-            </Link>
-            <div className="flex items-center gap-2">
+        {/* The character IS the banner: it's drawn edge-to-edge at the top of
+            the screen, cropped at the shoulders, with the avatar's own
+            background colour flooding the full width behind it. The name
+            overlays the top-left corner and the actions the top-right, so
+            nothing competes with the face. Tapping anywhere on it opens the
+            builder — the only way to change a profile picture. */}
+        <header className="relative" style={{ backgroundColor: bannerBackground }}>
+          <Link
+            href="/profile/avatar"
+            aria-label={t('profilePages.profile.editAvatarAria', 'Edit your avatar')}
+            className="block pt-14"
+          >
+            <VaquitaAvatar
+              config={profileData?.avatarConfig}
+              seed={profileData?.walletAddress || walletAddress || ''}
+              crop="bust"
+              background={false}
+              className="mx-auto block w-full max-w-[19rem] [&_svg]:block [&_svg]:h-auto [&_svg]:w-full"
+            />
+          </Link>
+
+          {/* Overlay row — back + name on the left, actions on the right. The
+              wrapper ignores pointer events so the whole banner behind it stays
+              tappable; each control opts back in. */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-2 px-4 pt-4 sm:px-6">
+            <div className="pointer-events-auto flex min-w-0 items-center gap-2">
+              <Link
+                href="/home"
+                aria-label={t('common.back')}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black border-b-2 bg-white/70 text-black transition hover:bg-white"
+              >
+                <FiChevronLeft className="h-5 w-5" />
+              </Link>
+              <h1 className="truncate text-2xl font-extrabold tracking-tight text-black sm:text-3xl">
+                {displayName}
+              </h1>
+            </div>
+            <div className="pointer-events-auto flex shrink-0 items-center gap-2">
               <ShareProfileQrButton displayName={displayName} handle={handle} />
               <Link
                 href="/profile/settings"
                 aria-label={t('profilePages.profile.settingsAria', 'Settings')}
-                className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-black border-b-2 bg-white/70 text-black transition hover:bg-white"
               >
                 <FiSettings className="h-4 w-4" />
               </Link>
             </div>
           </div>
-
-          {/* Avatar + name */}
-          <div className="mt-4 flex flex-col items-center gap-2 text-center">
-            <Link
-              href="/profile/edit"
-              aria-label={t('profilePages.profile.editProfileAria', 'Edit profile')}
-              className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-black border-b-4 shadow"
-            >
-              {profileData?.avatarUrl ? (
-                // Real uploaded photo: fill the circle (object-cover). next/image
-                // fetches it server-side and re-serves over https, so an http
-                // MinIO source still renders on an https page.
-                <Image
-                  src={profileData.avatarUrl}
-                  alt={displayName}
-                  fill
-                  sizes="128px"
-                  className="object-cover"
-                  priority
-                />
-              ) : (
-                <Image
-                  src={DEFAULT_AVATAR}
-                  alt={displayName}
-                  width={120}
-                  height={120}
-                  className="object-contain"
-                  priority
-                />
-              )}
-            </Link>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
-              {displayName}
-            </h1>
-            <p className="text-xs sm:text-sm font-semibold text-black/70">
-              {t('profilePages.profile.handleJoined', '{{handle}} · joined {{joinedLabel}}', {
-                handle,
-                joinedLabel,
-              })}
-            </p>
-          </div>
         </header>
+
+        {/* Handle + joined date sit on the page background, right under the
+            banner — the same split as the reference design. */}
+        <section className="-mt-2 px-4 sm:px-6">
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-500 sm:text-sm">
+            {t('profilePages.profile.handleJoined', '{{handle}} · joined {{joinedLabel}}', {
+              handle,
+              joinedLabel,
+            })}
+          </p>
+        </section>
 
         {/* Stats row -------------------------------------------------- */}
         <section className="px-4 sm:px-6">

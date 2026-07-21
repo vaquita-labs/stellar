@@ -1,3 +1,4 @@
+import { resolveAvatarConfig, type AvatarConfig } from '@vaquita/avatar';
 import { prisma } from '@vaquita/db';
 import type { Profile } from '../../types';
 
@@ -135,7 +136,10 @@ export interface LeaderboardRow {
 export interface EnrichedLeaderboardRow extends LeaderboardRow {
   position: number;
   nickname: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved
+   *  server-side — a profile that never opened the editor gets a stable
+   *  wallet-seeded avatar, so clients never have to guess a fallback. */
+  avatarConfig: AvatarConfig;
   badges: number;
   streak: number;
   experience: number;
@@ -166,7 +170,7 @@ export function enrichLeaderboardRows(
       position: index + 1,
       ...row,
       nickname: profile?.nickname ?? '',
-      avatarUrl: profile?.avatar_url ?? '',
+      avatarConfig: resolveAvatarConfig(profile?.avatar_config, profile?.wallet_address ?? row.walletAddress),
       badges: profile ? (rollups.badgesByProfileId.get(profile.id) ?? 0) : 0,
       streak: profile ? (rollups.streaksByProfileId.get(profile.id) ?? 0) : 0,
       experience: profile ? (rollups.experienceByProfileId.get(profile.id) ?? 0) : 0,

@@ -1,3 +1,4 @@
+import { resolveAvatarConfig } from '@vaquita/avatar';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
 import { LeaderboardResponseDTO } from '@/core-ui/types';
@@ -63,7 +64,7 @@ const toLeaderboardRow = (row: LeaderboardResponseDTO): LeaderboardResponseDTO =
   position: row?.position ?? 0,
   walletAddress: row?.walletAddress ?? '',
   nickname: row?.nickname ?? '',
-  avatarUrl: row?.avatarUrl ?? '',
+  avatarConfig: resolveAvatarConfig(row?.avatarConfig, row?.walletAddress ?? ''),
   badges: row?.badges ?? 0,
   streak: row?.streak ?? 0,
   experience: row?.experience ?? 0,
