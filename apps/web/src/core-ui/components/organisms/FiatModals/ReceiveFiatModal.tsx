@@ -16,6 +16,12 @@ import { FiatTxHistory } from './FiatTxHistory';
 interface ReceiveFiatModalProps {
   open: boolean;
   onOpenChange: () => void;
+  /**
+   * Si se define, muestra la flecha "atrás" en el header. Lo usa el flujo de
+   * depósito para volver al selector de país; desde la página de wallet, que
+   * abre este modal directo, no se pasa y no aparece la flecha.
+   */
+  onBack?: () => void;
 }
 
 type StepKey = 'trustline' | 'challenge' | 'sign' | 'token' | 'deposit' | 'credit' | 'swap';
@@ -43,7 +49,7 @@ const INITIAL_STEPS: Record<StepKey, StepStatus> = {
  * interactivo -> espera la acreditación de ARS (polling de la tx) -> swap
  * ARS -> USDC. Cada paso se marca a medida que avanza.
  */
-export function ReceiveFiatModal({ open, onOpenChange }: ReceiveFiatModalProps) {
+export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModalProps) {
   const { t } = useTranslation();
   const { walletAddress, refreshAssets, walletType, login } = usePollar();
   const { authenticate, ensureTrustline, startInteractive, waitForCompletion, swap } = useAnclap();
@@ -260,7 +266,9 @@ export function ReceiveFiatModal({ open, onOpenChange }: ReceiveFiatModalProps) 
       // Durante la espera de acreditación dejamos cerrar (puede tardar); el
       // polling se aborta solo. En los pasos rápidos (firmas) bloqueamos.
       isDismissable={!busy || waiting}
-      title={t('wallet.fiat.receive.title', 'Receive fiat (ARS)')}
+      // Durante una firma o el swap, volver atrás dejaría el flujo a medias.
+      onBack={onBack && !busy ? onBack : undefined}
+      title={t('wallet.fiat.receive.title', 'Argentina (ARS)')}
       size="md"
       bodyClassName="flex flex-col gap-4 pb-6"
       footer={

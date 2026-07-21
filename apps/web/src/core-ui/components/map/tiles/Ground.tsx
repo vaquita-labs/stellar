@@ -18,11 +18,19 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
   const isReplaceablePosition = useMapStore((store) => store.isReplaceablePosition);
   const pickedObject = useMapStore((store) => store.pickedObject);
   const updateTile = useMapStore((store) => store.updateTile);
+  const setPendingPlacement = useMapStore((store) => store.setPendingPlacement);
   const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
   const editingObjectPosition = useMapStore((store) => store.editingObjectPosition);
   const groundRef = useRef<THREE.Group>(null);
   const pickedObjectGroupRef = useRef<THREE.Group>(null);
+  // Posición "x,z" del objeto recién colocado, para animar su entrada (saltito).
+  // Se limpia después de cada render: solo el render que sigue a la colocación lo ve.
+  const justPlacedKeyRef = useRef<string | null>(null);
   const font = useFont();
+
+  useEffect(() => {
+    justPlacedKeyRef.current = null;
+  });
 
   const handlePlaceItem = useCallback(
     (position: [number, number, number], rotation: [number, number, number], mapObject?: MapObject) => {
@@ -61,16 +69,26 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
           return;
         }
 
+        // Guardar qué había en la celda: si se cancela sin confirmar, la
+        // colocación se revierte (revertPendingPlacement).
+        setPendingPlacement({ position, previous: useMapStore.getState().getTileAt(x, z) ?? null });
         updateTile(position, {
           variant: pickedObject.variant,
           type: pickedObject.type,
           position,
           rotation: rotation || [0, 0, 0],
         });
+        justPlacedKeyRef.current = `${x},${z}`;
 
         // Activar modo de edición para mostrar los botones flotantes
         setEditingObjectPosition(position);
       } else if (editMode === EditionMode.SELECT && mapObject) {
+        // Los tiles EMPTY son solo un plano invisible para poder clickear al
+        // colocar en modo ADD: ahí no hay nada que editar/quitar/rotar.
+        if (mapObject.type === MapObjectType.EMPTY) {
+          return;
+        }
+
         // Si hay un objeto en edición, NO permitir seleccionar otro hasta que se complete la acción
         if (editingObjectPosition) {
           const [editX, , editZ] = editingObjectPosition;
@@ -86,7 +104,7 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
         setEditingObjectPosition(position);
       }
     },
-    [editMode, updateTile, pickedObject, isReplaceablePosition, setEditingObjectPosition, editingObjectPosition]
+    [editMode, updateTile, pickedObject, isReplaceablePosition, setEditingObjectPosition, editingObjectPosition, setPendingPlacement]
   );
   const hasEditMode = !!editMode;
 
@@ -187,6 +205,14 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
             position={position}
             rotation={currentRotation}
             isEditing={isEditing}
+            spawnAnimation={justPlacedKeyRef.current === `${position[0]},${position[2]}`}
+            // Los tiles de terreno emergen desde abajo: el pop los encoge y
+            // expone paredes/líneas de costa vecinas durante la animación.
+            spawnStyle={
+              type === MapObjectType.GRASS || type === MapObjectType.WATER || type === MapObjectType.ROAD
+                ? 'rise'
+                : 'pop'
+            }
             onClick={
               !!editMode && !isBlocked
                 ? (e) => {
@@ -225,7 +251,9 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
                             ? 'copy'
                             : 'not-allowed'
                           : editMode === EditionMode.SELECT
-                            ? 'pointer'
+                            ? type !== MapObjectType.EMPTY
+                              ? 'pointer'
+                              : 'default'
                             : 'default';
                     pickedObjectGroupRef.current?.position.set(position[0], position[1], position[2]);
                   }

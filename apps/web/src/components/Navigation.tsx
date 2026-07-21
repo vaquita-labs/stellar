@@ -1,5 +1,6 @@
 'use client';
 
+import { DailyRewardChest } from '@/core-ui/components/home/DailyRewardChest';
 import { EditionMode, useMapStore } from '@/core-ui/stores';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -13,7 +14,6 @@ const navItems = [
   { id: 'shop', href: '/shop', icon: '/icons/navigation/shop.png', label: 'Shop' },
   { id: 'leaderboard', href: '/leaderboard', icon: '/icons/navigation/leaderboard.png', label: 'Leaderboard' },
   // { href: "/pools", icon: "/icons/pools.svg", label: "Pools" },
-  { id: 'profile', href: '/profile', icon: '/icons/navigation/profile.png', label: 'Profile' },
 ];
 
 function NavLink({
@@ -134,6 +134,9 @@ export function DesktopSidebar() {
                 </li>
               );
             })}
+            <li>
+              <DailyRewardChest variant="sidebar" />
+            </li>
           </ul>
         </nav>
       </div>

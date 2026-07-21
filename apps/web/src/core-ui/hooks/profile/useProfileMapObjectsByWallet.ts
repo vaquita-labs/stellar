@@ -40,5 +40,12 @@ export const useProfileMapObjectsByWallet = (walletAddress?: string, enabled = t
       return profile;
     },
     enabled: enabled && !!network?.networkName && !!walletAddress,
+    // Other players edit their maps without anything invalidating OUR cache,
+    // so the global staleTime: Infinity (+ localStorage persistence) served
+    // previews frozen at whenever the wallet was first cached. Serve the
+    // cached copy instantly but revalidate after 5 minutes so the board
+    // catches up on its own.
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: true,
   });
 };

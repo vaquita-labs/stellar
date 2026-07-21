@@ -221,5 +221,33 @@ const requireWalletSessionForParam =
 export const requireWalletSession: RequestHandler<{ walletAddress: string }> =
   requireWalletSessionForParam('walletAddress');
 
+/**
+ * Route middleware for endpoints that carry NO wallet in the URL: the caller's
+ * identity comes only from the session token, and the resolved wallet is stashed
+ * on `res.locals.sessionWallet` for the handler.
+ *
+ * Unlike `requireWalletSession`, `WALLET_AUTH_ENFORCE=false` is NOT an escape
+ * hatch here. That flag exists to keep serving requests whose subject is already
+ * named in the URL; with no route param there is no subject to fall back to, so
+ * an unauthenticated request has no identity to act on and must be rejected.
+ */
+export const requireSessionWallet: RequestHandler = (req, res, next) => {
+  const header = req.headers.authorization ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+  const wallet = verifySessionToken(token);
+
+  if (!wallet) {
+    sendError(res, 'Authentication required.', null, 401);
+    return;
+  }
+
+  res.locals.sessionWallet = wallet;
+  return next();
+};
+
+/** Reads the wallet `requireSessionWallet` authenticated for this request. */
+export const getSessionWallet = (res: { locals: Record<string, unknown> }): string =>
+  String(res.locals.sessionWallet ?? '');
+
 export const requireWalletParamSession: RequestHandler<{ wallet: string }> =
   requireWalletSessionForParam('wallet');

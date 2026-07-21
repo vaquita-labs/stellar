@@ -16,6 +16,7 @@ import {
   useProfileRewards,
 } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 import { ACHIEVEMENT_CARD_VERSION } from '../../../data/achievement-catalog';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 import { parseBadgeMintError } from '@/networks/stellar/badgeErrors';
@@ -728,13 +729,13 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
       onOpenChange={(o) => {
         if (!o) onOpenChange(false);
       }}
-      className="bg-black/70 backdrop-blur-sm data-[exiting=true]:duration-300"
+      className={'bg-black/70 backdrop-blur-sm ' + SHEET_BACKDROP_ANIMATION}
     >
       <Modal.Container
         size={isMobile ? 'full' : 'md'}
         placement={isMobile ? 'bottom' : 'center'}
         scroll="inside"
-        className={isMobile ? 'p-0! m-0!' : 'p-4!'}
+        className={(isMobile ? 'p-0! m-0! ' : 'p-4! ') + SHEET_CONTAINER_ANIMATION}
       >
         {/* Desktop: we deliberately omit `m-0!` so heroui's `placement=center`
             rule (`margin-block: auto` on the dialog) keeps the modal centered
@@ -743,17 +744,13 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
         <Modal.Dialog
           className={
             isMobile
-              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh data-[exiting=true]:duration-300'
-              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)] data-[exiting=true]:duration-300'
+              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh'
+              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)]'
           }
         >
-          <motion.div
-            initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
-            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
-            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}
-          >
+          {/* El slide de entrada/salida lo hace el Modal.Container (SHEET_*);
+              framer-motion acá no sirve: su `exit` nunca corre sin AnimatePresence. */}
+          <div className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
               <button
                 type="button"
@@ -842,7 +839,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
                 </div>
               )}
             </AnimatePresence>
-          </motion.div>
+          </div>
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>

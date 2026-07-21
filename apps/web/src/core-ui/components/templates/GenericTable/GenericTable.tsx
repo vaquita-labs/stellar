@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { IoMdCheckmarkCircleOutline } from 'react-icons/io';
 import { useTranslation } from 'react-i18next';
 import { truncateMiddle } from '../../../helpers';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 import { useConfigStore } from '../../../stores';
 import { GenericTableProps } from './types';
 
@@ -151,8 +152,8 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
           {activeFiltersSummary || t('ui.table.noActiveFilters')}
         </div>
       </div>
-      <Modal.Backdrop isOpen={isOpen} onOpenChange={setIsOpen}>
-        <Modal.Container scroll="inside">
+      <Modal.Backdrop isOpen={isOpen} onOpenChange={setIsOpen} className={SHEET_BACKDROP_ANIMATION}>
+        <Modal.Container scroll="inside" className={SHEET_CONTAINER_ANIMATION}>
           <Modal.Dialog>
             <Modal.Header><Modal.Heading>{t('ui.table.filters')}</Modal.Heading></Modal.Header>
             <Modal.Body
@@ -305,8 +306,8 @@ export function GenericTable({ rows, refetch, children }: GenericTableProps) {
         </TableBody>
       </Table>
 
-      <Modal.Backdrop isOpen={!!expandedValue} onOpenChange={(o) => { if (!o) setExpandedValue(null); }}>
-        <Modal.Container scroll="inside">
+      <Modal.Backdrop isOpen={!!expandedValue} onOpenChange={(o) => { if (!o) setExpandedValue(null); }} className={SHEET_BACKDROP_ANIMATION}>
+        <Modal.Container scroll="inside" className={SHEET_CONTAINER_ANIMATION}>
           <Modal.Dialog>
             <Modal.Header><Modal.Heading>{t('ui.table.fullValue')}</Modal.Heading></Modal.Header>
             <Modal.Body>

@@ -17,7 +17,10 @@ import {
   getLeaderboardRankForWallet,
   getNetworkName,
   getProfile,
+  getUnlockedAchievementIds,
   isAchievementEligible,
+  isAchievementUnlocked,
+  latchAchievementUnlocks,
   makeClaimExpiry,
   prisma,
   sendError,
@@ -64,26 +67,37 @@ async function resolveVoucherCycleId(
     if (!profile) {
       return { ok: false, status: 404, code: 'PROFILE_NOT_FOUND', message: 'Profile not resolved' };
     }
-    const signals = await computeEligibilitySignals({
-      id: profile.id,
-      network_id: 0,
-      email: profile.email ?? '',
-      full_name: profile.fullName ?? '',
-      nickname: profile.nickname ?? '',
-      wallet_address: profile.walletAddress,
-      avatar_url: profile.avatarUrl ?? null,
-      avatar_key: profile.avatarKey ?? null,
-      onboarding_completed: profile.onboardingCompleted ?? false,
-      tutorial_completed: profile.tutorialCompleted ?? false,
-      crypto_savvy: profile.cryptoSavvy ?? false,
-      language: profile.language ?? null,
-      currency: profile.currency ?? null,
-      notification_preferences: null,
-      created_at: profile.createdAt?.toISOString(),
-      updated_at: profile.updatedAt?.toISOString(),
-    });
-    const eligible = isAchievementEligible(achievement, signals);
-    return eligible
+    const [signals, latched] = await Promise.all([
+      computeEligibilitySignals({
+        id: profile.id,
+        network_id: 0,
+        email: profile.email ?? '',
+        full_name: profile.fullName ?? '',
+        nickname: profile.nickname ?? '',
+        wallet_address: profile.walletAddress,
+        avatar_url: profile.avatarUrl ?? null,
+        avatar_key: profile.avatarKey ?? null,
+        onboarding_completed: profile.onboardingCompleted ?? false,
+        tutorial_completed: profile.tutorialCompleted ?? false,
+        crypto_savvy: profile.cryptoSavvy ?? false,
+        language: profile.language ?? null,
+        currency: profile.currency ?? null,
+        notification_preferences: null,
+        created_at: profile.createdAt?.toISOString(),
+        updated_at: profile.updatedAt?.toISOString(),
+      }),
+      getUnlockedAchievementIds(profile.id),
+    ]);
+
+    // Latch-aware: a badge earned earlier stays claimable even if the live signal
+    // has since dropped (deposit withdrawn, streak broken). Requesting a voucher
+    // while live-eligible also latches, so the unlock survives from here on.
+    if (isAchievementEligible(achievement, signals) && !latched.has(String(achievement.id))) {
+      await latchAchievementUnlocks(profile.id, [BigInt(achievement.id)]);
+      return { ok: true, cycleId: 0 };
+    }
+
+    return isAchievementUnlocked(achievement, signals, latched)
       ? { ok: true, cycleId: 0 }
       : { ok: false, status: 403, code: 'NO_LONGER_ELIGIBLE', message: 'You are not eligible for this badge yet.' };
   }
@@ -257,9 +271,13 @@ router.post(
         return sendError(res, 'You did not finish at the required leaderboard rank last cycle.', null, 403);
       }
     } else if (achievementDoc.unlock_type === 'rule') {
-      // Signal-driven badges: evaluate the configurable rule.
-      const signals = await computeEligibilitySignals(profileData);
-      if (!isAchievementEligible(achievementDoc, signals)) {
+      // Signal-driven badges: evaluate the configurable rule, latch included so a
+      // badge earned earlier is never reported as un-earned.
+      const [signals, latched] = await Promise.all([
+        computeEligibilitySignals(profileData),
+        getUnlockedAchievementIds(profileData.id),
+      ]);
+      if (!isAchievementUnlocked(achievementDoc, signals, latched)) {
         req.log.warn(
           { profileId: profileData.id, key, signals },
           'Profile is not eligible for achievement',

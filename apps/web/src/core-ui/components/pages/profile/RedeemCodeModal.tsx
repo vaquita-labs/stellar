@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCamera, FiCheckCircle, FiX } from 'react-icons/fi';
 import { useIsMobile, useMintBadge, useRedeemAchievementCode } from '../../../hooks';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 
 interface RedeemCodeModalProps {
   open: boolean;
@@ -331,29 +332,27 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
       onOpenChange={(o) => {
         if (!o) onOpenChange(false);
       }}
-      className="bg-black/70 backdrop-blur-sm data-[exiting=true]:duration-300"
+      className={'bg-black/70 backdrop-blur-sm ' + SHEET_BACKDROP_ANIMATION}
     >
       <Modal.Container
         size={isMobile ? 'full' : 'md'}
         placement={isMobile ? 'bottom' : 'center'}
         scroll="inside"
-        className={isMobile ? 'p-0! m-0!' : 'p-4!'}
+        className={(isMobile ? 'p-0! m-0! ' : 'p-4! ') + SHEET_CONTAINER_ANIMATION}
       >
         <Modal.Dialog
           className={
             isMobile
-              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh data-[exiting=true]:duration-300'
-              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)] data-[exiting=true]:duration-300'
+              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh'
+              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)]'
           }
         >
-          <motion.div
-            initial={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
-            animate={isMobile ? { y: 0 } : { opacity: 1, scale: 1 }}
-            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 280, damping: 32 }}
-            className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}
-          >
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
+          {/* El slide de entrada/salida lo hace el Modal.Container (SHEET_*);
+              framer-motion acá no sirve: su `exit` nunca corre sin AnimatePresence. */}
+          <div className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
+            {/* Header — solo la X, a la derecha como en el resto de los
+                modales de la app. */}
+            <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-3">
               <button
                 type="button"
                 onClick={handleClose}
@@ -363,11 +362,6 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
               >
                 <FiX className="h-5 w-5" />
               </button>
-              <span
-                className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`}
-                aria-hidden
-              />
-              <span className="w-10" />
             </div>
 
             <AnimatePresence mode="wait" initial={false}>
@@ -376,7 +370,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
               {phase === 'claiming' && renderClaiming()}
               {phase === 'reward' && renderReward()}
             </AnimatePresence>
-          </motion.div>
+          </div>
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>

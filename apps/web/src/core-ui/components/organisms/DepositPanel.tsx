@@ -6,13 +6,25 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnalytics, useIsPoolPaused } from '../../hooks';
 import { useMapStore, useConfigStore } from '../../stores';
-import { DepositModal } from './DepositModal';
-import { VaquitasListModal } from './VaquitasListModal';
+import { useModalPresence } from '../molecules/AppModal';
+import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
+import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
+import { SendFiatModal } from './FiatModals/SendFiatModal';
+import { WithdrawModal } from './WithdrawModal';
 
 export function DepositPanel() {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const [isVaquitasListOpen, setIsVaquitasListOpen] = useState(false);
+  const [isMethodOpen, setIsMethodOpen] = useState(false);
+  // El picker de país lo comparten depósito (on-ramp) y retiro (off-ramp): el
+  // flujo activo decide a qué modal se sigue y a cuál vuelve el back.
+  const [countryFlow, setCountryFlow] = useState<'deposit' | 'withdraw' | null>(null);
+  const [isReceiveFiatOpen, setIsReceiveFiatOpen] = useState(false);
+  const isReceiveFiatMounted = useModalPresence(isReceiveFiatOpen);
+  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
+  const isWithdrawMounted = useModalPresence(isWithdrawOpen);
+  const [isSendFiatOpen, setIsSendFiatOpen] = useState(false);
+  const isSendFiatMounted = useModalPresence(isSendFiatOpen);
   const [ isDepositing, setIsDepositing ] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { trackUserAction } = useAnalytics();
@@ -29,7 +41,7 @@ export function DepositPanel() {
   return (
     <div
       style={{ filter: disabled ? 'grayscale(100%)' : 'none' }}
-      className="absolute bottom-20 md:bottom-10 left-0 flex flex-col items-center justify-center w-full gap-1"
+      className="absolute bottom-4 left-0 flex flex-col items-center justify-center w-full gap-1"
     >
       {isStellar && isPaused && (
         <p className="text-sm text-warning font-semibold">
@@ -48,12 +60,12 @@ export function DepositPanel() {
                 token: token?.symbol || null,
                 network: network?.networkName || null,
               });
-              setIsVaquitasListOpen(true);
+              setIsWithdrawOpen(true);
             }
           }}
-          className={`bg-white border-black py-7 text-black font-bold flex-1 border border-b-5 rounded-md`}
+          className={`bg-white border-black py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
         >
-          <span className="text-xl text-black capitalize">{t('deposit.withdraw.button', 'Withdraw')}</span>
+          <span className="text-xl text-black capitalize font-medium">{t('deposit.withdraw.button', 'Withdraw')}</span>
         </HeroButton>
         <HeroButton
           size="lg"
@@ -67,28 +79,96 @@ export function DepositPanel() {
                 lockPeriod,
                 network: network?.networkName || null,
               });
-              setIsOpen(true);
+              setIsMethodOpen(true);
             }
           }}
-          className={`bg-success border-[#018222] py-7 text-black font-bold flex-1 border border-b-5 rounded-md`}
+          className={`bg-success border-[#018222] py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
         >
-          <span className="text-xl text-black capitalize">
+          <span className="text-xl text-black capitalize font-medium">
             {isDepositing ? t('deposit.processing', 'Processing...') : t('common.save')}
           </span>
         </HeroButton>
       </div>
+      <DepositMethodModal
+        open={isMethodOpen}
+        onOpenChange={() => setIsMethodOpen(false)}
+        onContinue={() => {
+          setIsMethodOpen(false);
+          setIsOpen(true);
+        }}
+        onOnramp={() => {
+          setIsMethodOpen(false);
+          setCountryFlow('deposit');
+        }}
+      />
+      <CountryPickerModal
+        open={countryFlow !== null}
+        onOpenChange={() => setCountryFlow(null)}
+        onBack={() => {
+          const flow = countryFlow;
+          setCountryFlow(null);
+          if (flow === 'withdraw') setIsWithdrawOpen(true);
+          else setIsMethodOpen(true);
+        }}
+        onSelect={(countryCode) => {
+          const flow = countryFlow;
+          trackUserAction(flow === 'withdraw' ? 'withdraw_offramp_opened' : 'deposit_onramp_opened', {
+            country: countryCode,
+            network: network?.networkName || null,
+          });
+          setCountryFlow(null);
+          if (flow === 'withdraw') setIsSendFiatOpen(true);
+          else setIsReceiveFiatOpen(true);
+        }}
+      />
       <DepositModal
         open={isOpen}
         onOpenChange={() => setIsOpen(false)}
         isDepositing={isDepositing}
         setIsDepositing={setIsDepositing}
       />
-      {isVaquitasListOpen && (
-        <VaquitasListModal
-          open={isVaquitasListOpen}
-          onOpenChange={() => setIsVaquitasListOpen(false)}
-          readyToWithdrawOnly
+      {isReceiveFiatMounted && (
+        <ReceiveFiatModal
+          open={isReceiveFiatOpen}
+          onOpenChange={() => setIsReceiveFiatOpen(false)}
+          onBack={() => {
+            setIsReceiveFiatOpen(false);
+            setCountryFlow('deposit');
+          }}
         />
+      )}
+      {isWithdrawMounted && (
+        <WithdrawModal
+          open={isWithdrawOpen}
+          onOpenChange={() => setIsWithdrawOpen(false)}
+          onOfframp={() => {
+            setIsWithdrawOpen(false);
+            setCountryFlow('withdraw');
+          }}
+          onSubmit={async ({ amount, wallet }) => {
+            // TODO(withdraw): PLACEHOLDER — no mueve fondos.
+            //
+            // El retiro real todavía no existe para este flujo. El contrato
+            // (contracts/vaquita-pool/src/lib.rs:168) expone
+            // `withdraw(caller, deposit_id)`: retira la posición ENTERA y paga
+            // siempre a quien firma, así que no admite ni el monto parcial que
+            // se teclea acá ni la dirección de destino elegida. La API
+            // (apps/api/src/routes/deposit/route.ts:142) tampoco lee `amount`.
+            //
+            // Este stub solo simula la demora para poder ver los estados de
+            // loading y éxito. Reemplazar por la mutación real cuando se defina
+            // de dónde salen los fondos.
+            console.warn('[withdraw] placeholder submit', { amount, wallet });
+            trackUserAction('withdraw_submitted', {
+              amount,
+              network: network?.networkName || null,
+            });
+            await new Promise((resolve) => setTimeout(resolve, 1800));
+          }}
+        />
+      )}
+      {isSendFiatMounted && (
+        <SendFiatModal open={isSendFiatOpen} onOpenChange={() => setIsSendFiatOpen(false)} />
       )}
     </div>
   );

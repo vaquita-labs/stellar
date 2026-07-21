@@ -365,6 +365,31 @@
       "earnedSuffix": "ganhos",
       "onTimeDescription": "Você completou todo o período de bloqueio e manteve suas recompensas.",
       "onTimeTitle": "Sacado no prazo"
+    },
+    "method": {
+      "continue": "Já tenho USDC, continuar",
+      "country": {
+        "comingSoon": "Em breve",
+        "noResults": "Nenhum país encontrado",
+        "search": "Buscar país",
+        "title": "Selecione seu país"
+      },
+      "onramp": {
+        "subtitle": "Deposite com sua moeda local",
+        "title": "Banco"
+      },
+      "title": "Selecione o método",
+      "wallet": {
+        "subtitle": "Deposite de uma wallet cripto",
+        "title": "Wallet"
+      },
+      "walletDetails": {
+        "accountLabel": "Conta da Vaquita",
+        "copy": "Copiar endereço",
+        "onlyUsdc": "Envie apenas USDC na Stellar!",
+        "title": "Detalhes da wallet",
+        "warning": "Certifique-se de enviar USDC pela rede Stellar para este endereço exato. Fundos enviados por outra rede podem ser perdidos."
+      }
     }
   },
   "errors": {
@@ -545,11 +570,14 @@
     "stats": {
       "experienceAlt": "Experiência",
       "goldCoinAlt": "Moeda de ouro",
-      "greeting": "Suas economias",
-      "greetingNamed": "Suas economias, <b>{{name}}</b>",
       "profileAlt": "Perfil",
       "profileAria": "Perfil",
-      "streakAlt": "Sequência"
+      "streakAlt": "Sequência",
+      "apyAria": "Detalhe dos ganhos",
+      "boostAria": "Boost de indicações",
+      "earnings": {
+        "title": "Seus ganhos"
+      }
     },
     "totalDeposits": {
       "bagAlt": "Depósitos totais"
@@ -621,8 +649,11 @@
     },
     "title": "Ranking",
     "user": {
+      "backToLeaderboard": "Voltar ao leaderboard",
       "joined": "Entrou em {{joinedLabel}}",
-      "noAchievements": "Ainda não desbloqueou conquistas"
+      "noAchievements": "Ainda não desbloqueou conquistas",
+      "notFound": "Não encontramos @{{username}}",
+      "notFoundHint": "A conta pode ter mudado o nome de usuário ou não existe mais."
     },
     "vaquero": "Vaquero",
     "vaqueroNamed": "Vaquero {{tail}}"
@@ -720,6 +751,7 @@
     },
     "username": {
       "helperAvailable": "@{{name}} está disponível",
+      "helperBlocked": "Esse nome de usuário não é permitido",
       "helperChecking": "Verificando disponibilidade…",
       "helperDefault": "Exibido como @{{name}}",
       "helperError": "Não foi possível verificar a disponibilidade, tente novamente",
@@ -963,7 +995,7 @@
       "coinAlt": "moedas",
       "description": "As moedas são a moeda do jogo. Ganhe-as poupando e coletando sua recompensa diária, e gaste-as na loja para decorar seu mapa.",
       "earn": {
-        "daily": "Colete sua recompensa diária",
+        "daily": "Resgate sua recompensa diária",
         "deposits": "Crie e faça crescer seus depósitos",
         "streak": "Mantenha sua sequência diária ativa"
       },
@@ -980,17 +1012,22 @@
     "daily": {
       "activeStreak_one": "Sequência ativa: {{count}} dia",
       "activeStreak_other": "Sequência ativa: {{count}} dias",
+      "chestClosedAlt": "Baú fechado",
+      "chestOpenAlt": "Baú aberto",
       "coinsAlt": "moedas",
-      "collectButton": "Coletar +{{count}}",
-      "confirmSubtitle_one": "Pegue sua moeda diária e mantenha sua sequência viva!",
-      "confirmSubtitle_other": "Pegue sua moeda diária e mantenha sua sequência viva!",
-      "confirmTitle": "Sua vaquita tem uma recompensa para você!",
+      "collectButton": "Resgatar",
+      "confirmTitle": "Sua vaquita guardou isto para você hoje.",
+      "doneButton": "Pronto",
       "greatButton": "Show!",
+      "holdToOpen": "Segure para abrir",
+      "nextButton": "Próximo",
+      "opening": "Abrindo…",
       "rewardAlt": "recompensa",
+      "rewardTitle": "Você ganhou moedas!",
       "streakAlt": "sequência",
-      "successHint": "Continue economizando para manter sua sequência e subir de nível.",
-      "successWithXp_one": "Você ganhou {{count}} moeda e {{xp}} XP!",
-      "successWithXp_other": "Você ganhou {{count}} moedas e {{xp}} XP!",
+      "streakSubtitle": "Volte amanhã para mantê-la.",
+      "streakTitle_one": "Agora você tem uma sequência de {{count}} dia!",
+      "streakTitle_other": "Agora você tem uma sequência de {{count}} dias!",
       "success_one": "Você ganhou {{count}} moeda!",
       "success_other": "Você ganhou {{count}} moedas!",
       "title": "Recompensa diária"
@@ -1069,7 +1106,8 @@
       "leaderboard": "Ranking",
       "profile": "Perfil",
       "shop": "Loja",
-      "soon": "Em breve"
+      "soon": "Em breve",
+      "dailyReward": "Recompensa"
     },
     "notFound": {
       "backHome": "Voltar para o início",
@@ -1374,6 +1412,7 @@
       "tabMine": "Meu QR",
       "tabScan": "Escanear QR",
       "tabsLabel": "Visualização do QR",
+      "title": "Compartilhar perfil",
       "tryAgain": "Tentar de novo",
       "uploadFromGallery": "Enviar da galeria · em breve",
       "vaqueroNotFound": "Não encontramos esse vaquero."
@@ -1532,6 +1571,74 @@
       "saveChanges": "Salvar alterações",
       "title": "Perfil",
       "walletLabel": "Wallet"
+    }
+  },
+  "referrals": {
+    "activeReferrals": "Indicações ativas",
+    "apyBonus": "Bônus de APY",
+    "description": "Ganhe recompensas recorrentes enquanto seus amigos poupam. Cada indicação ativa soma APY extra sobre a sua taxa base.",
+    "earningsLabel": "Ganhos por indicações",
+    "invite": "Convidar amigos",
+    "nextTier": "Convide mais {{count}} para chegar a",
+    "pendingEarnings": "Ganhos pendentes por indicações",
+    "shareText": "Poupe comigo na Vaquita e ganhe recompensas. Use o meu código {{code}}",
+    "tiersTitle": "Níveis de boost",
+    "title": "Indicações",
+    "totalEarnings": "Ganhos totais por indicações",
+    "yourCode": "Seu código de indicação",
+    "tierLabel_one": "{{count}} indicação ativa",
+    "tierLabel_other": "{{count}} indicações ativas",
+    "learnMore": "Saiba como funciona"
+  },
+  "withdraw": {
+    "addMethod": "Adicionar método",
+    "addWallet": {
+      "addressField": "Endereço",
+      "addressPlaceholder": "Endereço de destino",
+      "cta": "Adicionar uma carteira",
+      "error": "Não foi possível salvar a carteira",
+      "invalidAddress": "Isso não parece um endereço válido de {{network}}",
+      "labelField": "Nome",
+      "labelPlaceholder": "ex. Minha exchange",
+      "networkHint": "Este endereço precisa ser da rede {{network}}.",
+      "paste": "Colar",
+      "pasteInvalid": "Isso não parece um endereço válido de {{network}}",
+      "save": "Salvar carteira"
+    },
+    "amountLabel": "Valor",
+    "available": "Disponível",
+    "confirm": {
+      "title": "Confirmar saque"
+    },
+    "confirmCta": "Confirmar",
+    "deleteWallet": {
+      "confirm": "Excluir “{{label}}”?",
+      "action": "Excluir"
+    },
+    "error": {
+      "generic": "Algo deu errado"
+    },
+    "method": {
+      "title": "Selecionar método",
+      "bank": {
+        "title": "Banco",
+        "subtitle": "Saque para sua conta bancária"
+      },
+      "wallet": {
+        "title": "Carteira",
+        "subtitle": "Saque para uma carteira cripto"
+      }
+    },
+    "methodLabel": "Método",
+    "methodWallet": "Carteira",
+    "noWallets": "Você ainda não tem carteiras salvas",
+    "processing": "Processando saque...",
+    "processingHint": "Isso pode levar alguns segundos.",
+    "review": "Revisar",
+    "selectAccount": "Selecionar conta",
+    "success": {
+      "subtitle": "Seu dinheiro está a caminho de {{label}}.",
+      "title": "Saque enviado!"
     }
   }
 }

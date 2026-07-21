@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheck, FiLoader, FiUserPlus, FiX } from 'react-icons/fi';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 import {
   useFollowCounts,
   useFollowList,
@@ -41,7 +42,7 @@ function FriendRow({
   return (
     <li className="flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-black/10 bg-white">
       <Link
-        href={`/leaderboard/${friend.walletAddress}`}
+        href={`/leaderboard/${encodeURIComponent(friend.nickname || friend.walletAddress)}`}
         onClick={onNavigate}
         className="flex items-center gap-3 flex-1 min-w-0"
       >
@@ -229,19 +230,19 @@ export function FollowListModal({ open, onOpenChange, initialTab }: FollowListMo
       onOpenChange={(o) => {
         if (!o) onOpenChange(false);
       }}
-      className="bg-black/70 backdrop-blur-sm data-[exiting=true]:duration-300"
+      className={'bg-black/70 backdrop-blur-sm ' + SHEET_BACKDROP_ANIMATION}
     >
       <Modal.Container
         size={isMobile ? 'full' : 'md'}
         placement={isMobile ? 'bottom' : 'center'}
         scroll="inside"
-        className={isMobile ? 'p-0! m-0!' : 'p-4!'}
+        className={(isMobile ? 'p-0! m-0! ' : 'p-4! ') + SHEET_CONTAINER_ANIMATION}
       >
         <Modal.Dialog
           className={
             isMobile
-              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh data-[exiting=true]:duration-300'
-              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)] data-[exiting=true]:duration-300'
+              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh'
+              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)]'
           }
         >
           <div className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
