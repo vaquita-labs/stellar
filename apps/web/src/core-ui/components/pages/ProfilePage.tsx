@@ -422,7 +422,10 @@ export function ProfilePage() {
             <SummaryItem
               icon="/icons/global/trophy.png"
               value={unlockedAchievements.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              label={t('profilePages.profile.achievements', 'Achievements')}
+              // "Medallas", no "Logros": el encabezado de la sección de abajo
+              // ya dice Logros y repetir la palabra a dos líneas de distancia
+              // hacía leer los dos números como el mismo dato dos veces.
+              label={t('profilePages.profile.badges', 'Badges')}
             />
             <SummaryItem
               icon="/icons/global/star.png"

@@ -963,6 +963,7 @@
     },
     "profile": {
       "achievements": "Logros",
+      "badges": "Medallas",
       "activeDeposits": "Depósitos activos",
       "addFriends": "Agregar amigos",
       "connectWalletDescription": "Accede a tu perfil, tus métricas y tus próximos logros conectando tu wallet.",

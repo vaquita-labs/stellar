@@ -12,6 +12,7 @@ import { FiAlertCircle, FiCamera, FiCopy, FiImage, FiLoader, FiShare2, FiUserPlu
 import { useToggleFollow } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
+import { SegmentedTabs } from '../../molecules/SegmentedTabs';
 
 interface ShareProfileModalProps {
   open: boolean;
@@ -85,38 +86,15 @@ function TabSwitch({
 }) {
   const { t } = useTranslation();
   return (
-    // Segmented control: the track is a light hairline holding the two halves
-    // together, and the SELECTED half is what carries the app's solid black
-    // border. No padding on the track, so the active tab fills its half edge to
-    // edge instead of floating inside a frame.
-    <div
-      role="tablist"
-      aria-label={t('social.share.tabsLabel')}
-      className="flex w-full overflow-hidden rounded-md border border-black/15 bg-background"
-    >
-      {([
+    <SegmentedTabs<TabKey>
+      value={value}
+      onChange={onChange}
+      ariaLabel={t('social.share.tabsLabel')}
+      tabs={[
         { key: 'mine', label: t('social.share.tabMine') },
         { key: 'scan', label: t('social.share.tabScan') },
-      ] as { key: TabKey; label: string }[]).map((tab) => {
-        const active = value === tab.key;
-        return (
-          <button
-            key={tab.key}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(tab.key)}
-            className={`flex-1 rounded-md py-3 text-xs font-extrabold uppercase tracking-wider transition-colors ${
-              active
-                ? 'border border-black bg-primary text-black'
-                : 'text-default-500 hover:bg-black/5 hover:text-black'
-            }`}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
-    </div>
+      ]}
+    />
   );
 }
 
