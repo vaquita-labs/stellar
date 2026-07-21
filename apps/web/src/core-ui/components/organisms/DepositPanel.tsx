@@ -48,7 +48,7 @@ export function DepositPanel() {
           {t('deposit.panel.paused', 'Deposits are temporarily paused')}
         </p>
       )}
-      <div className="w-full max-w-xl px-2 flex gap-2">
+      <div className="w-full max-w-xl px-1 flex gap-1">
         <HeroButton
           size="lg"
           isDisabled={disabled}
@@ -63,9 +63,9 @@ export function DepositPanel() {
               setIsWithdrawOpen(true);
             }
           }}
-          className={`bg-white border-black py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
+          className={`bg-white border-black py-7 text-black font-normal flex-1 border border-b-5 rounded-md`}
         >
-          <span className="text-xl text-black capitalize font-medium">{t('deposit.withdraw.button', 'Withdraw')}</span>
+          <span className="text-xl text-black capitalize font-normal">{t('deposit.withdraw.button', 'Withdraw')}</span>
         </HeroButton>
         <HeroButton
           size="lg"

@@ -259,7 +259,7 @@ export const HeaderStats = () => {
       {/* Offsets en px fijos (no las clases rem de Tailwind) para que la
           distancia al bloque naranja sea la misma en todos los dispositivos,
           aunque el usuario tenga el tamaño de fuente del sistema agrandado. */}
-      <div className="absolute left-0 right-0 -bottom-[36px] px-2 z-20 pointer-events-none">
+      <div className="absolute left-0 right-0 -bottom-[36px] px-1 z-20 pointer-events-none">
         <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white/60 backdrop-blur-md rounded-lg px-3 py-1.5  pointer-events-auto">
           <button
             type="button"
@@ -334,7 +334,7 @@ export const HeaderStats = () => {
           en el mismo contenedor centrado max-w-xl para que arranquen a la misma
           altura y a la misma distancia del naranja en cualquier pantalla.
           La columna derecha es solo móvil: en escritorio vive en el sidebar. */}
-      <div className="absolute left-0 right-0 top-full mt-[40px] px-2 z-20 pointer-events-none">
+      <div className="absolute left-0 right-0 top-full mt-[40px] px-1 z-20 pointer-events-none">
         <div className="max-w-xl mx-auto flex items-start justify-between gap-2">
           <div className="pointer-events-auto">
             <MapClock />
