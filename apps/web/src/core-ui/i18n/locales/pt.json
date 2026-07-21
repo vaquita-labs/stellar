@@ -1023,6 +1023,7 @@
       "nextButton": "Próximo",
       "opening": "Abrindo…",
       "rewardAlt": "recompensa",
+      "rewardTitle": "Você ganhou moedas!",
       "streakAlt": "sequência",
       "streakSubtitle": "Volte amanhã para mantê-la.",
       "streakTitle_one": "Agora você tem uma sequência de {{count}} dia!",

@@ -1023,6 +1023,7 @@
       "nextButton": "Siguiente",
       "opening": "Abriendo…",
       "rewardAlt": "recompensa",
+      "rewardTitle": "¡Ganaste monedas!",
       "streakAlt": "racha",
       "streakSubtitle": "Volvé mañana para mantenerla.",
       "streakTitle_one": "¡Ahora llevás {{count}} día de racha!",

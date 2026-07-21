@@ -1023,6 +1023,7 @@
       "nextButton": "Next",
       "opening": "Opening…",
       "rewardAlt": "reward",
+      "rewardTitle": "You earned coins!",
       "streakAlt": "streak",
       "streakSubtitle": "Come back tomorrow to keep it going.",
       "streakTitle_one": "You now have a {{count}}-day streak!",
