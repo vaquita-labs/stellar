@@ -32,7 +32,9 @@ export const ExitEditModeModal = ({
       size="sm"
       isDismissable={!isSaving}
       footer={
-        <div className="flex flex-col-reverse gap-2 w-full [&>*]:w-full">
+        // text-xs + px-3: con el tamaño por defecto "Discard changes" salta a
+        // dos líneas cuando los dos botones comparten la fila.
+        <div className="flex flex-row gap-2 w-full [&>*]:flex-1 [&>*]:min-w-0 [&>*]:text-xs [&>*]:px-3">
           <Button onPress={handleDiscard} type="white" isDisabled={isSaving}>
             {t('home.exitEdit.discard', 'Discard changes')}
           </Button>
@@ -43,23 +45,26 @@ export const ExitEditModeModal = ({
       }
     >
       <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-8 w-8 text-yellow-600 dark:text-yellow-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-        </div>
-        <p className="text-gray-600 dark:text-gray-400 text-center text-sm">
+        {/* Sin círculo de fondo: el triángulo mismo va relleno de amarillo con
+            contorno negro, el lenguaje visual del mapa (siluetas con línea
+            negra). El signo de admiración se dibuja aparte para que quede en
+            negro sobre el relleno. */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-16 w-16 text-black"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.1}
+        >
+          <path
+            fill="#FFD34E"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5.072 19h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+          <path fill="none" strokeLinecap="round" strokeLinejoin="round" d="M12 9v2.5m0 3.5h.01" />
+        </svg>
+        <p className="text-black/70 text-center text-sm">
           {t('home.exitEdit.body', 'You have unsaved changes. Are you sure you want to exit edit mode?')}
         </p>
       </div>
