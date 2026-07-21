@@ -43,6 +43,13 @@ export interface AppModalProps {
   fullScreen?: boolean;
   bodyClassName?: string;
   dialogClassName?: string;
+  /**
+   * Capa que se pinta por encima del contenido, dentro del propio diálogo (no
+   * es otro overlay de React Aria). Para selectores que deben aparecer sobre el
+   * formulario sin desmontarlo ni taparlo por completo, como el de fecha en los
+   * filtros del historial.
+   */
+  overlay?: ReactNode;
 }
 
 /**
@@ -134,6 +141,7 @@ export function AppModal({
   fullScreen = false,
   bodyClassName,
   dialogClassName,
+  overlay,
 }: AppModalProps) {
   const { t } = useTranslation();
   return (
@@ -163,7 +171,9 @@ export function AppModal({
       >
         <Modal.Dialog
           className={
-            'bg-background ' +
+            // relative + overflow-hidden: anclan la capa `overlay` al diálogo y
+            // la recortan a sus esquinas.
+            'bg-background relative overflow-hidden ' +
             (fullScreen
               ? 'h-dvh max-h-dvh w-full max-w-none rounded-none border-0 '
               : // Bottom-sheet en mobile: solo esquinas superiores redondeadas y
@@ -240,6 +250,7 @@ export function AppModal({
               {footer}
             </Modal.Footer>
           ) : null}
+          {overlay}
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>

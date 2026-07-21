@@ -1,6 +1,6 @@
 'use client';
 
-import { ListBox, Select, Spinner } from '@heroui/react';
+import { ListBox, Select } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -92,13 +92,7 @@ function FilterSelect<T extends string>({
   );
 }
 
-function NotificationItem({
-  notification,
-  onPress,
-}: {
-  notification: AppNotification;
-  onPress: () => void;
-}) {
+function NotificationItem({ notification, onPress }: { notification: AppNotification; onPress: () => void }) {
   const { t, i18n } = useTranslation();
   const { type, messageKey, params, link, createdAt, read } = notification;
 
@@ -147,6 +141,39 @@ function NotificationItem({
         {!read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" />}
       </button>
     </li>
+  );
+}
+
+/** Placeholder de la lista: se usa mientras hidrata y en la primera carga, para
+ *  que la pantalla entre con su forma en vez de con el loader de la vaquita. */
+function NotificationsSkeleton() {
+  return (
+    <>
+      <div className="flex gap-2">
+        <span className="h-9 flex-1 rounded-lg bg-default-100 animate-pulse" />
+        <span className="h-9 flex-1 rounded-lg bg-default-100 animate-pulse" />
+      </div>
+      <NotificationRowsSkeleton />
+    </>
+  );
+}
+
+function NotificationRowsSkeleton() {
+  return (
+    <section className="flex flex-col gap-2">
+      <span className="h-3 w-24 rounded bg-default-100 animate-pulse" />
+      <ul className="rounded-lg border border-black border-b-2 bg-white overflow-hidden divide-y divide-gray-200">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <li key={i} className="flex items-start gap-3 px-4 py-3.5">
+            <span className="h-9 w-9 shrink-0 rounded-md bg-default-100 animate-pulse" />
+            <div className="min-w-0 flex-1 space-y-2 py-1">
+              <span className="block h-3.5 w-2/5 rounded bg-default-100 animate-pulse" />
+              <span className="block h-3 w-4/5 rounded bg-default-100 animate-pulse" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -222,7 +249,7 @@ export function NotificationsCenterPage() {
         </button>
       }
     >
-      <WithHydrated>
+      <WithHydrated fallback={<NotificationsSkeleton />}>
         <div className="flex gap-2">
           <FilterSelect
             icon={<FiCalendar />}
@@ -243,15 +270,11 @@ export function NotificationsCenterPage() {
         </div>
 
         {isLoading && !data ? (
-          <div className="flex justify-center py-12">
-            <Spinner size="md" color="current" />
-          </div>
+          <NotificationRowsSkeleton />
         ) : groups.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-10 text-center">
             <FiBell className="h-7 w-7 text-gray-400" />
-            <p className="text-sm font-semibold text-black">
-              {t('notificationsCenter.empty', 'No notifications here yet')}
-            </p>
+            <p className="text-sm font-semibold text-black">{t('notificationsCenter.empty', 'No notifications here yet')}</p>
             <p className="text-xs text-gray-600">
               {t('notificationsCenter.emptyFiltered', 'Try changing the filters to see more.')}
             </p>
