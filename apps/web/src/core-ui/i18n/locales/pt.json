@@ -1611,6 +1611,10 @@
       "title": "Confirmar saque"
     },
     "confirmCta": "Confirmar",
+    "deleteWallet": {
+      "confirm": "Excluir “{{label}}”?",
+      "action": "Excluir"
+    },
     "error": {
       "generic": "Algo deu errado"
     },

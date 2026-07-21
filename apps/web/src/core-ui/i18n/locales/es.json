@@ -1676,6 +1676,10 @@
       "title": "Confirmar retiro"
     },
     "confirmCta": "Confirmar",
+    "deleteWallet": {
+      "confirm": "¿Eliminar “{{label}}”?",
+      "action": "Eliminar"
+    },
     "error": {
       "generic": "Algo salió mal"
     },

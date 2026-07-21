@@ -2,38 +2,34 @@
 
 import { useEffect, useState } from 'react';
 import { FiClock } from 'react-icons/fi';
-import { getGameTimeLabel } from '../../stores';
+import { getGameHourLabel } from '../../stores';
 
 /**
- * Reloj de la hora de JUEGO (HH:MM) que flota sobre el mapa. No es la hora local
- * del dispositivo: el día corre acelerado (tipo Minecraft) y es global para
- * todos, definido por el servidor (ver stores/gameClock). El ciclo de luz del
- * mapa sigue este mismo reloj (ver DayCycleSky), así que el reloj y el sol
- * siempre coinciden.
+ * Reloj de la hora de JUEGO, sólo la hora en formato 12h am/pm (sin minutos):
+ * "2 am", "12 pm", "8 pm". No es la hora local del dispositivo: el día corre
+ * acelerado (tipo Minecraft) y es global para todos, definido por el servidor
+ * (ver stores/gameClock).
  *
- * Arranca en null para no romper la hidratación SSR; el valor real se pinta tras
- * montar.
+ * El home no renderiza este reloj hasta que la hora está confirmada con el
+ * servidor (gate en HomePage), así que acá la hora ya es la definitiva. La card
+ * tiene ancho mínimo fijo para que no salte entre horas de 1 y 2 dígitos.
  */
 export const MapClock = () => {
-  const [time, setTime] = useState<string | null>(null);
+  const [label, setLabel] = useState<string | null>(null);
 
   useEffect(() => {
-    const update = () => setTime(getGameTimeLabel());
+    const update = () => setLabel(getGameHourLabel());
     update();
-    // El día va acelerado, así que un minuto de juego pasa en ~1s real: se
-    // refresca cada segundo para que el reloj avance de forma fluida.
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, []);
 
-  if (!time) return null;
+  if (!label) return null;
 
   return (
-    // Fondo blanco con esquinas suaves (no pastilla redonda) y sin borde, para
-    // que resalte sobre el mapa sin verse como un botón.
-    <span className="flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-black tabular-nums">
+    <span className="inline-flex h-6 min-w-[68px] items-center justify-center gap-1 rounded-md bg-white px-2 text-xs font-bold text-black">
       <FiClock className="h-3 w-3 shrink-0" />
-      {time}
+      {label}
     </span>
   );
 };
