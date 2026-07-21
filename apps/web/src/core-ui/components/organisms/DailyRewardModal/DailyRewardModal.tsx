@@ -48,6 +48,15 @@ export function DailyRewardModal({
       isDismissable={!isCollecting}
     >
       <div className="flex flex-col items-center text-center gap-5 py-2">
+        <Image
+          src="/icons/global/shiny_chest_open.png"
+          alt={t('rewards.daily.chestOpenAlt', 'Open chest')}
+          width={112}
+          height={112}
+          priority
+          style={{ filter: 'drop-shadow(0 0 12px rgba(251, 191, 36, 0.9))' }}
+        />
+
         <div className="flex items-center justify-center gap-3">
           <span className="text-4xl font-bold text-black">+{coinsToCollect}</span>
           <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={56} height={56} priority />

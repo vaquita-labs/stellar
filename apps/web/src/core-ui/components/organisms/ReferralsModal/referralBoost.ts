@@ -1,9 +1,16 @@
+'use client';
+
+import { getJson } from '@/core-ui/api/http';
+import { useConfigStore } from '@/core-ui/stores';
+import { useQuery } from '@tanstack/react-query';
+
 /**
- * Sistema de referidos — SOLO FRONTEND por ahora.
+ * Sistema de referidos, conectado al backend.
  *
- * El bonus de APY escala por tramos según cuántos referidos activos tengas y se
- * SUMA al APY base del depósito. Cuando exista el backend, `useReferralBoost`
- * es el único punto a cambiar: el resto de la UI ya consume su forma.
+ * El bonus de APY escala por tramos según cuántos referidos ACTIVOS tengas (un
+ * referido es activo cuando tiene un depósito vivo) y se SUMA al APY base. El
+ * cálculo vive en el servicio `referral` del backend; aquí solo consumimos su
+ * resumen. La UI ya consume la forma de `ReferralBoost`, así que no cambia.
  */
 
 export type ReferralTier = {
@@ -13,38 +20,16 @@ export type ReferralTier = {
   bonus: number;
 };
 
-export const REFERRAL_TIERS: ReferralTier[] = [
-  { referrals: 1, bonus: 0.25 },
-  { referrals: 3, bonus: 0.5 },
-  { referrals: 5, bonus: 1 },
-  { referrals: 10, bonus: 2 },
-];
-
-/** Bonus de APY para una cantidad de referidos activos (tramo alcanzado más alto). */
-export const getReferralBonus = (activeReferrals: number): number =>
-  REFERRAL_TIERS.reduce((bonus, tier) => (activeReferrals >= tier.referrals ? tier.bonus : bonus), 0);
-
-/** Siguiente tramo por alcanzar, o null si ya está en el máximo. */
-export const getNextReferralTier = (activeReferrals: number): ReferralTier | null =>
-  REFERRAL_TIERS.find((tier) => activeReferrals < tier.referrals) ?? null;
-
-/**
- * Código de invitación derivado del wallet (determinista) para no depender del
- * backend todavía. Al conectar la API real, reemplazar por el código guardado.
- */
-export const buildReferralCode = (walletAddress?: string | null): string => {
-  if (!walletAddress) return '------';
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let hash = 0;
-  for (let i = 0; i < walletAddress.length; i++) {
-    hash = (hash * 31 + walletAddress.charCodeAt(i)) >>> 0;
-  }
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += alphabet[hash % alphabet.length];
-    hash = Math.floor(hash / alphabet.length) + (i + 1) * 7919;
-  }
-  return code;
+export type ReferralSummary = {
+  walletAddress: string;
+  code: string;
+  referrals: number;
+  activeReferrals: number;
+  apyBonus: number;
+  totalEarnings: number;
+  pendingEarnings: number;
+  nextTier: ReferralTier | null;
+  tiers: ReferralTier[];
 };
 
 export type ReferralBoost = {
@@ -54,17 +39,47 @@ export type ReferralBoost = {
   pendingEarnings: number;
   code: string;
   nextTier: ReferralTier | null;
+  tiers: ReferralTier[];
+  isLoading: boolean;
 };
 
-/** Datos de referidos. Mock mientras no exista el endpoint. */
+/**
+ * Tramos por defecto para renderizar la tabla mientras el resumen carga. El
+ * backend es la fuente de verdad y devuelve `tiers`; estos deben coincidir.
+ */
+export const REFERRAL_TIERS: ReferralTier[] = [
+  { referrals: 1, bonus: 0.25 },
+  { referrals: 3, bonus: 0.5 },
+  { referrals: 5, bonus: 1 },
+  { referrals: 10, bonus: 2 },
+];
+
+const referralKey = (walletAddress?: string | null) => ['referral', 'summary', walletAddress] as const;
+
+/**
+ * Resumen de referidos del wallet. Son datos de cuenta (no del mundo/juego), así
+ * que se sobrescribe el `staleTime: Infinity` global: un referido puede volverse
+ * activo desde otro dispositivo y queremos verlo al reabrir, no al recargar.
+ */
 export const useReferralBoost = (walletAddress?: string | null): ReferralBoost => {
-  const activeReferrals = 0;
+  const configWallet = useConfigStore((s) => s.walletAddress);
+  const wallet = walletAddress ?? configWallet;
+
+  const { data, isLoading } = useQuery<ReferralSummary | null>({
+    queryKey: referralKey(wallet),
+    queryFn: () => getJson<ReferralSummary>(`/referrals/wallet/${wallet}`),
+    enabled: !!wallet,
+    staleTime: 30_000,
+  });
+
   return {
-    activeReferrals,
-    apyBonus: getReferralBonus(activeReferrals),
-    totalEarnings: 0,
-    pendingEarnings: 0,
-    code: buildReferralCode(walletAddress),
-    nextTier: getNextReferralTier(activeReferrals),
+    activeReferrals: data?.activeReferrals ?? 0,
+    apyBonus: data?.apyBonus ?? 0,
+    totalEarnings: data?.totalEarnings ?? 0,
+    pendingEarnings: data?.pendingEarnings ?? 0,
+    code: data?.code ?? '',
+    nextTier: data?.nextTier ?? null,
+    tiers: data?.tiers ?? REFERRAL_TIERS,
+    isLoading: isLoading && !data,
   };
 };

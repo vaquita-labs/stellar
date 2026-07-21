@@ -231,9 +231,20 @@ model Profile {
   // defaults: push/deposits/streaks on, email/friends off).
   notificationPreferences Json? @map("notification_preferences") @db.JsonB
 
+  // Invite-a-friend graph. `referralCode` is the short string this profile
+  // shares (minted lazily on first read, unique among non-NULL codes).
+  // `referredById` points at the profile whose code this user signed up with —
+  // set once at signup, never changed. `referrals` are the profiles this user
+  // brought in; `referredBy` is the one who brought this user in.
+  referralCode  String?   @unique(map: "profiles_referral_code_unique") @map("referral_code") @db.VarChar(12)
+  referredById  Int?      @map("referred_by_id")
+
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  referredBy    Profile?  @relation("referrals", fields: [referredById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  referrals     Profile[] @relation("referrals")
 
   profileAchievements ProfileAchievement[]
   profileUnlocks      ProfileAchievementUnlock[]

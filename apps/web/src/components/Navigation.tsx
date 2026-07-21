@@ -1,5 +1,6 @@
 'use client';
 
+import { DailyRewardChest } from '@/core-ui/components/home/DailyRewardChest';
 import { EditionMode, useMapStore } from '@/core-ui/stores';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -133,6 +134,9 @@ export function DesktopSidebar() {
                 </li>
               );
             })}
+            <li>
+              <DailyRewardChest variant="sidebar" />
+            </li>
           </ul>
         </nav>
       </div>

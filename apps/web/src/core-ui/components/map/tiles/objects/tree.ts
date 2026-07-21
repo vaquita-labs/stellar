@@ -68,23 +68,16 @@ const doubleCrownTree = (trunk: string, leaf: string): BoxSpec[] => [
   // arriba (y=0.08), para que la secundaria — pegada bajo su borde — quede
   // alta sin agrandar el árbol.
   { ...TOON, size: [0.56, 0.48, 0.56], at: [0, 0.32, 0], color: leaf, bevel: 0.09, outline: LEAF_OUTLINE },
-  // copa secundaria metida bajo el borde +x de la principal, EN CONTACTO
-  // (tope 0.085 apenas dentro de la copa, que arranca en 0.08): con un hueco
-  // de aire la ranura se veía verde iluminada desde un lado y como un agujero
-  // negro desde el otro. Solo bajo un eje (no diagonal) para que la costura
-  // sea un segmento recto.
-  { ...TOON, size: [0.42, 0.3, 0.42], at: [0.26, -0.065, 0.06], color: leaf, bevel: 0.08, outline: LEAF_OUTLINE },
-  // costura: placa negra al ras del tope de la copa chica (hundida 0.001),
-  // cruzando el borde de la principal y asomando hasta x=0.30 — desde
-  // cualquier ángulo se lee como la línea de unión pintada al pie de la copa.
-  {
-    size: [0.11, 0.006, 0.3],
-    at: [0.245, 0.087, 0.06],
-    color: OUTLINE_COLOR,
-    material: 'basic',
-    castShadow: false,
-    receiveShadow: false,
-  },
+  // copa secundaria colgando bajo la esquina de la principal, con tope en
+  // y=0.054: hueco de 0.026 < su outline (0.03, más grueso que LEAF_OUTLINE
+  // para que el hull siga llenando la ranura de negro con el arbusto un poco
+  // más abajo — pegado a la copa los dos contornos se pellizcaban). La línea
+  // de unión es el propio contorno del arbusto cerrándose en la ranura, no
+  // una pieza aparte. Clave: su meseta superior plana (footprint − bevel)
+  // queda TODA bajo la copa (|0.13|+0.13 ≤ 0.28); si asoma, se ve una franja
+  // verde iluminada entre la copa y la línea. Solo sobresalen los hombros
+  // curvos, cuyo hull sí dibuja silueta.
+  { ...TOON, size: [0.42, 0.3, 0.42], at: [0.13, -0.096, 0.13], color: leaf, bevel: 0.08, outline: 0.03 },
 ];
 
 /** Cactus chico con dos brazos. */

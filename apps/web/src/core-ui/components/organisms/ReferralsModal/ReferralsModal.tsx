@@ -2,26 +2,33 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiCheck, FiClock, FiCopy, FiShare2, FiUsers, FiZap } from 'react-icons/fi';
+import { FiCheck, FiClock, FiCopy, FiExternalLink, FiShare2, FiUsers, FiZap } from 'react-icons/fi';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
-import { REFERRAL_TIERS, useReferralBoost } from './referralBoost';
+import { useReferralBoost } from './referralBoost';
 import { ReferralsModalProps } from './types';
 
+// Página externa que explica cómo funcionan los referidos (qué cuenta como un
+// referido activo, cómo se acumula el APY). Un solo lugar para cambiar la URL.
+const REFERRALS_LEARN_MORE_URL = 'https://vaquita.finance/referrals';
+
 /**
- * Referidos — solo frontend. Explica cómo el APY sube por tramos según los
- * referidos activos y entrega el código para invitar.
+ * Referidos: explica cómo el APY sube por tramos según los referidos activos y
+ * entrega el código para invitar. Los datos vienen del backend vía
+ * `useReferralBoost`.
  */
 export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
   const { t } = useTranslation();
   const { walletAddress } = useConfigStore();
-  const { activeReferrals, apyBonus, totalEarnings, pendingEarnings, code, nextTier } =
+  const { activeReferrals, apyBonus, totalEarnings, pendingEarnings, code, nextTier, tiers, isLoading } =
     useReferralBoost(walletAddress);
   const [copied, setCopied] = useState(false);
 
-  const inviteUrl = typeof window === 'undefined' ? '' : `${window.location.origin}/?ref=${code}`;
+  const hasCode = code.length > 0;
+  const inviteUrl = typeof window === 'undefined' || !hasCode ? '' : `${window.location.origin}/?ref=${code}`;
 
   const copyCode = async () => {
+    if (!hasCode) return;
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
@@ -32,6 +39,7 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
   };
 
   const invite = async () => {
+    if (!hasCode) return;
     const shareText = t('referrals.shareText', 'Save with me on Vaquita and earn rewards. Use my code {{code}}', {
       code,
     });
@@ -90,7 +98,8 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
         <button
           type="button"
           onClick={invite}
-          className="flex w-full items-center justify-center gap-2 rounded-md border border-black border-b-2 bg-primary py-3 text-sm font-bold text-black transition hover:-translate-y-0.5"
+          disabled={!hasCode}
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-black border-b-2 bg-primary py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {t('referrals.invite', 'Invite friends')}
           <FiShare2 className="h-4 w-4" />
@@ -130,7 +139,7 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
         <div className="rounded-xl border border-black border-b-2 bg-white p-4 space-y-3">
           <h3 className="text-xs font-bold text-black uppercase tracking-wide">{t('referrals.tiersTitle', 'Boost tiers')}</h3>
           <ul className="space-y-2">
-            {REFERRAL_TIERS.map((tier) => {
+            {tiers.map((tier) => {
               const reached = activeReferrals >= tier.referrals;
               return (
                 <li key={tier.referrals} className="flex items-center justify-between gap-3">
@@ -154,14 +163,31 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
             })}
           </ul>
           {nextTier && (
-            <p className="text-xs text-gray-500">
-              {t('referrals.nextTier', 'Invite {{count}} more to reach +{{bonus}}% APY', {
-                count: nextTier.referrals - activeReferrals,
-                bonus: nextTier.bonus.toFixed(2),
-              })}
-            </p>
+            <div className="flex items-center justify-between gap-3 text-xs text-gray-500">
+              <span>
+                {t('referrals.nextTier', 'Invite {{count}} more to reach', {
+                  count: nextTier.referrals - activeReferrals,
+                })}
+              </span>
+              <span className="rounded-md bg-[#7c3aed]/15 px-2 py-0.5 text-[11px] font-bold text-[#7c3aed] tabular-nums">
+                +{nextTier.bonus.toFixed(2)}% APY
+              </span>
+            </div>
           )}
         </div>
+
+        {/* Enlace a la explicación externa, fuera de la tarjeta: texto a la
+            izquierda + icono a la derecha, con una línea que lo separa de la
+            sección del código. */}
+        <a
+          href={REFERRALS_LEARN_MORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex w-full items-center justify-between gap-2 border-b border-black/10 px-1 pb-4 text-xs font-semibold text-gray-600 transition hover:text-black"
+        >
+          {t('referrals.learnMore', 'Learn how it works')}
+          <FiExternalLink className="h-4 w-4" />
+        </a>
 
         {/* Código */}
         <div className="space-y-2">
@@ -169,9 +195,12 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
           <button
             type="button"
             onClick={copyCode}
-            className="flex w-full items-center justify-between gap-3 rounded-md border border-black border-b-2 bg-white px-4 py-3 transition hover:bg-gray-50"
+            disabled={!hasCode}
+            className="flex w-full items-center justify-between gap-3 rounded-md border border-black border-b-2 bg-white px-4 py-3 transition hover:bg-gray-50 disabled:opacity-60"
           >
-            <span className="text-base font-bold tracking-[0.2em] text-black">{code}</span>
+            <span className="text-base font-bold tracking-[0.2em] text-black">
+              {hasCode ? code : isLoading ? '••••••' : '——————'}
+            </span>
             {copied ? (
               <FiCheck className="h-4 w-4 text-success" />
             ) : (
