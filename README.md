@@ -3,6 +3,8 @@
 Vaquita monorepo on Stellar: frontend, API, services, and Soroban contracts.
 
 [![Contracts CI](https://github.com/vaquita-labs/stellar/actions/workflows/contracts-ci.yml/badge.svg?branch=main)](https://github.com/vaquita-labs/stellar/actions/workflows/contracts-ci.yml)
+[![API CI](https://github.com/vaquita-labs/stellar/actions/workflows/api-ci.yml/badge.svg)](https://github.com/vaquita-labs/stellar/actions/workflows/api-ci.yml)
+[![Web CI](https://github.com/vaquita-labs/stellar/actions/workflows/web-ci.yml/badge.svg)](https://github.com/vaquita-labs/stellar/actions/workflows/web-ci.yml)
 [![codecov](https://codecov.io/github/vaquita-labs/stellar/graph/badge.svg?token=O645YJTLJ2)](https://codecov.io/github/vaquita-labs/stellar)
 
 ## Requirements
@@ -53,6 +55,15 @@ Main screens:
 - **Onboarding** — first-run wallet + profile flow.
 
 More details in [`apps/web/README.md`](apps/web/README.md).
+
+## API
+
+The HTTP API is deployed at **`https://api.stellar.dev.vaquita.fi`** and serves
+live data from Supabase. All routes live under `/api/v1`.
+
+- **Endpoint reference:** [`apps/api/README.md`](apps/api/README.md#endpoints)
+- **Liveness:** [`https://api.stellar.dev.vaquita.fi/api/v1/health`](https://api.stellar.dev.vaquita.fi/api/v1/health) — confirms the API process is up
+- **DB health:** [`https://api.stellar.dev.vaquita.fi/api/v1/health/db`](https://api.stellar.dev.vaquita.fi/api/v1/health/db) — pings Supabase and reports live DB latency
 
 ## Contracts
 

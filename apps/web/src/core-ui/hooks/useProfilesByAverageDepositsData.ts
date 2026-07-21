@@ -1,16 +1,22 @@
+import { resolveAvatarConfig } from '@vaquita/avatar';
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { ProfileAverageResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 import { ONE_MINUTE } from '../config/constants';
 
+/**
+ * @deprecated The leaderboard now reads `/api/v1/leaderboard` via
+ * `useLeaderboardData`. Keep this hook only for compatibility with older
+ * profile-average views.
+ */
 export const useProfilesByAverageDepositsData = () => {
-  const { network } = useNetworkConfigStore();
+  const { network } = useConfigStore();
   return useQuery<ProfileAverageResponseDTO[]>({
-    queryKey: ['profiles', 'network', network?.name, 'by-average-deposits'],
+    queryKey: ['profiles', 'network', network?.networkName, 'by-average-deposits'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.name}/by-average-deposits`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/by-average-deposits`
       );
       const data = await response.json();
 
@@ -19,6 +25,7 @@ export const useProfilesByAverageDepositsData = () => {
           email: profile?.email ?? '',
           fullName: profile?.fullName ?? '',
           nickname: profile?.nickname ?? '',
+          avatarConfig: resolveAvatarConfig(profile?.avatarConfig, profile?.walletAddress ?? ''),
           walletAddress: profile?.walletAddress ?? '',
           totalSums: profile?.totalSums ?? 0,
           lastSum: profile?.lastSum ?? 0,
@@ -26,14 +33,22 @@ export const useProfilesByAverageDepositsData = () => {
           timestamp: profile?.timestamp ?? 0,
           delay: profile?.delay ?? 0,
           badges: profile?.badges ?? 0,
+          streak: profile?.streak ?? 0,
+          experience: profile?.experience ?? 0,
         };
 
         return p;
       });
     },
     refetchInterval: ONE_MINUTE * 5,
-    enabled: !!network?.name,
+    enabled: !!network?.networkName,
     refetchOnReconnect: true,
     refetchOnWindowFocus: true,
+    // The app's global default is staleTime: Infinity + refetchOnMount: false, so
+    // once cached this list never refreshes on navigation — leaving e.g. a freshly
+    // changed avatar stale until the 5-min interval fires. 'always' forces a fresh
+    // fetch every time the page mounts, so the board reflects the latest profiles
+    // (avatar, nickname, badges) on each visit.
+    refetchOnMount: 'always',
   });
 };

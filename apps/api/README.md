@@ -39,12 +39,59 @@ All routes live under the `/api/v1` prefix:
 | Path | Folder |
 |------|--------|
 | `/api/v1/config` | [`src/routes/config`](src/routes/config) |
+| `/api/v1/health` | [`src/routes/health`](src/routes/health) |
 | `/api/v1/profile` | [`src/routes/profile`](src/routes/profile) |
 | `/api/v1/deposit` | [`src/routes/deposit`](src/routes/deposit) |
 | `/api/v1/network` | [`src/routes/network`](src/routes/network) |
 | `/api/v1/user` | [`src/routes/user`](src/routes/user) |
 
 The main router is in [`src/routes/index.ts`](src/routes/index.ts).
+
+### Health checks
+
+Two separate endpoints. Both are public (no auth).
+
+**`GET /api/v1/health`** — liveness. Answers "is the API process alive?".
+Has no external dependencies, so a flaky Supabase will not flip this to red
+(which would cause orchestrators to reboot the container for no reason).
+
+```bash
+curl https://api.stellar.dev.vaquita.fi/api/v1/health
+```
+
+```json
+{
+  "status": "success",
+  "message": "alive",
+  "data": {
+    "service": "ok",
+    "env": "development",
+    "uptimeSec": 1234,
+    "ts": "2026-05-25T00:00:00.000Z"
+  }
+}
+```
+
+**`GET /api/v1/health/db`** — readiness. Pings Supabase with a trivial query
+and reports DB connectivity. Returns `200` when the DB is reachable, `503`
+when it is not.
+
+```bash
+curl https://api.stellar.dev.vaquita.fi/api/v1/health/db
+```
+
+```json
+{
+  "status": "success",
+  "message": "db reachable",
+  "data": {
+    "db": "ok",
+    "env": "development",
+    "ts": "2026-05-25T00:00:00.000Z",
+    "latencyMs": 42
+  }
+}
+```
 
 ## Layout
 

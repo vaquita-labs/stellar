@@ -1,24 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
 import { clientEnv } from '../config/clientEnv';
-import { ONE_MINUTE } from '../config/constants';
-import { useNetworkConfigStore } from '../stores';
+import { useConfigStore } from '../stores';
 import { DepositResponseDTO, TotalDepositsResponseDTO } from '../types';
 
 export const useDepositsComplete = (_walletAddress?: string) => {
-  const { walletAddress: userWalletAddress, network } = useNetworkConfigStore();
+  const { walletAddress: userWalletAddress, network } = useConfigStore();
 
   const walletAddress = _walletAddress ?? userWalletAddress;
 
   return useQuery<{ deposits: DepositResponseDTO[]; totals: TotalDepositsResponseDTO } | null>({
-    queryKey: ['deposit', 'network', network?.name, 'wallet', walletAddress, 'complete'],
+    queryKey: ['deposit', 'network', network?.networkName, 'wallet', walletAddress, 'complete'],
     queryFn: async () => {
       try {
         const response = await fetch(
-          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.name}/wallet/${walletAddress}/complete`
+          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.networkName}/wallet/${walletAddress}/complete`
         );
 
         const data = await response.json();
 
+        const fetchedAtTimestamp = Date.now();
         const deposits = ((data?.data?.deposits ?? []) as DepositResponseDTO[]).map((deposit) => {
           const data: DepositResponseDTO = {
             transactionHash: deposit.transactionHash,
@@ -29,7 +29,7 @@ export const useDepositsComplete = (_walletAddress?: string) => {
             id: deposit.id,
             vaquitaContractAddress: deposit.vaquitaContractAddress,
             vaquitaInterest: Number(deposit.vaquitaInterest),
-            aaveInterest: Number(deposit.aaveInterest),
+            protocolInterest: Number(deposit.protocolInterest),
             blendInterest: Number(deposit.blendInterest),
             vaultInterest:
               deposit.vaultInterest !== undefined && deposit.vaultInterest !== null
@@ -44,6 +44,7 @@ export const useDepositsComplete = (_walletAddress?: string) => {
             serverTimestamp: deposit.serverTimestamp || 0,
             confirmedTimestamp: deposit.confirmedTimestamp || 0,
             inLockPeriod: deposit.inLockPeriod,
+            fetchedAtTimestamp,
           };
           return data;
         });
@@ -59,7 +60,8 @@ export const useDepositsComplete = (_walletAddress?: string) => {
         };
       }
     },
-    refetchInterval: ONE_MINUTE * 5,
-    enabled: !!network?.name && !!walletAddress,
+    // No polling: deposit data only changes on deposit/withdraw, which the
+    // Ably `deposits-changes` channel invalidates (see ListenDepositsChanges).
+    enabled: !!network?.networkName && !!walletAddress,
   });
 };

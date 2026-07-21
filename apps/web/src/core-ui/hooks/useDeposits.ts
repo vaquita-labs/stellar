@@ -1,19 +1,18 @@
-import { ONE_MINUTE } from '@/core-ui/config/constants';
 import { useQuery } from '@tanstack/react-query';
 import { clientEnv } from '../config/clientEnv';
-import { useNetworkConfigStore } from '../stores';
+import { useConfigStore } from '../stores';
 import { DepositSummaryResponseDTO } from '../types';
 
 export const useDeposits = (_walletAddress?: string) => {
-  const { walletAddress: userWalletAddress, network } = useNetworkConfigStore();
+  const { walletAddress: userWalletAddress, network } = useConfigStore();
 
   const walletAddress = _walletAddress ?? userWalletAddress;
 
   return useQuery<{ deposits: DepositSummaryResponseDTO[] } | null>({
-    queryKey: ['deposit', 'network', network?.name, 'wallet', walletAddress],
+    queryKey: ['deposit', 'network', network?.networkName, 'wallet', walletAddress],
     queryFn: async () => {
       try {
-        const url = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.name}/wallet/${walletAddress}`;
+        const url = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.networkName}/wallet/${walletAddress}`;
         const response = await fetch(url);
         const data = await response.json();
 
@@ -40,7 +39,8 @@ export const useDeposits = (_walletAddress?: string) => {
         };
       }
     },
-    refetchInterval: ONE_MINUTE * 5,
-    enabled: !!network?.name && !!walletAddress,
+    // No polling: invalidated by the Ably `deposits-changes` channel on
+    // deposit/withdraw (see ListenDepositsChanges).
+    enabled: !!network?.networkName && !!walletAddress,
   });
 };

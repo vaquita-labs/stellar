@@ -1,0 +1,142 @@
+import { Html } from '@react-three/drei';
+import { Button } from '@heroui/react';
+import { EditionMode, useMapStore } from '@/core-ui/stores';
+import { MapObjectType } from '@/core-ui/types';
+import { useTranslation } from 'react-i18next';
+import * as THREE from 'three';
+
+// Tamaño en pantalla de la columna de botones (3 × 36px + separaciones), para
+// el clamping al viewport.
+const CONTROLS_WIDTH = 44;
+const CONTROLS_HEIGHT = 132;
+const MARGIN = 12;
+
+// Proyección estándar de drei Html + clamping: los botones siguen al tile en
+// edición pero nunca se salen de la pantalla (con la cámara cerca quedaban
+// fuera de vista y la confirmación "se perdía").
+const calculateClampedPosition = (
+  el: THREE.Object3D,
+  camera: THREE.Camera,
+  size: { width: number; height: number }
+): [number, number] => {
+  const objectPos = new THREE.Vector3().setFromMatrixPosition(el.matrixWorld);
+  objectPos.project(camera);
+  const x = objectPos.x * (size.width / 2) + size.width / 2;
+  const y = -(objectPos.y * (size.height / 2)) + size.height / 2;
+  return [
+    Math.min(Math.max(x, MARGIN), size.width - CONTROLS_WIDTH - MARGIN),
+    Math.min(Math.max(y, MARGIN), size.height - CONTROLS_HEIGHT - MARGIN),
+  ];
+};
+
+interface EditControlsProps {
+  position: [number, number, number];
+}
+
+export const EditControls = ({ position }: EditControlsProps) => {
+  const { t } = useTranslation();
+  const updateTile = useMapStore((store) => store.updateTile);
+  const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
+  const setPickedItem = useMapStore((store) => store.setPickedItem);
+  const setEditMode = useMapStore((store) => store.setEditMode);
+  const getTileAt = useMapStore((store) => store.getTileAt);
+  const editMode = useMapStore((store) => store.editMode);
+  const pickedObject = useMapStore((store) => store.pickedObject);
+  const currentTiles = useMapStore((store) => store.currentTiles);
+
+  const handleRemove = () => {
+    // Quitar una colocación pendiente = revertir la celda a lo que tenía (si
+    // era expansión, ni siquiera queda una entrada EMPTY suelta).
+    const pending = useMapStore.getState().pendingPlacement;
+    if (pending && pending.position[0] === position[0] && pending.position[2] === position[2]) {
+      useMapStore.getState().revertPendingPlacement();
+      setEditingObjectPosition(null);
+      return;
+    }
+    updateTile(position, {
+      variant: 0,
+      type: MapObjectType.EMPTY,
+      position,
+      rotation: [0, 0, 0],
+    });
+    setEditingObjectPosition(null);
+  };
+
+  const handleRotate = () => {
+    const tile = getTileAt(position[0], position[2]);
+    if (!tile) return;
+
+    // Obtener la rotación actual del tile
+    const currentRotation = tile.rotation || [0, 0, 0];
+    const [x, y, z] = currentRotation;
+    
+    // Rotar 90 grados (π/2) en el eje Y
+    let newY = y + Math.PI / 2;
+    
+    // Normalizar a [0, 2π) usando módulo
+    newY = ((newY % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2);
+    
+    const newRotation: [number, number, number] = [x, newY, z];
+
+    console.log('Rotación:', {
+      anterior: currentRotation,
+      nueva: newRotation,
+      gradosAnterior: (y * 180) / Math.PI,
+      gradosNueva: (newY * 180) / Math.PI,
+    });
+
+    updateTile(position, {
+      ...tile,
+      rotation: newRotation,
+    });
+  };
+
+  const handleDone = () => {
+    // Confirmar consolida la colocación pendiente: ya no hay nada que revertir.
+    useMapStore.getState().setPendingPlacement(null);
+    setEditingObjectPosition(null);
+
+    // Si el usuario está colocando un item del que todavía le quedan unidades,
+    // mantenerlo seleccionado en modo ADD para poder colocar varios seguidos
+    // sin volver a abrir la colección.
+    if (editMode === EditionMode.ADD && pickedObject) {
+      const used = currentTiles.reduce(
+        (sum, tile) => sum + +(tile.type === pickedObject.type && tile.variant === pickedObject.variant),
+        0
+      );
+      if (used < pickedObject.itemsAvailable) {
+        return;
+      }
+    }
+
+    // Sin unidades restantes (o editando un objeto existente): volver al estado
+    // base, deseleccionar el item picado y salir de ADD mode. Esto re-expande
+    // el bottom sheet para que el usuario vea el catálogo de nuevo.
+    setPickedItem(null);
+    setEditMode(EditionMode.SELECT);
+  };
+
+  return (
+    <Html
+      position={[position[0] + 1.2, position[1] + 2, position[2]]}
+      center={false}
+      transform={false}
+      occlude={false}
+      calculatePosition={calculateClampedPosition}
+      style={{ pointerEvents: 'auto', zIndex: 10000 }}
+      zIndexRange={[10000, 0]}
+    >
+      <div className="flex flex-col gap-2">
+        <Button isIconOnly onPress={handleRemove} aria-label={t('home.editControls.remove', 'Remove')} className="bg-transparent">
+          <img src="/icons/edit-controls/remove.svg" alt={t('home.editControls.remove', 'Remove')} width={36} height={36} />
+        </Button>
+        <Button isIconOnly onPress={handleRotate} aria-label={t('home.editControls.rotate', 'Rotate')} className="bg-transparent">
+          <img src="/icons/edit-controls/rotate.svg" alt={t('home.editControls.rotate', 'Rotate')} width={36} height={36} />
+        </Button>
+        <Button isIconOnly onPress={handleDone} aria-label={t('common.confirm')} className="bg-transparent">
+          <img src="/icons/edit-controls/done.svg" alt={t('common.confirm')} width={36} height={36} />
+        </Button>
+      </div>
+    </Html>
+  );
+};

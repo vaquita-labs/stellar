@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { PropsWithChildren, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const frames = [
   '/vaquita-loading/loading1.svg',
@@ -15,6 +16,7 @@ const indexRef = {
 };
 
 export const LoaderScreen = ({ children, withImage = false }: PropsWithChildren<{ withImage?: boolean }>) => {
+  const { t } = useTranslation();
   const [index, setIndex] = useState(indexRef.current);
 
   useEffect(() => {
@@ -40,9 +42,9 @@ export const LoaderScreen = ({ children, withImage = false }: PropsWithChildren<
       <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" />
       <div
         className="relative mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-black/5
-                   animate-in fade-in zoom-in-95 duration-150 flex flex-col items-center justify-center"
+                   flex flex-col items-center justify-center"
       >
-        {withImage && <Image src={frames[index]} alt="logo" width={350} height={350} />}
+        {withImage && <Image src={frames[index]} alt={t('shell.loader.alt', 'logo')} width={350} height={350} />}
         {children}
       </div>
     </div>

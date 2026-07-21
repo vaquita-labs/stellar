@@ -1,28 +1,34 @@
 'use client';
 
+import { paletteColor, resolveAvatarConfig } from '@vaquita/avatar';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { Card, toast } from '@heroui/react';
+import { addUsdcTrustline } from '@/networks/stellar/sorobanTx';
+import { Card } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import React, { useMemo } from 'react';
-import { FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
+import React, { useMemo, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
+import { FiChevronLeft, FiChevronRight, FiHeart, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
   useClaimedAchievements,
   useDepositsComplete,
+  useFollowCounts,
+  useMapLikeCount,
   useProfileAchievements,
   useProfileData,
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
+  type FollowListKind,
 } from '../../hooks';
-import { useHideBalance, useNetworkConfigStore } from '../../stores';
+import { useConfigStore } from '../../stores';
 import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
+import { VaquitaAvatar } from '../avatar/VaquitaAvatar';
 import { BadgeTile } from './profile/BadgeTile';
+import { FollowListModal } from './profile/FollowListModal';
 import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
-
-const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
 /* ------------------------------------------------------------------ */
 /* Sub-components                                                      */
@@ -37,6 +43,7 @@ const SectionHeader = ({
   count?: number;
   href?: string;
 }) => {
+  const { t } = useTranslation();
   const trailing = (
     <span className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-black transition">
       {typeof count === 'number' && <span className="tabular-nums">{count}</span>}
@@ -49,7 +56,7 @@ const SectionHeader = ({
         {title}
       </h2>
       {href ? (
-        <Link href={href} aria-label={`See all ${title}`}>
+        <Link href={href} aria-label={t('profilePages.profile.seeAll', 'See all {{title}}', { title })}>
           {trailing}
         </Link>
       ) : (
@@ -59,16 +66,41 @@ const SectionHeader = ({
   );
 };
 
-const StatPill = ({ value, label }: { value: React.ReactNode; label: string }) => (
-  <div className="flex flex-col items-center min-w-0 flex-1">
-    <span className="text-lg sm:text-xl font-extrabold text-black tabular-nums leading-none">
-      {value}
-    </span>
-    <span className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
-      {label}
-    </span>
-  </div>
-);
+const StatPill = ({
+  value,
+  label,
+  onPress,
+  ariaLabel,
+}: {
+  value: React.ReactNode;
+  label: string;
+  onPress?: () => void;
+  ariaLabel?: string;
+}) => {
+  const inner = (
+    <>
+      <span className="text-lg sm:text-xl font-extrabold text-black tabular-nums leading-none">
+        {value}
+      </span>
+      <span className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
+        {label}
+      </span>
+    </>
+  );
+  if (onPress) {
+    return (
+      <button
+        type="button"
+        onClick={onPress}
+        aria-label={ariaLabel}
+        className="flex flex-col items-center min-w-0 flex-1 rounded-xl py-1 bg-transparent hover:bg-black/5 transition"
+      >
+        {inner}
+      </button>
+    );
+  }
+  return <div className="flex flex-col items-center min-w-0 flex-1">{inner}</div>;
+};
 
 const SummaryItem = ({
   icon,
@@ -79,12 +111,13 @@ const SummaryItem = ({
   value: React.ReactNode;
   label: string;
 }) => (
-  <div className="flex items-center gap-2.5">
-    <Image src={icon} alt={label} width={28} height={28} className="object-contain" />
-    <div className="flex flex-col leading-tight">
-      <span className="text-sm font-extrabold text-black tabular-nums">{value}</span>
-      <span className="text-[11px] font-semibold text-gray-500">{label}</span>
-    </div>
+  // Icon stacked above the text, not beside it: in the 3-up summary row a
+  // side-by-side icon eats ~38px of a ~72px column on a 320px screen, which
+  // clipped long values ("128,450 XP") off the card.
+  <div className="flex min-w-0 flex-col items-center gap-1 text-center leading-tight">
+    <Image src={icon} alt="" aria-hidden width={28} height={28} className="object-contain" />
+    <span className="text-sm font-extrabold text-black tabular-nums">{value}</span>
+    <span className="text-[11px] font-semibold text-gray-500">{label}</span>
   </div>
 );
 
@@ -93,18 +126,28 @@ const SummaryItem = ({
 /* ------------------------------------------------------------------ */
 
 export function ProfilePage() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
-  const { walletAddress, token } = useNetworkConfigStore();
-  const hideBalance = useHideBalance();
+  const { walletAddress } = useConfigStore();
   const { data: profileData } = useProfileData();
   const { data: streakData } = useProfileStreak();
   const { data: experienceData } = useProfileExperience();
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
+  const { data: followCounts } = useFollowCounts();
+  const { data: mapLikes } = useMapLikeCount();
+  const [followModal, setFollowModal] = useState<{ open: boolean; tab: FollowListKind }>({
+    open: false,
+    tab: 'following',
+  });
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
+
+  // /profile?follow=<wallet> deep links are handled globally by
+  // FollowLinkCapture / PendingFollowConsumer in the (private) layout, so
+  // they survive the signup funnel for unregistered scanners.
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
   const hasActiveStreak = !!streakData?.todayStreak;
@@ -130,16 +173,31 @@ export function ProfilePage() {
     return '@vaquero';
   }, [profileData?.nickname, walletAddress]);
 
-  // We don't yet have a real "joined" date from the backend, so we show the
-  // current month + year as a friendly placeholder ("joined May 2026").
-  const joinedLabel = useMemo(
-    () =>
-      new Date().toLocaleDateString(undefined, {
-        month: 'long',
-        year: 'numeric',
-      }),
-    []
-  );
+  // Real account creation date from the backend ("joined 5 May 2026"). Falls
+  // back to the current date if the timestamp hasn't loaded yet.
+  // Formatted with the APP's language, not the browser's: `undefined` here read
+  // the OS locale, so a profile set to Spanish rendered "se unió el July 21".
+  const joinedLabel = useMemo(() => {
+    const createdAt = profileData?.createdAt;
+    const date = createdAt ? new Date(createdAt) : new Date();
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString(i18n.language, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [profileData?.createdAt, i18n.language]);
+
+  // The banner floods the full page width with the avatar's own background
+  // colour, so the character reads as part of the header instead of sitting in
+  // a coloured box that stops at the artwork's edges.
+  const bannerBackground = useMemo(() => {
+    const config = resolveAvatarConfig(
+      profileData?.avatarConfig,
+      profileData?.walletAddress || walletAddress || ''
+    );
+    return paletteColor('background', config['backgroundColor'] as number);
+  }, [profileData?.avatarConfig, profileData?.walletAddress, walletAddress]);
 
   const betaTester = useMemo(
     () => achievementsData?.achievements?.find((a) => a.key === 'beta-tester'),
@@ -156,49 +214,47 @@ export function ProfilePage() {
         isBetaTester: betaTester?.unlocked ?? false,
         betaTesterClaimedAt: betaTester?.claimedAt ?? undefined,
         extraAchievements: achievementsData?.achievements,
+        friendsCount: followCounts?.following ?? 0,
       }),
-    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements]
+    [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, followCounts?.following]
   );
 
-  const handleShareToInstagram = async () => {
-    // Instagram doesn't expose a public web-share intent for arbitrary URLs.
-    // We try the native share sheet first (which surfaces Instagram on mobile),
-    // and fall back to copying the link with a hint to paste into a story.
-    const url = typeof window !== 'undefined' ? window.location.href : '';
-    const text = `I'm saving with Vaquita 🐮 — join me!`;
-    try {
-      if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
-        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: 'Vaquita',
-          text,
-          url,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(`${text} — ${url}`);
-      toast.success('Copied! Paste it in your Instagram story.');
-    } catch (error) {
-      const message = (error as { message?: string })?.message ?? '';
-      if (message && !message.toLowerCase().includes('abort')) {
-        toast.danger('Could not share', { description: message });
-      }
-    }
-  };
+  // The 4-tile preview prioritises what the user can act on right now:
+  // 1) achievements ready to claim (unlocked, not yet claimed),
+  // 2) then ones already claimed (their earned trophies),
+  // 3) the still-locked ones last, easiest-to-get first (closest to completion),
+  //    so the grid never empties.
+  // Within each bucket we keep the catalog's display order (already easy→hard).
+  const previewBadges = useMemo(() => {
+    const closeness = (b: (typeof achievements)[number]) =>
+      b.progress && b.progress.target > 0 ? b.progress.current / b.progress.target : 0;
+
+    const claimable = achievements.filter((b) => b.unlocked && !isClaimed(b.id));
+    const claimed = achievements.filter((b) => b.unlocked && isClaimed(b.id));
+    const locked = achievements
+      .filter((b) => !b.unlocked)
+      .sort((a, b) => closeness(b) - closeness(a));
+
+    return [...claimable, ...claimed, ...locked].slice(0, 4);
+  }, [achievements, isClaimed]);
 
   /* -------------------------------------------------------------- */
   /* Disconnected state                                              */
   /* -------------------------------------------------------------- */
   if (!walletAddress) {
     return (
-      <PageLayout title="Profile" backHref="/home">
+      <PageLayout title={t('profilePages.profile.title', 'Profile')} backHref="/home">
         <Card className="border border-default-200/60 bg-white/80 shadow-sm backdrop-blur dark:border-default-100/40 dark:bg-default-50/80">
           <Card.Content className="flex flex-col gap-6 p-6 sm:p-10 text-center">
             <div className="space-y-3">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
-                Connect your wallet
+                {t('profilePages.profile.connectWalletTitle', 'Connect your wallet')}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Access your profile, metrics, and future achievements by connecting your wallet.
+                {t(
+                  'profilePages.profile.connectWalletDescription',
+                  'Access your profile, metrics, and future achievements by connecting your wallet.'
+                )}
               </p>
             </div>
           </Card.Content>
@@ -211,129 +267,155 @@ export function ProfilePage() {
     <div className="h-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-6">
         {/* Hero banner ------------------------------------------------ */}
-        <header className="relative bg-primary px-4 sm:px-6 pt-5 pb-12 rounded-b-3xl border-b-2 border-black/10">
-          {/* Top action row — Profile is reachable from the nav, so no back button. */}
-          <div className="flex items-center justify-end gap-2">
-            <ShareProfileQrButton displayName={displayName} handle={handle} />
-            <Link
-              href="/profile/settings"
-              aria-label="Settings"
-              className="flex items-center justify-center h-9 w-9 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
-            >
-              <FiSettings className="h-4 w-4" />
-            </Link>
-          </div>
+        {/* The character IS the banner: it's drawn edge-to-edge at the top of
+            the screen, cropped at the shoulders, with the avatar's own
+            background colour flooding the full width behind it. The name
+            overlays the top-left corner and the actions the top-right, so
+            nothing competes with the face. Tapping anywhere on it opens the
+            builder — the only way to change a profile picture. */}
+        <header className="relative" style={{ backgroundColor: bannerBackground }}>
+          <Link
+            href="/profile/avatar"
+            aria-label={t('profilePages.profile.editAvatarAria', 'Edit your avatar')}
+            className="block pt-11"
+          >
+            <VaquitaAvatar
+              config={profileData?.avatarConfig}
+              seed={profileData?.walletAddress || walletAddress || ''}
+              crop="bust"
+              background={false}
+              className="mx-auto block w-full max-w-[15.5rem] [&_svg]:block [&_svg]:h-auto [&_svg]:w-full"
+            />
+          </Link>
 
-          {/* Avatar + name */}
-          <div className="mt-4 flex flex-col items-center gap-2 text-center">
-            <Link
-              href="/profile/edit"
-              aria-label="Edit profile"
-              className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-black border-b-4 shadow"
-            >
-              <Image
-                src={DEFAULT_AVATAR}
-                alt={displayName}
-                width={120}
-                height={120}
-                className="object-contain"
-                priority
-              />
-            </Link>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
-              {displayName}
+          {/* Overlay row — back left, title centred, actions right. All three
+              cells are `flex-1 basis-0`, so the side groups claim equal width
+              however wide their buttons are and the middle third lands on the
+              page's centre line (a plain justify-between would push the title
+              off-centre by the difference between one button and two).
+              The wrapper ignores pointer events so the whole banner behind it
+              stays tappable; each control opts back in. */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 px-4 pt-4 sm:px-6">
+            <div className="pointer-events-auto flex flex-1 basis-0 justify-start">
+              <Link
+                href="/home"
+                aria-label={t('common.back')}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black border-b-2 bg-white/70 text-black transition hover:bg-white"
+              >
+                <FiChevronLeft className="h-5 w-5" />
+              </Link>
+            </div>
+            {/* The screen title, not the username — the handle right below the
+                banner already identifies who this is, and repeating it here
+                just competed with the character. */}
+            <h1 className="flex-1 basis-0 truncate text-center text-2xl font-extrabold tracking-tight text-black sm:text-3xl">
+              {t('profilePages.profile.title', 'Profile')}
             </h1>
-            <p className="text-xs sm:text-sm font-semibold text-black/70">
-              {handle} · joined {joinedLabel}
-            </p>
+            {/* Sharing lives next to the "add friends" CTA further down, where
+                it's an action rather than a header icon. */}
+            <div className="pointer-events-auto flex flex-1 basis-0 shrink-0 items-center justify-end gap-2">
+              <Link
+                href="/profile/settings"
+                aria-label={t('profilePages.profile.settingsAria', 'Settings')}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-black border-b-2 bg-white/70 text-black transition hover:bg-white"
+              >
+                <FiSettings className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </header>
+
+        {/* Handle + joined date sit on the page background, right under the
+            banner — the same split as the reference design. */}
+        <section className="-mt-2 px-4 sm:px-6">
+          {/* No `uppercase` here: the handle has to read exactly as the user
+              saved it (Lea, 4Test1234), and a CSS transform would rewrite it.
+              The handle is wrapped in <b> inside the translation so each locale
+              decides where it sits in the sentence — it's the identity on this
+              screen, the join date is just context. */}
+          <p className="text-xs font-bold tracking-wide text-gray-500 sm:text-sm">
+            <Trans
+              i18nKey="profilePages.profile.handleJoined"
+              values={{ handle, joinedLabel }}
+              components={{ b: <strong className="text-base font-extrabold text-black sm:text-lg" /> }}
+            />
+          </p>
+        </section>
 
         {/* Stats row -------------------------------------------------- */}
         <section className="px-4 sm:px-6">
           <div className="flex items-stretch gap-3">
-            <StatPill value={'0'} label="Following" />
+            <StatPill
+              value={followCounts?.following ?? 0}
+              label={t('profilePages.profile.following', 'Following')}
+              ariaLabel={t('profilePages.profile.viewFollowing', 'View following')}
+              onPress={() => setFollowModal({ open: true, tab: 'following' })}
+            />
             <span className="w-px bg-black/10" aria-hidden />
-            <StatPill value={'0'} label="Followers" />
+            <StatPill
+              value={followCounts?.followers ?? 0}
+              label={t('profilePages.profile.followers', 'Followers')}
+              ariaLabel={t('profilePages.profile.viewFollowers', 'View followers')}
+              onPress={() => setFollowModal({ open: true, tab: 'followers' })}
+            />
+            <span className="w-px bg-black/10" aria-hidden />
+            {/* Hearts the user's 3D world collected — not a follower metric, so
+                it gets the icon to set it apart from the two counts beside it. */}
+            <StatPill
+              value={
+                <span className="inline-flex items-center gap-1">
+                  <FiHeart className="h-4 w-4 fill-red-500 text-red-500" aria-hidden />
+                  {mapLikes ?? 0}
+                </span>
+              }
+              label={t('profilePages.profile.mapLikes', 'Hearts')}
+            />
           </div>
         </section>
 
-        {/* Friends CTA ------------------------------------------------ */}
-        <section className="px-4 sm:px-6">
+        {/* Friends CTA + share ---------------------------------------- */}
+        {/* The QR sits beside the CTA, not in the banner: both are "grow your
+            circle" actions, and pairing them frees the header for navigation. */}
+        <section className="flex items-stretch gap-3 px-4 sm:px-6">
           <Link
             href="/profile/friends"
-            className="flex items-center justify-center gap-2 w-full h-12 rounded-md bg-white text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide hover:bg-white/80 hover:-translate-y-0.5 transition"
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md border border-black border-b-3 bg-white text-sm font-bold uppercase tracking-wide text-black transition hover:-translate-y-0.5 hover:bg-white/80"
           >
             <FiUserPlus className="h-4 w-4" />
-            Add friends
+            {t('profilePages.profile.addFriends', 'Add friends')}
           </Link>
+          <ShareProfileQrButton
+            displayName={displayName}
+            handle={handle}
+            className="h-12 w-12 rounded-md !bg-white hover:-translate-y-0.5 border-b-3"
+          />
         </section>
 
-        {/* Share to Instagram CTA ------------------------------------- */}
-        {/* <section className="px-4 sm:px-6">
-          <div className="relative overflow-hidden rounded-2xl bg-white border border-black border-b-2 p-4 flex items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-extrabold text-black leading-snug">
-                Share your Vaquita on Instagram!
-              </p>
-              <p className="text-xs text-gray-600 mt-0.5">
-                Brag a little — invite your friends to save together.
-              </p>
-              <button
-                type="button"
-                onClick={handleShareToInstagram}
-                className="mt-3 inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-primary text-black border border-black border-b-3 text-xs font-bold uppercase tracking-wide hover:bg-primary/80 hover:-translate-y-0.5 transition"
-              >
-                <FiShare2 className="h-3.5 w-3.5" />
-                Share now
-              </button>
-            </div>
-            <div className="shrink-0">
-              <Image
-                src="/vaquita/vaquita_isotipo.svg"
-                alt="Vaquita"
-                width={72}
-                height={72}
-                className="object-contain"
-              />
-            </div>
-          </div>
-        </section> */}
 
-        {/* Resumen ---------------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <SectionHeader title="Summary" href="/profile/summary" />
+          <SectionHeader title={t('profilePages.profile.summary', 'Summary')} href="/profile/summary" />
           {/* Whole white card is the link target — the chevron in the header
               is just the visual cue. No interactive children inside, so a
               plain Link wrap is safe (no nested-anchor warnings). */}
           <Link
             href="/profile/summary"
-            aria-label="See full summary"
-            className="grid grid-cols-2 gap-3 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
+            aria-label={t('profilePages.profile.seeFullSummary', 'See full summary')}
+            className="grid grid-cols-3 gap-2 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
           >
             <SummaryItem
-              icon={hasActiveStreak ? '/icons/global/streak.png' : '/icons/global/streak_freeze.png'}
-              value={`${totalStreak} days`}
-              label="Streak"
+              icon={hasActiveStreak ? '/icons/global/streak_face.png' : '/icons/global/streak_freeze_face.png'}
+              value={t('profilePages.profile.daysCount', { count: totalStreak, defaultValue: '{{count}} days' })}
+              label={t('profilePages.profile.streak', 'Streak')}
             />
             <SummaryItem
               icon="/icons/global/coin.png"
-              value={
-                hideBalance
-                  ? '••••'
-                  : `$${activeDepositsTotalAmount} ${token?.symbol ?? ''}`.trim()
-              }
-              label="Active deposits"
+              value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              label={t('profilePages.profile.gold', 'Gold')}
             />
             <SummaryItem
-              icon="/icons/global/coin.png"
-              value={goldCoins.toLocaleString()}
-              label="Gold"
-            />
-            <SummaryItem
-              icon="/icons/global/trophy.png"
-              value={`${experience.toLocaleString()} XP`}
-              label="Experience"
+              icon="/icons/global/star.png"
+              value={`${Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })} XP`}
+              label={t('profilePages.profile.experience', 'Experience')}
             />
           </Link>
         </section>
@@ -341,28 +423,30 @@ export function ProfilePage() {
         {/* Achievements ---------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <SectionHeader
-            title="Achievements"
+            title={t('profilePages.profile.achievements', 'Achievements')}
             count={achievements.filter((b) => b.unlocked).length}
             href="/profile/achievements"
           />
           {/* The badge tiles are real <button>s, so we can't wrap the card in
               an <a> without invalid nesting. Instead, we place an absolute
-              Link layer behind the grid (catches clicks on the padding and
-              gaps), and have each tile's onPress push to the same route so
-              clicking a badge image also takes the user to the trophy room
-              — claiming happens there, not from the profile preview. */}
-          <div className="relative rounded-2xl bg-white border border-black border-b-2 p-4">
+              Link layer behind the grid, and have each tile's onPress push to
+              the same route so clicking a badge image also takes the user to
+              the trophy room — claiming happens there, not from the profile
+              preview. The grid layer is pointer-events-none (tiles re-enable
+              their own) so padding/gap hovers and clicks reach the Link
+              instead of dying on the grid wrapper. */}
+          <div className="relative rounded-2xl bg-white border border-black border-b-2 p-4 transition hover:-translate-y-0.5">
             <Link
               href="/profile/achievements"
-              aria-label="See all achievements"
+              aria-label={t('profilePages.profile.seeAllAchievements', 'See all achievements')}
               className="absolute inset-0 rounded-2xl z-0"
             />
-            <div className="relative z-10 grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
-              {achievements.slice(0, 4).map((badge) => (
+            <div className="pointer-events-none relative z-10 grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
+              {previewBadges.map((badge) => (
                 <BadgeTile
                   key={badge.id}
                   badge={badge}
-                  claimable={badge.unlocked && !isClaimed(badge.id)}
+                  claimable={(badge.claimState === 'pending_mint' || badge.unlocked) && !isClaimed(badge.id)}
                   onPress={() => router.push('/profile/achievements')}
                 />
               ))}
@@ -371,6 +455,11 @@ export function ProfilePage() {
         </section>
       </div>
 
+      <FollowListModal
+        open={followModal.open}
+        initialTab={followModal.tab}
+        onOpenChange={(o) => setFollowModal((s) => ({ ...s, open: o }))}
+      />
     </div>
   );
 }

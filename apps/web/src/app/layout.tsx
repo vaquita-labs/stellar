@@ -1,13 +1,20 @@
 import { Providers } from '@/components';
 import { WithHydrated } from '@/core-ui/components';
-// import { Analytics } from '@vercel/analytics/react';
-// import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata } from 'next';
 import './globals.css';
+
+// Next only honors a `viewport` exported from a layout/page — the standalone
+// viewport.ts file does nothing unless re-exported here.
+export { viewport } from './viewport';
 
 export const metadata: Metadata = {
   title: 'Vaquita App',
   description: 'La forma más segura y divertida de generar ahorros con el poder de la blockchain',
+  applicationName: 'Vaquita',
+  // iOS ignores the manifest for Add to Home Screen; these tags make the
+  // installed shortcut open full-screen with the right name and icon.
+  appleWebApp: { capable: true, title: 'Vaquita', statusBarStyle: 'default' },
+  icons: { apple: '/icons/pwa/apple-touch-icon.png' },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

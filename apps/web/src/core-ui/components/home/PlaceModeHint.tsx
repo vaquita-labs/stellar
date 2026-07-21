@@ -3,16 +3,25 @@
 import { EditionMode, useMapStore } from '@/core-ui/stores';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FiX } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
 
 export function PlaceModeHint() {
+  const { t } = useTranslation();
   const editMode = useMapStore((s) => s.editMode);
   const pickedObject = useMapStore((s) => s.pickedObject);
   const setEditMode = useMapStore((s) => s.setEditMode);
   const setPickedItem = useMapStore((s) => s.setPickedItem);
+  const revertPendingPlacement = useMapStore((s) => s.revertPendingPlacement);
+  const setEditingObjectPosition = useMapStore((s) => s.setEditingObjectPosition);
 
   const isVisible = editMode === EditionMode.ADD && !!pickedObject;
 
   const cancel = () => {
+    // Si hay un objeto colocado sin confirmar, no se pone: se revierte la
+    // celda a lo que tenía. Limpiar también la posición en edición para que
+    // el bottom sheet se re-expanda (quedaba minimizado y sin controles).
+    revertPendingPlacement();
+    setEditingObjectPosition(null);
     setPickedItem(null);
     setEditMode(EditionMode.SELECT);
   };
@@ -29,7 +38,7 @@ export function PlaceModeHint() {
         >
           <div className="flex items-center gap-2 bg-white border border-black border-b-2 rounded-full pl-3 pr-1 py-1 shadow-lg">
             <span className="text-xs sm:text-sm font-semibold text-black whitespace-nowrap">
-              Tap the map to place{' '}
+              {t('home.placeHint.tapToPlace', 'Tap the map to place')}{' '}
               <span className="text-[#34c759]">
                 {pickedObject?.type} v{(pickedObject?.variant ?? 0) + 1}
               </span>
@@ -37,7 +46,7 @@ export function PlaceModeHint() {
             <button
               type="button"
               onClick={cancel}
-              aria-label="Cancel placement"
+              aria-label={t('home.placeHint.cancelAria', 'Cancel placement')}
               className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"
             >
               <FiX className="text-black text-sm" />

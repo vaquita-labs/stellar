@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BsQrCode } from 'react-icons/bs';
+import { MdQrCode } from "react-icons/md";
 import { ShareProfileModal } from './ShareProfileModal';
 
 interface ShareProfileQrButtonProps {
@@ -11,6 +13,9 @@ interface ShareProfileQrButtonProps {
   profileUrl?: string;
   /** Overrides the avatar shown above the QR. Defaults to the vaquita isotipo. */
   avatarSrc?: string;
+  /** Replaces the pill's own sizing/shape classes (e.g. to match a taller CTA
+   *  it sits next to). The default is the 36px circle used in page headers. */
+  className?: string;
 }
 
 /**
@@ -23,7 +28,9 @@ export function ShareProfileQrButton({
   handle,
   profileUrl,
   avatarSrc,
+  className = 'h-9 w-9 rounded-full',
 }: ShareProfileQrButtonProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -31,10 +38,10 @@ export function ShareProfileQrButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Share profile QR"
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
+        aria-label={t('social.share.qrButtonLabel')}
+        className={`inline-flex shrink-0 items-center justify-center bg-white/70 border border-black border-b-2 text-black hover:bg-white transition ${className}`}
       >
-        <BsQrCode className="h-4 w-4" />
+        <MdQrCode className="h-5 w-5" />
       </button>
 
       <ShareProfileModal

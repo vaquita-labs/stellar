@@ -4,8 +4,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import { useAnalytics, useDeposits } from '../../hooks';
-import { EditionMode, useLoading, useMapStore, useNetworkConfigStore } from '../../stores';
+import { EditionMode, useGameClockSynced, useLoading, useMapStore, useConfigStore } from '../../stores';
 import { WorldType } from '../../types';
+import { LoaderScreen } from '../molecules';
+import { useModalPresence } from '../molecules/AppModal';
 import { BankAPYModal, CoinAnimation, DepositPanel, TutorialModal } from '../organisms';
 import { WorldMap } from '../templates';
 import { BackgroundMusic } from './BackgroundMusic';
@@ -14,15 +16,17 @@ import { HeaderStats } from './HeaderStats';
 import { PlaceModeHint } from './PlaceModeHint';
 
 export function HomePage() {
-  const { walletAddress, lockPeriod, network, token } = useNetworkConfigStore();
+  const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { isLoading } = useDeposits(walletAddress);
   const { trackPageView, trackUserAction } = useAnalytics();
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   const isEditingMap = useMapStore((store) => store.isEditingMap);
   const setIsEditingMap = useMapStore((store) => store.setIsEditingMap);
   const setEditMode = useMapStore((store) => store.setEditMode);
+  const setEditingObjectPosition = useMapStore((store) => store.setEditingObjectPosition);
 
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
+  const bankAPYModalMounted = useModalPresence(showBankAPYModal);
   const [coinAnimationTarget, setCoinAnimationTarget] = useState<{ x: number; y: number } | null>(null);
 
   // Track page view when component mounts
@@ -35,12 +39,18 @@ export function HomePage() {
     if (walletAddress) {
       trackUserAction('wallet_connected', {
         walletAddress: walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4),
-        network: network?.name || null,
+        network: network?.networkName || null,
       });
     }
-  }, [walletAddress, network?.name, trackUserAction]);
+  }, [walletAddress, network?.networkName, trackUserAction]);
 
   useLoading('deposits', isLoading);
+
+  // La hora del juego es estado del que depende toda la escena (reloj, y en el
+  // futuro la luz). Hasta que el servidor la confirma no se renderiza el mapa
+  // ni el reloj: se muestra el loader en vez de una hora provisional que después
+  // cambie. useGameClockSync (en Providers) hace el fetch a /api/v1/time.
+  const clockReady = useGameClockSynced();
 
   const handleCoinAnimationComplete = () => {
     setCoinAnimationTarget(null);
@@ -50,10 +60,17 @@ export function HomePage() {
   const handleEditPanelsClose = () => {
     setIsEditingMap(false);
     setEditMode(null);
+    setEditingObjectPosition(null);
   };
 
+  // Gate: sin la hora confirmada no se muestra el mapa/reloj (misma pantalla de
+  // carga que usan ConfigProvider / ProfileDataProvider).
+  if (!clockReady) {
+    return <LoaderScreen withImage />;
+  }
+
   return (
-    <div className="h-full w-full flex flex-col relative">
+    <div className="h-full w-full flex flex-col relative overflow-hidden min-h-0">
       <HeaderStats />
       <PlaceModeHint />
       {/* <BackgroundMusic /> */}
@@ -65,7 +82,7 @@ export function HomePage() {
       />
       {/* create a component that shows total days  */}
       {lockPeriod !== null && lockPeriod !== undefined && (
-        <div className="relative flex-1 flex items-stretch">
+        <div className="relative flex-1 flex items-stretch min-h-0">
           <div className="flex-1 flex flex-col h-full w-full overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div
@@ -111,7 +128,7 @@ export function HomePage() {
         <TutorialModal isOpen={isTutorialModalOpen} onClose={() => setIsTutorialModalOpen(false)} />
       )}
 
-      {showBankAPYModal && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
+      {bankAPYModalMounted && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
 
       {/* {showStreakModal && <StreakModal open={showStreakModal} onOpenChange={() => setShowStreakModal(false)} />} */}
 

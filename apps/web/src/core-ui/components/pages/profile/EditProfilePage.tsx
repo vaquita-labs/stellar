@@ -1,97 +1,144 @@
 'use client';
 
-import { Avatar, Spinner, toast } from '@heroui/react';
+import { Switch, toast } from '@heroui/react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FiCamera, FiSave, FiTrash2 } from 'react-icons/fi';
-import { truncateMiddle } from '../../../helpers';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FiChevronRight, FiSave } from 'react-icons/fi';
+import {
+  NICKNAME_MAX_LENGTH,
+  NICKNAME_MIN_LENGTH,
+  isNicknameFormatValid,
+  sanitizeNickname,
+} from '../../../helpers';
 import { useProfileData, useRestProfile } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { PageLayout } from '../../molecules';
+import { VaquitaAvatar } from '../../avatar/VaquitaAvatar';
 
 export function EditProfilePage() {
+  const { t } = useTranslation();
   const router = useRouter();
-  const { walletAddress, network } = useNetworkConfigStore();
-  const { data, isLoading } = useProfileData();
-  const { saveNickname } = useRestProfile();
+  const { walletAddress, network } = useConfigStore();
+  const { data, isLoading, refetch } = useProfileData();
+  const { saveProfile, saveProfileFlags } = useRestProfile();
 
   const initialNickname = (data?.nickname ?? '').trim();
-  const profileEmail = (data?.email ?? '').trim();
-
-  const DEFAULT_AVATAR = '/vaquita_working.jpg';
+  const initialEmail = (data?.email ?? '').trim();
 
   const [nickname, setNickname] = useState<string>(initialNickname);
+  const [email, setEmail] = useState<string>(initialEmail);
+  const [nicknameError, setNicknameError] = useState<string>('');
+  const [emailError, setEmailError] = useState<string>('');
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [tutorialCompleted, setTutorialCompleted] = useState(false);
+  const [savingFlag, setSavingFlag] = useState<null | 'onboarding' | 'tutorial'>(null);
   const [saving, setSaving] = useState(false);
-  const [avatarSrc, setAvatarSrc] = useState<string>(DEFAULT_AVATAR);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     setNickname(initialNickname);
   }, [initialNickname]);
 
   useEffect(() => {
-    return () => {
-      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    };
-  }, []);
+    setEmail(initialEmail);
+  }, [initialEmail]);
 
-  const handlePickPhoto = () => {
-    fileInputRef.current?.click();
-  };
+  useEffect(() => {
+    setOnboardingCompleted(data?.onboardingCompleted ?? false);
+    setTutorialCompleted(data?.tutorialCompleted ?? false);
+  }, [data?.onboardingCompleted, data?.tutorialCompleted]);
 
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.danger('Please choose an image file');
-      return;
-    }
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    const url = URL.createObjectURL(file);
-    objectUrlRef.current = url;
-    setUploadingPhoto(true);
-    setTimeout(() => {
-      setAvatarSrc(url);
-      setUploadingPhoto(false);
-      toast.success('Photo updated', { timeout: 2000 });
-    }, 700);
-  };
-
-  const handleResetPhoto = () => {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
-    }
-    setAvatarSrc(DEFAULT_AVATAR);
-  };
-
-  const isCustomPhoto = avatarSrc !== DEFAULT_AVATAR;
-
-  const isDirty = nickname.trim() !== initialNickname;
+  const nicknameDirty = nickname.trim() !== initialNickname;
+  const emailDirty = email.trim() !== initialEmail;
+  const isDirty = nicknameDirty || emailDirty;
   const canSave = !!walletAddress && isDirty && !saving && !!network;
 
-  const fallbackInitials = useMemo(() => {
-    const base = nickname.trim() || initialNickname || truncateMiddle(walletAddress) || 'VQ';
-    return base.slice(0, 2).toUpperCase();
-  }, [nickname, initialNickname, walletAddress]);
+  const handleToggleFlag = async (flag: 'onboarding' | 'tutorial', value: boolean) => {
+    if (!walletAddress || savingFlag) return;
+    const setLocal = flag === 'onboarding' ? setOnboardingCompleted : setTutorialCompleted;
+    const prev = flag === 'onboarding' ? onboardingCompleted : tutorialCompleted;
+    setLocal(value); // optimistic; reverted on failure
+    setSavingFlag(flag);
+    try {
+      const payload =
+        flag === 'onboarding' ? { onboardingCompleted: value } : { tutorialCompleted: value };
+      const { success, message } = await saveProfileFlags(payload);
+      if (success) {
+        toast.success(t('profilePages.edit.preferencesUpdated', 'Preferences updated'), { timeout: 2000 });
+        refetch();
+      } else {
+        setLocal(prev);
+        toast.danger(t('profilePages.edit.couldNotUpdatePreferences', 'Could not update preferences'), { description: message, timeout: 4000 });
+      }
+    } catch (error) {
+      setLocal(prev);
+      toast.danger(t('profilePages.edit.couldNotUpdatePreferences', 'Could not update preferences'), {
+        description: (error as { message?: string })?.message ?? '',
+        timeout: 4000,
+      });
+    } finally {
+      setSavingFlag(null);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!canSave) return;
+
+    // Send only the fields the user actually changed. The API validates and
+    // saves each one independently, so e.g. a free nickname still persists even
+    // if the email is already taken.
+    const payload: { nickname?: string; email?: string } = {};
+    if (nicknameDirty) payload.nickname = nickname.trim();
+    if (emailDirty) payload.email = email.trim();
+
+    // The input sanitizer guarantees the charset, but not the length — catch a
+    // too-short nickname here instead of spending a round-trip on it.
+    if (payload.nickname !== undefined && !isNicknameFormatValid(payload.nickname)) {
+      setNicknameError(
+        t('profilePages.edit.nicknameFormatError', {
+          defaultValue:
+            'Nicknames must be {{min}}-{{max}} characters: lowercase letters, numbers or underscores.',
+          min: NICKNAME_MIN_LENGTH,
+          max: NICKNAME_MAX_LENGTH,
+        }),
+      );
+      return;
+    }
+
+    setNicknameError('');
+    setEmailError('');
     setSaving(true);
     try {
-      const { success, message } = await saveNickname({ nickname });
-      if (success) {
-        toast.success('Profile saved', { timeout: 3000 });
-        router.push('/profile/settings');
-      } else {
-        toast.danger('Could not save profile', { description: message, timeout: 4000 });
+      const { success, message, result } = await saveProfile(payload);
+
+      if (!success || !result) {
+        toast.danger(t('profilePages.edit.couldNotSaveProfile', 'Could not save profile'), { description: message, timeout: 4000 });
+        return;
       }
+
+      // Surface per-field errors inline (and clear the ones that succeeded).
+      if (payload.nickname !== undefined) setNicknameError(result.nickname.error ?? '');
+      if (payload.email !== undefined) setEmailError(result.email.error ?? '');
+
+      const fieldErrors = [result.nickname.error, result.email.error].filter(Boolean) as string[];
+      const savedAny = result.nickname.saved || result.email.saved;
+
+      if (savedAny) {
+        toast.success(t('profilePages.edit.profileSaved', 'Profile saved'), { timeout: 2500 });
+        refetch();
+      }
+      if (fieldErrors.length > 0) {
+        toast.danger(t('profilePages.edit.someChangesNotSaved', 'Some changes were not saved'), {
+          description: fieldErrors.join(' '),
+          timeout: 5000,
+        });
+      }
+      // Stay on the edit page after saving — the success toast + refetch already
+      // reflect the saved values, so the user keeps editing without navigating away.
     } catch (error) {
-      toast.danger('Could not save profile', {
+      toast.danger(t('profilePages.edit.couldNotSaveProfile', 'Could not save profile'), {
         description: (error as { message?: string })?.message ?? '',
         timeout: 4000,
       });
@@ -101,92 +148,111 @@ export function EditProfilePage() {
   };
 
   return (
-    <PageLayout title="Edit profile" backHref="/profile/settings">
-        {/* Avatar */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handlePickPhoto}
-              aria-label="Change photo"
-              className="relative h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden border-2 border-black shadow group focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <Avatar size="lg" className="h-full w-full">
-                <Avatar.Image src={avatarSrc} className="h-full w-full object-cover" />
-                <Avatar.Fallback>{fallbackInitials}</Avatar.Fallback>
-              </Avatar>
-              <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-xs font-semibold opacity-0 group-hover:opacity-100 transition">
-                Change photo
-              </span>
-              {uploadingPhoto && (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/50">
-                  <Spinner size="sm" color="current" />
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={handlePickPhoto}
-              aria-label="Change photo"
-              className="absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full border border-black border-b-2 bg-primary text-black hover:bg-primary/80 transition shadow"
-            >
-              <FiCamera className="h-4 w-4" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handlePhotoChange}
+    <PageLayout title={t('profilePages.edit.title', 'Edit profile')} backHref="/profile/settings">
+        {/* Avatar — a character, never a photo. Editing it is a whole screen of
+            its own, so this is just a preview that links there. */}
+        <Link
+          href="/profile/avatar"
+          className="flex items-center gap-4 rounded-2xl border border-black border-b-2 bg-white p-3 transition hover:-translate-y-0.5"
+        >
+          <span className="h-20 w-20 shrink-0 overflow-hidden rounded-full border border-black border-b-2 bg-white [&_svg]:h-full [&_svg]:w-full">
+            <VaquitaAvatar
+              config={data?.avatarConfig}
+              seed={data?.walletAddress || walletAddress || ''}
+              crop="head"
+              background
+              alt={t('profilePages.edit.avatarAlt', 'Your avatar')}
+              className="block h-full w-full"
             />
-          </div>
-          {isCustomPhoto ? (
-            <button
-              type="button"
-              onClick={handleResetPhoto}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-red-600 transition"
-            >
-              <FiTrash2 className="h-3 w-3" />
-              Remove photo
-            </button>
-          ) : (
-            <p className="text-xs text-gray-500">Tap the photo to change it.</p>
-          )}
-        </div>
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-extrabold text-black">
+              {t('profilePages.edit.editAvatar', 'Edit avatar')}
+            </span>
+            <span className="block text-xs text-gray-500">
+              {t('profilePages.edit.editAvatarHint', 'Choose your hair, clothes, glasses and more.')}
+            </span>
+          </span>
+          <FiChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
+        </Link>
 
         {/* Form */}
         <section className="flex flex-col gap-4">
           <div>
-            <label className="text-black font-medium text-sm block mb-1.5">Nickname</label>
+            <label className="text-black font-medium text-sm block mb-1.5">{t('profilePages.edit.nickname', 'Nickname')}</label>
             <input
               type="text"
-              placeholder="@nickname"
+              placeholder={t('profilePages.edit.nicknamePlaceholder', '@nickname')}
               value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              maxLength={32}
+              onChange={(e) => {
+                // Only URL-safe lowercase survives typing: a-z, 0-9 and _. Pasting
+                // "@juan" leaves "juan"; the API re-validates on save anyway.
+                setNickname(sanitizeNickname(e.target.value));
+                if (nicknameError) setNicknameError('');
+              }}
+              maxLength={NICKNAME_MAX_LENGTH}
               disabled={!walletAddress || isLoading}
-              className="w-full bg-white border border-black border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none focus:border-primary disabled:opacity-50"
+              aria-invalid={!!nicknameError}
+              className={`w-full bg-white border border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none disabled:opacity-50 ${
+                nicknameError ? 'border-red-500 focus:border-red-500' : 'border-black focus:border-primary'
+              }`}
             />
+            {nicknameError && <p className="text-xs text-red-600 mt-1.5">{nicknameError}</p>}
           </div>
 
           <div>
-            <label className="text-black font-medium text-sm block mb-1.5">Email</label>
+            <label className="text-black font-medium text-sm block mb-1.5">{t('profilePages.edit.email', 'Email')}</label>
             <input
               type="email"
-              placeholder="you@example.com"
-              value={profileEmail}
-              readOnly
-              disabled
-              className="w-full bg-gray-50 border border-black border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none opacity-70 cursor-not-allowed"
+              placeholder={t('profilePages.edit.emailPlaceholder', 'you@example.com')}
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError('');
+              }}
+              maxLength={100}
+              disabled={!walletAddress || isLoading}
+              aria-invalid={!!emailError}
+              className={`w-full bg-white border border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none disabled:opacity-50 ${
+                emailError ? 'border-red-500 focus:border-red-500' : 'border-black focus:border-primary'
+              }`}
             />
-            <p className="text-xs text-gray-500 mt-1.5">Email editing is coming soon.</p>
+            {emailError && <p className="text-xs text-red-600 mt-1.5">{emailError}</p>}
+          </div>
+
+          {/* Flags — dev/testing only */}
+          <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-black/30 bg-black/[0.02] p-3">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
+                {t('profilePages.edit.profileFlags', 'Profile flags')}
+              </span>
+              <span className="rounded-full bg-[#39FF14] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-black shadow-[0_0_8px_rgba(57,255,20,0.7)] ring-1 ring-black/20">
+                {t('profilePages.edit.testingOnly', 'Testing only')}
+              </span>
+            </div>
+            <FlagToggle
+              label={t('profilePages.edit.onboardingCompleted', 'Onboarding completed')}
+              description={t('profilePages.edit.onboardingCompletedDesc', 'Mark the initial onboarding flow as done.')}
+              value={onboardingCompleted}
+              isDisabled={!walletAddress || isLoading || savingFlag === 'onboarding'}
+              isSaving={savingFlag === 'onboarding'}
+              onChange={(checked) => handleToggleFlag('onboarding', checked)}
+            />
+            <FlagToggle
+              label={t('profilePages.edit.tutorialCompleted', 'Tutorial completed')}
+              description={t('profilePages.edit.tutorialCompletedDesc', 'Mark the in-app tutorial as done.')}
+              value={tutorialCompleted}
+              isDisabled={!walletAddress || isLoading || savingFlag === 'tutorial'}
+              isSaving={savingFlag === 'tutorial'}
+              onChange={(checked) => handleToggleFlag('tutorial', checked)}
+            />
           </div>
         </section>
 
         {/* Actions */}
         <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-background border-t border-black/10 flex gap-3">
           <Button type="white" onPress={() => router.push('/profile/settings')} isDisabled={saving} wFull>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="primary"
@@ -196,9 +262,54 @@ export function EditProfilePage() {
             startContent={<FiSave className="h-4 w-4" />}
             wFull
           >
-            Save changes
+            {t('profilePages.edit.saveChanges', 'Save changes')}
           </Button>
         </div>
     </PageLayout>
+  );
+}
+
+/**
+ * A labelled on/off row. HeroUI v3's `Switch` is a compound component built on
+ * react-aria: it renders nothing visible unless `Switch.Control`/`Switch.Thumb`
+ * are provided, and it already renders its own <label> (so the row wrapper is a
+ * <div> — nesting <label>s breaks the click). The `@heroui/styles` sheet (loaded
+ * in globals.css) styles the track/thumb via the auto-applied `switch__*` slot
+ * classes, so we pass NO custom classes — overriding them fought the theme's
+ * margin-based thumb animation and hid the white knob.
+ */
+function FlagToggle({
+  label,
+  description,
+  value,
+  isDisabled,
+  isSaving,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: boolean;
+  isDisabled?: boolean;
+  isSaving?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-black border-b-2 bg-white px-3 py-3">
+      <span>
+        <span className="block text-black font-medium text-sm">{label}</span>
+        <span className="block text-xs text-gray-500">{description}</span>
+      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        <span className={`text-xs font-semibold ${value ? 'text-green-600' : 'text-gray-400'}`}>
+          {isSaving ? t('common.saving') : value ? t('common.on') : t('common.off')}
+        </span>
+        <Switch isSelected={value} onChange={onChange} isDisabled={isDisabled} aria-label={label}>
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch>
+      </div>
+    </div>
   );
 }

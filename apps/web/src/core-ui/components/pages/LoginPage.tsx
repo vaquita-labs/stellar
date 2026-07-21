@@ -1,32 +1,41 @@
 'use client';
 
 import StellarAuthButtons from '@/components/profile/StellarAuthButtons';
-import { DummyAuthButtons, NetworkSelector } from '@/core-ui/components';
-import { useIsAuthenticated, useNetworks } from '@/core-ui/hooks';
-import { useNetworkConfigStore } from '@/core-ui/stores';
-import { isDummyNetwork } from '@/networks/dummy';
-import { isStellarNetwork } from '@/networks/stellar';
+import { OnboardingIntro } from '@/core-ui/components';
+import { useIntroSeen, useIsAuthenticated } from '@/core-ui/hooks';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
-  const { network } = useNetworkConfigStore();
-  const {
-    data: { types },
-  } = useNetworks();
+  const searchParams = useSearchParams();
+
+  // El intro vive por dispositivo en localStorage: se muestra una sola vez y
+  // no reaparece al recargar. Sin env var (el env es global al build y no sabe
+  // si este dispositivo ya lo vio).
+  const { hydrated, seen, markSeen, replay } = useIntroSeen();
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/home');
+      // Volver a la ruta de origen (?redirect=) si la hay; solo rutas internas
+      // para evitar open-redirect. Si no, al /home por defecto.
+      const redirect = searchParams.get('redirect');
+      router.replace(redirect && redirect.startsWith('/') ? redirect : '/home');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, searchParams]);
 
-  // No mostrar nada mientras se verifica la autenticación o si ya está autenticado
-  if (isAuthenticated) {
+  // No mostrar nada mientras se verifica la autenticación, si ya está
+  // autenticado, o hasta leer localStorage (evita parpadeo del intro).
+  if (isAuthenticated || !hydrated) {
     return null;
+  }
+
+  if (!seen) {
+    return <OnboardingIntro onFinish={markSeen} />;
   }
 
   return (
@@ -36,7 +45,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center gap-4">
           <Image
             src="/vaquita/vaquita_isotipo.svg"
-            alt="Vaquita Logo"
+            alt={t('auth.login.logoAlt')}
             width={500}
             height={500}
             className="object-contain"
@@ -47,20 +56,13 @@ export default function LoginPage() {
 
       {/* Panel derecho - Login */}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-background p-8 relative">
-        {/* Selector de red en la esquina superior derecha */}
-        {types.length > 0 && (
-          <div className="absolute top-4 right-4 z-10">
-            <NetworkSelector />
-          </div>
-        )}
-
         <div className="w-full max-w-md border-2 border-primary rounded-lg p-8 bg-white/80 backdrop-blur-sm shadow-lg">
           <div className="flex flex-col items-center gap-4">
             {/* Logo móvil */}
             <div className="md:hidden mb-2">
               <Image
                 src="/vaquita/vaquita_logo.png"
-                alt="Vaquita Logo"
+                alt={t('auth.login.logoAlt')}
                 width={180}
                 height={180}
                 className="object-contain"
@@ -68,16 +70,21 @@ export default function LoginPage() {
               />
             </div>
 
-            <h1 className="text-3xl font-bold text-black">Welcome</h1>
-            <p className="text-gray-600 text-center mb-2">Connect your wallet to start saving securely</p>
+            <h1 className="text-3xl font-bold text-black">{t('auth.login.welcomeTitle')}</h1>
+            <p className="text-gray-600 text-center mb-2">{t('auth.login.welcomeSubtitle')}</p>
 
             {/* Botones de autenticación dentro de la card */}
-            {types.length > 0 && (
-              <div className="w-full flex flex-col gap-2">
-                {network && isStellarNetwork(network.name) && <StellarAuthButtons />}
-                {isDummyNetwork() && <DummyAuthButtons />}
-              </div>
-            )}
+            <div className="w-full flex flex-col gap-2">
+              <StellarAuthButtons />
+            </div>
+
+            {/* Botón para volver a ver el intro (testeo / replay) */}
+            <button
+              onClick={replay}
+              className="mt-1 text-sm font-semibold text-black/50 hover:text-black underline underline-offset-2 transition"
+            >
+              {t('auth.login.viewIntroAgain')}
+            </button>
           </div>
         </div>
       </div>

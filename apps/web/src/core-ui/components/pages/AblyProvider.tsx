@@ -6,15 +6,30 @@ import { ReactNode, useEffect, useState } from 'react';
 import { v4 } from 'uuid';
 import { clientEnv } from '../../config/clientEnv';
 
-const realtimeClient = new Ably.Realtime({
-  key: clientEnv.NEXT_PUBLIC_ABLY_KEY,
-});
+let client: Ably.Realtime | null = null;
+
+/**
+ * Lazily creates a single Ably Realtime client using token auth. The Ably API
+ * key stays on the server — the browser only ever receives short-lived token
+ * requests from `GET /api/v1/ably/token`. Created lazily so importing this
+ * module never opens a realtime connection (and never runs under SSR).
+ */
+function getAblyClient(): Ably.Realtime {
+  if (!client) {
+    client = new Ably.Realtime({
+      authUrl: `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/ably/token`,
+      authMethod: 'GET',
+    });
+  }
+  return client;
+}
 
 const idRef = { current: v4() };
 
 export const AblyProvider = ({ children }: { children: ReactNode }) => {
+  const [ably] = useState(getAblyClient);
   return (
-    <Provider client={realtimeClient}>
+    <Provider client={ably}>
       <ChannelProvider channelName="register-customer">
         <RegisterUser />
       </ChannelProvider>
@@ -23,12 +38,10 @@ export const AblyProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const logChannel = realtimeClient.channels.get('logs');
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function sendLogToAbly(level: 'log' | 'info' | 'error' | 'warn', args: any[]) {
-  if (!logChannel) return;
   try {
+    const logChannel = getAblyClient().channels.get('logs');
     const message = {
       sessionId: idRef.current,
       level,

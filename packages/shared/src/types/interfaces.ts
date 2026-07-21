@@ -1,4 +1,4 @@
-import { type Achievement, type DepositStatus, DepositWithdrawalState, Reward, WithdrawalStatus } from './commons';
+import { type Achievement, type DepositStatus, DepositWithdrawalState, type NotificationPreferences, Reward, WithdrawalStatus } from './commons';
 
 export interface Token {
   id: number,
@@ -14,13 +14,9 @@ export interface TokenNetwork {
   tokens: Token,
   contract_address: string,
   vaquita_contract_address: string,
-  /** Optional: DeFindex vault Soroban contract id (per network/token). Falls back to `STELLAR_DEFINDEX_VAULT_CONTRACT` env. */
   defindex_vault_contract_address?: string,
   token_decimals: number,
   lock_period: string,
-  aave_pool_contract_address: string,
-  aave_token_symbol: string,
-  aave_token_contract_address: string,
 }
 
 export interface Network {
@@ -34,6 +30,7 @@ export interface Network {
   tokens_networks: TokenNetwork[],
   origins: string,
   order: number,
+  badges_contract_address?: string,
 }
 
 export interface Deposit {
@@ -76,6 +73,14 @@ export interface Profile {
   full_name: string,
   nickname: string,
   wallet_address: string,
+  avatar_config?: unknown,
+  onboarding_completed: boolean,
+  tutorial_completed: boolean,
+  crypto_savvy: boolean,
+  language?: string | null,
+  currency?: string | null,
+  // Raw JSON column: only holds the keys the user has touched (may be partial).
+  notification_preferences?: Partial<NotificationPreferences> | null,
   created_at?: string,
   updated_at?: string,
 }
@@ -88,14 +93,56 @@ export interface AchievementDocument {
   tier: string,
   coin_reward: number,
   /** Optional redemption code. Hidden + code-gated badges are claimable only
-   *  via the "Redeem code" flow (POST /achievements/redeem). NULL for regular
+   *  via the "Redeem code" flow (POST /wallets/:wallet/badges/redeem). NULL for regular
    *  eligibility-driven achievements. */
   code?: string | null,
   /** When TRUE, the achievement is filtered out of the public catalog response
    *  unless the user has already claimed it. */
   hidden?: boolean,
+  /** Controls whether the claim endpoint re-signs on demand ('auto') or requires
+   *  admin intervention ('manual'). Defaults to 'auto'. */
+  refresh_policy: 'auto' | 'manual',
+  /** TRUE for leaderboard badges — eligibility is tied to a specific closed
+   *  cycle's rank, not live signals. */
+  cycle_scoped: boolean,
+  /** How the badge unlocks. 'rule' is evaluated by the rules engine against the
+   *  live eligibility signals; 'cycle_rank' keeps the leaderboard special-case;
+   *  'redeem_code'/'manual' are claim-driven. Defaults to 'rule'. */
+  unlock_type: BadgeUnlockType,
+  /** Rule definition evaluated by the rules engine. Present only when
+   *  `unlock_type === 'rule'`; NULL otherwise. */
+  rule?: BadgeRule | null,
+  /** Public icon path (e.g. '/icons/achievements/rookie.png') or absolute URL. */
+  icon?: string | null,
+  /** CSS gradient used as the halo behind the icon in the UI. */
+  accent?: string | null,
+  /** Ascending sort order in the catalog UI. */
+  display_order: number,
+  /** Soft-delete flag. Disabled badges are hidden from the public catalog, but
+   *  their historical claims survive — we never DELETE rows. */
+  enabled: boolean,
   created_at: string,
   updated_at: string,
+}
+
+/** How a badge becomes claimable. See {@link AchievementDocument.unlock_type}. */
+export type BadgeUnlockType = 'rule' | 'redeem_code' | 'manual' | 'cycle_rank';
+
+/** Comparison operators supported by the rules engine. Numeric ops compare the
+ *  signal as a number; date ops (`before`/`after`) compare it as a timestamp. */
+export type BadgeRuleOp = '>=' | '>' | '<=' | '<' | '==' | 'before' | 'after';
+
+/** A single condition: `<signal> <op> <value>`. `signal` must be a key the
+ *  signal registry knows how to resolve (see the rules engine). */
+export interface BadgeRuleCondition {
+  signal: string,
+  op: BadgeRuleOp,
+  value: number | string,
+}
+
+/** A rule definition. Currently an AND of conditions; extensible to OR later. */
+export interface BadgeRule {
+  all: BadgeRuleCondition[],
 }
 
 export interface ProfileAchievement {

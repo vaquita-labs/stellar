@@ -1,183 +1,245 @@
 'use client';
 
+import { useDepositListControls } from '@/core-ui/components/home/DepositListControls';
+import { DepositListTab, DepositListTabs } from '@/core-ui/components/home/DepositListTabs';
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
+import { WithdrawnDepositCard } from '@/core-ui/components/home/WithdrawnDepositCard';
+import { TransactionDetailsModal } from '@/core-ui/components/pages/transactions/TransactionDetailsModal';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { isStellarNetwork } from '@/networks/stellar/helpers';
+import { AppTransaction, buildTransactions } from '@/core-ui/helpers/transactions';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
-import { useState } from 'react';
-import { useApyByLockPeriod, useDepositsComplete } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useDeposit, useDepositsComplete } from '../../../hooks';
+import { useConfigStore } from '../../../stores';
+import { DepositResponseDTO } from '../../../types';
+import { Button } from '../../atoms';
 import { AppModal } from '../../molecules/AppModal';
+import { TransactionList, TransactionRow, TransactionRowSkeleton } from '../../molecules/TransactionRow';
+import { useVaquitaDetail } from '../VaquitaModal';
 import { BankAPYModalProps } from './types';
 
-export function BankAPYModal({ open, onOpenChange }: BankAPYModalProps) {
-  const { network, lockPeriod, walletAddress, token } = useNetworkConfigStore();
-  const { data: dataApy, isLoading: isLoadingApy } = useApyByLockPeriod(lockPeriod, token?.symbol ?? '');
+export function BankAPYModal({
+  open,
+  onOpenChange,
+  injectedDeposits,
+  simulate = false,
+  simulateInterest = 0,
+  onSimulatedWithdraw,
+  onDetailOpenChange,
+  onConfirmingChange,
+  lockToWithdraw = false,
+}: BankAPYModalProps) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { walletAddress } = useConfigStore();
   const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
 
-  const [showBreakdown, setShowBreakdown] = useState(false);
-  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [selectedVaquita, setSelectedVaquita] = useState<DepositResponseDTO | null>(null);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+  const [tab, setTab] = useState<DepositListTab>('active');
 
-  const protocolApy = dataApy?.protocolApy ?? 0;
-  const vaquitaApy = dataApy?.vaquitaApy ?? 0;
-  const networkLabel = dataApy?.lendingMarketName ?? '';
-  const totalApy = vaquitaApy + protocolApy;
-  const hasProtocolApy = !!networkLabel && protocolApy >= 0;
+  // En modo tutorial mostramos un depósito inyectado en vez de los reales.
+  const sourceDeposits = injectedDeposits ?? depositsData?.deposits ?? [];
 
-  const { deposits, activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
-  const tokenSymbol = deposits[0]?.tokenSymbol ?? token?.symbol ?? 'USDC';
-  const totalDepositsAllUsers = dataApy?.totalDeposits ?? 0;
+  const { deposits, activeDeposits, withdrawnDeposits } = getDepositsData(sourceDeposits);
 
-  const isLoading = isLoadingApy || isLoadingDeposits;
+  const { controls, filteredActiveDeposits, filteredWithdrawnDeposits } = useDepositListControls({
+    tab,
+    activeDeposits,
+    withdrawnDeposits,
+  });
+
+  // Últimos 3 movimientos (depósitos + retiros) para el resumen del modal.
+  const recentTransactions = useMemo(() => buildTransactions(sourceDeposits).slice(0, 3), [sourceDeposits]);
+
+  const goToTransactions = (path = '/transactions') => {
+    setSelectedTransactionId(null);
+    onOpenChange();
+    router.push(path);
+  };
+
+  // El detalle del movimiento se abre DENTRO de este modal (entra deslizándose
+  // desde la derecha, igual que en /transactions): el acceso rápido no debe
+  // sacar al usuario del home ni cerrar la hoja. El back solo lo oculta y
+  // vuelve a la lista de últimos movimientos.
+  const onTransactionPress = (transaction: AppTransaction) => setSelectedTransactionId(transaction.id);
+
+  // Con depósitos inyectados (tutorial) no esperamos a las queries reales.
+  const isLoading = !injectedDeposits && isLoadingDeposits;
+
+  // Detalle dentro del MISMO modal (igual que la lista de depósitos): al
+  // seleccionar una vaquita pintamos su detalle aquí, con flecha de "atrás", en
+  // vez de abrir un 2º modal encima. El tutorial usa el mismo detalle inline en
+  // modo simulado (sin segundo modal).
+  const inDetail = !!selectedVaquita;
+  const { data: fullDeposit } = useDeposit(selectedVaquita?.id ?? 0);
+  // En tutorial el depósito vive en `injectedDeposits` y se recalcula en cada
+  // render (cuenta regresiva), así que tomamos la versión viva por id; en modo
+  // real refrescamos el contador con useDeposit.
+  const detailVaquita = !inDetail
+    ? null
+    : simulate
+      ? deposits.find((d) => d.id === selectedVaquita!.id) ?? selectedVaquita
+      : fullDeposit ?? selectedVaquita;
+  const backToList = () => {
+    setSelectedVaquita(null);
+    onDetailOpenChange?.(false);
+  };
+  const detail = useVaquitaDetail({
+    vaquita: detailVaquita,
+    onClose: backToList,
+    isLeaderboard: false,
+    simulate,
+    simulateInterest,
+    onSimulatedWithdraw,
+    // Bloquea el Cancel del detalle (solo aplica a la pantalla de detalle; la de
+    // confirmación usa otro footer, donde el Cancel sigue habilitado).
+    lockClose: lockToWithdraw,
+  });
+  const detailReady = inDetail && detail.ready;
+
+  // Avisamos al orquestador (tutorial) cuando se entra/sale de "Confirm
+  // withdrawal" para que muestre el aviso de paciencia encima.
+  useEffect(() => {
+    onConfirmingChange?.(inDetail && detail.isConfirming);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inDetail, detail.isConfirming]);
 
   return (
+    <>
     <AppModal
       open={open}
-      onOpenChange={onOpenChange}
-      title="Bank Rewards"
-      titleIcon="/icons/medal.svg"
-      titleIconAlt="rewards"
+      // Al cerrar la hoja se olvida el detalle abierto: la próxima vez arranca
+      // otra vez en la lista de últimos movimientos.
+      onOpenChange={() => {
+        setSelectedTransactionId(null);
+        onOpenChange();
+      }}
+      isDismissable={!detail.loading && !lockToWithdraw}
+      hideClose={lockToWithdraw}
+      onBack={inDetail && !detail.loading && !lockToWithdraw ? backToList : undefined}
+      title={
+        inDetail
+          ? detail.title
+          : simulate
+            ? t('deposit.bank.title', 'Bank Rewards')
+            : t('transactions.recent', 'Recent transactions')
+      }
+      titleIconAlt={inDetail ? 'vaquita' : 'rewards'}
       size="lg"
+      // Sin footer propio, el "See more" queda pegado al borde inferior del
+      // sheet: un poco más de aire abajo para que respire.
+      bodyClassName={inDetail ? 'flex flex-col gap-5 pb-6' : 'pb-7'}
+      footer={detailReady ? detail.footer : undefined}
     >
-      {isLoading ? (
+      {inDetail ? (
+        detail.body
+      ) : isLoading ? (
         <div className="flex justify-center items-center py-12">
           <Spinner size="lg" color="accent" />
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="border border-success border-b-2 rounded-xl bg-success/10 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowBreakdown((v) => !v)}
-              className="w-full flex items-center justify-between gap-3 p-4 hover:bg-success/5 transition-colors"
-            >
-              <div className="text-left">
-                <p className="text-xs text-success/80 font-semibold uppercase tracking-wide">Total APY</p>
-                <p className="text-3xl font-bold text-success leading-tight">{totalApy.toFixed(2)}%</p>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-success font-semibold">
-                <span>{showBreakdown ? 'Hide' : 'Breakdown'}</span>
-                <span className={'transition-transform ' + (showBreakdown ? 'rotate-180' : '')}>▾</span>
-              </div>
-            </button>
-            {showBreakdown && (
-              <div className="border-t border-success/30 px-4 py-3 space-y-3 bg-white/60">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-                      <span className="text-sm font-medium text-black">Vaquita APY</span>
-                    </div>
-                    <span className="text-sm font-bold text-primary">{vaquitaApy.toFixed(2)}%</span>
-                  </div>
-                  <p className="text-xs text-gray-600 ml-5 mt-0.5">
-                    Rewards from the Vaquita community pool, based on your lock period.
-                  </p>
+          {/* Fuera del tutorial el modal solo muestra los últimos movimientos
+              (depósitos y retiros) para que abra liviano; el historial completo,
+              con filtros y detalle, vive en /transactions. En modo tutorial se
+              mantiene la lista de depósitos completa porque los pasos guiados
+              anclan en la tarjeta de la vaquita. */}
+          {!simulate ? (
+            <div className="space-y-3">
+              {isLoadingDeposits && !depositsData ? (
+                <TransactionList>
+                  {[0, 1, 2].map((i) => (
+                    <TransactionRowSkeleton key={i} />
+                  ))}
+                </TransactionList>
+              ) : recentTransactions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
+                  <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={80} height={80} />
+                  <p className="text-gray-500 text-sm mt-2">{t('transactions.empty', 'No transactions yet')}</p>
                 </div>
-                {hasProtocolApy && (
-                  <div className="pt-3 border-t border-success/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
-                        <span className="text-sm font-medium text-black">{networkLabel} APY</span>
-                      </div>
-                      <span className="text-sm font-bold text-purple-600">{protocolApy.toFixed(2)}%</span>
-                    </div>
-                    <p className="text-xs text-gray-600 ml-5 mt-0.5">
-                      Yield from {networkLabel} lending protocol where your funds are deposited.
-                    </p>
+              ) : (
+                <TransactionList>
+                  {recentTransactions.map((transaction) => (
+                    <TransactionRow
+                      key={transaction.id}
+                      transaction={transaction}
+                      onPress={() => onTransactionPress(transaction)}
+                    />
+                  ))}
+                </TransactionList>
+              )}
+              <Button variant="white" className="w-full" onPress={() => goToTransactions()}>
+                {t('transactions.seeMore', 'See more')}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold text-black">{t('deposit.bank.myDeposits', 'My deposits')}</h3>
+              {/* Mismos tabs Activos/Retirados que VaquitasListModal; los retirados
+                  distinguen retiro a tiempo de retiro anticipado. */}
+              <DepositListTabs
+                tab={tab}
+                onTabChange={setTab}
+                activeCount={activeDeposits.length}
+                withdrawnCount={withdrawnDeposits.length}
+              />
+              {(tab === 'active' ? activeDeposits : withdrawnDeposits).length > 0 && controls}
+              {tab === 'active' ? (
+                filteredActiveDeposits.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
+                    <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={80} height={80} />
+                    <p className="text-gray-500 text-sm mt-2">{t('deposit.list.noActiveDeposits', 'No active deposits')}</p>
                   </div>
-                )}
-                {network?.name && isStellarNetwork(network.name) && dataApy?.interestModelNote ? (
-                  <p className="text-xs text-gray-500 leading-snug pt-3 border-t border-success/20">
-                    {dataApy.interestModelNote}
-                  </p>
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="border border-primary border-b-2 rounded-xl bg-primary/10 p-3 text-center">
-              <div className="flex items-center justify-center gap-1.5 mb-1">
-                <Image src="/icons/bag.svg" alt="bag" width={18} height={18} />
-                <p className="text-xs text-primary font-semibold">My deposits</p>
-              </div>
-              <p className="text-lg font-bold text-primary leading-tight">
-                {activeDepositsTotalAmount.toFixed(2)}
-                <span className="text-xs ml-1 font-semibold">{tokenSymbol}</span>
-              </p>
-            </div>
-            <div className="border border-black/15 border-b-2 rounded-xl bg-black/5 p-3 text-center">
-              <p className="text-xs text-black/60 font-semibold mb-1">All users</p>
-              <p className="text-lg font-bold text-black leading-tight">
-                {totalDepositsAllUsers.toFixed(2)}
-                <span className="text-xs ml-1 font-semibold">{tokenSymbol}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Image src="/icons/deposits.svg" alt="deposits" width={20} height={20} />
-              <h3 className="text-sm font-bold text-black">My Vaquitas</h3>
-              <span className="text-xs text-gray-500">({activeDeposits.length})</span>
-            </div>
-            {activeDeposits.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
-                <Image src="/no_data.svg" alt="No data" width={80} height={80} />
-                <p className="text-gray-500 text-sm mt-2">No active vaquitas</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {activeDeposits.map((deposit) => (
-                  <VaquitaDepositCard key={deposit.id} deposit={deposit} />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="border border-black/10 rounded-xl overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setShowHowItWorks((v) => !v)}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-black/5 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span className="text-sm font-semibold text-black">How rewards work</span>
-              </div>
-              <span className={'text-black/60 transition-transform ' + (showHowItWorks ? 'rotate-180' : '')}>
-                ▾
-              </span>
-            </button>
-            {showHowItWorks && (
-              <ul className="px-4 pb-4 pt-1 text-sm text-gray-700 space-y-1.5 list-disc list-inside">
-                <li>Your deposit generates yield from multiple sources.</li>
-                <li>Estimated rewards are calculated using the current APY.</li>
-                <li>The APY is dynamic and may fluctuate based on user activity and total deposits.</li>
-                <li>Rewards become claimable only after the saving period ends.</li>
-                <li>Final rewards are confirmed upon withdrawal.</li>
-              </ul>
-            )}
-          </div>
-
-          {network && (
-            <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500 pt-1">
-              <span>Network:</span>
-              <span className="font-semibold text-black">{network.name}</span>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredActiveDeposits.map((deposit) => (
+                      <div key={deposit.id} data-tutorial={simulate ? 'tutorial-vaquita-card' : undefined}>
+                        <VaquitaDepositCard
+                          deposit={deposit}
+                          onPress={() => {
+                            setSelectedVaquita(deposit);
+                            onDetailOpenChange?.(true);
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : filteredWithdrawnDeposits.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-black/20 rounded-xl">
+                  <Image src="/no_data.svg" alt={t('deposit.list.noData', 'No data')} width={80} height={80} />
+                  <p className="text-gray-500 text-sm mt-2">{t('deposit.list.noWithdrawnDeposits', 'No withdrawn deposits')}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredWithdrawnDeposits.map((deposit) => (
+                    <WithdrawnDepositCard
+                      key={deposit.id}
+                      deposit={deposit}
+                      onPress={() => {
+                        setSelectedVaquita(deposit);
+                        onDetailOpenChange?.(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
     </AppModal>
+
+    {/* Hermano, no hijo: el detalle es su propia pantalla a pantalla completa y
+        esta hoja queda abierta debajo, tal cual estaba. */}
+    <TransactionDetailsModal
+      transactionId={selectedTransactionId}
+      onClose={() => setSelectedTransactionId(null)}
+    />
+    </>
   );
 }

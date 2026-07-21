@@ -3,6 +3,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { FiChevronLeft } from 'react-icons/fi';
+import { useTranslation } from 'react-i18next';
+import { CircleIconButton } from './CircleIconButton';
 
 const ICON_SIZE = 28;
 
@@ -21,19 +24,15 @@ interface PageHeaderProps {
   rightAction?: RightAction;
   rightSlot?: ReactNode;
   className?: string;
+  /** Overrides the title size classes (e.g. "text-lg" for long titles). */
+  titleClassName?: string;
 }
 
-const BackContent = () => (
-  <Image
-    src="/icons/arrow-back.svg"
-    alt="Back"
-    width={ICON_SIZE}
-    height={ICON_SIZE}
-    className="object-contain"
-    priority
-  />
-);
-
+/**
+ * Header estándar de la app: back circular de 32px a la izquierda y título
+ * compacto centrado. Todas las páginas (y el header de los modales, vía
+ * AppModal) comparten esta escala; no dupliques la barra a mano.
+ */
 export function PageHeader({
   title,
   backHref,
@@ -41,27 +40,32 @@ export function PageHeader({
   rightAction,
   rightSlot,
   className = '',
+  titleClassName = 'text-base sm:text-lg',
 }: PageHeaderProps) {
+  const { t } = useTranslation();
   return (
-    <div className={`relative flex items-center justify-center min-h-12 px-14 ${className}`}>
+    // mb-1: un respiro mínimo (4px) que separa la barra del contenido, para que
+    // se lea como header y no como la primera fila del body.
+    <div className={`relative flex items-center justify-center min-h-8 px-11 mb-1 ${className}`}>
       <div className="absolute left-0 flex items-center">
         {backHref ? (
-          <Link href={backHref} aria-label="Back" className="flex items-center justify-center">
-            <BackContent />
-          </Link>
+          <CircleIconButton
+            href={backHref}
+            variant="primary"
+            ariaLabel={t('common.back')}
+            icon={<FiChevronLeft className="w-4 h-4" />}
+          />
         ) : onBack ? (
-          <button
-            type="button"
+          <CircleIconButton
+            variant="primary"
+            ariaLabel={t('common.back')}
             onClick={onBack}
-            aria-label="Back"
-            className="flex items-center justify-center bg-transparent"
-          >
-            <BackContent />
-          </button>
+            icon={<FiChevronLeft className="w-4 h-4" />}
+          />
         ) : null}
       </div>
 
-      <h1 className="text-xl sm:text-2xl font-bold text-black truncate text-center">
+      <h1 className={`${titleClassName} font-bold text-black truncate text-center`}>
         {title}
       </h1>
 

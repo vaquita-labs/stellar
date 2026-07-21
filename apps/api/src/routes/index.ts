@@ -1,16 +1,42 @@
 import { Router } from 'express';
+import ablyRoutes from './ably/route';
+import authRoutes from './auth/route';
+import badgeRoutes from './badge/route';
+import badgeCatalogRoutes from './badges/route';
+import bridgeRoutes from './bridge/route';
 import configRoutes from './config/route';
 import depositRoutes from './deposit/route';
-import networkRoutes from './network/route';
+import exploreRoutes from './explore/route';
+import followRoutes from './follows/route';
+import leaderboardRoutes from './leaderboard/route';
+import mapLikeRoutes from './map-likes/route';
+import notificationRoutes from './notifications/route';
 import profileRoutes from './profile/route';
+import referralRoutes from './referral/route';
+import timeRoutes from './time/route';
 import userRoutes from './user/route';
+import savedWalletRoutes from './wallets/saved.route';
+import walletBadgeRoutes from './wallets/badges.route';
 
 const router = Router();
 
+router.use('/ably', ablyRoutes);
+router.use('/auth', authRoutes);
+router.use('/badge', badgeRoutes);
+router.use('/badges', badgeCatalogRoutes);
+router.use('/bridge', bridgeRoutes);
 router.use('/config', configRoutes);
 router.use('/profile', profileRoutes);
+router.use('/wallets/saved', savedWalletRoutes);
+router.use('/wallets/:wallet/badges', walletBadgeRoutes);
 router.use('/deposit', depositRoutes);
-router.use('/network', networkRoutes);
+router.use('/explore', exploreRoutes);
+router.use('/follows', followRoutes);
+router.use('/leaderboard', leaderboardRoutes);
+router.use('/map-likes', mapLikeRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/referrals', referralRoutes);
+router.use('/time', timeRoutes);
 router.use('/user', userRoutes);
 
 export default router;

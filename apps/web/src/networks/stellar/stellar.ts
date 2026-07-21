@@ -1,4 +1,4 @@
-import { useNetworkConfigStore } from '../../core-ui/stores';
+import { useConfigStore } from '../../core-ui/stores';
 import { pollarAdapter } from './wallet/adapters/pollar-adapter';
 import { setActiveAdapter } from './wallet/registry';
 
@@ -10,7 +10,7 @@ export function stellarSession() {
       console.warn('[stellarSession] disconnect ignore:', e);
     }
     setActiveAdapter(null);
-    useNetworkConfigStore.getState().setWalletAddress('');
+    useConfigStore.getState().setWalletAddress('');
   };
 
   // Pollar hydration is driven by PollarBridge subscribing to PollarProvider

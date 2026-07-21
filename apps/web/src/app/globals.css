@@ -3,6 +3,9 @@
 @import 'tailwindcss';
 @import '@heroui/styles';
 
+/* Shared UI lib lives outside this app, so point Tailwind at its source. */
+@source '../../../../packages/ui/src';
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -41,6 +44,43 @@ body {
     flex-direction: column;
 }
 
+/* El backdrop del modal NO puede animar su opacity (ni al entrar ni al salir):
+   el container (el sheet) es hijo suyo en el DOM y hereda el fade → el modal se
+   desvanece mientras se desliza. Se atenúa solo el color de fondo. */
+@keyframes modal-backdrop-in {
+    from {
+        background-color: transparent;
+    }
+}
+
+@keyframes modal-backdrop-out {
+    to {
+        background-color: transparent;
+    }
+}
+
+/* Onboarding slide fade-in */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* La cruz del toast de HeroUI está posicionada en absoluto con top: 10px, así
+   que queda por encima del eje del indicador y del texto. 14px = los 12px de
+   padding del toast + los 2px que sobran entre el botón (20px) y la fila de
+   contenido (24px), de modo que quede centrada con el indicador aunque el
+   toast crezca con una descripción. */
+.toast .toast__close-button {
+    top: 14px;
+    right: 12px;
+}
+
 /* Custom Scrollbar Styles */
 ::-webkit-scrollbar {
     width: 4px;
@@ -66,4 +106,17 @@ body {
 * {
     scrollbar-width: thin;
     scrollbar-color: #F5A161 #fef5e4;
+}
+
+/* Scroll sin barra visible (ruedas tipo picker, carruseles): la barra naranja
+   global se cuela dentro de esos controles y compite con el contenido. */
+.no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }

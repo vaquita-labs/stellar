@@ -1,15 +1,18 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useConfigStore } from '@/core-ui/stores';
 import { ProfileStreakResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
-export const useProfileStreak = () => {
-  const { network, walletAddress } = useNetworkConfigStore();
+/** Pass a wallet to read another user's streak (e.g. the leaderboard detail
+ *  view); defaults to the connected wallet. */
+export const useProfileStreak = (walletAddressOverride?: string) => {
+  const { network, walletAddress: connectedWallet } = useConfigStore();
+  const walletAddress = walletAddressOverride ?? connectedWallet;
   return useQuery<ProfileStreakResponseDTO>({
-    queryKey: ['profile', network?.name, walletAddress, 'profile-streak'],
+    queryKey: ['profile', network?.networkName, walletAddress, 'profile-streak'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.name}/wallet/${walletAddress}/streak`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/streak`
       );
       const data = await response.json();
 
@@ -23,6 +26,9 @@ export const useProfileStreak = () => {
 
       return profile;
     },
-    enabled: !!network?.name && !!walletAddress,
+    enabled: !!network?.networkName && !!walletAddress,
+    // Reset diario por tiempo: refetch al montar para reflejar el rollover.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };

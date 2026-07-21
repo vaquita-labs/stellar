@@ -1,15 +1,20 @@
+import { resolveAvatarConfig } from '@vaquita/avatar';
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { useNetworkConfigStore } from '@/core-ui/stores';
-import { ProfileResponseDTO } from '@/core-ui/types';
+import { useConfigStore } from '@/core-ui/stores';
+import { DEFAULT_NOTIFICATION_PREFERENCES, ProfileResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
 
-export const useProfileData = () => {
-  const { network, walletAddress } = useNetworkConfigStore();
+/** Pass a wallet to read another user's profile (e.g. the leaderboard detail
+ *  view); defaults to the connected wallet. Query keys match either way, so
+ *  the cache is shared with the own-profile reads. */
+export const useProfileData = (walletAddressOverride?: string) => {
+  const { network, walletAddress: connectedWallet } = useConfigStore();
+  const walletAddress = walletAddressOverride ?? connectedWallet;
   return useQuery<ProfileResponseDTO>({
-    queryKey: ['profile', network?.name, walletAddress, 'profile-data'],
+    queryKey: ['profile', network?.networkName, walletAddress, 'profile-data'],
     queryFn: async () => {
       const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/network/${network?.name}/wallet/${walletAddress}/data`
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/data`
       );
       const data = await response.json();
 
@@ -19,10 +24,28 @@ export const useProfileData = () => {
         email: data?.data?.email || '',
         fullName: data?.data?.fullName || '',
         nickname: data?.data?.nickname || '',
+        avatarConfig: resolveAvatarConfig(data?.data?.avatarConfig, data?.data?.walletAddress || walletAddress || ''),
+        onboardingCompleted: data?.data?.onboardingCompleted ?? false,
+        tutorialCompleted: data?.data?.tutorialCompleted ?? false,
+        cryptoSavvy: data?.data?.cryptoSavvy ?? false,
+        language: data?.data?.language ?? '',
+        currency: data?.data?.currency ?? '',
+        notificationPreferences: {
+          ...DEFAULT_NOTIFICATION_PREFERENCES,
+          ...(data?.data?.notificationPreferences ?? {}),
+        },
+        createdAt: data?.data?.createdAt ?? '',
       };
 
       return profile;
     },
-    enabled: !!network?.name && !!walletAddress,
+    enabled: !!network?.networkName && !!walletAddress,
+    // Show the persisted profile instantly, but revalidate on mount / focus /
+    // reconnect so values changed in the backend replace the stale cache
+    // (overrides the global staleTime: Infinity + refetch* false defaults).
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };

@@ -1,0 +1,4 @@
+app.local.vaquita.fi:443 {
+    tls internal
+    reverse_proxy localhost:3101
+}

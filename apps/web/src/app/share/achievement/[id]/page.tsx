@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
+import { ACHIEVEMENT_CARD_VERSION, getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
 
 /**
  * Public share page for achievements. Two jobs:
@@ -59,20 +59,32 @@ const formatDate = (iso?: string): string | null => {
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const { u, date } = await searchParams;
-  const achievement = getCatalogAchievement(id);
+  const achievement = await getCatalogAchievement(id);
+  // Public, server-rendered unfurl/OG page: it has no signed-in profile to read
+  // a locale from and must stay consistent for crawlers, so it renders in the
+  // source language (English) rather than the client i18n runtime.
   if (!achievement) return { title: 'Achievement · Vaquita' };
 
   const origin = await resolveOrigin();
-  const ogQuery = new URLSearchParams();
-  if (u) ogQuery.set('u', u);
-  if (date) ogQuery.set('date', date);
-  const qs = ogQuery.toString();
-  const ogImageUrl = `${origin}/og/achievement/${id}${qs ? `?${qs}` : ''}`;
+  const pageQuery = new URLSearchParams();
+  if (u) pageQuery.set('u', u);
+  if (date) pageQuery.set('date', date);
+  const qs = pageQuery.toString();
 
-  const title = `${achievement.title} · Vaquita`;
+  // `v` busts browser/CDN caches when the card design changes — the OG route
+  // itself ignores it. Only the image URL carries it; the canonical page URL
+  // stays version-free.
+  const ogQuery = new URLSearchParams(pageQuery);
+  ogQuery.set('v', ACHIEVEMENT_CARD_VERSION);
+  const ogImageUrl = `${origin}/og/achievement/${id}?${ogQuery.toString()}`;
+
+  const achievementTitle = achievement.title;
+  const achievementDescription = achievement.description;
+
+  const title = `${achievementTitle} · Vaquita`;
   const description = u
-    ? `@${u} just unlocked "${achievement.title}" on Vaquita. ${achievement.description}`
-    : `Someone just unlocked "${achievement.title}" on Vaquita. ${achievement.description}`;
+    ? `@${u} just unlocked "${achievementTitle}" on Vaquita. ${achievementDescription}`
+    : `Someone just unlocked "${achievementTitle}" on Vaquita. ${achievementDescription}`;
 
   return {
     // metadataBase resolves any future relative URLs (icons, manifest, …).
@@ -86,7 +98,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       description,
       url: `${origin}/share/achievement/${id}${qs ? `?${qs}` : ''}`,
       siteName: 'Vaquita',
-      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: achievement.title }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: achievementTitle }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -106,10 +118,12 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 export default async function SharedAchievementPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { u: username, date } = await searchParams;
-  const achievement = getCatalogAchievement(id);
+  const achievement = await getCatalogAchievement(id);
   if (!achievement) notFound();
 
   const formattedDate = formatDate(date);
+  const achievementTitle = achievement.title;
+  const achievementDescription = achievement.description;
 
   return (
     <main className="min-h-dvh flex flex-col items-center justify-center bg-background px-6 py-12">
@@ -123,7 +137,7 @@ export default async function SharedAchievementPage({ params, searchParams }: Pa
             />
             <Image
               src={achievement.icon}
-              alt={achievement.title}
+              alt={achievementTitle}
               fill
               sizes="160px"
               className="relative object-contain drop-shadow-md"
@@ -140,12 +154,14 @@ export default async function SharedAchievementPage({ params, searchParams }: Pa
           <p className="text-[11px] font-extrabold uppercase tracking-wider text-primary">
             Achievement unlocked
           </p>
-          <h1 className="text-2xl font-extrabold text-black leading-tight">{achievement.title}</h1>
+          <h1 className="text-2xl font-extrabold text-black leading-tight">{achievementTitle}</h1>
           {username && (
-            <p className="text-sm font-semibold text-gray-700">earned by @{username}</p>
+            <p className="text-sm font-semibold text-gray-700">
+              earned by @{username}
+            </p>
           )}
           <p className="text-sm text-gray-600 leading-snug max-w-[18rem]">
-            {achievement.description}
+            {achievementDescription}
           </p>
 
           <div className="mt-3 flex items-center gap-2 border-t border-black/10 pt-4 w-full justify-center">

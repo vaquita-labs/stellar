@@ -1,35 +1,21 @@
 'use client';
 
+import { PageHeader } from '@/core-ui/components/molecules/PageHeader';
+import { useDismissSuggestion, useFriendSuggestions, useToggleFollow } from '@/core-ui/hooks';
+import type { FriendSuggestionDTO } from '@/core-ui/types';
 import { toast } from '@heroui/react';
-import Image from 'next/image';
 import Link from 'next/link';
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
+import { VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
+import { useTranslation } from 'react-i18next';
 import {
-  FiArrowLeft,
   FiBookOpen,
   FiChevronRight,
+  FiLoader,
   FiSearch,
   FiShare2,
   FiX,
 } from 'react-icons/fi';
-
-/* ------------------------------------------------------------------ */
-/* Mock friend suggestions                                            */
-/* ------------------------------------------------------------------ */
-
-type Suggestion = {
-  id: string;
-  name: string;
-  followedBy: string;
-};
-
-const buildSuggestions = (): Suggestion[] => [
-  { id: 's-1', name: 'Rafaela.', followedBy: 'Bianka Arce' },
-  { id: 's-2', name: 'Zulma', followedBy: 'Carlos Jhesid L.' },
-  { id: 's-3', name: 'Camilo', followedBy: 'Andrea Alvarez' },
-  { id: 's-4', name: 'Daniela', followedBy: 'Mateo Velez' },
-  { id: 's-5', name: 'Tomás', followedBy: 'Sofía Castro' },
-];
 
 /* ------------------------------------------------------------------ */
 /* Sub-components                                                      */
@@ -41,13 +27,16 @@ function ActionRow({
   onPress,
   href,
   disabled,
+  soon,
 }: {
   icon: React.ReactNode;
   label: string;
   onPress?: () => void;
   href?: string;
   disabled?: boolean;
+  soon?: boolean;
 }) {
+  const { t } = useTranslation();
   const inner = (
     <div
       className={`flex items-center gap-3 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white transition ${
@@ -58,6 +47,11 @@ function ActionRow({
         {icon}
       </span>
       <p className="text-[15px] font-extrabold text-black flex-1 min-w-0 truncate">{label}</p>
+      {soon && (
+        <span className="text-[10px] font-bold uppercase tracking-wider bg-primary text-black border border-black border-b-2 rounded-full px-2.5 py-0.5 shrink-0">
+          {t('common.soon')}
+        </span>
+      )}
       <FiChevronRight className="text-gray-500 shrink-0" />
     </div>
   );
@@ -74,52 +68,63 @@ function ActionRow({
 function SuggestionCard({
   suggestion,
   followed,
+  loading,
   onToggleFollow,
   onDismiss,
 }: {
-  suggestion: Suggestion;
+  suggestion: FriendSuggestionDTO;
   followed: boolean;
+  loading: boolean;
   onToggleFollow: () => void;
   onDismiss: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="relative shrink-0 w-40 sm:w-44 rounded-2xl border border-black border-b-2 bg-white p-3 flex flex-col items-center gap-2">
       <button
         type="button"
         onClick={onDismiss}
-        aria-label="Dismiss suggestion"
+        aria-label={t('social.friends.dismissSuggestion')}
         className="absolute top-2 right-2 h-6 w-6 inline-flex items-center justify-center rounded-full text-gray-500 hover:text-black hover:bg-black/5 transition bg-transparent"
       >
         <FiX className="h-3.5 w-3.5" />
       </button>
 
-      <div className="h-16 w-16 rounded-full bg-[#FFE7C7] border-2 border-black border-b-4 flex items-center justify-center overflow-hidden mt-1">
-        <Image
-          src="/vaquita/vaquita_isotipo.svg"
-          alt={suggestion.name}
-          width={56}
-          height={56}
-          className="object-contain"
-        />
-      </div>
+      <VaquitaAvatarCircle
+        config={suggestion.avatarConfig}
+        seed={suggestion.walletAddress}
+        alt={suggestion.name}
+        className="mt-1 h-16 w-16 border-2 border-b-4"
+      />
 
       <div className="text-center min-w-0 w-full px-1">
         <p className="text-sm font-extrabold text-black truncate">{suggestion.name}</p>
         <p className="text-[11px] text-gray-500 leading-tight mt-0.5 line-clamp-2">
-          Followed by <span className="font-semibold text-gray-600">{suggestion.followedBy}</span>
+          {suggestion.followedBy ? (
+            <>
+              {t('social.friends.followedBy')}{' '}
+              <span className="font-semibold text-gray-600">{suggestion.followedBy}</span>
+            </>
+          ) : (
+            t('social.friends.suggestedForYou')
+          )}
         </p>
       </div>
 
       <button
         type="button"
         onClick={onToggleFollow}
-        className={`mt-1 w-full h-9 inline-flex items-center justify-center rounded-md text-[11px] font-extrabold uppercase tracking-wider border border-black border-b-3 transition hover:-translate-y-0.5 ${
-          followed
-            ? 'bg-white text-black hover:bg-white/80'
-            : 'bg-primary text-black hover:bg-primary/80'
+        disabled={loading}
+        aria-busy={loading}
+        aria-pressed={followed}
+        className={`mt-1 w-full h-9 inline-flex items-center justify-center gap-1.5 rounded-md text-[11px] font-extrabold uppercase tracking-wider border border-black border-b-3 transition ${
+          loading ? 'opacity-70 cursor-wait' : 'hover:-translate-y-0.5'
+        } ${
+          followed ? 'bg-white text-black hover:bg-white/80' : 'bg-primary text-black hover:bg-primary/80'
         }`}
       >
-        {followed ? 'Following' : 'Follow'}
+        {loading && <FiLoader className="h-3 w-3 animate-spin" />}
+        {followed ? t('social.friends.following') : t('social.friends.follow')}
       </button>
     </div>
   );
@@ -130,15 +135,19 @@ function SuggestionCard({
 /* ------------------------------------------------------------------ */
 
 export function FriendsPage() {
-  const suggestions = useMemo(buildSuggestions, []);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [following, setFollowing] = useState<Set<string>>(new Set());
+  const { t } = useTranslation();
+  const { data, isLoading } = useFriendSuggestions();
+  const toggleFollow = useToggleFollow();
+  const dismissSuggestion = useDismissSuggestion();
 
-  const visibleSuggestions = suggestions.filter((s) => !dismissed.has(s.id));
+  const [following, setFollowing] = useState<Set<string>>(new Set());
+  const [pendingWallet, setPendingWallet] = useState<string | null>(null);
+
+  const visibleSuggestions = data?.suggestions ?? [];
 
   const handleShareLink = async () => {
     const url = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
-    const text = 'Follow me on Vaquita 🐮';
+    const text = t('social.friends.shareText');
     try {
       if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
         await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
@@ -149,69 +158,66 @@ export function FriendsPage() {
         return;
       }
       await navigator.clipboard.writeText(`${text} — ${url}`);
-      toast.success('Follow link copied to clipboard');
+      toast.success(t('social.friends.linkCopied'));
     } catch (error) {
       const message = (error as { message?: string })?.message ?? '';
       if (message && !message.toLowerCase().includes('abort')) {
-        toast.danger('Could not share', { description: message });
+        toast.danger(t('social.friends.couldNotShare'), { description: message });
       }
     }
   };
 
-  const toggleFollow = (id: string) => {
+  const handleToggleFollow = (wallet: string) => {
+    const isFollowing = following.has(wallet);
+    // Optimistically flip the button; roll back on error.
     setFollowing((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (isFollowing) next.delete(wallet);
+      else next.add(wallet);
       return next;
     });
+    setPendingWallet(wallet);
+    toggleFollow.mutate(
+      { targetWallet: wallet, isFollowing },
+      {
+        onError: () => {
+          setFollowing((prev) => {
+            const next = new Set(prev);
+            if (isFollowing) next.add(wallet);
+            else next.delete(wallet);
+            return next;
+          });
+        },
+        onSettled: () => setPendingWallet(null),
+      },
+    );
   };
 
-  const dismiss = (id: string) => {
-    setDismissed((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  };
+  // "Not interested": the hook removes the card optimistically, persists the
+  // dismissal (survives F5), and refetches the rail to backfill a fresh one.
+  const dismiss = (wallet: string) => dismissSuggestion.mutate(wallet);
 
   return (
     <div className="h-full overflow-y-auto bg-background">
-      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-6 pb-12">
-        {/* Header: back arrow on the left + centered title. The title is
-            absolutely centered on the row so it stays optically balanced
-            regardless of the back-button width. */}
-        <header className="relative flex items-center justify-center h-9">
-          <Link
-            href="/profile"
-            aria-label="Back"
-            className="absolute left-0 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
-          >
-            <FiArrowLeft className="h-4 w-4" />
-          </Link>
-          <h1 className="text-lg sm:text-xl font-extrabold text-black tracking-tight">
-            Find your friends
-          </h1>
-        </header>
+      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-5 pb-12">
+        <PageHeader title={t('social.friends.title')} backHref="/profile" />
 
         {/* Find actions */}
         <section className="flex flex-col gap-3">
           <ActionRow
             icon={<FiBookOpen className="h-5 w-5" />}
-            label="Choose from contacts"
+            label={t('social.friends.chooseFromContacts')}
             href="/profile/friends/contacts"
+            soon
           />
           <ActionRow
             icon={<FiSearch className="h-5 w-5" />}
-            label="Search by name"
+            label={t('social.friends.searchByName')}
             href="/profile/friends/search"
           />
           <ActionRow
             icon={<FiShare2 className="h-5 w-5" />}
-            label="Share follow link"
+            label={t('social.friends.shareFollowLink')}
             onPress={handleShareLink}
           />
         </section>
@@ -219,20 +225,26 @@ export function FriendsPage() {
         {/* Friend suggestions */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-base sm:text-lg font-extrabold text-black">Friend suggestions</h2>
-            <button
-              type="button"
-              className="text-xs font-extrabold uppercase tracking-wider text-primary hover:text-primary/80 transition bg-transparent"
-              aria-label="View all suggestions"
-            >
-              View all
-            </button>
+            <h2 className="text-base sm:text-lg font-extrabold text-black">
+              {t('social.friends.suggestionsTitle')}
+            </h2>
           </div>
 
-          {visibleSuggestions.length === 0 ? (
+          {isLoading ? (
+            <div className="flex gap-3 overflow-hidden" aria-hidden>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="shrink-0 w-40 sm:w-44 h-[164px] rounded-2xl border border-black border-b-2 bg-white animate-pulse"
+                />
+              ))}
+            </div>
+          ) : visibleSuggestions.length === 0 ? (
             <div className="rounded-2xl border border-black border-b-2 bg-white p-6 text-center">
-              <p className="text-sm font-semibold text-black">No more suggestions right now</p>
-              <p className="text-xs text-gray-500 mt-1">Check back soon for new vaqueros to follow.</p>
+              <p className="text-sm font-semibold text-black">
+                {t('social.friends.emptyTitle')}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">{t('social.friends.emptyBody')}</p>
             </div>
           ) : (
             // Bleed the carousel out to the viewport edges and re-add the page
@@ -241,15 +253,16 @@ export function FriendsPage() {
             // half-cropped behind the page padding.
             <div
               className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-px-4 sm:scroll-px-6 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full snap-x snap-mandatory"
-              aria-label="Friend suggestions"
+              aria-label={t('social.friends.suggestionsTitle')}
             >
               {visibleSuggestions.map((s) => (
-                <div key={s.id} className="snap-start">
+                <div key={s.walletAddress} className="snap-start">
                   <SuggestionCard
                     suggestion={s}
-                    followed={following.has(s.id)}
-                    onToggleFollow={() => toggleFollow(s.id)}
-                    onDismiss={() => dismiss(s.id)}
+                    followed={following.has(s.walletAddress)}
+                    loading={pendingWallet === s.walletAddress}
+                    onToggleFollow={() => handleToggleFollow(s.walletAddress)}
+                    onDismiss={() => dismiss(s.walletAddress)}
                   />
                 </div>
               ))}

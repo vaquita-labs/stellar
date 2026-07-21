@@ -1,7 +1,8 @@
-import { useProfileMapObjects } from '@/core-ui/hooks/profile/useProfileMapObjects';
+import { useProfileMapObjectsByWallet } from '@/core-ui/hooks/profile/useProfileMapObjectsByWallet';
 import { MapObject, MapObjectType, ProfileMapObjectsResponseDTO } from '@/core-ui/types';
 import { useEffect } from 'react';
 import { create } from 'zustand';
+import { useConfigStore } from './config';
 
 export type ObjectItem = {
   type: MapObjectType;
@@ -34,6 +35,14 @@ export type MapStoreType = {
   setSelectedObject: (item: ObjectItem | null) => void;
   editingObjectPosition: [number, number, number] | null;
   setEditingObjectPosition: (position: [number, number, number] | null) => void;
+  /**
+   * Colocación pendiente de confirmar (modo ADD): guarda qué había en la celda
+   * antes de colocar, para poder revertirla si se cancela sin confirmar.
+   * `previous: null` = la celda no tenía entrada (expansión).
+   */
+  pendingPlacement: { position: [number, number, number]; previous: MapObject | null } | null;
+  setPendingPlacement: (pending: { position: [number, number, number]; previous: MapObject | null } | null) => void;
+  revertPendingPlacement: () => void;
   screenPosition: { x: number; y: number } | null;
   setScreenPosition: (position: { x: number; y: number } | null) => void;
   tileCorners: { x: number; y: number }[] | null;
@@ -104,14 +113,34 @@ export const useMapStore = create<MapStoreType>((set, get) => ({
   setSelectedObject: (item) => set({ selectedObject: item }),
   editingObjectPosition: null,
   setEditingObjectPosition: (position) => set({ editingObjectPosition: position }),
+  pendingPlacement: null,
+  setPendingPlacement: (pending) => set({ pendingPlacement: pending }),
+  revertPendingPlacement: () => {
+    set((state) => {
+      const pending = state.pendingPlacement;
+      if (!pending) return {};
+      const [x, , z] = pending.position;
+      const withoutCell = state.currentTiles.filter((tile) => tile.position[0] !== x || tile.position[2] !== z);
+      return {
+        currentTiles: pending.previous ? [...withoutCell, pending.previous] : withoutCell,
+        pendingPlacement: null,
+      };
+    });
+  },
   screenPosition: null,
   setScreenPosition: (position) => set({ screenPosition: position }),
   tileCorners: null,
   setTileCorners: (corners) => set({ tileCorners: corners }),
 }));
 
-export const useSyncMapObjects = () => {
-  const { data, refetch } = useProfileMapObjects();
+/**
+ * Sincroniza el store del mapa con los tiles de un perfil. Sin argumento usa
+ * el usuario logueado; con `walletAddress` carga el mapa de OTRO perfil (vista
+ * de leaderboard) — la vaquita y el render usan el mismo store en ambos casos.
+ */
+export const useSyncMapObjects = (walletAddress?: string) => {
+  const ownWalletAddress = useConfigStore((s) => s.walletAddress);
+  const { data, refetch } = useProfileMapObjectsByWallet(walletAddress || ownWalletAddress);
   const setTiles = useMapStore((s) => s.setTiles);
 
   const objectsString = JSON.stringify(data?.objects || []);
@@ -120,5 +149,7 @@ export const useSyncMapObjects = () => {
     setTiles(JSON.parse(objectsString));
   }, [objectsString, setTiles]);
 
-  return { refetch };
+  // isLoaded distingue "el mapa está vacío" de "todavía no llegó el API":
+  // con mapas que arrancan vacíos, currentTiles.length ya no sirve para eso.
+  return { refetch, isLoaded: data !== undefined };
 };

@@ -1,14 +1,18 @@
 import { BankAPYModal } from '@/core-ui/components';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { useDepositsComplete } from '@/core-ui/hooks';
-import { useNetworkConfigStore } from '@/core-ui/stores';
+import { useModalPresence } from '@/core-ui/components/molecules/AppModal';
+import { useConfigStore } from '@/core-ui/stores';
 import { Button, Spinner } from '@heroui/react';
 import Image from 'next/image';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const TotalDepositsButton = () => {
+  const { t } = useTranslation();
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
-  const { walletAddress, token } = useNetworkConfigStore();
+  const bankAPYModalMounted = useModalPresence(showBankAPYModal);
+  const { walletAddress, token } = useConfigStore();
 
   const { data, isLoading, isRefetching } = useDepositsComplete(walletAddress);
   const { activeDepositsTotalAmount } = getDepositsData(data?.deposits ?? []);
@@ -25,19 +29,19 @@ export const TotalDepositsButton = () => {
           <>
             <Image
               src="/icons/summary/bag.png"
-              alt="bag"
+              alt={t('home.totalDeposits.bagAlt', 'Total deposits')}
               width={typeof window !== 'undefined' && window.innerWidth < 768 ? 24 : 40}
               height={typeof window !== 'undefined' && window.innerWidth < 768 ? 24 : 40}
               className="object-contain"
               priority
             />
             <span className="text-xs font-semibold text-black">
-              {activeDepositsTotalAmount} {token?.symbol}
+              {activeDepositsTotalAmount.toFixed(2)} {token?.symbol}
             </span>
           </>
         )}
       </Button>
-      {showBankAPYModal && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
+      {bankAPYModalMounted && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
     </>
   );
 };

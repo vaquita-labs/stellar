@@ -1,14 +1,17 @@
 'use client';
 
+import { isHudItem } from '@/core-ui/components/home/edit/hudItems';
 import { ObjectListObjectCard } from '@/core-ui/components/home/edit/ObjectListObjectCard';
-import { SceneLighting } from '@/core-ui/components/templates/WorldMap/map/SceneLighting';
+import { SceneLighting } from '@/core-ui/components/map/scene/SceneLighting';
 import { useIsMobile, useProfileMapObjectsAvailable } from '@/core-ui/hooks';
 import { EditionMode, ObjectItem, useMapStore } from '@/core-ui/stores';
 import { Canvas } from '@react-three/fiber';
 import Image from 'next/image';
 import { memo, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 function ObjectListCmp() {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const { data } = useProfileMapObjectsAvailable();
   const currentTiles = useMapStore((store) => store.currentTiles);
@@ -24,7 +27,8 @@ function ObjectListCmp() {
           used: currentTiles.reduce((sum, tile) => sum + +(tile.type === obj.type && tile.variant === obj.variant), 0),
         }))
         // Hide items the user no longer has any of (placed all of them or never owned any)
-        .filter((obj) => obj.itemsAvailable - obj.used > 0),
+        // y los ítems de HUD, que se compran pero no se colocan en el mapa.
+        .filter((obj) => !isHudItem(obj.type) && obj.itemsAvailable - obj.used > 0),
     [currentTiles, data?.objects]
   );
 
@@ -49,9 +53,9 @@ function ObjectListCmp() {
   if (objects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-8 gap-2">
-        <Image src="/icons/summary/bag.png" alt="empty" width={48} height={48} className="opacity-60" />
-        <p className="text-sm text-gray-600">Your collection is empty.</p>
-        <p className="text-xs text-gray-500">Buy items from the catalog to start collecting!</p>
+        <Image src="/icons/summary/bag.png" alt={t('home.objectList.emptyAlt', 'Empty')} width={48} height={48} className="opacity-60" />
+        <p className="text-sm text-gray-600">{t('home.objectList.empty', 'Your collection is empty.')}</p>
+        <p className="text-xs text-gray-500">{t('home.objectList.emptyHint', 'Buy items from the catalog to start collecting!')}</p>
       </div>
     );
   }

@@ -3,19 +3,29 @@ use soroban_sdk::contracterror;
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
-pub enum DeFindexError {
-    /// Insufficient profit after swaps
-    InsufficientProfit = 1,
-    /// Invalid invocations (empty or exceeds limit)
-    InvalidInvocations = 2,
-    /// Swap execution failed
-    SwapFailed = 3,
-    /// Flash loan repayment failed
-    RepaymentFailed = 4,
-    /// Unauthorized caller
-    Unauthorized = 5,
-    /// Invalid parameters
-    InvalidArgument = 6,
-
-    NegativeNotAllowed= 7
+pub enum VaquitaPoolError {
+    NotInitialized = 1,
+    InvalidAmount = 2,
+    DepositAlreadyExists = 3,
+    InvalidPeriod = 4,
+    PositionNotFound = 5,
+    NotOwner = 6,
+    InvalidFee = 7,
+    FeeCapExceeded = 8,
+    LockPeriodAlreadySupported = 9,
+    LockPeriodNotSupported = 10,
+    LockPeriodHasPositions = 11,
+    VaultShareBalanceDecreased = 12,
+    VaultReturnedZeroShares = 13,
+    VaultReturnedLessThanPrincipal = 14,
+    PeriodDataNotFound = 15,
+    PeriodHasNoDeposits = 16,
+    Paused = 17,
+    ConservationInvariantViolated = 18,
+    ArithmeticOverflow = 19,
+    UpgradeNotProposed = 20,
+    UpgradeNotReady = 21,
+    UpgradeLocked = 22,
+    VaultRepointHasOutstandingPositions = 23,
+    TokenRepointHasOutstandingPositions = 24,
 }

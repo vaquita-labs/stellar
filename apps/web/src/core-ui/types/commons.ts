@@ -1,5 +1,6 @@
 // Shared across frontend and backend
-import { type Abi } from 'viem';
+
+import type { AvatarConfig } from '@vaquita/avatar';
 
 export enum WithdrawalStatus {
   INITIATED = 'initiated',
@@ -24,10 +25,23 @@ export enum DepositWithdrawalState {
   WITHDRAW_SUCCESS = 'withdraw_success',
 }
 
+export interface CurrencyDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+export interface LanguageDTO {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
 export interface NetworkResponseDTO {
-  name: string;
+  networkName: string;
   type: string;
-  chainId: number;
+  networkPassphrase: string | null;
+  badgesContractAddress?: string;
   tokens: {
     isGas: boolean;
     isNative: boolean;
@@ -35,12 +49,12 @@ export interface NetworkResponseDTO {
     symbol: string;
     name: string;
     decimals: number;
-    lockPeriod: number[];
+    lockPeriods: number[];
     contractAddress: string;
-    contractAbi: Abi;
     vaquitaContractAddress: string;
-    vaquitaContractAbi: Abi;
   }[];
+  currencies: CurrencyDTO[];
+  languages: LanguageDTO[];
 }
 
 export interface DepositSummaryResponseDTO {
@@ -78,9 +92,9 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   transactionHash: string;
   depositIdHex: string;
   vaquitaInterest: number;
-  aaveInterest: number;
+  protocolInterest: number;
   /**
-   * Stellar: same as `vaultInterest` (DeFindex vault accrual). EVM: Aave-style estimate field name kept for compatibility.
+   * Stellar: same as `vaultInterest` (DeFindex vault accrual).
    */
   blendInterest: number;
   /** Stellar testnet only: vault NAV accrual. Omitted on other networks. */
@@ -89,6 +103,13 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   updatedTimestamp: number;
   serverTimestamp: number;
   confirmedTimestamp: number;
+  /**
+   * Client clock (`Date.now()`) at the moment the deposit was fetched. The
+   * deposits list is cached (staleTime Infinity + localStorage), so
+   * `serverTimestamp` freezes at fetch time; live "now" must be derived as
+   * `serverTimestamp + (Date.now() - fetchedAtTimestamp)`.
+   */
+  fetchedAtTimestamp?: number;
 }
 
 export type TotalDepositsResponseDTO = {
@@ -96,14 +117,29 @@ export type TotalDepositsResponseDTO = {
     [key in DepositWithdrawalState]: {
       totalCount: number;
       totalAmount: number;
-      totalAaveInterest: number;
+      totalProtocolInterest: number;
       totalBlendInterest: number;
       totalVaquitaInterest: number;
-      totalAaveApy: number;
+      totalProtocolApy: number;
       totalBlendApy: number;
       totalVaquitaApy: number;
     };
   };
+};
+
+// Notification toggles offered on the profile Notifications page. `push` and
+// `email` are delivery channels; the rest pick which activity gets notified.
+export type NotificationPreferenceKey = 'push' | 'email' | 'deposits' | 'streaks' | 'friends';
+
+export type NotificationPreferences = Record<NotificationPreferenceKey, boolean>;
+
+// Mirrors the API defaults — used while the profile query is loading.
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  push: true,
+  email: false,
+  deposits: true,
+  streaks: true,
+  friends: false,
 };
 
 export interface ProfileResponseDTO {
@@ -112,6 +148,22 @@ export interface ProfileResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved by the
+   *  API — a profile that never opened the editor gets a stable wallet-seeded
+   *  avatar, so the client never needs a fallback of its own. */
+  avatarConfig: AvatarConfig;
+  onboardingCompleted: boolean;
+  tutorialCompleted: boolean;
+  cryptoSavvy: boolean;
+  // Per-user display preferences (option ids from the project config lists).
+  // Empty string until the user picks one.
+  language: string;
+  currency: string;
+  // Always a full object: the API merges defaults over whatever the user saved
+  // and forces the email channel off while the profile has no email address.
+  notificationPreferences: NotificationPreferences;
+  // Account creation timestamp (ISO 8601). Empty string when unknown.
+  createdAt: string;
 }
 
 export interface ProfileExperienceResponseDTO {
@@ -137,6 +189,100 @@ export interface ProfileStreakResponseDTO {
   days: number[];
 }
 
+/**
+ * A vaquero shown in the friend search / follow list. `level` is always 0 for
+ * now (no level system yet); `streak` and `followers` are computed live.
+ * `isFollowing` is relative to the viewer who made the request.
+ */
+export interface FriendDTO {
+  walletAddress: string;
+  name: string;
+  handle: string;
+  nickname: string;
+  fullName: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved by the
+   *  API — a profile that never opened the editor gets a stable wallet-seeded
+   *  avatar, so the client never needs a fallback of its own. */
+  avatarConfig: AvatarConfig;
+  level: number;
+  streak: number;
+  followers: number;
+  isFollowing: boolean;
+}
+
+export interface FriendSearchResponseDTO {
+  networkName: string;
+  query: string;
+  results: FriendDTO[];
+}
+
+export interface FollowResponseDTO {
+  followerWallet: string;
+  followeeWallet: string;
+  following: boolean;
+}
+
+/**
+ * A suggested vaquero for the "Friend suggestions" rail. `followedBy` names the
+ * mutual friend who connects the viewer to this suggestion; '' for random fills.
+ */
+export interface FriendSuggestionDTO extends FriendDTO {
+  followedBy: string;
+}
+
+export interface FriendSuggestionsResponseDTO {
+  networkName: string;
+  suggestions: FriendSuggestionDTO[];
+}
+
+export interface SuggestionDismissResponseDTO {
+  viewerWallet: string;
+  dismissedWallet: string;
+}
+
+/** Hearts a profile's 3D world has collected. */
+export interface MapLikeCountResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  likes: number;
+}
+
+/** Wallets whose map the viewer already liked — seeds the feed's heart buttons. */
+export interface LikedMapWalletsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  wallets: string[];
+}
+
+/** Result of toggling a heart, with the owner's fresh total. */
+export interface MapLikeResponseDTO {
+  likerWallet: string;
+  ownerWallet: string;
+  liked: boolean;
+  likes: number;
+}
+
+export interface FollowCountsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  following: number;
+  followers: number;
+}
+
+export interface FollowingWalletsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  /** Wallet addresses the viewer currently follows. */
+  following: string[];
+}
+
+/** A list of vaqueros (the viewer's followers or following), for the modal. */
+export interface FriendListResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  results: FriendDTO[];
+}
+
 export type MapObject = {
   position: [number, number, number];
   type: MapObjectType;
@@ -155,16 +301,33 @@ export interface ProfileMapObjectsAvailableResponseDTO {
   walletAddress: string;
   objects: {
     price: number;
+    /** Unidades colocables: freeItems del catálogo + compradas por el usuario. */
     itemsAvailable: number;
+    /** Unidades compradas por el usuario (subset de itemsAvailable). */
+    owned: number;
     type: MapObjectType;
     variant: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
   }[];
+}
+
+export interface PurchaseMapItemResponseDTO {
+  type: MapObjectType;
+  variant: number;
+  quantity: number;
+  /** Unidades del ítem que el usuario posee tras la compra. */
+  owned: number;
+  /** Saldo de monedas tras la compra. */
+  goldBalance: number;
 }
 
 export interface ProfileAverageResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved by the
+   *  API — a profile that never opened the editor gets a stable wallet-seeded
+   *  avatar, so the client never needs a fallback of its own. */
+  avatarConfig: AvatarConfig;
   walletAddress: string;
   totalSums: number;
   lastSum: number;
@@ -172,15 +335,34 @@ export interface ProfileAverageResponseDTO {
   timestamp: number;
   delay: number;
   badges: number;
+  // Real per-profile gamification signals served by the leaderboard endpoint
+  // (replaced the wallet-hash placeholder). `streak` is the display streak
+  // (yesterdayStreak + today's check-in); `experience` is total XP, from which
+  // the UI derives level (every 100 XP = +1 level).
+  streak: number;
+  experience: number;
 }
 
-export interface UserBalanceResponseDTO {
-  balances: {
-    balance: number;
-    networkName: string;
-    tokenSymbol: string;
-  }[];
-  wallet: { walletAddress: string };
+export interface LeaderboardResponseDTO {
+  position: number;
+  walletAddress: string;
+  nickname: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved by the
+   *  API — a profile that never opened the editor gets a stable wallet-seeded
+   *  avatar, so the client never needs a fallback of its own. */
+  avatarConfig: AvatarConfig;
+  badges: number;
+  streak: number;
+  experience: number;
+  coins: number;
+  /** Hearts this profile's 3D world has collected. */
+  mapLikes: number;
+  score: number;
+  activeAmount: number;
+  cycleId: number;
+  cycleStart: number;
+  cycleEnd: number;
+  cycleStatus: 'current' | 'last_closed' | 'historical';
 }
 
 export interface RewardResponseDTO {
@@ -192,6 +374,7 @@ export interface RewardResponseDTO {
 
 export enum Reward {
   GOLD_COIN = 'gold-coin',
+  EXPERIENCE = 'experience',
 }
 
 export enum Achievement {
@@ -223,6 +406,19 @@ export interface AchievementResponseDTO {
   unlocked: boolean;
   /** ISO timestamp of the claim, or null if not yet claimed. */
   claimedAt: string | null;
+  /** True when the badge has been minted on-chain (a confirmed badge_claims row). */
+  minted: boolean;
+  /** On-chain mint transaction hash, or null when not minted. Lets clients link
+   *  an already-minted badge to its stellar.expert tx without a re-mint. */
+  transactionHash: string | null;
+  claimState: 'locked' | 'claimable' | 'pending_mint' | 'claimed' | 'minted';
+  claimCycleId: number | null;
+  awardCycleId: number | null;
+  /** Catalog visual metadata, embedded so logged-in views need only this list.
+   *  `icon` may be a relative path or an absolute (admin-uploaded) URL. */
+  icon: string | null;
+  accent: string | null;
+  displayOrder: number;
 }
 
 export interface ProfileAchievementsResponseDTO {
@@ -247,5 +443,7 @@ export enum MapObjectType {
   BANK = 'bank',
   BARN = 'barn',
   LEADERBOARD = 'leaderboard',
+  /** Ítem de HUD (no se coloca en el mapa): desbloquea la card de la hora. */
+  CLOCK = 'clock',
   EMPTY = 'empty',
 }

@@ -1,8 +1,13 @@
 import type { Config } from "./config.js";
 
 export type CreateVaultRequest = {
-  roles: Record<"0" | "1" | "2" | "3", string>;
-  vault_fee_bps: number;
+  roles: {
+    emergencyManager: string;
+    feeReceiver: string;
+    manager: string;
+    rebalanceManager: string;
+  };
+  vaultFeeBps: number;
   assets: Array<{
     address: string;
     strategies: Array<{
@@ -11,8 +16,8 @@ export type CreateVaultRequest = {
       paused: boolean;
     }>;
   }>;
-  soroswap_router: string;
-  name_symbol: { name: string; symbol: string };
+  name: string;
+  symbol: string;
   upgradable: boolean;
   caller: string;
 };
@@ -24,14 +29,23 @@ export type CreateVaultResponse = {
 };
 
 export type SendResponse = {
-  status: string;
+  status?: string;
+  success?: boolean;
   txHash: string;
   returnValue?: string;
+  result?: {
+    type?: string;
+    value?: string | null;
+  };
   resultXdr?: string;
   resultMetaXdr?: string;
   envelopeXdr?: string;
   ledger?: number;
   createdAt?: string;
+  latestLedger?: number;
+  latestLedgerCloseTime?: string;
+  feeBump?: boolean;
+  feeCharged?: string;
 };
 
 export class DefindexApi {
@@ -66,31 +80,8 @@ export class DefindexApi {
   }
 
   async createVault(): Promise<CreateVaultResponse> {
-    const body: CreateVaultRequest = {
-      roles: {
-        "0": this.cfg.roles.emergencyManager,
-        "1": this.cfg.roles.vaultFeeReceiver,
-        "2": this.cfg.roles.manager,
-        "3": this.cfg.roles.rebalanceManager,
-      },
-      vault_fee_bps: this.cfg.vault.feeBps,
-      assets: [
-        {
-          address: this.cfg.assets.usdc,
-          strategies: [
-            {
-              address: this.cfg.assets.blendUsdcStrategy.address,
-              name: this.cfg.assets.blendUsdcStrategy.name,
-              paused: false,
-            },
-          ],
-        },
-      ],
-      soroswap_router: this.cfg.assets.soroswapRouter,
-      name_symbol: { name: this.cfg.vault.name, symbol: this.cfg.vault.symbol },
-      upgradable: this.cfg.vault.upgradable,
-      caller: this.cfg.deployer.public,
-    };
+    const body = buildCreateVaultRequest(this.cfg);
+    console.log(`     create-vault body: ${JSON.stringify(body)}`);
 
     const res = await this.request<CreateVaultResponse>(
       "POST",
@@ -108,10 +99,12 @@ export class DefindexApi {
   }
 
   async send(signedXdr: string): Promise<SendResponse> {
+    console.log(`     send body: {"xdr":"<redacted ${signedXdr.length} chars>"}`);
     const res = await this.request<SendResponse>("POST", "/send", { xdr: signedXdr });
-    if (res.status !== "SUCCESS") {
+    const submitted = res.success === true || res.status === "SUCCESS";
+    if (!submitted) {
       throw new Error(
-        `/send returned non-success status "${res.status}". txHash=${res.txHash ?? "<none>"}`,
+        `/send returned non-success response. success=${String(res.success)} status=${res.status ?? "<unset>"} txHash=${res.txHash ?? "<none>"} body=${JSON.stringify(res)}`,
       );
     }
     if (!res.txHash) {
@@ -119,6 +112,34 @@ export class DefindexApi {
     }
     return res;
   }
+}
+
+export function buildCreateVaultRequest(cfg: Config): CreateVaultRequest {
+  return {
+    roles: {
+      emergencyManager: cfg.roles.emergencyManager,
+      feeReceiver: cfg.roles.vaultFeeReceiver,
+      manager: cfg.roles.manager,
+      rebalanceManager: cfg.roles.rebalanceManager,
+    },
+    vaultFeeBps: cfg.vault.feeBps,
+    assets: [
+      {
+        address: cfg.assets.usdc,
+        strategies: [
+          {
+            address: cfg.assets.blendUsdcStrategy.address,
+            name: cfg.assets.blendUsdcStrategy.name,
+            paused: false,
+          },
+        ],
+      },
+    ],
+    name: cfg.vault.name,
+    symbol: cfg.vault.symbol,
+    upgradable: cfg.vault.upgradable,
+    caller: cfg.deployer.public,
+  };
 }
 
 export class DefindexApiError extends Error {

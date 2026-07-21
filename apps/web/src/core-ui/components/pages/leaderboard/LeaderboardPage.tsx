@@ -1,247 +1,252 @@
 'use client';
 
 import Image from 'next/image';
-import { useDeferredValue, useMemo, useState } from 'react';
-import { ProfileAverageResponseDTO } from '@/core-ui/types';
-import {
-  useProfileData,
-  useProfileExperience,
-  useProfilesByAverageDepositsData,
-  useProfileStreak,
-} from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useWeeklyLeague } from '../../../hooks/useWeeklyLeague';
 import { PageLayout } from '../../molecules';
-import { ShareProfileQrButton } from '../profile/ShareProfileQrButton';
-import {
-  LeaderboardCard,
-  LeaderboardCardData,
-  LeaderboardCardSkeleton,
-  getLeaderboardUsername,
-} from './LeaderboardCard';
-import { LeaderboardSubHeader, SortDirection, SortKey } from './LeaderboardSubHeader';
-import { derivePlaceholderUserStats } from './userStatsPlaceholder';
-
-const SKELETON_ROWS = 3;
-
-/* ------------------------------------------------------------------ */
-/* Ranking + filtering                                                 */
-/* ------------------------------------------------------------------ */
+import { getLeaderboardUsername } from './LeaderboardCard';
+import { LeagueBoard, LeagueBoardSkeleton } from './LeagueBoard';
+import { LeagueHeader, useDivisionName } from './LeagueHeader';
+import { LeagueTrophy } from './LeagueTrophy';
+import { PinnedOwnRow, useOwnRowTracking } from './PinnedOwnRow';
+import { DEMOTION_SLOTS, Division, DivisionId, PROMOTION_SLOTS, divisionById } from './leagues';
 
 /**
- * Default ordering — by internal average deposits. Never shown in UI; once
- * the backend ranks by XP this collapses to `(a, b) => b.xp - a.xp`.
+ * Division banner (trophy ladder + countdown) — TEMPORARILY OFF.
+ *
+ * The ladder is real UI over placeholder data: until the API ships cohorts and
+ * a persisted division per profile (see the TODO in `useWeeklyLeague`), the
+ * banner would promise promotions and demotions that never happen. The board
+ * below it still works on its own, so hiding just the banner leaves an honest
+ * weekly XP ranking.
+ *
+ * Flip this back to `true` — nothing else — once `/leaderboard/weekly` exists.
  */
-function defaultRank(profiles: ProfileAverageResponseDTO[]): ProfileAverageResponseDTO[] {
-  return [...profiles].sort((a, b) => {
-    const avgA = a.count !== 0 ? a.totalSums / a.count : 0;
-    const avgB = b.count !== 0 ? b.totalSums / b.count : 0;
-    return avgB - avgA;
-  });
-}
+const SHOW_LEAGUE_HEADER = false;
 
-/** Apply the user-selected sort + direction to a list of cards.
- *  Rows arrive already in descending rank order, so `rank + desc` is a no-op
- *  and `rank + asc` simply reverses the list. */
-function sortRows(
-  rows: LeaderboardCardData[],
-  key: SortKey,
-  direction: SortDirection
-): LeaderboardCardData[] {
-  if (key === 'rank') {
-    return direction === 'desc' ? rows : [...rows].reverse();
-  }
-  const accessor: Record<Exclude<SortKey, 'rank'>, (r: LeaderboardCardData) => number> = {
-    level: (r) => r.level,
-    streak: (r) => r.streak,
-    badges: (r) => r.badges,
-  };
-  const get = accessor[key];
-  return [...rows].sort((a, b) =>
-    direction === 'desc' ? get(b) - get(a) : get(a) - get(b)
-  );
-}
+/** The countdown is coarse (days → hours → minutes), so a minute is as often as
+ *  the clock can possibly change what's on screen. */
+const CLOCK_TICK_MS = 60_000;
 
-/** Case-insensitive substring match on the username. */
-function filterRows(rows: LeaderboardCardData[], query: string): LeaderboardCardData[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return rows;
-  return rows.filter((r) => r.username.toLowerCase().includes(q));
+/** Re-reads the clock on an interval instead of during render, so the countdown
+ *  stays live without making the render impure. */
+function useClock() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+  return now;
 }
 
 /* ------------------------------------------------------------------ */
 /* States                                                              */
 /* ------------------------------------------------------------------ */
 
-function LoadingState() {
-  return (
-    <ul className="flex flex-col gap-3" aria-busy="true" aria-label="Loading leaderboard">
-      {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-        <li key={i}>
-          <LeaderboardCardSkeleton />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-black/10 bg-white p-8 text-center">
-      <Image src="/vaquita/error.svg" alt="" width={140} height={140} />
-      <p className="text-base font-extrabold text-black">No vaqueros on the board yet</p>
-      <p className="text-xs text-gray-500 max-w-xs">
-        Be the first to climb the ranks — start a deposit streak and you&apos;ll show up here.
-      </p>
-    </div>
-  );
-}
-
-function NoResults({ query }: { query: string }) {
-  return (
-    <div className="rounded-3xl border border-black/10 bg-white p-6 text-center">
-      <p className="text-sm font-extrabold text-black">No vaqueros match &ldquo;{query}&rdquo;</p>
-      <p className="mt-1 text-xs text-gray-500">Try a different username or clear the search.</p>
-    </div>
-  );
-}
-
 function ErrorState({ message }: { message: string }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-3xl border border-red-300 bg-red-50 p-6 text-center">
-      <p className="text-sm font-extrabold text-red-700">Couldn&apos;t load the leaderboard</p>
+      <p className="text-sm font-extrabold text-red-700">
+        {t('leaderboard.error.title', "Couldn't load the leaderboard")}
+      </p>
       <p className="mt-1 text-xs text-red-700/80 break-words">{message}</p>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Feed                                                                */
-/* ------------------------------------------------------------------ */
-
-function LeaderboardFeed({ rows }: { rows: LeaderboardCardData[] }) {
+function EmptyState() {
+  const { t } = useTranslation();
   return (
-    <ul className="flex flex-col gap-3">
-      {rows.map((row) => (
-        <li key={row.walletAddress}>
-          <LeaderboardCard user={row} />
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-black/10 bg-white p-8 text-center">
+      <Image src="/vaquita/error.svg" alt="" width={140} height={140} />
+      <p className="text-base font-extrabold text-black">
+        {t('leaderboard.league.empty.title', 'Nobody in this division yet')}
+      </p>
+      <p className="text-xs text-gray-500 max-w-xs">
+        {t(
+          'leaderboard.league.empty.description',
+          'Save this week to earn XP — your first deposit already puts you on the board.',
+        )}
+      </p>
+    </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Row builder                                                         */
-/* ------------------------------------------------------------------ */
-
-function useLeaderboardRows(profiles: ProfileAverageResponseDTO[]): LeaderboardCardData[] {
-  const { walletAddress: currentUserWallet } = useNetworkConfigStore();
-  // Real stats for the current user only — every other row falls back to
-  // the deterministic placeholder until the API ships per-user XP/streak.
-  const { data: streakData } = useProfileStreak();
-  const { data: experienceData } = useProfileExperience();
-
-  return useMemo(() => {
-    const ranked = defaultRank(profiles);
-    return ranked.map((profile, index) => {
-      const isCurrentUser =
-        !!currentUserWallet &&
-        currentUserWallet.toLowerCase() === profile.walletAddress.toLowerCase();
-
-      const placeholder = derivePlaceholderUserStats(profile.walletAddress);
-
-      const realStreak = isCurrentUser
-        ? (streakData?.yesterdayStreak ?? 0) + (streakData?.todayStreak ? 1 : 0)
-        : null;
-      const realExperience = isCurrentUser ? experienceData?.experience ?? null : null;
-      // Lightweight "level" derivation from XP: every 100 XP = +1 level.
-      const realLevel =
-        realExperience !== null ? Math.max(1, Math.floor(realExperience / 100) + 1) : null;
-
-      return {
-        position: index + 1,
-        walletAddress: profile.walletAddress,
-        username: getLeaderboardUsername(profile.nickname, profile.walletAddress),
-        level: realLevel ?? placeholder.level,
-        streak: realStreak ?? placeholder.streak,
-        badges: profile.badges,
-        // TODO: Replace with real likes and comments once the API ships thems
-        likesSeed: 0,
-        commentsSeed: 0,
-        isCurrentUser,
-      };
-    });
-  }, [profiles, currentUserWallet, streakData, experienceData]);
+/** Shown when the player peeks at a division that isn't theirs. Their own board
+ *  is the only one with real people in it, so previewing another one shows the
+ *  trophy and what it takes to get there — never a made-up list. */
+function DivisionPreview({
+  division,
+  locked,
+  onBack,
+}: {
+  division: Division;
+  locked: boolean;
+  onBack: () => void;
+}) {
+  const { t } = useTranslation();
+  const divisionName = useDivisionName();
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-3xl border border-black/10 bg-white p-8 text-center">
+      <LeagueTrophy division={division} locked={locked} size={96} />
+      <p className="text-base font-extrabold text-black">
+        {locked
+          ? t('leaderboard.league.preview.lockedTitle', 'Reach {{xp}} XP to unlock {{division}}', {
+              xp: division.minXp.toLocaleString(),
+              division: divisionName(division),
+            })
+          : t('leaderboard.league.preview.pastTitle', 'You already cleared {{division}}', {
+              division: divisionName(division),
+            })}
+      </p>
+      <p className="max-w-xs text-xs text-gray-500">
+        {t(
+          'leaderboard.league.preview.description',
+          'You only compete against savers in your own division.',
+        )}
+      </p>
+      <button
+        type="button"
+        onClick={onBack}
+        className="rounded-full border border-black border-b-2 bg-primary px-4 py-1.5 text-xs font-extrabold text-black transition hover:-translate-y-0.5"
+      >
+        {t('leaderboard.league.preview.back', 'Back to my division')}
+      </button>
+    </div>
+  );
 }
 
-/* ------------------------------------------------------------------ */
-/* Current-user identity (for the share modal)                         */
-/* ------------------------------------------------------------------ */
-
-function useCurrentUserIdentity() {
-  const { walletAddress } = useNetworkConfigStore();
-  const { data: profileData } = useProfileData();
-
-  const displayName = useMemo(() => {
-    const nickname = profileData?.nickname?.trim();
-    if (nickname) return nickname;
-    const full = profileData?.fullName?.trim();
-    if (full) return full;
-    if (walletAddress) return `Vaquero ${walletAddress.slice(-4).toUpperCase()}`;
-    return 'Vaquero';
-  }, [profileData?.nickname, profileData?.fullName, walletAddress]);
-
-  const handle = useMemo(
-    () => getLeaderboardUsername(profileData?.nickname, walletAddress ?? ''),
-    [profileData?.nickname, walletAddress]
+/** One-liner under the board explaining the rules, so the green and red lines
+ *  don't have to be decoded. */
+function LeagueRules({ division }: { division: Division }) {
+  const { t } = useTranslation();
+  return (
+    <p className="px-2 text-center text-[11px] leading-relaxed text-black/50">
+      {t(
+        'leaderboard.league.rules',
+        'The board resets every Monday. The top {{promote}} move up a division, the bottom {{demote}} drop one.',
+        { promote: PROMOTION_SLOTS, demote: DEMOTION_SLOTS },
+      )}{' '}
+      {division.index === 0 &&
+        t(
+          'leaderboard.league.rulesFirstDivision',
+          'In the first division nobody drops — you can only climb.',
+        )}
+    </p>
   );
-
-  return { displayName, handle };
 }
 
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Weekly league board. Instead of one endless all-time ranking — where a new
+ * saver is permanently #4.812 and has no reason to come back — everyone
+ * competes inside a division-sized cohort that resets every Monday: the only
+ * number on screen is the XP earned *this week*, and the two zone lines leave
+ * every position one push away from moving.
+ */
 export const LeaderboardPage = () => {
-  const { data: profiles = [], isLoading, error } = useProfilesByAverageDepositsData();
-  const rankedRows = useLeaderboardRows(profiles);
+  const { t } = useTranslation();
+  const now = useClock();
+  const { league, isLoading, error } = useWeeklyLeague();
 
-  const [sortKey, setSortKey] = useState<SortKey>('rank');
-  const [direction, setDirection] = useState<SortDirection>('desc');
-  const [query, setQuery] = useState('');
-  const deferredQuery = useDeferredValue(query);
+  // Which division the header is previewing. `null` means "mine" — storing the
+  // id rather than the division keeps it valid across a promotion landing
+  // mid-session.
+  const [previewId, setPreviewId] = useState<DivisionId | null>(null);
+  const clearPreview = useCallback(() => setPreviewId(null), []);
 
-  const { displayName, handle } = useCurrentUserIdentity();
+  // Pinned "you are #N" bar — hangs from the edge your row is off past.
+  const { ownRowVisible, side, resolved, ownRowRef, scrollToOwnRow, hasOwnRowNode } =
+    useOwnRowTracking();
+  const handlePinnedPress = useCallback(() => {
+    if (hasOwnRowNode()) scrollToOwnRow();
+  }, [hasOwnRowNode, scrollToOwnRow]);
 
-  const visibleRows = useMemo(
-    () => filterRows(sortRows(rankedRows, sortKey, direction), deferredQuery),
-    [rankedRows, sortKey, direction, deferredQuery]
-  );
+  const currentDivision = league?.division ?? null;
+  const previewing = !!previewId && previewId !== currentDivision?.id;
+  const selectedDivision =
+    previewId && currentDivision ? divisionById(previewId) : currentDivision;
 
-  const renderFeed = () => {
-    if (isLoading) return <LoadingState />;
+  const renderBody = () => {
+    if (isLoading || (!league && !error)) {
+      return (
+        <>
+          {SHOW_LEAGUE_HEADER && (
+            <div
+              aria-hidden
+              className="h-52 animate-pulse rounded-3xl border border-black/10 bg-white"
+            />
+          )}
+          <LeagueBoardSkeleton />
+        </>
+      );
+    }
     if (error) return <ErrorState message={`${error}`} />;
-    if (rankedRows.length === 0) return <EmptyState />;
-    if (visibleRows.length === 0) return <NoResults query={query} />;
-    return <LeaderboardFeed rows={visibleRows} />;
+    if (!league || !currentDivision || !selectedDivision) return null;
+
+    return (
+      <>
+        {SHOW_LEAGUE_HEADER && (
+          <LeagueHeader
+            current={currentDivision}
+            selected={selectedDivision}
+            onSelect={(division) => setPreviewId(division.id)}
+            week={league.week}
+            now={now}
+          />
+        )}
+        {previewing ? (
+          <DivisionPreview
+            division={selectedDivision}
+            locked={selectedDivision.index > currentDivision.index}
+            onBack={clearPreview}
+          />
+        ) : league.members.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <>
+            <LeagueBoard
+              members={league.members}
+              division={currentDivision}
+              ownRowRef={ownRowRef}
+            />
+            <LeagueRules division={currentDivision} />
+          </>
+        )}
+      </>
+    );
   };
 
   return (
     <PageLayout
-      title="Leaderboard"
-      rightSlot={<ShareProfileQrButton displayName={displayName} handle={handle} />}
-      contentClassName="!gap-3"
+      title={t('leaderboard.title', 'Leaderboard')}
+      backHref="/home"
+      contentClassName="!gap-4"
     >
-      <LeaderboardSubHeader
-        query={query}
-        onQueryChange={setQuery}
-        sortKey={sortKey}
-        onSortChange={setSortKey}
-        direction={direction}
-        onDirectionChange={setDirection}
-      />
-      {renderFeed()}
+      {renderBody()}
+
+      {/* Kept mounted while the viewer has a row, so showing/hiding is a slide
+          rather than a remount. Hidden while previewing another division: the
+          rank it reports doesn't belong to the board on screen. */}
+      {league?.me && !previewing && (
+        <PinnedOwnRow
+          row={{
+            position: league.me.rank,
+            username: getLeaderboardUsername(league.me.nickname, league.me.walletAddress),
+            avatarConfig: league.me.avatarConfig,
+            walletAddress: league.me.walletAddress,
+            xp: league.me.weeklyXp,
+          }}
+          side={side}
+          shown={resolved && !ownRowVisible}
+          onPress={handlePinnedPress}
+        />
+      )}
     </PageLayout>
   );
 };

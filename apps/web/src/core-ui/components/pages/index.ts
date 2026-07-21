@@ -2,9 +2,12 @@
 
 export * from './AblyProvider';
 export * from '../home/HomePage';
+export * from './explore';
 export * from './leaderboard';
 export * from './ProfilePage';
 export * from './MarketPlace';
 export * from './ShopPage';
 export * from './legal';
+export * from './notifications';
 export * from './profile';
+export * from './transactions';

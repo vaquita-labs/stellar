@@ -2,7 +2,7 @@
 
 Creates a DeFindex vault via the [DeFindex REST API](https://api.defindex.io/docs),
 signs the returned XDR locally with the Vaquita deployer key, submits it, and
-writes the resulting vault contract address back to Doppler as `VAULT_ID`.
+can write the resulting vault contract address back to Doppler as `VAULT_ID`.
 
 No Stellar CLI, no WASM build, no `stellar contract invoke`. Pure API + local
 signing with `@stellar/stellar-sdk`.
@@ -17,7 +17,7 @@ doppler run --config <env> -- pnpm deploy:vault
   ├── 3. sign XDR locally (DEPLOYER_SECRET_KEY never leaves this process)
   ├── 4. POST /send                            (returns txHash + returnValue)
   ├── 5. extract vault contract address from returnValue
-  └── 6. doppler secrets set VAULT_ID=<addr>   (overwrites previous value)
+  └── 6. optional Doppler VAULT_ID writeback
 ```
 
 ## Install
@@ -46,23 +46,63 @@ doppler run --project defindex-vault --config mainnet -- pnpm deploy:vault
 On success, the new vault address is printed and written back to the same
 Doppler config as `VAULT_ID`.
 
-## Role mapping
+## GitHub Actions guarded mode
 
-The DeFindex factory takes a `roles` map keyed by integer. This script wires
-them as follows (matching the on-chain storage keys seen in vault metadata):
+The mainnet workflow uses GitHub Environment secrets and variables as the
+primary CI source. It sets:
 
-| Key | Role               | Env var                      |
-| --- | ------------------ | ---------------------------- |
-| 0   | EmergencyManager   | `EMERGENCY_MANAGER_ADDRESS`  |
-| 1   | VaultFeeReceiver   | `VAULT_FEE_RECEIVER_ADDRESS` |
-| 2   | Manager            | `MANAGER_ADDRESS`            |
-| 3   | RebalanceManager   | `REBALANCE_MANAGER_ADDRESS`  |
+```bash
+DEPLOYMENT_ENVIRONMENT=<selected GitHub Environment>
+DEPLOYMENT_ARTIFACT_PATH=artifacts/defindex-vault-<env>.json
+WRITE_VAULT_ID_TO_DOPPLER=false
+```
+
+Run validation only:
+
+```bash
+DEPLOYER_VALIDATE_ONLY=true pnpm deploy:vault
+```
+
+Run the irreversible vault creation:
+
+```bash
+DEPLOYER_VALIDATE_ONLY=false pnpm deploy:vault
+```
+
+Validation mode checks config, key/public-key matching, and environment/network
+guards without calling the DeFindex API. Execute mode calls the existing API
+flow, signs locally, submits, and writes a JSON artifact containing the public
+deployment inputs, vault ID, transaction hash, explorer links, and
+`manual_rewire_required=true`.
+
+## DeFindex request mapping
+
+The DeFindex factory takes named role fields and top-level vault metadata. This
+script wires them as follows:
+
+| Request field                    | Env var                       |
+| -------------------------------- | ----------------------------- |
+| `roles.emergencyManager`         | `EMERGENCY_MANAGER_ADDRESS`   |
+| `roles.feeReceiver`              | `VAULT_FEE_RECEIVER_ADDRESS`  |
+| `roles.manager`                  | `MANAGER_ADDRESS`             |
+| `roles.rebalanceManager`         | `REBALANCE_MANAGER_ADDRESS`   |
+| `vaultFeeBps`                    | `VAULT_FEE_BPS`               |
+| `name`                           | `VAULT_NAME`                  |
+| `symbol`                         | `VAULT_SYMBOL`                |
+| `assets[0].address`              | `USDC_CONTRACT_ADDRESS`       |
+| `assets[0].strategies[0].address`| `BLEND_USDC_STRATEGY_ADDRESS` |
+| `assets[0].strategies[0].name`   | `BLEND_USDC_STRATEGY_NAME`    |
+| `caller`                         | `DEPLOYER_PUBLIC_KEY`         |
 
 ## Safety notes
 
 - `DEPLOYER_SECRET_KEY` is only read into memory for `tx.sign(...)` and is
   never logged or sent over the network.
-- The script refuses to run if `NETWORK` is `mainnet` but Doppler doesn't
-  report the current config as `mainnet` — prevents cross-env key leaks.
+- The selected deployment environment may be `dev`, `staging`, or `prod`, and
+  each environment may target either `NETWORK=testnet` or `NETWORK=mainnet`.
+  GitHub Environment secrets and vars are the source of truth for whether a
+  given environment/network pair is safe to execute.
+- GitHub Actions sets `WRITE_VAULT_ID_TO_DOPPLER=false`; CI does not require a
+  Doppler token and does not update runtime app config.
 - Idempotency is NOT guaranteed: each run creates a fresh vault. The previous
-  `VAULT_ID` is overwritten, not deleted on-chain.
+  `VAULT_ID` is overwritten only when Doppler writeback is enabled locally.

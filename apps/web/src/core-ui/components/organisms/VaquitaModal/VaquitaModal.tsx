@@ -2,20 +2,23 @@
 
 import { Modal, Spinner } from '@heroui/react';
 import Image from 'next/image';
+import { useTranslation } from 'react-i18next';
 import { useDeposit } from '../../../hooks';
+import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 import { VaquitaModalProps } from './types';
 import { VaquitaModalContent } from './VaquitaModalContent';
 
 export const VaquitaModal = ({ isOpen, onClose, vaquitaSummary, isLeaderboard }: VaquitaModalProps) => {
+  const { t } = useTranslation();
   const { isLoading, data: vaquita = null } = useDeposit(vaquitaSummary.id);
 
   if (isLoading || !vaquita) {
     return (
-      <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-        <Modal.Container size="sm">
+      <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} className={SHEET_BACKDROP_ANIMATION}>
+        <Modal.Container size="sm" className={SHEET_CONTAINER_ANIMATION}>
           <Modal.Dialog className="bg-background text-[#191001] border border-black">
             <Modal.CloseTrigger>
-              <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} className="sm:w-10 sm:h-10" />
+              <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} className="sm:w-10 sm:h-10" />
             </Modal.CloseTrigger>
             <Modal.Body>
               <div className="flex justify-center items-center py-8">

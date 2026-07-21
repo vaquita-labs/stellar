@@ -1,306 +1,218 @@
 'use client';
 
-import { Button, Modal, toast } from '@heroui/react';
-import { useQueryClient } from '@tanstack/react-query';
+import { Button, toast } from '@heroui/react';
+import { Canvas } from '@react-three/fiber';
 import Image from 'next/image';
-import { useState } from 'react';
-import { useProfileRewards } from '../../../hooks';
-import { useNetworkConfigStore } from '../../../stores';
-import { ShopItem } from '../../organisms/ShopModal/types';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useIsMobile, useProfileMapObjectsAvailable, useProfileRewards, usePurchaseMapItem } from '../../../hooks';
+import { EditionMode, useMapStore } from '../../../stores';
+import { MapObjectType } from '../../../types';
+import { SceneLighting } from '../../map/scene/SceneLighting';
+import { AppModal } from '../../molecules/AppModal';
+import { CatalogObjectCard } from './CatalogObjectCard';
+import { isHudItem } from './hudItems';
+import { getMapItemName } from './mapItemNames';
 
-const catalogItems: ShopItem[] = [
-  {
-    id: 'tree',
-    name: 'Tree',
-    description: 'A beautiful tree to decorate your map. Always available!',
-    price: { goldCoins: 1 },
-    image: '/icons/summary/streak_freeze.png',
-    alwaysAvailable: true,
-    biome: 'forest',
-    type: 'decoration',
-    rarity: 'common',
-  },
-  {
-    id: 'streak-freeze',
-    name: 'Streak Freeze',
-    description: 'Protect your streak for one day if you cannot maintain it',
-    price: { goldCoins: 1 },
-    image: '/icons/summary/streak_freeze.png',
-    biome: 'any',
-    type: 'utility',
-    rarity: 'common',
-  },
-  {
-    id: 'tile-pack',
-    name: 'Tile Pack',
-    description: 'Pack of 5 exclusive tiles for your map',
-    price: { goldCoins: 3 },
-    image: '/icons/summary/edit_map.png',
-    biome: 'plains',
-    type: 'expansion',
-    rarity: 'rare',
-  },
-  {
-    id: 'fountain',
-    name: 'Decorative Fountain',
-    description: 'A stunning fountain to enhance your map',
-    price: { goldCoins: 2 },
-    image: '/icons/summary/edit_map.png',
-    biome: 'desert',
-    type: 'decoration',
-    rarity: 'rare',
-  },
-  {
-    id: 'golden-statue',
-    name: 'Golden Statue',
-    description: 'A prestigious golden statue for your collection',
-    price: { goldCoins: 15 },
-    image: '/icons/global/coin.png',
-    biome: 'mountain',
-    type: 'decoration',
-    rarity: 'legendary',
-  },
-];
+interface CatalogItem {
+  type: MapObjectType;
+  variant: number;
+  price: number;
+  itemsAvailable: number;
+}
 
-const rarityBadge: Record<NonNullable<ShopItem['rarity']>, string> = {
-  common: 'bg-gray-100 text-gray-700 border-gray-300',
-  rare: 'bg-blue-100 text-blue-700 border-blue-300',
-  epic: 'bg-purple-100 text-purple-700 border-purple-300',
-  legendary: 'bg-amber-100 text-amber-800 border-amber-400',
-};
-
+/**
+ * Catálogo de la tienda: los ítems comprables vienen del backend (map_objects
+ * con price > 0). Comprar descuenta monedas del ledger y suma el ítem al
+ * inventario; después se ofrece colocarlo en el mapa de inmediato o dejarlo
+ * en la colección.
+ */
 export function CatalogList() {
-  const { data: profileRewards, refetch } = useProfileRewards();
-  const queryClient = useQueryClient();
-  const { network, walletAddress } = useNetworkConfigStore();
+  const { t } = useTranslation();
+  const isMobile = useIsMobile();
+  const { data: available } = useProfileMapObjectsAvailable();
+  const { data: profileRewards } = useProfileRewards();
+  const purchase = usePurchaseMapItem();
+  const currentTiles = useMapStore((store) => store.currentTiles);
+  const setPickedItem = useMapStore((store) => store.setPickedItem);
+  const setEditMode = useMapStore((store) => store.setEditMode);
 
-  const [detailItem, setDetailItem] = useState<ShopItem | null>(null);
-  const [offerMode, setOfferMode] = useState(false);
-  const [offerGold, setOfferGold] = useState('');
-  const [isPurchasing, setIsPurchasing] = useState(false);
-  const [isOffering, setIsOffering] = useState(false);
+  const [detailItem, setDetailItem] = useState<CatalogItem | null>(null);
+  // Tras comprar: ofrecer colocar ya mismo o guardar en la colección.
+  const [placementItem, setPlacementItem] = useState<CatalogItem | null>(null);
 
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
 
-  const canAfford = (item: ShopItem): boolean => {
-    if (item.alwaysAvailable) return true;
-    return goldCoins >= item.price.goldCoins;
-  };
+  const items: CatalogItem[] = useMemo(
+    () =>
+      (available?.objects || []).filter(
+        // Los ítems de HUD (el reloj) son un desbloqueo de una sola vez: una vez
+        // comprados salen del catálogo, no se acumulan unidades.
+        (object) => object.price > 0 && !(isHudItem(object.type) && object.owned > 0)
+      ),
+    [available?.objects]
+  );
 
-  const closeDetail = () => {
-    setDetailItem(null);
-    setOfferMode(false);
-    setOfferGold('');
-  };
+  const closeDetail = () => setDetailItem(null);
 
   const handleBuy = async () => {
-    if (!detailItem || isPurchasing) return;
-    setIsPurchasing(true);
+    if (!detailItem || purchase.isPending) return;
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      await queryClient.invalidateQueries({
-        queryKey: ['profile', network?.name, walletAddress, 'profile-rewards'],
-      });
-      await refetch();
-      toast.success('Purchase successful!', {
-        description: `You've successfully purchased ${detailItem.name}`,
+      const result = await purchase.mutateAsync({ type: detailItem.type, variant: detailItem.variant });
+      toast.success(t('home.catalog.purchaseSuccessTitle', 'Purchase successful!'), {
+        description: t('home.catalog.purchaseSuccessDesc', "You've successfully purchased {{name}}", {
+          name: getMapItemName(t, detailItem.type, detailItem.variant),
+        }),
         timeout: 4000,
       });
-      closeDetail();
+      // Un ítem de HUD no se coloca: alcanza con la compra, así que se saltea
+      // el paso de "colocar ahora" (el reloj ya aparece sobre el mapa).
+      if (!isHudItem(detailItem.type)) {
+        // itemsAvailable local todavía no refleja el refetch: sumar la unidad comprada.
+        setPlacementItem({ ...detailItem, itemsAvailable: detailItem.itemsAvailable + result.quantity });
+      }
+      setDetailItem(null);
     } catch (error) {
-      console.error('Purchase error:', error);
-    } finally {
-      setIsPurchasing(false);
+      toast.danger(t('home.catalog.purchaseErrorTitle', 'Purchase failed'), {
+        description: error instanceof Error ? error.message : t('home.catalog.purchaseErrorDesc', 'Try again.'),
+        timeout: 4000,
+      });
     }
   };
 
-  const handleMakeOffer = async () => {
-    if (!detailItem || isOffering) return;
-    const gold = Number(offerGold) || 0;
-    if (gold <= 0) {
-      toast.danger('Invalid offer', { description: 'Enter at least 1 gold coin.', timeout: 3000 });
-      return;
-    }
-    if (gold > goldCoins) {
-      toast.danger('Not enough coins', { description: 'Your offer exceeds your balance.', timeout: 3000 });
-      return;
-    }
-    setIsOffering(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      toast.success('Offer submitted!', {
-        description: `Offered ${gold} gold for ${detailItem.name}`,
-        timeout: 4000,
-      });
-      closeDetail();
-    } catch (error) {
-      console.error('Offer error:', error);
-    } finally {
-      setIsOffering(false);
-    }
+  const handlePlaceNow = () => {
+    if (!placementItem) return;
+    const used = currentTiles.reduce(
+      (sum, tile) => sum + +(tile.type === placementItem.type && tile.variant === placementItem.variant),
+      0
+    );
+    // Mismo flujo que elegir el ítem desde la colección: queda "picado" y el
+    // mapa entra en modo ADD (el panel se minimiza solo para dejar colocar).
+    setPickedItem({
+      type: placementItem.type,
+      variant: placementItem.variant,
+      used,
+      itemsAvailable: placementItem.itemsAvailable,
+    });
+    setEditMode(EditionMode.ADD);
+    setPlacementItem(null);
   };
 
-  const detailAffordable = detailItem ? canAfford(detailItem) : false;
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-8 gap-2">
+        <Image src="/icons/summary/bag.png" alt="" width={48} height={48} className="opacity-60" />
+        <p className="text-sm text-gray-600">{t('home.catalog.empty', 'The catalog is empty right now.')}</p>
+        <p className="text-xs text-gray-500">{t('home.catalog.emptyHint', 'Come back soon for new items!')}</p>
+      </div>
+    );
+  }
+
+  // Misma matemática de layout que ObjectList: N cards de `spacing` unidades
+  // de mundo, cámara ortográfica con `zoom` px por unidad.
+  const zoom = isMobile ? 50 : 60;
+  const spacing = 2.5;
+  const startX = -((items.length - 1) * spacing) / 2;
+  const canvasWidth = items.length * spacing * zoom;
+
+  const detailAffordable = detailItem ? goldCoins >= detailItem.price : false;
 
   return (
     <>
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-        {catalogItems.map((item) => {
-          const affordable = canAfford(item);
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setDetailItem(item)}
-              className={`shrink-0 w-28 sm:w-32 text-left bg-white border border-black/10 border-b-2 rounded-lg p-2 flex flex-col gap-2 hover:-translate-y-0.5 transition ${
-                !affordable && !item.alwaysAvailable ? 'opacity-70' : ''
-              }`}
-            >
-              <div className="relative w-full aspect-square bg-[#FFF7E6] rounded-md flex items-center justify-center overflow-hidden">
-                {item.rarity && (
-                  <span
-                    className={`absolute top-1 left-1 text-[9px] font-bold uppercase tracking-wide border rounded-sm px-1 py-0.5 ${rarityBadge[item.rarity]}`}
-                  >
-                    {item.rarity}
-                  </span>
-                )}
-                {item.image && (
-                  <Image src={item.image} alt={item.name} width={64} height={64} className="object-contain" />
-                )}
-              </div>
-              <span className="text-xs font-bold text-black truncate">{item.name}</span>
-              <div className="flex items-center gap-2 mt-auto">
-                <div className="flex items-center gap-1">
-                  <Image src="/icons/global/coin.png" alt="Gold" width={14} height={14} className="object-contain" />
-                  <span className="text-xs font-bold text-black">{item.price.goldCoins}</span>
-                </div>
-              </div>
-            </button>
-          );
-        })}
+      <div className="h-[180px] sm:h-[200px] overflow-x-auto scrollbar-hide" style={{ width: '100%' }}>
+        <div style={{ width: canvasWidth, height: '100%' }}>
+          <Canvas shadows orthographic camera={{ position: [0, 10, 10], zoom, near: 0.1, far: 1000 }}>
+            <SceneLighting />
+            <group>
+              {items.map((item, index) => (
+                <CatalogObjectCard
+                  key={`${item.type}-${item.variant}`}
+                  type={item.type}
+                  variant={item.variant}
+                  price={item.price}
+                  affordable={goldCoins >= item.price}
+                  position={[startX + index * spacing, 0, 0]}
+                  onClick={() => setDetailItem(item)}
+                />
+              ))}
+            </group>
+          </Canvas>
+        </div>
       </div>
 
-      <Modal.Backdrop isOpen={!!detailItem} onOpenChange={(o) => { if (!o) closeDetail(); }}>
-        <Modal.Container size="md">
-          <Modal.Dialog className="bg-background border border-black">
-            <Modal.CloseTrigger>
-              <Image src="/icons/close-circle.svg" alt="close" width={40} height={40} />
-            </Modal.CloseTrigger>
-            <Modal.Header>
-              <Modal.Heading className="text-black font-bold text-lg">{detailItem?.name ?? 'Item'}</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body>
-              {detailItem && (
-                <div className="space-y-4">
-                  <div className="w-full aspect-square max-h-56 bg-[#FFF7E6] border border-black/10 rounded-md flex items-center justify-center overflow-hidden">
-                    {detailItem.image && (
-                      <Image src={detailItem.image} alt={detailItem.name} width={160} height={160} className="object-contain" />
-                    )}
-                  </div>
+      {/* Detalle + compra */}
+      <AppModal
+        open={!!detailItem}
+        onOpenChange={closeDetail}
+        title={detailItem ? getMapItemName(t, detailItem.type, detailItem.variant) : ''}
+        footer={
+          <Button
+            className={`w-full ${
+              detailAffordable
+                ? 'bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00]'
+                : 'bg-gray-200 border border-gray-400 text-gray-500 cursor-not-allowed'
+            } rounded-md`}
+            onPress={handleBuy}
+            isDisabled={!detailAffordable || purchase.isPending}
+          >
+            {purchase.isPending
+              ? t('home.catalog.processing', 'Processing...')
+              : detailAffordable
+                ? t('home.catalog.buy', 'Buy')
+                : t('home.catalog.notEnoughCoinsTitle', 'Not enough coins')}
+          </Button>
+        }
+      >
+        {detailItem && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700">
+              {isHudItem(detailItem.type)
+                ? t('home.catalog.hudHint', 'Buying it unlocks it on your map screen. It is a one-time purchase.')
+                : t('home.catalog.placeableHint', 'After buying you can place it anywhere on your map, move it or remove it.')}
+            </p>
+            <div className="pt-2 border-t border-gray-200">
+              <p className="text-xs text-gray-500 uppercase font-semibold mb-1">{t('home.catalog.price', 'Price')}</p>
+              <div className="flex items-center gap-1">
+                <Image src="/icons/global/coin.png" alt={t('home.catalog.goldAlt', 'Gold')} width={24} height={24} className="object-contain" />
+                <span className="text-lg font-bold text-black">{detailItem.price}</span>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-1">
+                {t('home.catalog.youHave', 'You have {{count}}', { count: goldCoins })}
+              </p>
+            </div>
+          </div>
+        )}
+      </AppModal>
 
-                  <div className="flex flex-wrap gap-2">
-                    {detailItem.rarity && (
-                      <span className={`text-[11px] font-bold uppercase border rounded-sm px-2 py-0.5 ${rarityBadge[detailItem.rarity]}`}>
-                        {detailItem.rarity}
-                      </span>
-                    )}
-                    {detailItem.type && (
-                      <span className="text-[11px] font-semibold uppercase bg-[#DDF4FF] text-black border border-[#84D8FF] rounded-sm px-2 py-0.5">
-                        {detailItem.type}
-                      </span>
-                    )}
-                    {detailItem.biome && (
-                      <span className="text-[11px] font-semibold uppercase bg-[#FFF7E6] text-black border border-[#B97204]/40 rounded-sm px-2 py-0.5">
-                        {detailItem.biome}
-                      </span>
-                    )}
-                    {detailItem.alwaysAvailable && (
-                      <span className="text-[11px] font-bold uppercase bg-green-100 text-green-800 border border-green-300 rounded-sm px-2 py-0.5">
-                        Always
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-sm text-gray-700">{detailItem.description}</p>
-
-                  <div className="pt-2 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Price</p>
-                    <div className="flex items-center gap-1">
-                      <Image src="/icons/global/coin.png" alt="Gold" width={24} height={24} className="object-contain" />
-                      <span className="text-lg font-bold text-black">{detailItem.price.goldCoins}</span>
-                    </div>
-                  </div>
-
-                  {offerMode && (
-                    <div className="pt-2 border-t border-gray-200 space-y-3">
-                      <p className="text-xs text-gray-500 uppercase font-semibold">Your offer</p>
-                      <div className="flex flex-col gap-1 min-w-0">
-                        <div className="flex items-center gap-2 bg-white border border-black rounded-md px-2 py-1.5">
-                          <Image src="/icons/global/coin.png" alt="Gold" width={20} height={20} className="object-contain shrink-0" />
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={offerGold}
-                            onChange={(e) => setOfferGold(e.target.value.replace(/[^\d]/g, ''))}
-                            placeholder="0"
-                            className="flex-1 min-w-0 w-full bg-transparent text-sm text-black outline-none"
-                          />
-                        </div>
-                        <p className="text-[11px] text-gray-500 px-1">You have {goldCoins}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              {offerMode ? (
-                <>
-                  <Button
-                    className="bg-gray-200 border border-gray-400 text-gray-700 font-semibold rounded-md hover:bg-gray-300"
-                    onPress={() => {
-                      setOfferMode(false);
-                      setOfferGold('');
-                    }}
-                    isDisabled={isOffering}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    className="bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00] rounded-md"
-                    onPress={handleMakeOffer}
-                    isDisabled={isOffering}
-                  >
-                    {isOffering ? 'Sending...' : 'Submit offer'}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    className="bg-white border border-black border-b-2 text-black font-semibold hover:bg-gray-100 rounded-md"
-                    onPress={() => setOfferMode(true)}
-                    isDisabled={isPurchasing}
-                  >
-                    Make offer
-                  </Button>
-                  <Button
-                    className={`${
-                      detailAffordable || detailItem?.alwaysAvailable
-                        ? 'bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00]'
-                        : 'bg-gray-200 border border-gray-400 text-gray-500 cursor-not-allowed'
-                    } rounded-md`}
-                    onPress={handleBuy}
-                    isDisabled={(!detailAffordable && !detailItem?.alwaysAvailable) || isPurchasing}
-                  >
-                    {isPurchasing ? 'Processing...' : 'Buy'}
-                  </Button>
-                </>
-              )}
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
+      {/* Post-compra: colocar ahora o dejar en la colección */}
+      <AppModal
+        open={!!placementItem}
+        onOpenChange={() => setPlacementItem(null)}
+        title={t('home.catalog.placeNowTitle', 'Place it now?')}
+        footer={
+          <div className="flex gap-2 w-full [&>*]:flex-1">
+            <Button
+              className="bg-white border border-black border-b-2 text-black font-semibold hover:bg-gray-100 rounded-md"
+              onPress={() => setPlacementItem(null)}
+            >
+              {t('home.catalog.keepForLater', 'Keep in collection')}
+            </Button>
+            <Button
+              className="bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00] rounded-md"
+              onPress={handlePlaceNow}
+            >
+              {t('home.catalog.placeNow', 'Place now')}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-gray-700">
+          {placementItem &&
+            t('home.catalog.placeNowDesc', '{{name}} is now in your collection. You can place it on your map right away.', {
+              name: getMapItemName(t, placementItem.type, placementItem.variant),
+            })}
+        </p>
+      </AppModal>
     </>
   );
 }

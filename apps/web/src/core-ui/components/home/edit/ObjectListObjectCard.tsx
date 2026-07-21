@@ -2,11 +2,14 @@
 
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Group } from 'three';
 import { EditionMode, useMapStore } from '../../../stores';
 import { MapObjectType, WorldType } from '../../../types';
-import { getObjectGroup } from '../../map/helpers';
+import { disposeObject } from '../../map/helpers';
+import { getObjectGroup } from '../../map/tiles/registry';
+import { getMapItemName } from './mapItemNames';
 
 type ObjectListObjectCardProps = {
   used: number;
@@ -25,6 +28,7 @@ export function ObjectListObjectCard({
   onClick,
   used,
 }: ObjectListObjectCardProps) {
+  const { t } = useTranslation();
   const rotatingRef = useRef<Group>(null);
   const selectedItem = useMapStore((store) => store.pickedObject);
   const editMode = useMapStore((store) => store.editMode);
@@ -39,15 +43,21 @@ export function ObjectListObjectCard({
   const remaining = Math.max(itemsAvailable - used, 0);
   const isAvailable = remaining > 0;
 
+  // Construir el preview una sola vez por (type, variant) y liberarlo al
+  // desmontar; antes se creaba un grupo nuevo (geometrías+materiales) en cada
+  // render de la card sin dispose.
+  const previewObject = useMemo(
+    () => getObjectGroup({ type, position: [0, 0, 0], variant, rotation: [0, 0, 0] }, WorldType.FOREST),
+    [type, variant]
+  );
+  useEffect(() => {
+    return () => disposeObject(previewObject);
+  }, [previewObject]);
+
   return (
     <group position={position} onClick={onClick}>
       <group ref={rotatingRef} position={[0, 0.55, 0]} scale={isSelected ? 1.1 : 1}>
-        <primitive
-          object={getObjectGroup(
-            { type, position: [0, 0, 0], variant, rotation: [0, 0, 0] },
-            WorldType.FOREST
-          )}
-        />
+        <primitive object={previewObject} />
       </group>
 
       {/* Top-right count badge */}
@@ -69,7 +79,7 @@ export function ObjectListObjectCard({
             className="text-xs font-bold text-black truncate max-w-full text-center bg-white/90 rounded-full px-2 py-0.5 border border-black/10"
             style={{ textWrap: 'nowrap' }}
           >
-            {type} <span className="text-gray-500 font-normal">v{variant + 1}</span>
+            {getMapItemName(t, type, variant)}
           </div>
         </div>
       </Html>

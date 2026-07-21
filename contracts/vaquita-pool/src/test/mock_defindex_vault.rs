@@ -3,6 +3,7 @@
 //!
 //! Matches the public interface of the real DeFindex vault (single-asset mode):
 //!   - `deposit(amounts_desired, amounts_min, from, invest) -> (amounts, shares, allocations)`
+//!   - `get_asset_amounts_per_shares(vault_shares) -> amounts`
 //!   - `withdraw(withdraw_shares, min_amounts_out, from) -> amounts`
 //!
 //! Shares are minted 1:1 with the deposited amount, so a position's `shares`
@@ -36,14 +37,22 @@ pub struct MockDeFindexVault;
 impl MockDeFindexVault {
     pub fn __constructor(env: Env, asset: Address) {
         env.storage().instance().set(&DataKey::Asset, &asset);
-        env.storage().instance().set(&DataKey::WithdrawAdjustment, &0i128);
-        env.storage().instance().set(&DataKey::TestStealSharesOnDeposit, &0i128);
-        env.storage().instance().set(&DataKey::TestSkipShareMint, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::WithdrawAdjustment, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::TestStealSharesOnDeposit, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::TestSkipShareMint, &false);
     }
 
     /// Changes gross asset returned by `withdraw` vs. share burn (default 1:1).
     pub fn test_set_withdraw_adjustment(env: Env, delta: i128) {
-        env.storage().instance().set(&DataKey::WithdrawAdjustment, &delta);
+        env.storage()
+            .instance()
+            .set(&DataKey::WithdrawAdjustment, &delta);
     }
 
     pub fn test_set_steal_shares_on_deposit(env: Env, steal: i128) {
@@ -53,7 +62,9 @@ impl MockDeFindexVault {
     }
 
     pub fn test_set_skip_share_mint(env: Env, skip: bool) {
-        env.storage().instance().set(&DataKey::TestSkipShareMint, &skip);
+        env.storage()
+            .instance()
+            .set(&DataKey::TestSkipShareMint, &skip);
     }
 
     pub fn asset(env: Env) -> Address {
@@ -112,7 +123,7 @@ impl MockDeFindexVault {
     pub fn withdraw(
         env: Env,
         withdraw_shares: i128,
-        _min_amounts_out: Vec<i128>,
+        min_amounts_out: Vec<i128>,
         from: Address,
     ) -> Vec<i128> {
         let current_shares: i128 = env
@@ -123,9 +134,10 @@ impl MockDeFindexVault {
         if withdraw_shares > current_shares {
             panic!("Insufficient shares");
         }
-        env.storage()
-            .instance()
-            .set(&DataKey::Shares(from.clone()), &(current_shares - withdraw_shares));
+        env.storage().instance().set(
+            &DataKey::Shares(from.clone()),
+            &(current_shares - withdraw_shares),
+        );
         let asset: Address = env.storage().instance().get(&DataKey::Asset).unwrap();
         let token = TokenClient::new(&env, &asset);
         let adjustment: i128 = env
@@ -137,12 +149,25 @@ impl MockDeFindexVault {
         if payout <= 0 {
             panic!("Invalid payout");
         }
+        let min_amount = min_amounts_out.get_unchecked(0);
+        if payout < min_amount {
+            panic!("Insufficient output amount");
+        }
         token.transfer(&env.current_contract_address(), &from, &payout);
         env.events().publish(
             (ASSET, Symbol::new(&env, "withdraw")),
             (withdraw_shares, from),
         );
         vec![&env, payout]
+    }
+
+    pub fn get_asset_amounts_per_shares(env: Env, vault_shares: i128) -> Vec<i128> {
+        let adjustment: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::WithdrawAdjustment)
+            .unwrap_or(0);
+        vec![&env, vault_shares.saturating_add(adjustment)]
     }
 
     pub fn balance(env: Env, id: Address) -> i128 {

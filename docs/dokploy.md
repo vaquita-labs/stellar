@@ -5,7 +5,6 @@ Esta guía documenta cómo configurar correctamente las variables de entorno en 
 ```
 ❌ Error en configuración de variables de entorno:
   NEXT_PUBLIC_SERVICES_URL: 'Too small: expected string to have >=1 characters'
-  NEXT_PUBLIC_ABLY_KEY: 'Too small: expected string to have >=1 characters'
 ```
 
 ## Las 3 secciones de variables en Dokploy
@@ -44,12 +43,13 @@ El `Dockerfile` declara `ARG` para las `NEXT_PUBLIC_*` y consume secrets vía `-
 
 ```env
 NEXT_PUBLIC_SERVICES_URL=https://tu-api.dominio.com
-NEXT_PUBLIC_ABLY_KEY=tu_ably_publishable_key
 NEXT_PUBLIC_STELLAR_NETWORK=testnet
 NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 ```
 
-> ⚠️ Sobre `NEXT_PUBLIC_ABLY_KEY`: las variables `NEXT_PUBLIC_*` terminan en el JS del cliente y son visibles públicamente. Asegúrate de usar una **publishable key** de Ably (con capacidades limitadas), nunca una root key con `publish + subscribe + admin`.
+> ℹ️ Ably ya **no** usa una key en el cliente. El navegador pide tokens efímeros a
+> `GET ${NEXT_PUBLIC_SERVICES_URL}/api/v1/ably/token` (y el admin a `/api/v1/ably/admin-token`).
+> La key full de Ably vive solo en la API como `ABLY_KEY` (Environment Settings, runtime).
 
 ### Build-time Secrets
 
@@ -125,6 +125,59 @@ CMD ["sh", "-c", "./notify.sh RUNTIME-PING true && exec node apps/web/server.js"
 3. **Build-time Secrets**: `webhook_url`, `webhook_token` (solo si quieres notificaciones de build).
 4. **Environment Settings**: `WEBHOOK_URL`, `WEBHOOK_TOKEN` (solo si quieres `RUNTIME-PING` al arrancar).
 5. Redeploy. El `next build` debe completar sin el error de Zod.
+
+## Bridge confirmation worker
+
+The bidirectional CCTP bridge uses a bounded confirmation worker. This is not a
+global blockchain listener: it only polls known `bridge_transfers` rows created
+or imported through the Vaquita API.
+
+Deploy it as a separate Dokploy worker/process using the API image or an
+equivalent Node runtime:
+
+```bash
+pnpm --filter @vaquita/api bridge-confirmation
+```
+
+For one-shot validation:
+
+```bash
+pnpm --filter @vaquita/api bridge-confirmation:once
+```
+
+Runtime environment settings:
+
+```env
+DATABASE_URL=postgresql://...
+CIRCLE_CCTP_IRIS_BASE_URL=
+BRIDGE_CONFIRMATION_INTERVAL_MS=60000
+BRIDGE_CONFIRMATION_BATCH_SIZE=20
+BRIDGE_CONFIRMATION_LEASE_MS=60000
+BRIDGE_CONFIRMATION_STALE_AFTER_MS=86400000
+BRIDGE_STELLAR_RELAYER_SECRET=
+BRIDGE_STELLAR_RELAYER_FEE_STROOPS=1000000
+BRIDGE_STELLAR_RELAYER_TIMEOUT_SECONDS=60
+```
+
+- Leave `CIRCLE_CCTP_IRIS_BASE_URL` empty for the default Circle Iris URL
+  selection: sandbox for testnet source networks and production for mainnet
+  source networks.
+- Set `BRIDGE_CONFIRMATION_BATCH_SIZE` conservatively. This is one shared
+  batch worker, not one poller per user.
+- The worker uses database leases on pending rows so multiple instances do not
+  intentionally process the same transfer. Tune `BRIDGE_CONFIRMATION_LEASE_MS`
+  to be longer than the expected per-batch processing time.
+- `BRIDGE_CONFIRMATION_STALE_AFTER_MS` moves old pending transfers to
+  `needs_review` with a stale-threshold reason instead of polling forever.
+- `BRIDGE_STELLAR_RELAYER_SECRET` is the server-only Stellar secret key that
+  pays for permissionless CCTP `mint_and_forward` destination transactions.
+  Fund this account with enough XLM on the target Stellar network. Never expose
+  it to browser clients or build-time arguments.
+- `BRIDGE_STELLAR_RELAYER_FEE_STROOPS` and
+  `BRIDGE_STELLAR_RELAYER_TIMEOUT_SECONDS` tune relayed destination transaction
+  submission.
+- The app still supports lazy/manual refresh from the Wallet page, so the
+  worker can be paused without making transfers unrecoverable.
 
 ## Referencias
 

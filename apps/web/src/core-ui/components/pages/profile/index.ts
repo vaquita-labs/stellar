@@ -1,6 +1,8 @@
 export * from './AchievementModal';
 export * from './AllAchievementsPage';
+export * from './AvatarEditorPage';
 export * from './BadgeTile';
+export * from './BridgeUsdcModal';
 export * from './ChooseContactsPage';
 export * from './EditProfilePage';
 export * from './FeedbackPage';
@@ -8,6 +10,7 @@ export * from './FriendsPage';
 export * from './HelpCenterPage';
 export * from './MockedSubPageLayout';
 export * from './NotificationsPage';
+export * from './PersonalRecords';
 export * from './PreferencesPage';
 export * from './PrivacySettingsPage';
 export * from './SearchFriendsPage';
