@@ -572,7 +572,10 @@
       "tapToPlace": "Toque no mapa para posicionar"
     },
     "shop": {
-      "title": "Loja"
+      "title": "Loja",
+      "tabsLabel": "Seções da loja",
+      "tabCatalog": "Catálogo",
+      "tabCollection": "Minha coleção"
     },
     "stats": {
       "experienceAlt": "Experiência",

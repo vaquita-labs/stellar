@@ -101,19 +101,6 @@ export function ProfileSkeleton() {
           </div>
         </section>
 
-        {/* Resumen: racha · oro · experiencia */}
-        <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <div className="h-3 w-24 rounded bg-black/10 animate-pulse" />
-          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-black/20 border-b-2 bg-white p-4">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex flex-col items-center gap-1.5">
-                <div className="h-7 w-7 rounded-full bg-black/10 animate-pulse" />
-                <div className="h-3 w-12 rounded bg-black/10 animate-pulse" />
-                <div className="h-3 w-10 rounded bg-black/5 animate-pulse" />
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </div>
   );

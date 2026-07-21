@@ -2,25 +2,17 @@
 
 import { deriveLevel } from '@/core-ui/helpers';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight } from 'react-icons/fi';
 import { AppModal } from '../../molecules/AppModal';
 import { ExperienceModalProps } from './types';
 
 export function ExperienceModal({ open, onOpenChange, experience }: ExperienceModalProps) {
   const { t } = useTranslation();
-  const router = useRouter();
 
   const totalXp = Math.round(experience);
   const { level, xpIntoLevel, xpForNextLevel } = useMemo(() => deriveLevel(totalXp), [totalXp]);
   const pct = Math.min(100, (xpIntoLevel / xpForNextLevel) * 100);
-
-  const handleViewStats = () => {
-    onOpenChange();
-    router.push('/profile/summary#xp-level');
-  };
 
   return (
     <AppModal
@@ -79,15 +71,6 @@ export function ExperienceModal({ open, onOpenChange, experience }: ExperienceMo
           </div>
         </div>
 
-        {/* View full stats */}
-        <button
-          type="button"
-          onClick={handleViewStats}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-black border-b-2 bg-white py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-gray-50"
-        >
-          {t('rewards.experience.viewStats', 'View full stats')}
-          <FiChevronRight className="h-4 w-4" />
-        </button>
       </div>
     </AppModal>
   );

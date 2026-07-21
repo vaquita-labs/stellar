@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRestProfile } from '../../../hooks';
 import { EditionMode, useMapStore, useSyncMapObjects } from '../../../stores';
+import { SegmentedTabs } from '../../molecules/SegmentedTabs';
 import { CatalogList } from './CatalogList';
 import { ExitEditModeModal } from './ExitEditModeModal';
 import { ObjectList } from './ObjectList';

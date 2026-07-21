@@ -18,5 +18,6 @@ export * from './PressableButton';
 export * from './PageHeader';
 export * from './SegmentedTabs';
 export * from './PageLayout';
+export * from './useSlidePage';
 export * from './TransactionRow';
 export * from './LoadMoreSentinel';

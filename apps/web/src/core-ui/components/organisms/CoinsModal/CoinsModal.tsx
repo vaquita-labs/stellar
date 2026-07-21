@@ -1,9 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight } from 'react-icons/fi';
 import { AppModal } from '../../molecules/AppModal';
 import { CoinsModalProps } from './types';
 
@@ -16,13 +14,6 @@ const EARN_WAYS = [
 
 export function CoinsModal({ open, onOpenChange, coins }: CoinsModalProps) {
   const { t } = useTranslation();
-  const router = useRouter();
-
-  const handleViewStats = () => {
-    onOpenChange();
-    router.push('/profile/summary');
-  };
-
   return (
     <AppModal
       open={open}
@@ -76,15 +67,6 @@ export function CoinsModal({ open, onOpenChange, coins }: CoinsModalProps) {
           </ul>
         </div>
 
-        {/* View full stats */}
-        <button
-          type="button"
-          onClick={handleViewStats}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-black border-b-2 bg-white py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-gray-50"
-        >
-          {t('rewards.coins.viewStats', 'View full stats')}
-          <FiChevronRight className="h-4 w-4" />
-        </button>
       </div>
     </AppModal>
   );

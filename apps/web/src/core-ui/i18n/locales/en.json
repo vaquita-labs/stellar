@@ -572,7 +572,10 @@
       "tapToPlace": "Tap the map to place"
     },
     "shop": {
-      "title": "Shop"
+      "title": "Shop",
+      "tabsLabel": "Shop sections",
+      "tabCatalog": "Catalog",
+      "tabCollection": "My collection"
     },
     "stats": {
       "experienceAlt": "Experience",

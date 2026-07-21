@@ -3,9 +3,7 @@
 import { getCurrentDay } from '@/core-ui/helpers';
 import { useProfileStreak } from '@/core-ui/hooks';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight } from 'react-icons/fi';
 import { ONE_DAY } from '../../../config/constants';
 import { AppModal } from '../../molecules/AppModal';
 import { StreakModalProps } from './types';
@@ -14,7 +12,6 @@ const DATES_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 export function StreakModal({ open, onOpenChange }: StreakModalProps) {
   const { t } = useTranslation();
-  const router = useRouter();
   const { data } = useProfileStreak();
 
   const currentStreak = (data?.yesterdayStreak || 0) + (data?.todayStreak ? 1 : 0);
@@ -33,11 +30,6 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
     });
     day++;
   }
-
-  const handleViewHistory = () => {
-    onOpenChange();
-    router.push('/profile/summary#streak-history');
-  };
 
   return (
     <AppModal
@@ -121,15 +113,6 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
           </div>
         </div>
 
-        {/* View full history */}
-        <button
-          type="button"
-          onClick={handleViewHistory}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-black border-b-2 bg-white py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-gray-50"
-        >
-          {t('rewards.streak.viewHistory', 'View full history')}
-          <FiChevronRight className="h-4 w-4" />
-        </button>
       </div>
     </AppModal>
   );

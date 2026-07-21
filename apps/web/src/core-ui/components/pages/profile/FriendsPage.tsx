@@ -1,6 +1,7 @@
 'use client';
 
 import { PageHeader } from '@/core-ui/components/molecules/PageHeader';
+import { useSlidePage } from '@/core-ui/components/molecules/useSlidePage';
 import { useDismissSuggestion, useFriendSuggestions, useToggleFollow } from '@/core-ui/hooks';
 import type { FriendSuggestionDTO } from '@/core-ui/types';
 import { toast } from '@heroui/react';
@@ -37,10 +38,13 @@ function ActionRow({
   soon?: boolean;
 }) {
   const { t } = useTranslation();
+  // No card of its own: the three rows share one bordered container, separated
+  // by hairlines, so the section reads as a single list instead of three
+  // stacked white blocks.
   const inner = (
     <div
-      className={`flex items-center gap-3 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white transition ${
-        disabled ? 'opacity-60 cursor-not-allowed' : 'hover:-translate-y-0.5 hover:bg-[#FFF7E6] cursor-pointer'
+      className={`flex items-center gap-3 px-4 py-4 transition ${
+        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-[#FFF7E6]'
       }`}
     >
       <span className="flex h-11 w-11 items-center justify-center rounded-md bg-[#DDF4FF] border border-[#84D8FF] text-black shrink-0">
@@ -56,8 +60,8 @@ function ActionRow({
     </div>
   );
 
-  if (disabled) return <div aria-disabled>{inner}</div>;
-  if (href) return <Link href={href}>{inner}</Link>;
+  if (disabled) return <div aria-disabled="true">{inner}</div>;
+  if (href) return <Link href={href} className="block">{inner}</Link>;
   return (
     <button type="button" onClick={onPress} className="block w-full text-left bg-transparent">
       {inner}
@@ -193,21 +197,27 @@ export function FriendsPage() {
     );
   };
 
+  // Slides in from the right and back out on the header's back button, so
+  // pushing this route feels like the app's side panels instead of a hard cut.
+  const { className: slideClassName, goBack } = useSlidePage('/profile');
+
   // "Not interested": the hook removes the card optimistically, persists the
   // dismissal (survives F5), and refetches the rail to backfill a fresh one.
   const dismiss = (wallet: string) => dismissSuggestion.mutate(wallet);
 
   return (
-    <div className="h-full overflow-y-auto bg-background">
+    <div className={`h-full overflow-y-auto bg-background ${slideClassName}`}>
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-5 pb-12">
-        <PageHeader title={t('social.friends.title')} backHref="/profile" />
+        <PageHeader title={t('social.friends.title')} onBack={goBack} />
 
-        {/* Find actions */}
-        <section className="flex flex-col gap-3">
+        {/* Find actions — one card, three rows */}
+        <section className="overflow-hidden rounded-2xl border border-black border-b-2 bg-white divide-y divide-black/10">
+          {/* Contacts import isn't built yet, so the row is inert rather than
+              routing to a screen that only says "soon" again. */}
           <ActionRow
             icon={<FiBookOpen className="h-5 w-5" />}
             label={t('social.friends.chooseFromContacts')}
-            href="/profile/friends/contacts"
+            disabled
             soon
           />
           <ActionRow
@@ -252,7 +262,7 @@ export function FriendsPage() {
             // first card flush with the content gutter instead of leaving it
             // half-cropped behind the page padding.
             <div
-              className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-px-4 sm:scroll-px-6 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full snap-x snap-mandatory"
+              className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-px-4 sm:scroll-px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory"
               aria-label={t('social.friends.suggestionsTitle')}
             >
               {visibleSuggestions.map((s) => (
