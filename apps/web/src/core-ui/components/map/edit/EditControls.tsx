@@ -20,6 +20,14 @@ export const EditControls = ({ position }: EditControlsProps) => {
   const currentTiles = useMapStore((store) => store.currentTiles);
 
   const handleRemove = () => {
+    // Quitar una colocación pendiente = revertir la celda a lo que tenía (si
+    // era expansión, ni siquiera queda una entrada EMPTY suelta).
+    const pending = useMapStore.getState().pendingPlacement;
+    if (pending && pending.position[0] === position[0] && pending.position[2] === position[2]) {
+      useMapStore.getState().revertPendingPlacement();
+      setEditingObjectPosition(null);
+      return;
+    }
     updateTile(position, {
       variant: 0,
       type: MapObjectType.EMPTY,
@@ -59,6 +67,8 @@ export const EditControls = ({ position }: EditControlsProps) => {
   };
 
   const handleDone = () => {
+    // Confirmar consolida la colocación pendiente: ya no hay nada que revertir.
+    useMapStore.getState().setPendingPlacement(null);
     setEditingObjectPosition(null);
 
     // Si el usuario está colocando un item del que todavía le quedan unidades,

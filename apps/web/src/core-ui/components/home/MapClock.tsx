@@ -29,9 +29,9 @@ export const MapClock = () => {
   if (!time) return null;
 
   return (
-    // Fondo blanco con esquinas suaves (no pastilla redonda), para que resalte
-    // sobre el mapa sin verse como un botón.
-    <span className="flex items-center gap-1 rounded-md border border-black/10 bg-white px-2 py-0.5 text-xs font-bold text-black tabular-nums">
+    // Fondo blanco con esquinas suaves (no pastilla redonda) y sin borde, para
+    // que resalte sobre el mapa sin verse como un botón.
+    <span className="flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-black tabular-nums">
       <FiClock className="h-3 w-3 shrink-0" />
       {time}
     </span>
