@@ -575,6 +575,7 @@
       "streakAlt": "Streak",
       "apyAria": "Earnings breakdown",
       "boostAria": "Referral boost",
+      "greeting": "Hi,",
       "earnings": {
         "title": "Your earnings"
       }

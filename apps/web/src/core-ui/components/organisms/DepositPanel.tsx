@@ -63,9 +63,9 @@ export function DepositPanel() {
               setIsWithdrawOpen(true);
             }
           }}
-          className={`bg-white border-black py-7 text-black font-normal flex-1 border border-b-5 rounded-md`}
+          className={`bg-white border-black/20 py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
         >
-          <span className="text-xl text-black capitalize font-normal">{t('deposit.withdraw.button', 'Withdraw')}</span>
+          <span className="text-xl text-black capitalize font-medium">{t('deposit.withdraw.button', 'Withdraw')}</span>
         </HeroButton>
         <HeroButton
           size="lg"
@@ -82,7 +82,7 @@ export function DepositPanel() {
               setIsMethodOpen(true);
             }
           }}
-          className={`bg-success border-[#018222] py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
+          className={`bg-success border-black py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
         >
           <span className="text-xl text-black capitalize font-medium">
             {isDepositing ? t('deposit.processing', 'Processing...') : t('common.save')}

@@ -6,7 +6,14 @@ import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
 import { useEffect } from 'react';
 
-export type DepositEarnings = { vaquita: number; protocol: number };
+export type DepositEarnings = {
+  vaquita: number;
+  protocol: number;
+  /** Interés que devenga el depósito por milisegundo (rendimiento lineal hasta el vencimiento). */
+  ratePerMs: number;
+  /** Tope: el interés total proyectado, para que el contador no siga después del vencimiento. */
+  maxInterest: number;
+};
 
 /**
  * Renderless helper: computes a single deposit's *projected* earnings from the
@@ -24,7 +31,7 @@ export const DepositEarningsReporter = ({
   const { network, token } = useConfigStore();
   const { data: dataApy } = useApyByLockPeriod(deposit.lockPeriod, token?.symbol ?? '');
 
-  const { vaquitaInterest, protocolInterest, blendInterest } = getInterestData(
+  const { vaquitaInterest, protocolInterest, blendInterest, totalInterest } = getInterestData(
     network!,
     dataApy,
     deposit.amount,
@@ -32,10 +39,13 @@ export const DepositEarningsReporter = ({
   );
   const vaquita = vaquitaInterest;
   const protocol = protocolInterest + blendInterest;
+  // El interés proyectado se reparte linealmente sobre el lock period: así el
+  // saldo del header puede avanzar en vivo sin pedirle nada al servidor.
+  const ratePerMs = deposit.lockPeriod > 0 ? totalInterest / deposit.lockPeriod : 0;
 
   useEffect(() => {
-    onReport(deposit.id, { vaquita, protocol });
-  }, [deposit.id, vaquita, protocol, onReport]);
+    onReport(deposit.id, { vaquita, protocol, ratePerMs, maxInterest: totalInterest });
+  }, [deposit.id, vaquita, protocol, ratePerMs, totalInterest, onReport]);
 
   return null;
 };
