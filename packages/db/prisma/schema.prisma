@@ -205,6 +205,11 @@ model Config {
 model Profile {
   id            Int       @id @default(autoincrement())
   walletAddress String    @unique(map: "profiles_wallet_unique") @map("wallet_address") @db.VarChar(100)
+  // Public URL segment (/leaderboard/<nickname>, /explore/<nickname>), so the
+  // charset is URL-safe lowercase only. Enforced in the DB by a check constraint
+  // Prisma can't express (kept here so `db pull` doesn't make it look absent):
+  //   profiles_nickname_format:
+  //     CHECK (nickname IS NULL OR nickname ~ '^[a-z0-9_]{3,32}$')
   nickname      String?   @db.VarChar(50)
   fullName      String?   @map("full_name") @db.VarChar(100)
   email         String?   @db.VarChar(100)

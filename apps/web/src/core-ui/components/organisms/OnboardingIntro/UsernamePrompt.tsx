@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheck, FiX } from 'react-icons/fi';
+import { NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, sanitizeNickname } from '../../../helpers';
 import { useRestProfile } from '../../../hooks';
 import { Button } from '../../atoms';
 
@@ -12,7 +13,7 @@ interface UsernamePromptProps {
   onDone: () => void;
 }
 
-const MIN_LENGTH = 3;
+const MIN_LENGTH = NICKNAME_MIN_LENGTH;
 
 type AvailabilityStatus = 'idle' | 'short' | 'checking' | 'available' | 'taken' | 'blocked' | 'error';
 
@@ -165,13 +166,13 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
               type="text"
               placeholder={t('onboarding.username.inputPlaceholder', '@username')}
               value={nickname}
-              // Usernames double as the public profile URL (/leaderboard/<name>),
-              // so only URL-safe lowercase survives typing: a-z, 0-9 and _.
-              onChange={(e) => setNickname(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+              // Only URL-safe lowercase survives typing: a-z, 0-9 and _. Pasting
+              // "@juan" leaves "juan"; the API re-validates on save anyway.
+              onChange={(e) => setNickname(sanitizeNickname(e.target.value))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSubmit();
               }}
-              maxLength={32}
+              maxLength={NICKNAME_MAX_LENGTH}
               autoFocus
               className={`w-full bg-white border ${borderColor} border-b-2 h-14 pl-3 pr-12 text-black font-medium rounded-sm outline-none transition-colors`}
             />

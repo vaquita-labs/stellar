@@ -11,7 +11,7 @@ import { IoRocketOutline } from 'react-icons/io5';
  */
 const STYLES = [
   { chip: 'bg-[#DCE9FF] text-[#1B4FCB]', solid: 'bg-[#1B4FCB] text-white', icon: <FiShield className="w-5 h-5" /> },
-  { chip: 'bg-success/20 text-[#177A34]', solid: 'bg-[#177A34] text-white', icon: <FiTrendingUp className="w-5 h-5" /> },
+  { chip: 'bg-success/20 text-success', solid: 'bg-success text-black', icon: <FiTrendingUp className="w-5 h-5" /> },
   { chip: 'bg-[#F5E3C0] text-[#8A5B00]', solid: 'bg-[#B97204] text-white', icon: <IoRocketOutline className="w-5 h-5" /> },
   { chip: 'bg-[#E9DEFB] text-[#45169B]', solid: 'bg-[#45169B] text-white', icon: <FiAward className="w-5 h-5" /> },
 ] as const;

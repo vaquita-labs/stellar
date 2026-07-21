@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AvatarConfig } from '@vaquita/avatar';
@@ -176,10 +177,21 @@ export function PinnedOwnRow({
           <span className="flex-1 min-w-0 text-left text-sm font-extrabold text-black truncate">
             {row.username}
           </span>
-          <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider bg-black text-white rounded-sm px-1.5 py-0.5">
+          {/* Deliberately tiny: it's a label, not a stat — at the row's own
+              size it competed with the username and the XP. */}
+          <span className="shrink-0 rounded-sm bg-black px-1.5 py-0.5 text-[7px] font-bold uppercase leading-tight tracking-wider text-white">
             {t('leaderboard.card.you', 'You')}
           </span>
-          <span className="shrink-0 text-sm font-extrabold tabular-nums text-black">
+          <span className="shrink-0 inline-flex items-center gap-1 text-sm font-extrabold tabular-nums text-black">
+            {/* Same star as the board rows, so the pinned bar reads as one of
+                them rather than a different widget. */}
+            <Image
+              src="/icons/global/star.png"
+              alt=""
+              width={16}
+              height={16}
+              className="object-contain"
+            />
             {t('leaderboard.league.xpValue', '{{xp}} XP', { xp: row.xp.toLocaleString() })}
           </span>
         </button>

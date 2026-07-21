@@ -80,10 +80,16 @@ export const useWeeklyLeague = () => {
       const page = body?.data;
       return { rows: page?.rows ?? [], me: page?.me ?? null };
     },
-    // The board is a shared, slow-moving object; a refetch a minute keeps it
-    // live without hammering the API from every open tab.
+    // The board is a shared, slow-moving object; a refetch every few minutes
+    // keeps it live without hammering the API from every open tab.
     refetchInterval: ONE_MINUTE * 5,
     refetchOnWindowFocus: true,
+    // Overrides the global `staleTime: Infinity` + localStorage persistence.
+    // Without this the page paints whatever was cached on a previous visit and
+    // never revalidates on mount — which is how a row could still show an
+    // avatar (or an XP total) the profile had already changed.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const data = useMemo<WeeklyLeagueDTO | null>(() => {

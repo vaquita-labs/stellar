@@ -1,5 +1,6 @@
 export * from './contract';
 export * from './map';
+export * from './nickname';
 export * from './numbers';
 export * from './network';
 export * from './strings';

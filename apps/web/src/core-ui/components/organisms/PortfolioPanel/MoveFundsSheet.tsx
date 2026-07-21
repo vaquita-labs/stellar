@@ -255,7 +255,7 @@ export function MoveFundsSheet({
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
         <span className="text-gray-500">{t('portfolio.move.apyChange', 'APY change')}</span>
-        <span className={`font-bold tabular-nums ${apyDelta >= 0 ? 'text-[#177A34]' : 'text-error'}`}>
+        <span className={`font-bold tabular-nums ${apyDelta >= 0 ? 'text-success' : 'text-error'}`}>
           {apyDelta >= 0 ? '+' : ''}
           {apyDelta.toFixed(2)}%
         </span>

@@ -12,6 +12,19 @@ import { LeagueTrophy } from './LeagueTrophy';
 import { PinnedOwnRow, useOwnRowTracking } from './PinnedOwnRow';
 import { DEMOTION_SLOTS, Division, DivisionId, PROMOTION_SLOTS, divisionById } from './leagues';
 
+/**
+ * Division banner (trophy ladder + countdown) — TEMPORARILY OFF.
+ *
+ * The ladder is real UI over placeholder data: until the API ships cohorts and
+ * a persisted division per profile (see the TODO in `useWeeklyLeague`), the
+ * banner would promise promotions and demotions that never happen. The board
+ * below it still works on its own, so hiding just the banner leaves an honest
+ * weekly XP ranking.
+ *
+ * Flip this back to `true` — nothing else — once `/leaderboard/weekly` exists.
+ */
+const SHOW_LEAGUE_HEADER = false;
+
 /** The countdown is coarse (days → hours → minutes), so a minute is as often as
  *  the clock can possibly change what's on screen. */
 const CLOCK_TICK_MS = 60_000;
@@ -163,10 +176,12 @@ export const LeaderboardPage = () => {
     if (isLoading || (!league && !error)) {
       return (
         <>
-          <div
-            aria-hidden
-            className="h-52 animate-pulse rounded-3xl border border-black/10 bg-white"
-          />
+          {SHOW_LEAGUE_HEADER && (
+            <div
+              aria-hidden
+              className="h-52 animate-pulse rounded-3xl border border-black/10 bg-white"
+            />
+          )}
           <LeagueBoardSkeleton />
         </>
       );
@@ -176,13 +191,15 @@ export const LeaderboardPage = () => {
 
     return (
       <>
-        <LeagueHeader
-          current={currentDivision}
-          selected={selectedDivision}
-          onSelect={(division) => setPreviewId(division.id)}
-          week={league.week}
-          now={now}
-        />
+        {SHOW_LEAGUE_HEADER && (
+          <LeagueHeader
+            current={currentDivision}
+            selected={selectedDivision}
+            onSelect={(division) => setPreviewId(division.id)}
+            week={league.week}
+            now={now}
+          />
+        )}
         {previewing ? (
           <DivisionPreview
             division={selectedDivision}

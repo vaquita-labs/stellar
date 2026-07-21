@@ -7,7 +7,7 @@ import { useApyByLockPeriods, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight } from 'react-icons/fi';
+import { FiChevronDown, FiChevronRight } from 'react-icons/fi';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
 import { EarningsBreakdown } from '../../molecules/EarningsBreakdown';
 import { AllocationDetailSheet } from './AllocationDetailSheet';
@@ -38,6 +38,8 @@ export function PortfolioPanel({
   const [detailLockPeriod, setDetailLockPeriod] = useState<number | null>(null);
   const [moveToLockPeriod, setMoveToLockPeriod] = useState<number | null>(null);
   const [showMove, setShowMove] = useState(false);
+  // El desglose de la ganancia arranca cerrado: es el "si querés ver más".
+  const [showEarningsDetail, setShowEarningsDetail] = useState(false);
   const detailMounted = useModalPresence(detailLockPeriod !== null);
   const moveMounted = useModalPresence(showMove);
 
@@ -72,6 +74,7 @@ export function PortfolioPanel({
   }, [depositsData, lockPeriods, byLockPeriod]);
 
   const totalAmount = allocations.reduce((acc, a) => acc + a.amount, 0);
+  const totalEarnings = vaquitaEarnings + protocolEarnings;
   // APY combinado ponderado por capital. Sin capital todavía no hay mezcla que
   // mostrar, así que se cae al APY del plazo elegido en el home.
   const blendedApy =
@@ -107,18 +110,60 @@ export function PortfolioPanel({
         size="lg"
         fullScreen
         slideFrom="right"
-        bodyClassName="flex flex-col gap-6 pb-10"
+        bodyClassName="flex flex-col gap-5 pb-10"
       >
-        {/* Resumen: lo que rinde hoy el conjunto y cuánto capital hay puesto. */}
+        {/* Encabezado: lo que se está ganando, que es lo que el usuario viene a
+            ver. El APY y el capital quedan en una línea secundaria, y el
+            "de dónde sale" se despliega solo si lo pide. Sin tarjeta: es el
+            contenido principal de la pantalla, no un bloque más. */}
         <div className="pt-2">
-          <p className="text-5xl font-bold text-black tabular-nums leading-none">
-            {apyLoading && totalAmount === 0 ? '—' : `${blendedApy.toFixed(2)}%`}
+          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
+            {t('deposit.bank.estimatedEarningsTotal', 'Estimated earnings total')}
           </p>
-          <p className="mt-1.5 text-sm text-gray-500">{t('portfolio.blendedApy', 'Your APY · blended')}</p>
+          <p className="mt-1 text-5xl font-bold text-success tabular-nums leading-none">
+            {totalEarnings.toFixed(2)}
+            <span className="text-2xl ml-1.5 font-semibold">{tokenSymbol}</span>
+          </p>
           <p className="mt-3 text-sm text-gray-500">
+            <span className="font-bold text-black tabular-nums">
+              {apyLoading && totalAmount === 0 ? '—' : `${blendedApy.toFixed(2)}%`} APY
+            </span>
+            <span className="mx-1.5">·</span>
             {t('portfolio.totalBalance', 'Total balance')}:{' '}
             <span className="font-bold text-black tabular-nums">{formatUsd(totalAmount)}</span>
           </p>
+        </div>
+
+        {/* Banda del "More info": las dos líneas la separan del resumen de
+            arriba y de la lista de abajo, y encierran el desglose al abrirlo. */}
+        <div className="-mt-1 border-y border-black/10">
+          <button
+            type="button"
+            onClick={() => setShowEarningsDetail((v) => !v)}
+            aria-expanded={showEarningsDetail}
+            className="w-full flex items-center justify-between gap-2 bg-transparent py-3 text-sm font-bold text-black"
+          >
+            {t('portfolio.moreInfo', 'More info')}
+            <FiChevronDown className={`w-4 h-4 transition-transform ${showEarningsDetail ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showEarningsDetail ? (
+            <div className="pb-4 animate-in fade-in slide-in-from-top-1 duration-200">
+              <EarningsBreakdown
+                vaquitaEarnings={vaquitaEarnings}
+                protocolEarnings={protocolEarnings}
+                protocolApy={protocolApy}
+                lendingMarketName={lendingMarketName}
+                tokenSymbol={tokenSymbol}
+              />
+              <p className="mt-3 text-xs text-gray-500 leading-relaxed">
+                {t(
+                  'deposit.bank.estimatesDisclaimer',
+                  'These are estimates and update over time final rewards are confirmed when you withdraw.',
+                )}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         {/* Allocation: una fila por plazo, ordenadas de más corto a más largo. */}
@@ -172,24 +217,6 @@ export function PortfolioPanel({
               })}
             </div>
           )}
-        </div>
-
-        {/* Ganancia estimada: el mismo desglose que mostraba el chip de APY. */}
-        <div>
-          <h3 className="text-sm font-bold text-black mb-2">{t('portfolio.rewards', 'Rewards')}</h3>
-          <EarningsBreakdown
-            vaquitaEarnings={vaquitaEarnings}
-            protocolEarnings={protocolEarnings}
-            protocolApy={protocolApy}
-            lendingMarketName={lendingMarketName}
-            tokenSymbol={tokenSymbol}
-          />
-          <p className="mt-3 text-xs text-gray-500 leading-relaxed">
-            {t(
-              'deposit.bank.estimatesDisclaimer',
-              'These are estimates and update over time final rewards are confirmed when you withdraw.',
-            )}
-          </p>
         </div>
       </AppModal>
 

@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiArrowUpRight, FiBell, FiZap } from 'react-icons/fi';
+import { FiArrowUpRight, FiBell } from 'react-icons/fi';
 import {
   useApyByLockPeriod,
   useDepositsComplete,
@@ -25,9 +25,7 @@ import {
   CoinsModal,
   ExperienceModal,
   PortfolioPanel,
-  ReferralsModal,
   StreakModal,
-  useReferralBoost,
 } from '../organisms';
 import { VaquitaAvatarCircle } from '../avatar/VaquitaAvatar';
 import { DailyRewardChest } from './DailyRewardChest';
@@ -42,14 +40,12 @@ export const HeaderStats = () => {
   const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const [showPortfolioPanel, setShowPortfolioPanel] = useState(false);
-  const [showReferralsModal, setShowReferralsModal] = useState(false);
   // Mantienen el modal montado mientras corre la animación de salida.
   const streakModalMounted = useModalPresence(showStreakModal);
   const coinsModalMounted = useModalPresence(showCoinsModal);
   const experienceModalMounted = useModalPresence(showExperienceModal);
   const bankAPYModalMounted = useModalPresence(showBankAPYModal);
   const portfolioPanelMounted = useModalPresence(showPortfolioPanel);
-  const referralsModalMounted = useModalPresence(showReferralsModal);
   const { walletAddress, token, lockPeriod } = useConfigStore();
   const hideBalance = useHideBalance();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
@@ -95,10 +91,9 @@ export const HeaderStats = () => {
     { vaquitaEarnings: 0, protocolEarnings: 0 },
   );
 
-  // APY base (lo que rinde el ahorro hoy) y boost de referidos, que se suma
-  // aparte porque tiene su propia pantalla y su propio color en el header.
+  // APY base: lo que rinde el ahorro hoy. El boost de referidos que se sumaba
+  // aparte está oculto por ahora (ver el comentario del chip más abajo).
   const baseApy = (apyData?.vaquitaApy ?? 0) + (apyData?.protocolApy ?? 0);
-  const { apyBonus } = useReferralBoost(walletAddress);
 
   // Saldo en vivo: capital + interés devengado hasta "ahora". Cada depósito
   // reporta cuánto rinde por milisegundo, así que el contador avanza en el
@@ -233,38 +228,31 @@ export const HeaderStats = () => {
               )}
             </button>
 
-            {/* APY base (verde) y boost de referidos (morado): cada uno abre su
-                propia explicación. */}
-            <div className="flex items-center gap-2.5 min-w-0">
+            {/* Chip de APY: abre el panel de portafolio. Mismo patrón que los
+                botones de la app (fondo de color + texto negro + borde negro +
+                rounded-md); el color va en el fondo, no en la letra, porque el
+                verde #34c759 sobre el naranja del header no contrasta, pero
+                como fondo con texto negro rinde 7:1.
+
+                OCULTO A PROPÓSITO (2026-07-21): al lado iba un segundo chip
+                lila con el boost de referidos (`apyBonus`, icono FiZap) que
+                abría <ReferralsModal>. Se decidió no exponer todavía la
+                pantalla de referidos al usuario, así que se quitó su único
+                punto de entrada. El feature sigue completo y funcionando
+                (hook `useReferralBoost` + `ReferralsModal` en organisms/): para
+                reactivarlo, volver a montar el chip aquí junto con el estado
+                showReferralsModal/referralsModalMounted y el render del modal
+                al final del componente. NO borrar esos archivos. */}
+            <div className="flex items-center gap-1.5 min-w-0">
               <button
                 type="button"
                 onClick={() => setShowPortfolioPanel(true)}
                 aria-label={t('home.stats.apyAria', 'Portfolio')}
-                className="flex items-center gap-1 bg-transparent shrink-0"
+                className="flex items-center gap-1 shrink-0 rounded-md border border-black bg-success px-1.5 py-1"
               >
-                {/* -ml compensa el aire interno del glifo: así la fila arranca
-                    ópticamente en la misma vertical que el "$" del saldo. */}
-                <FiArrowUpRight className="w-3.5 h-3.5 -ml-[3px] text-success shrink-0" />
-                {/* Contorno negro fino: el verde de marca tiene casi la misma
-                    luminancia que el naranja del header, así que sin borde el
-                    texto se lava. paint-order deja el trazo debajo del relleno
-                    para no adelgazar el glifo. */}
-                <span
-                  className="text-xs font-bold text-success tabular-nums leading-none whitespace-nowrap [-webkit-text-stroke:0.6px_#262626] [paint-order:stroke_fill]"
-                >
+                <FiArrowUpRight className="w-3.5 h-3.5 text-black shrink-0" />
+                <span className="text-xs font-bold text-black tabular-nums leading-none whitespace-nowrap">
                   {apyLoading ? '—' : `${baseApy.toFixed(2)}% APY`}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowReferralsModal(true)}
-                aria-label={t('home.stats.boostAria', 'Referral boost')}
-                className="flex items-center gap-1 bg-transparent shrink-0"
-              >
-                <FiZap className="w-3.5 h-3.5 text-[#45169B] shrink-0" />
-                <span className="text-xs font-bold text-[#45169B] tabular-nums leading-none whitespace-nowrap">
-                  {apyBonus.toFixed(2)}%
                 </span>
               </button>
             </div>
@@ -365,7 +353,9 @@ export const HeaderStats = () => {
           La columna derecha es solo móvil: en escritorio vive en el sidebar. */}
       <div className="absolute left-0 right-0 top-full mt-[40px] px-1 z-20 pointer-events-none">
         <div className="max-w-xl mx-auto flex items-start justify-between gap-2">
-          <div className="pointer-events-auto">
+          {/* El reloj baja 14px respecto del resto de la fila para dejar aire a
+              las cuerdas con las que "cuelga" del pill de stats (ver MapClock). */}
+          <div className="mt-[14px] pointer-events-auto">
             <MapClock />
           </div>
           <div className="flex flex-col items-center gap-2 pointer-events-auto md:hidden">
@@ -392,9 +382,9 @@ export const HeaderStats = () => {
           tokenSymbol={token?.symbol}
         />
       )}
-      {referralsModalMounted && (
-        <ReferralsModal open={showReferralsModal} onOpenChange={() => setShowReferralsModal(false)} />
-      )}
+      {/* Aquí se montaba <ReferralsModal> (pantalla de referidos: ganancias,
+          tiers de boost e invitar amigos). Oculta a propósito junto con su chip
+          en la fila de stats — ver el comentario largo ahí para reactivarla. */}
     </div>
   );
 };

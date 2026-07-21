@@ -11,10 +11,15 @@ const MAX_RESULTS = 50;
 /** The profile columns every friend row needs — all the search query selects. */
 type ProfileCard = Pick<PrismaProfile, 'id' | 'walletAddress' | 'nickname' | 'fullName' | 'avatarConfig'>;
 
-/** `@handle` from the nickname, or a shortened wallet when there's no nickname. */
+/**
+ * `@handle` from the nickname, or a shortened wallet when there's no nickname.
+ * The nickname keeps the exact casing the user saved (`@Lea`, `@4Test1234`) —
+ * lowercasing it here made friend lists and search disagree with the profile
+ * and leaderboard, which have always shown it verbatim.
+ */
 const toHandle = (p: Pick<PrismaProfile, 'nickname' | 'walletAddress'>): string =>
   p.nickname?.trim()
-    ? `@${p.nickname.trim().replace(/\s+/g, '').toLowerCase()}`
+    ? `@${p.nickname.trim().replace(/\s+/g, '')}`
     : `@${p.walletAddress.slice(0, 6).toLowerCase()}`;
 
 /** Display name: full name, else nickname, else a shortened wallet. */

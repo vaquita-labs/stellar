@@ -763,7 +763,7 @@
       "helperError": "Could not check availability, try again",
       "helperShort": "At least {{count}} characters",
       "helperTaken": "@{{name}} is already taken",
-      "inputPlaceholder": "@username",
+      "inputPlaceholder": "username",
       "label": "Username",
       "placeholderName": "username",
       "saveErrorToast": "Could not save username",
@@ -894,7 +894,8 @@
       "email": "Email",
       "emailPlaceholder": "you@example.com",
       "nickname": "Nickname",
-      "nicknamePlaceholder": "@nickname",
+      "nicknameFormatError": "Nicknames must be {{min}}-{{max}} characters: lowercase letters, numbers or underscores.",
+      "nicknamePlaceholder": "nickname",
       "onboardingCompleted": "Onboarding completed",
       "onboardingCompletedDesc": "Mark the initial onboarding flow as done.",
       "preferencesUpdated": "Preferences updated",
@@ -1883,11 +1884,9 @@
   },
   "portfolio": {
     "title": "Portfolio",
-    "blendedApy": "Your APY · blended",
     "totalBalance": "Total balance",
     "allocation": "Allocation",
     "manage": "Manage allocations",
-    "rewards": "Rewards",
     "empty": "No saving terms available yet.",
     "detail": {
       "description": "Description",
@@ -1912,6 +1911,7 @@
         "title": "Funds moved!",
         "subtitle": "${{amount}} moved from {{from}} to {{to}}."
       }
-    }
+    },
+    "moreInfo": "More info"
   }
 }

@@ -59,7 +59,7 @@ export function AllocationDetailSheet({
           {style.icon}
         </span>
       </div>
-      <p className="-mt-3 text-sm font-bold text-[#177A34] tabular-nums">{allocation.apy.toFixed(2)}% APY</p>
+      <p className="-mt-3 text-sm font-bold text-success tabular-nums">{allocation.apy.toFixed(2)}% APY</p>
 
       <div>
         <p className="text-xs text-gray-500 mb-1">{t('portfolio.detail.description', 'Description')}</p>

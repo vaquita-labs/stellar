@@ -763,7 +763,7 @@
       "helperError": "Não foi possível verificar a disponibilidade, tente novamente",
       "helperShort": "Pelo menos {{count}} caracteres",
       "helperTaken": "@{{name}} já está em uso",
-      "inputPlaceholder": "@usuario",
+      "inputPlaceholder": "usuario",
       "label": "Nome de usuário",
       "placeholderName": "usuario",
       "saveErrorToast": "Não foi possível salvar o nome de usuário",
@@ -894,7 +894,8 @@
       "email": "E-mail",
       "emailPlaceholder": "voce@exemplo.com",
       "nickname": "Apelido",
-      "nicknamePlaceholder": "@apelido",
+      "nicknameFormatError": "O apelido deve ter entre {{min}} e {{max}} caracteres: apenas minúsculas, números ou sublinhados.",
+      "nicknamePlaceholder": "apelido",
       "onboardingCompleted": "Onboarding concluído",
       "onboardingCompletedDesc": "Marque o fluxo de onboarding inicial como concluído.",
       "preferencesUpdated": "Preferências atualizadas",
@@ -1818,11 +1819,9 @@
   },
   "portfolio": {
     "title": "Portfólio",
-    "blendedApy": "Seu APY · combinado",
     "totalBalance": "Saldo total",
     "allocation": "Distribuição",
     "manage": "Gerenciar distribuição",
-    "rewards": "Recompensas",
     "empty": "Ainda não há prazos de poupança disponíveis.",
     "detail": {
       "description": "Descrição",
@@ -1847,6 +1846,7 @@
         "title": "Fundos movidos!",
         "subtitle": "${{amount}} movidos de {{from}} para {{to}}."
       }
-    }
+    },
+    "moreInfo": "Mais informações"
   }
 }

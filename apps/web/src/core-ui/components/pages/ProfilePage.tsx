@@ -21,7 +21,7 @@ import {
   useProfileStreak,
   type FollowListKind,
 } from '../../hooks';
-import { useHideBalance, useConfigStore } from '../../stores';
+import { useConfigStore } from '../../stores';
 import { buildAchievements } from '../../data/profile-badges';
 import { PageLayout } from '../molecules';
 import { VaquitaAvatar } from '../avatar/VaquitaAvatar';
@@ -110,12 +110,13 @@ const SummaryItem = ({
   value: React.ReactNode;
   label: string;
 }) => (
-  <div className="flex items-center gap-2.5">
-    <Image src={icon} alt={label} width={28} height={28} className="object-contain" />
-    <div className="flex flex-col leading-tight">
-      <span className="text-sm font-extrabold text-black tabular-nums">{value}</span>
-      <span className="text-[11px] font-semibold text-gray-500">{label}</span>
-    </div>
+  // Icon stacked above the text, not beside it: in the 3-up summary row a
+  // side-by-side icon eats ~38px of a ~72px column on a 320px screen, which
+  // clipped long values ("128,450 XP") off the card.
+  <div className="flex min-w-0 flex-col items-center gap-1 text-center leading-tight">
+    <Image src={icon} alt="" aria-hidden width={28} height={28} className="object-contain" />
+    <span className="text-sm font-extrabold text-black tabular-nums">{value}</span>
+    <span className="text-[11px] font-semibold text-gray-500">{label}</span>
   </div>
 );
 
@@ -126,8 +127,7 @@ const SummaryItem = ({
 export function ProfilePage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { walletAddress, token } = useConfigStore();
-  const hideBalance = useHideBalance();
+  const { walletAddress } = useConfigStore();
   const { data: profileData } = useProfileData();
   const { data: streakData } = useProfileStreak();
   const { data: experienceData } = useProfileExperience();
@@ -284,11 +284,15 @@ export function ProfilePage() {
             />
           </Link>
 
-          {/* Overlay row — back + name on the left, actions on the right. The
-              wrapper ignores pointer events so the whole banner behind it stays
-              tappable; each control opts back in. */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-2 px-4 pt-4 sm:px-6">
-            <div className="pointer-events-auto flex min-w-0 items-center gap-2">
+          {/* Overlay row — back left, title centred, actions right. All three
+              cells are `flex-1 basis-0`, so the side groups claim equal width
+              however wide their buttons are and the middle third lands on the
+              page's centre line (a plain justify-between would push the title
+              off-centre by the difference between one button and two).
+              The wrapper ignores pointer events so the whole banner behind it
+              stays tappable; each control opts back in. */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 px-4 pt-4 sm:px-6">
+            <div className="pointer-events-auto flex flex-1 basis-0 justify-start">
               <Link
                 href="/home"
                 aria-label={t('common.back')}
@@ -296,11 +300,14 @@ export function ProfilePage() {
               >
                 <FiChevronLeft className="h-5 w-5" />
               </Link>
-              <h1 className="truncate text-2xl font-extrabold tracking-tight text-black sm:text-3xl">
-                {displayName}
-              </h1>
             </div>
-            <div className="pointer-events-auto flex shrink-0 items-center gap-2">
+            {/* The screen title, not the username — the handle right below the
+                banner already identifies who this is, and repeating it here
+                just competed with the character. */}
+            <h1 className="flex-1 basis-0 truncate text-center text-2xl font-extrabold tracking-tight text-black sm:text-3xl">
+              {t('profilePages.profile.title', 'Profile')}
+            </h1>
+            <div className="pointer-events-auto flex flex-1 basis-0 shrink-0 items-center justify-end gap-2">
               <ShareProfileQrButton displayName={displayName} handle={handle} />
               <Link
                 href="/profile/settings"
@@ -316,7 +323,9 @@ export function ProfilePage() {
         {/* Handle + joined date sit on the page background, right under the
             banner — the same split as the reference design. */}
         <section className="-mt-2 px-4 sm:px-6">
-          <p className="text-xs font-bold uppercase tracking-wide text-gray-500 sm:text-sm">
+          {/* No `uppercase` here: the handle has to read exactly as the user
+              saved it (Lea, 4Test1234), and a CSS transform would rewrite it. */}
+          <p className="text-center text-xs font-bold tracking-wide text-gray-500 sm:text-sm">
             {t('profilePages.profile.handleJoined', '{{handle}} · joined {{joinedLabel}}', {
               handle,
               joinedLabel,
@@ -363,21 +372,12 @@ export function ProfilePage() {
           <Link
             href="/profile/summary"
             aria-label={t('profilePages.profile.seeFullSummary', 'See full summary')}
-            className="grid grid-cols-2 gap-3 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
+            className="grid grid-cols-3 gap-2 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
           >
             <SummaryItem
               icon={hasActiveStreak ? '/icons/global/streak_face.png' : '/icons/global/streak_freeze_face.png'}
               value={t('profilePages.profile.daysCount', { count: totalStreak, defaultValue: '{{count}} days' })}
               label={t('profilePages.profile.streak', 'Streak')}
-            />
-            <SummaryItem
-              icon="/icons/global/coin.png"
-              value={
-                hideBalance
-                  ? '••••'
-                  : `$${activeDepositsTotalAmount.toFixed(2)} ${token?.symbol ?? ''}`.trim()
-              }
-              label={t('profilePages.profile.activeDeposits', 'Active deposits')}
             />
             <SummaryItem
               icon="/icons/global/coin.png"

@@ -96,7 +96,7 @@ function LeagueRow({
         <span className="flex-1 min-w-0 flex items-center gap-2">
           <span className="truncate text-sm font-extrabold text-black">{username}</span>
           {member.isCurrentUser && (
-            <span className="shrink-0 rounded-sm bg-black px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+            <span className="shrink-0 rounded-sm bg-black px-1.5 py-0.5 text-[7px] font-bold uppercase leading-tight tracking-wider text-white">
               {t('leaderboard.card.you', 'You')}
             </span>
           )}

@@ -27,7 +27,14 @@ export const MapClock = () => {
   if (!label) return null;
 
   return (
-    <span className="inline-flex h-6 min-w-[68px] items-center justify-center gap-1 rounded-md bg-white px-2 text-xs font-medium text-black">
+    // Mismo fondo translúcido que el pill de stats (bg-white/60 + blur) para que
+    // la hora no robe foco, y dos "cuerdas" que suben hasta el borde inferior de
+    // ese pill: la card queda visualmente colgada de la barra de stats. El alto
+    // de las cuerdas (18px) es el hueco exacto entre el pill y esta fila, así que
+    // si cambia el offset de la fila en HeaderStats hay que ajustarlo acá.
+    <span className="relative inline-flex h-6 min-w-[68px] items-center justify-center gap-1 rounded-md bg-white/60 px-2 text-xs font-bold text-black backdrop-blur-md">
+      <span aria-hidden className="absolute -top-[18px] left-2.5 h-[18px] w-[3px] rounded-full bg-primary" />
+      <span aria-hidden className="absolute -top-[18px] right-2.5 h-[18px] w-[3px] rounded-full bg-primary" />
       <FiClock className="h-3 w-3 shrink-0" />
       {label}
     </span>
