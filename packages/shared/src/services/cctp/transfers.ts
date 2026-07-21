@@ -114,7 +114,7 @@ export const createBridgeTransfer = async (
   input: CreateBridgeTransferInput,
 ): Promise<BridgeTransferRecord> => {
   assertTransferShape(input);
-  const amountRaw = humanUsdcToCctpAmount(input.amount).toString();
+  const amountRaw = humanUsdcToCctpAmount(input.amount, CCTP_NETWORKS[input.sourceNetwork].usdcDecimals).toString();
   if (amountRaw === '0') throw new Error('Bridge amount is too small');
 
   return repo.create({
