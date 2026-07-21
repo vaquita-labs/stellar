@@ -1,4 +1,5 @@
 export * from './day-cycle';
+export * from './gameClock';
 export * from './element-positions';
 export * from './loader';
 export * from './map';

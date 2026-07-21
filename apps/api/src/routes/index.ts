@@ -11,6 +11,7 @@ import leaderboardRoutes from './leaderboard/route';
 import notificationRoutes from './notifications/route';
 import profileRoutes from './profile/route';
 import referralRoutes from './referral/route';
+import timeRoutes from './time/route';
 import userRoutes from './user/route';
 import savedWalletRoutes from './wallets/saved.route';
 import walletBadgeRoutes from './wallets/badges.route';
@@ -31,6 +32,7 @@ router.use('/follows', followRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/referrals', referralRoutes);
+router.use('/time', timeRoutes);
 router.use('/user', userRoutes);
 
 export default router;
