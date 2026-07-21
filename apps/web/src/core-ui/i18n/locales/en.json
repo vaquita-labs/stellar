@@ -1676,6 +1676,10 @@
       "title": "Confirm withdrawal"
     },
     "confirmCta": "Confirm",
+    "deleteWallet": {
+      "confirm": "Delete “{{label}}”?",
+      "action": "Delete"
+    },
     "error": {
       "generic": "Something went wrong"
     },

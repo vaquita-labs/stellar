@@ -5,17 +5,19 @@ import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { Button, Spinner } from '@heroui/react';
 import { motion, useAnimationControls } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
-import { FiCheck, FiChevronRight, FiCreditCard, FiPlus } from 'react-icons/fi';
+import { FiCheck, FiChevronRight, FiPlus } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
+import { IoWalletOutline } from 'react-icons/io5';
 import { useDepositsComplete } from '../../../hooks';
-import { SavedWallet, useSavedWallets } from '../../../hooks/useSavedWallets';
+import { SavedWallet, useDeleteSavedWallet, useSavedWallets } from '../../../hooks/useSavedWallets';
 import { useConfigStore } from '../../../stores';
 import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
 import { AddWalletForm } from './AddWalletForm';
+import { WalletRow } from './WalletRow';
 import { WithdrawModalProps, WithdrawStep } from './types';
 
 /** Formatea el monto tecleado tal cual lo escribe el usuario ('' → $0.00, '1.' → $1.). */
@@ -36,6 +38,8 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const { walletAddress, token } = useConfigStore();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: savedWallets = [], isLoading: walletsLoading } = useSavedWallets();
+  const deleteWallet = useDeleteSavedWallet();
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const [step, setStep] = useState<WithdrawStep>('method');
   const [amount, setAmount] = useState('');
@@ -102,6 +106,34 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     setStep('confirm');
   };
 
+  // Cambio rápido de wallet con swipe vertical (o rueda en desktop) sobre el
+  // selector: arriba = siguiente, abajo = anterior, con wrap. Es el atajo que
+  // sugiere el ícono de dobles flechas; el tap sigue abriendo la lista completa.
+  const cycleWallet = (dir: 1 | -1) => {
+    if (savedWallets.length < 2) return;
+    const idx = savedWallets.findIndex((w) => w.id === selectedWalletId);
+    const base = idx === -1 ? 0 : idx;
+    const next = (base + dir + savedWallets.length) % savedWallets.length;
+    setSelectedWalletId(savedWallets[next].id);
+    if (overBalance) setOverBalance(false);
+  };
+
+  const touchStartY = useRef<number | null>(null);
+  // Si el gesto fue un swipe, se marca para que el onClick no abra la lista.
+  const swipedRef = useRef(false);
+
+  const handleDeleteWallet = async (id: string) => {
+    setPendingDeleteId(id);
+    try {
+      await deleteWallet.mutateAsync(id);
+      // Si se borró la wallet elegida, se deselecciona para no retirar a una
+      // dirección que ya no existe.
+      if (selectedWalletId === id) setSelectedWalletId(null);
+    } finally {
+      setPendingDeleteId(null);
+    }
+  };
+
   const handleConfirm = async () => {
     if (!selectedWallet) return;
     setStep('processing');
@@ -145,7 +177,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         onClick={() => setStep('amount')}
         className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
       >
-        <FiCreditCard className="w-6 h-6 text-black shrink-0" />
+        <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-bold text-black">
             {t('withdraw.method.wallet.title', 'Wallet')}
@@ -187,10 +219,32 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
       <button
         type="button"
-        onClick={() => setStep('account')}
-        className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left hover:bg-[#F5FBFF] transition"
+        onClick={() => {
+          if (swipedRef.current) {
+            swipedRef.current = false;
+            return;
+          }
+          setStep('account');
+        }}
+        onTouchStart={(e) => {
+          touchStartY.current = e.touches[0].clientY;
+          swipedRef.current = false;
+        }}
+        onTouchEnd={(e) => {
+          if (touchStartY.current === null) return;
+          const dy = e.changedTouches[0].clientY - touchStartY.current;
+          touchStartY.current = null;
+          if (Math.abs(dy) > 30) {
+            swipedRef.current = true;
+            cycleWallet(dy < 0 ? 1 : -1); // swipe hacia arriba = siguiente
+          }
+        }}
+        onWheel={(e) => {
+          if (Math.abs(e.deltaY) > 10) cycleWallet(e.deltaY > 0 ? 1 : -1);
+        }}
+        className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 text-left transition hover:bg-[#F5FBFF] active:bg-[#EAF4FF] touch-pan-x select-none"
       >
-        <FiCreditCard className="w-6 h-6 text-black shrink-0" />
+        <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
           {selectedWallet ? (
             <>
@@ -224,30 +278,19 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   // --- Paso: elegir cuenta ---------------------------------------------------
   const accountStep = (
     <div className="flex flex-col gap-2">
-      {savedWallets.map((wallet) => {
-        const isSelected = wallet.id === selectedWalletId;
-        return (
-          <button
-            key={wallet.id}
-            type="button"
-            onClick={() => {
-              setSelectedWalletId(wallet.id);
-              setStep('amount');
-            }}
-            className={
-              'w-full flex items-center gap-3 rounded-lg border border-black border-b-2 px-4 py-3 text-left transition ' +
-              (isSelected ? 'bg-[#F5FBFF]' : 'bg-white hover:bg-[#F5FBFF]')
-            }
-          >
-            <FiCreditCard className="w-6 h-6 text-black shrink-0" />
-            <span className="flex-1 min-w-0">
-              <span className="block text-sm font-bold text-black truncate">{wallet.label}</span>
-              <span className="block text-xs text-gray-500">{truncateMiddle(wallet.address, 6, 5)}</span>
-            </span>
-            {isSelected ? <FiCheck className="w-5 h-5 text-black shrink-0" /> : null}
-          </button>
-        );
-      })}
+      {savedWallets.map((wallet) => (
+        <WalletRow
+          key={wallet.id}
+          wallet={wallet}
+          selected={wallet.id === selectedWalletId}
+          deleting={deleteWallet.isPending && pendingDeleteId === wallet.id}
+          onSelect={() => {
+            setSelectedWalletId(wallet.id);
+            setStep('amount');
+          }}
+          onDelete={() => handleDeleteWallet(wallet.id)}
+        />
+      ))}
 
       {savedWallets.length === 0 && !walletsLoading ? (
         <p className="text-sm text-gray-500 text-center py-4">
@@ -286,7 +329,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
       {selectedWallet ? (
         <div className="flex items-center gap-3">
-          <FiCreditCard className="w-6 h-6 text-black shrink-0" />
+          <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-black truncate">{selectedWallet.label}</p>
             <p className="text-xs text-gray-500">{truncateMiddle(selectedWallet.address, 6, 5)}</p>
