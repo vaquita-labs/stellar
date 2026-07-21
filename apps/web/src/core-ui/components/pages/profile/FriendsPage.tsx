@@ -1,5 +1,6 @@
 'use client';
 
+import { PageHeader } from '@/core-ui/components/molecules/PageHeader';
 import { useDismissSuggestion, useFriendSuggestions, useToggleFollow } from '@/core-ui/hooks';
 import type { FriendSuggestionDTO } from '@/core-ui/types';
 import { toast } from '@heroui/react';
@@ -8,7 +9,6 @@ import Link from 'next/link';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  FiArrowLeft,
   FiBookOpen,
   FiChevronRight,
   FiLoader,
@@ -202,22 +202,8 @@ export function FriendsPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-background">
-      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-6 pb-12">
-        {/* Header: back arrow on the left + centered title. The title is
-            absolutely centered on the row so it stays optically balanced
-            regardless of the back-button width. */}
-        <header className="relative flex items-center justify-center h-9">
-          <Link
-            href="/profile"
-            aria-label={t('common.back')}
-            className="absolute left-0 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
-          >
-            <FiArrowLeft className="h-4 w-4" />
-          </Link>
-          <h1 className="text-lg sm:text-xl font-extrabold text-black tracking-tight">
-            {t('social.friends.title')}
-          </h1>
-        </header>
+      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-5 pb-12">
+        <PageHeader title={t('social.friends.title')} backHref="/profile" />
 
         {/* Find actions */}
         <section className="flex flex-col gap-3">

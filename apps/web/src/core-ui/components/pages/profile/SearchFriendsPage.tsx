@@ -60,7 +60,7 @@ export function SearchFriendsPage() {
   const isPending = hasQuery && (query.trim() !== term || isFetching || data?.query.trim() !== term);
 
   return (
-    <MockedSubPageLayout title={t('social.search.title')} backHref="/profile/friends" showSoonBadge={false} inlineTitle>
+    <MockedSubPageLayout title={t('social.search.title')} backHref="/profile/friends" showSoonBadge={false}>
       {/* Search. Submitting (Enter / the keyboard's search key) runs it now;
           otherwise it runs on its own once typing settles. */}
       <form role="search" onSubmit={onSubmit} className="relative">

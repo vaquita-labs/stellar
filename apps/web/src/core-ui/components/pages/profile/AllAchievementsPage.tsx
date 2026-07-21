@@ -1,9 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { FiArrowLeft, FiGift } from 'react-icons/fi';
+import { FiGift } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
+import { CircleIconButton } from '../../molecules/CircleIconButton';
+import { PageHeader } from '../../molecules/PageHeader';
 import { getDepositsData } from '../../../helpers/deposits';
 import {
   useClaimedAchievements,
@@ -82,29 +83,20 @@ export function AllAchievementsPage() {
   return (
     <div className="h-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-6 pb-16">
-        {/* Header — back arrow on the left, muted centered title (Duolingo-style),
-            redeem-code button on the right. */}
-        <header className="relative flex items-center justify-center min-h-10 border-b border-black/10 pb-3">
-          <Link
-            href="/profile"
-            aria-label={t('common.back')}
-            className="absolute left-0 flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
-          >
-            <FiArrowLeft className="h-4 w-4" />
-          </Link>
-          <h1 className="text-base sm:text-lg font-bold text-gray-500 tracking-wide uppercase">
-            {t('achievements.page.title', 'Achievements')}
-          </h1>
-          <button
-            type="button"
-            onClick={() => setRedeemOpen(true)}
-            aria-label={t('achievements.page.redeemCode', 'Redeem code')}
-            title={t('achievements.page.redeemCode', 'Redeem code')}
-            className="absolute right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
-          >
-            <FiGift className="h-4 w-4" />
-          </button>
-        </header>
+        {/* Header estándar (PageHeader) con el botón de canjear código a la derecha. */}
+        <PageHeader
+          title={t('achievements.page.title', 'Achievements')}
+          backHref="/profile"
+          className="border-b border-black/10 pb-3"
+          rightSlot={
+            <CircleIconButton
+              variant="white"
+              ariaLabel={t('achievements.page.redeemCode', 'Redeem code')}
+              onClick={() => setRedeemOpen(true)}
+              icon={<FiGift className="h-4 w-4" />}
+            />
+          }
+        />
 
         {/* Personal records ----------------------------------------- */}
         <section className="flex flex-col gap-3">
