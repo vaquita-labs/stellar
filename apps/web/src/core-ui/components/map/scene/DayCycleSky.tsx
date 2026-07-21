@@ -3,7 +3,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useDayCycleStore } from '@/core-ui/stores';
+import { getGameDayProgress, useDayCycleStore } from '@/core-ui/stores';
 import { useMapStore } from '@/core-ui/stores';
 
 type SkyKey = {
@@ -67,12 +67,6 @@ const interpolate = (progress: number) => {
 // (WorldMap pone gl.shadowMap.autoUpdate = false al crear el canvas).
 const SHADOW_UPDATE_INTERVAL = 0.1;
 
-// La iluminación del mapa queda FIJA en mediodía (0.5): con el reloj de juego
-// acelerado, animar el ciclo día/noche hacía transiciones raras (el sol
-// saltaba en segundos). El reloj (MapClock) sigue mostrando la hora de juego;
-// sólo desacoplamos la luz para que la escena se vea estable y clara.
-const FIXED_DAY_PROGRESS = 0.5;
-
 export const DayCycleSky = () => {
   const { scene, gl } = useThree();
   const editingObjectPosition = useMapStore((s) => s.editingObjectPosition);
@@ -95,18 +89,15 @@ export const DayCycleSky = () => {
     };
   }, [scene, skyColor, fog]);
 
-  // La luz es fija (mediodía), así que el progreso del día también: se escribe
-  // UNA vez al store para que la vaquita quede en modo diurno (no duerme con el
-  // reloj acelerado). La hora que ve el usuario la maneja MapClock aparte.
-  useEffect(() => {
-    useDayCycleStore.getState().setDayProgress(FIXED_DAY_PROGRESS);
-  }, []);
-
   useFrame((_, delta) => {
-    // Iluminación FIJA en mediodía (ver FIXED_DAY_PROGRESS): sin ciclo día/noche
-    // animado, que con el reloj acelerado se veía raro. Se sigue recalculando
-    // por frame para que el atenuado del modo edición (editDim*) se aplique.
-    const values = interpolate(FIXED_DAY_PROGRESS);
+    // La luz del mapa sigue el reloj de JUEGO: a medianoche se ve oscuro, a
+    // mediodía claro, así el sol y la hora que muestra MapClock coinciden. El
+    // día es largo (config game_day_length_seconds) para que la transición sea
+    // lenta y natural. Se escribe al store para que la vaquita (que lee
+    // dayProgress) siga el mismo día (duerme de noche).
+    const progress = getGameDayProgress();
+    useDayCycleStore.getState().setDayProgress(progress);
+    const values = interpolate(progress);
 
     skyColor.set(values.sky);
     // La niebla siempre toma el color del cielo para un horizonte sin costura
