@@ -41,6 +41,12 @@ export interface AppModalProps {
    * Mantiene la misma animación de entrada/salida desde abajo.
    */
   fullScreen?: boolean;
+  /**
+   * Dirección desde la que entra (y por la que sale) el diálogo. `bottom` es la
+   * hoja de siempre; `right` lo convierte en una pantalla que se apila sobre lo
+   * que había, como el detalle de un movimiento sobre la lista.
+   */
+  slideFrom?: 'bottom' | 'right';
   bodyClassName?: string;
   dialogClassName?: string;
   /**
@@ -94,6 +100,18 @@ export const SHEET_BACKDROP_ANIMATION =
   // solo atenúan el background-color y dejan a los hijos 100% opacos.
   'data-[entering=true]:animate-[modal-backdrop-in_300ms_ease-out] ' +
   'data-[exiting=true]:animate-[modal-backdrop-out_250ms_ease-out_forwards]';
+/**
+ * Variante lateral: el diálogo entra desde la derecha y sale por el mismo lado,
+ * como una pantalla apilada sobre la anterior (push/pop de navegación). Se usa
+ * en los detalles a pantalla completa que se abren desde otra hoja.
+ */
+export const PANEL_CONTAINER_ANIMATION =
+  'data-[entering=true]:duration-300 data-[entering=true]:ease-out ' +
+  'data-[entering=true]:slide-in-from-right-full data-[entering=true]:zoom-in-100 data-[entering=true]:fade-in-100 ' +
+  'data-[exiting=true]:duration-250 data-[exiting=true]:ease-in ' +
+  'data-[exiting=true]:slide-out-to-right-full data-[exiting=true]:zoom-out-100 data-[exiting=true]:fade-out-100 ' +
+  'data-[exiting=true]:fill-mode-forwards';
+
 export const SHEET_CONTAINER_ANIMATION =
   'data-[entering=true]:duration-300 data-[entering=true]:ease-out ' +
   'data-[entering=true]:slide-in-from-bottom-full data-[entering=true]:zoom-in-100 data-[entering=true]:fade-in-100 ' +
@@ -139,6 +157,7 @@ export function AppModal({
   onBack,
   placement,
   fullScreen = false,
+  slideFrom = 'bottom',
   bodyClassName,
   dialogClassName,
   overlay,
@@ -166,7 +185,7 @@ export function AppModal({
           (fullScreen
             ? 'p-0! '
             : 'justify-end! items-center! px-0! pt-3! pb-0! sm:justify-center! sm:p-10! ') +
-          SHEET_CONTAINER_ANIMATION
+          (slideFrom === 'right' ? PANEL_CONTAINER_ANIMATION : SHEET_CONTAINER_ANIMATION)
         }
       >
         <Modal.Dialog

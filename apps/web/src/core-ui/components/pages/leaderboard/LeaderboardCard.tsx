@@ -122,10 +122,13 @@ export function PositionPill({
   );
 }
 
-/** Un stat de la fila: ícono + número, sin etiqueta. */
+/** Una card de stat: ícono + número, sin etiqueta. */
 function Stat({ icon, value, label }: { icon: string; value: string; label: string }) {
   return (
-    <div className="flex flex-1 items-center justify-center gap-1.5" title={label}>
+    <div
+      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 py-1.5"
+      title={label}
+    >
       <Image src={icon} alt={label} width={20} height={20} className="object-contain" />
       <span className="text-xs font-bold text-black tabular-nums">{value}</span>
     </div>
@@ -133,24 +136,22 @@ function Stat({ icon, value, label }: { icon: string; value: string; label: stri
 }
 
 /** Racha · monedas · XP, los mismos tres números (y los mismos íconos) que la
- *  barra de stats del home, para que el perfil ajeno se lea igual que el propio. */
+ *  barra de stats del home, para que el perfil ajeno se lea igual que el propio.
+ *  Tres cards separadas, no una fila con divisores: cada dato es su propio bloque. */
 function StatsRow({ streak, coins, experience }: { streak: number; coins: number; experience: number }) {
   const { t } = useTranslation();
-  const divider = <div className="w-px h-4 bg-black/10 shrink-0" />;
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-black/10 bg-white px-3 py-1.5">
+    <div className="flex items-stretch gap-2">
       <Stat
         icon="/icons/global/streak_face.png"
         value={`${streak}`}
         label={t('leaderboard.card.dayStreak', 'Day streak')}
       />
-      {divider}
       <Stat
         icon="/icons/global/coin.png"
         value={`${Math.floor(coins).toLocaleString()}`}
         label={t('leaderboard.card.coins', 'Coins')}
       />
-      {divider}
       <Stat
         icon="/icons/global/star.png"
         value={`${Math.floor(experience).toLocaleString()}`}
@@ -376,8 +377,12 @@ export function LeaderboardCardSkeleton() {
         <div className="h-6 w-16 rounded-full bg-black/10" />
       </div>
       <div className="w-full aspect-[16/9] rounded-lg bg-black/10" />
-      {/* Fila de stats: racha · monedas · XP, la misma altura que la real. */}
-      <div className="h-8 w-full rounded-lg bg-black/5" />
+      {/* Tres cards de stats: racha · monedas · XP, la misma altura que las reales. */}
+      <div className="flex gap-2">
+        <div className="h-8 flex-1 rounded-lg bg-black/5" />
+        <div className="h-8 flex-1 rounded-lg bg-black/5" />
+        <div className="h-8 flex-1 rounded-lg bg-black/5" />
+      </div>
       <div className="flex gap-2">
         <div className="h-6 w-14 rounded-full bg-black/5" />
         <div className="h-6 w-14 rounded-full bg-black/5" />

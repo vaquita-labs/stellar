@@ -23,6 +23,9 @@ interface PageLayoutProps {
   headerGap?: string;
   /** Gap class between the content blocks. Defaults to "gap-6". */
   contentGap?: string;
+  /** Bottom padding class. Lower it on screens whose last block is a footer
+   *  pinned with mt-auto and should sit close to the edge. Defaults to "pb-10". */
+  bottomPadding?: string;
   /** Overrides the header title size (e.g. "text-lg" for long titles). */
   titleClassName?: string;
   /** Pins the header to the top while the content scrolls under it. Opt-in:
@@ -42,6 +45,7 @@ export function PageLayout({
   headerGap = 'gap-2',
   contentGap = 'gap-6',
   titleClassName,
+  bottomPadding = 'pb-10',
   stickyHeader = false,
 }: PageLayoutProps) {
   return (
@@ -49,7 +53,10 @@ export function PageLayout({
       {/* Aire al final para que el último ítem no quede pegado al borde. Antes
           era pb-24 para dejar pasar una barra de navegación fija que ya no
           existe, y dejaba un hueco enorme al final de cada página. */}
-      <div className={`mx-auto w-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col ${headerGap} pb-10`}>
+      {/* min-h-full: el contenido puede repartirse en todo el alto (p. ej. un
+          bloque con mt-auto que se pega al fondo) sin dejar de crecer y hacer
+          scroll cuando sobra. */}
+      <div className={`mx-auto w-full min-h-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col ${headerGap} ${bottomPadding}`}>
         {/* Wrapped rather than styled through PageHeader's className: the sticky
             bar needs its own horizontal padding, which would collide with the
             header's own px-11 (same specificity, order decides the winner).
