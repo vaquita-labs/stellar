@@ -32,7 +32,7 @@ export interface BadgeClaimPayload {
   cycle_id: number;
   expiry: number;           // Unix seconds
   signature: string;        // hex
-  contract_symbol: string;  // achievements.tier — valid Soroban Symbol passed to mint_badge
+  contract_symbol: string;  // per-badge Soroban Symbol (key with `-`→`_`), passed to mint_badge — see toBadgeSymbol
 }
 
 // ---------------------------------------------------------------------------

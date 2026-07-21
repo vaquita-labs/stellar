@@ -31,6 +31,34 @@ export function buildBadgeMessageBytes(
   return Buffer.concat([contractXdr, walletXdr, symXdr, cycleIdBuf, expiryBuf]);
 }
 
+/** Max length of a Soroban `Symbol` (also the cap the admin key field enforces). */
+export const BADGE_SYMBOL_MAX_LEN = 32;
+
+/**
+ * Derive the on-chain Soroban Symbol for a badge from its catalog key.
+ *
+ * The contract indexes each mint by `Claimed(symbol, cycle_id, wallet)`, so the
+ * symbol MUST be unique per badge for the "one NFT per badge" model to hold.
+ * Catalog keys are kebab-case (`first-deposit`), but a Soroban Symbol only
+ * allows `[a-zA-Z0-9_]` (max 32), so we map `-` → `_`. Kebab keys never contain
+ * `_`, so the mapping is injective — distinct keys never collide on one slot.
+ *
+ * This replaced an earlier scheme (fee9152, 2026-05-20) that signed the tier
+ * (`Bronze`) as the symbol. Because many badges share a tier, that collapsed
+ * every same-tier badge onto a single claim slot, so a wallet could mint only
+ * one badge per tier per cycle. Per-key symbols restore per-badge granularity.
+ */
+export function toBadgeSymbol(badgeKey: string): string {
+  const symbol = badgeKey.replace(/-/g, '_');
+  if (!new RegExp(`^[a-zA-Z0-9_]{1,${BADGE_SYMBOL_MAX_LEN}}$`).test(symbol)) {
+    throw new Error(
+      `Cannot derive a valid Soroban Symbol from badge key "${badgeKey}": ` +
+        `symbols allow only [a-zA-Z0-9_] and at most ${BADGE_SYMBOL_MAX_LEN} chars.`,
+    );
+  }
+  return symbol;
+}
+
 export function signBadgeClaim(
   contractAddress: string,
   wallet: string,
