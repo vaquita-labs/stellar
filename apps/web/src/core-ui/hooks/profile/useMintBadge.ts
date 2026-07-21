@@ -40,7 +40,8 @@ export const useMintBadge = () => {
         claim = refreshed;
       }
 
-      // Step 3: mint on-chain via Pollar — use tier (Soroban Symbol) not the key
+      // Step 3: mint on-chain via Pollar. The server sends the per-badge Soroban
+      // Symbol in `contract_symbol` — pass it through verbatim (do not re-derive).
       const { hash } = await mintBadge({
         address: walletAddress,
         badgeContractId: badgesContractAddress,
