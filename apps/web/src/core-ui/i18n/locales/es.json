@@ -588,8 +588,10 @@
   "leaderboard": {
     "card": {
       "badges": "Insignias",
+      "coins": "Monedas",
       "commentsComingSoon": "Los comentarios en el mundo de {{username}} llegan pronto",
       "dayStreak": "Días de racha",
+      "experience": "XP",
       "follow": "Seguir",
       "followAria": "Seguir a {{username}}",
       "following": "Siguiendo",
@@ -597,6 +599,7 @@
       "like": "Me gusta",
       "openComments": "Abrir comentarios",
       "positionLabel": "Posición {{position}}",
+      "unfollow": "Dejar de seguir",
       "unfollowAria": "Dejar de seguir a {{username}}",
       "unlike": "Quitar me gusta",
       "viewWorld": "Ver el mundo de {{username}}",
@@ -696,22 +699,22 @@
     "markAllRead": "Marcar todas como leídas",
     "messages": {
       "achievementUnlocked": {
-        "body": "Ganaste la insignia \"{{name}}\". Mira tu colección.",
+        "body": "Ganaste la insignia \"{{name}}\".",
         "title": "¡Trofeo desbloqueado!"
       },
       "depositConfirmed": {
-        "body": "Tu depósito de ${{amount}} USDC está confirmado y ya está creciendo.",
+        "body": "${{amount}} USDC confirmados y creciendo.",
         "title": "Depósito confirmado"
       },
       "depositUnlocked": {
-        "body": "Tu depósito de ${{amount}} USDC cumplió su plazo. Ya puedes retirarlo.",
+        "body": "${{amount}} USDC listos para retirar.",
         "title": "¡Tus ahorros están desbloqueados!"
       },
       "generic": {
         "title": "Notificación"
       },
       "newFollower": {
-        "body": "{{name}} empezó a seguirte. ¡Mira su granja!",
+        "body": "{{name}} empezó a seguirte.",
         "title": "Nuevo seguidor"
       },
       "withdrawalCompleted": {

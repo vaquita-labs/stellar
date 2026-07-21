@@ -367,6 +367,8 @@ function useLeaderboardRows(rows: LeaderboardResponseDTO[]): LeaderboardCardData
         level,
         streak: row.streak ?? 0,
         badges: row.badges ?? 0,
+        coins: row.coins ?? 0,
+        experience: row.experience ?? 0,
         // TODO: Replace with real likes and comments once the API ships them.
         likesSeed: 0,
         commentsSeed: 0,

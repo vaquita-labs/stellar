@@ -966,6 +966,31 @@ export const getAchievementCountsByProfile = async (): Promise<{
 };
 
 /**
+ * Single-query rollup of each profile's gold-coin balance, mirroring what the
+ * profile endpoint reports for a single wallet: the sum of every Gold Coin
+ * ledger row, spends included (purchases are stored as negative amounts).
+ */
+export const getCoinsByProfile = async (): Promise<{
+  counts: Map<number, number>;
+  error: unknown;
+}> => {
+  const counts = new Map<number, number>();
+  try {
+    const rows = await prisma.profileReward.findMany({
+      where: { reward: { key: Reward.GOLD_COIN } },
+      select: { profileId: true, amount: true },
+    });
+    for (const row of rows) {
+      counts.set(row.profileId, (counts.get(row.profileId) ?? 0) + Number(row.amount ?? 0));
+    }
+    return { counts, error: null };
+  } catch (error) {
+    console.error('Error on getCoinsByProfile', error);
+    return { counts, error };
+  }
+};
+
+/**
  * Inserts the ledger row + the matching gold-coin credit in a single Postgres
  * transaction via the `claim_achievement` PL/pgSQL function. The UNIQUE
  * constraint on (profile_id, achievement_id) surfaces a repeat claim as error

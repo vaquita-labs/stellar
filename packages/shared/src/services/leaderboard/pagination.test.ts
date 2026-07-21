@@ -16,6 +16,7 @@ const row = (overrides: Partial<EnrichedLeaderboardRow>): EnrichedLeaderboardRow
   badges: 0,
   streak: 0,
   experience: 0,
+  coins: 0,
   score: 0,
   activeAmount: 0,
   cycleId: 202606,

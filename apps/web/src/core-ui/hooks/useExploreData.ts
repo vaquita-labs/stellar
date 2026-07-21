@@ -13,6 +13,7 @@ export interface ExploreProfileDTO {
   badges: number;
   streak: number;
   experience: number;
+  coins: number;
 }
 
 export interface ExplorePageDTO {
@@ -46,6 +47,7 @@ const toRow = (row: Partial<ExploreProfileDTO> | undefined): ExploreProfileDTO =
   badges: row?.badges ?? 0,
   streak: row?.streak ?? 0,
   experience: row?.experience ?? 0,
+  coins: row?.coins ?? 0,
 });
 
 /**

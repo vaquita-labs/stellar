@@ -108,7 +108,7 @@ export const creteConfirmWithdrawal = async (withdrawal: {
       type: 'deposit',
       messageKey: 'withdrawalCompleted',
       params: { amount: Number(data.transferAmount ?? data.deposit.amount).toFixed(2) },
-      link: '/profile/wallet',
+      link: '/transactions',
       dedupeKey: `withdrawal-confirmed-${data.id}`,
     });
     await broadcastDepositsChange('creteConfirmWithdrawal');
@@ -236,7 +236,7 @@ export const confirmDepositWithTx = async (depositId: number, depositIdHex: stri
       type: 'deposit',
       messageKey: 'depositConfirmed',
       params: { amount: Number(data.amount).toFixed(2) },
-      link: '/home',
+      link: '/transactions',
       dedupeKey: `deposit-confirmed-${data.id}`,
     });
 
@@ -290,7 +290,7 @@ export const confirmDeposit = async (depositId: number) => {
       type: 'deposit',
       messageKey: 'depositConfirmed',
       params: { amount: Number(data.amount).toFixed(2) },
-      link: '/home',
+      link: '/transactions',
       dedupeKey: `deposit-confirmed-${data.id}`,
     });
     await broadcastDepositsChange('confirmDeposit');
@@ -318,7 +318,7 @@ export const confirmWithdrawal = async (withdrawalId: number) => {
         type: 'deposit',
         messageKey: 'withdrawalCompleted',
         params: { amount: Number(data.transferAmount ?? data.deposit.amount).toFixed(2) },
-        link: '/profile/wallet',
+        link: '/transactions',
         dedupeKey: `withdrawal-confirmed-${data.id}`,
       });
       void (async () => {

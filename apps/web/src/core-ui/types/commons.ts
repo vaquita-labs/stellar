@@ -318,6 +318,7 @@ export interface LeaderboardResponseDTO {
   badges: number;
   streak: number;
   experience: number;
+  coins: number;
   score: number;
   activeAmount: number;
   cycleId: number;
