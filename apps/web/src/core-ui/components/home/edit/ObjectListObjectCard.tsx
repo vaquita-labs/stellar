@@ -76,7 +76,7 @@ export function ObjectListObjectCard({
           style={{ width: 110 }}
         >
           <div
-            className="text-xs font-bold text-black truncate max-w-full text-center bg-white/90 rounded-full px-2 py-0.5 border border-black/10"
+            className="text-xs font-bold text-black truncate max-w-full text-center bg-white/90 rounded-md px-2 py-0.5 border border-black/10"
             style={{ textWrap: 'nowrap' }}
           >
             {getMapItemName(t, type, variant)}

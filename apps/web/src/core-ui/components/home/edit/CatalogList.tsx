@@ -168,11 +168,11 @@ export function CatalogList() {
           <div className="space-y-4">
             {/* El precio primero: es lo que se decide acá. El saldo no se
                 repite porque ya está en la cabecera de la tienda. */}
-            <div>
-              <p className="text-xs text-gray-500 uppercase font-semibold mb-1">{t('home.catalog.price', 'Price')}</p>
-              <div className="flex items-center gap-1">
-                <Image src="/icons/global/coin.png" alt={t('home.catalog.goldAlt', 'Gold')} width={24} height={24} className="object-contain" />
-                <span className="text-lg font-bold text-black">{detailItem.price}</span>
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-gray-500 uppercase font-semibold">{t('home.catalog.price', 'Price')}</p>
+              <div className="flex items-center gap-1.5">
+                <Image src="/icons/global/coin.png" alt={t('home.catalog.goldAlt', 'Gold')} width={28} height={28} className="object-contain" />
+                <span className="text-2xl font-bold text-black">{detailItem.price}</span>
               </div>
             </div>
             <p className="text-sm text-gray-700 pt-3 border-t border-gray-200">

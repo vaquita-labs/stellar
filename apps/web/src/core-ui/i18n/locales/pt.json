@@ -258,6 +258,21 @@
     }
   },
   "deposit": {
+    "blend": {
+      "accountLabel": "Conta Vaquita",
+      "confirm": {
+        "title": "Confirmar depósito"
+      },
+      "cta": "Depositar no Blend",
+      "destination": "Blend",
+      "mainnetOnly": "Depósitos diretos no Blend só estão disponíveis na mainnet da Stellar.",
+      "notTracked": "Seu USDC vai direto para o Blend e começa a render na hora. Este depósito não conta como um bloqueio da Vaquita.",
+      "processing": "Processando depósito...",
+      "success": {
+        "subtitle": "Seu USDC já está rendendo no Blend.",
+        "title": "Depósito enviado!"
+      }
+    },
     "bank": {
       "details": "Detalhes",
       "estimatedEarningsTotal": "Ganhos estimados totais",
@@ -384,13 +399,6 @@
       "wallet": {
         "subtitle": "Deposite de uma wallet cripto",
         "title": "Wallet"
-      },
-      "walletDetails": {
-        "accountLabel": "Conta da Vaquita",
-        "copy": "Copiar endereço",
-        "onlyUsdc": "Envie apenas USDC na Stellar!",
-        "title": "Detalhes da wallet",
-        "warning": "Certifique-se de enviar USDC pela rede Stellar para este endereço exato. Fundos enviados por outra rede podem ser perdidos."
       }
     }
   },
@@ -502,7 +510,7 @@
           "default": "Árvore"
         },
         "rock": {
-          "3": "Terreno rochoso",
+          "3": "Rocha",
           "default": "Rocha"
         },
         "bush": {
@@ -510,7 +518,7 @@
           "default": "Arbusto"
         },
         "grass": {
-          "0": "Terreno de grama",
+          "0": "Grama",
           "default": "Grama"
         },
         "water": {

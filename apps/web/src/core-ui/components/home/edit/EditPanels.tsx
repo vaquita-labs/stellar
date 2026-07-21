@@ -196,6 +196,7 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
                       value={activeTab}
                       onChange={setActiveTab}
                       ariaLabel={t('home.shop.tabsLabel', 'Shop sections')}
+                      spaced
                       tabs={[
                         { key: 'catalog', label: t('home.shop.tabCatalog', 'Catalog') },
                         { key: 'collection', label: t('home.shop.tabCollection', 'My collection') },

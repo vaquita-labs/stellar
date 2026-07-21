@@ -11,6 +11,8 @@ interface AmountKeypadProps {
   /** Tope duro: teclas que lo superarían se ignoran (no se recorta el valor). */
   max?: number;
   disabled?: boolean;
+  /** Teclas más bajas, para sheets donde el resto del contenido no deja aire. */
+  compact?: boolean;
 }
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del'] as const;
@@ -29,6 +31,7 @@ export function AmountKeypad({
   maxDecimals = 2,
   max,
   disabled = false,
+  compact = false,
 }: AmountKeypadProps) {
   const press = (key: (typeof KEYS)[number]) => {
     if (disabled) return;
@@ -64,7 +67,10 @@ export function AmountKeypad({
           disabled={disabled}
           onClick={() => press(key)}
           aria-label={key === 'del' ? 'delete' : key}
-          className="flex items-center justify-center h-11 rounded-lg text-xl font-bold text-black transition active:translate-y-0.5 hover:bg-black/5 disabled:opacity-40 disabled:pointer-events-none"
+          className={
+            'flex items-center justify-center rounded-lg font-bold text-black transition active:translate-y-0.5 hover:bg-black/5 disabled:opacity-40 disabled:pointer-events-none ' +
+            (compact ? 'h-9 text-lg' : 'h-11 text-xl')
+          }
         >
           {key === 'del' ? <FiDelete className="w-5 h-5" /> : key}
         </button>

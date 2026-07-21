@@ -29,6 +29,7 @@ import { VaquitaAvatar } from '../avatar/VaquitaAvatar';
 import { BadgeTile } from './profile/BadgeTile';
 import { FollowListModal } from './profile/FollowListModal';
 import { FriendsModal } from './profile/FriendsModal';
+import { SettingsModal } from './profile/SettingsModal';
 import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
 
 /* ------------------------------------------------------------------ */
@@ -150,6 +151,7 @@ export function ProfilePage() {
     tab: 'following',
   });
   const [friendsOpen, setFriendsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
@@ -337,13 +339,17 @@ export function ProfilePage() {
             {/* Sharing lives next to the "add friends" CTA further down, where
                 it's an action rather than a header icon. */}
             <div className="pointer-events-auto flex flex-1 basis-0 shrink-0 items-center justify-end gap-2">
-              <Link
-                href="/profile/settings"
+              {/* Abre el panel en vez de navegar (ver el botón de amigos): la
+                  ruta /profile/settings sigue existiendo para entradas
+                  directas. */}
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
                 aria-label={t('profilePages.profile.settingsAria', 'Settings')}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-black border-b-2 bg-white/70 text-black transition hover:bg-white"
               >
                 <FiSettings className="h-4 w-4" />
-              </Link>
+              </button>
             </div>
           </div>
         </header>
@@ -505,6 +511,8 @@ export function ProfilePage() {
       />
 
       <FriendsModal open={friendsOpen} onClose={() => setFriendsOpen(false)} />
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import { Switch } from '@heroui/react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import React, { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -23,6 +22,8 @@ import { useInstallApp, useLogout, useProfileData } from '../../../hooks';
 import { usePrivacyStore, useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { AppModal, ConfirmDialog } from '../../molecules';
+import { PageHeader } from '../../molecules/PageHeader';
+import { useSlidePage } from '../../molecules/useSlidePage';
 import { PRIVACY_LAST_UPDATED, TERMS_LAST_UPDATED } from '../legal';
 
 type LinkRow = {
@@ -165,9 +166,13 @@ const formatDate = (iso: string) => {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-export function SettingsPage() {
+/**
+ * `onBack` lo pasa <SettingsModal> cuando la pantalla se abre como panel sobre
+ * el perfil: ahí el cierre y la animación los maneja el modal. Sin él funciona
+ * como ruta suelta (/profile/settings) y se anima sola con useSlidePage.
+ */
+export function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
-  const router = useRouter();
   const logout = useLogout();
   const { reset } = useConfigStore();
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -176,6 +181,10 @@ export function SettingsPage() {
   const { canInstall, isInstalled, isIOS, promptInstall } = useInstallApp();
 
   const hideBalance = usePrivacyStore((s) => s.hideBalance);
+
+  // Sólo para el modo ruta suelta: como panel, quien anima es <SettingsModal>.
+  const { className: slideClassName, goBack } = useSlidePage('/profile');
+  const asPanel = !!onBack;
 
   const handleDisconnect = async () => {
     if (isDisconnecting) return;
@@ -277,21 +286,13 @@ export function SettingsPage() {
 
   return (
     <>
-      <div className="h-full overflow-y-auto bg-background">
-        <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-4">
-          {/* Duolingo-style header: muted title centered, Done on the right */}
-          <header className="relative flex items-center justify-center min-h-10 border-b border-black/10 pb-3">
-            <h1 className="text-base sm:text-lg font-bold text-gray-500 tracking-wide uppercase">
-              {t('profilePages.settings.title', 'Settings')}
-            </h1>
-            <button
-              type="button"
-              onClick={() => router.push('/profile')}
-              className="absolute right-0 text-sm font-extrabold text-primary hover:text-primary/80 transition uppercase tracking-wider bg-transparent"
-            >
-              {t('common.done')}
-            </button>
-          </header>
+      <div className={`h-full overflow-y-auto bg-background ${asPanel ? '' : slideClassName}`}>
+        <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pt-4 pb-6 flex flex-col gap-4">
+          {/* El mismo <PageHeader> que el resto de la app: flecha atrás a la
+              izquierda y título centrado. Antes era un header propio con "Done"
+              a la derecha — la única pantalla que se cerraba así, y encima con
+              una palabra en vez del gesto que el usuario ya conoce. */}
+          <PageHeader title={t('profilePages.settings.title', 'Settings')} onBack={onBack ?? goBack} />
 
           <Section title={t('profilePages.settings.accountSection', 'Account')} rows={accountRows} />
           <Section title={t('profilePages.settings.supportSection', 'Support')} rows={supportRows} />

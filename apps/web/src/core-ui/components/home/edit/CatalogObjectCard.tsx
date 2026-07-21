@@ -71,7 +71,7 @@ export function CatalogObjectCard({ type, variant, price, affordable, position, 
           className={`pointer-events-auto ${!affordable ? 'opacity-60' : ''}`}
           style={{ width: 124 }}
         >
-          <div className="flex items-center justify-between gap-1.5 bg-white/90 rounded-full px-2.5 py-0.5 border border-black/10">
+          <div className="flex items-center justify-between gap-1.5 bg-white/90 rounded-md px-2.5 py-0.5 border border-black/10">
             <span className="text-xs font-bold text-black truncate">{getMapItemName(t, type, variant)}</span>
             <span className="flex shrink-0 items-center gap-0.5">
               <Image

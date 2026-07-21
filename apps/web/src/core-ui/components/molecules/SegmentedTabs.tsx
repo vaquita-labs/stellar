@@ -12,6 +12,12 @@ export interface SegmentedTabsProps<T extends string> {
   tabs: ReadonlyArray<{ key: T; label: string }>;
   /** Texto para lectores de pantalla que describe qué se está eligiendo. */
   ariaLabel?: string;
+  /**
+   * Separa las mitades con aire en vez de dejarlas pegadas. El track gana
+   * padding, así la pestaña activa flota dentro del marco en lugar de llenar
+   * su mitad de borde a borde.
+   */
+  spaced?: boolean;
   className?: string;
 }
 
@@ -20,13 +26,16 @@ export function SegmentedTabs<T extends string>({
   onChange,
   tabs,
   ariaLabel,
+  spaced = false,
   className = '',
 }: SegmentedTabsProps<T>) {
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`flex w-full overflow-hidden rounded-md border border-black/15 bg-background ${className}`}
+      className={`flex w-full overflow-hidden rounded-md border border-black/15 bg-background ${
+        spaced ? 'gap-2 p-1' : ''
+      } ${className}`}
     >
       {tabs.map((tab) => {
         const active = value === tab.key;
