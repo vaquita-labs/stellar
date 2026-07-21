@@ -63,7 +63,7 @@ export function DepositPanel() {
               setIsWithdrawOpen(true);
             }
           }}
-          className={`bg-white py-7 text-black font-medium flex-1 border-none rounded-md`}
+          className={`bg-white border-[#E3DAC9] py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
         >
           <span className="text-xl text-black capitalize font-medium">{t('deposit.withdraw.button', 'Withdraw')}</span>
         </HeroButton>
