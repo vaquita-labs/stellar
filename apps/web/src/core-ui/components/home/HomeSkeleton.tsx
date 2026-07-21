@@ -85,8 +85,8 @@ export function HomeSkeleton() {
           <DepositPanel>, así el pulgar no ve saltar los botones. */}
       <div className="absolute bottom-4 left-0 w-full flex justify-center">
         <div className="w-full max-w-xl px-1 flex gap-1">
-          <div className="h-12 flex-1 rounded-md border border-black/20 border-b-5 bg-white/70 animate-pulse" />
-          <div className="h-12 flex-1 rounded-md border border-black/20 border-b-5 bg-black/10 animate-pulse" />
+          <div className="h-14 flex-1 rounded-md border border-black/20 border-b-5 bg-white/70 animate-pulse" />
+          <div className="h-14 flex-1 rounded-md border border-black/20 border-b-5 bg-black/10 animate-pulse" />
         </div>
       </div>
     </div>

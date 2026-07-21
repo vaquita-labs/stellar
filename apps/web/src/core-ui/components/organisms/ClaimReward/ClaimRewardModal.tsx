@@ -33,7 +33,10 @@ const formatAmount = (amount: string) =>
  */
 export function ClaimRewardModal({ onDone }: ClaimRewardModalProps) {
   const { t } = useTranslation();
-  const { getClient, enabledAssets, refreshAssets, setTrustline, walletType, login } = usePollar();
+  const { getClient, enabledAssets, refreshAssets, setTrustline, wallet, login } = usePollar();
+  // Id del adapter on-chain (freighter, xbull, …) solo cuando la wallet es
+  // externa; las custodiales (`internal` / `smart`) no se pueden reconectar.
+  const walletType = wallet?.custody === 'external' ? wallet.provider : null;
 
   const [reward, setReward] = useState<Reward | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,8 +100,10 @@ export function ClaimRewardModal({ onDone }: ClaimRewardModalProps) {
     setShowReconnect(false);
     try {
       for (const asset of pendingTrustlines) {
+        // El patrocinio lo resuelve Pollar desde la config de la app; no lo
+        // forzamos desde el cliente.
         // eslint-disable-next-line no-await-in-loop
-        const outcome = await setTrustline({ code: asset.code, issuer: asset.issuer! }, { sponsored: asset.sponsored });
+        const outcome = await setTrustline({ code: asset.code, issuer: asset.issuer! });
         if (outcome.status === 'error') {
           throw new Error(outcome.details ?? 'trustline failed');
         }
@@ -121,7 +126,7 @@ export function ClaimRewardModal({ onDone }: ClaimRewardModalProps) {
     if (!walletType) return;
     setError(null);
     setShowReconnect(false);
-    login({ provider: 'wallet', type: walletType });
+    login({ provider: walletType });
   };
 
   const handleClaim = async () => {

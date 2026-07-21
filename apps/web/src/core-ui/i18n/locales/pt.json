@@ -258,6 +258,21 @@
     }
   },
   "deposit": {
+    "blend": {
+      "accountLabel": "Conta Vaquita",
+      "confirm": {
+        "title": "Confirmar depósito"
+      },
+      "cta": "Depositar no Blend",
+      "destination": "Blend",
+      "mainnetOnly": "Depósitos diretos no Blend só estão disponíveis na mainnet da Stellar.",
+      "notTracked": "Seu USDC vai direto para o Blend e começa a render na hora. Este depósito não conta como um bloqueio da Vaquita.",
+      "processing": "Processando depósito...",
+      "success": {
+        "subtitle": "Seu USDC já está rendendo no Blend.",
+        "title": "Depósito enviado!"
+      }
+    },
     "bank": {
       "details": "Detalhes",
       "estimatedEarningsTotal": "Ganhos estimados totais",
@@ -384,13 +399,6 @@
       "wallet": {
         "subtitle": "Deposite de uma wallet cripto",
         "title": "Wallet"
-      },
-      "walletDetails": {
-        "accountLabel": "Conta da Vaquita",
-        "copy": "Copiar endereço",
-        "onlyUsdc": "Envie apenas USDC na Stellar!",
-        "title": "Detalhes da wallet",
-        "warning": "Certifique-se de enviar USDC pela rede Stellar para este endereço exato. Fundos enviados por outra rede podem ser perdidos."
       }
     }
   },
@@ -482,7 +490,6 @@
         "expansion": "expansão",
         "utility": "utilidade"
       },
-      "youHave": "Você tem {{count}}",
       "yourOffer": "Sua oferta",
       "empty": "O catálogo está vazio por enquanto.",
       "emptyHint": "Volte em breve para ver novos itens!",
@@ -503,7 +510,7 @@
           "default": "Árvore"
         },
         "rock": {
-          "3": "Terreno rochoso",
+          "3": "Rocha",
           "default": "Rocha"
         },
         "bush": {
@@ -511,7 +518,7 @@
           "default": "Arbusto"
         },
         "grass": {
-          "0": "Terreno de grama",
+          "0": "Grama",
           "default": "Grama"
         },
         "water": {
@@ -572,7 +579,10 @@
       "tapToPlace": "Toque no mapa para posicionar"
     },
     "shop": {
-      "title": "Loja"
+      "title": "Loja",
+      "tabsLabel": "Seções da loja",
+      "tabCatalog": "Catálogo",
+      "tabCollection": "Minha coleção"
     },
     "stats": {
       "experienceAlt": "Experiência",
@@ -963,6 +973,7 @@
     },
     "profile": {
       "achievements": "Conquistas",
+      "badges": "Medalhas",
       "activeDeposits": "Depósitos ativos",
       "addFriends": "Adicionar amigos",
       "connectWalletDescription": "Acesse seu perfil, suas métricas e suas próximas conquistas conectando sua wallet.",
@@ -984,7 +995,6 @@
       "mapLikes": "Likes",
       "seeAll": "Ver tudo de {{title}}",
       "seeAllAchievements": "Ver todas as conquistas",
-      "seeFullSummary": "Ver resumo completo",
       "settingsAria": "Configurações",
       "streak": "Sequência",
       "summary": "Resumo",
@@ -1101,7 +1111,7 @@
       },
       "earnTitle": "Formas de ganhar",
       "title": "Moedas",
-      "viewStats": "Ver estatísticas"
+      "unitLabel": "Moedas"
     },
     "countdown": {
       "comeBackIn": "Muu! Volte em",
@@ -1134,12 +1144,11 @@
     },
     "experience": {
       "description": "Você ganha XP toda vez que poupa e mantém sua sequência. Alcance novos níveis para mostrar seu progresso de poupança!",
-      "levelLabel": "Nível {{level}}",
       "levelProgress": "Progresso de nível",
       "title": "Experiência",
       "totalExperience": "Experiência total",
-      "viewStats": "Ver estatísticas",
-      "xpAlt": "experiência"
+      "xpAlt": "experiência",
+      "unitLabel": "XP · Nível {{level}}"
     },
     "mood": {
       "excited": {
@@ -1180,7 +1189,6 @@
       "repairTitle": "Reparar sequência",
       "streakAlt": "sequência",
       "title": "Sequência",
-      "viewHistory": "Ver histórico completo",
       "weekdays": {
         "Fr": "Sex",
         "Mo": "Seg",
@@ -1191,7 +1199,8 @@
         "We": "Qua"
       },
       "weeklyHint": "Ganhe uma peça nova toda vez que aumentar sua sequência! Os ícones coloridos mostram os dias que você completou, e os cinzas indicam os dias perdidos.",
-      "weeklyProgress": "Progresso semanal"
+      "weeklyProgress": "Progresso semanal",
+      "unitLabel": "Sequência de dias"
     }
   },
   "shell": {
@@ -1512,7 +1521,7 @@
       "tabsLabel": "Visualização do QR",
       "title": "Compartilhar perfil",
       "tryAgain": "Tentar de novo",
-      "uploadFromGallery": "Enviar da galeria · em breve",
+      "uploadFromGallery": "Galeria · em breve",
       "vaqueroNotFound": "Não encontramos esse vaquero."
     }
   },

@@ -258,6 +258,21 @@
     }
   },
   "deposit": {
+    "blend": {
+      "accountLabel": "Cuenta Vaquita",
+      "confirm": {
+        "title": "Confirmar depósito"
+      },
+      "cta": "Depositar en Blend",
+      "destination": "Blend",
+      "mainnetOnly": "Los depósitos directos a Blend solo están disponibles en la mainnet de Stellar.",
+      "notTracked": "Tu USDC va directo a Blend y empieza a generar rendimiento al instante. Este depósito no cuenta como un bloqueo de Vaquita.",
+      "processing": "Procesando depósito...",
+      "success": {
+        "subtitle": "Tu USDC ya está generando rendimiento en Blend.",
+        "title": "¡Depósito enviado!"
+      }
+    },
     "bank": {
       "details": "Detalles",
       "estimatedEarningsTotal": "Ganancias estimadas totales",
@@ -384,13 +399,6 @@
       "wallet": {
         "subtitle": "Deposita desde una wallet cripto",
         "title": "Wallet"
-      },
-      "walletDetails": {
-        "accountLabel": "Cuenta de Vaquita",
-        "copy": "Copiar dirección",
-        "onlyUsdc": "¡Envía solo USDC en Stellar!",
-        "title": "Detalles de wallet",
-        "warning": "Asegúrate de enviar USDC por la red Stellar a esta dirección exacta. Los fondos enviados por otra red se pueden perder."
       }
     }
   },
@@ -482,7 +490,6 @@
         "expansion": "expansión",
         "utility": "utilidad"
       },
-      "youHave": "Tienes {{count}}",
       "yourOffer": "Tu oferta",
       "empty": "El catálogo está vacío por ahora.",
       "emptyHint": "¡Vuelve pronto para ver nuevos artículos!",
@@ -503,7 +510,7 @@
           "default": "Árbol"
         },
         "rock": {
-          "3": "Terreno rocoso",
+          "3": "Roca",
           "default": "Roca"
         },
         "bush": {
@@ -511,7 +518,7 @@
           "default": "Arbusto"
         },
         "grass": {
-          "0": "Terreno de pasto",
+          "0": "Pasto",
           "default": "Pasto"
         },
         "water": {
@@ -572,7 +579,10 @@
       "tapToPlace": "Toca el mapa para colocar"
     },
     "shop": {
-      "title": "Tienda"
+      "title": "Tienda",
+      "tabsLabel": "Secciones de la tienda",
+      "tabCatalog": "Catálogo",
+      "tabCollection": "Mi colección"
     },
     "stats": {
       "experienceAlt": "Experiencia",
@@ -963,6 +973,7 @@
     },
     "profile": {
       "achievements": "Logros",
+      "badges": "Medallas",
       "activeDeposits": "Depósitos activos",
       "addFriends": "Agregar amigos",
       "connectWalletDescription": "Accede a tu perfil, tus métricas y tus próximos logros conectando tu wallet.",
@@ -984,7 +995,6 @@
       "mapLikes": "Likes",
       "seeAll": "Ver todo {{title}}",
       "seeAllAchievements": "Ver todos los logros",
-      "seeFullSummary": "Ver resumen completo",
       "settingsAria": "Ajustes",
       "streak": "Racha",
       "summary": "Resumen",
@@ -1101,7 +1111,7 @@
       },
       "earnTitle": "Formas de ganar",
       "title": "Monedas",
-      "viewStats": "Ver estadísticas"
+      "unitLabel": "Monedas"
     },
     "countdown": {
       "comeBackIn": "¡Mu! Regresa en",
@@ -1134,12 +1144,11 @@
     },
     "experience": {
       "description": "Ganas XP cada vez que ahorras y mantienes tu racha. ¡Alcanza nuevos niveles para mostrar tu progreso de ahorro!",
-      "levelLabel": "Nivel {{level}}",
       "levelProgress": "Progreso de nivel",
       "title": "Experiencia",
       "totalExperience": "Experiencia total",
-      "viewStats": "Ver estadísticas",
-      "xpAlt": "experiencia"
+      "xpAlt": "experiencia",
+      "unitLabel": "XP · Nivel {{level}}"
     },
     "mood": {
       "excited": {
@@ -1180,7 +1189,6 @@
       "repairTitle": "Reparar racha",
       "streakAlt": "racha",
       "title": "Racha",
-      "viewHistory": "Ver historial completo",
       "weekdays": {
         "Fr": "Vi",
         "Mo": "Lu",
@@ -1191,7 +1199,8 @@
         "We": "Mi"
       },
       "weeklyHint": "¡Consigue una loseta nueva cada vez que aumentas tu racha! Los íconos a color muestran los días que completaste, y los grises indican los días que te saltaste.",
-      "weeklyProgress": "Progreso semanal"
+      "weeklyProgress": "Progreso semanal",
+      "unitLabel": "Racha de días"
     }
   },
   "shell": {
@@ -1512,7 +1521,7 @@
       "tabsLabel": "Vista del QR",
       "title": "Compartir perfil",
       "tryAgain": "Intentar de nuevo",
-      "uploadFromGallery": "Subir desde la galería · pronto",
+      "uploadFromGallery": "Galería · pronto",
       "vaqueroNotFound": "No encontramos a ese vaquero."
     }
   },

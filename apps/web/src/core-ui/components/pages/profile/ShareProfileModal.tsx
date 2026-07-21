@@ -12,6 +12,7 @@ import { FiAlertCircle, FiCamera, FiCopy, FiImage, FiLoader, FiShare2, FiUserPlu
 import { useToggleFollow } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
+import { SegmentedTabs } from '../../molecules/SegmentedTabs';
 
 interface ShareProfileModalProps {
   open: boolean;
@@ -85,36 +86,15 @@ function TabSwitch({
 }) {
   const { t } = useTranslation();
   return (
-    // Same segmented control as DepositListTabs (the app's existing tab
-    // pattern): the track is `bg-background`, so the cream reads as the modal
-    // itself rather than the white halo the old white/70 track drew around the
-    // selected tab, and it's rounded-md like everything else.
-    <div
-      role="tablist"
-      aria-label={t('social.share.tabsLabel')}
-      className="flex w-full gap-1 rounded-md border border-black border-b-2 bg-background p-1"
-    >
-      {([
+    <SegmentedTabs<TabKey>
+      value={value}
+      onChange={onChange}
+      ariaLabel={t('social.share.tabsLabel')}
+      tabs={[
         { key: 'mine', label: t('social.share.tabMine') },
         { key: 'scan', label: t('social.share.tabScan') },
-      ] as { key: TabKey; label: string }[]).map((tab) => {
-        const active = value === tab.key;
-        return (
-          <button
-            key={tab.key}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(tab.key)}
-            className={`flex-1 rounded-[6px] py-2.5 text-xs font-extrabold uppercase tracking-wider transition-colors ${
-              active ? 'bg-primary text-black' : 'text-default-500 hover:bg-black/5 hover:text-black'
-            }`}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
-    </div>
+      ]}
+    />
   );
 }
 
@@ -401,8 +381,11 @@ function ScanQrView({
   }, [stopScanner]);
 
   const preview = (
-    <div className="flex flex-col items-center gap-4 w-full">
-      <div className="relative w-full aspect-square overflow-hidden rounded-2xl bg-black border-2 border-black border-b-4">
+    <div className="flex w-full flex-col items-center gap-4">
+      {/* Capped: a full-width aspect-square viewfinder on a full-screen modal
+          grew past 400px and pushed the tab strip down to a sliver. The QR only
+          needs to be recognizable in frame, not fill the screen. */}
+      <div className="relative aspect-square w-full max-w-[15rem] shrink-0 overflow-hidden rounded-2xl bg-black border-2 border-black border-b-4">
         {/* html5-qrcode mounts its <video> feed inside this region. */}
         <div
           id={SCAN_REGION_ID}
@@ -482,62 +465,58 @@ function ScanQrView({
   // The actions belong to the modal's sticky footer, next to where the "My QR"
   // tab puts Share/Copy — but they're driven by the scanner state that lives in
   // this component, so they're portalled instead of lifted.
-  const actions = (
-    <div className="flex w-full flex-col gap-2">
-      {/* Primary action — varies with state */}
-      {state === 'idle' && (
-        <button
-          type="button"
-          onClick={() => void startScanning()}
-          className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
-        >
-          <FiCamera className="h-4 w-4" />
-          {t('social.share.startScanning')}
-        </button>
-      )}
-      {state === 'scanning' && (
-        <button
-          type="button"
-          onClick={() => void cancelScan()}
-          className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-md bg-white text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
-        >
-          {t('common.cancel')}
-        </button>
-      )}
-      {(state === 'denied' || state === 'noQr' || state === 'failed') && (
-        <button
-          type="button"
-          onClick={() => void startScanning()}
-          className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-md bg-white text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
-        >
-          {state === 'denied' ? t('social.share.tryAgain') : t('social.share.scanAgain')}
-        </button>
-      )}
-      {state === 'success' && (
-        <>
-          <div className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-[#DCFFE0] border border-[#9ED36A] py-2.5 text-xs font-extrabold uppercase tracking-wider text-black">
-            <FiUserPlus className="h-4 w-4" />
-            {t('social.share.followingHandle', { handle: resultHandle })}
-          </div>
-          <button
-            type="button"
-            onClick={() => void startScanning()}
-            className="w-full h-10 inline-flex items-center justify-center gap-2 rounded-md bg-white text-black border border-black border-b-2 text-[11px] font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
-          >
-            {t('social.share.scanAgain')}
-          </button>
-        </>
-      )}
-
-      {/* Secondary — upload image w/ a QR (mocked, kept disabled for now) */}
+  // The primary action swaps with the scanner state; the disabled "upload"
+  // sits beside it. Same row as the My-QR tab's Share/Copy pair.
+  const primaryAction =
+    state === 'idle' ? (
       <button
         type="button"
-        disabled
-        className="w-full h-10 inline-flex items-center justify-center gap-2 rounded-md bg-white text-gray-400 border border-black/20 text-[11px] font-extrabold uppercase tracking-wider opacity-70 cursor-not-allowed"
+        onClick={() => void startScanning()}
+        className="flex-1 h-11 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
       >
-        <FiImage className="h-3.5 w-3.5" />
-        {t('social.share.uploadFromGallery')}
+        <FiCamera className="h-4 w-4" />
+        {t('social.share.startScanning')}
       </button>
+    ) : state === 'scanning' ? (
+      <button
+        type="button"
+        onClick={() => void cancelScan()}
+        className="flex-1 h-11 inline-flex items-center justify-center gap-2 rounded-md bg-white text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
+      >
+        {t('common.cancel')}
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={() => void startScanning()}
+        className="flex-1 h-11 inline-flex items-center justify-center gap-2 rounded-md bg-white text-black border border-black border-b-3 text-xs font-extrabold uppercase tracking-wider transition shadow-sm hover:-translate-y-0.5"
+      >
+        {state === 'denied' ? t('social.share.tryAgain') : t('social.share.scanAgain')}
+      </button>
+    );
+
+  const actions = (
+    <div className="flex w-full flex-col gap-2">
+      {/* The follow confirmation keeps its own full-width line above the row. */}
+      {state === 'success' && (
+        <div className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-[#DCFFE0] border border-[#9ED36A] py-2.5 text-xs font-extrabold uppercase tracking-wider text-black">
+          <FiUserPlus className="h-4 w-4" />
+          {t('social.share.followingHandle', { handle: resultHandle })}
+        </div>
+      )}
+
+      <div className="flex w-full items-stretch gap-2">
+        {primaryAction}
+        {/* Secondary — upload image w/ a QR (mocked, kept disabled for now) */}
+        <button
+          type="button"
+          disabled
+          className="flex-1 h-11 inline-flex items-center justify-center gap-2 rounded-md bg-white text-gray-400 border border-black/20 text-[11px] font-extrabold uppercase tracking-wider opacity-70 cursor-not-allowed"
+        >
+          <FiImage className="h-3.5 w-3.5" />
+          {t('social.share.uploadFromGallery')}
+        </button>
+      </div>
     </div>
   );
 
@@ -661,8 +640,10 @@ export function ShareProfileModal({
         )
       }
     >
-      <TabSwitch value={tab} onChange={setTab} />
-      <div className="flex-1 flex flex-col items-center justify-center">
+      <div className="shrink-0">
+        <TabSwitch value={tab} onChange={setTab} />
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center">
         {tab === 'mine' ? (
           <MyQrView url={url} displayName={displayName} handle={handle} avatarConfig={avatarConfig} avatarSeed={avatarSeed} />
         ) : (

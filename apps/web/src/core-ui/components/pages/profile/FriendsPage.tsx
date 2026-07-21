@@ -1,9 +1,9 @@
 'use client';
 
 import { PageHeader } from '@/core-ui/components/molecules/PageHeader';
+import { useSlidePage } from '@/core-ui/components/molecules/useSlidePage';
 import { useDismissSuggestion, useFriendSuggestions, useToggleFollow } from '@/core-ui/hooks';
 import type { FriendSuggestionDTO } from '@/core-ui/types';
-import { toast } from '@heroui/react';
 import Link from 'next/link';
 import React, { useState } from 'react';
 import { VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
@@ -37,13 +37,18 @@ function ActionRow({
   soon?: boolean;
 }) {
   const { t } = useTranslation();
+  // No card of its own: the three rows share one bordered container, separated
+  // by hairlines, so the section reads as a single list instead of three
+  // stacked white blocks.
   const inner = (
     <div
-      className={`flex items-center gap-3 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white transition ${
-        disabled ? 'opacity-60 cursor-not-allowed' : 'hover:-translate-y-0.5 hover:bg-[#FFF7E6] cursor-pointer'
+      className={`flex items-center gap-3 px-4 py-2.5 transition ${
+        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-[#FFF7E6]'
       }`}
     >
-      <span className="flex h-11 w-11 items-center justify-center rounded-md bg-[#DDF4FF] border border-[#84D8FF] text-black shrink-0">
+      {/* Sin recuadro celeste: era el único azul de toda la app y competía con
+          el texto de la fila. El ícono solo ya distingue cada acción. */}
+      <span className="flex h-8 w-8 items-center justify-center text-black shrink-0">
         {icon}
       </span>
       <p className="text-[15px] font-extrabold text-black flex-1 min-w-0 truncate">{label}</p>
@@ -56,8 +61,8 @@ function ActionRow({
     </div>
   );
 
-  if (disabled) return <div aria-disabled>{inner}</div>;
-  if (href) return <Link href={href}>{inner}</Link>;
+  if (disabled) return <div aria-disabled="true">{inner}</div>;
+  if (href) return <Link href={href} className="block">{inner}</Link>;
   return (
     <button type="button" onClick={onPress} className="block w-full text-left bg-transparent">
       {inner}
@@ -134,7 +139,13 @@ function SuggestionCard({
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
 
-export function FriendsPage() {
+/**
+ * `onBack` lo pasa <FriendsModal> cuando la pantalla se abre como panel sobre
+ * el perfil: ahí el cierre y la animación los maneja el modal. Sin él, la
+ * pantalla funciona como ruta suelta (/profile/friends, entrada directa o
+ * enlace compartido) y se anima sola con useSlidePage.
+ */
+export function FriendsPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const { data, isLoading } = useFriendSuggestions();
   const toggleFollow = useToggleFollow();
@@ -144,28 +155,6 @@ export function FriendsPage() {
   const [pendingWallet, setPendingWallet] = useState<string | null>(null);
 
   const visibleSuggestions = data?.suggestions ?? [];
-
-  const handleShareLink = async () => {
-    const url = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
-    const text = t('social.friends.shareText');
-    try {
-      if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
-        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: 'Vaquita',
-          text,
-          url,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(`${text} — ${url}`);
-      toast.success(t('social.friends.linkCopied'));
-    } catch (error) {
-      const message = (error as { message?: string })?.message ?? '';
-      if (message && !message.toLowerCase().includes('abort')) {
-        toast.danger(t('social.friends.couldNotShare'), { description: message });
-      }
-    }
-  };
 
   const handleToggleFollow = (wallet: string) => {
     const isFollowing = following.has(wallet);
@@ -193,32 +182,45 @@ export function FriendsPage() {
     );
   };
 
+  // Sólo para el modo ruta suelta: como panel, quien anima es <FriendsModal>
+  // (aplicar las dos animaciones a la vez hacía que la pantalla entrara dos
+  // veces).
+  const { className: slideClassName, goBack } = useSlidePage('/profile');
+  const asPanel = !!onBack;
+
   // "Not interested": the hook removes the card optimistically, persists the
   // dismissal (survives F5), and refetches the rail to backfill a fresh one.
   const dismiss = (wallet: string) => dismissSuggestion.mutate(wallet);
 
   return (
-    <div className="h-full overflow-y-auto bg-background">
-      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-5 pb-12">
-        <PageHeader title={t('social.friends.title')} backHref="/profile" />
+    <div className={`h-full overflow-y-auto bg-background ${asPanel ? '' : slideClassName}`}>
+      {/* pt-4 + gap-4: antes el encabezado arrancaba a 20-24px del borde y
+          dejaba otros 20 hasta la primera tarjeta, así que la pantalla abría
+          con un hueco antes de cualquier contenido. */}
+      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pt-4 pb-12 flex flex-col gap-4">
+        <PageHeader title={t('social.friends.title')} onBack={onBack ?? goBack} />
 
-        {/* Find actions */}
-        <section className="flex flex-col gap-3">
-          <ActionRow
-            icon={<FiBookOpen className="h-5 w-5" />}
-            label={t('social.friends.chooseFromContacts')}
-            href="/profile/friends/contacts"
-            soon
-          />
+        {/* Find actions — one card, three rows */}
+        <section className="overflow-hidden rounded-2xl border border-black border-b-2 bg-white divide-y divide-black/10">
+          {/* Search is the only path that works today, so it leads. Contacts
+              import and the share link aren't built yet: inert rows rather
+              than screens that only say "soon" again. */}
           <ActionRow
             icon={<FiSearch className="h-5 w-5" />}
             label={t('social.friends.searchByName')}
             href="/profile/friends/search"
           />
           <ActionRow
+            icon={<FiBookOpen className="h-5 w-5" />}
+            label={t('social.friends.chooseFromContacts')}
+            disabled
+            soon
+          />
+          <ActionRow
             icon={<FiShare2 className="h-5 w-5" />}
             label={t('social.friends.shareFollowLink')}
-            onPress={handleShareLink}
+            disabled
+            soon
           />
         </section>
 
@@ -252,7 +254,7 @@ export function FriendsPage() {
             // first card flush with the content gutter instead of leaving it
             // half-cropped behind the page padding.
             <div
-              className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-px-4 sm:scroll-px-6 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full snap-x snap-mandatory"
+              className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-px-4 sm:scroll-px-6 no-scrollbar snap-x snap-mandatory"
               aria-label={t('social.friends.suggestionsTitle')}
             >
               {visibleSuggestions.map((s) => (

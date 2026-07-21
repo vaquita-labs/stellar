@@ -189,21 +189,28 @@ export const HeaderStats = () => {
       ))}
       <div className="w-full px-4 pt-3 pb-3 bg-primary rounded-g">
         <div className="max-w-xl mx-auto flex items-center gap-3">
-          <Link href="/profile" aria-label={t('home.stats.profileAria', 'Profile')} className="relative shrink-0">
+          {/* Avatar y campana llevan el mismo borde negro con la base más
+              gruesa que <PressableButton>, y se hunden al presionarse: son
+              botones (perfil / notificaciones), no adornos del header. */}
+          <Link
+            href="/profile"
+            aria-label={t('home.stats.profileAria', 'Profile')}
+            className="group relative shrink-0 transition active:translate-y-[2px]"
+          >
             <VaquitaAvatarCircle
               config={profileData?.avatarConfig}
               seed={profileData?.walletAddress || walletAddress || ''}
               alt={t('home.stats.profileAlt', 'Profile')}
-              className="h-14 w-14 border-[#B97204]/30"
+              className="h-14 w-14 border-black border-b-3 transition group-active:border-b-[1px]"
             />
           </Link>
 
           <div className="flex flex-col min-w-0 flex-1 gap-1">
-            {/* Saludo traducido + el username con @, sin negrita. Si todavía no
+            {/* Saludo traducido + el username con @ en negrita. Si todavía no
                 hay perfil no se renderiza para no reservar una línea vacía. */}
             {displayName && (
               <p className="text-xs text-black/70 leading-none truncate">
-                {t('home.stats.greeting', 'Hi,')} @{displayName}
+                {t('home.stats.greeting', 'Hi,')} <span className="font-bold text-black">@{displayName}</span>
               </p>
             )}
             {/* El saldo es la puerta al portafolio: se pinta como botón (crema
@@ -246,7 +253,7 @@ export const HeaderStats = () => {
           <Link
             href="/notifications"
             aria-label={t('notificationsCenter.bellAria', 'Notifications')}
-            className="relative shrink-0 self-start w-8 h-8 rounded-full bg-white border border-[#B97204]/30 flex items-center justify-center"
+            className="relative shrink-0 self-start w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px]"
           >
             <FiBell className="w-4 h-4 text-black" />
             {unreadNotifications > 0 && (

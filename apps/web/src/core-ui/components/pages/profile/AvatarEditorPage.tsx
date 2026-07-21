@@ -163,7 +163,7 @@ export function AvatarEditorPage() {
       <div
         role="tablist"
         aria-label={t('profilePages.avatar.title', 'Edit avatar')}
-        className="flex shrink-0 items-center gap-1 overflow-x-auto border-b-2 border-black/10 px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex shrink-0 items-center gap-1 overflow-x-auto border-b-2 border-black/10 px-2 no-scrollbar"
       >
         {EDITABLE_CATEGORIES.map((c) => {
           const selected = c.id === activeTab;

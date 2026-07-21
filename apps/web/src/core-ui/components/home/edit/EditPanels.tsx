@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRestProfile } from '../../../hooks';
 import { EditionMode, useMapStore, useSyncMapObjects } from '../../../stores';
+import { SegmentedTabs } from '../../molecules/SegmentedTabs';
 import { CatalogList } from './CatalogList';
 import { ExitEditModeModal } from './ExitEditModeModal';
 import { ObjectList } from './ObjectList';
@@ -191,26 +192,16 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
               {!isEditing && (
                 <>
                   <div className="flex items-center gap-2 px-4 mt-4">
-                    <div className="flex flex-1 bg-[#FFF7E6] border border-black/10 rounded-full p-1">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('catalog')}
-                        className={`flex-1 text-sm font-semibold rounded-full px-3 py-1.5 transition ${
-                          activeTab === 'catalog' ? 'bg-white text-black shadow-sm border border-black/10' : 'text-gray-600'
-                        }`}
-                      >
-                        Catalog
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('collection')}
-                        className={`flex-1 text-sm font-semibold rounded-full px-3 py-1.5 transition ${
-                          activeTab === 'collection' ? 'bg-white text-black shadow-sm border border-black/10' : 'text-gray-600'
-                        }`}
-                      >
-                        My Collection
-                      </button>
-                    </div>
+                    <SegmentedTabs<EditTab>
+                      value={activeTab}
+                      onChange={setActiveTab}
+                      ariaLabel={t('home.shop.tabsLabel', 'Shop sections')}
+                      spaced
+                      tabs={[
+                        { key: 'catalog', label: t('home.shop.tabCatalog', 'Catalog') },
+                        { key: 'collection', label: t('home.shop.tabCollection', 'My collection') },
+                      ]}
+                    />
                   </div>
 
                   <div className="px-4 pb-3 mt-3 max-h-[60vh] min-h-[100px] overflow-y-auto">

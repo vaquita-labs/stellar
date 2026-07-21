@@ -1,9 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight } from 'react-icons/fi';
 import { AppModal } from '../../molecules/AppModal';
 import { CoinsModalProps } from './types';
 
@@ -16,13 +14,6 @@ const EARN_WAYS = [
 
 export function CoinsModal({ open, onOpenChange, coins }: CoinsModalProps) {
   const { t } = useTranslation();
-  const router = useRouter();
-
-  const handleViewStats = () => {
-    onOpenChange();
-    router.push('/profile/summary');
-  };
-
   return (
     <AppModal
       open={open}
@@ -47,16 +38,11 @@ export function CoinsModal({ open, onOpenChange, coins }: CoinsModalProps) {
             <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
               {coins.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
+            {/* Sólo QUÉ es el número, sin repetirlo (ver StreakModal). */}
             <div className="mt-1 text-sm font-semibold text-gray-500">
-              {t('rewards.coins.balanceLabel', '{{count}} coins', { count: coins })}
+              {t('rewards.coins.unitLabel', 'Coins')}
             </div>
           </div>
-          <p className="max-w-xs text-center text-sm text-gray-600">
-            {t(
-              'rewards.coins.description',
-              'Coins are your in-game currency. Earn them by saving and collecting your daily reward, then spend them in the shop to decorate your map.',
-            )}
-          </p>
         </div>
 
         {/* Ways to earn */}
@@ -76,15 +62,13 @@ export function CoinsModal({ open, onOpenChange, coins }: CoinsModalProps) {
           </ul>
         </div>
 
-        {/* View full stats */}
-        <button
-          type="button"
-          onClick={handleViewStats}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-black border-b-2 bg-white py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-gray-50"
-        >
-          {t('rewards.coins.viewStats', 'View full stats')}
-          <FiChevronRight className="h-4 w-4" />
-        </button>
+        {/* Explicación al final y alineada a la izquierda (ver StreakModal). */}
+        <p className="text-sm leading-relaxed text-gray-600">
+          {t(
+            'rewards.coins.description',
+            'Coins are your in-game currency. Earn them by saving and collecting your daily reward, then spend them in the shop to decorate your map.',
+          )}
+        </p>
       </div>
     </AppModal>
   );

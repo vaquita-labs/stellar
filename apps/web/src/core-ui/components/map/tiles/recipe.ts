@@ -585,6 +585,16 @@ export const addTerrainTile = (group: THREE.Group, x: number, z: number, color: 
       const endNeg = endOffset(bitNeg, diagNeg);
       tubes.push({ axis, sign, mid: (endPos - endNeg) / 2, length: endPos + endNeg, deep: isVoid(sideType) });
     }
+
+    // Bordes secos (previews de las cards): el tile va suelto sobre un fondo
+    // plano, no flotando en el mar. Se queda el contorno negro y se descarta
+    // todo lo que representa agua — falda del acantilado, línea de flotación y
+    // relleno de las esquinas.
+    if (ctx.dryEdges) {
+      for (const tube of tubes) tube.deep = false;
+      for (const arc of cornerArcs) arc.deep = false;
+      fillers.length = 0;
+    }
   }
 
   // Contorno de la isla con la lógica de los árboles: piezas negras BackSide

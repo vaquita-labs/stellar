@@ -1,5 +1,4 @@
 import { Networks } from '@creit.tech/stellar-wallets-kit';
-import { stellarWalletsKit } from '@pollar/stellar-wallets-kit-adapter';
 
 export type StellarNetwork = 'mainnet' | 'testnet';
 
@@ -35,9 +34,3 @@ export function getRpcUrl(): string {
 export function getHorizonUrl(): string {
   return isMainnet() ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org';
 }
-
-// Resolver consumed by PollarProvider's `walletAdapter` slot. Pollar uses this
-// under the hood to let the user pick a Stellar wallet (Freighter, xBull, …)
-// during its hosted login flow. The first call lazily runs
-// `StellarWalletsKit.init({ modules, network })`.
-export const stellarWalletsKitResolver = stellarWalletsKit({ network: getNetworkEnum() });

@@ -11,7 +11,7 @@ import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
 import { Toast } from '@heroui/react';
 import { PollarProvider } from '@pollar/react';
 import '@pollar/react/styles.css';
-import { createStellarWalletsKitBundle } from '@pollar/stellar-wallets-kit-adapter/picker';
+import { stellarWalletsKitAdapters } from '@pollar/stellar-wallets-kit-adapter';
 import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
@@ -26,7 +26,10 @@ import { useViewportVh } from './useViewportVh';
 const POLLAR_API_KEY = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY ?? '';
 const POLLAR_NETWORK = getStellarNetwork();
 
-const bundle = createStellarWalletsKitBundle({
+// One `WalletAdapter` per kit module (xBull, Lobstr, Freighter, …), registered
+// on the client so Pollar's own login modal renders them as wallet buttons.
+// Returns `[]` during SSR — the adapters are browser-only.
+const walletAdapters = stellarWalletsKitAdapters({
   network: getNetworkEnum(),
   // picker: { wallets: ['xbull', 'lobstr', 'freighter'] },
 });
@@ -85,10 +88,9 @@ export function Providers({ children }: { children: ReactNode }) {
         client={{
           baseUrl: 'https://sdk.api.pollar.xyz',
           apiKey: POLLAR_API_KEY,
-          walletAdapter: bundle.walletAdapter,
+          walletAdapters,
           stellarNetwork: POLLAR_NETWORK,
         }}
-        ui={{ renderWallets: bundle.renderWallets }}
       >
         <PollarBridge />
         <GameClockSync />

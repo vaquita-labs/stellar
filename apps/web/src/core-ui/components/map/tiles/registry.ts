@@ -58,9 +58,22 @@ export const buildTileObject = (mapObject: MapObject, ctx: BuildContext): THREE.
 // Igual que buildTileObject pero con fallback a GRASS para tipos desconocidos
 // y para EMPTY (cuyo builder es un plano invisible que solo sirve en edición).
 // Lo usan los previews (catálogo de edición, snapshot del leaderboard).
+//
+// El tile va como una isla suelta: se le declara EMPTY a los cuatro vecinos
+// para que addTerrainTile le dibuje el contorno completo (delineado del pasto
+// y de la tierra de abajo). Sin esto el preview salía sin líneas mientras que
+// el mismo objeto en el mapa sí las tiene.
+const STANDALONE_CTX = (worldType: WorldType): BuildContext => ({
+  worldType,
+  tileXZ: [0, 0],
+  neighborTypeAt: () => MapObjectType.EMPTY,
+  dryEdges: true,
+});
+
 export const getObjectGroup = (mapObject: MapObject, worldType: WorldType): THREE.Object3D => {
+  const ctx = STANDALONE_CTX(worldType);
   if (mapObject.type === MapObjectType.EMPTY) {
-    return getGrassGroup(mapObject, { worldType });
+    return getGrassGroup(mapObject, ctx);
   }
-  return buildTileObject(mapObject, { worldType }) ?? getGrassGroup(mapObject, { worldType });
+  return buildTileObject(mapObject, ctx) ?? getGrassGroup(mapObject, ctx);
 };

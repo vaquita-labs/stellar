@@ -21,7 +21,7 @@ export function ProfileSkeleton() {
       aria-busy="true"
       aria-live="polite"
     >
-      <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-6">
+      <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-4">
         {/* Banner: el avatar ocupa el ancho hasta 15.5rem, con el back a la
             izquierda, el título al centro y ajustes a la derecha. */}
         <header className="relative bg-black/5">
@@ -73,15 +73,17 @@ export function ProfileSkeleton() {
           <div className="h-12 w-12 rounded-md border border-black/20 border-b-3 bg-white animate-pulse" />
         </section>
 
-        {/* Resumen: racha · oro · experiencia */}
-        <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <div className="h-3 w-24 rounded bg-black/10 animate-pulse" />
-          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-black/20 border-b-2 bg-white p-4">
-            {[0, 1, 2].map((i) => (
+        {/* Tira de progreso: racha · medallas · XP · oro. Sin tarjeta, igual
+            que en <ProfilePage> — si el orden o la forma difieren, los bloques
+            se reacomodan al llegar los datos, que es justo lo que el esqueleto
+            evita. */}
+        <section className="px-4 sm:px-6">
+          <div className="grid grid-cols-4 gap-2">
+            {[0, 1, 2, 3].map((i) => (
               <div key={i} className="flex flex-col items-center gap-1.5">
                 <div className="h-7 w-7 rounded-full bg-black/10 animate-pulse" />
-                <div className="h-3 w-12 rounded bg-black/10 animate-pulse" />
-                <div className="h-3 w-10 rounded bg-black/5 animate-pulse" />
+                <div className="h-3.5 w-12 rounded bg-black/10 animate-pulse" />
+                <div className="h-3 w-14 rounded bg-black/5 animate-pulse" />
               </div>
             ))}
           </div>
@@ -98,6 +100,7 @@ export function ProfileSkeleton() {
             </div>
           </div>
         </section>
+
       </div>
     </div>
   );

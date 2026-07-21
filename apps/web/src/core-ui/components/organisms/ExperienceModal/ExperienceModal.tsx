@@ -2,25 +2,17 @@
 
 import { deriveLevel } from '@/core-ui/helpers';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight } from 'react-icons/fi';
 import { AppModal } from '../../molecules/AppModal';
 import { ExperienceModalProps } from './types';
 
 export function ExperienceModal({ open, onOpenChange, experience }: ExperienceModalProps) {
   const { t } = useTranslation();
-  const router = useRouter();
 
   const totalXp = Math.round(experience);
   const { level, xpIntoLevel, xpForNextLevel } = useMemo(() => deriveLevel(totalXp), [totalXp]);
   const pct = Math.min(100, (xpIntoLevel / xpForNextLevel) * 100);
-
-  const handleViewStats = () => {
-    onOpenChange();
-    router.push('/profile/summary#xp-level');
-  };
 
   return (
     <AppModal
@@ -46,16 +38,12 @@ export function ExperienceModal({ open, onOpenChange, experience }: ExperienceMo
             <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
               {totalXp.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
+            {/* Qué es el número + el nivel al que corresponde. El número solo
+                no dice si son XP o niveles (ver StreakModal). */}
             <div className="mt-1 text-sm font-semibold text-gray-500">
-              {t('rewards.experience.levelLabel', 'Level {{level}}', { level })}
+              {t('rewards.experience.unitLabel', 'XP · Level {{level}}', { level })}
             </div>
           </div>
-          <p className="max-w-xs text-center text-sm text-gray-600">
-            {t(
-              'rewards.experience.description',
-              'You earn XP every time you save and keep your streak. Reach new levels to show off your saving progress!',
-            )}
-          </p>
         </div>
 
         {/* Level progress */}
@@ -79,15 +67,13 @@ export function ExperienceModal({ open, onOpenChange, experience }: ExperienceMo
           </div>
         </div>
 
-        {/* View full stats */}
-        <button
-          type="button"
-          onClick={handleViewStats}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-black border-b-2 bg-white py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 hover:bg-gray-50"
-        >
-          {t('rewards.experience.viewStats', 'View full stats')}
-          <FiChevronRight className="h-4 w-4" />
-        </button>
+        {/* Explicación al final y alineada a la izquierda (ver StreakModal). */}
+        <p className="text-sm leading-relaxed text-gray-600">
+          {t(
+            'rewards.experience.description',
+            'You earn XP every time you save and keep your streak. Reach new levels to show off your saving progress!',
+          )}
+        </p>
       </div>
     </AppModal>
   );

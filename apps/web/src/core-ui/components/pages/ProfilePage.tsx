@@ -28,6 +28,8 @@ import { PageLayout } from '../molecules';
 import { VaquitaAvatar } from '../avatar/VaquitaAvatar';
 import { BadgeTile } from './profile/BadgeTile';
 import { FollowListModal } from './profile/FollowListModal';
+import { FriendsModal } from './profile/FriendsModal';
+import { SettingsModal } from './profile/SettingsModal';
 import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
 
 /* ------------------------------------------------------------------ */
@@ -111,13 +113,20 @@ const SummaryItem = ({
   value: React.ReactNode;
   label: string;
 }) => (
-  // Icon stacked above the text, not beside it: in the 3-up summary row a
-  // side-by-side icon eats ~38px of a ~72px column on a 320px screen, which
-  // clipped long values ("128,450 XP") off the card.
-  <div className="flex min-w-0 flex-col items-center gap-1 text-center leading-tight">
-    <Image src={icon} alt="" aria-hidden width={28} height={28} className="object-contain" />
-    <span className="text-sm font-extrabold text-black tabular-nums">{value}</span>
-    <span className="text-[11px] font-semibold text-gray-500">{label}</span>
+  // Icono + número en una línea. La etiqueta queda sólo para lectores de
+  // pantalla: el ícono ya dice qué es cada número y escribirlo al lado sumaba
+  // ruido sin información.
+  <div className="flex min-w-0 items-center justify-center gap-2 leading-tight">
+    <Image
+      src={icon}
+      alt=""
+      aria-hidden
+      width={28}
+      height={28}
+      className="shrink-0 object-contain"
+    />
+    <span className="text-base font-extrabold text-black tabular-nums">{value}</span>
+    <span className="sr-only">{label}</span>
   </div>
 );
 
@@ -141,6 +150,8 @@ export function ProfilePage() {
     open: false,
     tab: 'following',
   });
+  const [friendsOpen, setFriendsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
@@ -238,6 +249,14 @@ export function ProfilePage() {
     return [...claimable, ...claimed, ...locked].slice(0, 4);
   }, [achievements, isClaimed]);
 
+  // Medallas conseguidas: el mismo número que muestra el encabezado de la
+  // sección de logros, para que la tira de progreso y la sección no se
+  // contradigan.
+  const unlockedAchievements = useMemo(
+    () => achievements.filter((b) => b.unlocked).length,
+    [achievements],
+  );
+
   /* -------------------------------------------------------------- */
   /* Disconnected state                                              */
   /* -------------------------------------------------------------- */
@@ -265,7 +284,13 @@ export function ProfilePage() {
 
   return (
     <div className="h-full overflow-y-auto bg-background">
-      <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-6">
+      {/* gap-4, no gap-6: con 24px entre cada bloque la pantalla se leía como
+          piezas sueltas flotando en el fondo en vez de un perfil. 16px las
+          agrupa sin que se toquen; el respiro dentro de cada bloque (header →
+          tarjeta) lo da su propio gap-3. */}
+      {/* pb-20: sólo lo justo para que el nav flotante no tape la última
+          tarjeta. Con pb-28 quedaba una franja vacía enorme al final. */}
+      <div className="mx-auto w-full max-w-2xl pb-20 md:pb-8 flex flex-col gap-4">
         {/* Hero banner ------------------------------------------------ */}
         {/* The character IS the banner: it's drawn edge-to-edge at the top of
             the screen, cropped at the shoulders, with the avatar's own
@@ -314,13 +339,17 @@ export function ProfilePage() {
             {/* Sharing lives next to the "add friends" CTA further down, where
                 it's an action rather than a header icon. */}
             <div className="pointer-events-auto flex flex-1 basis-0 shrink-0 items-center justify-end gap-2">
-              <Link
-                href="/profile/settings"
+              {/* Abre el panel en vez de navegar (ver el botón de amigos): la
+                  ruta /profile/settings sigue existiendo para entradas
+                  directas. */}
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
                 aria-label={t('profilePages.profile.settingsAria', 'Settings')}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-black border-b-2 bg-white/70 text-black transition hover:bg-white"
               >
                 <FiSettings className="h-4 w-4" />
-              </Link>
+              </button>
             </div>
           </div>
         </header>
@@ -378,13 +407,17 @@ export function ProfilePage() {
         {/* The QR sits beside the CTA, not in the banner: both are "grow your
             circle" actions, and pairing them frees the header for navigation. */}
         <section className="flex items-stretch gap-3 px-4 sm:px-6">
-          <Link
-            href="/profile/friends"
+          {/* Abre el panel en vez de navegar: la ruta /profile/friends sigue
+              existiendo para enlaces directos, pero desde acá se apila sobre el
+              perfil (que queda debajo) en lugar de reemplazarlo. */}
+          <button
+            type="button"
+            onClick={() => setFriendsOpen(true)}
             className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md border border-black border-b-3 bg-white text-sm font-bold uppercase tracking-wide text-black transition hover:-translate-y-0.5 hover:bg-white/80"
           >
             <FiUserPlus className="h-4 w-4" />
             {t('profilePages.profile.addFriends', 'Add friends')}
-          </Link>
+          </button>
           <ShareProfileQrButton
             displayName={displayName}
             handle={handle}
@@ -395,39 +428,52 @@ export function ProfilePage() {
         </section>
 
 
+        {/* Progreso --------------------------------------------------- */}
+        {/* Tira de datos, no una sección navegable: son los cuatro números que
+            el usuario va acumulando (racha, medallas, XP, oro) y se leen de un
+            vistazo. Sin tarjeta blanca ni chevron a propósito — no lleva a
+            ningún lado, así que nada acá debe parecer tocable. */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <SectionHeader title={t('profilePages.profile.summary', 'Summary')} href="/profile/summary" />
-          {/* Whole white card is the link target — the chevron in the header
-              is just the visual cue. No interactive children inside, so a
-              plain Link wrap is safe (no nested-anchor warnings). */}
-          <Link
-            href="/profile/summary"
-            aria-label={t('profilePages.profile.seeFullSummary', 'See full summary')}
-            className="grid grid-cols-3 gap-2 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
-          >
+          {/* Encabezado sin chevron ni contador: la tira no navega a ningún
+              lado, solo necesita nombre para no quedar flotando entre los
+              botones y Logros. */}
+          <h2 className="px-1 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-gray-500">
+            {t('profilePages.profile.summary', 'Summary')}
+          </h2>
+          {/* 2x2 en vez de 4 en fila: a 320px cada columna quedaba en ~70px y
+              los valores largos ("878 XP") se apretaban contra el label. */}
+          <div className="grid grid-cols-2 gap-x-10 gap-y-4 py-1">
             <SummaryItem
               icon={hasActiveStreak ? '/icons/global/streak_face.png' : '/icons/global/streak_freeze_face.png'}
               value={t('profilePages.profile.daysCount', { count: totalStreak, defaultValue: '{{count}} days' })}
               label={t('profilePages.profile.streak', 'Streak')}
             />
             <SummaryItem
-              icon="/icons/global/coin.png"
-              value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              label={t('profilePages.profile.gold', 'Gold')}
+              icon="/icons/global/trophy.png"
+              value={unlockedAchievements.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              // "Medallas", no "Logros": el encabezado de la sección de abajo
+              // ya dice Logros y repetir la palabra a dos líneas de distancia
+              // hacía leer los dos números como el mismo dato dos veces.
+              label={t('profilePages.profile.badges', 'Badges')}
             />
             <SummaryItem
               icon="/icons/global/star.png"
               value={`${Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })} XP`}
               label={t('profilePages.profile.experience', 'Experience')}
             />
-          </Link>
+            <SummaryItem
+              icon="/icons/global/coin.png"
+              value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              label={t('profilePages.profile.gold', 'Gold')}
+            />
+          </div>
         </section>
 
         {/* Achievements ---------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <SectionHeader
             title={t('profilePages.profile.achievements', 'Achievements')}
-            count={achievements.filter((b) => b.unlocked).length}
+            count={unlockedAchievements}
             href="/profile/achievements"
           />
           {/* The badge tiles are real <button>s, so we can't wrap the card in
@@ -463,6 +509,10 @@ export function ProfilePage() {
         initialTab={followModal.tab}
         onOpenChange={(o) => setFollowModal((s) => ({ ...s, open: o }))}
       />
+
+      <FriendsModal open={friendsOpen} onClose={() => setFriendsOpen(false)} />
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
