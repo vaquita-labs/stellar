@@ -38,6 +38,18 @@ export interface AppModalProps {
   dialogClassName?: string;
 }
 
+/**
+ * En mobile el modal es un bottom-sheet a todo el ancho, así que se anula el
+ * max-width que trae el `size` de HeroUI y se restaura recién en sm. Sin esto,
+ * los tamaños más chicos (sm = 384px) quedan angostos y con huecos a los lados
+ * contra el borde inferior de la pantalla.
+ */
+const SIZE_MAX_WIDTH: Record<AppModalSize, string> = {
+  sm: 'max-w-none! sm:max-w-sm!',
+  md: 'max-w-none! sm:max-w-md!',
+  lg: 'max-w-none! sm:max-w-lg!',
+};
+
 const SCROLLBAR_CLASSES =
   '[scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] ' +
   '[&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:bg-transparent ' +
@@ -128,12 +140,16 @@ export function AppModal({
         scroll="inside"
         placement={placement}
         className={
-          // En mobile es un bottom-sheet: pegado al borde inferior (items-end,
+          // En mobile es un bottom-sheet: pegado al borde inferior (justify-end,
           // sin padding abajo) para que no quede un hueco. En desktop vuelve a
           // ser una tarjeta centrada con márgenes.
+          // OJO: el container de HeroUI es `flex flex-col`, así que el eje
+          // principal es el vertical (justify-*) y align-items controla el
+          // HORIZONTAL. Usar items-end aquí pegaba el diálogo al borde derecho
+          // (se notaba con size="sm", que no ocupa todo el ancho).
           (fullScreen
             ? 'p-0! '
-            : 'items-end! px-0! pt-3! pb-0! sm:items-center! sm:p-10! ') +
+            : 'justify-end! items-center! px-0! pt-3! pb-0! sm:justify-center! sm:p-10! ') +
           SHEET_CONTAINER_ANIMATION
         }
       >
@@ -147,17 +163,19 @@ export function AppModal({
                 // la pantalla. En desktop (sm) se restauran las 4 esquinas y el
                 // borde completo de la tarjeta flotante.
                 'border border-black border-b-0 rounded-2xl rounded-b-none max-h-[85dvh] ' +
-                'sm:border-b sm:rounded-b-2xl sm:max-h-[90vh] ') +
+                'sm:border-b sm:rounded-b-2xl sm:max-h-[90vh] ' +
+                SIZE_MAX_WIDTH[size] +
+                ' ') +
             'p-0! ' +
             (dialogClassName ?? '')
           }
         >
-          <Modal.Header className="flex-row! items-center gap-2 px-5 sm:px-6 pt-4 pb-3 border-b border-black/10">
+          <Modal.Header className="flex-row! items-center gap-2 px-4 sm:px-5 pt-3.5 pb-3 border-b border-black/10">
             {/* Los dos costados son contenedores del MISMO ancho (uno con el
                 back, otro con la X), así el título —flex-1 centrado en medio—
                 queda centrado respecto al modal y no respecto al espacio que
                 sobra, sin importar qué controles haya a los lados. */}
-            <div className="w-9 shrink-0 flex items-center justify-start">
+            <div className="w-7 shrink-0 flex items-center justify-start">
               {onBack ? (
                 <CircleIconButton
                   variant="primary"
@@ -174,7 +192,7 @@ export function AppModal({
               ) : null}
               <span className="truncate">{title}</span>
             </Modal.Heading>
-            <div className="w-9 shrink-0 flex items-center justify-end">
+            <div className="w-7 shrink-0 flex items-center justify-end">
               {!hideClose && (
                 <CircleIconButton
                   variant="white"
@@ -188,13 +206,20 @@ export function AppModal({
           </Modal.Header>
           <Modal.Body
             className={
-              'px-5 sm:px-6 py-4 overflow-y-auto mt-0! ' + SCROLLBAR_CLASSES + ' ' + (bodyClassName ?? '')
+              // mx-0!: HeroUI le da al body `margin:-3px; padding:3px` (para que
+              // el focus-ring no se recorte con el overflow). Nuestro px-* pisa
+              // ese padding pero el margen negativo queda y el body sobresale
+              // 3px por lado respecto del header/footer.
+              'px-4 sm:px-5 py-4 overflow-y-auto mt-0! mx-0! ' +
+              SCROLLBAR_CLASSES +
+              ' ' +
+              (bodyClassName ?? '')
             }
           >
             {children}
           </Modal.Body>
           {footer ? (
-            <Modal.Footer className="px-5 sm:px-6 pt-3 pb-5 border-t border-black/10 mt-0!">
+            <Modal.Footer className="px-4 sm:px-5 pt-3 pb-5 border-t border-black/10 mt-0!">
               {footer}
             </Modal.Footer>
           ) : null}
