@@ -1,5 +1,7 @@
 // Shared across frontend and backend
 
+import type { AvatarConfig } from '@vaquita/avatar';
+
 export enum WithdrawalStatus {
   INITIATED = 'initiated',
   CONFIRMED = 'confirmed',
@@ -171,7 +173,10 @@ export interface ProfileResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved
+   *  server-side — a profile that never opened the editor gets a stable
+   *  wallet-seeded avatar, so clients never have to guess a fallback. */
+  avatarConfig: AvatarConfig;
   onboardingCompleted: boolean;
   tutorialCompleted: boolean;
   cryptoSavvy: boolean;
@@ -222,7 +227,10 @@ export interface FriendDTO {
   handle: string;
   nickname: string;
   fullName: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved
+   *  server-side — a profile that never opened the editor gets a stable
+   *  wallet-seeded avatar, so clients never have to guess a fallback. */
+  avatarConfig: AvatarConfig;
   level: number;
   streak: number;
   followers: number;
@@ -348,7 +356,10 @@ export interface ProfileAverageResponseDTO {
   email: string;
   fullName: string;
   nickname: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved
+   *  server-side — a profile that never opened the editor gets a stable
+   *  wallet-seeded avatar, so clients never have to guess a fallback. */
+  avatarConfig: AvatarConfig;
   walletAddress: string;
   // Current active-deposit balance for the wallet, computed on the fly from the
   // `deposits` table. `totalSums === lastSum` and `count === 1` now — the old
@@ -372,7 +383,10 @@ export interface LeaderboardResponseDTO {
   position: number;
   walletAddress: string;
   nickname: string;
-  avatarUrl: string;
+  /** The user's character avatar (see @vaquita/avatar). Always resolved
+   *  server-side — a profile that never opened the editor gets a stable
+   *  wallet-seeded avatar, so clients never have to guess a fallback. */
+  avatarConfig: AvatarConfig;
   badges: number;
   streak: number;
   experience: number;

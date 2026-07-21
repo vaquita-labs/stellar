@@ -12,6 +12,7 @@ export * from './useInstallApp';
 export * from './useIntroSeen';
 export * from './useExploreData';
 export * from './useLeaderboardData';
+export * from './useWeeklyLeague';
 export * from './useIsAuthenticated';
 export * from './useIsMobile';
 export * from './useLogout';

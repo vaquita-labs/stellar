@@ -1,5 +1,6 @@
 'use client';
 
+import type { AvatarConfig } from '@vaquita/avatar';
 import { toast } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -7,6 +8,7 @@ import { useState } from 'react';
 import { FiHeart, FiLoader, FiMessageCircle } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { useFollowingWallets, useToggleFollow } from '../../../hooks';
+import { VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
 import { MapMiniPreview } from './MapMiniPreview';
 
 /* ------------------------------------------------------------------ */
@@ -22,8 +24,9 @@ export type LeaderboardCardData = {
   /** Always the username (nickname or `vaqueroXXXX` fallback) — the wallet
    *  is never surfaced in the UI. */
   username: string;
-  /** Uploaded profile photo URL, or '' to fall back to the default vaquita avatar. */
-  avatarUrl?: string;
+  /** The user's character avatar. Resolved by the API, so it's always present
+   *  — a profile that never opened the builder gets a wallet-seeded one. */
+  avatarConfig?: AvatarConfig;
   level: number;
   streak: number;
   badges: number;
@@ -48,33 +51,21 @@ const MEDALS: Record<number, string> = {
   3: '/icons/global/bronze_medal.png',
 };
 
-const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
-
 /* ------------------------------------------------------------------ */
 /* Sub-components                                                      */
 /* ------------------------------------------------------------------ */
 
-export function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: string }) {
-  if (avatarUrl) {
-    // next/image fetches the (possibly http) MinIO URL server-side and re-serves
-    // it over https, so the photo renders without a mixed-content block.
-    return (
-      <div className="relative h-10 w-10 shrink-0 rounded-full border border-black/15 overflow-hidden">
-        <Image src={avatarUrl} alt={username} fill sizes="40px" className="object-cover" />
-      </div>
-    );
-  }
-  return (
-    <div className="h-10 w-10 shrink-0 rounded-full border border-black/15 bg-white flex items-center justify-center overflow-hidden">
-      <Image
-        src={DEFAULT_AVATAR}
-        alt={username}
-        width={32}
-        height={32}
-        className="object-contain"
-      />
-    </div>
-  );
+export function Avatar({
+  username,
+  avatarConfig,
+  seed,
+}: {
+  username: string;
+  avatarConfig?: AvatarConfig | undefined;
+  seed?: string | undefined;
+}) {
+  // Inline SVG, so a 50-row leaderboard costs zero image requests.
+  return <VaquitaAvatarCircle config={avatarConfig} seed={seed ?? username} alt={username} className="h-10 w-10" />;
 }
 
 export function PositionPill({
@@ -287,7 +278,7 @@ function CardHeader({ user }: { user: LeaderboardCardData }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2">
-      <Avatar username={user.username} avatarUrl={user.avatarUrl} />
+      <Avatar username={user.username} avatarConfig={user.avatarConfig} seed={user.walletAddress} />
 
       <div className="flex-1 min-w-0 flex items-center gap-2">
         <p className="text-sm font-extrabold text-black truncate">{user.username}</p>

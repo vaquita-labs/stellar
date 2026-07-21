@@ -1,3 +1,4 @@
+import { resolveAvatarConfig, type AvatarConfig } from '@vaquita/avatar';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
 import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
@@ -9,7 +10,7 @@ export const EXPLORE_PAGE_SIZE = 10;
 export interface ExploreProfileDTO {
   walletAddress: string;
   nickname: string;
-  avatarUrl: string;
+  avatarConfig: AvatarConfig;
   badges: number;
   streak: number;
   experience: number;
@@ -43,7 +44,7 @@ export const useExploreSeed = () => {
 const toRow = (row: Partial<ExploreProfileDTO> | undefined): ExploreProfileDTO => ({
   walletAddress: row?.walletAddress ?? '',
   nickname: row?.nickname ?? '',
-  avatarUrl: row?.avatarUrl ?? '',
+  avatarConfig: resolveAvatarConfig(row?.avatarConfig, row?.walletAddress ?? ''),
   badges: row?.badges ?? 0,
   streak: row?.streak ?? 0,
   experience: row?.experience ?? 0,

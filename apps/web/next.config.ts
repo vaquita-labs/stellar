@@ -14,7 +14,16 @@ const nextConfig: NextConfig = {
     // stamps a fresh value (or the commit SHA when CI provides one), so a
     // redesigned card gets a new URL on deploy without anyone remembering to
     // bump a manual version. Inlined into the client bundle at build time.
-    NEXT_PUBLIC_CARD_VERSION: process.env.GIT_SHA?.slice(0, 8) ?? Date.now().toString(36),
+    //
+    // In dev it MUST be constant: Turbopack re-evaluates this config while the
+    // server runs, so a `Date.now()` here changes the inlined env on every
+    // evaluation, which invalidates the server components, which pushes a
+    // `serverComponentChanges` frame over the HMR socket, which makes the client
+    // refetch the RSC payload — and that request re-evaluates the config again.
+    // The result is an endless GET /<route> storm in the dev log.
+    NEXT_PUBLIC_CARD_VERSION:
+      process.env.GIT_SHA?.slice(0, 8) ??
+      (process.env.NODE_ENV === 'development' ? 'dev' : Date.now().toString(36)),
   },
   outputFileTracingRoot: path.join(__dirname, '../../'),
   // Public profiles used to hang off /leaderboard/<username>, and that is the
@@ -30,18 +39,8 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // @vaquita/ui ships raw TSX (exports ./src/index.ts), so Next must transpile it.
-  transpilePackages: ['@vaquita/ui'],
-  images: {
-    // Profile avatars live on MinIO under a *.vaquita.fi subdomain. next/image
-    // fetches them server-side, so an http source is fine — the browser only
-    // ever sees the optimized https /_next/image URL, which avoids mixed-content
-    // blocking. http stays allowed until the MinIO domain is served over TLS.
-    remotePatterns: [
-      { protocol: 'https', hostname: '**.vaquita.fi' },
-      { protocol: 'http', hostname: '**.vaquita.fi' },
-    ],
-  },
+  // @vaquita/avatar ships raw TS (exports ./src/index.ts) — transpile it too.
+  transpilePackages: ['@vaquita/ui', '@vaquita/avatar'],
 };
 
 export default nextConfig;

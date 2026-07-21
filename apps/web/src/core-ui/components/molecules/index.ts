@@ -10,6 +10,7 @@ export * from './ProfileDataProvider';
 export * from './toast';
 export * from './ConfirmDialog';
 export * from './AppModal';
+export * from './EarningsBreakdown';
 export * from './PageHeader';
 export * from './PageLayout';
 export * from './TransactionRow';

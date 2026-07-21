@@ -6,6 +6,7 @@ import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheck, FiLoader, FiSearch, FiUserPlus, FiX } from 'react-icons/fi';
+import { VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 
 /** Idle time after the last keystroke before the search actually fires. */
@@ -134,20 +135,12 @@ export function SearchFriendsPage() {
               <ul className="flex flex-col" aria-busy={isPending}>
                 {results.map((v) => (
                   <li key={v.walletAddress} className="flex items-center gap-3 py-2.5">
-                    <div className="relative h-10 w-10 rounded-full bg-[#FFE7C7] border-2 border-black flex items-center justify-center overflow-hidden shrink-0">
-                      {v.avatarUrl ? (
-                        // Real uploaded photo: fill the circle (object-cover), same as ProfilePage.
-                        <Image src={v.avatarUrl} alt={v.handle} fill sizes="40px" className="object-cover" />
-                      ) : (
-                        <Image
-                          src="/vaquita/vaquita_isotipo.svg"
-                          alt={v.handle}
-                          width={32}
-                          height={32}
-                          className="object-contain"
-                        />
-                      )}
-                    </div>
+                    <VaquitaAvatarCircle
+                      config={v.avatarConfig}
+                      seed={v.walletAddress}
+                      alt={v.handle}
+                      className="h-10 w-10 border-2"
+                    />
                     <p className="flex-1 min-w-0 text-sm font-extrabold text-black truncate">{v.handle}</p>
                     {(() => {
                       const isRowLoading = pendingWallet === v.walletAddress;

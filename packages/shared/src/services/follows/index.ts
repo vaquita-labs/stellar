@@ -1,3 +1,4 @@
+import { resolveAvatarConfig } from '@vaquita/avatar';
 import { Prisma, prisma } from '@vaquita/db';
 import type { Profile as PrismaProfile } from '@vaquita/db';
 import type { FriendDTO, FriendSuggestionDTO } from '../../types';
@@ -8,7 +9,7 @@ import { notify } from '../notifications';
 const MAX_RESULTS = 50;
 
 /** The profile columns every friend row needs — all the search query selects. */
-type ProfileCard = Pick<PrismaProfile, 'id' | 'walletAddress' | 'nickname' | 'fullName' | 'avatarUrl'>;
+type ProfileCard = Pick<PrismaProfile, 'id' | 'walletAddress' | 'nickname' | 'fullName' | 'avatarConfig'>;
 
 /** `@handle` from the nickname, or a shortened wallet when there's no nickname. */
 const toHandle = (p: Pick<PrismaProfile, 'nickname' | 'walletAddress'>): string =>
@@ -39,7 +40,7 @@ const toFriendDTO = (
   handle: toHandle(p),
   nickname: p.nickname ?? '',
   fullName: p.fullName ?? '',
-  avatarUrl: p.avatarUrl ?? '',
+  avatarConfig: resolveAvatarConfig(p.avatarConfig, p.walletAddress),
   level: 0, // No level system yet — kept 0 by design.
   streak: extra.streak,
   followers: extra.followers,
@@ -104,7 +105,7 @@ export const searchFriends = async ({
            wallet_address AS "walletAddress",
            nickname,
            full_name      AS "fullName",
-           avatar_url     AS "avatarUrl"
+           avatar_config  AS "avatarConfig"
       FROM profiles
      WHERE deleted_at IS NULL
        AND id <> ${viewer.id}

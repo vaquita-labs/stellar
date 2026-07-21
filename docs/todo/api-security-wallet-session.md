@@ -7,25 +7,24 @@
 
 ### 1.1 Validación de avatares (anti "código disfrazado de foto")
 
+> **Obsoleto desde 2026-07-21.** Las fotos de perfil se eliminaron del producto:
+> ya no existe endpoint de subida, ni MinIO, ni `sharp`/`multer` en el API. El
+> avatar es un personaje armado con el catálogo de `@vaquita/avatar` y lo que se
+> guarda es un JSON de ids + índices de paleta (`profiles.avatar_config`).
+> `normalizeAvatarConfig` descarta cualquier clave desconocida, reemplaza ids
+> inválidos por el default de su categoría y clampea los colores a su paleta, así
+> que lo persistido siempre es renderizable y nunca contiene texto del usuario.
+> Con eso desaparece toda esta clase de ataques por construcción, no por
+> mitigación: no hay bytes del usuario que decodificar.
+>
+> Lo que sigue queda como registro histórico de la mitigación anterior.
+
 Antes el API confiaba en el `Content-Type` que declaraba el navegador: cualquiera
 podía subir HTML/scripts diciendo "esto es un PNG" y se guardaba tal cual en MinIO.
 
-Ahora (`apps/api/src/routes/profile/route.ts`, función `processAvatarImage`):
-
-- **sharp decodifica los píxeles reales.** Si el archivo no es una imagen de
-  verdad (HTML, script, PDF…), la decodificación falla → 400. El nombre y el
-  mimetype declarado no importan.
-- **Nunca se guardan los bytes del usuario.** El servidor re-codifica a WebP de
-  máx. 512×512 y almacena SU salida. Todo lo que no sea píxeles desaparece:
-  EXIF/GPS, ICC, payloads pegados al final del archivo (polyglots).
-- **Bloqueos específicos:** SVG (puede traer `<script>`) → rechazado aunque
-  sharp sepa rasterizarlo; bombas de descompresión → `limitInputPixels` 8192²;
-  5 MB máx. lo corta multer antes de procesar; solo JPG/PNG/WEBP/GIF.
-- El frontend muestra los requisitos ("JPG, PNG, WEBP o GIF · máx. 5 MB") y
-  valida lo mismo antes de subir (solo UX — la seguridad es del servidor).
-
-Probado con ataques reales: HTML-como-PNG, SVG con script, PNG+script appendeado,
-imagen de 81 MP — todos rechazados o neutralizados.
+La mitigación (ya removida junto con el endpoint) decodificaba los píxeles con
+sharp, re-codificaba a WebP 512×512 —descartando EXIF/ICC/polyglots—, rechazaba
+SVG y bombas de descompresión, y limitaba a 5 MB vía multer.
 
 ### 1.2 Sesión de wallet para mutaciones de perfil
 

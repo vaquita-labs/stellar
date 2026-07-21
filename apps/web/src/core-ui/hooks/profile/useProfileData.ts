@@ -1,3 +1,4 @@
+import { resolveAvatarConfig } from '@vaquita/avatar';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
 import { DEFAULT_NOTIFICATION_PREFERENCES, ProfileResponseDTO } from '@/core-ui/types';
@@ -23,7 +24,7 @@ export const useProfileData = (walletAddressOverride?: string) => {
         email: data?.data?.email || '',
         fullName: data?.data?.fullName || '',
         nickname: data?.data?.nickname || '',
-        avatarUrl: data?.data?.avatarUrl || '',
+        avatarConfig: resolveAvatarConfig(data?.data?.avatarConfig, data?.data?.walletAddress || walletAddress || ''),
         onboardingCompleted: data?.data?.onboardingCompleted ?? false,
         tutorialCompleted: data?.data?.tutorialCompleted ?? false,
         cryptoSavvy: data?.data?.cryptoSavvy ?? false,

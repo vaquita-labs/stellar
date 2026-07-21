@@ -1,3 +1,4 @@
+import type { AvatarConfig } from '@vaquita/avatar';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { authFetch } from '@/networks/stellar/walletSession';
 import { useConfigStore } from '@/core-ui/stores';
@@ -129,15 +130,17 @@ export const useRestProfile = () => {
     [networkName, walletAddress]
   );
 
-  const uploadAvatar = useCallback(
-    async (file: File) => {
-      const form = new FormData();
-      form.append('file', file);
+  // The avatar is a set of catalog ids, never an image — there is no upload
+  // endpoint. The API re-normalizes whatever we send against the same catalog,
+  // so a stale client can't persist an option that no longer exists.
+  const saveAvatar = useCallback(
+    async (config: AvatarConfig) => {
       const response = await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/avatar`,
         {
-          method: 'POST',
-          body: form,
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config),
         },
         walletAddress
       );
@@ -145,28 +148,12 @@ export const useRestProfile = () => {
 
       return {
         success: data?.status === 'success',
-        message: data?.message,
-        avatarUrl: data?.data?.avatarUrl as string | undefined,
+        message: data?.message as string | undefined,
+        avatarConfig: data?.data?.avatarConfig as AvatarConfig | undefined,
       };
     },
     [networkName, walletAddress]
   );
-
-  const removeAvatar = useCallback(async () => {
-    const response = await authFetch(
-      `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/avatar`,
-      {
-        method: 'DELETE',
-      },
-      walletAddress
-    );
-    const data = await response.json();
-
-    return {
-      success: data?.status === 'success',
-      message: data?.message,
-    };
-  }, [networkName, walletAddress]);
 
   const checkNicknameAvailability = useCallback(
     async (nickname: string): Promise<{ available: boolean; reason?: 'not-allowed' | 'invalid-format' }> => {
@@ -221,8 +208,7 @@ export const useRestProfile = () => {
     saveProfileFlags,
     saveProfilePreferences,
     saveNotificationPreferences,
-    uploadAvatar,
-    removeAvatar,
+    saveAvatar,
     checkNicknameAvailability,
     goldDailyCollect,
     saveMapObjects,

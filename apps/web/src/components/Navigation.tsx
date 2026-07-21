@@ -13,6 +13,7 @@ const navItems = [
   { id: 'home', href: '/home', icon: '/icons/navigation/home.png', label: 'Home' },
   { id: 'shop', href: '/shop', icon: '/icons/navigation/shop.png', label: 'Shop' },
   { id: 'leaderboard', href: '/leaderboard', icon: '/icons/navigation/leaderboard.png', label: 'Leaderboard' },
+  { id: 'explore', href: '/explore', icon: '/icons/navigation/world.png', label: 'Explore' },
   // { href: "/pools", icon: "/icons/pools.svg", label: "Pools" },
 ];
 

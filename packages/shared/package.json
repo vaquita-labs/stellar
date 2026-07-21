@@ -18,6 +18,7 @@
   "dependencies": {
     "@blend-capital/blend-sdk": "^3.2.2",
     "@stellar/stellar-sdk": "^15.1.0",
+    "@vaquita/avatar": "workspace:*",
     "@vaquita/db": "workspace:*",
     "ably": "^2.21.0",
     "dotenv": "^17.4.2",
