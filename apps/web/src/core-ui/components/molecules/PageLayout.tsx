@@ -35,9 +35,10 @@ export function PageLayout({
 }: PageLayoutProps) {
   return (
     <div className="h-full overflow-y-auto">
-      {/* Extra bottom padding on mobile so the last item clears the fixed
-          bottom nav (h-16). Desktop has a sidebar instead, so pb-12 is fine. */}
-      <div className={`mx-auto w-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col ${headerGap} pb-24 md:pb-12`}>
+      {/* Aire al final para que el último ítem no quede pegado al borde. Antes
+          era pb-24 para dejar pasar una barra de navegación fija que ya no
+          existe, y dejaba un hueco enorme al final de cada página. */}
+      <div className={`mx-auto w-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col ${headerGap} pb-10`}>
         <PageHeader
           title={title}
           backHref={backHref}
