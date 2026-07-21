@@ -988,7 +988,6 @@
       "mapLikes": "Likes",
       "seeAll": "See all {{title}}",
       "seeAllAchievements": "See all achievements",
-      "seeFullSummary": "See full summary",
       "settingsAria": "Settings",
       "streak": "Streak",
       "summary": "Summary",
@@ -1105,7 +1104,7 @@
       },
       "earnTitle": "Ways to earn",
       "title": "Coins",
-      "viewStats": "View full stats"
+      "unitLabel": "Coins"
     },
     "countdown": {
       "comeBackIn": "Moo! Come back in",
@@ -1138,12 +1137,11 @@
     },
     "experience": {
       "description": "You earn XP every time you save and keep your streak. Reach new levels to show off your saving progress!",
-      "levelLabel": "Level {{level}}",
       "levelProgress": "Level progress",
       "title": "Experience",
       "totalExperience": "Total experience",
-      "viewStats": "View full stats",
-      "xpAlt": "experience"
+      "xpAlt": "experience",
+      "unitLabel": "XP · Level {{level}}"
     },
     "mood": {
       "excited": {
@@ -1184,7 +1182,6 @@
       "repairTitle": "Streak Repair",
       "streakAlt": "streak",
       "title": "Streak",
-      "viewHistory": "View full history",
       "weekdays": {
         "Fr": "Fr",
         "Mo": "Mo",
@@ -1195,7 +1192,8 @@
         "We": "We"
       },
       "weeklyHint": "Get a new tile every time you increase your streak! The colored icons show days you've completed, while gray icons indicate missed days.",
-      "weeklyProgress": "Weekly Progress"
+      "weeklyProgress": "Weekly Progress",
+      "unitLabel": "Day streak"
     }
   },
   "shell": {

@@ -111,13 +111,20 @@ const SummaryItem = ({
   value: React.ReactNode;
   label: string;
 }) => (
-  // Icon stacked above the text, not beside it: in the 3-up summary row a
-  // side-by-side icon eats ~38px of a ~72px column on a 320px screen, which
-  // clipped long values ("128,450 XP") off the card.
-  <div className="flex min-w-0 flex-col items-center gap-1 text-center leading-tight">
-    <Image src={icon} alt="" aria-hidden width={28} height={28} className="object-contain" />
-    <span className="text-sm font-extrabold text-black tabular-nums">{value}</span>
-    <span className="text-[11px] font-semibold text-gray-500">{label}</span>
+  // Icono + número en una línea. La etiqueta queda sólo para lectores de
+  // pantalla: el ícono ya dice qué es cada número y escribirlo al lado sumaba
+  // ruido sin información.
+  <div className="flex min-w-0 items-center justify-center gap-2 leading-tight">
+    <Image
+      src={icon}
+      alt=""
+      aria-hidden
+      width={28}
+      height={28}
+      className="shrink-0 object-contain"
+    />
+    <span className="text-base font-extrabold text-black tabular-nums">{value}</span>
+    <span className="sr-only">{label}</span>
   </div>
 );
 
@@ -277,7 +284,9 @@ export function ProfilePage() {
           piezas sueltas flotando en el fondo en vez de un perfil. 16px las
           agrupa sin que se toquen; el respiro dentro de cada bloque (header →
           tarjeta) lo da su propio gap-3. */}
-      <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-4">
+      {/* pb-20: sólo lo justo para que el nav flotante no tape la última
+          tarjeta. Con pb-28 quedaba una franja vacía enorme al final. */}
+      <div className="mx-auto w-full max-w-2xl pb-20 md:pb-8 flex flex-col gap-4">
         {/* Hero banner ------------------------------------------------ */}
         {/* The character IS the banner: it's drawn edge-to-edge at the top of
             the screen, cropped at the shoulders, with the avatar's own
@@ -412,8 +421,16 @@ export function ProfilePage() {
             el usuario va acumulando (racha, medallas, XP, oro) y se leen de un
             vistazo. Sin tarjeta blanca ni chevron a propósito — no lleva a
             ningún lado, así que nada acá debe parecer tocable. */}
-        <section className="px-4 sm:px-6">
-          <div className="grid grid-cols-4 gap-2">
+        <section className="px-4 sm:px-6 flex flex-col gap-3">
+          {/* Encabezado sin chevron ni contador: la tira no navega a ningún
+              lado, solo necesita nombre para no quedar flotando entre los
+              botones y Logros. */}
+          <h2 className="px-1 text-xs sm:text-sm font-extrabold uppercase tracking-wider text-gray-500">
+            {t('profilePages.profile.summary', 'Summary')}
+          </h2>
+          {/* 2x2 en vez de 4 en fila: a 320px cada columna quedaba en ~70px y
+              los valores largos ("878 XP") se apretaban contra el label. */}
+          <div className="grid grid-cols-2 gap-x-10 gap-y-4 py-1">
             <SummaryItem
               icon={hasActiveStreak ? '/icons/global/streak_face.png' : '/icons/global/streak_freeze_face.png'}
               value={t('profilePages.profile.daysCount', { count: totalStreak, defaultValue: '{{count}} days' })}

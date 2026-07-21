@@ -1,5 +1,6 @@
 'use client';
 
+import { CarouselScroller } from '@/core-ui/components/home/edit/CarouselScroller';
 import { isHudItem } from '@/core-ui/components/home/edit/hudItems';
 import { ObjectListObjectCard } from '@/core-ui/components/home/edit/ObjectListObjectCard';
 import { SceneLighting } from '@/core-ui/components/map/scene/SceneLighting';
@@ -69,7 +70,7 @@ function ObjectListCmp() {
   const canvasWidth = objects.length * spacing * zoom;
 
   return (
-    <div className="h-[160px] sm:h-[180px] overflow-x-auto scrollbar-hide" style={{ width: '100%' }}>
+    <CarouselScroller className="h-[160px] sm:h-[180px] w-full">
       <div style={{ width: canvasWidth, height: '100%' }}>
         <Canvas
           shadows
@@ -92,7 +93,7 @@ function ObjectListCmp() {
           </group>
         </Canvas>
       </div>
-    </div>
+    </CarouselScroller>
   );
 }
 

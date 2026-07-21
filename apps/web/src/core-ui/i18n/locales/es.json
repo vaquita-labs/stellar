@@ -988,7 +988,6 @@
       "mapLikes": "Likes",
       "seeAll": "Ver todo {{title}}",
       "seeAllAchievements": "Ver todos los logros",
-      "seeFullSummary": "Ver resumen completo",
       "settingsAria": "Ajustes",
       "streak": "Racha",
       "summary": "Resumen",
@@ -1105,7 +1104,7 @@
       },
       "earnTitle": "Formas de ganar",
       "title": "Monedas",
-      "viewStats": "Ver estadísticas"
+      "unitLabel": "Monedas"
     },
     "countdown": {
       "comeBackIn": "¡Mu! Regresa en",
@@ -1138,12 +1137,11 @@
     },
     "experience": {
       "description": "Ganas XP cada vez que ahorras y mantienes tu racha. ¡Alcanza nuevos niveles para mostrar tu progreso de ahorro!",
-      "levelLabel": "Nivel {{level}}",
       "levelProgress": "Progreso de nivel",
       "title": "Experiencia",
       "totalExperience": "Experiencia total",
-      "viewStats": "Ver estadísticas",
-      "xpAlt": "experiencia"
+      "xpAlt": "experiencia",
+      "unitLabel": "XP · Nivel {{level}}"
     },
     "mood": {
       "excited": {
@@ -1184,7 +1182,6 @@
       "repairTitle": "Reparar racha",
       "streakAlt": "racha",
       "title": "Racha",
-      "viewHistory": "Ver historial completo",
       "weekdays": {
         "Fr": "Vi",
         "Mo": "Lu",
@@ -1195,7 +1192,8 @@
         "We": "Mi"
       },
       "weeklyHint": "¡Consigue una loseta nueva cada vez que aumentas tu racha! Los íconos a color muestran los días que completaste, y los grises indican los días que te saltaste.",
-      "weeklyProgress": "Progreso semanal"
+      "weeklyProgress": "Progreso semanal",
+      "unitLabel": "Racha de días"
     }
   },
   "shell": {

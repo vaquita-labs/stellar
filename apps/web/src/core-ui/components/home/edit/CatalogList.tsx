@@ -10,6 +10,7 @@ import { EditionMode, useMapStore } from '../../../stores';
 import { MapObjectType } from '../../../types';
 import { SceneLighting } from '../../map/scene/SceneLighting';
 import { AppModal } from '../../molecules/AppModal';
+import { CarouselScroller } from './CarouselScroller';
 import { CatalogObjectCard } from './CatalogObjectCard';
 import { isHudItem } from './hudItems';
 import { getMapItemName } from './mapItemNames';
@@ -119,7 +120,7 @@ export function CatalogList() {
 
   return (
     <>
-      <div className="h-[180px] sm:h-[200px] overflow-x-auto scrollbar-hide" style={{ width: '100%' }}>
+      <CarouselScroller className="h-[180px] sm:h-[200px] w-full">
         <div style={{ width: canvasWidth, height: '100%' }}>
           <Canvas shadows orthographic camera={{ position: [0, 10, 10], zoom, near: 0.1, far: 1000 }}>
             <SceneLighting />
@@ -138,7 +139,7 @@ export function CatalogList() {
             </group>
           </Canvas>
         </div>
-      </div>
+      </CarouselScroller>
 
       {/* Detalle + compra */}
       <AppModal

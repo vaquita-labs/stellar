@@ -4,7 +4,6 @@ import { PageHeader } from '@/core-ui/components/molecules/PageHeader';
 import { useSlidePage } from '@/core-ui/components/molecules/useSlidePage';
 import { useDismissSuggestion, useFriendSuggestions, useToggleFollow } from '@/core-ui/hooks';
 import type { FriendSuggestionDTO } from '@/core-ui/types';
-import { toast } from '@heroui/react';
 import Link from 'next/link';
 import React, { useState } from 'react';
 import { VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
@@ -149,28 +148,6 @@ export function FriendsPage() {
 
   const visibleSuggestions = data?.suggestions ?? [];
 
-  const handleShareLink = async () => {
-    const url = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
-    const text = t('social.friends.shareText');
-    try {
-      if (typeof navigator !== 'undefined' && (navigator as Navigator & { share?: unknown }).share) {
-        await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
-          title: 'Vaquita',
-          text,
-          url,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(`${text} — ${url}`);
-      toast.success(t('social.friends.linkCopied'));
-    } catch (error) {
-      const message = (error as { message?: string })?.message ?? '';
-      if (message && !message.toLowerCase().includes('abort')) {
-        toast.danger(t('social.friends.couldNotShare'), { description: message });
-      }
-    }
-  };
-
   const handleToggleFollow = (wallet: string) => {
     const isFollowing = following.has(wallet);
     // Optimistically flip the button; roll back on error.
@@ -212,8 +189,14 @@ export function FriendsPage() {
 
         {/* Find actions — one card, three rows */}
         <section className="overflow-hidden rounded-2xl border border-black border-b-2 bg-white divide-y divide-black/10">
-          {/* Contacts import isn't built yet, so the row is inert rather than
-              routing to a screen that only says "soon" again. */}
+          {/* Search is the only path that works today, so it leads. Contacts
+              import and the share link aren't built yet: inert rows rather
+              than screens that only say "soon" again. */}
+          <ActionRow
+            icon={<FiSearch className="h-5 w-5" />}
+            label={t('social.friends.searchByName')}
+            href="/profile/friends/search"
+          />
           <ActionRow
             icon={<FiBookOpen className="h-5 w-5" />}
             label={t('social.friends.chooseFromContacts')}
@@ -221,14 +204,10 @@ export function FriendsPage() {
             soon
           />
           <ActionRow
-            icon={<FiSearch className="h-5 w-5" />}
-            label={t('social.friends.searchByName')}
-            href="/profile/friends/search"
-          />
-          <ActionRow
             icon={<FiShare2 className="h-5 w-5" />}
             label={t('social.friends.shareFollowLink')}
-            onPress={handleShareLink}
+            disabled
+            soon
           />
         </section>
 
@@ -262,7 +241,7 @@ export function FriendsPage() {
             // first card flush with the content gutter instead of leaving it
             // half-cropped behind the page padding.
             <div
-              className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-px-4 sm:scroll-px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory"
+              className="flex gap-3 overflow-x-auto pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 scroll-px-4 sm:scroll-px-6 no-scrollbar snap-x snap-mandatory"
               aria-label={t('social.friends.suggestionsTitle')}
             >
               {visibleSuggestions.map((s) => (

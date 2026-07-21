@@ -38,16 +38,11 @@ export function CoinsModal({ open, onOpenChange, coins }: CoinsModalProps) {
             <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
               {coins.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
+            {/* Sólo QUÉ es el número, sin repetirlo (ver StreakModal). */}
             <div className="mt-1 text-sm font-semibold text-gray-500">
-              {t('rewards.coins.balanceLabel', '{{count}} coins', { count: coins })}
+              {t('rewards.coins.unitLabel', 'Coins')}
             </div>
           </div>
-          <p className="max-w-xs text-center text-sm text-gray-600">
-            {t(
-              'rewards.coins.description',
-              'Coins are your in-game currency. Earn them by saving and collecting your daily reward, then spend them in the shop to decorate your map.',
-            )}
-          </p>
         </div>
 
         {/* Ways to earn */}
@@ -67,6 +62,13 @@ export function CoinsModal({ open, onOpenChange, coins }: CoinsModalProps) {
           </ul>
         </div>
 
+        {/* Explicación al final y alineada a la izquierda (ver StreakModal). */}
+        <p className="text-sm leading-relaxed text-gray-600">
+          {t(
+            'rewards.coins.description',
+            'Coins are your in-game currency. Earn them by saving and collecting your daily reward, then spend them in the shop to decorate your map.',
+          )}
+        </p>
       </div>
     </AppModal>
   );

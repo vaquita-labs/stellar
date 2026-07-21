@@ -38,16 +38,12 @@ export function ExperienceModal({ open, onOpenChange, experience }: ExperienceMo
             <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
               {totalXp.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
+            {/* Qué es el número + el nivel al que corresponde. El número solo
+                no dice si son XP o niveles (ver StreakModal). */}
             <div className="mt-1 text-sm font-semibold text-gray-500">
-              {t('rewards.experience.levelLabel', 'Level {{level}}', { level })}
+              {t('rewards.experience.unitLabel', 'XP · Level {{level}}', { level })}
             </div>
           </div>
-          <p className="max-w-xs text-center text-sm text-gray-600">
-            {t(
-              'rewards.experience.description',
-              'You earn XP every time you save and keep your streak. Reach new levels to show off your saving progress!',
-            )}
-          </p>
         </div>
 
         {/* Level progress */}
@@ -71,6 +67,13 @@ export function ExperienceModal({ open, onOpenChange, experience }: ExperienceMo
           </div>
         </div>
 
+        {/* Explicación al final y alineada a la izquierda (ver StreakModal). */}
+        <p className="text-sm leading-relaxed text-gray-600">
+          {t(
+            'rewards.experience.description',
+            'You earn XP every time you save and keep your streak. Reach new levels to show off your saving progress!',
+          )}
+        </p>
       </div>
     </AppModal>
   );

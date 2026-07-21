@@ -55,16 +55,13 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
             <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
               {currentStreak}
             </div>
+            {/* Sólo QUÉ es el número, sin repetirlo: antes decía "4 day streak"
+                justo debajo de un "4" gigante, así que el dato se leía dos
+                veces y el subtítulo no aportaba nada. */}
             <div className="mt-1 text-sm font-semibold text-gray-500">
-              {t('rewards.streak.dayStreakLabel', '{{count}} day streak', { count: currentStreak })}
+              {t('rewards.streak.unitLabel', 'Day streak')}
             </div>
           </div>
-          <p className="max-w-xs text-center text-sm text-gray-600">
-            {t(
-              'rewards.streak.description',
-              'Your streak represents consecutive days of activity. Keep it going to unlock rewards and special tiles for your map!',
-            )}
-          </p>
         </div>
 
         {/* Weekly Progress Section */}
@@ -113,6 +110,16 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
           </div>
         </div>
 
+        {/* La explicación va al final y alineada a la izquierda: arriba, centrada
+            y entre el número y el calendario, partía el bloque de datos en dos y
+            obligaba a leer tres líneas de texto antes de llegar a lo que el
+            usuario abrió el modal a ver. */}
+        <p className="text-sm leading-relaxed text-gray-600">
+          {t(
+            'rewards.streak.description',
+            'Your streak represents consecutive days of activity. Keep it going to unlock rewards and special tiles for your map!',
+          )}
+        </p>
       </div>
     </AppModal>
   );
