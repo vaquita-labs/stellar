@@ -333,7 +333,7 @@ router.post('/wallet/:walletAddress/nickname', requireWalletSession, async (req,
   }
 
   if (!isNicknameAllowed(nickname)) {
-    req.log.warn({ walletAddress, nickname }, 'Nickname rejected by moderation policy');
+    req.log.warn({ walletAddress, nickname }, 'Nickname rejected by name policy (reserved or moderated)');
     return sendError(res, 'That nickname is not allowed.', null, 422);
   }
 
@@ -415,7 +415,7 @@ router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req,
     } else if (!isNicknameFormatValid(nickname)) {
       result.nickname.error = 'Nicknames must be 3-32 lowercase letters, numbers or underscores.';
     } else if (!isNicknameAllowed(nickname)) {
-      req.log.warn({ walletAddress, nickname }, 'Nickname rejected by moderation policy');
+      req.log.warn({ walletAddress, nickname }, 'Nickname rejected by name policy (reserved or moderated)');
       result.nickname.error = 'That nickname is not allowed.';
     } else {
       // Case-insensitive match so "Juan", "JUAN" and "juan" can't coexist as separate users.

@@ -970,7 +970,7 @@
       "followingEmptyBody": "Follow vaqueros from the leaderboard to see them here.",
       "followingEmptyTitle": "Not following anyone yet",
       "gold": "Gold",
-      "handleJoined": "{{handle}} · joined {{joinedLabel}}",
+      "handleJoined": "<b>{{handle}}</b> · joined {{joinedLabel}}",
       "seeAll": "See all {{title}}",
       "seeAllAchievements": "See all achievements",
       "seeFullSummary": "See full summary",

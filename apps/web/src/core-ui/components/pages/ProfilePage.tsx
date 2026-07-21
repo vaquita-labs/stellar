@@ -8,7 +8,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { FiChevronLeft, FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
   useClaimedAchievements,
@@ -125,7 +125,7 @@ const SummaryItem = ({
 /* ------------------------------------------------------------------ */
 
 export function ProfilePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { walletAddress } = useConfigStore();
   const { data: profileData } = useProfileData();
@@ -173,16 +173,18 @@ export function ProfilePage() {
 
   // Real account creation date from the backend ("joined 5 May 2026"). Falls
   // back to the current date if the timestamp hasn't loaded yet.
+  // Formatted with the APP's language, not the browser's: `undefined` here read
+  // the OS locale, so a profile set to Spanish rendered "se unió el July 21".
   const joinedLabel = useMemo(() => {
     const createdAt = profileData?.createdAt;
     const date = createdAt ? new Date(createdAt) : new Date();
     if (Number.isNaN(date.getTime())) return '';
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString(i18n.language, {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
-  }, [profileData?.createdAt]);
+  }, [profileData?.createdAt, i18n.language]);
 
   // The banner floods the full page width with the avatar's own background
   // colour, so the character reads as part of the header instead of sitting in
@@ -273,14 +275,14 @@ export function ProfilePage() {
           <Link
             href="/profile/avatar"
             aria-label={t('profilePages.profile.editAvatarAria', 'Edit your avatar')}
-            className="block pt-14"
+            className="block pt-11"
           >
             <VaquitaAvatar
               config={profileData?.avatarConfig}
               seed={profileData?.walletAddress || walletAddress || ''}
               crop="bust"
               background={false}
-              className="mx-auto block w-full max-w-[19rem] [&_svg]:block [&_svg]:h-auto [&_svg]:w-full"
+              className="mx-auto block w-full max-w-[15.5rem] [&_svg]:block [&_svg]:h-auto [&_svg]:w-full"
             />
           </Link>
 
@@ -307,8 +309,9 @@ export function ProfilePage() {
             <h1 className="flex-1 basis-0 truncate text-center text-2xl font-extrabold tracking-tight text-black sm:text-3xl">
               {t('profilePages.profile.title', 'Profile')}
             </h1>
+            {/* Sharing lives next to the "add friends" CTA further down, where
+                it's an action rather than a header icon. */}
             <div className="pointer-events-auto flex flex-1 basis-0 shrink-0 items-center justify-end gap-2">
-              <ShareProfileQrButton displayName={displayName} handle={handle} />
               <Link
                 href="/profile/settings"
                 aria-label={t('profilePages.profile.settingsAria', 'Settings')}
@@ -324,12 +327,16 @@ export function ProfilePage() {
             banner — the same split as the reference design. */}
         <section className="-mt-2 px-4 sm:px-6">
           {/* No `uppercase` here: the handle has to read exactly as the user
-              saved it (Lea, 4Test1234), and a CSS transform would rewrite it. */}
-          <p className="text-center text-xs font-bold tracking-wide text-gray-500 sm:text-sm">
-            {t('profilePages.profile.handleJoined', '{{handle}} · joined {{joinedLabel}}', {
-              handle,
-              joinedLabel,
-            })}
+              saved it (Lea, 4Test1234), and a CSS transform would rewrite it.
+              The handle is wrapped in <b> inside the translation so each locale
+              decides where it sits in the sentence — it's the identity on this
+              screen, the join date is just context. */}
+          <p className="text-xs font-bold tracking-wide text-gray-500 sm:text-sm">
+            <Trans
+              i18nKey="profilePages.profile.handleJoined"
+              values={{ handle, joinedLabel }}
+              components={{ b: <strong className="text-base font-extrabold text-black sm:text-lg" /> }}
+            />
           </p>
         </section>
 
@@ -352,15 +359,22 @@ export function ProfilePage() {
           </div>
         </section>
 
-        {/* Friends CTA ------------------------------------------------ */}
-        <section className="px-4 sm:px-6">
+        {/* Friends CTA + share ---------------------------------------- */}
+        {/* The QR sits beside the CTA, not in the banner: both are "grow your
+            circle" actions, and pairing them frees the header for navigation. */}
+        <section className="flex items-stretch gap-3 px-4 sm:px-6">
           <Link
             href="/profile/friends"
-            className="flex items-center justify-center gap-2 w-full h-12 rounded-md bg-white text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide hover:bg-white/80 hover:-translate-y-0.5 transition"
+            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md border border-black border-b-3 bg-white text-sm font-bold uppercase tracking-wide text-black transition hover:-translate-y-0.5 hover:bg-white/80"
           >
             <FiUserPlus className="h-4 w-4" />
             {t('profilePages.profile.addFriends', 'Add friends')}
           </Link>
+          <ShareProfileQrButton
+            displayName={displayName}
+            handle={handle}
+            className="h-12 w-12 rounded-md !bg-white hover:-translate-y-0.5 border-b-3"
+          />
         </section>
 
 

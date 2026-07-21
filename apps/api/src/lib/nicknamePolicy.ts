@@ -1,6 +1,8 @@
-// Nickname moderation. Nicknames are user-visible all over the app (leaderboard,
-// follows, share cards), so offensive or impersonating names are rejected at the
-// API — client-side checks alone can be bypassed with a direct request.
+// Nickname policy: charset, reserved names, and moderation. Nicknames are
+// user-visible all over the app (leaderboard, follows, share cards) AND double
+// as a public URL segment, so offensive, impersonating or route-colliding names
+// are rejected at the API — client-side checks alone can be bypassed with a
+// direct request.
 //
 // The term lists live in blockedNicknameTerms.json (categorized by language and
 // severity for maintenance; flattened here at load). Two matching modes, because
@@ -29,6 +31,39 @@ export const NICKNAME_FORMAT_REGEX = /^[a-z0-9_]{3,32}$/;
 /** True when the (already lowercased/trimmed) nickname is URL-safe. */
 export function isNicknameFormatValid(nickname: string): boolean {
   return NICKNAME_FORMAT_REGEX.test(nickname);
+}
+
+// Names that would collide with a route if they became a URL segment. Today only
+// /explore/<nickname> is user-namespaced and /explore has no static siblings, so
+// nothing is actually shadowed — this is insurance. The day someone adds
+// /explore/search (or a top-level /<nickname>), a user already holding that name
+// becomes unreachable and has to be renamed by hand; rejecting up front is free.
+//
+// Matched EXACTLY, not as a substring: "admin1" shadows no route, so this list
+// leaves it alone. Entries shorter than 3 chars would be dead (the format regex
+// already rejects them), so "me", "og" and friends are deliberately absent.
+//
+// This list is about ROUTES only. Names that impersonate the app or its team
+// ("admin", "support", "vaquita", …) live in blockedNicknameTerms.json under
+// `reserved_impersonation`, where token matching also catches "admin_1" — don't
+// duplicate them here.
+const RESERVED_NICKNAMES = new Set([
+  // Current top-level routes
+  'explore', 'home', 'leaderboard', 'login', 'notifications', 'onboarding',
+  'profile', 'shop', 'transactions', 'tutorial', 'api', 'share',
+  // Routes an app like this grows into
+  'about', 'account', 'accounts', 'auth', 'billing', 'blog', 'contact',
+  'dashboard', 'docs', 'edit', 'faq', 'feed', 'help', 'legal', 'logout', 'new',
+  'privacy', 'search', 'security', 'settings', 'signin', 'signup', 'terms',
+  'user', 'users', 'wallet',
+  // Reserved by the framework or prone to breaking clients
+  'assets', 'favicon', 'manifest', 'next', 'null', 'public', 'robots',
+  'sitemap', 'static', 'undefined', 'www',
+]);
+
+/** True when the nickname would collide with a current or likely future route. */
+export function isNicknameReserved(nickname: string): boolean {
+  return RESERVED_NICKNAMES.has(nickname);
 }
 
 // A term with uppercase, accents, spaces or symbols can never match the
@@ -65,6 +100,8 @@ const WORD_SET = new Set(BLOCKED_WORDS);
 
 /** True when the (already lowercased) nickname is acceptable to store. */
 export function isNicknameAllowed(nickname: string): boolean {
+  if (isNicknameReserved(nickname)) return false;
+
   const normalized = stripAccents(nickname.toLowerCase());
 
   // Separator-collapsed variants: plain and with leetspeak undone.

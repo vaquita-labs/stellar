@@ -970,7 +970,7 @@
       "followingEmptyBody": "Siga vaqueros no ranking para vê-los aqui.",
       "followingEmptyTitle": "Você ainda não segue ninguém",
       "gold": "Ouro",
-      "handleJoined": "{{handle}} · entrou em {{joinedLabel}}",
+      "handleJoined": "<b>{{handle}}</b> · entrou em {{joinedLabel}}",
       "seeAll": "Ver tudo de {{title}}",
       "seeAllAchievements": "Ver todas as conquistas",
       "seeFullSummary": "Ver resumo completo",

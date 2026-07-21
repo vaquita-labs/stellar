@@ -14,6 +14,15 @@ import { getGameHourLabel } from '../../stores';
  * servidor (gate en HomePage), así que acá la hora ya es la definitiva. La card
  * tiene ancho mínimo fijo para que no salte entre horas de 1 y 2 dígitos.
  */
+const ROPE_SIDES = ['left', 'right'] as const;
+
+/** Soga trenzada: base tipo yute + franjas diagonales para el hilado. */
+const ROPE_STYLE = {
+  backgroundColor: '#B98B5E',
+  backgroundImage:
+    'repeating-linear-gradient(-50deg, rgba(0,0,0,0.28) 0 1px, rgba(255,255,255,0.22) 1px 2px, transparent 2px 3px)',
+} as const;
+
 export const MapClock = () => {
   const [label, setLabel] = useState<string | null>(null);
 
@@ -28,15 +37,22 @@ export const MapClock = () => {
 
   return (
     // Mismo fondo translúcido que el pill de stats (bg-white/60 + blur) para que
-    // la hora no robe foco, y dos "cuerdas" que suben hasta el borde inferior de
-    // ese pill: la card queda visualmente colgada de la barra de stats. El alto
-    // de las cuerdas (18px) es el hueco exacto entre el pill y esta fila, así que
-    // si cambia el offset de la fila en HeaderStats hay que ajustarlo acá.
-    <span className="relative inline-flex h-6 min-w-[68px] items-center justify-center gap-1 rounded-md bg-white/60 px-2 text-xs font-bold text-black backdrop-blur-md">
-      <span aria-hidden className="absolute -top-[18px] left-2.5 h-[18px] w-[3px] rounded-full bg-primary" />
-      <span aria-hidden className="absolute -top-[18px] right-2.5 h-[18px] w-[3px] rounded-full bg-primary" />
+    // la hora no robe foco, y dos cuerdas cortas que suben hasta el borde inferior
+    // de ese pill: la card se lee como un cartel de madera colgado de la barra de
+    // stats. El alto de las cuerdas (9px) es el hueco medido entre el borde inferior
+    // del pill y el tope de esta fila, así que si cambia el offset de la fila en
+    // HeaderStats hay que volver a ajustarlo acá. Los remaches son los puntos donde la cuerda "atraviesa" la
+    // tabla. El icono va pegado a la izquierda (justify-start): así no se corre
+    // cuando la hora pasa de 1 a 2 dígitos ("9 pm" → "10 pm").
+    <span className="relative inline-flex h-6 min-w-[68px] items-center justify-start gap-1 rounded-md bg-white/60 px-2 text-xs font-bold text-black backdrop-blur-md">
+      {ROPE_SIDES.map((side) => (
+        <span key={side} aria-hidden>
+          <span className="absolute -top-[9px] h-[9px] w-[3px] rounded-[1px]" style={{ ...ROPE_STYLE, [side]: 10 }} />
+          <span className="absolute top-[3px] h-[5px] w-[5px] rounded-full bg-black/25" style={{ [side]: 9 }} />
+        </span>
+      ))}
       <FiClock className="h-3 w-3 shrink-0" />
-      {label}
+      <span className="tabular-nums">{label}</span>
     </span>
   );
 };

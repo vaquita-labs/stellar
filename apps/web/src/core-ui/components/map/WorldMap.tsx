@@ -141,7 +141,7 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
         {mapLoaded && <SceneCamera center={center} />}
         <EditGrid />
         {/* <FloatingIslandBase /> */}
-        <WaterBackground worldType={worldType} />
+        <WaterBackground worldType={worldType} center={center} />
         <Ground mapObjects={currentTiles} worldType={worldType} />
         {!isEditMode && (
           <MapObjects

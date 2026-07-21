@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiArrowUpRight, FiBell } from 'react-icons/fi';
+import { FiBell, FiChevronRight } from 'react-icons/fi';
 import {
   useApyByLockPeriod,
   useDepositsComplete,
@@ -21,7 +21,6 @@ import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../store
 import { PageHeader } from '../molecules';
 import { useModalPresence } from '../molecules/AppModal';
 import {
-  BankAPYModal,
   CoinsModal,
   ExperienceModal,
   PortfolioPanel,
@@ -38,13 +37,11 @@ export const HeaderStats = () => {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showCoinsModal, setShowCoinsModal] = useState(false);
   const [showExperienceModal, setShowExperienceModal] = useState(false);
-  const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const [showPortfolioPanel, setShowPortfolioPanel] = useState(false);
   // Mantienen el modal montado mientras corre la animación de salida.
   const streakModalMounted = useModalPresence(showStreakModal);
   const coinsModalMounted = useModalPresence(showCoinsModal);
   const experienceModalMounted = useModalPresence(showExperienceModal);
-  const bankAPYModalMounted = useModalPresence(showBankAPYModal);
   const portfolioPanelMounted = useModalPresence(showPortfolioPanel);
   const { walletAddress, token, lockPeriod } = useConfigStore();
   const hideBalance = useHideBalance();
@@ -59,7 +56,8 @@ export const HeaderStats = () => {
   const { data: depositsData, isLoading: depositsLoading } = useDepositsComplete(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
-  const { data: apyData, isLoading: apyLoading } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
+  // Solo para el desglose del portafolio: el APY ya no se muestra en el header.
+  const { data: apyData } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
 
   // Ganancia estimada (proyección a vencimiento) sumada desde cada depósito,
@@ -90,10 +88,6 @@ export const HeaderStats = () => {
     },
     { vaquitaEarnings: 0, protocolEarnings: 0 },
   );
-
-  // APY base: lo que rinde el ahorro hoy. El boost de referidos que se sumaba
-  // aparte está oculto por ahora (ver el comentario del chip más abajo).
-  const baseApy = (apyData?.vaquitaApy ?? 0) + (apyData?.protocolApy ?? 0);
 
   // Saldo en vivo: capital + interés devengado hasta "ahora". Cada depósito
   // reporta cuánto rinde por milisegundo, así que el contador avanza en el
@@ -211,10 +205,16 @@ export const HeaderStats = () => {
                 {t('home.stats.greeting', 'Hi,')} @{displayName}
               </p>
             )}
+            {/* El saldo es la puerta al portafolio: se pinta como botón (crema
+                sobre el naranja del header + borde negro, el idioma de botones
+                de la app) para que se lea como algo que se toca, no como un
+                dato. Antes abría el historial de movimientos; ese sigue
+                accesible desde TotalDepositsButton y SavingsStats. */}
             <button
               type="button"
-              onClick={() => setShowBankAPYModal(true)}
-              className="flex items-center min-w-0 bg-transparent text-left"
+              onClick={() => setShowPortfolioPanel(true)}
+              aria-label={t('home.stats.apyAria', 'Portfolio')}
+              className="flex items-center gap-1.5 min-w-0 self-start rounded-md border border-black border-b-2 bg-background pl-2.5 pr-1.5 py-1 text-left"
             >
               {depositsLoading && !depositsData ? (
                 <Spinner size="sm" color="current" />
@@ -226,36 +226,19 @@ export const HeaderStats = () => {
                   {hideBalance ? '••••' : `$${formattedBalance}`}
                 </span>
               )}
+              <FiChevronRight className="w-4 h-4 text-black shrink-0" />
             </button>
 
-            {/* Chip de APY: abre el panel de portafolio. Mismo patrón que los
-                botones de la app (fondo de color + texto negro + borde negro +
-                rounded-md); el color va en el fondo, no en la letra, porque el
-                verde #34c759 sobre el naranja del header no contrasta, pero
-                como fondo con texto negro rinde 7:1.
-
-                OCULTO A PROPÓSITO (2026-07-21): al lado iba un segundo chip
-                lila con el boost de referidos (`apyBonus`, icono FiZap) que
-                abría <ReferralsModal>. Se decidió no exponer todavía la
-                pantalla de referidos al usuario, así que se quitó su único
-                punto de entrada. El feature sigue completo y funcionando
-                (hook `useReferralBoost` + `ReferralsModal` en organisms/): para
-                reactivarlo, volver a montar el chip aquí junto con el estado
-                showReferralsModal/referralsModalMounted y el render del modal
-                al final del componente. NO borrar esos archivos. */}
-            <div className="flex items-center gap-1.5 min-w-0">
-              <button
-                type="button"
-                onClick={() => setShowPortfolioPanel(true)}
-                aria-label={t('home.stats.apyAria', 'Portfolio')}
-                className="flex items-center gap-1 shrink-0 rounded-md border border-black bg-success px-1.5 py-1"
-              >
-                <FiArrowUpRight className="w-3.5 h-3.5 text-black shrink-0" />
-                <span className="text-xs font-bold text-black tabular-nums leading-none whitespace-nowrap">
-                  {apyLoading ? '—' : `${baseApy.toFixed(2)}% APY`}
-                </span>
-              </button>
-            </div>
+            {/* OCULTOS A PROPÓSITO (2026-07-21): acá vivían dos chips bajo el
+                saldo. El verde mostraba el APY base y abría <PortfolioPanel>;
+                ese punto de entrada se mudó al propio saldo (arriba), así que
+                el chip desapareció. El lila mostraba el boost de referidos
+                (`apyBonus`, icono FiZap) y abría <ReferralsModal>: se decidió
+                no exponer todavía esa pantalla. Ambos features siguen completos
+                (`useApyByLockPeriod`, `useReferralBoost`, `ReferralsModal` en
+                organisms/); para reactivarlos, volver a montar el chip acá con
+                su estado y el render del modal al final. NO borrar esos
+                archivos. */}
           </div>
 
           <Link
@@ -353,9 +336,7 @@ export const HeaderStats = () => {
           La columna derecha es solo móvil: en escritorio vive en el sidebar. */}
       <div className="absolute left-0 right-0 top-full mt-[40px] px-1 z-20 pointer-events-none">
         <div className="max-w-xl mx-auto flex items-start justify-between gap-2">
-          {/* El reloj baja 14px respecto del resto de la fila para dejar aire a
-              las cuerdas con las que "cuelga" del pill de stats (ver MapClock). */}
-          <div className="mt-[14px] pointer-events-auto">
+          <div className="pointer-events-auto">
             <MapClock />
           </div>
           <div className="flex flex-col items-center gap-2 pointer-events-auto md:hidden">
@@ -370,7 +351,6 @@ export const HeaderStats = () => {
       {experienceModalMounted && (
         <ExperienceModal open={showExperienceModal} onOpenChange={() => setShowExperienceModal(false)} experience={experience} />
       )}
-      {bankAPYModalMounted && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
       {portfolioPanelMounted && (
         <PortfolioPanel
           open={showPortfolioPanel}
