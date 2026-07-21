@@ -39,7 +39,8 @@ function StatChip({ icon, value, label }: { icon: ReactNode; value: string; labe
 }
 
 /**
- * Identity header for another player's world page (`/leaderboard/[wallet]`).
+ * Identity header for another player's world page (`/leaderboard/[username]`,
+ * already resolved to a wallet by the page).
  * Deliberately compact — a single banner row (back · avatar · username +
  * joined date · follow) plus the stat chips and the unlocked-achievements
  * strip — so the header and the world map fit one screen without scrolling.

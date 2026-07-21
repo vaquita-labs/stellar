@@ -5,11 +5,13 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileStreak } from '../../hooks';
+import { useModalPresence } from '../molecules/AppModal';
 import { StreakModal } from '../organisms';
 
 export const StreakButton = () => {
   const { t } = useTranslation();
   const [showStreakModal, setShowStreakModal] = useState(false);
+  const streakModalMounted = useModalPresence(showStreakModal);
   const { data, isLoading, isRefetching } = useProfileStreak();
 
   return (
@@ -37,7 +39,7 @@ export const StreakButton = () => {
           </>
         )}
       </Button>
-      {showStreakModal && <StreakModal open={showStreakModal} onOpenChange={() => setShowStreakModal(false)} />}
+      {streakModalMounted && <StreakModal open={showStreakModal} onOpenChange={() => setShowStreakModal(false)} />}
     </>
   );
 };

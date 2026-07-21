@@ -47,6 +47,7 @@ model Achievement {
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   profileAchievements ProfileAchievement[]
+  profileUnlocks      ProfileAchievementUnlock[]
 
   @@map("achievements")
 }
@@ -124,6 +125,28 @@ model BridgeTransfer {
   @@map("bridge_transfers")
 }
 
+/// Payout wallet the user saved for the withdraw flow, so they don't have to
+/// paste an exchange/self-custody address every time. `label` is user-chosen
+/// free text ("Binance Solana usdc"); `network` is one of the supported network
+/// keys (see CCTP_NETWORKS in @vaquita/shared). Soft-deleted so a removed entry
+/// never resurrects a stale address, while past withdrawals can still resolve it.
+model SavedWallet {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId Int       @map("profile_id")
+  label     String    @db.VarChar(60)
+  address   String    @db.VarChar(128)
+  network   String    @db.VarChar(40)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([profileId, address, network], map: "saved_wallets_unique_address")
+  @@index([profileId], map: "idx_saved_wallets_profile_id")
+  @@map("saved_wallets")
+}
+
 model MapObject {
   id        BigInt    @id @default(autoincrement())
   type      String?   @default("")
@@ -159,6 +182,10 @@ model Config {
   // (type 'earned', the `experience` reward) on collect and summed into the
   // profile's total experience. `0` disables the check-in XP bonus.
   dailyCheckinExperience Int     @default(0) @map("daily_checkin_experience")
+  // Duración (en segundos reales) de un día COMPLETO del reloj de juego, que
+  // corre acelerado tipo Minecraft. Global para todos (se sirve vía GET
+  // /api/v1/time). Reemplaza la env var GAME_DAY_LENGTH_SECONDS. 1200 = 20 min.
+  gameDayLengthSeconds  Int      @default(1200) @map("game_day_length_seconds")
   // Fiat display currencies offered in the UI (Preferences page). Each entry is
   // `{ id, label, hint? }`, e.g. `{ "id": "usd", "label": "USD", "hint": "US Dollar" }`.
   currencies            Json     @default("[]")
@@ -208,15 +235,28 @@ model Profile {
   // defaults: push/deposits/streaks on, email/friends off).
   notificationPreferences Json? @map("notification_preferences") @db.JsonB
 
+  // Invite-a-friend graph. `referralCode` is the short string this profile
+  // shares (minted lazily on first read, unique among non-NULL codes).
+  // `referredById` points at the profile whose code this user signed up with —
+  // set once at signup, never changed. `referrals` are the profiles this user
+  // brought in; `referredBy` is the one who brought this user in.
+  referralCode  String?   @unique(map: "profiles_referral_code_unique") @map("referral_code") @db.VarChar(12)
+  referredById  Int?      @map("referred_by_id")
+
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
 
+  referredBy    Profile?  @relation("referrals", fields: [referredById], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  referrals     Profile[] @relation("referrals")
+
   profileAchievements ProfileAchievement[]
+  profileUnlocks      ProfileAchievementUnlock[]
   profileMapObjects   ProfileMapObject[]
   profileMapItems     ProfileMapItem[]
   profileRewards      ProfileReward[]
   notifications       Notification[]
+  savedWallets        SavedWallet[]
 
   // Unidirectional follow graph. `following` are edges where this profile is the
   // follower; `followers` are edges where it is the followee.
@@ -295,6 +335,23 @@ model ProfileAchievement {
   @@unique([profileId, achievementId])
   @@index([profileId], map: "profiles_achievements_profile_idx")
   @@map("profiles_achievements")
+}
+
+/// Permanent "this profile once met the badge rule" latch. Eligibility reads
+/// `liveRule(signals) OR latched`, so a signal going down (withdrawal, broken
+/// streak, unfollow) can never re-lock a badge the user already earned.
+model ProfileAchievementUnlock {
+  id            BigInt   @id @default(autoincrement())
+  profileId     Int      @map("profile_id")
+  achievementId BigInt   @map("achievement_id")
+  unlockedAt    DateTime @default(now()) @map("unlocked_at") @db.Timestamptz(6)
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profile     Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([profileId, achievementId], map: "profiles_achievements_unlocks_unique")
+  @@index([profileId], map: "profiles_achievements_unlocks_profile_idx")
+  @@map("profiles_achievements_unlocks")
 }
 
 model ProfileMapObject {

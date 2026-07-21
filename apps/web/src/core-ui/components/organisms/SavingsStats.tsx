@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useApyByLockPeriod } from '../../hooks';
 import { useConfigStore } from '../../stores';
+import { useModalPresence } from '../molecules/AppModal';
 import { BankAPYModal } from './BankAPYModal';
 
 export const SavingsStats = () => {
@@ -18,6 +19,7 @@ export const SavingsStats = () => {
   const APYVaquita = vaquitaApy.toFixed(2);
   const APYTotal = (+APYNetwork + +APYVaquita).toFixed(2);
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
+  const bankAPYModalMounted = useModalPresence(showBankAPYModal);
 
   const handleBankAPYModal = () => {
     setShowBankAPYModal(true);
@@ -35,7 +37,7 @@ export const SavingsStats = () => {
           </Button>
         )}
       </div>
-      {showBankAPYModal && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
+      {bankAPYModalMounted && <BankAPYModal open={showBankAPYModal} onOpenChange={() => setShowBankAPYModal(false)} />}
     </>
   );
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Modal, toast } from '@heroui/react';
+import { Button, toast } from '@heroui/react';
 import { Canvas } from '@react-three/fiber';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
@@ -9,6 +9,7 @@ import { useIsMobile, useProfileMapObjectsAvailable, useProfileRewards, usePurch
 import { EditionMode, useMapStore } from '../../../stores';
 import { MapObjectType } from '../../../types';
 import { SceneLighting } from '../../map/scene/SceneLighting';
+import { AppModal } from '../../molecules/AppModal';
 import { CatalogObjectCard } from './CatalogObjectCard';
 import { getMapItemName } from './mapItemNames';
 
@@ -130,91 +131,76 @@ export function CatalogList() {
       </div>
 
       {/* Detalle + compra */}
-      <Modal.Backdrop isOpen={!!detailItem} onOpenChange={(o) => { if (!o) closeDetail(); }}>
-        <Modal.Container size="md">
-          <Modal.Dialog className="bg-background border border-black">
-            <Modal.CloseTrigger>
-              <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />
-            </Modal.CloseTrigger>
-            <Modal.Header>
-              <Modal.Heading className="text-black font-bold text-lg">
-                {detailItem ? getMapItemName(t, detailItem.type, detailItem.variant) : ''}
-              </Modal.Heading>
-            </Modal.Header>
-            <Modal.Body>
-              {detailItem && (
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-700">
-                    {t('home.catalog.placeableHint', 'After buying you can place it anywhere on your map, move it or remove it.')}
-                  </p>
-                  <div className="pt-2 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">{t('home.catalog.price', 'Price')}</p>
-                    <div className="flex items-center gap-1">
-                      <Image src="/icons/global/coin.png" alt={t('home.catalog.goldAlt', 'Gold')} width={24} height={24} className="object-contain" />
-                      <span className="text-lg font-bold text-black">{detailItem.price}</span>
-                    </div>
-                    <p className="text-[11px] text-gray-500 mt-1">
-                      {t('home.catalog.youHave', 'You have {{count}}', { count: goldCoins })}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </Modal.Body>
-            <Modal.Footer>
-              <Button
-                className={`${
-                  detailAffordable
-                    ? 'bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00]'
-                    : 'bg-gray-200 border border-gray-400 text-gray-500 cursor-not-allowed'
-                } rounded-md`}
-                onPress={handleBuy}
-                isDisabled={!detailAffordable || purchase.isPending}
-              >
-                {purchase.isPending
-                  ? t('home.catalog.processing', 'Processing...')
-                  : detailAffordable
-                    ? t('home.catalog.buy', 'Buy')
-                    : t('home.catalog.notEnoughCoinsTitle', 'Not enough coins')}
-              </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
+      <AppModal
+        open={!!detailItem}
+        onOpenChange={closeDetail}
+        title={detailItem ? getMapItemName(t, detailItem.type, detailItem.variant) : ''}
+        footer={
+          <Button
+            className={`w-full ${
+              detailAffordable
+                ? 'bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00]'
+                : 'bg-gray-200 border border-gray-400 text-gray-500 cursor-not-allowed'
+            } rounded-md`}
+            onPress={handleBuy}
+            isDisabled={!detailAffordable || purchase.isPending}
+          >
+            {purchase.isPending
+              ? t('home.catalog.processing', 'Processing...')
+              : detailAffordable
+                ? t('home.catalog.buy', 'Buy')
+                : t('home.catalog.notEnoughCoinsTitle', 'Not enough coins')}
+          </Button>
+        }
+      >
+        {detailItem && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700">
+              {t('home.catalog.placeableHint', 'After buying you can place it anywhere on your map, move it or remove it.')}
+            </p>
+            <div className="pt-2 border-t border-gray-200">
+              <p className="text-xs text-gray-500 uppercase font-semibold mb-1">{t('home.catalog.price', 'Price')}</p>
+              <div className="flex items-center gap-1">
+                <Image src="/icons/global/coin.png" alt={t('home.catalog.goldAlt', 'Gold')} width={24} height={24} className="object-contain" />
+                <span className="text-lg font-bold text-black">{detailItem.price}</span>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-1">
+                {t('home.catalog.youHave', 'You have {{count}}', { count: goldCoins })}
+              </p>
+            </div>
+          </div>
+        )}
+      </AppModal>
 
       {/* Post-compra: colocar ahora o dejar en la colección */}
-      <Modal.Backdrop isOpen={!!placementItem} onOpenChange={(o) => { if (!o) setPlacementItem(null); }}>
-        <Modal.Container size="md">
-          <Modal.Dialog className="bg-background border border-black">
-            <Modal.Header>
-              <Modal.Heading className="text-black font-bold text-lg">
-                {t('home.catalog.placeNowTitle', 'Place it now?')}
-              </Modal.Heading>
-            </Modal.Header>
-            <Modal.Body>
-              <p className="text-sm text-gray-700">
-                {placementItem &&
-                  t('home.catalog.placeNowDesc', '{{name}} is now in your collection. You can place it on your map right away.', {
-                    name: getMapItemName(t, placementItem.type, placementItem.variant),
-                  })}
-              </p>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button
-                className="bg-white border border-black border-b-2 text-black font-semibold hover:bg-gray-100 rounded-md"
-                onPress={() => setPlacementItem(null)}
-              >
-                {t('home.catalog.keepForLater', 'Keep in collection')}
-              </Button>
-              <Button
-                className="bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00] rounded-md"
-                onPress={handlePlaceNow}
-              >
-                {t('home.catalog.placeNow', 'Place now')}
-              </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
+      <AppModal
+        open={!!placementItem}
+        onOpenChange={() => setPlacementItem(null)}
+        title={t('home.catalog.placeNowTitle', 'Place it now?')}
+        footer={
+          <div className="flex gap-2 w-full [&>*]:flex-1">
+            <Button
+              className="bg-white border border-black border-b-2 text-black font-semibold hover:bg-gray-100 rounded-md"
+              onPress={() => setPlacementItem(null)}
+            >
+              {t('home.catalog.keepForLater', 'Keep in collection')}
+            </Button>
+            <Button
+              className="bg-primary border border-black border-b-2 text-black font-semibold hover:bg-[#e68a00] rounded-md"
+              onPress={handlePlaceNow}
+            >
+              {t('home.catalog.placeNow', 'Place now')}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-gray-700">
+          {placementItem &&
+            t('home.catalog.placeNowDesc', '{{name}} is now in your collection. You can place it on your map right away.', {
+              name: getMapItemName(t, placementItem.type, placementItem.variant),
+            })}
+        </p>
+      </AppModal>
     </>
   );
 }

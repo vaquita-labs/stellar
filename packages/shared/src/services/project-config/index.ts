@@ -46,6 +46,22 @@ export const getRewardsConfig = async (): Promise<RewardsConfig> => {
   };
 };
 
+/** Duración por defecto de un día del reloj de juego (20 min), usada si el
+ *  singleton `config` todavía no existe. */
+export const DEFAULT_GAME_DAY_LENGTH_SECONDS = 1200;
+
+/**
+ * Duración (en segundos reales) de un día completo del reloj de juego acelerado,
+ * leída en vivo del singleton `config`. Global para todos. Cae al default
+ * histórico (20 min) si la fila no existe, así el endpoint nunca falla.
+ */
+export const getGameDayLengthSeconds = async (): Promise<number> => {
+  const config = await prisma.config.findFirst({
+    select: { gameDayLengthSeconds: true },
+  });
+  return config?.gameDayLengthSeconds ?? DEFAULT_GAME_DAY_LENGTH_SECONDS;
+};
+
 /**
  * Returns the single project configuration (the app is single-network now), with
  * its supported tokens. Replaces the old getNetworkByName / getNetworks /

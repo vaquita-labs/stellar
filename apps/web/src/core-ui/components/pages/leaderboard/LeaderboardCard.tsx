@@ -16,6 +16,9 @@ import { MapMiniPreview } from './MapMiniPreview';
 export type LeaderboardCardData = {
   position: number;
   walletAddress: string;
+  /** Raw nickname ('' when the profile never set one) — used to build the
+   *  /leaderboard/<username> link. */
+  nickname: string;
   /** Always the username (nickname or `vaqueroXXXX` fallback) — the wallet
    *  is never surfaced in the UI. */
   username: string;
@@ -276,7 +279,9 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
 
   return (
     <Link
-      href={`/leaderboard/${user.walletAddress}`}
+      // Public URLs are keyed by username; the wallet is only a fallback for
+      // profiles that never set one (the page accepts both).
+      href={`/leaderboard/${encodeURIComponent(user.nickname || user.walletAddress)}`}
       aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", {
         username: user.username,
       })}

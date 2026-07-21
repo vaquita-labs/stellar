@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
 import { useMapStore, useConfigStore, useSyncMapObjects } from '../../stores';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
+import { useModalPresence } from '../molecules/AppModal';
 import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
 import { MapObjects } from './buildings/MapObjects';
 import { SceneCamera } from './scene/SceneCamera';
@@ -54,6 +55,10 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
   const [dailyRewardExperience, setDailyRewardExperience] = useState(0);
   const [showMoodModal, setShowMoodModal] = useState(false);
+  // Mantienen el modal montado mientras corre la animación de salida.
+  const vaquitasListModalMounted = useModalPresence(showVaquitasListModal);
+  const dailyRewardModalMounted = useModalPresence(showDailyRewardModal);
+  const moodModalMounted = useModalPresence(showMoodModal);
   const userWalletAddress = useConfigStore((store) => store.walletAddress);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
 
@@ -99,8 +104,12 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
   };
 
   const handleCollectDailyReward = async () => {
+    // Solo esperamos a que la recompensa se otorgue: en cuanto resuelve, el
+    // modal muestra la pantalla de premio. La invalidación de la caché corre en
+    // segundo plano (fire-and-forget) para no colgar el modal si un refetch de
+    // ['profile'] se demora (staleTime: Infinity refetchea todas las activas).
     await goldDailyCollect();
-    await queryClient.invalidateQueries({ queryKey: ['profile'] });
+    void queryClient.invalidateQueries({ queryKey: ['profile'] });
   };
 
   return (
@@ -162,10 +171,10 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
         <TileSpotlightUpdater />
         <ObjectGlow />
       </Canvas>
-      {showVaquitasListModal && (
+      {vaquitasListModalMounted && (
         <VaquitasListModal open={showVaquitasListModal} onOpenChange={() => setShowVaquitasListModal(false)} />
       )}
-      {showDailyRewardModal && (
+      {dailyRewardModalMounted && (
         <DailyRewardModal
           open={showDailyRewardModal}
           onOpenChange={() => setShowDailyRewardModal(false)}
@@ -175,7 +184,7 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
           onCollect={handleCollectDailyReward}
         />
       )}
-      {showMoodModal && (
+      {moodModalMounted && (
         <MoodMessageModal open={showMoodModal} onOpenChange={() => setShowMoodModal(false)} mood={mood} />
       )}
     </div>

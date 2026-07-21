@@ -49,6 +49,7 @@ const emptyConfig = {
   cycleDurationMs: null as number | null,
   dailyGoldCoins: 0,
   dailyCheckinExperience: 0,
+  gameDayLengthSeconds: 1200,
   currencies: [] as Currency[],
   languages: [] as Language[],
   createdAt: null,
@@ -95,6 +96,9 @@ const updateSchema = z.object({
   // Daily check-in reward amounts. Non-negative integers; only written when sent.
   dailyGoldCoins: z.number().int().min(0).optional(),
   dailyCheckinExperience: z.number().int().min(0).optional(),
+  // Duración de un día del reloj de juego, en segundos reales (>=1). Sólo se
+  // escribe cuando viene en el payload. 600 = 10 min, 1200 = 20 min.
+  gameDayLengthSeconds: z.number().int().min(1).optional(),
   currencies: z.array(optionSchema).optional(),
   languages: z.array(optionSchema).optional(),
 });
@@ -146,6 +150,7 @@ export async function PATCH(req: NextRequest) {
         cycleDurationMs: data.cycleDurationMs == null ? null : BigInt(data.cycleDurationMs),
         dailyGoldCoins: data.dailyGoldCoins ?? 1,
         dailyCheckinExperience: data.dailyCheckinExperience ?? 0,
+        gameDayLengthSeconds: data.gameDayLengthSeconds ?? 1200,
         currencies: data.currencies ?? [],
         languages: data.languages ?? [],
       },
@@ -165,6 +170,7 @@ export async function PATCH(req: NextRequest) {
       ...(data.languages !== undefined ? { languages: data.languages } : {}),
       ...(data.dailyGoldCoins !== undefined ? { dailyGoldCoins: data.dailyGoldCoins } : {}),
       ...(data.dailyCheckinExperience !== undefined ? { dailyCheckinExperience: data.dailyCheckinExperience } : {}),
+      ...(data.gameDayLengthSeconds !== undefined ? { gameDayLengthSeconds: data.gameDayLengthSeconds } : {}),
       networkPassphrase: data.networkPassphrase,
       badgesContractAddress: data.badgesContractAddress,
       cycleDurationMs: data.cycleDurationMs == null ? null : BigInt(data.cycleDurationMs),

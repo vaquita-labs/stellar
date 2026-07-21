@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack -p 3101",
     "dev:stellar": "next dev --turbopack -p 3101",
+    "dev:https": "next dev --turbopack -p 3101 --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
