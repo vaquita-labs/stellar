@@ -59,6 +59,12 @@ router.get('/rank', async (req, res) => {
  * position without paging to it. `me` is null when the wallet isn't on the
  * board. Costs one array scan over the already-cached enriched board.
  *
+ * `meViewIndex` comes back alongside it: the 0-based index of that wallet in
+ * *this* view (search + sort applied), so the client can request the page it
+ * falls on directly (`offset = floor(meViewIndex / limit) * limit`) instead of
+ * paging down to it. Slicing at a deep offset is free here — the board is
+ * already materialised in memory.
+ *
  * The enriched board is cached ~30s per cycle (shared across all viewers and
  * pages), so scrolling through pages costs one DB computation per window, not
  * one per request. Filtering/sorting/slicing happen per-request on the cached
@@ -75,7 +81,7 @@ router.get('/', async (req, res) => {
 
     const enriched = await getEnrichedLeaderboard(cycleId, cycleStatus);
 
-    const page = paginateLeaderboardRows(enriched, pageParams);
+    const page = paginateLeaderboardRows(enriched, { ...pageParams, me: meWallet });
     if (meWallet) page.me = findLeaderboardRowForWallet(enriched, meWallet);
 
     return sendSuccess(res, page, '');

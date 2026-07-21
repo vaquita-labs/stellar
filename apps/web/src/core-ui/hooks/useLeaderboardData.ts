@@ -14,6 +14,9 @@ export interface LeaderboardViewParams {
   search?: string;
   sort?: LeaderboardSortKey;
   direction?: LeaderboardSortDirection;
+  /** Row offset the feed starts at. Defaults to 0 (the top of the board); set
+   *  it to jump straight to a deep page — see `me`/`meViewIndex` below. */
+  anchorOffset?: number;
 }
 
 export interface LeaderboardPageDTO {
@@ -25,6 +28,10 @@ export interface LeaderboardPageDTO {
   /** The viewer's own row (true rank, independent of the search/sort view),
    *  or null when the viewer isn't on the board / isn't connected. */
   me: LeaderboardResponseDTO | null;
+  /** 0-based index of the viewer's row *in this view*, or null when it isn't
+   *  in it. Unlike `me.position` (a true rank) this is the index the offset
+   *  maths works on, so it stays correct under any sort/search. */
+  meViewIndex: number | null;
 }
 
 /** Prefix shared by every leaderboard view (any cycle/search/sort) — use it to
@@ -34,10 +41,23 @@ export const leaderboardQueryPrefix = (networkName: string | undefined) =>
 
 export const leaderboardQueryKey = (
   networkName: string | undefined,
-  { cycle = 'current', search = '', sort = 'rank', direction = 'desc' }: LeaderboardViewParams = {},
+  {
+    cycle = 'current',
+    search = '',
+    sort = 'rank',
+    direction = 'desc',
+    anchorOffset = 0,
+  }: LeaderboardViewParams = {},
   // Part of the key so switching wallets can't serve another viewer's `me` row.
   viewerWallet = '',
-) => [...leaderboardQueryPrefix(networkName), cycle, { search, sort, direction, viewerWallet }] as const;
+) =>
+  [
+    ...leaderboardQueryPrefix(networkName),
+    cycle,
+    // The anchor belongs in the key: a feed starting at row 999.980 is a
+    // different list from the one starting at row 0, not a page of it.
+    { search, sort, direction, viewerWallet, anchorOffset },
+  ] as const;
 
 const toLeaderboardRow = (row: LeaderboardResponseDTO): LeaderboardResponseDTO => ({
   position: row?.position ?? 0,
@@ -59,16 +79,27 @@ const toLeaderboardRow = (row: LeaderboardResponseDTO): LeaderboardResponseDTO =
  * Infinite-scroll leaderboard feed. The API paginates server-side (search +
  * sort included, so every loaded page is globally consistent) and each page
  * reports `hasMore`/`offset` for the next fetch.
+ *
+ * `anchorOffset` starts the feed at an arbitrary row instead of the top. The
+ * API materialises the whole board in memory before slicing, so a deep offset
+ * costs the same as offset 0 — that's what makes "jump to my position" one
+ * request rather than one per page in between.
  */
 export const useLeaderboardData = (params: LeaderboardViewParams = {}) => {
   const { network, walletAddress } = useConfigStore();
-  const { cycle = 'current', search = '', sort = 'rank', direction = 'desc' } = params;
+  const {
+    cycle = 'current',
+    search = '',
+    sort = 'rank',
+    direction = 'desc',
+    anchorOffset = 0,
+  } = params;
   const viewerWallet = walletAddress ?? '';
 
   return useInfiniteQuery({
     queryKey: leaderboardQueryKey(
       network?.networkName,
-      { cycle, search, sort, direction },
+      { cycle, search, sort, direction, anchorOffset },
       viewerWallet,
     ),
     queryFn: async ({ pageParam }): Promise<LeaderboardPageDTO> => {
@@ -94,9 +125,10 @@ export const useLeaderboardData = (params: LeaderboardViewParams = {}) => {
         offset: page?.offset ?? 0,
         hasMore: page?.hasMore ?? false,
         me: page?.me ? toLeaderboardRow(page.me) : null,
+        meViewIndex: typeof page?.meViewIndex === 'number' ? page.meViewIndex : null,
       };
     },
-    initialPageParam: 0,
+    initialPageParam: anchorOffset,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.offset + lastPage.rows.length : undefined,
     // Switching search/sort/direction is a new query key; keep showing the

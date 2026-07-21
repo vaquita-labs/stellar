@@ -656,7 +656,11 @@
       "notFoundHint": "The account may have changed its username or no longer exists."
     },
     "vaquero": "Vaquero",
-    "vaqueroNamed": "Vaquero {{tail}}"
+    "vaqueroNamed": "Vaquero {{tail}}",
+    "anchored": {
+      "title": "Showing your part of the board",
+      "backToTop": "Back to #1"
+    }
   },
   "nav": {
     "primaryAriaLabel": "Primary"

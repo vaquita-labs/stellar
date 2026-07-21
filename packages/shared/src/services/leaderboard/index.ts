@@ -185,6 +185,8 @@ export interface LeaderboardPageParams {
   search: string;
   sort: LeaderboardSortKey;
   direction: LeaderboardSortDirection;
+  /** Wallet whose index within this view should be reported as `meViewIndex`. */
+  me?: string;
 }
 
 export interface LeaderboardPage {
@@ -196,6 +198,11 @@ export interface LeaderboardPage {
   /** The requester's own row (true rank, independent of the search/sort view),
    *  when a `me` wallet was passed and it is on the board. */
   me?: EnrichedLeaderboardRow | null;
+  /** 0-based index of the requester's row *within this view* (search + sort
+   *  applied), or null when it isn't in it. `me.position` is a true rank and
+   *  only matches this index in the default rank view, so a client that wants
+   *  to jump straight to its own page must page off this instead. */
+  meViewIndex?: number | null;
 }
 
 export const LEADERBOARD_DEFAULT_PAGE_SIZE = 20;
@@ -261,7 +268,7 @@ export function paginateLeaderboardRows(
   rows: EnrichedLeaderboardRow[],
   params: LeaderboardPageParams,
 ): LeaderboardPage {
-  const { limit, offset, search, sort, direction } = params;
+  const { limit, offset, search, sort, direction, me } = params;
 
   let view = rows;
 
@@ -287,12 +294,23 @@ export function paginateLeaderboardRows(
   const total = view.length;
   const pageRows = view.slice(offset, offset + limit);
 
+  // One extra scan over the already-materialised view, so a client can jump to
+  // its own page in a single request instead of paging there — at rank 1M that
+  // is the difference between one request and fifty thousand.
+  let meViewIndex: number | null = null;
+  if (me) {
+    const needle = me.toLowerCase();
+    const found = view.findIndex((row) => row.walletAddress.toLowerCase() === needle);
+    meViewIndex = found === -1 ? null : found;
+  }
+
   return {
     rows: pageRows,
     total,
     limit,
     offset,
     hasMore: offset + pageRows.length < total,
+    meViewIndex,
   };
 }
 
