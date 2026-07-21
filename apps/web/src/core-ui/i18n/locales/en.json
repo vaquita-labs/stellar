@@ -482,7 +482,6 @@
         "expansion": "expansion",
         "utility": "utility"
       },
-      "youHave": "You have {{count}}",
       "yourOffer": "Your offer",
       "empty": "The catalog is empty right now.",
       "emptyHint": "Come back soon for new items!",

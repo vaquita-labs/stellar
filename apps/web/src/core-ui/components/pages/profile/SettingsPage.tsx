@@ -66,12 +66,15 @@ function RowShell({
 }) {
   return (
     <div
-      className={`flex items-center justify-between gap-3 px-4 py-4 transition ${
-        disabled ? 'opacity-60' : ''
+      className={`flex items-center justify-between gap-3 px-4 py-3 transition ${
+        disabled ? 'opacity-50' : ''
       }`}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[#DDF4FF] border border-[#84D8FF] text-black shrink-0">
+        {/* Plain glyph, no tinted chip: with a dozen rows stacked, the blue
+            squares read as the loudest thing on the screen instead of the
+            labels. */}
+        <span className="flex h-8 w-8 items-center justify-center text-black shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px]">
           {icon}
         </span>
         <div className="min-w-0 flex-1">
@@ -125,7 +128,7 @@ function SettingsRow({ row }: { row: Row }) {
   );
 
   if (row.disabled) {
-    return <div aria-disabled>{shell}</div>;
+    return <div aria-disabled="true">{shell}</div>;
   }
   if (row.href) {
     return (
@@ -228,8 +231,9 @@ export function SettingsPage() {
       description: hideBalance
         ? t('profilePages.settings.privacyDescHidden', 'Balance hidden on this device.')
         : t('profilePages.settings.privacyDesc', 'Hide your balance on the profile and home screens.'),
-      href: '/profile/privacy-settings',
-      badge: t('common.soon')
+      // Not built yet: the badge says "soon", so the row shouldn't navigate.
+      disabled: true,
+      badge: t('common.soon'),
     },
   ];
 
@@ -257,7 +261,7 @@ export function SettingsPage() {
       icon: <FiHelpCircle />,
       label: t('profilePages.settings.help', 'Help center'),
       description: t('profilePages.settings.helpDesc', 'FAQ and account support.'),
-      href: '/profile/help',
+      disabled: true,
       badge: t('common.soon'),
     },
     {
@@ -266,7 +270,7 @@ export function SettingsPage() {
       icon: <FiMessageCircle />,
       label: t('profilePages.settings.feedback', 'Feedback'),
       description: t('profilePages.settings.feedbackDesc', 'Tell us what you think.'),
-      href: '/profile/feedback',
+      disabled: true,
       badge: t('common.soon'),
     },
   ];
@@ -274,7 +278,7 @@ export function SettingsPage() {
   return (
     <>
       <div className="h-full overflow-y-auto bg-background">
-        <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-5">
+        <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-4">
           {/* Duolingo-style header: muted title centered, Done on the right */}
           <header className="relative flex items-center justify-center min-h-10 border-b border-black/10 pb-3">
             <h1 className="text-base sm:text-lg font-bold text-gray-500 tracking-wide uppercase">

@@ -28,6 +28,7 @@ import { PageLayout } from '../molecules';
 import { VaquitaAvatar } from '../avatar/VaquitaAvatar';
 import { BadgeTile } from './profile/BadgeTile';
 import { FollowListModal } from './profile/FollowListModal';
+import { FriendsModal } from './profile/FriendsModal';
 import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
 
 /* ------------------------------------------------------------------ */
@@ -148,6 +149,7 @@ export function ProfilePage() {
     open: false,
     tab: 'following',
   });
+  const [friendsOpen, setFriendsOpen] = useState(false);
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
   const { isClaimed } = useClaimedAchievements();
@@ -399,13 +401,17 @@ export function ProfilePage() {
         {/* The QR sits beside the CTA, not in the banner: both are "grow your
             circle" actions, and pairing them frees the header for navigation. */}
         <section className="flex items-stretch gap-3 px-4 sm:px-6">
-          <Link
-            href="/profile/friends"
+          {/* Abre el panel en vez de navegar: la ruta /profile/friends sigue
+              existiendo para enlaces directos, pero desde acá se apila sobre el
+              perfil (que queda debajo) en lugar de reemplazarlo. */}
+          <button
+            type="button"
+            onClick={() => setFriendsOpen(true)}
             className="flex h-12 flex-1 items-center justify-center gap-2 rounded-md border border-black border-b-3 bg-white text-sm font-bold uppercase tracking-wide text-black transition hover:-translate-y-0.5 hover:bg-white/80"
           >
             <FiUserPlus className="h-4 w-4" />
             {t('profilePages.profile.addFriends', 'Add friends')}
-          </Link>
+          </button>
           <ShareProfileQrButton
             displayName={displayName}
             handle={handle}
@@ -497,6 +503,8 @@ export function ProfilePage() {
         initialTab={followModal.tab}
         onOpenChange={(o) => setFollowModal((s) => ({ ...s, open: o }))}
       />
+
+      <FriendsModal open={friendsOpen} onClose={() => setFriendsOpen(false)} />
     </div>
   );
 }

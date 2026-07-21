@@ -70,7 +70,7 @@ function ObjectListCmp() {
   const canvasWidth = objects.length * spacing * zoom;
 
   return (
-    <CarouselScroller className="h-[160px] sm:h-[180px] w-full">
+    <CarouselScroller>
       <div style={{ width: canvasWidth, height: '100%' }}>
         <Canvas
           shadows

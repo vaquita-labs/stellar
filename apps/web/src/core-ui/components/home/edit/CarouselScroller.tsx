@@ -5,9 +5,16 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 /** Cuánto tarda el indicador en desvanecerse después del último scroll. */
 const HIDE_DELAY_MS = 800;
 
+/**
+ * Alto del carrusel. Vive acá y no en cada lista porque el catálogo y la
+ * colección muestran la MISMA card (preview + píldora de nombre): si cada uno
+ * declara su alto, el panel de la tienda cambia de tamaño al cambiar de tab.
+ */
+const CAROUSEL_HEIGHT = 'h-[160px] sm:h-[180px]';
+
 interface CarouselScrollerProps {
   children: ReactNode;
-  /** Clases del contenedor scrolleable (alto, etc.). */
+  /** Clases extra del contenedor scrolleable. */
   className?: string;
 }
 
@@ -66,7 +73,11 @@ export function CarouselScroller({ children, className = '' }: CarouselScrollerP
 
   return (
     <div className="relative">
-      <div ref={scrollRef} onScroll={handleScroll} className={`no-scrollbar overflow-x-auto ${className}`}>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className={`no-scrollbar w-full overflow-x-auto ${CAROUSEL_HEIGHT} ${className}`}
+      >
         {children}
       </div>
       {thumb && (

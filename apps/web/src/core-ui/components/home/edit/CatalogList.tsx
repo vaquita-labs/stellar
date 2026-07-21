@@ -120,7 +120,7 @@ export function CatalogList() {
 
   return (
     <>
-      <CarouselScroller className="h-[180px] sm:h-[200px] w-full">
+      <CarouselScroller>
         <div style={{ width: canvasWidth, height: '100%' }}>
           <Canvas shadows orthographic camera={{ position: [0, 10, 10], zoom, near: 0.1, far: 1000 }}>
             <SceneLighting />
@@ -166,21 +166,20 @@ export function CatalogList() {
       >
         {detailItem && (
           <div className="space-y-4">
-            <p className="text-sm text-gray-700">
-              {isHudItem(detailItem.type)
-                ? t('home.catalog.hudHint', 'Buying it unlocks it on your map screen. It is a one-time purchase.')
-                : t('home.catalog.placeableHint', 'After buying you can place it anywhere on your map, move it or remove it.')}
-            </p>
-            <div className="pt-2 border-t border-gray-200">
+            {/* El precio primero: es lo que se decide acá. El saldo no se
+                repite porque ya está en la cabecera de la tienda. */}
+            <div>
               <p className="text-xs text-gray-500 uppercase font-semibold mb-1">{t('home.catalog.price', 'Price')}</p>
               <div className="flex items-center gap-1">
                 <Image src="/icons/global/coin.png" alt={t('home.catalog.goldAlt', 'Gold')} width={24} height={24} className="object-contain" />
                 <span className="text-lg font-bold text-black">{detailItem.price}</span>
               </div>
-              <p className="text-[11px] text-gray-500 mt-1">
-                {t('home.catalog.youHave', 'You have {{count}}', { count: goldCoins })}
-              </p>
             </div>
+            <p className="text-sm text-gray-700 pt-3 border-t border-gray-200">
+              {isHudItem(detailItem.type)
+                ? t('home.catalog.hudHint', 'Buying it unlocks it on your map screen. It is a one-time purchase.')
+                : t('home.catalog.placeableHint', 'After buying you can place it anywhere on your map, move it or remove it.')}
+            </p>
           </div>
         )}
       </AppModal>

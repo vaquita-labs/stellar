@@ -62,35 +62,27 @@ export function CatalogObjectCard({ type, variant, price, affordable, position, 
         </Html>
       )}
 
-      {/* Precio: badge sobre el preview, en el mismo lugar que el contador de
-          cantidad de "Mi colección" (ObjectListObjectCard). */}
-      <Html position={[0.65, 1.3, 0]} center transform={false}>
-        <span
-          className={`text-[10px] font-bold bg-white text-black border border-black/10 rounded-full h-5 px-1.5 inline-flex items-center gap-1 pointer-events-none whitespace-nowrap ${
-            !affordable ? 'opacity-60' : ''
-          }`}
-        >
-          <Image
-            src="/icons/global/coin.png"
-            alt={t('home.catalog.goldAlt', 'Gold')}
-            width={12}
-            height={12}
-            className="object-contain"
-          />
-          {price}
-        </span>
-      </Html>
-
-      {/* Nombre */}
+      {/* Nombre + precio en la misma píldora. El nombre trunca si no entra; el
+          precio nunca (shrink-0), que es el dato que se compara entre cards. */}
       <Html position={[0, -1.5, 0]} center transform={false}>
         <button
           type="button"
           onClick={onClick}
           className={`pointer-events-auto ${!affordable ? 'opacity-60' : ''}`}
-          style={{ width: 110 }}
+          style={{ width: 124 }}
         >
-          <div className="text-xs font-bold text-black truncate max-w-full text-center bg-white/90 rounded-full px-2 py-0.5 border border-black/10">
-            {getMapItemName(t, type, variant)}
+          <div className="flex items-center justify-between gap-1.5 bg-white/90 rounded-full px-2.5 py-0.5 border border-black/10">
+            <span className="text-xs font-bold text-black truncate">{getMapItemName(t, type, variant)}</span>
+            <span className="flex shrink-0 items-center gap-0.5">
+              <Image
+                src="/icons/global/coin.png"
+                alt={t('home.catalog.goldAlt', 'Gold')}
+                width={12}
+                height={12}
+                className="object-contain"
+              />
+              <span className="text-xs font-bold text-black">{price}</span>
+            </span>
           </div>
         </button>
       </Html>

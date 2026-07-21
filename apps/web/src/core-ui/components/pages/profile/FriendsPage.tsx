@@ -42,11 +42,13 @@ function ActionRow({
   // stacked white blocks.
   const inner = (
     <div
-      className={`flex items-center gap-3 px-4 py-4 transition ${
+      className={`flex items-center gap-3 px-4 py-2.5 transition ${
         disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-[#FFF7E6]'
       }`}
     >
-      <span className="flex h-11 w-11 items-center justify-center rounded-md bg-[#DDF4FF] border border-[#84D8FF] text-black shrink-0">
+      {/* Sin recuadro celeste: era el único azul de toda la app y competía con
+          el texto de la fila. El ícono solo ya distingue cada acción. */}
+      <span className="flex h-8 w-8 items-center justify-center text-black shrink-0">
         {icon}
       </span>
       <p className="text-[15px] font-extrabold text-black flex-1 min-w-0 truncate">{label}</p>
@@ -137,7 +139,13 @@ function SuggestionCard({
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
 
-export function FriendsPage() {
+/**
+ * `onBack` lo pasa <FriendsModal> cuando la pantalla se abre como panel sobre
+ * el perfil: ahí el cierre y la animación los maneja el modal. Sin él, la
+ * pantalla funciona como ruta suelta (/profile/friends, entrada directa o
+ * enlace compartido) y se anima sola con useSlidePage.
+ */
+export function FriendsPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const { data, isLoading } = useFriendSuggestions();
   const toggleFollow = useToggleFollow();
@@ -174,18 +182,23 @@ export function FriendsPage() {
     );
   };
 
-  // Slides in from the right and back out on the header's back button, so
-  // pushing this route feels like the app's side panels instead of a hard cut.
+  // Sólo para el modo ruta suelta: como panel, quien anima es <FriendsModal>
+  // (aplicar las dos animaciones a la vez hacía que la pantalla entrara dos
+  // veces).
   const { className: slideClassName, goBack } = useSlidePage('/profile');
+  const asPanel = !!onBack;
 
   // "Not interested": the hook removes the card optimistically, persists the
   // dismissal (survives F5), and refetches the rail to backfill a fresh one.
   const dismiss = (wallet: string) => dismissSuggestion.mutate(wallet);
 
   return (
-    <div className={`h-full overflow-y-auto bg-background ${slideClassName}`}>
-      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-5 pb-12">
-        <PageHeader title={t('social.friends.title')} onBack={goBack} />
+    <div className={`h-full overflow-y-auto bg-background ${asPanel ? '' : slideClassName}`}>
+      {/* pt-4 + gap-4: antes el encabezado arrancaba a 20-24px del borde y
+          dejaba otros 20 hasta la primera tarjeta, así que la pantalla abría
+          con un hueco antes de cualquier contenido. */}
+      <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pt-4 pb-12 flex flex-col gap-4">
+        <PageHeader title={t('social.friends.title')} onBack={onBack ?? goBack} />
 
         {/* Find actions — one card, three rows */}
         <section className="overflow-hidden rounded-2xl border border-black border-b-2 bg-white divide-y divide-black/10">
