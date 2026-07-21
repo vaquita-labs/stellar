@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LeaderboardResponseDTO } from '@/core-ui/types';
-import { useLeaderboardData, useProfileData } from '../../../hooks';
+import { LEADERBOARD_PAGE_SIZE, useLeaderboardData, useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
 import {
@@ -139,17 +139,32 @@ function LoadMoreSentinel({
 /* Own-row tracking — drives the pinned "you are #N" bar               */
 /* ------------------------------------------------------------------ */
 
-type OwnRowStatus = 'visible' | 'above' | 'below';
+/** Visible height (px) of the own card that counts as "you reached your row",
+ *  i.e. enough to hide the pinned bar. */
+const OWN_ROW_HIDE_PX = 56;
+/** Fires the observer often enough that the px-based hysteresis stays accurate
+ *  even for very tall cards, where 56px is a tiny ratio. */
+const OWN_ROW_THRESHOLDS = Array.from({ length: 21 }, (_, i) => i / 20);
 
 /**
  * Watches the viewer's own card in the feed. While the card is off-screen the
- * pinned bar shows (above → stuck to the top, below → stuck to the bottom);
- * once the card scrolls into view the bar hides — your row "integrates" into
- * the list. When the own card isn't even loaded yet (deep rank), it must be
- * further down the feed, so the status defaults to 'below'.
+ * pinned bar shows, anchored to the edge the card left by (above → drops from
+ * the top, below → rises from the bottom); once the card scrolls into view the
+ * bar hides back through that same edge — your row "integrates" into the list.
+ *
+ * The transition is hysteretic on purpose: the bar only *appears* once the card
+ * is fully off-screen, and only *disappears* once a real chunk of it is on
+ * screen. With a single threshold the two states fought each other around the
+ * boundary and the bar flickered while scrolling.
  */
 function useOwnRowTracking() {
-  const [status, setStatus] = useState<OwnRowStatus>('below');
+  // Defaults: card not on screen, and further down the feed (deep ranks aren't
+  // even loaded yet).
+  const [ownRowVisible, setOwnRowVisible] = useState(false);
+  const [side, setSide] = useState<'above' | 'below'>('below');
+  // The bar animates in/out, so it must not slide out on first paint just
+  // because the default hadn't been corrected by the observer yet.
+  const [resolved, setResolved] = useState(false);
   const nodeRef = useRef<HTMLLIElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -160,21 +175,35 @@ function useOwnRowTracking() {
     observerRef.current = null;
     nodeRef.current = node;
     if (!node) {
-      setStatus('below');
+      setOwnRowVisible(false);
+      setSide('below');
+      setResolved(true);
       return;
     }
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          setStatus('visible');
-        } else {
+        setResolved(true);
+        const visiblePx = entry.isIntersecting ? entry.intersectionRect.height : 0;
+
+        // Only re-anchor while the card is fully out of view. Re-deriving the
+        // side on every callback would move the anchor mid-retraction, and the
+        // bar would fly across the screen instead of tucking back into its edge.
+        if (visiblePx === 0) {
           const rootTop = entry.rootBounds?.top ?? 0;
-          setStatus(entry.boundingClientRect.top < rootTop ? 'above' : 'below');
+          setSide(entry.boundingClientRect.top < rootTop ? 'above' : 'below');
         }
+
+        setOwnRowVisible((prev) => {
+          // Enough of the card on screen → your row took over, hide the bar.
+          if (visiblePx >= OWN_ROW_HIDE_PX) return true;
+          // Card completely out of the viewport → show the bar.
+          if (visiblePx === 0) return false;
+          // Only a sliver on screen: dead zone. Keep whatever we were showing
+          // so the bar can't toggle on every pixel of scroll.
+          return prev;
+        });
       },
-      // "Reached your position" = a meaningful chunk of the card on screen,
-      // not just its border grazing the edge.
-      { threshold: 0.35 }
+      { threshold: OWN_ROW_THRESHOLDS }
     );
     observer.observe(node);
     observerRef.current = observer;
@@ -182,56 +211,123 @@ function useOwnRowTracking() {
 
   useEffect(() => () => observerRef.current?.disconnect(), []);
 
-  const scrollToOwnRow = useCallback(() => {
-    nodeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const scrollToOwnRow = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    nodeRef.current?.scrollIntoView({ behavior, block: 'center' });
   }, []);
 
-  return { status, ownRowRef, scrollToOwnRow };
+  /** True once the own card exists in the DOM — i.e. scrolling to it will work. */
+  const hasOwnRowNode = useCallback(() => !!nodeRef.current, []);
+
+  return { ownRowVisible, side, resolved, ownRowRef, scrollToOwnRow, hasOwnRowNode };
 }
 
 /** Slim pinned bar with the viewer's live rank. Tapping it scrolls the feed to
- *  the real card when that card is already loaded; otherwise it's a no-op. */
+ *  the real card when that card is already loaded; otherwise it's a no-op.
+ *  Always mounted while the page has a `me` row: it slides out of the edge your
+ *  card left by and tucks back into that same edge, so showing and hiding are
+ *  the same motion in reverse. */
 function PinnedOwnRow({
   row,
   side,
+  shown,
   onPress,
 }: {
-  row: { position: number; username: string; avatarUrl?: string; level: number; streak: number };
+  row: { position: number; username: string; avatarUrl?: string };
   side: 'above' | 'below';
+  shown: boolean;
   onPress: () => void;
 }) {
   const { t } = useTranslation();
+  const anchoredTop = side === 'above';
+  // Mount off-screen and slide in on the next frame — mounting straight into
+  // the shown position would paint it in place with no transition to run.
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  // Swapping edges also flips the sign of the hidden transform, so animating
+  // through it would send the bar flying across the viewport. The swap only
+  // ever happens while hidden, so just cut the transition for that one frame.
+  const [swapping, setSwapping] = useState(false);
+  const prevSide = useRef(side);
+  useEffect(() => {
+    if (prevSide.current === side) return;
+    prevSide.current = side;
+    setSwapping(true);
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => setSwapping(false))
+    );
+    return () => cancelAnimationFrame(id);
+  }, [side]);
+
+  const visible = shown && entered;
   return (
-    // Sticky inside the page's scroll container. The bottom variant clears the
-    // mobile fixed bottom nav (h-16); desktop uses a sidebar, so bottom-4 works.
-    <div className={`sticky z-20 ${side === 'above' ? 'top-2' : 'bottom-[4.5rem] md:bottom-4'}`}>
-      <button
-        type="button"
-        onClick={onPress}
-        aria-label={t('leaderboard.pinned.goToPosition', 'Go to your position')}
-        className="w-full flex items-center gap-2 rounded-2xl border-2 border-black border-b-4 bg-primary px-3 py-2 shadow-lg transition hover:-translate-y-0.5"
-      >
-        <PositionPill position={row.position} />
-        <Avatar username={row.username} avatarUrl={row.avatarUrl} />
-        <span className="flex-1 min-w-0 flex items-center gap-2">
-          <span className="text-sm font-extrabold text-black truncate">{row.username}</span>
-          <span className="text-[10px] font-bold uppercase tracking-wider bg-black text-white rounded-sm px-1.5 py-0.5 shrink-0">
+    // Fixed, NOT sticky: as a sticky flex child of the feed column, mounting the
+    // bar reflowed the list and could push the own card back into view — which
+    // unmounted the bar, which pushed the list back... an infinite show/hide
+    // loop. Out of flow, showing it can't move the card it's tracking.
+    //
+    // Full-bleed and flush with the viewport edge it hangs from (there is no
+    // bottom navbar any more — see AppShell). `md:left-64` keeps it clear of
+    // the desktop sidebar, matching `main`'s own md:ml-64. The hidden state
+    // parks it just past its edge; the extra 1rem covers the shadow.
+    <div
+      className={`fixed left-0 right-0 md:left-64 z-30 pointer-events-none ease-out motion-reduce:transition-none ${
+        swapping ? 'transition-none' : 'transition-transform duration-300'
+      } ${anchoredTop ? 'top-0' : 'bottom-0'} ${
+        visible
+          ? 'translate-y-0'
+          : anchoredTop
+            ? '-translate-y-[calc(100%+1rem)]'
+            : 'translate-y-[calc(100%+1rem)]'
+      }`}
+      aria-hidden={!visible}
+    >
+      <div className={visible ? 'pointer-events-auto' : ''}>
+        <button
+          type="button"
+          onClick={onPress}
+          tabIndex={visible ? 0 : -1}
+          aria-label={t('leaderboard.pinned.goToPosition', 'Go to your position')}
+          // A single, even border: the cards' heavier bottom edge (border-b-4)
+          // read as two stacked lines once the bar floated over the feed.
+          // Only the corners facing the feed are rounded — the edge flush with
+          // the chrome stays square, so the bar reads as attached to it.
+          className={`w-full flex items-center gap-2 border-2 border-black bg-primary px-3 py-2 shadow-lg ${
+            anchoredTop ? 'rounded-b-2xl' : 'rounded-t-2xl'
+          }`}
+        >
+          <Avatar username={row.username} avatarUrl={row.avatarUrl} />
+          <span className="flex-1 min-w-0 text-left text-sm font-extrabold text-black truncate">
+            {row.username}
+          </span>
+          <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider bg-black text-white rounded-sm px-1.5 py-0.5">
             {t('leaderboard.card.you', 'You')}
           </span>
-        </span>
-        <span className="text-xs font-extrabold text-black tabular-nums shrink-0">
-          {t('leaderboard.card.levelShort', 'Lv {{level}}', { level: row.level })}
-        </span>
-        <span className="flex items-center gap-1 shrink-0">
-          <Image
-            src="/icons/global/streak_face.png"
-            alt=""
-            width={16}
-            height={16}
-            className="object-contain"
-          />
-          <span className="text-xs font-extrabold text-black tabular-nums">{row.streak}</span>
-        </span>
+          <PositionPill position={row.position} medalOnly />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Shown while the feed is anchored to a deep page instead of the top of the
+ *  board, so the list not starting at #1 never looks like a bug. */
+function AnchoredNotice({ onBackToTop }: { onBackToTop: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-black/10 bg-white px-3 py-2">
+      <span className="text-xs font-bold text-gray-500">
+        {t('leaderboard.anchored.title', 'Showing your part of the board')}
+      </span>
+      <button
+        type="button"
+        onClick={onBackToTop}
+        className="shrink-0 text-xs font-extrabold text-black underline underline-offset-2"
+      >
+        {t('leaderboard.anchored.backToTop', 'Back to #1')}
       </button>
     </div>
   );
@@ -355,6 +451,19 @@ export const LeaderboardPage = () => {
   const [direction, setDirection] = useState<SortDirection>('desc');
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
+  // Row the feed starts at. 0 is the top of the board; tapping the pinned bar
+  // when your card is too deep to be loaded re-anchors the feed to your page.
+  const [anchorOffset, setAnchorOffset] = useState(0);
+  // A ref, not state: the effect that consumes it also clears it, and clearing
+  // a state dep would re-run the effect and cancel its own pending scroll.
+  const pendingOwnRowScroll = useRef(false);
+
+  // Changing the view invalidates the anchor: your row sits somewhere else in
+  // it, and the offset was computed against the old ordering.
+  useEffect(() => {
+    setAnchorOffset(0);
+    pendingOwnRowScroll.current = false;
+  }, [debouncedQuery, sortKey, direction]);
 
   // Search + sort + pagination all happen server-side now: each view is its
   // own infinite query, and pages arrive already filtered/ordered globally.
@@ -366,7 +475,12 @@ export const LeaderboardPage = () => {
     isFetchingNextPage,
     isPlaceholderData,
     fetchNextPage,
-  } = useLeaderboardData({ search: debouncedQuery, sort: sortKey, direction });
+  } = useLeaderboardData({
+    search: debouncedQuery,
+    sort: sortKey,
+    direction,
+    anchorOffset,
+  });
 
   const leaderboardRows = useMemo(
     () => data?.pages.flatMap((page) => page.rows) ?? [],
@@ -377,29 +491,65 @@ export const LeaderboardPage = () => {
   const { displayName, handle } = useCurrentUserIdentity();
 
   // Pinned own-position bar: the API ships the viewer's row (`me`) with every
-  // page; it shows stuck to an edge until the real card scrolls into view.
-  const { status: ownRowStatus, ownRowRef, scrollToOwnRow } = useOwnRowTracking();
+  // page; it hangs from the edge your card is off past until it scrolls in.
+  const {
+    ownRowVisible,
+    side: ownRowSide,
+    resolved: ownRowResolved,
+    ownRowRef,
+    scrollToOwnRow,
+    hasOwnRowNode,
+  } = useOwnRowTracking();
   const myRow = data?.pages?.[0]?.me ?? null;
+  const myViewIndex = data?.pages?.[0]?.meViewIndex ?? null;
   const pinnedRow = useMemo(() => {
     if (!myRow) return null;
     return {
       position: myRow.position,
       username: getLeaderboardUsername(myRow.nickname, myRow.walletAddress),
       avatarUrl: myRow.avatarUrl,
-      // Same XP → level derivation as the feed cards, so both always agree.
-      level: Math.max(1, Math.floor((myRow.experience ?? 0) / 100) + 1),
-      streak: myRow.streak ?? 0,
     };
   }, [myRow]);
   // Only pin over a browsable feed — searching shows a filtered view where a
   // floating global rank would just get in the way of the results.
-  const showPinned =
-    !!pinnedRow &&
-    !debouncedQuery &&
-    !isLoading &&
-    !error &&
-    rankedRows.length > 0 &&
-    ownRowStatus !== 'visible';
+  const canPin =
+    !!pinnedRow && !debouncedQuery && !isLoading && !error && rankedRows.length > 0;
+  // When the viewer's card isn't among the loaded pages there's no element to
+  // observe, so nothing will ever "resolve" — off-screen is already the right
+  // answer.
+  const ownRowRendered = rankedRows.some((row) => row.isCurrentUser);
+  const showPinned = canPin && (!ownRowRendered || ownRowResolved) && !ownRowVisible;
+
+  // Tapping the bar: scroll if your card is already in the feed, otherwise jump
+  // the feed to the page it lives on. Paging down to it isn't an option — at
+  // rank 1M that's 50.000 requests, while a deep offset is a single one (the
+  // API slices an already-materialised board).
+  const handlePinnedPress = useCallback(() => {
+    if (hasOwnRowNode()) {
+      scrollToOwnRow();
+      return;
+    }
+    if (myViewIndex == null) return;
+    const target = Math.floor(myViewIndex / LEADERBOARD_PAGE_SIZE) * LEADERBOARD_PAGE_SIZE;
+    pendingOwnRowScroll.current = true;
+    // Already anchored there (the row just isn't rendered yet) → wait for it.
+    if (target !== anchorOffset) setAnchorOffset(target);
+  }, [hasOwnRowNode, scrollToOwnRow, myViewIndex, anchorOffset]);
+
+  // The jump lands the feed on your page but not necessarily on your row, so
+  // finish the trip once it mounts. Instantly, not smoothly: your card can be
+  // 20 cards down a freshly rendered list and a smooth scroll would crawl.
+  useEffect(() => {
+    if (!pendingOwnRowScroll.current || !ownRowRendered) return;
+    pendingOwnRowScroll.current = false;
+    requestAnimationFrame(() => scrollToOwnRow('auto'));
+  }, [ownRowRendered, scrollToOwnRow]);
+
+  const isAnchored = anchorOffset > 0;
+  const backToTop = useCallback(() => {
+    pendingOwnRowScroll.current = false;
+    setAnchorOffset(0);
+  }, []);
 
   const renderFeed = () => {
     if (isLoading) return <LoadingState />;
@@ -437,14 +587,17 @@ export const LeaderboardPage = () => {
         direction={direction}
         onDirectionChange={setDirection}
       />
-      {/* The bar lives before the feed when your row is above the viewport and
-          after it when below, so `sticky` pins it to the matching edge. */}
-      {showPinned && ownRowStatus === 'above' && pinnedRow && (
-        <PinnedOwnRow row={pinnedRow} side="above" onPress={scrollToOwnRow} />
-      )}
+      {isAnchored && <AnchoredNotice onBackToTop={backToTop} />}
       {renderFeed()}
-      {showPinned && ownRowStatus === 'below' && pinnedRow && (
-        <PinnedOwnRow row={pinnedRow} side="below" onPress={scrollToOwnRow} />
+      {/* Kept mounted while the page can pin, so showing/hiding is a slide
+          rather than a remount. */}
+      {canPin && pinnedRow && (
+        <PinnedOwnRow
+          row={pinnedRow}
+          side={ownRowSide}
+          shown={showPinned}
+          onPress={handlePinnedPress}
+        />
       )}
     </PageLayout>
   );

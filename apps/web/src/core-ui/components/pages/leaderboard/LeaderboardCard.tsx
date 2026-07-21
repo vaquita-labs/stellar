@@ -37,7 +37,13 @@ export type LeaderboardCardData = {
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-const MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+/** Top-3 medals as art, not emoji: the emoji rendered differently on every
+ *  platform and clashed with the rest of the game's icon set. */
+const MEDALS: Record<number, string> = {
+  1: '/icons/global/gold_medal.png',
+  2: '/icons/global/silver_medal.png',
+  3: '/icons/global/bronze_medal.png',
+};
 
 const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
@@ -68,17 +74,46 @@ export function Avatar({ username, avatarUrl }: { username: string; avatarUrl?: 
   );
 }
 
-export function PositionPill({ position }: { position: number }) {
+export function PositionPill({
+  position,
+  /** Drop the pill and the "#N" for the top 3 and show the medal art on its
+   *  own — it already carries the black outline the pill would add. Ranks
+   *  without a medal still fall back to the "#N" pill. The rank always reaches
+   *  screen readers through the label. */
+  medalOnly = false,
+}: {
+  position: number;
+  medalOnly?: boolean;
+}) {
   const { t } = useTranslation();
   const medal = MEDALS[position];
+  const label = t('leaderboard.card.positionLabel', 'Position {{position}}', { position });
+
+  // The medal art is detailed, so it needs more room than the 16px of the other
+  // inline icons or it collapses into a grey blob.
+  if (medal && medalOnly) {
+    return (
+      <Image
+        src={medal}
+        alt={label}
+        width={26}
+        height={26}
+        className="object-contain shrink-0"
+      />
+    );
+  }
+
   return (
+    // Always white: the top 3 used to get a primary fill, but the bronze medal
+    // is nearly the same orange and vanished into it. The medal art carries the
+    // rank colour now, so the pill just needs to stay readable over the map.
     <span
-      className={`inline-flex items-center gap-1 rounded-full border border-black border-b-2 px-2.5 py-0.5 text-xs font-extrabold tabular-nums shrink-0 ${
-        position <= 3 ? 'bg-primary text-black' : 'bg-white text-black'
-      }`}
-      aria-label={t('leaderboard.card.positionLabel', 'Position {{position}}', { position })}
+      className="inline-flex items-center gap-1 rounded-full border border-black border-b-2 bg-white px-2.5 py-0.5 text-xs font-extrabold tabular-nums text-black shrink-0"
+      aria-label={label}
     >
-      {medal && <span aria-hidden className="text-sm leading-none">{medal}</span>}
+      {medal && (
+        <Image src={medal} alt="" width={20} height={20} className="object-contain shrink-0" />
+      )}
       <span>#{position}</span>
     </span>
   );

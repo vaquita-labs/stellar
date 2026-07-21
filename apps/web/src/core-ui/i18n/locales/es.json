@@ -656,7 +656,11 @@
       "notFoundHint": "Puede que la cuenta haya cambiado su nombre de usuario o ya no exista."
     },
     "vaquero": "Vaquero",
-    "vaqueroNamed": "Vaquero {{tail}}"
+    "vaqueroNamed": "Vaquero {{tail}}",
+    "anchored": {
+      "title": "Mostrando tu tramo de la tabla",
+      "backToTop": "Volver al #1"
+    }
   },
   "nav": {
     "primaryAriaLabel": "Principal"
