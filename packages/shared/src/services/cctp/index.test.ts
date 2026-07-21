@@ -43,9 +43,15 @@ describe('CCTP configuration and Stellar helpers', () => {
     expect(() => buildCctpForwarderHookData('not-a-stellar-address')).toThrow(/invalid stellar/i);
   });
 
-  it('uses six-decimal CCTP amounts regardless of Stellar display precision', () => {
+  it('defaults to six-decimal CCTP amounts, matching EVM USDC precision', () => {
     expect(humanUsdcToCctpAmount('1')).toBe(1_000_000n);
     expect(humanUsdcToCctpAmount('0.1234567')).toBe(123_456n);
     expect(humanUsdcToCctpAmount('0.0000009')).toBe(0n);
+  });
+
+  it('scales to seven decimals for Stellar, matching the SAC token precision', () => {
+    expect(humanUsdcToCctpAmount('1', 7)).toBe(10_000_000n);
+    expect(humanUsdcToCctpAmount('0.0001', 7)).toBe(1_000n);
+    expect(humanUsdcToCctpAmount('1.234567', 7)).toBe(12_345_670n);
   });
 });

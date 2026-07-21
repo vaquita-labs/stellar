@@ -96,7 +96,7 @@ describe('bridge transfer tracker', () => {
       direction: 'stellar_to_evm',
       sourceNetwork: 'stellar-testnet',
       destinationNetwork: 'base-sepolia',
-      amountRaw: '1234567',
+      amountRaw: '12345670',
       status: 'source_awaiting_signature',
     });
   });
