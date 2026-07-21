@@ -1,9 +1,10 @@
 'use client';
 
 import { Button, Spinner, toast } from '@heroui/react';
+import { StrKey } from '@stellar/stellar-sdk';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiClipboard } from 'react-icons/fi';
+import { MdContentPaste } from 'react-icons/md';
 import { SavedWallet, useCreateSavedWallet } from '../../../hooks/useSavedWallets';
 import { useConfigStore } from '../../../stores';
 
@@ -17,6 +18,27 @@ interface AddWalletFormProps {
  * ("Stellar Testnet"). Se normaliza a slug antes de enviar.
  */
 const toNetworkSlug = (networkName: string) => networkName.trim().toLowerCase().replace(/\s+/g, '-');
+
+/**
+ * Valida que una dirección tenga el formato de la red destino, para no dejar
+ * guardar (ni pegar) texto que no es una wallet. El slug se compara por prefijo:
+ * `stellar` cubre `stellar` y `stellar-testnet`; los EVM comparten formato 0x.
+ */
+const isValidAddressForNetwork = (address: string, networkSlug: string): boolean => {
+  const addr = address.trim();
+  if (!addr) return false;
+
+  if (networkSlug.startsWith('stellar')) {
+    // Clave pública ed25519 (G...) o dirección muxed (M...).
+    return StrKey.isValidEd25519PublicKey(addr) || StrKey.isValidMed25519PublicKey(addr);
+  }
+  if (['ethereum', 'base', 'arbitrum', 'optimism', 'polygon', 'avalanche'].some((n) => networkSlug.startsWith(n))) {
+    return /^0x[a-fA-F0-9]{40}$/.test(addr);
+  }
+  // Red desconocida: no se puede afirmar el formato, se acepta no vacío y el
+  // backend hace la validación final.
+  return addr.length > 0;
+};
 
 /**
  * Alta de una dirección de destino. El `network` se toma de la red activa: hoy
@@ -33,9 +55,13 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
   const [error, setError] = useState<string | null>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
 
+  const networkSlug = toNetworkSlug(network?.networkName ?? '');
   const trimmedLabel = label.trim();
   const trimmedAddress = address.trim();
-  const canSubmit = trimmedLabel.length > 0 && trimmedAddress.length > 0 && !createWallet.isPending;
+  const addressValid = isValidAddressForNetwork(trimmedAddress, networkSlug);
+  // El error de formato se muestra solo si ya hay algo escrito (no en vacío).
+  const addressFormatError = trimmedAddress.length > 0 && !addressValid;
+  const canSubmit = trimmedLabel.length > 0 && addressValid && !createWallet.isPending;
 
   // La lectura programática del portapapeles (`clipboard.readText`) NO es
   // universal: falla en contextos no seguros (http por IP en LAN, típico al
@@ -44,25 +70,36 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
   // para que el usuario pegue a mano (long-press en mobile, Ctrl/Cmd+V en
   // desktop) — nunca un error, porque el pegado manual siempre funciona.
   const handlePaste = async () => {
-    const canRead =
-      typeof navigator !== 'undefined' &&
-      navigator.clipboard &&
-      typeof navigator.clipboard.readText === 'function' &&
-      window.isSecureContext;
-
-    if (canRead) {
+    // Se intenta leer directo (no se pre-chequea isSecureContext: en algunos
+    // navegadores da falso negativo aunque readText funcione). Si la API existe
+    // se prueba y el catch decide; el gate real es que arroje o no.
+    const readText = navigator?.clipboard?.readText?.bind(navigator.clipboard);
+    if (readText) {
       try {
-        const text = await navigator.clipboard.readText();
+        const text = (await readText())?.trim();
         if (text) {
-          setAddress(text.trim());
+          // Si lo copiado no tiene forma de dirección de la red, no se pega:
+          // así no entra por error una URL, un monto, un texto cualquiera.
+          if (!isValidAddressForNetwork(text, networkSlug)) {
+            toast.danger(
+              t('withdraw.addWallet.pasteInvalid', "That doesn't look like a valid {{network}} address", {
+                network: network?.networkName ?? '—',
+              }),
+            );
+            return;
+          }
+          setAddress(text);
           if (error) setError(null);
         }
         return;
       } catch {
-        // Permiso denegado o gesto insuficiente: cae al pegado manual.
+        // Contexto no seguro (http por IP), permiso denegado o navegador que no
+        // lo soporta: cae al pegado manual.
       }
     }
 
+    // Fallback universal: enfocar el campo para pegar a mano (long-press en
+    // mobile, Ctrl/Cmd+V en desktop). Siempre funciona.
     addressInputRef.current?.focus();
     toast(t('withdraw.addWallet.pasteManual', 'Paste the address into the field'));
   };
@@ -80,7 +117,7 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
       const wallet = await createWallet.mutateAsync({
         label: trimmedLabel,
         address: trimmedAddress,
-        network: toNetworkSlug(network?.networkName ?? ''),
+        network: networkSlug,
       });
       onCreated(wallet);
     } catch (e) {
@@ -127,7 +164,7 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
             aria-label={t('withdraw.addWallet.paste', 'Paste')}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-md text-black hover:bg-black/5 active:translate-y-[calc(-50%+1px)] transition disabled:opacity-40"
           >
-            <FiClipboard className="w-4 h-4" />
+            <MdContentPaste className="w-4 h-4" />
           </button>
         </div>
       </label>
@@ -138,7 +175,15 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
         })}
       </p>
 
-      {error ? <p className="text-sm text-error font-semibold">{error}</p> : null}
+      {addressFormatError ? (
+        <p className="text-sm text-error font-semibold">
+          {t('withdraw.addWallet.invalidAddress', "That doesn't look like a valid {{network}} address", {
+            network: network?.networkName ?? '—',
+          })}
+        </p>
+      ) : error ? (
+        <p className="text-sm text-error font-semibold">{error}</p>
+      ) : null}
 
       <Button
         onPress={handleSubmit}

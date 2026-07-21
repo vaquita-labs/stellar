@@ -18,6 +18,7 @@ import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client
 import { ChannelProvider } from 'ably/react';
 import { ReactNode, useState } from 'react';
 import { AppShell } from './AppShell';
+import { GameClockSync } from './GameClockSync';
 import { useAuthGate } from './useAuthGate';
 import { useConsoleToAbly } from './useConsoleToAbly';
 import { useViewportVh } from './useViewportVh';
@@ -90,6 +91,7 @@ export function Providers({ children }: { children: ReactNode }) {
         ui={{ renderWallets: bundle.renderWallets }}
       >
         <PollarBridge />
+        <GameClockSync />
         <AblyProvider>
           <Toast.Provider placement="top" />
           <ChannelProvider channelName="deposits-changes">

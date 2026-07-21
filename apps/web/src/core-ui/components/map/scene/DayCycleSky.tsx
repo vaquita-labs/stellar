@@ -3,7 +3,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { progressFromLocalTime, useDayCycleStore } from '@/core-ui/stores';
+import { getGameDayProgress, useDayCycleStore } from '@/core-ui/stores';
 import { useMapStore } from '@/core-ui/stores';
 
 type SkyKey = {
@@ -90,10 +90,11 @@ export const DayCycleSky = () => {
   }, [scene, skyColor, fog]);
 
   useFrame((_, delta) => {
-    // Sincroniza el ciclo con la hora local real (solo visual): el sol/luz del
-    // mapa refleja si es de día o de noche de verdad. Se escribe al store para
-    // que la vaquita (que lee dayProgress) también siga el día real.
-    const progress = progressFromLocalTime(new Date());
+    // Sincroniza el ciclo con el reloj de JUEGO acelerado y global (no la hora
+    // local): el sol/luz del mapa refleja la hora de juego que muestra MapClock.
+    // Se escribe al store para que la vaquita (que lee dayProgress) siga el
+    // mismo día.
+    const progress = getGameDayProgress();
     useDayCycleStore.getState().setDayProgress(progress);
     const values = interpolate(progress);
 
