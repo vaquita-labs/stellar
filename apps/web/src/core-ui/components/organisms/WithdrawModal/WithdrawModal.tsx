@@ -253,15 +253,24 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
                 {truncateMiddle(selectedWallet.address, 6, 5)}
               </span>
             </>
+          ) : walletsLoading ? (
+            // Skeleton mientras carga la lista: dos barras que imitan el
+            // nombre y la dirección, en vez de un texto "Cargando…".
+            <span className="block animate-pulse">
+              <span className="block h-3.5 w-24 rounded bg-black/10" />
+              <span className="mt-1.5 block h-3 w-32 rounded bg-black/10" />
+            </span>
           ) : (
             <span className="block text-sm font-bold text-black">
-              {walletsLoading
-                ? t('common.loading', 'Loading...')
-                : t('withdraw.addWallet.cta', 'Add a wallet')}
+              {t('withdraw.addWallet.cta', 'Add a wallet')}
             </span>
           )}
         </span>
-        <HiOutlineSelector className="w-5 h-5 text-black shrink-0" />
+        {walletsLoading ? (
+          <span className="w-5 h-5 shrink-0 rounded bg-black/10 animate-pulse" />
+        ) : (
+          <HiOutlineSelector className="w-5 h-5 text-black shrink-0" />
+        )}
       </button>
 
       <AmountKeypad
@@ -291,6 +300,22 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           onDelete={() => handleDeleteWallet(wallet.id)}
         />
       ))}
+
+      {walletsLoading && savedWallets.length === 0
+        ? // Skeleton de filas mientras carga la lista guardada.
+          Array.from({ length: 2 }).map((_, i) => (
+            <div
+              key={i}
+              className="w-full flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3 animate-pulse"
+            >
+              <span className="w-6 h-6 shrink-0 rounded bg-black/10" />
+              <span className="flex-1">
+                <span className="block h-3.5 w-24 rounded bg-black/10" />
+                <span className="mt-1.5 block h-3 w-32 rounded bg-black/10" />
+              </span>
+            </div>
+          ))
+        : null}
 
       {savedWallets.length === 0 && !walletsLoading ? (
         <p className="text-sm text-gray-500 text-center py-4">
