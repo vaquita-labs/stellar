@@ -9,11 +9,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { FiChevronLeft, FiChevronRight, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiHeart, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
   useClaimedAchievements,
   useDepositsComplete,
   useFollowCounts,
+  useMapLikeCount,
   useProfileAchievements,
   useProfileData,
   useProfileExperience,
@@ -135,6 +136,7 @@ export function ProfilePage() {
   const { data: depositsData } = useDepositsComplete(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
   const { data: followCounts } = useFollowCounts();
+  const { data: mapLikes } = useMapLikeCount();
   const [followModal, setFollowModal] = useState<{ open: boolean; tab: FollowListKind }>({
     open: false,
     tab: 'following',
@@ -355,6 +357,18 @@ export function ProfilePage() {
               label={t('profilePages.profile.followers', 'Followers')}
               ariaLabel={t('profilePages.profile.viewFollowers', 'View followers')}
               onPress={() => setFollowModal({ open: true, tab: 'followers' })}
+            />
+            <span className="w-px bg-black/10" aria-hidden />
+            {/* Hearts the user's 3D world collected — not a follower metric, so
+                it gets the icon to set it apart from the two counts beside it. */}
+            <StatPill
+              value={
+                <span className="inline-flex items-center gap-1">
+                  <FiHeart className="h-4 w-4 fill-red-500 text-red-500" aria-hidden />
+                  {mapLikes ?? 0}
+                </span>
+              }
+              label={t('profilePages.profile.mapLikes', 'Hearts')}
             />
           </div>
         </section>

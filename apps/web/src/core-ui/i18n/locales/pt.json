@@ -431,7 +431,9 @@
         "plains": "planície"
       },
       "buy": "Comprar",
+      "clockPreviewHour": "8 pm",
       "goldAlt": "Ouro",
+      "hudHint": "Comprá-lo o desbloqueia na tela do seu mapa. É uma compra única.",
       "invalidOfferDesc": "Insira pelo menos 1 moeda de ouro.",
       "invalidOfferTitle": "Oferta inválida",
       "itemFallback": "Item",
@@ -491,6 +493,9 @@
       "purchaseErrorTitle": "Não foi possível comprar",
       "purchaseErrorDesc": "Tente novamente.",
       "objects": {
+        "clock": {
+          "default": "Relógio"
+        },
         "tree": {
           "0": "Árvore",
           "4": "Palmeira",
@@ -709,6 +714,10 @@
       },
       "generic": {
         "title": "Notificação"
+      },
+      "mapLiked": {
+        "body": "{{name}} deu um coração ao seu mapa.",
+        "title": "Alguém amou seu mundo"
       },
       "newFollower": {
         "body": "{{name}} começou a seguir você.",
@@ -971,6 +980,7 @@
       "followingEmptyTitle": "Você ainda não segue ninguém",
       "gold": "Ouro",
       "handleJoined": "<b>{{handle}}</b> · entrou em {{joinedLabel}}",
+      "mapLikes": "Corações",
       "seeAll": "Ver tudo de {{title}}",
       "seeAllAchievements": "Ver todas as conquistas",
       "seeFullSummary": "Ver resumo completo",

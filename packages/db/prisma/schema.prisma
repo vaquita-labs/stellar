@@ -274,7 +274,30 @@ model Profile {
   suggestionDismissals FollowSuggestionDismissal[] @relation("suggestionDismissals")
   dismissedBy          FollowSuggestionDismissal[] @relation("dismissedBy")
 
+  // Hearts on the 3D world: `mapLikesGiven` are maps this profile liked,
+  // `mapLikesReceived` are the hearts its own map collected.
+  mapLikesGiven    MapLike[] @relation("mapLikesGiven")
+  mapLikesReceived MapLike[] @relation("mapLikesReceived")
+
   @@map("profiles")
+}
+
+/// A heart given to a profile's 3D world from the explore / leaderboard feed.
+/// One row per (liker, owner) pair, so the count is "how many distinct vaqueros
+/// liked this map" and liking twice is a no-op rather than double-counting.
+model MapLike {
+  id        Int      @id @default(autoincrement())
+  likerId   Int      @map("liker_id")
+  ownerId   Int      @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  liker Profile @relation("mapLikesGiven", fields: [likerId], references: [id], onDelete: Cascade)
+  owner Profile @relation("mapLikesReceived", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([likerId, ownerId], map: "map_likes_unique_pair")
+  @@index([likerId], map: "idx_map_likes_liker")
+  @@index([ownerId], map: "idx_map_likes_owner")
+  @@map("map_likes")
 }
 
 /// Unidirectional follow edge: `follower` follows `followee` (Twitter-style, not mutual).

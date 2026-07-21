@@ -9,6 +9,8 @@ import { Group } from 'three';
 import { MapObjectType, WorldType } from '../../../types';
 import { disposeObject } from '../../map/helpers';
 import { getObjectGroup } from '../../map/tiles/registry';
+import { MapClockCard } from '../MapClock';
+import { isHudItem } from './hudItems';
 import { getMapItemName } from './mapItemNames';
 
 type CatalogObjectCardProps = {
@@ -31,19 +33,34 @@ export function CatalogObjectCard({ type, variant, price, affordable, position, 
     }
   });
 
+  // Los ítems de HUD no tienen modelo 3D: el preview es la propia card que
+  // desbloquean, en 2D sobre la escena.
+  const hud = isHudItem(type);
+
   const previewObject = useMemo(
-    () => getObjectGroup({ type, position: [0, 0, 0], variant, rotation: [0, 0, 0] }, WorldType.FOREST),
-    [type, variant]
+    () => (hud ? null : getObjectGroup({ type, position: [0, 0, 0], variant, rotation: [0, 0, 0] }, WorldType.FOREST)),
+    [hud, type, variant]
   );
   useEffect(() => {
+    if (!previewObject) return;
     return () => disposeObject(previewObject);
   }, [previewObject]);
 
   return (
     <group position={position} onClick={onClick}>
-      <group ref={rotatingRef} position={[0, 0.55, 0]}>
-        <primitive object={previewObject} />
-      </group>
+      {previewObject ? (
+        <group ref={rotatingRef} position={[0, 0.55, 0]}>
+          <primitive object={previewObject} />
+        </group>
+      ) : (
+        <Html position={[0, 0.55, 0]} center transform={false}>
+          {/* Ancho fijo como el de la etiqueta de abajo: sin él la card queda a
+              merced del ancho que le da el Canvas y la hora se parte en dos líneas. */}
+          <button type="button" onClick={onClick} className="pointer-events-auto flex justify-center" style={{ width: 110 }}>
+            <MapClockCard label={t('home.catalog.clockPreviewHour', '8 pm')} solid />
+          </button>
+        </Html>
+      )}
 
       {/* Nombre + precio */}
       <Html position={[0, -1.5, 0]} center transform={false}>

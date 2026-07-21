@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { FiHeart, FiLoader, FiMessageCircle } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
-import { useFollowingWallets, useToggleFollow } from '../../../hooks';
+import { useFollowingWallets, useLikedMapWallets, useToggleFollow, useToggleMapLike } from '../../../hooks';
+import { useConfigStore } from '../../../stores';
 import { VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
 import { MapMiniPreview } from './MapMiniPreview';
 
@@ -33,8 +34,9 @@ export type LeaderboardCardData = {
   /** Gold coins and XP — the same trio the home header shows (streak · coins · XP). */
   coins: number;
   experience: number;
-  /** Seed for the (mocked) like + comment counts. */
-  likesSeed: number;
+  /** Hearts this profile's 3D world has collected — a real, persisted count. */
+  mapLikes: number;
+  /** Seed for the (still mocked) comment count. */
   commentsSeed: number;
   isCurrentUser: boolean;
 };
@@ -153,19 +155,31 @@ function StatsRow({ streak, coins, experience }: { streak: number; coins: number
 }
 
 /* ------------------------------------------------------------------ */
-/* Social row — heart + comment (mocked client-side state)             */
+/* Social row — real hearts, mocked comments                           */
 /* ------------------------------------------------------------------ */
 
 interface SocialRowProps {
   username: string;
+  /** Owner of the map being hearted. */
+  walletAddress: string;
   likes: number;
   comments: number;
 }
 
-function SocialRow({ username, likes, comments }: SocialRowProps) {
+/**
+ * The heart is persisted: `useLikedMapWallets` seeds the filled state for every
+ * row from one request, and the toggle optimistically patches that set plus the
+ * owner's count. Comments are still a placeholder.
+ */
+function SocialRow({ username, walletAddress, likes, comments }: SocialRowProps) {
   const { t } = useTranslation();
-  const [liked, setLiked] = useState(false);
-  const likeCount = liked ? likes + 1 : likes;
+  const { walletAddress: viewerWallet } = useConfigStore();
+  const { data: likedWallets } = useLikedMapWallets();
+  const toggleLike = useToggleMapLike();
+
+  const liked = likedWallets?.has(walletAddress.toLowerCase()) ?? false;
+  // Liking your own map is rejected server-side, so don't offer it.
+  const isOwnMap = !!viewerWallet && viewerWallet.toLowerCase() === walletAddress.toLowerCase();
 
   // Buttons live inside an anchor, so we stop propagation to keep their
   // clicks from triggering the card-level navigation.
@@ -176,7 +190,8 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
 
   const handleLike = (e: React.MouseEvent) => {
     stop(e);
-    setLiked((v) => !v);
+    if (isOwnMap || !viewerWallet) return;
+    toggleLike.mutate({ targetWallet: walletAddress, isLiked: liked });
   };
 
   const handleComment = (e: React.MouseEvent) => {
@@ -193,14 +208,15 @@ function SocialRow({ username, likes, comments }: SocialRowProps) {
       <button
         type="button"
         onClick={handleLike}
+        disabled={isOwnMap || !viewerWallet}
         aria-pressed={liked}
         aria-label={liked ? t('leaderboard.card.unlike', 'Unlike') : t('leaderboard.card.like', 'Like')}
-        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 hover:bg-black/5 transition bg-transparent"
+        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 hover:bg-black/5 transition bg-transparent disabled:hover:bg-transparent"
       >
         <FiHeart
           className={`h-4 w-4 transition ${liked ? 'fill-red-500 text-red-500' : 'text-black'}`}
         />
-        <span className="text-xs font-bold text-black tabular-nums">{likeCount}</span>
+        <span className="text-xs font-bold text-black tabular-nums">{likes}</span>
       </button>
       <button
         type="button"
@@ -344,7 +360,8 @@ export function LeaderboardCard({
 
       <SocialRow
         username={user.username}
-        likes={user.likesSeed}
+        walletAddress={user.walletAddress}
+        likes={user.mapLikes}
         comments={user.commentsSeed}
       />
     </Link>

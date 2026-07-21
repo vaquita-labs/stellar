@@ -431,7 +431,9 @@
         "plains": "plains"
       },
       "buy": "Buy",
+      "clockPreviewHour": "8 pm",
       "goldAlt": "Gold",
+      "hudHint": "Buying it unlocks it on your map screen. It is a one-time purchase.",
       "invalidOfferDesc": "Enter at least 1 gold coin.",
       "invalidOfferTitle": "Invalid offer",
       "itemFallback": "Item",
@@ -491,6 +493,9 @@
       "purchaseErrorTitle": "Purchase failed",
       "purchaseErrorDesc": "Try again.",
       "objects": {
+        "clock": {
+          "default": "Clock"
+        },
         "tree": {
           "0": "Tree",
           "4": "Palm tree",
@@ -709,6 +714,10 @@
       },
       "generic": {
         "title": "Notification"
+      },
+      "mapLiked": {
+        "body": "{{name}} gave your map a heart.",
+        "title": "Someone loved your world"
       },
       "newFollower": {
         "body": "{{name}} started following you.",
@@ -971,6 +980,7 @@
       "followingEmptyTitle": "Not following anyone yet",
       "gold": "Gold",
       "handleJoined": "<b>{{handle}}</b> · joined {{joinedLabel}}",
+      "mapLikes": "Hearts",
       "seeAll": "See all {{title}}",
       "seeAllAchievements": "See all achievements",
       "seeFullSummary": "See full summary",

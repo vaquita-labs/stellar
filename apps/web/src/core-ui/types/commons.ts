@@ -240,6 +240,28 @@ export interface SuggestionDismissResponseDTO {
   dismissedWallet: string;
 }
 
+/** Hearts a profile's 3D world has collected. */
+export interface MapLikeCountResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  likes: number;
+}
+
+/** Wallets whose map the viewer already liked — seeds the feed's heart buttons. */
+export interface LikedMapWalletsResponseDTO {
+  networkName: string;
+  walletAddress: string;
+  wallets: string[];
+}
+
+/** Result of toggling a heart, with the owner's fresh total. */
+export interface MapLikeResponseDTO {
+  likerWallet: string;
+  ownerWallet: string;
+  liked: boolean;
+  likes: number;
+}
+
 export interface FollowCountsResponseDTO {
   networkName: string;
   walletAddress: string;
@@ -333,6 +355,8 @@ export interface LeaderboardResponseDTO {
   streak: number;
   experience: number;
   coins: number;
+  /** Hearts this profile's 3D world has collected. */
+  mapLikes: number;
   score: number;
   activeAmount: number;
   cycleId: number;
@@ -419,5 +443,7 @@ export enum MapObjectType {
   BANK = 'bank',
   BARN = 'barn',
   LEADERBOARD = 'leaderboard',
+  /** Ítem de HUD (no se coloca en el mapa): desbloquea la card de la hora. */
+  CLOCK = 'clock',
   EMPTY = 'empty',
 }

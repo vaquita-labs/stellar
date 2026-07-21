@@ -69,6 +69,7 @@ const toLeaderboardRow = (row: LeaderboardResponseDTO): LeaderboardResponseDTO =
   streak: row?.streak ?? 0,
   experience: row?.experience ?? 0,
   coins: row?.coins ?? 0,
+  mapLikes: row?.mapLikes ?? 0,
   score: row?.score ?? 0,
   activeAmount: row?.activeAmount ?? 0,
   cycleId: row?.cycleId ?? 0,

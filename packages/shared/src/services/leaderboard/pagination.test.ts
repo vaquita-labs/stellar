@@ -14,6 +14,7 @@ const row = (overrides: Partial<EnrichedLeaderboardRow>): EnrichedLeaderboardRow
   walletAddress: 'GA',
   nickname: '',
   avatarConfig: defaultAvatarConfig(),
+  mapLikes: 0,
   badges: 0,
   streak: 0,
   experience: 0,

@@ -134,6 +134,8 @@ export interface LeaderboardRow {
 }
 
 export interface EnrichedLeaderboardRow extends LeaderboardRow {
+  /** Hearts this profile's 3D world has collected. */
+  mapLikes: number;
   position: number;
   nickname: string;
   /** The user's character avatar (see @vaquita/avatar). Always resolved
@@ -153,6 +155,8 @@ export interface LeaderboardProfileRollups {
   experienceByProfileId: Map<number, number>;
   /** Optional: rows fall back to 0 coins when the rollup isn't provided. */
   coinsByProfileId?: Map<number, number>;
+  /** Optional: hearts on each profile's 3D world. Defaults to 0. */
+  mapLikesByProfileId?: Map<number, number>;
 }
 
 export function enrichLeaderboardRows(
@@ -175,6 +179,7 @@ export function enrichLeaderboardRows(
       streak: profile ? (rollups.streaksByProfileId.get(profile.id) ?? 0) : 0,
       experience: profile ? (rollups.experienceByProfileId.get(profile.id) ?? 0) : 0,
       coins: profile ? (rollups.coinsByProfileId?.get(profile.id) ?? 0) : 0,
+      mapLikes: profile ? (rollups.mapLikesByProfileId?.get(profile.id) ?? 0) : 0,
       cycleStatus,
     };
   });

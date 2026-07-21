@@ -121,7 +121,13 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
         camera={{ fov: 50 }}
         shadows
         gl={{ antialias: true }}
-        dpr={[1, 2]}
+        // El fill-rate escala con el CUADRADO del dpr: a 2 son 4× los píxeles
+        // de 1, y el antialias los multiplica otra vez — es lo más caro de la
+        // escena, más que cualquier shader. Con esta paleta plana el tope en
+        // 1.5 casi no se nota y recorta ~45% de píxeles. Se prefiere bajar el
+        // dpr antes que apagar el antialias: sin él los bordes duros de los
+        // tiles quedan escalonados.
+        dpr={[1, 1.5]}
         onCreated={({ gl }) => {
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;

@@ -2,6 +2,7 @@ export * from './useDismissSuggestion';
 export * from './useFollowCounts';
 export * from './useFollowList';
 export * from './useFollowingWallets';
+export * from './useMapLikes';
 export * from './useFriendSuggestions';
 export * from './useLeaderboardRank';
 export * from './useMintBadge';

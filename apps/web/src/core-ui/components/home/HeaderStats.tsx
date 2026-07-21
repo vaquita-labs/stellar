@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiBell, FiChevronRight } from 'react-icons/fi';
+import { FiBell } from 'react-icons/fi';
 import {
   useApyByLockPeriod,
   useDepositsComplete,
@@ -214,19 +214,23 @@ export const HeaderStats = () => {
               type="button"
               onClick={() => setShowPortfolioPanel(true)}
               aria-label={t('home.stats.apyAria', 'Portfolio')}
-              className="flex items-center gap-1.5 min-w-0 self-start rounded-md border border-black border-b-2 bg-background pl-2.5 pr-1.5 py-1 text-left"
+              // self-start + w-fit: la pastilla se ajusta al saldo y crece con
+              // él (arranca alineada a la izquierda, contra el borde del
+              // saludo). px-4 para que el número nunca toque el borde.
+              // border-b-4 + el hundido al presionar son el idioma de botón de
+              // la app, para que se lea como algo que se toca.
+              className="w-fit max-w-full flex items-center justify-start min-w-0 self-start rounded-md border border-black border-b-4 bg-background px-4 py-2 text-left transition active:translate-y-0.5 active:border-b-2"
             >
               {depositsLoading && !depositsData ? (
                 <Spinner size="sm" color="current" />
               ) : (
                 <span
                   data-tutorial="tutorial-balance"
-                  className="text-lg font-bold text-black tabular-nums leading-none truncate"
+                  className="text-xl font-bold text-black tabular-nums leading-none truncate"
                 >
                   {hideBalance ? '••••' : `$${formattedBalance}`}
                 </span>
               )}
-              <FiChevronRight className="w-4 h-4 text-black shrink-0" />
             </button>
 
             {/* OCULTOS A PROPÓSITO (2026-07-21): acá vivían dos chips bajo el

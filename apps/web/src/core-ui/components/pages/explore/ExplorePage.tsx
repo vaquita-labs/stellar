@@ -91,7 +91,7 @@ function useExploreCards(rows: ExploreProfileDTO[]): LeaderboardCardData[] {
         badges: row.badges ?? 0,
         coins: row.coins ?? 0,
         experience: row.experience ?? 0,
-        likesSeed: 0,
+        mapLikes: row.mapLikes ?? 0,
         commentsSeed: 0,
         // The API already excludes the viewer, so no row here is ever "you".
         isCurrentUser:

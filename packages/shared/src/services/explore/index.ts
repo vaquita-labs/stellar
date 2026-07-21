@@ -7,6 +7,7 @@ import {
   getProfiles,
   getStreakCountsByProfile,
 } from '../profile';
+import { getMapLikeCountsByProfile } from '../mapLikes/counts';
 
 /**
  * Explore feed: a shuffled stream of other vaqueros to discover and follow.
@@ -38,6 +39,8 @@ export interface ExploreProfileRow {
    *  server-side — a profile that never opened the editor gets a stable
    *  wallet-seeded avatar, so clients never have to guess a fallback. */
   avatarConfig: AvatarConfig;
+  /** Hearts this profile's 3D world has collected. */
+  mapLikes: number;
   badges: number;
   streak: number;
   experience: number;
@@ -76,11 +79,13 @@ async function buildExplorePool(): Promise<ExploreCandidate[]> {
     { counts: streaksByProfileId },
     { experience: experienceByProfileId },
     { counts: coinsByProfileId },
+    mapLikesByProfileId,
   ] = await Promise.all([
     getAchievementCountsByProfile(),
     getStreakCountsByProfile(),
     getExperienceByProfile(profiles),
     getCoinsByProfile(),
+    getMapLikeCountsByProfile(profiles.map((p) => p.id)),
   ]);
 
   return profiles
@@ -100,6 +105,7 @@ async function buildExplorePool(): Promise<ExploreCandidate[]> {
       streak: streaksByProfileId.get(profile.id) ?? 0,
       experience: experienceByProfileId.get(profile.id) ?? 0,
       coins: coinsByProfileId.get(profile.id) ?? 0,
+      mapLikes: mapLikesByProfileId.get(profile.id) ?? 0,
     }));
 }
 

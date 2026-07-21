@@ -15,6 +15,8 @@ export interface ExploreProfileDTO {
   streak: number;
   experience: number;
   coins: number;
+  /** Hearts this profile's 3D world has collected. */
+  mapLikes: number;
 }
 
 export interface ExplorePageDTO {
@@ -49,6 +51,7 @@ const toRow = (row: Partial<ExploreProfileDTO> | undefined): ExploreProfileDTO =
   streak: row?.streak ?? 0,
   experience: row?.experience ?? 0,
   coins: row?.coins ?? 0,
+  mapLikes: row?.mapLikes ?? 0,
 });
 
 /**

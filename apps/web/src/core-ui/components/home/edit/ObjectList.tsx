@@ -1,5 +1,6 @@
 'use client';
 
+import { isHudItem } from '@/core-ui/components/home/edit/hudItems';
 import { ObjectListObjectCard } from '@/core-ui/components/home/edit/ObjectListObjectCard';
 import { SceneLighting } from '@/core-ui/components/map/scene/SceneLighting';
 import { useIsMobile, useProfileMapObjectsAvailable } from '@/core-ui/hooks';
@@ -26,7 +27,8 @@ function ObjectListCmp() {
           used: currentTiles.reduce((sum, tile) => sum + +(tile.type === obj.type && tile.variant === obj.variant), 0),
         }))
         // Hide items the user no longer has any of (placed all of them or never owned any)
-        .filter((obj) => obj.itemsAvailable - obj.used > 0),
+        // y los ítems de HUD, que se compran pero no se colocan en el mapa.
+        .filter((obj) => !isHudItem(obj.type) && obj.itemsAvailable - obj.used > 0),
     [currentTiles, data?.objects]
   );
 

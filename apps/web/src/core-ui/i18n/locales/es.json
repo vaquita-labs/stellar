@@ -431,7 +431,9 @@
         "plains": "llanura"
       },
       "buy": "Comprar",
+      "clockPreviewHour": "8 pm",
       "goldAlt": "Oro",
+      "hudHint": "Comprarlo lo desbloquea en la pantalla de tu mapa. Es una compra única.",
       "invalidOfferDesc": "Ingresa al menos 1 moneda de oro.",
       "invalidOfferTitle": "Oferta no válida",
       "itemFallback": "Artículo",
@@ -491,6 +493,9 @@
       "purchaseErrorTitle": "No se pudo comprar",
       "purchaseErrorDesc": "Inténtalo de nuevo.",
       "objects": {
+        "clock": {
+          "default": "Reloj"
+        },
         "tree": {
           "0": "Árbol",
           "4": "Palmera",
@@ -709,6 +714,10 @@
       },
       "generic": {
         "title": "Notificación"
+      },
+      "mapLiked": {
+        "body": "{{name}} le dio un corazón a tu mapa.",
+        "title": "Le encantó tu mundo"
       },
       "newFollower": {
         "body": "{{name}} empezó a seguirte.",
@@ -971,6 +980,7 @@
       "followingEmptyTitle": "Todavía no sigues a nadie",
       "gold": "Oro",
       "handleJoined": "<b>{{handle}}</b> · se unió el {{joinedLabel}}",
+      "mapLikes": "Corazones",
       "seeAll": "Ver todo {{title}}",
       "seeAllAchievements": "Ver todos los logros",
       "seeFullSummary": "Ver resumen completo",

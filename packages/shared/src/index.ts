@@ -31,6 +31,7 @@ export * from './services/explore';
 export * from './services/reconciliation';
 export * from './services/cctp';
 export * from './services/follows';
+export * from './services/mapLikes';
 export * from './services/referral';
 export * from './services/notifications';
 export * from './services/savedWallet';

@@ -11,6 +11,7 @@ import { MapObjectType } from '../../../types';
 import { SceneLighting } from '../../map/scene/SceneLighting';
 import { AppModal } from '../../molecules/AppModal';
 import { CatalogObjectCard } from './CatalogObjectCard';
+import { isHudItem } from './hudItems';
 import { getMapItemName } from './mapItemNames';
 
 interface CatalogItem {
@@ -43,7 +44,12 @@ export function CatalogList() {
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
 
   const items: CatalogItem[] = useMemo(
-    () => (available?.objects || []).filter((object) => object.price > 0),
+    () =>
+      (available?.objects || []).filter(
+        // Los ítems de HUD (el reloj) son un desbloqueo de una sola vez: una vez
+        // comprados salen del catálogo, no se acumulan unidades.
+        (object) => object.price > 0 && !(isHudItem(object.type) && object.owned > 0)
+      ),
     [available?.objects]
   );
 
@@ -59,8 +65,12 @@ export function CatalogList() {
         }),
         timeout: 4000,
       });
-      // itemsAvailable local todavía no refleja el refetch: sumar la unidad comprada.
-      setPlacementItem({ ...detailItem, itemsAvailable: detailItem.itemsAvailable + result.quantity });
+      // Un ítem de HUD no se coloca: alcanza con la compra, así que se saltea
+      // el paso de "colocar ahora" (el reloj ya aparece sobre el mapa).
+      if (!isHudItem(detailItem.type)) {
+        // itemsAvailable local todavía no refleja el refetch: sumar la unidad comprada.
+        setPlacementItem({ ...detailItem, itemsAvailable: detailItem.itemsAvailable + result.quantity });
+      }
       setDetailItem(null);
     } catch (error) {
       toast.danger(t('home.catalog.purchaseErrorTitle', 'Purchase failed'), {
@@ -156,7 +166,9 @@ export function CatalogList() {
         {detailItem && (
           <div className="space-y-4">
             <p className="text-sm text-gray-700">
-              {t('home.catalog.placeableHint', 'After buying you can place it anywhere on your map, move it or remove it.')}
+              {isHudItem(detailItem.type)
+                ? t('home.catalog.hudHint', 'Buying it unlocks it on your map screen. It is a one-time purchase.')
+                : t('home.catalog.placeableHint', 'After buying you can place it anywhere on your map, move it or remove it.')}
             </p>
             <div className="pt-2 border-t border-gray-200">
               <p className="text-xs text-gray-500 uppercase font-semibold mb-1">{t('home.catalog.price', 'Price')}</p>

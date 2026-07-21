@@ -5,6 +5,7 @@ import {
   getProfiles,
   getStreakCountsByProfile,
 } from '../profile';
+import { getMapLikeCountsByProfile } from '../mapLikes/counts';
 import {
   enrichLeaderboardRows,
   getLeaderboard,
@@ -58,17 +59,19 @@ async function buildEnrichedLeaderboard(
     { counts: streaksByProfileId },
     { experience: experienceByProfileId },
     { counts: coinsByProfileId },
+    mapLikesByProfileId,
   ] = await Promise.all([
     getAchievementCountsByProfile(),
     getStreakCountsByProfile(),
     getExperienceByProfile(profiles),
     getCoinsByProfile(),
+    getMapLikeCountsByProfile(profiles.map((p) => p.id)),
   ]);
 
   return enrichLeaderboardRows(
     rows,
     profiles,
-    { badgesByProfileId, streaksByProfileId, experienceByProfileId, coinsByProfileId },
+    { badgesByProfileId, streaksByProfileId, experienceByProfileId, coinsByProfileId, mapLikesByProfileId },
     cycleStatus,
   );
 }
