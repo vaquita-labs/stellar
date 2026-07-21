@@ -13,6 +13,7 @@ vi.mock('../profile', () => ({
   getAchievementCountsByProfile: async () => ({ counts: new Map(), error: null }),
   getStreakCountsByProfile: async () => ({ counts: new Map(), error: null }),
   getExperienceByProfile: async () => ({ experience: new Map(), error: null }),
+  getCoinsByProfile: async () => ({ counts: new Map(), error: null }),
 }));
 
 import { clearEnrichedLeaderboardCache, getEnrichedLeaderboard } from './enriched';

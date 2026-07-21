@@ -97,7 +97,7 @@ const ensureDepositUnlockedNotifications = async (walletAddress: string) => {
       type: 'deposit',
       messageKey: 'depositUnlocked',
       params: { amount: fmtAmount(d.amount) },
-      link: '/home',
+      link: '/transactions',
       dedupeKey: `deposit-unlocked-${d.id}`,
     });
   }

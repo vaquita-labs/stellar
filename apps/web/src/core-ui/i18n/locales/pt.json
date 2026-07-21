@@ -588,8 +588,10 @@
   "leaderboard": {
     "card": {
       "badges": "Medalhas",
+      "coins": "Moedas",
       "commentsComingSoon": "Os comentários no mundo de {{username}} chegam em breve",
       "dayStreak": "Dias de sequência",
+      "experience": "XP",
       "follow": "Seguir",
       "followAria": "Seguir {{username}}",
       "following": "Seguindo",
@@ -597,6 +599,7 @@
       "like": "Curtir",
       "openComments": "Abrir comentários",
       "positionLabel": "Posição {{position}}",
+      "unfollow": "Deixar de seguir",
       "unfollowAria": "Deixar de seguir {{username}}",
       "unlike": "Descurtir",
       "viewWorld": "Ver o mundo de {{username}}",
@@ -696,26 +699,26 @@
     "markAllRead": "Marcar todas como lidas",
     "messages": {
       "achievementUnlocked": {
-        "body": "Você ganhou o emblema \"{{name}}\". Veja sua coleção.",
+        "body": "Você ganhou o emblema \"{{name}}\".",
         "title": "Troféu desbloqueado!"
       },
       "depositConfirmed": {
-        "body": "Seu depósito de ${{amount}} USDC foi confirmado e já está crescendo.",
+        "body": "${{amount}} USDC confirmados e crescendo.",
         "title": "Depósito confirmado"
       },
       "depositUnlocked": {
-        "body": "Seu depósito de ${{amount}} USDC cumpriu o prazo. Você já pode sacá-lo.",
+        "body": "${{amount}} USDC prontos para sacar.",
         "title": "Suas economias estão desbloqueadas!"
       },
       "generic": {
         "title": "Notificação"
       },
       "newFollower": {
-        "body": "{{name}} começou a seguir você. Dê uma olhada na fazenda dele!",
+        "body": "{{name}} começou a seguir você.",
         "title": "Novo seguidor"
       },
       "withdrawalCompleted": {
-        "body": "${{amount}} USDC foram enviados para sua carteira.",
+        "body": "${{amount}} USDC enviados para sua carteira.",
         "title": "Saque concluído"
       }
     },

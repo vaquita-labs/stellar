@@ -1,5 +1,6 @@
 import {
   getAchievementCountsByProfile,
+  getCoinsByProfile,
   getExperienceByProfile,
   getProfiles,
   getStreakCountsByProfile,
@@ -52,17 +53,22 @@ async function buildEnrichedLeaderboard(
     throw new Error('Failed to load profile metadata for leaderboard', { cause: profilesError });
   }
 
-  const [{ counts: badgesByProfileId }, { counts: streaksByProfileId }, { experience: experienceByProfileId }] =
-    await Promise.all([
-      getAchievementCountsByProfile(),
-      getStreakCountsByProfile(),
-      getExperienceByProfile(profiles),
-    ]);
+  const [
+    { counts: badgesByProfileId },
+    { counts: streaksByProfileId },
+    { experience: experienceByProfileId },
+    { counts: coinsByProfileId },
+  ] = await Promise.all([
+    getAchievementCountsByProfile(),
+    getStreakCountsByProfile(),
+    getExperienceByProfile(profiles),
+    getCoinsByProfile(),
+  ]);
 
   return enrichLeaderboardRows(
     rows,
     profiles,
-    { badgesByProfileId, streaksByProfileId, experienceByProfileId },
+    { badgesByProfileId, streaksByProfileId, experienceByProfileId, coinsByProfileId },
     cycleStatus,
   );
 }

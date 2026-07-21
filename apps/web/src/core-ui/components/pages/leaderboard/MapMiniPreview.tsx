@@ -59,7 +59,7 @@ export function MapMiniPreview({ walletAddress, caption, badge }: MapMiniPreview
   return (
     <div
       ref={tileRef}
-      className="relative w-full aspect-[16/9] overflow-hidden rounded-2xl border border-black/10 bg-[#FAF6EE]"
+      className="relative w-full aspect-[16/9] overflow-hidden rounded-lg border border-black/10 bg-[#FAF6EE]"
     >
       {snapshot ? (
         // eslint-disable-next-line @next/next/no-img-element -- a runtime-generated

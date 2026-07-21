@@ -22,12 +22,18 @@ const DATE_FILTERS: DateFilter[] = ['all', 'today', 'week', 'month'];
 const TYPE_FILTERS: TypeFilter[] = ['all', 'deposit', 'reward', 'streak', 'friend', 'system'];
 
 const TYPE_ICONS: Record<NotificationType, React.ReactNode> = {
-  deposit: <FiTrendingUp />,
-  reward: <FiGift />,
-  streak: <FiZap />,
-  friend: <FiUsers />,
-  system: <FiBell />,
+  deposit: <FiTrendingUp className="h-5 w-5" />,
+  reward: <FiGift className="h-5 w-5" />,
+  streak: <FiZap className="h-5 w-5" />,
+  friend: <FiUsers className="h-5 w-5" />,
+  system: <FiBell className="h-5 w-5" />,
 };
+
+/** Los movimientos de plata (depósito, retiro, desbloqueo) llevan al historial,
+ *  aunque la notificación guardada en la base apunte a otra ruta más vieja. */
+const MONEY_MESSAGE_KEYS = new Set(['depositConfirmed', 'withdrawalCompleted', 'depositUnlocked']);
+
+const notificationLink = (n: AppNotification) => (MONEY_MESSAGE_KEYS.has(n.messageKey) ? '/transactions' : n.link);
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -94,7 +100,8 @@ function FilterSelect<T extends string>({
 
 function NotificationItem({ notification, onPress }: { notification: AppNotification; onPress: () => void }) {
   const { t, i18n } = useTranslation();
-  const { type, messageKey, params, link, createdAt, read } = notification;
+  const { type, messageKey, params, createdAt, read } = notification;
+  const link = notificationLink(notification);
 
   const elapsed = Date.now() - createdAt;
   let timeLabel: string;
@@ -128,7 +135,7 @@ function NotificationItem({ notification, onPress }: { notification: AppNotifica
           read ? 'bg-white' : 'bg-[#FFF4E5]'
         } ${link ? 'cursor-pointer hover:bg-[#FFF7E6]' : 'cursor-default'}`}
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#DDF4FF] border border-[#84D8FF] text-black shrink-0">
+        <span className="flex h-9 w-9 items-center justify-center text-black shrink-0">
           {TYPE_ICONS[type] ?? <FiBell />}
         </span>
         <div className="min-w-0 flex-1">
@@ -136,7 +143,7 @@ function NotificationItem({ notification, onPress }: { notification: AppNotifica
             <p className={`text-sm text-black truncate ${read ? 'font-semibold' : 'font-bold'}`}>{title}</p>
             <span className="shrink-0 text-[11px] text-gray-500">{timeLabel}</span>
           </div>
-          {body && <p className="text-xs text-gray-600">{body}</p>}
+          {body && <p className="text-xs text-gray-600 line-clamp-1">{body}</p>}
         </div>
         {!read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" />}
       </button>
@@ -165,7 +172,7 @@ function NotificationRowsSkeleton() {
       <ul className="rounded-lg border border-black border-b-2 bg-white overflow-hidden divide-y divide-gray-200">
         {Array.from({ length: 5 }).map((_, i) => (
           <li key={i} className="flex items-start gap-3 px-4 py-3.5">
-            <span className="h-9 w-9 shrink-0 rounded-md bg-default-100 animate-pulse" />
+            <span className="my-1 h-7 w-7 shrink-0 rounded-full bg-default-100 animate-pulse" />
             <div className="min-w-0 flex-1 space-y-2 py-1">
               <span className="block h-3.5 w-2/5 rounded bg-default-100 animate-pulse" />
               <span className="block h-3 w-4/5 rounded bg-default-100 animate-pulse" />
@@ -225,8 +232,9 @@ export function NotificationsCenterPage() {
     if (!n.read) {
       markRead(n.id);
     }
-    if (n.link) {
-      router.push(n.link);
+    const link = notificationLink(n);
+    if (link) {
+      router.push(link);
     }
   };
 
@@ -234,6 +242,7 @@ export function NotificationsCenterPage() {
     <PageLayout
       title={t('notificationsCenter.title', 'Notifications')}
       backHref="/home"
+      contentGap="gap-4"
       rightSlot={
         <button
           type="button"

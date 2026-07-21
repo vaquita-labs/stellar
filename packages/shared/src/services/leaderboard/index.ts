@@ -139,6 +139,7 @@ export interface EnrichedLeaderboardRow extends LeaderboardRow {
   badges: number;
   streak: number;
   experience: number;
+  coins: number;
   cycleStatus: LeaderboardCycleStatus;
 }
 
@@ -146,6 +147,8 @@ export interface LeaderboardProfileRollups {
   badgesByProfileId: Map<number, number>;
   streaksByProfileId: Map<number, number>;
   experienceByProfileId: Map<number, number>;
+  /** Optional: rows fall back to 0 coins when the rollup isn't provided. */
+  coinsByProfileId?: Map<number, number>;
 }
 
 export function enrichLeaderboardRows(
@@ -167,6 +170,7 @@ export function enrichLeaderboardRows(
       badges: profile ? (rollups.badgesByProfileId.get(profile.id) ?? 0) : 0,
       streak: profile ? (rollups.streaksByProfileId.get(profile.id) ?? 0) : 0,
       experience: profile ? (rollups.experienceByProfileId.get(profile.id) ?? 0) : 0,
+      coins: profile ? (rollups.coinsByProfileId?.get(profile.id) ?? 0) : 0,
       cycleStatus,
     };
   });

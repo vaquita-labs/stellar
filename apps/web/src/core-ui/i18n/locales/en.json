@@ -588,8 +588,10 @@
   "leaderboard": {
     "card": {
       "badges": "Badges",
+      "coins": "Coins",
       "commentsComingSoon": "Comments on {{username}}'s world coming soon",
       "dayStreak": "Day streak",
+      "experience": "XP",
       "follow": "Follow",
       "followAria": "Follow {{username}}",
       "following": "Following",
@@ -597,6 +599,7 @@
       "like": "Like",
       "openComments": "Open comments",
       "positionLabel": "Position {{position}}",
+      "unfollow": "Unfollow",
       "unfollowAria": "Unfollow {{username}}",
       "unlike": "Unlike",
       "viewWorld": "View {{username}}'s world",
@@ -696,26 +699,26 @@
     "markAllRead": "Mark all as read",
     "messages": {
       "achievementUnlocked": {
-        "body": "You earned the \"{{name}}\" badge. Check your collection.",
+        "body": "You earned the \"{{name}}\" badge.",
         "title": "Trophy unlocked!"
       },
       "depositConfirmed": {
-        "body": "Your ${{amount}} USDC deposit is confirmed and already growing.",
+        "body": "${{amount}} USDC confirmed and growing.",
         "title": "Deposit confirmed"
       },
       "depositUnlocked": {
-        "body": "Your ${{amount}} USDC deposit completed its term. You can withdraw it now.",
+        "body": "${{amount}} USDC ready to withdraw.",
         "title": "Your savings are unlocked!"
       },
       "generic": {
         "title": "Notification"
       },
       "newFollower": {
-        "body": "{{name}} started following you. Take a look at their farm!",
+        "body": "{{name}} started following you.",
         "title": "New follower"
       },
       "withdrawalCompleted": {
-        "body": "${{amount}} USDC was sent to your wallet.",
+        "body": "${{amount}} USDC sent to your wallet.",
         "title": "Withdrawal completed"
       }
     },

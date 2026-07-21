@@ -3,8 +3,8 @@
 import { toast } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ReactNode, useState } from 'react';
-import { FiCheck, FiHeart, FiLoader, FiMessageCircle, FiUserPlus } from 'react-icons/fi';
+import { useState } from 'react';
+import { FiHeart, FiLoader, FiMessageCircle } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { useFollowingWallets, useToggleFollow } from '../../../hooks';
 import { MapMiniPreview } from './MapMiniPreview';
@@ -27,6 +27,9 @@ export type LeaderboardCardData = {
   level: number;
   streak: number;
   badges: number;
+  /** Gold coins and XP — the same trio the home header shows (streak · coins · XP). */
+  coins: number;
+  experience: number;
   /** Seed for the (mocked) like + comment counts. */
   likesSeed: number;
   commentsSeed: number;
@@ -119,30 +122,40 @@ export function PositionPill({
   );
 }
 
-/** Slim stat box, mirrors the Focus Tree "FOCUS TIME / GARDENERS" pattern.
- *  Accepts any icon node so callers can pass an emoji span or an <Image />. */
-function StatBox({
-  icon,
-  value,
-  label,
-}: {
-  icon: ReactNode;
-  value: string;
-  label: string;
-}) {
+/** Un stat de la fila: ícono + número, sin etiqueta. */
+function Stat({ icon, value, label }: { icon: string; value: string; label: string }) {
   return (
-    <div className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-3 py-2">
-      <span className="flex items-center justify-center w-6 h-6 shrink-0">
-        {icon}
-      </span>
-      <div className="flex flex-col items-start leading-tight">
-        <span className="text-base font-extrabold text-black tabular-nums leading-none">
-          {value}
-        </span>
-        <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-500">
-          {label}
-        </span>
-      </div>
+    <div className="flex flex-1 items-center justify-center gap-1.5" title={label}>
+      <Image src={icon} alt={label} width={20} height={20} className="object-contain" />
+      <span className="text-xs font-bold text-black tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+/** Racha · monedas · XP, los mismos tres números (y los mismos íconos) que la
+ *  barra de stats del home, para que el perfil ajeno se lea igual que el propio. */
+function StatsRow({ streak, coins, experience }: { streak: number; coins: number; experience: number }) {
+  const { t } = useTranslation();
+  const divider = <div className="w-px h-4 bg-black/10 shrink-0" />;
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-black/10 bg-white px-3 py-1.5">
+      <Stat
+        icon="/icons/global/streak_face.png"
+        value={`${streak}`}
+        label={t('leaderboard.card.dayStreak', 'Day streak')}
+      />
+      {divider}
+      <Stat
+        icon="/icons/global/coin.png"
+        value={`${Math.floor(coins).toLocaleString()}`}
+        label={t('leaderboard.card.coins', 'Coins')}
+      />
+      {divider}
+      <Stat
+        icon="/icons/global/star.png"
+        value={`${Math.floor(experience).toLocaleString()}`}
+        label={t('leaderboard.card.experience', 'XP')}
+      />
     </div>
   );
 }
@@ -245,7 +258,7 @@ export function FollowButton({ username, targetWallet }: { username: string; tar
           ? t('leaderboard.card.unfollowAria', 'Unfollow {{username}}', { username })
           : t('leaderboard.card.followAria', 'Follow {{username}}', { username })
       }
-      className={`inline-flex items-center gap-1 rounded-full border border-black border-b-2 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider shrink-0 transition ${
+      className={`inline-flex items-center gap-1 rounded-full border border-black border-b-2 px-2.5 py-1 text-[10px] font-bold shrink-0 transition ${
         pending ? 'opacity-70 cursor-wait' : 'hover:-translate-y-0.5'
       } ${
         following
@@ -253,16 +266,12 @@ export function FollowButton({ username, targetWallet }: { username: string; tar
           : 'bg-primary text-black hover:bg-primary/80'
       }`}
     >
-      {pending ? (
-        <FiLoader className="h-3 w-3 animate-spin" aria-hidden />
-      ) : following ? (
-        <FiCheck className="h-3 w-3" aria-hidden />
-      ) : (
-        <FiUserPlus className="h-3 w-3" aria-hidden />
-      )}
+      {/* Sin ícono: el texto ya dice qué hace el botón, y el check/persona sólo
+          competían con él en un botón de 10px. El spinner sí queda: es estado. */}
+      {pending && <FiLoader className="h-3 w-3 animate-spin" aria-hidden />}
       <span>
         {following
-          ? t('leaderboard.card.following', 'Following')
+          ? t('leaderboard.card.unfollow', 'Unfollow')
           : t('leaderboard.card.follow', 'Follow')}
       </span>
     </button>
@@ -329,7 +338,7 @@ export function LeaderboardCard({
       aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", {
         username: user.username,
       })}
-      className={`group flex flex-col gap-2.5 rounded-3xl p-3 shadow-sm transition hover:-translate-y-0.5 ${containerClasses}`}
+      className={`group flex flex-col gap-2.5 rounded-xl p-3 shadow-sm transition hover:-translate-y-0.5 ${containerClasses}`}
     >
       <CardHeader user={user} />
 
@@ -339,34 +348,7 @@ export function LeaderboardCard({
         badge={showPosition ? <PositionPill position={user.position} /> : undefined}
       />
 
-      <div className="flex gap-2">
-        <StatBox
-          icon={
-            <Image
-              src="/icons/global/streak_face.png"
-              alt=""
-              width={24}
-              height={24}
-              className="object-contain"
-            />
-          }
-          value={`${user.streak}`}
-          label={t('leaderboard.card.dayStreak', 'Day streak')}
-        />
-        <StatBox
-          icon={
-            <Image
-              src="/icons/global/trophy.png"
-              alt=""
-              width={24}
-              height={24}
-              className="object-contain"
-            />
-          }
-          value={`${user.badges}`}
-          label={t('leaderboard.card.badges', 'Badges')}
-        />
-      </div>
+      <StatsRow streak={user.streak} coins={user.coins} experience={user.experience} />
 
       <SocialRow
         username={user.username}
@@ -386,18 +368,16 @@ export function LeaderboardCardSkeleton() {
   return (
     <div
       aria-hidden
-      className="flex flex-col gap-2.5 rounded-3xl border border-black/10 bg-white p-3 animate-pulse"
+      className="flex flex-col gap-2.5 rounded-xl border border-black/10 bg-white p-3 animate-pulse"
     >
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-full bg-black/10" />
         <div className="flex-1 h-3 w-32 rounded bg-black/10" />
-        <div className="h-6 w-14 rounded-full bg-black/10" />
+        <div className="h-6 w-16 rounded-full bg-black/10" />
       </div>
-      <div className="w-full aspect-[16/9] rounded-2xl bg-black/10" />
-      <div className="flex gap-2">
-        <div className="h-10 flex-1 rounded-xl bg-black/5" />
-        <div className="h-10 flex-1 rounded-xl bg-black/5" />
-      </div>
+      <div className="w-full aspect-[16/9] rounded-lg bg-black/10" />
+      {/* Fila de stats: racha · monedas · XP, la misma altura que la real. */}
+      <div className="h-8 w-full rounded-lg bg-black/5" />
       <div className="flex gap-2">
         <div className="h-6 w-14 rounded-full bg-black/5" />
         <div className="h-6 w-14 rounded-full bg-black/5" />

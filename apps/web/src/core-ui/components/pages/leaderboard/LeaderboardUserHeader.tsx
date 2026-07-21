@@ -13,7 +13,7 @@ import {
 import { useConfigStore } from '@/core-ui/stores';
 import { InfiniteData, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiArrowLeft, FiLoader } from 'react-icons/fi';
@@ -39,7 +39,7 @@ function StatChip({ icon, value, label }: { icon: ReactNode; value: string; labe
 }
 
 /**
- * Identity header for another player's world page (`/leaderboard/[username]`,
+ * Identity header for another player's world page (`/explore/[username]`,
  * already resolved to a wallet by the page).
  * Deliberately compact — a single banner row (back · avatar · username +
  * joined date · follow) plus the stat chips and the unlocked-achievements
@@ -48,6 +48,7 @@ function StatChip({ icon, value, label }: { icon: ReactNode; value: string; labe
  */
 export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string }) {
   const { t } = useTranslation();
+  const router = useRouter();
   const { walletAddress: viewerWallet, network } = useConfigStore();
   const queryClient = useQueryClient();
   const { data: profile } = useProfileData(walletAddress);
@@ -86,6 +87,18 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
     : (listRow?.streak ?? 0);
   const isOwnProfile = viewerWallet?.toLowerCase() === walletAddress.toLowerCase();
 
+  // A este perfil se llega desde varios lados (explorar, ranking, la lista de
+  // seguidos), así que el back vuelve por el historial en vez de mandar siempre
+  // al ranking. Si se entró por link directo (pestaña nueva) no hay a dónde
+  // volver: ahí sí cae en /explore.
+  const goBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/explore');
+    }
+  };
+
   const joinedLabel = useMemo(() => {
     const createdAt = profile?.createdAt;
     if (!createdAt) return '';
@@ -115,13 +128,14 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
       {/* Banner row — back · avatar · identity · follow ----------------- */}
       <header className="bg-primary px-3 sm:px-6 py-3 rounded-b-3xl border-b-2 border-black/10">
         <div className="flex items-center gap-2.5">
-          <Link
-            href="/leaderboard"
+          <button
+            type="button"
+            onClick={goBack}
             aria-label={t('common.back', 'Back')}
             className="flex items-center justify-center h-9 w-9 shrink-0 rounded-full bg-white/70 border border-black border-b-2 text-black hover:bg-white transition"
           >
             <FiArrowLeft className="h-4 w-4" />
-          </Link>
+          </button>
 
           <div className="relative h-14 w-14 shrink-0 rounded-full bg-white flex items-center justify-center overflow-hidden border-2 border-black border-b-4 shadow">
             {avatarUrl ? (

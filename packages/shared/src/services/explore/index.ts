@@ -1,6 +1,7 @@
 import { prisma } from '@vaquita/db';
 import {
   getAchievementCountsByProfile,
+  getCoinsByProfile,
   getExperienceByProfile,
   getProfiles,
   getStreakCountsByProfile,
@@ -36,6 +37,7 @@ export interface ExploreProfileRow {
   badges: number;
   streak: number;
   experience: number;
+  coins: number;
 }
 
 interface ExploreCandidate extends ExploreProfileRow {
@@ -65,12 +67,17 @@ async function buildExplorePool(): Promise<ExploreCandidate[]> {
     throw new Error('Failed to load profiles for the explore feed', { cause: error });
   }
 
-  const [{ counts: badgesByProfileId }, { counts: streaksByProfileId }, { experience: experienceByProfileId }] =
-    await Promise.all([
-      getAchievementCountsByProfile(),
-      getStreakCountsByProfile(),
-      getExperienceByProfile(profiles),
-    ]);
+  const [
+    { counts: badgesByProfileId },
+    { counts: streaksByProfileId },
+    { experience: experienceByProfileId },
+    { counts: coinsByProfileId },
+  ] = await Promise.all([
+    getAchievementCountsByProfile(),
+    getStreakCountsByProfile(),
+    getExperienceByProfile(profiles),
+    getCoinsByProfile(),
+  ]);
 
   return profiles
     .filter((profile) => {
@@ -88,6 +95,7 @@ async function buildExplorePool(): Promise<ExploreCandidate[]> {
       badges: badgesByProfileId.get(profile.id) ?? 0,
       streak: streaksByProfileId.get(profile.id) ?? 0,
       experience: experienceByProfileId.get(profile.id) ?? 0,
+      coins: coinsByProfileId.get(profile.id) ?? 0,
     }));
 }
 

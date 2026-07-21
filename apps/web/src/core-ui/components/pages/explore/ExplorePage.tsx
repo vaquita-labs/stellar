@@ -89,6 +89,8 @@ function useExploreCards(rows: ExploreProfileDTO[]): LeaderboardCardData[] {
         level: Math.max(1, Math.floor((row.experience ?? 0) / 100) + 1),
         streak: row.streak ?? 0,
         badges: row.badges ?? 0,
+        coins: row.coins ?? 0,
+        experience: row.experience ?? 0,
         likesSeed: 0,
         commentsSeed: 0,
         // The API already excludes the viewer, so no row here is ever "you".

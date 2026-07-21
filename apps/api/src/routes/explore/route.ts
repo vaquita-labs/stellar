@@ -26,7 +26,7 @@ const router = Router();
  * profile the way `ORDER BY random()` per request would. A fresh visit gets a
  * fresh seed and therefore a fresh order.
  *
- * 200 { rows: [ { walletAddress, nickname, avatarUrl, badges, streak, experience } ],
+ * 200 { rows: [ { walletAddress, nickname, avatarUrl, badges, streak, experience, coins } ],
  *       total, limit, offset, hasMore, networkName }
  */
 router.get('/wallet/:walletAddress', async (req, res) => {
