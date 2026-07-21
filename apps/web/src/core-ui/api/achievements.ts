@@ -14,6 +14,19 @@ export interface BadgeClaimPayload {
 const enc = encodeURIComponent;
 const API_BASE = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1`;
 
+/** Error carrying the API's HTTP status + machine-readable `code`, so callers
+ *  can branch on outcomes like ALREADY_MINTED instead of matching on message. */
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
 async function authJson<T>(
   wallet: string,
   path: string,
@@ -25,7 +38,11 @@ async function authJson<T>(
 
   if (!response.ok) {
     if (okStatuses.includes(response.status)) return null;
-    throw new Error(body?.message ?? body?.error ?? `Request failed (${response.status})`);
+    throw new ApiError(
+      body?.message ?? body?.error ?? `Request failed (${response.status})`,
+      response.status,
+      typeof body?.code === 'string' ? body.code : undefined,
+    );
   }
 
   return body?.data ?? null;

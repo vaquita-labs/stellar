@@ -1,6 +1,6 @@
 'use client';
 
-import { confirmMint, fetchSignedClaim, refreshSignedClaim } from '@/core-ui/api/achievements';
+import { ApiError, confirmMint, fetchSignedClaim, refreshSignedClaim } from '@/core-ui/api/achievements';
 import { useConfigStore } from '@/core-ui/stores';
 import { mintBadge } from '@/networks/stellar/sorobanTx';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,14 +18,25 @@ export const useMintBadge = () => {
   const networkName = network?.networkName ?? '';
   const badgesContractAddress = network?.badgesContractAddress;
 
-  return useMutation<{ hash: string; coinReward: number }, Error, string>({
+  return useMutation<{ hash: string; coinReward: number; alreadyMinted?: boolean }, Error, string>({
     mutationFn: async (badgeType: string) => {
       if (!badgesContractAddress) {
         throw new Error('Badge contract address not configured for this network');
       }
       if (!walletAddress) throw new Error('No connected wallet');
 
-      let claim = await fetchSignedClaim(walletAddress, badgeType);
+      let claim: Awaited<ReturnType<typeof fetchSignedClaim>>;
+      try {
+        claim = await fetchSignedClaim(walletAddress, badgeType);
+      } catch (err) {
+        // The badge is already minted on-chain and the server just reconciled the
+        // DB from the chain (voucher self-heal). Treat it as a successful outcome:
+        // onSuccess invalidates the badge queries, so the grid re-renders as minted.
+        if (err instanceof ApiError && err.code === 'ALREADY_MINTED') {
+          return { hash: '', coinReward: 0, alreadyMinted: true };
+        }
+        throw err;
+      }
       if (!claim) throw new Error('Failed to fetch badge claim');
 
       // Step 2: refresh if signature expired
