@@ -1,6 +1,5 @@
 import { Html } from '@react-three/drei';
 import { Button } from '@heroui/react';
-import { sfxRemove, sfxRotate } from '@/core-ui/helpers/sfx';
 import { EditionMode, useMapStore } from '@/core-ui/stores';
 import { MapObjectType } from '@/core-ui/types';
 import { useTranslation } from 'react-i18next';
@@ -46,7 +45,6 @@ export const EditControls = ({ position }: EditControlsProps) => {
   const currentTiles = useMapStore((store) => store.currentTiles);
 
   const handleRemove = () => {
-    sfxRemove();
     // Quitar una colocación pendiente = revertir la celda a lo que tenía (si
     // era expansión, ni siquiera queda una entrada EMPTY suelta).
     const pending = useMapStore.getState().pendingPlacement;
@@ -67,7 +65,6 @@ export const EditControls = ({ position }: EditControlsProps) => {
   const handleRotate = () => {
     const tile = getTileAt(position[0], position[2]);
     if (!tile) return;
-    sfxRotate();
 
     // Obtener la rotación actual del tile
     const currentRotation = tile.rotation || [0, 0, 0];
