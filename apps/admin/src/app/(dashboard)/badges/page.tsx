@@ -250,8 +250,14 @@ const BadgeFormModal = ({
       addDangerToast('Missing fields', 'Name and description are required.');
       return;
     }
-    if (!isEdit && !/^[a-z0-9-]+$/.test(form.key)) {
-      addDangerToast('Invalid key', 'Key must be kebab-case (a-z, 0-9, -).');
+    // The key doubles as the on-chain Soroban Symbol (only [a-zA-Z0-9_], max 32),
+    // so no hyphens: start with a letter, then letters / digits / underscores.
+    if (!isEdit && !/^[a-z][a-z0-9_]*$/.test(form.key)) {
+      addDangerToast('Invalid key', 'Key must start with a letter and use only a-z, 0-9 or _ (no hyphens).');
+      return;
+    }
+    if (!isEdit && form.key.length > 32) {
+      addDangerToast('Invalid key', 'Key must be at most 32 characters (Soroban Symbol limit).');
       return;
     }
     setSaving(true);
@@ -293,7 +299,7 @@ const BadgeFormModal = ({
         {!isEdit && (
           <Input
             label="Key (immutable)"
-            placeholder="e.g. summer-2026"
+            placeholder="e.g. summer_2026"
             value={form.key}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('key', e.target.value)}
           />
