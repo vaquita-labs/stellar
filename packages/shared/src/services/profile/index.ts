@@ -999,11 +999,42 @@ export const getCoinsByProfile = async (): Promise<{
  */
 export const claimAchievement = async (profileId: number, key: Achievement) => {
   try {
-    const rows = await prisma.$queryRaw<
-      { achievement_id: bigint; coin_reward: number; claimed_at: Date }[]
-    >`SELECT * FROM claim_achievement(${profileId}::bigint, ${key}::text)`;
+    // Finalize the off-chain claim entirely in Prisma: insert the claim row and,
+    // if the badge carries coins, credit the gold-coin reward — atomically.
+    //
+    // This used to delegate to the `claim_achievement` Postgres function, but
+    // that function is a hand-applied migration artifact that was missing on some
+    // deployments, so every claim failed silently (no claimed_at, no coins) and
+    // the mint/reconcile flows could never finalize. Owning the logic here
+    // removes that hidden DB dependency — it works on any DB with the schema.
+    const { achievementId, coinReward, claimedAt } = await prisma.$transaction(async (tx) => {
+      const achievement = await tx.achievement.findFirst({
+        where: { key },
+        select: { id: true, coinReward: true },
+      });
+      if (!achievement) {
+        throw new Error(`Unknown achievement key: ${key}`);
+      }
 
-    const row = rows[0];
+      const now = new Date();
+      // The @@unique(profileId, achievementId) turns a repeat claim into a P2002,
+      // surfaced as `alreadyClaimed` in the catch below.
+      await tx.profileAchievement.create({
+        data: { profileId, achievementId: achievement.id, claimedAt: now },
+      });
+
+      if (achievement.coinReward > 0) {
+        const gold = await tx.reward.findFirst({ where: { key: 'gold-coin' }, select: { id: true } });
+        if (!gold) {
+          throw new Error('gold-coin reward row is missing from `rewards`.');
+        }
+        await tx.profileReward.create({
+          data: { profileId, rewardId: gold.id, reason: 'achievement', amount: achievement.coinReward },
+        });
+      }
+
+      return { achievementId: achievement.id, coinReward: achievement.coinReward, claimedAt: now };
+    });
 
     // Fire-and-forget feed notification — both the claim and redeem endpoints
     // funnel through here, so this covers every off-chain achievement award.
@@ -1030,17 +1061,18 @@ export const claimAchievement = async (profileId: number, key: Achievement) => {
 
     return {
       success: true as const,
-      achievementId: Number(row?.achievement_id ?? 0),
-      coinReward: Number(row?.coin_reward ?? 0),
-      claimedAt: (row?.claimed_at ?? new Date()).toISOString(),
+      achievementId: Number(achievementId),
+      coinReward,
+      claimedAt: claimedAt.toISOString(),
     };
   } catch (error) {
-    // Prisma surfaces the Postgres error code on the raw-query error; 23505 is
-    // the UNIQUE (profile_id, achievement_id) violation = already claimed.
+    // Prisma raises P2002 on the UNIQUE (profile_id, achievement_id) violation =
+    // already claimed. Keep the raw 23505 check as a fallback for raw paths.
     const code =
-      (error as { meta?: { code?: string }; code?: string })?.meta?.code ??
-      (error as { code?: string })?.code;
-    const alreadyClaimed = code === '23505' || /23505/.test(String((error as Error)?.message ?? ''));
+      (error as { code?: string })?.code ??
+      (error as { meta?: { code?: string } })?.meta?.code;
+    const alreadyClaimed =
+      code === 'P2002' || code === '23505' || /23505/.test(String((error as Error)?.message ?? ''));
     return { success: false as const, alreadyClaimed, error };
   }
 };
