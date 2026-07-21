@@ -4,6 +4,7 @@ import { useDepositListControls } from '@/core-ui/components/home/DepositListCon
 import { DepositListTab, DepositListTabs } from '@/core-ui/components/home/DepositListTabs';
 import { VaquitaDepositCard } from '@/core-ui/components/home/VaquitaDepositCard';
 import { WithdrawnDepositCard } from '@/core-ui/components/home/WithdrawnDepositCard';
+import { TransactionDetailsModal } from '@/core-ui/components/pages/transactions/TransactionDetailsModal';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { AppTransaction, buildTransactions } from '@/core-ui/helpers/transactions';
 import { Spinner } from '@heroui/react';
@@ -37,6 +38,7 @@ export function BankAPYModal({
   const { data: depositsData, isLoading: isLoadingDeposits } = useDepositsComplete(walletAddress);
 
   const [selectedVaquita, setSelectedVaquita] = useState<DepositResponseDTO | null>(null);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [tab, setTab] = useState<DepositListTab>('active');
 
   // En modo tutorial mostramos un depósito inyectado en vez de los reales.
@@ -54,22 +56,16 @@ export function BankAPYModal({
   const recentTransactions = useMemo(() => buildTransactions(sourceDeposits).slice(0, 3), [sourceDeposits]);
 
   const goToTransactions = (path = '/transactions') => {
+    setSelectedTransactionId(null);
     onOpenChange();
     router.push(path);
   };
 
-  // Un depósito abre su detalle inline (donde vive el retiro); un retiro ya no
-  // tiene acciones, así que va directo a la pantalla de detalle del movimiento.
-  const onTransactionPress = (transaction: AppTransaction) => {
-    if (transaction.kind !== 'deposit') {
-      goToTransactions(`/transactions/${transaction.id}`);
-      return;
-    }
-    const deposit = sourceDeposits.find((d) => d.id === transaction.depositId);
-    if (!deposit) return;
-    setSelectedVaquita(deposit);
-    onDetailOpenChange?.(true);
-  };
+  // El detalle del movimiento se abre DENTRO de este modal (entra deslizándose
+  // desde la derecha, igual que en /transactions): el acceso rápido no debe
+  // sacar al usuario del home ni cerrar la hoja. El back solo lo oculta y
+  // vuelve a la lista de últimos movimientos.
+  const onTransactionPress = (transaction: AppTransaction) => setSelectedTransactionId(transaction.id);
 
   // Con depósitos inyectados (tutorial) no esperamos a las queries reales.
   const isLoading = !injectedDeposits && isLoadingDeposits;
@@ -113,9 +109,15 @@ export function BankAPYModal({
   }, [inDetail, detail.isConfirming]);
 
   return (
+    <>
     <AppModal
       open={open}
-      onOpenChange={onOpenChange}
+      // Al cerrar la hoja se olvida el detalle abierto: la próxima vez arranca
+      // otra vez en la lista de últimos movimientos.
+      onOpenChange={() => {
+        setSelectedTransactionId(null);
+        onOpenChange();
+      }}
       isDismissable={!detail.loading && !lockToWithdraw}
       hideClose={lockToWithdraw}
       onBack={inDetail && !detail.loading && !lockToWithdraw ? backToList : undefined}
@@ -231,5 +233,13 @@ export function BankAPYModal({
         </div>
       )}
     </AppModal>
+
+    {/* Hermano, no hijo: el detalle es su propia pantalla a pantalla completa y
+        esta hoja queda abierta debajo, tal cual estaba. */}
+    <TransactionDetailsModal
+      transactionId={selectedTransactionId}
+      onClose={() => setSelectedTransactionId(null)}
+    />
+    </>
   );
 }

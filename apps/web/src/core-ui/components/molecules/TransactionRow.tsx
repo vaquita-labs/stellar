@@ -61,16 +61,16 @@ export function TransactionRow({
       >
         <span
           className={
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-black text-black ' +
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-black text-black ' +
             (isDeposit ? 'bg-primary/30' : 'bg-success/25')
           }
         >
-          {isDeposit ? <FiArrowDownLeft className="h-4 w-4" /> : <FiArrowUpRight className="h-4 w-4" />}
+          {isDeposit ? <FiArrowDownLeft className="h-3.5 w-3.5" /> : <FiArrowUpRight className="h-3.5 w-3.5" />}
         </span>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm font-bold text-black truncate">{title}</p>
+            <p className="text-[13px] font-bold text-black truncate">{title}</p>
             {transaction.status !== 'completed' && (
               <span
                 className={
@@ -82,15 +82,15 @@ export function TransactionRow({
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-600 truncate">{subtitle}</p>
+          <p className="text-[11px] text-gray-600 truncate">{subtitle}</p>
         </div>
 
         <div className="shrink-0 text-right">
-          <p className={`text-sm font-bold tabular-nums ${amountColor}`}>
+          <p className={`text-[13px] font-bold tabular-nums ${amountColor}`}>
             {sign}
             {transaction.amount.toFixed(2)} {transaction.tokenSymbol}
           </p>
-          <p className="text-[11px] text-gray-500">{formatTransactionTime(transaction.timestamp, i18n.language)}</p>
+          <p className="text-[10px] text-gray-500">{formatTransactionTime(transaction.timestamp, i18n.language)}</p>
         </div>
       </button>
     </li>
@@ -101,7 +101,7 @@ export function TransactionRow({
 export function TransactionRowSkeleton() {
   return (
     <li className="flex items-center gap-3 px-2 py-2.5">
-      <span className="h-9 w-9 shrink-0 rounded-md border border-black/20 bg-default-100 animate-pulse" />
+      <span className="h-8 w-8 shrink-0 rounded-md border border-black/20 bg-default-100 animate-pulse" />
       <div className="min-w-0 flex-1 space-y-1.5">
         <span className="block h-3.5 w-24 rounded bg-default-100 animate-pulse" />
         <span className="block h-3 w-16 rounded bg-default-100 animate-pulse" />
@@ -136,7 +136,7 @@ export function TransactionList({
 export function TransactionMonthCard({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl bg-white p-2">
-      <h2 className="px-2 pt-1 pb-1.5 text-base font-bold text-black">{label}</h2>
+      <h2 className="px-2 pt-1 pb-1.5 text-sm font-bold text-black">{label}</h2>
       {children}
     </section>
   );

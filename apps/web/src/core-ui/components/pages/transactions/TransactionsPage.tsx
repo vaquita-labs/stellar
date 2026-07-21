@@ -63,6 +63,9 @@ export function TransactionsPage() {
 
   const [filters, setFilters] = useState<TransactionFilters>(EMPTY_TRANSACTION_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // ¿Se entró directo al detalle (link compartido o refresh con `?tx=`)? Ahí el
+  // panel se pinta ya puesto, sin deslizarse sobre una lista que nunca se vio.
+  const [deepLinked] = useState(() => openTransactionId !== null);
 
   const transactions = useMemo(() => buildTransactions(data?.deposits ?? []), [data]);
   const groups = useMemo(() => groupTransactionsByMonth(filterTransactions(transactions, filters)), [transactions, filters]);
@@ -170,7 +173,14 @@ export function TransactionsPage() {
         />
       </PageLayout>
 
-      <TransactionDetailsOverlay transactionId={openTransactionId} onClose={() => router.back()} />
+      {/* Cerrar quita `?tx=` en vez de hacer `back()`: el panel sale animado
+          dejando la lista debajo, y con un link compartido se aterriza en la
+          lista en vez de salir de la app. */}
+      <TransactionDetailsOverlay
+        transactionId={openTransactionId}
+        animated={!deepLinked}
+        onClose={() => router.replace('/transactions', { scroll: false })}
+      />
     </div>
   );
 }

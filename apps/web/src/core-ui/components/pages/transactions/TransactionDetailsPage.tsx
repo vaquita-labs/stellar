@@ -58,8 +58,9 @@ function DetailsSkeleton() {
   );
 }
 
-/** `onBack` lo pasa el overlay para animar la salida antes de navegar; en la
- *  ruta a pantalla completa (entrada directa o refresh) se vuelve sin más. */
+/** `onBack` lo pasa quien la muestra sobre otra cosa (el panel de la lista o el
+ *  modal del home) para cerrarla en vez de navegar; en la ruta a pantalla
+ *  completa (entrada directa o refresh) se vuelve sin más. */
 export function TransactionDetailsPage({ transactionId, onBack }: { transactionId: string; onBack?: () => void }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -105,15 +106,8 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
         ? t('transactions.kind.withdrawEarly', 'Early withdrawal')
         : t('transactions.kind.withdraw', 'Withdrawal');
 
-  return (
-    <PageLayout
-      title={t('transactions.details.title', 'Transaction details')}
-      onBack={onBack ?? (() => router.back())}
-      headerGap="gap-2"
-      contentGap="gap-3"
-      titleClassName="text-base sm:text-lg"
-    >
-      <WithHydrated fallback={<DetailsSkeleton />}>
+  const content = (
+    <WithHydrated fallback={<DetailsSkeleton />}>
         {isLoading && !data ? (
           <DetailsSkeleton />
         ) : !transaction ? (
@@ -122,7 +116,9 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
           </div>
         ) : (
           <>
-            <div className="flex flex-col items-center gap-1 py-2 text-center">
+            {/* El monto es el dato principal de la pantalla: va suelto, con aire
+                arriba y abajo, para que se lea antes que los bloques de datos. */}
+            <div className="flex flex-col items-center gap-1.5 py-7 text-center">
               <p
                 className={
                   'text-4xl font-bold tabular-nums leading-tight ' +
@@ -221,8 +217,10 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
               )}
             </div>
 
+            {/* mt-auto: explorador y compartir son el pie de la pantalla, no un
+                bloque más de la lista; con poco contenido quedan abajo igual. */}
             {explorerUrl && (
-              <div className="flex gap-2">
+              <div className="mt-auto flex gap-2 pt-2">
                 <a
                   href={explorerUrl}
                   target="_blank"
@@ -242,9 +240,24 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
                 </button>
               </div>
             )}
-          </>
-        )}
-      </WithHydrated>
+        </>
+      )}
+    </WithHydrated>
+  );
+
+  return (
+    <PageLayout
+      title={t('transactions.details.title', 'Transaction details')}
+      onBack={onBack ?? (() => router.back())}
+      headerGap="gap-2"
+      contentGap="gap-3"
+      // flex-1: el contenido ocupa el alto disponible para que el mt-auto de los
+      // botones los empuje al fondo de la pantalla; y con explorador/compartir
+      // haciendo de pie, el aire de abajo es el justo para despegarlos del borde.
+      contentClassName="flex-1"
+      bottomPadding="pb-5"
+    >
+      {content}
     </PageLayout>
   );
 }
