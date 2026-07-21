@@ -21,6 +21,10 @@ interface PageLayoutProps {
   contentClassName?: string;
   /** Gap class between the header and the content (e.g. "gap-3"). Defaults to "gap-6". */
   headerGap?: string;
+  /** Gap class between the content blocks. Defaults to "gap-6". */
+  contentGap?: string;
+  /** Overrides the header title size (e.g. "text-lg" for long titles). */
+  titleClassName?: string;
 }
 
 export function PageLayout({
@@ -32,6 +36,8 @@ export function PageLayout({
   children,
   contentClassName = '',
   headerGap = 'gap-2',
+  contentGap = 'gap-6',
+  titleClassName,
 }: PageLayoutProps) {
   return (
     <div className="h-full overflow-y-auto">
@@ -45,8 +51,9 @@ export function PageLayout({
           onBack={onBack}
           rightAction={rightAction}
           rightSlot={rightSlot}
+          titleClassName={titleClassName}
         />
-        <div className={`flex flex-col gap-6 ${contentClassName}`}>{children}</div>
+        <div className={`flex flex-col ${contentGap} ${contentClassName}`}>{children}</div>
       </div>
     </div>
   );

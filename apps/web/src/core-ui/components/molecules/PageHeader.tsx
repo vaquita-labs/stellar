@@ -24,6 +24,8 @@ interface PageHeaderProps {
   rightAction?: RightAction;
   rightSlot?: ReactNode;
   className?: string;
+  /** Overrides the title size classes (e.g. "text-lg" for long titles). */
+  titleClassName?: string;
 }
 
 export function PageHeader({
@@ -33,6 +35,7 @@ export function PageHeader({
   rightAction,
   rightSlot,
   className = '',
+  titleClassName = 'text-xl sm:text-2xl',
 }: PageHeaderProps) {
   const { t } = useTranslation();
   return (
@@ -55,7 +58,7 @@ export function PageHeader({
         ) : null}
       </div>
 
-      <h1 className="text-xl sm:text-2xl font-bold text-black truncate text-center">
+      <h1 className={`${titleClassName} font-bold text-black truncate text-center`}>
         {title}
       </h1>
 

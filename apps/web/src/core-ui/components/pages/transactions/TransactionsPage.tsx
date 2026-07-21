@@ -19,10 +19,11 @@ import {
 } from '@/core-ui/helpers/transactions';
 import { useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiFilter, FiX } from 'react-icons/fi';
+import { TransactionDetailsOverlay } from './TransactionDetailsOverlay';
 import { TransactionFiltersModal } from './TransactionFiltersModal';
 
 /** Chip de un filtro aplicado, con × para quitarlo (como en el mock). */
@@ -37,9 +38,26 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
   );
 }
 
+/** Placeholder de la lista: se usa tanto en la primera carga de datos como
+ *  mientras hidrata, para no cortar la navegación con el loader de la vaquita. */
+function ListSkeleton() {
+  return (
+    <TransactionMonthCard label="">
+      <TransactionList align="grouped">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <TransactionRowSkeleton key={i} />
+        ))}
+      </TransactionList>
+    </TransactionMonthCard>
+  );
+}
+
 export function TransactionsPage() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  // El detalle vive en `?tx=` de esta misma ruta, no en /transactions/[id]: así
+  // la lista no se desmonta y el panel puede entrar y salir animado.
+  const openTransactionId = useSearchParams().get('tx');
   const { walletAddress } = useConfigStore();
   const { data, isLoading } = useDepositsComplete(walletAddress);
 
@@ -47,10 +65,7 @@ export function TransactionsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const transactions = useMemo(() => buildTransactions(data?.deposits ?? []), [data]);
-  const groups = useMemo(
-    () => groupTransactionsByMonth(filterTransactions(transactions, filters)),
-    [transactions, filters],
-  );
+  const groups = useMemo(() => groupTransactionsByMonth(filterTransactions(transactions, filters)), [transactions, filters]);
 
   const formatDate = (timestamp: number) =>
     new Date(timestamp).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -90,76 +105,72 @@ export function TransactionsPage() {
   const showSkeleton = isLoading && !data;
 
   return (
-    <PageLayout
-      title={t('transactions.title', 'Transactions')}
-      backHref="/home"
-      headerGap="gap-3"
-      rightSlot={
-        <CircleIconButton
-          variant={hasActiveFilters(filters) ? 'primary' : 'white'}
-          ariaLabel={t('transactions.filters.title', 'Filter')}
-          onClick={() => setFiltersOpen(true)}
-          icon={<FiFilter className="h-4 w-4" />}
-        />
-      }
-    >
-      <WithHydrated>
-        {chips.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {chips.map((chip) => (
-              <FilterChip key={chip.key} label={chip.label} onRemove={chip.onRemove} />
-            ))}
-          </div>
-        )}
-
-        {showSkeleton ? (
-          <TransactionMonthCard label="">
-            <TransactionList align="grouped">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <TransactionRowSkeleton key={i} />
+    <div className="relative h-full">
+      <PageLayout
+        title={t('transactions.title', 'Transactions')}
+        backHref="/home"
+        headerGap="gap-3"
+        rightSlot={
+          <CircleIconButton
+            variant={hasActiveFilters(filters) ? 'primary' : 'white'}
+            ariaLabel={t('transactions.filters.title', 'Filter')}
+            onClick={() => setFiltersOpen(true)}
+            icon={<FiFilter className="h-4 w-4" />}
+          />
+        }
+      >
+        <WithHydrated fallback={<ListSkeleton />}>
+          {chips.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {chips.map((chip) => (
+                <FilterChip key={chip.key} label={chip.label} onRemove={chip.onRemove} />
               ))}
-            </TransactionList>
-          </TransactionMonthCard>
-        ) : groups.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-10 text-center">
-            <p className="text-sm font-semibold text-black">
-              {t('transactions.empty', 'No transactions yet')}
-            </p>
-            <p className="text-xs text-gray-600">
-              {hasActiveFilters(filters)
-                ? t('transactions.emptyFiltered', 'Try changing the filters to see more.')
-                : t('transactions.emptyHint', 'Your deposits and withdrawals will show up here.')}
-            </p>
-          </div>
-        ) : (
-          groups.map((group) => (
-            <TransactionMonthCard
-              key={group.key}
-              label={new Date(group.timestamp).toLocaleDateString(i18n.language, {
-                month: 'long',
-                year: 'numeric',
-              })}
-            >
-              <TransactionList align="grouped">
-                {group.items.map((transaction) => (
-                  <TransactionRow
-                    key={transaction.id}
-                    transaction={transaction}
-                    onPress={() => router.push(`/transactions/${transaction.id}`)}
-                  />
-                ))}
-              </TransactionList>
-            </TransactionMonthCard>
-          ))
-        )}
-      </WithHydrated>
+            </div>
+          )}
 
-      <TransactionFiltersModal
-        open={filtersOpen}
-        onOpenChange={() => setFiltersOpen(false)}
-        filters={filters}
-        onApply={setFilters}
-      />
-    </PageLayout>
+          {showSkeleton ? (
+            <ListSkeleton />
+          ) : groups.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-10 text-center">
+              <p className="text-sm font-semibold text-black">{t('transactions.empty', 'No transactions yet')}</p>
+              <p className="text-xs text-gray-600">
+                {hasActiveFilters(filters)
+                  ? t('transactions.emptyFiltered', 'Try changing the filters to see more.')
+                  : t('transactions.emptyHint', 'Your deposits and withdrawals will show up here.')}
+              </p>
+            </div>
+          ) : (
+            groups.map((group) => (
+              <TransactionMonthCard
+                key={group.key}
+                label={new Date(group.timestamp).toLocaleDateString(i18n.language, {
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              >
+                <TransactionList align="grouped">
+                  {group.items.map((transaction) => (
+                    <TransactionRow
+                      key={transaction.id}
+                      transaction={transaction}
+                      onPress={() => router.push(`/transactions?tx=${transaction.id}`, { scroll: false })}
+                    />
+                  ))}
+                </TransactionList>
+              </TransactionMonthCard>
+            ))
+          )}
+        </WithHydrated>
+
+        <TransactionFiltersModal
+          open={filtersOpen}
+          onOpenChange={() => setFiltersOpen(false)}
+          filters={filters}
+          onApply={setFilters}
+        />
+      </PageLayout>
+
+      <TransactionDetailsOverlay transactionId={openTransactionId} onClose={() => router.back()} />
+    </div>
   );
 }

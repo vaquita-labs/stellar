@@ -8,6 +8,7 @@ import {
   TransactionKindFilter,
   TransactionStatusFilter,
 } from '@/core-ui/helpers/transactions';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCalendar, FiX } from 'react-icons/fi';
@@ -18,6 +19,8 @@ const WHEEL_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
 const PAD = (WHEEL_HEIGHT - ITEM_HEIGHT) / 2;
 
 const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
 
@@ -64,7 +67,12 @@ function WheelColumn({
     }, 120);
   };
 
-  useEffect(() => () => { if (settleRef.current) clearTimeout(settleRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (settleRef.current) clearTimeout(settleRef.current);
+    },
+    [],
+  );
 
   return (
     <div
@@ -96,21 +104,46 @@ function WheelColumn({
   );
 }
 
-function DateWheel({ value, onChange }: { value: Date; onChange: (date: Date) => void }) {
+function DateWheel({
+  value,
+  onChange,
+  min,
+  max,
+}: {
+  value: Date;
+  onChange: (date: Date) => void;
+  min: Date;
+  max: Date;
+}) {
   const { i18n } = useTranslation();
-  const currentYear = new Date().getFullYear();
-  const years = range(currentYear - 5, currentYear + 1);
-  const months = range(0, 11).map((m) =>
-    new Date(2000, m, 1).toLocaleDateString(i18n.language, { month: 'long' }),
-  );
-  const days = range(1, daysInMonth(value.getFullYear(), value.getMonth())).map(String);
+
+  // Cada columna solo lista lo que se puede elegir dado el resto de la fecha:
+  // en el año del tope no aparecen los meses posteriores, y en ese mes no
+  // aparecen los días posteriores (ídem hacia atrás con el mínimo). Así el
+  // límite se ve, en vez de que la rueda rebote sola.
+  const years = range(min.getFullYear(), max.getFullYear());
+  const monthFrom = value.getFullYear() === min.getFullYear() ? min.getMonth() : 0;
+  const monthTo = value.getFullYear() === max.getFullYear() ? max.getMonth() : 11;
+  const monthValues = range(monthFrom, monthTo);
+  const inMinMonth = value.getFullYear() === min.getFullYear() && value.getMonth() === min.getMonth();
+  const inMaxMonth = value.getFullYear() === max.getFullYear() && value.getMonth() === max.getMonth();
+  const dayFrom = inMinMonth ? min.getDate() : 1;
+  const dayTo = inMaxMonth ? max.getDate() : daysInMonth(value.getFullYear(), value.getMonth());
+  const dayValues = range(dayFrom, dayTo);
+
+  const months = monthValues.map((m) => new Date(2000, m, 1).toLocaleDateString(i18n.language, { month: 'long' }));
+  const days = dayValues.map(String);
 
   const setPart = (part: 'day' | 'month' | 'year', index: number) => {
     const year = part === 'year' ? years[index] : value.getFullYear();
-    const month = part === 'month' ? index : value.getMonth();
-    const day = part === 'day' ? index + 1 : value.getDate();
+    const month = part === 'month' ? monthValues[index] : value.getMonth();
+    const day = part === 'day' ? dayValues[index] : value.getDate();
     // Al pasar a un mes más corto el día se recorta en vez de saltar de mes.
-    onChange(new Date(year, month, Math.min(day, daysInMonth(year, month))));
+    const next = new Date(year, month, Math.min(day, daysInMonth(year, month)));
+    // Cambiar de año o mes puede dejar el resto fuera de rango (ej. pasar al
+    // año del tope con un mes posterior): se acota al límite y las columnas se
+    // recalculan con el valor ya válido.
+    onChange(new Date(Math.min(Math.max(next.getTime(), min.getTime()), max.getTime())));
   };
 
   return (
@@ -121,8 +154,18 @@ function DateWheel({ value, onChange }: { value: Date; onChange: (date: Date) =>
         style={{ top: PAD, height: ITEM_HEIGHT }}
       />
       <div className="flex gap-2">
-        <WheelColumn items={days} index={value.getDate() - 1} onChange={(i) => setPart('day', i)} ariaLabel="day" />
-        <WheelColumn items={months} index={value.getMonth()} onChange={(i) => setPart('month', i)} ariaLabel="month" />
+        <WheelColumn
+          items={days}
+          index={Math.max(0, value.getDate() - dayFrom)}
+          onChange={(i) => setPart('day', i)}
+          ariaLabel="day"
+        />
+        <WheelColumn
+          items={months}
+          index={Math.max(0, value.getMonth() - monthFrom)}
+          onChange={(i) => setPart('month', i)}
+          ariaLabel="month"
+        />
         <WheelColumn
           items={years.map(String)}
           index={Math.max(0, years.indexOf(value.getFullYear()))}
@@ -150,7 +193,9 @@ function DateField({
     <div className="flex items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 h-12">
       <button type="button" onClick={onPress} className="flex flex-1 items-center gap-2 text-left min-w-0">
         <span className={'flex-1 truncate text-sm font-semibold ' + (value ? 'text-black' : 'text-gray-400')}>
-          {value ? new Date(value).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' }) : label}
+          {value
+            ? new Date(value).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' })
+            : label}
         </span>
         <FiCalendar className="h-4 w-4 shrink-0 text-gray-500" />
       </button>
@@ -163,15 +208,7 @@ function DateField({
   );
 }
 
-function OptionRow({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
+function OptionRow({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
     <button
       type="button"
@@ -195,9 +232,10 @@ const KINDS: TransactionKindFilter[] = ['all', 'deposit', 'withdraw'];
 const STATUSES: TransactionStatusFilter[] = ['all', 'completed', 'pending', 'failed'];
 
 /**
- * Filtros del historial: rango de fechas + tipo + estado. El selector de fecha
- * se pinta dentro del MISMO modal (con flecha atrás), igual que el detalle de
- * la vaquita en Bank Rewards, para no apilar overlays.
+ * Filtros del historial: rango de fechas + tipo + estado, a pantalla completa.
+ * El selector de fecha es una hoja DENTRO del mismo diálogo (prop `overlay` de
+ * AppModal): así los filtros siguen visibles detrás en vez de desaparecer, y no
+ * se apilan dos overlays de React Aria.
  */
 export function TransactionFiltersModal({
   open,
@@ -223,15 +261,24 @@ export function TransactionFiltersModal({
     }
   }, [open, filters]);
 
+  // Rango elegible: nunca a futuro y nunca cruzado (el "hasta" no puede ser
+  // anterior al "desde" ni al revés).
+  const today = startOfDay(new Date());
+  const oldest = new Date(today.getFullYear() - 5, 0, 1);
+  const pickerMin = picking === 'endDate' && draft.startDate !== null ? startOfDay(new Date(draft.startDate)) : oldest;
+  const pickerMax = picking === 'startDate' && draft.endDate !== null ? startOfDay(new Date(draft.endDate)) : today;
+
   const openPicker = (field: 'startDate' | 'endDate') => {
-    setPickerDate(new Date(draft[field] ?? Date.now()));
+    const min = field === 'endDate' && draft.startDate !== null ? startOfDay(new Date(draft.startDate)) : oldest;
+    const max = field === 'startDate' && draft.endDate !== null ? startOfDay(new Date(draft.endDate)) : today;
+    const current = startOfDay(new Date(draft[field] ?? Date.now()));
+    setPickerDate(new Date(Math.min(Math.max(current.getTime(), min.getTime()), max.getTime())));
     setPicking(field);
   };
 
   const savePicker = () => {
     if (!picking) return;
-    const picked = new Date(pickerDate);
-    picked.setHours(0, 0, 0, 0);
+    const picked = startOfDay(pickerDate);
     setDraft((prev) => ({ ...prev, [picking]: picked.getTime() }));
     setPicking(null);
   };
@@ -240,98 +287,110 @@ export function TransactionFiltersModal({
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      title={picking ? t('transactions.filters.selectDate', 'Select date') : t('transactions.filters.title', 'Filter')}
-      // El selector de fecha lleva su propio encabezado dentro del body y se
-      // cierra con Cancel/Save, así que no necesita la barra de título.
-      hideHeader={!!picking}
+      title={t('transactions.filters.title', 'Filter')}
       size="md"
+      fullScreen
       footer={
-        picking ? (
-          <div className="flex gap-2 w-full">
-            <Button variant="white" className="flex-1" onPress={() => setPicking(null)}>
-              {t('common.cancel', 'Cancel')}
-            </Button>
-            <Button className="flex-1" onPress={savePicker}>
-              {t('common.save', 'Save')}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex gap-2 w-full">
-            <Button
-              variant="white"
-              className="flex-1"
-              onPress={() => setDraft(EMPTY_TRANSACTION_FILTERS)}
-            >
-              {t('transactions.filters.clearAll', 'Clear all')}
-            </Button>
-            <Button
-              className="flex-1"
-              onPress={() => {
-                onApply(draft);
-                onOpenChange();
-              }}
-            >
-              {t('transactions.filters.apply', 'Apply')}
-            </Button>
-          </div>
-        )
+        <div className="flex gap-2 w-full">
+          <Button variant="white" className="flex-1" onPress={() => setDraft(EMPTY_TRANSACTION_FILTERS)}>
+            {t('transactions.filters.clearAll', 'Clear all')}
+          </Button>
+          <Button
+            className="flex-1"
+            onPress={() => {
+              onApply(draft);
+              onOpenChange();
+            }}
+          >
+            {t('transactions.filters.apply', 'Apply')}
+          </Button>
+        </div>
+      }
+      overlay={
+        <AnimatePresence>
+          {picking && (
+            <>
+              <motion.div
+                key="date-dim"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 z-10 bg-black/40"
+                onClick={() => setPicking(null)}
+              />
+              <motion.div
+                key="date-sheet"
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.25 }}
+                className="absolute inset-x-0 bottom-0 z-20 space-y-3 rounded-t-2xl border-t border-black bg-background px-4 pt-4 pb-5"
+              >
+                <h2 className="text-lg font-bold text-black">{t('transactions.filters.selectDate', 'Select date')}</h2>
+                <DateWheel value={pickerDate} onChange={setPickerDate} min={pickerMin} max={pickerMax} />
+                <div className="flex gap-2">
+                  <Button variant="white" className="flex-1" onPress={() => setPicking(null)}>
+                    {t('common.cancel', 'Cancel')}
+                  </Button>
+                  <Button className="flex-1" onPress={savePicker}>
+                    {t('common.save', 'Save')}
+                  </Button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       }
     >
-      {picking ? (
-        <div className="space-y-3">
-          <h2 className="text-lg font-bold text-black">{t('transactions.filters.selectDate', 'Select date')}</h2>
-          <DateWheel value={pickerDate} onChange={setPickerDate} />
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <DateField
+            label={t('transactions.filters.startDate', 'Start date')}
+            value={draft.startDate}
+            onPress={() => openPicker('startDate')}
+            onClear={() => setDraft((prev) => ({ ...prev, startDate: null }))}
+          />
+          <DateField
+            label={t('transactions.filters.endDate', 'End date')}
+            value={draft.endDate}
+            onPress={() => openPicker('endDate')}
+            onClear={() => setDraft((prev) => ({ ...prev, endDate: null }))}
+          />
         </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <DateField
-              label={t('transactions.filters.startDate', 'Start date')}
-              value={draft.startDate}
-              onPress={() => openPicker('startDate')}
-              onClear={() => setDraft((prev) => ({ ...prev, startDate: null }))}
-            />
-            <DateField
-              label={t('transactions.filters.endDate', 'End date')}
-              value={draft.endDate}
-              onPress={() => openPicker('endDate')}
-              onClear={() => setDraft((prev) => ({ ...prev, endDate: null }))}
-            />
-          </div>
 
-          <div className="space-y-2">
-            <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              {t('transactions.filters.type', 'Transaction type')}
-            </h3>
-            <div className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-black border-b-2 bg-white">
-              {KINDS.map((kind) => (
-                <OptionRow
-                  key={kind}
-                  label={t(`transactions.filters.kinds.${kind}`)}
-                  selected={draft.kind === kind}
-                  onPress={() => setDraft((prev) => ({ ...prev, kind }))}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              {t('transactions.filters.status', 'Status')}
-            </h3>
-            <div className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-black border-b-2 bg-white">
-              {STATUSES.map((status) => (
-                <OptionRow
-                  key={status}
-                  label={t(`transactions.filters.statuses.${status}`)}
-                  selected={draft.status === status}
-                  onPress={() => setDraft((prev) => ({ ...prev, status }))}
-                />
-              ))}
-            </div>
+        <div className="space-y-1.5">
+          <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            {t('transactions.filters.type', 'Transaction type')}
+          </h3>
+          <div className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-black border-b-2 bg-white">
+            {KINDS.map((kind) => (
+              <OptionRow
+                key={kind}
+                label={t(`transactions.filters.kinds.${kind}`)}
+                selected={draft.kind === kind}
+                onPress={() => setDraft((prev) => ({ ...prev, kind }))}
+              />
+            ))}
           </div>
         </div>
-      )}
+
+        <div className="space-y-1.5">
+          <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            {t('transactions.filters.status', 'Status')}
+          </h3>
+          <div className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-black border-b-2 bg-white">
+            {STATUSES.map((status) => (
+              <OptionRow
+                key={status}
+                label={t(`transactions.filters.statuses.${status}`)}
+                selected={draft.status === status}
+                onPress={() => setDraft((prev) => ({ ...prev, status }))}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
     </AppModal>
   );
 }
