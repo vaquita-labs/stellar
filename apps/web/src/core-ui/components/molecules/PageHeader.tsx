@@ -28,6 +28,11 @@ interface PageHeaderProps {
   titleClassName?: string;
 }
 
+/**
+ * Header estándar de la app: back circular de 32px a la izquierda y título
+ * compacto centrado. Todas las páginas (y el header de los modales, vía
+ * AppModal) comparten esta escala; no dupliques la barra a mano.
+ */
 export function PageHeader({
   title,
   backHref,
@@ -35,25 +40,27 @@ export function PageHeader({
   rightAction,
   rightSlot,
   className = '',
-  titleClassName = 'text-xl sm:text-2xl',
+  titleClassName = 'text-base sm:text-lg',
 }: PageHeaderProps) {
   const { t } = useTranslation();
   return (
-    <div className={`relative flex items-center justify-center min-h-12 px-14 ${className}`}>
+    // mb-1: un respiro mínimo (4px) que separa la barra del contenido, para que
+    // se lea como header y no como la primera fila del body.
+    <div className={`relative flex items-center justify-center min-h-8 px-11 mb-1 ${className}`}>
       <div className="absolute left-0 flex items-center">
         {backHref ? (
           <CircleIconButton
             href={backHref}
             variant="primary"
             ariaLabel={t('common.back')}
-            icon={<FiChevronLeft className="w-5 h-5" />}
+            icon={<FiChevronLeft className="w-4 h-4" />}
           />
         ) : onBack ? (
           <CircleIconButton
             variant="primary"
             ariaLabel={t('common.back')}
             onClick={onBack}
-            icon={<FiChevronLeft className="w-5 h-5" />}
+            icon={<FiChevronLeft className="w-4 h-4" />}
           />
         ) : null}
       </div>

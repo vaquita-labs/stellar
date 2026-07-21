@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ReactNode } from 'react';
 
 export type CircleIconButtonVariant = 'primary' | 'white';
-/** `md` (36px) para el back de páginas; `sm` (28px) para los headers de modal. */
+/** `md` (32px) para el back de páginas; `sm` (28px) para los headers de modal. */
 export type CircleIconButtonSize = 'sm' | 'md';
 
 interface CircleIconButtonProps {
@@ -34,7 +34,7 @@ const VARIANT_CLASSES: Record<CircleIconButtonVariant, string> = {
 
 const SIZE_CLASSES: Record<CircleIconButtonSize, string> = {
   sm: 'w-7 h-7',
-  md: 'w-9 h-9',
+  md: 'w-8 h-8',
 };
 
 const BASE_CLASSES =

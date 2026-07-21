@@ -1,9 +1,9 @@
 'use client';
 
+import { PageHeader } from '@/core-ui/components/molecules/PageHeader';
 import { useRouter } from 'next/navigation';
 import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiArrowLeft } from 'react-icons/fi';
 
 interface MockedSubPageLayoutProps {
   title: string;
@@ -13,11 +13,6 @@ interface MockedSubPageLayoutProps {
   backHref?: string;
   /** Hide the "Soon" badge if the page becomes real later. */
   showSoonBadge?: boolean;
-  /**
-   * Render the title inline next to the back button (small font) instead of as
-   * the big block underneath. Frees vertical space on content-first pages.
-   */
-  inlineTitle?: boolean;
   children: ReactNode;
 }
 
@@ -31,7 +26,6 @@ export function MockedSubPageLayout({
   subtitle,
   backHref = '/profile/settings',
   showSoonBadge = true,
-  inlineTitle = false,
   children,
 }: MockedSubPageLayoutProps) {
   const { t } = useTranslation();
@@ -51,39 +45,23 @@ export function MockedSubPageLayout({
     <div className="h-full overflow-y-auto bg-background">
       {/* min-h-full so a child can claim the leftover space with flex-1 (e.g. an
           empty state that centers itself in the rest of the screen). */}
-      <div className="mx-auto w-full min-h-full max-w-2xl px-4 sm:px-6 pt-5 sm:pt-6 pb-6 flex flex-col gap-6">
-        <header className={inlineTitle ? 'flex flex-col gap-2' : 'flex flex-col gap-4'}>
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={handleBack}
-              aria-label={t('common.back')}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition shrink-0"
-            >
-              <FiArrowLeft className="h-4 w-4" />
-            </button>
-            {inlineTitle && (
-              <h1 className="flex-1 min-w-0 text-base font-extrabold text-black tracking-tight truncate text-center">
-                {title}
-              </h1>
-            )}
-            {showSoonBadge ? (
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-primary text-black border border-black border-b-2 rounded-full px-3 py-1">
-                {t('common.soon')}
-              </span>
-            ) : (
-              // Mirror of the back button so the inline title stays optically centered.
-              inlineTitle && <span aria-hidden className="h-9 w-9 shrink-0" />
-            )}
-          </div>
-          {!inlineTitle ? (
-            <div className="flex flex-col gap-1">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">{title}</h1>
-              {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
-            </div>
-          ) : (
-            subtitle && <p className="text-sm text-gray-600">{subtitle}</p>
-          )}
+      <div className="mx-auto w-full min-h-full max-w-2xl px-4 sm:px-6 pt-5 sm:pt-6 pb-6 flex flex-col gap-5">
+        {/* Misma barra que el resto de la app (PageHeader): back de 32px a la
+            izquierda y título compacto centrado. El badge SOON viaja en el
+            slot derecho para no romper ese centrado. */}
+        <header className="flex flex-col gap-2">
+          <PageHeader
+            title={title}
+            onBack={handleBack}
+            rightSlot={
+              showSoonBadge ? (
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-primary text-black border border-black border-b-2 rounded-full px-2.5 py-0.5">
+                  {t('common.soon')}
+                </span>
+              ) : undefined
+            }
+          />
+          {subtitle && <p className="text-sm text-gray-600 text-center">{subtitle}</p>}
         </header>
 
         {children}

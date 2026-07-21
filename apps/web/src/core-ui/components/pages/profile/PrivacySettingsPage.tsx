@@ -1,10 +1,10 @@
 'use client';
 
 import { Switch } from '@heroui/react';
-import Link from 'next/link';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiArrowLeft, FiEye, FiEyeOff, FiInfo } from 'react-icons/fi';
+import { FiEye, FiEyeOff, FiInfo } from 'react-icons/fi';
+import { PageHeader } from '../../molecules/PageHeader';
 import { usePrivacyStore } from '../../../stores';
 
 function ToggleCard({
@@ -47,22 +47,11 @@ export function PrivacySettingsPage() {
     <div className="h-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-6 pb-16">
         {/* Header */}
-        <header className="flex flex-col gap-4">
-          <Link
-            href="/profile/settings"
-            aria-label={t('common.back')}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:bg-white/80 transition"
-          >
-            <FiArrowLeft className="h-4 w-4" />
-          </Link>
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
-              {t('profilePages.privacy.title', 'Privacy settings')}
-            </h1>
-            <p className="text-sm text-gray-600">
-              {t('profilePages.privacy.subtitle', 'Decide how much of your activity is visible on this device.')}
-            </p>
-          </div>
+        <header className="flex flex-col gap-2">
+          <PageHeader title={t('profilePages.privacy.title', 'Privacy settings')} backHref="/profile/settings" />
+          <p className="text-sm text-gray-600 text-center">
+            {t('profilePages.privacy.subtitle', 'Decide how much of your activity is visible on this device.')}
+          </p>
         </header>
 
         {/* Hide balance */}
