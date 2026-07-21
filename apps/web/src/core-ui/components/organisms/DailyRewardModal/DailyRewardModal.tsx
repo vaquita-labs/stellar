@@ -100,9 +100,14 @@ export function DailyRewardModal({
   // todas las pantallas de premio/racha.
   const expanded = step !== 'confirm' || isHolding;
 
-  const ringDeg = holdProgress * 3.6;
   const chestPx = expanded ? 176 : 104;
   const ringPx = chestPx + 64;
+  // Geometría del anillo de progreso (SVG). Contorno negro + canal + arco con
+  // puntas redondeadas, para que combine con el estilo cartoon de la app.
+  const ringStroke = 13;
+  const ringR = ringPx / 2 - 12;
+  const ringCirc = 2 * Math.PI * ringR;
+  const ringOffset = ringCirc * (1 - holdProgress / 100);
 
   // El botón vive en el footer (anclado abajo). Solo en las pantallas de premio
   // y racha; la pantalla inicial se avanza manteniendo presionado el cofre.
@@ -138,15 +143,24 @@ export function DailyRewardModal({
       isDismissable={step === 'confirm' && !isHolding}
       hideClose={step !== 'confirm' || isHolding}
     >
-      <div
-        className={
-          'select-none ' +
-          (expanded
-            ? 'flex flex-col items-center justify-center text-center gap-7 min-h-[68dvh] py-6'
-            : 'flex flex-col items-center text-center gap-6 py-4')
-        }
-      >
-        {step === 'reward' ? (
+      {/* Crossfade + slide corto entre pasos: el AppModal solo anima
+          abrir/cerrar, así que la transición reward→streak la damos acá para
+          que no se cambie de golpe. */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className={
+            'select-none ' +
+            (expanded
+              ? 'flex flex-col items-center justify-center text-center gap-7 min-h-[68dvh] py-6'
+              : 'flex flex-col items-center text-center gap-6 py-4')
+          }
+        >
+          {step === 'reward' ? (
           <>
             <motion.div
               initial={{ scale: 0.6, opacity: 0, y: 8 }}
@@ -172,7 +186,7 @@ export function DailyRewardModal({
             </motion.div>
 
             <p className="text-xl font-bold text-black">
-              {t('rewards.daily.success', 'You earned {{count}} coin!', { count: coinsToCollect })}
+              {t('rewards.daily.rewardTitle', 'You earned coins!')}
             </p>
 
             <motion.div
@@ -181,8 +195,8 @@ export function DailyRewardModal({
               transition={{ delay: 0.15, type: 'spring', stiffness: 260, damping: 18 }}
               className="flex items-center justify-center gap-3"
             >
-              <span className="text-4xl font-bold text-black">+{coinsToCollect}</span>
-              <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={56} height={56} priority draggable={false} className="pointer-events-none" />
+              <span className="text-5xl font-bold text-black">+{coinsToCollect}</span>
+              <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={64} height={64} priority draggable={false} className="pointer-events-none" />
             </motion.div>
           </>
         ) : step === 'streak' ? (
@@ -235,27 +249,43 @@ export function DailyRewardModal({
               onPointerLeave={cancelHold}
               onPointerCancel={cancelHold}
               onContextMenu={(e) => e.preventDefault()}
-              className="relative flex items-center justify-center rounded-full bg-transparent touch-none select-none"
+              className="relative flex items-center justify-center rounded-full bg-transparent touch-none select-none outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 border-0 appearance-none"
               style={{
                 width: ringPx,
                 height: ringPx,
                 WebkitTouchCallout: 'none',
                 WebkitUserSelect: 'none',
                 userSelect: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                outline: 'none',
               }}
               whileTap={{ scale: 0.97 }}
             >
-              {/* Anillo de progreso del hold (donut con conic-gradient). */}
-              <span
+              {/* Anillo de progreso del hold: canal crema + arco ámbar con
+                  puntas redondeadas. */}
+              <svg
                 aria-hidden
-                className="absolute inset-0 rounded-full transition-opacity"
-                style={{
-                  opacity: isHolding ? 1 : 0,
-                  background: `conic-gradient(#f59e0b ${ringDeg}deg, rgba(0,0,0,0.08) ${ringDeg}deg)`,
-                  WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px))',
-                  mask: 'radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px))',
-                }}
-              />
+                width={ringPx}
+                height={ringPx}
+                viewBox={`0 0 ${ringPx} ${ringPx}`}
+                className="absolute inset-0 -rotate-90 transition-opacity"
+                style={{ opacity: isHolding ? 1 : 0 }}
+              >
+                {/* Canal (parte sin llenar). */}
+                <circle cx={ringPx / 2} cy={ringPx / 2} r={ringR} fill="none" stroke="#fde8c3" strokeWidth={ringStroke} />
+                {/* Progreso. */}
+                <circle
+                  cx={ringPx / 2}
+                  cy={ringPx / 2}
+                  r={ringR}
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth={ringStroke}
+                  strokeLinecap="round"
+                  strokeDasharray={ringCirc}
+                  strokeDashoffset={ringOffset}
+                />
+              </svg>
 
               {/* Halo que se intensifica al presionar. */}
               <span
@@ -308,8 +338,9 @@ export function DailyRewardModal({
               </p>
             )}
           </>
-        )}
-      </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </AppModal>
   );
 }
