@@ -5,6 +5,7 @@ import { StrKey } from '@stellar/stellar-sdk';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MdContentPaste } from 'react-icons/md';
+import { useIsMobile } from '../../../hooks';
 import { SavedWallet, useCreateSavedWallet } from '../../../hooks/useSavedWallets';
 import { useConfigStore } from '../../../stores';
 
@@ -55,6 +56,11 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
   const [error, setError] = useState<string | null>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
 
+  // El botón de pegar se muestra solo en pantallas chicas (mobile), donde pegar
+  // es un gesto largo y el atajo de un toque ayuda. En desktop el pegado natural
+  // es Ctrl/Cmd+V dentro del campo, así que el botón sobra.
+  const isMobile = useIsMobile();
+
   const networkSlug = toNetworkSlug(network?.networkName ?? '');
   const trimmedLabel = label.trim();
   const trimmedAddress = address.trim();
@@ -63,16 +69,11 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
   const addressFormatError = trimmedAddress.length > 0 && !addressValid;
   const canSubmit = trimmedLabel.length > 0 && addressValid && !createWallet.isPending;
 
-  // La lectura programática del portapapeles (`clipboard.readText`) NO es
-  // universal: falla en contextos no seguros (http por IP en LAN, típico al
-  // probar desde el celular), en Firefox y en varios navegadores in-app. Se
-  // intenta solo cuando hay API y contexto seguro; si no, se enfoca el input
-  // para que el usuario pegue a mano (long-press en mobile, Ctrl/Cmd+V en
-  // desktop) — nunca un error, porque el pegado manual siempre funciona.
+  // Atajo de pegado para táctil. `clipboard.readText` solo funciona en contexto
+  // seguro (HTTPS/producción); si falla (dev por http en IP, permiso denegado)
+  // se enfoca el campo en silencio para que el usuario pegue con el gesto nativo
+  // — sin toast de advertencia, porque el pegado manual siempre está disponible.
   const handlePaste = async () => {
-    // Se intenta leer directo (no se pre-chequea isSecureContext: en algunos
-    // navegadores da falso negativo aunque readText funcione). Si la API existe
-    // se prueba y el catch decide; el gate real es que arroje o no.
     const readText = navigator?.clipboard?.readText?.bind(navigator.clipboard);
     if (readText) {
       try {
@@ -93,15 +94,10 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
         }
         return;
       } catch {
-        // Contexto no seguro (http por IP), permiso denegado o navegador que no
-        // lo soporta: cae al pegado manual.
+        // Sin permiso de lectura: cae al foco silencioso para pegado manual.
       }
     }
-
-    // Fallback universal: enfocar el campo para pegar a mano (long-press en
-    // mobile, Ctrl/Cmd+V en desktop). Siempre funciona.
     addressInputRef.current?.focus();
-    toast(t('withdraw.addWallet.pasteManual', 'Paste the address into the field'));
   };
 
   // Mismo estilo que el buscador del CountryPickerModal, para que todos los
@@ -155,17 +151,20 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
             onChange={(e) => setAddress(e.target.value)}
             maxLength={128}
             disabled={createWallet.isPending}
-            className={inputClasses + ' font-mono text-xs pr-11'}
+            className={inputClasses + ' font-mono text-xs' + (isMobile ? ' pr-11' : '')}
           />
-          <button
-            type="button"
-            onClick={handlePaste}
-            disabled={createWallet.isPending}
-            aria-label={t('withdraw.addWallet.paste', 'Paste')}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-md text-black hover:bg-black/5 active:translate-y-[calc(-50%+1px)] transition disabled:opacity-40"
-          >
-            <MdContentPaste className="w-4 h-4" />
-          </button>
+          {/* Solo en mobile: en desktop se pega con Ctrl/Cmd+V dentro del campo. */}
+          {isMobile ? (
+            <button
+              type="button"
+              onClick={handlePaste}
+              disabled={createWallet.isPending}
+              aria-label={t('withdraw.addWallet.paste', 'Paste')}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-md text-black hover:bg-black/5 active:translate-y-[calc(-50%+1px)] transition disabled:opacity-40"
+            >
+              <MdContentPaste className="w-4 h-4" />
+            </button>
+          ) : null}
         </div>
       </label>
 

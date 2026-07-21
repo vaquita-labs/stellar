@@ -1602,7 +1602,6 @@
       "networkHint": "Este endereço precisa ser da rede {{network}}.",
       "paste": "Colar",
       "pasteInvalid": "Isso não parece um endereço válido de {{network}}",
-      "pasteManual": "Cole o endereço no campo",
       "save": "Salvar carteira"
     },
     "amountLabel": "Valor",

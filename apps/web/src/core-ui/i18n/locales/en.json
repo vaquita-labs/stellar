@@ -1667,7 +1667,6 @@
       "networkHint": "This address must be on the {{network}} network.",
       "paste": "Paste",
       "pasteInvalid": "That doesn't look like a valid {{network}} address",
-      "pasteManual": "Paste the address into the field",
       "save": "Save wallet"
     },
     "amountLabel": "Amount",
