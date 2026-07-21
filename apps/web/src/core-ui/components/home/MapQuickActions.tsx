@@ -9,7 +9,8 @@ import { useTranslation } from 'react-i18next';
 /**
  * Accesos rápidos que flotan sobre el mapa, apilados debajo del cofre. Sustituyen
  * a la barra de navegación inferior: la tienda abre el modo edición del mapa (no
- * navega) y el leaderboard va a su propia ruta con back propio.
+ * navega), mientras que el leaderboard y explorar van a su propia ruta con back
+ * propio. Orden: leaderboard, explorar, tienda.
  */
 export const MapQuickActions = () => {
   const { t } = useTranslation();
@@ -36,6 +37,17 @@ export const MapQuickActions = () => {
         <Image
           src="/icons/navigation/leaderboard.png"
           alt={t('shell.nav.leaderboard', 'Leaderboard')}
+          width={40}
+          height={40}
+          className="object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
+          priority
+        />
+      </Link>
+
+      <Link href="/explore" aria-label={t('shell.nav.explore', 'Explore')} className="active:scale-95 transition-transform">
+        <Image
+          src="/icons/navigation/world.png"
+          alt={t('shell.nav.explore', 'Explore')}
           width={40}
           height={40}
           className="object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"

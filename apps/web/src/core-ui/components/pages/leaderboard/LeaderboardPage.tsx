@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { LeaderboardResponseDTO } from '@/core-ui/types';
 import { LEADERBOARD_PAGE_SIZE, useLeaderboardData, useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
-import { PageLayout } from '../../molecules';
+import { LoadMoreSentinel, PageLayout } from '../../molecules';
 import {
   Avatar,
   LeaderboardCard,
@@ -98,41 +98,6 @@ function ErrorState({ message }: { message: string }) {
       <p className="mt-1 text-xs text-red-700/80 break-words">{message}</p>
     </div>
   );
-}
-
-/* ------------------------------------------------------------------ */
-/* Infinite-scroll sentinel                                            */
-/* ------------------------------------------------------------------ */
-
-/** Invisible marker below the feed — when it scrolls into view (with a
- *  viewport of margin to prefetch early), ask for the next page. */
-function LoadMoreSentinel({
-  onVisible,
-  disabled,
-}: {
-  onVisible: () => void;
-  disabled: boolean;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const onVisibleRef = useRef(onVisible);
-  onVisibleRef.current = onVisible;
-
-  useEffect(() => {
-    if (disabled) return;
-    const node = ref.current;
-    if (!node) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) onVisibleRef.current();
-      },
-      { rootMargin: '600px 0px' }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [disabled]);
-
-  return <div ref={ref} aria-hidden className="h-px" />;
 }
 
 /* ------------------------------------------------------------------ */

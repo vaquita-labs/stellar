@@ -304,7 +304,16 @@ function CardHeader({ user }: { user: LeaderboardCardData }) {
  * card so a couple fit per phone screen; preview tile is a clean dotted
  * square — no gradient, no random imagery.
  */
-export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
+export function LeaderboardCard({
+  user,
+  /** Drops the rank pill from the preview. The explore feed is unranked — it has
+   *  no positions to show, and a "#42" there would imply an order that isn't
+   *  there (its rows come back shuffled). */
+  showPosition = true,
+}: {
+  user: LeaderboardCardData;
+  showPosition?: boolean;
+}) {
   const { t } = useTranslation();
   // Current-user card is filled with a soft primary tint (not just an outline)
   // so "this is you" reads at a glance while scrolling the feed.
@@ -316,7 +325,7 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
     <Link
       // Public URLs are keyed by username; the wallet is only a fallback for
       // profiles that never set one (the page accepts both).
-      href={`/leaderboard/${encodeURIComponent(user.nickname || user.walletAddress)}`}
+      href={`/explore/${encodeURIComponent(user.nickname || user.walletAddress)}`}
       aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", {
         username: user.username,
       })}
@@ -327,7 +336,7 @@ export function LeaderboardCard({ user }: { user: LeaderboardCardData }) {
       <MapMiniPreview
         walletAddress={user.walletAddress}
         caption={t('leaderboard.card.levelShort', 'Lv {{level}}', { level: user.level })}
-        badge={<PositionPill position={user.position} />}
+        badge={showPosition ? <PositionPill position={user.position} /> : undefined}
       />
 
       <div className="flex gap-2">

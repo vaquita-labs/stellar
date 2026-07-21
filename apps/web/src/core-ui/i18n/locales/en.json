@@ -1110,6 +1110,7 @@
     "nav": {
       "home": "Home",
       "leaderboard": "Leaderboard",
+      "explore": "Explore",
       "profile": "Profile",
       "shop": "Shop",
       "soon": "Soon",
@@ -1781,6 +1782,21 @@
       "share": "Share",
       "hashCopied": "Transaction ID copied",
       "linkCopied": "Link copied"
+    }
+  },
+  "explore": {
+    "title": "Explore",
+    "loadingLabel": "Loading vaqueros",
+    "loadingMore": "Loading more vaqueros",
+    "caughtUp": {
+      "title": "You've met everyone",
+      "description": "You already follow every vaquero around. Come back later — new worlds show up all the time."
+    },
+    "error": {
+      "title": "Couldn't load vaqueros"
+    },
+    "user": {
+      "back": "Back to explore"
     }
   }
 }

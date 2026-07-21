@@ -42,7 +42,7 @@ function FriendRow({
   return (
     <li className="flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-black/10 bg-white">
       <Link
-        href={`/leaderboard/${encodeURIComponent(friend.nickname || friend.walletAddress)}`}
+        href={`/explore/${encodeURIComponent(friend.nickname || friend.walletAddress)}`}
         onClick={onNavigate}
         className="flex items-center gap-3 flex-1 min-w-0"
       >
