@@ -2,20 +2,22 @@ import { Prisma, prisma } from '@vaquita/db';
 import type { Profile as PrismaProfile } from '@vaquita/db';
 import type { FriendDTO, FriendSuggestionDTO } from '../../types';
 import { notify } from '../notifications';
-import { getStreakData } from '../profile';
 
 // Upper bound on a single search page. Streak is computed per result (deposits +
 // rewards lookups), so this also caps the per-request DB fan-out.
 const MAX_RESULTS = 50;
 
+/** The profile columns every friend row needs — all the search query selects. */
+type ProfileCard = Pick<PrismaProfile, 'id' | 'walletAddress' | 'nickname' | 'fullName' | 'avatarUrl'>;
+
 /** `@handle` from the nickname, or a shortened wallet when there's no nickname. */
-const toHandle = (p: PrismaProfile): string =>
+const toHandle = (p: Pick<PrismaProfile, 'nickname' | 'walletAddress'>): string =>
   p.nickname?.trim()
     ? `@${p.nickname.trim().replace(/\s+/g, '').toLowerCase()}`
     : `@${p.walletAddress.slice(0, 6).toLowerCase()}`;
 
 /** Display name: full name, else nickname, else a shortened wallet. */
-const toName = (p: PrismaProfile): string =>
+const toName = (p: Pick<PrismaProfile, 'nickname' | 'fullName' | 'walletAddress'>): string =>
   p.fullName?.trim() ||
   p.nickname?.trim() ||
   `${p.walletAddress.slice(0, 4)}…${p.walletAddress.slice(-4)}`;
@@ -29,7 +31,7 @@ const hasDisplayName = (p: Pick<PrismaProfile, 'nickname' | 'fullName'>): boolea
   Boolean(p.fullName?.trim() || p.nickname?.trim());
 
 const toFriendDTO = (
-  p: PrismaProfile,
+  p: ProfileCard,
   extra: { streak: number; followers: number; isFollowing: boolean },
 ): FriendDTO => ({
   walletAddress: p.walletAddress,
@@ -44,11 +46,27 @@ const toFriendDTO = (
   isFollowing: extra.isFollowing,
 });
 
+/** Shortest query we'll run. One letter matches half the table — never useful. */
+export const MIN_SEARCH_LENGTH = 2;
+
+/** Escapes the LIKE wildcards so a user typing `%` or `_` searches literally. */
+const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
+
 /**
  * Search profiles by nickname or full name, from the viewer's perspective.
- * Excludes the viewer, marks `isFollowing`, and includes a live follower count
- * and saving streak per result. An empty query returns the newest profiles
- * (the "Popular vaqueros" default the UI shows before the user types).
+ * Excludes the viewer and marks `isFollowing`. Queries shorter than
+ * MIN_SEARCH_LENGTH return nothing — there is no "list everyone" mode, so the
+ * table is never scanned wholesale.
+ *
+ * Scaling notes (this runs on every search keystroke burst):
+ *  - Matching is a single indexed statement. `ILIKE '%q%'` is served by the
+ *    pg_trgm GIN indexes on `nickname` / `full_name` (see `profiles_nickname_trgm_idx`),
+ *    so it does not degrade into a seq scan as the table grows.
+ *  - Prefix matches ("mar" → "maria") are ranked above mid-word ones, then
+ *    shortest-name first, so the obvious answer is row 1.
+ *  - Per-row work is bounded: no streak computation (an N+1 over deposits and
+ *    rewards) — the search list doesn't display it. Follower counts come from a
+ *    single grouped query over the ≤`limit` ids.
  *
  * The viewer is upserted (mirrors `getProfile`) so a first-time caller still
  * resolves to a row to diff `isFollowing` against.
@@ -62,71 +80,68 @@ export const searchFriends = async ({
   query: string;
   limit?: number;
 }) => {
+  // Handles are rendered as `@name` but stored without the `@`, so searching by
+  // the handle the user sees ("@camilo") must match the nickname "camilo".
+  const q = (query ?? '').trim().replace(/^@+/, '');
+  const empty = { success: true, errors: [] as unknown[], errorMessage: '', results: [] as FriendDTO[] };
+  if (q.length < MIN_SEARCH_LENGTH) return empty;
+
   const viewer = await prisma.profile.upsert({
     where: { walletAddress: viewerWallet },
     update: {},
     create: { walletAddress: viewerWallet },
   });
 
-  const q = (query ?? '').trim();
-  const where: Prisma.ProfileWhereInput = {
-    deletedAt: null,
-    id: { not: viewer.id },
-    ...(q
-      ? {
-          OR: [
-            { nickname: { contains: q, mode: 'insensitive' } },
-            { fullName: { contains: q, mode: 'insensitive' } },
-          ],
-        }
-      : {}),
-  };
+  const take = Math.min(Math.max(limit, 1), MAX_RESULTS);
+  const term = escapeLike(q);
+  const contains = `%${term}%`;
+  const prefix = `${term}%`;
 
-  const profiles = await prisma.profile.findMany({
-    where,
-    take: Math.min(Math.max(limit, 1), MAX_RESULTS),
-    orderBy: { createdAt: 'desc' },
-  });
+  // Raw SQL because the ranking (prefix hits first) can't be expressed in the
+  // Prisma query API. Parameterised — no interpolation of user input.
+  const profiles = await prisma.$queryRaw<ProfileCard[]>(Prisma.sql`
+    SELECT id,
+           wallet_address AS "walletAddress",
+           nickname,
+           full_name      AS "fullName",
+           avatar_url     AS "avatarUrl"
+      FROM profiles
+     WHERE deleted_at IS NULL
+       AND id <> ${viewer.id}
+       AND (nickname ILIKE ${contains} ESCAPE '\\' OR full_name ILIKE ${contains} ESCAPE '\\')
+     ORDER BY CASE
+                WHEN nickname ILIKE ${prefix} ESCAPE '\\' OR full_name ILIKE ${prefix} ESCAPE '\\' THEN 0
+                ELSE 1
+              END,
+              length(COALESCE(nickname, full_name, '')),
+              COALESCE(nickname, full_name, '') ASC
+     LIMIT ${take}
+  `);
 
   const ids = profiles.map((p) => p.id);
+  if (!ids.length) return empty;
 
-  // Which of these the viewer already follows (single query).
-  const followingRows = ids.length
-    ? await prisma.follow.findMany({
-        where: { followerId: viewer.id, followeeId: { in: ids } },
-        select: { followeeId: true },
-      })
-    : [];
+  // Which of these the viewer already follows + follower counts: two indexed
+  // queries over the page of ids, regardless of table size.
+  const [followingRows, followerCounts] = await Promise.all([
+    prisma.follow.findMany({
+      where: { followerId: viewer.id, followeeId: { in: ids } },
+      select: { followeeId: true },
+    }),
+    prisma.follow.groupBy({
+      by: ['followeeId'],
+      where: { followeeId: { in: ids }, follower: { deletedAt: null } },
+      _count: { _all: true },
+    }),
+  ]);
   const followingSet = new Set(followingRows.map((r) => r.followeeId));
-
-  // Follower counts for the whole result set (single grouped query). Deleted
-  // followers don't count.
-  const followerCounts = ids.length
-    ? await prisma.follow.groupBy({
-        by: ['followeeId'],
-        where: { followeeId: { in: ids }, follower: { deletedAt: null } },
-        _count: { _all: true },
-      })
-    : [];
   const followersById = new Map(followerCounts.map((r) => [r.followeeId, r._count._all]));
 
-  // Streak is per-profile (deposits + collected rewards). Bounded by `take`, and
-  // only runs on explicit searches — compute in parallel.
-  const results = await Promise.all(
-    profiles.map(async (p) => {
-      let streak = 0;
-      try {
-        // getStreakData only reads `id` and `wallet_address` off the profile.
-        const s = await getStreakData({ id: p.id, wallet_address: p.walletAddress } as never);
-        streak = s.yesterdayStreak + (s.todayStreak ? 1 : 0);
-      } catch {
-        // streak stays 0 on failure — non-fatal for the list.
-      }
-      return toFriendDTO(p, {
-        streak,
-        followers: followersById.get(p.id) ?? 0,
-        isFollowing: followingSet.has(p.id),
-      });
+  const results = profiles.map((p) =>
+    toFriendDTO(p, {
+      streak: 0, // Not shown in search results; skipped to keep the query O(1) per row.
+      followers: followersById.get(p.id) ?? 0,
+      isFollowing: followingSet.has(p.id),
     }),
   );
 
