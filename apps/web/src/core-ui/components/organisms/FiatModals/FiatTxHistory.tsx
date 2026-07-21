@@ -51,7 +51,8 @@ function looksLikeAuthError(msg: string): boolean {
  */
 export function FiatTxHistory({ assetCode, kind, jwt: jwtProp, onResume }: FiatTxHistoryProps) {
   const { t } = useTranslation();
-  const { walletAddress } = usePollar();
+  const { wallet } = usePollar();
+  const walletAddress = wallet?.address ?? null;
   const { authenticate, getTransaction, getTransactions } = useAnclap();
   const { jwt: storeJwt, setJwt, clearJwt } = useAnclapAuthStore();
 

@@ -167,7 +167,8 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
   const amountRaw = humanToUsdcRaw(amount);
   const stellarBalances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
   const stellarUsdcBalance = stellarBalances.find((balance) => balance.type !== 'native' && balance.code?.toUpperCase() === 'USDC');
-  const stellarUsdcBalanceRaw = stellarUsdcBalance ? humanToUsdcRaw(stellarUsdcBalance.available) : null;
+  // `available` pasó a ser `string | null` en @pollar/core 0.11.1.
+  const stellarUsdcBalanceRaw = stellarUsdcBalance?.available != null ? humanToUsdcRaw(stellarUsdcBalance.available) : null;
   const stellarBalanceLoading = walletBalance.step === 'loading';
   const hasEnoughEvmUsdc =
     direction !== 'evm_to_stellar' ||

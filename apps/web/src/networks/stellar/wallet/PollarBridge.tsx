@@ -17,7 +17,8 @@ import { getActiveAdapter, setActiveAdapter } from './registry';
  *  - Mirror the wallet address into the existing Zustand store so the rest of the app keeps working.
  */
 export function PollarBridge() {
-  const { walletAddress, isAuthenticated, getClient, logout } = usePollar();
+  const { wallet, isAuthenticated, getClient, logout } = usePollar();
+  const walletAddress = wallet?.address ?? null;
   const setWalletAddress = useConfigStore((s) => s.setWalletAddress);
   const setPollarReady = usePollarReadyStore((s) => s.setReady);
 

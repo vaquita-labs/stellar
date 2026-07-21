@@ -52,7 +52,11 @@ const INITIAL_STEPS: Record<StepKey, StepStatus> = {
  */
 export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModalProps) {
   const { t } = useTranslation();
-  const { walletAddress, refreshAssets, walletType, login } = usePollar();
+  const { wallet, refreshAssets, login } = usePollar();
+  const walletAddress = wallet?.address ?? null;
+  // Id del adapter on-chain (freighter, xbull, …) solo cuando la wallet es
+  // externa; las custodiales (`internal` / `smart`) no se pueden reconectar.
+  const walletType = wallet?.custody === 'external' ? wallet.provider : null;
   const { authenticate, ensureTrustline, startInteractive, waitForCompletion, swap } = useAnclap();
   const setSharedJwt = useAnclapAuthStore((s) => s.setJwt);
 
@@ -246,7 +250,7 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
     if (!walletType) return;
     setError(null);
     setShowReconnect(false);
-    login({ provider: 'wallet', type: walletType });
+    login({ provider: walletType });
   };
 
   const stepLabels: Record<StepKey, string> = {
