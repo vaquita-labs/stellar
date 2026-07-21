@@ -104,8 +104,12 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
   };
 
   const handleCollectDailyReward = async () => {
+    // Solo esperamos a que la recompensa se otorgue: en cuanto resuelve, el
+    // modal muestra la pantalla de premio. La invalidación de la caché corre en
+    // segundo plano (fire-and-forget) para no colgar el modal si un refetch de
+    // ['profile'] se demora (staleTime: Infinity refetchea todas las activas).
     await goldDailyCollect();
-    await queryClient.invalidateQueries({ queryKey: ['profile'] });
+    void queryClient.invalidateQueries({ queryKey: ['profile'] });
   };
 
   return (

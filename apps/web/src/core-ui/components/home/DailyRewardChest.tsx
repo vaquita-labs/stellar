@@ -82,8 +82,12 @@ export const DailyRewardChest = ({ variant = 'floating' }: { variant?: 'floating
   };
 
   const handleCollect = async () => {
+    // Solo esperamos a que la recompensa se otorgue: en cuanto resuelve, el
+    // modal pasa a la pantalla de premio. La invalidación corre en segundo plano
+    // (fire-and-forget) para no colgar el modal si un refetch de ['profile'] se
+    // demora (staleTime: Infinity refetchea todas las queries activas).
     await goldDailyCollect();
-    await queryClient.invalidateQueries({ queryKey: ['profile'] });
+    void queryClient.invalidateQueries({ queryKey: ['profile'] });
   };
 
   // Al cruzar la medianoche UTC con la app abierta, refresca el daily-check para

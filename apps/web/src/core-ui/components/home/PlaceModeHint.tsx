@@ -11,10 +11,17 @@ export function PlaceModeHint() {
   const pickedObject = useMapStore((s) => s.pickedObject);
   const setEditMode = useMapStore((s) => s.setEditMode);
   const setPickedItem = useMapStore((s) => s.setPickedItem);
+  const revertPendingPlacement = useMapStore((s) => s.revertPendingPlacement);
+  const setEditingObjectPosition = useMapStore((s) => s.setEditingObjectPosition);
 
   const isVisible = editMode === EditionMode.ADD && !!pickedObject;
 
   const cancel = () => {
+    // Si hay un objeto colocado sin confirmar, no se pone: se revierte la
+    // celda a lo que tenía. Limpiar también la posición en edición para que
+    // el bottom sheet se re-expanda (quedaba minimizado y sin controles).
+    revertPendingPlacement();
+    setEditingObjectPosition(null);
     setPickedItem(null);
     setEditMode(EditionMode.SELECT);
   };

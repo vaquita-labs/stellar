@@ -2,7 +2,6 @@
 
 import { getJson } from '@/core-ui/api/http';
 import { syncGameClock } from '@/core-ui/stores';
-import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 interface GameClockDTO {
@@ -12,26 +11,40 @@ interface GameClockDTO {
 }
 
 /**
- * Sincroniza el reloj de juego con el servidor (fuente de verdad global). Se
- * monta una vez a nivel app; refetchea de a ratos para corregir la deriva del
- * reloj local. No renderiza nada. Si falla, el reloj sigue andando con el
- * default local (mismo ancla), así que nunca se rompe la vista.
+ * Sincroniza el reloj de juego con el servidor (fuente de verdad global). En
+ * cada carga hace un fetch FRESCO a GET /api/v1/time y pregunta "qué hora es",
+ * porque `serverTimeMs` sólo es válido en el instante del fetch: usarlo cacheado
+ * (react-query persiste en localStorage) haría que el offset se calcule contra
+ * un timestamp viejo y el reloj saltara hacia atrás al recargar. Por eso NO usa
+ * react-query: fetch directo al montar + cada 10 min + al volver el foco.
+ *
+ * No renderiza nada. Si falla, el reloj sigue con el default local (mismo ancla
+ * y duración) hasta el próximo intento, así que la vista nunca se rompe.
  */
 export function GameClockSync() {
-  const { data } = useQuery<GameClockDTO | null>({
-    queryKey: ['game-clock'],
-    queryFn: () => getJson<GameClockDTO>('/time'),
-    // El servidor es la referencia: revalidar cada 10 min corrige la deriva sin
-    // pegarle seguido (el offset apenas cambia). Ignora el staleTime global.
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
-    refetchOnWindowFocus: true,
-    retry: 2,
-  });
-
   useEffect(() => {
-    if (data) syncGameClock(data);
-  }, [data]);
+    let cancelled = false;
+
+    const sync = async () => {
+      try {
+        const data = await getJson<GameClockDTO>('/time');
+        if (!cancelled && data) syncGameClock(data);
+      } catch {
+        // Se reintenta en el próximo tick; mientras tanto corre el default local.
+      }
+    };
+
+    void sync();
+    const id = setInterval(() => void sync(), 10 * 60 * 1000);
+    const onFocus = () => void sync();
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
 
   return null;
 }
