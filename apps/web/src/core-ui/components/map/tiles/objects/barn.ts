@@ -19,7 +19,8 @@ export function getBarnGroup(_: MapObject, __: WorldType) {
   const windowBlueMaterial = new THREE.MeshLambertMaterial({ color: '#A5C9D6' }); // Azul claro para ventanas
 
   const addMesh = getAddMesh(buildingGroup);
-  addMesh(new BoxGeometry(TILE_SIZE, TILE_HEIGHT, TILE_SIZE), roofBrownMaterial, [0, getY_0(TILE_HEIGHT), 0]);
+  // Sin bloque de terreno propio: el tile de pasto lo agrega withGrassTerrain
+  // (buildings/registry), igual que el resto del mapa.
 
   // Base/Plataforma
   const baseStep = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.14, 1.0), roofBrownMaterial);

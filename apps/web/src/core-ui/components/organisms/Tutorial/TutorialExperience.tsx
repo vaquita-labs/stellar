@@ -18,6 +18,7 @@ import { HeaderStats } from '../../home/HeaderStats';
 import { WorldMap } from '../../templates';
 import { BankAPYModal } from '../BankAPYModal';
 import { DepositModal } from '../DepositModal';
+import { PressableButton } from '../../molecules/PressableButton';
 import { TutorialFocusLock } from './TutorialFocusLock';
 import { TutorialOverlay } from './TutorialOverlay';
 import { TutorialWaitModal } from './TutorialWaitModal';
@@ -229,15 +230,16 @@ export function TutorialExperience() {
         {/* Botón Save recreado (mismo look que el home) que el overlay resalta. */}
         <div className="absolute bottom-20 left-0 flex w-full flex-col items-center justify-center gap-1 md:bottom-10">
           <div data-tutorial={TUTORIAL_ANCHOR_SAVE} className="w-full max-w-xl px-2">
-            <HeroButton
-              size="lg"
+            <PressableButton
+              variant="success"
+              size="cta"
+              className="h-12 py-0"
               // Solo abre el depósito en su paso (startDeposit lo verifica); fuera
               // de él un toque accidental no debe dispararlo.
-              onPress={startDeposit}
-              className="w-full rounded-md border border-b-5 border-[#018222] bg-success py-7 font-bold text-black"
+              onClick={startDeposit}
             >
-              <span className="text-xl capitalize text-black">{t('tutorial.saveButton', 'Save')}</span>
-            </HeroButton>
+              <span className="text-xl capitalize text-black">{t('tutorial.saveButton', 'Deposit')}</span>
+            </PressableButton>
           </div>
         </div>
       </div>

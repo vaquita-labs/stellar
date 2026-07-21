@@ -144,7 +144,11 @@ export const mergeStaticGroup = (source: THREE.Object3D): THREE.Group => {
     }
     // Las geometrías indexadas y no-indexadas (TextGeometry) no se pueden
     // fusionar entre sí, por eso el flag forma parte de la clave del bucket.
-    const key = `${materialSignature(mesh.material)}|${mesh.castShadow}|${mesh.receiveShadow}|${!!mesh.geometry.index}`;
+    // El set de atributos también: dos materiales con la misma firma pueden
+    // venir uno con `color` (faceShade/vertexColors) y otro sin él, y
+    // mergeGeometries falla — cae al fallback, pero loguea un error por tile.
+    const attributes = Object.keys(mesh.geometry.attributes).sort().join('+');
+    const key = `${materialSignature(mesh.material)}|${mesh.castShadow}|${mesh.receiveShadow}|${!!mesh.geometry.index}|${attributes}`;
     let bucket = buckets.get(key);
     if (!bucket) {
       bucket = {

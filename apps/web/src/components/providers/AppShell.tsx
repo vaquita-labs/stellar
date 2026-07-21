@@ -1,7 +1,7 @@
 'use client';
 
 import { DesktopSidebar } from '@/components';
-import { ConfigProvider, LoaderScreen, ProfileDataProvider } from '@/core-ui/components';
+import { BootLoader, ConfigProvider, ProfileDataProvider } from '@/core-ui/components';
 import { useMapStore, useResize } from '@/core-ui/stores';
 import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
@@ -50,7 +50,7 @@ export function AppShell({
   const hideNavigation = isShopRoute || isEditingMap;
 
   if (showLoader) {
-    return <LoaderScreen withImage />;
+    return <BootLoader />;
   }
 
   return (

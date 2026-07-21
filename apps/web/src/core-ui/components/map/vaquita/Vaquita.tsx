@@ -68,6 +68,16 @@ export const Vaquita = ({ vaquita, onSelect, headLabel, mood = 'normal' }: Vaqui
       store.setClaim(id, [x, z], [x, z]);
       return [x, z];
     }
+    // El sorteo solo mira el cuadrante 1..8: si ahí no había nada pisable
+    // (mapa casi vacío, suelo solo en un borde) se barre el mapa entero antes
+    // de rendirse. WorldMap ya no monta la vaquita si NO hay suelo, así que
+    // el [0, 0] final es solo una red de seguridad.
+    for (const tile of useMapStore.getState().currentTiles) {
+      const [x, , z] = tile.position;
+      if (!isWalkable(x, z) || store.isTileOccupied(x, z, id)) continue;
+      store.setClaim(id, [x, z], [x, z]);
+      return [x, z];
+    }
     return [0, 0];
   }, [isWalkable]);
 

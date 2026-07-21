@@ -1,5 +1,8 @@
 import { MapObject, MapObjectType, WorldType } from '@/core-ui/types';
 import { ComponentType } from 'react';
+import * as THREE from 'three';
+import { getPalette } from '../tiles/palette';
+import { addTerrainTile } from '../tiles/recipe';
 import { getBankGroup, getBarnGroup, getLeaderboardGroup } from '../tiles/objects';
 import { ObjectBuilder } from '../types';
 import Coin from './Coin';
@@ -41,19 +44,55 @@ const BankExtras = () => {
   return <Coin position={[0, roofTopY, 0]} size={0.25} counter={BANK_COINS_TO_COLLECT} isLoading={false} />;
 };
 
+/**
+ * Cuánto se levanta el edificio sobre la cara de pasto. Apoyado justo en y=0
+ * el primer escalón se hunde en la capa de pasto y se pisa con la costura de
+ * tierra; este offset lo deja limpio encima.
+ */
+const BUILDING_LIFT = 0.06;
+
+/**
+ * Los edificios no traen su propio bloque de terreno (antes cada uno metía un
+ * cubo gris/marrón a modo de pedestal): se apoyan sobre el MISMO tile de pasto
+ * que el resto del mapa, contorno de costa incluido.
+ */
+const withGrassTerrain =
+  (type: MapObjectType, build: ObjectBuilder): ObjectBuilder =>
+  (mapObject, ctx) => {
+    const group = new THREE.Group();
+
+    const terrain = new THREE.Group();
+    const palette = getPalette(ctx.worldType);
+    const checker = ctx.tileXZ ? (ctx.tileXZ[0] + ctx.tileXZ[1]) % 2 !== 0 : false;
+    addTerrainTile(terrain, 0, 0, checker ? palette.grassTopAlt : palette.grassTop, ctx);
+    // El grupo entero se rota (baseRotation + rotación del usuario), pero las
+    // piezas de costa del terreno son direccionales: se contra-rota para que
+    // sigan alineadas con la grilla y calcen con los tiles vecinos.
+    terrain.rotation.y = -composeBuildingRotation(type, mapObject.rotation)[1];
+    group.add(terrain);
+
+    const building = build(mapObject, ctx);
+    building.position.y += BUILDING_LIFT;
+    group.add(building);
+
+    return group;
+  };
+
 export const BUILDINGS: Partial<Record<MapObjectType, BuildingDefinition>> = {
   [MapObjectType.BANK]: {
-    build: (o, { worldType, font }) => getBankGroup(o, worldType, font ?? null),
+    build: withGrassTerrain(MapObjectType.BANK, getBankGroup),
     baseRotation: [0, Math.PI, 0],
     Extras: BankExtras,
   },
   [MapObjectType.BARN]: {
     // 4.7 ≈ 3π/2: el granero quedaba enterrado/mal orientado con 0
-    build: (o, { worldType }) => getBarnGroup(o, worldType),
+    build: withGrassTerrain(MapObjectType.BARN, (o, { worldType }) => getBarnGroup(o, worldType)),
     baseRotation: [0, 4.7, 0],
   },
   [MapObjectType.LEADERBOARD]: {
-    build: (o, { worldType, font }) => getLeaderboardGroup(o, worldType, font ?? null),
+    build: withGrassTerrain(MapObjectType.LEADERBOARD, (o, { worldType, font }) =>
+      getLeaderboardGroup(o, worldType, font ?? null)
+    ),
     baseRotation: [0, 0, 0],
   },
 };

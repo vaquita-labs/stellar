@@ -3,9 +3,11 @@
 import { getJson } from '@/core-ui/api/http';
 import { toast } from '@heroui/react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import type { AvatarConfig } from '@vaquita/avatar';
+import { VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
 import { FiAlertCircle, FiCamera, FiCopy, FiImage, FiLoader, FiShare2, FiUserPlus } from 'react-icons/fi';
 import { useToggleFollow } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
@@ -18,11 +20,11 @@ interface ShareProfileModalProps {
   handle: string;
   /** The URL the QR code should encode. Defaults to the current window URL. */
   profileUrl?: string;
-  /** Avatar image src. Defaults to the vaquita isotipo. */
-  avatarSrc?: string;
+  /** The profile's character avatar (see @vaquita/avatar). */
+  avatarConfig?: AvatarConfig;
+  /** Wallet address, used to seed the avatar when the config is missing. */
+  avatarSeed?: string;
 }
-
-const DEFAULT_AVATAR = '/vaquita/vaquita_isotipo.svg';
 
 type TabKey = 'mine' | 'scan';
 
@@ -83,10 +85,14 @@ function TabSwitch({
 }) {
   const { t } = useTranslation();
   return (
+    // Same segmented control as DepositListTabs (the app's existing tab
+    // pattern): the track is `bg-background`, so the cream reads as the modal
+    // itself rather than the white halo the old white/70 track drew around the
+    // selected tab, and it's rounded-md like everything else.
     <div
       role="tablist"
       aria-label={t('social.share.tabsLabel')}
-      className="inline-flex w-full items-center gap-1 rounded-full border border-black/15 bg-white/70 p-1"
+      className="flex w-full gap-1 rounded-md border border-black border-b-2 bg-background p-1"
     >
       {([
         { key: 'mine', label: t('social.share.tabMine') },
@@ -100,10 +106,8 @@ function TabSwitch({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.key)}
-            className={`flex-1 h-9 rounded-full text-xs font-extrabold uppercase tracking-wider transition ${
-              active
-                ? 'bg-primary text-black border border-black border-b-2 shadow-sm'
-                : 'text-gray-600 hover:text-black'
+            className={`flex-1 rounded-[6px] py-2.5 text-xs font-extrabold uppercase tracking-wider transition-colors ${
+              active ? 'bg-primary text-black' : 'text-default-500 hover:bg-black/5 hover:text-black'
             }`}
           >
             {tab.label}
@@ -122,13 +126,14 @@ interface MyQrViewProps {
   url: string;
   displayName: string;
   handle: string;
-  avatarSrc: string;
+  avatarConfig: AvatarConfig | undefined;
+  avatarSeed: string;
 }
 
 /** Centered visual block — avatar + identity + QR + caption. The Share /
  *  Copy action buttons live in the modal's sticky bottom bar, mirroring how
  *  AchievementModal anchors its "Claim award" CTA. */
-function MyQrView({ url, displayName, handle, avatarSrc }: MyQrViewProps) {
+function MyQrView({ url, displayName, handle, avatarConfig, avatarSeed }: MyQrViewProps) {
   const { t } = useTranslation();
   // The QR is a remote image (api.qrserver.com), so it can take a beat (or
   // fail offline) — show a spinner in the frame until it actually paints.
@@ -158,17 +163,21 @@ function MyQrView({ url, displayName, handle, avatarSrc }: MyQrViewProps) {
 
   return (
     <div className="flex flex-col items-center gap-5 w-full">
-      {/* Avatar + identity */}
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="h-16 w-16 rounded-full bg-white border-2 border-black border-b-4 flex items-center justify-center overflow-hidden shadow">
-          <Image src={avatarSrc} alt={displayName} width={56} height={56} className="object-contain" />
+      {/* Avatar beside the identity: the character IS the profile picture, so
+          it reads as one "this is me" row rather than a stacked header. */}
+      <div className="flex items-center gap-3">
+        <VaquitaAvatarCircle
+          config={avatarConfig}
+          seed={avatarSeed}
+          alt={displayName}
+          className="h-16 w-16 border-2 border-b-4 shadow"
+        />
+        <div className="min-w-0">
+          <h2 className="truncate text-xl font-extrabold tracking-tight text-black">{displayName}</h2>
+          {!isHandleDuplicate && (
+            <p className="truncate text-xs font-semibold text-gray-500 tabular-nums">{handle}</p>
+          )}
         </div>
-        <h2 className="text-xl font-extrabold text-black tracking-tight text-center">
-          {displayName}
-        </h2>
-        {!isHandleDuplicate && (
-          <p className="text-xs font-semibold text-gray-500 tabular-nums">{handle}</p>
-        )}
       </div>
 
       {/* QR — explicit size classes so the image doesn't stretch with the
@@ -253,9 +262,12 @@ const INVALID_HINT_MS = 2_500;
 function ScanQrView({
   ownWallet,
   onFollowed,
+  footerSlot,
 }: {
   ownWallet: string | null;
   onFollowed: (handle: string) => void;
+  /** Modal footer node the action buttons are portalled into. */
+  footerSlot: HTMLElement | null;
 }) {
   const { t } = useTranslation();
   const toggleFollow = useToggleFollow();
@@ -388,7 +400,7 @@ function ScanQrView({
     setState('idle');
   }, [stopScanner]);
 
-  return (
+  const preview = (
     <div className="flex flex-col items-center gap-4 w-full">
       <div className="relative w-full aspect-square overflow-hidden rounded-2xl bg-black border-2 border-black border-b-4">
         {/* html5-qrcode mounts its <video> feed inside this region. */}
@@ -464,7 +476,14 @@ function ScanQrView({
           {t('social.share.scanCaption')}
         </p>
       )}
+    </div>
+  );
 
+  // The actions belong to the modal's sticky footer, next to where the "My QR"
+  // tab puts Share/Copy — but they're driven by the scanner state that lives in
+  // this component, so they're portalled instead of lifted.
+  const actions = (
+    <div className="flex w-full flex-col gap-2">
       {/* Primary action — varies with state */}
       {state === 'idle' && (
         <button
@@ -521,6 +540,13 @@ function ScanQrView({
       </button>
     </div>
   );
+
+  return (
+    <>
+      {preview}
+      {footerSlot ? createPortal(actions, footerSlot) : null}
+    </>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -533,11 +559,15 @@ export function ShareProfileModal({
   displayName,
   handle,
   profileUrl,
-  avatarSrc = DEFAULT_AVATAR,
+  avatarConfig,
+  avatarSeed = '',
 }: ShareProfileModalProps) {
   const { t } = useTranslation();
   const { walletAddress } = useConfigStore();
   const [tab, setTab] = useState<TabKey>('mine');
+  // Callback ref (not useRef): the portal target has to trigger a re-render
+  // once the footer node exists, or ScanQrView renders before it can portal.
+  const [scanFooter, setScanFooter] = useState<HTMLDivElement | null>(null);
 
   // Reset to the default tab every time the modal opens.
   useEffect(() => {
@@ -600,14 +630,18 @@ export function ShareProfileModal({
       onOpenChange={() => onOpenChange(false)}
       title={t('social.share.title', 'Share profile')}
       size="md"
+      // Full screen: the QR has to be big enough to scan across a table, and
+      // the scan tab is a live camera viewfinder — both were fighting for room
+      // inside an 85dvh sheet, which left the QR cropped behind the footer.
+      fullScreen
       bodyClassName="flex flex-col gap-4 pb-5"
       footer={
         tab === 'mine' ? (
-          <div className="flex w-full flex-col gap-2">
+          <div className="flex w-full items-stretch gap-2">
             <button
               type="button"
               onClick={handleNativeShare}
-              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+              className="flex-1 h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
             >
               <FiShare2 className="h-4 w-4" />
               {t('social.share.shareLink')}
@@ -615,21 +649,24 @@ export function ShareProfileModal({
             <button
               type="button"
               onClick={handleCopy}
-              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+              className="flex-1 h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
             >
               <FiCopy className="h-4 w-4" />
               {t('social.share.copyLink')}
             </button>
           </div>
-        ) : undefined
+        ) : (
+          // Slot the scan tab portals its own state-dependent actions into.
+          <div ref={setScanFooter} className="w-full" />
+        )
       }
     >
       <TabSwitch value={tab} onChange={setTab} />
       <div className="flex-1 flex flex-col items-center justify-center">
         {tab === 'mine' ? (
-          <MyQrView url={url} displayName={displayName} handle={handle} avatarSrc={avatarSrc} />
+          <MyQrView url={url} displayName={displayName} handle={handle} avatarConfig={avatarConfig} avatarSeed={avatarSeed} />
         ) : (
-          <ScanQrView ownWallet={walletAddress ?? null} onFollowed={handleFollowed} />
+          <ScanQrView ownWallet={walletAddress ?? null} onFollowed={handleFollowed} footerSlot={scanFooter} />
         )}
       </div>
     </AppModal>

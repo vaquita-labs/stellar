@@ -43,6 +43,27 @@ export const getMapLikeCountsByProfile = async (
 };
 
 /**
+ * Same as `getMapLikeCountsByProfile`, keyed by wallet address — for callers
+ * that only carry wallets (the leaderboard rows). Two indexed lookups over a
+ * single page of wallets, so it's cheap enough to run outside the feed caches.
+ */
+export const getMapLikeCountsByWallet = async (
+  walletAddresses: string[],
+): Promise<Map<string, number>> => {
+  if (!walletAddresses.length) return new Map();
+
+  const profiles = await prisma.profile.findMany({
+    where: { walletAddress: { in: walletAddresses } },
+    select: { id: true, walletAddress: true },
+  });
+  if (!profiles.length) return new Map();
+
+  const counts = await getMapLikeCountsByProfile(profiles.map((p) => p.id));
+
+  return new Map(profiles.map((p) => [p.walletAddress, counts.get(p.id) ?? 0]));
+};
+
+/**
  * Wallets whose map the viewer has already liked. Lets every heart button in a
  * feed resolve its filled/empty state from one request instead of one per row,
  * so a like survives a reload.

@@ -31,6 +31,7 @@ import { DailyRewardChest } from './DailyRewardChest';
 import { MapClock } from './MapClock';
 import { MapQuickActions } from './MapQuickActions';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
+import { PressableButton } from '../molecules/PressableButton';
 
 export const HeaderStats = () => {
   const { t } = useTranslation();
@@ -210,16 +211,13 @@ export const HeaderStats = () => {
                 de la app) para que se lea como algo que se toca, no como un
                 dato. Antes abría el historial de movimientos; ese sigue
                 accesible desde TotalDepositsButton y SavingsStats. */}
-            <button
-              type="button"
+            <PressableButton
+              variant="cream"
               onClick={() => setShowPortfolioPanel(true)}
-              aria-label={t('home.stats.apyAria', 'Portfolio')}
-              // self-start + w-fit: la pastilla se ajusta al saldo y crece con
-              // él (arranca alineada a la izquierda, contra el borde del
-              // saludo). px-4 para que el número nunca toque el borde.
-              // border-b-4 + el hundido al presionar son el idioma de botón de
-              // la app, para que se lea como algo que se toca.
-              className="w-fit max-w-full flex items-center justify-start min-w-0 self-start rounded-md border border-black border-b-4 bg-background px-4 py-2 text-left transition active:translate-y-0.5 active:border-b-2"
+              ariaLabel={t('home.stats.apyAria', 'Portfolio')}
+              // w-fit + self-start: la pastilla se ajusta al saldo y crece con
+              // él, alineada contra el mismo borde que el saludo.
+              className="w-fit max-w-full self-start justify-start min-w-0 py-2"
             >
               {depositsLoading && !depositsData ? (
                 <Spinner size="sm" color="current" />
@@ -231,7 +229,7 @@ export const HeaderStats = () => {
                   {hideBalance ? '••••' : `$${formattedBalance}`}
                 </span>
               )}
-            </button>
+            </PressableButton>
 
             {/* OCULTOS A PROPÓSITO (2026-07-21): acá vivían dos chips bajo el
                 saldo. El verde mostraba el APY base y abría <PortfolioPanel>;

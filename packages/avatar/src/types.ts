@@ -32,8 +32,6 @@ export interface AvatarCategory {
   id: string;
   /** Painter's-algorithm z-order. Lower draws first (further back). */
   layer: number;
-  /** Emoji shown on the editor tab strip. */
-  icon: string;
   /** i18n key suffix, resolved by the client as `avatar.category.<i18nKey>`. */
   i18nKey: string;
   /** Palette the part's main color comes from (omit for colorless parts). */

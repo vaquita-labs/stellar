@@ -1,5 +1,6 @@
 'use client';
 
+import { useUnplacedMapItemsCount } from '@/core-ui/hooks';
 import { EditionMode, useMapStore } from '@/core-ui/stores';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -18,6 +19,11 @@ export const MapQuickActions = () => {
   const pathname = usePathname();
   const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
   const setEditMode = useMapStore((s) => s.setEditMode);
+  // Piezas compradas/regaladas que todavía no están en el mapa: la tienda
+  // brilla para avisar que hay algo para colocar (típico del primer ingreso,
+  // donde el mapa arranca vacío y ya hay ítems gratis esperando).
+  const unplacedItems = useUnplacedMapItemsCount();
+  const hasUnplacedItems = unplacedItems > 0;
 
   const openShop = () => {
     if (pathname !== '/home') {
@@ -58,17 +64,36 @@ export const MapQuickActions = () => {
       <button
         type="button"
         onClick={openShop}
-        aria-label={t('shell.nav.shop', 'Shop')}
-        className="bg-transparent active:scale-95 transition-transform"
+        aria-label={
+          hasUnplacedItems
+            ? t('shell.nav.shopWithItems', '{{count}} items to place', { count: unplacedItems })
+            : t('shell.nav.shop', 'Shop')
+        }
+        className="relative bg-transparent active:scale-95 transition-transform"
       >
+        {hasUnplacedItems && (
+          <span
+            aria-hidden
+            className="absolute inset-0 -m-1 rounded-full bg-amber-300/40 blur-md animate-pulse motion-reduce:animate-none"
+          />
+        )}
         <Image
           src="/icons/navigation/shop.png"
           alt={t('shell.nav.shop', 'Shop')}
           width={40}
           height={40}
-          className="object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
+          className={`relative object-contain ${
+            hasUnplacedItems
+              ? 'drop-shadow-[0_0_8px_rgba(252,211,77,0.95)]'
+              : 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]'
+          }`}
           priority
         />
+        {hasUnplacedItems && (
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-[18px] text-center shadow-md">
+            {unplacedItems > 99 ? '99+' : unplacedItems}
+          </span>
+        )}
       </button>
     </div>
   );

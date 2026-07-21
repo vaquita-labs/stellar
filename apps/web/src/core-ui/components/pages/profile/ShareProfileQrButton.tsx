@@ -1,5 +1,6 @@
 'use client';
 
+import type { AvatarConfig } from '@vaquita/avatar';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsQrCode } from 'react-icons/bs';
@@ -11,8 +12,10 @@ interface ShareProfileQrButtonProps {
   handle: string;
   /** Overrides the URL encoded into the QR. Defaults to the current window URL. */
   profileUrl?: string;
-  /** Overrides the avatar shown above the QR. Defaults to the vaquita isotipo. */
-  avatarSrc?: string;
+  /** The profile's character avatar, shown next to the name above the QR. */
+  avatarConfig?: AvatarConfig;
+  /** Wallet address, used to seed the avatar when the config is missing. */
+  avatarSeed?: string;
   /** Replaces the pill's own sizing/shape classes (e.g. to match a taller CTA
    *  it sits next to). The default is the 36px circle used in page headers. */
   className?: string;
@@ -27,7 +30,8 @@ export function ShareProfileQrButton({
   displayName,
   handle,
   profileUrl,
-  avatarSrc,
+  avatarConfig,
+  avatarSeed,
   className = 'h-9 w-9 rounded-full',
 }: ShareProfileQrButtonProps) {
   const { t } = useTranslation();
@@ -50,7 +54,8 @@ export function ShareProfileQrButton({
         displayName={displayName}
         handle={handle}
         profileUrl={profileUrl}
-        avatarSrc={avatarSrc}
+        avatarConfig={avatarConfig}
+        avatarSeed={avatarSeed}
       />
     </>
   );

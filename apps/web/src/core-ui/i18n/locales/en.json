@@ -339,7 +339,8 @@
       "title": "Deposit"
     },
     "panel": {
-      "paused": "Deposits are temporarily paused"
+      "paused": "Deposits are temporarily paused",
+      "deposit": "Deposit"
     },
     "processing": "Processing...",
     "processingShort": "Processing",
@@ -980,7 +981,7 @@
       "followingEmptyTitle": "Not following anyone yet",
       "gold": "Gold",
       "handleJoined": "<b>{{handle}}</b> · joined {{joinedLabel}}",
-      "mapLikes": "Hearts",
+      "mapLikes": "Likes",
       "seeAll": "See all {{title}}",
       "seeAllAchievements": "See all achievements",
       "seeFullSummary": "See full summary",
@@ -1207,7 +1208,8 @@
       "profile": "Profile",
       "shop": "Shop",
       "soon": "Soon",
-      "dailyReward": "Daily reward"
+      "dailyReward": "Daily reward",
+      "shopWithItems": "{{count}} items to place"
     },
     "notFound": {
       "backHome": "Go back to home",
@@ -1533,7 +1535,7 @@
       "interestEarned": "Interest earned",
       "youReceived": "You received"
     },
-    "saveButton": "Save",
+    "saveButton": "Deposit",
     "skip": "Skip tutorial",
     "steps": {
       "deposit": {

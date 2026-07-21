@@ -339,7 +339,8 @@
       "title": "Depositar"
     },
     "panel": {
-      "paused": "Os depósitos estão pausados temporariamente"
+      "paused": "Os depósitos estão pausados temporariamente",
+      "deposit": "Depositar"
     },
     "processing": "Processando...",
     "processingShort": "Processando",
@@ -980,7 +981,7 @@
       "followingEmptyTitle": "Você ainda não segue ninguém",
       "gold": "Ouro",
       "handleJoined": "<b>{{handle}}</b> · entrou em {{joinedLabel}}",
-      "mapLikes": "Corações",
+      "mapLikes": "Likes",
       "seeAll": "Ver tudo de {{title}}",
       "seeAllAchievements": "Ver todas as conquistas",
       "seeFullSummary": "Ver resumo completo",
@@ -1207,7 +1208,8 @@
       "profile": "Perfil",
       "shop": "Loja",
       "soon": "Em breve",
-      "dailyReward": "Recompensa"
+      "dailyReward": "Recompensa",
+      "shopWithItems": "{{count}} objetos para colocar"
     },
     "notFound": {
       "backHome": "Voltar para o início",
@@ -1533,7 +1535,7 @@
       "interestEarned": "Juros ganhos",
       "youReceived": "Você recebeu"
     },
-    "saveButton": "Ahorrar",
+    "saveButton": "Depositar",
     "skip": "Pular tutorial",
     "steps": {
       "deposit": {

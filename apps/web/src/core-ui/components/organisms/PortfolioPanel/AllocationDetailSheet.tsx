@@ -2,9 +2,9 @@
 
 import { formatUsd } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
-import { Button } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
+import { PressableButton } from '../../molecules/PressableButton';
 import { AllocationStyle } from './allocationStyles';
 import { Allocation } from './types';
 
@@ -44,12 +44,9 @@ export function AllocationDetailSheet({
       bodyClassName="flex flex-col gap-4 pb-2"
       footer={
         canManage ? (
-          <Button
-            onPress={onManage}
-            className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
-          >
+          <PressableButton variant="success" size="cta" onClick={onManage}>
             {t('portfolio.manage', 'Manage allocations')}
-          </Button>
+          </PressableButton>
         ) : undefined
       }
     >

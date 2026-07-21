@@ -17,10 +17,34 @@ import { useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheck, FiX } from 'react-icons/fi';
-import { LuDices } from 'react-icons/lu';
+import { GiBeard, GiBilledCap } from 'react-icons/gi';
+import { LuDices, LuEye, LuGem, LuGlasses, LuPalette, LuScissors, LuShirt, LuSmile, LuUserRound } from 'react-icons/lu';
+import type { IconType } from 'react-icons';
 import { useProfileData, useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { VaquitaAvatar } from '../../avatar/VaquitaAvatar';
+
+/**
+ * Category → tab icon. Lives here, not in the catalog, so `@vaquita/avatar`
+ * stays free of React. A category with no entry falls back to the generic
+ * person glyph, so a newly added one still renders a usable tab.
+ *
+ * Preference is Lucide (thin, uniform line weight, legible at 20px). Game Icons
+ * are only used where Lucide has no equivalent — their denser glyphs turn to
+ * noise at this size, which is why hair is scissors and earrings is a gem.
+ */
+const CATEGORY_ICONS: Record<string, IconType> = {
+  skin: LuUserRound,
+  background: LuPalette,
+  clothes: LuShirt,
+  eyes: LuEye,
+  mouth: LuSmile,
+  facialHair: GiBeard,
+  hair: LuScissors,
+  earrings: LuGem,
+  glasses: LuGlasses,
+  hat: GiBilledCap,
+};
 
 /**
  * The avatar builder. There are no photo uploads anywhere in the product — a
@@ -143,6 +167,7 @@ export function AvatarEditorPage() {
       >
         {EDITABLE_CATEGORIES.map((c) => {
           const selected = c.id === activeTab;
+          const Icon = CATEGORY_ICONS[c.id] ?? LuUserRound;
           return (
             <button
               key={c.id}
@@ -151,11 +176,11 @@ export function AvatarEditorPage() {
               aria-label={categoryLabel(t, c)}
               title={categoryLabel(t, c)}
               onClick={() => setActiveTab(c.id)}
-              className={`shrink-0 border-b-4 px-3 pb-2 pt-2 text-2xl transition ${
-                selected ? 'border-primary opacity-100' : 'border-transparent opacity-45 grayscale'
+              className={`shrink-0 border-b-4 px-3.5 pb-2.5 pt-2.5 transition ${
+                selected ? 'border-primary text-black' : 'border-transparent text-gray-400 hover:text-gray-600'
               }`}
             >
-              <span aria-hidden>{c.icon}</span>
+              <Icon className="h-5 w-5" aria-hidden />
             </button>
           );
         })}

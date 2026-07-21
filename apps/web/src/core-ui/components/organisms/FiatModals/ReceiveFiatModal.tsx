@@ -12,6 +12,7 @@ import { AppModal } from '../../molecules/AppModal';
 import { FiatAuthBadge } from './FiatAuthBadge';
 import { FiatStepList, StepStatus } from './FiatStepList';
 import { FiatTxHistory } from './FiatTxHistory';
+import { PressableButton } from '../../molecules/PressableButton';
 
 interface ReceiveFiatModalProps {
   open: boolean;
@@ -273,18 +274,11 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
       bodyClassName="flex flex-col gap-4 pb-6"
       footer={
         showReconnect ? (
-          <Button
-            onPress={handleReconnect}
-            className="w-full border px-4 py-6 bg-primary border-black border-b-5 font-bold rounded-md text-black"
-          >
+          <PressableButton variant="primary" size="cta" onClick={handleReconnect}>
             {t('wallet.fiat.receive.reconnect', 'Reconnect wallet')}
-          </Button>
+          </PressableButton>
         ) : (
-          <Button
-            onPress={handleContinue}
-            isDisabled={busy || !walletAddress}
-            className="w-full border px-4 py-6 bg-primary border-black border-b-5 font-bold rounded-md text-black"
-          >
+          <PressableButton variant="primary" size="cta" onClick={handleContinue} disabled={busy || !walletAddress}>
             {busy ? (
               <>
                 <Spinner size="sm" color="current" /> {t('wallet.fiat.receive.processing', 'Processing…')}
@@ -292,7 +286,7 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
             ) : (
               t('wallet.fiat.receive.cta', 'Continue')
             )}
-          </Button>
+          </PressableButton>
         )
       }
     >

@@ -1,7 +1,7 @@
 'use client';
 
 import { VAQUITA_KEY_TIMESTAMP, VAQUITA_TIMESTAMP_VALUE } from '@/components/providers/constants';
-import { LoaderScreen } from '@/core-ui/components/molecules/LoaderScreen';
+import { BootLoader } from '@/core-ui/components/molecules/BootLoader';
 import { useConfigStore } from '@/core-ui/stores';
 import { isStellarNetwork } from '@/networks/stellar';
 import { stellarSession } from '@/networks/stellar/stellar';
@@ -53,11 +53,16 @@ export function WalletProviderSync() {
     };
   }, []);
 
+  // Este provider es un hermano de ConfigProvider dentro del <main>, no lo
+  // envuelve: por eso su pantalla de carga va montada como overlay fijo (si
+  // fuera un bloque en flujo se apilaría debajo de la del gate de config, y se
+  // verían dos). Es el mismo BootLoader, así que tapa sin que se note el
+  // cambio.
   if (!stellarReady) {
     return (
-      <LoaderScreen withImage>
-        <></>
-      </LoaderScreen>
+      <div className="fixed inset-0 z-50">
+        <BootLoader />
+      </div>
     );
   }
 

@@ -11,7 +11,7 @@ import type { AvatarCategory } from './types';
  *
  *   1. Author the SVG part in `parts/` (respect the 200x200 grid anchors).
  *   2. Push it onto an existing category's `options`, or add a whole new
- *      category here with its own `layer`, `icon` and `i18nKey`.
+ *      category here with its own `layer` and `i18nKey`.
  *   3. Add the i18n strings (`avatar.category.*` / `avatar.part.*`).
  *
  * Nothing else needs to change: the API validates against this list, the editor
@@ -20,7 +20,11 @@ import type { AvatarCategory } from './types';
  *
  * Compatibility rules: part ids are persisted, so never rename or remove one —
  * append instead. Same for palette entries (see palettes.ts).
+ *
+ * Note there is no icon here: this package stays framework-agnostic, so the
+ * editor owns the category → React icon mapping (see AvatarEditorPage).
  */
+
 /**
  * The skin tone is a palette slot the head, neck and ears all read rather than
  * a layer of its own — hence the empty renderer. Modelling it as a category
@@ -34,7 +38,6 @@ export const AVATAR_CATALOG: AvatarCategory[] = [
   {
     id: 'skin',
     layer: -10,
-    icon: '🙂',
     i18nKey: 'skin',
     palette: 'skin',
     colorKey: SKIN_COLOR_KEY,
@@ -46,7 +49,6 @@ export const AVATAR_CATALOG: AvatarCategory[] = [
   {
     id: 'background',
     layer: 0,
-    icon: '🎨',
     i18nKey: 'background',
     palette: 'background',
     colorKey: 'backgroundColor',
@@ -55,11 +57,10 @@ export const AVATAR_CATALOG: AvatarCategory[] = [
     colorOnly: true,
     options: BACKGROUNDS,
   },
-  { id: 'neck', layer: 10, icon: '', i18nKey: 'neck', defaultPart: 'default', hidden: true, options: NECKS },
+  { id: 'neck', layer: 10, i18nKey: 'neck', defaultPart: 'default', hidden: true, options: NECKS },
   {
     id: 'clothes',
     layer: 20,
-    icon: '👕',
     i18nKey: 'clothes',
     palette: 'clothes',
     colorKey: 'clothesColor',
@@ -68,14 +69,13 @@ export const AVATAR_CATALOG: AvatarCategory[] = [
     preview: 'bust',
     options: CLOTHES,
   },
-  { id: 'head', layer: 30, icon: '', i18nKey: 'head', defaultPart: 'default', hidden: true, options: HEADS },
-  { id: 'eyes', layer: 40, icon: '👀', i18nKey: 'eyes', defaultPart: 'normal', preview: 'head', options: EYES },
-  { id: 'brows', layer: 45, icon: '', i18nKey: 'brows', defaultPart: 'default', hidden: true, options: BROWS },
-  { id: 'mouth', layer: 50, icon: '👄', i18nKey: 'mouth', defaultPart: 'smile', preview: 'head', options: MOUTHS },
+  { id: 'head', layer: 30, i18nKey: 'head', defaultPart: 'default', hidden: true, options: HEADS },
+  { id: 'eyes', layer: 40, i18nKey: 'eyes', defaultPart: 'normal', preview: 'head', options: EYES },
+  { id: 'brows', layer: 45, i18nKey: 'brows', defaultPart: 'default', hidden: true, options: BROWS },
+  { id: 'mouth', layer: 50, i18nKey: 'mouth', defaultPart: 'smile', preview: 'head', options: MOUTHS },
   {
     id: 'facialHair',
     layer: 60,
-    icon: '🧔',
     i18nKey: 'facialHair',
     palette: 'hair',
     colorKey: 'facialHairColor',
@@ -87,7 +87,6 @@ export const AVATAR_CATALOG: AvatarCategory[] = [
   {
     id: 'hair',
     layer: 70,
-    icon: '💇',
     i18nKey: 'hair',
     palette: 'hair',
     colorKey: 'hairColor',
@@ -99,7 +98,6 @@ export const AVATAR_CATALOG: AvatarCategory[] = [
   {
     id: 'earrings',
     layer: 75,
-    icon: '💎',
     i18nKey: 'earrings',
     palette: 'metal',
     colorKey: 'earringsColor',
@@ -108,8 +106,8 @@ export const AVATAR_CATALOG: AvatarCategory[] = [
     preview: 'head',
     options: EARRINGS,
   },
-  { id: 'glasses', layer: 80, icon: '👓', i18nKey: 'glasses', defaultPart: 'none', preview: 'head', options: GLASSES },
-  { id: 'hat', layer: 90, icon: '🧢', i18nKey: 'hat', defaultPart: 'none', preview: 'head', options: HATS },
+  { id: 'glasses', layer: 80, i18nKey: 'glasses', defaultPart: 'none', preview: 'head', options: GLASSES },
+  { id: 'hat', layer: 90, i18nKey: 'hat', defaultPart: 'none', preview: 'head', options: HATS },
 ];
 
 /** Categories in draw order (back to front). */

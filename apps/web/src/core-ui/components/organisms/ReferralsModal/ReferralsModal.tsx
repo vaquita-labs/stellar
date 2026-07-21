@@ -7,6 +7,7 @@ import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { useReferralBoost } from './referralBoost';
 import { ReferralsModalProps } from './types';
+import { PressableButton } from '../../molecules/PressableButton';
 
 // Página externa que explica cómo funcionan los referidos (qué cuenta como un
 // referido activo, cómo se acumula el APY). Un solo lugar para cambiar la URL.
@@ -95,15 +96,12 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
       size="md"
       fullScreen
       footer={
-        <button
-          type="button"
+        <PressableButton variant="primary" size="cta"
           onClick={invite}
-          disabled={!hasCode}
-          className="flex w-full items-center justify-center gap-2 rounded-md border border-black border-b-2 bg-primary py-3 text-sm font-bold text-black transition hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
-        >
+          disabled={!hasCode}>
           {t('referrals.invite', 'Invite friends')}
           <FiShare2 className="h-4 w-4" />
-        </button>
+        </PressableButton>
       }
     >
       <div className="space-y-4 mb-2">
@@ -192,12 +190,9 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
         {/* Código */}
         <div className="space-y-2">
           <p className="text-xs font-bold text-black uppercase tracking-wide">{t('referrals.yourCode', 'Your referral code')}</p>
-          <button
-            type="button"
+          <PressableButton variant="white" size="row" className="justify-between rounded-md"
             onClick={copyCode}
-            disabled={!hasCode}
-            className="flex w-full items-center justify-between gap-3 rounded-md border border-black border-b-2 bg-white px-4 py-3 transition hover:bg-gray-50 disabled:opacity-60"
-          >
+            disabled={!hasCode}>
             <span className="text-base font-bold tracking-[0.2em] text-black">
               {hasCode ? code : isLoading ? '••••••' : '——————'}
             </span>
@@ -206,7 +201,7 @@ export function ReferralsModal({ open, onOpenChange }: ReferralsModalProps) {
             ) : (
               <FiCopy className="h-4 w-4 text-gray-500" />
             )}
-          </button>
+          </PressableButton>
         </div>
       </div>
     </AppModal>

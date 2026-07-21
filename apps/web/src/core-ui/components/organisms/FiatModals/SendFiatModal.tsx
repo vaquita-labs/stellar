@@ -16,6 +16,7 @@ import { TokenSymbol } from '../../molecules/MoneyInput/types';
 import { FiatAuthBadge } from './FiatAuthBadge';
 import { FiatStepList, StepStatus } from './FiatStepList';
 import { FiatTxHistory } from './FiatTxHistory';
+import { PressableButton } from '../../molecules/PressableButton';
 
 interface SendFiatModalProps {
   open: boolean;
@@ -316,18 +317,11 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
       bodyClassName="flex flex-col gap-4 pb-6"
       footer={
         showReconnect ? (
-          <Button
-            onPress={handleReconnect}
-            className="w-full border px-4 py-6 bg-primary border-black border-b-5 font-bold rounded-md text-black"
-          >
+          <PressableButton variant="primary" size="cta" onClick={handleReconnect}>
             {t('wallet.fiat.send.reconnect', 'Reconnect wallet')}
-          </Button>
+          </PressableButton>
         ) : (
-          <Button
-            onPress={handleSend}
-            isDisabled={isDisabled || busy}
-            className="w-full border px-4 py-6 bg-success border-[#018222] border-b-5 font-bold rounded-md text-black"
-          >
+          <PressableButton variant="success" size="cta" onClick={handleSend} disabled={isDisabled || busy}>
             {busy ? (
               <>
                 <Spinner size="sm" color="current" /> {t('wallet.fiat.send.processing', 'Processing…')}
@@ -335,7 +329,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
             ) : (
               t('wallet.fiat.send.cta', 'Send')
             )}
-          </Button>
+          </PressableButton>
         )
       }
     >

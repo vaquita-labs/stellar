@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
-import { useMapStore, useConfigStore, useSyncMapObjects } from '../../stores';
+import { useMapStore, useConfigStore, useSyncMapObjects, isWalkableType } from '../../stores';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
 import { useModalPresence } from '../molecules/AppModal';
 import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
@@ -47,6 +47,9 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
   const router = useRouter();
   const isEditMode = useMapStore((store) => store.editMode);
   const currentTiles = useMapStore((store) => store.currentTiles);
+  // Sin ningún tile pisable (mapa recién creado, todo EMPTY) la vaquita no
+  // tiene dónde pararse: no se renderiza en vez de flotar sobre el agua.
+  const hasWalkableTile = useMemo(() => currentTiles.some((tile) => isWalkableType(tile.type)), [currentTiles]);
   // Con walletAddress (vista de leaderboard) se carga el mapa de ESE perfil;
   // sin él, el del usuario logueado.
   const { isLoaded: mapLoaded } = useSyncMapObjects(walletAddress);
@@ -158,7 +161,7 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
             hasWallet={!!userWalletAddress}
           />
         )}
-        {!isEditMode && (
+        {!isEditMode && hasWalkableTile && (
           <Vaquita
             vaquita={PLACEHOLDER_VAQUITA}
             mood={isOwnMap ? mood : 'normal'}

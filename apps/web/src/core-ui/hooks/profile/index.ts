@@ -20,4 +20,5 @@ export * from './useRedeemAchievementCode';
 export * from './useRestProfile';
 export * from './useSearchFriends';
 export * from './useToggleFollow';
+export * from './useUnplacedMapItems';
 export * from './useWalletByUsername';

@@ -11,6 +11,14 @@ export type ObjectItem = {
   itemsAvailable: number;
 };
 
+/**
+ * Tipos de tile sobre los que la vaquita puede pararse/caminar. Un mapa sin
+ * ninguno de estos no tiene suelo: ahí la vaquita directamente no se muestra
+ * (WorldMap) en vez de quedar flotando sobre el agua.
+ */
+export const isWalkableType = (type?: MapObjectType): boolean =>
+  type === MapObjectType.BUSH || type === MapObjectType.GRASS;
+
 export enum EditionMode {
   SELECT = 'select',
   ADD = 'add',
@@ -23,6 +31,8 @@ export type MapStoreType = {
   setTiles: (tiles: ProfileMapObjectsResponseDTO['objects']) => void;
   getTileAt: (x: number, z: number) => MapObject | undefined;
   isWalkable: (x: number, z: number) => boolean;
+  /** ¿Hay al menos un tile pisable en todo el mapa? */
+  hasWalkableTile: () => boolean;
   updateTile: (position: [number, number, number], changes: MapObject) => void;
   isReplaceablePosition: (x: number, z: number) => boolean;
   editMode: EditionMode | null;
@@ -56,10 +66,8 @@ export const useMapStore = create<MapStoreType>((set, get) => ({
   getTileAt: (x, z) => {
     return get().currentTiles.find((t) => t.position[0] === x && t.position[2] === z);
   },
-  isWalkable: (x, z) => {
-    const tile = get().getTileAt(x, z);
-    return tile?.type === MapObjectType.BUSH || tile?.type === MapObjectType.GRASS;
-  },
+  isWalkable: (x, z) => isWalkableType(get().getTileAt(x, z)?.type),
+  hasWalkableTile: () => get().currentTiles.some((tile) => isWalkableType(tile.type)),
   updateTile: (position, changes) => {
     set((state) => {
       const existingTileIndex = state.currentTiles.findIndex(

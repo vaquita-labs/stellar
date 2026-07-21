@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   findLeaderboardRowForWallet,
   getEnrichedLeaderboard,
+  getMapLikeCountsByWallet,
   getLastClosedCycleId,
   getLeaderboardRankForWallet,
   paginateLeaderboardRows,
@@ -83,6 +84,14 @@ router.get('/', async (req, res) => {
 
     const page = paginateLeaderboardRows(enriched, { ...pageParams, me: meWallet });
     if (meWallet) page.me = findLeaderboardRowForWallet(enriched, meWallet);
+
+    // Heart counts bypass the 30s enrichment cache: the heart is the card's
+    // interactive element, so liking a map and reloading has to move the
+    // number. Only the wallets on this page are re-read.
+    const likeWallets = [...page.rows.map((row) => row.walletAddress), ...(page.me ? [page.me.walletAddress] : [])];
+    const freshLikes = await getMapLikeCountsByWallet(likeWallets);
+    page.rows = page.rows.map((row) => ({ ...row, mapLikes: freshLikes.get(row.walletAddress) ?? row.mapLikes }));
+    if (page.me) page.me = { ...page.me, mapLikes: freshLikes.get(page.me.walletAddress) ?? page.me.mapLikes };
 
     return sendSuccess(res, page, '');
   } catch (err: any) {
