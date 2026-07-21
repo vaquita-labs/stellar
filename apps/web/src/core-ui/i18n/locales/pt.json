@@ -1640,5 +1640,80 @@
       "subtitle": "Seu dinheiro está a caminho de {{label}}.",
       "title": "Saque enviado!"
     }
+  },
+  "transactions": {
+    "title": "Transações",
+    "recent": "Transações recentes",
+    "seeMore": "Ver mais",
+    "empty": "Ainda não há transações",
+    "emptyFiltered": "Tente mudar os filtros para ver mais.",
+    "emptyHint": "Seus depósitos e saques vão aparecer aqui.",
+    "kind": {
+      "deposit": "Depósito",
+      "withdraw": "Saque",
+      "withdrawEarly": "Saque antecipado"
+    },
+    "row": {
+      "toSavings": "Para a poupança",
+      "toWallet": "Para sua carteira"
+    },
+    "status": {
+      "completed": "Concluída",
+      "pending": "Pendente",
+      "failed": "Falhou"
+    },
+    "chips": {
+      "from": "De {{date}}",
+      "to": "Até {{date}}"
+    },
+    "filters": {
+      "title": "Filtrar",
+      "selectDate": "Selecionar data",
+      "startDate": "Data inicial",
+      "endDate": "Data final",
+      "type": "Tipo de transação",
+      "status": "Status",
+      "clearAll": "Limpar tudo",
+      "apply": "Aplicar",
+      "kinds": {
+        "all": "Todas as transações",
+        "deposit": "Depósitos",
+        "withdraw": "Saques"
+      },
+      "statuses": {
+        "all": "Todos os status",
+        "completed": "Concluídas",
+        "pending": "Pendentes",
+        "failed": "Falhas"
+      }
+    },
+    "history": {
+      "created": "Depósito solicitado",
+      "confirmed": "Depósito confirmado",
+      "failed": "Depósito falhou",
+      "withdrawRequested": "Saque solicitado",
+      "withdrawConfirmed": "Saque confirmado",
+      "withdrawFailed": "Saque falhou"
+    },
+    "details": {
+      "title": "Detalhes da transação",
+      "from": "De",
+      "to": "Para",
+      "wallet": "Sua carteira",
+      "savings": "Poupança",
+      "lockPeriod": "Período de bloqueio",
+      "amount": "Valor da transação",
+      "rewards": "Recompensas",
+      "forfeited": "Perdidas",
+      "transactionId": "ID da transação",
+      "time": "Data e hora",
+      "status": "Status",
+      "statusHistory": "Histórico de status",
+      "notFound": "Transação não encontrada",
+      "viewOnExplorer": "Ver no explorador",
+      "share": "Compartilhar",
+      "hashCopied": "ID da transação copiado",
+      "linkCopied": "Link copiado"
+    }
   }
 }

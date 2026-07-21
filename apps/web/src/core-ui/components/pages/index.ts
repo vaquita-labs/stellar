@@ -9,3 +9,4 @@ export * from './ShopPage';
 export * from './legal';
 export * from './notifications';
 export * from './profile';
+export * from './transactions';
