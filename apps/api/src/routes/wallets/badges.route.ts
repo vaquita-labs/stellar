@@ -28,6 +28,7 @@ import {
   signBadgeClaim,
   storeBadgeClaim,
   supersedeBadgeClaim,
+  toBadgeSymbol,
   toClaimPayload,
   toProfileAchievementsResponseDTO,
 } from '@vaquita/shared';
@@ -207,7 +208,9 @@ router.post(
       return lifecycleError(res, 400, 'INVALID_REDEEM_BADGE', 'That code is not valid for a redeemable badge.');
     }
 
-    const contractSymbol = achievement.tier ?? achievement.key;
+    // Per-badge Soroban Symbol (key with `-` → `_`), NOT the tier — the tier is
+    // shared across badges and would collapse them onto one on-chain claim slot.
+    const contractSymbol = toBadgeSymbol(achievement.key);
     const claim = await issueOrReturnVoucher(wallet, achievement.key, 0, contractSymbol);
 
     await broadcastProfileChange('badge-voucher-created', ['profile-achievements']).catch((err) => {
@@ -336,7 +339,8 @@ router.get(
       return lifecycleError(res, 400, 'UNKNOWN_BADGE', `Unknown badge type: ${badgeType}`);
     }
 
-    const contractSymbol: string = achievement.tier ?? badgeType;
+    // Per-badge Soroban Symbol (key with `-` → `_`), NOT the tier.
+    const contractSymbol = toBadgeSymbol(badgeType);
 
     req.log.info({ badgeType, wallet }, 'GET /wallets/:wallet/badges/:key/voucher');
 
@@ -433,9 +437,10 @@ router.post(
       return lifecycleError(res, 409, 'STALE_LEADERBOARD_CYCLE', 'This badge voucher is for an expired award cycle.');
     }
 
-    const contractSymbol: string = achievement.tier ?? badgeType;
+    // Per-badge Soroban Symbol (key with `-` → `_`), NOT the tier.
+    const contractSymbol = toBadgeSymbol(badgeType);
 
-    // Check if already minted on-chain (use tier as the contract Symbol)
+    // Check if already minted on-chain (per-badge symbol)
     const alreadyMinted = await contractHasClaimed(contractId, wallet, contractSymbol, cycleId);
     if (alreadyMinted) {
       return res.status(409).json({ status: 'error', message: 'Badge already minted on-chain' });

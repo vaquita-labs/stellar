@@ -215,7 +215,19 @@ const refineEditable = (
  *  fall back to DB defaults. */
 export const achievementCreateSchema = z
   .object({
-    key: z.string().min(1).regex(/^[a-z0-9-]+$/, 'key must be kebab-case (a-z, 0-9, -)'),
+    // The key doubles as the on-chain Soroban Symbol (see toBadgeSymbol), which
+    // allows only [a-zA-Z0-9_], max 32. Enforce a valid symbol at creation so no
+    // badge can be minted-blocked later: start with a letter, then lowercase
+    // letters / digits / underscores. No hyphens (legacy kebab keys are mapped
+    // `-`→`_` at mint time, but new keys must already be symbol-clean).
+    key: z
+      .string()
+      .min(1)
+      .max(32)
+      .regex(
+        /^[a-z][a-z0-9_]*$/,
+        'key must be a valid contract symbol: start with a letter, then a-z, 0-9 or _ (no hyphens), max 32 chars',
+      ),
     ...editableShape,
   })
   .partial({
