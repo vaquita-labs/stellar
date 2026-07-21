@@ -22,6 +22,13 @@ export interface AppModalProps {
   /** Oculta la X de cerrar (ej. tutorial: el modal solo se cierra por su acción). */
   hideClose?: boolean;
   /**
+   * Oculta la barra de título completa (back, título y X). Para hojas que ponen
+   * su propio encabezado dentro del body (ej. el selector de fecha, que se
+   * cierra con sus botones). El título sigue existiendo para lectores de
+   * pantalla.
+   */
+  hideHeader?: boolean;
+  /**
    * Si se define, muestra una flecha "atrás" a la izquierda del título. Sirve
    * para navegar dentro del mismo modal (lista → detalle) sin abrir otro.
    */
@@ -121,6 +128,7 @@ export function AppModal({
   footer,
   isDismissable = true,
   hideClose = false,
+  hideHeader = false,
   onBack,
   placement,
   fullScreen = false,
@@ -170,13 +178,22 @@ export function AppModal({
             (dialogClassName ?? '')
           }
         >
-          <Modal.Header className="flex-row! items-center gap-2 px-4 sm:px-5 pt-3.5 pb-3 border-b border-black/10">
+          {/* Con hideHeader la barra sigue en el árbol pero fuera de pantalla
+              (sr-only): así el diálogo conserva su nombre accesible sin ocupar
+              layout ni pintar el borde inferior. */}
+          <Modal.Header
+            className={
+              hideHeader
+                ? 'sr-only'
+                : 'flex-row! items-center gap-2 px-4 sm:px-5 pt-3.5 pb-3 border-b border-black/10'
+            }
+          >
             {/* Los dos costados son contenedores del MISMO ancho (uno con el
                 back, otro con la X), así el título —flex-1 centrado en medio—
                 queda centrado respecto al modal y no respecto al espacio que
                 sobra, sin importar qué controles haya a los lados. */}
             <div className="w-7 shrink-0 flex items-center justify-start">
-              {onBack ? (
+              {onBack && !hideHeader ? (
                 <CircleIconButton
                   variant="primary"
                   size="sm"
@@ -193,7 +210,7 @@ export function AppModal({
               <span className="truncate">{title}</span>
             </Modal.Heading>
             <div className="w-7 shrink-0 flex items-center justify-end">
-              {!hideClose && (
+              {!hideClose && !hideHeader && (
                 <CircleIconButton
                   variant="white"
                   size="sm"

@@ -241,7 +241,9 @@ export function TransactionFiltersModal({
       open={open}
       onOpenChange={onOpenChange}
       title={picking ? t('transactions.filters.selectDate', 'Select date') : t('transactions.filters.title', 'Filter')}
-      onBack={picking ? () => setPicking(null) : undefined}
+      // El selector de fecha lleva su propio encabezado dentro del body y se
+      // cierra con Cancel/Save, así que no necesita la barra de título.
+      hideHeader={!!picking}
       size="md"
       footer={
         picking ? (
@@ -276,7 +278,10 @@ export function TransactionFiltersModal({
       }
     >
       {picking ? (
-        <DateWheel value={pickerDate} onChange={setPickerDate} />
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-black">{t('transactions.filters.selectDate', 'Select date')}</h2>
+          <DateWheel value={pickerDate} onChange={setPickerDate} />
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="space-y-2">
