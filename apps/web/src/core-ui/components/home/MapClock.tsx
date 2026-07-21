@@ -27,7 +27,7 @@ export const MapClock = () => {
   if (!label) return null;
 
   return (
-    <span className="inline-flex h-6 min-w-[68px] items-center justify-center gap-1 rounded-md bg-white px-2 text-xs font-bold text-black">
+    <span className="inline-flex h-6 min-w-[68px] items-center justify-center gap-1 rounded-md bg-white px-2 text-xs font-medium text-black">
       <FiClock className="h-3 w-3 shrink-0" />
       {label}
     </span>
