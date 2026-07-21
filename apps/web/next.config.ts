@@ -17,6 +17,19 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_CARD_VERSION: process.env.GIT_SHA?.slice(0, 8) ?? Date.now().toString(36),
   },
   outputFileTracingRoot: path.join(__dirname, '../../'),
+  // Public profiles used to hang off /leaderboard/<username>, and that is the
+  // URL baked into every share link and QR handed out so far. The screen is now
+  // /explore, so keep the old shape resolving instead of 404ing links that are
+  // already out in the wild. 308 = permanent, method-preserving.
+  async redirects() {
+    return [
+      {
+        source: '/leaderboard/:username',
+        destination: '/explore/:username',
+        permanent: true,
+      },
+    ];
+  },
   // @vaquita/ui ships raw TSX (exports ./src/index.ts), so Next must transpile it.
   transpilePackages: ['@vaquita/ui'],
   images: {

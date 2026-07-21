@@ -13,3 +13,4 @@ export * from './AppModal';
 export * from './PageHeader';
 export * from './PageLayout';
 export * from './TransactionRow';
+export * from './LoadMoreSentinel';

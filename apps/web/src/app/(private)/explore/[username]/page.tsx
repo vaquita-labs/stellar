@@ -26,7 +26,7 @@ export default function UsernamePage() {
 
   // The URL carries the username, but every profile/world query is keyed by
   // wallet — resolve once and reuse the existing per-wallet components.
-  // Old /leaderboard/<G...> links pass through unchanged.
+  // Old /explore/<G...> links pass through unchanged.
   const { walletAddress, isLoading, notFound } = useWalletByUsername(username);
 
   if (isLoading) {
@@ -47,11 +47,11 @@ export default function UsernamePage() {
           {t('leaderboard.user.notFoundHint', 'The account may have changed its username or no longer exists.')}
         </p>
         <Link
-          href="/leaderboard"
+          href="/explore"
           className="inline-flex items-center gap-2 rounded-full bg-white border border-black border-b-2 px-4 py-2 text-sm font-bold text-black hover:bg-black/5 transition"
         >
           <FiArrowLeft className="h-4 w-4" />
-          {t('leaderboard.user.backToLeaderboard', 'Back to leaderboard')}
+          {t('explore.user.back', 'Back to explore')}
         </Link>
       </div>
     );

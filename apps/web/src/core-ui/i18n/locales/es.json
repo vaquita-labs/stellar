@@ -1110,6 +1110,7 @@
     "nav": {
       "home": "Inicio",
       "leaderboard": "Ranking",
+      "explore": "Explorar",
       "profile": "Perfil",
       "shop": "Tienda",
       "soon": "Pronto",
@@ -1781,6 +1782,21 @@
       "share": "Compartir",
       "hashCopied": "ID de transacción copiado",
       "linkCopied": "Enlace copiado"
+    }
+  },
+  "explore": {
+    "title": "Explorar",
+    "loadingLabel": "Cargando vaqueros",
+    "loadingMore": "Cargando más vaqueros",
+    "caughtUp": {
+      "title": "Ya conociste a todos",
+      "description": "Ya seguís a todos los vaqueros por acá. Volvé más tarde — siempre aparecen mundos nuevos."
+    },
+    "error": {
+      "title": "No pudimos cargar los vaqueros"
+    },
+    "user": {
+      "back": "Volver a explorar"
     }
   }
 }

@@ -10,6 +10,7 @@ export * from './useFont';
 export * from './useHasHydrated';
 export * from './useInstallApp';
 export * from './useIntroSeen';
+export * from './useExploreData';
 export * from './useLeaderboardData';
 export * from './useIsAuthenticated';
 export * from './useIsMobile';
