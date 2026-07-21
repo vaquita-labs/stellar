@@ -165,15 +165,24 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       <div className="text-center pt-1">
         <motion.p
           animate={amountControls}
+          // Al exceder el saldo el número se apaga a gris plomo (lectura de
+          // "no disponible"), sin el rojo agresivo del estado de error.
           className={`text-4xl font-bold ${
-            overBalance ? 'text-danger' : amount === '' ? 'text-gray-400' : 'text-black'
+            overBalance ? 'text-gray-400' : amount === '' ? 'text-gray-400' : 'text-black'
           }`}
         >
           {displayAmount(amount)}
         </motion.p>
-        <p className={`text-xs mt-1 ${overBalance ? 'text-danger font-semibold' : 'text-gray-500'}`}>
+        <button
+          type="button"
+          onClick={() => {
+            setAmount(String(available));
+            if (overBalance) setOverBalance(false);
+          }}
+          className="mt-1 inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10"
+        >
           {t('withdraw.available', 'Available')}: ${available.toFixed(2)}
-        </p>
+        </button>
       </div>
 
       <button
@@ -285,7 +294,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-danger font-semibold">{error}</p> : null}
+      {error ? <p className="text-sm text-error font-semibold">{error}</p> : null}
     </div>
   );
 

@@ -3,7 +3,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useDayCycleStore } from '@/core-ui/stores';
+import { progressFromLocalTime, useDayCycleStore } from '@/core-ui/stores';
 import { useMapStore } from '@/core-ui/stores';
 
 type SkyKey = {
@@ -16,16 +16,19 @@ type SkyKey = {
   sunPos: [number, number, number];
 };
 
+// Keyframes retimados a un día estándar (progress = fracción de 24h): noche
+// cerrada hasta ~04:48, amanecer 06:00, mediodía 12:00, atardecer 18:00 y de
+// nuevo noche hacia ~19:12. Así la luz del mapa coincide con la hora real.
 const KEYS: SkyKey[] = [
-  { at: 0.0, sky: '#0a1030', fog: '#0a1030', ambient: 0.45, directional: 0.0, sunColor: '#bcd3ff', sunPos: [0, 20, 0] },
-  { at: 0.04, sky: '#1a1850', fog: '#1f1c5a', ambient: 0.5, directional: 0.0, sunColor: '#bcd3ff', sunPos: [-18, 2, 0] },
-  { at: 0.08, sky: '#ffb37a', fog: '#ffd1a3', ambient: 0.7, directional: 0.7, sunColor: '#ffc785', sunPos: [-16, 5, 0] },
-  { at: 0.2, sky: '#9fd6f5', fog: '#cfeaf7', ambient: 0.85, directional: 1.25, sunColor: '#fff4d6', sunPos: [-12, 12, -3] },
-  { at: 0.5, sky: '#74c5ee', fog: '#bde2f3', ambient: 1.0, directional: 1.5, sunColor: '#ffffff', sunPos: [0, 20, -4] },
-  { at: 0.8, sky: '#7fc6e8', fog: '#cae3f0', ambient: 0.85, directional: 1.25, sunColor: '#fff1d0', sunPos: [12, 12, -3] },
-  { at: 0.9, sky: '#f08a55', fog: '#f4b88c', ambient: 0.7, directional: 0.7, sunColor: '#ff9a5a', sunPos: [16, 5, 0] },
-  { at: 0.94, sky: '#3a2960', fog: '#4a3873', ambient: 0.55, directional: 0.0, sunColor: '#9c87c4', sunPos: [18, 2, 0] },
-  { at: 1.0, sky: '#0a1030', fog: '#0a1030', ambient: 0.45, directional: 0.0, sunColor: '#bcd3ff', sunPos: [0, 20, 0] },
+  { at: 0.0, sky: '#0a1030', fog: '#0a1030', ambient: 0.45, directional: 0.0, sunColor: '#bcd3ff', sunPos: [0, 20, 0] }, // 00:00
+  { at: 0.2, sky: '#1a1850', fog: '#1f1c5a', ambient: 0.5, directional: 0.0, sunColor: '#bcd3ff', sunPos: [-18, 2, 0] }, // 04:48
+  { at: 0.25, sky: '#ffb37a', fog: '#ffd1a3', ambient: 0.7, directional: 0.7, sunColor: '#ffc785', sunPos: [-16, 5, 0] }, // 06:00
+  { at: 0.3, sky: '#9fd6f5', fog: '#cfeaf7', ambient: 0.85, directional: 1.25, sunColor: '#fff4d6', sunPos: [-12, 12, -3] }, // 07:12
+  { at: 0.5, sky: '#74c5ee', fog: '#bde2f3', ambient: 1.0, directional: 1.5, sunColor: '#ffffff', sunPos: [0, 20, -4] }, // 12:00
+  { at: 0.7, sky: '#7fc6e8', fog: '#cae3f0', ambient: 0.85, directional: 1.25, sunColor: '#fff1d0', sunPos: [12, 12, -3] }, // 16:48
+  { at: 0.75, sky: '#f08a55', fog: '#f4b88c', ambient: 0.7, directional: 0.7, sunColor: '#ff9a5a', sunPos: [16, 5, 0] }, // 18:00
+  { at: 0.8, sky: '#3a2960', fog: '#4a3873', ambient: 0.55, directional: 0.0, sunColor: '#9c87c4', sunPos: [18, 2, 0] }, // 19:12
+  { at: 1.0, sky: '#0a1030', fog: '#0a1030', ambient: 0.45, directional: 0.0, sunColor: '#bcd3ff', sunPos: [0, 20, 0] }, // 24:00
 ];
 
 const tmpA = new THREE.Color();
@@ -66,7 +69,6 @@ const SHADOW_UPDATE_INTERVAL = 0.1;
 
 export const DayCycleSky = () => {
   const { scene, gl } = useThree();
-  const advance = useDayCycleStore((s) => s.advance);
   const editingObjectPosition = useMapStore((s) => s.editingObjectPosition);
 
   const ambientRef = useRef<THREE.AmbientLight>(null);
@@ -88,8 +90,11 @@ export const DayCycleSky = () => {
   }, [scene, skyColor, fog]);
 
   useFrame((_, delta) => {
-    advance(delta);
-    const progress = useDayCycleStore.getState().dayProgress;
+    // Sincroniza el ciclo con la hora local real (solo visual): el sol/luz del
+    // mapa refleja si es de día o de noche de verdad. Se escribe al store para
+    // que la vaquita (que lee dayProgress) también siga el día real.
+    const progress = progressFromLocalTime(new Date());
+    useDayCycleStore.getState().setDayProgress(progress);
     const values = interpolate(progress);
 
     skyColor.set(values.sky);

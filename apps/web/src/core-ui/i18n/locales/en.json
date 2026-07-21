@@ -1012,6 +1012,7 @@
     "daily": {
       "activeStreak_one": "Active streak: {{count}} day",
       "activeStreak_other": "Active streak: {{count}} days",
+      "chestOpenAlt": "Open chest",
       "coinsAlt": "coins",
       "collectButton": "Claim",
       "confirmTitle": "Your vaquita saved this for you today.",
@@ -1096,7 +1097,8 @@
       "leaderboard": "Leaderboard",
       "profile": "Profile",
       "shop": "Shop",
-      "soon": "Soon"
+      "soon": "Soon",
+      "dailyReward": "Daily reward"
     },
     "notFound": {
       "backHome": "Go back to home",
@@ -1633,7 +1635,7 @@
     "description": "Earn recurring rewards as your friends save. Each active referral adds extra APY on top of your base rate.",
     "earningsLabel": "Referral earnings",
     "invite": "Invite friends",
-    "nextTier": "Invite {{count}} more to reach +{{bonus}}% APY",
+    "nextTier": "Invite {{count}} more to reach",
     "pendingEarnings": "Pending referral earnings",
     "shareText": "Save with me on Vaquita and earn rewards. Use my code {{code}}",
     "tiersTitle": "Boost tiers",
@@ -1641,7 +1643,8 @@
     "totalEarnings": "Total referral earnings",
     "yourCode": "Your referral code",
     "tierLabel_one": "{{count}} active referral",
-    "tierLabel_other": "{{count}} active referrals"
+    "tierLabel_other": "{{count}} active referrals",
+    "learnMore": "Learn how it works"
   },
   "withdraw": {
     "addMethod": "Add method",
@@ -1653,6 +1656,8 @@
       "labelField": "Name",
       "labelPlaceholder": "e.g. My exchange",
       "networkHint": "This address must be on the {{network}} network.",
+      "paste": "Paste",
+      "pasteManual": "Paste the address into the field",
       "save": "Save wallet"
     },
     "amountLabel": "Amount",

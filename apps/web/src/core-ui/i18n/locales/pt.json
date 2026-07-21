@@ -1012,6 +1012,7 @@
     "daily": {
       "activeStreak_one": "Sequência ativa: {{count}} dia",
       "activeStreak_other": "Sequência ativa: {{count}} dias",
+      "chestOpenAlt": "Baú aberto",
       "coinsAlt": "moedas",
       "collectButton": "Resgatar",
       "confirmTitle": "Sua vaquita guardou isto para você hoje.",
@@ -1096,7 +1097,8 @@
       "leaderboard": "Ranking",
       "profile": "Perfil",
       "shop": "Loja",
-      "soon": "Em breve"
+      "soon": "Em breve",
+      "dailyReward": "Recompensa"
     },
     "notFound": {
       "backHome": "Voltar para o início",
@@ -1568,7 +1570,7 @@
     "description": "Ganhe recompensas recorrentes enquanto seus amigos poupam. Cada indicação ativa soma APY extra sobre a sua taxa base.",
     "earningsLabel": "Ganhos por indicações",
     "invite": "Convidar amigos",
-    "nextTier": "Convide mais {{count}} para chegar a +{{bonus}}% APY",
+    "nextTier": "Convide mais {{count}} para chegar a",
     "pendingEarnings": "Ganhos pendentes por indicações",
     "shareText": "Poupe comigo na Vaquita e ganhe recompensas. Use o meu código {{code}}",
     "tiersTitle": "Níveis de boost",
@@ -1576,7 +1578,8 @@
     "totalEarnings": "Ganhos totais por indicações",
     "yourCode": "Seu código de indicação",
     "tierLabel_one": "{{count}} indicação ativa",
-    "tierLabel_other": "{{count}} indicações ativas"
+    "tierLabel_other": "{{count}} indicações ativas",
+    "learnMore": "Saiba como funciona"
   },
   "withdraw": {
     "addMethod": "Adicionar método",
@@ -1588,6 +1591,8 @@
       "labelField": "Nome",
       "labelPlaceholder": "ex. Minha exchange",
       "networkHint": "Este endereço precisa ser da rede {{network}}.",
+      "paste": "Colar",
+      "pasteManual": "Cole o endereço no campo",
       "save": "Salvar carteira"
     },
     "amountLabel": "Valor",

@@ -41,7 +41,7 @@ export function DepositPanel() {
   return (
     <div
       style={{ filter: disabled ? 'grayscale(100%)' : 'none' }}
-      className="absolute bottom-20 md:bottom-10 left-0 flex flex-col items-center justify-center w-full gap-1"
+      className="absolute bottom-4 left-0 flex flex-col items-center justify-center w-full gap-1"
     >
       {isStellar && isPaused && (
         <p className="text-sm text-warning font-semibold">
@@ -63,9 +63,9 @@ export function DepositPanel() {
               setIsWithdrawOpen(true);
             }
           }}
-          className={`bg-white border-black py-7 text-black font-bold flex-1 border border-b-5 rounded-md`}
+          className={`bg-white border-black py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
         >
-          <span className="text-xl text-black capitalize">{t('deposit.withdraw.button', 'Withdraw')}</span>
+          <span className="text-xl text-black capitalize font-medium">{t('deposit.withdraw.button', 'Withdraw')}</span>
         </HeroButton>
         <HeroButton
           size="lg"
@@ -82,9 +82,9 @@ export function DepositPanel() {
               setIsMethodOpen(true);
             }
           }}
-          className={`bg-success border-[#018222] py-7 text-black font-bold flex-1 border border-b-5 rounded-md`}
+          className={`bg-success border-[#018222] py-7 text-black font-medium flex-1 border border-b-5 rounded-md`}
         >
-          <span className="text-xl text-black capitalize">
+          <span className="text-xl text-black capitalize font-medium">
             {isDepositing ? t('deposit.processing', 'Processing...') : t('common.save')}
           </span>
         </HeroButton>

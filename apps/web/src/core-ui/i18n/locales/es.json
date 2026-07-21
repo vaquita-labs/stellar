@@ -1012,6 +1012,7 @@
     "daily": {
       "activeStreak_one": "Racha activa: {{count}} día",
       "activeStreak_other": "Racha activa: {{count}} días",
+      "chestOpenAlt": "Cofre abierto",
       "coinsAlt": "monedas",
       "collectButton": "Reclamar",
       "confirmTitle": "Tu vaquita guardó esto para ti hoy.",
@@ -1096,7 +1097,8 @@
       "leaderboard": "Ranking",
       "profile": "Perfil",
       "shop": "Tienda",
-      "soon": "Pronto"
+      "soon": "Pronto",
+      "dailyReward": "Recompensa"
     },
     "notFound": {
       "backHome": "Volver al inicio",
@@ -1633,7 +1635,7 @@
     "description": "Gana recompensas recurrentes mientras tus amigos ahorran. Cada referido activo suma APY extra sobre tu tasa base.",
     "earningsLabel": "Ganancias por referidos",
     "invite": "Invitar amigos",
-    "nextTier": "Invita a {{count}} más para llegar a +{{bonus}}% APY",
+    "nextTier": "Invita a {{count}} más para llegar a",
     "pendingEarnings": "Ganancias pendientes por referidos",
     "shareText": "Ahorra conmigo en Vaquita y gana recompensas. Usa mi código {{code}}",
     "tiersTitle": "Niveles de boost",
@@ -1641,7 +1643,8 @@
     "totalEarnings": "Ganancias totales por referidos",
     "yourCode": "Tu código de referido",
     "tierLabel_one": "{{count}} referido activo",
-    "tierLabel_other": "{{count}} referidos activos"
+    "tierLabel_other": "{{count}} referidos activos",
+    "learnMore": "Conoce cómo funciona"
   },
   "withdraw": {
     "addMethod": "Agregar método",
@@ -1653,6 +1656,8 @@
       "labelField": "Nombre",
       "labelPlaceholder": "ej. Mi exchange",
       "networkHint": "Esta dirección tiene que ser de la red {{network}}.",
+      "paste": "Pegar",
+      "pasteManual": "Pegá la dirección en el campo",
       "save": "Guardar wallet"
     },
     "amountLabel": "Monto",

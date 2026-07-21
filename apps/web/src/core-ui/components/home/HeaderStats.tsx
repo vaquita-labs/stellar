@@ -30,6 +30,7 @@ import {
   useReferralBoost,
 } from '../organisms';
 import { DailyRewardChest } from './DailyRewardChest';
+import { MapClock } from './MapClock';
 import { MapQuickActions } from './MapQuickActions';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
 
@@ -255,8 +256,8 @@ export const HeaderStats = () => {
         </div>
       </div>
 
-      <div className="absolute left-0 right-0 -bottom-10 px-2 z-20 pointer-events-none">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-1.5  pointer-events-auto">
+      <div className="absolute left-0 right-0 -bottom-12 px-2 z-20 pointer-events-none">
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white/60 backdrop-blur-md rounded-lg px-3 py-1.5  pointer-events-auto">
           <button
             type="button"
             onClick={() => setShowStreakModal(true)}
@@ -275,7 +276,7 @@ export const HeaderStats = () => {
                   priority
                   style={hasActiveStreak ? {} : { filter: 'grayscale(100%)' }}
                 />
-                <span className="text-sm font-bold text-black tabular-nums">
+                <span className="text-xs font-bold text-black tabular-nums">
                   {totalStreak}
                 </span>
               </>
@@ -298,7 +299,7 @@ export const HeaderStats = () => {
               className="object-contain"
               priority
             />
-            <span className="text-sm font-bold text-black tabular-nums">{goldCoins}</span>
+            <span className="text-xs font-bold text-black tabular-nums">{goldCoins}</span>
           </button>
 
           <div className="w-px h-4 bg-black/10" />
@@ -316,20 +317,33 @@ export const HeaderStats = () => {
               className="object-contain"
               priority
             />
-            <span className="text-sm font-bold text-black tabular-nums">
+            <span className="text-xs font-bold text-black tabular-nums">
               {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </span>
           </button>
         </div>
       </div>
 
-      {/* Cofre + accesos rápidos flotan sueltos sobre el cielo, apilados a la
-          derecha del mapa. Se anclan por `top` para que la columna crezca hacia
-          abajo (cofre arriba, tienda y leaderboard debajo) sin mover el cofre. */}
-      <div className="absolute right-4 top-full mt-12 z-20 pointer-events-none">
-        <div className="flex flex-col items-center gap-3 pointer-events-auto">
-          <DailyRewardChest />
+      {/* Reloj de la hora local real, DEBAJO del pill de stats (mt-14 lo baja
+          por debajo de la barra para que no la tape en móvil). Va en el mismo
+          contenedor centrado max-w-xl y alineado a su borde izquierdo, así en
+          escritorio queda junto a la barra y no se va a la esquina.
+          El ciclo de luz del mapa sigue esta misma hora, así que coinciden. */}
+      <div className="absolute left-0 right-0 top-full mt-14 px-2 z-20 pointer-events-none">
+        <div className="max-w-xl mx-auto flex">
+          <div className="pointer-events-auto">
+            <MapClock />
+          </div>
+        </div>
+      </div>
+
+      {/* Accesos rápidos + cofre flotan sueltos sobre el cielo, apilados a la
+          derecha del mapa: tienda arriba, luego leaderboard y el cofre al final.
+          Solo en móvil: en escritorio esto vive en el sidebar (no se duplica). */}
+      <div className="absolute right-4 top-full mt-12 z-20 pointer-events-none md:hidden">
+        <div className="flex flex-col items-center gap-2 pointer-events-auto">
           <MapQuickActions />
+          <DailyRewardChest />
         </div>
       </div>
 

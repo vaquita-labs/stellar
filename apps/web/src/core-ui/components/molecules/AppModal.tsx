@@ -3,8 +3,9 @@
 import { Modal } from '@heroui/react';
 import Image from 'next/image';
 import { ReactNode, useEffect, useState } from 'react';
-import { FiArrowLeft } from 'react-icons/fi';
+import { FiChevronLeft, FiX } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
+import { CircleIconButton } from './CircleIconButton';
 
 export type AppModalSize = 'sm' | 'md' | 'lg';
 
@@ -127,7 +128,13 @@ export function AppModal({
         scroll="inside"
         placement={placement}
         className={
-          (fullScreen ? 'p-0! ' : 'px-0! py-3! sm:p-10! ') + SHEET_CONTAINER_ANIMATION
+          // En mobile es un bottom-sheet: pegado al borde inferior (items-end,
+          // sin padding abajo) para que no quede un hueco. En desktop vuelve a
+          // ser una tarjeta centrada con márgenes.
+          (fullScreen
+            ? 'p-0! '
+            : 'items-end! px-0! pt-3! pb-0! sm:items-center! sm:p-10! ') +
+          SHEET_CONTAINER_ANIMATION
         }
       >
         <Modal.Dialog
@@ -135,7 +142,12 @@ export function AppModal({
             'bg-background ' +
             (fullScreen
               ? 'h-dvh max-h-dvh w-full max-w-none rounded-none border-0 '
-              : 'border border-black max-h-[85dvh] sm:max-h-[90vh] rounded-2xl ') +
+              : // Bottom-sheet en mobile: solo esquinas superiores redondeadas y
+                // sin borde inferior, porque el modal termina contra el borde de
+                // la pantalla. En desktop (sm) se restauran las 4 esquinas y el
+                // borde completo de la tarjeta flotante.
+                'border border-black border-b-0 rounded-2xl rounded-b-none max-h-[85dvh] ' +
+                'sm:border-b sm:rounded-b-2xl sm:max-h-[90vh] ') +
             'p-0! ' +
             (dialogClassName ?? '')
           }
@@ -147,14 +159,13 @@ export function AppModal({
                 sobra, sin importar qué controles haya a los lados. */}
             <div className="w-9 shrink-0 flex items-center justify-start">
               {onBack ? (
-                <button
-                  type="button"
-                  aria-label={t('common.back')}
+                <CircleIconButton
+                  variant="primary"
+                  size="sm"
+                  ariaLabel={t('common.back')}
                   onClick={onBack}
-                  className="flex items-center justify-center w-8 h-8 rounded-full border border-black border-b-2 bg-white text-black hover:bg-default-100 active:translate-y-0.5 transition-all"
-                >
-                  <FiArrowLeft className="w-4 h-4" />
-                </button>
+                  icon={<FiChevronLeft className="w-4 h-4" />}
+                />
               ) : null}
             </div>
             <Modal.Heading className="flex-1 min-w-0 flex items-center justify-center gap-2 text-black font-bold text-base text-center">
@@ -165,9 +176,12 @@ export function AppModal({
             </Modal.Heading>
             <div className="w-9 shrink-0 flex items-center justify-end">
               {!hideClose && (
-                <Modal.CloseTrigger
-                  aria-label={t('common.close')}
-                  className="bg-primary text-black text-sm border-[0.5] border-black"
+                <CircleIconButton
+                  variant="white"
+                  size="sm"
+                  ariaLabel={t('common.close')}
+                  onClick={onOpenChange}
+                  icon={<FiX className="w-4 h-4" />}
                 />
               )}
             </div>
