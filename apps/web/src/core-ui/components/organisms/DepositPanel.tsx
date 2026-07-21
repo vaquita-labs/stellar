@@ -52,7 +52,7 @@ export function DepositPanel() {
         <PressableButton
           variant="white"
           size="cta"
-          className="flex-1 h-12 py-0"
+          className="flex-1 h-14 py-0"
           disabled={disabled}
           onClick={() => {
             if (!walletAddress) {
@@ -66,12 +66,12 @@ export function DepositPanel() {
             }
           }}
         >
-          <span className="text-xl text-black capitalize font-medium">{t('deposit.withdraw.button', 'Withdraw')}</span>
+          <span className="text-xl text-black capitalize font-normal">{t('deposit.withdraw.button', 'Withdraw')}</span>
         </PressableButton>
         <PressableButton
           variant="success"
           size="cta"
-          className="flex-1 h-12 py-0"
+          className="flex-1 h-14 py-0"
           disabled={disabled}
           onClick={() => {
             if (!walletAddress) {

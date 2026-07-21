@@ -21,7 +21,7 @@ export function ProfileSkeleton() {
       aria-busy="true"
       aria-live="polite"
     >
-      <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-6">
+      <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-4">
         {/* Banner: el avatar ocupa el ancho hasta 15.5rem, con el back a la
             izquierda, el título al centro y ajustes a la derecha. */}
         <header className="relative bg-black/5">
@@ -73,6 +73,20 @@ export function ProfileSkeleton() {
           <div className="h-12 w-12 rounded-md border border-black/20 border-b-3 bg-white animate-pulse" />
         </section>
 
+        {/* Logros: grilla de 4 medallas. Van antes que el resumen, igual que en
+            <ProfilePage> — si el orden difiere, los bloques se reacomodan al
+            llegar los datos, que es justo lo que el esqueleto evita. */}
+        <section className="px-4 sm:px-6 flex flex-col gap-3">
+          <div className="h-3 w-28 rounded bg-black/10 animate-pulse" />
+          <div className="rounded-2xl border border-black/20 border-b-2 bg-white p-4">
+            <div className="grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-14 w-14 rounded-xl bg-black/10 animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Resumen: racha · oro · experiencia */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <div className="h-3 w-24 rounded bg-black/10 animate-pulse" />
@@ -84,18 +98,6 @@ export function ProfileSkeleton() {
                 <div className="h-3 w-10 rounded bg-black/5 animate-pulse" />
               </div>
             ))}
-          </div>
-        </section>
-
-        {/* Logros: grilla de 4 medallas */}
-        <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <div className="h-3 w-28 rounded bg-black/10 animate-pulse" />
-          <div className="rounded-2xl border border-black/20 border-b-2 bg-white p-4">
-            <div className="grid grid-cols-4 gap-2 sm:gap-4 place-items-center">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="h-14 w-14 rounded-xl bg-black/10 animate-pulse" />
-              ))}
-            </div>
           </div>
         </section>
       </div>

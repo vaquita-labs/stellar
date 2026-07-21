@@ -233,7 +233,7 @@ export function TutorialExperience() {
             <PressableButton
               variant="success"
               size="cta"
-              className="h-12 py-0"
+              className="h-14 py-0"
               // Solo abre el depósito en su paso (startDeposit lo verifica); fuera
               // de él un toque accidental no debe dispararlo.
               onClick={startDeposit}

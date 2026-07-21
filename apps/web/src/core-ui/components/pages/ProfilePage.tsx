@@ -238,6 +238,14 @@ export function ProfilePage() {
     return [...claimable, ...claimed, ...locked].slice(0, 4);
   }, [achievements, isClaimed]);
 
+  // Medallas conseguidas: el mismo número que muestra el encabezado de la
+  // sección de logros, para que la tira de progreso y la sección no se
+  // contradigan.
+  const unlockedAchievements = useMemo(
+    () => achievements.filter((b) => b.unlocked).length,
+    [achievements],
+  );
+
   /* -------------------------------------------------------------- */
   /* Disconnected state                                              */
   /* -------------------------------------------------------------- */
@@ -265,7 +273,11 @@ export function ProfilePage() {
 
   return (
     <div className="h-full overflow-y-auto bg-background">
-      <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-6">
+      {/* gap-4, no gap-6: con 24px entre cada bloque la pantalla se leía como
+          piezas sueltas flotando en el fondo en vez de un perfil. 16px las
+          agrupa sin que se toquen; el respiro dentro de cada bloque (header →
+          tarjeta) lo da su propio gap-3. */}
+      <div className="mx-auto w-full max-w-2xl pb-28 md:pb-12 flex flex-col gap-4">
         {/* Hero banner ------------------------------------------------ */}
         {/* The character IS the banner: it's drawn edge-to-edge at the top of
             the screen, cropped at the shoulders, with the avatar's own
@@ -395,39 +407,41 @@ export function ProfilePage() {
         </section>
 
 
-        <section className="px-4 sm:px-6 flex flex-col gap-3">
-          <SectionHeader title={t('profilePages.profile.summary', 'Summary')} href="/profile/summary" />
-          {/* Whole white card is the link target — the chevron in the header
-              is just the visual cue. No interactive children inside, so a
-              plain Link wrap is safe (no nested-anchor warnings). */}
-          <Link
-            href="/profile/summary"
-            aria-label={t('profilePages.profile.seeFullSummary', 'See full summary')}
-            className="grid grid-cols-3 gap-2 rounded-2xl bg-white border border-black border-b-2 p-4 hover:-translate-y-0.5 transition"
-          >
+        {/* Progreso --------------------------------------------------- */}
+        {/* Tira de datos, no una sección navegable: son los cuatro números que
+            el usuario va acumulando (racha, medallas, XP, oro) y se leen de un
+            vistazo. Sin tarjeta blanca ni chevron a propósito — no lleva a
+            ningún lado, así que nada acá debe parecer tocable. */}
+        <section className="px-4 sm:px-6">
+          <div className="grid grid-cols-4 gap-2">
             <SummaryItem
               icon={hasActiveStreak ? '/icons/global/streak_face.png' : '/icons/global/streak_freeze_face.png'}
               value={t('profilePages.profile.daysCount', { count: totalStreak, defaultValue: '{{count}} days' })}
               label={t('profilePages.profile.streak', 'Streak')}
             />
             <SummaryItem
-              icon="/icons/global/coin.png"
-              value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              label={t('profilePages.profile.gold', 'Gold')}
+              icon="/icons/global/trophy.png"
+              value={unlockedAchievements.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              label={t('profilePages.profile.achievements', 'Achievements')}
             />
             <SummaryItem
               icon="/icons/global/star.png"
               value={`${Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })} XP`}
               label={t('profilePages.profile.experience', 'Experience')}
             />
-          </Link>
+            <SummaryItem
+              icon="/icons/global/coin.png"
+              value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              label={t('profilePages.profile.gold', 'Gold')}
+            />
+          </div>
         </section>
 
         {/* Achievements ---------------------------------------------- */}
         <section className="px-4 sm:px-6 flex flex-col gap-3">
           <SectionHeader
             title={t('profilePages.profile.achievements', 'Achievements')}
-            count={achievements.filter((b) => b.unlocked).length}
+            count={unlockedAchievements}
             href="/profile/achievements"
           />
           {/* The badge tiles are real <button>s, so we can't wrap the card in
