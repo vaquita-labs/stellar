@@ -4,8 +4,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import { useAnalytics, useDeposits } from '../../hooks';
-import { EditionMode, useLoading, useMapStore, useConfigStore } from '../../stores';
+import { EditionMode, useGameClockSynced, useLoading, useMapStore, useConfigStore } from '../../stores';
 import { WorldType } from '../../types';
+import { LoaderScreen } from '../molecules';
 import { useModalPresence } from '../molecules/AppModal';
 import { BankAPYModal, CoinAnimation, DepositPanel, TutorialModal } from '../organisms';
 import { WorldMap } from '../templates';
@@ -45,6 +46,12 @@ export function HomePage() {
 
   useLoading('deposits', isLoading);
 
+  // La hora del juego es estado del que depende toda la escena (reloj, y en el
+  // futuro la luz). Hasta que el servidor la confirma no se renderiza el mapa
+  // ni el reloj: se muestra el loader en vez de una hora provisional que después
+  // cambie. useGameClockSync (en Providers) hace el fetch a /api/v1/time.
+  const clockReady = useGameClockSynced();
+
   const handleCoinAnimationComplete = () => {
     setCoinAnimationTarget(null);
   };
@@ -55,6 +62,12 @@ export function HomePage() {
     setEditMode(null);
     setEditingObjectPosition(null);
   };
+
+  // Gate: sin la hora confirmada no se muestra el mapa/reloj (misma pantalla de
+  // carga que usan ConfigProvider / ProfileDataProvider).
+  if (!clockReady) {
+    return <LoaderScreen withImage />;
+  }
 
   return (
     <div className="h-full w-full flex flex-col relative overflow-hidden min-h-0">

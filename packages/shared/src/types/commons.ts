@@ -493,3 +493,45 @@ export enum MapObjectType {
   LEADERBOARD = 'leaderboard',
   EMPTY = 'empty',
 }
+
+/** A payout wallet the user saved for the withdraw flow. */
+export interface SavedWalletResponseDTO {
+  id: string;
+  label: string;
+  address: string;
+  network: string;
+  createdTimestamp: number;
+  updatedTimestamp: number;
+}
+
+export interface SavedWalletsResponseDTO {
+  savedWallets: SavedWalletResponseDTO[];
+}
+
+/** One boost tier: reaching `referrals` active referrals adds `bonus` APY points. */
+export interface ReferralTierDTO {
+  referrals: number;
+  bonus: number;
+}
+
+/**
+ * Referral summary for a wallet. `apyBonus` is derived from `activeReferrals`
+ * (referred users that currently hold a live deposit) via the tier table.
+ * `total`/`pending` earnings are honest zeros until the payout ledger exists.
+ */
+export interface ReferralSummaryResponseDTO {
+  walletAddress: string;
+  /** The short code this user shares to invite others. */
+  code: string;
+  /** Everyone this user referred (attributed), regardless of activity. */
+  referrals: number;
+  /** Referred users that currently hold a live deposit. Drives the bonus. */
+  activeReferrals: number;
+  /** APY points added on top of the base rate, from the reached tier. */
+  apyBonus: number;
+  totalEarnings: number;
+  pendingEarnings: number;
+  /** Next tier still to reach, or null when already at the top. */
+  nextTier: ReferralTierDTO | null;
+  tiers: ReferralTierDTO[];
+}

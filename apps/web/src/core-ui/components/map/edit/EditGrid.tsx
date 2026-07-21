@@ -37,7 +37,12 @@ export const EditGrid = () => {
     const maxX = MAP_SIZE - 0.5;
     const minZ = -0.5;
     const maxZ = MAP_SIZE - 0.5;
-    const gridY = 0.02; // Ligeramente por encima del suelo para evitar z-fighting y ser más visible
+    // Apenas DEBAJO del tope de los tiles (y=0): los tiles ocupados ocultan la
+    // línea con su propio sólido (depthTest) y la cuadrícula solo se ve en las
+    // celdas vacías donde se puede colocar. Por encima (0.02) se dibujaba
+    // cruzando el pasto, como una línea pegada sobre los objetos — y durante la
+    // animación de colocación (escala 0.5 → 1) desbordaba el objeto chico.
+    const gridY = -0.02;
     
     // Líneas verticales (paralelas al eje Z) - una por cada posición de tile + bordes
     for (let i = 0; i <= MAP_SIZE; i++) {

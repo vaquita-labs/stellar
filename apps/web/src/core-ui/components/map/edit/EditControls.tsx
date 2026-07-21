@@ -3,6 +3,31 @@ import { Button } from '@heroui/react';
 import { EditionMode, useMapStore } from '@/core-ui/stores';
 import { MapObjectType } from '@/core-ui/types';
 import { useTranslation } from 'react-i18next';
+import * as THREE from 'three';
+
+// Tamaño en pantalla de la columna de botones (3 × 36px + separaciones), para
+// el clamping al viewport.
+const CONTROLS_WIDTH = 44;
+const CONTROLS_HEIGHT = 132;
+const MARGIN = 12;
+
+// Proyección estándar de drei Html + clamping: los botones siguen al tile en
+// edición pero nunca se salen de la pantalla (con la cámara cerca quedaban
+// fuera de vista y la confirmación "se perdía").
+const calculateClampedPosition = (
+  el: THREE.Object3D,
+  camera: THREE.Camera,
+  size: { width: number; height: number }
+): [number, number] => {
+  const objectPos = new THREE.Vector3().setFromMatrixPosition(el.matrixWorld);
+  objectPos.project(camera);
+  const x = objectPos.x * (size.width / 2) + size.width / 2;
+  const y = -(objectPos.y * (size.height / 2)) + size.height / 2;
+  return [
+    Math.min(Math.max(x, MARGIN), size.width - CONTROLS_WIDTH - MARGIN),
+    Math.min(Math.max(y, MARGIN), size.height - CONTROLS_HEIGHT - MARGIN),
+  ];
+};
 
 interface EditControlsProps {
   position: [number, number, number];
@@ -20,6 +45,14 @@ export const EditControls = ({ position }: EditControlsProps) => {
   const currentTiles = useMapStore((store) => store.currentTiles);
 
   const handleRemove = () => {
+    // Quitar una colocación pendiente = revertir la celda a lo que tenía (si
+    // era expansión, ni siquiera queda una entrada EMPTY suelta).
+    const pending = useMapStore.getState().pendingPlacement;
+    if (pending && pending.position[0] === position[0] && pending.position[2] === position[2]) {
+      useMapStore.getState().revertPendingPlacement();
+      setEditingObjectPosition(null);
+      return;
+    }
     updateTile(position, {
       variant: 0,
       type: MapObjectType.EMPTY,
@@ -59,6 +92,8 @@ export const EditControls = ({ position }: EditControlsProps) => {
   };
 
   const handleDone = () => {
+    // Confirmar consolida la colocación pendiente: ya no hay nada que revertir.
+    useMapStore.getState().setPendingPlacement(null);
     setEditingObjectPosition(null);
 
     // Si el usuario está colocando un item del que todavía le quedan unidades,
@@ -87,6 +122,7 @@ export const EditControls = ({ position }: EditControlsProps) => {
       center={false}
       transform={false}
       occlude={false}
+      calculatePosition={calculateClampedPosition}
       style={{ pointerEvents: 'auto', zIndex: 10000 }}
       zIndexRange={[10000, 0]}
     >

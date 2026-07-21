@@ -365,6 +365,31 @@
       "earnedSuffix": "ganados",
       "onTimeDescription": "Completaste todo el periodo de bloqueo y conservaste tus recompensas.",
       "onTimeTitle": "Retirado a tiempo"
+    },
+    "method": {
+      "continue": "Ya tengo USDC, continuar",
+      "country": {
+        "comingSoon": "Próximamente",
+        "noResults": "No se encontraron países",
+        "search": "Buscar país",
+        "title": "Selecciona tu país"
+      },
+      "onramp": {
+        "subtitle": "Depositá con tu moneda local",
+        "title": "Banco"
+      },
+      "title": "Selecciona el método",
+      "wallet": {
+        "subtitle": "Deposita desde una wallet cripto",
+        "title": "Wallet"
+      },
+      "walletDetails": {
+        "accountLabel": "Cuenta de Vaquita",
+        "copy": "Copiar dirección",
+        "onlyUsdc": "¡Envía solo USDC en Stellar!",
+        "title": "Detalles de wallet",
+        "warning": "Asegúrate de enviar USDC por la red Stellar a esta dirección exacta. Los fondos enviados por otra red se pueden perder."
+      }
     }
   },
   "errors": {
@@ -545,11 +570,14 @@
     "stats": {
       "experienceAlt": "Experiencia",
       "goldCoinAlt": "Moneda de oro",
-      "greeting": "Tus ahorros",
-      "greetingNamed": "Tus ahorros, <b>{{name}}</b>",
       "profileAlt": "Perfil",
       "profileAria": "Perfil",
-      "streakAlt": "Racha"
+      "streakAlt": "Racha",
+      "apyAria": "Desglose de ganancias",
+      "boostAria": "Boost de referidos",
+      "earnings": {
+        "title": "Tus ganancias"
+      }
     },
     "totalDeposits": {
       "bagAlt": "Depósitos totales"
@@ -967,7 +995,7 @@
       "coinAlt": "monedas",
       "description": "Las monedas son tu moneda del juego. Gánalas ahorrando y recogiendo tu recompensa diaria, y gástalas en la tienda para decorar tu mapa.",
       "earn": {
-        "daily": "Recoge tu recompensa diaria",
+        "daily": "Reclama tu recompensa diaria",
         "deposits": "Crea y haz crecer tus depósitos",
         "streak": "Mantén viva tu racha diaria"
       },
@@ -984,17 +1012,22 @@
     "daily": {
       "activeStreak_one": "Racha activa: {{count}} día",
       "activeStreak_other": "Racha activa: {{count}} días",
+      "chestClosedAlt": "Cofre cerrado",
+      "chestOpenAlt": "Cofre abierto",
       "coinsAlt": "monedas",
-      "collectButton": "Recoger +{{count}}",
-      "confirmSubtitle_one": "¡Recoge tu moneda diaria y mantén viva tu racha!",
-      "confirmSubtitle_other": "¡Recoge tu moneda diaria y mantén viva tu racha!",
-      "confirmTitle": "¡Tu vaquita tiene una recompensa para ti!",
+      "collectButton": "Reclamar",
+      "confirmTitle": "Tu vaquita guardó esto para ti hoy.",
+      "doneButton": "Listo",
       "greatButton": "¡Genial!",
+      "holdToOpen": "Mantené presionado para abrir",
+      "nextButton": "Siguiente",
+      "opening": "Abriendo…",
       "rewardAlt": "recompensa",
+      "rewardTitle": "¡Ganaste monedas!",
       "streakAlt": "racha",
-      "successHint": "Sigue ahorrando para mantener tu racha y subir de nivel.",
-      "successWithXp_one": "¡Ganaste {{count}} moneda y {{xp}} XP!",
-      "successWithXp_other": "¡Ganaste {{count}} monedas y {{xp}} XP!",
+      "streakSubtitle": "Volvé mañana para mantenerla.",
+      "streakTitle_one": "¡Ahora llevás {{count}} día de racha!",
+      "streakTitle_other": "¡Ahora llevás {{count}} días de racha!",
       "success_one": "¡Ganaste {{count}} moneda!",
       "success_other": "¡Ganaste {{count}} monedas!",
       "title": "Recompensa diaria"
@@ -1073,7 +1106,8 @@
       "leaderboard": "Ranking",
       "profile": "Perfil",
       "shop": "Tienda",
-      "soon": "Pronto"
+      "soon": "Pronto",
+      "dailyReward": "Recompensa"
     },
     "notFound": {
       "backHome": "Volver al inicio",
@@ -1378,6 +1412,7 @@
       "tabMine": "Mi QR",
       "tabScan": "Escanear QR",
       "tabsLabel": "Vista del QR",
+      "title": "Compartir perfil",
       "tryAgain": "Intentar de nuevo",
       "uploadFromGallery": "Subir desde la galería · pronto",
       "vaqueroNotFound": "No encontramos a ese vaquero."
@@ -1543,7 +1578,7 @@
         "stepDeposit": "SEP-24 · Iniciar depósito",
         "stepSwap": "Convertir ARS → USDC",
         "swapDone": "Convertido a USDC — ¡listo!",
-        "title": "Recibir fiat (ARS)",
+        "title": "Argentina (ARS)",
         "usdcReceived": "≈ {{amount}} USDC recibidos",
         "waitingHint": "Completa el depósito en Anclap. Estamos esperando que se acrediten los ARS…"
       },
@@ -1601,6 +1636,74 @@
       "saveChanges": "Guardar cambios",
       "title": "Perfil",
       "walletLabel": "Wallet"
+    }
+  },
+  "referrals": {
+    "activeReferrals": "Referidos activos",
+    "apyBonus": "Bonus de APY",
+    "description": "Gana recompensas recurrentes mientras tus amigos ahorran. Cada referido activo suma APY extra sobre tu tasa base.",
+    "earningsLabel": "Ganancias por referidos",
+    "invite": "Invitar amigos",
+    "nextTier": "Invita a {{count}} más para llegar a",
+    "pendingEarnings": "Ganancias pendientes por referidos",
+    "shareText": "Ahorra conmigo en Vaquita y gana recompensas. Usa mi código {{code}}",
+    "tiersTitle": "Niveles de boost",
+    "title": "Referidos",
+    "totalEarnings": "Ganancias totales por referidos",
+    "yourCode": "Tu código de referido",
+    "tierLabel_one": "{{count}} referido activo",
+    "tierLabel_other": "{{count}} referidos activos",
+    "learnMore": "Conoce cómo funciona"
+  },
+  "withdraw": {
+    "addMethod": "Agregar método",
+    "addWallet": {
+      "addressField": "Dirección",
+      "addressPlaceholder": "Dirección de destino",
+      "cta": "Agregar una wallet",
+      "error": "No se pudo guardar la wallet",
+      "invalidAddress": "Eso no parece una dirección válida de {{network}}",
+      "labelField": "Nombre",
+      "labelPlaceholder": "ej. Mi exchange",
+      "networkHint": "Esta dirección tiene que ser de la red {{network}}.",
+      "paste": "Pegar",
+      "pasteInvalid": "Eso no parece una dirección válida de {{network}}",
+      "save": "Guardar wallet"
+    },
+    "amountLabel": "Monto",
+    "available": "Disponible",
+    "confirm": {
+      "title": "Confirmar retiro"
+    },
+    "confirmCta": "Confirmar",
+    "deleteWallet": {
+      "confirm": "¿Eliminar “{{label}}”?",
+      "action": "Eliminar"
+    },
+    "error": {
+      "generic": "Algo salió mal"
+    },
+    "method": {
+      "title": "Elegir método",
+      "bank": {
+        "title": "Banco",
+        "subtitle": "Retirá a tu cuenta bancaria"
+      },
+      "wallet": {
+        "title": "Wallet",
+        "subtitle": "Retirá a una wallet cripto"
+      }
+    },
+    "methodLabel": "Método",
+    "methodWallet": "Wallet",
+    "noWallets": "Todavía no tenés wallets guardadas",
+    "processing": "Procesando retiro...",
+    "processingHint": "Esto puede tardar unos segundos.",
+    "review": "Revisar",
+    "selectAccount": "Elegir cuenta",
+    "success": {
+      "subtitle": "Tu dinero va en camino a {{label}}.",
+      "title": "¡Retiro enviado!"
     }
   }
 }

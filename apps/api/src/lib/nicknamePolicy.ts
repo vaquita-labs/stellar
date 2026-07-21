@@ -2,19 +2,24 @@
 // follows, share cards), so offensive or impersonating names are rejected at the
 // API — client-side checks alone can be bypassed with a direct request.
 //
-// Two matching modes, because pure substring matching over-blocks real names
-// (the "Scunthorpe problem": "sex" is inside "essex", "anal" inside "analia"):
+// The term lists live in blockedNicknameTerms.json (categorized by language and
+// severity for maintenance; flattened here at load). Two matching modes, because
+// pure substring matching over-blocks real names (the "Scunthorpe problem":
+// "sex" is inside "essex", "anal" inside "analia", "fag" inside "fagundes"):
 //
-// - BLOCKED_SUBSTRINGS: terms that almost never appear inside an innocent
-//   nickname. Matched anywhere, with separators/leetspeak collapsed, so
-//   "p-o-r-n-o", "p0rno" and "xxpornoxx" are all caught.
-// - BLOCKED_WORDS: terms that DO appear inside innocent names, so they only
-//   match as a whole token ("puta" blocks "puta" and "puta123" but not
-//   "computadora") or as the entire collapsed nickname ("p.u.t.a").
+// - `substrings`: terms that almost never appear inside an innocent nickname.
+//   Matched anywhere, with separators/leetspeak collapsed, so "p-o-r-n-o",
+//   "p0rno" and "xxpornoxx" are all caught.
+// - `words`: terms that DO appear inside innocent names, so they only match as
+//   a whole token ("puta" blocks "puta" and "puta123" but not "computadora")
+//   or as the entire collapsed nickname ("p.u.t.a").
 //
-// Both lists are plain lowercase ASCII; input is lowercased and accent-stripped
-// before matching, so "pör̃no" and "PUTA" are covered. Extend the lists freely —
-// entries must be lowercase, unaccented.
+// Entries must be lowercase ASCII with no accents or spaces — input is
+// lowercased/accent-stripped/collapsed before matching, so an entry that
+// carries an accent or a space can never match; the load-time check below
+// rejects those instead of letting them silently do nothing.
+
+import blockedTerms from './blockedNicknameTerms.json';
 
 // Nicknames double as the public profile URL segment (/leaderboard/<nickname>),
 // so the charset is restricted to URL-safe lowercase: letters, digits and
@@ -26,32 +31,24 @@ export function isNicknameFormatValid(nickname: string): boolean {
   return NICKNAME_FORMAT_REGEX.test(nickname);
 }
 
-const BLOCKED_SUBSTRINGS = [
-  // sexual / porn
-  'porn', 'xxx', 'hentai', 'blowjob', 'dildo', 'onlyfans',
-  'chupapija', 'chupaverga', 'garchar', 'garchando',
-  // slurs / hate
-  'nigg', 'faggot', 'nazi', 'hitler',
-  // abuse
-  'pedofil', 'pedoph', 'violador', 'violadora',
-  'fuck',
-];
+// A term with uppercase, accents, spaces or symbols can never match the
+// collapsed input — fail loudly at module load instead of shipping a dead entry.
+const assertMatchable = (terms: string[], source: string): string[] => {
+  for (const term of terms) {
+    if (!/^[a-z0-9]+$/.test(term)) {
+      throw new Error(
+        `blockedNicknameTerms.json: entry "${term}" in "${source}" is not matchable — use lowercase ASCII letters/digits only (no accents, spaces or symbols).`,
+      );
+    }
+  }
+  return terms;
+};
 
-const BLOCKED_WORDS = [
-  // en
-  'sex', 'anal', 'dick', 'cock', 'pussy', 'cum', 'tits', 'boobs',
-  'whore', 'slut', 'bitch', 'cunt', 'rape', 'shit',
-  // es
-  'porno', 'sexo', 'puta', 'puto', 'putita', 'putito', 'mierda', 'verga',
-  'pija', 'poronga', 'pene', 'concha', 'culo', 'tetas', 'pajero', 'pajera',
-  'trolo', 'trola', 'sorete', 'pelotudo', 'pelotuda', 'boludo', 'boluda',
-  // pt
-  'caralho', 'buceta', 'porra', 'foda', 'foder', 'merda', 'viado', 'piroca',
-  // reserved / impersonation
-  'admin', 'administrator', 'administrador', 'moderator', 'moderador', 'mod',
-  'support', 'soporte', 'suporte', 'official', 'oficial', 'staff', 'root',
-  'system', 'vaquita',
-];
+const BLOCKED_SUBSTRINGS = assertMatchable(
+  Object.values(blockedTerms.substrings).flat(),
+  'substrings',
+);
+const BLOCKED_WORDS = assertMatchable(Object.values(blockedTerms.words).flat(), 'words');
 
 // Common obfuscations mapped back to letters BEFORE matching, so "p0rn0",
 // "s3xo" or "put@" don't slip through.
