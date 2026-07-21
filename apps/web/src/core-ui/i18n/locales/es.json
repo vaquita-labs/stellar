@@ -1705,5 +1705,80 @@
       "subtitle": "Tu dinero va en camino a {{label}}.",
       "title": "¡Retiro enviado!"
     }
+  },
+  "transactions": {
+    "title": "Transacciones",
+    "recent": "Transacciones recientes",
+    "seeMore": "Ver más",
+    "empty": "Todavía no hay transacciones",
+    "emptyFiltered": "Probá cambiando los filtros para ver más.",
+    "emptyHint": "Tus depósitos y retiros van a aparecer acá.",
+    "kind": {
+      "deposit": "Depósito",
+      "withdraw": "Retiro",
+      "withdrawEarly": "Retiro anticipado"
+    },
+    "row": {
+      "toSavings": "A tus ahorros",
+      "toWallet": "A tu billetera"
+    },
+    "status": {
+      "completed": "Completada",
+      "pending": "Pendiente",
+      "failed": "Fallida"
+    },
+    "chips": {
+      "from": "Desde {{date}}",
+      "to": "Hasta {{date}}"
+    },
+    "filters": {
+      "title": "Filtrar",
+      "selectDate": "Seleccionar fecha",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "type": "Tipo de transacción",
+      "status": "Estado",
+      "clearAll": "Limpiar todo",
+      "apply": "Aplicar",
+      "kinds": {
+        "all": "Todas las transacciones",
+        "deposit": "Depósitos",
+        "withdraw": "Retiros"
+      },
+      "statuses": {
+        "all": "Todos los estados",
+        "completed": "Completadas",
+        "pending": "Pendientes",
+        "failed": "Fallidas"
+      }
+    },
+    "history": {
+      "created": "Depósito solicitado",
+      "confirmed": "Depósito confirmado",
+      "failed": "Depósito fallido",
+      "withdrawRequested": "Retiro solicitado",
+      "withdrawConfirmed": "Retiro confirmado",
+      "withdrawFailed": "Retiro fallido"
+    },
+    "details": {
+      "title": "Detalle de la transacción",
+      "from": "Desde",
+      "to": "Hacia",
+      "wallet": "Tu billetera",
+      "savings": "Ahorros",
+      "lockPeriod": "Período de bloqueo",
+      "amount": "Monto de la transacción",
+      "rewards": "Recompensas",
+      "forfeited": "Perdidas",
+      "transactionId": "ID de transacción",
+      "time": "Fecha y hora",
+      "status": "Estado",
+      "statusHistory": "Historial de estados",
+      "notFound": "No encontramos la transacción",
+      "viewOnExplorer": "Ver en el explorador",
+      "share": "Compartir",
+      "hashCopied": "ID de transacción copiado",
+      "linkCopied": "Enlace copiado"
+    }
   }
 }

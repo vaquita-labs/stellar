@@ -1705,5 +1705,80 @@
       "subtitle": "Your funds are on their way to {{label}}.",
       "title": "Withdrawal sent!"
     }
+  },
+  "transactions": {
+    "title": "Transactions",
+    "recent": "Recent transactions",
+    "seeMore": "See more",
+    "empty": "No transactions yet",
+    "emptyFiltered": "Try changing the filters to see more.",
+    "emptyHint": "Your deposits and withdrawals will show up here.",
+    "kind": {
+      "deposit": "Deposit",
+      "withdraw": "Withdrawal",
+      "withdrawEarly": "Early withdrawal"
+    },
+    "row": {
+      "toSavings": "To savings",
+      "toWallet": "To your wallet"
+    },
+    "status": {
+      "completed": "Completed",
+      "pending": "Pending",
+      "failed": "Failed"
+    },
+    "chips": {
+      "from": "From {{date}}",
+      "to": "To {{date}}"
+    },
+    "filters": {
+      "title": "Filter",
+      "selectDate": "Select date",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "type": "Transaction type",
+      "status": "Status",
+      "clearAll": "Clear all",
+      "apply": "Apply",
+      "kinds": {
+        "all": "All transactions",
+        "deposit": "Deposits",
+        "withdraw": "Withdrawals"
+      },
+      "statuses": {
+        "all": "All statuses",
+        "completed": "Completed",
+        "pending": "Pending",
+        "failed": "Failed"
+      }
+    },
+    "history": {
+      "created": "Deposit requested",
+      "confirmed": "Deposit confirmed",
+      "failed": "Deposit failed",
+      "withdrawRequested": "Withdrawal requested",
+      "withdrawConfirmed": "Withdrawal confirmed",
+      "withdrawFailed": "Withdrawal failed"
+    },
+    "details": {
+      "title": "Transaction details",
+      "from": "From",
+      "to": "To",
+      "wallet": "Your wallet",
+      "savings": "Savings",
+      "lockPeriod": "Lock period",
+      "amount": "Transaction amount",
+      "rewards": "Rewards",
+      "forfeited": "Forfeited",
+      "transactionId": "Transaction ID",
+      "time": "Transaction time",
+      "status": "Status",
+      "statusHistory": "Status history",
+      "notFound": "Transaction not found",
+      "viewOnExplorer": "View on explorer",
+      "share": "Share",
+      "hashCopied": "Transaction ID copied",
+      "linkCopied": "Link copied"
+    }
   }
 }
