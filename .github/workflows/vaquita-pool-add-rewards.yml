@@ -4,11 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       target_environment:
-        description: "VaquitaPool deployment to fund"
+        description: GitHub Environment to use for secrets and vars
         required: true
         type: choice
         options:
           - dev
+          - staging
+          - prod
       lock_period:
         description: "Lock period passed to add_rewards, in seconds"
         required: true
@@ -23,19 +25,24 @@ permissions:
 
 env:
   STELLAR_CLI_VERSION: "25.1.0"
-  STELLAR_NETWORK: testnet
 
 jobs:
   add-rewards:
-    name: Add rewards to dev pool
+    name: Add rewards (${{ inputs.target_environment }})
     runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment }}
     concurrency:
       group: vaquita-pool-add-rewards-${{ inputs.target_environment }}
       cancel-in-progress: false
+    env:
+      TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+      CONTRACT_ID: ${{ vars.VAQUITA_POOL_CONTRACT_ID }}
+      STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
+      STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
+      POOL_DEPLOYER_SECRET_KEY: ${{ secrets.POOL_DEPLOYER_SECRET_KEY }}
+      LOCK_PERIOD: ${{ inputs.lock_period }}
+      REWARD_AMOUNT: ${{ inputs.reward_amount }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Install Stellar CLI
         run: |
           set -euo pipefail
@@ -53,84 +60,65 @@ jobs:
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
           stellar version
 
-      - name: Resolve dev contract
-        id: contract
-        env:
-          TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
-          VAQUITA_CONTRACTS_SECRET: ${{ secrets.VAQUITA_CONTRACTS }}
-          VAQUITA_CONTRACTS_VARIABLE: ${{ vars.VAQUITA_CONTRACTS }}
+      - name: Validate configuration and inputs
         run: |
           set -euo pipefail
 
-          if [ "${TARGET_ENVIRONMENT}" != "dev" ]; then
-            echo "Only the dev environment is enabled for this workflow." >&2
+          require_env() {
+            local name="$1"
+            if [ -z "${!name:-}" ]; then
+              echo "Missing ${name}. Set it on the '${TARGET_ENVIRONMENT}' GitHub Environment." >&2
+              exit 1
+            fi
+          }
+
+          require_env CONTRACT_ID
+          require_env STELLAR_RPC_URL
+          require_env STELLAR_NETWORK_PASSPHRASE
+          require_env POOL_DEPLOYER_SECRET_KEY
+
+          echo "::add-mask::${POOL_DEPLOYER_SECRET_KEY}"
+
+          if ! printf '%s' "${CONTRACT_ID}" | grep -Eq '^C[A-Z2-7]{55}$'; then
+            echo "VAQUITA_POOL_CONTRACT_ID for ${TARGET_ENVIRONMENT} does not look like a Stellar contract id." >&2
             exit 1
           fi
-
-          contracts="${VAQUITA_CONTRACTS_SECRET:-${VAQUITA_CONTRACTS_VARIABLE:-}}"
-          if [ -z "${contracts}" ]; then
-            echo "Set VAQUITA_CONTRACTS as a repo secret or variable, e.g. dev=C...,staging=C..." >&2
-            exit 1
-          fi
-
-          contract_id="$(
-            printf '%s' "${contracts}" |
-              tr ',' '\n' |
-              awk -F= -v env="${TARGET_ENVIRONMENT}" '
-                {
-                  key=$1
-                  value=$2
-                  gsub(/^[[:space:]]+|[[:space:]]+$/, "", key)
-                  gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-                  if (key == env) {
-                    print value
-                    exit
-                  }
-                }
-              '
-          )"
-
-          if [ -z "${contract_id}" ]; then
-            echo "No ${TARGET_ENVIRONMENT}=... entry found in VAQUITA_CONTRACTS." >&2
-            exit 1
-          fi
-
-          if ! printf '%s' "${contract_id}" | grep -Eq '^C[A-Z2-7]{55}$'; then
-            echo "Resolved contract id for ${TARGET_ENVIRONMENT} does not look like a Stellar contract id." >&2
-            exit 1
-          fi
-
-          echo "contract_id=${contract_id}" >> "${GITHUB_OUTPUT}"
-          echo "Resolved ${TARGET_ENVIRONMENT} VaquitaPool contract: ${contract_id}"
-
-      - name: Add rewards
-        env:
-          CONTRACT_ID: ${{ steps.contract.outputs.contract_id }}
-          LOCK_PERIOD: ${{ inputs.lock_period }}
-          REWARD_AMOUNT: ${{ inputs.reward_amount }}
-          VAQUITA_POOL_ADMIN_SECRET_KEY: ${{ secrets.VAQUITA_POOL_ADMIN_SECRET_KEY }}
-        run: |
-          set -euo pipefail
-
-          if [ -z "${VAQUITA_POOL_ADMIN_SECRET_KEY}" ]; then
-            echo "Set the VAQUITA_POOL_ADMIN_SECRET_KEY repo secret to the dev pool admin secret key." >&2
-            exit 1
-          fi
-          echo "::add-mask::${VAQUITA_POOL_ADMIN_SECRET_KEY}"
 
           for value_name in LOCK_PERIOD REWARD_AMOUNT; do
-            value="$(eval "printf '%s' \"\${${value_name}}\"")"
+            value="${!value_name}"
             if ! printf '%s' "${value}" | grep -Eq '^[1-9][0-9]*$'; then
               echo "${value_name} must be a positive integer." >&2
               exit 1
             fi
           done
 
+          echo "Environment: ${TARGET_ENVIRONMENT}"
+          echo "VaquitaPool contract: ${CONTRACT_ID}"
+
+      - name: Add rewards
+        run: |
+          set -euo pipefail
+
           stellar contract invoke \
             --id "${CONTRACT_ID}" \
-            --source "${VAQUITA_POOL_ADMIN_SECRET_KEY}" \
-            --network "${STELLAR_NETWORK}" \
+            --source-account "${POOL_DEPLOYER_SECRET_KEY}" \
+            --rpc-url "${STELLAR_RPC_URL}" \
+            --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" \
             -- \
             add_rewards \
             --period "${LOCK_PERIOD}" \
             --reward_amount "${REWARD_AMOUNT}"
+
+      - name: Write step summary
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "## VaquitaPool add rewards"
+            echo
+            echo "- Environment: ${TARGET_ENVIRONMENT}"
+            echo "- Contract: ${CONTRACT_ID}"
+            echo "- Lock period: ${LOCK_PERIOD}"
+            echo "- Reward amount (raw): ${REWARD_AMOUNT}"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } >> "${GITHUB_STEP_SUMMARY}"
