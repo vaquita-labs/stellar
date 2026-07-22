@@ -99,11 +99,16 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Bump the inclusion fee (default is 100 stroops) so the tx is not
+          # deprioritized and dropped during mainnet surge pricing, which
+          # surfaces as "transaction submission timeout". This is a max/cap;
+          # the network only charges what inclusion actually requires.
           stellar contract invoke \
             --id "${CONTRACT_ID}" \
             --source-account "${POOL_ADMIN_SECRET_KEY}" \
             --rpc-url "${STELLAR_RPC_URL}" \
             --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" \
+            --inclusion-fee "${INCLUSION_FEE:-1000000}" \
             -- \
             add_rewards \
             --period "${LOCK_PERIOD}" \
