@@ -39,7 +39,7 @@ jobs:
       CONTRACT_ID: ${{ vars.VAQUITA_POOL_CONTRACT_ID }}
       STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
       STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
-      POOL_DEPLOYER_SECRET_KEY: ${{ secrets.POOL_DEPLOYER_SECRET_KEY }}
+      POOL_ADMIN_SECRET_KEY: ${{ secrets.POOL_ADMIN_SECRET_KEY }}
       LOCK_PERIOD: ${{ inputs.lock_period }}
       REWARD_AMOUNT: ${{ inputs.reward_amount }}
     steps:
@@ -75,9 +75,9 @@ jobs:
           require_env CONTRACT_ID
           require_env STELLAR_RPC_URL
           require_env STELLAR_NETWORK_PASSPHRASE
-          require_env POOL_DEPLOYER_SECRET_KEY
+          require_env POOL_ADMIN_SECRET_KEY
 
-          echo "::add-mask::${POOL_DEPLOYER_SECRET_KEY}"
+          echo "::add-mask::${POOL_ADMIN_SECRET_KEY}"
 
           if ! printf '%s' "${CONTRACT_ID}" | grep -Eq '^C[A-Z2-7]{55}$'; then
             echo "VAQUITA_POOL_CONTRACT_ID for ${TARGET_ENVIRONMENT} does not look like a Stellar contract id." >&2
@@ -101,7 +101,7 @@ jobs:
 
           stellar contract invoke \
             --id "${CONTRACT_ID}" \
-            --source-account "${POOL_DEPLOYER_SECRET_KEY}" \
+            --source-account "${POOL_ADMIN_SECRET_KEY}" \
             --rpc-url "${STELLAR_RPC_URL}" \
             --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" \
             -- \
