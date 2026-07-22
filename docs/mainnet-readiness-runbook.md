@@ -464,7 +464,7 @@ Workflow:
 
 Required GitHub Environment secret:
 
-- `POOL_DEPLOYER_SECRET_KEY` — must be the pool **admin/owner** key. `add_rewards` calls `require_owner` and transfers USDC from the stored `Admin` address, so this account must both own the contract and hold enough USDC to fund the reward.
+- `POOL_ADMIN_SECRET_KEY` — must be the pool **admin/owner** key (the address passed as `--admin`/`POOL_ADMIN_ADDRESS` at deploy, which is not necessarily the deployer). `add_rewards` calls `require_owner` and transfers USDC from the stored `Admin` address, so this account must both own the contract and hold enough USDC to fund the reward.
 
 Required GitHub Environment variables:
 
@@ -480,7 +480,7 @@ Notes:
 Before running mainnet:
 
 - Confirm the `prod` GitHub Environment is protected with required reviewers.
-- Confirm `POOL_DEPLOYER_SECRET_KEY` is the current admin and holds enough USDC for `reward_amount`.
+- Confirm `POOL_ADMIN_SECRET_KEY`'s public key equals the pool's stored `Admin` (`POOL_ADMIN_ADDRESS`) and holds enough USDC for `reward_amount`, plus a little XLM for the trustline reserve.
 - Confirm `lock_period` is a supported period with nonzero deposits.
 
 Append later:
