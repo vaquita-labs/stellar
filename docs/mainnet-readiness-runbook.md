@@ -214,7 +214,7 @@ Required GitHub Environment variables:
 - `VAULT_UPGRADABLE`
 - `BLEND_USDC_STRATEGY_ADDRESS`
 - `BLEND_USDC_STRATEGY_NAME`
-- `USDC_CONTRACT_ADDRESS`
+- `USDC_CONTRACT_ID`
 
 Mainnet Blend USDC strategy values:
 
@@ -284,7 +284,7 @@ Required GitHub Environment variables:
 - `STELLAR_RPC_URL`
 - `STELLAR_NETWORK_PASSPHRASE`
 - `POOL_ADMIN_ADDRESS`
-- `POOL_USDC_CONTRACT_ADDRESS` or `USDC_CONTRACT_ADDRESS`
+- `POOL_USDC_CONTRACT_ADDRESS` or `USDC_CONTRACT_ID`
 - `POOL_LOCK_PERIODS`
 - `POOL_EARLY_WITHDRAWAL_FEE_BPS`
 - `POOL_UPGRADE_TIMELOCK_SECS`
@@ -453,15 +453,40 @@ Scope guard:
 
 - Mainnet reward funding must be protected by GitHub Environment approvals.
 - Add-rewards must remain manual-only and must not run on push or schedule.
-- Reward funding is not part of this scaffold issue.
+
+Workflow:
+
+- File: `.github/workflows/vaquita-pool-add-rewards.yml`.
+- Trigger: `workflow_dispatch` only (no push or schedule).
+- Dispatch inputs: `target_environment` (`dev` | `staging` | `prod`), `lock_period` (seconds), `reward_amount` (raw token amount, in token decimals).
+- Runs with `environment: ${{ inputs.target_environment }}` so secrets and vars resolve from the selected GitHub Environment.
+- Network is resolved from `STELLAR_RPC_URL` + `STELLAR_NETWORK_PASSPHRASE` (invoked with `--rpc-url` / `--network-passphrase`), so it works on any network — not pinned to testnet.
+
+Required GitHub Environment secret:
+
+- `POOL_DEPLOYER_SECRET_KEY` — must be the pool **admin/owner** key. `add_rewards` calls `require_owner` and transfers USDC from the stored `Admin` address, so this account must both own the contract and hold enough USDC to fund the reward.
+
+Required GitHub Environment variables:
+
+- `VAQUITA_POOL_CONTRACT_ID`
+- `STELLAR_RPC_URL`
+- `STELLAR_NETWORK_PASSPHRASE`
+
+Notes:
+
+- The USDC token address is read from the pool contract's own storage (`DataKey::BlendToken`); the workflow does not need a USDC variable.
+- `add_rewards` reverts if the period is not a supported lock period (`LockPeriodNotSupported`) or has zero deposits (`PeriodHasNoDeposits`).
+
+Before running mainnet:
+
+- Confirm the `prod` GitHub Environment is protected with required reviewers.
+- Confirm `POOL_DEPLOYER_SECRET_KEY` is the current admin and holds enough USDC for `reward_amount`.
+- Confirm `lock_period` is a supported period with nonzero deposits.
 
 Append later:
 
-- Workflow filename and input examples.
-- Required environment variables and secrets.
-- Preflight/postflight summary shape.
 - Mainnet funding transaction hash, only after an approved execution window.
-- Artifact path and Step Summary link.
+- Step Summary link.
 
 ## Dune SQL
 

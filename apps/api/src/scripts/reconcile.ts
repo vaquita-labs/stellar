@@ -111,7 +111,7 @@ const resolveOptions = async (): Promise<CliOptions> => {
   const envSingleContractId = splitList(process.env.VAQUITA_POOL_CONTRACT_ID);
   const needsProjectConfig =
     explicitContractIds.length === 0 ||
-    (!readFlag('network-passphrase') && !process.env.STELLAR_NETWORK);
+    (!readFlag('network-passphrase') && !process.env.STELLAR_NETWORK_PASSPHRASE && !process.env.STELLAR_NETWORK);
   const projectConfig = needsProjectConfig ? await getProjectConfig() : null;
   const projectContractIds = projectConfig?.tokens.map((token) => token.vaquitaContractAddress).filter(Boolean) ?? [];
   const contractIds = firstNonEmptyList(
@@ -123,6 +123,7 @@ const resolveOptions = async (): Promise<CliOptions> => {
 
   const networkPassphrase =
     readFlag('network-passphrase') ??
+    process.env.STELLAR_NETWORK_PASSPHRASE ??
     passphraseForNetwork(process.env.STELLAR_NETWORK) ??
     projectConfig?.networkPassphrase ??
     '';
