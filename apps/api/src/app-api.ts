@@ -11,7 +11,11 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import pinoHttp from 'pino-http';
 import { tryParsePoolError } from '@vaquita/shared';
 import { logger } from './lib/logger';
-import { httpMetricsMiddleware } from './lib/metrics';
+import { httpMetricsMiddleware, isMetricsEnabled } from './lib/metrics';
+import {
+  createPrismaProductStatsRepository,
+  startProductMetricsCollector,
+} from './lib/product-metrics';
 import router from './routes';
 
 const app = express();
@@ -81,4 +85,13 @@ const PORT = Number(process.env.PORT) || 3100;
 
 app.listen(PORT, () => {
   logger.info({ port: PORT, env: process.env.NODE_ENV ?? 'development' }, 'API listening');
+
+  // DB-derived product metrics collector. Only runs when metrics are enabled
+  // (no point aggregating if nothing scrapes /api/v1/metrics). Refresh interval
+  // is tunable via OBSERVABILITY_METRICS_REFRESH_MS (default 60s).
+  if (isMetricsEnabled()) {
+    const refreshMs = Number(process.env.OBSERVABILITY_METRICS_REFRESH_MS) || 60_000;
+    startProductMetricsCollector(createPrismaProductStatsRepository(), refreshMs);
+    logger.info({ refreshMs }, 'product metrics collector started');
+  }
 });
