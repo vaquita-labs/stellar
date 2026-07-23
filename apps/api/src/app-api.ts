@@ -11,12 +11,14 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import pinoHttp from 'pino-http';
 import { tryParsePoolError } from '@vaquita/shared';
 import { logger } from './lib/logger';
+import { httpMetricsMiddleware } from './lib/metrics';
 import router from './routes';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(httpMetricsMiddleware);
 
 app.use(
   pinoHttp({

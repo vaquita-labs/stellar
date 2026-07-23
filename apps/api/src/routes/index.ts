@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { isMetricsEnabled, metricsHandler } from '../lib/metrics';
 import ablyRoutes from './ably/route';
 import authRoutes from './auth/route';
 import badgeRoutes from './badge/route';
@@ -8,6 +9,7 @@ import configRoutes from './config/route';
 import depositRoutes from './deposit/route';
 import exploreRoutes from './explore/route';
 import followRoutes from './follows/route';
+import healthRoutes from './health/route';
 import leaderboardRoutes from './leaderboard/route';
 import mapLikeRoutes from './map-likes/route';
 import notificationRoutes from './notifications/route';
@@ -20,6 +22,14 @@ import walletBadgeRoutes from './wallets/badges.route';
 
 const router = Router();
 
+// Private-only metrics scrape endpoint (Prometheus exposition). Opt-in via
+// OBSERVABILITY_METRICS_ENABLED; intended for host/container scraping by Alloy,
+// never public exposure.
+if (isMetricsEnabled()) {
+  router.get('/metrics', metricsHandler);
+}
+
+router.use('/health', healthRoutes);
 router.use('/ably', ablyRoutes);
 router.use('/auth', authRoutes);
 router.use('/badge', badgeRoutes);
