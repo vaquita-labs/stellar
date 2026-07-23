@@ -82,9 +82,30 @@ usage/billing page):
 
 ## Alloy collectors
 
-_Populated by issue 036 (dev) and 038 (staging/prod). Record here: Alloy image
-tag (pinned), host names/labels, deploy commands, and Cloud Explore smoke-test
-queries._
+### Dev (issue 036)
+
+| Field | Value |
+|-------|-------|
+| Config | `observability/alloy/dev.alloy` (metrics only; logs deferred to 038) |
+| Compose | `observability/dokploy/alloy-compose.yml` (Dokploy Compose service) |
+| Image (pinned) | `grafana/alloy:v1.17.0` |
+| Labels | `project=vaquita`, `environment=dev`, `host=dev-01` |
+| Scrapes | Vaquita API `/api/v1/metrics` (private), host/node metrics, container (cAdvisor) |
+| Requires | `OBSERVABILITY_METRICS_ENABLED=true` on the dev `api-service` |
+| Secrets on the service | `GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL`, `_USERNAME`, `_API_KEY` |
+
+**Deploy:** create a Dokploy Compose service pointing at `alloy-compose.yml`, set the
+three `GRAFANA_CLOUD_PROMETHEUS_*` env vars, and deploy. Confirm the API service
+has `OBSERVABILITY_METRICS_ENABLED=true` first.
+
+**Smoke-test (Grafana Cloud → Explore, Prometheus data source):**
+
+- `vaquita_api_http_requests_total{environment="dev"}` — API request metrics
+- `vaquita_pool_tvl_usdc{environment="dev"}` — DB-derived product metric
+- `node_cpu_seconds_total{environment="dev"}` — host metric
+- `container_cpu_usage_seconds_total{environment="dev"}` — container metric (best-effort)
+
+_Staging/prod populated by issue 038._
 
 ## Dashboards
 

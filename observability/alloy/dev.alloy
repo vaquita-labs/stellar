@@ -1,0 +1,90 @@
+// Vaquita — dev Grafana Alloy collector (metrics only).
+// Managed in-repo per docs/grafana-cloud-observability-prd.md (issue 036).
+//
+// Logs are intentionally omitted here: log export is gated behind the log
+// hygiene work (issue 037) and enabled for staging/prod in issue 038.
+//
+// Credentials are read from environment variables — never hard-coded. The
+// Dokploy Alloy service supplies GRAFANA_CLOUD_PROMETHEUS_* from host secrets.
+
+// ============================================================================
+// Grafana Cloud — metrics remote write
+// ============================================================================
+prometheus.remote_write "grafana_cloud" {
+	endpoint {
+		// Optional label for this endpoint in Alloy's own internal metrics/WAL;
+		// does not affect data sent to Grafana Cloud.
+		name = "hosted-prometheus"
+
+		url = sys.env("GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL")
+
+		basic_auth {
+			username = sys.env("GRAFANA_CLOUD_PROMETHEUS_USERNAME")
+			password = sys.env("GRAFANA_CLOUD_PROMETHEUS_API_KEY")
+		}
+	}
+
+	// Stable Vaquita labels applied to every series. Keep bounded — never add
+	// wallet addresses, tx hashes, request IDs, deposit IDs, or user IDs.
+	external_labels = {
+		project     = "vaquita",
+		environment = "dev",
+		host        = "dev-01",
+	}
+}
+
+// ============================================================================
+// Vaquita API — private metrics scrape
+// Reached over the internal Dokploy network; /api/v1/metrics is never public.
+// Requires OBSERVABILITY_METRICS_ENABLED=true on the API service, otherwise the
+// endpoint 404s and this target stays down.
+// ============================================================================
+prometheus.scrape "vaquita_api" {
+	targets = [
+		// Dokploy internal app name (the slug under the service title), NOT the
+		// public domain — keeps the scrape on the private network. Port 3100 is
+		// the container's internal listen port.
+		{ __address__ = "vaquita-apiservice-ni4qwm:3100", service = "api" },
+	]
+
+	metrics_path    = "/api/v1/metrics"
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// ============================================================================
+// Host / node metrics (CPU, memory, disk, filesystem)
+// ============================================================================
+prometheus.exporter.unix "host" {
+	procfs_path = "/host/proc"
+	sysfs_path  = "/host/sys"
+	rootfs_path = "/rootfs"
+
+	filesystem {
+		mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
+		fs_types_exclude     = "^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|securityfs|sysfs|tmpfs|tracefs)$"
+	}
+}
+
+prometheus.scrape "host" {
+	targets         = prometheus.exporter.unix.host.targets
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// ============================================================================
+// Container metrics (cAdvisor over the Docker socket)
+// Best-effort: the container name arrives as the `name` label. If cAdvisor
+// needs extra host mounts on your kernel, host + API metrics still satisfy the
+// smoke test on their own.
+// ============================================================================
+prometheus.exporter.cadvisor "containers" {
+	docker_host      = "unix:///var/run/docker.sock"
+	storage_duration = "5m"
+}
+
+prometheus.scrape "containers" {
+	targets         = prometheus.exporter.cadvisor.containers.targets
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
