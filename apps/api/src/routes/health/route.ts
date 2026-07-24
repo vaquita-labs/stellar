@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { env, prisma, sendError, sendSuccess } from '@vaquita/shared';
+import { observeDbHealth } from '../../lib/metrics';
 
 const router = Router();
 
@@ -33,6 +34,7 @@ router.get('/db', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     const latencyMs = Date.now() - startedAt;
+    observeDbHealth({ ok: true, latencySeconds: latencyMs / 1000 });
 
     return sendSuccess(
       res,
@@ -41,6 +43,7 @@ router.get('/db', async (req, res) => {
     );
   } catch (err) {
     const latencyMs = Date.now() - startedAt;
+    observeDbHealth({ ok: false, latencySeconds: latencyMs / 1000 });
     const detail = err instanceof Error ? err.message : String(err);
     req.log.error({ err, latencyMs }, 'Database health check threw');
     return sendError(

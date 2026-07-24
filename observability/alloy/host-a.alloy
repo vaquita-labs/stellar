@@ -1,0 +1,79 @@
+// Vaquita — Host A Grafana Alloy (dev/testnet + staging/mainnet). Metrics.
+// Managed in-repo per docs/grafana-cloud-observability-prd.md (issue 038).
+//
+// One Alloy per host. This host runs the dev and staging api-services, scraped
+// as SEPARATE targets with per-target `environment` labels so shared host
+// metrics aren't duplicated. Logs are added in a follow-up (see runbook).
+//
+// Credentials via sys.env(...); no secrets committed.
+
+// ============================================================================
+// Grafana Cloud — metrics remote write
+// ============================================================================
+prometheus.remote_write "grafana_cloud" {
+	endpoint {
+		name = "hosted-prometheus"
+		url  = sys.env("GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL")
+
+		basic_auth {
+			username = sys.env("GRAFANA_CLOUD_PROMETHEUS_USERNAME")
+			password = sys.env("GRAFANA_CLOUD_PROMETHEUS_API_KEY")
+		}
+	}
+
+	// `environment` is set per-target below (dev vs staging), NOT globally,
+	// because this host serves two environments. Keep labels bounded.
+	external_labels = {
+		project = "vaquita",
+		host    = "host-a",
+	}
+}
+
+// ============================================================================
+// Vaquita API — one private scrape target per environment on this host.
+// Each api-service must run the metrics code and OBSERVABILITY_METRICS_ENABLED=true.
+// ============================================================================
+prometheus.scrape "vaquita_api" {
+	targets = [
+		{ __address__ = "vaquita-apiservice-ni4qwm:3100", environment = "dev", service = "api" },
+		{ __address__ = "vaquita-apiservice-q9savv:3100", environment = "staging", service = "api" },
+	]
+
+	metrics_path    = "/api/v1/metrics"
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// ============================================================================
+// Host / node metrics (collected once for this host; no per-env label)
+// ============================================================================
+prometheus.exporter.unix "host" {
+	procfs_path = "/host/proc"
+	sysfs_path  = "/host/sys"
+	rootfs_path = "/rootfs"
+
+	filesystem {
+		mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
+		fs_types_exclude     = "^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|securityfs|sysfs|tmpfs|tracefs)$"
+	}
+}
+
+prometheus.scrape "host" {
+	targets         = prometheus.exporter.unix.host.targets
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// ============================================================================
+// Container metrics (cAdvisor over the Docker socket; host-wide, best-effort)
+// ============================================================================
+prometheus.exporter.cadvisor "containers" {
+	docker_host      = "unix:///var/run/docker.sock"
+	storage_duration = "5m"
+}
+
+prometheus.scrape "containers" {
+	targets         = prometheus.exporter.cadvisor.containers.targets
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}

@@ -10,13 +10,19 @@ import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import pinoHttp from 'pino-http';
 import { tryParsePoolError } from '@vaquita/shared';
-import { logger } from './lib/logger';
+import { logger, serializeReq } from './lib/logger';
+import { httpMetricsMiddleware, isMetricsEnabled } from './lib/metrics';
+import {
+  createPrismaProductStatsRepository,
+  startProductMetricsCollector,
+} from './lib/product-metrics';
 import router from './routes';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(httpMetricsMiddleware);
 
 app.use(
   pinoHttp({
@@ -26,17 +32,14 @@ app.use(
       if (res.statusCode >= 400) return 'warn';
       return 'info';
     },
-    customSuccessMessage: (req, res) => `${req.method} ${req.url} → ${res.statusCode}`,
+    // Strip the query string from log messages so query-param secrets never
+    // land in the log body.
+    customSuccessMessage: (req, res) =>
+      `${req.method} ${req.url?.split('?')[0]} → ${res.statusCode}`,
     customErrorMessage: (req, res, err) =>
-      `${req.method} ${req.url} → ${res.statusCode} (${err.message})`,
+      `${req.method} ${req.url?.split('?')[0]} → ${res.statusCode} (${err.message})`,
     serializers: {
-      req: (req) => ({
-        id: req.id,
-        method: req.method,
-        url: req.url,
-        params: req.params,
-        query: req.query,
-      }),
+      req: serializeReq,
       res: (res) => ({ statusCode: res.statusCode }),
     },
   }),
@@ -79,4 +82,13 @@ const PORT = Number(process.env.PORT) || 3100;
 
 app.listen(PORT, () => {
   logger.info({ port: PORT, env: process.env.NODE_ENV ?? 'development' }, 'API listening');
+
+  // DB-derived product metrics collector. Only runs when metrics are enabled
+  // (no point aggregating if nothing scrapes /api/v1/metrics). Refresh interval
+  // is tunable via OBSERVABILITY_METRICS_REFRESH_MS (default 60s).
+  if (isMetricsEnabled()) {
+    const refreshMs = Number(process.env.OBSERVABILITY_METRICS_REFRESH_MS) || 60_000;
+    startProductMetricsCollector(createPrismaProductStatsRepository(), refreshMs);
+    logger.info({ refreshMs }, 'product metrics collector started');
+  }
 });

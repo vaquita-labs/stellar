@@ -1,0 +1,46 @@
+# Vaquita — Host B Grafana Alloy collector (prod/mainnet), deployed as a Dokploy
+# Compose service on the production host.
+# Managed in-repo per docs/grafana-cloud-observability-prd.md (issue 038).
+#
+# Set the GRAFANA_CLOUD_PROMETHEUS_* values as environment variables on THIS
+# Dokploy service (sourced from host secrets — never committed). The LOKI_*
+# credentials are added when log collection is enabled (logs follow-up).
+
+services:
+  alloy:
+    # Pin an exact tag — never latest/canary in production. Verify the current
+    # stable at https://github.com/grafana/alloy/releases before bumping.
+    image: grafana/alloy:v1.17.0
+    container_name: vaquita-alloy-host-b
+    restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=0.0.0.0:12345
+    environment:
+      GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL: ${GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL}
+      GRAFANA_CLOUD_PROMETHEUS_USERNAME: ${GRAFANA_CLOUD_PROMETHEUS_USERNAME}
+      GRAFANA_CLOUD_PROMETHEUS_API_KEY: ${GRAFANA_CLOUD_PROMETHEUS_API_KEY}
+    volumes:
+      # Alloy config (repo-owned), relative to this compose file.
+      - ../alloy/host-b.alloy:/etc/alloy/config.alloy:ro
+      # Docker socket for container discovery + cAdvisor (trusted infra).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Host filesystem for node metrics.
+      - /:/rootfs:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      # Alloy WAL / state.
+      - alloy-data:/var/lib/alloy/data
+    networks:
+      - dokploy-network
+
+volumes:
+  alloy-data:
+
+networks:
+  # Join the prod host's Dokploy network so Alloy can reach the prod api-service
+  # privately.
+  dokploy-network:
+    external: true

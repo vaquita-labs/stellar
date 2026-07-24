@@ -1,0 +1,73 @@
+// Vaquita — Host B Grafana Alloy (prod/mainnet). Metrics.
+// Managed in-repo per docs/grafana-cloud-observability-prd.md (issue 038).
+//
+// One Alloy per host. This host runs only the prod api-service. Logs are added
+// in a follow-up (see runbook). Credentials via sys.env(...); no secrets committed.
+
+// ============================================================================
+// Grafana Cloud — metrics remote write
+// ============================================================================
+prometheus.remote_write "grafana_cloud" {
+	endpoint {
+		name = "hosted-prometheus"
+		url  = sys.env("GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL")
+
+		basic_auth {
+			username = sys.env("GRAFANA_CLOUD_PROMETHEUS_USERNAME")
+			password = sys.env("GRAFANA_CLOUD_PROMETHEUS_API_KEY")
+		}
+	}
+
+	external_labels = {
+		project = "vaquita",
+		host    = "host-b",
+	}
+}
+
+// ============================================================================
+// Vaquita API — prod private scrape target.
+// The prod api-service must run the metrics code and OBSERVABILITY_METRICS_ENABLED=true.
+// ============================================================================
+prometheus.scrape "vaquita_api" {
+	targets = [
+		{ __address__ = "vaquita-api-service-7ksgla:3100", environment = "prod", service = "api" },
+	]
+
+	metrics_path    = "/api/v1/metrics"
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// ============================================================================
+// Host / node metrics
+// ============================================================================
+prometheus.exporter.unix "host" {
+	procfs_path = "/host/proc"
+	sysfs_path  = "/host/sys"
+	rootfs_path = "/rootfs"
+
+	filesystem {
+		mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
+		fs_types_exclude     = "^(autofs|binfmt_misc|cgroup|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|securityfs|sysfs|tmpfs|tracefs)$"
+	}
+}
+
+prometheus.scrape "host" {
+	targets         = prometheus.exporter.unix.host.targets
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// ============================================================================
+// Container metrics (cAdvisor over the Docker socket)
+// ============================================================================
+prometheus.exporter.cadvisor "containers" {
+	docker_host      = "unix:///var/run/docker.sock"
+	storage_duration = "5m"
+}
+
+prometheus.scrape "containers" {
+	targets         = prometheus.exporter.cadvisor.containers.targets
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
