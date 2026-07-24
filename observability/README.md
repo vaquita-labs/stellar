@@ -61,7 +61,7 @@ usage/billing page):
 | Logs ingested | 50 GB / mo | after the log hygiene gate (037) |
 | Retention | 14 days | accepted for the MVP public dashboard |
 | Users | 3 | — |
-| Synthetic Monitoring checks | _TBD_ | needed for issue 068 uptime |
+| Synthetic Monitoring checks | see "Synthetic Monitoring" section | 2 checks × 1 probe × 60s |
 
 ## API metrics surface (implemented — issue 035, 067)
 
@@ -138,6 +138,25 @@ operationally necessary. They must **never** become Loki labels.
 **Allowed Loki labels** (set by Alloy, not the app): `environment`, `project`,
 `service`, `host`, `container`, `level`. Nothing else — no wallet addresses,
 transaction hashes, request IDs, deposit IDs, or user identifiers as labels.
+
+## Synthetic Monitoring (issue 068)
+
+Grafana Cloud Synthetic Monitoring runs external HTTP probes against the public
+endpoints and emits `probe_*` metrics into the stack's Prometheus. These feed
+the "uptime" panel on the public dashboard (069). Uptime % is
+`avg_over_time(probe_success{job="..."}[$__range]) * 100`; response time is
+`probe_duration_seconds`.
+
+| Check (job) | Target | Probe | Labels |
+|-------------|--------|-------|--------|
+| `vaquita-api-health` | `https://api.testnet.dev.vaquita.fi/api/v1/health` | 1 (NA) | `project=vaquita`, `service=api`, `environment=dev` |
+| `vaquita-web` | _TBD — public web app URL_ | 1 (NA) | `project=vaquita`, `service=web`, `environment=dev` |
+
+- Currently scoped to the live testnet/dev endpoints. When mainnet is live, add
+  prod-targeted checks (or repoint) and the public dashboard filters
+  `environment="prod"`.
+- Free-tier Synthetic Monitoring budget observed at setup: _TBD — record exact
+  allowance_ (baseline for the 040 usage alert).
 
 ## Dashboards
 
