@@ -10,7 +10,7 @@ import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import pinoHttp from 'pino-http';
 import { tryParsePoolError } from '@vaquita/shared';
-import { logger } from './lib/logger';
+import { logger, serializeReq } from './lib/logger';
 import { httpMetricsMiddleware, isMetricsEnabled } from './lib/metrics';
 import {
   createPrismaProductStatsRepository,
@@ -32,17 +32,14 @@ app.use(
       if (res.statusCode >= 400) return 'warn';
       return 'info';
     },
-    customSuccessMessage: (req, res) => `${req.method} ${req.url} → ${res.statusCode}`,
+    // Strip the query string from log messages so query-param secrets never
+    // land in the log body.
+    customSuccessMessage: (req, res) =>
+      `${req.method} ${req.url?.split('?')[0]} → ${res.statusCode}`,
     customErrorMessage: (req, res, err) =>
-      `${req.method} ${req.url} → ${res.statusCode} (${err.message})`,
+      `${req.method} ${req.url?.split('?')[0]} → ${res.statusCode} (${err.message})`,
     serializers: {
-      req: (req) => ({
-        id: req.id,
-        method: req.method,
-        url: req.url,
-        params: req.params,
-        query: req.query,
-      }),
+      req: serializeReq,
       res: (res) => ({ statusCode: res.statusCode }),
     },
   }),

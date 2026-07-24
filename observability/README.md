@@ -107,6 +107,38 @@ has `OBSERVABILITY_METRICS_ENABLED=true` first.
 
 _Staging/prod populated by issue 038._
 
+## Log hygiene (issue 037)
+
+App-level redaction gate that must be in place before staging/prod logs are
+exported to Grafana Cloud Logs (issue 038). Alloy adds a second redaction layer
+before `loki.write`; this app-level pass is not optional.
+
+**Redacted in API logs** (`apps/api/src/lib/logger.ts`, `REDACT_PATHS`, censored
+to `[REDACTED]`, top-level and one level deep):
+
+- auth/session: `authorization`, `cookie`, `password`, `token`, `accessToken`,
+  `refreshToken`, `idToken`, `sessionToken`, `jwt`
+- API keys: `apiKey` / `api_key` / `apikey`
+- secrets/signing: `secret`, `sessionSecret`, `authSessionSecret`, `signingSeed`,
+  `signingKey`, `privateKey` / `private_key`, `serverPrivateKey`
+- seed phrases: `seed`, `seedPhrase`, `mnemonic`
+- DB/connection: `databaseUrl` / `database_url`, `connectionString`
+- webhooks: `webhookToken` / `webhook_token`, `x-webhook-token`, `x-api-key` headers
+- raw on-chain envelopes: `transactionRaw`, `transactionEventRaw`,
+  `transaction_event_raw` — **never logged**
+
+**Request logging** (`serializeReq`): logs the route path only — the query
+string is stripped and the raw `query` object is dropped, so secrets passed as
+query params never reach the logs. The same query-strip applies to the pino-http
+success/error messages.
+
+**Wallet addresses & transaction hashes**: may appear in log **bodies** only when
+operationally necessary. They must **never** become Loki labels.
+
+**Allowed Loki labels** (set by Alloy, not the app): `environment`, `project`,
+`service`, `host`, `container`, `level`. Nothing else — no wallet addresses,
+transaction hashes, request IDs, deposit IDs, or user identifiers as labels.
+
 ## Dashboards
 
 _Populated by issue 039 (private ops) and 069 (public product dashboard).
