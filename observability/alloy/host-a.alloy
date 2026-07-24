@@ -1,22 +1,19 @@
-// Vaquita — dev Grafana Alloy collector (metrics only).
-// Managed in-repo per docs/grafana-cloud-observability-prd.md (issue 036).
+// Vaquita — Host A Grafana Alloy (dev/testnet + staging/mainnet). Metrics.
+// Managed in-repo per docs/grafana-cloud-observability-prd.md (issue 038).
 //
-// Logs are intentionally omitted here: log export is gated behind the log
-// hygiene work (issue 037) and enabled for staging/prod in issue 038.
+// One Alloy per host. This host runs the dev and staging api-services, scraped
+// as SEPARATE targets with per-target `environment` labels so shared host
+// metrics aren't duplicated. Logs are added in a follow-up (see runbook).
 //
-// Credentials are read from environment variables — never hard-coded. The
-// Dokploy Alloy service supplies GRAFANA_CLOUD_PROMETHEUS_* from host secrets.
+// Credentials via sys.env(...); no secrets committed.
 
 // ============================================================================
 // Grafana Cloud — metrics remote write
 // ============================================================================
 prometheus.remote_write "grafana_cloud" {
 	endpoint {
-		// Optional label for this endpoint in Alloy's own internal metrics/WAL;
-		// does not affect data sent to Grafana Cloud.
 		name = "hosted-prometheus"
-
-		url = sys.env("GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL")
+		url  = sys.env("GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL")
 
 		basic_auth {
 			username = sys.env("GRAFANA_CLOUD_PROMETHEUS_USERNAME")
@@ -24,27 +21,22 @@ prometheus.remote_write "grafana_cloud" {
 		}
 	}
 
-	// Stable Vaquita labels applied to every series. Keep bounded — never add
-	// wallet addresses, tx hashes, request IDs, deposit IDs, or user IDs.
+	// `environment` is set per-target below (dev vs staging), NOT globally,
+	// because this host serves two environments. Keep labels bounded.
 	external_labels = {
-		project     = "vaquita",
-		environment = "dev",
-		host        = "dev-01",
+		project = "vaquita",
+		host    = "host-a",
 	}
 }
 
 // ============================================================================
-// Vaquita API — private metrics scrape
-// Reached over the internal Dokploy network; /api/v1/metrics is never public.
-// Requires OBSERVABILITY_METRICS_ENABLED=true on the API service, otherwise the
-// endpoint 404s and this target stays down.
+// Vaquita API — one private scrape target per environment on this host.
+// Each api-service must run the metrics code and OBSERVABILITY_METRICS_ENABLED=true.
 // ============================================================================
 prometheus.scrape "vaquita_api" {
 	targets = [
-		// Dokploy internal app name (the slug under the service title), NOT the
-		// public domain — keeps the scrape on the private network. Port 3100 is
-		// the container's internal listen port.
-		{ __address__ = "vaquita-apiservice-ni4qwm:3100", service = "api" },
+		{ __address__ = "vaquita-apiservice-ni4qwm:3100", environment = "dev", service = "api" },
+		{ __address__ = "vaquita-apiservice-q9savv:3100", environment = "staging", service = "api" },
 	]
 
 	metrics_path    = "/api/v1/metrics"
@@ -53,7 +45,7 @@ prometheus.scrape "vaquita_api" {
 }
 
 // ============================================================================
-// Host / node metrics (CPU, memory, disk, filesystem)
+// Host / node metrics (collected once for this host; no per-env label)
 // ============================================================================
 prometheus.exporter.unix "host" {
 	procfs_path = "/host/proc"
@@ -73,10 +65,7 @@ prometheus.scrape "host" {
 }
 
 // ============================================================================
-// Container metrics (cAdvisor over the Docker socket)
-// Best-effort: the container name arrives as the `name` label. If cAdvisor
-// needs extra host mounts on your kernel, host + API metrics still satisfy the
-// smoke test on their own.
+// Container metrics (cAdvisor over the Docker socket; host-wide, best-effort)
 // ============================================================================
 prometheus.exporter.cadvisor "containers" {
 	docker_host      = "unix:///var/run/docker.sock"

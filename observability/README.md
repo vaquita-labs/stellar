@@ -82,30 +82,37 @@ usage/billing page):
 
 ## Alloy collectors
 
-### Dev (issue 036)
+One Alloy **per host**; `environment` is a per-target label (dev/staging/prod)
+so shared host metrics aren't duplicated. Deploy from `main` (Grafana configs
+always deploy from `main`).
 
-| Field | Value |
-|-------|-------|
-| Config | `observability/alloy/dev.alloy` (metrics only; logs deferred to 038) |
-| Compose | `observability/dokploy/alloy-compose.yml` (Dokploy Compose service) |
-| Image (pinned) | `grafana/alloy:v1.17.0` |
-| Labels | `project=vaquita`, `environment=dev`, `host=dev-01` |
-| Scrapes | Vaquita API `/api/v1/metrics` (private), host/node metrics, container (cAdvisor) |
-| Requires | `OBSERVABILITY_METRICS_ENABLED=true` on the dev `api-service` |
-| Secrets on the service | `GRAFANA_CLOUD_PROMETHEUS_REMOTE_WRITE_URL`, `_USERNAME`, `_API_KEY` |
+| Host | Envs | Config | Compose | Deploy Path |
+|------|------|--------|---------|-------------|
+| A (`ubuntu-4gb-ash-1`) | dev/testnet + staging/mainnet | `observability/alloy/host-a.alloy` | `alloy-compose.yml` | container `vaquita-alloy-host-a` |
+| B (prod) | prod/mainnet | `observability/alloy/host-b.alloy` | `alloy-compose.prod.yml` | container `vaquita-alloy-host-b` |
 
-**Deploy:** create a Dokploy Compose service pointing at `alloy-compose.yml`, set the
-three `GRAFANA_CLOUD_PROMETHEUS_*` env vars, and deploy. Confirm the API service
-has `OBSERVABILITY_METRICS_ENABLED=true` first.
+**Scrape targets (internal Dokploy service names, private):**
 
-**Smoke-test (Grafana Cloud → Explore, Prometheus data source):**
+| Env | api-service (internal) | Deploy branch |
+|-----|------------------------|---------------|
+| dev | `vaquita-apiservice-ni4qwm:3100` | `dev` |
+| staging | `vaquita-apiservice-q9savv:3100` | `main` |
+| prod | `vaquita-api-service-7ksgla:3100` | `main` |
 
-- `vaquita_api_http_requests_total{environment="dev"}` — API request metrics
-- `vaquita_pool_tvl_usdc{environment="dev"}` — DB-derived product metric
-- `node_cpu_seconds_total{environment="dev"}` — host metric
-- `container_cpu_usage_seconds_total{environment="dev"}` — container metric (best-effort)
+**Each api-service needs** `OBSERVABILITY_METRICS_ENABLED=true` and the 035/067
+metrics code on its deploy branch. Each Alloy service needs the three
+`GRAFANA_CLOUD_PROMETHEUS_*` env vars (image pinned `grafana/alloy:v1.17.0`).
 
-_Staging/prod populated by issue 038._
+**Verify (Grafana Cloud → Explore) — staging first, then prod:**
+
+- `vaquita_pool_tvl_usdc{environment="staging"}` / `{environment="prod"}`
+- `vaquita_api_http_requests_total{environment="prod"}`
+- `node_cpu_seconds_total{host="host-b"}`
+
+**Logs:** metrics enabled first (this pass). Log collection (Loki + a second
+redaction layer after the 037 app-level gate) is a follow-up — it needs the
+Docker labels Dokploy sets on containers to derive `environment`/`service`
+cleanly. `GRAFANA_CLOUD_LOKI_*` env vars get added to the Alloy services then._
 
 ## Log hygiene (issue 037)
 

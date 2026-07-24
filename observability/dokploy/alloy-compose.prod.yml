@@ -1,5 +1,5 @@
-# Vaquita — Host A Grafana Alloy collector (dev/testnet + staging/mainnet),
-# deployed as a Dokploy Compose service on the shared host.
+# Vaquita — Host B Grafana Alloy collector (prod/mainnet), deployed as a Dokploy
+# Compose service on the production host.
 # Managed in-repo per docs/grafana-cloud-observability-prd.md (issue 038).
 #
 # Set the GRAFANA_CLOUD_PROMETHEUS_* values as environment variables on THIS
@@ -11,7 +11,7 @@ services:
     # Pin an exact tag — never latest/canary in production. Verify the current
     # stable at https://github.com/grafana/alloy/releases before bumping.
     image: grafana/alloy:v1.17.0
-    container_name: vaquita-alloy-host-a
+    container_name: vaquita-alloy-host-b
     restart: unless-stopped
     command:
       - run
@@ -24,7 +24,7 @@ services:
       GRAFANA_CLOUD_PROMETHEUS_API_KEY: ${GRAFANA_CLOUD_PROMETHEUS_API_KEY}
     volumes:
       # Alloy config (repo-owned), relative to this compose file.
-      - ../alloy/host-a.alloy:/etc/alloy/config.alloy:ro
+      - ../alloy/host-b.alloy:/etc/alloy/config.alloy:ro
       # Docker socket for container discovery + cAdvisor (trusted infra).
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Host filesystem for node metrics.
@@ -40,8 +40,7 @@ volumes:
   alloy-data:
 
 networks:
-  # Join the existing Dokploy network so Alloy can reach api-service privately.
-  # TODO: confirm the network name Dokploy uses for the Vaquita project
-  # (commonly `dokploy-network`).
+  # Join the prod host's Dokploy network so Alloy can reach the prod api-service
+  # privately.
   dokploy-network:
     external: true
