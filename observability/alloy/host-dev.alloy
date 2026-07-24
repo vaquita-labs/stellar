@@ -1,8 +1,11 @@
-// Vaquita — Host B Grafana Alloy (prod/mainnet). Metrics.
+// Vaquita — Grafana Alloy for the dev host (dev/testnet + staging/mainnet). Metrics.
 // Managed in-repo per docs/grafana-cloud-observability-prd.md (issue 038).
 //
-// One Alloy per host. This host runs only the prod api-service. Logs are added
-// in a follow-up (see runbook). Credentials via sys.env(...); no secrets committed.
+// One Alloy per host. This host runs the dev and staging api-services, scraped
+// as SEPARATE targets with per-target `environment` labels so shared host
+// metrics aren't duplicated. Logs are added in a follow-up (see runbook).
+//
+// Credentials via sys.env(...); no secrets committed.
 
 // ============================================================================
 // Grafana Cloud — metrics remote write
@@ -18,19 +21,22 @@ prometheus.remote_write "grafana_cloud" {
 		}
 	}
 
+	// `environment` is set per-target below (dev vs staging), NOT globally,
+	// because this host serves two environments. Keep labels bounded.
 	external_labels = {
 		project = "vaquita",
-		host    = "host-b",
+		host    = "host-dev",
 	}
 }
 
 // ============================================================================
-// Vaquita API — prod private scrape target.
-// The prod api-service must run the metrics code and OBSERVABILITY_METRICS_ENABLED=true.
+// Vaquita API — one private scrape target per environment on this host.
+// Each api-service must run the metrics code and OBSERVABILITY_METRICS_ENABLED=true.
 // ============================================================================
 prometheus.scrape "vaquita_api" {
 	targets = [
-		{ __address__ = "vaquita-api-service-7ksgla:3100", environment = "prod", service = "api" },
+		{ __address__ = "vaquita-apiservice-ni4qwm:3100", environment = "dev", service = "api" },
+		{ __address__ = "vaquita-apiservice-q9savv:3100", environment = "staging", service = "api" },
 	]
 
 	metrics_path    = "/api/v1/metrics"
@@ -39,7 +45,7 @@ prometheus.scrape "vaquita_api" {
 }
 
 // ============================================================================
-// Host / node metrics
+// Host / node metrics (collected once for this host; no per-env label)
 // ============================================================================
 prometheus.exporter.unix "host" {
 	procfs_path = "/host/proc"
@@ -59,7 +65,7 @@ prometheus.scrape "host" {
 }
 
 // ============================================================================
-// Container metrics (cAdvisor over the Docker socket)
+// Container metrics (cAdvisor over the Docker socket; host-wide, best-effort)
 // ============================================================================
 prometheus.exporter.cadvisor "containers" {
 	docker_host      = "unix:///var/run/docker.sock"
@@ -73,10 +79,11 @@ prometheus.scrape "containers" {
 }
 
 // ============================================================================
-// Logs — prod api-service container logs → Grafana Cloud Loki.
-// Option 1: explicit slug→environment mapping. App-level redaction (issue 037)
-// is the first layer; loki.process below is the second. Bounded Loki labels
-// only: project, environment, service, host, container, level.
+// Logs — api-service container logs → Grafana Cloud Loki.
+// Option 1: explicit slug→environment mapping (Dokploy sets no env labels; the
+// only signal is the Swarm service name). App-level redaction (issue 037) is the
+// first layer; loki.process below is the second. Bounded Loki labels only:
+// project, environment, service, host, container, level.
 // ============================================================================
 discovery.docker "containers" {
 	host = "unix:///var/run/docker.sock"
@@ -85,23 +92,33 @@ discovery.docker "containers" {
 discovery.relabel "api_logs" {
 	targets = discovery.docker.containers.targets
 
-	// Keep only the prod api-service container.
+	// Keep only this host's api-service containers.
 	rule {
 		source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
-		regex         = "vaquita-api-service-7ksgla"
+		regex         = "vaquita-apiservice-(ni4qwm|q9savv)"
 		action        = "keep"
 	}
+	// environment from the slug
 	rule {
-		target_label = "environment"
-		replacement  = "prod"
+		source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+		regex         = "vaquita-apiservice-ni4qwm"
+		target_label  = "environment"
+		replacement   = "dev"
 	}
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+		regex         = "vaquita-apiservice-q9savv"
+		target_label  = "environment"
+		replacement   = "staging"
+	}
+	// bounded static + derived labels
 	rule {
 		target_label = "project"
 		replacement  = "vaquita"
 	}
 	rule {
 		target_label = "host"
-		replacement  = "host-b"
+		replacement  = "host-dev"
 	}
 	rule {
 		target_label = "service"
@@ -121,6 +138,7 @@ loki.source.docker "api" {
 }
 
 loki.process "hygiene" {
+	// Promote pino's level into a bounded label.
 	stage.json {
 		expressions = {
 			level = "level",
@@ -133,6 +151,8 @@ loki.process "hygiene" {
 		}
 	}
 
+	// Second-layer redaction: scrub bearer tokens that might appear inside a
+	// message string (structured secret fields are already redacted app-side).
 	stage.replace {
 		expression = "(?i)bearer\\s+[A-Za-z0-9._-]+"
 		replace    = "Bearer [REDACTED]"
@@ -143,6 +163,7 @@ loki.process "hygiene" {
 
 loki.write "grafana_cloud" {
 	endpoint {
+		// GRAFANA_CLOUD_LOKI_PUSH_URL is the base host; the push path is appended.
 		url = sys.env("GRAFANA_CLOUD_LOKI_PUSH_URL") + "/loki/api/v1/push"
 
 		basic_auth {
