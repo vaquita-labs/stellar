@@ -77,3 +77,98 @@ prometheus.scrape "containers" {
 	scrape_interval = "30s"
 	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
 }
+
+// ============================================================================
+// Logs — api-service container logs → Grafana Cloud Loki.
+// Option 1: explicit slug→environment mapping (Dokploy sets no env labels; the
+// only signal is the Swarm service name). App-level redaction (issue 037) is the
+// first layer; loki.process below is the second. Bounded Loki labels only:
+// project, environment, service, host, container, level.
+// ============================================================================
+discovery.docker "containers" {
+	host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "api_logs" {
+	targets = discovery.docker.containers.targets
+
+	// Keep only this host's api-service containers.
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+		regex         = "vaquita-apiservice-(ni4qwm|q9savv)"
+		action        = "keep"
+	}
+	// environment from the slug
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+		regex         = "vaquita-apiservice-ni4qwm"
+		target_label  = "environment"
+		replacement   = "dev"
+	}
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+		regex         = "vaquita-apiservice-q9savv"
+		target_label  = "environment"
+		replacement   = "staging"
+	}
+	// bounded static + derived labels
+	rule {
+		target_label = "project"
+		replacement  = "vaquita"
+	}
+	rule {
+		target_label = "host"
+		replacement  = "host-a"
+	}
+	rule {
+		target_label = "service"
+		replacement  = "api"
+	}
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+		target_label  = "container"
+	}
+}
+
+loki.source.docker "api" {
+	host          = "unix:///var/run/docker.sock"
+	targets       = discovery.docker.containers.targets
+	relabel_rules = discovery.relabel.api_logs.rules
+	forward_to    = [loki.process.hygiene.receiver]
+}
+
+loki.process "hygiene" {
+	// Promote pino's level into a bounded label.
+	stage.json {
+		expressions = {
+			level = "level",
+		}
+	}
+
+	stage.labels {
+		values = {
+			level = "",
+		}
+	}
+
+	// Second-layer redaction: scrub bearer tokens that might appear inside a
+	// message string (structured secret fields are already redacted app-side).
+	stage.replace {
+		expression = "(?i)bearer\\s+[A-Za-z0-9._-]+"
+		replace    = "Bearer [REDACTED]"
+	}
+
+	forward_to = [loki.write.grafana_cloud.receiver]
+}
+
+loki.write "grafana_cloud" {
+	endpoint {
+		// GRAFANA_CLOUD_LOKI_PUSH_URL is the base host; the push path is appended.
+		url = sys.env("GRAFANA_CLOUD_LOKI_PUSH_URL") + "/loki/api/v1/push"
+
+		basic_auth {
+			username = sys.env("GRAFANA_CLOUD_LOKI_USERNAME")
+			password = sys.env("GRAFANA_CLOUD_LOKI_API_KEY")
+		}
+	}
+}
