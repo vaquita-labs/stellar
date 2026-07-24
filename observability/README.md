@@ -109,10 +109,16 @@ metrics code on its deploy branch. Each Alloy service needs the three
 - `vaquita_api_http_requests_total{environment="prod"}`
 - `node_cpu_seconds_total{host="host-b"}`
 
-**Logs:** metrics enabled first (this pass). Log collection (Loki + a second
-redaction layer after the 037 app-level gate) is a follow-up — it needs the
-Docker labels Dokploy sets on containers to derive `environment`/`service`
-cleanly. `GRAFANA_CLOUD_LOKI_*` env vars get added to the Alloy services then._
+**Logs:** enabled in the same configs. Dokploy sets no environment/service
+Docker labels (only the Swarm service name), so logs use **option 1** — an
+explicit slug→environment mapping in `discovery.relabel` for the api-services
+(`ni4qwm`→dev, `q9savv`→staging, `7ksgla`→prod). A `loki.process` stage promotes
+pino's `level` to a label and scrubs bearer tokens (second layer after the 037
+app-level gate) before `loki.write`. Bounded Loki labels only: `project`,
+`environment`, `service`, `host`, `container`, `level`. Requires the three
+`GRAFANA_CLOUD_LOKI_*` env vars on each Alloy service. Currently api-services
+only; web/admin/jobs can be added by extending the relabel keep-list (or by
+adding custom Docker labels in Dokploy — "option 2")._
 
 ## Log hygiene (issue 037)
 

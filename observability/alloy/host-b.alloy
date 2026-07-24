@@ -71,3 +71,83 @@ prometheus.scrape "containers" {
 	scrape_interval = "30s"
 	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
 }
+
+// ============================================================================
+// Logs — prod api-service container logs → Grafana Cloud Loki.
+// Option 1: explicit slug→environment mapping. App-level redaction (issue 037)
+// is the first layer; loki.process below is the second. Bounded Loki labels
+// only: project, environment, service, host, container, level.
+// ============================================================================
+discovery.docker "containers" {
+	host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "api_logs" {
+	targets = discovery.docker.containers.targets
+
+	// Keep only the prod api-service container.
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+		regex         = "vaquita-api-service-7ksgla"
+		action        = "keep"
+	}
+	rule {
+		target_label = "environment"
+		replacement  = "prod"
+	}
+	rule {
+		target_label = "project"
+		replacement  = "vaquita"
+	}
+	rule {
+		target_label = "host"
+		replacement  = "host-b"
+	}
+	rule {
+		target_label = "service"
+		replacement  = "api"
+	}
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+		target_label  = "container"
+	}
+}
+
+loki.source.docker "api" {
+	host          = "unix:///var/run/docker.sock"
+	targets       = discovery.docker.containers.targets
+	relabel_rules = discovery.relabel.api_logs.rules
+	forward_to    = [loki.process.hygiene.receiver]
+}
+
+loki.process "hygiene" {
+	stage.json {
+		expressions = {
+			level = "level",
+		}
+	}
+
+	stage.labels {
+		values = {
+			level = "",
+		}
+	}
+
+	stage.replace {
+		expression = "(?i)bearer\\s+[A-Za-z0-9._-]+"
+		replace    = "Bearer [REDACTED]"
+	}
+
+	forward_to = [loki.write.grafana_cloud.receiver]
+}
+
+loki.write "grafana_cloud" {
+	endpoint {
+		url = sys.env("GRAFANA_CLOUD_LOKI_PUSH_URL") + "/loki/api/v1/push"
+
+		basic_auth {
+			username = sys.env("GRAFANA_CLOUD_LOKI_USERNAME")
+			password = sys.env("GRAFANA_CLOUD_LOKI_API_KEY")
+		}
+	}
+}
