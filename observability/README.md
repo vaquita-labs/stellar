@@ -88,8 +88,8 @@ always deploy from `main`).
 
 | Host | Envs | Config | Compose | Deploy Path |
 |------|------|--------|---------|-------------|
-| A (`ubuntu-4gb-ash-1`) | dev/testnet + staging/mainnet | `observability/alloy/host-a.alloy` | `alloy-compose.yml` | container `vaquita-alloy-host-a` |
-| B (prod) | prod/mainnet | `observability/alloy/host-b.alloy` | `alloy-compose.prod.yml` | container `vaquita-alloy-host-b` |
+| dev host (`ubuntu-4gb-ash-1`) | dev/testnet + staging/mainnet | `observability/alloy/host-dev.alloy` | `alloy-compose.yml` | container `vaquita-alloy-host-dev` |
+| prod host | prod/mainnet | `observability/alloy/host-prod.alloy` | `alloy-compose.prod.yml` | container `vaquita-alloy-host-prod` |
 
 **Scrape targets (internal Dokploy service names, private):**
 
@@ -107,7 +107,7 @@ metrics code on its deploy branch. Each Alloy service needs the three
 
 - `vaquita_pool_tvl_usdc{environment="staging"}` / `{environment="prod"}`
 - `vaquita_api_http_requests_total{environment="prod"}`
-- `node_cpu_seconds_total{host="host-b"}`
+- `node_cpu_seconds_total{host="host-prod"}`
 
 **Logs:** enabled in the same configs. Dokploy sets no environment/service
 Docker labels (only the Swarm service name), so logs use **option 1** — an

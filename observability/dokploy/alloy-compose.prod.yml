@@ -1,4 +1,4 @@
-# Vaquita — Host B Grafana Alloy collector (prod/mainnet), deployed as a Dokploy
+# Vaquita — Grafana Alloy for the prod host (prod/mainnet), deployed as a Dokploy
 # Compose service on the production host.
 # Managed in-repo per docs/grafana-cloud-observability-prd.md (issue 038).
 #
@@ -11,7 +11,7 @@ services:
     # Pin an exact tag — never latest/canary in production. Verify the current
     # stable at https://github.com/grafana/alloy/releases before bumping.
     image: grafana/alloy:v1.17.0
-    container_name: vaquita-alloy-host-b
+    container_name: vaquita-alloy-host-prod
     restart: unless-stopped
     command:
       - run
@@ -27,7 +27,7 @@ services:
       GRAFANA_CLOUD_LOKI_API_KEY: ${GRAFANA_CLOUD_LOKI_API_KEY}
     volumes:
       # Alloy config (repo-owned), relative to this compose file.
-      - ../alloy/host-b.alloy:/etc/alloy/config.alloy:ro
+      - ../alloy/host-prod.alloy:/etc/alloy/config.alloy:ro
       # Docker socket for container discovery + cAdvisor (trusted infra).
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Host filesystem for node metrics.
