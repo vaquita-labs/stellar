@@ -19,7 +19,7 @@ const LogoByType: Record<string, ReactNode> = {
   Stellar: <Image src="/chains/stellar.png" alt="Stellar" width={20} height={20} className="rounded-sm" />,
 };
 
-export function WalletPage() {
+export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const { walletAddress, network } = useConfigStore();
@@ -46,7 +46,11 @@ export function WalletPage() {
   const networkLogo = network?.type ? LogoByType[network.type] : null;
 
   return (
-    <PageLayout title={t('wallet.page.title')} backHref="/profile/settings">
+    <PageLayout
+      title={t('wallet.page.title')}
+      backHref={onBack ? undefined : '/profile/settings'}
+      onBack={onBack}
+    >
       <section className="rounded-lg border border-black border-b-2 bg-white p-4 sm:p-6 flex flex-col gap-4">
           <div className="flex items-center gap-2">
             {networkLogo}

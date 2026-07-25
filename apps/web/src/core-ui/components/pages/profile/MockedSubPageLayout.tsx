@@ -11,6 +11,9 @@ interface MockedSubPageLayoutProps {
   subtitle?: string;
   /** Fallback route when there's no in-app history to go back to. */
   backHref?: string;
+  /** Cierra el panel apilado en vez de navegar por ruta. Lo pasa el modal padre
+   *  cuando la página se abre como panel; sin él, el back navega (ruta suelta). */
+  onBack?: () => void;
   /** Hide the "Soon" badge if the page becomes real later. */
   showSoonBadge?: boolean;
   children: ReactNode;
@@ -25,21 +28,24 @@ export function MockedSubPageLayout({
   title,
   subtitle,
   backHref = '/profile/settings',
+  onBack,
   showSoonBadge = true,
   children,
 }: MockedSubPageLayoutProps) {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const handleBack = () => {
-    // Prefer returning to wherever the user came from. Fall back to the
-    // provided href when there's no in-app history (e.g. direct URL entry).
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push(backHref);
-    }
-  };
+  const handleBack =
+    onBack ??
+    (() => {
+      // Prefer returning to wherever the user came from. Fall back to the
+      // provided href when there's no in-app history (e.g. direct URL entry).
+      if (typeof window !== 'undefined' && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push(backHref);
+      }
+    });
 
   return (
     <div className="h-full overflow-y-auto bg-background">
