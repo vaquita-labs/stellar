@@ -26,13 +26,19 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
   });
   useEffect(() => {
     if (!open) return;
-    const previousUrl = window.location.pathname + window.location.search;
-    window.history.pushState(null, '', '/profile/settings');
+    const settingsUrl = '/profile/settings';
+    window.history.pushState(null, '', settingsUrl);
     const onPopState = () => onCloseRef.current();
     window.addEventListener('popstate', onPopState);
     return () => {
       window.removeEventListener('popstate', onPopState);
-      if (window.location.pathname + window.location.search !== previousUrl) window.history.back();
+      // Sólo deshacemos nuestro pushState cuando Settings se cierra en su lugar
+      // (flecha atrás o gesto del sistema): ahí la URL sigue siendo /profile/settings.
+      // Si el usuario entró a una sub-página (Preferences, Wallet…), la URL ya
+      // avanzó; un history.back() acá cancelaría esa navegación y cerraría
+      // Settings de golpe. Dejar la entrada hace que el "atrás" de la sub-página
+      // vuelva a /profile/settings, es decir, Settings reaparece.
+      if (window.location.pathname === settingsUrl) window.history.back();
     };
   }, [open]);
 
