@@ -6,12 +6,11 @@ import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiBell } from 'react-icons/fi';
 import {
-  useApyByLockPeriod,
   useBlendPosition,
   useDepositsComplete,
   useProfileData,
@@ -26,7 +25,6 @@ import { useModalPresence } from '../molecules/AppModal';
 import {
   CoinsModal,
   ExperienceModal,
-  PortfolioPanel,
   StreakModal,
 } from '../organisms';
 import { VaquitaAvatarCircle } from '../avatar/VaquitaAvatar';
@@ -41,22 +39,17 @@ export const HeaderStats = () => {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showCoinsModal, setShowCoinsModal] = useState(false);
   const [showExperienceModal, setShowExperienceModal] = useState(false);
-  // El panel de portafolio se maneja por URL (`?portfolio=1` en /home), NO por
-  // estado local: así, al entrar a la ruta /portafolio (tocar un plazo) el panel
-  // no se "pierde", y el botón atrás del navegador vuelve a /home?portfolio=1 con
-  // el panel abierto. Además sobrevive a un refresh. Ver goToTerm en PortfolioPanel.
+  // El saldo abre el portafolio navegando a /portafolio: esa ruta la intercepta
+  // el slot `@modal` y se pinta como overlay sobre /home (el mundo 3D queda
+  // montado detrás, no se recarga). El panel y las posiciones viven ahí, en
+  // <PortfolioFlow>. Ver [[portfolio-overlay-flow]].
   const router = useRouter();
-  const showPortfolioPanel = useSearchParams().get('portfolio') === '1';
-  const openPortfolioPanel = () => router.push('/home?portfolio=1', { scroll: false });
-  // Cerrar con replace (no push): saca el `?portfolio=1` sin dejar un entry que,
-  // al hacer atrás, reabra el panel recién cerrado.
-  const closePortfolioPanel = () => router.replace('/home', { scroll: false });
+  const openPortfolioPanel = () => router.push('/portafolio');
   // Mantienen el modal montado mientras corre la animación de salida.
   const streakModalMounted = useModalPresence(showStreakModal);
   const coinsModalMounted = useModalPresence(showCoinsModal);
   const experienceModalMounted = useModalPresence(showExperienceModal);
-  const portfolioPanelMounted = useModalPresence(showPortfolioPanel);
-  const { walletAddress, token, lockPeriod } = useConfigStore();
+  const { walletAddress, token } = useConfigStore();
   const hideBalance = useHideBalance();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
@@ -78,8 +71,6 @@ export const HeaderStats = () => {
   } = useBlendPosition(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
-  // Solo para el desglose del portafolio: el APY ya no se muestra en el header.
-  const { data: apyData } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
 
   // Ganancia estimada (proyección a vencimiento) sumada desde cada depósito,
@@ -99,18 +90,6 @@ export const HeaderStats = () => {
       return { ...prev, [id]: earnings };
     });
   }, []);
-  const { vaquitaEarnings, protocolEarnings } = activeDeposits.reduce(
-    (acc, d) => {
-      const earnings = earningsById[d.id];
-      if (earnings) {
-        acc.vaquitaEarnings += earnings.vaquita;
-        acc.protocolEarnings += earnings.protocol;
-      }
-      return acc;
-    },
-    { vaquitaEarnings: 0, protocolEarnings: 0 },
-  );
-
   // Saldo en vivo: capital + interés devengado hasta "ahora". Cada depósito
   // reporta cuánto rinde por milisegundo, así que el contador avanza en el
   // cliente sin volver a pedirle nada al servidor. Tick corto para que los
@@ -431,17 +410,6 @@ export const HeaderStats = () => {
       {coinsModalMounted && <CoinsModal open={showCoinsModal} onOpenChange={() => setShowCoinsModal(false)} coins={goldCoins} />}
       {experienceModalMounted && (
         <ExperienceModal open={showExperienceModal} onOpenChange={() => setShowExperienceModal(false)} experience={experience} />
-      )}
-      {portfolioPanelMounted && (
-        <PortfolioPanel
-          open={showPortfolioPanel}
-          onOpenChange={closePortfolioPanel}
-          vaquitaEarnings={vaquitaEarnings}
-          protocolEarnings={protocolEarnings}
-          protocolApy={apyData?.protocolApy ?? 0}
-          lendingMarketName={apyData?.lendingMarketName}
-          tokenSymbol={token?.symbol}
-        />
       )}
       {/* Aquí se montaba <ReferralsModal> (pantalla de referidos: ganancias,
           tiers de boost e invitar amigos). Oculta a propósito junto con su chip

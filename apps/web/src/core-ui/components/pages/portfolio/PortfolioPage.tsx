@@ -57,7 +57,7 @@ const isReady = (d: DepositResponseDTO) => d.createdTimestamp + d.lockPeriod - d
  * PortfolioPanel al tocar un plazo). El retiro devuelve la plata a las savings
  * (Blend) vía PositionWithdrawSheet.
  */
-export function PortfolioPage() {
+export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { walletAddress, token } = useConfigStore();
@@ -143,10 +143,10 @@ export function PortfolioPage() {
   return (
     <PageLayout
       title={t('portfolio.title', 'Portfolio')}
-      // Volvemos con back() (no a "/home" fijo): así se regresa al entry anterior
-      // del historial —/home?portfolio=1— y el panel de portafolio reaparece
-      // abierto, en vez de aterrizar en /home con el panel cerrado.
-      onBack={() => router.back()}
+      // En el flujo de overlays, PortfolioFlow pasa un onBack que cierra la hoja
+      // de posiciones y deja el panel de portafolio visible detrás. Como
+      // fallback (uso directo de la página) se vuelve al entry anterior.
+      onBack={onBack ?? (() => router.back())}
       headerGap="gap-3"
       rightSlot={
         <CircleIconButton

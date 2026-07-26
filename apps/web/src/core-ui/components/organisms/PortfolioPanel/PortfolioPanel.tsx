@@ -6,10 +6,11 @@ import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useBlendPosition, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { useRouter } from 'next/navigation';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight } from 'react-icons/fi';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
+import { DepositEarnings, DepositEarningsReporter } from '../../home/DepositEarningsReporter';
 import { AllocationDetailSheet } from './AllocationDetailSheet';
 import { BlendDetailSheet } from './BlendDetailSheet';
 import { InvestModal } from './InvestModal';
@@ -27,10 +28,6 @@ import { PressableButton } from '../../molecules/PressableButton';
 export function PortfolioPanel({
   open,
   onOpenChange,
-  vaquitaEarnings,
-  protocolEarnings,
-  protocolApy,
-  lendingMarketName,
   tokenSymbol = 'USDC',
 }: PortfolioPanelProps) {
   const { t } = useTranslation();
@@ -57,10 +54,12 @@ export function PortfolioPanel({
   const depositMounted = useModalPresence(showDeposit);
 
   // Retirar navega a /portafolio con ese plazo ya filtrado (la lista de
-  // posiciones a retirar). NO cerramos el panel: como está abierto por URL
-  // (/home?portfolio=1), ese entry queda en el historial y el botón atrás de
-  // /portafolio vuelve al panel abierto.
+  // posiciones a retirar). El panel queda montado detrás (misma ruta
+  // interceptada, solo cambia `?period`), así el push/pop anima la hoja de
+  // posiciones sobre él. Cerramos el detalle del plazo para no dejarlo apilado
+  // debajo de la lista.
   const goToTerm = (lockPeriod: number) => {
+    setDetailLockPeriod(null);
     router.push(`/portafolio?period=${lockPeriod}`);
   };
 
@@ -72,9 +71,46 @@ export function PortfolioPanel({
   );
   const { byLockPeriod, isLoading: apyLoading } = useApyByLockPeriods(lockPeriods, token?.symbol ?? '');
 
+  // Depósitos activos (con lock): la fuente tanto de las allocations por plazo
+  // como de la ganancia estimada del header.
+  const activeDeposits = useMemo(
+    () => getDepositsData(depositsData?.deposits ?? []).activeDeposits,
+    [depositsData],
+  );
+
+  // Ganancia estimada: cada depósito reporta su proyección según el APY de su
+  // propio lock period (mismo cálculo que la card). Antes lo agregaba el
+  // HeaderStats y lo pasaba por props; como el panel ya no vive dentro del
+  // header (se abre por la ruta /portafolio), lo calcula él mismo.
+  const [earningsById, setEarningsById] = useState<Record<number, DepositEarnings>>({});
+  const reportEarnings = useCallback((id: number, earnings: DepositEarnings) => {
+    setEarningsById((prev) => {
+      const current = prev[id];
+      if (
+        current &&
+        current.vaquita === earnings.vaquita &&
+        current.protocol === earnings.protocol &&
+        current.ratePerMs === earnings.ratePerMs
+      ) {
+        return prev;
+      }
+      return { ...prev, [id]: earnings };
+    });
+  }, []);
+  const { vaquitaEarnings, protocolEarnings } = activeDeposits.reduce(
+    (acc, d) => {
+      const earnings = earningsById[d.id];
+      if (earnings) {
+        acc.vaquitaEarnings += earnings.vaquita;
+        acc.protocolEarnings += earnings.protocol;
+      }
+      return acc;
+    },
+    { vaquitaEarnings: 0, protocolEarnings: 0 },
+  );
+
   // Capital por plazo: los depósitos activos agrupados por su propio lockPeriod.
   const allocations: Allocation[] = useMemo(() => {
-    const { activeDeposits } = getDepositsData(depositsData?.deposits ?? []);
     const amountByLockPeriod = activeDeposits.reduce<Record<number, number>>((acc, deposit) => {
       acc[deposit.lockPeriod] = (acc[deposit.lockPeriod] ?? 0) + deposit.amount;
       return acc;
@@ -92,7 +128,7 @@ export function PortfolioPanel({
         lendingMarketName: apy?.lendingMarketName,
       };
     });
-  }, [depositsData, lockPeriods, byLockPeriod]);
+  }, [activeDeposits, lockPeriods, byLockPeriod]);
 
   // Capital en locks (alimenta mover-fondos y el APY ponderado de los plazos).
   const lockTotal = allocations.reduce((acc, a) => acc + a.amount, 0);
@@ -120,6 +156,10 @@ export function PortfolioPanel({
 
   return (
     <>
+      {/* Reporta la ganancia estimada de cada depósito activo para el header. */}
+      {activeDeposits.map((d) => (
+        <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
+      ))}
       <AppModal
         open={open}
         onOpenChange={onOpenChange}
