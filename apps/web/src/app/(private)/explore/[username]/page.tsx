@@ -1,6 +1,6 @@
 'use client';
 
-import { LeaderboardUserHeader, WorldMap } from '@/core-ui/components';
+import { LeaderboardUserHeader, MapLikeFab, WorldMap } from '@/core-ui/components';
 import { useWalletByUsername } from '@/core-ui/hooks';
 import { WorldType } from '@/core-ui/types';
 import Link from 'next/link';
@@ -62,9 +62,11 @@ export default function UsernamePage() {
     // and the whole screen (header + map) fits without scrolling.
     <div className="h-full w-full flex flex-col overflow-hidden min-h-0">
       <LeaderboardUserHeader walletAddress={walletAddress} />
-      <div className="flex-1 min-h-0 w-full overflow-hidden">
+      <div className="relative flex-1 min-h-0 w-full overflow-hidden">
         {/* TODO: should be a style associated with the lock period */}
         <WorldMap walletAddress={walletAddress} isLeaderboard={true} worldType={WorldType.FOREST} isAvailable={true} />
+        {/* Corazón flotante para gustar el mapa de este perfil. */}
+        <MapLikeFab walletAddress={walletAddress} />
       </div>
     </div>
   );

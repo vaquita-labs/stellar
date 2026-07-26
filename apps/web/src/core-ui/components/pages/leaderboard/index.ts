@@ -1,6 +1,7 @@
 export * from './LeaderboardPage';
 export * from './LeaderboardCard';
 export * from './LeaderboardUserHeader';
+export * from './MapLikeFab';
 export * from './LeagueBoard';
 export * from './LeagueHeader';
 export * from './LeagueTrophy';
