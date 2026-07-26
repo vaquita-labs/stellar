@@ -281,7 +281,7 @@
     "bank": {
       "details": "Detalhes",
       "estimatedEarningsTotal": "Ganhos estimados totais",
-      "estimatesDisclaimer": "São estimativas e se atualizam com o tempo — as recompensas finais são confirmadas no saque.",
+      "estimatesDisclaimer": "São estimativas e podem mudar com o tempo. As recompensas finais são confirmadas no saque.",
       "hide": "Ocultar",
       "howItWorks1": "Seu depósito gera rendimento de várias fontes.",
       "howItWorks2": "As recompensas estimadas são calculadas com o APY atual.",

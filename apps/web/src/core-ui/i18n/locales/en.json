@@ -281,7 +281,7 @@
     "bank": {
       "details": "Details",
       "estimatedEarningsTotal": "Estimated earnings total",
-      "estimatesDisclaimer": "These are estimates and update over time final rewards are confirmed when you withdraw.",
+      "estimatesDisclaimer": "These values are estimates and can change over time. Your final rewards are confirmed when you withdraw.",
       "hide": "Hide",
       "howItWorks1": "Your deposit generates yield from multiple sources.",
       "howItWorks2": "Estimated rewards are calculated using the current APY.",
@@ -1919,7 +1919,7 @@
       "descriptionText": "Funds saved for {{period}} earn a bigger share of the Vaquita reward pool. The longer the term, the higher the APR.",
       "withdrawPeriod": "Withdraw period",
       "vaquitaApy": "Vaquita pool APR",
-      "marketApy": "{{market}} APR",
+      "marketApy": "{{market}} APY",
       "tokenNote": "Balances are shown in {{token}}."
     },
     "move": {

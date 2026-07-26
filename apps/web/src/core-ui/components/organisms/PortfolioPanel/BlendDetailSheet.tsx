@@ -48,7 +48,7 @@ export function BlendDetailSheet({
         <p className="text-sm text-black leading-relaxed">
           {t(
             'portfolio.blend.detailText',
-            'Your USDC earns yield in Blend, a lending protocol on Stellar. It stays flexible — there is no lock period, so you can withdraw it whenever you want.',
+            'Your USDC earns yield in Blend, a lending protocol on Stellar. There is no lock period, so you can withdraw your money whenever you want.',
           )}
         </p>
       </div>
