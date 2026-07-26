@@ -7,31 +7,38 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheck } from 'react-icons/fi';
 
-export type PositionStatusFilter = 'all' | 'ready' | 'locked';
+export type PositionStatusFilter = 'ready' | 'locked' | 'withdrawn' | 'failed';
 
 export interface PortfolioFilters {
   /** Plazos elegidos (multi-selección). Vacío = todos. */
   periods: number[];
-  status: PositionStatusFilter;
+  /**
+   * Estado a mostrar. No hay opción "todas": es uno u otro estado. `null` es el
+   * default (sin filtro) y muestra las posiciones activas (ready + locked), que
+   * es lo que la pantalla necesita para retirar. Elegir un estado la convierte en
+   * un visor de ese estado (incluyendo retiradas y con error).
+   */
+  status: PositionStatusFilter | null;
   startDate: number | null;
   endDate: number | null;
 }
 
 export const EMPTY_PORTFOLIO_FILTERS: PortfolioFilters = {
   periods: [],
-  status: 'all',
+  status: null,
   startDate: null,
   endDate: null,
 };
 
 export const hasActivePortfolioFilters = (f: PortfolioFilters): boolean =>
-  f.periods.length > 0 || f.status !== 'all' || f.startDate !== null || f.endDate !== null;
+  f.periods.length > 0 || f.status !== null || f.startDate !== null || f.endDate !== null;
 
-const STATUSES: PositionStatusFilter[] = ['all', 'ready', 'locked'];
+const STATUSES: PositionStatusFilter[] = ['ready', 'locked', 'withdrawn', 'failed'];
 const STATUS_LABEL: Record<PositionStatusFilter, string> = {
-  all: 'All',
   ready: 'Ready to withdraw',
   locked: 'Still locked',
+  withdrawn: 'Withdrawn',
+  failed: 'With error',
 };
 
 /** Fila con radio (selección única), estilo del filtro de transactions. */
@@ -208,7 +215,9 @@ export function PortfolioFiltersModal({
                 key={status}
                 label={t(`portfolio.filters.statuses.${status}`, STATUS_LABEL[status])}
                 selected={draft.status === status}
-                onPress={() => setDraft((prev) => ({ ...prev, status }))}
+                // Tocar el estado ya elegido lo deselecciona (vuelve al default:
+                // activas). No hay fila "todas"; así se sale de un estado puntual.
+                onPress={() => setDraft((prev) => ({ ...prev, status: prev.status === status ? null : status }))}
               />
             ))}
           </div>

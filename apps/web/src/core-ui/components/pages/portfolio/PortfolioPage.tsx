@@ -7,15 +7,15 @@ import {
   TransactionMonthCard,
   WithHydrated,
 } from '@/core-ui/components/molecules';
-import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { formatTimeDeposit } from '@/core-ui/helpers';
 import { useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { DepositResponseDTO } from '@/core-ui/types';
+import { DepositResponseDTO, DepositWithdrawalState } from '@/core-ui/types';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiFilter, FiX } from 'react-icons/fi';
+import { PositionInfoSheet } from './PositionInfoSheet';
 import { PositionRow } from './PositionRow';
 import { PositionWithdrawSheet } from './PositionWithdrawSheet';
 import {
@@ -23,6 +23,7 @@ import {
   hasActivePortfolioFilters,
   PortfolioFilters,
   PortfolioFiltersModal,
+  PositionStatusFilter,
 } from './PortfolioFiltersModal';
 
 /** Cuántas posiciones se muestran por tanda (para no renderizarlas todas). */
@@ -48,6 +49,28 @@ const depositNow = (d: DepositResponseDTO) =>
 
 const isReady = (d: DepositResponseDTO) => d.createdTimestamp + d.lockPeriod - depositNow(d) <= 0;
 
+const S = DepositWithdrawalState;
+const isActive = (d: DepositResponseDTO) => d.state === S.DEPOSIT_SUCCESS;
+const isWithdrawn = (d: DepositResponseDTO) =>
+  d.state === S.WITHDRAW_SUCCESS || d.state === S.WITHDRAW_SUCCESS_EARLY;
+const isFailed = (d: DepositResponseDTO) =>
+  d.state === S.DEPOSIT_FAILED || d.state === S.WITHDRAW_FAILED;
+
+/** Traducción de la etiqueta de cada estado (mismo texto que el filtro/chip). */
+const useStatusLabel = () => {
+  const { t } = useTranslation();
+  return (status: PositionStatusFilter | null): string =>
+    status === null
+      ? t('portfolio.positionsTitle', 'Your positions')
+      : status === 'ready'
+        ? t('portfolio.filters.statuses.ready', 'Ready to withdraw')
+        : status === 'locked'
+          ? t('portfolio.filters.statuses.locked', 'Still locked')
+          : status === 'withdrawn'
+            ? t('portfolio.filters.statuses.withdrawn', 'Withdrawn')
+            : t('portfolio.filters.statuses.failed', 'With error');
+};
+
 /**
  * Ruta `/portafolio`: lista las posiciones activas (depósitos con lock) para
  * elegir cuál retirar. Los filtros (plazo, estado, orden) viven en el modal del
@@ -69,8 +92,12 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
     [token?.lockPeriods],
   );
 
+  const statusLabelOf = useStatusLabel();
+
   const [selected, setSelected] = useState<DepositResponseDTO | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Detalle de solo lectura para posiciones retiradas o con error (no se retiran).
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // Filtros (plazos + estado + fechas) del embudo, y paginación de la lista. Los
   // plazos arrancan con el `?period=` de la URL si matchea un plazo válido.
@@ -83,12 +110,23 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const positions = useMemo(() => {
-    const { activeDeposits } = getDepositsData(data?.deposits ?? []);
+    const all = data?.deposits ?? [];
+    // El estado elegido define el conjunto base. `null` (default) = activas.
+    // Retiradas y con error son visores aparte (uno u otro, no hay "todas").
+    const base =
+      filters.status === 'withdrawn'
+        ? all.filter(isWithdrawn)
+        : filters.status === 'failed'
+          ? all.filter(isFailed)
+          : filters.status === 'ready'
+            ? all.filter((d) => isActive(d) && isReady(d))
+            : filters.status === 'locked'
+              ? all.filter((d) => isActive(d) && !isReady(d))
+              : all.filter(isActive);
     // Fin del día del "hasta" para incluir todo ese día.
     const endInclusive = filters.endDate !== null ? filters.endDate + 86_400_000 - 1 : null;
-    return activeDeposits
+    return base
       .filter((d) => filters.periods.length === 0 || filters.periods.includes(d.lockPeriod))
-      .filter((d) => filters.status === 'all' || (filters.status === 'ready' ? isReady(d) : !isReady(d)))
       .filter((d) => filters.startDate === null || d.createdTimestamp >= filters.startDate)
       .filter((d) => endInclusive === null || d.createdTimestamp <= endInclusive)
       .sort((a, b) => b.createdTimestamp - a.createdTimestamp);
@@ -106,14 +144,11 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
       onRemove: () => setFilters((prev) => ({ ...prev, periods: prev.periods.filter((p) => p !== lp) })),
     }),
   );
-  if (filters.status !== 'all') {
+  if (filters.status !== null) {
     chips.push({
       key: 'status',
-      label: t(
-        `portfolio.filters.statuses.${filters.status}`,
-        filters.status === 'ready' ? 'Ready to withdraw' : 'Still locked',
-      ),
-      onRemove: () => setFilters((prev) => ({ ...prev, status: 'all' })),
+      label: statusLabelOf(filters.status),
+      onRemove: () => setFilters((prev) => ({ ...prev, status: null })),
     });
   }
   if (filters.startDate !== null) {
@@ -184,7 +219,7 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
         ) : positions.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-2xl bg-white px-4 py-10 text-center">
             <p className="text-sm font-semibold text-black">
-              {t('portfolio.withdraw.empty', 'No positions to withdraw in this term.')}
+              {t('portfolio.list.empty', 'No positions to show.')}
             </p>
             <p className="text-xs text-gray-600">
               {t('portfolio.list.emptyHint', 'Your locked savings will show up here.')}
@@ -192,7 +227,7 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
           </div>
         ) : (
           <>
-            <TransactionMonthCard label={t('portfolio.positionsTitle', 'Your positions')}>
+            <TransactionMonthCard label={statusLabelOf(filters.status)}>
               <TransactionList align="grouped">
                 {visiblePositions.map((deposit) => (
                   <PositionRow
@@ -200,7 +235,10 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
                     deposit={deposit}
                     onPress={() => {
                       setSelected(deposit);
-                      setSheetOpen(true);
+                      // Activas → hoja de retiro; retiradas/con error → detalle
+                      // de solo lectura (no se pueden retirar).
+                      if (isActive(deposit)) setSheetOpen(true);
+                      else setInfoOpen(true);
                     }}
                   />
                 ))}
@@ -226,6 +264,12 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
         deposit={selected}
         open={sheetOpen}
         onOpenChange={() => setSheetOpen(false)}
+      />
+
+      <PositionInfoSheet
+        deposit={selected}
+        open={infoOpen}
+        onOpenChange={() => setInfoOpen(false)}
       />
 
       <PortfolioFiltersModal
