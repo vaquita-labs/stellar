@@ -1,5 +1,13 @@
 import { PoolContractV2, RequestType } from '@blend-capital/blend-sdk';
-import { Address, Contract, nativeToScVal, rpc, TransactionBuilder, xdr } from '@stellar/stellar-sdk';
+import {
+  Address,
+  Contract,
+  nativeToScVal,
+  rpc,
+  scValToNative,
+  TransactionBuilder,
+  xdr,
+} from '@stellar/stellar-sdk';
 import {
   getNetworkPassphrase,
   getRpcUrl,
@@ -233,6 +241,34 @@ export const directUsdcTransfer = async ({
     throw new Error(outcome.details ?? 'USDC transfer failed');
   }
   return { hash: outcome.hash };
+};
+
+/**
+ * Lee (read-only) el saldo del USDC de Blend de una cuenta, en unidades humanas.
+ * Se usa tras un retiro del Vaquita pool para saber "todo lo recibido" y volver a
+ * depositarlo en Blend. Simula `balance()` del SAC; devuelve 0 ante cualquier error.
+ */
+export const getBlendUsdcBalance = async (address: string, decimals: number): Promise<number> => {
+  const config = getBlendConfig();
+  if (!config || !address) return 0;
+  try {
+    const server = new rpc.Server(getRpcUrl());
+    const usdc = new Contract(config.usdcId);
+    const account = await server.getAccount(address);
+    const tx = new TransactionBuilder(account, {
+      fee: '100',
+      networkPassphrase: getNetworkPassphrase(),
+    })
+      .addOperation(usdc.call('balance', Address.fromString(address).toScVal()))
+      .setTimeout(30)
+      .build();
+    const sim = await server.simulateTransaction(tx);
+    if (rpc.Api.isSimulationError(sim) || !sim.result) return 0;
+    const raw = scValToNative(sim.result.retval) as bigint;
+    return Number(raw) / 10 ** decimals;
+  } catch {
+    return 0;
+  }
 };
 
 /**

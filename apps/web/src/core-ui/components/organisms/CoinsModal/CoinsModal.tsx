@@ -23,25 +23,25 @@ export function CoinsModal({ open, onOpenChange, coins }: CoinsModalProps) {
     >
       <div className="space-y-6 mb-2">
         {/* Hero — big coin balance */}
-        <div className="flex flex-col items-center gap-2 pt-1">
-          <div className="relative flex items-center justify-center">
-            <span className="absolute inset-0 rounded-full bg-primary/30 blur-2xl" aria-hidden />
-            <Image
-              src="/icons/global/coin.png"
-              alt={t('rewards.coins.coinAlt', 'coins')}
-              width={72}
-              height={72}
-              className="relative object-contain"
-            />
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
+        <div className="flex flex-col items-center gap-1 pt-1">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-primary/30 blur-2xl" aria-hidden />
+              <Image
+                src="/icons/global/coin.png"
+                alt={t('rewards.coins.coinAlt', 'coins')}
+                width={56}
+                height={56}
+                className="relative object-contain"
+              />
+            </div>
+            <div className="text-5xl font-extrabold text-black leading-none tabular-nums">
               {coins.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
-            {/* Sólo QUÉ es el número, sin repetirlo (ver StreakModal). */}
-            <div className="mt-1 text-sm font-semibold text-gray-500">
-              {t('rewards.coins.unitLabel', 'Coins')}
-            </div>
+          </div>
+          {/* Sólo QUÉ es el número, sin repetirlo (ver StreakModal). */}
+          <div className="text-sm font-semibold text-gray-500">
+            {t('rewards.coins.unitLabel', 'Coins')}
           </div>
         </div>
 

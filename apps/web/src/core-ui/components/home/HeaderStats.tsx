@@ -6,6 +6,7 @@ import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiBell } from 'react-icons/fi';
@@ -40,7 +41,16 @@ export const HeaderStats = () => {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showCoinsModal, setShowCoinsModal] = useState(false);
   const [showExperienceModal, setShowExperienceModal] = useState(false);
-  const [showPortfolioPanel, setShowPortfolioPanel] = useState(false);
+  // El panel de portafolio se maneja por URL (`?portfolio=1` en /home), NO por
+  // estado local: así, al entrar a la ruta /portafolio (tocar un plazo) el panel
+  // no se "pierde", y el botón atrás del navegador vuelve a /home?portfolio=1 con
+  // el panel abierto. Además sobrevive a un refresh. Ver goToTerm en PortfolioPanel.
+  const router = useRouter();
+  const showPortfolioPanel = useSearchParams().get('portfolio') === '1';
+  const openPortfolioPanel = () => router.push('/home?portfolio=1', { scroll: false });
+  // Cerrar con replace (no push): saca el `?portfolio=1` sin dejar un entry que,
+  // al hacer atrás, reabra el panel recién cerrado.
+  const closePortfolioPanel = () => router.replace('/home', { scroll: false });
   // Mantienen el modal montado mientras corre la animación de salida.
   const streakModalMounted = useModalPresence(showStreakModal);
   const coinsModalMounted = useModalPresence(showCoinsModal);
@@ -263,7 +273,7 @@ export const HeaderStats = () => {
             <div className="flex items-center gap-1.5 self-start max-w-full">
               <PressableButton
                 variant="cream"
-                onClick={() => setShowPortfolioPanel(true)}
+                onClick={openPortfolioPanel}
                 ariaLabel={t('home.stats.apyAria', 'Portfolio')}
                 // w-fit + self-start: la pastilla se ajusta al saldo y crece con
                 // él, alineada contra el mismo borde que el saludo.
@@ -425,7 +435,7 @@ export const HeaderStats = () => {
       {portfolioPanelMounted && (
         <PortfolioPanel
           open={showPortfolioPanel}
-          onOpenChange={() => setShowPortfolioPanel(false)}
+          onOpenChange={closePortfolioPanel}
           vaquitaEarnings={vaquitaEarnings}
           protocolEarnings={protocolEarnings}
           protocolApy={apyData?.protocolApy ?? 0}

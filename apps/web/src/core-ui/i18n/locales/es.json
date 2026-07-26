@@ -260,16 +260,21 @@
   "deposit": {
     "blend": {
       "accountLabel": "Cuenta Vaquita",
+      "apyLabel": "APY estimado",
       "confirm": {
         "title": "Confirmar depósito"
       },
-      "cta": "Depositar en Blend",
+      "cta": "Depositar en tus ahorros",
       "destination": "Blend",
-      "mainnetOnly": "Los depósitos directos a Blend solo están disponibles en la mainnet de Stellar.",
-      "notTracked": "Tu USDC va directo a Blend y empieza a generar rendimiento al instante. Este depósito no cuenta como un bloqueo de Vaquita.",
+      "mainnetOnly": "Los depósitos directos solo están disponibles en la mainnet de Stellar.",
+      "notTracked": "Tu USDC empieza a generar rendimiento al instante, sin período de bloqueo — retiralo cuando quieras.",
       "processing": "Procesando depósito...",
+      "processingStep": "Depositando en tus ahorros",
+      "unavailable": "Los depósitos directos aún no están disponibles en esta red.",
+      "whatIsTitle": "¿Qué es Blend?",
+      "whatIs": "Blend es un protocolo de préstamos auditado en Stellar. Tu USDC se aporta a su pool para generar rendimiento, y podés retirarlo cuando quieras.",
       "success": {
-        "subtitle": "Tu USDC ya está generando rendimiento en Blend.",
+        "subtitle": "Tu USDC ya está generando rendimiento en tus ahorros.",
         "title": "¡Depósito enviado!"
       }
     },
@@ -1933,6 +1938,15 @@
         "subtitle": "${{amount}} movidos de {{from}} a {{to}}."
       }
     },
-    "moreInfo": "Más información"
+    "moreInfo": "Más información",
+    "withdraw": {
+      "step1": "Sacando tu dinero",
+      "step2": "Devolviéndolo a tus ahorros",
+      "empty": "No hay posiciones para retirar en este plazo.",
+      "note": "Tus fondos (más intereses) vuelven a tus ahorros, donde siguen flexibles y generando rendimiento.",
+      "successTitle": "¡De vuelta en tus ahorros!",
+      "successSubtitle": "Tus fondos vuelven a estar flexibles y siguen generando rendimiento en tus ahorros.",
+      "cta": "Retirar a tus ahorros"
+    }
   }
 }

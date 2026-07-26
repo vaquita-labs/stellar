@@ -16,6 +16,7 @@ import { SavedWallet, useDeleteSavedWallet, useSavedWallets } from '../../../hoo
 import { useConfigStore } from '../../../stores';
 import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
+import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { AddWalletForm } from './AddWalletForm';
 import { WalletRow } from './WalletRow';
 import { WithdrawModalProps, WithdrawProgressStep, WithdrawStep } from './types';
@@ -406,7 +407,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-error font-semibold">{error}</p> : null}
+      {error ? <ErrorNotice error={error} /> : null}
     </div>
   );
 
@@ -457,10 +458,6 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           );
         })}
       </div>
-
-      <p className="mt-1 text-center text-xs text-gray-500">
-        {t('withdraw.processingHint', 'This may take a few seconds.')}
-      </p>
     </div>
   );
 
@@ -528,6 +525,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleConfirm}>
         {t('withdraw.confirmCta', 'Confirm')}
       </PressableButton>
+    ) : step === 'processing' ? (
+      <p className="w-full text-center text-xs text-gray-500">
+        {t('withdraw.processingHint', 'This may take a few seconds.')}
+      </p>
     ) : step === 'success' ? (
       <PressableButton variant="success" size="cta" className="py-2.5!" onClick={onOpenChange}>
         {t('common.done', 'Done')}

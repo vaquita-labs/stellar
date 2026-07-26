@@ -260,16 +260,21 @@
   "deposit": {
     "blend": {
       "accountLabel": "Conta Vaquita",
+      "apyLabel": "APY estimado",
       "confirm": {
         "title": "Confirmar depósito"
       },
-      "cta": "Depositar no Blend",
+      "cta": "Depositar nas suas economias",
       "destination": "Blend",
-      "mainnetOnly": "Depósitos diretos no Blend só estão disponíveis na mainnet da Stellar.",
-      "notTracked": "Seu USDC vai direto para o Blend e começa a render na hora. Este depósito não conta como um bloqueio da Vaquita.",
+      "mainnetOnly": "Depósitos diretos só estão disponíveis na mainnet da Stellar.",
+      "notTracked": "Seu USDC começa a render na hora, sem período de bloqueio — retire quando quiser.",
       "processing": "Processando depósito...",
+      "processingStep": "Depositando nas suas economias",
+      "unavailable": "Depósitos diretos ainda não estão disponíveis nesta rede.",
+      "whatIsTitle": "O que é Blend?",
+      "whatIs": "Blend é um protocolo de empréstimos auditado na Stellar. Seu USDC é fornecido ao pool dele para render, e você pode sacar quando quiser.",
       "success": {
-        "subtitle": "Seu USDC já está rendendo no Blend.",
+        "subtitle": "Seu USDC já está rendendo nas suas economias.",
         "title": "Depósito enviado!"
       }
     },
@@ -1868,6 +1873,15 @@
         "subtitle": "${{amount}} movidos de {{from}} para {{to}}."
       }
     },
-    "moreInfo": "Mais informações"
+    "moreInfo": "Mais informações",
+    "withdraw": {
+      "step1": "Tirando seu dinheiro",
+      "step2": "Movendo de volta para suas economias",
+      "empty": "Nenhuma posição para sacar neste prazo.",
+      "note": "Seus fundos (mais juros) voltam para suas economias, onde ficam flexíveis e continuam rendendo.",
+      "successTitle": "De volta nas suas economias!",
+      "successSubtitle": "Seus fundos estão flexíveis de novo e continuam rendendo nas suas economias.",
+      "cta": "Sacar para suas economias"
+    }
   }
 }

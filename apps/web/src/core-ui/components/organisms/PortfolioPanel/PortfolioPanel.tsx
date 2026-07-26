@@ -5,14 +5,13 @@ import { formatUsd } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useBlendPosition, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight } from 'react-icons/fi';
-import { IoWalletOutline } from 'react-icons/io5';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
-import { AllocationDetailSheet } from './AllocationDetailSheet';
 import { BlendDetailSheet } from './BlendDetailSheet';
-import { MoveFundsSheet } from './MoveFundsSheet';
+import { InvestModal } from './InvestModal';
 import { getAllocationStyle } from './allocationStyles';
 import { Allocation, PortfolioPanelProps } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -43,14 +42,21 @@ export function PortfolioPanel({
   const blendBalance = blendPosition?.usdc ?? 0;
   const blendApy = blendPosition?.apy ?? 0;
 
-  const [detailLockPeriod, setDetailLockPeriod] = useState<number | null>(null);
-  const [moveToLockPeriod, setMoveToLockPeriod] = useState<number | null>(null);
-  const [showMove, setShowMove] = useState(false);
-  // Detalle de Blend (qué es + números), como el detalle de cada plazo.
+  const router = useRouter();
+  // Detalle de Blend (qué es + números).
   const [showBlendDetail, setShowBlendDetail] = useState(false);
   const blendDetailMounted = useModalPresence(showBlendDetail);
-  const detailMounted = useModalPresence(detailLockPeriod !== null);
-  const moveMounted = useModalPresence(showMove);
+  // "Invertir": abre el InvestModal (teclado + selector de plazo/APY; la plata
+  // sale de Blend y se lockea en el Vaquita pool).
+  const [showDeposit, setShowDeposit] = useState(false);
+  const depositMounted = useModalPresence(showDeposit);
+
+  // Tocar un plazo navega a la ruta /portafolio con ese plazo ya filtrado. NO
+  // cerramos el panel: como está abierto por URL (/home?portfolio=1), ese entry
+  // queda en el historial y el botón atrás de /portafolio vuelve al panel abierto.
+  const goToTerm = (lockPeriod: number) => {
+    router.push(`/portafolio?period=${lockPeriod}`);
+  };
 
   // Plazos ofrecidos por el token, de menor a mayor: define el orden de la lista
   // y, con él, el color/ícono de cada fila (ver allocationStyles).
@@ -97,32 +103,6 @@ export function PortfolioPanel({
         totalAmount
       : (allocations.find((a) => a.lockPeriod === selectedLockPeriod) ?? allocations[0])?.apy ?? 0;
 
-  // Mover fondos necesita al menos dos plazos y algo de capital EN LOCKS que
-  // mover (Blend no participa del move entre plazos todavía).
-  const canManage = allocations.length >= 2 && lockTotal > 0;
-
-  const detailAllocation = allocations.find((a) => a.lockPeriod === detailLockPeriod) ?? null;
-  const detailIndex = allocations.findIndex((a) => a.lockPeriod === detailLockPeriod);
-  // Al cerrar, detailLockPeriod vuelve a null antes de que termine la animación
-  // de salida. Retenemos el último plazo para que el sheet siga teniendo qué
-  // renderizar mientras se va, y no desaparezca de golpe.
-  const lastDetailRef = useRef<{ allocation: Allocation; index: number } | null>(null);
-  if (detailAllocation) lastDetailRef.current = { allocation: detailAllocation, index: detailIndex };
-  const detailView = detailAllocation ? { allocation: detailAllocation, index: detailIndex } : lastDetailRef.current;
-
-  const openMove = (toLockPeriod: number | null) => {
-    setMoveToLockPeriod(toLockPeriod);
-    setDetailLockPeriod(null);
-    setShowMove(true);
-  };
-
-  // Placeholder: mover entre plazos implica retirar y volver a depositar, y el
-  // contrato hoy solo retira la posición entera pagando al firmante
-  // (contracts/vaquita-pool/src/lib.rs:168). Se conecta al backend después.
-  const handleMoveSubmit = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 1800));
-  };
-
   return (
     <>
       <AppModal
@@ -133,20 +113,32 @@ export function PortfolioPanel({
         fullScreen
         slideFrom="right"
         bodyClassName="flex flex-col gap-5 pb-10"
+        footer={
+          <PressableButton variant="success" size="cta" className="py-2.5!" onClick={() => setShowDeposit(true)}>
+            {t('portfolio.invest', 'Invest')}
+          </PressableButton>
+        }
       >
         {/* Encabezado: lo que se está ganando, que es lo que el usuario viene a
             ver. El APY y el capital quedan en una línea secundaria, y el
             "de dónde sale" se despliega solo si lo pide. Sin tarjeta: es el
             contenido principal de la pantalla, no un bloque más. */}
-        <div className="pt-2">
+        {/* El balance es la plata en Blend (nivel base): tocarlo abre el detalle
+            de Blend. Por eso Blend ya no va como fila en la lista de abajo. */}
+        <button
+          type="button"
+          onClick={() => setShowBlendDetail(true)}
+          className="pt-2 w-full text-left transition active:opacity-80"
+        >
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
             {t('portfolio.totalBalance', 'Total balance')}
           </p>
-          {/* El número grande = TODO el dinero disponible (Blend + locks). Las
-              ganancias estimadas pasan a la línea secundaria. */}
-          <p className="mt-1 text-5xl font-bold text-success tabular-nums leading-none">
-            {totalAmount.toFixed(2)}
-            <span className="text-2xl ml-1.5 font-semibold">{tokenSymbol}</span>
+          <p className="mt-1 flex items-center gap-1.5 text-5xl font-bold text-success tabular-nums leading-none">
+            <span>
+              {totalAmount.toFixed(2)}
+              <span className="text-2xl ml-1.5 font-semibold">{tokenSymbol}</span>
+            </span>
+            <FiChevronRight className="w-6 h-6 text-black/40 shrink-0" />
           </p>
           <p className="mt-3 text-sm text-gray-500">
             <span className="font-bold text-black tabular-nums">
@@ -158,7 +150,7 @@ export function PortfolioPanel({
               +{totalEarnings.toFixed(2)} {tokenSymbol}
             </span>
           </p>
-        </div>
+        </button>
 
         {/* El "de dónde sale" ya no es un desglose global: cada allocation lo
             explica en su propio detalle (tocá una fila). */}
@@ -166,60 +158,25 @@ export function PortfolioPanel({
 
         {/* Allocation: una fila por plazo, ordenadas de más corto a más largo. */}
         <div>
-          <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="mb-2">
             <h3 className="text-sm font-bold text-black">{t('portfolio.allocation', 'Allocation')}</h3>
-            {canManage ? (
-              <button
-                type="button"
-                onClick={() => openMove(null)}
-                className="flex items-center gap-1 bg-transparent text-sm font-bold text-black"
-              >
-                {t('portfolio.manage', 'Manage allocations')}
-                <FiChevronRight className="w-4 h-4" />
-              </button>
-            ) : null}
           </div>
 
-          {allocations.length === 0 && blendBalance <= 0 ? (
+          {allocations.length === 0 ? (
             <p className="text-sm text-gray-500 py-4 text-center">
               {t('portfolio.empty', 'No saving terms available yet.')}
             </p>
           ) : (
-            // Lista agrupada (no cards sueltas): un contenedor con filas
-            // separadas por divisores. Más compacto, ocupa menos espacio.
+            // Lista agrupada (no cards sueltas): solo los plazos con lock. Blend
+            // ya no va acá: se accede tocando el balance de arriba.
             <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10 overflow-hidden bg-white">
-              {/* Nivel base: lo que está en Blend, líquido y sin lock. Tocarla
-                  abre el detalle que explica qué es Blend. Solo si hay algo. */}
-              {blendBalance > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setShowBlendDetail(true)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition active:bg-black/[0.04]"
-                >
-                  <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-success/20 text-success">
-                    <IoWalletOutline className="w-[18px] h-[18px]" />
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-bold text-black truncate">
-                      {t('portfolio.blend.label', 'Blend · Flexible')}
-                    </span>
-                    <span className="block text-xs text-gray-500 tabular-nums">
-                      {formatUsd(blendBalance)}
-                    </span>
-                  </span>
-                  <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums bg-success/20 text-success">
-                    {blendApy.toFixed(2)}%
-                  </span>
-                  <FiChevronRight className="w-4 h-4 text-black/50 shrink-0" />
-                </button>
-              ) : null}
               {allocations.map((allocation, index) => {
                 const style = getAllocationStyle(index);
                 return (
                   <button
                     type="button"
                     key={allocation.lockPeriod}
-                    onClick={() => setDetailLockPeriod(allocation.lockPeriod)}
+                    onClick={() => goToTerm(allocation.lockPeriod)}
                     className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition active:bg-black/[0.04]"
                   >
                     <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${style.chip}`}>
@@ -245,28 +202,6 @@ export function PortfolioPanel({
         </div>
       </AppModal>
 
-      {detailMounted && detailView ? (
-        <AllocationDetailSheet
-          open={detailLockPeriod !== null}
-          onOpenChange={() => setDetailLockPeriod(null)}
-          allocation={detailView.allocation}
-          style={getAllocationStyle(detailView.index)}
-          tokenSymbol={tokenSymbol}
-          canManage={canManage}
-          onManage={() => openMove(detailView.allocation.lockPeriod)}
-        />
-      ) : null}
-
-      {moveMounted ? (
-        <MoveFundsSheet
-          open={showMove}
-          onOpenChange={() => setShowMove(false)}
-          allocations={allocations}
-          initialToLockPeriod={moveToLockPeriod ?? undefined}
-          onSubmit={handleMoveSubmit}
-        />
-      ) : null}
-
       {blendDetailMounted ? (
         <BlendDetailSheet
           open={showBlendDetail}
@@ -275,6 +210,10 @@ export function PortfolioPanel({
           apy={blendApy}
           tokenSymbol={tokenSymbol}
         />
+      ) : null}
+
+      {depositMounted ? (
+        <InvestModal open={showDeposit} onOpenChange={() => setShowDeposit(false)} />
       ) : null}
     </>
   );

@@ -260,16 +260,21 @@
   "deposit": {
     "blend": {
       "accountLabel": "Vaquita account",
+      "apyLabel": "Estimated APY",
       "confirm": {
         "title": "Confirm deposit"
       },
-      "cta": "Deposit to Blend",
+      "cta": "Deposit to your savings",
       "destination": "Blend",
-      "mainnetOnly": "Direct Blend deposits are only available on Stellar mainnet.",
-      "notTracked": "Your USDC goes straight to Blend and starts earning right away. This deposit is not tracked as a Vaquita lock.",
+      "mainnetOnly": "Direct deposits are only available on Stellar mainnet.",
+      "notTracked": "Your USDC starts earning yield right away, with no lock period withdraw whenever you want.",
       "processing": "Processing deposit...",
+      "processingStep": "Depositing to your savings",
+      "unavailable": "Direct deposits are not available on this network yet.",
+      "whatIsTitle": "What is Blend?",
+      "whatIs": "Blend is an audited lending protocol on Stellar. Your USDC is supplied to its pool to earn yield, and you can withdraw anytime.",
       "success": {
-        "subtitle": "Your USDC is now earning in Blend.",
+        "subtitle": "Your USDC is now earning in your savings.",
         "title": "Deposit sent!"
       }
     },
@@ -1911,10 +1916,10 @@
     "empty": "No saving terms available yet.",
     "detail": {
       "description": "Description",
-      "descriptionText": "Funds saved for {{period}} earn a bigger share of the Vaquita reward pool. The longer the term, the higher the APY.",
+      "descriptionText": "Funds saved for {{period}} earn a bigger share of the Vaquita reward pool. The longer the term, the higher the APR.",
       "withdrawPeriod": "Withdraw period",
-      "vaquitaApy": "Vaquita pool APY",
-      "marketApy": "{{market}} APY",
+      "vaquitaApy": "Vaquita pool APR",
+      "marketApy": "{{market}} APR",
       "tokenNote": "Balances are shown in {{token}}."
     },
     "move": {
@@ -1933,6 +1938,15 @@
         "subtitle": "${{amount}} moved from {{from}} to {{to}}."
       }
     },
-    "moreInfo": "More info"
+    "moreInfo": "More info",
+    "withdraw": {
+      "step1": "Getting your money out",
+      "step2": "Moving it back to your savings",
+      "empty": "No positions to withdraw in this term.",
+      "note": "Your funds (plus interest) go back to your savings, where they stay flexible and keep earning.",
+      "successTitle": "Back in your savings!",
+      "successSubtitle": "Your funds are flexible again and keep earning in your savings.",
+      "cta": "Withdraw to your savings"
+    }
   }
 }

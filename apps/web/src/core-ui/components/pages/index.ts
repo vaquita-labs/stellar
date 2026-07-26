@@ -9,5 +9,6 @@ export * from './MarketPlace';
 export * from './ShopPage';
 export * from './legal';
 export * from './notifications';
+export * from './portfolio';
 export * from './profile';
 export * from './transactions';
