@@ -1,13 +1,12 @@
 'use client';
 
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
-import { Modal } from '@heroui/react';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 import type { Badge } from '../../../data/profile-badges';
 import { useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
-import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
+import { AppModal } from '../../molecules/AppModal';
 
 interface LeaderboardBadgeModalProps {
   badge: Badge | null;
@@ -30,6 +29,9 @@ const formatDate = (iso?: string) => {
  * AchievementModal para el perfil propio. Si el ESPECTADOR tiene el modo
  * cripto activado (cryptoSavvy) y el dueño lo minteó on-chain, se muestra el
  * link a la transacción en stellar.expert.
+ *
+ * Usa el AppModal genérico: hoja inferior (bottom-sheet) con la misma
+ * animación de entrada/salida que el resto de la app.
  */
 export function LeaderboardBadgeModal({ badge, txHash, open, onOpenChange }: LeaderboardBadgeModalProps) {
   const { t } = useTranslation();
@@ -46,57 +48,45 @@ export function LeaderboardBadgeModal({ badge, txHash, open, onOpenChange }: Lea
   const networkLabel = network?.type === 'mainnet' ? 'Mainnet' : 'Testnet';
 
   return (
-    <Modal.Backdrop isOpen={open} onOpenChange={(o) => { if (!o) onOpenChange(false); }} className={SHEET_BACKDROP_ANIMATION}>
-      <Modal.Container size="sm" className={SHEET_CONTAINER_ANIMATION}>
-        <Modal.Dialog className="bg-background border border-black">
-          <Modal.CloseTrigger>
-            <Image src="/icons/close-circle.svg" alt={t('common.close')} width={40} height={40} />
-          </Modal.CloseTrigger>
-          <Modal.Header>
-            <Modal.Heading className="text-black font-bold text-xl">{title}</Modal.Heading>
-          </Modal.Header>
-          <Modal.Body className="pb-6">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="relative flex h-32 w-32 items-center justify-center">
-                <span
-                  aria-hidden
-                  className="absolute inset-4 rounded-full blur-2xl opacity-55"
-                  style={{ background: badge.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)' }}
-                />
-                <Image src={badge.icon} alt={title} fill sizes="128px" className="relative object-contain drop-shadow-xl" />
-              </div>
+    <AppModal open={open} onOpenChange={() => onOpenChange(false)} title={title} size="sm">
+      <div className="flex flex-col items-center gap-3 text-center pb-2">
+        <div className="relative flex h-32 w-32 items-center justify-center">
+          <span
+            aria-hidden
+            className="absolute inset-4 rounded-full blur-2xl opacity-55"
+            style={{ background: badge.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)' }}
+          />
+          <Image src={badge.icon} alt={title} fill sizes="128px" className="relative object-contain drop-shadow-xl" />
+        </div>
 
-              {badge.date && (
-                <span className="inline-flex items-center text-[11px] font-bold uppercase tracking-wider bg-primary/30 text-[#7A3E00] rounded-full px-3 py-1">
-                  {formatDate(badge.date)}
-                </span>
-              )}
+        {badge.date && (
+          <span className="inline-flex items-center text-[11px] font-bold uppercase tracking-wider bg-primary/30 text-[#7A3E00] rounded-full px-3 py-1">
+            {formatDate(badge.date)}
+          </span>
+        )}
 
-              <p className="text-sm text-gray-700 leading-relaxed max-w-xs">{description}</p>
+        <p className="text-sm text-gray-700 leading-relaxed max-w-xs">{description}</p>
 
-              {/* Modo cripto: transacción del mint on-chain de este jugador. */}
-              {showTx && txHash && (
-                <div className="flex items-center justify-center gap-2 flex-wrap pt-2 border-t border-black/10 w-full">
-                  <span className="text-xs font-semibold text-gray-600">
-                    {t('achievements.detail.viewOnStellarExpert', 'View on Stellar Expert')}
-                  </span>
-                  <a
-                    href={stellarExpertTxUrl(txHash, network?.type)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-mono font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition"
-                  >
-                    {`${txHash.slice(0, 6)}…${txHash.slice(-4)}`}
-                  </a>
-                  <span className="text-[10px] font-bold uppercase tracking-wide bg-white text-gray-600 border border-black/20 rounded-full px-2 py-0.5">
-                    {networkLabel}
-                  </span>
-                </div>
-              )}
-            </div>
-          </Modal.Body>
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+        {/* Modo cripto: transacción del mint on-chain de este jugador. */}
+        {showTx && txHash && (
+          <div className="flex items-center justify-center gap-2 flex-wrap pt-2 border-t border-black/10 w-full">
+            <span className="text-xs font-semibold text-gray-600">
+              {t('achievements.detail.viewOnStellarExpert', 'View on Stellar Expert')}
+            </span>
+            <a
+              href={stellarExpertTxUrl(txHash, network?.type)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition"
+            >
+              {`${txHash.slice(0, 6)}…${txHash.slice(-4)}`}
+            </a>
+            <span className="text-[10px] font-bold uppercase tracking-wide bg-white text-gray-600 border border-black/20 rounded-full px-2 py-0.5">
+              {networkLabel}
+            </span>
+          </div>
+        )}
+      </div>
+    </AppModal>
   );
 }
