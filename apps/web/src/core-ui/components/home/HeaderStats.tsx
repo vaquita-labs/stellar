@@ -244,7 +244,7 @@ export const HeaderStats = () => {
               config={profileData?.avatarConfig}
               seed={profileData?.walletAddress || walletAddress || ''}
               alt={t('home.stats.profileAlt', 'Profile')}
-              className="h-14 w-14 border-black border-b-3 transition group-active:border-b-[1px]"
+              className="h-16 w-16 border-2 border-black border-b-[6px] transition group-active:border-b-2"
             />
           </Link>
 
