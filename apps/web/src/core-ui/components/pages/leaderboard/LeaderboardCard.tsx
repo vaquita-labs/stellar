@@ -188,7 +188,7 @@ function SocialRow({ walletAddress, likes }: SocialRowProps) {
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center justify-end gap-1">
       <button
         type="button"
         onClick={handleLike}
@@ -362,8 +362,9 @@ export function LeaderboardCardSkeleton() {
         <div className="h-8 flex-1 rounded-lg bg-black/5" />
       </div>
       {/* Solo el corazón: los comentarios se ocultaron, así que el skeleton ya
-          no reserva un segundo pill para ellos. */}
-      <div className="flex gap-2">
+          no reserva un segundo pill para ellos. Alineado a la derecha, igual
+          que el corazón real de la card. */}
+      <div className="flex justify-end gap-2">
         <div className="h-6 w-14 rounded-full bg-black/5" />
       </div>
     </div>
