@@ -115,6 +115,11 @@ export function PortfolioFlow({ mode }: PortfolioFlowProps) {
           hideHeader
           fullScreen
           slideFrom="right"
+          // Solo desktop (sm:): un poco más ancho y con alto mínimo, para que la
+          // tarjeta flotante no quede angosta ni chata con pocas posiciones. En
+          // mobile sigue a pantalla completa (fullScreen), sin cambios.
+          size="lg"
+          dialogClassName="sm:max-w-2xl! sm:min-h-[80vh]"
           bodyClassName="p-0!"
         >
           <PortfolioPage onBack={closePositions} />

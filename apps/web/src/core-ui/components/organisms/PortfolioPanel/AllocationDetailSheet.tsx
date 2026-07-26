@@ -39,6 +39,11 @@ export function AllocationDetailSheet({
       onOpenChange={onOpenChange}
       title={allocation.label}
       size="md"
+      // Se abre apilado sobre el panel de Portfolio: el botón vuelve al panel
+      // (flecha atrás a la izquierda), no cierra todo con una X.
+      onBack={onOpenChange}
+      backVariant="primary"
+      hideClose
       bodyClassName="flex flex-col gap-4 pb-2"
       footer={
         <PressableButton

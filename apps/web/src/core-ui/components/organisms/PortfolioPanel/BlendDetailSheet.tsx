@@ -33,6 +33,11 @@ export function BlendDetailSheet({
       onOpenChange={onOpenChange}
       title={t('portfolio.blend.label', 'Blend · Flexible')}
       size="md"
+      // Apilado sobre el panel de Portfolio (igual que AllocationDetailSheet):
+      // el botón vuelve al panel, no cierra todo con una X.
+      onBack={onOpenChange}
+      backVariant="primary"
+      hideClose
       bodyClassName="flex flex-col gap-4 pb-2"
     >
       <div className="flex items-center gap-3">

@@ -386,8 +386,18 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
       title={STEP_TITLE[step]}
       size="md"
       isDismissable={step !== 'processing'}
-      hideClose={step === 'processing'}
-      onBack={step === 'term' ? () => setStep('amount') : undefined}
+      // Apilado sobre el panel de Portfolio: nunca cierra con X, siempre vuelve
+      // atrás. El paso `term` retrocede al monto; el resto (raíz/éxito) vuelve al
+      // panel. `processing` no navega: la tx ya salió.
+      hideClose
+      backVariant="primary"
+      onBack={
+        step === 'processing'
+          ? undefined
+          : step === 'term'
+            ? () => setStep('amount')
+            : onOpenChange
+      }
       bodyClassName={'flex flex-col gap-3 ' + (footer ? 'pb-2' : 'pb-6')}
       footer={footer}
     >

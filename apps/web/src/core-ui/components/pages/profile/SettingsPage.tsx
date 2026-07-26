@@ -304,11 +304,14 @@ export function SettingsPage({
     <>
       <div className={`h-full overflow-y-auto bg-background ${asPanel ? '' : slideClassName}`}>
         <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pt-4 pb-6 flex flex-col gap-4">
-          {/* El mismo <PageHeader> que el resto de la app: flecha atrás a la
-              izquierda y título centrado. Antes era un header propio con "Done"
-              a la derecha — la única pantalla que se cerraba así, y encima con
-              una palabra en vez del gesto que el usuario ya conoce. */}
-          <PageHeader title={t('profilePages.settings.title', 'Settings')} onBack={onBack ?? goBack} />
+          {/* El mismo <PageHeader> que el resto de la app. Como panel apilado el
+              botón cierra el modal (X a la derecha, blanco), no retrocede; como
+              página suelta es la flecha atrás a la izquierda. */}
+          <PageHeader
+            title={t('profilePages.settings.title', 'Settings')}
+            onBack={onBack ?? goBack}
+            leftIcon={asPanel ? 'close' : 'back'}
+          />
 
           <Section title={t('profilePages.settings.accountSection', 'Account')} rows={accountRows} />
           <Section title={t('profilePages.settings.supportSection', 'Support')} rows={supportRows} />

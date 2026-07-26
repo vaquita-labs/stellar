@@ -33,6 +33,12 @@ export interface AppModalProps {
    * para navegar dentro del mismo modal (lista → detalle) sin abrir otro.
    */
   onBack?: () => void;
+  /**
+   * Estilo del botón de atrás. `white` por defecto; `primary` (naranja) para
+   * las hojas que se abren apiladas sobre un panel y vuelven a él, donde la
+   * flecha es la acción principal para retroceder.
+   */
+  backVariant?: 'white' | 'primary';
   /** Posición vertical del modal. Por defecto el comportamiento de HeroUI. */
   placement?: 'auto' | 'top' | 'center' | 'bottom';
   /**
@@ -155,6 +161,7 @@ export function AppModal({
   hideClose = false,
   hideHeader = false,
   onBack,
+  backVariant = 'white',
   placement,
   fullScreen = false,
   slideFrom = 'bottom',
@@ -234,7 +241,7 @@ export function AppModal({
             <div className="w-7 shrink-0 flex items-center justify-start">
               {onBack && !hideHeader ? (
                 <CircleIconButton
-                  variant="white"
+                  variant={backVariant}
                   size="sm"
                   ariaLabel={t('common.back')}
                   onClick={onBack}
