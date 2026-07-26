@@ -8,6 +8,7 @@ export * from './ProfilePage';
 export * from './MarketPlace';
 export * from './ShopPage';
 export * from './legal';
+export * from './concierge';
 export * from './notifications';
 export * from './portfolio';
 export * from './profile';

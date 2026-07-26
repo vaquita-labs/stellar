@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertCircle, FiBell } from 'react-icons/fi';
+import { FiAlertCircle, FiHeadphones } from 'react-icons/fi';
 import {
   useBlendPosition,
   useDepositsComplete,
@@ -17,7 +17,6 @@ import {
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
-  useUnreadNotificationsCount,
 } from '../../hooks';
 import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
@@ -172,8 +171,6 @@ export const HeaderStats = () => {
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
   const experience = experienceData?.experience ?? 0;
 
-  const unreadNotifications = useUnreadNotificationsCount();
-
   // Callback ref so the coin-animation target can live on either the editing-map
   // div or the stats-bar button (which opens the coins modal) without a type clash.
   const goldCoinRef = useRef<HTMLElement | null>(null);
@@ -314,16 +311,11 @@ export const HeaderStats = () => {
           </div>
 
           <Link
-            href="/notifications"
-            aria-label={t('notificationsCenter.bellAria', 'Notifications')}
+            href="/concierge"
+            aria-label={t('concierge.buttonAria', 'Concierge')}
             className="relative shrink-0 self-start w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px]"
           >
-            <FiBell className="w-4 h-4 text-black" />
-            {unreadNotifications > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 border border-white text-[10px] font-bold text-white flex items-center justify-center tabular-nums">
-                {unreadNotifications > 9 ? '9+' : unreadNotifications}
-              </span>
-            )}
+            <FiHeadphones className="w-4 h-4 text-black" />
           </Link>
         </div>
       </div>
