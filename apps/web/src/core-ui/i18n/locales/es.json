@@ -106,7 +106,8 @@
       "subtitle": "{{title}} ya está en tu sala de trofeos.",
       "title": "¡Ganaste {{count}} monedas!",
       "title_one": "¡Ganaste {{count}} moneda!",
-      "title_other": "¡Ganaste {{count}} monedas!"
+      "title_other": "¡Ganaste {{count}} monedas!",
+      "xp": "+{{count}} XP"
     },
     "share": {
       "copyLink": "Copiar enlace",
@@ -114,6 +115,7 @@
       "downloadImage": "Descargar imagen",
       "earnedBy": "logrado por @{{username}}",
       "imageNotReady": "La imagen aún no está lista, intenta de nuevo",
+      "button": "Compartir",
       "menuTitle": "Compartir insignia",
       "shareImage": "Compartir imagen…",
       "fallbackTitle": "Logro · Vaquita",

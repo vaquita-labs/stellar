@@ -514,6 +514,7 @@ export interface AchievementsCatalogResponseDTO {
 export interface ClaimAchievementResponseDTO {
   achievementKey: Achievement;
   coinReward: number;
+  xpReward: number;
   claimedAt: string;
 }
 

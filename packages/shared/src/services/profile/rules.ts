@@ -171,6 +171,7 @@ const editableShape = {
   description: z.string().min(1),
   tier: z.string().min(1),
   coinReward: z.number().int().min(0),
+  xpReward: z.number().int().min(0),
   unlockType: unlockTypeSchema,
   rule: badgeRuleSchema.nullable(),
   icon: z.string().min(1).nullable(),
@@ -187,6 +188,7 @@ export type AchievementAdminPayload = Partial<{
   description: string;
   tier: string;
   coinReward: number;
+  xpReward: number;
   unlockType: z.infer<typeof unlockTypeSchema>;
   rule: BadgeRule | null;
   icon: string | null;
@@ -239,6 +241,7 @@ export const achievementCreateSchema = z
     displayOrder: true,
     enabled: true,
     coinReward: true,
+    xpReward: true,
   })
   .superRefine(refineEditable);
 
@@ -254,6 +257,7 @@ export const achievementPayloadToRow = (
   ...(v.description !== undefined && { description: v.description }),
   ...(v.tier !== undefined && { tier: v.tier }),
   ...(v.coinReward !== undefined && { coin_reward: v.coinReward }),
+  ...(v.xpReward !== undefined && { xp_reward: v.xpReward }),
   ...(v.unlockType !== undefined && { unlock_type: v.unlockType }),
   ...(v.rule !== undefined && { rule: v.rule }),
   ...(v.icon !== undefined && { icon: v.icon }),

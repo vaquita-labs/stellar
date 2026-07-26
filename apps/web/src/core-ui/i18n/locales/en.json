@@ -106,9 +106,11 @@
       "subtitle": "{{title}} is now in your trophy room.",
       "title": "You earned {{count}} coins!",
       "title_one": "You earned {{count}} coin!",
-      "title_other": "You earned {{count}} coins!"
+      "title_other": "You earned {{count}} coins!",
+      "xp": "+{{count}} XP"
     },
     "share": {
+      "button": "Share",
       "copyLink": "Copy link",
       "cta": "Earn your own on Vaquita",
       "downloadImage": "Download image",
