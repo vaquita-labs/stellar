@@ -80,8 +80,16 @@ function VaquitaDots() {
 /* Modal                                                               */
 /* ------------------------------------------------------------------ */
 
-export function AchievementModal({ achievement, unlocked = false, open, onOpenChange }: AchievementModalProps) {
+export function AchievementModal({ achievement: achievementProp, unlocked = false, open, onOpenChange }: AchievementModalProps) {
   const { t } = useTranslation();
+  // El caller pone `achievement` en null al cerrar (mismo render que open=false).
+  // Sin retenerlo, el `if (!achievement) return null` de abajo desmonta el
+  // Modal.Backdrop en ese mismo render y la animación de salida (data-[exiting])
+  // nunca corre → el sheet desaparece de golpe. Retenemos la última achievement
+  // mostrada para que el sheet siga montado mientras se desliza hacia abajo.
+  const lastAchievementRef = useRef<AchievementDetail | null>(achievementProp);
+  if (achievementProp) lastAchievementRef.current = achievementProp;
+  const achievement = achievementProp ?? lastAchievementRef.current;
   const { isClaimed } = useClaimedAchievements();
   const { isMinted, getMintTxHash } = useMintedBadges();
   const mintBadgeMutation = useMintBadge();
@@ -760,16 +768,15 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
                   </span>
                 </motion.div>
               ) : (
-                <span className="w-10" />
+                <span className="w-8" />
               )}
-              <span className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`} aria-hidden />
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
                 aria-label={t('common.close')}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black hover:-translate-y-0.5 transition"
               >
-                <FiX className="h-5 w-5" />
+                <FiX className="h-4 w-4" />
               </button>
             </div>
 

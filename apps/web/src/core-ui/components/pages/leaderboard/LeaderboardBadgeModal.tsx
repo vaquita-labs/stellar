@@ -2,6 +2,7 @@
 
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 import Image from 'next/image';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Badge } from '../../../data/profile-badges';
 import { useProfileData } from '../../../hooks';
@@ -33,12 +34,19 @@ const formatDate = (iso?: string) => {
  * Usa el AppModal genérico: hoja inferior (bottom-sheet) con la misma
  * animación de entrada/salida que el resto de la app.
  */
-export function LeaderboardBadgeModal({ badge, txHash, open, onOpenChange }: LeaderboardBadgeModalProps) {
+export function LeaderboardBadgeModal({ badge: badgeProp, txHash, open, onOpenChange }: LeaderboardBadgeModalProps) {
   const { t } = useTranslation();
   const { network } = useConfigStore();
   // cryptoSavvy del ESPECTADOR (su propio perfil), no del perfil visitado.
   const { data: viewerProfile } = useProfileData();
   const cryptoMode = viewerProfile?.cryptoSavvy ?? false;
+
+  // El caller pone `badge` en null al cerrar (mismo render que open=false). Sin
+  // retenerlo, este return null desmonta el sheet antes de que corra la
+  // animación de salida del AppModal → se cierra de golpe. Retenemos el último.
+  const lastBadgeRef = useRef<Badge | null>(badgeProp);
+  if (badgeProp) lastBadgeRef.current = badgeProp;
+  const badge = badgeProp ?? lastBadgeRef.current;
 
   if (!badge) return null;
 
