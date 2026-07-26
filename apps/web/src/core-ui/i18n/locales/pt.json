@@ -106,7 +106,8 @@
       "subtitle": "{{title}} já está na sua sala de troféus.",
       "title": "Você ganhou {{count}} moedas!",
       "title_one": "Você ganhou {{count}} moeda!",
-      "title_other": "Você ganhou {{count}} moedas!"
+      "title_other": "Você ganhou {{count}} moedas!",
+      "xp": "+{{count}} XP"
     },
     "share": {
       "copyLink": "Copiar link",
@@ -114,6 +115,7 @@
       "downloadImage": "Baixar imagem",
       "earnedBy": "conquistado por @{{username}}",
       "imageNotReady": "A imagem ainda não está pronta, tente novamente",
+      "button": "Compartilhar",
       "menuTitle": "Compartilhar insígnia",
       "shareImage": "Compartilhar imagem…",
       "fallbackTitle": "Conquista · Vaquita",

@@ -92,6 +92,9 @@ export interface AchievementDocument {
   description: string,
   tier: string,
   coin_reward: number,
+  /** XP credited on claim, ledgered to profiles_rewards (reward `experience`,
+   *  reason 'achievement') exactly like coins. 0 disables the XP award. */
+  xp_reward: number,
   /** Optional redemption code. Hidden + code-gated badges are claimable only
    *  via the "Redeem code" flow (POST /wallets/:wallet/badges/redeem). NULL for regular
    *  eligibility-driven achievements. */

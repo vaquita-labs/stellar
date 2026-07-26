@@ -36,7 +36,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
   const isMobile = useIsMobile();
   const [phase, setPhase] = useState<Phase>('input');
   const [code, setCode] = useState('');
-  const [reward, setReward] = useState<{ coinReward: number; achievementKey: string } | null>(null);
+  const [reward, setReward] = useState<{ coinReward: number; xpReward: number; achievementKey: string } | null>(null);
   const redeem = useRedeemAchievementCode();
   const mintBadge = useMintBadge();
 
@@ -141,7 +141,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
       const achievementKey = result?.achievementKey ?? '';
       if (!achievementKey) throw new Error(t('common.somethingWentWrong'));
       const minted = await mintBadge.mutateAsync(achievementKey);
-      setReward({ coinReward: minted.coinReward, achievementKey });
+      setReward({ coinReward: minted.coinReward, xpReward: minted.xpReward, achievementKey });
       setPhase('reward');
     } catch (err) {
       const message = (err as Error)?.message ?? t('common.somethingWentWrong');
@@ -300,6 +300,16 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           <FiCheckCircle className="h-6 w-6 text-[#58CC02]" aria-hidden />
           {t('social.redeem.coinsReward', { count: reward?.coinReward ?? 0 })}
         </motion.h2>
+        {!!reward?.xpReward && (
+          <motion.span
+            initial={{ y: 12, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.14 }}
+            className="inline-flex items-center rounded-full bg-[#E8F5D6] border border-[#58CC02] px-4 py-1 text-sm font-bold text-[#3F9102]"
+          >
+            {t('achievements.reward.xp', '+{{count}} XP', { count: reward.xpReward })}
+          </motion.span>
+        )}
         <motion.p
           initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

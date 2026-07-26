@@ -46,6 +46,7 @@ type FormState = {
   description: string;
   tier: string;
   coinReward: string;
+  xpReward: string;
   unlockType: BadgeUnlockType;
   icon: string;
   accent: string;
@@ -63,6 +64,7 @@ const emptyForm = (): FormState => ({
   description: '',
   tier: 'Bronze',
   coinReward: '0',
+  xpReward: '0',
   unlockType: 'rule',
   icon: '',
   accent: '',
@@ -80,6 +82,7 @@ const formFromAchievement = (a: AdminAchievement): FormState => ({
   description: a.description,
   tier: a.tier,
   coinReward: String(a.coin_reward ?? 0),
+  xpReward: String(a.xp_reward ?? 0),
   unlockType: a.unlock_type,
   icon: a.icon ?? '',
   accent: a.accent ?? '',
@@ -222,6 +225,7 @@ const BadgeFormModal = ({
       description: form.description.trim(),
       tier: form.tier,
       coinReward: Number(form.coinReward) || 0,
+      xpReward: Number(form.xpReward) || 0,
       unlockType: form.unlockType,
       icon: form.icon.trim() || null,
       accent: form.accent.trim() || null,
@@ -334,6 +338,13 @@ const BadgeFormModal = ({
             type="number"
             value={form.coinReward}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('coinReward', e.target.value)}
+          />
+          <Input
+            label="XP reward"
+            containerClassName="flex-1"
+            type="number"
+            value={form.xpReward}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('xpReward', e.target.value)}
           />
           <Input
             label="Display order"
@@ -458,6 +469,7 @@ export default function Page() {
         tier: a.tier,
         unlock_type: a.unlock_type,
         coin_reward: a.coin_reward,
+        xp_reward: a.xp_reward,
         display_order: a.display_order,
         enabled: String(a.enabled !== false),
         hidden: String(!!a.hidden),

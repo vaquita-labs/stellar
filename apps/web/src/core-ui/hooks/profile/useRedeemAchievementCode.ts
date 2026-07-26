@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 type RedeemAchievementCodeResponse = {
   achievementKey: string;
   coinReward: number;
+  xpReward: number;
 };
 
 /**
