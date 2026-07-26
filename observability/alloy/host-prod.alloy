@@ -121,6 +121,15 @@ loki.source.docker "api" {
 }
 
 loki.process "hygiene" {
+	// Drop entries older than Grafana Cloud Loki's acceptance window (~7 days).
+	// On first collection of a long-running container Alloy reads the whole log
+	// history; without this, the ancient backlog is rejected (HTTP 400 "timestamp
+	// too old") and jams the pipeline so recent logs never ship.
+	stage.drop {
+		older_than          = "168h"
+		drop_counter_reason = "too_old"
+	}
+
 	stage.json {
 		expressions = {
 			level = "level",
