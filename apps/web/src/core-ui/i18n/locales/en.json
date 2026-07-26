@@ -759,6 +759,20 @@
       "title": "Learn how to save with Vaquita",
       "titleMobile": "Learn how to save with Vaquita mobile"
     },
+    "install": {
+      "title": "Get the full experience",
+      "finalStep": "This is the final step!",
+      "body": "Add Vaquita to your home screen to unlock your wallet and start using it.",
+      "installButton": "Add to home screen",
+      "iosStep1Prefix": "Tap the",
+      "iosShare": "Share icon",
+      "iosStep1Suffix": "in your browser",
+      "iosStep2Prefix": "Then tap",
+      "iosStep2Action": "“Add to Home Screen”",
+      "installedBody": "Vaquita is installed! Open it from your home screen to unlock your wallet.",
+      "installedHint": "You can close this tab — from now on open Vaquita from the app icon.",
+      "pullHint": "Already installed? Pull down to refresh"
+    },
     "intro": {
       "goToSlide": "Go to slide {{number}}",
       "letsStart": "Let's start",

@@ -759,6 +759,20 @@
       "title": "Aprenda a poupar com a Vaquita",
       "titleMobile": "Aprenda a poupar com a Vaquita no celular"
     },
+    "install": {
+      "title": "Tenha a experiência completa",
+      "finalStep": "Este é o último passo!",
+      "body": "Adicione a Vaquita à sua tela inicial para desbloquear sua carteira e começar a usá-la.",
+      "installButton": "Adicionar à tela inicial",
+      "iosStep1Prefix": "Toque no",
+      "iosShare": "ícone de Compartilhar",
+      "iosStep1Suffix": "no seu navegador",
+      "iosStep2Prefix": "Depois toque em",
+      "iosStep2Action": "“Adicionar à Tela de Início”",
+      "installedBody": "A Vaquita está instalada! Abra-a pela tela inicial para desbloquear sua carteira.",
+      "installedHint": "Você já pode fechar esta aba — a partir de agora abra a Vaquita pelo ícone do app.",
+      "pullHint": "Já instalou? Puxe para baixo para atualizar"
+    },
     "intro": {
       "goToSlide": "Ir para o slide {{number}}",
       "letsStart": "Vamos começar!",

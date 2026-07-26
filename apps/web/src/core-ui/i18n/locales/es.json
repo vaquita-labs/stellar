@@ -759,6 +759,20 @@
       "title": "Aprende a ahorrar con Vaquita",
       "titleMobile": "Aprende a ahorrar con Vaquita en el móvil"
     },
+    "install": {
+      "title": "Aprovechá la experiencia completa",
+      "finalStep": "¡Este es el último paso!",
+      "body": "Agregá Vaquita a tu pantalla de inicio para desbloquear tu billetera y empezar a usarla.",
+      "installButton": "Agregar a inicio",
+      "iosStep1Prefix": "Tocá el",
+      "iosShare": "ícono de Compartir",
+      "iosStep1Suffix": "en tu navegador",
+      "iosStep2Prefix": "Y después tocá",
+      "iosStep2Action": "“Agregar a inicio”",
+      "installedBody": "¡Vaquita está instalada! Abrila desde tu pantalla de inicio para desbloquear tu billetera.",
+      "installedHint": "Ya podés cerrar esta pestaña — de ahora en más abrí Vaquita desde el ícono de la app.",
+      "pullHint": "¿Ya la instalaste? Tirá hacia abajo para recargar"
+    },
     "intro": {
       "goToSlide": "Ir a la diapositiva {{number}}",
       "letsStart": "¡Empecemos!",

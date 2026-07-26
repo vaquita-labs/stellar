@@ -23,6 +23,7 @@ export * from './MoodMessageModal';
 export * from './SavingsStats';
 export * from './RequireAuth';
 export * from './FollowDeepLink';
+export * from './InstallApp';
 export * from './OnboardingIntro';
 export * from './PortfolioPanel';
 export * from './ReferralsModal';
