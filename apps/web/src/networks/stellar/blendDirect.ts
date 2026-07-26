@@ -15,6 +15,7 @@ import {
   isMainnet,
   type StellarNetwork,
 } from './kit';
+import { describeOutcomeError, runWithErrorCapture } from './pollarError';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 
 // Blend V2 pool + el USDC (reserva) que ese pool acepta, por red. Son solo los
@@ -155,9 +156,11 @@ const submitBlendRequest = async (
     .build();
 
   const prepared = await server.prepareTransaction(transaction);
-  const outcome = await binding.client.signAndSubmitTx(prepared.toXDR());
+  const { outcome, lastError } = await runWithErrorCapture(binding.client, () =>
+    binding.client.signAndSubmitTx(prepared.toXDR()),
+  );
   if (outcome.status === 'error') {
-    throw new Error(outcome.details ?? 'Blend transaction failed');
+    throw new Error(describeOutcomeError(outcome, lastError, 'Blend transaction failed'));
   }
   return { hash: outcome.hash };
 };
@@ -236,9 +239,11 @@ export const directUsdcTransfer = async ({
     .build();
 
   const prepared = await server.prepareTransaction(transaction);
-  const outcome = await binding.client.signAndSubmitTx(prepared.toXDR());
+  const { outcome, lastError } = await runWithErrorCapture(binding.client, () =>
+    binding.client.signAndSubmitTx(prepared.toXDR()),
+  );
   if (outcome.status === 'error') {
-    throw new Error(outcome.details ?? 'USDC transfer failed');
+    throw new Error(describeOutcomeError(outcome, lastError, 'USDC transfer failed'));
   }
   return { hash: outcome.hash };
 };

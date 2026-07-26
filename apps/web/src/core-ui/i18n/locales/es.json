@@ -689,6 +689,14 @@
   "nav": {
     "primaryAriaLabel": "Principal"
   },
+  "concierge": {
+    "title": "Concierge",
+    "buttonAria": "Concierge",
+    "chat": "Chatea con nosotros",
+    "email": "Email",
+    "telegramTitle": "¿Querés estar al día?",
+    "telegramBody": "Unite a nuestro canal oficial de Telegram"
+  },
   "notificationsCenter": {
     "bellAria": "Notificaciones",
     "empty": "Aún no hay notificaciones",
@@ -1962,6 +1970,19 @@
       "successTitle": "¡De vuelta en tus ahorros!",
       "successSubtitle": "Tus fondos vuelven a estar flexibles y siguen generando rendimiento en tus ahorros.",
       "cta": "Retirar a tus ahorros"
+    }
+  },
+  "txError": {
+    "generic": "No pudimos completar la transacción. Probá de nuevo en un momento.",
+    "rejected": "Cancelaste la firma. No se hizo ningún cambio.",
+    "trustline": "Tu wallet necesita habilitar USDC primero. Agregá la trustline de USDC y volvé a intentar.",
+    "balance": "No tenés saldo suficiente para cubrir esta transacción y su comisión de red.",
+    "network": "No pudimos conectar con la red. Revisá tu conexión y volvé a intentar.",
+    "timeout": "La transacción tardó demasiado en confirmarse. Probá de nuevo.",
+    "contractGeneric": "La red rechazó la transacción. Probá de nuevo.",
+    "contract": {
+      "10": "No tenés suficiente USDC en tu wallet para cubrir este monto. Agregá fondos y volvé a intentar.",
+      "13": "Tu wallet necesita habilitar USDC primero. Agregá la trustline de USDC y volvé a intentar."
     }
   }
 }

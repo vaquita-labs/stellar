@@ -689,6 +689,14 @@
   "nav": {
     "primaryAriaLabel": "Primary"
   },
+  "concierge": {
+    "title": "Concierge",
+    "buttonAria": "Concierge",
+    "chat": "Chat with us",
+    "email": "Email",
+    "telegramTitle": "Want to stay in the loop?",
+    "telegramBody": "Join our official Telegram channel"
+  },
   "notificationsCenter": {
     "bellAria": "Notifications",
     "empty": "No notifications here yet",
@@ -1962,6 +1970,19 @@
       "successTitle": "Back in your savings!",
       "successSubtitle": "Your funds are flexible again and keep earning in your savings.",
       "cta": "Withdraw to your savings"
+    }
+  },
+  "txError": {
+    "generic": "We couldn't complete the transaction. Please try again in a moment.",
+    "rejected": "You cancelled the signature. No changes were made.",
+    "trustline": "Your wallet needs to enable USDC first. Add the USDC trustline and try again.",
+    "balance": "You don't have enough balance to cover this transaction and its network fee.",
+    "network": "We couldn't reach the network. Check your connection and try again.",
+    "timeout": "The transaction took too long to confirm. Please try again.",
+    "contractGeneric": "The network rejected the transaction. Please try again.",
+    "contract": {
+      "10": "You don't have enough USDC in your wallet to cover this amount. Add funds and try again.",
+      "13": "Your wallet needs to enable USDC first. Add the USDC trustline and try again."
     }
   }
 }

@@ -371,9 +371,11 @@ export function PositionWithdrawSheet({
         className="py-2.5!"
         onClick={handleWithdraw}
       >
-        {inLock
-          ? t('deposit.withdraw.withdrawAnyway', 'Withdraw anyway')
-          : t('portfolio.withdraw.cta', 'Withdraw to your savings')}
+        {error
+          ? t('common.retry', 'Retry')
+          : inLock
+            ? t('deposit.withdraw.withdrawAnyway', 'Withdraw anyway')
+            : t('portfolio.withdraw.cta', 'Withdraw to your savings')}
       </PressableButton>
     ) : step === 'processing' ? (
       <p className="w-full text-center text-xs text-gray-500">

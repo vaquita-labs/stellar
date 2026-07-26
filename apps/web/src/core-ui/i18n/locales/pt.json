@@ -689,6 +689,14 @@
   "nav": {
     "primaryAriaLabel": "Principal"
   },
+  "concierge": {
+    "title": "Concierge",
+    "buttonAria": "Concierge",
+    "chat": "Fale conosco",
+    "email": "Email",
+    "telegramTitle": "Quer ficar por dentro?",
+    "telegramBody": "Entre no nosso canal oficial do Telegram"
+  },
   "notificationsCenter": {
     "bellAria": "Notificações",
     "empty": "Ainda não há notificações",
@@ -1897,6 +1905,19 @@
       "successTitle": "De volta nas suas economias!",
       "successSubtitle": "Seus fundos estão flexíveis de novo e continuam rendendo nas suas economias.",
       "cta": "Sacar para suas economias"
+    }
+  },
+  "txError": {
+    "generic": "Não conseguimos concluir a transação. Tente novamente em instantes.",
+    "rejected": "Você cancelou a assinatura. Nenhuma alteração foi feita.",
+    "trustline": "Sua carteira precisa habilitar o USDC primeiro. Adicione a trustline de USDC e tente de novo.",
+    "balance": "Você não tem saldo suficiente para cobrir esta transação e a taxa de rede.",
+    "network": "Não conseguimos conectar à rede. Verifique sua conexão e tente de novo.",
+    "timeout": "A transação demorou demais para confirmar. Tente novamente.",
+    "contractGeneric": "A rede rejeitou a transação. Tente novamente.",
+    "contract": {
+      "10": "Você não tem USDC suficiente na carteira para cobrir este valor. Adicione fundos e tente de novo.",
+      "13": "Sua carteira precisa habilitar o USDC primeiro. Adicione a trustline de USDC e tente de novo."
     }
   }
 }

@@ -7,24 +7,27 @@ export interface HumanTxError {
   raw: string;
 }
 
-// Errores de contrato conocidos → explicación humana. Los códigos son los que
-// devuelven el SAC de Stellar / el pool de Blend (Error(Contract, #N)).
+// Errores de contrato conocidos → explicación humana y accionable (qué pasó +
+// qué hacer). Los códigos son los que devuelven el SAC de Stellar / el pool de
+// Blend (Error(Contract, #N)).
 const CONTRACT_ERROR_KEYS: Record<number, { key: string; fallback: string }> = {
   10: {
     key: 'txError.contract.10',
-    fallback: "You don't have enough of the accepted USDC in your wallet for this amount.",
+    fallback: "You don't have enough USDC in your wallet to cover this amount. Add funds and try again.",
   },
   13: {
     key: 'txError.contract.13',
-    fallback: 'Your wallet is missing the trustline for this asset.',
+    fallback: 'Your wallet needs to enable USDC first. Add the USDC trustline and try again.',
   },
 };
 
 /**
  * Convierte un error de transacción (que puede venir como un `HostError` enorme
- * con todo el event log) en un mensaje corto y legible, conservando el texto
- * crudo aparte para copiarlo. Nunca tira: ante cualquier forma rara cae a un
- * genérico. `t` es opcional (si no se pasa, usa los textos en inglés).
+ * con todo el event log, o un genérico tipo "Pollar withdraw failed") en un
+ * mensaje corto, legible y accionable para el usuario final. Nunca muestra el
+ * texto crudo: ante cualquier forma desconocida cae a un genérico amable. El
+ * `raw` se conserva solo para logging/telemetría, no para la UI. `t` es opcional
+ * (si no se pasa, usa los textos en inglés).
  */
 export const humanizeTxError = (
   error: unknown,
@@ -36,8 +39,22 @@ export const humanizeTxError = (
       : (error as { message?: string })?.message ?? String(error ?? '');
   const tr = (key: string, fallback: string, opts?: Record<string, unknown>) =>
     t ? t(key, fallback, opts) : fallback;
+  const generic = tr('txError.generic', "We couldn't complete the transaction. Please try again in a moment.");
 
-  if (!raw) return { title: tr('txError.generic', 'Something went wrong.'), raw };
+  if (!raw) return { title: generic, raw };
+
+  // El usuario canceló/rechazó la firma en su wallet: no es un fallo real. Cada
+  // wallet lo reporta distinto, así que cubrimos los textos habituales:
+  //  - externas (Freighter/xBull/Albedo): "user declined/rejected", "denied"…
+  //  - smart/passkey (WebAuthn): DOMException NotAllowedError, "operation either
+  //    timed out or was not allowed", AbortError → "aborted".
+  if (
+    /declin|reject|denied|cancell?ed|user cancel|dismiss|not allowed|notallowed|was not allowed|abort|user closed|closed the (popup|window|modal)|operation either timed out/i.test(
+      raw,
+    )
+  ) {
+    return { title: tr('txError.rejected', 'You cancelled the signature. No changes were made.'), raw };
+  }
 
   // Error(Contract, #N): el motivo de rechazo del contrato.
   const contractMatch = raw.match(/Error\(Contract,\s*#(\d+)\)/);
@@ -46,24 +63,25 @@ export const humanizeTxError = (
     const known = CONTRACT_ERROR_KEYS[code];
     if (known) return { title: tr(known.key, known.fallback), raw };
     return {
-      title: tr('txError.contractGeneric', 'The transaction was rejected by the contract (code #{{code}}).', {
-        code,
-      }),
+      title: tr('txError.contractGeneric', 'The network rejected the transaction. Please try again.'),
       raw,
     };
   }
 
   if (/trustline/i.test(raw)) {
-    return { title: tr('txError.trustline', 'Your wallet is missing the trustline for this asset.'), raw };
+    return { title: tr('txError.trustline', 'Your wallet needs to enable USDC first. Add the USDC trustline and try again.'), raw };
   }
-  if (/insufficient|not within the allowed range|balance/i.test(raw)) {
-    return { title: tr('txError.balance', "You don't have enough balance for this transaction."), raw };
+  if (/insufficient|not within the allowed range|balance|underfunded/i.test(raw)) {
+    return { title: tr('txError.balance', "You don't have enough balance to cover this transaction and its network fee."), raw };
   }
-  if (/user (declined|rejected)|denied|cancell?ed/i.test(raw)) {
-    return { title: tr('txError.rejected', 'The signature was cancelled.'), raw };
+  if (/network|fetch|connection|offline|econn|dns|failed to fetch/i.test(raw)) {
+    return { title: tr('txError.network', "We couldn't reach the network. Check your connection and try again."), raw };
+  }
+  if (/timeout|timed out|deadline|expired|too long/i.test(raw)) {
+    return { title: tr('txError.timeout', 'The transaction took too long to confirm. Please try again.'), raw };
   }
 
-  // Sin patrón conocido: primera línea recortada, para no volcar un párrafo.
-  const firstLine = raw.split('\n')[0].trim().slice(0, 140);
-  return { title: firstLine || tr('txError.generic', 'Something went wrong.'), raw };
+  // Sin patrón conocido (incluye genéricos del SDK tipo "Pollar withdraw
+  // failed"): nunca volcamos el crudo al usuario, mostramos el genérico amable.
+  return { title: generic, raw };
 };

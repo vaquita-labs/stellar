@@ -1,4 +1,5 @@
 import type { PollarClient, TransactionState, TxBuildBody } from '@pollar/core';
+import { describeOutcomeError, runWithErrorCapture } from './pollarError';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 
 // TEST — remove before mainnet
@@ -81,10 +82,12 @@ async function invokeViaPollar(
   }
 
   const promise = (async () => {
-    const outcome = await client.buildAndSignAndSubmitTx('invoke_contract', params);
+    const { outcome, lastError } = await runWithErrorCapture(client, () =>
+      client.buildAndSignAndSubmitTx('invoke_contract', params),
+    );
     console.info(`[${logLabel}] outcome`, outcome.status, outcome);
     if (outcome.status === 'error') {
-      throw new Error(outcome.details ?? `Pollar ${params.method} failed`);
+      throw new Error(describeOutcomeError(outcome, lastError, `Pollar ${params.method} failed`));
     }
     // Both 'success' (ledger-confirmed) and 'pending' (Horizon ack) carry a hash.
     return { hash: outcome.hash };
