@@ -157,12 +157,11 @@ export function DepositMethodModal({
       network: network?.networkName ?? null,
     });
     try {
-      const { hash } = await directBlendSupply({
+      await directBlendSupply({
         address: walletAddress,
         amount,
         decimals: token.decimals,
       });
-      console.info('[direct-blend-deposit] submitted', { hash });
       trackConversion('direct_blend_deposit_successful', numericAmount, token.symbol);
       void refreshWalletBalance();
       // La posición on-chain en Blend cambió: invalidar su query para que el
@@ -301,7 +300,7 @@ export function DepositMethodModal({
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
         <span className="text-gray-500">{t('withdraw.methodLabel', 'Method')}</span>
-        <Popover placement="top" offset={8}>
+        <Popover>
           <PopoverTrigger>
             <button
               type="button"
@@ -311,7 +310,7 @@ export function DepositMethodModal({
               <FiInfo className="w-3.5 h-3.5 text-gray-500" />
             </button>
           </PopoverTrigger>
-          <PopoverContent className="max-w-[240px]">
+          <PopoverContent placement="top" offset={8} className="max-w-[240px]">
             <div className="px-1 py-2">
               <p className="text-xs font-bold text-black mb-1">
                 {t('deposit.blend.whatIsTitle', 'What is Blend?')}
@@ -438,7 +437,7 @@ export function DepositMethodModal({
       </div>
     ) : step === 'confirm' ? (
       <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleConfirm}>
-        {t('deposit.blend.cta', 'Deposit to your savings')}
+        {error ? t('common.retry', 'Retry') : t('deposit.blend.cta', 'Deposit to your savings')}
       </PressableButton>
     ) : step === 'processing' ? (
       <p className="w-full text-center text-xs text-gray-500">
