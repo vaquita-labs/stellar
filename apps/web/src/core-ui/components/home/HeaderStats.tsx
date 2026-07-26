@@ -1,15 +1,17 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
+import { truncateDecimals } from '@/core-ui/helpers/strings';
 import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiBell } from 'react-icons/fi';
+import { FiAlertCircle, FiBell } from 'react-icons/fi';
 import {
   useApyByLockPeriod,
+  useBlendPosition,
   useDepositsComplete,
   useProfileData,
   useProfileExperience,
@@ -55,6 +57,15 @@ export const HeaderStats = () => {
   const { data: profileData } = useProfileData();
   const { data: streakData, isLoading: streakLoading } = useProfileStreak();
   const { data: depositsData, isLoading: depositsLoading } = useDepositsComplete(walletAddress);
+  // Posición de depósito directo a Blend (on-chain). Es el nivel base del
+  // portafolio: entra al total junto con los locks de Vaquita.
+  const {
+    data: blendPosition,
+    isLoading: blendLoading,
+    isError: blendError,
+    refetch: refetchBlend,
+    dataUpdatedAt: blendUpdatedAt,
+  } = useBlendPosition(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
   // Solo para el desglose del portafolio: el APY ya no se muestra en el header.
@@ -114,9 +125,40 @@ export const HeaderStats = () => {
   }, 0);
 
   // Seis decimales fijos, todos del mismo tamaño: los últimos corren solos a
-  // medida que se devenga el rendimiento.
-  const liveBalance = activeDepositsTotalAmount + accruedInterest;
-  const formattedBalance = liveBalance.toLocaleString(undefined, {
+  // medida que se devenga el rendimiento. Total = locks (capital + interés) +
+  // posición directa en Blend (nivel base, líquido).
+  const blendBalance = blendPosition?.usdc ?? 0;
+  const blendApy = blendPosition?.apy ?? 0;
+  // Proyección en vivo del rendimiento de Blend entre refetches, igual que los
+  // locks: capital × APY prorrateado por el tiempo transcurrido desde el último
+  // fetch on-chain. Así el saldo de Blend también "crece de a poco" en pantalla.
+  // Al próximo refetch (60s) snapea al valor real, corrigiendo cualquier deriva.
+  // OJO: la magnitud la manda el APY — en testnet Blend rinde ~0.1%, así que el
+  // movimiento a 6 decimales es imperceptible; con un APY real (mainnet/locks)
+  // sí se ve correr.
+  const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
+  const blendRatePerMs = (blendBalance * (blendApy / 100)) / MS_PER_YEAR;
+  const blendElapsed = blendUpdatedAt ? Math.max(0, clientNow - blendUpdatedAt) : 0;
+  const blendLive = blendBalance + blendRatePerMs * blendElapsed;
+  const liveBalance = activeDepositsTotalAmount + accruedInterest + blendLive;
+
+  // Reglas para NO asustar con la plata:
+  // - `blendPending`: primer load sin valor en cache todavía. No mostramos un
+  //   total parcial (locks sin Blend) que después pega un salto: mostramos el
+  //   spinner del saldo hasta saber el número completo.
+  // - `blendFailed`: se agotaron los reintentos y no hay valor. En vez de
+  //   mostrar un total MENOR al real en silencio, avisamos y ofrecemos
+  //   reintentar. Si hay valor en cache (aunque viejo), se muestra ese y no se
+  //   considera "failed".
+  const blendPending = blendLoading && !blendPosition;
+  const blendFailed = blendError && !blendPosition;
+  const balanceLoading = (depositsLoading && !depositsData) || blendPending;
+  // Con plata NUNCA redondeamos hacia arriba: truncamos a 6 decimales antes de
+  // formatear. `toLocaleString` redondea, y eso hacía que el header mostrara
+  // $6.000000 con $5.9999995 reales, contradiciendo el "Available" del retiro
+  // (que trunca a 2 → $5.99) y aparentando un centavo perdido que no existe.
+  // Truncar en ambos lados = misma dirección, nunca mostramos de más.
+  const formattedBalance = truncateDecimals(liveBalance, 6).toLocaleString(undefined, {
     minimumFractionDigits: 6,
     maximumFractionDigits: 6,
   });
@@ -218,25 +260,45 @@ export const HeaderStats = () => {
                 de la app) para que se lea como algo que se toca, no como un
                 dato. Antes abría el historial de movimientos; ese sigue
                 accesible desde TotalDepositsButton y SavingsStats. */}
-            <PressableButton
-              variant="cream"
-              onClick={() => setShowPortfolioPanel(true)}
-              ariaLabel={t('home.stats.apyAria', 'Portfolio')}
-              // w-fit + self-start: la pastilla se ajusta al saldo y crece con
-              // él, alineada contra el mismo borde que el saludo.
-              className="w-fit max-w-full self-start justify-start min-w-0 py-2"
-            >
-              {depositsLoading && !depositsData ? (
-                <Spinner size="sm" color="current" />
-              ) : (
-                <span
-                  data-tutorial="tutorial-balance"
-                  className="text-xl font-bold text-black tabular-nums leading-none truncate"
+            <div className="flex items-center gap-1.5 self-start max-w-full">
+              <PressableButton
+                variant="cream"
+                onClick={() => setShowPortfolioPanel(true)}
+                ariaLabel={t('home.stats.apyAria', 'Portfolio')}
+                // w-fit + self-start: la pastilla se ajusta al saldo y crece con
+                // él, alineada contra el mismo borde que el saludo.
+                className="w-fit max-w-full self-start justify-start min-w-0 py-2"
+              >
+                {balanceLoading ? (
+                  <Spinner size="sm" color="current" />
+                ) : (
+                  <span
+                    data-tutorial="tutorial-balance"
+                    className="text-xl font-bold text-black tabular-nums leading-none truncate"
+                  >
+                    {hideBalance ? '••••' : `$${formattedBalance}`}
+                  </span>
+                )}
+              </PressableButton>
+              {/* Nunca ocultamos que un saldo no se pudo confirmar: si Blend
+                  falló y no hay valor en cache, el total mostrado NO incluye esa
+                  parte, así que lo avisamos y dejamos reintentar en el acto en
+                  vez de mentir con un número menor. */}
+              {blendFailed ? (
+                <button
+                  type="button"
+                  onClick={() => void refetchBlend()}
+                  aria-label={t('home.stats.balanceRetry', 'Retry loading balance')}
+                  title={t(
+                    'home.stats.balanceSyncError',
+                    "Couldn't load your Blend balance. Tap to retry.",
+                  )}
+                  className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-white/80 border border-black/20 text-amber-600 transition active:translate-y-[1px]"
                 >
-                  {hideBalance ? '••••' : `$${formattedBalance}`}
-                </span>
-              )}
-            </PressableButton>
+                  <FiAlertCircle className="w-4 h-4" />
+                </button>
+              ) : null}
+            </div>
 
             {/* OCULTOS A PROPÓSITO (2026-07-21): acá vivían dos chips bajo el
                 saldo. El verde mostraba el APY base y abría <PortfolioPanel>;

@@ -30,6 +30,12 @@ export const BootLoader = () => {
   const isExactly = (route: string) => pathname === route;
   const isUnder = (route: string) => pathname.startsWith(`${route}/`);
 
+  // Login: no es una lista ni comparte el chrome de <PageLayout>. LoginPage
+  // ya renderiza `null` mientras verifica auth / lee el intro de localStorage;
+  // el arranque hace lo mismo para no pintar el esqueleto de filas del
+  // leaderboard sobre la pantalla de login (se leía como otra pantalla).
+  if (isExactly('/login')) return null;
+
   // Home: header naranja + cielo + botonera.
   if (isExactly('/') || isExactly('/home') || isUnder('/home')) return <HomeSkeleton />;
 

@@ -9,6 +9,7 @@ import { WorldType } from '../../types';
 import { useModalPresence } from '../molecules/AppModal';
 import { BankAPYModal, CoinAnimation, DepositPanel, TutorialModal } from '../organisms';
 import { WorldMap } from '../templates';
+import { AutoInvest } from './AutoInvest';
 import { BackgroundMusic } from './BackgroundMusic';
 import { EditPanels } from './edit';
 import { HeaderStats } from './HeaderStats';
@@ -73,6 +74,7 @@ export function HomePage() {
 
   return (
     <div className="h-full w-full flex flex-col relative overflow-hidden min-h-0">
+      <AutoInvest />
       <HeaderStats />
       <PlaceModeHint />
       {/* <BackgroundMusic /> */}
