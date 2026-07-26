@@ -182,7 +182,7 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
             </TransactionList>
           </TransactionMonthCard>
         ) : positions.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-10 text-center">
+          <div className="flex flex-col items-center gap-2 rounded-2xl bg-white px-4 py-10 text-center">
             <p className="text-sm font-semibold text-black">
               {t('portfolio.withdraw.empty', 'No positions to withdraw in this term.')}
             </p>

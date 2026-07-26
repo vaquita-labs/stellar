@@ -44,7 +44,19 @@ export const HeaderStats = () => {
   // montado detrás, no se recarga). El panel y las posiciones viven ahí, en
   // <PortfolioFlow>. Ver [[portfolio-overlay-flow]].
   const router = useRouter();
-  const openPortfolioPanel = () => router.push('/portafolio');
+  // Normalmente estamos en /home y esto navega (la ruta la intercepta @modal y
+  // se pinta el overlay). Red de seguridad: si por una desincronización previa
+  // del historial la URL ya quedó parada en /portafolio con el overlay cerrado,
+  // un push idéntico Next lo deduplica a no-op y el botón "no abre". En ese caso
+  // (el saldo solo es visible/tocable si el overlay NO está encima) forzamos una
+  // navegación real con un query distinto para re-disparar la ruta interceptora.
+  const openPortfolioPanel = () => {
+    if (window.location.pathname === '/portafolio') {
+      router.push(`/portafolio?r=${Date.now()}`);
+    } else {
+      router.push('/portafolio');
+    }
+  };
   // Mantienen el modal montado mientras corre la animación de salida.
   const streakModalMounted = useModalPresence(showStreakModal);
   const coinsModalMounted = useModalPresence(showCoinsModal);
