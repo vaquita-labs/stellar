@@ -7,11 +7,11 @@ import { useApyByLockPeriods, useBlendPosition, useDepositsComplete } from '@/co
 import { useConfigStore } from '@/core-ui/stores';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronDown, FiChevronRight } from 'react-icons/fi';
+import { FiChevronRight } from 'react-icons/fi';
 import { IoWalletOutline } from 'react-icons/io5';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
-import { EarningsBreakdown } from '../../molecules/EarningsBreakdown';
 import { AllocationDetailSheet } from './AllocationDetailSheet';
+import { BlendDetailSheet } from './BlendDetailSheet';
 import { MoveFundsSheet } from './MoveFundsSheet';
 import { getAllocationStyle } from './allocationStyles';
 import { Allocation, PortfolioPanelProps } from './types';
@@ -46,8 +46,9 @@ export function PortfolioPanel({
   const [detailLockPeriod, setDetailLockPeriod] = useState<number | null>(null);
   const [moveToLockPeriod, setMoveToLockPeriod] = useState<number | null>(null);
   const [showMove, setShowMove] = useState(false);
-  // El desglose de la ganancia arranca cerrado: es el "si querés ver más".
-  const [showEarningsDetail, setShowEarningsDetail] = useState(false);
+  // Detalle de Blend (qué es + números), como el detalle de cada plazo.
+  const [showBlendDetail, setShowBlendDetail] = useState(false);
+  const blendDetailMounted = useModalPresence(showBlendDetail);
   const detailMounted = useModalPresence(detailLockPeriod !== null);
   const moveMounted = useModalPresence(showMove);
 
@@ -139,10 +140,12 @@ export function PortfolioPanel({
             contenido principal de la pantalla, no un bloque más. */}
         <div className="pt-2">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
-            {t('deposit.bank.estimatedEarningsTotal', 'Estimated earnings total')}
+            {t('portfolio.totalBalance', 'Total balance')}
           </p>
+          {/* El número grande = TODO el dinero disponible (Blend + locks). Las
+              ganancias estimadas pasan a la línea secundaria. */}
           <p className="mt-1 text-5xl font-bold text-success tabular-nums leading-none">
-            {totalEarnings.toFixed(2)}
+            {totalAmount.toFixed(2)}
             <span className="text-2xl ml-1.5 font-semibold">{tokenSymbol}</span>
           </p>
           <p className="mt-3 text-sm text-gray-500">
@@ -150,42 +153,16 @@ export function PortfolioPanel({
               {apyLoading && totalAmount === 0 ? '—' : `${blendedApy.toFixed(2)}%`} APY
             </span>
             <span className="mx-1.5">·</span>
-            {t('portfolio.totalBalance', 'Total balance')}:{' '}
-            <span className="font-bold text-black tabular-nums">{formatUsd(totalAmount)}</span>
+            {t('portfolio.earning', 'Earning')}{' '}
+            <span className="font-bold text-success tabular-nums">
+              +{totalEarnings.toFixed(2)} {tokenSymbol}
+            </span>
           </p>
         </div>
 
-        {/* Banda del "More info": las dos líneas la separan del resumen de
-            arriba y de la lista de abajo, y encierran el desglose al abrirlo. */}
-        <div className="-mt-1 border-y border-black/10">
-          <button
-            type="button"
-            onClick={() => setShowEarningsDetail((v) => !v)}
-            aria-expanded={showEarningsDetail}
-            className="w-full flex items-center justify-between gap-2 bg-transparent py-3 text-sm font-bold text-black"
-          >
-            {t('portfolio.moreInfo', 'More info')}
-            <FiChevronDown className={`w-4 h-4 transition-transform ${showEarningsDetail ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showEarningsDetail ? (
-            <div className="pb-4 animate-in fade-in slide-in-from-top-1 duration-200">
-              <EarningsBreakdown
-                vaquitaEarnings={vaquitaEarnings}
-                protocolEarnings={protocolEarnings}
-                protocolApy={protocolApy}
-                lendingMarketName={lendingMarketName}
-                tokenSymbol={tokenSymbol}
-              />
-              <p className="mt-3 text-xs text-gray-500 leading-relaxed">
-                {t(
-                  'deposit.bank.estimatesDisclaimer',
-                  'These are estimates and update over time final rewards are confirmed when you withdraw.',
-                )}
-              </p>
-            </div>
-          ) : null}
-        </div>
+        {/* El "de dónde sale" ya no es un desglose global: cada allocation lo
+            explica en su propio detalle (tocá una fila). */}
+        <div className="-mt-1 border-t border-black/10" />
 
         {/* Allocation: una fila por plazo, ordenadas de más corto a más largo. */}
         <div>
@@ -208,14 +185,19 @@ export function PortfolioPanel({
               {t('portfolio.empty', 'No saving terms available yet.')}
             </p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {/* Nivel base: lo que está en Blend, líquido y sin lock. Fila
-                  informativa; el retiro se hace desde el botón "Withdraw" del
-                  home (Blend es el modo normal). Se muestra solo si hay algo. */}
+            // Lista agrupada (no cards sueltas): un contenedor con filas
+            // separadas por divisores. Más compacto, ocupa menos espacio.
+            <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10 overflow-hidden bg-white">
+              {/* Nivel base: lo que está en Blend, líquido y sin lock. Tocarla
+                  abre el detalle que explica qué es Blend. Solo si hay algo. */}
               {blendBalance > 0 ? (
-                <div className="w-full flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-2.5">
-                  <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-success/20 text-success">
-                    <IoWalletOutline className="w-5 h-5" />
+                <button
+                  type="button"
+                  onClick={() => setShowBlendDetail(true)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition active:bg-black/[0.04]"
+                >
+                  <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-success/20 text-success">
+                    <IoWalletOutline className="w-[18px] h-[18px]" />
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-bold text-black truncate">
@@ -225,18 +207,22 @@ export function PortfolioPanel({
                       {formatUsd(blendBalance)}
                     </span>
                   </span>
-                  <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums bg-success/20 text-success">
+                  <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums bg-success/20 text-success">
                     {blendApy.toFixed(2)}%
                   </span>
-                </div>
+                  <FiChevronRight className="w-4 h-4 text-black/50 shrink-0" />
+                </button>
               ) : null}
               {allocations.map((allocation, index) => {
                 const style = getAllocationStyle(index);
                 return (
-                  <PressableButton variant="white" size="row"
+                  <button
+                    type="button"
                     key={allocation.lockPeriod}
-                    onClick={() => setDetailLockPeriod(allocation.lockPeriod)}>
-                    <span className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${style.chip}`}>
+                    onClick={() => setDetailLockPeriod(allocation.lockPeriod)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition active:bg-black/[0.04]"
+                  >
+                    <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${style.chip}`}>
                       {style.icon}
                     </span>
                     <span className="flex-1 min-w-0">
@@ -246,12 +232,12 @@ export function PortfolioPanel({
                       </span>
                     </span>
                     <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums ${style.chip}`}
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${style.chip}`}
                     >
                       {allocation.apy.toFixed(2)}%
                     </span>
-                    <FiChevronRight className="w-5 h-5 text-black shrink-0" />
-                  </PressableButton>
+                    <FiChevronRight className="w-4 h-4 text-black/50 shrink-0" />
+                  </button>
                 );
               })}
             </div>
@@ -278,6 +264,16 @@ export function PortfolioPanel({
           allocations={allocations}
           initialToLockPeriod={moveToLockPeriod ?? undefined}
           onSubmit={handleMoveSubmit}
+        />
+      ) : null}
+
+      {blendDetailMounted ? (
+        <BlendDetailSheet
+          open={showBlendDetail}
+          onOpenChange={() => setShowBlendDetail(false)}
+          amount={blendBalance}
+          apy={blendApy}
+          tokenSymbol={tokenSymbol}
         />
       ) : null}
     </>
