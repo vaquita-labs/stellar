@@ -5,11 +5,13 @@ import { formatUsd } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useBlendPosition, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
+import { Spinner } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight } from 'react-icons/fi';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
+import { TransactionList, TransactionMonthCard } from '../../molecules/TransactionRow';
 import { DepositEarnings, DepositEarningsReporter } from '../../home/DepositEarningsReporter';
 import { AllocationDetailSheet } from './AllocationDetailSheet';
 import { BlendDetailSheet } from './BlendDetailSheet';
@@ -35,11 +37,11 @@ export function PortfolioPanel({
 }: PortfolioPanelProps) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
-  const { data: depositsData } = useDepositsComplete(walletAddress);
+  const { data: depositsData, isFetching: depositsFetching } = useDepositsComplete(walletAddress);
   // Nivel base del portafolio: depósito directo a Blend, líquido (sin lock).
   // Se lee on-chain y va aparte de las allocations por plazo (no entra en el
   // mover-fondos ni en los detalles de plazo, que son solo para locks).
-  const { data: blendPosition } = useBlendPosition(walletAddress);
+  const { data: blendPosition, isFetching: blendFetching } = useBlendPosition(walletAddress);
   const blendBalance = blendPosition?.usdc ?? 0;
   const blendApy = blendPosition?.apy ?? 0;
 
@@ -140,6 +142,19 @@ export function PortfolioPanel({
   const totalAmount = lockTotal + blendBalance;
   const totalEarnings = vaquitaEarnings + protocolEarnings;
 
+  // Tras un invest/retiro, Blend (nivel base) y los depósitos (locks) se re-leen
+  // por separado y asientan en momentos distintos: si ponés 2 de Blend en un
+  // plazo, Blend baja a −2 unos segundos ANTES de que el nuevo lock aparezca, y
+  // el total pega un bajón visible (6 → 4 → 6) que asusta. Mientras cualquiera de
+  // las dos fuentes se está re-sincronizando, congelamos el total en el último
+  // valor estable y mostramos un spinner; al asentar ambas, snapea al valor real
+  // (ya consistente), sin el salto. keepPreviousData en las queries evita el flash
+  // a 0; esto evita además el bajón por desincronización entre las dos.
+  const isSyncing = depositsFetching || blendFetching;
+  const lastStableTotalRef = useRef(totalAmount);
+  if (!isSyncing) lastStableTotalRef.current = totalAmount;
+  const displayTotal = isSyncing ? lastStableTotalRef.current : totalAmount;
+
   const detailAllocation = allocations.find((a) => a.lockPeriod === detailLockPeriod) ?? null;
   const detailIndex = allocations.findIndex((a) => a.lockPeriod === detailLockPeriod);
   // Al cerrar, detailLockPeriod vuelve a null antes de que termine la animación
@@ -183,9 +198,14 @@ export function PortfolioPanel({
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
             {t('portfolio.totalBalance', 'Total balance')}
           </p>
-          <p className="mt-1 text-5xl font-bold text-success tabular-nums leading-none">
-            {totalAmount.toFixed(2)}
-            <span className="text-2xl ml-1.5 font-semibold">{tokenSymbol}</span>
+          <p className="mt-1 flex items-center gap-2 text-5xl font-bold text-success tabular-nums leading-none">
+            <span className={isSyncing ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+              {displayTotal.toFixed(2)}
+              <span className="text-2xl ml-1.5 font-semibold">{tokenSymbol}</span>
+            </span>
+            {/* Mientras Blend + depósitos se re-sincronizan tras un invest/retiro,
+                un spinner en vez de dejar que el total pegue un bajón transitorio. */}
+            {isSyncing ? <Spinner size="sm" color="current" className="text-black/40" /> : null}
           </p>
           <p className="mt-3 text-sm text-gray-500">
             {t('portfolio.earning', 'Earning')}{' '}
@@ -199,50 +219,48 @@ export function PortfolioPanel({
             explica en su propio detalle (tocá una fila). */}
         <div className="-mt-1 border-t border-black/10" />
 
-        {/* Allocation: una fila por plazo, ordenadas de más corto a más largo. */}
-        <div>
-          <div className="mb-2">
-            <h3 className="text-sm font-bold text-black">{t('portfolio.allocation', 'Allocation')}</h3>
-          </div>
-
+        {/* Allocation: una fila por plazo, ordenadas de más corto a más largo.
+            Mismo card blanco redondeado que "Your positions" (TransactionMonthCard):
+            título adentro, sin borde negro, filas con hover suave y sin divisores.
+            Solo los plazos con lock; Blend se accede tocando el balance de arriba. */}
+        <TransactionMonthCard label={t('portfolio.allocation', 'Allocation')}>
           {allocations.length === 0 ? (
-            <p className="text-sm text-gray-500 py-4 text-center">
+            <p className="px-2 py-4 text-center text-sm text-gray-500">
               {t('portfolio.empty', 'No saving terms available yet.')}
             </p>
           ) : (
-            // Lista agrupada (no cards sueltas): solo los plazos con lock. Blend
-            // ya no va acá: se accede tocando el balance de arriba.
-            <div className="flex flex-col divide-y divide-black/10 rounded-md border border-black border-b-2 overflow-hidden bg-white">
+            <TransactionList align="grouped">
               {allocations.map((allocation, index) => {
                 const style = getAllocationStyle(index);
                 return (
-                  <button
-                    type="button"
-                    key={allocation.lockPeriod}
-                    onClick={() => setDetailLockPeriod(allocation.lockPeriod)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition active:bg-black/[0.04]"
-                  >
-                    <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${style.chip}`}>
-                      {style.icon}
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-bold text-black truncate">{allocation.label}</span>
-                      <span className="block text-xs text-gray-500 tabular-nums">
-                        {formatUsd(allocation.amount)}
-                      </span>
-                    </span>
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${style.chip}`}
+                  <li key={allocation.lockPeriod}>
+                    <button
+                      type="button"
+                      onClick={() => setDetailLockPeriod(allocation.lockPeriod)}
+                      className="w-full flex items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-black/5 active:bg-black/10"
                     >
-                      {allocation.apy.toFixed(2)}%
-                    </span>
-                    <FiChevronRight className="w-4 h-4 text-black/50 shrink-0" />
-                  </button>
+                      <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${style.chip}`}>
+                        {style.icon}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-bold text-black truncate">{allocation.label}</span>
+                        <span className="block text-xs text-gray-500 tabular-nums">
+                          {formatUsd(allocation.amount)}
+                        </span>
+                      </span>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${style.chip}`}
+                      >
+                        {allocation.apy.toFixed(2)}%
+                      </span>
+                      <FiChevronRight className="w-4 h-4 text-black/50 shrink-0" />
+                    </button>
+                  </li>
                 );
               })}
-            </div>
+            </TransactionList>
           )}
-        </div>
+        </TransactionMonthCard>
       </AppModal>
 
       {detailMounted && detailView ? (

@@ -4,26 +4,15 @@ import { formatTimeDeposit, getInterestData } from '@/core-ui/helpers';
 import { useApyByLockPeriod } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
-import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight, FiClock } from 'react-icons/fi';
-
-const formatRemaining = (ms: number, t: TFunction) => {
-  if (ms <= 0) return t('home.depositCard.ready', 'Ready');
-  const totalSecs = Math.floor(ms / 1000);
-  const days = Math.floor(totalSecs / 86400);
-  const hours = Math.floor((totalSecs % 86400) / 3600);
-  const mins = Math.floor((totalSecs % 3600) / 60);
-  if (days > 0) return t('home.depositCard.remainingDays', '{{days}}d {{hours}}h left', { days, hours });
-  if (hours > 0) return t('home.depositCard.remainingHours', '{{hours}}h {{mins}}m left', { hours, mins });
-  return t('home.depositCard.remainingMins', '{{mins}}m left', { mins: Math.max(1, mins) });
-};
+import { FiClock } from 'react-icons/fi';
 
 /**
  * Fila compacta de una posición (depósito con lock) en /portafolio, con el mismo
  * lenguaje visual que las filas de /transactions: ícono cuadrado + monto/plazo a
- * la izquierda y ganancia/tiempo a la derecha. Sin badge "Locked" (confundía) ni
- * tarjeta gigante: es una fila de lista, tappable para retirar.
+ * la izquierda y ganancia a la derecha. Sin badge "Locked" (confundía) ni tarjeta
+ * gigante: es una fila de lista, tappable para retirar. El tiempo restante no se
+ * muestra acá (era ruido): vive en el detalle de la posición.
  */
 export function PositionRow({
   deposit,
@@ -36,12 +25,6 @@ export function PositionRow({
   const { network, token } = useConfigStore();
   const { data: dataApy } = useApyByLockPeriod(deposit.lockPeriod, token?.symbol ?? '');
   const { totalInterest } = getInterestData(network!, dataApy, deposit.amount, deposit.lockPeriod);
-
-  const now =
-    deposit.serverTimestamp && deposit.fetchedAtTimestamp
-      ? deposit.serverTimestamp + (Date.now() - deposit.fetchedAtTimestamp)
-      : Date.now();
-  const remainingMs = Math.max(0, deposit.createdTimestamp + deposit.lockPeriod - now);
   const symbol = token?.symbol ?? 'USDC';
 
   return (
@@ -60,7 +43,7 @@ export function PositionRow({
             {deposit.amount.toFixed(2)} {symbol}
           </p>
           <p className="text-[11px] text-gray-600 truncate">
-            {formatTimeDeposit(deposit.lockPeriod)} · {formatRemaining(remainingMs, t)}
+            {formatTimeDeposit(deposit.lockPeriod)}
           </p>
         </div>
 
@@ -70,8 +53,6 @@ export function PositionRow({
           </p>
           <p className="text-[10px] text-gray-500">{t('portfolio.row.earnings', 'Earnings')}</p>
         </div>
-
-        <FiChevronRight className="h-4 w-4 shrink-0 text-black/40" />
       </button>
     </li>
   );
