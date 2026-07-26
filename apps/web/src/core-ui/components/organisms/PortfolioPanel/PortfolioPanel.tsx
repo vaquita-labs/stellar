@@ -198,10 +198,10 @@ export function PortfolioPanel({
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
             {t('portfolio.totalBalance', 'Total balance')}
           </p>
-          <p className="mt-1 flex items-center gap-2 text-5xl font-bold text-success tabular-nums leading-none">
+          <p className="mt-1 flex items-center gap-2 text-4xl font-bold text-black tabular-nums leading-none">
             <span className={isSyncing ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
               {displayTotal.toFixed(2)}
-              <span className="text-2xl ml-1.5 font-semibold">{tokenSymbol}</span>
+              <span className="text-xl ml-1.5 font-semibold">{tokenSymbol}</span>
             </span>
             {/* Mientras Blend + depósitos se re-sincronizan tras un invest/retiro,
                 un spinner en vez de dejar que el total pegue un bajón transitorio. */}

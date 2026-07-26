@@ -183,7 +183,9 @@ export function AppModal({
           // HORIZONTAL. Usar items-end aquí pegaba el diálogo al borde derecho
           // (se notaba con size="sm", que no ocupa todo el ancho).
           (fullScreen
-            ? 'p-0! '
+            ? // A pantalla completa en mobile; en desktop se centra con márgenes
+              // como una tarjeta (no ocupa todo el viewport).
+              'p-0! sm:justify-center! sm:items-center! sm:p-10! '
             : 'justify-end! items-center! px-0! pt-3! pb-0! sm:justify-center! sm:p-10! ') +
           (slideFrom === 'right' ? PANEL_CONTAINER_ANIMATION : SHEET_CONTAINER_ANIMATION)
         }
