@@ -53,7 +53,6 @@ function displayAmount(raw: string) {
 export function DepositMethodModal({
   open,
   onOpenChange,
-  onContinue,
   onOnramp,
   onReceive,
 }: DepositMethodModalProps) {
@@ -413,11 +412,7 @@ export function DepositMethodModal({
   const backTarget = BACK_TARGET[step];
 
   const footer =
-    step === 'method' ? (
-      <PressableButton variant="success" size="cta" onClick={onContinue}>
-        {t('deposit.method.continue', 'I already have USDC, continue')}
-      </PressableButton>
-    ) : step === 'amount' ? (
+    step === 'amount' ? (
       // El aviso de red va acá abajo (y no en el body) porque el teclado ya lo
       // empuja fuera de la vista: pegado al CTA se lee justo cuando el usuario
       // descubre que el botón no responde.

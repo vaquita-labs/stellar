@@ -6,10 +6,11 @@ import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useBlendPosition, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight } from 'react-icons/fi';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
+import { AllocationDetailSheet } from './AllocationDetailSheet';
 import { BlendDetailSheet } from './BlendDetailSheet';
 import { InvestModal } from './InvestModal';
 import { getAllocationStyle } from './allocationStyles';
@@ -46,14 +47,19 @@ export function PortfolioPanel({
   // Detalle de Blend (qué es + números).
   const [showBlendDetail, setShowBlendDetail] = useState(false);
   const blendDetailMounted = useModalPresence(showBlendDetail);
+  // Detalle de un plazo (info + botón de retiro), como el de Blend pero para
+  // cada lock period. Tocar una fila lo abre; el retiro sale desde acá.
+  const [detailLockPeriod, setDetailLockPeriod] = useState<number | null>(null);
+  const detailMounted = useModalPresence(detailLockPeriod !== null);
   // "Invertir": abre el InvestModal (teclado + selector de plazo/APY; la plata
   // sale de Blend y se lockea en el Vaquita pool).
   const [showDeposit, setShowDeposit] = useState(false);
   const depositMounted = useModalPresence(showDeposit);
 
-  // Tocar un plazo navega a la ruta /portafolio con ese plazo ya filtrado. NO
-  // cerramos el panel: como está abierto por URL (/home?portfolio=1), ese entry
-  // queda en el historial y el botón atrás de /portafolio vuelve al panel abierto.
+  // Retirar navega a /portafolio con ese plazo ya filtrado (la lista de
+  // posiciones a retirar). NO cerramos el panel: como está abierto por URL
+  // (/home?portfolio=1), ese entry queda en el historial y el botón atrás de
+  // /portafolio vuelve al panel abierto.
   const goToTerm = (lockPeriod: number) => {
     router.push(`/portafolio?period=${lockPeriod}`);
   };
@@ -102,6 +108,15 @@ export function PortfolioPanel({
       ? (allocations.reduce((acc, a) => acc + a.amount * a.apy, 0) + blendBalance * blendApy) /
         totalAmount
       : (allocations.find((a) => a.lockPeriod === selectedLockPeriod) ?? allocations[0])?.apy ?? 0;
+
+  const detailAllocation = allocations.find((a) => a.lockPeriod === detailLockPeriod) ?? null;
+  const detailIndex = allocations.findIndex((a) => a.lockPeriod === detailLockPeriod);
+  // Al cerrar, detailLockPeriod vuelve a null antes de que termine la animación
+  // de salida. Retenemos el último plazo para que el sheet siga teniendo qué
+  // renderizar mientras se va, y no desaparezca de golpe.
+  const lastDetailRef = useRef<{ allocation: Allocation; index: number } | null>(null);
+  if (detailAllocation) lastDetailRef.current = { allocation: detailAllocation, index: detailIndex };
+  const detailView = detailAllocation ? { allocation: detailAllocation, index: detailIndex } : lastDetailRef.current;
 
   return (
     <>
@@ -176,7 +191,7 @@ export function PortfolioPanel({
                   <button
                     type="button"
                     key={allocation.lockPeriod}
-                    onClick={() => goToTerm(allocation.lockPeriod)}
+                    onClick={() => setDetailLockPeriod(allocation.lockPeriod)}
                     className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition active:bg-black/[0.04]"
                   >
                     <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${style.chip}`}>
@@ -201,6 +216,17 @@ export function PortfolioPanel({
           )}
         </div>
       </AppModal>
+
+      {detailMounted && detailView ? (
+        <AllocationDetailSheet
+          open={detailLockPeriod !== null}
+          onOpenChange={() => setDetailLockPeriod(null)}
+          allocation={detailView.allocation}
+          style={getAllocationStyle(detailView.index)}
+          tokenSymbol={tokenSymbol}
+          onWithdraw={() => goToTerm(detailView.allocation.lockPeriod)}
+        />
+      ) : null}
 
       {blendDetailMounted ? (
         <BlendDetailSheet
