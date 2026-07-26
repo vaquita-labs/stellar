@@ -1,7 +1,8 @@
 'use client';
 
-import { directBlendMainnetSupply } from '@/networks/stellar/blendDirect';
+import { directBlendSupply, isBlendDepositAvailable } from '@/networks/stellar/blendDirect';
 import { Spinner } from '@heroui/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, useAnimationControls } from 'framer-motion';
 import Image from 'next/image';
 import { usePollar } from '@pollar/react';
@@ -24,6 +25,8 @@ interface DepositMethodModalProps {
   onContinue: () => void;
   /** Onramp ARS: cierra este modal y abre el flujo de recibir fiat. */
   onOnramp: () => void;
+  /** Social/custodial: cierra este modal y abre el modal de recibir a su dirección. */
+  onReceive: () => void;
 }
 
 type Step = 'method' | 'amount' | 'confirm' | 'processing' | 'success';
@@ -47,6 +50,7 @@ export function DepositMethodModal({
   onOpenChange,
   onContinue,
   onOnramp,
+  onReceive,
 }: DepositMethodModalProps) {
   const { t } = useTranslation();
   const { walletAddress, token, network } = useConfigStore();
@@ -60,7 +64,12 @@ export function DepositMethodModal({
   const [overBalance, setOverBalance] = useState(false);
   const amountControls = useAnimationControls();
 
-  const { walletBalance, refreshWalletBalance } = usePollar();
+  const queryClient = useQueryClient();
+  const { walletBalance, refreshWalletBalance, wallet } = usePollar();
+  // Login externo (Freighter/xBull) vs custodial/social (Pollar). El social no
+  // "mueve" USDC que ya tiene: fondea RECIBIENDO a su dirección custodia, así que
+  // su rama "Wallet" abre el modal de recibir NATIVO (no el de Pollar) vía onReceive.
+  const isExternalWallet = wallet?.custody === 'external';
   const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
   // Pollar devuelve los balances ya en unidades humanas; el nativo se matchea por
   // `type` y el resto por código de asset (== `symbol` del token de config).
@@ -69,7 +78,10 @@ export function DepositMethodModal({
   );
   const available = tokenBalance ? truncateDecimals(Number(tokenBalance.available), 2) : 0;
   const balanceIsLoading = walletBalance.step === 'loading';
-  const isMainnet = network?.type === 'mainnet';
+  // Gatea el CTA según haya un pool de Blend configurado para la red activa
+  // (resuelto en blendDirect, mismo criterio que usa el envío de la tx). Ya no
+  // se cablea a "mainnet": en testnet se habilita solo si hay pool apuntado.
+  const blendAvailable = isBlendDepositAvailable();
 
   // Cada apertura arranca en la selección de método.
   useEffect(() => {
@@ -92,7 +104,7 @@ export function DepositMethodModal({
   // Igual que en el retiro: cualquier monto > 0 habilita el CTA. Exceder el
   // saldo se resuelve al presionar Review (gris + temblor), no con un botón
   // muerto que no explica nada.
-  const canReview = numericAmount > 0 && isMainnet;
+  const canReview = numericAmount > 0 && blendAvailable;
 
   const shakeAmount = () => {
     setOverBalance(true);
@@ -120,7 +132,7 @@ export function DepositMethodModal({
       network: network?.networkName ?? null,
     });
     try {
-      const { hash } = await directBlendMainnetSupply({
+      const { hash } = await directBlendSupply({
         address: walletAddress,
         amount,
         decimals: token.decimals,
@@ -128,6 +140,10 @@ export function DepositMethodModal({
       console.info('[direct-blend-deposit] submitted', { hash });
       trackConversion('direct_blend_deposit_successful', numericAmount, token.symbol);
       void refreshWalletBalance();
+      // La posición on-chain en Blend cambió: invalidar su query para que el
+      // header y el PortfolioPanel reflejen el nuevo total sin esperar los 60s
+      // de staleTime.
+      void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
       setStep('success');
     } catch (e) {
       trackError('direct_blend_deposit_failed', {
@@ -157,14 +173,30 @@ export function DepositMethodModal({
         </span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
-      <PressableButton variant="white" size="row" onClick={() => setStep('amount')}>
+      <PressableButton
+        variant="white"
+        size="row"
+        onClick={() => {
+          // Externa: teclea el monto y hace supply directo a Blend (ya tiene el
+          // USDC en su wallet). Social/custodial: no tiene de dónde "mover", así
+          // que abre el modal de recibir NATIVO a su dirección para que le entre
+          // plata (y de ahí se pone a invertir).
+          if (isExternalWallet) {
+            setStep('amount');
+          } else {
+            onReceive();
+          }
+        }}
+      >
         <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-bold text-black">
             {t('deposit.method.wallet.title', 'Wallet')}
           </span>
           <span className="block text-xs text-gray-500">
-            {t('deposit.method.wallet.subtitle', 'Deposit from a crypto wallet')}
+            {isExternalWallet
+              ? t('deposit.method.wallet.subtitle', 'Deposit from a crypto wallet')
+              : t('deposit.method.wallet.receiveSubtitle', 'Receive USDC to your address')}
           </span>
         </span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />
@@ -337,13 +369,13 @@ export function DepositMethodModal({
         >
           {t('withdraw.review', 'Review')}
         </PressableButton>
-        {!isMainnet ? (
+        {!blendAvailable ? (
           <div className="flex items-start justify-center gap-1.5 text-xs text-gray-500">
             <FiAlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
             <p>
               {t(
-                'deposit.blend.mainnetOnly',
-                'Direct Blend deposits are only available on Stellar mainnet.',
+                'deposit.blend.unavailable',
+                'Direct Blend deposits are not available on this network yet.',
               )}
             </p>
           </div>
@@ -354,7 +386,7 @@ export function DepositMethodModal({
         {t('deposit.blend.cta', 'Deposit to Blend')}
       </PressableButton>
     ) : step === 'success' ? (
-      <PressableButton variant="success" size="cta" onClick={onOpenChange}>
+      <PressableButton variant="success" size="cta" className="py-2.5!" onClick={onOpenChange}>
         {t('common.done', 'Done')}
       </PressableButton>
     ) : undefined;

@@ -1,12 +1,16 @@
 'use client';
 
 import { isStellarNetwork } from '@/networks/stellar';
+import { directBlendWithdraw, directUsdcTransfer } from '@/networks/stellar/blendDirect';
+import { usePollar } from '@pollar/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnalytics, useIsPoolPaused } from '../../hooks';
 import { useMapStore, useConfigStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
+import { ReceiveModal } from './DepositModal/ReceiveModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
 import { SendFiatModal } from './FiatModals/SendFiatModal';
 import { WithdrawModal } from './WithdrawModal';
@@ -25,8 +29,13 @@ export function DepositPanel() {
   const isWithdrawMounted = useModalPresence(isWithdrawOpen);
   const [isSendFiatOpen, setIsSendFiatOpen] = useState(false);
   const isSendFiatMounted = useModalPresence(isSendFiatOpen);
+  // Modal nativo de recibir (fondeo del usuario social a su dirección custodial).
+  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
+  const isReceiveMounted = useModalPresence(isReceiveOpen);
   const [ isDepositing, setIsDepositing ] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
+  const { wallet: pollarWallet } = usePollar();
+  const queryClient = useQueryClient();
   const { trackUserAction } = useAnalytics();
   const editMode = useMapStore((store) => store.editMode);
   const isStellar = network?.networkName ? isStellarNetwork(network.networkName) : false;
@@ -102,6 +111,10 @@ export function DepositPanel() {
           setIsMethodOpen(false);
           setCountryFlow('deposit');
         }}
+        onReceive={() => {
+          setIsMethodOpen(false);
+          setIsReceiveOpen(true);
+        }}
       />
       <CountryPickerModal
         open={countryFlow !== null}
@@ -147,30 +160,78 @@ export function DepositPanel() {
             setIsWithdrawOpen(false);
             setCountryFlow('withdraw');
           }}
-          onSubmit={async ({ amount, wallet }) => {
-            // TODO(withdraw): PLACEHOLDER — no mueve fondos.
-            //
-            // El retiro real todavía no existe para este flujo. El contrato
-            // (contracts/vaquita-pool/src/lib.rs:168) expone
-            // `withdraw(caller, deposit_id)`: retira la posición ENTERA y paga
-            // siempre a quien firma, así que no admite ni el monto parcial que
-            // se teclea acá ni la dirección de destino elegida. La API
-            // (apps/api/src/routes/deposit/route.ts:142) tampoco lee `amount`.
-            //
-            // Este stub solo simula la demora para poder ver los estados de
-            // loading y éxito. Reemplazar por la mutación real cuando se defina
-            // de dónde salen los fondos.
-            console.warn('[withdraw] placeholder submit', { amount, wallet });
+          onSubmit={async ({ amount, withdrawAll, wallet, onProgress }) => {
+            if (!walletAddress || !token) {
+              throw new Error(t('withdraw.error.generic', 'Something went wrong'));
+            }
+
+            // --- Wallet EXTERNA (Freighter): retiro directo de Blend, el pool
+            // paga al firmante (vuelve a su propia wallet). `withdrawAll` saca la
+            // posición entera vía el sentinel i128. Un solo salto: 'sending'. ---
+            if (pollarWallet?.custody === 'external') {
+              onProgress('sending');
+              const { hash } = await directBlendWithdraw({
+                address: walletAddress,
+                amount: String(amount),
+                decimals: token.decimals,
+                withdrawAll,
+              });
+              console.info('[withdraw] external blend withdraw submitted', { hash });
+              void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+              trackUserAction('withdraw_submitted', {
+                amount,
+                network: network?.networkName || null,
+              });
+              return;
+            }
+
+            // --- Social/CUSTODIAL: dos saltos con NUESTROS contratos. La plata
+            // está en Blend, en la wallet interna; el destino es una wallet
+            // EXTERNA elegida. ---
+            // 1) Retirar de Blend → wallet custodial (nuestro contrato).
+            // 2) Enviar de la custodial → la dirección externa (sendPayment).
+            const amountStr = String(amount);
+
+            // Salto 1: Blend → custodial (mismo directBlendWithdraw que externa,
+            // pero acá los fondos quedan en la wallet interna del usuario).
+            onProgress('preparing');
+            const wd = await directBlendWithdraw({
+              address: walletAddress,
+              amount: amountStr,
+              decimals: token.decimals,
+              withdrawAll,
+            });
+            console.info('[withdraw] social hop1 directBlendWithdraw', { hash: wd.hash });
+
+            // Salto 2: custodial → wallet externa elegida. USDC transfer SOROBAN
+            // (no `sendPayment` clásico): esa vía la patrocina Pollar, así que
+            // funciona con 0 XLM. El destino debe tener trustline al USDC.
+            onProgress('sending');
+            const pay = await directUsdcTransfer({
+              from: walletAddress,
+              to: wallet.address,
+              amount: amountStr,
+              decimals: token.decimals,
+            });
+            console.info('[withdraw] social hop2 directUsdcTransfer', { hash: pay.hash });
+
+            void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
             trackUserAction('withdraw_submitted', {
               amount,
               network: network?.networkName || null,
             });
-            await new Promise((resolve) => setTimeout(resolve, 1800));
           }}
         />
       )}
       {isSendFiatMounted && (
         <SendFiatModal open={isSendFiatOpen} onOpenChange={() => setIsSendFiatOpen(false)} />
+      )}
+      {isReceiveMounted && (
+        <ReceiveModal
+          open={isReceiveOpen}
+          onOpenChange={() => setIsReceiveOpen(false)}
+          address={pollarWallet?.address ?? walletAddress ?? ''}
+        />
       )}
     </div>
   );

@@ -184,7 +184,7 @@ function PersistedToggleRow({
   );
 }
 
-export function PreferencesPage() {
+export function PreferencesPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const { walletAddress, network } = useConfigStore();
   const { data, isLoading, refetch } = useProfileData();
@@ -322,6 +322,7 @@ export function PreferencesPage() {
     <MockedSubPageLayout
       title={t('profile.preferences.title')}
       subtitle={t('profile.preferences.subtitle')}
+      onBack={onBack}
       showSoonBadge={false}
     >
       <OptionSelect

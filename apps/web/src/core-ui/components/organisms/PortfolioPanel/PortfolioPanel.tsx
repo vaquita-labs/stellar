@@ -3,11 +3,12 @@
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { formatUsd } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
-import { useApyByLockPeriods, useDepositsComplete } from '@/core-ui/hooks';
+import { useApyByLockPeriods, useBlendPosition, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronDown, FiChevronRight } from 'react-icons/fi';
+import { IoWalletOutline } from 'react-icons/io5';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
 import { EarningsBreakdown } from '../../molecules/EarningsBreakdown';
 import { AllocationDetailSheet } from './AllocationDetailSheet';
@@ -35,6 +36,12 @@ export function PortfolioPanel({
   const { t } = useTranslation();
   const { walletAddress, token, lockPeriod: selectedLockPeriod } = useConfigStore();
   const { data: depositsData } = useDepositsComplete(walletAddress);
+  // Nivel base del portafolio: depósito directo a Blend, líquido (sin lock).
+  // Se lee on-chain y va aparte de las allocations por plazo (no entra en el
+  // mover-fondos ni en los detalles de plazo, que son solo para locks).
+  const { data: blendPosition } = useBlendPosition(walletAddress);
+  const blendBalance = blendPosition?.usdc ?? 0;
+  const blendApy = blendPosition?.apy ?? 0;
 
   const [detailLockPeriod, setDetailLockPeriod] = useState<number | null>(null);
   const [moveToLockPeriod, setMoveToLockPeriod] = useState<number | null>(null);
@@ -74,17 +81,24 @@ export function PortfolioPanel({
     });
   }, [depositsData, lockPeriods, byLockPeriod]);
 
-  const totalAmount = allocations.reduce((acc, a) => acc + a.amount, 0);
+  // Capital en locks (alimenta mover-fondos y el APY ponderado de los plazos).
+  const lockTotal = allocations.reduce((acc, a) => acc + a.amount, 0);
+  // Balance total del portafolio = locks + Blend (nivel base). Es el número que
+  // el usuario espera ver como "todo lo que tiene invertido".
+  const totalAmount = lockTotal + blendBalance;
   const totalEarnings = vaquitaEarnings + protocolEarnings;
-  // APY combinado ponderado por capital. Sin capital todavía no hay mezcla que
-  // mostrar, así que se cae al APY del plazo elegido en el home.
+  // APY combinado ponderado por capital, incluyendo Blend con su propio APY. Sin
+  // capital todavía no hay mezcla que mostrar, así que se cae al APY del plazo
+  // elegido en el home.
   const blendedApy =
     totalAmount > 0
-      ? allocations.reduce((acc, a) => acc + a.amount * a.apy, 0) / totalAmount
+      ? (allocations.reduce((acc, a) => acc + a.amount * a.apy, 0) + blendBalance * blendApy) /
+        totalAmount
       : (allocations.find((a) => a.lockPeriod === selectedLockPeriod) ?? allocations[0])?.apy ?? 0;
 
-  // Mover fondos necesita al menos dos plazos y algo de capital que mover.
-  const canManage = allocations.length >= 2 && totalAmount > 0;
+  // Mover fondos necesita al menos dos plazos y algo de capital EN LOCKS que
+  // mover (Blend no participa del move entre plazos todavía).
+  const canManage = allocations.length >= 2 && lockTotal > 0;
 
   const detailAllocation = allocations.find((a) => a.lockPeriod === detailLockPeriod) ?? null;
   const detailIndex = allocations.findIndex((a) => a.lockPeriod === detailLockPeriod);
@@ -189,12 +203,33 @@ export function PortfolioPanel({
             ) : null}
           </div>
 
-          {allocations.length === 0 ? (
+          {allocations.length === 0 && blendBalance <= 0 ? (
             <p className="text-sm text-gray-500 py-4 text-center">
               {t('portfolio.empty', 'No saving terms available yet.')}
             </p>
           ) : (
             <div className="flex flex-col gap-2">
+              {/* Nivel base: lo que está en Blend, líquido y sin lock. Fila
+                  informativa; el retiro se hace desde el botón "Withdraw" del
+                  home (Blend es el modo normal). Se muestra solo si hay algo. */}
+              {blendBalance > 0 ? (
+                <div className="w-full flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-2.5">
+                  <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-success/20 text-success">
+                    <IoWalletOutline className="w-5 h-5" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-bold text-black truncate">
+                      {t('portfolio.blend.label', 'Blend · Flexible')}
+                    </span>
+                    <span className="block text-xs text-gray-500 tabular-nums">
+                      {formatUsd(blendBalance)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums bg-success/20 text-success">
+                    {blendApy.toFixed(2)}%
+                  </span>
+                </div>
+              ) : null}
               {allocations.map((allocation, index) => {
                 const style = getAllocationStyle(index);
                 return (

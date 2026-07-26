@@ -18,9 +18,11 @@ import { Button } from '../../atoms';
 import { PageLayout } from '../../molecules';
 import { VaquitaAvatar } from '../../avatar/VaquitaAvatar';
 
-export function EditProfilePage() {
+export function EditProfilePage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const router = useRouter();
+  // Como panel cierra el apilado; como ruta suelta vuelve a Ajustes.
+  const goBack = onBack ?? (() => router.push('/profile/settings'));
   const { walletAddress, network } = useConfigStore();
   const { data, isLoading, refetch } = useProfileData();
   const { saveProfile, saveProfileFlags } = useRestProfile();
@@ -148,7 +150,11 @@ export function EditProfilePage() {
   };
 
   return (
-    <PageLayout title={t('profilePages.edit.title', 'Edit profile')} backHref="/profile/settings">
+    <PageLayout
+      title={t('profilePages.edit.title', 'Edit profile')}
+      backHref={onBack ? undefined : '/profile/settings'}
+      onBack={onBack}
+    >
         {/* Avatar — a character, never a photo. Editing it is a whole screen of
             its own, so this is just a preview that links there. */}
         <Link
@@ -251,7 +257,7 @@ export function EditProfilePage() {
 
         {/* Actions */}
         <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-background border-t border-black/10 flex gap-3">
-          <Button type="white" onPress={() => router.push('/profile/settings')} isDisabled={saving} wFull>
+          <Button type="white" onPress={goBack} isDisabled={saving} wFull>
             {t('common.cancel')}
           </Button>
           <Button

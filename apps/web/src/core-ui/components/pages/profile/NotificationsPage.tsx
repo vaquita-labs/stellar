@@ -62,7 +62,7 @@ function Toggle({
   );
 }
 
-export function NotificationsPage() {
+export function NotificationsPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const { walletAddress } = useConfigStore();
   const { data, isLoading, refetch } = useProfileData();
@@ -114,7 +114,11 @@ export function NotificationsPage() {
   };
 
   return (
-    <PageLayout title={t('profilePages.notifications.title', 'Notifications')} backHref="/profile/settings">
+    <PageLayout
+      title={t('profilePages.notifications.title', 'Notifications')}
+      backHref={onBack ? undefined : '/profile/settings'}
+      onBack={onBack}
+    >
       {SECTIONS.map((section) => (
           <section key={section.id} className="flex flex-col gap-2">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1">

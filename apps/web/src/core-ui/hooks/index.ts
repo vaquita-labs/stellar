@@ -1,6 +1,7 @@
 export * from './useAdminDeposits';
 export * from './useAnalytics';
 export * from './useApyByLockPeriod';
+export * from './useBlendPosition';
 export * from './useBridgeTransfers';
 export * from './useClaimedAchievements';
 export * from './useDeposit';

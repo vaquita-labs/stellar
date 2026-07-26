@@ -9,9 +9,21 @@ export type WithdrawStep =
   | 'processing'
   | 'success';
 
+/**
+ * Sub-pasos del retiro, para el progreso visible:
+ *   - 'preparing' = retirar de Blend → wallet (salto 1 del retiro social).
+ *   - 'sending'   = enviar a la wallet destino (salto único externa / salto 2 social).
+ */
+export type WithdrawProgressStep = 'preparing' | 'sending';
+
 export interface WithdrawSubmitInput {
   amount: number;
+  /** El usuario pidió retirar TODO: el submit usa el sentinel i128 de Blend. */
+  withdrawAll: boolean;
+  /** Destino: la wallet propia (login externo) o la externa elegida (social). */
   wallet: SavedWallet;
+  /** El submit lo llama al arrancar cada salto para animar el progreso. */
+  onProgress: (step: WithdrawProgressStep) => void;
 }
 
 export interface WithdrawModalProps {

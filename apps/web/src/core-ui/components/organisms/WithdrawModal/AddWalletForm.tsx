@@ -185,7 +185,7 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
         <p className="text-sm text-error font-semibold">{error}</p>
       ) : null}
 
-      <PressableButton variant="success" size="cta" onClick={handleSubmit} disabled={!canSubmit}>
+      <PressableButton variant="success" size="cta" className="!py-3.5" onClick={handleSubmit} disabled={!canSubmit}>
         {createWallet.isPending ? <Spinner size="sm" color="current" /> : null}
         {t('withdraw.addWallet.save', 'Save wallet')}
       </PressableButton>

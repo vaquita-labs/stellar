@@ -166,12 +166,23 @@ const formatDate = (iso: string) => {
   return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
+/** Sub-pantallas de Ajustes que <SettingsModal> puede apilar como panel. */
+export type SettingsSubKey = 'preferences' | 'profile' | 'notifications' | 'wallet';
+
 /**
  * `onBack` lo pasa <SettingsModal> cuando la pantalla se abre como panel sobre
  * el perfil: ahí el cierre y la animación los maneja el modal. Sin él funciona
  * como ruta suelta (/profile/settings) y se anima sola con useSlidePage.
+ *
+ * `onOpenSub` (también sólo en modo panel) hace que los ítems de cuenta abran su
+ * sub-pantalla como panel apilado en vez de navegar por ruta —que desmontaría
+ * todo—. Sin él, los ítems son <Link> normales a sus rutas (deep-link / ruta
+ * suelta).
  */
-export function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
+export function SettingsPage({
+  onBack,
+  onOpenSub,
+}: { onBack?: () => void; onOpenSub?: (key: SettingsSubKey) => void } = {}) {
   const { t } = useTranslation();
   const logout = useLogout();
   const { reset } = useConfigStore();
@@ -199,6 +210,11 @@ export function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
     }
   };
 
+  // En modo panel (dentro de <SettingsModal>) los ítems abren su sub-pantalla
+  // apilada; como ruta suelta son <Link> normales. Uno u otro, nunca ambos.
+  const nav = (key: SettingsSubKey, href: string): Pick<LinkRow, 'href' | 'onPress'> =>
+    onOpenSub ? { onPress: () => onOpenSub(key) } : { href };
+
   const accountRows: Row[] = [
     {
       kind: 'link',
@@ -206,7 +222,7 @@ export function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
       icon: <FiSliders />,
       label: t('profilePages.settings.preferences', 'Preferences'),
       description: t('profilePages.settings.preferencesDesc', 'Language, currency and display options.'),
-      href: '/profile/preferences',
+      ...nav('preferences', '/profile/preferences'),
     },
     {
       kind: 'link',
@@ -214,7 +230,7 @@ export function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
       icon: <FiEdit3 />,
       label: t('profilePages.settings.profile', 'Profile'),
       description: t('profilePages.settings.profileDesc', 'Edit your nickname and avatar.'),
-      href: '/profile/edit',
+      ...nav('profile', '/profile/edit'),
     },
     {
       kind: 'link',
@@ -222,7 +238,7 @@ export function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
       icon: <FiBell />,
       label: t('profilePages.settings.notifications', 'Notifications'),
       description: t('profilePages.settings.notificationsDesc', 'Manage push and email alerts.'),
-      href: '/profile/notifications',
+      ...nav('notifications', '/profile/notifications'),
     },
     {
       kind: 'link',
@@ -230,7 +246,7 @@ export function SettingsPage({ onBack }: { onBack?: () => void } = {}) {
       icon: <FiCreditCard />,
       label: t('profilePages.settings.wallet', 'Wallet'),
       description: t('profilePages.settings.walletDesc', 'View address, send and receive funds.'),
-      href: '/profile/wallet',
+      ...nav('wallet', '/profile/wallet'),
     },
     {
       kind: 'link',
