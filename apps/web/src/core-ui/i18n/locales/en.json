@@ -306,6 +306,7 @@
       "sendTransaction": "Confirm to send the transaction.",
       "timesUp": "Time's up!",
       "title": "Confirm withdrawal",
+      "youWillEarn": "You will earn",
       "youWillLose": "You will lose",
       "youWillReceive": "You will receive"
     },

@@ -19,9 +19,12 @@ import { Allocation, PortfolioPanelProps } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
 
 /**
- * Pantalla completa de inversión que abre el chip de APY del header. Muestra el
- * APY combinado, cómo está repartido el capital entre los plazos disponibles
- * (una fila por lock period del token) y el desglose de la ganancia estimada.
+ * Pantalla completa de inversión que abre el chip de APY del header. Muestra la
+ * ganancia estimada y cómo está repartido el capital entre los plazos
+ * disponibles (una fila por lock period del token). El APY no se combina a nivel
+ * portafolio a propósito: cada plazo usa un rate tipo APR y Blend un APY real,
+ * mezclarlos en un solo número sería juntar unidades distintas. El APY vive en
+ * cada fila/detalle, no en el encabezado.
  *
  * Desde acá se entra al detalle de cada plazo y a mover fondos entre plazos.
  */
@@ -31,7 +34,7 @@ export function PortfolioPanel({
   tokenSymbol = 'USDC',
 }: PortfolioPanelProps) {
   const { t } = useTranslation();
-  const { walletAddress, token, lockPeriod: selectedLockPeriod } = useConfigStore();
+  const { walletAddress, token } = useConfigStore();
   const { data: depositsData } = useDepositsComplete(walletAddress);
   // Nivel base del portafolio: depósito directo a Blend, líquido (sin lock).
   // Se lee on-chain y va aparte de las allocations por plazo (no entra en el
@@ -69,7 +72,7 @@ export function PortfolioPanel({
     () => [...(token?.lockPeriods ?? [])].filter((p) => p > 0).sort((a, b) => a - b),
     [token?.lockPeriods],
   );
-  const { byLockPeriod, isLoading: apyLoading } = useApyByLockPeriods(lockPeriods, token?.symbol ?? '');
+  const { byLockPeriod } = useApyByLockPeriods(lockPeriods, token?.symbol ?? '');
 
   // Depósitos activos (con lock): la fuente tanto de las allocations por plazo
   // como de la ganancia estimada del header.
@@ -136,14 +139,6 @@ export function PortfolioPanel({
   // el usuario espera ver como "todo lo que tiene invertido".
   const totalAmount = lockTotal + blendBalance;
   const totalEarnings = vaquitaEarnings + protocolEarnings;
-  // APY combinado ponderado por capital, incluyendo Blend con su propio APY. Sin
-  // capital todavía no hay mezcla que mostrar, así que se cae al APY del plazo
-  // elegido en el home.
-  const blendedApy =
-    totalAmount > 0
-      ? (allocations.reduce((acc, a) => acc + a.amount * a.apy, 0) + blendBalance * blendApy) /
-        totalAmount
-      : (allocations.find((a) => a.lockPeriod === selectedLockPeriod) ?? allocations[0])?.apy ?? 0;
 
   const detailAllocation = allocations.find((a) => a.lockPeriod === detailLockPeriod) ?? null;
   const detailIndex = allocations.findIndex((a) => a.lockPeriod === detailLockPeriod);
@@ -188,18 +183,11 @@ export function PortfolioPanel({
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
             {t('portfolio.totalBalance', 'Total balance')}
           </p>
-          <p className="mt-1 flex items-center gap-1.5 text-5xl font-bold text-success tabular-nums leading-none">
-            <span>
-              {totalAmount.toFixed(2)}
-              <span className="text-2xl ml-1.5 font-semibold">{tokenSymbol}</span>
-            </span>
-            <FiChevronRight className="w-6 h-6 text-black/40 shrink-0" />
+          <p className="mt-1 text-5xl font-bold text-success tabular-nums leading-none">
+            {totalAmount.toFixed(2)}
+            <span className="text-2xl ml-1.5 font-semibold">{tokenSymbol}</span>
           </p>
           <p className="mt-3 text-sm text-gray-500">
-            <span className="font-bold text-black tabular-nums">
-              {apyLoading && totalAmount === 0 ? '—' : `${blendedApy.toFixed(2)}%`} APY
-            </span>
-            <span className="mx-1.5">·</span>
             {t('portfolio.earning', 'Earning')}{' '}
             <span className="font-bold text-success tabular-nums">
               +{totalEarnings.toFixed(2)} {tokenSymbol}
@@ -224,7 +212,7 @@ export function PortfolioPanel({
           ) : (
             // Lista agrupada (no cards sueltas): solo los plazos con lock. Blend
             // ya no va acá: se accede tocando el balance de arriba.
-            <div className="flex flex-col divide-y divide-black/10 rounded-lg border border-black/10 overflow-hidden bg-white">
+            <div className="flex flex-col divide-y divide-black/10 rounded-md border border-black border-b-2 overflow-hidden bg-white">
               {allocations.map((allocation, index) => {
                 const style = getAllocationStyle(index);
                 return (
