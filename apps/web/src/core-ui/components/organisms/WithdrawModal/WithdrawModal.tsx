@@ -198,7 +198,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
   // --- Paso: método ----------------------------------------------------------
   const methodStep = (
-    <>
+    <div className="flex flex-col gap-2">
       <PressableButton variant="white" size="row" onClick={onOfframp}>
         <BsBank2 className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
@@ -209,7 +209,6 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
             {t('withdraw.method.bank.subtitle', 'Withdraw to your bank account')}
           </span>
         </span>
-        <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
       <PressableButton variant="white" size="row" onClick={() => setStep('amount')}>
         <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
@@ -221,9 +220,8 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
             {t('withdraw.method.wallet.subtitle', 'Withdraw to a crypto wallet')}
           </span>
         </span>
-        <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
-    </>
+    </div>
   );
 
   // --- Paso: monto -----------------------------------------------------------

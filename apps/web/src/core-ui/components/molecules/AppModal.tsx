@@ -196,7 +196,13 @@ export function AppModal({
             // la recortan a sus esquinas.
             'bg-background relative overflow-hidden ' +
             (fullScreen
-              ? 'h-dvh max-h-dvh w-full max-w-none rounded-none border-0 '
+              ? // Pantalla completa en mobile (sin bordes ni esquinas). En desktop
+                // (sm) se convierte en una tarjeta flotante centrada, con el mismo
+                // ancho de columna que los demás modales y altura acotada a 90vh.
+                'h-dvh max-h-dvh w-full max-w-none rounded-none border-0 ' +
+                'sm:h-auto sm:max-h-[90vh] sm:rounded-2xl sm:border sm:border-black ' +
+                SIZE_MAX_WIDTH[size] +
+                ' '
               : // Bottom-sheet en mobile: solo esquinas superiores redondeadas y
                 // sin borde inferior, porque el modal termina contra el borde de
                 // la pantalla. En desktop (sm) se restauran las 4 esquinas y el
@@ -223,10 +229,12 @@ export function AppModal({
                 back, otro con la X), así el título —flex-1 centrado en medio—
                 queda centrado respecto al modal y no respecto al espacio que
                 sobra, sin importar qué controles haya a los lados. */}
+            {/* Regla fija de toda la app: back a la IZQUIERDA, close (X) a la
+                DERECHA. Ambos en blanco. */}
             <div className="w-7 shrink-0 flex items-center justify-start">
               {onBack && !hideHeader ? (
                 <CircleIconButton
-                  variant="primary"
+                  variant="white"
                   size="sm"
                   ariaLabel={t('common.back')}
                   onClick={onBack}

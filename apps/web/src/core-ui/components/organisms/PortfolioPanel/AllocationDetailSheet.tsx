@@ -71,7 +71,7 @@ export function AllocationDetailSheet({
         </p>
       </div>
 
-      <div className="divide-y divide-black/10 border-y border-black/10">
+      <div className="divide-y divide-black/10">
         <div className="flex items-center justify-between py-2.5 text-sm">
           <span className="text-gray-500">{t('portfolio.detail.withdrawPeriod', 'Withdraw period')}</span>
           <span className="font-bold text-black">{formatTimeDeposit(allocation.lockPeriod)}</span>

@@ -88,7 +88,7 @@ export function PositionInfoSheet({
         </p>
       ) : null}
 
-      <div className="divide-y divide-black/10 border-y border-black/10 text-sm">
+      <div className="divide-y divide-black/10 text-sm">
         <InfoRow label={t('portfolio.info.term', 'Term')} value={formatTimeDeposit(deposit?.lockPeriod ?? 0)} />
         {!isFailed ? (
           <InfoRow

@@ -13,7 +13,7 @@ import { usePollar } from '@pollar/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
-import { FiAlertCircle, FiCheck, FiChevronRight, FiInfo } from 'react-icons/fi';
+import { FiAlertCircle, FiCheck, FiInfo } from 'react-icons/fi';
 import { IoWalletOutline } from 'react-icons/io5';
 import { truncateDecimals, truncateMiddle } from '../../../helpers';
 import { useAnalytics, useBlendPosition, useProfileData } from '../../../hooks';
@@ -185,7 +185,7 @@ export function DepositMethodModal({
   // Banco va primero: el público objetivo no es web3 y fondear desde el banco es
   // la vía que entiende sin explicación.
   const methodStep = (
-    <>
+    <div className="flex flex-col gap-2">
       <PressableButton variant="white" size="row" onClick={onOnramp}>
         <BsBank2 className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
@@ -196,7 +196,6 @@ export function DepositMethodModal({
             {t('deposit.method.onramp.subtitle', 'Deposit with your local currency')}
           </span>
         </span>
-        <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
       <PressableButton
         variant="white"
@@ -224,9 +223,8 @@ export function DepositMethodModal({
               : t('deposit.method.wallet.receiveSubtitle', 'Receive USDC to your address')}
           </span>
         </span>
-        <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
-    </>
+    </div>
   );
 
   // --- Paso: monto -----------------------------------------------------------

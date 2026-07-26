@@ -751,16 +751,9 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
           {/* El slide de entrada/salida lo hace el Modal.Container (SHEET_*);
               framer-motion acá no sirve: su `exit` nunca corre sin AnimatePresence. */}
           <div className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
+            {/* La acción (moneda/compartir) va a la izquierda; la X de cerrar
+                SIEMPRE a la derecha (convención de toda la app). */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                aria-label={t('common.close')}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition"
-              >
-                <FiX className="h-5 w-5" />
-              </button>
-              <span className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`} aria-hidden />
               {phase === 'reward' || phase === 'minting' ? (
                 // Duolingo-style coin balance — only meaningful on the reward
                 // reveal (and the loading step into it), so we mount it there
@@ -791,6 +784,15 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
               ) : (
                 <span className="w-10" />
               )}
+              <span className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`} aria-hidden />
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                aria-label={t('common.close')}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
             </div>
 
             <AnimatePresence mode="wait" initial={false}>

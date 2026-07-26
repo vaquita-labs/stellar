@@ -145,7 +145,10 @@ function SuggestionCard({
  * pantalla funciona como ruta suelta (/profile/friends, entrada directa o
  * enlace compartido) y se anima sola con useSlidePage.
  */
-export function FriendsPage({ onBack }: { onBack?: () => void } = {}) {
+export function FriendsPage({
+  onBack,
+  onOpenSearch,
+}: { onBack?: () => void; onOpenSearch?: () => void } = {}) {
   const { t } = useTranslation();
   const { data, isLoading } = useFriendSuggestions();
   const toggleFollow = useToggleFollow();
@@ -198,17 +201,24 @@ export function FriendsPage({ onBack }: { onBack?: () => void } = {}) {
           dejaba otros 20 hasta la primera tarjeta, así que la pantalla abría
           con un hueco antes de cualquier contenido. */}
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pt-4 pb-12 flex flex-col gap-4">
-        <PageHeader title={t('social.friends.title')} onBack={onBack ?? goBack} />
+        <PageHeader
+          title={t('social.friends.title')}
+          onBack={onBack ?? goBack}
+          // Como panel apilado el botón cierra el modal, no retrocede: X en vez de flecha.
+          leftIcon={asPanel ? 'close' : 'back'}
+        />
 
         {/* Find actions — one card, three rows */}
         <section className="overflow-hidden rounded-2xl border border-black border-b-2 bg-white divide-y divide-black/10">
           {/* Search is the only path that works today, so it leads. Contacts
               import and the share link aren't built yet: inert rows rather
               than screens that only say "soon" again. */}
+          {/* Como panel apilado (onOpenSearch) abre la búsqueda como sub-panel
+              sin desmontar; como ruta suelta sigue siendo un <Link> a la ruta. */}
           <ActionRow
             icon={<FiSearch className="h-5 w-5" />}
             label={t('social.friends.searchByName')}
-            href="/profile/friends/search"
+            {...(onOpenSearch ? { onPress: onOpenSearch } : { href: '/profile/friends/search' })}
           />
           <ActionRow
             icon={<FiBookOpen className="h-5 w-5" />}

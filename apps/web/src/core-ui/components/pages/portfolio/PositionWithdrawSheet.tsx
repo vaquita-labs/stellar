@@ -201,7 +201,7 @@ export function PositionWithdrawSheet({
         ) : null}
       </div>
 
-      <div className="divide-y divide-black/10 border-y border-black/10">
+      <div className="divide-y divide-black/10">
         <div className="flex items-center justify-between gap-3 py-2 text-xs">
           <span className="flex items-center gap-1.5 text-gray-500">
             {t('deposit.detail.vaquitaInterest', 'Vaquita interest')}
