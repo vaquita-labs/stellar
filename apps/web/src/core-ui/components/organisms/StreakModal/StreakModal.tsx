@@ -40,34 +40,34 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
     >
       <div className="space-y-6 mb-2">
         {/* Hero — big streak count */}
-        <div className="flex flex-col items-center gap-2 pt-1">
-          <div className="relative flex items-center justify-center">
-            <span className="absolute inset-0 rounded-full bg-primary/30 blur-2xl" aria-hidden />
-            <Image
-              src="/icons/global/streak_face.png"
-              alt={t('rewards.streak.streakAlt', 'streak')}
-              width={72}
-              height={72}
-              className="relative object-contain"
-            />
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
+        <div className="flex flex-col items-center gap-1 pt-1">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-primary/30 blur-2xl" aria-hidden />
+              <Image
+                src="/icons/global/streak_face.png"
+                alt={t('rewards.streak.streakAlt', 'streak')}
+                width={56}
+                height={56}
+                className="relative object-contain"
+              />
+            </div>
+            <div className="text-5xl font-extrabold text-black leading-none tabular-nums">
               {currentStreak}
             </div>
-            {/* Sólo QUÉ es el número, sin repetirlo: antes decía "4 day streak"
-                justo debajo de un "4" gigante, así que el dato se leía dos
-                veces y el subtítulo no aportaba nada. */}
-            <div className="mt-1 text-sm font-semibold text-gray-500">
-              {t('rewards.streak.unitLabel', 'Day streak')}
-            </div>
+          </div>
+          {/* Sólo QUÉ es el número, sin repetirlo: antes decía "4 day streak"
+              justo debajo de un "4" gigante, así que el dato se leía dos
+              veces y el subtítulo no aportaba nada. */}
+          <div className="text-sm font-semibold text-gray-500">
+            {t('rewards.streak.unitLabel', 'Day streak')}
           </div>
         </div>
 
         {/* Weekly Progress Section */}
         <div className="space-y-3 rounded-2xl border border-black border-b-2 bg-white p-4">
           <h3 className="text-sm font-bold text-black">{t('rewards.streak.weeklyProgress', 'Weekly Progress')}</h3>
-          <div className="grid grid-cols-7 gap-x-1 gap-y-2 text-center">
+          <div className="grid grid-cols-7 gap-x-2.5 gap-y-2 text-center">
             {weeklyProgress.map(({ day, isToday }, index) => (
               <span
                 key={`label-${index}`}
@@ -81,7 +81,7 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
                 return (
                   <div
                     key={`cell-${index}`}
-                    className="mx-auto h-9 w-9 rounded-full border border-dashed border-gray-300 bg-gray-100/60"
+                    className="mx-auto h-8 w-8 rounded-full border border-dashed border-gray-300 bg-gray-100/60"
                     aria-hidden
                   />
                 );
@@ -89,7 +89,7 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
               return (
                 <div
                   key={`cell-${index}`}
-                  className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full ${
+                  className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full ${
                     completed ? 'bg-primary/15' : 'bg-black/5'
                   } ${isToday ? 'ring-2 ring-black ring-offset-1 ring-offset-white' : ''}`}
                 >
@@ -97,8 +97,8 @@ export function StreakModal({ open, onOpenChange }: StreakModalProps) {
                     <Image
                       src="/icons/global/streak_face.png"
                       alt={t('rewards.streak.streakAlt', 'streak')}
-                      width={22}
-                      height={22}
+                      width={20}
+                      height={20}
                       className="object-contain"
                     />
                   ) : (

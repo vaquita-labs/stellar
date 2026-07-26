@@ -1,5 +1,5 @@
 import { composeBuildingRotation, isBuildingType } from '@/core-ui/components/map/buildings/registry';
-import { TILE_HEIGHT } from '@/core-ui/components/map/constants';
+import { MAP_SIZE, TILE_HEIGHT } from '@/core-ui/components/map/constants';
 import { disposeObject } from '@/core-ui/components/map/helpers';
 import { getPalette } from '@/core-ui/components/map/tiles/palette';
 import { getObjectGroup } from '@/core-ui/components/map/tiles/registry';
@@ -21,6 +21,18 @@ const ISO_DIRECTION = new THREE.Vector3(1, 1.15, 1).normalize();
 const FILL = 1.4;
 /** Half-size of the ocean plane; the camera far plane must reach past it. */
 const OCEAN_EXTENT = 500;
+/**
+ * The whole board footprint, framed identically for every world regardless of
+ * what's placed on it. Tiles occupy the grid cells 0..MAP_SIZE-1 (each 1 wide,
+ * so the land spans -0.5..MAP_SIZE-0.5); the y range leaves headroom for tall
+ * buildings above and the sunken tile skirts below. Framing to this fixed box
+ * — instead of the objects' bounding box — is what keeps the camera at the same
+ * distance and angle: a world with a single building no longer zooms into it.
+ */
+const BOARD_BOX = new THREE.Box3(
+  new THREE.Vector3(-0.5, -TILE_HEIGHT * 2, -0.5),
+  new THREE.Vector3(MAP_SIZE - 0.5, TILE_HEIGHT * 3, MAP_SIZE - 0.5)
+);
 let renderer: THREE.WebGLRenderer | null = null;
 let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
@@ -54,10 +66,14 @@ function ensureRenderer() {
   camera = new THREE.PerspectiveCamera(14, BASE_W / BASE_H, 0.1, 1000);
 }
 
-/** Frame the whole board into the 16:9 image (projection-based, like FitCamera). */
-function fitCamera(cam: THREE.PerspectiveCamera, target: THREE.Object3D) {
-  const box = new THREE.Box3().setFromObject(target);
-  if (box.isEmpty()) return;
+/**
+ * Frame the fixed board footprint into the 16:9 image (projection-based, like
+ * FitCamera). Deliberately ignores what's placed on the board: every world is
+ * shot from the same distance and angle so the preview is a consistent "here's
+ * their island", not a zoom that tightens around sparse maps.
+ */
+function fitCamera(cam: THREE.PerspectiveCamera) {
+  const box = BOARD_BOX;
 
   const sphere = box.getBoundingSphere(new THREE.Sphere());
   const radius = sphere.radius || 1;
@@ -123,7 +139,7 @@ function renderSnapshot(objects: MapObject[], worldType: WorldType): string {
   ocean!.material.color.set(getPalette(worldType).ocean);
 
   scene!.add(root);
-  fitCamera(camera!, root);
+  fitCamera(camera!);
   renderer!.render(scene!, camera!);
   const url = renderer!.domElement.toDataURL('image/png');
 
