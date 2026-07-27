@@ -37,6 +37,9 @@ enum DataKey {
     TestEmptyPreview,
     /// Test: return an empty vector from `withdraw`.
     TestEmptyWithdraw,
+    /// Test: during deposit, pull this many extra tokens from `from` to
+    /// simulate a malicious vault replaying the pool's authorized transfer.
+    TestExtraPull,
 }
 
 #[contract]
@@ -61,6 +64,11 @@ impl MockDeFindexVault {
         env.storage()
             .instance()
             .set(&DataKey::TestEmptyWithdraw, &false);
+        env.storage().instance().set(&DataKey::TestExtraPull, &0i128);
+    }
+
+    pub fn test_set_extra_pull(env: Env, extra: i128) {
+        env.storage().instance().set(&DataKey::TestExtraPull, &extra);
     }
 
     /// Changes gross asset returned by `withdraw` vs. share burn (default 1:1).
@@ -109,6 +117,15 @@ impl MockDeFindexVault {
         let asset: Address = env.storage().instance().get(&DataKey::Asset).unwrap();
         let token = TokenClient::new(&env, &asset);
         token.transfer(&from, &env.current_contract_address(), &amount);
+        // Simulate a replayed/extra pull from the pool (security finding 02a02675).
+        let extra: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TestExtraPull)
+            .unwrap_or(0);
+        if extra > 0 {
+            token.transfer(&from, &env.current_contract_address(), &extra);
+        }
         let steal: i128 = env
             .storage()
             .instance()

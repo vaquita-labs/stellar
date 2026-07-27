@@ -53,8 +53,16 @@ tree only — nothing deployed. Deploying any of it still goes through the timel
 - Why flagged, even though additive: it lives on the **core deposit money-path**. A wrong assertion (e.g. if
   the real DeFindex vault ever pulls a rounded/different amount) would revert **all deposits**. Must be
   validated against real vault behavior on testnet before mainnet.
-- **Status: BLOCKED pending your review of the exact assertion + a testnet deposit run.**
-  (This is the one I'd prioritize fixing first, carefully.)
+- **Status: PROTOTYPED on branch `security/vault-replay-guard-d3` (NOT on dev, NOT deployed).**
+  - Implemented the exact-balance-delta assertion in `deposit_into_vault`: snapshot pool BLEND balance
+    before/after the vault call, revert with new `VaultPulledUnexpectedAmount` unless it dropped by exactly
+    `amount`.
+  - Tests: `security_fixes.rs` — over-pull (replay) reverts; exact-pull succeeds. A mock hook
+    (`test_set_extra_pull`) simulates the malicious replay.
+  - **De-risking result: the full pool suite (110 tests), including the realistic Blend-fixture deposit
+    path, passes unchanged** — strong evidence the real vault pulls exactly `amount`.
+  - **Still required before merge/deploy:** a real **testnet deposit against the actual DeFindex vault**
+    (the fixture is realistic but not identical to mainnet). Only merge to dev + upgrade after that passes.
 
 ---
 

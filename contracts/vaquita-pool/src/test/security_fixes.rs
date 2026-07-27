@@ -113,3 +113,37 @@ fn withdraw_reverts_when_vault_withdraw_is_empty() {
     let result = pool.try_withdraw(&alice, &id);
     assert_eq!(result, Err(Ok(VaquitaPoolError::VaultReturnedNoAmounts)));
 }
+
+// ---- D3: vault replay / over-pull guard ----
+
+#[test]
+fn deposit_reverts_when_vault_pulls_more_than_amount() {
+    let e = Env::default();
+    let (_, alice, pool, vault, tok) = setup(&e);
+
+    let pool_addr = pool.address.clone();
+    let amount: i128 = 100_000;
+
+    // The pool already holds some BLEND (e.g. an existing reward pool) that a
+    // replayed transfer would try to drain.
+    tok.mint(&pool_addr, &50_000i128);
+    // Vault will pull an extra 50_000 beyond the authorized `amount`.
+    vault.test_set_extra_pull(&50_000i128);
+
+    tok.mint(&alice, &amount);
+    let result = pool.try_deposit(&alice, &String::from_str(&e, "R"), &amount, &LOCK_7D);
+    assert_eq!(
+        result,
+        Err(Ok(VaquitaPoolError::VaultPulledUnexpectedAmount))
+    );
+}
+
+#[test]
+fn deposit_succeeds_when_vault_pulls_exactly_amount() {
+    let e = Env::default();
+    let (_, alice, pool, _vault, tok) = setup(&e);
+
+    // Sanity: the balance-delta guard must not reject a well-behaved vault.
+    tok.mint(&alice, &100_000i128);
+    pool.deposit(&alice, &String::from_str(&e, "OK2"), &100_000i128, &LOCK_7D);
+}

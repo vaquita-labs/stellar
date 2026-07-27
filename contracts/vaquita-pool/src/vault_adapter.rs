@@ -1,6 +1,6 @@
 use soroban_sdk::{
     auth::{ContractContext, InvokerContractAuthEntry, SubContractInvocation},
-    vec, Address, Env, IntoVal, Symbol, Vec,
+    token::Client as TokenClient, vec, Address, Env, IntoVal, Symbol, Vec,
 };
 
 use crate::arithmetic;
@@ -19,6 +19,15 @@ pub fn deposit_into_vault(
     let contract_address = env.current_contract_address();
     let defindex_vault_client = DeFindexVaultClient::new(env, defindex_vault_address);
     let shares_before = defindex_vault_client.balance(&contract_address);
+
+    // Snapshot the pool's own BLEND balance so we can prove the vault pulled
+    // exactly `amount` and nothing more. `authorize_as_current_contract` entries
+    // are not single-use: a malicious/compromised vault could match the
+    // authorized transfer multiple times in one invocation and drain the pool's
+    // existing reward/fee balance (security finding 02a02675). Enforcing the
+    // exact balance delta caps the total pullable to `amount`.
+    let blend_client = TokenClient::new(env, blend_token);
+    let pool_blend_before = blend_client.balance(&contract_address);
 
     env.authorize_as_current_contract(vec![
         env,
@@ -40,6 +49,14 @@ pub fn deposit_into_vault(
     let amounts_desired: Vec<i128> = vec![env, amount];
     let amounts_min: Vec<i128> = vec![env, amount];
     defindex_vault_client.deposit(&amounts_desired, &amounts_min, &contract_address, &true);
+
+    // The pool must have parted with exactly `amount` of BLEND — no more (replay
+    // pull), no less (partial/no pull).
+    let pool_blend_after = blend_client.balance(&contract_address);
+    let pulled = arithmetic::checked_sub(pool_blend_before, pool_blend_after)?;
+    if pulled != amount {
+        return Err(VaquitaPoolError::VaultPulledUnexpectedAmount);
+    }
 
     let shares_after = defindex_vault_client.balance(&contract_address);
     if shares_after < shares_before {
