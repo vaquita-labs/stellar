@@ -18,6 +18,7 @@ const depositEvent = (overrides: Partial<NormalizedDepositEvent> = {}): Normaliz
   caller: 'GOWNER',
   owner: 'GOWNER',
   depositId: 'dep-1',
+  nonce: '0',
   token: 'CTOKEN',
   amountRaw: '1000',
   sharesRaw: '1000',

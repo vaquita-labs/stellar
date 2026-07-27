@@ -24,6 +24,10 @@ const UPGRADES_LOCKED: Symbol = symbol_short!("upg_lock");
 pub struct DepositEvent {
     pub owner: Address,
     pub deposit_id: BytesN<32>,
+    /// Client-supplied nonce this position id was derived from. Emitted so
+    /// off-chain systems (reconciliation/backfill) can recover the nonce needed
+    /// to later `withdraw(caller, nonce)`.
+    pub nonce: u64,
     pub token: Address,
     pub amount: i128,
     pub shares: i128,
@@ -54,6 +58,7 @@ pub fn emit_deposit(
     env: &Env,
     caller: Address,
     deposit_id: BytesN<32>,
+    nonce: u64,
     token: Address,
     amount: i128,
     shares: i128,
@@ -64,6 +69,7 @@ pub fn emit_deposit(
         DepositEvent {
             owner: caller,
             deposit_id,
+            nonce,
             token,
             amount,
             shares,

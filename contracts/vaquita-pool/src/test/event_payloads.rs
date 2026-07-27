@@ -111,6 +111,7 @@ fn deposit_event_payload() {
     assert_eq!(ev.owner, alice);
     assert_eq!(ev.amount, amount);
     assert_eq!(ev.deposit_id, expected_id);
+    assert_eq!(ev.nonce, nonce);
     assert_eq!(ev.lock_period, LOCK_7D);
 }
 

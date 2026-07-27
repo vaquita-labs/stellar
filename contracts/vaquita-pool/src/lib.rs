@@ -182,6 +182,7 @@ impl VaquitaPool {
             &env,
             caller,
             deposit_id,
+            nonce,
             blend_token,
             amount,
             shares,
