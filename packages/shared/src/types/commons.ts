@@ -122,6 +122,7 @@ export interface DepositResponseDTO extends DepositSummaryResponseDTO {
   withdrawals: DepositWithdrawalResponseDTO[];
   transactionHash: string;
   depositIdHex: string;
+  nonce?: string | null;
   vaquitaInterest: number;
   protocolInterest: number;
   /**

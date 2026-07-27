@@ -14,10 +14,10 @@ function toBaseUnits(input: string, decimals: number): bigint {
   return BigInt(combined);
 }
 
-function assertHex32(hex: string): string {
-  const h = hex.toLowerCase().replace(/^0x/, '');
-  if (!/^[0-9a-f]{32}$/.test(h)) throw new Error('deposit_id must be 32 hex chars (16 bytes)');
-  return h;
+function assertU64(value: bigint | number | string): string {
+  const n = BigInt(value);
+  if (n < 0n || n > 0xffffffffffffffffn) throw new Error('nonce must be a u64');
+  return n.toString();
 }
 
 type Common = {
@@ -35,7 +35,7 @@ type MintBadgeParams = {
 };
 
 type DepositParams = {
-  depositId: string;
+  nonce: bigint | number | string;
   humanAmount?: string;
   amount?: bigint;
   period?: number | string | bigint;
@@ -43,7 +43,7 @@ type DepositParams = {
 };
 
 type WithdrawParams = {
-  depositId: string;
+  nonce: bigint | number | string;
 };
 
 type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' }>['params'];
@@ -55,9 +55,9 @@ type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' 
  * machine for modal UIs). We just `await` it and read the returned outcome —
  * no manual `onTransactionStateChange` subscription needed.
  *
- * `deposit_id` in the Vaquita pool is a `String`, NOT a `BytesN<16>` (see
- * `contracts/vaquita-pool/src/lib.rs`), so callers pass the 32-char hex string
- * verbatim under `{ type: 'string' }`.
+ * The pool derives each position id on-chain as `sha256(caller || nonce)`, so
+ * callers pass the client-supplied `nonce` (a `u64`) — NOT a precomputed id.
+ * `withdraw(caller, nonce)` re-derives the same id.
  */
 // Coalesce overlapping invocations of the same contract call into one
 // in-flight request. A double-click or re-render that fires two identical
@@ -111,7 +111,7 @@ function requirePollarClient(): PollarClient {
 
 export function getSorobanTx({ address, contractId }: Common) {
   const deposit = async ({
-    depositId,
+    nonce,
     humanAmount,
     amount,
     period,
@@ -129,7 +129,7 @@ export function getSorobanTx({ address, contractId }: Common) {
             })();
 
     const client = requirePollarClient();
-    console.info('[sorobanTx:deposit] routing via Pollar buildTx', { depositId, amt, contractId });
+    console.info('[sorobanTx:deposit] routing via Pollar buildTx', { nonce, amt, contractId });
     return await invokeViaPollar(
       client,
       {
@@ -137,7 +137,7 @@ export function getSorobanTx({ address, contractId }: Common) {
         method: 'deposit',
         args: [
           { type: 'address', value: address },
-          { type: 'string',  value: assertHex32(depositId) },
+          { type: 'u64',     value: assertU64(nonce) },
           { type: 'i128',    value: amt.toString() },
           { type: 'u64',     value: BigInt(period ?? 604800n).toString() },
         ],
@@ -146,11 +146,11 @@ export function getSorobanTx({ address, contractId }: Common) {
     );
   };
 
-  const withdraw = async ({ depositId }: WithdrawParams) => {
+  const withdraw = async ({ nonce }: WithdrawParams) => {
     if (!address) throw new Error('No connected address');
 
     const client = requirePollarClient();
-    console.info('[sorobanTx:withdraw] routing via Pollar buildTx', { depositId, contractId });
+    console.info('[sorobanTx:withdraw] routing via Pollar buildTx', { nonce, contractId });
     return await invokeViaPollar(
       client,
       {
@@ -158,7 +158,7 @@ export function getSorobanTx({ address, contractId }: Common) {
         method: 'withdraw',
         args: [
           { type: 'address', value: address },
-          { type: 'string',  value: assertHex32(depositId) },
+          { type: 'u64',     value: assertU64(nonce) },
         ],
       },
       'pollar-withdraw',

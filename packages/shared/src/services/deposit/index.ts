@@ -45,6 +45,7 @@ const toDepositShape = (row: any): Deposit => ({
   lock_period: Number(row.lockPeriod ?? 0),
   token_id: row.tokenId,
   deposit_id_hex: row.depositIdHex ?? '',
+  nonce: row.nonce != null ? String(row.nonce) : null,
   transaction_hash: row.transactionHash ?? '',
   transaction_event_raw: row.transactionEventRaw ?? '',
   vaquita_contract_address: row.vaquitaContractAddress ?? '',
@@ -505,6 +506,9 @@ export const toDepositResponseDTO = async (deposit: DepositWithState, networkDat
     status: deposit.status,
     transactionHash: deposit.transaction_hash,
     depositIdHex: deposit.deposit_id_hex,
+    nonce: (deposit as { nonce?: bigint | number | string | null }).nonce != null
+      ? String((deposit as { nonce?: bigint | number | string | null }).nonce)
+      : null,
     protocolInterest,
     vaquitaInterest,
     blendInterest,

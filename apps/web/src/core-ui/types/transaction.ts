@@ -1,5 +1,5 @@
 export type DepositFn = (
-  id: number,
+  nonce: bigint | string,
   amount: number,
   lockPeriod: number,
   log: (message: string, data?: object) => void
@@ -13,8 +13,7 @@ export type DepositFn = (
 }>;
 
 export type WithdrawFn = (
-  id: number,
-  depositIdHex: string,
+  nonce: bigint | string,
   vaquitaContractAddress: string,
   log: (message: string, data?: object) => void
 ) => Promise<{
@@ -26,7 +25,7 @@ export type WithdrawFn = (
 }>;
 
 export type DepositFunction = (
-  id: number,
+  nonce: bigint | string,
   amount: number,
   lockPeriod: number
 ) => Promise<{
@@ -39,8 +38,7 @@ export type DepositFunction = (
 }>;
 
 export type WithdrawFunction = (
-  id: number,
-  depositIdHex: string,
+  nonce: bigint | string,
   vaquitaContractAddress: string
 ) => Promise<{
   success: boolean;

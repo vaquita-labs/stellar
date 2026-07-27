@@ -121,10 +121,11 @@ export function PositionWithdrawSheet({
       // produce este retiro, nunca todo el saldo (si no barreríamos plata suelta).
       const balanceBefore = await getBlendUsdcBalance(walletAddress, token.decimals);
 
-      // 1) Vaquita pool → wallet.
+      // 1) Vaquita pool → wallet. The pool re-derives the id from the caller +
+      // the position's nonce, so we pass the stored nonce.
+      if (deposit.nonce == null) throw new Error('Position is missing its nonce; cannot withdraw');
       const { success, txHash, transaction, error: wErr } = await transactionWithdraw(
-        +deposit.id,
-        deposit.depositIdHex,
+        deposit.nonce,
         deposit.vaquitaContractAddress,
       );
       if (!success) throw (wErr as Error) ?? new Error(t('withdraw.error.generic', 'Something went wrong'));
