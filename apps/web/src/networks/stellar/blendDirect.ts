@@ -1,4 +1,4 @@
-import { PoolContractV2, RequestType } from '@blend-capital/blend-sdk';
+import { RequestType } from '@blend-capital/blend-sdk';
 import {
   Address,
   Contract,
@@ -6,7 +6,6 @@ import {
   rpc,
   scValToNative,
   TransactionBuilder,
-  xdr,
 } from '@stellar/stellar-sdk';
 import {
   getNetworkPassphrase,
@@ -105,9 +104,30 @@ const toBaseUnits = (input: string, decimals: number): bigint => {
 const I128_MAX = (1n << 127n) - 1n;
 
 /**
- * Arma, firma y envía un `submit` de Blend con un único request sobre el USDC de
- * la red activa. `directBlendSupply` / `directBlendWithdraw` son wrappers sobre
- * esto; comparten resolución de pool/USDC/fee, RPC y firma vía Pollar.
+ * Codifica el `Request` de Blend (`{ address, amount, request_type }`) como el
+ * ScVal-map que entiende `/tx/build` de Pollar. Las claves van en orden
+ * alfabético porque un SCMap de Soroban debe estar ordenado por clave.
+ */
+const encodeBlendRequest = (usdcId: string, requestType: RequestType, rawAmount: bigint) => ({
+  type: 'map' as const,
+  value: [
+    { key: { type: 'symbol', value: 'address' }, val: { type: 'address', value: usdcId } },
+    { key: { type: 'symbol', value: 'amount' }, val: { type: 'i128', value: rawAmount.toString() } },
+    { key: { type: 'symbol', value: 'request_type' }, val: { type: 'u32', value: requestType } },
+  ],
+});
+
+/**
+ * Manda un `submit` de Blend con un único request sobre el USDC de la red activa.
+ * `directBlendSupply` / `directBlendWithdraw` son wrappers sobre esto; comparten
+ * resolución de pool/USDC/fee.
+ *
+ * La operación la ARMA POLLAR: le pasamos la intención (`invoke_contract` +
+ * contrato + método + args) y su backend hace build → simulate → firma → submit
+ * en un solo round-trip (`/tx/build-sign-submit`). Así el fee y el patrocinio los
+ * decide el server, que es el único que puede aplicar la política de sponsorship
+ * de la app; armándola en el browser el fee salía de la cuenta del usuario y un
+ * custodial sin XLM moría con `txInsufficientBalance`.
  */
 const submitBlendRequest = async (
   requestType: RequestType,
@@ -130,34 +150,22 @@ const submitBlendRequest = async (
   const rawAmount = max ? I128_MAX : toBaseUnits(amount, decimals);
   if (rawAmount <= 0n) throw new Error('Amount must be greater than zero');
 
-  const pool = new PoolContractV2(config.poolId);
-  const submitOperation = xdr.Operation.fromXDR(
-    pool.submit({
-      from: address,
-      spender: address,
-      to: address,
-      requests: [{
-        request_type: requestType,
-        address: config.usdcId,
-        amount: rawAmount,
-      }],
-    }),
-    'base64',
-  );
-
-  const server = new rpc.Server(getRpcUrl());
-  const account = await server.getAccount(address);
-  const transaction = new TransactionBuilder(account, {
-    fee: config.feeStroops,
-    networkPassphrase: getNetworkPassphrase(),
-  })
-    .addOperation(submitOperation)
-    .setTimeout(60)
-    .build();
-
-  const prepared = await server.prepareTransaction(transaction);
   const { outcome, lastError } = await runWithErrorCapture(binding.client, () =>
-    binding.client.signAndSubmitTx(prepared.toXDR()),
+    binding.client.buildAndSignAndSubmitTx(
+      'invoke_contract',
+      {
+        contractId: config.poolId,
+        method: 'submit',
+        // submit(from, spender, to, requests): las tres direcciones son el usuario
+        // (deposita lo suyo y recibe lo suyo), y el pool cobra/paga vía el USDC.
+        args: [
+          { type: 'address', value: address },
+          { type: 'address', value: address },
+          { type: 'address', value: address },
+          { type: 'vec', value: [encodeBlendRequest(config.usdcId, requestType, rawAmount)] },
+        ],
+      },
+    ),
   );
   if (outcome.status === 'error') {
     throw new Error(describeOutcomeError(outcome, lastError, 'Blend transaction failed'));

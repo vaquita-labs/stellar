@@ -1,6 +1,7 @@
 'use client';
 
 import { getHorizonUrl, getNetworkPassphrase } from '@/networks/stellar/kit';
+import { ANCLAP_HOME } from '@/networks/anclap/anclap';
 import { usePollar } from '@pollar/react';
 import { Asset, BASE_FEE, Horizon, Memo, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 import { useCallback } from 'react';
@@ -106,7 +107,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * tanto el off-ramp (withdraw) como el on-ramp (deposit) lo reutilicen.
  */
 export function useAnclap() {
-  const { signTx, submitTx, setTrustline, buildAndSignAndSubmitTx } = usePollar();
+  const { signTx, submitTx, setTrustline, buildAndSignAndSubmitTx, getClient } = usePollar();
 
   // Llama a un Route Handler propio y devuelve el sobre Upstream; tira
   // AnclapError con el detalle si el proxy o Anclap responden mal.
@@ -148,13 +149,22 @@ export function useAnclap() {
 
   const signChallenge = useCallback(
     async (challengeXdr: string): Promise<string> => {
-      const outcome = await signTx(challengeXdr);
+      // El challenge SEP-10 tiene `tx.source = cuenta del servidor de Anclap`, no la
+      // del usuario, así que el firmador genérico `signTx` lo rechaza (SOURCE_MISMATCH).
+      // `stellar.sep10.sign` despacha por tipo de wallet: externas firman con su adapter
+      // (Freighter), custodiales firman server-side en el endpoint SEP-10 dedicado.
+      const authDomain = new URL(ANCLAP_HOME).host;
+      const outcome = await getClient().stellar.sep10.sign({
+        challengeXdr,
+        homeDomains: authDomain,
+        webAuthDomain: authDomain,
+      });
       if (outcome.status !== 'signed') {
         throw new AnclapError(outcome.details ?? 'No se pudo firmar el challenge.');
       }
       return outcome.signedXdr;
     },
-    [signTx],
+    [getClient],
   );
 
   const fetchJwt = useCallback(

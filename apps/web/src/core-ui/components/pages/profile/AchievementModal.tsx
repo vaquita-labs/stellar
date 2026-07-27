@@ -740,8 +740,8 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
         <Modal.Dialog
           className={
             isMobile
-              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh'
-              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)]'
+              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh overflow-hidden'
+              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)] overflow-hidden'
           }
         >
           {/* El slide de entrada/salida lo hace el Modal.Container (SHEET_*);

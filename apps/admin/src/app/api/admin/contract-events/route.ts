@@ -2,7 +2,7 @@ import { StrKey } from '@stellar/stellar-sdk';
 import { prisma } from '@vaquita/db';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { defaultRpcUrlFor, formatUnits, scanPoolEvents, type ParsedPoolEvent } from '@/lib/contractEvents';
+import { formatUnits, rpcUrlFor, scanPoolEvents, type ParsedPoolEvent } from '@/lib/contractEvents';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
   }
 
   const config = await prisma.config.findFirst({ orderBy: { id: 'asc' } });
-  const rpcUrl = process.env.SOROBAN_RPC_URL || defaultRpcUrlFor(config?.networkPassphrase);
+  const rpcUrl = rpcUrlFor(config?.networkPassphrase);
 
   let scan;
   try {
