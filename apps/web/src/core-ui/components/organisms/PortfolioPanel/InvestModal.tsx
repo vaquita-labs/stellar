@@ -1,6 +1,6 @@
 'use client';
 
-import { truncateDecimals } from '@/core-ui/helpers/strings';
+import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import {
   useApyByLockPeriods,
@@ -42,7 +42,7 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
   const { walletAddress, token } = useConfigStore();
   const queryClient = useQueryClient();
   const { data: blendPosition, refetch: refetchBlend } = useBlendPosition(walletAddress);
-  const available = truncateDecimals(blendPosition?.usdc ?? 0, 2);
+  const available = floorAmount(blendPosition?.usdc ?? 0, AMOUNT_DECIMALS);
 
   const lockPeriods = useMemo(
     () => [...(token?.lockPeriods ?? [])].filter((p) => p > 0).sort((a, b) => a - b),
@@ -175,13 +175,13 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
         <button
           type="button"
           onClick={() => {
-            setAmount(String(available));
+            setAmount(truncatedAmountString(available));
             setIsMax(true);
             if (overBalance) setOverBalance(false);
           }}
           className="mt-1 inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10"
         >
-          {`${t('withdraw.available', 'Available')}: $${available.toFixed(2)}`}
+          {`${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available)}`}
         </button>
       </div>
 
@@ -235,7 +235,7 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
           setIsMax(false);
           if (overBalance) setOverBalance(false);
         }}
-        maxDecimals={2}
+        maxDecimals={AMOUNT_DECIMALS}
         compact
       />
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { truncateDecimals, truncateMiddle } from '@/core-ui/helpers/strings';
+import { truncateMiddle } from '@/core-ui/helpers/strings';
+import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
 import { useBlendPosition } from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
@@ -88,8 +89,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         { key: 'sending', label: t('withdraw.steps.sending', 'Sending to your wallet') },
       ];
 
-  // Saldo retirable = la posición directa en Blend (líquida, sin lock).
-  const available = truncateDecimals(blendPosition?.usdc ?? 0, 2);
+  // Saldo retirable = la posición directa en Blend (líquida, sin lock). Truncado
+  // a 6 decimales (nunca hacia arriba) para mostrar el saldo con toda su precisión
+  // sin aparentar plata que no existe.
+  const available = floorAmount(blendPosition?.usdc ?? 0, AMOUNT_DECIMALS);
 
   // Wallet propia sintética (login externo): el retiro vuelve al firmante.
   const ownWallet: SavedWallet | null =
@@ -239,13 +242,13 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         <button
           type="button"
           onClick={() => {
-            setAmount(String(available));
+            setAmount(truncatedAmountString(available));
             setIsMax(true);
             if (overBalance) setOverBalance(false);
           }}
           className="mt-1 inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10"
         >
-          {t('withdraw.available', 'Available')}: ${available.toFixed(2)}
+          {t('withdraw.available', 'Available')}: {formatUsdPrecise(available)}
         </button>
       </div>
 
@@ -327,7 +330,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           setIsMax(false);
           if (overBalance) setOverBalance(false);
         }}
-        maxDecimals={2}
+        maxDecimals={AMOUNT_DECIMALS}
       />
     </div>
   );
@@ -387,7 +390,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     <div className="flex flex-col gap-4">
       <div className="text-center pt-1">
         <p className="text-sm text-gray-500">{t('withdraw.amountLabel', 'Amount')}</p>
-        <p className="text-4xl font-bold text-black">${numericAmount.toFixed(2)}</p>
+        <p className="text-4xl font-bold text-black">{formatUsdPrecise(numericAmount)}</p>
       </div>
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">

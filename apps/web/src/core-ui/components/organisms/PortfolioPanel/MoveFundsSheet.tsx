@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUsd } from '@/core-ui/helpers/numbers';
+import { AMOUNT_DECIMALS, formatTokenPrecise, formatUsdPrecise } from '@/core-ui/helpers/numbers';
 import { Spinner } from '@heroui/react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -183,7 +183,7 @@ export function MoveFundsSheet({
         className={`flex-1 min-w-0 rounded-xl border border-black border-b-2 px-3 py-2.5 text-left transition active:translate-y-0.5 ${style.solid}`}
       >
         <span className="block text-sm font-bold truncate">{allocation.label}</span>
-        <span className="block text-xs opacity-80 tabular-nums">{formatUsd(allocation.amount)}</span>
+        <span className="block text-xs opacity-80 tabular-nums">{formatUsdPrecise(allocation.amount)}</span>
       </button>
     );
   };
@@ -229,7 +229,7 @@ export function MoveFundsSheet({
           setAmount(next);
           if (overBalance) setOverBalance(false);
         }}
-        maxDecimals={2}
+        maxDecimals={AMOUNT_DECIMALS}
       />
     </div>
   );
@@ -239,7 +239,7 @@ export function MoveFundsSheet({
     <div className="flex flex-col gap-4">
       <div className="text-center pt-1">
         <p className="text-sm text-gray-500">{t('portfolio.move.amount', 'Amount')}</p>
-        <p className="text-4xl font-bold text-black tabular-nums">{formatUsd(numericAmount)}</p>
+        <p className="text-4xl font-bold text-black tabular-nums">{formatUsdPrecise(numericAmount)}</p>
       </div>
 
       <div className="flex items-center justify-between gap-3 text-sm border-b border-black/10 pb-2">
@@ -287,7 +287,7 @@ export function MoveFundsSheet({
       <p className="text-lg font-bold text-black">{t('portfolio.move.success.title', 'Funds moved!')}</p>
       <p className="text-sm text-gray-500 text-center">
         {t('portfolio.move.success.subtitle', '${{amount}} moved from {{from}} to {{to}}.', {
-          amount: numericAmount.toFixed(2),
+          amount: formatTokenPrecise(numericAmount),
           from: from?.label ?? '',
           to: to?.label ?? '',
         })}

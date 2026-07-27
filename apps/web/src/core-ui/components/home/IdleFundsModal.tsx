@@ -62,7 +62,7 @@ export function IdleFundsModal({
               <Spinner size="sm" color="current" /> {t('idleFunds.processing', 'Investing...')}
             </>
           ) : (
-            t('idleFunds.cta', 'Invest ${{amount}}', { amount: idle.toFixed(2) })
+            t('idleFunds.cta', 'Start earning ${{amount}}', { amount: idle.toFixed(2) })
           )}
         </PressableButton>
       }

@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUsd } from '@/core-ui/helpers/numbers';
+import { formatUsdPrecise } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
@@ -58,7 +58,7 @@ export function AllocationDetailSheet({
       }
     >
       <div className="flex items-center gap-3">
-        <p className="text-4xl font-bold text-black tabular-nums">{formatUsd(allocation.amount)}</p>
+        <p className="text-4xl font-bold text-black tabular-nums">{formatUsdPrecise(allocation.amount)}</p>
         <span className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${style.chip}`}>
           {style.icon}
         </span>

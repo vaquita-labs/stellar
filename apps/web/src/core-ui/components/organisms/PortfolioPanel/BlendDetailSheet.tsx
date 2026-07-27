@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUsd } from '@/core-ui/helpers/numbers';
+import { formatUsdPrecise } from '@/core-ui/helpers/numbers';
 import { useTranslation } from 'react-i18next';
 import { IoWalletOutline } from 'react-icons/io5';
 import { AppModal } from '../../molecules/AppModal';
@@ -41,7 +41,7 @@ export function BlendDetailSheet({
       bodyClassName="flex flex-col gap-4 pb-2"
     >
       <div className="flex items-center gap-3">
-        <p className="text-4xl font-bold text-black tabular-nums">{formatUsd(amount)}</p>
+        <p className="text-4xl font-bold text-black tabular-nums">{formatUsdPrecise(amount)}</p>
         <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-success/20 text-success">
           <IoWalletOutline className="w-5 h-5" />
         </span>
