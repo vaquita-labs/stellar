@@ -41,6 +41,10 @@ const POOL_ERROR_KEYS: Record<number, { key: string; fallback: string }> = {
   22: { key: 'errors.pool.upgradesLockedForever', fallback: 'Upgrades have been locked forever' },
   23: { key: 'errors.pool.cannotChangeVaultWithOpenPositions', fallback: 'Cannot change vault while positions are open' },
   24: { key: 'errors.pool.cannotChangeTokenWithOpenPositions', fallback: 'Cannot change token while positions are open' },
+  25: { key: 'errors.pool.vaultReturnedNoAmounts', fallback: 'Vault returned no amounts' },
+  26: { key: 'errors.pool.vaultPulledUnexpectedAmount', fallback: 'Vault pulled an unexpected amount' },
+  27: { key: 'errors.pool.lockPeriodExceedsMax', fallback: 'Lock period exceeds the maximum' },
+  28: { key: 'errors.pool.upgradeTimelockTooShort', fallback: 'Upgrade timelock is too short' },
 };
 
 /**
