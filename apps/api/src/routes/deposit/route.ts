@@ -12,6 +12,7 @@ import {
   getDepositsById,
   getDepositsByNetworkId,
   getDummyApyData,
+  getNextDepositNonce,
   getNetworkById,
   getNetworkByName,
   getStellarApyData,
@@ -84,6 +85,7 @@ router.post('/', asyncHandler(async (req, res) => {
       data.tokenSymbol,
       data.lockPeriod,
       data.vaquitaContract,
+      data.nonce,
     );
   } catch (err) {
     childLog.error({ err }, 'createDepositByNames threw');
@@ -267,6 +269,24 @@ router.get('/network/:networkName/wallet/:walletAddress/complete', asyncHandler(
 
   const response = await dataToDepositResponseDTOTotalDepositsResponseDTO(networkData, data, false, true);
   return sendSuccess(res, response, '');
+}));
+
+router.get('/next-nonce/wallet/:walletAddress', asyncHandler(async (req, res) => {
+  const { walletAddress } = req.params;
+  req.log.info({ walletAddress }, 'GET /deposit/next-nonce/wallet/:walletAddress');
+
+  if (!walletAddress) {
+    return sendError(res, 'Missing walletAddress', null, 400);
+  }
+
+  const { data, error } = await getNextDepositNonce(walletAddress);
+  if (error || !data) {
+    req.log.error({ err: error, walletAddress }, 'Failed to compute next deposit nonce');
+    return sendError(res, 'Failed to compute next nonce', error, 500);
+  }
+
+  // { nonce: "<u64 as string>" }
+  return sendSuccess(res, data, '');
 }));
 
 router.get('/:id', asyncHandler(async (req, res) => {

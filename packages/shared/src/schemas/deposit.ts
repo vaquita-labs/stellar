@@ -7,4 +7,7 @@ export const depositSchema = z.object({
   tokenSymbol: z.string().min(1),
   lockPeriod: z.number().positive(),
   vaquitaContract: z.string().min(1),
+  // Client-supplied per-wallet nonce (u64 as string) the position id is derived
+  // from. Optional for backward compatibility; the new UI supplies it.
+  nonce: z.string().min(1).optional(),
 });
