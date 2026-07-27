@@ -105,7 +105,7 @@ update-upgrade-timelock-badges:
 	-- update_upgrade_timelock_secs --new_secs $(BADGES_UPGRADE_TIMELOCK_SECS)
 
 deposit:
-	stellar contract invoke --id CDX5QB7JOJJQKVYICT4K5PURM73WUOWDMKKHFIHVYUH5HV2RPPL5Q6CM --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	deposit \
 	--caller $(USER_ADDRESS) \
@@ -114,7 +114,7 @@ deposit:
 	--period $(LOCK_PERIOD)
 
 withdraw:
-	stellar contract invoke --id CDX5QB7JOJJQKVYICT4K5PURM73WUOWDMKKHFIHVYUH5HV2RPPL5Q6CM --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	withdraw \
 	--caller $(USER_ADDRESS) \
