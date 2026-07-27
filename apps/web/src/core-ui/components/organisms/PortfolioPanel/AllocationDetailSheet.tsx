@@ -2,7 +2,6 @@
 
 import { formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
-import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -60,15 +59,7 @@ export function AllocationDetailSheet({
     >
       <div className="flex min-w-0 items-center gap-3">
         <p className="min-w-0 truncate text-4xl font-bold text-black tabular-nums">{formatUsdAdaptive(allocation.amount)}</p>
-        <span
-          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${style.chip}`}
-        >
-          {style.image ? (
-            <Image src={style.image} alt="" width={40} height={40} className="h-9 w-9 object-contain" />
-          ) : (
-            style.icon
-          )}
-        </span>
+        <span className={`w-10 h-10 rounded-full shrink-0 ${style.solid}`} />
       </div>
       <p className="-mt-3 text-sm font-bold text-success tabular-nums">{allocation.apy.toFixed(2)}% APR</p>
 

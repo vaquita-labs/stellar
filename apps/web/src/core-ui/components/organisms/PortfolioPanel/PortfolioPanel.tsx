@@ -5,7 +5,6 @@ import { formatTokenPrecise, formatUsdAdaptive } from '@/core-ui/helpers/numbers
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useDepositsComplete, useLiveBlendUsdc } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -261,7 +260,7 @@ export function PortfolioPanel({
         size="lg"
         fullScreen
         slideFrom="right"
-        bodyClassName="flex flex-col gap-5 pb-10 overflow-x-hidden"
+        bodyClassName="flex flex-col gap-4 pb-10 overflow-x-hidden"
         footer={
           <PressableButton variant="success" size="cta" className="py-2.5!" onClick={() => openInvest(null)}>
             {t('portfolio.invest', 'Invest')}
@@ -273,7 +272,7 @@ export function PortfolioPanel({
             color (mismos colores que los íconos de la lista). Debajo, la ganancia
             y cuántas opciones se están usando (las vacías son la oportunidad de
             rendir más). El desglose e interacción viven en la lista de abajo. */}
-        <div className="flex flex-col items-center gap-3 pt-2">
+        <div className="flex flex-col items-center gap-1.5">
           <PortfolioDonut
             segments={rows.map((row) => ({ key: row.key, color: row.style.hex, value: row.amount }))}
             total={totalAmount}
@@ -336,25 +335,11 @@ export function PortfolioPanel({
                       empty ? 'cursor-default' : 'active:bg-black/[0.04]'
                     }`}
                   >
+                    {/* Disco sólido del color de la opción: amarra la fila con su
+                        arco en el donut. Vacío → gris tenue (se lee "bloqueado"). */}
                     <span
-                      className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${
-                        empty ? 'bg-black/5 text-gray-400' : row.style.chip
-                      }`}
-                    >
-                      {row.style.image ? (
-                        // Sticker de crecimiento (o la moneda en Ahorros). Vacío →
-                        // en gris y atenuado, para que se lea como "bloqueado".
-                        <Image
-                          src={row.style.image}
-                          alt=""
-                          width={36}
-                          height={36}
-                          className={`h-8 w-8 object-contain ${empty ? 'opacity-40 grayscale' : ''}`}
-                        />
-                      ) : (
-                        row.style.icon
-                      )}
-                    </span>
+                      className={`w-9 h-9 rounded-full shrink-0 ${empty ? 'bg-black/10' : row.style.solid}`}
+                    />
                     <span className="flex-1 min-w-0">
                       <span
                         className={`block text-sm font-bold truncate ${empty ? 'text-gray-400' : 'text-black'}`}
