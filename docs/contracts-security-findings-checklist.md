@@ -106,9 +106,12 @@ All MEDIUMs are now resolved and none need further rework:
 
 Status: DB, contract deposit-event nonce, reconciliation decode, nonce endpoint,
 and the web deposit/withdraw wiring are implemented and typecheck-clean (commits
-5cb5d5d, 96b39da, 04e10d6). **Remaining:** (a) runtime-verify `deriveDepositId`
-matches on-chain `compute_deposit_id`/the deposit event on the first testnet
-deposit; (b) deploy config (below). Original plan for reference:
+5cb5d5d, 96b39da, 04e10d6, bec58d1). The web reads `deposit_id` from the
+contract's `compute_deposit_id` view (not a client-side hash), so there is no
+byte-layout to verify; `deposit_id_hex` is best-effort (nonce is what withdrawal
+needs). **Remaining:** (a) end-to-end testnet deposit/withdraw smoke test; (b)
+deploy config (below); (c) optional: reconciliation matcher by (wallet+nonce) as
+a fallback when `deposit_id_hex` is empty. Original plan for reference:
 
 
 The D1 signature change ripples beyond the contract. Before the new contract goes live, update:
