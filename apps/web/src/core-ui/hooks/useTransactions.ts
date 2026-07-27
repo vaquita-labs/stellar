@@ -27,7 +27,9 @@ export function useTransactions(): {
         log('init', { nonce: String(nonce), amount });
         const { transactionDeposit: deposit } = await stellarTransactions(token);
         const { success, txHash, transaction, depositIdHex, explorer, error } = await deposit(nonce, amount, lockPeriod, log);
-        if (success && !!txHash && !!transaction && !!depositIdHex && !error) {
+        // deposit_id_hex is best-effort now (read from the contract); the deposit
+        // itself succeeding does not depend on it.
+        if (success && !!txHash && !!transaction && !error) {
           console.info(`[transactionDeposit] ✅`, { nonce: String(nonce), amount, txHash, transaction });
           if (explorer) {
             console.info('[transactionDeposit] ✅', explorer);

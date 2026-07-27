@@ -1,5 +1,4 @@
 export * from './contract';
-export * from './depositId';
 export * from './map';
 export * from './nickname';
 export * from './numbers';

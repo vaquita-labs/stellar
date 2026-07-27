@@ -1,6 +1,7 @@
-import { deriveDepositId, getWalletAddress } from '@/core-ui/helpers';
+import { getWalletAddress } from '@/core-ui/helpers';
 import { DepositFn, NetworkResponseDTO, WithdrawFn } from '../../core-ui/types';
 import { isStellarWalletConnected, stellarExpertTxUrl } from './helpers';
+import { getComputedDepositId } from './poolQueries';
 import { getSorobanTx } from './sorobanTx';
 
 export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: NetworkResponseDTO['tokens'][number]) => {
@@ -23,10 +24,12 @@ export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: 
       };
     }
 
-    // The pool derives the id on-chain as sha256(caller || nonce); recompute it
-    // locally so we can store deposit_id_hex to match the deposit event.
-    const depositIdHex = deriveDepositId(address, nonce);
-    log('derived depositIdHex:', { nonce: String(nonce), depositIdHex });
+    // Ask the contract (via compute_deposit_id) for the exact position id it
+    // stores — the same value the deposit event carries — so we never guess the
+    // hash client-side. Empty string if the read fails; the nonce (stored
+    // separately) is what withdrawal actually needs.
+    const depositIdHex = (await getComputedDepositId(vaquitaContractAddress, address, nonce)) ?? '';
+    log('computed depositIdHex:', { nonce: String(nonce), depositIdHex });
 
     const period = BigInt(lockPeriod / 1000); // 7 días (ajusta si corresponde)
 
