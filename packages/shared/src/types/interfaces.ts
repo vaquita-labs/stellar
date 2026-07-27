@@ -42,6 +42,7 @@ export interface Deposit {
   lock_period: number,
   token_id: number,
   deposit_id_hex: string,
+  nonce?: string | null,
   transaction_hash: string,
   transaction_event_raw: string,
   vaquita_contract_address: string,

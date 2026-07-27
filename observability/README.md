@@ -195,3 +195,7 @@ period, no-data behavior, contact point, owner, reason._
 | Date | Change | By |
 |------|--------|----|
 | 2026-07-23 | Initial Grafana Cloud stack + `metrics:write` / `logs:write` tokens provisioned (issue 055) | Vaquita team |
+| 2026-07-24 | Dev-host Alloy live; API + host/container metrics confirmed in Cloud (issue 036) | Vaquita team |
+| 2026-07-24 | Synthetic uptime checks for API health + web (issue 068) | Vaquita team |
+| 2026-07-26 | Staging + prod Alloy live; metrics for all envs; api-service log shipping to Loki with redaction; log-hygiene gate (issues 037, 038) | Vaquita team |
+| 2026-07-27 | Cardinality trim (cAdvisor allowlist) + 60s scrape interval | Vaquita team |

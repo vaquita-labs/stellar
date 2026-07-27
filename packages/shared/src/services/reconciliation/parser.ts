@@ -18,6 +18,14 @@ const asString = (value: unknown): string | null => {
   return null;
 };
 
+// The new pool emits `deposit_id` as BytesN<32> (scValToNative → Buffer). The
+// old pool emitted a hex String. Normalize both to a lowercase hex string.
+const asHex = (value: unknown): string | null => {
+  if (value instanceof Uint8Array) return Buffer.from(value).toString('hex');
+  if (typeof value === 'string') return value.toLowerCase().replace(/^0x/, '');
+  return null;
+};
+
 const asNumber = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'bigint') return Number(value);
@@ -98,7 +106,7 @@ export const parseVaquitaPoolEvent = (
   if ('error' in base) return { event: null, issue: base.error ?? null };
 
   const owner = asString(base.value.owner) ?? base.caller;
-  const depositId = asString(base.value.deposit_id ?? base.value.depositId);
+  const depositId = asHex(base.value.deposit_id ?? base.value.depositId);
   const token = asString(base.value.token);
   const amountRaw = asString(base.value.amount);
   const lockPeriod = asNumber(base.value.lock_period ?? base.value.lockPeriod);
@@ -120,6 +128,8 @@ export const parseVaquitaPoolEvent = (
       caller: base.caller,
       owner,
       depositId,
+      // Present on the new pool; null for legacy events that predate the field.
+      nonce: asString(base.value.nonce),
       token,
       amountRaw,
       sharesRaw,

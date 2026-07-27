@@ -18,7 +18,7 @@ use crate::test::EnvTestUtils;
 use crate::{VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env, String, Vec};
+use soroban_sdk::{Address, Env, Vec};
 
 const LOCK_7D: u64 = 604_800;
 const LOCK_14D: u64 = 1_209_600;
@@ -73,9 +73,9 @@ fn vault_returns_exact_principal_succeeds() {
 
     let alice = Address::generate(&e);
     tok.mint(&alice, &100_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "d1"), &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100_000i128, &LOCK_7D);
     e.jump_time(LOCK_7D + 1);
-    pool.withdraw(&alice, &String::from_str(&e, "d1"));
+    pool.withdraw(&alice, &1u64);
     assert_eq!(tok.balance(&alice), 100_000i128);
 }
 
@@ -86,14 +86,14 @@ fn vault_returns_principal_plus_interest_succeeds() {
 
     let alice = Address::generate(&e);
     tok.mint(&alice, &100_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "d1"), &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100_000i128, &LOCK_7D);
 
     let interest = 5_000i128;
     tok.mint(&vault_addr, &interest);
     vault.test_set_withdraw_adjustment(&interest);
 
     e.jump_time(LOCK_7D + 1);
-    pool.withdraw(&alice, &String::from_str(&e, "d1"));
+    pool.withdraw(&alice, &1u64);
     assert_eq!(tok.balance(&alice), 100_000i128 + interest);
 }
 
@@ -104,11 +104,11 @@ fn vault_returns_less_than_principal_realizes_loss() {
 
     let alice = Address::generate(&e);
     tok.mint(&alice, &100_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "d1"), &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100_000i128, &LOCK_7D);
     vault.test_set_withdraw_adjustment(&-10_000i128);
 
     e.jump_time(LOCK_7D + 1);
-    pool.withdraw(&alice, &String::from_str(&e, "d1"));
+    pool.withdraw(&alice, &1u64);
     assert_eq!(tok.balance(&alice), 90_000i128);
     assert!(pool.try_check_solvency().is_ok());
 }
@@ -122,7 +122,7 @@ fn corrupted_state_triggers_conservation_invariant() {
 
     let alice = Address::generate(&e);
     tok.mint(&alice, &100_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "d1"), &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100_000i128, &LOCK_7D);
 
     // Admin adds 20_000 rewards — contract now holds 20_000 BLEND directly
     tok.mint(&admin, &20_000i128);
@@ -137,7 +137,7 @@ fn corrupted_state_triggers_conservation_invariant() {
     // Withdraw on-time so assert_solvent runs. It should succeed because the
     // contract holds the reward tokens.
     e.jump_time(LOCK_7D + 1);
-    pool.withdraw(&alice, &String::from_str(&e, "d1"));
+    pool.withdraw(&alice, &1u64);
     assert!(pool.try_check_solvency().is_ok());
 }
 
@@ -148,13 +148,13 @@ fn conservation_check_fires_when_reward_pool_exceeds_balance() {
 
     let alice = Address::generate(&e);
     tok.mint(&alice, &100_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "d1"), &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100_000i128, &LOCK_7D);
     tok.mint(&admin, &20_000i128);
     pool.add_rewards(&LOCK_7D, &20_000i128);
 
     // Now on-time withdrawal should pass the solvency check
     e.jump_time(LOCK_7D + 1);
-    pool.withdraw(&alice, &String::from_str(&e, "d1"));
+    pool.withdraw(&alice, &1u64);
     assert!(pool.try_check_solvency().is_ok());
 }
 
@@ -209,9 +209,10 @@ fn property_solvency_holds_over_random_sequences() {
     tok.mint(&admin, &1_000_000_000i128);
 
     let mut seed: u64 = 0xDEAD_BEEF_1234_5678;
-    let mut deposit_counter: u32 = 0;
-    // Track (deposit_id_str, user_index, period)
-    let mut open: StdVec<(crate::test::std::string::String, usize, u64)> = StdVec::new();
+    let mut deposit_counter: u64 = 0;
+    // Track (nonce, user_index, period). The nonce is unique per deposit; the
+    // contract derives the id from (caller, nonce).
+    let mut open: StdVec<(u64, usize, u64)> = StdVec::new();
 
     for step in 0..120usize {
         let r = next_rand(&mut seed);
@@ -223,24 +224,22 @@ fn property_solvency_holds_over_random_sequences() {
                 let ui = (r as usize >> 3) % users.len();
                 let period = periods[(r as usize >> 6) % periods.len()];
                 let amount = 1_000i128 + (r as i128 % 99_000);
-                let id_str = crate::test::std::format!("p{:03}", deposit_counter);
-                let id = String::from_str(&e, &id_str);
+                let nonce = deposit_counter;
                 if tok.balance(&users[ui]) < amount {
                     tok.mint(&users[ui], &(amount * 2));
                 }
-                if pool.try_deposit(&users[ui], &id, &amount, &period).is_ok() {
-                    open.push((id_str, ui, period));
+                if pool.try_deposit(&users[ui], &nonce, &amount, &period).is_ok() {
+                    open.push((nonce, ui, period));
                 }
             }
             2 => {
                 if !open.is_empty() {
                     let idx = (r as usize >> 4) % open.len();
-                    let (ref id_str, ui, period) = open[idx].clone();
-                    let id = String::from_str(&e, id_str.as_str());
+                    let (nonce, ui, period) = open[idx];
                     if (r >> 8) & 1 == 1 {
                         e.jump_time(period + 1);
                     }
-                    let _ = pool.try_withdraw(&users[ui], &id);
+                    let _ = pool.try_withdraw(&users[ui], &nonce);
                     open.remove(idx);
                 }
             }

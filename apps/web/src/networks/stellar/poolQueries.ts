@@ -1,7 +1,9 @@
 import {
   Account,
+  Address,
   Contract,
   Keypair,
+  nativeToScVal,
   Networks,
   rpc,
   scValToNative,
@@ -39,6 +41,10 @@ const POOL_ERROR_KEYS: Record<number, { key: string; fallback: string }> = {
   22: { key: 'errors.pool.upgradesLockedForever', fallback: 'Upgrades have been locked forever' },
   23: { key: 'errors.pool.cannotChangeVaultWithOpenPositions', fallback: 'Cannot change vault while positions are open' },
   24: { key: 'errors.pool.cannotChangeTokenWithOpenPositions', fallback: 'Cannot change token while positions are open' },
+  25: { key: 'errors.pool.vaultReturnedNoAmounts', fallback: 'Vault returned no amounts' },
+  26: { key: 'errors.pool.vaultPulledUnexpectedAmount', fallback: 'Vault pulled an unexpected amount' },
+  27: { key: 'errors.pool.lockPeriodExceedsMax', fallback: 'Lock period exceeds the maximum' },
+  28: { key: 'errors.pool.upgradeTimelockTooShort', fallback: 'Upgrade timelock is too short' },
 };
 
 /**
@@ -58,6 +64,50 @@ export function parsePoolErrorMessage(err: unknown): string | null {
   const code = parseInt(match[1], 10);
   const entry = POOL_ERROR_KEYS[code];
   return entry ? i18n.t(entry.key, entry.fallback) : null;
+}
+
+/**
+ * Ask the contract for the position id it will store for `(caller, nonce)` by
+ * simulating the `compute_deposit_id(caller, nonce)` view. This returns the
+ * exact `BytesN<32>` the deposit event carries (`sha256(caller || nonce)`),
+ * sourced from the contract itself — no client-side hashing. Returns the id as
+ * a lowercase hex string, or `null` on any RPC/simulation error (the deposit
+ * still proceeds; the nonce is what withdrawal needs).
+ */
+export async function getComputedDepositId(
+  contractId: string,
+  caller: string,
+  nonce: bigint | number | string,
+): Promise<string | null> {
+  if (!contractId || !caller) return null;
+  try {
+    const rpcUrl = getRpcUrl();
+    const networkPassphrase = getNetworkPassphrase() as Networks;
+    const contract = new Contract(contractId);
+    const server = new rpc.Server(rpcUrl);
+    const keypair = Keypair.random();
+    const account = new Account(keypair.publicKey(), '0');
+    const operation = contract.call(
+      'compute_deposit_id',
+      new Address(caller).toScVal(),
+      nativeToScVal(BigInt(nonce), { type: 'u64' }),
+    );
+    const transaction = new TransactionBuilder(account, {
+      fee: '100',
+      networkPassphrase,
+    })
+      .addOperation(operation)
+      .setTimeout(30)
+      .build();
+    const simulation = await server.simulateTransaction(transaction);
+    if (rpc.Api.isSimulationError(simulation)) return null;
+    const returnValue = simulation.result?.retval;
+    if (!returnValue) return null;
+    const bytes = scValToNative(returnValue) as Uint8Array;
+    return Buffer.from(bytes).toString('hex');
+  } catch {
+    return null;
+  }
 }
 
 /**

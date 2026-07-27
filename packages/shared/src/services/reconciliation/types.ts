@@ -24,6 +24,9 @@ export interface NormalizedDepositEvent {
   caller: string;
   owner: string;
   depositId: string;
+  /// Client-supplied nonce this position was derived from (raw u64 as string).
+  /// Needed to reconstruct the withdraw call for backfilled deposits.
+  nonce: string | null;
   token: string;
   amountRaw: string;
   sharesRaw: string;

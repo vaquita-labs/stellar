@@ -6,7 +6,7 @@ use crate::test::EnvTestUtils;
 use crate::{VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env, String, Vec};
+use soroban_sdk::{Address, Env, Vec};
 
 const LOCK_7D: u64 = 604_800;
 
@@ -58,7 +58,7 @@ fn set_defindex_vault_blocked_with_positions() {
     let (_, alice, _, pool, tok) = setup(&e);
 
     tok.mint(&alice, &100_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "D1"), &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100_000i128, &LOCK_7D);
 
     let new_vault = Address::generate(&e);
     let result = pool.try_set_defindex_vault(&new_vault);
@@ -74,7 +74,7 @@ fn set_defindex_vault_succeeds_after_withdrawal() {
     let (_, alice, _, pool, tok) = setup(&e);
 
     tok.mint(&alice, &100_000i128);
-    let id = String::from_str(&e, "D1");
+    let id = 1u64;
     pool.deposit(&alice, &id, &100_000i128, &LOCK_7D);
     pool.withdraw(&alice, &id);
 
@@ -121,7 +121,7 @@ fn set_blend_token_blocked_with_positions() {
     let (_, alice, _, pool, tok) = setup(&e);
 
     tok.mint(&alice, &100_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "D2"), &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &2u64, &100_000i128, &LOCK_7D);
 
     let new_token = Address::generate(&e);
     let result = pool.try_set_blend_token(&new_token);
@@ -137,7 +137,7 @@ fn set_blend_token_succeeds_after_withdrawal() {
     let (_, alice, _, pool, tok) = setup(&e);
 
     tok.mint(&alice, &100_000i128);
-    let id = String::from_str(&e, "D2");
+    let id = 2u64;
     pool.deposit(&alice, &id, &100_000i128, &LOCK_7D);
     pool.withdraw(&alice, &id);
 

@@ -90,6 +90,29 @@ describe('VaquitaPool event parser', () => {
     }));
   });
 
+  it('decodes BytesN deposit_id (new pool) to hex and reads the nonce', () => {
+    const idBytes = Buffer.alloc(32, 0);
+    idBytes[31] = 0xab;
+    const result = parseVaquitaPoolEvent(baseEvent({
+      value: {
+        owner: 'GOWNER',
+        deposit_id: idBytes, // BytesN<32> → Buffer after scValToNative
+        nonce: 5n,
+        token: 'CTOKEN',
+        amount: 1000n,
+        shares: 1000n,
+        lock_period: 604800,
+      },
+    }));
+
+    expect(result.issue).toBeNull();
+    expect(result.event).toEqual(expect.objectContaining({
+      kind: 'deposit',
+      depositId: idBytes.toString('hex'),
+      nonce: '5',
+    }));
+  });
+
   it('reports malformed payloads', () => {
     const result = parseVaquitaPoolEvent(baseEvent({ value: { owner: 'GOWNER' } }));
 

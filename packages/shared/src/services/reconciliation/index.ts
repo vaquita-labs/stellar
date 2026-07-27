@@ -232,6 +232,7 @@ export const createPrismaReconciliationDependencies = (
           transactionHash: repair.event.txHash,
           transactionEventRaw: JSON.stringify(repair.event.raw),
           depositIdHex: repair.event.depositId,
+          nonce: repair.event.nonce != null ? BigInt(repair.event.nonce) : null,
           lockPeriod: BigInt(repair.lockPeriodMs),
           vaquitaContractAddress: repair.event.contractId,
           createdAt: confirmedAt,

@@ -24,6 +24,8 @@ impl VaquitaBadges {
         signing_key: BytesN<32>,
         upgrade_timelock_secs: u64,
     ) {
+        // Timelock must meet the minimum floor (finding 2ce344e3).
+        assert!(upgrade_timelock_secs >= crate::upgrade::MIN_TIMELOCK_SECS);
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage()
             .instance()

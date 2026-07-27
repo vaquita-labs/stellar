@@ -188,20 +188,27 @@ export const useVaquitaDetail = ({
 
     if (!network || !transactionWithdraw) return;
     setLoading(true);
+    // The pool re-derives the position id from the caller + the stored nonce.
+    if (deposit.nonce == null) {
+      setLoading(false);
+      toast.danger(t('deposit.withdraw.errorTitle', "Withdrawal didn't go through"), {
+        description: 'Position is missing its nonce; cannot withdraw',
+      });
+      return;
+    }
+    const nonce = deposit.nonce;
     let isSuccess = false;
     let lastError: unknown = null;
     if (isNewDepositHandled(network.networkName)) {
       const { success, error } = await transactionWithdraw(
-        +deposit.id,
-        deposit.depositIdHex,
+        nonce,
         deposit.vaquitaContractAddress
       );
       isSuccess = !!success;
       lastError = error ?? null;
     } else {
       const { success, txHash, transaction, error } = await transactionWithdraw(
-        +deposit.id,
-        deposit.depositIdHex,
+        nonce,
         deposit.vaquitaContractAddress
       );
       lastError = error ?? null;

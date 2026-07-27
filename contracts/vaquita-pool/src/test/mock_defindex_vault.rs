@@ -1,4 +1,9 @@
 #![cfg(test)]
+//! TEST ONLY — never deploy. The `test_*` hooks below intentionally mutate
+//! state without auth to simulate broken/malicious vault behavior; they exist
+//! purely for the `#![cfg(test)]` harness (security findings b9ff40ec /
+//! 03dfadaa / 2eaffbf0). Do not reuse this contract in production.
+//!
 //! Minimal pass-through mock of the DeFindex vault used in integration tests.
 //!
 //! Matches the public interface of the real DeFindex vault (single-asset mode):
@@ -28,6 +33,13 @@ enum DataKey {
     TestStealSharesOnDeposit,
     /// Test: transfer assets in but do not mint shares (broken vault).
     TestSkipShareMint,
+    /// Test: return an empty vector from `get_asset_amounts_per_shares`.
+    TestEmptyPreview,
+    /// Test: return an empty vector from `withdraw`.
+    TestEmptyWithdraw,
+    /// Test: during deposit, pull this many extra tokens from `from` to
+    /// simulate a malicious vault replaying the pool's authorized transfer.
+    TestExtraPull,
 }
 
 #[contract]
@@ -46,6 +58,17 @@ impl MockDeFindexVault {
         env.storage()
             .instance()
             .set(&DataKey::TestSkipShareMint, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::TestEmptyPreview, &false);
+        env.storage()
+            .instance()
+            .set(&DataKey::TestEmptyWithdraw, &false);
+        env.storage().instance().set(&DataKey::TestExtraPull, &0i128);
+    }
+
+    pub fn test_set_extra_pull(env: Env, extra: i128) {
+        env.storage().instance().set(&DataKey::TestExtraPull, &extra);
     }
 
     /// Changes gross asset returned by `withdraw` vs. share burn (default 1:1).
@@ -53,6 +76,18 @@ impl MockDeFindexVault {
         env.storage()
             .instance()
             .set(&DataKey::WithdrawAdjustment, &delta);
+    }
+
+    pub fn test_set_empty_preview(env: Env, empty: bool) {
+        env.storage()
+            .instance()
+            .set(&DataKey::TestEmptyPreview, &empty);
+    }
+
+    pub fn test_set_empty_withdraw(env: Env, empty: bool) {
+        env.storage()
+            .instance()
+            .set(&DataKey::TestEmptyWithdraw, &empty);
     }
 
     pub fn test_set_steal_shares_on_deposit(env: Env, steal: i128) {
@@ -82,6 +117,15 @@ impl MockDeFindexVault {
         let asset: Address = env.storage().instance().get(&DataKey::Asset).unwrap();
         let token = TokenClient::new(&env, &asset);
         token.transfer(&from, &env.current_contract_address(), &amount);
+        // Simulate a replayed/extra pull from the pool (security finding 02a02675).
+        let extra: i128 = env
+            .storage()
+            .instance()
+            .get(&DataKey::TestExtraPull)
+            .unwrap_or(0);
+        if extra > 0 {
+            token.transfer(&from, &env.current_contract_address(), &extra);
+        }
         let steal: i128 = env
             .storage()
             .instance()
@@ -158,10 +202,26 @@ impl MockDeFindexVault {
             (ASSET, Symbol::new(&env, "withdraw")),
             (withdraw_shares, from),
         );
+        let empty: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::TestEmptyWithdraw)
+            .unwrap_or(false);
+        if empty {
+            return vec![&env];
+        }
         vec![&env, payout]
     }
 
     pub fn get_asset_amounts_per_shares(env: Env, vault_shares: i128) -> Vec<i128> {
+        let empty: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::TestEmptyPreview)
+            .unwrap_or(false);
+        if empty {
+            return vec![&env];
+        }
         let adjustment: i128 = env
             .storage()
             .instance()

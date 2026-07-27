@@ -5,7 +5,7 @@ use crate::test::{assert_approx_eq_rel, EnvTestUtils};
 use crate::{VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env, String, Vec};
+use soroban_sdk::{Address, Env, Vec};
 
 #[test]
 fn success() {
@@ -43,10 +43,10 @@ fn success() {
     let vaquita_client = VaquitaPoolClient::new(&e, &vaquita_contract_id);
     println!("Vaquita pool initialized via constructor");
 
-    vaquita_client.deposit(&alice, &String::from_str(&e, "TEST"), &principal, &604800);
+    vaquita_client.deposit(&alice, &1u64, &principal, &604800);
     println!("Vaquita pool deposited");
 
-    vaquita_client.withdraw(&alice, &String::from_str(&e, "TEST"));
+    vaquita_client.withdraw(&alice, &1u64);
     println!("Vaquita pool withdrew");
 
     assert_approx_eq_rel(usdc_client.balance(&alice), principal, 1);

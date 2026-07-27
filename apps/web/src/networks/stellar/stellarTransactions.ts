@@ -1,6 +1,7 @@
-import { getWalletAddress, toHexFromAny } from '@/core-ui/helpers';
+import { getWalletAddress } from '@/core-ui/helpers';
 import { DepositFn, NetworkResponseDTO, WithdrawFn } from '../../core-ui/types';
 import { isStellarWalletConnected, stellarExpertTxUrl } from './helpers';
+import { getComputedDepositId } from './poolQueries';
 import { getSorobanTx } from './sorobanTx';
 
 export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: NetworkResponseDTO['tokens'][number]) => {
@@ -11,7 +12,7 @@ export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: 
     contractId: vaquitaContractAddress,
   });
 
-  const transactionDeposit: DepositFn = async (id: number, amount: number, lockPeriod, log) => {
+  const transactionDeposit: DepositFn = async (nonce, amount: number, lockPeriod, log) => {
     if (!isConnected || !address) {
       return {
         success: false,
@@ -23,19 +24,23 @@ export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: 
       };
     }
 
-    const depositIdHex = await toHexFromAny(id, 32);
-    log('normalized depositIdHex:', { id, depositIdHex });
+    // Ask the contract (via compute_deposit_id) for the exact position id it
+    // stores — the same value the deposit event carries — so we never guess the
+    // hash client-side. Empty string if the read fails; the nonce (stored
+    // separately) is what withdrawal actually needs.
+    const depositIdHex = (await getComputedDepositId(vaquitaContractAddress, address, nonce)) ?? '';
+    log('computed depositIdHex:', { nonce: String(nonce), depositIdHex });
 
     const period = BigInt(lockPeriod / 1000); // 7 días (ajusta si corresponde)
 
     log('stellar deposit', {
-      depositId: depositIdHex,
+      nonce: String(nonce),
       humanAmount: amount.toString(),
       tokenDecimals: decimals,
       period,
     });
     const transaction = await deposit({
-      depositId: depositIdHex,
+      nonce,
       humanAmount: amount.toString(),
       tokenDecimals: decimals,
       period,
@@ -53,7 +58,7 @@ export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: 
     };
   };
 
-  const transactionWithdraw: WithdrawFn = async (_: number, depositIdHex: string) => {
+  const transactionWithdraw: WithdrawFn = async (nonce) => {
     if (!isConnected || !address) {
       return {
         success: false,
@@ -64,9 +69,7 @@ export const stellarTransactions = async ({ decimals, vaquitaContractAddress }: 
       };
     }
 
-    const transaction = await withdraw({
-      depositId: depositIdHex,
-    });
+    const transaction = await withdraw({ nonce });
 
     const { hash } = transaction;
 

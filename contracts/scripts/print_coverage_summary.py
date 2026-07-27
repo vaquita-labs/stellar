@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
 """Pretty-print `cargo llvm-cov report --json --summary-only` for terminal preview."""
 import json
+import re
 import sys
+
+# Strip ASCII control chars (except tab) so a crafted filename in the coverage
+# JSON cannot inject ANSI escape sequences / control chars into the terminal
+# (security finding 23c95cf8).
+_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+
+
+def _safe(value: object) -> str:
+    return _CONTROL_CHARS.sub("", str(value))
+
 
 def main() -> None:
     data = json.load(sys.stdin).get("data") or []
@@ -11,7 +22,7 @@ def main() -> None:
     for block in data:
         for f in block.get("files") or []:
             s = f["summary"]
-            print(f"  {f['filename']}")
+            print(f"  {_safe(f['filename'])}")
             print(
                 f"    Functions: {s['functions']['covered']}/{s['functions']['count']} "
                 f"({s['functions']['percent']:.2f}%)"

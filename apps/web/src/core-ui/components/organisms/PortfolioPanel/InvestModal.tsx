@@ -59,7 +59,7 @@ export function InvestModal({
     [token?.lockPeriods],
   );
   const { byLockPeriod } = useApyByLockPeriods(lockPeriods, token?.symbol ?? '');
-  const { createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
+  const { getNextNonce, createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactions();
 
   const [step, setStep] = useState<Step>('amount');
@@ -141,16 +141,20 @@ export function InvestModal({
 
       // 2) Depósito al Vaquita pool (crea la posición con lock).
       setActiveStep('locking');
+      // Per-wallet nonce → the pool derives the position id as sha256(caller || nonce).
+      const nonce = await getNextNonce();
+      if (!nonce) throw new Error(t('withdraw.error.generic', 'Something went wrong'));
       const newDeposit = await createDeposit({
         amount: numericAmount,
         tokenSymbol: token.symbol,
         lockPeriod: selectedLock,
         vaquitaContract: token?.vaquitaContractAddress,
+        nonce,
       });
       if (!newDeposit.success) throw new Error(t('withdraw.error.generic', 'Something went wrong'));
 
       const { success, txHash, transaction, depositIdHex, error: txError } = await transactionDeposit(
-        newDeposit.id,
+        nonce,
         numericAmount,
         selectedLock,
       );

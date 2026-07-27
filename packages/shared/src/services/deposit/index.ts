@@ -45,6 +45,7 @@ const toDepositShape = (row: any): Deposit => ({
   lock_period: Number(row.lockPeriod ?? 0),
   token_id: row.tokenId,
   deposit_id_hex: row.depositIdHex ?? '',
+  nonce: row.nonce != null ? String(row.nonce) : null,
   transaction_hash: row.transactionHash ?? '',
   transaction_event_raw: row.transactionEventRaw ?? '',
   vaquita_contract_address: row.vaquitaContractAddress ?? '',
@@ -167,12 +168,14 @@ export const createDeposit = async (deposit: {
   tokenId: number,
   lockPeriod: number,
   vaquitaContract: string,
+  nonce?: string | number | bigint | null,
 }) => {
   try {
     const row = await prisma.deposit.create({
       data: {
         status: DepositStatus.INITIATED,
         depositIdHex: deposit.depositIdHex,
+        nonce: deposit.nonce != null && deposit.nonce !== '' ? BigInt(deposit.nonce) : null,
         amount: deposit.amount,
         walletAddress: deposit.walletAddress,
         tokenId: deposit.tokenId,
@@ -191,7 +194,29 @@ export const createDeposit = async (deposit: {
   }
 };
 
-export const createDepositByNames = async (depositIdHex: string, amount: number, walletAddress: string, networkName: string, tokenSymbol: string, lockPeriod: number, vaquitaContract: string) => {
+/**
+ * Next deposit nonce for a wallet: a per-wallet monotonic counter used to derive
+ * the on-chain position id (`sha256(caller || nonce)`). Computed as
+ * `MAX(nonce) + 1` over ALL of the wallet's deposits (including soft-deleted), so
+ * a value is never reused. Concurrency is handled at insert time by the
+ * `UNIQUE(wallet_address, nonce)` index — a losing writer retries with the next
+ * value. Returned as a string to preserve the full u64 range.
+ */
+export const getNextDepositNonce = async (walletAddress: string) => {
+  try {
+    const agg = await prisma.deposit.aggregate({
+      where: { walletAddress },
+      _max: { nonce: true },
+    });
+    const max = agg._max.nonce;
+    const next = max != null ? max + 1n : 0n;
+    return { data: { nonce: next.toString() }, error: null };
+  } catch (error) {
+    return { data: null, error: error as Error };
+  }
+};
+
+export const createDepositByNames = async (depositIdHex: string, amount: number, walletAddress: string, networkName: string, tokenSymbol: string, lockPeriod: number, vaquitaContract: string, nonce?: string | number | bigint | null) => {
 
   const config = await prisma.config.findFirst({ select: { networkName: true } });
   if (!config || config.networkName !== networkName) {
@@ -216,6 +241,7 @@ export const createDepositByNames = async (depositIdHex: string, amount: number,
     tokenId: token.id,
     lockPeriod,
     vaquitaContract,
+    nonce: nonce ?? null,
   });
 };
 
@@ -480,6 +506,9 @@ export const toDepositResponseDTO = async (deposit: DepositWithState, networkDat
     status: deposit.status,
     transactionHash: deposit.transaction_hash,
     depositIdHex: deposit.deposit_id_hex,
+    nonce: (deposit as { nonce?: bigint | number | string | null }).nonce != null
+      ? String((deposit as { nonce?: bigint | number | string | null }).nonce)
+      : null,
     protocolInterest,
     vaquitaInterest,
     blendInterest,

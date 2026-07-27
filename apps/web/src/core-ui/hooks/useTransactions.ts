@@ -19,59 +19,60 @@ export function useTransactions(): {
       return { transactionDeposit: null, transactionWithdraw: null };
     }
 
-    const transactionDeposit: DepositFunction = async (id, amount, lockPeriod) => {
+    const transactionDeposit: DepositFunction = async (nonce, amount, lockPeriod) => {
       const log: Parameters<DepositFn>[3] = (...props) => {
         console.info('[transactionDeposit]:', ...props);
       };
       try {
-        log('init', { id, amount });
+        log('init', { nonce: String(nonce), amount });
         const { transactionDeposit: deposit } = await stellarTransactions(token);
-        const { success, txHash, transaction, depositIdHex, explorer, error } = await deposit(id, amount, lockPeriod, log);
-        if (success && !!txHash && !!transaction && !!depositIdHex && !error) {
-          console.info(`[transactionDeposit] ✅`, { id, amount, txHash, transaction });
+        const { success, txHash, transaction, depositIdHex, explorer, error } = await deposit(nonce, amount, lockPeriod, log);
+        // deposit_id_hex is best-effort now (read from the contract); the deposit
+        // itself succeeding does not depend on it.
+        if (success && !!txHash && !!transaction && !error) {
+          console.info(`[transactionDeposit] ✅`, { nonce: String(nonce), amount, txHash, transaction });
           if (explorer) {
             console.info('[transactionDeposit] ✅', explorer);
           }
           return { success: true, txHash, transaction, depositIdHex, explorer, error };
         }
-        console.error('[transactionDeposit] ❌:', { id, amount, txHash, transaction, error });
+        console.error('[transactionDeposit] ❌:', { nonce: String(nonce), amount, txHash, transaction, error });
         if (explorer) {
           console.info('[transactionDeposit] ❌', explorer);
         }
         return { success: false, txHash, transaction, depositIdHex, explorer, error };
       } catch (error) {
-        console.error('[transactionDeposit] ❌:', { id, amount, error });
+        console.error('[transactionDeposit] ❌:', { nonce: String(nonce), amount, error });
         return { success: false, txHash: '', transaction: null, depositIdHex: '', explorer: '', error };
       }
     };
 
-    const transactionWithdraw: WithdrawFunction = async (id, depositIdHex, vaquitaContractAddress) => {
-      const log: Parameters<WithdrawFn>[3] = (...props) => {
+    const transactionWithdraw: WithdrawFunction = async (nonce, vaquitaContractAddress) => {
+      const log: Parameters<WithdrawFn>[2] = (...props) => {
         console.info('[transactionWithdraw]:', ...props);
       };
       try {
-        log('init', { id, depositIdHex, vaquitaContractAddress });
+        log('init', { nonce: String(nonce), vaquitaContractAddress });
         const { transactionWithdraw: withdraw } = await stellarTransactions(token);
         const { success, txHash, transaction, explorer, error } = await withdraw(
-          id,
-          depositIdHex,
+          nonce,
           vaquitaContractAddress,
           log,
         );
         if (success && !!txHash && !!transaction && !error) {
-          console.info(`[transactionWithdraw] ✅`, { id, depositIdHex, vaquitaContractAddress, txHash, transaction });
+          console.info(`[transactionWithdraw] ✅`, { nonce: String(nonce), vaquitaContractAddress, txHash, transaction });
           if (explorer) {
             console.info('[transactionWithdraw] ✅', explorer);
           }
           return { success: true, txHash, transaction, explorer, error };
         }
-        console.error('[transactionWithdraw] ❌:', { id, depositIdHex, vaquitaContractAddress, txHash, transaction, error });
+        console.error('[transactionWithdraw] ❌:', { nonce: String(nonce), vaquitaContractAddress, txHash, transaction, error });
         if (explorer) {
           console.info('[transactionWithdraw] ❌', explorer);
         }
         return { success: false, txHash, transaction, explorer, error };
       } catch (error) {
-        console.error('[transactionWithdraw] ❌:', { id, depositIdHex, vaquitaContractAddress, error });
+        console.error('[transactionWithdraw] ❌:', { nonce: String(nonce), vaquitaContractAddress, error });
         return { success: false, txHash: '', transaction: null, explorer: '', error };
       }
     };

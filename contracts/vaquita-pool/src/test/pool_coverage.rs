@@ -9,7 +9,7 @@ use crate::test::{assert_approx_eq_rel, test_calculate_reward, EnvTestUtils};
 use crate::{accounting, Period, VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env, String, Vec};
+use soroban_sdk::{Address, Env, Vec};
 
 const LOCK_7D: u64 = 604800;
 const LOCK_14D: u64 = 1_209_600;
@@ -76,10 +76,11 @@ fn views_and_period_updates() {
 
     let principal: i128 = 100_000_0000;
     tok.mint(&alice, &principal);
-    let dep = String::from_str(&e, "A1");
+    let dep = 1u64;
+    let dep_id = pool.compute_deposit_id(&alice, &dep);
     pool.deposit(&alice, &dep, &principal, &LOCK_7D);
 
-    let pos = pool.get_position(&dep).expect("position");
+    let pos = pool.get_position(&dep_id).expect("position");
     assert_eq!(pos.amount, principal);
     assert_eq!(pos.owner, alice);
 
@@ -89,7 +90,8 @@ fn views_and_period_updates() {
 
     pool.add_lock_period(&LOCK_14D);
 
-    let p2 = String::from_str(&e, "B1");
+    let p2 = 2u64;
+    let p2_id = pool.compute_deposit_id(&alice, &p2);
     tok.mint(&alice, &(principal * 2));
     pool.deposit(&alice, &p2, &principal, &LOCK_14D);
 
@@ -107,9 +109,10 @@ fn views_and_period_updates() {
     vault.test_set_withdraw_adjustment(&0);
     pool.withdraw(&alice, &p2);
 
-    assert!(pool.get_position(&p2).is_none());
+    assert!(pool.get_position(&p2_id).is_none());
     vault.test_set_withdraw_adjustment(&0);
     pool.withdraw(&alice, &dep);
+    assert!(pool.get_position(&dep_id).is_none());
 }
 
 #[test]
@@ -122,8 +125,8 @@ fn on_time_withdraw_includes_reward_share() {
     tok.mint(&alice, &a_amt);
     tok.mint(&bob, &b_amt);
 
-    let da = String::from_str(&e, "da");
-    let db = String::from_str(&e, "db");
+    let da = 1u64;
+    let db = 2u64;
     pool.deposit(&alice, &da, &a_amt, &LOCK_7D);
     pool.deposit(&bob, &db, &b_amt, &LOCK_7D);
 
@@ -153,7 +156,7 @@ fn early_withdraw_routes_interest_to_protocol_and_pool() {
 
     let principal: i128 = 200_000_0000;
     tok.mint(&alice, &principal);
-    let dep = String::from_str(&e, "early");
+    let dep = 1u64;
     pool.deposit(&alice, &dep, &principal, &LOCK_7D);
 
     let yield_extra: i128 = 40_000_0000;
@@ -195,7 +198,7 @@ fn early_withdraw_with_zero_yield_still_hits_early_branch() {
 
     let principal: i128 = 50_000_0000;
     tok.mint(&alice, &principal);
-    let dep = String::from_str(&e, "early0");
+    let dep = 1u64;
     pool.deposit(&alice, &dep, &principal, &LOCK_7D);
     vault.test_set_withdraw_adjustment(&0);
     e.jump_time(LOCK_7D / 3);
@@ -208,7 +211,8 @@ fn early_withdraw_with_zero_yield_still_hits_early_branch() {
 fn get_views_return_none_for_missing_keys() {
     let e = Env::default();
     let (_, _, _, _, _, pool, _, _) = deploy_pool(&e);
-    assert!(pool.get_position(&String::from_str(&e, "nope")).is_none());
+    let missing = pool.compute_deposit_id(&Address::generate(&e), &1u64);
+    assert!(pool.get_position(&missing).is_none());
     assert!(pool.get_period_data(&999_999u64).is_none());
 }
 
@@ -228,7 +232,7 @@ fn vault_loss_realizes_less_than_principal() {
 
     let principal: i128 = 150_000_0000;
     tok.mint(&alice, &principal);
-    let dep = String::from_str(&e, "loss");
+    let dep = 1u64;
     pool.deposit(&alice, &dep, &principal, &LOCK_7D);
 
     let loss: i128 = -20_000_0000;
@@ -321,7 +325,7 @@ fn deposit_rejects_zero_amount() {
     let e = Env::default();
     let (_, alice, _, _, _, pool, _, tok) = deploy_pool(&e);
     tok.mint(&alice, &1i128);
-    let result = pool.try_deposit(&alice, &String::from_str(&e, "z"), &0i128, &LOCK_7D);
+    let result = pool.try_deposit(&alice, &1u64, &0i128, &LOCK_7D);
     assert_eq!(result, Err(Ok(VaquitaPoolError::InvalidAmount)));
 }
 
@@ -330,7 +334,7 @@ fn deposit_rejects_unknown_period() {
     let e = Env::default();
     let (_, alice, _, _, _, pool, _, tok) = deploy_pool(&e);
     tok.mint(&alice, &100i128);
-    let result = pool.try_deposit(&alice, &String::from_str(&e, "x"), &100i128, &999u64);
+    let result = pool.try_deposit(&alice, &1u64, &100i128, &999u64);
     assert_eq!(result, Err(Ok(VaquitaPoolError::InvalidPeriod)));
 }
 
@@ -349,7 +353,7 @@ fn constructor_sets_expected_slots() {
 fn deposit_rejects_duplicate_id() {
     let e = Env::default();
     let (_, alice, _, _, _, pool, _, tok) = deploy_pool(&e);
-    let id = String::from_str(&e, "dup");
+    let id = 1u64;
     tok.mint(&alice, &200i128);
     pool.deposit(&alice, &id, &100i128, &LOCK_7D);
     let result = pool.try_deposit(&alice, &id, &100i128, &LOCK_7D);
@@ -357,14 +361,16 @@ fn deposit_rejects_duplicate_id() {
 }
 
 #[test]
-fn withdraw_rejects_non_owner() {
+fn withdraw_by_other_caller_finds_no_position() {
     let e = Env::default();
     let (_, alice, bob, _, _, pool, _, tok) = deploy_pool(&e);
-    let id = String::from_str(&e, "own");
+    let nonce = 1u64;
     tok.mint(&alice, &100i128);
-    pool.deposit(&alice, &id, &100i128, &LOCK_7D);
-    let result = pool.try_withdraw(&bob, &id);
-    assert_eq!(result, Err(Ok(VaquitaPoolError::NotOwner)));
+    pool.deposit(&alice, &nonce, &100i128, &LOCK_7D);
+    // bob deriving the same nonce computes a different (bob-bound) id, so he
+    // simply has no position — owner-bound ids make cross-owner access impossible.
+    let result = pool.try_withdraw(&bob, &nonce);
+    assert_eq!(result, Err(Ok(VaquitaPoolError::PositionNotFound)));
 }
 
 #[test]
@@ -372,7 +378,7 @@ fn withdraw_rejects_unknown_deposit() {
     let e = Env::default();
     let (_, alice, _, _, _, pool, _, tok) = deploy_pool(&e);
     tok.mint(&alice, &1i128);
-    let result = pool.try_withdraw(&alice, &String::from_str(&e, "missing"));
+    let result = pool.try_withdraw(&alice, &1u64);
     assert_eq!(result, Err(Ok(VaquitaPoolError::PositionNotFound)));
 }
 
@@ -480,7 +486,7 @@ fn deposit_rejects_zero_vault_shares() {
     let (_, alice, _, _, _, pool, vault, tok) = deploy_pool(&e);
     vault.test_set_skip_share_mint(&true);
     tok.mint(&alice, &100i128);
-    let result = pool.try_deposit(&alice, &String::from_str(&e, "zs"), &100i128, &LOCK_7D);
+    let result = pool.try_deposit(&alice, &1u64, &100i128, &LOCK_7D);
     assert_eq!(result, Err(Ok(VaquitaPoolError::VaultReturnedZeroShares)));
 }
 
@@ -489,9 +495,9 @@ fn deposit_rejects_vault_share_drop() {
     let e = Env::default();
     let (_, alice, _, _, _, pool, vault, tok) = deploy_pool(&e);
     tok.mint(&alice, &200i128);
-    pool.deposit(&alice, &String::from_str(&e, "s1"), &100i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100i128, &LOCK_7D);
     vault.test_set_steal_shares_on_deposit(&80i128);
-    let result = pool.try_deposit(&alice, &String::from_str(&e, "s2"), &50i128, &LOCK_7D);
+    let result = pool.try_deposit(&alice, &2u64, &50i128, &LOCK_7D);
     assert_eq!(
         result,
         Err(Ok(VaquitaPoolError::VaultShareBalanceDecreased))
