@@ -1,7 +1,7 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { formatUsd } from '@/core-ui/helpers/numbers';
+import { formatTokenPrecise, formatUsdPrecise } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useBlendPosition, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
@@ -200,7 +200,7 @@ export function PortfolioPanel({
           </p>
           <p className="mt-1 flex items-center gap-2 text-4xl font-bold text-black tabular-nums leading-none">
             <span className={isSyncing ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-              {displayTotal.toFixed(2)}
+              {formatTokenPrecise(displayTotal)}
               <span className="text-xl ml-1.5 font-semibold">{tokenSymbol}</span>
             </span>
             {/* Mientras Blend + depósitos se re-sincronizan tras un invest/retiro,
@@ -210,7 +210,7 @@ export function PortfolioPanel({
           <p className="mt-3 text-sm text-gray-500">
             {t('portfolio.earning', 'Earning')}{' '}
             <span className="font-bold text-success tabular-nums">
-              +{totalEarnings.toFixed(2)} {tokenSymbol}
+              +{formatTokenPrecise(totalEarnings)} {tokenSymbol}
             </span>
           </p>
         </button>
@@ -245,7 +245,7 @@ export function PortfolioPanel({
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm font-bold text-black truncate">{allocation.label}</span>
                         <span className="block text-xs text-gray-500 tabular-nums">
-                          {formatUsd(allocation.amount)}
+                          {formatUsdPrecise(allocation.amount)}
                         </span>
                       </span>
                       <span
