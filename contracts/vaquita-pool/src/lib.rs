@@ -119,7 +119,14 @@ impl VaquitaPool {
             .get(&DataKey::DeFindexVaultAddress)
             .ok_or(VaquitaPoolError::NotInitialized)?;
         let contract_address = env.current_contract_address();
-        let finalization_time = env.ledger().timestamp() + period;
+        // Guard against `timestamp + period` wrapping past u64::MAX, which would
+        // set finalization_time in the past and make the position instantly
+        // "matured" (see security finding f620e7c9).
+        let finalization_time = env
+            .ledger()
+            .timestamp()
+            .checked_add(period)
+            .ok_or(VaquitaPoolError::ArithmeticOverflow)?;
 
         let token_client = TokenClient::new(&env, &blend_token);
         token_client.transfer(&caller, &contract_address, &amount);

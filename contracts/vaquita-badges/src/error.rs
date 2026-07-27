@@ -15,4 +15,5 @@ pub enum BadgeError {
     UpgradeNotProposed = 9,
     UpgradeNotReady = 10,
     UpgradeLocked = 11,
+    ArithmeticOverflow = 12,
 }

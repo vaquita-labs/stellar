@@ -280,6 +280,37 @@ fn update_upgrade_timelock_secs_takes_effect_on_next_propose() {
     assert_ne!(result, Err(Ok(BadgeError::UpgradeNotReady)));
 }
 
+// ---------- security hardening (checklist S3, S4) ----------
+
+#[test]
+fn execute_upgrade_blocked_after_lock() {
+    // S3: a pending upgrade must not be executable once upgrades are locked,
+    // even after the timelock elapses.
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+
+    let hash = BytesN::from_array(&env, &[7u8; 32]);
+    client.propose_upgrade(&hash);
+    client.lock_upgrades_forever();
+
+    // Jump well past the 48h/2-day timelock so only the lock can be blocking.
+    env.jump_time(172_800);
+    let result = client.try_execute_upgrade();
+    assert_eq!(result, Err(Ok(BadgeError::UpgradeLocked)));
+}
+
+#[test]
+fn propose_upgrade_reverts_on_timelock_overflow() {
+    // S4: an absurd timelock must not wrap ready_at into the past.
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+
+    client.update_upgrade_timelock_secs(&u64::MAX);
+    let hash = BytesN::from_array(&env, &[8u8; 32]);
+    let result = client.try_propose_upgrade(&hash);
+    assert_eq!(result, Err(Ok(BadgeError::ArithmeticOverflow)));
+}
+
 #[test]
 fn update_upgrade_timelock_secs_non_admin_rejected() {
     let env = Env::default();

@@ -64,11 +64,18 @@ pub fn withdraw_from_vault(
 ) -> Result<i128, VaquitaPoolError> {
     let contract_address = env.current_contract_address();
     let defindex_vault_client = DeFindexVaultClient::new(env, defindex_vault_address);
+    // A misconfigured/malicious vault could return an empty vector; use checked
+    // access so withdrawals fail with a controlled error instead of trapping
+    // (security finding 95153d60).
     let preview_amounts = defindex_vault_client.get_asset_amounts_per_shares(&shares);
-    let min_amount = preview_amounts.get_unchecked(0);
+    let min_amount = preview_amounts
+        .get(0)
+        .ok_or(VaquitaPoolError::VaultReturnedNoAmounts)?;
     let withdrawn_amounts =
         defindex_vault_client.withdraw(&shares, &vec![env, min_amount], &contract_address);
-    let gross = withdrawn_amounts.get_unchecked(0);
+    let gross = withdrawn_amounts
+        .get(0)
+        .ok_or(VaquitaPoolError::VaultReturnedNoAmounts)?;
     if gross < min_amount {
         return Err(VaquitaPoolError::VaultReturnedLessThanPrincipal);
     }

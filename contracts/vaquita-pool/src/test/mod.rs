@@ -179,10 +179,12 @@ pub mod mock_defindex_vault;
 
 mod arithmetic;
 mod conservation;
+mod coverage_gaps;
 mod event_payloads;
 mod pause;
 mod pool_coverage;
 mod positions;
+mod security_fixes;
 mod success;
 mod upgrade;
 mod vault_repoint;

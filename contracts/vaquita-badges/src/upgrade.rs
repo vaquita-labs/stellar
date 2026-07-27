@@ -29,7 +29,13 @@ pub fn propose_upgrade(env: &Env, new_wasm_hash: BytesN<32>) -> Result<(), Badge
         .instance()
         .get(&DataKey::UpgradeTimelockSecs)
         .unwrap_or(DEFAULT_TIMELOCK_SECS);
-    let ready_at = env.ledger().timestamp() + timelock;
+    // Checked add so a very large timelock cannot wrap `ready_at` into the past
+    // and defeat the delay (security findings 565f1c37 / 2ce344e3).
+    let ready_at = env
+        .ledger()
+        .timestamp()
+        .checked_add(timelock)
+        .ok_or(BadgeError::ArithmeticOverflow)?;
     env.storage()
         .instance()
         .set(&DataKey::PendingUpgradeHash, &new_wasm_hash);
@@ -59,6 +65,17 @@ pub fn cancel_upgrade(env: &Env) -> Result<(), BadgeError> {
 
 pub fn execute_upgrade(env: &Env) -> Result<(), BadgeError> {
     admin::require_owner(env)?;
+    // Enforce the lock at execution too, not only at proposal, so a pending
+    // upgrade cannot still be executed after `lock_upgrades_forever` (security
+    // finding 284b1ad9 — brings badges to parity with the pool contract).
+    let locked: bool = env
+        .storage()
+        .instance()
+        .get(&DataKey::UpgradesLocked)
+        .unwrap_or(false);
+    if locked {
+        return Err(BadgeError::UpgradeLocked);
+    }
     let pending_hash: BytesN<32> = env
         .storage()
         .instance()
@@ -73,7 +90,8 @@ pub fn execute_upgrade(env: &Env) -> Result<(), BadgeError> {
         return Err(BadgeError::UpgradeNotReady);
     }
     let version: u32 = get_version(env);
-    let new_version = version + 1;
+    // saturating_add mirrors the pool contract and cannot wrap the version.
+    let new_version = version.saturating_add(1);
     env.storage()
         .instance()
         .remove(&DataKey::PendingUpgradeHash);
