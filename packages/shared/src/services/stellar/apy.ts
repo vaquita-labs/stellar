@@ -4,7 +4,8 @@ import { ONE_DAY } from '../../config/constants';
 import { firstElement } from '../../helpers';
 import type { Network, TokenNetwork } from '../../types';
 import { fetchDefindexVaultApy, stellarNetworkNameToDefindexHttpNetwork } from './defindexApy';
-import { DEFAULT_STELLAR_MAINNET_SOROBAN_RPC, getPeriodData } from './stellar-sdk';
+import { requireSorobanRpcUrl } from './rpc';
+import { getPeriodData } from './stellar-sdk';
 
 const SECONDS_PER_MONTH_30D = 60 * 60 * 24 * 30;
 
@@ -54,7 +55,7 @@ export const getStellarApyData = async (
     const periodOpts =
       network.name === 'Stellar'
         ? {
-            rpcUrl: process.env.STELLAR_MAINNET_SOROBAN_RPC || DEFAULT_STELLAR_MAINNET_SOROBAN_RPC,
+            rpcUrl: requireSorobanRpcUrl('mainnet'),
             networkPassphrase: Networks.PUBLIC,
           }
         : undefined;
