@@ -129,6 +129,11 @@ pub fn update_upgrade_timelock_secs(
     new_secs: u64,
 ) -> Result<(), crate::VaquitaPoolError> {
     crate::admin::require_owner(env)?;
+    // Reject a below-floor timelock so the safety delay cannot be neutered
+    // (finding 2ce344e3).
+    if new_secs < crate::MIN_UPGRADE_TIMELOCK_SECS {
+        return Err(VaquitaPoolError::UpgradeTimelockTooShort);
+    }
     env.storage()
         .instance()
         .set(&DataKey::UpgradeTimelockSecs, &new_secs);

@@ -2,20 +2,19 @@
 
 Source: static-analysis findings on `contracts/` (vaquita-pool + vaquita-badges), 2026-07-27.
 
-**Context that governs everything below:** `vaquita-pool` is **deployed on mainnet with real
-funds and live positions** (`CCYMXJCZTQEB5QUAVAQUZ66SKHCUWJHF24MXA2ZZPIE3IC2FZEVM3RF7`). Any change
-to a storage key type or to a stored struct's shape is a **breaking migration**: existing entries
-become unreadable and users can no longer withdraw. Those are flagged 🔴 DESTRUCTIVE and must NOT be
-applied without a migration plan + your review. Fixes that only add guard branches (revert on an
-attack/edge input, no storage-shape change) are 🟢 SAFE and become live only through the normal
-timelocked upgrade you control.
+**Context update (2026-07-27):** the team is **deploying a NEW contract**, not upgrading the live
+mainnet one, so there are **no existing positions to migrate** — the storage-shape changes that were
+"destructive" are now clean design choices on a fresh deploy. All findings below are now resolved at
+the **contract layer**.
 
-Legend: 🔴 destructive/breaking · 🟡 behavior/policy change (review) · 🟢 safe additive guard
+Legend: 🔴 was-destructive (now unblocked by fresh deploy) · 🟡 policy · 🟢 safe additive guard
 
-**Status as of 2026-07-27 (autonomous pass):** S1–S5 implemented + tested; coverage lifted to
-Functions 100% / Lines 99.66% / Regions 95.78% (all >95%); full suite 164 tests green.
-D1–D3 and P1/P2 left BLOCKED for your review (see each section). Contract changes are in the working
-tree only — nothing deployed. Deploying any of it still goes through the timelocked upgrade you control.
+**Status:** S1–S5 + D1–D3 + P1–P2 all implemented and tested. `make coverage` = Functions 100% /
+Lines 99.67% / Regions 95.96% (all >95%); full suite **169 tests green**. Contract changes are on
+`dev`. **Phase 2 (cross-stack) is NOT done:** the D1 change alters `deposit`/`withdraw` to take a
+`nonce: u64` instead of a `String` deposit_id — the frontend, API, listener, job, and the
+`deposits.deposit_id_hex` column must be updated to match before the new contract goes live (see
+"Cross-stack follow-up" at the end).
 
 ---
 
@@ -30,7 +29,12 @@ tree only — nothing deployed. Deploying any of it still goes through the timel
   - Enforce a **max `deposit_id` length** in `deposit` (bounds state-bloat 60b2e092 without changing the key type).
   - Enforce a **per-address open-position cap** and/or a **minimum deposit amount**.
   - Squatting itself (front-run same `deposit_id`) is only fully fixed by binding the key to the owner → breaking.
-- **Status: BLOCKED pending your decision (migrate vs. mitigate vs. accept).**
+- **Status: ✅ RESOLVED (contract layer).** Positions are now keyed by a contract-derived
+  `deposit_id = sha256(caller ‖ nonce)` (`DataKey::Positions(BytesN<32>)`). `deposit`/`withdraw` take a
+  `nonce: u64`; `compute_deposit_id(caller, nonce)` is exposed for off-chain matching. Because the id is
+  a function of the caller, squatting is impossible and the redundant `NotOwner` check in `withdraw` was
+  removed (a wrong caller derives a different id → `PositionNotFound`). Requires the Phase-2 cross-stack
+  updates.
 
 ### D2. Token repoint guard bypassable after TTL expiry
 - Finding: `038e5c7a` (MED)
@@ -40,7 +44,10 @@ tree only — nothing deployed. Deploying any of it still goes through the timel
 - Non-breaking alternatives (review): fail-closed if `PositionCount` key is missing/unrestored; or add a
   repoint cooldown/timelock. Note repoint is admin-only and already blocked when counter > 0, so live risk
   is low today.
-- **Status: BLOCKED pending your decision.**
+- **Status: ✅ RESOLVED.** `Position` now carries a `token: Address` captured at deposit; `withdraw`
+  settles in `position.token`. `set_blend_token` is fail-closed — it reverts unless the pool holds zero
+  token-denominated value (no open positions, `TotalRewardPool == 0`, `ProtocolFees == 0`), which
+  eliminates both the TTL-counter bypass and token-accounting mixing.
 
 ### D3. Vault can replay authorized token transfer (HIGH)
 - Finding: `02a02675` (**HIGH**) — highest severity here.
@@ -73,13 +80,40 @@ tree only — nothing deployed. Deploying any of it still goes through the timel
 - Adding a `MAX_LOCK_PERIOD_SECS` cap (consistent with the existing "≤30 days" invariant documented in
   `positions.rs`) rejects periods an admin could previously add. Safe given current config uses ≤30d, but it
   removes an admin capability → flagged.
-- Plan: add cap in both `__constructor` and `add_lock_period`; test the reject path.
+- **Status: ✅ DONE.** `MAX_LOCK_PERIOD_SECS = 30 days` enforced in `__constructor` (assert) and
+  `add_lock_period` (`LockPeriodExceedsMax`). This makes the S1 `finalization_time` overflow
+  unreachable (kept as defense-in-depth).
 
 ### P2. Badges: enforce a **minimum** upgrade timelock
 - Finding part of `2ce344e3` (MED).
 - Rejecting `timelock = 0` (or below a floor) removes admin flexibility and would be **inconsistent with the
   pool** (which allows 0). Recommend deciding a floor for BOTH contracts together, or neither.
-- Plan: implement the checked-arithmetic half now (🟢 S5); leave the floor policy for your call.
+- **Status: ✅ DONE.** `MIN_UPGRADE_TIMELOCK_SECS = 1 hour` enforced on **both** contracts
+  (constructor assert + `update_upgrade_timelock_secs` → `UpgradeTimelockTooShort`), for consistency.
+
+---
+
+## Re-audit of the MEDIUM findings (requested)
+
+All MEDIUMs are now resolved and none need further rework:
+- `1e484c83` position-key squatting → D1 ✅ (owner-derived ids).
+- `038e5c7a` token repoint bypass → D2 ✅ (per-position token + fail-closed guard).
+- `2ce344e3` timelock reducible to 0 / unchecked add → S4 ✅ (checked add) + P2 ✅ (floor).
+- `f620e7c9` finalization overflow → S1 ✅ (checked add) + P1 ✅ (cap makes it unreachable).
+- `284b1ad9` badges lock not enforced at execute → S3 ✅.
+
+## Cross-stack follow-up (Phase 2 — NOT done, outside `contracts/`)
+
+The D1 signature change ripples beyond the contract. Before the new contract goes live, update:
+- **apps/web** — deposit/withdraw flows: pass a `nonce: u64` instead of a string `deposit_id`; read the
+  id from the deposit event or `compute_deposit_id` to track/withdraw a position.
+- **apps/api** — any endpoint constructing deposit/withdraw invokes or reading `deposit_id`.
+- **apps/listener** + **apps/job-deposits** — event decoding: `deposit_id` is now `BytesN<32>` (hex),
+  emitted in the deposit/withdraw events.
+- **DB** — `deposits.deposit_id_hex` should store the derived 32-byte id (hex); confirm the reconcile
+  logic keys on it.
+- The new contract's constructor now rejects lock periods > 30 days and timelock < 1 hour — set deploy
+  config (`POOL_LOCK_PERIODS`, `POOL_UPGRADE_TIMELOCK_SECS`, badges timelock) accordingly.
 
 ---
 

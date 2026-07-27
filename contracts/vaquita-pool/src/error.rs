@@ -30,4 +30,6 @@ pub enum VaquitaPoolError {
     TokenRepointHasOutstandingPositions = 24,
     VaultReturnedNoAmounts = 25,
     VaultPulledUnexpectedAmount = 26,
+    LockPeriodExceedsMax = 27,
+    UpgradeTimelockTooShort = 28,
 }

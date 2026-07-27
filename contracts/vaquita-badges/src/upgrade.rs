@@ -10,6 +10,10 @@ use crate::types::DataKey;
 /// before the parameter was introduced).
 const DEFAULT_TIMELOCK_SECS: u64 = 48 * 60 * 60; // 48 hours
 
+/// Minimum upgrade timelock (1 hour). Prevents an admin from setting the
+/// timelock to 0 and executing an instant upgrade (finding 2ce344e3).
+pub const MIN_TIMELOCK_SECS: u64 = 60 * 60;
+
 pub fn get_version(env: &Env) -> u32 {
     env.storage().instance().get(&DataKey::Version).unwrap_or(1)
 }
@@ -118,6 +122,9 @@ pub fn lock_upgrades_forever(env: &Env) -> Result<(), BadgeError> {
 
 pub fn update_upgrade_timelock_secs(env: &Env, new_secs: u64) -> Result<(), BadgeError> {
     admin::require_owner(env)?;
+    if new_secs < MIN_TIMELOCK_SECS {
+        return Err(BadgeError::UpgradeTimelockTooShort);
+    }
     env.storage()
         .instance()
         .set(&DataKey::UpgradeTimelockSecs, &new_secs);

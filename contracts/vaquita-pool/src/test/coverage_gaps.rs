@@ -1,6 +1,6 @@
 #![cfg(test)]
 //! Tests that close remaining coverage gaps in lib.rs:
-//! - `refresh_position_ttl` (previously uncovered public fn)
+//! - `refresh_position_ttl` + `compute_deposit_id`
 //! - `calculate_reward` zero-deposits early return
 //! - early-withdrawal fee computation + `remove_lock_period` reward sweep
 
@@ -11,7 +11,7 @@ use crate::test::EnvTestUtils;
 use crate::{Period, VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env, String, Vec};
+use soroban_sdk::{Address, Env, Vec};
 
 const LOCK_7D: u64 = 604_800;
 
@@ -63,12 +63,13 @@ fn refresh_position_ttl_runs_for_open_position() {
     let (alice, _vault_addr, pool, _vault, tok) = setup_fee(&e, 0);
 
     tok.mint(&alice, &100_000i128);
-    let id = String::from_str(&e, "R");
-    pool.deposit(&alice, &id, &100_000i128, &LOCK_7D);
+    let nonce = 7u64;
+    pool.deposit(&alice, &nonce, &100_000i128, &LOCK_7D);
 
-    // Previously uncovered public entrypoint — must not panic and is a no-op
-    // for a live position.
+    // compute_deposit_id gives the raw id refresh_position_ttl expects.
+    let id = pool.compute_deposit_id(&alice, &nonce);
     pool.refresh_position_ttl(&id);
+    assert!(pool.get_position(&id).is_some());
 }
 
 #[test]
@@ -90,8 +91,8 @@ fn early_withdrawal_charges_fee_and_period_removal_sweeps_reward() {
 
     let principal: i128 = 100_000;
     tok.mint(&alice, &principal);
-    let id = String::from_str(&e, "E");
-    pool.deposit(&alice, &id, &principal, &LOCK_7D);
+    let nonce = 1u64;
+    pool.deposit(&alice, &nonce, &principal, &LOCK_7D);
 
     // Simulate 10_000 of yield: fund the vault and set the payout adjustment.
     let yield_amt: i128 = 10_000;
@@ -100,7 +101,7 @@ fn early_withdrawal_charges_fee_and_period_removal_sweeps_reward() {
 
     // Withdraw before maturity → early-withdrawal branch:
     //   interest = 10_000; fee = 1_000 → protocol_fees; 9_000 → reward_pool.
-    pool.withdraw(&alice, &id);
+    pool.withdraw(&alice, &nonce);
     assert_eq!(tok.balance(&alice), principal); // principal returned, interest forfeited
 
     // Period now has reward_pool = 9_000 and no open positions; removing it

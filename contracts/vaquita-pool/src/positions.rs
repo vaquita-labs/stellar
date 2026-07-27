@@ -5,13 +5,13 @@
 //! archivable and restorable.  Instance storage is reserved for admin config
 //! and the bounded per-period maps.
 //!
-//! ## Recommended `deposit_id` derivation (M8)
-//! Callers should derive deposit ids as `sha256(owner_address || nonce)`.
-//! The contract only enforces uniqueness — it does not dictate the format.
-//! Using a hash of owner + nonce makes collisions from different owners
-//! cryptographically infeasible and binds the id to the depositor.
+//! ## `deposit_id` derivation
+//! The contract derives every id as `sha256(caller || nonce)` (see
+//! `VaquitaPool::compute_deposit_id`). Because the id is a function of the
+//! depositor's address, collisions across owners are cryptographically
+//! infeasible and no third party can squat another user's id (finding 1e484c83).
 
-use soroban_sdk::{Env, String};
+use soroban_sdk::{BytesN, Env};
 
 use crate::types::{DataKey, Position};
 
@@ -29,14 +29,14 @@ pub const INSTANCE_TTL_EXTEND_TO: u32 = 1_555_200;
 
 // ---------- Public read/write API ----------
 
-pub fn get(env: &Env, deposit_id: &String) -> Option<Position> {
+pub fn get(env: &Env, deposit_id: &BytesN<32>) -> Option<Position> {
     env.storage()
         .persistent()
         .get(&DataKey::Positions(deposit_id.clone()))
 }
 
 /// Write a position to persistent storage and extend its TTL.
-pub fn set(env: &Env, deposit_id: &String, position: &Position) {
+pub fn set(env: &Env, deposit_id: &BytesN<32>, position: &Position) {
     let key = DataKey::Positions(deposit_id.clone());
     env.storage().persistent().set(&key, position);
     env.storage()
@@ -46,20 +46,20 @@ pub fn set(env: &Env, deposit_id: &String, position: &Position) {
 }
 
 /// Remove a position from persistent storage and update counters.
-pub fn remove(env: &Env, deposit_id: &String, lock_period: u64) {
+pub fn remove(env: &Env, deposit_id: &BytesN<32>, lock_period: u64) {
     env.storage()
         .persistent()
         .remove(&DataKey::Positions(deposit_id.clone()));
     decrement_count(env, lock_period);
 }
 
-pub fn exists(env: &Env, deposit_id: &String) -> bool {
+pub fn exists(env: &Env, deposit_id: &BytesN<32>) -> bool {
     env.storage()
         .persistent()
         .has(&DataKey::Positions(deposit_id.clone()))
 }
 
-pub fn extend_ttl(env: &Env, deposit_id: &String) {
+pub fn extend_ttl(env: &Env, deposit_id: &BytesN<32>) {
     let key = DataKey::Positions(deposit_id.clone());
     if env.storage().persistent().has(&key) {
         env.storage()

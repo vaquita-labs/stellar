@@ -267,17 +267,25 @@ fn update_upgrade_timelock_secs_takes_effect_on_next_propose() {
     let env = Env::default();
     let (_, _, client) = deploy(&env);
 
-    // Lower timelock to 60 seconds
-    let new_timelock: u64 = 60;
+    // Lower timelock to the minimum floor (1 hour), below the 48h default.
+    let new_timelock: u64 = crate::upgrade::MIN_TIMELOCK_SECS;
     client.update_upgrade_timelock_secs(&new_timelock);
 
     let hash = BytesN::from_array(&env, &[5u8; 32]);
     client.propose_upgrade(&hash);
 
-    // Jump only 60 seconds — timelock check should now pass
+    // Jump exactly the new timelock — timelock check should now pass
     env.jump_time(new_timelock);
     let result = client.try_execute_upgrade();
     assert_ne!(result, Err(Ok(BadgeError::UpgradeNotReady)));
+}
+
+#[test]
+fn update_upgrade_timelock_secs_rejects_below_floor() {
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+    let result = client.try_update_upgrade_timelock_secs(&(crate::upgrade::MIN_TIMELOCK_SECS - 1));
+    assert_eq!(result, Err(Ok(BadgeError::UpgradeTimelockTooShort)));
 }
 
 // ---------- security hardening (checklist S3, S4) ----------

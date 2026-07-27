@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, symbol_short, Address, BytesN, Env, String, Symbol, Vec};
+use soroban_sdk::{contracttype, symbol_short, Address, BytesN, Env, Symbol, Vec};
 
 /// Topic symbols for each event type.
 const DEPOSIT: Symbol = symbol_short!("deposit");
@@ -23,7 +23,7 @@ const UPGRADES_LOCKED: Symbol = symbol_short!("upg_lock");
 #[contracttype]
 pub struct DepositEvent {
     pub owner: Address,
-    pub deposit_id: String,
+    pub deposit_id: BytesN<32>,
     pub token: Address,
     pub amount: i128,
     pub shares: i128,
@@ -41,7 +41,7 @@ pub struct DepositEvent {
 #[contracttype]
 pub struct WithdrawEvent {
     pub owner: Address,
-    pub deposit_id: String,
+    pub deposit_id: BytesN<32>,
     pub token: Address,
     pub amount: i128,
     pub reward: i128,
@@ -53,7 +53,7 @@ pub struct WithdrawEvent {
 pub fn emit_deposit(
     env: &Env,
     caller: Address,
-    deposit_id: String,
+    deposit_id: BytesN<32>,
     token: Address,
     amount: i128,
     shares: i128,
@@ -272,7 +272,7 @@ pub fn emit_upgrades_locked(env: &Env, admin: Address) {
 pub fn emit_withdraw(
     env: &Env,
     caller: Address,
-    deposit_id: String,
+    deposit_id: BytesN<32>,
     token: Address,
     amount: i128,
     reward: i128,

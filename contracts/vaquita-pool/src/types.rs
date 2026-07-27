@@ -1,9 +1,13 @@
-use soroban_sdk::{contracttype, Address, String};
+use soroban_sdk::{contracttype, Address, BytesN};
 
 #[derive(Clone)]
 #[contracttype]
 pub struct Position {
     pub owner: Address,
+    /// BLEND token this position was opened with, captured at deposit time so
+    /// withdrawal always settles in the correct asset even if the pool's global
+    /// token is later repointed (security finding 038e5c7a).
+    pub token: Address,
     pub amount: i128,
     pub shares: i128,
     pub finalization_time: u64,
@@ -26,9 +30,10 @@ pub enum DataKey {
     BasisPoints,
     EarlyWithdrawalFee,
     ProtocolFees,
-    // NOTE: Positions(String) has moved to persistent storage (see positions module).
-    // The variant is kept here so DataKey can still be used as a persistent key.
-    Positions(String),
+    // Positions live in persistent storage (see positions module). The key is a
+    // contract-derived id = sha256(caller || nonce), so a position id is bound to
+    // its depositor and cannot be squatted by a third party (finding 1e484c83).
+    Positions(BytesN<32>),
     Periods(u64),
     SupportedLockPeriod(u64),
     /// Running count of open positions across all periods.

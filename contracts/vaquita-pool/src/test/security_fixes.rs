@@ -1,15 +1,15 @@
 #![cfg(test)]
-//! Tests for the safe security-hardening guards (checklist S1, S2).
+//! Tests for the safe security-hardening guards (S2, D3) and the P1 lock cap.
 
 use crate::error::VaquitaPoolError;
 use crate::test::mock_defindex_vault::{
     MockDeFindexVault, MockDeFindexVaultArgs, MockDeFindexVaultClient,
 };
 use crate::test::EnvTestUtils;
-use crate::{VaquitaPool, VaquitaPoolClient};
+use crate::{VaquitaPool, VaquitaPoolClient, MAX_LOCK_PERIOD_SECS};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env, String, Vec};
+use soroban_sdk::{Address, Env, Vec};
 
 const LOCK_7D: u64 = 604_800;
 
@@ -54,30 +54,35 @@ fn setup(
     (admin, alice, pool, vault, usdc_client)
 }
 
-// ---- S1: finalization_time overflow ----
+// ---- P1: lock-period cap ----
 
 #[test]
-fn deposit_with_overflowing_period_reverts() {
+fn add_lock_period_rejects_over_max() {
     let e = Env::default();
-    let (_, alice, pool, _vault, tok) = setup(&e);
+    let (_, _, pool, _vault, _tok) = setup(&e);
 
-    // A supported but absurd lock period makes `timestamp + period` wrap u64.
-    let huge = u64::MAX;
-    pool.add_lock_period(&huge);
+    let result = pool.try_add_lock_period(&(MAX_LOCK_PERIOD_SECS + 1));
+    assert_eq!(result, Err(Ok(VaquitaPoolError::LockPeriodExceedsMax)));
 
-    tok.mint(&alice, &100_000i128);
-    let result = pool.try_deposit(&alice, &String::from_str(&e, "OF"), &100_000i128, &huge);
-    assert_eq!(result, Err(Ok(VaquitaPoolError::ArithmeticOverflow)));
+    // Zero is also rejected.
+    let zero = pool.try_add_lock_period(&0u64);
+    assert_eq!(zero, Err(Ok(VaquitaPoolError::LockPeriodExceedsMax)));
 }
 
 #[test]
-fn deposit_with_normal_period_still_succeeds() {
+fn add_lock_period_accepts_at_max() {
+    let e = Env::default();
+    let (_, _, pool, _vault, _tok) = setup(&e);
+    pool.add_lock_period(&MAX_LOCK_PERIOD_SECS); // must succeed
+}
+
+#[test]
+fn deposit_normal_period_succeeds() {
     let e = Env::default();
     let (_, alice, pool, _vault, tok) = setup(&e);
 
     tok.mint(&alice, &100_000i128);
-    // Sanity: the checked_add change must not regress the normal path.
-    pool.deposit(&alice, &String::from_str(&e, "OK"), &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100_000i128, &LOCK_7D);
 }
 
 // ---- S2: withdraw_from_vault checked vector access ----
@@ -88,13 +93,12 @@ fn withdraw_reverts_when_vault_preview_is_empty() {
     let (_, alice, pool, vault, tok) = setup(&e);
 
     tok.mint(&alice, &100_000i128);
-    let id = String::from_str(&e, "P");
-    pool.deposit(&alice, &id, &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100_000i128, &LOCK_7D);
 
     // Malicious/broken vault returns an empty preview vector.
     vault.test_set_empty_preview(&true);
 
-    let result = pool.try_withdraw(&alice, &id);
+    let result = pool.try_withdraw(&alice, &1u64);
     assert_eq!(result, Err(Ok(VaquitaPoolError::VaultReturnedNoAmounts)));
 }
 
@@ -104,13 +108,12 @@ fn withdraw_reverts_when_vault_withdraw_is_empty() {
     let (_, alice, pool, vault, tok) = setup(&e);
 
     tok.mint(&alice, &100_000i128);
-    let id = String::from_str(&e, "W");
-    pool.deposit(&alice, &id, &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &100_000i128, &LOCK_7D);
 
     // Preview is fine, but the withdraw call returns an empty vector.
     vault.test_set_empty_withdraw(&true);
 
-    let result = pool.try_withdraw(&alice, &id);
+    let result = pool.try_withdraw(&alice, &1u64);
     assert_eq!(result, Err(Ok(VaquitaPoolError::VaultReturnedNoAmounts)));
 }
 
@@ -131,7 +134,7 @@ fn deposit_reverts_when_vault_pulls_more_than_amount() {
     vault.test_set_extra_pull(&50_000i128);
 
     tok.mint(&alice, &amount);
-    let result = pool.try_deposit(&alice, &String::from_str(&e, "R"), &amount, &LOCK_7D);
+    let result = pool.try_deposit(&alice, &1u64, &amount, &LOCK_7D);
     assert_eq!(
         result,
         Err(Ok(VaquitaPoolError::VaultPulledUnexpectedAmount))
@@ -145,5 +148,5 @@ fn deposit_succeeds_when_vault_pulls_exactly_amount() {
 
     // Sanity: the balance-delta guard must not reject a well-behaved vault.
     tok.mint(&alice, &100_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "OK2"), &100_000i128, &LOCK_7D);
+    pool.deposit(&alice, &2u64, &100_000i128, &LOCK_7D);
 }

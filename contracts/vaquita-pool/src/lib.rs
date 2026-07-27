@@ -1,7 +1,7 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, token::Client as TokenClient, Address, BytesN, Env, IntoVal, String,
-    Vec,
+    contract, contractimpl, token::Client as TokenClient, xdr::ToXdr, Address, Bytes, BytesN, Env,
+    IntoVal, Vec,
 };
 
 mod accounting;
@@ -19,6 +19,16 @@ mod vault_adapter;
 
 pub use error::VaquitaPoolError;
 pub use types::{DataKey, Period, Position};
+
+/// Upper bound on a supported lock period, in seconds (30 days). Keeps
+/// `finalization_time = now + period` well within the ~90-day position TTL and
+/// removes the overflow surface (findings 1d4e7d58 / f620e7c9). Must stay below
+/// the day-equivalent of `positions::POSITION_TTL_EXTEND_TO`.
+pub const MAX_LOCK_PERIOD_SECS: u64 = 30 * 24 * 60 * 60;
+
+/// Minimum upgrade timelock, in seconds (1 hour). Prevents an admin from setting
+/// the timelock to 0 and executing an instant upgrade (finding 2ce344e3).
+pub const MIN_UPGRADE_TIMELOCK_SECS: u64 = 60 * 60;
 
 // ==================== CONTRACT ====================
 
@@ -41,6 +51,12 @@ impl VaquitaPool {
     ) {
         // Enforce 20% cap at deploy time — invalid args must fail the deployment tx
         assert!(early_withdrawal_fee_bps >= 0 && early_withdrawal_fee_bps <= 2000);
+        // Every configured lock period must be within the supported bound (P1).
+        for lp in lock_periods.iter() {
+            assert!(lp > 0 && lp <= MAX_LOCK_PERIOD_SECS);
+        }
+        // Timelock must meet the minimum floor (P2).
+        assert!(upgrade_timelock_secs >= MIN_UPGRADE_TIMELOCK_SECS);
 
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage()
@@ -84,14 +100,16 @@ impl VaquitaPool {
     pub fn deposit(
         env: Env,
         caller: Address,
-        deposit_id: String,
+        nonce: u64,
         amount: i128,
         period: u64,
     ) -> Result<(), VaquitaPoolError> {
-        caller.require_auth_for_args(
-            (caller.clone(), deposit_id.clone(), amount, period).into_val(&env),
-        );
+        caller.require_auth_for_args((caller.clone(), nonce, amount, period).into_val(&env));
         pause::require_not_paused(&env)?;
+
+        // Derive the position id from the caller so no third party can squat it
+        // (finding 1e484c83).
+        let deposit_id = Self::derive_id(&env, &caller, nonce);
 
         if amount <= 0 {
             return Err(VaquitaPoolError::InvalidAmount);
@@ -136,6 +154,7 @@ impl VaquitaPool {
 
         let position = Position {
             owner: caller.clone(),
+            token: blend_token.clone(),
             amount,
             shares,
             finalization_time,
@@ -172,21 +191,19 @@ impl VaquitaPool {
     }
 
     // ---------- Withdraw ----------
-    pub fn withdraw(env: Env, caller: Address, deposit_id: String) -> Result<(), VaquitaPoolError> {
-        caller.require_auth_for_args((caller.clone(), deposit_id.clone()).into_val(&env));
+    pub fn withdraw(env: Env, caller: Address, nonce: u64) -> Result<(), VaquitaPoolError> {
+        caller.require_auth_for_args((caller.clone(), nonce).into_val(&env));
 
+        // The id is derived from `caller`, so a position found here is provably
+        // owned by the caller — no separate owner check is needed (an attacker
+        // computing withdraw with their own address derives a different id).
+        let deposit_id = Self::derive_id(&env, &caller, nonce);
         let position: Position =
             positions::get(&env, &deposit_id).ok_or(VaquitaPoolError::PositionNotFound)?;
 
-        if caller != position.owner {
-            return Err(VaquitaPoolError::NotOwner);
-        }
-
-        let blend_token: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::BlendToken)
-            .ok_or(VaquitaPoolError::NotInitialized)?;
+        // Settle in the token captured at deposit time, not the pool's current
+        // global token (finding 038e5c7a).
+        let blend_token: Address = position.token.clone();
         let defindex_vault_address: Address = env
             .storage()
             .instance()
@@ -287,6 +304,22 @@ impl VaquitaPool {
             arithmetic::checked_mul(period_data.reward_pool, amount)?,
             period_data.total_deposits,
         )
+    }
+
+    /// Deterministic, owner-bound position id: `sha256(caller_xdr || nonce_be)`.
+    /// Because it is a function of the depositor's address, no third party can
+    /// produce another user's id, which prevents deposit-id squatting.
+    fn derive_id(env: &Env, caller: &Address, nonce: u64) -> BytesN<32> {
+        let mut preimage = Bytes::new(env);
+        preimage.append(&caller.clone().to_xdr(env));
+        preimage.append(&Bytes::from_array(env, &nonce.to_be_bytes()));
+        env.crypto().sha256(&preimage).to_bytes()
+    }
+
+    /// View helper so off-chain code (and the frontend) can compute the same id
+    /// the contract uses, e.g. to match deposit/withdraw events to a position.
+    pub fn compute_deposit_id(env: Env, caller: Address, nonce: u64) -> BytesN<32> {
+        Self::derive_id(&env, &caller, nonce)
     }
 
     // ---------- Admin entrypoints ----------
@@ -395,6 +428,11 @@ impl VaquitaPool {
 
     pub fn add_lock_period(env: Env, new_lock_period: u64) -> Result<(), VaquitaPoolError> {
         admin::require_owner(&env)?;
+        // Bound the period so it cannot overflow finalization_time or exceed the
+        // position TTL (findings 1d4e7d58 / f620e7c9).
+        if new_lock_period == 0 || new_lock_period > MAX_LOCK_PERIOD_SECS {
+            return Err(VaquitaPoolError::LockPeriodExceedsMax);
+        }
         let exists: bool = env
             .storage()
             .instance()
@@ -518,13 +556,14 @@ impl VaquitaPool {
         pause::is_paused(&env)
     }
 
-    pub fn get_position(env: Env, deposit_id: String) -> Option<Position> {
+    pub fn get_position(env: Env, deposit_id: BytesN<32>) -> Option<Position> {
         positions::get(&env, &deposit_id)
     }
 
     /// Extend the TTL of an open position so it is not archived before maturity.
-    /// Anyone may call this — no auth required.
-    pub fn refresh_position_ttl(env: Env, deposit_id: String) {
+    /// Anyone may call this — no auth required. Takes the raw id (as emitted in
+    /// the deposit event / returned by `compute_deposit_id`).
+    pub fn refresh_position_ttl(env: Env, deposit_id: BytesN<32>) {
         positions::extend_ttl(&env, &deposit_id);
         positions::extend_instance(&env);
     }
