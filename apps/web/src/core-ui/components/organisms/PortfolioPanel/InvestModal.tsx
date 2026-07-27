@@ -37,7 +37,17 @@ function displayAmount(raw: string) {
  *   1) directBlendWithdraw (Blend → wallet, mismo USDC/issuer)
  *   2) el depósito al Vaquita pool (createDeposit → transactionDeposit → confirm)
  */
-export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChange: () => void }) {
+export function InvestModal({
+  open,
+  onOpenChange,
+  initialLockPeriod,
+}: {
+  open: boolean;
+  onOpenChange: () => void;
+  /** Plazo preseleccionado al abrir (ej. tocar "Invertir" en un plan vacío del
+   *  Portfolio). Si no viene, arranca en el plazo más corto. */
+  initialLockPeriod?: number;
+}) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
   const queryClient = useQueryClient();
@@ -67,13 +77,19 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
     if (open) {
       setStep('amount');
       setAmount('');
-      setSelectedLock(lockPeriods[0] ?? null);
+      // Respeta el plazo con el que se abrió (Invertir desde un plan vacío);
+      // si no aplica o ya no existe, cae al plazo más corto.
+      setSelectedLock(
+        initialLockPeriod != null && lockPeriods.includes(initialLockPeriod)
+          ? initialLockPeriod
+          : (lockPeriods[0] ?? null),
+      );
       setError(null);
       setOverBalance(false);
       setIsMax(false);
       setActiveStep(null);
     }
-  }, [open, lockPeriods]);
+  }, [open, lockPeriods, initialLockPeriod]);
 
   const numericAmount = Number(amount || '0');
   const apyOf = (lp: number) =>
@@ -386,18 +402,13 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
       title={STEP_TITLE[step]}
       size="md"
       isDismissable={step !== 'processing'}
-      // Apilado sobre el panel de Portfolio: nunca cierra con X, siempre vuelve
-      // atrás. El paso `term` retrocede al monto; el resto (raíz/éxito) vuelve al
-      // panel. `processing` no navega: la tx ya salió.
-      hideClose
-      backVariant="primary"
-      onBack={
-        step === 'processing'
-          ? undefined
-          : step === 'term'
-            ? () => setStep('amount')
-            : onOpenChange
-      }
+      // Convención de la app: la X (cerrar) va a la derecha y blanca. Los pasos
+      // raíz (`amount`) y `success` cierran el modal → muestran la X. `term` es
+      // navegación interna (vuelve al monto) → flecha atrás a la izquierda.
+      // `processing` no navega ni cierra: la tx ya salió.
+      hideClose={step === 'term' || step === 'processing'}
+      backVariant="white"
+      onBack={step === 'term' ? () => setStep('amount') : undefined}
       bodyClassName={'flex flex-col gap-3 ' + (footer ? 'pb-2' : 'pb-6')}
       footer={footer}
     >

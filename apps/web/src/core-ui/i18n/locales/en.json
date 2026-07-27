@@ -1935,8 +1935,16 @@
   },
   "portfolio": {
     "title": "Portfolio",
-    "totalBalance": "Total balance",
+    "total": "Total",
+    "totalBalance": "Your money",
+    "earning": "Earned so far",
+    "invest": "Invest",
+    "savings": "Savings",
     "allocation": "Allocation",
+    "distributed": "Spread across {{funded}} of {{total}} options",
+    "ofTotal": "{{pct}}% of total",
+    "noFunds": "No funds",
+    "sum": "Total",
     "manage": "Manage allocations",
     "empty": "No saving terms available yet.",
     "detail": {

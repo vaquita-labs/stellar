@@ -2,7 +2,7 @@
 
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
-import { useBlendPosition } from '@/core-ui/hooks';
+import { useLiveBlendUsdc } from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { motion, useAnimationControls } from 'framer-motion';
@@ -45,7 +45,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const { wallet } = usePollar();
   const { data: profile } = useProfileData();
   const savvy = !!profile?.cryptoSavvy;
-  const { data: blendPosition } = useBlendPosition(walletAddress);
+  const { live: blendLiveUsdc } = useLiveBlendUsdc(walletAddress);
   const { data: savedWallets = [], isLoading: walletsLoading } = useSavedWallets();
   const deleteWallet = useDeleteSavedWallet();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -89,10 +89,11 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         { key: 'sending', label: t('withdraw.steps.sending', 'Sending to your wallet') },
       ];
 
-  // Saldo retirable = la posición directa en Blend (líquida, sin lock). Truncado
-  // a 6 decimales (nunca hacia arriba) para mostrar el saldo con toda su precisión
-  // sin aparentar plata que no existe.
-  const available = floorAmount(blendPosition?.usdc ?? 0, AMOUNT_DECIMALS);
+  // Saldo retirable = la posición directa en Blend (líquida, sin lock), proyectada
+  // en vivo con `useLiveBlendUsdc` (la MISMA fuente que el header, así el saldo de
+  // arriba y el "Available" corren juntos y coinciden). Piso a 7 decimales (nunca
+  // hacia arriba) para no aparentar plata que no existe.
+  const available = floorAmount(blendLiveUsdc, AMOUNT_DECIMALS);
 
   // Wallet propia sintética (login externo): el retiro vuelve al firmante.
   const ownWallet: SavedWallet | null =

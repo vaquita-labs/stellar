@@ -65,6 +65,22 @@ export const formatTokenPrecise = (amount: number, maxDecimals = AMOUNT_DECIMALS
   });
 
 /**
+ * Decimales adaptados a la magnitud, para SALDOS que se muestran en grande (el
+ * titular del portfolio, el número del detalle de Blend). Un saldo de tres o más
+ * cifras con los 7 decimales de USDC (`722.0121232`) no cabe en un número gigante
+ * y rompe el layout con scroll horizontal; ahí 2 decimales alcanzan y se leen de
+ * un vistazo. Los saldos chicos conservan la precisión fina, que es justo donde
+ * importa (micro-ganancias, centavos). Umbral en 100: por debajo se ve completo
+ * (`10.4699999`), por encima se redondea a 2 (`722.01`). Nunca redondea hacia
+ * arriba (usa el mismo piso que el resto).
+ */
+export const formatTokenAdaptive = (amount: number) =>
+  formatTokenPrecise(amount, Math.abs(amount) >= 100 ? 2 : AMOUNT_DECIMALS);
+
+/** Igual que `formatTokenAdaptive` pero con el `$` delante. */
+export const formatUsdAdaptive = (amount: number) => `$${formatTokenAdaptive(amount)}`;
+
+/**
  * Pisa a `digits` decimales y devuelve un string limpio para prellenar el
  * teclado (sin ceros de cola ni ruido de float): 4 → "4", 3.001234 → "3.001234".
  * Se usa en el botón "Available/Max" para teclear el saldo exacto retirable.

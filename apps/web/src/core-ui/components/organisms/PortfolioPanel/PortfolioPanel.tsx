@@ -1,22 +1,22 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { formatTokenPrecise, formatUsdPrecise } from '@/core-ui/helpers/numbers';
+import { formatTokenPrecise, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
-import { useApyByLockPeriods, useBlendPosition, useDepositsComplete } from '@/core-ui/hooks';
+import { useApyByLockPeriods, useDepositsComplete, useLiveBlendUsdc } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { Spinner } from '@heroui/react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight } from 'react-icons/fi';
+import { FiChevronRight, FiPocket } from 'react-icons/fi';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
-import { TransactionList, TransactionMonthCard } from '../../molecules/TransactionRow';
 import { DepositEarnings, DepositEarningsReporter } from '../../home/DepositEarningsReporter';
 import { AllocationDetailSheet } from './AllocationDetailSheet';
 import { BlendDetailSheet } from './BlendDetailSheet';
 import { InvestModal } from './InvestModal';
-import { getAllocationStyle } from './allocationStyles';
+import { PortfolioDonut } from './PortfolioDonut';
+import { AllocationStyle, getAllocationStyle } from './allocationStyles';
 import { Allocation, PortfolioPanelProps } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
 
@@ -30,6 +30,18 @@ import { PressableButton } from '../../molecules/PressableButton';
  *
  * Desde acá se entra al detalle de cada plazo y a mover fondos entre plazos.
  */
+interface PortfolioRow {
+  key: string;
+  /** 'blend' = base líquida/flexible; 'lock' = un plazo con lock. */
+  kind: 'blend' | 'lock';
+  /** Solo en filas 'lock': identidad del plazo (ms). */
+  lockPeriod?: number;
+  label: string;
+  amount: number;
+  apy: number;
+  style: AllocationStyle;
+}
+
 export function PortfolioPanel({
   open,
   onOpenChange,
@@ -41,8 +53,11 @@ export function PortfolioPanel({
   // Nivel base del portafolio: depósito directo a Blend, líquido (sin lock).
   // Se lee on-chain y va aparte de las allocations por plazo (no entra en el
   // mover-fondos ni en los detalles de plazo, que son solo para locks).
-  const { data: blendPosition, isFetching: blendFetching } = useBlendPosition(walletAddress);
-  const blendBalance = blendPosition?.usdc ?? 0;
+  // `live`: saldo de Blend proyectado en vivo, la MISMA fuente que el header y el
+  // "Available" del retiro, así el total del portfolio corre igual y coincide con
+  // ellos (antes usaba el snapshot crudo y quedaba un decimal atrás).
+  const { data: blendPosition, isFetching: blendFetching, live: blendBalance } =
+    useLiveBlendUsdc(walletAddress);
   const blendApy = blendPosition?.apy ?? 0;
 
   const router = useRouter();
@@ -57,6 +72,14 @@ export function PortfolioPanel({
   // sale de Blend y se lockea en el Vaquita pool).
   const [showDeposit, setShowDeposit] = useState(false);
   const depositMounted = useModalPresence(showDeposit);
+  // Plazo con el que se abre "Invertir". null = botón general del footer (arranca
+  // en el plazo más corto); un valor = tocaron "Invertir" en un plan vacío y ese
+  // plazo queda preseleccionado en el teclado.
+  const [investLockPeriod, setInvestLockPeriod] = useState<number | null>(null);
+  const openInvest = (lockPeriod: number | null) => {
+    setInvestLockPeriod(lockPeriod);
+    setShowDeposit(true);
+  };
 
   // Retirar navega a /portafolio con ese plazo ya filtrado (la lista de
   // posiciones a retirar). El panel queda montado detrás (misma ruta
@@ -155,6 +178,67 @@ export function PortfolioPanel({
   if (!isSyncing) lastStableTotalRef.current = totalAmount;
   const displayTotal = isSyncing ? lastStableTotalRef.current : totalAmount;
 
+  // Filas de la distribución: el nivel base (Blend, líquido/flexible) + una por
+  // plazo con lock. Blend lleva su propio estilo (bolsillo/gris) porque no es un
+  // plazo; cada lock hereda color/ícono por su posición corto→largo.
+  const rows: PortfolioRow[] = useMemo(() => {
+    const blendRow: PortfolioRow = {
+      key: 'blend',
+      kind: 'blend',
+      label: t('portfolio.savings', 'Savings'),
+      amount: blendBalance,
+      apy: blendApy,
+      style: {
+        // Ahorros = tu dinero líquido/disponible: la moneda USDC (el "capital
+        // semilla" antes de plantarlo en un plazo), en el mismo estilo sticker.
+        // Color primary (el de marca por defecto) para que se distinga de los
+        // plazos y la barra no se vea gris cuando Ahorros es lo único con fondos.
+        chip: 'bg-primary/20',
+        solid: 'bg-primary text-white',
+        hex: '#F5A161',
+        icon: <FiPocket className="w-5 h-5" />,
+        image: '/icons/global/usdc.png',
+      },
+    };
+    const lockRows: PortfolioRow[] = allocations.map((a, i) => ({
+      key: `lock-${a.lockPeriod}`,
+      kind: 'lock',
+      lockPeriod: a.lockPeriod,
+      label: a.label,
+      amount: a.amount,
+      apy: a.apy,
+      style: getAllocationStyle(i),
+    }));
+    return [blendRow, ...lockRows];
+  }, [allocations, blendBalance, blendApy, t]);
+
+  // Orden de despliegue: primero lo que tiene fondos (de mayor a menor, así la
+  // barra y la lista cuentan la misma historia), y al final los planes vacíos
+  // como oportunidad ("Sin fondos · Invertir").
+  const displayRows = useMemo(
+    () =>
+      [...rows].sort((a, b) => {
+        const aFunded = a.amount > 0 ? 1 : 0;
+        const bFunded = b.amount > 0 ? 1 : 0;
+        if (aFunded !== bFunded) return bFunded - aFunded;
+        if (a.amount !== b.amount) return b.amount - a.amount;
+        return (a.lockPeriod ?? -1) - (b.lockPeriod ?? -1);
+      }),
+    [rows],
+  );
+  const fundedRows = displayRows.filter((r) => r.amount > 0);
+  const fundedCount = fundedRows.length;
+  const pctOf = (amount: number) => (totalAmount > 0 ? (amount / totalAmount) * 100 : 0);
+
+  // Número del centro del donut, partido en enteros + centavos (los centavos van
+  // en superíndice, estilo "$722·⁰¹"). Con ≥1 lo mostramos a 2 decimales para que
+  // quepa limpio; los micro-saldos (<1) conservan la precisión fina.
+  const donutStr =
+    displayTotal >= 1 ? `$${formatTokenPrecise(displayTotal, 2)}` : formatUsdAdaptive(displayTotal);
+  const donutDot = donutStr.lastIndexOf('.');
+  const donutInt = donutDot >= 0 ? donutStr.slice(0, donutDot) : donutStr;
+  const donutCents = donutDot >= 0 ? donutStr.slice(donutDot + 1) : '';
+
   const detailAllocation = allocations.find((a) => a.lockPeriod === detailLockPeriod) ?? null;
   const detailIndex = allocations.findIndex((a) => a.lockPeriod === detailLockPeriod);
   // Al cerrar, detailLockPeriod vuelve a null antes de que termine la animación
@@ -177,90 +261,165 @@ export function PortfolioPanel({
         size="lg"
         fullScreen
         slideFrom="right"
-        bodyClassName="flex flex-col gap-5 pb-10"
+        bodyClassName="flex flex-col gap-5 pb-10 overflow-x-hidden"
         footer={
-          <PressableButton variant="success" size="cta" className="py-2.5!" onClick={() => setShowDeposit(true)}>
+          <PressableButton variant="success" size="cta" className="py-2.5!" onClick={() => openInvest(null)}>
             {t('portfolio.invest', 'Invest')}
           </PressableButton>
         }
       >
-        {/* Encabezado: lo que se está ganando, que es lo que el usuario viene a
-            ver. El APY y el capital quedan en una línea secundaria, y el
-            "de dónde sale" se despliega solo si lo pide. Sin tarjeta: es el
-            contenido principal de la pantalla, no un bloque más. */}
-        {/* El balance es la plata en Blend (nivel base): tocarlo abre el detalle
-            de Blend. Por eso Blend ya no va como fila en la lista de abajo. */}
-        <button
-          type="button"
-          onClick={() => setShowBlendDetail(true)}
-          className="pt-2 w-full text-left transition active:opacity-80"
-        >
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
-            {t('portfolio.totalBalance', 'Total balance')}
-          </p>
-          <p className="mt-1 flex items-center gap-2 text-4xl font-bold text-black tabular-nums leading-none">
-            <span className={isSyncing ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-              {formatTokenPrecise(displayTotal)}
-              <span className="text-xl ml-1.5 font-semibold">{tokenSymbol}</span>
-            </span>
-            {/* Mientras Blend + depósitos se re-sincronizan tras un invest/retiro,
-                un spinner en vez de dejar que el total pegue un bajón transitorio. */}
-            {isSyncing ? <Spinner size="sm" color="current" className="text-black/40" /> : null}
-          </p>
-          <p className="mt-3 text-sm text-gray-500">
-            {t('portfolio.earning', 'Earning')}{' '}
-            <span className="font-bold text-success tabular-nums">
-              +{formatTokenPrecise(totalEarnings)} {tokenSymbol}
-            </span>
-          </p>
-        </button>
-
-        {/* El "de dónde sale" ya no es un desglose global: cada allocation lo
-            explica en su propio detalle (tocá una fila). */}
-        <div className="-mt-1 border-t border-black/10" />
-
-        {/* Allocation: una fila por plazo, ordenadas de más corto a más largo.
-            Mismo card blanco redondeado que "Your positions" (TransactionMonthCard):
-            título adentro, sin borde negro, filas con hover suave y sin divisores.
-            Solo los plazos con lock; Blend se accede tocando el balance de arriba. */}
-        <TransactionMonthCard label={t('portfolio.allocation', 'Allocation')}>
-          {allocations.length === 0 ? (
-            <p className="px-2 py-4 text-center text-sm text-gray-500">
-              {t('portfolio.empty', 'No saving terms available yet.')}
+        {/* Donut de distribución con el total al centro: reemplaza el número
+            grande y la barra horizontal. Cada opción con fondos es un arco de su
+            color (mismos colores que los íconos de la lista). Debajo, la ganancia
+            y cuántas opciones se están usando (las vacías son la oportunidad de
+            rendir más). El desglose e interacción viven en la lista de abajo. */}
+        <div className="flex flex-col items-center gap-3 pt-2">
+          <PortfolioDonut
+            segments={rows.map((row) => ({ key: row.key, color: row.style.hex, value: row.amount }))}
+            total={totalAmount}
+            label={t('portfolio.total', 'Total')}
+            syncing={isSyncing}
+            amount={
+              <>
+                {donutInt}
+                {donutCents ? (
+                  <span className="align-super text-[0.5em] font-bold ml-0.5">{donutCents}</span>
+                ) : null}
+              </>
+            }
+          />
+          {totalEarnings > 0 ? (
+            <p className="text-sm text-gray-500">
+              {t('portfolio.earning', 'Earned so far')}{' '}
+              <span className="font-bold text-success tabular-nums">+{formatUsdAdaptive(totalEarnings)}</span>
             </p>
-          ) : (
-            <TransactionList align="grouped">
-              {allocations.map((allocation, index) => {
-                const style = getAllocationStyle(index);
-                return (
-                  <li key={allocation.lockPeriod}>
+          ) : null}
+          {totalAmount > 0 ? (
+            <p className="text-xs text-gray-500">
+              {t('portfolio.distributed', 'Spread across {{funded}} of {{total}} options', {
+                funded: fundedCount,
+                total: rows.length,
+              })}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Distribución: una fila por opción (Ahorros + cada plazo), plana sobre el
+            fondo, sin card. Con fondos → toca para ver el detalle; vacía → "Sin
+            fondos" atenuado con "Invertir" al lado, que abre el teclado en ese
+            plazo. */}
+        {rows.length === 0 ? (
+          <p className="py-4 text-center text-sm text-gray-500">
+            {t('portfolio.empty', 'No saving terms available yet.')}
+          </p>
+        ) : (
+          <div className="flex flex-col">
+            {displayRows.map((row) => {
+              const empty = row.amount <= 0;
+              const investable = row.kind === 'lock' && row.lockPeriod != null;
+              const showInvest = empty && investable;
+              return (
+                <div
+                  key={row.key}
+                  className="flex items-center gap-3 border-t border-black/[0.07] first:border-t-0 py-3"
+                >
+                  {/* Zona izquierda: ícono + nombre + APY. Es el área tocable
+                      cuando la fila tiene fondos (abre su detalle). */}
+                  <button
+                    type="button"
+                    disabled={empty}
+                    onClick={() => {
+                      if (row.kind === 'blend') setShowBlendDetail(true);
+                      else if (row.lockPeriod != null) setDetailLockPeriod(row.lockPeriod);
+                    }}
+                    className={`flex flex-1 min-w-0 items-center gap-3 text-left rounded-lg -mx-1 px-1 py-0.5 transition-colors ${
+                      empty ? 'cursor-default' : 'active:bg-black/[0.04]'
+                    }`}
+                  >
+                    <span
+                      className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${
+                        empty ? 'bg-black/5 text-gray-400' : row.style.chip
+                      }`}
+                    >
+                      {row.style.image ? (
+                        // Sticker de crecimiento (o la moneda en Ahorros). Vacío →
+                        // en gris y atenuado, para que se lea como "bloqueado".
+                        <Image
+                          src={row.style.image}
+                          alt=""
+                          width={36}
+                          height={36}
+                          className={`h-8 w-8 object-contain ${empty ? 'opacity-40 grayscale' : ''}`}
+                        />
+                      ) : (
+                        row.style.icon
+                      )}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span
+                        className={`block text-sm font-bold truncate ${empty ? 'text-gray-400' : 'text-black'}`}
+                      >
+                        {row.label}
+                      </span>
+                      <span className="block text-xs text-gray-500 tabular-nums">
+                        {empty ? `${t('portfolio.noFunds', 'No funds')} · ` : ''}
+                        {row.apy.toFixed(2)}% APY
+                      </span>
+                    </span>
+                  </button>
+
+                  {/* Zona derecha: con fondos → monto + % del total + chevron;
+                      vacía (plazo) → "Invertir". */}
+                  {showInvest ? (
                     <button
                       type="button"
-                      onClick={() => setDetailLockPeriod(allocation.lockPeriod)}
-                      className="w-full flex items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-black/5 active:bg-black/10"
+                      onClick={() => openInvest(row.lockPeriod ?? null)}
+                      className="shrink-0 rounded-full px-3 py-1.5 text-sm font-bold text-[#1B4FCB] transition-colors active:bg-[#1B4FCB]/10"
                     >
-                      <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${style.chip}`}>
-                        {style.icon}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-bold text-black truncate">{allocation.label}</span>
-                        <span className="block text-xs text-gray-500 tabular-nums">
-                          {formatUsdPrecise(allocation.amount)}
+                      {t('portfolio.invest', 'Invest')}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={empty}
+                      onClick={() => {
+                        if (row.kind === 'blend') setShowBlendDetail(true);
+                        else if (row.lockPeriod != null) setDetailLockPeriod(row.lockPeriod);
+                      }}
+                      className={`shrink-0 flex items-center gap-1.5 text-right ${
+                        empty ? 'cursor-default' : ''
+                      }`}
+                    >
+                      <span className="flex flex-col items-end">
+                        <span className="text-sm font-bold text-black tabular-nums leading-tight">
+                          {formatUsdAdaptive(row.amount)}
+                        </span>
+                        <span className="text-xs text-gray-500 tabular-nums leading-tight">
+                          {t('portfolio.ofTotal', '{{pct}}% of total', {
+                            pct: pctOf(row.amount).toFixed(1),
+                          })}
                         </span>
                       </span>
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${style.chip}`}
-                      >
-                        {allocation.apy.toFixed(2)}%
-                      </span>
-                      <FiChevronRight className="w-4 h-4 text-black/50 shrink-0" />
+                      {empty ? null : <FiChevronRight className="w-4 h-4 text-black/40 shrink-0" />}
                     </button>
-                  </li>
-                );
-              })}
-            </TransactionList>
-          )}
-        </TransactionMonthCard>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Suma: reafirma que las filas cierran con el número de arriba. */}
+            {fundedCount > 0 ? (
+              <div className="flex items-center justify-between border-t border-black/15 mt-1 pt-3">
+                <span className="text-sm font-semibold text-gray-500">
+                  {t('portfolio.sum', 'Total')}
+                </span>
+                <span className="text-sm font-bold text-black tabular-nums">
+                  {formatUsdAdaptive(displayTotal)}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        )}
       </AppModal>
 
       {detailMounted && detailView ? (
@@ -285,7 +444,11 @@ export function PortfolioPanel({
       ) : null}
 
       {depositMounted ? (
-        <InvestModal open={showDeposit} onOpenChange={() => setShowDeposit(false)} />
+        <InvestModal
+          open={showDeposit}
+          onOpenChange={() => setShowDeposit(false)}
+          initialLockPeriod={investLockPeriod ?? undefined}
+        />
       ) : null}
     </>
   );
