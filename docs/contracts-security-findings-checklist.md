@@ -105,13 +105,29 @@ All MEDIUMs are now resolved and none need further rework:
 ## Cross-stack follow-up (Phase 2 — NOT done, outside `contracts/`)
 
 The D1 signature change ripples beyond the contract. Before the new contract goes live, update:
-- **apps/web** — deposit/withdraw flows: pass a `nonce: u64` instead of a string `deposit_id`; read the
-  id from the deposit event or `compute_deposit_id` to track/withdraw a position.
-- **apps/api** — any endpoint constructing deposit/withdraw invokes or reading `deposit_id`.
+
+**Nonce generation (the key design decision for the UI):** `deposit` takes a client-supplied
+`nonce: u64`; the contract derives `id = sha256(caller ‖ nonce)`. Generate the nonce as a
+**per-wallet monotonic counter kept off-chain** (in the DB): `next_nonce = MAX(nonce for that wallet) + 1`.
+- Off-chain is the *right* home for the counter — unlike an on-chain counter it can't expire/reset, so it
+  never collides. Monotonic + never-reused ⇒ `sha256(caller ‖ nonce)` is always fresh ⇒ `DepositAlreadyExists`
+  never fires in normal use.
+- **Concurrency:** two simultaneous deposits from the same wallet could compute the same `next_nonce`.
+  Guard with a DB `UNIQUE(wallet_address, nonce)` constraint (+ retry with the next value), or serialize
+  per-wallet. Low-frequency in practice, but design for it.
+- **Withdrawal:** store each deposit's `nonce` so the client can call `withdraw(caller, nonce)` for the
+  specific position. (Random `u64`/UUID also works and is collision-safe without a counter, but the
+  per-wallet counter is cleaner to track and debug.)
+
+Then:
+- **DB** — add a `nonce` column to `deposits` (per deposit) with `UNIQUE(wallet_address, nonce)`; keep
+  `deposit_id_hex` = the derived 32-byte id (hex) for event matching / reconcile keys.
+- **apps/web** — deposit flow computes the next per-wallet nonce (via API/DB), passes `nonce: u64`;
+  withdraw flow looks up the position's stored nonce. Use `compute_deposit_id` (or the deposit event) to
+  confirm the id.
+- **apps/api** — expose/compute the next nonce per wallet; update deposit/withdraw invoke construction.
 - **apps/listener** + **apps/job-deposits** — event decoding: `deposit_id` is now `BytesN<32>` (hex),
-  emitted in the deposit/withdraw events.
-- **DB** — `deposits.deposit_id_hex` should store the derived 32-byte id (hex); confirm the reconcile
-  logic keys on it.
+  emitted in the deposit/withdraw events; persist alongside the wallet's `nonce`.
 - The new contract's constructor now rejects lock periods > 30 days and timelock < 1 hour — set deploy
   config (`POOL_LOCK_PERIODS`, `POOL_UPGRADE_TIMELOCK_SECS`, badges timelock) accordingly.
 
