@@ -52,6 +52,10 @@ const isIOS = () =>
     // iPadOS reports itself as Mac but has touch
     (window.navigator.userAgent.includes('Mac') && 'ontouchend' in document));
 
+const isMobile = () =>
+  typeof window !== 'undefined' &&
+  (isIOS() || /android|mobile|iphone|ipad|ipod/i.test(window.navigator.userAgent));
+
 export function useInstallApp() {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
@@ -76,6 +80,8 @@ export function useInstallApp() {
     isInstalled: state === 'installed' || standalone,
     /** iOS has no install API — show manual Add-to-Home-Screen instructions. */
     isIOS: isIOS(),
+    /** Phone/tablet — where a home-screen shortcut actually makes sense. */
+    isMobile: isMobile(),
     promptInstall,
   };
 }

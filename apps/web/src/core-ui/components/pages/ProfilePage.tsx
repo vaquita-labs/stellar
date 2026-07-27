@@ -442,7 +442,7 @@ export function ProfilePage() {
           </h2>
           {/* 2x2 en vez de 4 en fila: a 320px cada columna quedaba en ~70px y
               los valores largos ("878 XP") se apretaban contra el label. */}
-          <div className="grid grid-cols-2 gap-x-10 gap-y-4 py-1">
+          <div className="grid grid-cols-2 gap-x-10 gap-y-4 rounded-2xl bg-white p-4">
             <SummaryItem
               icon={hasActiveStreak ? '/icons/global/streak_face.png' : '/icons/global/streak_freeze_face.png'}
               value={t('profilePages.profile.daysCount', { count: totalStreak, defaultValue: '{{count}} days' })}

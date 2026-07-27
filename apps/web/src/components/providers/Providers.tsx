@@ -39,7 +39,6 @@ export function Providers({ children }: { children: ReactNode }) {
   useViewportVh();
   useConsoleToAbly();
   const { isPublicRoute, showLoader } = useAuthGate();
-  console.log('Providers')
 
   // Single QueryClient per app session — created lazily so it isn't shared
   // across requests/StrictMode remounts, and lifted to the top so react-query

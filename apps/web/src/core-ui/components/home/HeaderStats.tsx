@@ -6,18 +6,17 @@ import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertCircle, FiBell } from 'react-icons/fi';
+import { FiAlertCircle, FiHeadphones } from 'react-icons/fi';
 import {
-  useApyByLockPeriod,
   useBlendPosition,
   useDepositsComplete,
   useProfileData,
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
-  useUnreadNotificationsCount,
 } from '../../hooks';
 import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
 import { PageHeader } from '../molecules';
@@ -25,7 +24,6 @@ import { useModalPresence } from '../molecules/AppModal';
 import {
   CoinsModal,
   ExperienceModal,
-  PortfolioPanel,
   StreakModal,
 } from '../organisms';
 import { VaquitaAvatarCircle } from '../avatar/VaquitaAvatar';
@@ -40,13 +38,29 @@ export const HeaderStats = () => {
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showCoinsModal, setShowCoinsModal] = useState(false);
   const [showExperienceModal, setShowExperienceModal] = useState(false);
-  const [showPortfolioPanel, setShowPortfolioPanel] = useState(false);
+  // El saldo abre el portafolio navegando a /portafolio: esa ruta la intercepta
+  // el slot `@modal` y se pinta como overlay sobre /home (el mundo 3D queda
+  // montado detrás, no se recarga). El panel y las posiciones viven ahí, en
+  // <PortfolioFlow>. Ver [[portfolio-overlay-flow]].
+  const router = useRouter();
+  // Normalmente estamos en /home y esto navega (la ruta la intercepta @modal y
+  // se pinta el overlay). Red de seguridad: si por una desincronización previa
+  // del historial la URL ya quedó parada en /portafolio con el overlay cerrado,
+  // un push idéntico Next lo deduplica a no-op y el botón "no abre". En ese caso
+  // (el saldo solo es visible/tocable si el overlay NO está encima) forzamos una
+  // navegación real con un query distinto para re-disparar la ruta interceptora.
+  const openPortfolioPanel = () => {
+    if (window.location.pathname === '/portafolio') {
+      router.push(`/portafolio?r=${Date.now()}`);
+    } else {
+      router.push('/portafolio');
+    }
+  };
   // Mantienen el modal montado mientras corre la animación de salida.
   const streakModalMounted = useModalPresence(showStreakModal);
   const coinsModalMounted = useModalPresence(showCoinsModal);
   const experienceModalMounted = useModalPresence(showExperienceModal);
-  const portfolioPanelMounted = useModalPresence(showPortfolioPanel);
-  const { walletAddress, token, lockPeriod } = useConfigStore();
+  const { walletAddress, token } = useConfigStore();
   const hideBalance = useHideBalance();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
@@ -68,8 +82,6 @@ export const HeaderStats = () => {
   } = useBlendPosition(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
-  // Solo para el desglose del portafolio: el APY ya no se muestra en el header.
-  const { data: apyData } = useApyByLockPeriod(lockPeriod ?? 0, token?.symbol ?? '');
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
 
   // Ganancia estimada (proyección a vencimiento) sumada desde cada depósito,
@@ -89,18 +101,6 @@ export const HeaderStats = () => {
       return { ...prev, [id]: earnings };
     });
   }, []);
-  const { vaquitaEarnings, protocolEarnings } = activeDeposits.reduce(
-    (acc, d) => {
-      const earnings = earningsById[d.id];
-      if (earnings) {
-        acc.vaquitaEarnings += earnings.vaquita;
-        acc.protocolEarnings += earnings.protocol;
-      }
-      return acc;
-    },
-    { vaquitaEarnings: 0, protocolEarnings: 0 },
-  );
-
   // Saldo en vivo: capital + interés devengado hasta "ahora". Cada depósito
   // reporta cuánto rinde por milisegundo, así que el contador avanza en el
   // cliente sin volver a pedirle nada al servidor. Tick corto para que los
@@ -170,8 +170,6 @@ export const HeaderStats = () => {
 
   const goldCoins = profileRewards?.rewards?.find((r) => r?.name === 'Gold Coin')?.amount ?? 0;
   const experience = experienceData?.experience ?? 0;
-
-  const unreadNotifications = useUnreadNotificationsCount();
 
   // Callback ref so the coin-animation target can live on either the editing-map
   // div or the stats-bar button (which opens the coins modal) without a type clash.
@@ -243,7 +241,7 @@ export const HeaderStats = () => {
               config={profileData?.avatarConfig}
               seed={profileData?.walletAddress || walletAddress || ''}
               alt={t('home.stats.profileAlt', 'Profile')}
-              className="h-14 w-14 border-black border-b-3 transition group-active:border-b-[1px]"
+              className="h-16 w-16 border-2 border-black border-b-[6px] transition group-active:border-b-2"
             />
           </Link>
 
@@ -263,7 +261,7 @@ export const HeaderStats = () => {
             <div className="flex items-center gap-1.5 self-start max-w-full">
               <PressableButton
                 variant="cream"
-                onClick={() => setShowPortfolioPanel(true)}
+                onClick={openPortfolioPanel}
                 ariaLabel={t('home.stats.apyAria', 'Portfolio')}
                 // w-fit + self-start: la pastilla se ajusta al saldo y crece con
                 // él, alineada contra el mismo borde que el saludo.
@@ -313,16 +311,11 @@ export const HeaderStats = () => {
           </div>
 
           <Link
-            href="/notifications"
-            aria-label={t('notificationsCenter.bellAria', 'Notifications')}
+            href="/concierge"
+            aria-label={t('concierge.buttonAria', 'Concierge')}
             className="relative shrink-0 self-start w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px]"
           >
-            <FiBell className="w-4 h-4 text-black" />
-            {unreadNotifications > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 border border-white text-[10px] font-bold text-white flex items-center justify-center tabular-nums">
-                {unreadNotifications > 9 ? '9+' : unreadNotifications}
-              </span>
-            )}
+            <FiHeadphones className="w-4 h-4 text-black" />
           </Link>
         </div>
       </div>
@@ -421,17 +414,6 @@ export const HeaderStats = () => {
       {coinsModalMounted && <CoinsModal open={showCoinsModal} onOpenChange={() => setShowCoinsModal(false)} coins={goldCoins} />}
       {experienceModalMounted && (
         <ExperienceModal open={showExperienceModal} onOpenChange={() => setShowExperienceModal(false)} experience={experience} />
-      )}
-      {portfolioPanelMounted && (
-        <PortfolioPanel
-          open={showPortfolioPanel}
-          onOpenChange={() => setShowPortfolioPanel(false)}
-          vaquitaEarnings={vaquitaEarnings}
-          protocolEarnings={protocolEarnings}
-          protocolApy={apyData?.protocolApy ?? 0}
-          lendingMarketName={apyData?.lendingMarketName}
-          tokenSymbol={token?.symbol}
-        />
       )}
       {/* Aquí se montaba <ReferralsModal> (pantalla de referidos: ganancias,
           tiers de boost e invitar amigos). Oculta a propósito junto con su chip

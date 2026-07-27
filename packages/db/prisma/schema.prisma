@@ -32,6 +32,9 @@ model Achievement {
   tier          String
   code          String?   @unique(map: "achievements_code_unique", where: raw("(code IS NOT NULL)"))
   coinReward    Int       @default(0) @map("coin_reward")
+  // XP credited on claim, ledgered to `profiles_rewards` (reward `experience`)
+  // the same way coins are — the admin value only affects claims from then on.
+  xpReward      Int       @default(0) @map("xp_reward")
   hidden        Boolean   @default(false)
   refreshPolicy String    @default("auto") @map("refresh_policy")
   cycleScoped   Boolean   @default(false) @map("cycle_scoped")

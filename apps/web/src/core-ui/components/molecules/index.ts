@@ -13,6 +13,7 @@ export * from './ProfileDataProvider';
 export * from './toast';
 export * from './ConfirmDialog';
 export * from './AppModal';
+export * from './DateWheelPicker';
 export * from './EarningsBreakdown';
 export * from './PressableButton';
 export * from './PageHeader';

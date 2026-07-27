@@ -19,7 +19,12 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    // stellar-wallets-kit escribe variables --swk-* como style inline en <html>
+    // apenas se importa en el cliente (efecto de módulo en su state/effects.js).
+    // El server nunca corre eso, así que el <html> difiere entre server y client:
+    // suppressHydrationWarning silencia ESE nivel (solo atributos del <html>, no
+    // sus hijos), que es justo el mismatch esperado del tema aplicado en cliente.
+    <html lang="es" suppressHydrationWarning>
       <head>
         {process?.env?.NODE_ENV !== 'development' && (
           <script

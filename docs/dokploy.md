@@ -43,9 +43,11 @@ El `Dockerfile` declara `ARG` para las `NEXT_PUBLIC_*` y consume secrets vía `-
 
 ```env
 NEXT_PUBLIC_SERVICES_URL=https://tu-api.dominio.com
-NEXT_PUBLIC_STELLAR_NETWORK=testnet
 NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 ```
+
+> ℹ️ La red Stellar (mainnet/testnet) se deriva del prefijo de
+> `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` (`pub_mainnet_…` → mainnet).
 
 > ℹ️ Ably ya **no** usa una key en el cliente. El navegador pide tokens efímeros a
 > `GET ${NEXT_PUBLIC_SERVICES_URL}/api/v1/ably/token` (y el admin a `/api/v1/ably/admin-token`).

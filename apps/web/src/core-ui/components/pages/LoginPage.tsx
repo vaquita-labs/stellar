@@ -39,7 +39,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-full w-full flex relative">
+    <div className="min-h-dvh w-full flex relative">
       {/* Panel izquierdo - Logo */}
       <div className="hidden md:flex w-1/2 items-center justify-center bg-primary border-r-2 border-primary">
         <div className="flex flex-col items-center gap-4">
@@ -55,8 +55,8 @@ export default function LoginPage() {
       </div>
 
       {/* Panel derecho - Login */}
-      <div className="w-full md:w-1/2 flex items-center justify-center bg-background p-8 relative">
-        <div className="w-full max-w-md border-2 border-primary rounded-lg p-8 bg-white/80 backdrop-blur-sm shadow-lg">
+      <div className="w-full md:w-1/2 flex items-center justify-center bg-background p-4 md:p-8 relative">
+        <div className="w-full max-w-lg min-h-[80dvh] md:min-h-0 flex flex-col justify-center rounded-2xl p-8 bg-white shadow-lg">
           <div className="flex flex-col items-center gap-4">
             {/* Logo móvil */}
             <div className="md:hidden mb-2">

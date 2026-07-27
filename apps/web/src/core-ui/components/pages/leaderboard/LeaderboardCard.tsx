@@ -1,11 +1,9 @@
 'use client';
 
 import type { AvatarConfig } from '@vaquita/avatar';
-import { toast } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
-import { FiHeart, FiLoader, FiMessageCircle } from 'react-icons/fi';
+import { FiHeart, FiLoader } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { useFollowingWallets, useLikedMapWallets, useToggleFollow, useToggleMapLike } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
@@ -159,19 +157,18 @@ function StatsRow({ streak, coins, experience }: { streak: number; coins: number
 /* ------------------------------------------------------------------ */
 
 interface SocialRowProps {
-  username: string;
   /** Owner of the map being hearted. */
   walletAddress: string;
   likes: number;
-  comments: number;
 }
 
 /**
  * The heart is persisted: `useLikedMapWallets` seeds the filled state for every
  * row from one request, and the toggle optimistically patches that set plus the
- * owner's count. Comments are still a placeholder.
+ * owner's count. Comments are hidden for now — the feature isn't built yet, so
+ * the placeholder button was removed rather than shipping a dead affordance.
  */
-function SocialRow({ username, walletAddress, likes, comments }: SocialRowProps) {
+function SocialRow({ walletAddress, likes }: SocialRowProps) {
   const { t } = useTranslation();
   const { walletAddress: viewerWallet } = useConfigStore();
   const { data: likedWallets } = useLikedMapWallets();
@@ -181,30 +178,17 @@ function SocialRow({ username, walletAddress, likes, comments }: SocialRowProps)
   // Liking your own map is rejected server-side, so don't offer it.
   const isOwnMap = !!viewerWallet && viewerWallet.toLowerCase() === walletAddress.toLowerCase();
 
-  // Buttons live inside an anchor, so we stop propagation to keep their
-  // clicks from triggering the card-level navigation.
-  const stop = (e: React.MouseEvent) => {
+  const handleLike = (e: React.MouseEvent) => {
+    // The button lives inside an anchor, so we stop propagation to keep its
+    // click from triggering the card-level navigation.
     e.preventDefault();
     e.stopPropagation();
-  };
-
-  const handleLike = (e: React.MouseEvent) => {
-    stop(e);
     if (isOwnMap || !viewerWallet) return;
     toggleLike.mutate({ targetWallet: walletAddress, isLiked: liked });
   };
 
-  const handleComment = (e: React.MouseEvent) => {
-    stop(e);
-    toast.success(
-      t('leaderboard.card.commentsComingSoon', "Comments on {{username}}'s world coming soon", {
-        username,
-      })
-    );
-  };
-
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center justify-end gap-1">
       <button
         type="button"
         onClick={handleLike}
@@ -217,15 +201,6 @@ function SocialRow({ username, walletAddress, likes, comments }: SocialRowProps)
           className={`h-4 w-4 transition ${liked ? 'fill-red-500 text-red-500' : 'text-black'}`}
         />
         <span className="text-xs font-bold text-black tabular-nums">{likes}</span>
-      </button>
-      <button
-        type="button"
-        onClick={handleComment}
-        aria-label={t('leaderboard.card.openComments', 'Open comments')}
-        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 hover:bg-black/5 transition bg-transparent"
-      >
-        <FiMessageCircle className="h-4 w-4 text-black" />
-        <span className="text-xs font-bold text-black tabular-nums">{comments}</span>
       </button>
     </div>
   );
@@ -358,12 +333,7 @@ export function LeaderboardCard({
 
       <StatsRow streak={user.streak} coins={user.coins} experience={user.experience} />
 
-      <SocialRow
-        username={user.username}
-        walletAddress={user.walletAddress}
-        likes={user.mapLikes}
-        comments={user.commentsSeed}
-      />
+      <SocialRow walletAddress={user.walletAddress} likes={user.mapLikes} />
     </Link>
   );
 }
@@ -391,8 +361,10 @@ export function LeaderboardCardSkeleton() {
         <div className="h-8 flex-1 rounded-lg bg-black/5" />
         <div className="h-8 flex-1 rounded-lg bg-black/5" />
       </div>
-      <div className="flex gap-2">
-        <div className="h-6 w-14 rounded-full bg-black/5" />
+      {/* Solo el corazón: los comentarios se ocultaron, así que el skeleton ya
+          no reserva un segundo pill para ellos. Alineado a la derecha, igual
+          que el corazón real de la card. */}
+      <div className="flex justify-end gap-2">
         <div className="h-6 w-14 rounded-full bg-black/5" />
       </div>
     </div>

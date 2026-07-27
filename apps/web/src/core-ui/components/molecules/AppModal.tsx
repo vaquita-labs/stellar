@@ -33,6 +33,12 @@ export interface AppModalProps {
    * para navegar dentro del mismo modal (lista → detalle) sin abrir otro.
    */
   onBack?: () => void;
+  /**
+   * Estilo del botón de atrás. `white` por defecto; `primary` (naranja) para
+   * las hojas que se abren apiladas sobre un panel y vuelven a él, donde la
+   * flecha es la acción principal para retroceder.
+   */
+  backVariant?: 'white' | 'primary';
   /** Posición vertical del modal. Por defecto el comportamiento de HeroUI. */
   placement?: 'auto' | 'top' | 'center' | 'bottom';
   /**
@@ -155,6 +161,7 @@ export function AppModal({
   hideClose = false,
   hideHeader = false,
   onBack,
+  backVariant = 'white',
   placement,
   fullScreen = false,
   slideFrom = 'bottom',
@@ -183,7 +190,9 @@ export function AppModal({
           // HORIZONTAL. Usar items-end aquí pegaba el diálogo al borde derecho
           // (se notaba con size="sm", que no ocupa todo el ancho).
           (fullScreen
-            ? 'p-0! '
+            ? // A pantalla completa en mobile; en desktop se centra con márgenes
+              // como una tarjeta (no ocupa todo el viewport).
+              'p-0! sm:justify-center! sm:items-center! sm:p-10! '
             : 'justify-end! items-center! px-0! pt-3! pb-0! sm:justify-center! sm:p-10! ') +
           (slideFrom === 'right' ? PANEL_CONTAINER_ANIMATION : SHEET_CONTAINER_ANIMATION)
         }
@@ -194,7 +203,13 @@ export function AppModal({
             // la recortan a sus esquinas.
             'bg-background relative overflow-hidden ' +
             (fullScreen
-              ? 'h-dvh max-h-dvh w-full max-w-none rounded-none border-0 '
+              ? // Pantalla completa en mobile (sin bordes ni esquinas). En desktop
+                // (sm) se convierte en una tarjeta flotante centrada, con el mismo
+                // ancho de columna que los demás modales y altura acotada a 90vh.
+                'h-dvh max-h-dvh w-full max-w-none rounded-none border-0 ' +
+                'sm:h-auto sm:max-h-[90vh] sm:rounded-2xl sm:border sm:border-black ' +
+                SIZE_MAX_WIDTH[size] +
+                ' '
               : // Bottom-sheet en mobile: solo esquinas superiores redondeadas y
                 // sin borde inferior, porque el modal termina contra el borde de
                 // la pantalla. En desktop (sm) se restauran las 4 esquinas y el
@@ -221,10 +236,12 @@ export function AppModal({
                 back, otro con la X), así el título —flex-1 centrado en medio—
                 queda centrado respecto al modal y no respecto al espacio que
                 sobra, sin importar qué controles haya a los lados. */}
+            {/* Regla fija de toda la app: back a la IZQUIERDA, close (X) a la
+                DERECHA. Ambos en blanco. */}
             <div className="w-7 shrink-0 flex items-center justify-start">
               {onBack && !hideHeader ? (
                 <CircleIconButton
-                  variant="primary"
+                  variant={backVariant}
                   size="sm"
                   ariaLabel={t('common.back')}
                   onClick={onBack}

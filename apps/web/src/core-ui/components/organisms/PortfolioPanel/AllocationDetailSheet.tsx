@@ -14,14 +14,13 @@ interface AllocationDetailSheetProps {
   allocation: Allocation;
   style: AllocationStyle;
   tokenSymbol?: string;
-  /** Abre "Move funds" con este plazo como destino. */
-  onManage: () => void;
-  canManage: boolean;
+  /** Abre la lista de posiciones de este plazo para retirar. */
+  onWithdraw: () => void;
 }
 
 /**
  * Detalle de un plazo: cuánto tenés ahí, cuánto rinde y por qué. El CTA lleva a
- * mover fondos hacia este mismo plazo, que es la acción natural desde acá.
+ * retirar (abre la lista de posiciones de este plazo).
  */
 export function AllocationDetailSheet({
   open,
@@ -29,8 +28,7 @@ export function AllocationDetailSheet({
   allocation,
   style,
   tokenSymbol = 'USDC',
-  onManage,
-  canManage,
+  onWithdraw,
 }: AllocationDetailSheetProps) {
   const { t } = useTranslation();
   const market = allocation.lendingMarketName || t('deposit.bank.theLendingProtocol', 'the lending protocol');
@@ -41,13 +39,22 @@ export function AllocationDetailSheet({
       onOpenChange={onOpenChange}
       title={allocation.label}
       size="md"
+      // Se abre apilado sobre el panel de Portfolio: el botón vuelve al panel
+      // (flecha atrás a la izquierda), no cierra todo con una X.
+      onBack={onOpenChange}
+      backVariant="primary"
+      hideClose
       bodyClassName="flex flex-col gap-4 pb-2"
       footer={
-        canManage ? (
-          <PressableButton variant="success" size="cta" onClick={onManage}>
-            {t('portfolio.manage', 'Manage allocations')}
-          </PressableButton>
-        ) : undefined
+        <PressableButton
+          variant="white"
+          size="cta"
+          className="py-2.5!"
+          onClick={onWithdraw}
+          disabled={allocation.amount <= 0}
+        >
+          {t('deposit.withdraw.button', 'Withdraw')}
+        </PressableButton>
       }
     >
       <div className="flex items-center gap-3">
@@ -56,7 +63,7 @@ export function AllocationDetailSheet({
           {style.icon}
         </span>
       </div>
-      <p className="-mt-3 text-sm font-bold text-success tabular-nums">{allocation.apy.toFixed(2)}% APY</p>
+      <p className="-mt-3 text-sm font-bold text-success tabular-nums">{allocation.apy.toFixed(2)}% APR</p>
 
       <div>
         <p className="text-xs text-gray-500 mb-1">{t('portfolio.detail.description', 'Description')}</p>
@@ -69,7 +76,7 @@ export function AllocationDetailSheet({
         </p>
       </div>
 
-      <div className="divide-y divide-black/10 border-y border-black/10">
+      <div className="divide-y divide-black/10">
         <div className="flex items-center justify-between py-2.5 text-sm">
           <span className="text-gray-500">{t('portfolio.detail.withdrawPeriod', 'Withdraw period')}</span>
           <span className="font-bold text-black">{formatTimeDeposit(allocation.lockPeriod)}</span>
@@ -84,12 +91,8 @@ export function AllocationDetailSheet({
         </div>
       </div>
 
-      <p className="text-xs text-gray-500 leading-relaxed">
-        {t(
-          'deposit.bank.estimatesDisclaimer',
-          'These are estimates and update over time final rewards are confirmed when you withdraw.',
-        )}{' '}
-        {t('portfolio.detail.tokenNote', 'Balances are shown in {{token}}.', { token: tokenSymbol })}
+      <p className="text-xs text-gray-500">
+        {t('portfolio.detail.estimateNote', 'APR is an estimate and may change over time.')}
       </p>
     </AppModal>
   );

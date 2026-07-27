@@ -10,6 +10,7 @@ export * from './useDepositsComplete';
 export * from './useFont';
 export * from './useHasHydrated';
 export * from './useInstallApp';
+export * from './useInstallDismissed';
 export * from './useIntroSeen';
 export * from './useExploreData';
 export * from './useLeaderboardData';

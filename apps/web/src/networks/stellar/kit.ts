@@ -3,11 +3,6 @@ import { Networks } from '@creit.tech/stellar-wallets-kit';
 export type StellarNetwork = 'mainnet' | 'testnet';
 
 export function getStellarNetwork(): StellarNetwork {
-  const configuredNetwork = process.env.NEXT_PUBLIC_STELLAR_NETWORK?.toLowerCase();
-  if (configuredNetwork === 'mainnet' || configuredNetwork === 'testnet') {
-    return configuredNetwork;
-  }
-
   const key = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY ?? '';
   return key.startsWith('pub_mainnet_') ? 'mainnet' : 'testnet';
 }

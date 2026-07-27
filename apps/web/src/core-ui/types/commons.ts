@@ -430,6 +430,7 @@ export interface ProfileAchievementsResponseDTO {
 export interface ClaimAchievementResponseDTO {
   achievementKey: Achievement;
   coinReward: number;
+  xpReward: number;
   claimedAt: string;
 }
 

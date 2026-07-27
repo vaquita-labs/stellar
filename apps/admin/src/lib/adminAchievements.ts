@@ -41,6 +41,7 @@ export const serializeAchievement = (a: AchievementRow) => ({
   description: a.description,
   tier: a.tier,
   coin_reward: a.coinReward,
+  xp_reward: a.xpReward,
   code: a.code,
   hidden: a.hidden,
   refresh_policy: a.refreshPolicy,
@@ -65,6 +66,7 @@ export const achievementWriteToPrisma = (
   if (input.description !== undefined) data.description = input.description;
   if (input.tier !== undefined) data.tier = input.tier;
   if (input.coin_reward !== undefined) data.coinReward = input.coin_reward;
+  if (input.xp_reward !== undefined) data.xpReward = input.xp_reward;
   if (input.unlock_type !== undefined) data.unlockType = input.unlock_type;
   if (input.rule !== undefined)
     data.rule = input.rule === null ? Prisma.DbNull : (input.rule as unknown as Prisma.InputJsonValue);

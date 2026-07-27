@@ -16,6 +16,7 @@ import { SavedWallet, useDeleteSavedWallet, useSavedWallets } from '../../../hoo
 import { useConfigStore } from '../../../stores';
 import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
+import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { AddWalletForm } from './AddWalletForm';
 import { WalletRow } from './WalletRow';
 import { WithdrawModalProps, WithdrawProgressStep, WithdrawStep } from './types';
@@ -197,7 +198,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
   // --- Paso: método ----------------------------------------------------------
   const methodStep = (
-    <>
+    <div className="flex flex-col gap-2">
       <PressableButton variant="white" size="row" onClick={onOfframp}>
         <BsBank2 className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
@@ -208,7 +209,6 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
             {t('withdraw.method.bank.subtitle', 'Withdraw to your bank account')}
           </span>
         </span>
-        <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
       <PressableButton variant="white" size="row" onClick={() => setStep('amount')}>
         <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
@@ -220,9 +220,8 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
             {t('withdraw.method.wallet.subtitle', 'Withdraw to a crypto wallet')}
           </span>
         </span>
-        <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
-    </>
+    </div>
   );
 
   // --- Paso: monto -----------------------------------------------------------
@@ -406,7 +405,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-error font-semibold">{error}</p> : null}
+      {error ? <ErrorNotice error={error} /> : null}
     </div>
   );
 
@@ -457,10 +456,6 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           );
         })}
       </div>
-
-      <p className="mt-1 text-center text-xs text-gray-500">
-        {t('withdraw.processingHint', 'This may take a few seconds.')}
-      </p>
     </div>
   );
 
@@ -528,6 +523,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleConfirm}>
         {t('withdraw.confirmCta', 'Confirm')}
       </PressableButton>
+    ) : step === 'processing' ? (
+      <p className="w-full text-center text-xs text-gray-500">
+        {t('withdraw.processingHint', 'This may take a few seconds.')}
+      </p>
     ) : step === 'success' ? (
       <PressableButton variant="success" size="cta" className="py-2.5!" onClick={onOpenChange}>
         {t('common.done', 'Done')}

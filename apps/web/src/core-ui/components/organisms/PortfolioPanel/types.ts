@@ -20,13 +20,6 @@ export interface Allocation {
 export interface PortfolioPanelProps {
   open: boolean;
   onOpenChange: () => void;
-  /** Ganancia estimada del pool de Vaquita, sumada por quien abre el panel. */
-  vaquitaEarnings: number;
-  /** Ganancia estimada del protocolo de lending. */
-  protocolEarnings: number;
-  /** APY del protocolo para el plazo seleccionado (chip del desglose). */
-  protocolApy: number;
-  lendingMarketName?: string;
   tokenSymbol?: string;
 }
 

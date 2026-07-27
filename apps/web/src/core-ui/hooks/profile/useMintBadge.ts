@@ -18,7 +18,7 @@ export const useMintBadge = () => {
   const networkName = network?.networkName ?? '';
   const badgesContractAddress = network?.badgesContractAddress;
 
-  return useMutation<{ hash: string; coinReward: number; alreadyMinted?: boolean }, Error, string>({
+  return useMutation<{ hash: string; coinReward: number; xpReward: number; alreadyMinted?: boolean }, Error, string>({
     mutationFn: async (badgeType: string) => {
       if (!badgesContractAddress) {
         throw new Error('Badge contract address not configured for this network');
@@ -33,7 +33,7 @@ export const useMintBadge = () => {
         // DB from the chain (voucher self-heal). Treat it as a successful outcome:
         // onSuccess invalidates the badge queries, so the grid re-renders as minted.
         if (err instanceof ApiError && err.code === 'ALREADY_MINTED') {
-          return { hash: '', coinReward: 0, alreadyMinted: true };
+          return { hash: '', coinReward: 0, xpReward: 0, alreadyMinted: true };
         }
         throw err;
       }
@@ -70,7 +70,7 @@ export const useMintBadge = () => {
         transaction_hash: hash,
       });
 
-      return { hash, coinReward: finalized?.coinReward ?? 0 };
+      return { hash, coinReward: finalized?.coinReward ?? 0, xpReward: finalized?.xpReward ?? 0 };
     },
     onSuccess: () => {
       // `minted` is folded into the profile-achievements list, so invalidating

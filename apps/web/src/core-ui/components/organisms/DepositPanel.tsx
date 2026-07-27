@@ -170,13 +170,12 @@ export function DepositPanel() {
             // posición entera vía el sentinel i128. Un solo salto: 'sending'. ---
             if (pollarWallet?.custody === 'external') {
               onProgress('sending');
-              const { hash } = await directBlendWithdraw({
+              await directBlendWithdraw({
                 address: walletAddress,
                 amount: String(amount),
                 decimals: token.decimals,
                 withdrawAll,
               });
-              console.info('[withdraw] external blend withdraw submitted', { hash });
               void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
               trackUserAction('withdraw_submitted', {
                 amount,
@@ -195,25 +194,23 @@ export function DepositPanel() {
             // Salto 1: Blend → custodial (mismo directBlendWithdraw que externa,
             // pero acá los fondos quedan en la wallet interna del usuario).
             onProgress('preparing');
-            const wd = await directBlendWithdraw({
+            await directBlendWithdraw({
               address: walletAddress,
               amount: amountStr,
               decimals: token.decimals,
               withdrawAll,
             });
-            console.info('[withdraw] social hop1 directBlendWithdraw', { hash: wd.hash });
 
             // Salto 2: custodial → wallet externa elegida. USDC transfer SOROBAN
             // (no `sendPayment` clásico): esa vía la patrocina Pollar, así que
             // funciona con 0 XLM. El destino debe tener trustline al USDC.
             onProgress('sending');
-            const pay = await directUsdcTransfer({
+            await directUsdcTransfer({
               from: walletAddress,
               to: wallet.address,
               amount: amountStr,
               decimals: token.decimals,
             });
-            console.info('[withdraw] social hop2 directUsdcTransfer', { hash: pay.hash });
 
             void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
             trackUserAction('withdraw_submitted', {

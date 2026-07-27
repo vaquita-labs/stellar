@@ -29,6 +29,6 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - react-dom@19.2.7
   - react@19.2.7
-  - '@pollar/core@0.11.1'
-  - '@pollar/react@0.11.1'
-  - '@pollar/stellar-wallets-kit-adapter@0.11.1'
+  - '@pollar/core@0.11.2'
+  - '@pollar/react@0.11.2'
+  - '@pollar/stellar-wallets-kit-adapter@0.11.2'

@@ -23,26 +23,26 @@ export function ExperienceModal({ open, onOpenChange, experience }: ExperienceMo
     >
       <div className="space-y-6 mb-2">
         {/* Hero — big XP count + current level */}
-        <div className="flex flex-col items-center gap-2 pt-1">
-          <div className="relative flex items-center justify-center">
-            <span className="absolute inset-0 rounded-full bg-primary/30 blur-2xl" aria-hidden />
-            <Image
-              src="/icons/global/star.png"
-              alt={t('rewards.experience.xpAlt', 'experience')}
-              width={72}
-              height={72}
-              className="relative object-contain"
-            />
-          </div>
-          <div className="text-center">
-            <div className="text-4xl font-extrabold text-black leading-none tabular-nums">
+        <div className="flex flex-col items-center gap-1 pt-1">
+          <div className="flex items-center gap-3">
+            <div className="relative flex items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-primary/30 blur-2xl" aria-hidden />
+              <Image
+                src="/icons/global/star.png"
+                alt={t('rewards.experience.xpAlt', 'experience')}
+                width={56}
+                height={56}
+                className="relative object-contain"
+              />
+            </div>
+            <div className="text-5xl font-extrabold text-black leading-none tabular-nums">
               {totalXp.toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
-            {/* Qué es el número + el nivel al que corresponde. El número solo
-                no dice si son XP o niveles (ver StreakModal). */}
-            <div className="mt-1 text-sm font-semibold text-gray-500">
-              {t('rewards.experience.unitLabel', 'XP · Level {{level}}', { level })}
-            </div>
+          </div>
+          {/* Qué es el número + el nivel al que corresponde. El número solo
+              no dice si son XP o niveles (ver StreakModal). */}
+          <div className="text-sm font-semibold text-gray-500">
+            {t('rewards.experience.unitLabel', 'XP · Level {{level}}', { level })}
           </div>
         </div>
 

@@ -4,7 +4,19 @@ import { ListBox, Select } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiBell, FiCalendar, FiChevronDown, FiFilter, FiGift, FiTrendingUp, FiUsers, FiZap } from 'react-icons/fi';
+import {
+  FiArrowDownLeft,
+  FiArrowUpRight,
+  FiBell,
+  FiCalendar,
+  FiChevronDown,
+  FiFilter,
+  FiGift,
+  FiTrendingUp,
+  FiUnlock,
+  FiUsers,
+  FiZap,
+} from 'react-icons/fi';
 import { TfiBrushAlt } from 'react-icons/tfi';
 import {
   AppNotification,
@@ -28,6 +40,17 @@ const TYPE_ICONS: Record<NotificationType, React.ReactNode> = {
   friend: <FiUsers className="h-5 w-5" />,
   system: <FiBell className="h-5 w-5" />,
 };
+
+/** Los movimientos de plata comparten el tipo `deposit`, así que el icono se
+ *  decide por el mensaje: entra (depósito), sale (retiro) o se desbloquea. */
+const MESSAGE_ICONS: Record<string, React.ReactNode> = {
+  depositConfirmed: <FiArrowDownLeft className="h-5 w-5" />,
+  withdrawalCompleted: <FiArrowUpRight className="h-5 w-5" />,
+  depositUnlocked: <FiUnlock className="h-5 w-5" />,
+};
+
+const notificationIcon = (n: AppNotification): React.ReactNode =>
+  MESSAGE_ICONS[n.messageKey] ?? TYPE_ICONS[n.type] ?? <FiBell />;
 
 /** Los movimientos de plata (depósito, retiro, desbloqueo) llevan al historial,
  *  aunque la notificación guardada en la base apunte a otra ruta más vieja. */
@@ -100,7 +123,7 @@ function FilterSelect<T extends string>({
 
 function NotificationItem({ notification, onPress }: { notification: AppNotification; onPress: () => void }) {
   const { t, i18n } = useTranslation();
-  const { type, messageKey, params, createdAt, read } = notification;
+  const { messageKey, params, createdAt, read } = notification;
   const link = notificationLink(notification);
 
   const elapsed = Date.now() - createdAt;
@@ -136,7 +159,7 @@ function NotificationItem({ notification, onPress }: { notification: AppNotifica
         } ${link ? 'cursor-pointer hover:bg-[#FFF7E6]' : 'cursor-default'}`}
       >
         <span className="flex h-9 w-9 items-center justify-center text-black shrink-0">
-          {TYPE_ICONS[type] ?? <FiBell />}
+          {notificationIcon(notification)}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
@@ -169,7 +192,7 @@ function NotificationRowsSkeleton() {
   return (
     <section className="flex flex-col gap-2">
       <span className="h-3 w-24 rounded bg-default-100 animate-pulse" />
-      <ul className="rounded-lg border border-black border-b-2 bg-white overflow-hidden divide-y divide-gray-200">
+      <ul className="rounded-lg bg-white overflow-hidden divide-y divide-gray-200">
         {Array.from({ length: 5 }).map((_, i) => (
           <li key={i} className="flex items-start gap-3 px-4 py-3.5">
             <span className="my-1 h-7 w-7 shrink-0 rounded-full bg-default-100 animate-pulse" />
@@ -281,7 +304,7 @@ export function NotificationsCenterPage() {
         {isLoading && !data ? (
           <NotificationRowsSkeleton />
         ) : groups.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-10 text-center">
+          <div className="flex flex-col items-center gap-2 rounded-lg bg-white px-4 py-10 text-center">
             <FiBell className="h-7 w-7 text-gray-400" />
             <p className="text-sm font-semibold text-black">{t('notificationsCenter.empty', 'No notifications here yet')}</p>
             <p className="text-xs text-gray-600">
@@ -292,7 +315,7 @@ export function NotificationsCenterPage() {
           groups.map(({ day, label, items }) => (
             <section key={day} className="flex flex-col gap-2">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1">{label}</h2>
-              <ul className="rounded-lg border border-black border-b-2 bg-white overflow-hidden divide-y divide-gray-200">
+              <ul className="rounded-lg bg-white overflow-hidden divide-y divide-gray-200">
                 {items.map((n) => (
                   <NotificationItem key={n.id} notification={n} onPress={() => onNotificationPress(n)} />
                 ))}

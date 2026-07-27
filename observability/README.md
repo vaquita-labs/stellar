@@ -57,11 +57,19 @@ usage/billing page):
 
 | Resource | Limit | Notes |
 |----------|-------|-------|
-| Active metric series | ~10k | product gauges are ~9 flat series; watch API HTTP label growth |
+| Active metric series | ~10k | ~5.4k before trim; cAdvisor `container_fs_*`/`container_io_*` were the bulk. See cardinality note below. |
 | Logs ingested | 50 GB / mo | after the log hygiene gate (037) |
 | Retention | 14 days | accepted for the MVP public dashboard |
 | Users | 3 | — |
 | Synthetic Monitoring checks | see "Synthetic Monitoring" section | 2 checks × 1 probe × 60s |
+
+**Cardinality control:** the Alloy configs route the cAdvisor scrape through a
+`prometheus.relabel` keep-allowlist (CPU, memory, network, liveness only) to
+drop the high-cardinality `container_fs_*` / `container_io_*` series, and use a
+60s `scrape_interval` to halve sample volume. `OBSERVABILITY_METRICS_REFRESH_MS`
+does NOT affect Grafana quota — it only governs how often the app recomputes the
+product gauges from the Supabase DB (freshness + DB load), not series count.
+Check active series on Cost Management → Cardinality.
 
 ## API metrics surface (implemented — issue 035, 067)
 

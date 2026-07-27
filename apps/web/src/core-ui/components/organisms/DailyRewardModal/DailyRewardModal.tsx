@@ -114,11 +114,11 @@ export function DailyRewardModal({
   // y racha; la pantalla inicial se avanza manteniendo presionado el cofre.
   const footer =
     step === 'reward' ? (
-      <PressableButton variant="primary" size="cta" onClick={() => setStep('streak')}>
+      <PressableButton variant="primary" size="cta" className="!py-3.5" onClick={() => setStep('streak')}>
         {t('rewards.daily.nextButton', 'Next')}
       </PressableButton>
     ) : step === 'streak' ? (
-      <PressableButton variant="primary" size="cta" onClick={onOpenChange}>
+      <PressableButton variant="primary" size="cta" className="!py-3.5" onClick={onOpenChange}>
         {t('rewards.daily.doneButton', 'Done')}
       </PressableButton>
     ) : undefined;

@@ -221,6 +221,7 @@ router.post(
     return sendSuccess(res, {
       achievementKey: achievement.key,
       coinReward: achievement.coin_reward,
+      xpReward: achievement.xp_reward,
       claim: toClaimPayload(claim, contractSymbol),
     });
   }),
@@ -560,6 +561,7 @@ router.post(
         return sendSuccess(res, {
           achievementKey: badgeType,
           coinReward: 0,
+          xpReward: 0,
           claimedAt: alreadyFinalized.claimedAt.toISOString(),
           transactionHash: txHash,
         });
@@ -590,6 +592,7 @@ router.post(
         return sendSuccess(res, {
           achievementKey: badgeType,
           coinReward: 0,
+          xpReward: 0,
           claimedAt: alreadyFinalized?.claimedAt.toISOString() ?? new Date().toISOString(),
           transactionHash: txHash,
         });
@@ -609,6 +612,7 @@ router.post(
     return sendSuccess(res, {
       achievementKey: badgeType,
       coinReward: result.coinReward,
+      xpReward: result.xpReward,
       claimedAt: result.claimedAt,
       transactionHash: txHash,
     });

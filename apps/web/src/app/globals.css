@@ -120,3 +120,21 @@ body {
     width: 0;
     height: 0;
 }
+
+/* Confeti de emojis del corazón flotante (MapLikeFab): brotan desde el centro
+   del botón, suben con deriva/rotación propias (vars por partícula) y se
+   desvanecen. translate(-50%) centra cada emoji sobre el punto de origen. */
+@keyframes emoji-burst {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.4);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -60%) scale(var(--scale, 1));
+    }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--drift, 0px)), -160px) scale(calc(var(--scale, 1) * 0.85)) rotate(var(--spin, 0deg));
+    }
+}

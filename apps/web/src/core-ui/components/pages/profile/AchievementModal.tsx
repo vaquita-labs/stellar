@@ -80,8 +80,16 @@ function VaquitaDots() {
 /* Modal                                                               */
 /* ------------------------------------------------------------------ */
 
-export function AchievementModal({ achievement, unlocked = false, open, onOpenChange }: AchievementModalProps) {
+export function AchievementModal({ achievement: achievementProp, unlocked = false, open, onOpenChange }: AchievementModalProps) {
   const { t } = useTranslation();
+  // El caller pone `achievement` en null al cerrar (mismo render que open=false).
+  // Sin retenerlo, el `if (!achievement) return null` de abajo desmonta el
+  // Modal.Backdrop en ese mismo render y la animación de salida (data-[exiting])
+  // nunca corre → el sheet desaparece de golpe. Retenemos la última achievement
+  // mostrada para que el sheet siga montado mientras se desliza hacia abajo.
+  const lastAchievementRef = useRef<AchievementDetail | null>(achievementProp);
+  if (achievementProp) lastAchievementRef.current = achievementProp;
+  const achievement = achievementProp ?? lastAchievementRef.current;
   const { isClaimed } = useClaimedAchievements();
   const { isMinted, getMintTxHash } = useMintedBadges();
   const mintBadgeMutation = useMintBadge();
@@ -115,9 +123,10 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
     setCanNativeShare(typeof navigator !== 'undefined' && typeof navigator.share === 'function');
   }, []);
   const [mintTxHash, setMintTxHash] = useState<string | null>(null);
-  // Real coin reward returned by the mint flow's off-chain claim step; drives
-  // the "You earned N coins!" reveal shown after a successful mint.
+  // Real coin/XP rewards returned by the mint flow's off-chain claim step; they
+  // drive the "You earned N coins!" reveal shown after a successful mint.
   const [coinReward, setCoinReward] = useState(0);
+  const [xpReward, setXpReward] = useState(0);
 
   // Reset to the detail phase every time the modal opens so a previous
   // claim-flow doesn't leak into the next achievement view.
@@ -127,6 +136,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
       setShareMenuOpen(false);
       setMintTxHash(null);
       setCoinReward(0);
+      setXpReward(0);
       mintBadgeMutation.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,9 +151,10 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
     if (!achievement || mintBadgeMutation.isPending) return;
     setPhase('minting');
     mintBadgeMutation.mutate(achievement.id, {
-      onSuccess: ({ hash, coinReward }) => {
+      onSuccess: ({ hash, coinReward, xpReward }) => {
         setMintTxHash(hash);
         setCoinReward(coinReward);
+        setXpReward(xpReward);
         setPhase('reward');
       },
       onError: (err) => {
@@ -408,6 +419,75 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   ];
 
   /* ------------------------------------------------------------------ */
+  /* Shared share-preview card + bottom Share button                     */
+  /* ------------------------------------------------------------------ */
+
+  // The white social-card preview — a faithful 1:1 render of the OG image at
+  // `/share/achievement/[id]` (white surface, black border, "Achievement
+  // unlocked" kicker, "earned by @user" byline, Vaquita lockup). Shown both on
+  // the claimed-badge detail view and as the post-mint confirmation screen.
+  const renderShareCard = () => (
+    <motion.div
+      initial={{ scale: 0.96, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+      className="relative w-full max-w-sm mx-auto rounded-3xl bg-white border border-black border-b-2 shadow-lg"
+    >
+      <div className="flex flex-col items-center text-center px-6 pt-7 pb-6 gap-3">
+        <div className="relative flex h-40 w-40 items-center justify-center">
+          <span
+            aria-hidden
+            className="absolute inset-4 rounded-full blur-2xl opacity-50"
+            style={{
+              background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
+            }}
+          />
+          <Image src={achievement.icon} alt={title} fill sizes="160px" className="relative object-contain drop-shadow-md" />
+        </div>
+
+        {achievement.date && (
+          <span className="inline-flex items-center text-[11px] font-bold uppercase tracking-wider bg-primary/30 text-[#7A3E00] rounded-full px-3 py-1">
+            {formatDate(achievement.date)}
+          </span>
+        )}
+
+        <p className="text-[11px] font-extrabold uppercase tracking-wider text-primary">
+          {t('achievements.share.unlocked', 'Achievement unlocked')}
+        </p>
+        <h2 className="text-2xl font-extrabold text-black leading-tight">{title}</h2>
+        {username && (
+          <p className="text-sm font-semibold text-gray-700">
+            {t('achievements.share.earnedBy', 'earned by @{{username}}', { username })}
+          </p>
+        )}
+        <p className="text-sm text-gray-600 leading-snug max-w-[18rem]">{description}</p>
+
+        <div className="mt-3 flex items-center gap-2 border-t border-black/10 pt-4 w-full justify-center">
+          <Image src="/vaquita/vaquita_isotipo.svg" alt="" width={40} height={40} className="object-contain" />
+          <span className="text-base font-extrabold tracking-tight text-black">Vaquita</span>
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  // Full-width Share button footer — opens the explicit share-targets sheet.
+  // Replaces the top-right share icon so the primary action reads like the
+  // Done/Continue CTAs elsewhere in the flow.
+  const renderShareFooter = () => (
+    <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
+      <button
+        type="button"
+        onClick={() => setShareMenuOpen(true)}
+        disabled={sharing}
+        className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
+      >
+        <FiShare2 className="h-4 w-4" />
+        {t('achievements.share.button', 'Share')}
+      </button>
+    </div>
+  );
+
+  /* ------------------------------------------------------------------ */
   /* Phase: reward reveal                                                */
   /* ------------------------------------------------------------------ */
   const renderReward = () => (
@@ -440,6 +520,16 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
         >
           {t('achievements.reward.title', 'You earned {{count}} coins!', { count: coinReward })}
         </motion.h2>
+        {xpReward > 0 && (
+          <motion.span
+            initial={{ y: 12, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.14 }}
+            className="inline-flex items-center rounded-full bg-[#E8F5D6] border border-[#58CC02] px-4 py-1 text-sm font-bold text-[#3F9102]"
+          >
+            {t('achievements.reward.xp', '+{{count}} XP', { count: xpReward })}
+          </motion.span>
+        )}
         <motion.p
           initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -484,7 +574,7 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
   );
 
   /* ------------------------------------------------------------------ */
-  /* Phase: minted (on-chain confirmed)                                 */
+  /* Phase: minted (on-chain confirmed) — shows the shareable badge card */
   /* ------------------------------------------------------------------ */
   const renderMinted = () => {
     return (
@@ -495,55 +585,15 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
         exit={{ opacity: 0 }}
         className="flex-1 flex flex-col"
       >
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6">
-          <motion.div
-            initial={{ scale: 0.4, rotate: -12, opacity: 0 }}
-            animate={{ scale: 1, rotate: 0, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 220, damping: 14 }}
-            className="relative flex h-40 w-40 sm:h-48 sm:w-48 items-center justify-center"
-          >
-            <span
-              aria-hidden
-              className="absolute inset-6 rounded-full blur-2xl opacity-60"
-              style={{
-                background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
-              }}
-            />
-            <Image
-              src={achievement.icon}
-              alt={title}
-              fill
-              sizes="(min-width: 640px) 192px, 160px"
-              className="relative object-contain drop-shadow-2xl"
-            />
-          </motion.div>
-          <motion.h2
-            initial={{ y: 12, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="text-2xl sm:text-3xl font-extrabold text-black text-center"
-          >
-            {t('achievements.minted.title', 'Badge minted on-chain!')}
-          </motion.h2>
-          {mintTxHash && (
-            <motion.div
-              initial={{ y: 12, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.18 }}
-            >
-              {txHashRow(mintTxHash)}
-            </motion.div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-5 py-4 overflow-y-auto">
+          {renderShareCard()}
+          {/* On-chain tx of the mint we just made — surfaced only in crypto
+              mode, mirroring the already-minted detail view. */}
+          {cryptoMode && mintTxHash && (
+            <div className="w-full max-w-sm mx-auto">{txHashRow(mintTxHash)}</div>
           )}
         </div>
-        <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-          >
-            {t('common.done')}
-          </button>
-        </div>
+        {renderShareFooter()}
       </motion.div>
     );
   };
@@ -567,70 +617,21 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="flex-1 flex flex-col items-center justify-center gap-4 px-5 py-4 overflow-y-auto"
+          className="flex-1 flex flex-col"
         >
-          {/* Share preview — kept identical to the shared card so what the user
-              sees is exactly what gets posted. */}
-          <motion.div
-            initial={{ scale: 0.96, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 220, damping: 20 }}
-            className="relative w-full max-w-sm mx-auto rounded-3xl bg-white border border-black border-b-2 shadow-lg"
-          >
-            <div className="flex flex-col items-center text-center px-6 pt-7 pb-6 gap-3">
-              <div className="relative flex h-40 w-40 items-center justify-center">
-                <span
-                  aria-hidden
-                  className="absolute inset-4 rounded-full blur-2xl opacity-50"
-                  style={{
-                    background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
-                  }}
-                />
-                <Image
-                  src={achievement.icon}
-                  alt={title}
-                  fill
-                  sizes="160px"
-                  className="relative object-contain drop-shadow-md"
-                />
-              </div>
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-5 py-4 overflow-y-auto">
+            {/* Share preview — kept identical to the shared card so what the user
+                sees is exactly what gets posted. */}
+            {renderShareCard()}
 
-              {achievement.date && (
-                <span className="inline-flex items-center text-[11px] font-bold uppercase tracking-wider bg-primary/30 text-[#7A3E00] rounded-full px-3 py-1">
-                  {formatDate(achievement.date)}
-                </span>
-              )}
-
-              <p className="text-[11px] font-extrabold uppercase tracking-wider text-primary">
-                {t('achievements.share.unlocked', 'Achievement unlocked')}
-              </p>
-              <h2 className="text-2xl font-extrabold text-black leading-tight">{title}</h2>
-              {username && (
-                <p className="text-sm font-semibold text-gray-700">
-                  {t('achievements.share.earnedBy', 'earned by @{{username}}', { username })}
-                </p>
-              )}
-              <p className="text-sm text-gray-600 leading-snug max-w-[18rem]">{description}</p>
-
-              <div className="mt-3 flex items-center gap-2 border-t border-black/10 pt-4 w-full justify-center">
-                <Image
-                  src="/vaquita/vaquita_isotipo.svg"
-                  alt=""
-                  width={40}
-                  height={40}
-                  className="object-contain"
-                />
-                <span className="text-base font-extrabold tracking-tight text-black">Vaquita</span>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Crypto mode: on-chain tx for an already-minted badge. It is NOT
-              part of the shared image, so it sits below the white card as extra
-              info. Tapping the hash opens the transaction on stellar.expert. */}
-          {showStoredTx && storedTxHash && (
-            <div className="w-full max-w-sm mx-auto">{txHashRow(storedTxHash)}</div>
-          )}
+            {/* Crypto mode: on-chain tx for an already-minted badge. It is NOT
+                part of the shared image, so it sits below the white card as extra
+                info. Tapping the hash opens the transaction on stellar.expert. */}
+            {showStoredTx && storedTxHash && (
+              <div className="w-full max-w-sm mx-auto">{txHashRow(storedTxHash)}</div>
+            )}
+          </div>
+          {renderShareFooter()}
         </motion.div>
       );
     }
@@ -717,11 +718,6 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
     );
   };
 
-  // Top bar layout: X on the left, drag handle in the middle, share button on
-  // the right (Duolingo-style) — but only when the user has actually claimed
-  // this achievement and hasn't entered the minting flow.
-  const showHeaderShare = phase === 'detail' && claimed;
-
   return (
     <Modal.Backdrop
       isOpen={open}
@@ -751,16 +747,9 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
           {/* El slide de entrada/salida lo hace el Modal.Container (SHEET_*);
               framer-motion acá no sirve: su `exit` nunca corre sin AnimatePresence. */}
           <div className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
+            {/* La acción (moneda/compartir) va a la izquierda; la X de cerrar
+                SIEMPRE a la derecha (convención de toda la app). */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
-              <button
-                type="button"
-                onClick={() => onOpenChange(false)}
-                aria-label={t('common.close')}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition"
-              >
-                <FiX className="h-5 w-5" />
-              </button>
-              <span className={`h-1.5 w-12 rounded-full bg-black/15 ${isMobile ? '' : 'invisible'}`} aria-hidden />
               {phase === 'reward' || phase === 'minting' ? (
                 // Duolingo-style coin balance — only meaningful on the reward
                 // reveal (and the loading step into it), so we mount it there
@@ -778,19 +767,17 @@ export function AchievementModal({ achievement, unlocked = false, open, onOpenCh
                     {Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
                 </motion.div>
-              ) : showHeaderShare ? (
-                <button
-                  type="button"
-                  onClick={() => setShareMenuOpen(true)}
-                  disabled={sharing}
-                  aria-label={t('achievements.modal.shareAchievement', 'Share achievement')}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-black border-b-2 text-black hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-wait disabled:hover:translate-y-0"
-                >
-                  <FiShare2 className="h-4 w-4" />
-                </button>
               ) : (
-                <span className="w-10" />
+                <span className="w-8" />
               )}
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                aria-label={t('common.close')}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-black hover:-translate-y-0.5 transition"
+              >
+                <FiX className="h-4 w-4" />
+              </button>
             </div>
 
             <AnimatePresence mode="wait" initial={false}>

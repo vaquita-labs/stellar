@@ -73,6 +73,7 @@ const toAchievementDoc = (a: PrismaAchievement): AchievementDocument => ({
   description: a.description,
   tier: a.tier,
   coin_reward: a.coinReward,
+  xp_reward: a.xpReward,
   code: a.code,
   hidden: a.hidden,
   refresh_policy: a.refreshPolicy as 'auto' | 'manual',
@@ -873,6 +874,7 @@ export interface AchievementWriteFields {
   description: string;
   tier: string;
   coin_reward: number;
+  xp_reward: number;
   unlock_type: BadgeUnlockType;
   rule: BadgeRule | null;
   icon: string | null;
@@ -1007,10 +1009,10 @@ export const claimAchievement = async (profileId: number, key: Achievement) => {
     // deployments, so every claim failed silently (no claimed_at, no coins) and
     // the mint/reconcile flows could never finalize. Owning the logic here
     // removes that hidden DB dependency — it works on any DB with the schema.
-    const { achievementId, coinReward, claimedAt } = await prisma.$transaction(async (tx) => {
+    const { achievementId, coinReward, xpReward, claimedAt } = await prisma.$transaction(async (tx) => {
       const achievement = await tx.achievement.findFirst({
         where: { key },
-        select: { id: true, coinReward: true },
+        select: { id: true, coinReward: true, xpReward: true },
       });
       if (!achievement) {
         throw new Error(`Unknown achievement key: ${key}`);
@@ -1033,7 +1035,26 @@ export const claimAchievement = async (profileId: number, key: Achievement) => {
         });
       }
 
-      return { achievementId: achievement.id, coinReward: achievement.coinReward, claimedAt: now };
+      // Badge XP is ledgered like the coins: the amount configured at claim time
+      // is frozen in its own row, so later admin edits never rewrite history.
+      // getCheckinExperience / getExperienceByProfile sum every `experience`
+      // reward row regardless of reason, so this feeds the XP total as-is.
+      if (achievement.xpReward > 0) {
+        const experience = await tx.reward.findFirst({ where: { key: Reward.EXPERIENCE }, select: { id: true } });
+        if (!experience) {
+          throw new Error('experience reward row is missing from `rewards`.');
+        }
+        await tx.profileReward.create({
+          data: { profileId, rewardId: experience.id, reason: 'achievement', amount: achievement.xpReward },
+        });
+      }
+
+      return {
+        achievementId: achievement.id,
+        coinReward: achievement.coinReward,
+        xpReward: achievement.xpReward,
+        claimedAt: now,
+      };
     });
 
     // Fire-and-forget feed notification — both the claim and redeem endpoints
@@ -1063,6 +1084,7 @@ export const claimAchievement = async (profileId: number, key: Achievement) => {
       success: true as const,
       achievementId: Number(achievementId),
       coinReward,
+      xpReward,
       claimedAt: claimedAt.toISOString(),
     };
   } catch (error) {

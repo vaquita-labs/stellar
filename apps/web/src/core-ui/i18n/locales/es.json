@@ -106,7 +106,8 @@
       "subtitle": "{{title}} ya está en tu sala de trofeos.",
       "title": "¡Ganaste {{count}} monedas!",
       "title_one": "¡Ganaste {{count}} moneda!",
-      "title_other": "¡Ganaste {{count}} monedas!"
+      "title_other": "¡Ganaste {{count}} monedas!",
+      "xp": "+{{count}} XP"
     },
     "share": {
       "copyLink": "Copiar enlace",
@@ -114,6 +115,7 @@
       "downloadImage": "Descargar imagen",
       "earnedBy": "logrado por @{{username}}",
       "imageNotReady": "La imagen aún no está lista, intenta de nuevo",
+      "button": "Compartir",
       "menuTitle": "Compartir insignia",
       "shareImage": "Compartir imagen…",
       "fallbackTitle": "Logro · Vaquita",
@@ -260,23 +262,28 @@
   "deposit": {
     "blend": {
       "accountLabel": "Cuenta Vaquita",
+      "apyLabel": "APY estimado",
       "confirm": {
         "title": "Confirmar depósito"
       },
-      "cta": "Depositar en Blend",
+      "cta": "Depositar en tus ahorros",
       "destination": "Blend",
-      "mainnetOnly": "Los depósitos directos a Blend solo están disponibles en la mainnet de Stellar.",
-      "notTracked": "Tu USDC va directo a Blend y empieza a generar rendimiento al instante. Este depósito no cuenta como un bloqueo de Vaquita.",
+      "mainnetOnly": "Los depósitos directos solo están disponibles en la mainnet de Stellar.",
+      "notTracked": "Tu USDC empieza a generar rendimiento al instante, sin período de bloqueo — retiralo cuando quieras.",
       "processing": "Procesando depósito...",
+      "processingStep": "Depositando en tus ahorros",
+      "unavailable": "Los depósitos directos aún no están disponibles en esta red.",
+      "whatIsTitle": "¿Qué es Blend?",
+      "whatIs": "Blend es un protocolo de préstamos auditado en Stellar. Tu USDC se aporta a su pool para generar rendimiento, y podés retirarlo cuando quieras.",
       "success": {
-        "subtitle": "Tu USDC ya está generando rendimiento en Blend.",
+        "subtitle": "Tu USDC ya está generando rendimiento en tus ahorros.",
         "title": "¡Depósito enviado!"
       }
     },
     "bank": {
       "details": "Detalles",
       "estimatedEarningsTotal": "Ganancias estimadas totales",
-      "estimatesDisclaimer": "Son estimaciones y se actualizan con el tiempo — las recompensas finales se confirman al retirar.",
+      "estimatesDisclaimer": "Son estimaciones y pueden cambiar con el tiempo. Las recompensas finales se confirman al retirar.",
       "hide": "Ocultar",
       "howItWorks1": "Tu depósito genera rendimiento de varias fuentes.",
       "howItWorks2": "Las recompensas estimadas se calculan con el APY actual.",
@@ -301,6 +308,7 @@
       "sendTransaction": "Confirma para enviar la transacción.",
       "timesUp": "¡Se acabó el tiempo!",
       "title": "Confirmar retiro",
+      "youWillEarn": "Vas a ganar",
       "youWillLose": "Vas a perder",
       "youWillReceive": "Vas a recibir"
     },
@@ -683,6 +691,14 @@
   "nav": {
     "primaryAriaLabel": "Principal"
   },
+  "concierge": {
+    "title": "Concierge",
+    "buttonAria": "Concierge",
+    "chat": "Chatea con nosotros",
+    "email": "Email",
+    "telegramTitle": "¿Querés estar al día?",
+    "telegramBody": "Unite a nuestro canal oficial de Telegram"
+  },
   "notificationsCenter": {
     "bellAria": "Notificaciones",
     "empty": "Aún no hay notificaciones",
@@ -752,6 +768,20 @@
     "demo": {
       "title": "Aprende a ahorrar con Vaquita",
       "titleMobile": "Aprende a ahorrar con Vaquita en el móvil"
+    },
+    "install": {
+      "title": "Aprovechá la experiencia completa",
+      "finalStep": "¡Este es el último paso!",
+      "body": "Agregá Vaquita a tu pantalla de inicio para desbloquear tu billetera y empezar a usarla.",
+      "installButton": "Agregar a inicio",
+      "iosStep1Prefix": "Tocá el",
+      "iosShare": "ícono de Compartir",
+      "iosStep1Suffix": "en tu navegador",
+      "iosStep2Prefix": "Y después tocá",
+      "iosStep2Action": "“Agregar a inicio”",
+      "installedBody": "¡Vaquita está instalada! Abrila desde tu pantalla de inicio para desbloquear tu billetera.",
+      "installedHint": "Ya podés cerrar esta pestaña — de ahora en más abrí Vaquita desde el ícono de la app.",
+      "pullHint": "¿Ya la instalaste? Tirá hacia abajo para recargar"
     },
     "intro": {
       "goToSlide": "Ir a la diapositiva {{number}}",
@@ -1933,6 +1963,28 @@
         "subtitle": "${{amount}} movidos de {{from}} a {{to}}."
       }
     },
-    "moreInfo": "Más información"
+    "moreInfo": "Más información",
+    "withdraw": {
+      "step1": "Sacando tu dinero",
+      "step2": "Devolviéndolo a tus ahorros",
+      "empty": "No hay posiciones para retirar en este plazo.",
+      "note": "Tus fondos (más intereses) vuelven a tus ahorros, donde siguen flexibles y generando rendimiento.",
+      "successTitle": "¡De vuelta en tus ahorros!",
+      "successSubtitle": "Tus fondos vuelven a estar flexibles y siguen generando rendimiento en tus ahorros.",
+      "cta": "Retirar a tus ahorros"
+    }
+  },
+  "txError": {
+    "generic": "No pudimos completar la transacción. Probá de nuevo en un momento.",
+    "rejected": "Cancelaste la firma. No se hizo ningún cambio.",
+    "trustline": "Tu wallet necesita habilitar USDC primero. Agregá la trustline de USDC y volvé a intentar.",
+    "balance": "No tenés saldo suficiente para cubrir esta transacción y su comisión de red.",
+    "network": "No pudimos conectar con la red. Revisá tu conexión y volvé a intentar.",
+    "timeout": "La transacción tardó demasiado en confirmarse. Probá de nuevo.",
+    "contractGeneric": "La red rechazó la transacción. Probá de nuevo.",
+    "contract": {
+      "10": "No tenés suficiente USDC en tu wallet para cubrir este monto. Agregá fondos y volvé a intentar.",
+      "13": "Tu wallet necesita habilitar USDC primero. Agregá la trustline de USDC y volvé a intentar."
+    }
   }
 }

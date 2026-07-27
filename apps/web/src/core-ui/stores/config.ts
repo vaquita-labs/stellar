@@ -24,7 +24,6 @@ const resetObj = {
 export const useConfigStore = create<ConfigStore>()((set, get) => ({
   ...resetObj,
   reset: (hard?: boolean) => {
-    console.info('reset', { hard });
     if (hard) {
       return set((state) => ({ ...state, ...resetObj }));
     }
@@ -38,7 +37,6 @@ export const useConfigStore = create<ConfigStore>()((set, get) => ({
   setToken: (token) => {
     const { token: currentToken, lockPeriod: currentLockPeriod } = get();
     const changed = JSON.stringify(token) !== JSON.stringify(currentToken);
-    console.info('setToken', { token, currentToken, changed });
     if (changed) {
       let lockPeriod = currentLockPeriod;
       if (!token?.lockPeriods?.includes(lockPeriod)) {
@@ -50,7 +48,6 @@ export const useConfigStore = create<ConfigStore>()((set, get) => ({
   setNetwork: (network) => {
     const { network: currentNetwork } = get();
     const changed = JSON.stringify(network) !== JSON.stringify(currentNetwork);
-    console.info('setNetwork', { network, currentNetwork, changed });
     if (changed) {
       const token = network?.tokens?.[0] || null;
       const lockPeriod = token?.lockPeriods?.[0] ?? 0;

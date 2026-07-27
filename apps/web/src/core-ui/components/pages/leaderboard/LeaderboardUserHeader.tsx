@@ -23,6 +23,13 @@ import { LeaderboardBadgeModal } from './LeaderboardBadgeModal';
 import { FollowButton, getLeaderboardUsername } from './LeaderboardCard';
 
 
+/** Desvanecido en los extremos de la tira de logros: opaco desde 12px (donde
+ *  descansa la primera vaquita) hasta 12px del borde derecho, transparente en
+ *  las orillas. Suaviza el corte de las vaquitas parciales y sugiere que hay
+ *  más para scrollear. */
+const EDGE_FADE =
+  'linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)';
+
 /** Slim stat chip mirroring the leaderboard card's StatBox. */
 function StatChip({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
   return (
@@ -124,9 +131,9 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
   }, [selectedBadge, achievementsData?.achievements]);
 
   return (
-    <div className="w-full shrink-0 flex flex-col gap-2 pb-2">
+    <div className="w-full shrink-0 flex flex-col gap-1.5 pb-2 bg-primary">
       {/* Banner row — back · avatar · identity · follow ----------------- */}
-      <header className="bg-primary px-3 sm:px-6 py-3 rounded-b-3xl border-b-2 border-black/10">
+      <header className="px-3 sm:px-6 py-2.5">
         <div className="flex items-center gap-2.5">
           <button
             type="button"
@@ -160,6 +167,48 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
       </header>
 
       <div className="w-full max-w-xl mx-auto px-3 sm:px-4 flex flex-col gap-2">
+        {/* Achievements strip -------------------------------------------- */}
+        {/* Sin título "ACHIEVEMENTS": las medallas se explican solas. El conteo
+            queda como chip flotante en la esquina para no gastar una fila
+            entera y que las vaquitas suban. */}
+        <div className="relative rounded-2xl bg-white shadow-sm py-2">
+          <span className="absolute right-2.5 top-1.5 z-10 rounded-full bg-white/85 px-1.5 text-[11px] font-extrabold text-black tabular-nums shadow-sm">
+            {/* While badges load, show the count the list already knows so the
+                number doesn't flash 0 → N. */}
+            {achievementsData ? unlockedBadges.length : (listRow?.badges ?? 0)}
+          </span>
+          {/* Fixed h-14 row in every state (loading / badges / empty) so the
+              strip never resizes and the map below doesn't jump. La fila sangra
+              hasta los bordes de la card (sin padding lateral) y las vaquitas de
+              los extremos se difuminan con una máscara en vez de cortarse en
+              seco — ese fade a la derecha también avisa que hay más para
+              scrollear (la barra está oculta). snap-mandatory deja siempre una
+              vaquita entera al soltar. */}
+          {achievementsLoading ? (
+            <div className="flex h-14 items-center justify-center px-3">
+              <FiLoader className="h-4 w-4 animate-spin text-gray-400" aria-hidden />
+            </div>
+          ) : unlockedBadges.length > 0 ? (
+            <div
+              className="no-scrollbar flex h-14 items-center gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory px-3 scroll-px-3"
+              style={{
+                maskImage: EDGE_FADE,
+                WebkitMaskImage: EDGE_FADE,
+              }}
+            >
+              {unlockedBadges.map((badge) => (
+                <div key={badge.id} className="w-12 shrink-0 snap-start">
+                  <BadgeTile badge={badge} size="sm" onPress={() => setSelectedBadge(badge)} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="flex h-14 items-center text-xs font-medium text-gray-500 px-3">
+              {t('leaderboard.user.noAchievements', 'No achievements unlocked yet')}
+            </p>
+          )}
+        </div>
+
         {/* Stats row ---------------------------------------------------- */}
         <div className="flex gap-2">
           <StatChip
@@ -188,43 +237,6 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
             value={`${streak}`}
             label={t('leaderboard.card.dayStreak', 'Day streak')}
           />
-        </div>
-
-        {/* Achievements strip -------------------------------------------- */}
-        <div className="rounded-2xl bg-white border border-black border-b-2 px-3 py-2">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-600">
-              {t('profilePages.profile.achievements', 'Achievements')}
-            </h2>
-            <span className="text-xs font-extrabold text-black tabular-nums">
-              {/* While badges load, show the count the list already knows so the
-                  number doesn't flash 0 → N. */}
-              {achievementsData ? unlockedBadges.length : (listRow?.badges ?? 0)}
-            </span>
-          </div>
-          {/* Fixed h-14 row in every state (loading / badges / empty) so the
-              strip never resizes and the map below doesn't jump. The badges
-              get a 48px lane at the top and the horizontal scrollbar gets its
-              own lane underneath (pb-1 + overflow-y-hidden) — without it the
-              bar paints over the medals and, by eating 4px of the row, spawns
-              a phantom vertical scrollbar on the right. */}
-          {achievementsLoading ? (
-            <div className="flex h-14 items-center justify-center">
-              <FiLoader className="h-4 w-4 animate-spin text-gray-400" aria-hidden />
-            </div>
-          ) : unlockedBadges.length > 0 ? (
-            <div className="flex h-14 items-start gap-3 overflow-x-auto overflow-y-hidden pb-1 snap-x">
-              {unlockedBadges.map((badge) => (
-                <div key={badge.id} className="w-12 shrink-0 snap-start">
-                  <BadgeTile badge={badge} size="sm" onPress={() => setSelectedBadge(badge)} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="flex h-14 items-center text-xs font-medium text-gray-500">
-              {t('leaderboard.user.noAchievements', 'No achievements unlocked yet')}
-            </p>
-          )}
         </div>
       </div>
 

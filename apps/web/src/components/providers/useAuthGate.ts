@@ -32,7 +32,6 @@ export function useAuthGate() {
   const showAuthGate = hydrated && pollarReady && !isPublicRoute && !isAuthenticated;
   const showLoader = !hydrated || (!pollarReady && !isPublicRoute) || showAuthGate;
 
-  console.log({ hydrated, showLoader, pollarReady, isPublicRoute });
   useEffect(() => {
     try {
       const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STELLAR_ADDRESS_KEY) : null;

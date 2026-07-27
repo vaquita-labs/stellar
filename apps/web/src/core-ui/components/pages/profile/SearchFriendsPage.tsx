@@ -12,7 +12,7 @@ import { MockedSubPageLayout } from './MockedSubPageLayout';
 /** Idle time after the last keystroke before the search actually fires. */
 const DEBOUNCE_MS = 450;
 
-export function SearchFriendsPage() {
+export function SearchFriendsPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -61,7 +61,7 @@ export function SearchFriendsPage() {
   const isPending = hasQuery && (query.trim() !== term || isFetching || data?.query.trim() !== term);
 
   return (
-    <MockedSubPageLayout title={t('social.search.title')} backHref="/profile/friends" showSoonBadge={false}>
+    <MockedSubPageLayout title={t('social.search.title')} backHref="/profile/friends" showSoonBadge={false} onBack={onBack}>
       {/* Search. Submitting (Enter / the keyboard's search key) runs it now;
           otherwise it runs on its own once typing settles. */}
       <form role="search" onSubmit={onSubmit} className="relative">

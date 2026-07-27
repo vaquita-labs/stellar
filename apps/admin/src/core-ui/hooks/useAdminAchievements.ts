@@ -22,6 +22,7 @@ export interface AdminAchievement {
   description: string;
   tier: string;
   coin_reward: number;
+  xp_reward: number;
   unlock_type: BadgeUnlockType;
   rule: BadgeRule | null;
   icon: string | null;
@@ -40,6 +41,7 @@ export interface AchievementPayload {
   description?: string;
   tier?: string;
   coinReward?: number;
+  xpReward?: number;
   unlockType?: BadgeUnlockType;
   rule?: BadgeRule | null;
   icon?: string | null;
