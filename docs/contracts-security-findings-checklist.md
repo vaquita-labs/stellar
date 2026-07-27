@@ -102,7 +102,14 @@ All MEDIUMs are now resolved and none need further rework:
 - `f620e7c9` finalization overflow → S1 ✅ (checked add) + P1 ✅ (cap makes it unreachable).
 - `284b1ad9` badges lock not enforced at execute → S3 ✅.
 
-## Cross-stack follow-up (Phase 2 — NOT done, outside `contracts/`)
+## Cross-stack follow-up (Phase 2 — mostly DONE; verify at runtime)
+
+Status: DB, contract deposit-event nonce, reconciliation decode, nonce endpoint,
+and the web deposit/withdraw wiring are implemented and typecheck-clean (commits
+5cb5d5d, 96b39da, 04e10d6). **Remaining:** (a) runtime-verify `deriveDepositId`
+matches on-chain `compute_deposit_id`/the deposit event on the first testnet
+deposit; (b) deploy config (below). Original plan for reference:
+
 
 The D1 signature change ripples beyond the contract. Before the new contract goes live, update:
 
