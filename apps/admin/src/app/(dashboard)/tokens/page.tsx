@@ -13,7 +13,7 @@ import {
 } from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { Button, Checkbox, Input } from '@vaquita/ui';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 type FormState = {
   name: string;
@@ -81,7 +81,7 @@ const formatLockPeriod = (value: number): string => formatPeriod(value >= 1_000_
 const shortAddress = (address: string): string =>
   address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-6)}` : address;
 
-type OnchainState = { loading: boolean; data: TokenOnchainSnapshot | null };
+type OnchainState = { loading: boolean; data: TokenOnchainSnapshot | null; error: string | null };
 
 export default function Page() {
   const { data: tokens, refetch, isLoading } = useTokens();
@@ -91,23 +91,33 @@ export default function Page() {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  // Per-token on-chain snapshot panel; absent key = panel closed.
+  // Per-token on-chain snapshot, loaded automatically for every token that has
+  // a pool address. Errors render inside the panel (no toast) so a token with a
+  // bad address doesn't spam the page on every load.
   const [onchain, setOnchain] = useState<Record<number, OnchainState>>({});
+  const onchainRequested = useRef<Set<number>>(new Set());
 
-  const toggleOnchain = async (t: Token) => {
-    if (onchain[t.id]) {
-      setOnchain(({ [t.id]: _closed, ...rest }) => rest);
-      return;
-    }
-    setOnchain((s) => ({ ...s, [t.id]: { loading: true, data: null } }));
+  const loadOnchain = useCallback(async (t: Token) => {
+    setOnchain((s) => ({ ...s, [t.id]: { loading: true, data: s[t.id]?.data ?? null, error: null } }));
     try {
       const data = await fetchTokenOnchain(t.id);
-      setOnchain((s) => (s[t.id] ? { ...s, [t.id]: { loading: false, data } } : s));
+      setOnchain((s) => ({ ...s, [t.id]: { loading: false, data, error: null } }));
     } catch (err) {
-      setOnchain(({ [t.id]: _failed, ...rest }) => rest);
-      addDangerToast('On-chain lookup failed', (err as Error)?.message ?? 'Unknown error');
+      setOnchain((s) => ({
+        ...s,
+        [t.id]: { loading: false, data: s[t.id]?.data ?? null, error: (err as Error)?.message ?? 'Lookup failed' },
+      }));
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    for (const t of tokens ?? []) {
+      if (t.vaquitaContractAddress && !onchainRequested.current.has(t.id)) {
+        onchainRequested.current.add(t.id);
+        loadOnchain(t);
+      }
+    }
+  }, [tokens, loadOnchain]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -346,17 +356,6 @@ export default function Page() {
                       </dl>
                     </div>
                     <div className="flex shrink-0 gap-2">
-                      {t.vaquitaContractAddress && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onPress={() => toggleOnchain(t)}
-                          isDisabled={onchain[t.id]?.loading}
-                          isLoading={onchain[t.id]?.loading}
-                        >
-                          {onchain[t.id]?.data ? 'Hide on-chain' : 'On-chain'}
-                        </Button>
-                      )}
                       <Button size="sm" variant="ghost" onPress={() => openEdit(t)} isDisabled={saving}>
                         Edit
                       </Button>
@@ -373,9 +372,7 @@ export default function Page() {
                   </div>
 
                   {/* On-chain snapshot: pool balances + per-address positions. */}
-                  {onchain[t.id]?.data && (
-                    <OnchainPanel snapshot={onchain[t.id].data as TokenOnchainSnapshot} />
-                  )}
+                  {t.vaquitaContractAddress && <OnchainPanel state={onchain[t.id]} onRefresh={() => loadOnchain(t)} />}
                 </li>
               ))}
             </ul>
@@ -387,7 +384,35 @@ export default function Page() {
 }
 
 /** Read-only view of the pool's on-chain money: where it sits and who owns it. */
-function OnchainPanel({ snapshot }: { snapshot: TokenOnchainSnapshot }) {
+function OnchainPanel({ state, onRefresh }: { state: OnchainState | undefined; onRefresh: () => void }) {
+  const snapshot = state?.data;
+  const loading = state?.loading ?? true;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-default-200 bg-default-50/50 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">On-chain pool snapshot</h3>
+        <Button size="sm" variant="ghost" onPress={onRefresh} isDisabled={loading} isLoading={loading}>
+          Refresh
+        </Button>
+      </div>
+
+      {state?.error && (
+        <div className="rounded-lg bg-danger-50 p-2 text-xs text-danger-700">{state.error}</div>
+      )}
+
+      {!snapshot && loading && (
+        <div className="flex justify-center p-4">
+          <Spinner />
+        </div>
+      )}
+
+      {snapshot && <OnchainSnapshotBody snapshot={snapshot} />}
+    </div>
+  );
+}
+
+function OnchainSnapshotBody({ snapshot }: { snapshot: TokenOnchainSnapshot }) {
   const symbol = snapshot.token.symbol;
   const stat = (label: string, value: string) => (
     <div className="flex flex-col rounded-lg bg-default-50 px-2 py-1">
@@ -397,7 +422,7 @@ function OnchainPanel({ snapshot }: { snapshot: TokenOnchainSnapshot }) {
   );
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-default-200 bg-default-50/50 p-3">
+    <>
       <div className="flex flex-wrap items-center gap-2 text-xs text-default-500">
         <span className="rounded bg-default-100 px-1.5">{snapshot.network}</span>
         {snapshot.paused != null && (
@@ -479,6 +504,6 @@ function OnchainPanel({ snapshot }: { snapshot: TokenOnchainSnapshot }) {
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }
