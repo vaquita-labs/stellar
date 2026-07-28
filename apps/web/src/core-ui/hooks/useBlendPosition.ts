@@ -1,9 +1,9 @@
 import { PoolV2 } from '@blend-capital/blend-sdk';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
 import { useConfigStore } from '@/core-ui/stores';
 import { blendConfigForToken } from '@/networks/stellar/blendDirect';
 import { getNetworkPassphrase, getRpcUrl, getStellarNetwork } from '@/networks/stellar/kit';
+import { useLiveTick } from './useLiveTick';
 
 export interface BlendPosition {
   /** Colateral suministrado directo a Blend, en USDC (unidades humanas). */
@@ -69,10 +69,32 @@ export const useBlendPosition = (walletAddress?: string) => {
 const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
 
 /**
- * Igual que `useBlendPosition` pero además devuelve `live`: el saldo de Blend
+ * `useBlendPosition` + los ingredientes para PROYECTAR el saldo en vivo: el
+ * snapshot on-chain (`settled`), cuánto rinde por milisegundo (`ratePerMs`) y
+ * desde cuándo corre esa proyección (`updatedAt`, el momento del fetch).
+ *
+ * No tickea ni re-renderiza: es la versión para quien pinta el número por fuera
+ * de React (ver <LiveBalance>, que escribe el DOM en cada tick sin render). Si
+ * el número tiene que participar del render, usá `useLiveBlendUsdc`.
+ */
+export const useBlendUsdc = (walletAddress?: string) => {
+  const query = useBlendPosition(walletAddress);
+  const settled = query.data?.usdc ?? 0;
+  const apy = query.data?.apy ?? 0;
+  const ratePerMs = (settled * (apy / 100)) / MS_PER_YEAR;
+
+  return { ...query, settled, apy, ratePerMs, updatedAt: query.dataUpdatedAt };
+};
+
+/** Snapshot + lo devengado desde el fetch hasta `now`. */
+export const projectBlendUsdc = (settled: number, ratePerMs: number, updatedAt: number, now: number) =>
+  settled + ratePerMs * (updatedAt ? Math.max(0, now - updatedAt) : 0);
+
+/**
+ * Igual que `useBlendUsdc` pero además devuelve `live`: el saldo de Blend
  * PROYECTADO en vivo = snapshot on-chain + el interés estimado devengado desde el
- * último fetch, avanzando cada 250ms. Al próximo refetch (60s) el snapshot snapea
- * al valor real y la proyección arranca de nuevo desde ahí.
+ * último fetch, avanzando con el tick compartido. Al próximo refetch (60s) el
+ * snapshot snapea al valor real y la proyección arranca de nuevo desde ahí.
  *
  * Por qué existe: el header y el retiro deben mostrar (y mover) EL MISMO número.
  * Antes el header proyectaba y el retiro usaba el snapshot crudo, y a 7 decimales
@@ -81,25 +103,17 @@ const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
  * on-chain (el snapshot está algo viejo). El retiro-todo (sentinel i128::MAX)
  * igual toma el total real al ejecutar, así que mostrar el estimado es seguro.
  *
- * `now` es por-componente (un intervalo propio), así que dos consumidores pueden
- * estar hasta 250ms desfasados; a las tasas reales eso es < 10⁻⁸, por debajo del
- * 7º decimal, así que el número mostrado es el mismo.
+ * El `now` sale de `useLiveTick`, un único timer para toda la app: todos los
+ * consumidores avanzan en el mismo frame, así que no hay dos saldos desfasados
+ * en pantalla. Ojo: esto re-renderiza al componente 4 veces por segundo — no lo
+ * uses en algo que esté montado sobre el mapa (ver la nota en `useLiveTick`).
  */
 export const useLiveBlendUsdc = (walletAddress?: string) => {
-  const query = useBlendPosition(walletAddress);
-  const settled = query.data?.usdc ?? 0;
-  const apy = query.data?.apy ?? 0;
-  const updatedAt = query.dataUpdatedAt;
+  const position = useBlendUsdc(walletAddress);
+  const now = useLiveTick();
 
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(id);
-  }, []);
-
-  const ratePerMs = (settled * (apy / 100)) / MS_PER_YEAR;
-  const elapsed = updatedAt ? Math.max(0, now - updatedAt) : 0;
-  const live = settled + ratePerMs * elapsed;
-
-  return { ...query, live, settled, apy };
+  return {
+    ...position,
+    live: projectBlendUsdc(position.settled, position.ratePerMs, position.updatedAt, now),
+  };
 };

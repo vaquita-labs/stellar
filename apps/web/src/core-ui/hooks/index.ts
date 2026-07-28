@@ -17,6 +17,7 @@ export * from './useLeaderboardData';
 export * from './useWeeklyLeague';
 export * from './useIsAuthenticated';
 export * from './useIsMobile';
+export * from './useLiveTick';
 export * from './useLogout';
 export * from './useNotifications';
 export * from './profile';
