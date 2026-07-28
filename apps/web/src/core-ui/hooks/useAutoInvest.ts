@@ -10,6 +10,11 @@ import { useConfigStore } from '../stores';
 // Umbral mínimo (USDC, unidades humanas): no promptear ni gastar gas por polvo.
 const MIN_IDLE = 1;
 
+// Cada cuánto re-consultamos el balance custodial mientras el usuario está en el
+// home. La plata puede entrar on-chain por fuera de la app (le mandan USDC a su
+// dirección de "Recibir"), y sin poll no nos enteraríamos hasta un reload.
+const IDLE_POLL_MS = 12_000;
+
 /**
  * Detecta USDC ocioso en la wallet CUSTODIAL (social login) y expone la acción
  * para invertirlo en Blend. Ya NO firma en silencio: la firma custodial de Pollar
@@ -46,10 +51,33 @@ export const useIdleFunds = () => {
     : undefined;
   const idle = usdc ? Number(usdc.available) : 0;
 
-  // Traemos el balance al montar (el home no lo pide solo) para detectar lo
-  // ocioso apenas entra el usuario. Espera a que Pollar esté listo.
+  // Detectar la plata ociosa apenas entra, sin depender de un reload. El home no
+  // pide el balance solo, así que: (1) lo traemos al montar, y (2) lo re-pollamos
+  // en intervalo mientras la wallet custodial está lista, porque el fondeo entra
+  // on-chain por fuera de la app (le mandan USDC a su dirección). Guardas: solo
+  // custodial + sesión Pollar restaurada (si no, la firma/DPoP falla); pausa
+  // cuando la pestaña está oculta (no gastar requests en background) y mientras
+  // hay un supply in-flight (no pisar su propio refresh). Al volver a la pestaña
+  // refrescamos enseguida en vez de esperar al próximo tick.
   useEffect(() => {
-    if (ready && isCustodial && walletAddress) void refreshWalletBalance();
+    if (!ready || !isCustodial || !walletAddress) return;
+
+    void refreshWalletBalance();
+
+    const tick = () => {
+      if (inFlight.current || document.visibilityState === 'hidden') return;
+      void refreshWalletBalance();
+    };
+    const id = setInterval(tick, IDLE_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [ready, isCustodial, walletAddress, refreshWalletBalance]);
 
   const invest = useCallback(async () => {
