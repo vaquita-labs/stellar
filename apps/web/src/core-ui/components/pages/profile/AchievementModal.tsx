@@ -593,15 +593,19 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="flex-1 flex flex-col"
+        className="flex-1 min-h-0 flex flex-col"
       >
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-5 py-4 overflow-y-auto">
-          {renderShareCard()}
-          {/* On-chain tx of the mint we just made — surfaced only in crypto
-              mode, mirroring the already-minted detail view. */}
-          {cryptoMode && mintTxHash && (
-            <div className="w-full max-w-sm mx-auto">{txHashRow(mintTxHash)}</div>
-          )}
+        {/* `min-h-0` lets this column shrink below its content so the scroll
+            area actually scrolls instead of pushing the footer past the
+            dialog's fixed height; `min-h-full` inside keeps the card centered
+            when there is room to spare. */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+          <div className="min-h-full flex flex-col items-center justify-center gap-4">
+            {renderShareCard()}
+            {/* On-chain tx of the mint we just made — surfaced only in crypto
+                mode, mirroring the already-minted detail view. */}
+            {cryptoMode && mintTxHash && <div className="w-full max-w-sm mx-auto">{txHashRow(mintTxHash)}</div>}
+          </div>
         </div>
         {renderShareFooter()}
       </motion.div>
@@ -627,19 +631,23 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="flex-1 flex flex-col"
+          className="flex-1 min-h-0 flex flex-col"
         >
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-5 py-4 overflow-y-auto">
-            {/* Share preview — kept identical to the shared card so what the user
-                sees is exactly what gets posted. */}
-            {renderShareCard()}
+          {/* `min-h-0` lets this column shrink below its content so the scroll
+              area actually scrolls instead of pushing the footer past the
+              dialog's fixed height; `min-h-full` inside keeps the card centered
+              when there is room to spare. */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+            <div className="min-h-full flex flex-col items-center justify-center gap-4">
+              {/* Share preview — kept identical to the shared card so what the user
+                  sees is exactly what gets posted. */}
+              {renderShareCard()}
 
-            {/* Crypto mode: on-chain tx for an already-minted badge. It is NOT
-                part of the shared image, so it sits below the white card as extra
-                info. Tapping the hash opens the transaction on stellar.expert. */}
-            {showStoredTx && storedTxHash && (
-              <div className="w-full max-w-sm mx-auto">{txHashRow(storedTxHash)}</div>
-            )}
+              {/* Crypto mode: on-chain tx for an already-minted badge. It is NOT
+                  part of the shared image, so it sits below the white card as extra
+                  info. Tapping the hash opens the transaction on stellar.expert. */}
+              {showStoredTx && storedTxHash && <div className="w-full max-w-sm mx-auto">{txHashRow(storedTxHash)}</div>}
+            </div>
           </div>
           {renderShareFooter()}
         </motion.div>
@@ -751,12 +759,21 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
           className={
             isMobile
               ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh overflow-hidden'
-              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)] overflow-hidden'
+              : // 620px is a floor, not a fixed height: the share-card phases run a
+                // little taller than that, and pinning the height there left them
+                // scrolling a handful of pixels behind a full-length scrollbar. As a
+                // minimum it still keeps the shorter phases (detail, minting, reward)
+                // from resizing the dialog, while `max-h` hands scrolling back to the
+                // body only when the viewport is genuinely too short.
+                'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md min-h-[min(620px,90dvh)] max-h-[90dvh] overflow-hidden'
           }
         >
           {/* El slide de entrada/salida lo hace el Modal.Container (SHEET_*);
               framer-motion acá no sirve: su `exit` nunca corre sin AnimatePresence. */}
-          <div className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
+          {/* Desktop: `h-full` would resolve against an indefinite height now that
+              the dialog is sized by its content, so it stretches as a flex child
+              (`.modal__dialog` is already a flex column) instead. */}
+          <div className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'flex-1 min-h-0'}`}>
             {/* La acción (moneda/compartir) va a la izquierda; la X de cerrar
                 SIEMPRE a la derecha (convención de toda la app). */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
