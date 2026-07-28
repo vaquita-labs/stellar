@@ -1,4 +1,4 @@
-name: Deploy API
+name: Auto Deploy API (dev)
 
 on:
   push:
