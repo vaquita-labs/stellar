@@ -4,7 +4,7 @@ import { Billboard, Text } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
 import { useMapStore, useConfigStore, useSyncMapObjects, isWalkableType } from '../../stores';
@@ -65,6 +65,24 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
   const userWalletAddress = useConfigStore((store) => store.walletAddress);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
 
+  // Chrome limita ~16 contextos WebGL por pestaña: al crear uno de más, mata
+  // el más viejo y ese canvas queda muerto (carita triste). Si el contexto del
+  // mapa se pierde, se remonta el Canvas vía key para crear uno nuevo; al
+  // desmontar se libera el contexto de inmediato con forceContextLoss para no
+  // agotar el cupo navegando entre pantallas.
+  const [canvasKey, setCanvasKey] = useState(0);
+  const glRef = useRef<THREE.WebGLRenderer | null>(null);
+  const unmountedRef = useRef(false);
+
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+      glRef.current?.forceContextLoss();
+      glRef.current = null;
+    };
+  }, []);
+
   // Mapa de otro jugador (vista de leaderboard): la vaquita es solo decorativa.
   // El humor y el modal de estado son datos del ESPECTADOR y no tienen sentido
   // sobre la vaquita de otra persona.
@@ -121,8 +139,12 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
       style={isAvailable ? undefined : { filter: 'grayscale(70%) brightness(100%)', opacity: 0.4 }}
     >
       <Canvas
+        key={canvasKey}
         camera={{ fov: 50 }}
-        shadows
+        // "percentage" = PCFShadowMap: three deprecó PCFSoftShadowMap y ya
+        // cae en PCFShadowMap igual, pero logueando un warning por cada
+        // render del shadow map.
+        shadows="percentage"
         gl={{ antialias: true }}
         // El fill-rate escala con el CUADRADO del dpr: a 2 son 4× los píxeles
         // de 1, y el antialias los multiplica otra vez — es lo más caro de la
@@ -132,12 +154,21 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
         // tiles quedan escalonados.
         dpr={[1, 1.5]}
         onCreated={({ gl }) => {
+          glRef.current = gl;
           gl.shadowMap.enabled = true;
-          gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          gl.shadowMap.type = THREE.PCFShadowMap;
           // El shadow map no se re-renderiza solo cada frame: DayCycleSky lo
           // marca needsUpdate a intervalos (la luz se mueve muy lento).
           gl.shadowMap.autoUpdate = false;
           gl.shadowMap.needsUpdate = true;
+          gl.domElement.addEventListener('webglcontextlost', (event) => {
+            // Sin preventDefault el navegador da el contexto por perdido de
+            // forma definitiva y no permite crear el reemplazo.
+            event.preventDefault();
+            if (!unmountedRef.current) {
+              setCanvasKey((key) => key + 1);
+            }
+          });
         }}
         // h-full (not h-dvh): the canvas must track its container, so screens
         // that stack a header above the map (leaderboard detail) don't scroll.
