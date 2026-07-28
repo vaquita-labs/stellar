@@ -289,7 +289,7 @@ export function PortfolioPanel({
           />
           {totalEarnings > 0 ? (
             <p className="text-sm text-gray-500">
-              {t('portfolio.earning', 'Earned so far')}{' '}
+              {t('portfolio.earning', 'Estimated earnings')}{' '}
               <span className="font-bold text-success tabular-nums">+{formatUsdAdaptive(totalEarnings)}</span>
             </p>
           ) : null}
