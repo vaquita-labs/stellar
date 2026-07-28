@@ -15,17 +15,17 @@ import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 export interface BlendConfig {
   poolId: string;
   usdcId: string;
-  /** Emisor (G-address) del USDC que acepta Blend. Sirve para no confundirlo con
-   *  otros USDC de otros emisores (relevante en testnet). */
+  /** Issuer (G-address) of the USDC Blend accepts. Tells it apart from other
+   *  USDC assets from different issuers (relevant on testnet). */
   usdcIssuer: string;
   feeStroops: string;
 }
 
 /**
- * Pool de Blend, USDC que acepta y fee para la red ACTIVA. Las cuatro envs son
- * requeridas y vienen validadas de `clientEnv`, así que siempre hay config:
- * apuntar un deployment a otra red es solo cambiar las NEXT_PUBLIC_BLEND_* —
- * sin "mainnet" cableado en la lógica.
+ * Blend pool, the USDC it accepts and the fee for the ACTIVE network. The four
+ * envs are required and come validated from `clientEnv`, so config is always
+ * present: pointing a deployment at another network is just changing the
+ * NEXT_PUBLIC_BLEND_* values — no "mainnet" hardwired in the logic.
  */
 export const getBlendConfig = (): BlendConfig => ({
   poolId: clientEnv.NEXT_PUBLIC_BLEND_POOL_CONTRACT_ID,

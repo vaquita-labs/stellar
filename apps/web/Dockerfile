@@ -35,8 +35,8 @@ COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/apps/web/node_modules ./apps/web/node_modules
 COPY . .
 
-# Todas las NEXT_PUBLIC_* que valida clientEnv.ts: son requeridas y se inyectan
-# en el bundle en build time, así que cada una necesita su ARG/ENV acá.
+# Every NEXT_PUBLIC_* from clientEnv.ts: all required and baked into the
+# bundle at build time, so each one needs its ARG/ENV here.
 ARG NEXT_PUBLIC_SERVICES_URL
 ARG NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL
 ARG NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL
@@ -45,7 +45,7 @@ ARG NEXT_PUBLIC_BLEND_POOL_CONTRACT_ID
 ARG NEXT_PUBLIC_BLEND_USDC_CONTRACT_ID
 ARG NEXT_PUBLIC_BLEND_USDC_ISSUER
 ARG NEXT_PUBLIC_BLEND_FEE_STROOPS
-# SHA del commit (lo provee CI): estampa NEXT_PUBLIC_CARD_VERSION en next.config.ts.
+# Commit SHA (provided by CI): stamps NEXT_PUBLIC_CARD_VERSION in next.config.ts.
 ARG GIT_SHA
 ENV NEXT_PUBLIC_SERVICES_URL=$NEXT_PUBLIC_SERVICES_URL
 ENV NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL=$NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL

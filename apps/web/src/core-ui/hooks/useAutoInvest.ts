@@ -35,9 +35,9 @@ export const useIdleFunds = () => {
   // Solo custodial (social login). `external` = Freighter/xBull: no se toca.
   const isCustodial = !!wallet && wallet.custody !== 'external';
   const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
-  // Ocioso = SOLO el USDC que Blend acepta (mismo emisor). En testnet hay varios
-  // "USDC" de emisores distintos; sin este filtro se detecta el equivocado y
-  // el supply falla con "trustline missing".
+  // Idle = ONLY the USDC Blend accepts (same issuer). Testnet has several
+  // "USDC" assets from different issuers; without this filter the wrong one is
+  // detected and the supply fails with "trustline missing".
   const blendUsdcIssuer = getBlendConfig().usdcIssuer;
   const usdc = balances.find(
     (b) => b.code?.toUpperCase() === 'USDC' && b.issuer === blendUsdcIssuer

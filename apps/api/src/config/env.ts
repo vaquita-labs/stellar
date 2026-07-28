@@ -41,7 +41,7 @@ const parsed = apiEnvSchema.safeParse(process.env);
 if (!parsed.success) {
   console.error('❌ Error en configuración de variables de entorno del API service:');
   console.error(parsed.error.format());
-  process.exit(1); // Detener la app si falta un secreto requerido
+  process.exit(1); // stop the app when a required secret is missing
 }
 
 export const apiEnv = parsed.data;

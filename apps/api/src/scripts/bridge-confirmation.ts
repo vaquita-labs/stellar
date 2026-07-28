@@ -6,8 +6,8 @@ import {
   runBridgeConfirmationBatch,
 } from '@vaquita/shared/services/cctp/worker';
 
-// Worker-only env, todas requeridas y validadas al arrancar (el resto de las
-// envs del worker las valida el schema compartido de @vaquita/shared).
+// Worker-only env, all required and validated at startup (the rest of the
+// worker's env is validated by the shared @vaquita/shared schema).
 const positiveInt = z
   .string()
   .regex(/^\d+$/)
@@ -15,7 +15,7 @@ const positiveInt = z
   .refine((n) => Number.isSafeInteger(n) && n > 0, 'must be a positive integer');
 
 const workerEnvSchema = z.object({
-  // 'true' corre un solo batch y sale (igual que --once); 'false' loopea.
+  // 'true' runs a single batch and exits (same as --once); 'false' loops.
   BRIDGE_CONFIRMATION_ONCE: z.enum(['true', 'false']),
   BRIDGE_CONFIRMATION_INTERVAL_MS: positiveInt,
   BRIDGE_CONFIRMATION_BATCH_SIZE: positiveInt,

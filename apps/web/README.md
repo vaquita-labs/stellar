@@ -41,8 +41,7 @@ NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY=pub_mainnet_…   # its prefix picks the active network
 ```
 
-> Check `.env.example` for the full list. (`env.example`, without the dot, holds
-> parameters for the Stellar contract testing scripts — not app config.)
+> Check `.env.example` for the full list.
 
 ## Stack
 

@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
-// Valores dummy para los schemas requeridos (shared config/env + config/env de
-// la API): los tests unitarios importan módulos que validan el env al cargar,
-// pero nunca tocan servicios externos reales.
+// Dummy values for the required schemas (shared config/env + the API's
+// config/env): unit tests import modules that validate the env at load time
+// but never touch real external services.
 const testEnv = {
   PORT: '3100',
   NODE_ENV: 'test',

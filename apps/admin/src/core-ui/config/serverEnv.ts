@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 // SERVER-ONLY env (no NEXT_PUBLIC_ prefix): never import from client components.
-// Todas requeridas — no hay "open mode": un valor vacío es error de deploy, no
-// una forma de deshabilitar la autenticación.
+// All required — an empty value is a deploy error, not a way to disable
+// authentication.
 const envServerSchema = z.object({
   // Soroban RPC endpoints, one per network. The contract-events scan picks one
   // by the Config network passphrase, so neither can silently fall back to a
@@ -24,9 +24,9 @@ type ServerEnv = z.infer<typeof envServerSchema>;
 let cached: ServerEnv | null = null;
 
 /**
- * Env del servidor validada con zod. Lazy (se valida en el primer acceso, no en
- * el import) para que `next build` no exija secretos de runtime; un deploy mal
- * configurado falla en el primer request con el detalle de zod.
+ * Zod-validated server env. Lazy (validated on first access, not at import) so
+ * `next build` does not need runtime secrets; a misconfigured deploy fails on
+ * the first request with the zod detail.
  */
 export function getServerEnv(): ServerEnv {
   if (cached) return cached;

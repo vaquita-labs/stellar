@@ -3,10 +3,10 @@ import { z } from 'zod';
 
 import { PrismaClient } from './generated/prisma/client';
 
-// Env que este paquete consume, validada con zod y requerida: sin
-// DATABASE_URL, el driver de pg caería a los defaults de libpq y fallaría
-// recién en la primera query con un ECONNREFUSED confuso — acá falla al cargar
-// el módulo con el error de configuración real.
+// Env this package consumes, zod-validated and required: without DATABASE_URL
+// the pg driver would fall back to libpq defaults and only fail on the first
+// query with a confusing ECONNREFUSED — here it fails at module load with the
+// real configuration error.
 const dbEnv = z
   .object({
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required (pooled Postgres connection string)'),

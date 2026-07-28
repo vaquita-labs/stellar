@@ -7,9 +7,9 @@ const StellarAccountId = z
   .string()
   .regex(/^G[A-Z2-7]{55}$/, 'must be a G… Stellar account address');
 
-// TODAS las envs del cliente pasan por acá: el código nunca lee process.env
-// directamente, siempre `clientEnv`. Todas son requeridas — si falta una, el
-// build/arranque falla acá en vez de degradar en silencio en runtime.
+// Every client env goes through here: code never reads process.env directly,
+// always `clientEnv`. All are required — a missing one fails the build/boot
+// here instead of degrading silently at runtime.
 const envClientSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']),
   // Base URL of the API service the web client calls.
@@ -19,27 +19,27 @@ const envClientSchema = z.object({
   // testnet RPC (or vice versa).
   NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL: z.url(),
   NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL: z.url(),
-  // Pollar publishable key. Su prefijo decide la red Stellar ACTIVA de toda la
-  // app (pub_mainnet_… → mainnet, pub_testnet_… → testnet), así que un valor
-  // vacío o malformado significaría "testnet silencioso" — por eso el regex.
+  // Pollar publishable key. Its prefix selects the ACTIVE Stellar network of
+  // the whole app (pub_mainnet_… → mainnet, pub_testnet_… → testnet), so an
+  // empty or malformed value would mean "silent testnet" — hence the regex.
   NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY: z
     .string()
     .regex(/^pub_(mainnet|testnet)_/, 'must start with pub_mainnet_ or pub_testnet_'),
-  // Blend V2: pool, USDC (reserva) que ese pool acepta y su emisor, para la red
-  // ACTIVA. El emisor distingue el USDC de Blend de otros "USDC" de emisores
-  // distintos (relevante en testnet; en mainnet hay uno solo).
+  // Blend V2: pool, the USDC reserve that pool accepts, and its issuer, for
+  // the ACTIVE network. The issuer tells Blend's USDC apart from other "USDC"
+  // assets from different issuers (relevant on testnet; mainnet has one only).
   NEXT_PUBLIC_BLEND_POOL_CONTRACT_ID: StellarContractId,
   NEXT_PUBLIC_BLEND_USDC_CONTRACT_ID: StellarContractId,
   NEXT_PUBLIC_BLEND_USDC_ISSUER: StellarAccountId,
-  // Fee bid (stroops) para las tx de Blend.
+  // Fee bid (stroops) for Blend transactions.
   NEXT_PUBLIC_BLEND_FEE_STROOPS: z.string().regex(/^\d+$/, 'must be an integer (stroops)'),
-  // Cache-buster de las share cards. La estampa next.config.ts en cada build —
-  // NUNCA setearla a mano.
+  // Share-card cache-buster. Stamped by next.config.ts on every build — never
+  // set by hand.
   NEXT_PUBLIC_CARD_VERSION: z.string().min(1),
 });
 
-// Referencias literales a process.env.*: Next.js inyecta las NEXT_PUBLIC_ en el
-// bundle del cliente solo cuando aparecen escritas completas.
+// Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
+// into the client bundle when they appear written out in full.
 const parsed = envClientSchema.safeParse({
   NODE_ENV: process.env.NODE_ENV,
   NEXT_PUBLIC_SERVICES_URL: process.env.NEXT_PUBLIC_SERVICES_URL,

@@ -3,10 +3,10 @@ import { z } from 'zod';
 
 dotenv.config();
 
-// TODAS las envs de los servicios compartidos pasan por acá: el código nunca
-// lee process.env directamente, siempre `env`. Todas son requeridas — el
-// proceso (API y bridge-worker) sale al arrancar si falta alguna, en vez de
-// degradar en silencio en runtime.
+// Every env the shared services read goes through here: code never reads
+// process.env directly, always `env`. All are required — the process (API and
+// bridge-worker) exits at startup if one is missing, instead of degrading
+// silently at runtime.
 const envSchema = z.object({
   PORT: z.string().regex(/^\d+$/).transform(Number),
   NODE_ENV: z.enum(['development', 'production', 'test']),

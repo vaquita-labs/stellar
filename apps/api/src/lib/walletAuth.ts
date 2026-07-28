@@ -38,7 +38,7 @@ import { logger } from './logger';
  * challenges we minted, once), which is what the server signature provides in
  * stock SEP-10.
  *
- * Env (todas requeridas, validadas con zod al arrancar):
+ * Env (all required, validated at startup):
  *  - AUTH_SESSION_SECRET     HMAC key for session tokens (apiEnv, min 32
  *                            chars). Fixed across PM2 instances so tokens
  *                            issued by one instance verify on another.
