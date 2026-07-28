@@ -8,17 +8,7 @@ import type { AchievementWriteFields } from '@vaquita/shared/services/profile/in
 // the behaviour of apps/api's admin router so the migration is contract-neutral:
 // same auth gate, same response envelope, same snake_case row shape.
 
-/**
- * Same contract as apps/api's requireAdminSecret: if ADMIN_SECRET is set, the
- * request must echo it in `x-admin-secret`. If unset, the endpoint is open
- * (dev only). Note this is a SERVER env var (not NEXT_PUBLIC_), so the secret
- * itself never ships to the browser.
- */
-export function adminSecretOk(req: NextRequest): boolean {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) return true;
-  return req.headers.get('x-admin-secret') === secret;
-}
+export { adminSecretOk } from './adminSecret';
 
 export const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
 

@@ -1,22 +1,18 @@
 import { Networks } from '@stellar/stellar-sdk';
+import { env } from '../../config/env';
 import { passphraseForNetwork } from './passphrase';
 
 export type SorobanNetwork = 'mainnet' | 'testnet';
 
 /**
- * Soroban RPC URL for the given network. Read from the per-network env vars
- * STELLAR_MAINNET_SOROBAN_RPC_URL / STELLAR_TESTNET_SOROBAN_RPC_URL — both required
- * (validated with zod at boot in config/env.ts). Throws when unset so a
- * misconfigured deployment fails fast instead of silently querying a public
- * endpoint of the wrong network.
+ * Soroban RPC URL for the given network, from the required per-network env
+ * vars STELLAR_MAINNET_SOROBAN_RPC_URL / STELLAR_TESTNET_SOROBAN_RPC_URL
+ * (validated with zod at boot in config/env.ts).
  */
 export function requireSorobanRpcUrl(network: SorobanNetwork): string {
-  const name = network === 'mainnet' ? 'STELLAR_MAINNET_SOROBAN_RPC_URL' : 'STELLAR_TESTNET_SOROBAN_RPC_URL';
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(`${name} is not configured. Set it in the service environment.`);
-  }
-  return value;
+  return network === 'mainnet'
+    ? env.STELLAR_MAINNET_SOROBAN_RPC_URL
+    : env.STELLAR_TESTNET_SOROBAN_RPC_URL;
 }
 
 /**

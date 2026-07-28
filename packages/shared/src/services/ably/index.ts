@@ -1,5 +1,6 @@
 import { Realtime } from 'ably';
+import { apiServicesEnv } from '../../config/apiServicesEnv';
 
 export const ably = new Realtime({
-  key: process.env.ABLY_KEY!,
+  key: apiServicesEnv.ABLY_KEY,
 });

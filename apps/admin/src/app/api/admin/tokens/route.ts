@@ -1,6 +1,7 @@
 import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { adminSecretOk } from '@/lib/adminSecret';
 
 // Server-side admin API for the `tokens` collection. Runs in the Next.js Node
 // server (never the browser) and talks to the same Postgres DB as apps/api via
@@ -10,18 +11,6 @@ import { z } from 'zod';
 export const runtime = 'nodejs';
 // Tokens are read live from the DB — never statically cached.
 export const dynamic = 'force-dynamic';
-
-/**
- * Same contract as apps/api's requireAdminSecret: if ADMIN_SECRET is set, the
- * request must echo it in `x-admin-secret`. If unset, the endpoint is open
- * (dev only). Note this is a SERVER env var (not NEXT_PUBLIC_), so the secret
- * itself never ships to the browser.
- */
-function adminSecretOk(req: NextRequest): boolean {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) return true;
-  return req.headers.get('x-admin-secret') === secret;
-}
 
 const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
 
@@ -45,6 +34,8 @@ const tokenFields = {
   vaquitaContractAddress: nullableStr(128),
   lockPeriods: z.array(z.number().int().min(0)),
   defindexVaultContractAddress: nullableStr(10_000),
+  issuer: nullableStr(56),
+  blendPoolContractAddress: nullableStr(128),
 };
 
 // On create, name + symbol are required; everything else has a sensible default.
@@ -59,6 +50,8 @@ const createSchema = z.object({
   vaquitaContractAddress: tokenFields.vaquitaContractAddress,
   lockPeriods: tokenFields.lockPeriods.optional(),
   defindexVaultContractAddress: tokenFields.defindexVaultContractAddress,
+  issuer: tokenFields.issuer,
+  blendPoolContractAddress: tokenFields.blendPoolContractAddress,
 });
 
 // On update everything is optional; only sent keys are written.
@@ -74,6 +67,8 @@ const updateSchema = z.object({
   vaquitaContractAddress: tokenFields.vaquitaContractAddress,
   lockPeriods: tokenFields.lockPeriods.optional(),
   defindexVaultContractAddress: tokenFields.defindexVaultContractAddress,
+  issuer: tokenFields.issuer,
+  blendPoolContractAddress: tokenFields.blendPoolContractAddress,
 });
 
 const invalidJson = () => NextResponse.json({ status: 'error', message: 'Invalid JSON body' }, { status: 400 });
@@ -130,6 +125,8 @@ export async function POST(req: NextRequest) {
       vaquitaContractAddress: d.vaquitaContractAddress ?? null,
       lockPeriods: (d.lockPeriods ?? []).map((n) => BigInt(n)),
       defindexVaultContractAddress: d.defindexVaultContractAddress ?? null,
+      issuer: d.issuer ?? null,
+      blendPoolContractAddress: d.blendPoolContractAddress ?? null,
     },
   });
   return NextResponse.json({ data: { token: serializeToken(token) } });
@@ -175,6 +172,10 @@ export async function PATCH(req: NextRequest) {
       ...(data.lockPeriods !== undefined ? { lockPeriods: data.lockPeriods.map((n) => BigInt(n)) } : {}),
       ...(data.defindexVaultContractAddress !== undefined
         ? { defindexVaultContractAddress: data.defindexVaultContractAddress }
+        : {}),
+      ...(data.issuer !== undefined ? { issuer: data.issuer } : {}),
+      ...(data.blendPoolContractAddress !== undefined
+        ? { blendPoolContractAddress: data.blendPoolContractAddress }
         : {}),
     },
   });

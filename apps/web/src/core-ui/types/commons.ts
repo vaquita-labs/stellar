@@ -52,6 +52,10 @@ export interface NetworkResponseDTO {
     lockPeriods: number[];
     contractAddress: string;
     vaquitaContractAddress: string;
+    /** Issuer (G-address) of the asset behind contractAddress. */
+    issuer: string | null;
+    /** Blend V2 pool that accepts this token as reserve. */
+    blendPoolContractAddress: string | null;
   }[];
   currencies: CurrencyDTO[];
   languages: LanguageDTO[];

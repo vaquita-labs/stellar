@@ -25,20 +25,23 @@ Server at `http://localhost:3101`.
 
 ## Environment variables
 
-Copy `env.example` to `.env.local` and fill it in:
+Copy `.env.example` to `.env.local` and fill it in:
 
 ```bash
-cp env.example .env.local
+cp .env.example .env.local
 ```
 
-Relevant variables include the Soroban RPC and contract:
+All variables are required and validated with zod in
+`src/core-ui/config/clientEnv.ts` — the build fails if any is missing. Key ones:
 
 ```bash
-NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
-NEXT_PUBLIC_VAQUITA_POOL_CONTRACT_ID=<contract id>
+NEXT_PUBLIC_SERVICES_URL=https://api.vaquita.fi
+NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL=https://mainnet.sorobanrpc.com
+NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY=pub_mainnet_…   # its prefix picks the active network
 ```
 
-> Check `env.example` for the full list.
+> Check `.env.example` for the full list.
 
 ## Stack
 

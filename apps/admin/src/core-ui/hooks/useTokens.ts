@@ -18,6 +18,8 @@ export interface Token {
   vaquitaContractAddress: string | null;
   lockPeriods: number[];
   defindexVaultContractAddress: string | null;
+  issuer: string | null;
+  blendPoolContractAddress: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +36,8 @@ export interface TokenCreatePayload {
   vaquitaContractAddress?: string | null;
   lockPeriods?: number[];
   defindexVaultContractAddress?: string | null;
+  issuer?: string | null;
+  blendPoolContractAddress?: string | null;
 }
 
 /** Payload accepted by PATCH /api/admin/tokens (id required, rest optional). */

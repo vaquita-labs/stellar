@@ -5,22 +5,21 @@ WORKDIR /repo
 RUN corepack enable
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
-COPY apps/api/package.json ./apps/api/
+COPY apps/bridge-worker/package.json ./apps/bridge-worker/
 COPY packages ./packages
 
-RUN pnpm install --frozen-lockfile --filter @vaquita/api...
+RUN pnpm install --frozen-lockfile --filter @vaquita/bridge-worker...
 
 FROM node:22-alpine AS runner
 WORKDIR /repo
 RUN corepack enable
 
 ENV NODE_ENV=production
-ENV PORT=3101
 
 COPY --from=deps /repo/node_modules ./node_modules
-COPY --from=deps /repo/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /repo/apps/bridge-worker/node_modules ./apps/bridge-worker/node_modules
 COPY --from=deps /repo/packages ./packages
 COPY pnpm-workspace.yaml package.json tsconfig.base.json ./
-COPY apps/api ./apps/api
+COPY apps/bridge-worker ./apps/bridge-worker
 
-CMD ["pnpm", "--filter", "@vaquita/api", "bridge-confirmation"]
+CMD ["pnpm", "--filter", "@vaquita/bridge-worker", "start"]

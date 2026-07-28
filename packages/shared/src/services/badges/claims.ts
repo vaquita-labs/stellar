@@ -1,5 +1,6 @@
 import { prisma } from '@vaquita/db';
 import type { BadgeClaim as PrismaBadgeClaim } from '@vaquita/db';
+import { apiServicesEnv } from '../../config/apiServicesEnv';
 
 const toBadgeClaimRecord = (c: PrismaBadgeClaim): BadgeClaimRecord => ({
   id: c.id,
@@ -45,14 +46,11 @@ export const GENESIS_SAVER_CAP = 50;
 export const MAINNET_PIONEER_WINDOW_DAYS = 7;
 
 /**
- * Returns the mainnet launch timestamp in Unix milliseconds, or null if not configured.
- * Set MAINNET_LAUNCH_TIMESTAMP to a Unix ms value (e.g. Date.parse('2026-06-01T00:00:00Z')).
+ * Mainnet launch timestamp in Unix milliseconds, from the required
+ * MAINNET_LAUNCH_TIMESTAMP env (e.g. Date.parse('2026-06-01T00:00:00Z')).
  */
-export function getMainnetLaunchTimestampMs(): number | null {
-  const raw = process.env.MAINNET_LAUNCH_TIMESTAMP;
-  if (!raw) return null;
-  const ts = Number(raw);
-  return Number.isFinite(ts) && ts > 0 ? ts : null;
+export function getMainnetLaunchTimestampMs(): number {
+  return apiServicesEnv.MAINNET_LAUNCH_TIMESTAMP;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,8 +112,6 @@ export async function checkGenesisSaverEligibility(walletAddress: string): Promi
  */
 export async function checkMainnetPioneerEligibility(walletAddress: string): Promise<boolean> {
   const launchMs = getMainnetLaunchTimestampMs();
-  if (launchMs === null) return false; // mainnet not launched yet
-
   const windowEndMs = launchMs + MAINNET_PIONEER_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
   const data = await prisma.deposit.findFirst({

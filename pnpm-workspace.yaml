@@ -1,8 +1,7 @@
 packages:
   - 'apps/api'
+  - 'apps/bridge-worker'
   - 'apps/deployer'
-  - 'apps/listener'
-  - 'apps/job-deposits'
   - 'apps/web'
   - 'apps/admin'
   - 'analytics'

@@ -41,10 +41,20 @@ El `Dockerfile` declara `ARG` para las `NEXT_PUBLIC_*` y consume secrets vía `-
 
 ### Build-time Arguments
 
+Todas las `NEXT_PUBLIC_*` son requeridas (zod en `clientEnv.ts` — el build falla
+si falta alguna):
+
 ```env
 NEXT_PUBLIC_SERVICES_URL=https://tu-api.dominio.com
-NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL=https://mainnet.sorobanrpc.com
+NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY=pub_mainnet_…
+NEXT_PUBLIC_BLEND_FEE_STROOPS=1000000
+GIT_SHA=<sha del commit, lo provee CI>
 ```
+
+El pool de Blend, su USDC y el issuer se configuran por token en el admin
+(Admin → Tokens → Edit).
 
 > ℹ️ La red Stellar (mainnet/testnet) se deriva del prefijo de
 > `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` (`pub_mainnet_…` → mainnet).
@@ -59,8 +69,8 @@ Para las notificaciones de build (`notify.sh`):
 
 | ID del secret | Valor |
 |---|---|
-| `webhook_url` | URL del receptor de webhooks |
-| `webhook_token` | Token enviado en `x-webhook-token` |
+| `notification_webhook_url` | URL del receptor de webhooks |
+| `notification_webhook_token` | Token enviado en `x-webhook-token` |
 
 Estos solo se necesitan durante `docker build` para reportar `INSTALL_*` y `BUILD_*`. **No quedan en la imagen final**.
 
@@ -69,8 +79,8 @@ Estos solo se necesitan durante `docker build` para reportar `INSTALL_*` y `BUIL
 Para que el contenedor pueda emitir `RUNTIME-PING_START` al arrancar:
 
 ```env
-WEBHOOK_URL=https://tu-receptor.dominio.com/hook
-WEBHOOK_TOKEN=tu_token
+NOTIFICATION_WEBHOOK_URL=https://tu-receptor.dominio.com/hook
+NOTIFICATION_WEBHOOK_TOKEN=tu_token
 ```
 
 Si los omites, `notify.sh` simplemente no envía nada (la app arranca igual).
@@ -90,11 +100,13 @@ El monorepo usa `/notify.sh` (raíz) para emitir webhooks granulares por fase: `
 El `Dockerfile` usa BuildKit secrets:
 
 ```dockerfile
-RUN --mount=type=secret,id=webhook_url \
-    --mount=type=secret,id=webhook_token \
-    WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )" \
-    WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )" \
-    ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/web...
+RUN --mount=type=secret,id=notification_webhook_url \
+    --mount=type=secret,id=notification_webhook_token \
+    sh -c '\
+      export NOTIFICATION_WEBHOOK_URL="$( [ -f /run/secrets/notification_webhook_url ] && cat /run/secrets/notification_webhook_url )"; \
+      export NOTIFICATION_WEBHOOK_TOKEN="$( [ -f /run/secrets/notification_webhook_token ] && cat /run/secrets/notification_webhook_token )"; \
+      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/web... \
+    '
 ```
 
 - El `[ -f ... ] &&` permite que el build no falle si los secrets no están definidos (modo dev local sin webhook).
@@ -134,36 +146,24 @@ The bidirectional CCTP bridge uses a bounded confirmation worker. This is not a
 global blockchain listener: it only polls known `bridge_transfers` rows created
 or imported through the Vaquita API.
 
-Deploy it as a separate Dokploy worker/process using the API image or an
-equivalent Node runtime:
+It lives in its own workspace, `apps/bridge-worker`, with its own Dockerfile
+(`apps/bridge-worker/Dockerfile`). Deploy it as a separate Dokploy service
+pointing at that Dockerfile, or run it directly:
 
 ```bash
-pnpm --filter @vaquita/api bridge-confirmation
+pnpm --filter @vaquita/bridge-worker start
 ```
 
 For one-shot validation:
 
 ```bash
-pnpm --filter @vaquita/api bridge-confirmation:once
+pnpm --filter @vaquita/bridge-worker start:once
 ```
 
-Runtime environment settings:
+Runtime environment settings: see `apps/bridge-worker/.env.example` for the
+full list (DB, per-network Soroban RPC and Circle Iris endpoints, relayer key
+and the `BRIDGE_CONFIRMATION_*` tuning set).
 
-```env
-DATABASE_URL=postgresql://...
-CIRCLE_CCTP_IRIS_BASE_URL=
-BRIDGE_CONFIRMATION_INTERVAL_MS=60000
-BRIDGE_CONFIRMATION_BATCH_SIZE=20
-BRIDGE_CONFIRMATION_LEASE_MS=60000
-BRIDGE_CONFIRMATION_STALE_AFTER_MS=86400000
-BRIDGE_STELLAR_RELAYER_SECRET=
-BRIDGE_STELLAR_RELAYER_FEE_STROOPS=1000000
-BRIDGE_STELLAR_RELAYER_TIMEOUT_SECONDS=60
-```
-
-- Leave `CIRCLE_CCTP_IRIS_BASE_URL` empty for the default Circle Iris URL
-  selection: sandbox for testnet source networks and production for mainnet
-  source networks.
 - Set `BRIDGE_CONFIRMATION_BATCH_SIZE` conservatively. This is one shared
   batch worker, not one poller per user.
 - The worker uses database leases on pending rows so multiple instances do not

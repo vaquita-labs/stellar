@@ -1,5 +1,4 @@
 test_snapshots/
 target/
-.env
 lcov.info
 coverage-html/

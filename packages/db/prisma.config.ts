@@ -7,8 +7,11 @@
 //
 // The runtime connection is NOT configured here — it goes through the
 // @prisma/adapter-pg driver adapter constructed in src/index.ts with DATABASE_URL.
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { defineConfig } from 'prisma/config';
+
+// .env.local takes precedence over .env, matching the rest of the monorepo.
+dotenv.config({ path: ['.env.local', '.env'] });
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',

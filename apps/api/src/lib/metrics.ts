@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { Counter, Gauge, Histogram, Registry } from 'prom-client';
+import { apiEnv } from '../config/env';
 
 export const register = new Registry();
 
@@ -113,8 +114,7 @@ export const renderMetrics = (): Promise<string> => register.metrics();
 // staging/prod enable it). The recording middleware always runs — it is cheap
 // and in-memory — but the scrape endpoint is only registered when enabled, and
 // is intended for private host/container scraping only, never public exposure.
-export const isMetricsEnabled = (): boolean =>
-  process.env.OBSERVABILITY_METRICS_ENABLED === 'true';
+export const isMetricsEnabled = (): boolean => apiEnv.OBSERVABILITY_METRICS_ENABLED === 'true';
 
 export const metricsHandler = async (_req: Request, res: Response): Promise<void> => {
   res.set('Content-Type', register.contentType);

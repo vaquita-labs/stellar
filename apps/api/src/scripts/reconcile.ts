@@ -5,6 +5,7 @@ import { rpc } from '@stellar/stellar-sdk';
 import { prisma } from '@vaquita/db';
 import { getProjectConfig } from '@vaquita/shared/services/project-config/index';
 import { passphraseForNetwork } from '@vaquita/shared/services/stellar/passphrase';
+import { requireSorobanRpcUrl } from '@vaquita/shared/services/stellar/rpc';
 import {
   createPrismaReconciliationDependencies,
   resolveReconciliationLedgerRange,
@@ -100,11 +101,10 @@ const loadDotEnvIfPresent = (): void => {
 };
 
 const resolveOptions = async (): Promise<CliOptions> => {
+  const network = inferNetwork();
   const rpcUrl =
     readFlag('rpc-url') ??
-    process.env.STELLAR_RPC_URL ??
-    process.env.MAINNET_STELLAR_RPC_URL ??
-    '';
+    requireSorobanRpcUrl(network === 'mainnet' ? 'mainnet' : 'testnet');
 
   const explicitContractIds = splitList(readFlag('pool-contract-id'));
   const envContractIds = splitList(process.env.VAQUITA_POOL_CONTRACT_IDS);
@@ -133,9 +133,6 @@ const resolveOptions = async (): Promise<CliOptions> => {
       'No VaquitaPool contract ID configured. Provide --pool-contract-id, VAQUITA_POOL_CONTRACT_ID(S), or project config token vaquitaContractAddress.',
     );
   }
-  if (!rpcUrl) {
-    throw new Error('Missing Stellar RPC URL. Provide --rpc-url, STELLAR_RPC_URL, or MAINNET_STELLAR_RPC_URL.');
-  }
   if (!networkPassphrase) {
     throw new Error('Missing network passphrase. Provide --network-passphrase, STELLAR_NETWORK (mainnet|testnet), or project config.');
   }
@@ -149,10 +146,10 @@ const resolveOptions = async (): Promise<CliOptions> => {
   return {
     fromLedger,
     toLedger,
-    network: inferNetwork(),
+    network,
     dryRun: readBoolean('dry-run', true),
     advanceCursor: readBoolean('advance-cursor', false),
-    job: readFlag('job') ?? process.env.RECONCILIATION_JOB ?? `${inferNetwork()}-pool-events`,
+    job: readFlag('job') ?? process.env.RECONCILIATION_JOB ?? `${network}-pool-events`,
     rpcUrl,
     networkPassphrase,
     contractIds,

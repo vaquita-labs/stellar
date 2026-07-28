@@ -11,6 +11,8 @@
   },
   "scripts": {
     "db:pull": "prisma db pull",
+    "db:push": "prisma db push && node scripts/apply-sql.mjs",
+    "db:apply-sql": "node scripts/apply-sql.mjs",
     "generate": "prisma generate",
     "postinstall": "prisma generate",
     "studio": "prisma studio",
@@ -20,7 +22,8 @@
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "dotenv": "^17.4.2",
-    "pg": "^8.21.0"
+    "pg": "^8.21.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
