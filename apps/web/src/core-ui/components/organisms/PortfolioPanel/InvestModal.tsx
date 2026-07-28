@@ -23,7 +23,7 @@ import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { PressableButton } from '../../molecules/PressableButton';
 
-type Step = 'amount' | 'term' | 'processing' | 'success';
+type Step = 'amount' | 'term' | 'review' | 'processing' | 'success';
 
 function displayAmount(raw: string) {
   if (raw === '') return '$0.00';
@@ -122,7 +122,8 @@ export function InvestModal({
       shakeAmount();
       return;
     }
-    void handleConfirm();
+    setError(null);
+    setStep('review');
   };
 
   const handleConfirm = async () => {
@@ -290,6 +291,37 @@ export function InvestModal({
     </div>
   );
 
+  // --- Paso: revisar (resumen antes de firmar) -------------------------------
+  // Muestra qué se va a invertir (monto, plazo, APY y de dónde sale) para que el
+  // usuario confirme explícitamente antes de que salgan las 2 transacciones.
+  const reviewStep = (
+    <div className="flex flex-col gap-4">
+      <div className="text-center pt-1">
+        <p className="text-sm text-gray-500">{t('withdraw.amountLabel', 'Amount')}</p>
+        <p className="text-4xl font-bold text-black">{formatUsdPrecise(numericAmount)}</p>
+      </div>
+
+      <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
+        <span className="text-gray-500">{t('invest.review.termLabel', 'Term')}</span>
+        <span className="font-bold text-black">
+          {selectedLock != null ? formatTimeDeposit(selectedLock) : ''}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
+        <span className="text-gray-500">{t('invest.review.apyLabel', 'APR')}</span>
+        <span className="font-bold text-success tabular-nums">{selectedApy.toFixed(2)}%</span>
+      </div>
+
+      <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
+        <span className="text-gray-500">{t('withdraw.fromLabel', 'From')}</span>
+        <span className="font-bold text-black">{t('portfolio.blend.label', 'Blend · Flexible')}</span>
+      </div>
+
+      {error ? <ErrorNotice error={error} /> : null}
+    </div>
+  );
+
   // Secuencia visible del invest: retirar de Blend → lockear en el tramo. Deja
   // claro que son 2 pasos (se firma 2 veces), no una pantalla colgada.
   const investSteps: { key: 'preparing' | 'locking'; label: string }[] = [
@@ -367,6 +399,7 @@ export function InvestModal({
   const STEP_CONTENT: Record<Step, React.ReactNode> = {
     amount: amountStep,
     term: termStep,
+    review: reviewStep,
     processing: processingStep,
     success: successStep,
   };
@@ -374,6 +407,7 @@ export function InvestModal({
   const STEP_TITLE: Record<Step, string> = {
     amount: t('portfolio.invest', 'Invest'),
     term: t('invest.selectTerm', 'Select a term'),
+    review: t('invest.review.title', 'Review'),
     processing: t('portfolio.invest', 'Invest'),
     success: t('portfolio.invest', 'Invest'),
   };
@@ -388,6 +422,15 @@ export function InvestModal({
         disabled={!canReview}
       >
         {t('withdraw.review', 'Review')}
+      </PressableButton>
+    ) : step === 'review' ? (
+      <PressableButton
+        variant="success"
+        size="cta"
+        className="py-2.5!"
+        onClick={() => void handleConfirm()}
+      >
+        {t('withdraw.confirmCta', 'Confirm')}
       </PressableButton>
     ) : step === 'processing' ? (
       <p className="w-full text-center text-xs text-gray-500">
@@ -407,12 +450,12 @@ export function InvestModal({
       size="md"
       isDismissable={step !== 'processing'}
       // Convención de la app: la X (cerrar) va a la derecha y blanca. Los pasos
-      // raíz (`amount`) y `success` cierran el modal → muestran la X. `term` es
-      // navegación interna (vuelve al monto) → flecha atrás a la izquierda.
-      // `processing` no navega ni cierra: la tx ya salió.
-      hideClose={step === 'term' || step === 'processing'}
+      // raíz (`amount`) y `success` cierran el modal → muestran la X. `term` y
+      // `review` son navegación interna (vuelven al monto) → flecha atrás a la
+      // izquierda. `processing` no navega ni cierra: la tx ya salió.
+      hideClose={step === 'term' || step === 'review' || step === 'processing'}
       backVariant="white"
-      onBack={step === 'term' ? () => setStep('amount') : undefined}
+      onBack={step === 'term' || step === 'review' ? () => setStep('amount') : undefined}
       bodyClassName={'flex flex-col gap-3 ' + (footer ? 'pb-2' : 'pb-6')}
       footer={footer}
     >
