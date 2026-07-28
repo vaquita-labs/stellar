@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 
 interface GameClockDTO {
   serverTimeMs: number;
-  dayLengthSeconds: number;
+  dayLengthMs: number;
   anchorMs: number;
 }
 

@@ -17,6 +17,38 @@ import { FiPlus, FiTrash2 } from 'react-icons/fi';
 // same add/edit/delete editor, so they're modeled with one local type.
 type Option = { id: string; label: string; hint?: string };
 
+/** Mismo default que la columna `game_day_length_ms` (20 min por día de juego). */
+const DEFAULT_GAME_DAY_LENGTH_MS = 1_200_000;
+
+// Atajos para el largo del día de juego: el campo se guarda en ms, que son
+// incómodos de escribir a mano, así que los valores que se usan de verdad están
+// a un click.
+const GAME_DAY_PRESETS = [
+  { label: '1 min', ms: 60_000 },
+  { label: '5 min', ms: 300_000 },
+  { label: '10 min', ms: 600_000 },
+  { label: '20 min', ms: DEFAULT_GAME_DAY_LENGTH_MS },
+  { label: '30 min', ms: 1_800_000 },
+] as const;
+
+/** Redondea a un decimal y saca el `.0` para que los números queden legibles. */
+const trim = (n: number): string => String(Math.round(n * 10) / 10);
+
+/**
+ * Traduce los ms del campo a lo que significan en el juego: cuánto dura un día
+ * real, cada cuánto avanza una hora en pantalla y cuántas veces más rápido corre
+ * el reloj. Devuelve null si lo escrito todavía no es un valor válido.
+ */
+const describeGameDay = (raw: string): string | null => {
+  const ms = Number(raw.trim());
+  if (!raw.trim() || !Number.isFinite(ms) || ms < 1) return null;
+  return [
+    `${trim(ms / 60_000)} min reales = 1 día de juego`,
+    `1 hora de juego cada ${trim(ms / 24_000)} s`,
+    `${trim(86_400_000 / ms)}× el tiempo real`,
+  ].join(' · ');
+};
+
 // The two option lists live on the form under these keys; helpers are generic
 // over the key so currencies and languages reuse the same handlers.
 type OptionKey = 'currencies' | 'languages';
@@ -32,9 +64,9 @@ type FormState = {
   // non-negative integers on submit.
   dailyGoldCoins: string;
   dailyCheckinExperience: string;
-  // Duración de un día del reloj de juego, en segundos reales. String mientras
-  // se edita; se parsea a entero al guardar.
-  gameDayLengthSeconds: string;
+  // Duración de un día del reloj de juego, en milisegundos reales. String
+  // mientras se edita; se parsea a entero al guardar.
+  gameDayLengthMs: string;
   // Edited inline as a list of rows; each blank-hint row stores hint: ''.
   currencies: Option[];
   languages: Option[];
@@ -48,7 +80,7 @@ const emptyForm = (): FormState => ({
   cycleDurationMs: '',
   dailyGoldCoins: '0',
   dailyCheckinExperience: '0',
-  gameDayLengthSeconds: '1200',
+  gameDayLengthMs: String(DEFAULT_GAME_DAY_LENGTH_MS),
   currencies: [],
   languages: [],
 });
@@ -65,7 +97,7 @@ const formFromConfig = (c: ProjectConfig): FormState => ({
   cycleDurationMs: c.cycleDurationMs != null ? String(c.cycleDurationMs) : '',
   dailyGoldCoins: String(c.dailyGoldCoins ?? 0),
   dailyCheckinExperience: String(c.dailyCheckinExperience ?? 0),
-  gameDayLengthSeconds: String(c.gameDayLengthSeconds ?? 1200),
+  gameDayLengthMs: String(c.gameDayLengthMs ?? DEFAULT_GAME_DAY_LENGTH_MS),
   currencies: toRows(c.currencies),
   languages: toRows(c.languages),
 });
@@ -212,7 +244,7 @@ export default function Page() {
     cycleDurationMs: form.cycleDurationMs.trim() ? Number(form.cycleDurationMs.trim()) : null,
     dailyGoldCoins: form.dailyGoldCoins.trim() ? Number(form.dailyGoldCoins.trim()) : 0,
     dailyCheckinExperience: form.dailyCheckinExperience.trim() ? Number(form.dailyCheckinExperience.trim()) : 0,
-    gameDayLengthSeconds: form.gameDayLengthSeconds.trim() ? Number(form.gameDayLengthSeconds.trim()) : 1200,
+    gameDayLengthMs: form.gameDayLengthMs.trim() ? Number(form.gameDayLengthMs.trim()) : DEFAULT_GAME_DAY_LENGTH_MS,
     currencies: buildOptions(form.currencies),
     languages: buildOptions(form.languages),
   });
@@ -256,10 +288,14 @@ export default function Page() {
         return;
       }
     }
-    if (form.gameDayLengthSeconds.trim()) {
-      const secs = Number(form.gameDayLengthSeconds.trim());
-      if (!Number.isInteger(secs) || secs < 1) {
-        addDangerToast('Invalid game day length', 'Game day length must be a positive whole number of seconds.');
+    if (form.gameDayLengthMs.trim()) {
+      const ms = Number(form.gameDayLengthMs.trim());
+      // El tope es el máximo de un int4, que es el tipo de la columna.
+      if (!Number.isInteger(ms) || ms < 1 || ms > 2_147_483_647) {
+        addDangerToast(
+          'Invalid game day length',
+          'Game day length must be a positive whole number of milliseconds, up to 2147483647.',
+        );
         return;
       }
     }
@@ -357,13 +393,34 @@ export default function Page() {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('dailyCheckinExperience', e.target.value)}
           />
 
-          <Input
-            label="Game day length (seconds)"
-            type="number"
-            placeholder="Real seconds per full in-game day (e.g. 1200 = 20 min, 600 = 10 min)"
-            value={form.gameDayLengthSeconds}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('gameDayLengthSeconds', e.target.value)}
-          />
+          <div className="flex flex-col gap-2">
+            <Input
+              label="Game day length (ms)"
+              type="number"
+              placeholder="Real milliseconds per full in-game day (e.g. 1200000 = 20 min)"
+              value={form.gameDayLengthMs}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('gameDayLengthMs', e.target.value)}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              {GAME_DAY_PRESETS.map((preset) => {
+                const selected = form.gameDayLengthMs.trim() === String(preset.ms);
+                return (
+                  <Button
+                    key={preset.ms}
+                    size="sm"
+                    variant={selected ? 'primary' : 'ghost'}
+                    onPress={() => set('gameDayLengthMs', String(preset.ms))}
+                    isDisabled={saving}
+                  >
+                    {preset.ms === DEFAULT_GAME_DAY_LENGTH_MS ? `${preset.label} (default)` : preset.label}
+                  </Button>
+                );
+              })}
+            </div>
+            {describeGameDay(form.gameDayLengthMs) && (
+              <p className="text-xs text-default-500">{describeGameDay(form.gameDayLengthMs)}</p>
+            )}
+          </div>
 
           <Textarea
             label="Allowed origins (one per line)"

@@ -18,7 +18,7 @@ import { create } from 'zustand';
  */
 
 /** 20 min reales = 1 día de juego (igual que Minecraft). Es sólo el default de
- *  arranque: el valor real lo define el servidor (columna game_day_length_seconds
+ *  arranque: el valor real lo define el servidor (columna game_day_length_ms
  *  del singleton `config`, editable desde el admin) y gana al sincronizar. */
 const DEFAULT_DAY_LENGTH_MS = 20 * 60 * 1000;
 /** Epoch Unix: hace el progreso continuo y determinista entre clientes. */
@@ -30,7 +30,7 @@ type GameClockState = {
   dayLengthMs: number;
   anchorMs: number;
   synced: boolean;
-  sync: (params: { serverTimeMs: number; dayLengthSeconds?: number; anchorMs?: number }) => void;
+  sync: (params: { serverTimeMs: number; dayLengthMs?: number; anchorMs?: number }) => void;
 };
 
 export const useGameClockStore = create<GameClockState>((set) => ({
@@ -41,21 +41,14 @@ export const useGameClockStore = create<GameClockState>((set) => ({
   sync: (params) =>
     set((state) => ({
       offsetMs: params.serverTimeMs - Date.now(),
-      dayLengthMs:
-        params.dayLengthSeconds && params.dayLengthSeconds > 0
-          ? params.dayLengthSeconds * 1000
-          : state.dayLengthMs,
+      dayLengthMs: params.dayLengthMs && params.dayLengthMs > 0 ? params.dayLengthMs : state.dayLengthMs,
       anchorMs: typeof params.anchorMs === 'number' ? params.anchorMs : state.anchorMs,
       synced: true,
     })),
 }));
 
 /** Alinea el reloj de juego con la respuesta del servidor (GET /api/v1/time). */
-export function syncGameClock(params: {
-  serverTimeMs: number;
-  dayLengthSeconds?: number;
-  anchorMs?: number;
-}): void {
+export function syncGameClock(params: { serverTimeMs: number; dayLengthMs?: number; anchorMs?: number }): void {
   useGameClockStore.getState().sync(params);
 }
 

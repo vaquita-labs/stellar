@@ -92,7 +92,7 @@ export const DayCycleSky = () => {
   useFrame((_, delta) => {
     // La luz del mapa sigue el reloj de JUEGO: a medianoche se ve oscuro, a
     // mediodía claro, así el sol y la hora que muestra MapClock coinciden. El
-    // día es largo (config game_day_length_seconds) para que la transición sea
+    // día es largo (config game_day_length_ms) para que la transición sea
     // lenta y natural. Se escribe al store para que la vaquita (que lee
     // dayProgress) siga el mismo día (duerme de noche).
     const progress = getGameDayProgress();

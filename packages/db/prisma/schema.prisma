@@ -190,10 +190,10 @@ model Config {
   // (type 'earned', the `experience` reward) on collect and summed into the
   // profile's total experience. `0` disables the check-in XP bonus.
   dailyCheckinExperience Int     @default(0) @map("daily_checkin_experience")
-  // Duración (en segundos reales) de un día COMPLETO del reloj de juego, que
+  // Duración (en milisegundos reales) de un día COMPLETO del reloj de juego, que
   // corre acelerado tipo Minecraft. Global para todos (se sirve vía GET
-  // /api/v1/time). Reemplaza la env var GAME_DAY_LENGTH_SECONDS. 1200 = 20 min.
-  gameDayLengthSeconds  Int      @default(1200) @map("game_day_length_seconds")
+  // /api/v1/time). 1200000 = 20 min. Tope int4 (~24.8 días) de sobra.
+  gameDayLengthMs       Int      @default(1200000) @map("game_day_length_ms")
   // Fiat display currencies offered in the UI (Preferences page). Each entry is
   // `{ id, label, hint? }`, e.g. `{ "id": "usd", "label": "USD", "hint": "US Dollar" }`.
   currencies            Json     @default("[]")
