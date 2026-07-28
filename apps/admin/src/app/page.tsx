@@ -29,6 +29,11 @@ const sections: { href: string; title: string; description: string }[] = [
     description: 'Add, edit and remove reward types (key and display name).',
   },
   {
+    href: '/map-objects',
+    title: 'Map objects',
+    description: 'Catalog of placeable map elements: variants, prices and free units.',
+  },
+  {
     href: '/listening',
     title: 'Listening',
     description: 'Live on-chain event listener and transactions.',
