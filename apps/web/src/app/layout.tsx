@@ -26,11 +26,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // sus hijos), que es justo el mismatch esperado del tema aplicado en cliente.
     <html lang="es" suppressHydrationWarning>
       <head>
-        {process?.env?.NODE_ENV !== 'development' && (
+        {/* Umami analytics (prod only). Set NEXT_PUBLIC_UMAMI_WEBSITE_ID per
+            environment; when unset, no tracking script is rendered. */}
+        {process?.env?.NODE_ENV !== 'development' && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <script
             defer
-            src="http://vaquita-umami-19cb95-87-99-152-125.sslip.io/script.js"
-            data-website-id="7effb45c-5595-4447-8409-a6ba51ca6b62"
+            src="https://umami.vaquita.fi/script.js"
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
           ></script>
         )}
       </head>
