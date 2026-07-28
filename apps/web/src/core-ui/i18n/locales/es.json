@@ -91,6 +91,9 @@
     },
     "modal": {
       "claimingReward": "Reclamando premio",
+      "coinsPending": "+{{count}} monedas",
+      "coinsPending_one": "+{{count}} moneda",
+      "coinsPending_other": "+{{count}} monedas",
       "goldCoins": "{{count}} monedas de oro",
       "goldCoins_one": "{{count}} moneda de oro",
       "goldCoins_other": "{{count}} monedas de oro",
@@ -1734,6 +1737,7 @@
         "stepToken": "SEP-10 · Obtener JWT de Anclap",
         "stepSettled": "Esperar confirmación de Anclap",
         "stepTransfer": "Enviar ARS a Anclap",
+        "stepBlend": "Retirar de Blend",
         "stepTrustline": "Activar trustline de ARS",
         "stepWithdraw": "SEP-24 · Iniciar retiro",
         "settled": "Retiro completado en Anclap.",

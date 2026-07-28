@@ -91,6 +91,9 @@
     },
     "modal": {
       "claimingReward": "Claiming reward",
+      "coinsPending": "+{{count}} coins",
+      "coinsPending_one": "+{{count}} coin",
+      "coinsPending_other": "+{{count}} coins",
       "goldCoins": "{{count}} gold coins",
       "goldCoins_one": "{{count}} gold coin",
       "goldCoins_other": "{{count}} gold coins",
@@ -1734,6 +1737,7 @@
         "stepToken": "SEP-10 · Get Anclap JWT",
         "stepSettled": "Wait for Anclap confirmation",
         "stepTransfer": "Send ARS to Anclap",
+        "stepBlend": "Withdraw from Blend",
         "stepTrustline": "Activate ARS trustline",
         "stepWithdraw": "SEP-24 · Start withdrawal",
         "settled": "Withdrawal completed on Anclap.",

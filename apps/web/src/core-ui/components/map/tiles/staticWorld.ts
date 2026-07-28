@@ -162,8 +162,11 @@ export const mergeStaticGroup = (source: THREE.Object3D): THREE.Group => {
       surplusMaterials.push(mesh.material);
     }
     // Clonar antes de transformar: la geometría original puede ser compartida.
+    // clone() copia userData POR REFERENCIA, así que el clon estrena el suyo:
+    // mutar el heredado le borraría la marca `shared` a la geometría cacheada
+    // (recipe.ts) y disposeObject terminaría liberándola para todo el mapa.
     const geometry = mesh.geometry.clone();
-    delete geometry.userData.shared;
+    geometry.userData = {};
     geometry.applyMatrix4(mesh.matrixWorld);
     bucket.geometries.push(geometry);
   });
@@ -190,8 +193,9 @@ export const mergeStaticGroup = (source: THREE.Object3D): THREE.Group => {
   }
   for (const mesh of passthrough) {
     // Copia con la transformación horneada (reusa geometría clonada + material).
+    // userData propio por lo mismo que arriba: clone() lo comparte por referencia.
     const geometry = mesh.geometry.clone();
-    delete geometry.userData.shared;
+    geometry.userData = {};
     geometry.applyMatrix4(mesh.matrixWorld);
     const copy = new THREE.Mesh(geometry, mesh.material);
     copy.castShadow = mesh.castShadow;

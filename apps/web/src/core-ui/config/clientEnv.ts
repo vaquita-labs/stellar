@@ -23,6 +23,11 @@ const envClientSchema = z.object({
   // Share-card cache-buster. Stamped by next.config.ts on every build — never
   // set by hand.
   NEXT_PUBLIC_CARD_VERSION: z.string().min(1),
+  // Buster for the react-query cache persisted in localStorage. Any value
+  // change discards every persisted entry on the next load, so a release that
+  // reads a new field off a cached payload is not served stale objects that
+  // predate it.
+  NEXT_PUBLIC_QUERY_CACHE_VERSION: z.string().min(1),
 });
 
 // Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
@@ -35,6 +40,7 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY,
   NEXT_PUBLIC_BLEND_FEE_STROOPS: process.env.NEXT_PUBLIC_BLEND_FEE_STROOPS,
   NEXT_PUBLIC_CARD_VERSION: process.env.NEXT_PUBLIC_CARD_VERSION,
+  NEXT_PUBLIC_QUERY_CACHE_VERSION: process.env.NEXT_PUBLIC_QUERY_CACHE_VERSION,
 });
 
 if (!parsed.success) {

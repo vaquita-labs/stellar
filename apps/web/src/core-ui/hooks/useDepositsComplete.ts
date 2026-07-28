@@ -36,6 +36,9 @@ export const useDepositsComplete = (_walletAddress?: string) => {
                 ? Number(deposit.vaultInterest)
                 : undefined,
             depositIdHex: deposit.depositIdHex,
+            // The pool re-derives the position id from the caller + this nonce,
+            // so withdrawing is impossible without it.
+            nonce: deposit.nonce ?? null,
             withdrawals: deposit.withdrawals || null,
             createdTimestamp: deposit.createdTimestamp || 0,
             walletAddress: deposit.walletAddress,

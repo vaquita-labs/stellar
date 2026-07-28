@@ -67,7 +67,8 @@ export function Providers({ children }: { children: ReactNode }) {
 
   // Persist the cache to localStorage so reloads show the last known values
   // immediately instead of flashing a spinner. SSR-safe: falls back to a noop
-  // store when `window` is unavailable.
+  // store when `window` is unavailable. `buster` below decides how long those
+  // values survive a deploy.
   const [persister] = useState(() =>
     createSyncStoragePersister({
       key: 'vaquita-rq-cache',
@@ -81,7 +82,16 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <PersistQueryClientProvider
       client={queryClient}
-      persistOptions={{ persister, maxAge: 1000 * 60 * 60 * 24 }}
+      // A cache entry is only restored when its buster matches; otherwise the
+      // whole persisted client is dropped and every query refetches. Bump
+      // NEXT_PUBLIC_QUERY_CACHE_VERSION whenever a release reads a field that
+      // older cached payloads do not carry — without it those clients keep
+      // serving the old shape for up to `maxAge`, with no request to notice.
+      persistOptions={{
+        persister,
+        maxAge: 1000 * 60 * 60 * 24,
+        buster: clientEnv.NEXT_PUBLIC_QUERY_CACHE_VERSION,
+      }}
     >
       <I18nProvider>
       <PollarProvider

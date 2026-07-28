@@ -3,12 +3,15 @@
 import { ASSETS } from '@/networks/anclap/anclap';
 import { useAnclapAuthStore } from '@/networks/anclap/anclapAuth';
 import { AnclapCancelled, AnclapError, assetParam, SepTransaction, useAnclap } from '@/networks/anclap/useAnclap';
+import { directBlendWithdraw } from '@/networks/stellar/blendDirect';
 import { Button, Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiExternalLink } from 'react-icons/fi';
 import { truncateDecimals } from '../../../helpers';
+import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
+import { useLiveBlendUsdc } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
@@ -23,9 +26,9 @@ interface SendFiatModalProps {
   onOpenChange: () => void;
 }
 
-type StepKey = 'trustline' | 'swap' | 'challenge' | 'sign' | 'token' | 'withdraw' | 'transfer' | 'settled';
+type StepKey = 'blend' | 'trustline' | 'swap' | 'challenge' | 'sign' | 'token' | 'withdraw' | 'transfer' | 'settled';
 
-const IMPLEMENTED: StepKey[] = ['trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'transfer', 'settled'];
+const IMPLEMENTED: StepKey[] = ['blend', 'trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'transfer', 'settled'];
 
 const ARS = 'ARS';
 const USDC = 'USDC';
@@ -35,6 +38,7 @@ const MIN_USDC = 0.1;
 const FAILED = new Set(['error', 'refunded', 'expired', 'no_market', 'too_small', 'too_large']);
 
 const INITIAL_STEPS: Record<StepKey, StepStatus> = {
+  blend: 'idle',
   trustline: 'idle',
   swap: 'idle',
   challenge: 'idle',
@@ -48,7 +52,7 @@ const INITIAL_STEPS: Record<StepKey, StepStatus> = {
 export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
   const { t } = useTranslation();
   const { token, setToken } = useConfigStore();
-  const { wallet, walletBalance, refreshWalletBalance, refreshAssets, login } = usePollar();
+  const { wallet, refreshAssets, login } = usePollar();
   const walletAddress = wallet?.address ?? null;
   // Id del adapter on-chain (freighter, xbull, …) solo cuando la wallet es
   // externa; las custodiales (`internal` / `smart`) no se pueden reconectar.
@@ -81,19 +85,25 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     openRef.current = open;
   }, [open]);
 
-  const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
-  const usdcBalance = balances.find((b) => b.type !== 'native' && b.code?.toUpperCase() === 'USDC');
-  const balanceFormatted = usdcBalance ? truncateDecimals(Number(usdcBalance.available), 5) : 0;
-  const balanceIsLoading = walletBalance.step === 'loading';
+  // El saldo disponible para el off-ramp es la posición líquida en Blend (la
+  // MISMA fuente que el modal de Withdraw wallet), no el USDC suelto on-chain:
+  // los fondos del usuario viven en Blend, así que el USDC de la wallet es 0.
+  // El primer paso del envío retira ese monto de Blend a la wallet antes de swappear.
+  const {
+    live: blendLiveUsdc,
+    isLoading: balanceIsLoading,
+    refetch: refreshBalance,
+  } = useLiveBlendUsdc(walletAddress ?? undefined);
+  const balanceFormatted = floorAmount(blendLiveUsdc, AMOUNT_DECIMALS);
 
   const amountNum = Number(amount);
-  const overBalance = amountNum > Number(balanceFormatted);
+  const overBalance = amountNum > balanceFormatted;
   const belowMin = amountNum < MIN_USDC;
-  const isDisabled = !amount || Number.isNaN(amountNum) || belowMin || overBalance || !walletAddress;
+  const isDisabled = !amount || Number.isNaN(amountNum) || belowMin || overBalance || !walletAddress || !token;
 
   useEffect(() => {
-    if (open && walletAddress) void refreshWalletBalance();
-  }, [open, walletAddress, refreshWalletBalance]);
+    if (open && walletAddress) void refreshBalance();
+  }, [open, walletAddress, refreshBalance]);
 
   // Reset al cerrar para que un nuevo envío arranque limpio.
   useEffect(() => {
@@ -156,7 +166,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
   };
 
   const handleSend = async () => {
-    if (isDisabled || !walletAddress) return;
+    if (isDisabled || !walletAddress || !token) return;
     setBusy(true);
     setError(null);
     setShowReconnect(false);
@@ -166,6 +176,20 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     setWaitStatus(null);
 
     try {
+      // 0) Retirar de Blend -> wallet: trae el USDC on-chain que necesita el swap.
+      // La plata del usuario está depositada en Blend, no suelta en la wallet, así
+      // que sin este paso el swap no tendría USDC. `withdrawAll` cuando el monto
+      // iguala el disponible (dispara el sentinel i128, evita dejar dust).
+      mark('blend', 'running');
+      await directBlendWithdraw({
+        address: walletAddress,
+        amount,
+        decimals: token.decimals,
+        withdrawAll: amountNum >= balanceFormatted,
+      });
+      await refreshAssets();
+      mark('blend', 'done');
+
       // 1) Trustline ARS (necesaria para recibir el swap y operar el retiro).
       mark('trustline', 'running');
       await ensureTrustline(walletAddress, ARS, ASSETS[ARS].issuer);
@@ -255,6 +279,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     setSharedJwt(tokenJwt);
     // Los pasos previos al retiro ya ocurrieron (la tx existe en Anclap).
     setSteps({
+      blend: 'done',
       trustline: 'done',
       swap: 'done',
       challenge: 'done',
@@ -298,6 +323,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
   };
 
   const stepLabels: Record<StepKey, string> = {
+    blend: t('wallet.fiat.send.stepBlend', 'Withdraw from Blend'),
     trustline: t('wallet.fiat.send.stepTrustline', 'Activate ARS trustline'),
     swap: t('wallet.fiat.send.stepSwap', 'Swap USDC → ARS'),
     challenge: t('wallet.fiat.send.stepChallenge', 'SEP-10 · Request challenge'),
@@ -307,7 +333,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     transfer: t('wallet.fiat.send.stepTransfer', 'Send ARS to Anclap'),
     settled: t('wallet.fiat.send.stepSettled', 'Wait for Anclap confirmation'),
   };
-  const order: StepKey[] = ['trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'transfer', 'settled'];
+  const order: StepKey[] = ['blend', 'trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'transfer', 'settled'];
 
   return (
     <AppModal
@@ -343,7 +369,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
         value={amount}
         onValueChange={(v) => setAmount(v)}
         onTokenChange={(t) => setToken(t)}
-        onReloadBalance={refreshWalletBalance}
+        onReloadBalance={refreshBalance}
         loading={busy}
         balanceIsLoading={balanceIsLoading}
         min={MIN_USDC}

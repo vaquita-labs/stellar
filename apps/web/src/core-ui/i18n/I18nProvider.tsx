@@ -14,11 +14,19 @@ const readStoredLanguage = (): AppLanguage | null => {
   return isSupportedLanguage(stored) ? stored : null;
 };
 
-/** Best-effort guess from the browser before we know the user's preference. */
+/** Best-effort guess from the device before we know the user's preference.
+ * Walks the full `navigator.languages` preference list (falling back to the
+ * single `navigator.language`) and picks the first entry we actually ship a
+ * locale for — so a device set to e.g. ['de', 'es', 'en'] lands on Spanish
+ * instead of the 'en' default, matching what the user reads on their system. */
 const readBrowserLanguage = (): AppLanguage | null => {
   if (typeof navigator === 'undefined') return null;
-  const prefix = navigator.language?.slice(0, 2).toLowerCase();
-  return isSupportedLanguage(prefix) ? prefix : null;
+  const preferences = navigator.languages?.length ? navigator.languages : [navigator.language];
+  for (const tag of preferences) {
+    const prefix = tag?.slice(0, 2).toLowerCase();
+    if (isSupportedLanguage(prefix)) return prefix;
+  }
+  return null;
 };
 
 /** Apply a locale to i18next, the persisted store and `<html lang>`. */

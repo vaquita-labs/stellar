@@ -35,6 +35,9 @@ export type AchievementDetail = {
   /** Background color for the icon container. */
   accent?: string;
   claimState?: 'locked' | 'claimable' | 'pending_mint' | 'claimed' | 'minted';
+  /** Coins this badge pays out on claim, straight from the catalog. Lets the
+   *  modal advertise the reward BEFORE the mint returns the finalized amount. */
+  coinReward?: number;
 };
 
 interface AchievementModalProps {
@@ -171,6 +174,13 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
   };
 
   const claimed = !!achievement && isClaimed(achievement.id);
+
+  // Coins this claim is about to pay out, read from the catalog because the
+  // mint hasn't returned yet. Strictly a minting-screen affordance: once the
+  // reward lands the balance already includes it and the reveal announces the
+  // amount itself, so advertising it again would double-count the prize.
+  const showPendingCoins = phase === 'minting' && !!achievement?.coinReward;
+  const pendingCoins = Math.floor(achievement?.coinReward ?? 0);
 
   // Warm the story-format (9:16) share image while the user looks at the
   // modal, so the share tap can attach it instantly. Fetching on demand is
@@ -583,15 +593,19 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="flex-1 flex flex-col"
+        className="flex-1 min-h-0 flex flex-col"
       >
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-5 py-4 overflow-y-auto">
-          {renderShareCard()}
-          {/* On-chain tx of the mint we just made — surfaced only in crypto
-              mode, mirroring the already-minted detail view. */}
-          {cryptoMode && mintTxHash && (
-            <div className="w-full max-w-sm mx-auto">{txHashRow(mintTxHash)}</div>
-          )}
+        {/* `min-h-0` lets this column shrink below its content so the scroll
+            area actually scrolls instead of pushing the footer past the
+            dialog's fixed height; `min-h-full` inside keeps the card centered
+            when there is room to spare. */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+          <div className="min-h-full flex flex-col items-center justify-center gap-4">
+            {renderShareCard()}
+            {/* On-chain tx of the mint we just made — surfaced only in crypto
+                mode, mirroring the already-minted detail view. */}
+            {cryptoMode && mintTxHash && <div className="w-full max-w-sm mx-auto">{txHashRow(mintTxHash)}</div>}
+          </div>
         </div>
         {renderShareFooter()}
       </motion.div>
@@ -617,19 +631,23 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="flex-1 flex flex-col"
+          className="flex-1 min-h-0 flex flex-col"
         >
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 px-5 py-4 overflow-y-auto">
-            {/* Share preview — kept identical to the shared card so what the user
-                sees is exactly what gets posted. */}
-            {renderShareCard()}
+          {/* `min-h-0` lets this column shrink below its content so the scroll
+              area actually scrolls instead of pushing the footer past the
+              dialog's fixed height; `min-h-full` inside keeps the card centered
+              when there is room to spare. */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
+            <div className="min-h-full flex flex-col items-center justify-center gap-4">
+              {/* Share preview — kept identical to the shared card so what the user
+                  sees is exactly what gets posted. */}
+              {renderShareCard()}
 
-            {/* Crypto mode: on-chain tx for an already-minted badge. It is NOT
-                part of the shared image, so it sits below the white card as extra
-                info. Tapping the hash opens the transaction on stellar.expert. */}
-            {showStoredTx && storedTxHash && (
-              <div className="w-full max-w-sm mx-auto">{txHashRow(storedTxHash)}</div>
-            )}
+              {/* Crypto mode: on-chain tx for an already-minted badge. It is NOT
+                  part of the shared image, so it sits below the white card as extra
+                  info. Tapping the hash opens the transaction on stellar.expert. */}
+              {showStoredTx && storedTxHash && <div className="w-full max-w-sm mx-auto">{txHashRow(storedTxHash)}</div>}
+            </div>
           </div>
           {renderShareFooter()}
         </motion.div>
@@ -741,12 +759,21 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
           className={
             isMobile
               ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh overflow-hidden'
-              : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)] overflow-hidden'
+              : // 620px is a floor, not a fixed height: the share-card phases run a
+                // little taller than that, and pinning the height there left them
+                // scrolling a handful of pixels behind a full-length scrollbar. As a
+                // minimum it still keeps the shorter phases (detail, minting, reward)
+                // from resizing the dialog, while `max-h` hands scrolling back to the
+                // body only when the viewport is genuinely too short.
+                'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md min-h-[min(620px,90dvh)] max-h-[90dvh] overflow-hidden'
           }
         >
           {/* El slide de entrada/salida lo hace el Modal.Container (SHEET_*);
               framer-motion acá no sirve: su `exit` nunca corre sin AnimatePresence. */}
-          <div className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
+          {/* Desktop: `h-full` would resolve against an indefinite height now that
+              the dialog is sized by its content, so it stretches as a flex child
+              (`.modal__dialog` is already a flex column) instead. */}
+          <div className={`relative flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'flex-1 min-h-0'}`}>
             {/* La acción (moneda/compartir) va a la izquierda; la X de cerrar
                 SIEMPRE a la derecha (convención de toda la app). */}
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3">
@@ -762,10 +789,34 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
                   className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white border border-black border-b-2 px-3 text-black"
                   aria-label={t('achievements.modal.goldCoins', '{{count}} gold coins', { count: goldCoins })}
                 >
-                  <Image src="/icons/global/coin.png" alt="" width={18} height={18} className="object-contain" />
+                  {/* Pulses in sync with the `+N` beside it (same duration/ease,
+                      no delay, so they peak together) — one coin reading as
+                      "these are going up", instead of a second icon that would
+                      read as a second currency. */}
+                  <motion.span
+                    className="inline-flex"
+                    animate={showPendingCoins ? { scale: [1, 1.15, 1] } : undefined}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <Image src="/icons/global/coin.png" alt="" width={18} height={18} className="object-contain" />
+                  </motion.span>
                   <span className="text-sm font-extrabold tabular-nums">
                     {Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
+                  {/* The reward on its way in, blinking next to the balance so the
+                      pair reads as total + incoming — without it the bare number
+                      looks like the prize itself. Green matches the `+N XP` pill
+                      on the reveal, so both increments share one colour. */}
+                  {showPendingCoins && (
+                    <motion.span
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="text-sm font-extrabold tabular-nums text-[#3F9102] whitespace-nowrap"
+                      aria-label={t('achievements.modal.coinsPending', '+{{count}} coins', { count: pendingCoins })}
+                    >
+                      +{pendingCoins.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </motion.span>
+                  )}
                 </motion.div>
               ) : (
                 <span className="w-8" />

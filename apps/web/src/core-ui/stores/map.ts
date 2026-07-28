@@ -108,8 +108,11 @@ export const useMapStore = create<MapStoreType>((set, get) => ({
     const tile = get().getTileAt(x, z);
     // Si no hay tile, es un espacio vacío y se puede rellenar
     if (!tile) return true;
-    // Si el tile es EMPTY o GRASS, se puede reemplazar
-    return tile.type === MapObjectType.EMPTY || tile.type === MapObjectType.GRASS;
+    // Solo una celda vacía acepta un objeto. Sobre cualquier tile ya colocado
+    // — pasto incluido — primero hay que quitarlo: así el pasto se comporta
+    // como el resto de los ítems y su unidad vuelve a la colección al sacarlo,
+    // en vez de que colocar encima lo pise en silencio.
+    return tile.type === MapObjectType.EMPTY;
   },
   editMode: null,
   setEditMode: (editMode) => set({ editMode }),

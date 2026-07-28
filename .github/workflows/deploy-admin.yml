@@ -1,4 +1,4 @@
-name: Deploy Admin
+name: Auto Deploy Admin (dev)
 
 on:
   push:

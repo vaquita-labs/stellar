@@ -48,18 +48,18 @@ export const getRewardsConfig = async (): Promise<RewardsConfig> => {
 
 /** Duración por defecto de un día del reloj de juego (20 min), usada si el
  *  singleton `config` todavía no existe. */
-export const DEFAULT_GAME_DAY_LENGTH_SECONDS = 1200;
+export const DEFAULT_GAME_DAY_LENGTH_MS = 1_200_000;
 
 /**
- * Duración (en segundos reales) de un día completo del reloj de juego acelerado,
- * leída en vivo del singleton `config`. Global para todos. Cae al default
- * histórico (20 min) si la fila no existe, así el endpoint nunca falla.
+ * Duración (en milisegundos reales) de un día completo del reloj de juego
+ * acelerado, leída en vivo del singleton `config`. Global para todos. Cae al
+ * default (20 min) si la fila no existe, así el endpoint nunca falla.
  */
-export const getGameDayLengthSeconds = async (): Promise<number> => {
+export const getGameDayLengthMs = async (): Promise<number> => {
   const config = await prisma.config.findFirst({
-    select: { gameDayLengthSeconds: true },
+    select: { gameDayLengthMs: true },
   });
-  return config?.gameDayLengthSeconds ?? DEFAULT_GAME_DAY_LENGTH_SECONDS;
+  return config?.gameDayLengthMs ?? DEFAULT_GAME_DAY_LENGTH_MS;
 };
 
 /**
