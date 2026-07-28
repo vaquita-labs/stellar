@@ -29,9 +29,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {process?.env?.NODE_ENV !== 'development' && (
           <script
             defer
-            src="/umami.js"
-            data-website-id="df3ddd20-0ec1-446f-9b53-47a51458c1b9"
-            data-host-url="https://analytics.oscargauss.com"
+            src="http://vaquita-umami-19cb95-87-99-152-125.sslip.io/script.js"
+            data-website-id="7effb45c-5595-4447-8409-a6ba51ca6b62"
           ></script>
         )}
       </head>
