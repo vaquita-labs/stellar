@@ -1870,8 +1870,16 @@
   },
   "portfolio": {
     "title": "Portfólio",
-    "totalBalance": "Saldo total",
+    "total": "Total",
+    "totalBalance": "Seu dinheiro",
+    "earning": "Ganho acumulado",
+    "invest": "Investir",
+    "savings": "Poupança",
     "allocation": "Distribuição",
+    "distributed": "Distribuído em {{funded}} de {{total}} opções",
+    "ofTotal": "{{pct}}% do total",
+    "noFunds": "Sem fundos",
+    "sum": "Total",
     "manage": "Gerenciar distribuição",
     "empty": "Ainda não há prazos de poupança disponíveis.",
     "detail": {

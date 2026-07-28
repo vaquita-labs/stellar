@@ -1,3 +1,4 @@
+import { clientEnv } from '@/core-ui/config/clientEnv';
 import { Networks } from '@creit.tech/stellar-wallets-kit';
 
 export type StellarNetwork = 'mainnet' | 'testnet';
@@ -20,10 +21,9 @@ export function getNetworkPassphrase(): string {
 }
 
 export function getRpcUrl(): string {
-  if (process.env.NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL) {
-    return process.env.NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL;
-  }
-  return isMainnet() ? 'https://mainnet.sorobanrpc.com' : 'https://soroban-testnet.stellar.org';
+  return isMainnet()
+    ? clientEnv.NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL
+    : clientEnv.NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL;
 }
 
 export function getHorizonUrl(): string {

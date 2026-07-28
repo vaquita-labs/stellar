@@ -13,9 +13,6 @@ const EMPTY = { rewardPool: '0', totalDeposits: '0', totalShares: '0' };
 
 const DEFAULT_SOROBAN_RPC = 'https://soroban-testnet.stellar.org';
 
-/** Public Soroban RPC for Stellar mainnet (override with `STELLAR_MAINNET_SOROBAN_RPC`). */
-export const DEFAULT_STELLAR_MAINNET_SOROBAN_RPC = 'https://soroban-rpc.mainnet.stellar.org:443';
-
 export type GetPeriodDataOptions = {
   rpcUrl?: string;
   networkPassphrase?: string;

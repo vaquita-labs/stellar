@@ -7,7 +7,7 @@ use crate::types::Position;
 use crate::{positions, VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env, String, Vec};
+use soroban_sdk::{Address, BytesN, Env, Vec};
 
 const LOCK_7D: u64 = 604800;
 
@@ -46,28 +46,30 @@ fn deposit_creates_position_withdraw_removes_it() {
     let (alice, _, pool, tok) = setup(&e);
     let amt: i128 = 100_000;
     tok.mint(&alice, &amt);
-    let id = String::from_str(&e, "D1");
+    let nonce = 1u64;
+    let id = pool.compute_deposit_id(&alice, &nonce);
 
-    pool.deposit(&alice, &id, &amt, &LOCK_7D);
+    pool.deposit(&alice, &nonce, &amt, &LOCK_7D);
     assert!(pool.get_position(&id).is_some());
 
-    pool.withdraw(&alice, &id);
+    pool.withdraw(&alice, &nonce);
     assert!(pool.get_position(&id).is_none());
 }
 
 #[test]
-fn deposit_id_can_be_reused_after_withdrawal() {
+fn nonce_can_be_reused_after_withdrawal() {
     let e = Env::default();
     let (alice, _, pool, tok) = setup(&e);
     let amt: i128 = 100_000;
     tok.mint(&alice, &(amt * 2));
-    let id = String::from_str(&e, "reuse");
+    let nonce = 42u64;
+    let id = pool.compute_deposit_id(&alice, &nonce);
 
-    pool.deposit(&alice, &id, &amt, &LOCK_7D);
-    pool.withdraw(&alice, &id);
+    pool.deposit(&alice, &nonce, &amt, &LOCK_7D);
+    pool.withdraw(&alice, &nonce);
 
-    // Same id should now be allowed again
-    pool.deposit(&alice, &id, &amt, &LOCK_7D);
+    // Same nonce should now be allowed again
+    pool.deposit(&alice, &nonce, &amt, &LOCK_7D);
     assert!(pool.get_position(&id).is_some());
 }
 
@@ -78,20 +80,19 @@ fn outstanding_count_tracks_open_positions() {
     let amt: i128 = 100_000;
     tok.mint(&alice, &(amt * 3));
 
-    let id1 = String::from_str(&e, "c1");
-    let id2 = String::from_str(&e, "c2");
-    let id3 = String::from_str(&e, "c3");
+    let id1 = pool.compute_deposit_id(&alice, &1u64);
+    let id2 = pool.compute_deposit_id(&alice, &2u64);
+    let id3 = pool.compute_deposit_id(&alice, &3u64);
 
-    pool.deposit(&alice, &id1, &amt, &LOCK_7D);
-    pool.deposit(&alice, &id2, &amt, &LOCK_7D);
-    pool.deposit(&alice, &id3, &amt, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &amt, &LOCK_7D);
+    pool.deposit(&alice, &2u64, &amt, &LOCK_7D);
+    pool.deposit(&alice, &3u64, &amt, &LOCK_7D);
 
-    // Verify positions exist
     assert!(pool.get_position(&id1).is_some());
     assert!(pool.get_position(&id2).is_some());
     assert!(pool.get_position(&id3).is_some());
 
-    pool.withdraw(&alice, &id1);
+    pool.withdraw(&alice, &1u64);
     assert!(pool.get_position(&id1).is_none());
     assert!(pool.get_position(&id2).is_some());
     assert!(pool.get_position(&id3).is_some());
@@ -106,6 +107,7 @@ fn positions_helpers_cover_default_and_ttl_paths() {
     let admin = Address::generate(&e);
     let owner = Address::generate(&e);
     let usdc = e.register_stellar_asset_contract_v2(admin.clone());
+    let token = usdc.address();
     let vault = e.register(
         MockDeFindexVault,
         MockDeFindexVaultArgs::__constructor(&usdc.address()),
@@ -115,7 +117,7 @@ fn positions_helpers_cover_default_and_ttl_paths() {
         VaquitaPool,
         (admin, usdc.address(), vault, lp, 0i128, 172800u64),
     );
-    let id = String::from_str(&e, "helper");
+    let id: BytesN<32> = BytesN::from_array(&e, &[9u8; 32]);
 
     e.as_contract(&contract, || {
         assert_eq!(positions::outstanding_count(&e), 0);
@@ -129,6 +131,7 @@ fn positions_helpers_cover_default_and_ttl_paths() {
 
         let position = Position {
             owner,
+            token,
             amount: 123,
             shares: 120,
             finalization_time: 456,

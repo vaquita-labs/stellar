@@ -1,7 +1,7 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { truncateDecimals } from '@/core-ui/helpers/strings';
+import { AMOUNT_DECIMALS, floorAmount } from '@/core-ui/helpers/numbers';
 import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
@@ -11,8 +11,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiHeadphones } from 'react-icons/fi';
 import {
-  useBlendPosition,
   useDepositsComplete,
+  useLiveBlendUsdc,
   useProfileData,
   useProfileExperience,
   useProfileRewards,
@@ -78,8 +78,8 @@ export const HeaderStats = () => {
     isLoading: blendLoading,
     isError: blendError,
     refetch: refetchBlend,
-    dataUpdatedAt: blendUpdatedAt,
-  } = useBlendPosition(walletAddress);
+    live: blendLive,
+  } = useLiveBlendUsdc(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
@@ -124,22 +124,10 @@ export const HeaderStats = () => {
     return acc + Math.min(earnings.maxInterest, earnings.ratePerMs * elapsed);
   }, 0);
 
-  // Seis decimales fijos, todos del mismo tamaño: los últimos corren solos a
-  // medida que se devenga el rendimiento. Total = locks (capital + interés) +
-  // posición directa en Blend (nivel base, líquido).
-  const blendBalance = blendPosition?.usdc ?? 0;
-  const blendApy = blendPosition?.apy ?? 0;
-  // Proyección en vivo del rendimiento de Blend entre refetches, igual que los
-  // locks: capital × APY prorrateado por el tiempo transcurrido desde el último
-  // fetch on-chain. Así el saldo de Blend también "crece de a poco" en pantalla.
-  // Al próximo refetch (60s) snapea al valor real, corrigiendo cualquier deriva.
-  // OJO: la magnitud la manda el APY — en testnet Blend rinde ~0.1%, así que el
-  // movimiento a 6 decimales es imperceptible; con un APY real (mainnet/locks)
-  // sí se ve correr.
-  const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
-  const blendRatePerMs = (blendBalance * (blendApy / 100)) / MS_PER_YEAR;
-  const blendElapsed = blendUpdatedAt ? Math.max(0, clientNow - blendUpdatedAt) : 0;
-  const blendLive = blendBalance + blendRatePerMs * blendElapsed;
+  // Total = locks (capital + interés devengado en vivo) + posición directa en
+  // Blend (nivel base, líquido). `blendLive` viene proyectado en vivo desde el
+  // hook compartido `useLiveBlendUsdc` — la MISMA fuente que usa el "Available"
+  // del retiro, así ambos corren juntos y muestran el mismo número (ver el hook).
   const liveBalance = activeDepositsTotalAmount + accruedInterest + blendLive;
 
   // Reglas para NO asustar con la plata:
@@ -153,15 +141,24 @@ export const HeaderStats = () => {
   const blendPending = blendLoading && !blendPosition;
   const blendFailed = blendError && !blendPosition;
   const balanceLoading = (depositsLoading && !depositsData) || blendPending;
-  // Con plata NUNCA redondeamos hacia arriba: truncamos a 6 decimales antes de
-  // formatear. `toLocaleString` redondea, y eso hacía que el header mostrara
-  // $6.000000 con $5.9999995 reales, contradiciendo el "Available" del retiro
-  // (que trunca a 2 → $5.99) y aparentando un centavo perdido que no existe.
-  // Truncar en ambos lados = misma dirección, nunca mostramos de más.
-  const formattedBalance = truncateDecimals(liveBalance, 6).toLocaleString(undefined, {
-    minimumFractionDigits: 6,
-    maximumFractionDigits: 6,
-  });
+  // Con plata NUNCA redondeamos hacia arriba: `floorAmount` PISA a los 7 decimales
+  // nativos de USDC (nunca $6.0000000 con $5.9999995 reales), igual que el
+  // "Available" del retiro y el total del portfolio.
+  //
+  // Saldo con layout ESTABLE para que no "salte" mientras tickea en vivo: los
+  // dólares y centavos van grandes (solo cambian de ancho al sumar un dígito
+  // entero, algo rarísimo), y la precisión sub-centavo de USDC (hasta 5 decimales
+  // más) va chica y tenue al lado, con ancho tabular fijo. Antes, achicar la
+  // tipografía según el largo hacía que el número cambiara de tamaño en cada
+  // update (el saldo crece → cruza un umbral → salta de text-xl a text-lg).
+  const flooredBalance = floorAmount(liveBalance, AMOUNT_DECIMALS);
+  const [balanceInt, balanceDec = ''] = flooredBalance.toFixed(AMOUNT_DECIMALS).split('.');
+  const bigBalance = `$${Number(balanceInt).toLocaleString()}.${balanceDec.slice(0, 2)}`;
+  // Los 5 decimales restantes SIEMPRE se muestran, incluso en ceros ($0.00 →
+  // "00000"): así el saldo no queda "pelado" cuando es redondo y el ancho es casi
+  // constante (solo cambia con los dígitos enteros), que es lo que hace que la
+  // pastilla no salte.
+  const subCents = balanceDec.slice(2);
 
   const displayName = profileData?.nickname || profileData?.fullName || '';
 
@@ -263,8 +260,11 @@ export const HeaderStats = () => {
                 variant="cream"
                 onClick={openPortfolioPanel}
                 ariaLabel={t('home.stats.apyAria', 'Portfolio')}
-                // w-fit + self-start: la pastilla se ajusta al saldo y crece con
-                // él, alineada contra el mismo borde que el saludo.
+                // w-fit: la pastilla ABRAZA el número (no llena todo el ancho, que
+                // dejaba un vacío enorme adentro con saldos cortos). Como ahora
+                // SIEMPRE mostramos los 7 decimales, el número es más largo y de
+                // ancho casi constante, así que la pastilla queda snug y estable.
+                // Alineada a la izquierda, mismo borde que el saludo.
                 className="w-fit max-w-full self-start justify-start min-w-0 py-2"
               >
                 {balanceLoading ? (
@@ -272,9 +272,16 @@ export const HeaderStats = () => {
                 ) : (
                   <span
                     data-tutorial="tutorial-balance"
-                    className="text-xl font-bold text-black tabular-nums leading-none truncate"
+                    className="font-bold text-black tabular-nums leading-none truncate"
                   >
-                    {hideBalance ? '••••' : `$${formattedBalance}`}
+                    {hideBalance ? (
+                      <span className="text-xl">••••</span>
+                    ) : (
+                      <>
+                        <span className="text-xl">{bigBalance}</span>
+                        <span className="text-sm text-black/40">{subCents}</span>
+                      </>
+                    )}
                   </span>
                 )}
               </PressableButton>

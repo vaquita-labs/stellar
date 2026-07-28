@@ -40,7 +40,7 @@ export function DepositModal({
   const [mounted, setMounted] = useState(false);
   const [amount, setAmount] = useState<string>('');
   const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useConfigStore();
-  const { createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
+  const { getNextNonce, createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactions();
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
   // En modo tutorial el lock es local (no toca el config global) y se ofrece una
@@ -118,19 +118,23 @@ export function DepositModal({
       let isSuccess = false;
       if (isNewDepositHandled(network?.networkName)) {
         onOpenChange();
-        const { success, error } = await transactionDeposit(0, amount, lockPeriod);
+        const { success, error } = await transactionDeposit('0', amount, lockPeriod);
         isSuccess = !!success;
         lastError = error ?? null;
       } else {
+        // Per-wallet nonce → the pool derives the position id as sha256(caller || nonce).
+        const nonce = await getNextNonce();
+        if (!nonce) throw new Error('Could not allocate a deposit nonce');
         const newDeposit = await createDeposit({
           amount,
           tokenSymbol: token.symbol,
           lockPeriod,
           vaquitaContract: token?.vaquitaContractAddress,
+          nonce,
         });
         if (newDeposit.success) {
           const { success, txHash, transaction, depositIdHex, error } = await transactionDeposit(
-            newDeposit.id,
+            nonce,
             amount,
             lockPeriod
           );

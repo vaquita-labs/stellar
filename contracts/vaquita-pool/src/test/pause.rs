@@ -6,7 +6,7 @@ use crate::test::EnvTestUtils;
 use crate::{VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{Address, Env, String, Vec};
+use soroban_sdk::{Address, Env, Vec};
 
 const LOCK_7D: u64 = 604_800;
 
@@ -66,7 +66,7 @@ fn deposit_rejected_while_paused() {
     tok.mint(&alice, &100i128);
     pool.pause();
 
-    let result = pool.try_deposit(&alice, &String::from_str(&e, "D1"), &100i128, &LOCK_7D);
+    let result = pool.try_deposit(&alice, &1u64, &100i128, &LOCK_7D);
     assert_eq!(result, Err(Ok(VaquitaPoolError::Paused)));
 }
 
@@ -79,12 +79,13 @@ fn withdraw_succeeds_while_paused() {
 
     let amt: i128 = 100_000;
     tok.mint(&alice, &amt);
-    let id = String::from_str(&e, "W1");
-    pool.deposit(&alice, &id, &amt, &LOCK_7D);
+    let nonce = 1u64;
+    let id = pool.compute_deposit_id(&alice, &nonce);
+    pool.deposit(&alice, &nonce, &amt, &LOCK_7D);
 
     pool.pause();
     // Withdraw must succeed even while paused
-    pool.withdraw(&alice, &id);
+    pool.withdraw(&alice, &nonce);
     assert!(pool.get_position(&id).is_none());
 }
 
@@ -144,7 +145,7 @@ fn remove_lock_period_success() {
     // Verify the period is gone: try to deposit into it → should fail
     let result = pool.try_deposit(
         &Address::generate(&e),
-        &String::from_str(&e, "X"),
+        &1u64,
         &1i128,
         &86400u64,
     );
@@ -160,7 +161,7 @@ fn remove_lock_period_blocked_with_positions() {
 
     let amt: i128 = 100_000;
     tok.mint(&alice, &amt);
-    pool.deposit(&alice, &String::from_str(&e, "P1"), &amt, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &amt, &LOCK_7D);
 
     let result = pool.try_remove_lock_period(&LOCK_7D);
     assert_eq!(result, Err(Ok(VaquitaPoolError::LockPeriodHasPositions)));
@@ -177,10 +178,10 @@ fn remove_lock_period_sweeps_reward_pool() {
     let amt: i128 = 100_000_0000;
     tok.mint(&alice, &amt);
     pool.update_early_withdrawal_fee(&500i128); // 5%
-    pool.deposit(&alice, &String::from_str(&e, "S1"), &amt, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &amt, &LOCK_7D);
 
     e.jump_time(LOCK_7D / 2); // early-withdraw window
-    pool.withdraw(&alice, &String::from_str(&e, "S1"));
+    pool.withdraw(&alice, &1u64);
 
     // Now reward_pool for LOCK_7D should be nonzero if interest > 0.
     // Since vault returns no yield in mock by default, interest = 0 and reward_pool = 0.
@@ -189,7 +190,7 @@ fn remove_lock_period_sweeps_reward_pool() {
     tok.mint(&admin, &(reward + amt)); // admin needs extra tokens
     tok.mint(&alice, &amt);
     // Need a deposit so add_rewards validates total_deposits > 0
-    pool.deposit(&alice, &String::from_str(&e, "S2"), &amt, &LOCK_7D);
+    pool.deposit(&alice, &2u64, &amt, &LOCK_7D);
     pool.add_rewards(&LOCK_7D, &reward);
 
     // Verify reward_pool is seeded
@@ -197,13 +198,13 @@ fn remove_lock_period_sweeps_reward_pool() {
     assert!(pd_before.reward_pool > 0);
 
     // Now withdraw the deposit so position count = 0
-    pool.withdraw(&alice, &String::from_str(&e, "S2"));
+    pool.withdraw(&alice, &2u64);
 
     // remove_lock_period should sweep reward_pool into ProtocolFees
     pool.remove_lock_period(&LOCK_7D);
 
     // LOCK_7D is gone — depositing into it fails
-    let gone = pool.try_deposit(&alice, &String::from_str(&e, "after"), &1i128, &LOCK_7D);
+    let gone = pool.try_deposit(&alice, &3u64, &1i128, &LOCK_7D);
     assert_eq!(gone, Err(Ok(VaquitaPoolError::InvalidPeriod)));
 
     // Protocol fees increased by the swept reward pool

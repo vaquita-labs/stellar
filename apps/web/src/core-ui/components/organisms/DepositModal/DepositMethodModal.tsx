@@ -15,7 +15,13 @@ import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
 import { FiAlertCircle, FiCheck, FiInfo } from 'react-icons/fi';
 import { IoWalletOutline } from 'react-icons/io5';
-import { truncateDecimals, truncateMiddle } from '../../../helpers';
+import {
+  AMOUNT_DECIMALS,
+  floorAmount,
+  formatUsdPrecise,
+  truncatedAmountString,
+  truncateMiddle,
+} from '../../../helpers';
 import { useAnalytics, useBlendPosition, useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AmountKeypad } from '../../molecules/AmountKeypad';
@@ -110,7 +116,7 @@ export function DepositMethodModal({
     let cancelled = false;
     setBlendUsdc(null);
     void getBlendUsdcBalance(walletAddress, token.decimals).then((b) => {
-      if (!cancelled) setBlendUsdc(truncateDecimals(b, 2));
+      if (!cancelled) setBlendUsdc(floorAmount(b, AMOUNT_DECIMALS));
     });
     return () => {
       cancelled = true;
@@ -244,7 +250,7 @@ export function DepositMethodModal({
         <button
           type="button"
           onClick={() => {
-            setAmount(String(available));
+            setAmount(truncatedAmountString(available));
             if (overBalance) setOverBalance(false);
           }}
           disabled={balanceIsLoading}
@@ -253,7 +259,7 @@ export function DepositMethodModal({
           {balanceIsLoading ? (
             <span className="h-3 w-20 rounded bg-black/10 animate-pulse" />
           ) : (
-            `${t('withdraw.available', 'Available')}: $${available.toFixed(2)}`
+            `${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available)}`
           )}
         </button>
       </div>
@@ -284,7 +290,7 @@ export function DepositMethodModal({
           setAmount(next);
           if (overBalance) setOverBalance(false);
         }}
-        maxDecimals={2}
+        maxDecimals={AMOUNT_DECIMALS}
         compact
       />
     </div>
@@ -295,7 +301,7 @@ export function DepositMethodModal({
     <div className="flex flex-col gap-4">
       <div className="text-center pt-1">
         <p className="text-sm text-gray-500">{t('withdraw.amountLabel', 'Amount')}</p>
-        <p className="text-4xl font-bold text-black">${numericAmount.toFixed(2)}</p>
+        <p className="text-4xl font-bold text-black">{formatUsdPrecise(numericAmount)}</p>
       </div>
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">

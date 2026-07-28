@@ -1,8 +1,7 @@
 'use client';
 
-import { formatUsd } from '@/core-ui/helpers/numbers';
+import { formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { useTranslation } from 'react-i18next';
-import { IoWalletOutline } from 'react-icons/io5';
 import { AppModal } from '../../molecules/AppModal';
 
 interface BlendDetailSheetProps {
@@ -38,13 +37,11 @@ export function BlendDetailSheet({
       onBack={onOpenChange}
       backVariant="primary"
       hideClose
-      bodyClassName="flex flex-col gap-4 pb-2"
+      bodyClassName="flex flex-col gap-4 pb-2 overflow-x-hidden"
     >
-      <div className="flex items-center gap-3">
-        <p className="text-4xl font-bold text-black tabular-nums">{formatUsd(amount)}</p>
-        <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-success/20 text-success">
-          <IoWalletOutline className="w-5 h-5" />
-        </span>
+      <div className="flex min-w-0 items-center gap-3">
+        <p className="min-w-0 truncate text-4xl font-bold text-black tabular-nums">{formatUsdAdaptive(amount)}</p>
+        <span className="w-10 h-10 rounded-full shrink-0 bg-primary" />
       </div>
       <p className="-mt-3 text-sm font-bold text-success tabular-nums">{apy.toFixed(2)}% APY</p>
 

@@ -1,7 +1,8 @@
 'use client';
 
-import { truncateDecimals, truncateMiddle } from '@/core-ui/helpers/strings';
-import { useBlendPosition } from '@/core-ui/hooks';
+import { truncateMiddle } from '@/core-ui/helpers/strings';
+import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
+import { useLiveBlendUsdc } from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { motion, useAnimationControls } from 'framer-motion';
@@ -44,7 +45,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const { wallet } = usePollar();
   const { data: profile } = useProfileData();
   const savvy = !!profile?.cryptoSavvy;
-  const { data: blendPosition } = useBlendPosition(walletAddress);
+  const { live: blendLiveUsdc } = useLiveBlendUsdc(walletAddress);
   const { data: savedWallets = [], isLoading: walletsLoading } = useSavedWallets();
   const deleteWallet = useDeleteSavedWallet();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -88,8 +89,11 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         { key: 'sending', label: t('withdraw.steps.sending', 'Sending to your wallet') },
       ];
 
-  // Saldo retirable = la posición directa en Blend (líquida, sin lock).
-  const available = truncateDecimals(blendPosition?.usdc ?? 0, 2);
+  // Saldo retirable = la posición directa en Blend (líquida, sin lock), proyectada
+  // en vivo con `useLiveBlendUsdc` (la MISMA fuente que el header, así el saldo de
+  // arriba y el "Available" corren juntos y coinciden). Piso a 7 decimales (nunca
+  // hacia arriba) para no aparentar plata que no existe.
+  const available = floorAmount(blendLiveUsdc, AMOUNT_DECIMALS);
 
   // Wallet propia sintética (login externo): el retiro vuelve al firmante.
   const ownWallet: SavedWallet | null =
@@ -239,13 +243,13 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         <button
           type="button"
           onClick={() => {
-            setAmount(String(available));
+            setAmount(truncatedAmountString(available));
             setIsMax(true);
             if (overBalance) setOverBalance(false);
           }}
           className="mt-1 inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10"
         >
-          {t('withdraw.available', 'Available')}: ${available.toFixed(2)}
+          {t('withdraw.available', 'Available')}: {formatUsdPrecise(available)}
         </button>
       </div>
 
@@ -327,7 +331,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           setIsMax(false);
           if (overBalance) setOverBalance(false);
         }}
-        maxDecimals={2}
+        maxDecimals={AMOUNT_DECIMALS}
       />
     </div>
   );
@@ -387,7 +391,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     <div className="flex flex-col gap-4">
       <div className="text-center pt-1">
         <p className="text-sm text-gray-500">{t('withdraw.amountLabel', 'Amount')}</p>
-        <p className="text-4xl font-bold text-black">${numericAmount.toFixed(2)}</p>
+        <p className="text-4xl font-bold text-black">{formatUsdPrecise(numericAmount)}</p>
       </div>
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">

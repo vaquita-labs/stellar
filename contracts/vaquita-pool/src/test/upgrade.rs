@@ -305,16 +305,24 @@ fn update_upgrade_timelock_secs_takes_effect_on_next_propose() {
     let e = Env::default();
     let (_, pool) = deploy(&e);
 
-    // Lower timelock to 1 second
-    let new_timelock: u64 = 1;
+    // Lower timelock to the minimum floor (1 hour), below the 48h default.
+    let new_timelock: u64 = crate::MIN_UPGRADE_TIMELOCK_SECS;
     pool.update_upgrade_timelock_secs(&new_timelock);
 
     pool.propose_upgrade(&random_hash(&e));
 
-    // Jump only 1 second — should satisfy the new timelock
+    // Jump exactly the new timelock — should satisfy it
     e.jump_time(new_timelock);
     let result = pool.try_execute_upgrade();
     assert_ne!(result, Err(Ok(VaquitaPoolError::UpgradeNotReady)));
+}
+
+#[test]
+fn update_upgrade_timelock_secs_rejects_below_floor() {
+    let e = Env::default();
+    let (_, pool) = deploy(&e);
+    let result = pool.try_update_upgrade_timelock_secs(&(crate::MIN_UPGRADE_TIMELOCK_SECS - 1));
+    assert_eq!(result, Err(Ok(VaquitaPoolError::UpgradeTimelockTooShort)));
 }
 
 #[test]
@@ -326,8 +334,9 @@ fn update_upgrade_timelock_secs_does_not_affect_pending_proposal() {
 
     pool.propose_upgrade(&random_hash(&e));
 
-    // Reduce timelock to 0 AFTER proposing — pending ready_at was already set
-    pool.update_upgrade_timelock_secs(&0u64);
+    // Reduce timelock to the floor AFTER proposing — pending ready_at was
+    // already set to the original 48h and must not change.
+    pool.update_upgrade_timelock_secs(&crate::MIN_UPGRADE_TIMELOCK_SECS);
 
     // Immediately try to execute — the original 48-hour ready_at still blocks it
     let result = pool.try_execute_upgrade();

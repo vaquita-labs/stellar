@@ -267,17 +267,56 @@ fn update_upgrade_timelock_secs_takes_effect_on_next_propose() {
     let env = Env::default();
     let (_, _, client) = deploy(&env);
 
-    // Lower timelock to 60 seconds
-    let new_timelock: u64 = 60;
+    // Lower timelock to the minimum floor (1 hour), below the 48h default.
+    let new_timelock: u64 = crate::upgrade::MIN_TIMELOCK_SECS;
     client.update_upgrade_timelock_secs(&new_timelock);
 
     let hash = BytesN::from_array(&env, &[5u8; 32]);
     client.propose_upgrade(&hash);
 
-    // Jump only 60 seconds — timelock check should now pass
+    // Jump exactly the new timelock — timelock check should now pass
     env.jump_time(new_timelock);
     let result = client.try_execute_upgrade();
     assert_ne!(result, Err(Ok(BadgeError::UpgradeNotReady)));
+}
+
+#[test]
+fn update_upgrade_timelock_secs_rejects_below_floor() {
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+    let result = client.try_update_upgrade_timelock_secs(&(crate::upgrade::MIN_TIMELOCK_SECS - 1));
+    assert_eq!(result, Err(Ok(BadgeError::UpgradeTimelockTooShort)));
+}
+
+// ---------- security hardening (checklist S3, S4) ----------
+
+#[test]
+fn execute_upgrade_blocked_after_lock() {
+    // S3: a pending upgrade must not be executable once upgrades are locked,
+    // even after the timelock elapses.
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+
+    let hash = BytesN::from_array(&env, &[7u8; 32]);
+    client.propose_upgrade(&hash);
+    client.lock_upgrades_forever();
+
+    // Jump well past the 48h/2-day timelock so only the lock can be blocking.
+    env.jump_time(172_800);
+    let result = client.try_execute_upgrade();
+    assert_eq!(result, Err(Ok(BadgeError::UpgradeLocked)));
+}
+
+#[test]
+fn propose_upgrade_reverts_on_timelock_overflow() {
+    // S4: an absurd timelock must not wrap ready_at into the past.
+    let env = Env::default();
+    let (_, _, client) = deploy(&env);
+
+    client.update_upgrade_timelock_secs(&u64::MAX);
+    let hash = BytesN::from_array(&env, &[8u8; 32]);
+    let result = client.try_propose_upgrade(&hash);
+    assert_eq!(result, Err(Ok(BadgeError::ArithmeticOverflow)));
 }
 
 #[test]

@@ -27,6 +27,10 @@ export const VaquitaPoolErrorCode = {
   UpgradeLocked: 22,
   VaultRepointHasOutstandingPositions: 23,
   TokenRepointHasOutstandingPositions: 24,
+  VaultReturnedNoAmounts: 25,
+  VaultPulledUnexpectedAmount: 26,
+  LockPeriodExceedsMax: 27,
+  UpgradeTimelockTooShort: 28,
 } as const;
 
 export type VaquitaPoolErrorCodeValue =
@@ -59,6 +63,10 @@ const ERROR_META: Record<number, ErrorMeta> = {
   [VaquitaPoolErrorCode.UpgradeLocked]: { message: 'Upgrades have been locked forever', httpStatus: 400 },
   [VaquitaPoolErrorCode.VaultRepointHasOutstandingPositions]: { message: 'Cannot change vault while positions are open', httpStatus: 409 },
   [VaquitaPoolErrorCode.TokenRepointHasOutstandingPositions]: { message: 'Cannot change token while positions are open', httpStatus: 409 },
+  [VaquitaPoolErrorCode.VaultReturnedNoAmounts]: { message: 'Vault returned no amounts', httpStatus: 502 },
+  [VaquitaPoolErrorCode.VaultPulledUnexpectedAmount]: { message: 'Vault pulled an unexpected amount', httpStatus: 502 },
+  [VaquitaPoolErrorCode.LockPeriodExceedsMax]: { message: 'Lock period exceeds the maximum', httpStatus: 400 },
+  [VaquitaPoolErrorCode.UpgradeTimelockTooShort]: { message: 'Upgrade timelock is too short', httpStatus: 400 },
 };
 
 const FALLBACK: ErrorMeta = { message: 'Contract error', httpStatus: 500 };

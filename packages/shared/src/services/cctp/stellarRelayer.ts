@@ -6,11 +6,9 @@ import {
   rpc,
   xdr,
 } from '@stellar/stellar-sdk';
+import { requireSorobanRpcUrl } from '../stellar/rpc';
 import { CCTP_NETWORKS } from './index';
 import type { BridgeTransferRecord } from './transfers';
-
-const DEFAULT_TESTNET_RPC = 'https://soroban-testnet.stellar.org';
-const DEFAULT_MAINNET_RPC = 'https://soroban-rpc.mainnet.stellar.org:443';
 
 const requireEnv = (name: string): string => {
   const value = process.env[name];
@@ -20,10 +18,7 @@ const requireEnv = (name: string): string => {
 
 const rpcUrlFor = (networkKey: string): string => {
   const network = CCTP_NETWORKS[networkKey as keyof typeof CCTP_NETWORKS];
-  if (network?.environment === 'mainnet') {
-    return process.env.STELLAR_MAINNET_SOROBAN_RPC || DEFAULT_MAINNET_RPC;
-  }
-  return process.env.STELLAR_TESTNET_SOROBAN_RPC || DEFAULT_TESTNET_RPC;
+  return requireSorobanRpcUrl(network?.environment === 'mainnet' ? 'mainnet' : 'testnet');
 };
 
 const passphraseFor = (networkKey: string): string => {

@@ -1,5 +1,6 @@
 import { PoolV2 } from '@blend-capital/blend-sdk';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { getBlendConfig } from '@/networks/stellar/blendDirect';
 import { getNetworkPassphrase, getRpcUrl, getStellarNetwork } from '@/networks/stellar/kit';
 
@@ -61,4 +62,42 @@ export const useBlendPosition = (walletAddress?: string) => {
     retry: 4,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
+};
+
+const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
+
+/**
+ * Igual que `useBlendPosition` pero además devuelve `live`: el saldo de Blend
+ * PROYECTADO en vivo = snapshot on-chain + el interés estimado devengado desde el
+ * último fetch, avanzando cada 250ms. Al próximo refetch (60s) el snapshot snapea
+ * al valor real y la proyección arranca de nuevo desde ahí.
+ *
+ * Por qué existe: el header y el retiro deben mostrar (y mover) EL MISMO número.
+ * Antes el header proyectaba y el retiro usaba el snapshot crudo, y a 7 decimales
+ * uno "crecía" y el otro no → parecían saldos distintos. Leyendo ambos de `live`,
+ * coinciden. `live` no es plata inventada: es un estimado de lo que YA se devengó
+ * on-chain (el snapshot está algo viejo). El retiro-todo (sentinel i128::MAX)
+ * igual toma el total real al ejecutar, así que mostrar el estimado es seguro.
+ *
+ * `now` es por-componente (un intervalo propio), así que dos consumidores pueden
+ * estar hasta 250ms desfasados; a las tasas reales eso es < 10⁻⁸, por debajo del
+ * 7º decimal, así que el número mostrado es el mismo.
+ */
+export const useLiveBlendUsdc = (walletAddress?: string) => {
+  const query = useBlendPosition(walletAddress);
+  const settled = query.data?.usdc ?? 0;
+  const apy = query.data?.apy ?? 0;
+  const updatedAt = query.dataUpdatedAt;
+
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, []);
+
+  const ratePerMs = (settled * (apy / 100)) / MS_PER_YEAR;
+  const elapsed = updatedAt ? Math.max(0, now - updatedAt) : 0;
+  const live = settled + ratePerMs * elapsed;
+
+  return { ...query, live, settled, apy };
 };

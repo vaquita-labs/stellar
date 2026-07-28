@@ -8,6 +8,11 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']),
   // Pooled Postgres connection used by the Prisma driver adapter (@vaquita/db).
   DATABASE_URL: z.string().min(1),
+  // Soroban RPC endpoints, one per network. Both are always required so every
+  // caller picks the endpoint by network explicitly — there is no single
+  // override var and no fallback to public endpoints.
+  STELLAR_MAINNET_SOROBAN_RPC_URL: z.url(),
+  STELLAR_TESTNET_SOROBAN_RPC_URL: z.url(),
 });
 
 // NOTE: API-service-only secrets (AUTH_SESSION_SECRET, BADGE_SIGNING_SEED) are

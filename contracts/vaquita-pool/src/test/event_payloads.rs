@@ -17,7 +17,7 @@ use crate::test::EnvTestUtils;
 use crate::{VaquitaPool, VaquitaPoolClient};
 use sep_41_token::testutils::MockTokenClient;
 use soroban_sdk::testutils::{Address as _, BytesN as _, Events as _};
-use soroban_sdk::{Address, BytesN, Env, String, TryFromVal, Vec};
+use soroban_sdk::{Address, BytesN, Env, TryFromVal, Vec};
 
 const LOCK_7D: u64 = 604_800;
 const TIMELOCK_48H: u64 = 172_800;
@@ -104,12 +104,14 @@ fn deposit_event_payload() {
     let (_, alice, _, pool, _, tok) = setup(&e);
     let amount: i128 = 1_000_000;
     tok.mint(&alice, &amount);
-    let dep = String::from_str(&e, "d1");
-    pool.deposit(&alice, &dep, &amount, &LOCK_7D);
+    let nonce = 1u64;
+    let expected_id = pool.compute_deposit_id(&alice, &nonce);
+    pool.deposit(&alice, &nonce, &amount, &LOCK_7D);
     let ev = DepositEvent::try_from_val(&e, &last_val(&e)).unwrap();
     assert_eq!(ev.owner, alice);
     assert_eq!(ev.amount, amount);
-    assert_eq!(ev.deposit_id, dep);
+    assert_eq!(ev.deposit_id, expected_id);
+    assert_eq!(ev.nonce, nonce);
     assert_eq!(ev.lock_period, LOCK_7D);
 }
 
@@ -122,12 +124,13 @@ fn withdraw_event_payload() {
     let e = Env::default();
     let (_, alice, _, pool, _, tok) = setup(&e);
     tok.mint(&alice, &1_000_000i128);
-    let dep = String::from_str(&e, "w1");
-    pool.deposit(&alice, &dep, &1_000_000i128, &LOCK_7D);
-    pool.withdraw(&alice, &dep);
+    let nonce = 1u64;
+    let expected_id = pool.compute_deposit_id(&alice, &nonce);
+    pool.deposit(&alice, &nonce, &1_000_000i128, &LOCK_7D);
+    pool.withdraw(&alice, &nonce);
     let ev = WithdrawEvent::try_from_val(&e, &last_val(&e)).unwrap();
     assert_eq!(ev.owner, alice);
-    assert_eq!(ev.deposit_id, dep);
+    assert_eq!(ev.deposit_id, expected_id);
     assert_eq!(ev.reward, 0);
     assert_eq!(ev.early_fee, 0);
     assert!(!ev.matured, "withdrawn before finalization_time → not matured");
@@ -140,7 +143,7 @@ fn withdraw_event_matured_flag() {
     let e = Env::default();
     let (_, alice, _, pool, _, tok) = setup(&e);
     tok.mint(&alice, &1_000_000i128);
-    let dep = String::from_str(&e, "wm");
+    let dep = 1u64;
     pool.deposit(&alice, &dep, &1_000_000i128, &LOCK_7D);
     e.jump_time(LOCK_7D + 1);
     pool.withdraw(&alice, &dep);
@@ -169,7 +172,7 @@ fn rewards_added_event_payload() {
     let e = Env::default();
     let (admin, alice, _, pool, _, tok) = setup(&e);
     tok.mint(&alice, &1_000_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "r1"), &1_000_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &1_000_000i128, &LOCK_7D);
     tok.mint(&admin, &50_000i128);
     pool.add_rewards(&LOCK_7D, &50_000i128);
     let ev = RewardsAddedEvent::try_from_val(&e, &last_val(&e)).unwrap();
@@ -184,11 +187,11 @@ fn protocol_fees_withdrawn_event_payload() {
     let e = Env::default();
     let (admin, alice, vault_addr, pool, vault, tok) = setup(&e);
     tok.mint(&alice, &2_000_000i128);
-    pool.deposit(&alice, &String::from_str(&e, "pf1"), &2_000_000i128, &LOCK_7D);
+    pool.deposit(&alice, &1u64, &2_000_000i128, &LOCK_7D);
     tok.mint(&vault_addr, &400_000i128);
     vault.test_set_withdraw_adjustment(&400_000i128);
     e.jump_time(LOCK_7D / 2);
-    pool.withdraw(&alice, &String::from_str(&e, "pf1"));
+    pool.withdraw(&alice, &1u64);
     pool.withdraw_protocol_fees();
     let ev = ProtocolFeesWithdrawnEvent::try_from_val(&e, &last_val(&e)).unwrap();
     assert_eq!(ev.admin, admin);

@@ -10,6 +10,11 @@ BADGES_UPGRADE_TIMELOCK_SECS ?= 60
 
 INVOKE_FEE ?= 10000000
 
+# Client-supplied position nonce for the deposit/withdraw helpers. The contract
+# derives deposit_id = sha256(caller || nonce), so deposit and withdraw must use
+# the same NONCE to refer to the same position.
+NONCE ?= 1
+
 default: build
 
 all: test
@@ -105,20 +110,20 @@ update-upgrade-timelock-badges:
 	-- update_upgrade_timelock_secs --new_secs $(BADGES_UPGRADE_TIMELOCK_SECS)
 
 deposit:
-	stellar contract invoke --id CDX5QB7JOJJQKVYICT4K5PURM73WUOWDMKKHFIHVYUH5HV2RPPL5Q6CM --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	deposit \
 	--caller $(USER_ADDRESS) \
-	--deposit_id $(DEPOSIT_ID) \
+	--nonce $(NONCE) \
 	--amount $(DEPOSIT_AMOUNT) \
 	--period $(LOCK_PERIOD)
 
 withdraw:
-	stellar contract invoke --id CDX5QB7JOJJQKVYICT4K5PURM73WUOWDMKKHFIHVYUH5HV2RPPL5Q6CM --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
+	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \
 	-- \
 	withdraw \
 	--caller $(USER_ADDRESS) \
-	--deposit_id $(DEPOSIT_ID)
+	--nonce $(NONCE)
 
 add-lock-period:
 	stellar contract invoke --id vaquita_pool --source $(SOURCE_ACCOUNT) --network $(NETWORK) --inclusion-fee $(INVOKE_FEE) \

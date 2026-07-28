@@ -1,6 +1,6 @@
 'use client';
 
-import { truncateDecimals } from '@/core-ui/helpers/strings';
+import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import {
   useApyByLockPeriods,
@@ -37,19 +37,29 @@ function displayAmount(raw: string) {
  *   1) directBlendWithdraw (Blend → wallet, mismo USDC/issuer)
  *   2) el depósito al Vaquita pool (createDeposit → transactionDeposit → confirm)
  */
-export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChange: () => void }) {
+export function InvestModal({
+  open,
+  onOpenChange,
+  initialLockPeriod,
+}: {
+  open: boolean;
+  onOpenChange: () => void;
+  /** Plazo preseleccionado al abrir (ej. tocar "Invertir" en un plan vacío del
+   *  Portfolio). Si no viene, arranca en el plazo más corto. */
+  initialLockPeriod?: number;
+}) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
   const queryClient = useQueryClient();
   const { data: blendPosition, refetch: refetchBlend } = useBlendPosition(walletAddress);
-  const available = truncateDecimals(blendPosition?.usdc ?? 0, 2);
+  const available = floorAmount(blendPosition?.usdc ?? 0, AMOUNT_DECIMALS);
 
   const lockPeriods = useMemo(
     () => [...(token?.lockPeriods ?? [])].filter((p) => p > 0).sort((a, b) => a - b),
     [token?.lockPeriods],
   );
   const { byLockPeriod } = useApyByLockPeriods(lockPeriods, token?.symbol ?? '');
-  const { createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
+  const { getNextNonce, createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactions();
 
   const [step, setStep] = useState<Step>('amount');
@@ -67,13 +77,19 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
     if (open) {
       setStep('amount');
       setAmount('');
-      setSelectedLock(lockPeriods[0] ?? null);
+      // Respeta el plazo con el que se abrió (Invertir desde un plan vacío);
+      // si no aplica o ya no existe, cae al plazo más corto.
+      setSelectedLock(
+        initialLockPeriod != null && lockPeriods.includes(initialLockPeriod)
+          ? initialLockPeriod
+          : (lockPeriods[0] ?? null),
+      );
       setError(null);
       setOverBalance(false);
       setIsMax(false);
       setActiveStep(null);
     }
-  }, [open, lockPeriods]);
+  }, [open, lockPeriods, initialLockPeriod]);
 
   const numericAmount = Number(amount || '0');
   const apyOf = (lp: number) =>
@@ -125,16 +141,20 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
 
       // 2) Depósito al Vaquita pool (crea la posición con lock).
       setActiveStep('locking');
+      // Per-wallet nonce → the pool derives the position id as sha256(caller || nonce).
+      const nonce = await getNextNonce();
+      if (!nonce) throw new Error(t('withdraw.error.generic', 'Something went wrong'));
       const newDeposit = await createDeposit({
         amount: numericAmount,
         tokenSymbol: token.symbol,
         lockPeriod: selectedLock,
         vaquitaContract: token?.vaquitaContractAddress,
+        nonce,
       });
       if (!newDeposit.success) throw new Error(t('withdraw.error.generic', 'Something went wrong'));
 
       const { success, txHash, transaction, depositIdHex, error: txError } = await transactionDeposit(
-        newDeposit.id,
+        nonce,
         numericAmount,
         selectedLock,
       );
@@ -175,13 +195,13 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
         <button
           type="button"
           onClick={() => {
-            setAmount(String(available));
+            setAmount(truncatedAmountString(available));
             setIsMax(true);
             if (overBalance) setOverBalance(false);
           }}
           className="mt-1 inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10"
         >
-          {`${t('withdraw.available', 'Available')}: $${available.toFixed(2)}`}
+          {`${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available)}`}
         </button>
       </div>
 
@@ -235,7 +255,7 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
           setIsMax(false);
           if (overBalance) setOverBalance(false);
         }}
-        maxDecimals={2}
+        maxDecimals={AMOUNT_DECIMALS}
         compact
       />
 
@@ -386,18 +406,13 @@ export function InvestModal({ open, onOpenChange }: { open: boolean; onOpenChang
       title={STEP_TITLE[step]}
       size="md"
       isDismissable={step !== 'processing'}
-      // Apilado sobre el panel de Portfolio: nunca cierra con X, siempre vuelve
-      // atrás. El paso `term` retrocede al monto; el resto (raíz/éxito) vuelve al
-      // panel. `processing` no navega: la tx ya salió.
-      hideClose
-      backVariant="primary"
-      onBack={
-        step === 'processing'
-          ? undefined
-          : step === 'term'
-            ? () => setStep('amount')
-            : onOpenChange
-      }
+      // Convención de la app: la X (cerrar) va a la derecha y blanca. Los pasos
+      // raíz (`amount`) y `success` cierran el modal → muestran la X. `term` es
+      // navegación interna (vuelve al monto) → flecha atrás a la izquierda.
+      // `processing` no navega ni cierra: la tx ya salió.
+      hideClose={step === 'term' || step === 'processing'}
+      backVariant="white"
+      onBack={step === 'term' ? () => setStep('amount') : undefined}
       bodyClassName={'flex flex-col gap-3 ' + (footer ? 'pb-2' : 'pb-6')}
       footer={footer}
     >
