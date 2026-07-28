@@ -1737,6 +1737,7 @@
         "stepToken": "SEP-10 · Get Anclap JWT",
         "stepSettled": "Wait for Anclap confirmation",
         "stepTransfer": "Send ARS to Anclap",
+        "stepBlend": "Withdraw from Blend",
         "stepTrustline": "Activate ARS trustline",
         "stepWithdraw": "SEP-24 · Start withdrawal",
         "settled": "Withdrawal completed on Anclap.",
