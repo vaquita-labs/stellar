@@ -53,6 +53,8 @@ export const toProjectConfig = (
     lockPeriods: token.lockPeriods.map(Number),
     contractAddress: token.contractAddress?.split(',')?.[0] ?? '',
     vaquitaContractAddress: firstElement(token.vaquitaContractAddress ?? ''),
+    issuer: token.issuer ?? null,
+    blendPoolContractAddress: token.blendPoolContractAddress ?? null,
   })),
   currencies: toCurrencies(config.currencies),
   languages: toLanguages(config.languages),

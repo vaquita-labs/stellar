@@ -34,6 +34,8 @@ const tokenFields = {
   vaquitaContractAddress: nullableStr(128),
   lockPeriods: z.array(z.number().int().min(0)),
   defindexVaultContractAddress: nullableStr(10_000),
+  issuer: nullableStr(56),
+  blendPoolContractAddress: nullableStr(128),
 };
 
 // On create, name + symbol are required; everything else has a sensible default.
@@ -48,6 +50,8 @@ const createSchema = z.object({
   vaquitaContractAddress: tokenFields.vaquitaContractAddress,
   lockPeriods: tokenFields.lockPeriods.optional(),
   defindexVaultContractAddress: tokenFields.defindexVaultContractAddress,
+  issuer: tokenFields.issuer,
+  blendPoolContractAddress: tokenFields.blendPoolContractAddress,
 });
 
 // On update everything is optional; only sent keys are written.
@@ -63,6 +67,8 @@ const updateSchema = z.object({
   vaquitaContractAddress: tokenFields.vaquitaContractAddress,
   lockPeriods: tokenFields.lockPeriods.optional(),
   defindexVaultContractAddress: tokenFields.defindexVaultContractAddress,
+  issuer: tokenFields.issuer,
+  blendPoolContractAddress: tokenFields.blendPoolContractAddress,
 });
 
 const invalidJson = () => NextResponse.json({ status: 'error', message: 'Invalid JSON body' }, { status: 400 });
@@ -119,6 +125,8 @@ export async function POST(req: NextRequest) {
       vaquitaContractAddress: d.vaquitaContractAddress ?? null,
       lockPeriods: (d.lockPeriods ?? []).map((n) => BigInt(n)),
       defindexVaultContractAddress: d.defindexVaultContractAddress ?? null,
+      issuer: d.issuer ?? null,
+      blendPoolContractAddress: d.blendPoolContractAddress ?? null,
     },
   });
   return NextResponse.json({ data: { token: serializeToken(token) } });
@@ -164,6 +172,10 @@ export async function PATCH(req: NextRequest) {
       ...(data.lockPeriods !== undefined ? { lockPeriods: data.lockPeriods.map((n) => BigInt(n)) } : {}),
       ...(data.defindexVaultContractAddress !== undefined
         ? { defindexVaultContractAddress: data.defindexVaultContractAddress }
+        : {}),
+      ...(data.issuer !== undefined ? { issuer: data.issuer } : {}),
+      ...(data.blendPoolContractAddress !== undefined
+        ? { blendPoolContractAddress: data.blendPoolContractAddress }
         : {}),
     },
   });

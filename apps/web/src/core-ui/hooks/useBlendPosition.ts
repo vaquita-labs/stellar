@@ -1,7 +1,8 @@
 import { PoolV2 } from '@blend-capital/blend-sdk';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { getBlendConfig } from '@/networks/stellar/blendDirect';
+import { useConfigStore } from '@/core-ui/stores';
+import { blendConfigForToken } from '@/networks/stellar/blendDirect';
 import { getNetworkPassphrase, getRpcUrl, getStellarNetwork } from '@/networks/stellar/kit';
 
 export interface BlendPosition {
@@ -15,20 +16,21 @@ const EMPTY: BlendPosition = { usdc: 0, apy: 0 };
 
 /**
  * Lee la posición de depósito DIRECTO a Blend del usuario, on-chain y en vivo.
- * Es la fuente de verdad (no hay DB): resuelve pool + USDC de la red activa con
- * getBlendConfig() y consulta el colateral del usuario en el pool.
+ * El pool + USDC salen del token activo del project config (DB → API → store)
+ * y se consulta el colateral del usuario en el pool.
  *
  * Sin caché propia todavía: el `staleTime` de react-query evita martillar el RPC
  * (la posición solo cambia al depositar/retirar). El caché en DB + cron llega
  * cuando la carga RPC lo justifique, no antes.
  */
 export const useBlendPosition = (walletAddress?: string) => {
-  const config = getBlendConfig();
+  const token = useConfigStore((s) => s.token);
+  const config = blendConfigForToken(token);
 
   return useQuery<BlendPosition>({
-    queryKey: ['blend-position', getStellarNetwork(), config.poolId, walletAddress],
+    queryKey: ['blend-position', getStellarNetwork(), config?.poolId, walletAddress],
     queryFn: async () => {
-      if (!walletAddress) return EMPTY;
+      if (!walletAddress || !config) return EMPTY;
       const network = { rpc: getRpcUrl(), passphrase: getNetworkPassphrase() };
       const pool = await PoolV2.load(network, config.poolId);
       const reserve = pool.reserves.get(config.usdcId);
@@ -41,7 +43,7 @@ export const useBlendPosition = (walletAddress?: string) => {
         apy: (reserve.estSupplyApy ?? 0) * 100,
       };
     },
-    enabled: !!walletAddress,
+    enabled: !!walletAddress && !!config,
     // La posición solo cambia al depositar/retirar; 60s es de sobra y mantiene
     // el RPC tranquilo. Tras un depósito, invalidar esta query fuerza el refresh.
     staleTime: 60_000,

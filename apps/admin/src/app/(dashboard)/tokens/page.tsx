@@ -26,6 +26,8 @@ type FormState = {
   vaquitaContractAddress: string;
   lockPeriods: string;
   defindexVaultContractAddress: string;
+  issuer: string;
+  blendPoolContractAddress: string;
 };
 
 const emptyForm = (): FormState => ({
@@ -40,6 +42,8 @@ const emptyForm = (): FormState => ({
   // Edited comma/space separated; parsed back to an int[] on submit.
   lockPeriods: '',
   defindexVaultContractAddress: '',
+  issuer: '',
+  blendPoolContractAddress: '',
 });
 
 const formFromToken = (t: Token): FormState => ({
@@ -53,6 +57,8 @@ const formFromToken = (t: Token): FormState => ({
   vaquitaContractAddress: t.vaquitaContractAddress ?? '',
   lockPeriods: (t.lockPeriods ?? []).join(', '),
   defindexVaultContractAddress: t.defindexVaultContractAddress ?? '',
+  issuer: t.issuer ?? '',
+  blendPoolContractAddress: t.blendPoolContractAddress ?? '',
 });
 
 // "30, 60 90" -> [30, 60, 90]; ignores blanks/non-numbers.
@@ -149,6 +155,8 @@ export default function Page() {
       vaquitaContractAddress: orNull(form.vaquitaContractAddress),
       lockPeriods: parseLockPeriods(form.lockPeriods),
       defindexVaultContractAddress: orNull(form.defindexVaultContractAddress),
+      issuer: orNull(form.issuer),
+      blendPoolContractAddress: orNull(form.blendPoolContractAddress),
     };
   };
 
@@ -306,6 +314,22 @@ export default function Page() {
               />
 
               <Input
+                label="Asset issuer"
+                maxLength={56}
+                placeholder="G..."
+                value={form.issuer}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('issuer', e.target.value)}
+              />
+
+              <Input
+                label="Blend pool contract address"
+                maxLength={128}
+                placeholder="C..."
+                value={form.blendPoolContractAddress}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('blendPoolContractAddress', e.target.value)}
+              />
+
+              <Input
                 label="Lock periods (comma separated)"
                 placeholder="e.g. 30, 60, 90"
                 value={form.lockPeriods}
@@ -353,6 +377,10 @@ export default function Page() {
                         <dd className="break-all font-mono text-default-500">{t.vaquitaContractAddress ?? '—'}</dd>
                         <dt className="text-default-400">DeFindex vault</dt>
                         <dd className="break-all font-mono text-default-500">{t.defindexVaultContractAddress ?? '—'}</dd>
+                        <dt className="text-default-400">Issuer</dt>
+                        <dd className="break-all font-mono text-default-500">{t.issuer ?? '—'}</dd>
+                        <dt className="text-default-400">Blend pool</dt>
+                        <dd className="break-all font-mono text-default-500">{t.blendPoolContractAddress ?? '—'}</dd>
                       </dl>
                     </div>
                     <div className="flex shrink-0 gap-2">

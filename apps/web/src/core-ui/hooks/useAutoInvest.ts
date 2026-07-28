@@ -1,4 +1,4 @@
-import { directBlendSupply, getBlendConfig } from '@/networks/stellar/blendDirect';
+import { blendConfigForToken, directBlendSupply } from '@/networks/stellar/blendDirect';
 import { usePollarReadyStore } from '@/networks/stellar/wallet/pollarReady';
 import { toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
@@ -37,11 +37,13 @@ export const useIdleFunds = () => {
   const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
   // Idle = ONLY the USDC Blend accepts (same issuer). Testnet has several
   // "USDC" assets from different issuers; without this filter the wrong one is
-  // detected and the supply fails with "trustline missing".
-  const blendUsdcIssuer = getBlendConfig().usdcIssuer;
-  const usdc = balances.find(
-    (b) => b.code?.toUpperCase() === 'USDC' && b.issuer === blendUsdcIssuer
-  );
+  // detected and the supply fails with "trustline missing". The Blend config
+  // comes from the active token (project config); null until it loads or when
+  // the token has no Blend pool — then nothing counts as idle.
+  const blendUsdcIssuer = blendConfigForToken(token)?.usdcIssuer;
+  const usdc = blendUsdcIssuer
+    ? balances.find((b) => b.code?.toUpperCase() === 'USDC' && b.issuer === blendUsdcIssuer)
+    : undefined;
   const idle = usdc ? Number(usdc.available) : 0;
 
   // Traemos el balance al montar (el home no lo pide solo) para detectar lo

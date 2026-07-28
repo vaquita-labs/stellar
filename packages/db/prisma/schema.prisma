@@ -471,6 +471,11 @@ model Token {
   vaquitaContractAddress       String?   @map("vaquita_contract_address") @db.VarChar(128)
   lockPeriods                  BigInt[]  @default([]) @map("lock_periods")
   defindexVaultContractAddress String?   @map("defindex_vault_contract_address")
+  // Issuer (G-address) of the asset behind contract_address; tells this asset
+  // apart from same-code assets from other issuers.
+  issuer                       String?   @db.VarChar(56)
+  // Blend V2 pool that accepts this token as reserve (direct-to-Blend deposit).
+  blendPoolContractAddress     String?   @map("blend_pool_contract_address") @db.VarChar(128)
 
   createdAt                    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt                    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)

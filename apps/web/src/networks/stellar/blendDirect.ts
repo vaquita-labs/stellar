@@ -8,6 +8,8 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import { clientEnv } from '@/core-ui/config/clientEnv';
+import { useConfigStore } from '@/core-ui/stores';
+import type { NetworkResponseDTO } from '@/core-ui/types';
 import { getNetworkPassphrase, getRpcUrl } from './kit';
 import { describeOutcomeError, runWithErrorCapture } from './pollarError';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
@@ -22,17 +24,30 @@ export interface BlendConfig {
 }
 
 /**
- * Blend pool, the USDC it accepts and the fee for the ACTIVE network. The four
- * envs are required and come validated from `clientEnv`, so config is always
- * present: pointing a deployment at another network is just changing the
- * NEXT_PUBLIC_BLEND_* values — no "mainnet" hardwired in the logic.
+ * Blend pool, the USDC it accepts and its issuer come from the token row of
+ * the project config (DB → API → config store), same source as the Vaquita
+ * pool and the DeFindex vault. Null while the config has not loaded or when
+ * the token has no Blend pool configured (Admin → Tokens → Edit).
  */
-export const getBlendConfig = (): BlendConfig => ({
-  poolId: clientEnv.NEXT_PUBLIC_BLEND_POOL_CONTRACT_ID,
-  usdcId: clientEnv.NEXT_PUBLIC_BLEND_USDC_CONTRACT_ID,
-  usdcIssuer: clientEnv.NEXT_PUBLIC_BLEND_USDC_ISSUER,
-  feeStroops: clientEnv.NEXT_PUBLIC_BLEND_FEE_STROOPS,
-});
+export const blendConfigForToken = (
+  token: NetworkResponseDTO['tokens'][number] | null,
+): BlendConfig | null => {
+  if (!token?.blendPoolContractAddress || !token.contractAddress || !token.issuer) return null;
+  return {
+    poolId: token.blendPoolContractAddress,
+    usdcId: token.contractAddress,
+    usdcIssuer: token.issuer,
+    feeStroops: clientEnv.NEXT_PUBLIC_BLEND_FEE_STROOPS,
+  };
+};
+
+/**
+ * Non-reactive read of the ACTIVE token's Blend config, for imperative call
+ * sites (transaction submission, balance reads). React code must derive it
+ * from the store subscription instead: `blendConfigForToken(useConfigStore(s => s.token))`.
+ */
+export const getBlendConfig = (): BlendConfig | null =>
+  blendConfigForToken(useConfigStore.getState().token);
 
 const toBaseUnits = (input: string, decimals: number): bigint => {
   const [wholeRaw = '0', fractionalRaw = ''] = input.trim().split('.');
@@ -85,6 +100,7 @@ const submitBlendRequest = async (
   }: { address: string; amount: string; decimals: number; max?: boolean },
 ): Promise<{ hash: string }> => {
   const config = getBlendConfig();
+  if (!config) throw new Error('Blend pool is not configured for this token');
   if (!address) throw new Error('No connected address');
 
   const binding = getPollarBinding();
@@ -163,6 +179,7 @@ export const directUsdcTransfer = async ({
   decimals: number;
 }): Promise<{ hash: string }> => {
   const config = getBlendConfig();
+  if (!config) throw new Error('Blend pool is not configured for this token');
 
   const binding = getPollarBinding();
   if (!binding) throw new Error('Pollar adapter is not bound yet. Connect your wallet first.');

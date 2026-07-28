@@ -49,12 +49,12 @@ NEXT_PUBLIC_SERVICES_URL=https://tu-api.dominio.com
 NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL=https://mainnet.sorobanrpc.com
 NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY=pub_mainnet_…
-NEXT_PUBLIC_BLEND_POOL_CONTRACT_ID=…
-NEXT_PUBLIC_BLEND_USDC_CONTRACT_ID=…
-NEXT_PUBLIC_BLEND_USDC_ISSUER=…
 NEXT_PUBLIC_BLEND_FEE_STROOPS=1000000
 GIT_SHA=<sha del commit, lo provee CI>
 ```
+
+El pool de Blend, su USDC y el issuer se configuran por token en el admin
+(Admin → Tokens → Edit).
 
 > ℹ️ La red Stellar (mainnet/testnet) se deriva del prefijo de
 > `NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY` (`pub_mainnet_…` → mainnet).
