@@ -35,7 +35,7 @@ All variables are required and validated with zod in
 `src/core-ui/config/clientEnv.ts` — the build fails if any is missing. Key ones:
 
 ```bash
-NEXT_PUBLIC_SERVICES_URL=https://api.vaquita.fi
+NEXT_PUBLIC_SERVICES_URL=https://api.local.vaquita.fi
 NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL=https://mainnet.sorobanrpc.com
 NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY=pub_mainnet_…   # its prefix picks the active network
