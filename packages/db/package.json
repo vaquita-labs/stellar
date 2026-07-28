@@ -11,6 +11,8 @@
   },
   "scripts": {
     "db:pull": "prisma db pull",
+    "db:push": "prisma db push && node scripts/apply-sql.mjs",
+    "db:apply-sql": "node scripts/apply-sql.mjs",
     "generate": "prisma generate",
     "postinstall": "prisma generate",
     "studio": "prisma studio",
