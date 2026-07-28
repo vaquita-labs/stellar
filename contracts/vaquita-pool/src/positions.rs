@@ -20,8 +20,10 @@ use crate::types::{DataKey, Position};
 /// Bump only when remaining TTL falls below this (≈1 day at 5 s/ledger).
 pub const TTL_THRESHOLD_LEDGERS: u32 = 17_280;
 
-/// Extend persistent position TTL to ≈90 days.  Safely exceeds the
-/// maximum supported lock period (≤30 days).
+/// Extend persistent position TTL to ≈90 days on each touch. This is below the
+/// network max entry TTL (~180 days) and below `MAX_LOCK_PERIOD_SECS` (2 years),
+/// so long-locked positions will archive before maturity and need on-demand
+/// restore at withdrawal (deferred archival-recovery work — see lib.rs).
 pub const POSITION_TTL_EXTEND_TO: u32 = 1_555_200;
 
 /// Extend instance storage TTL to ≈90 days on every state-changing call.

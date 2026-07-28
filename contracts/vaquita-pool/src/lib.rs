@@ -20,11 +20,18 @@ mod vault_adapter;
 pub use error::VaquitaPoolError;
 pub use types::{DataKey, Period, Position};
 
-/// Upper bound on a supported lock period, in seconds (30 days). Keeps
-/// `finalization_time = now + period` well within the ~90-day position TTL and
-/// removes the overflow surface (findings 1d4e7d58 / f620e7c9). Must stay below
-/// the day-equivalent of `positions::POSITION_TTL_EXTEND_TO`.
-pub const MAX_LOCK_PERIOD_SECS: u64 = 30 * 24 * 60 * 60;
+/// Upper bound on a supported lock period, in seconds (2 years). Bounds admin
+/// misconfiguration (finding 1d4e7d58); `finalization_time = now + period` is
+/// still nowhere near overflowing u64 at this range (the `checked_add` guard
+/// covers the rest, finding f620e7c9).
+///
+/// NOTE: this exceeds the network's ~180-day max entry TTL, so positions with
+/// locks longer than that will be archived before maturity and require an
+/// on-demand restore (or a TTL keeper) at withdrawal. That archival-recovery
+/// flow is intentionally deferred to a later story — funds are never at risk
+/// (archived entries are restorable), the position is just temporarily
+/// inaccessible on-chain until restored.
+pub const MAX_LOCK_PERIOD_SECS: u64 = 2 * 365 * 24 * 60 * 60;
 
 /// Minimum upgrade timelock, in seconds (1 hour). Prevents an admin from setting
 /// the timelock to 0 and executing an instant upgrade (finding 2ce344e3).
