@@ -1,6 +1,6 @@
 import { prisma } from '@vaquita/db';
 import type { BadgeClaim as PrismaBadgeClaim } from '@vaquita/db';
-import { env } from '../../config/env';
+import { apiServicesEnv } from '../../config/apiServicesEnv';
 
 const toBadgeClaimRecord = (c: PrismaBadgeClaim): BadgeClaimRecord => ({
   id: c.id,
@@ -50,7 +50,7 @@ export const MAINNET_PIONEER_WINDOW_DAYS = 7;
  * MAINNET_LAUNCH_TIMESTAMP env (e.g. Date.parse('2026-06-01T00:00:00Z')).
  */
 export function getMainnetLaunchTimestampMs(): number {
-  return env.MAINNET_LAUNCH_TIMESTAMP;
+  return apiServicesEnv.MAINNET_LAUNCH_TIMESTAMP;
 }
 
 // ---------------------------------------------------------------------------

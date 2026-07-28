@@ -1,6 +1,6 @@
 import * as Ably from 'ably';
 import { type Request, type Response, Router } from 'express';
-import { env } from '@vaquita/shared';
+import { apiServicesEnv } from '@vaquita/shared/config/apiServicesEnv';
 import { requireAdminSecret } from '../../lib/adminSecret';
 
 const router = Router();
@@ -12,7 +12,7 @@ const router = Router();
  */
 async function issueTokenRequest(req: Request, res: Response, capability: NonNullable<Ably.TokenParams['capability']>) {
   try {
-    const rest = new Ably.Rest({ key: env.ABLY_KEY });
+    const rest = new Ably.Rest({ key: apiServicesEnv.ABLY_KEY });
     const tokenRequest = await rest.auth.createTokenRequest({ capability });
     return res.status(200).json(tokenRequest);
   } catch (err: any) {

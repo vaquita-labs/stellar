@@ -11,6 +11,8 @@ import { z } from 'zod';
  * so process.env is already populated when this runs.
  */
 const apiEnvSchema = z.object({
+  // HTTP port the API listens on.
+  PORT: z.string().regex(/^\d+$/).transform(Number),
   // HMAC key for wallet-session tokens (see lib/walletAuth.ts). Must be a FIXED
   // value shared by every PM2 cluster instance (ecosystem config runs
   // instances: 2) — otherwise each instance signs with its own ephemeral key and

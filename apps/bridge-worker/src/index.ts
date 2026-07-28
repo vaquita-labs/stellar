@@ -1,13 +1,14 @@
 import 'dotenv/config';
 import { z } from 'zod';
 import { prisma } from '@vaquita/db';
+import { getRelayerEnv } from '@vaquita/shared/config/relayerEnv';
 import {
   prismaBridgeConfirmationQueue,
   runBridgeConfirmationBatch,
 } from '@vaquita/shared/services/cctp/worker';
 
-// Worker-only env, all required and validated at startup (the rest of the
-// worker's env is validated by the shared @vaquita/shared schema).
+// Worker-only env, all required and validated at startup (the base and bridge
+// groups are validated by the @vaquita/shared schemas the imports load).
 const positiveInt = z
   .string()
   .regex(/^\d+$/)
@@ -30,6 +31,11 @@ if (!parsedWorkerEnv.success) {
   process.exit(1);
 }
 const workerEnv = parsedWorkerEnv.data;
+
+// The relayer group is lazy in @vaquita/shared (the API loads the cctp modules
+// without it); resolve it here so a misconfigured worker fails at startup, not
+// on the first relayed transfer.
+getRelayerEnv();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev:api": "pnpm --filter @vaquita/api dev",
+    "dev:bridge-worker": "pnpm --filter @vaquita/bridge-worker dev",
     "dev:app": "pnpm --filter @vaquita/web dev",
     "dev:admin": "pnpm --filter @vaquita/admin dev",
     "dev": "pnpm --parallel --filter @vaquita/api --filter @vaquita/admin --filter @vaquita/web dev",

@@ -32,6 +32,7 @@ pnpm dev:all        # All in parallel
 |------|-------------|
 | [`apps/web/`](apps/web/) | Gamified DeFi frontend (Next.js + R3F) |
 | [`apps/api/`](apps/api/) | HTTP API (Express) |
+| [`apps/bridge-worker/`](apps/bridge-worker/) | CCTP bridge confirmation worker |
 | [`apps/deployer/`](apps/deployer/) | DeFindex vault deployer |
 | [`contracts/`](contracts/) | Soroban contracts (`vaquita-pool`) |
 | [`packages/`](packages/) | Shared packages |

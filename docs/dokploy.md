@@ -146,36 +146,24 @@ The bidirectional CCTP bridge uses a bounded confirmation worker. This is not a
 global blockchain listener: it only polls known `bridge_transfers` rows created
 or imported through the Vaquita API.
 
-Deploy it as a separate Dokploy worker/process using the API image or an
-equivalent Node runtime:
+It lives in its own workspace, `apps/bridge-worker`, with its own Dockerfile
+(`apps/bridge-worker/Dockerfile`). Deploy it as a separate Dokploy service
+pointing at that Dockerfile, or run it directly:
 
 ```bash
-pnpm --filter @vaquita/api bridge-confirmation
+pnpm --filter @vaquita/bridge-worker start
 ```
 
 For one-shot validation:
 
 ```bash
-pnpm --filter @vaquita/api bridge-confirmation:once
+pnpm --filter @vaquita/bridge-worker start:once
 ```
 
-Runtime environment settings:
+Runtime environment settings: see `apps/bridge-worker/.env.example` for the
+full list (DB, per-network Soroban RPC and Circle Iris endpoints, relayer key
+and the `BRIDGE_CONFIRMATION_*` tuning set).
 
-```env
-DATABASE_URL=postgresql://...
-CIRCLE_CCTP_IRIS_BASE_URL=
-BRIDGE_CONFIRMATION_INTERVAL_MS=60000
-BRIDGE_CONFIRMATION_BATCH_SIZE=20
-BRIDGE_CONFIRMATION_LEASE_MS=60000
-BRIDGE_CONFIRMATION_STALE_AFTER_MS=86400000
-BRIDGE_STELLAR_RELAYER_SECRET=
-BRIDGE_STELLAR_RELAYER_FEE_STROOPS=1000000
-BRIDGE_STELLAR_RELAYER_TIMEOUT_SECONDS=60
-```
-
-- Leave `CIRCLE_CCTP_IRIS_BASE_URL` empty for the default Circle Iris URL
-  selection: sandbox for testnet source networks and production for mainnet
-  source networks.
 - Set `BRIDGE_CONFIRMATION_BATCH_SIZE` conservatively. This is one shared
   batch worker, not one poller per user.
 - The worker uses database leases on pending rows so multiple instances do not

@@ -1,5 +1,6 @@
 packages:
   - 'apps/api'
+  - 'apps/bridge-worker'
   - 'apps/deployer'
   - 'apps/web'
   - 'apps/admin'

@@ -6,7 +6,7 @@ import {
   rpc,
   xdr,
 } from '@stellar/stellar-sdk';
-import { env } from '../../config/env';
+import { getRelayerEnv } from '../../config/relayerEnv';
 import { requireSorobanRpcUrl } from '../stellar/rpc';
 import { CCTP_NETWORKS } from './index';
 import type { BridgeTransferRecord } from './transfers';
@@ -46,12 +46,13 @@ export const relayStellarMintAndForward = async (
   const forwarder = CCTP_NETWORKS[transfer.destinationNetwork].cctpForwarder;
   if (!forwarder) throw new Error(`Missing CctpForwarder for ${transfer.destinationNetwork}`);
 
-  const relayer = Keypair.fromSecret(env.BRIDGE_STELLAR_RELAYER_SECRET);
+  const relayerEnv = getRelayerEnv();
+  const relayer = Keypair.fromSecret(relayerEnv.BRIDGE_STELLAR_RELAYER_SECRET);
   const server = new rpc.Server(rpcUrlFor(transfer.destinationNetwork));
   const account = await server.getAccount(relayer.publicKey());
   const contract = new Contract(forwarder);
   const transaction = new TransactionBuilder(account, {
-    fee: env.BRIDGE_STELLAR_RELAYER_FEE_STROOPS,
+    fee: relayerEnv.BRIDGE_STELLAR_RELAYER_FEE_STROOPS,
     networkPassphrase: passphraseFor(transfer.destinationNetwork),
   })
     .addOperation(contract.call(
@@ -59,7 +60,7 @@ export const relayStellarMintAndForward = async (
       hexToBytesScVal(transfer.cctpMessage),
       hexToBytesScVal(transfer.cctpAttestation),
     ))
-    .setTimeout(env.BRIDGE_STELLAR_RELAYER_TIMEOUT_SECONDS)
+    .setTimeout(relayerEnv.BRIDGE_STELLAR_RELAYER_TIMEOUT_SECONDS)
     .build();
 
   const prepared = await server.prepareTransaction(transaction);
