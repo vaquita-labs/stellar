@@ -71,6 +71,8 @@ interface PeriodRow {
   periodSeconds: number;
   totalDeposits: string;
   rewardPool: string;
+  /** Live position count for this period (PositionCountForPeriod). */
+  positionsCount: number | null;
 }
 
 interface InstanceState {
@@ -97,12 +99,14 @@ function decodeInstanceStorage(entry: xdr.LedgerEntryData | undefined): Instance
   const storage = entry?.contractData().val().instance().storage();
   if (!storage) return state;
 
+  const countByPeriod = new Map<number, number>();
   for (const mapEntry of storage) {
     const key = scValToNative(mapEntry.key()) as unknown[];
     const name = String(key?.[0] ?? '');
     const val = scValToNative(mapEntry.val()) as unknown;
     if (name === 'Paused') state.paused = Boolean(val);
     else if (name === 'PositionCount') state.positionCount = Number(val);
+    else if (name === 'PositionCountForPeriod') countByPeriod.set(Number(key?.[1] ?? 0), Number(val));
     else if (name === 'ProtocolFees') state.protocolFees = toStringSafe(val);
     else if (name === 'EarlyWithdrawalFee') state.earlyWithdrawalFeeBps = toStringSafe(val);
     else if (name === 'BlendToken') state.blendToken = String(val);
@@ -113,8 +117,12 @@ function decodeInstanceStorage(entry: xdr.LedgerEntryData | undefined): Instance
         periodSeconds: Number(key?.[1] ?? 0),
         totalDeposits: toStringSafe(period?.total_deposits ?? 0),
         rewardPool: toStringSafe(period?.reward_pool ?? 0),
+        positionsCount: null,
       });
     }
+  }
+  for (const period of state.periods) {
+    period.positionsCount = countByPeriod.get(period.periodSeconds) ?? null;
   }
   state.periods.sort((a, b) => a.periodSeconds - b.periodSeconds);
   return state;
@@ -227,12 +235,13 @@ export async function GET(req: NextRequest) {
     }
 
     // 4. Per-address positions: rebuild the persistent-storage keys from the
-    //    deposit ids the listener recorded, and read them in bulk. Deposits are
-    //    matched by pool address (not tokenId): each deposit row records the
-    //    pool it went through, and the snapshot is per-pool — this keeps old
-    //    deposits visible even after the token row is repointed or recreated.
+    //    deposit ids the listener recorded, and read them in bulk. Every known
+    //    deposit id is probed (not just rows recorded against this pool): the
+    //    id is sha256(caller || nonce) — pool-agnostic — so only positions that
+    //    actually live in this pool come back, and rows with a stale or null
+    //    vaquitaContractAddress are still covered.
     const deposits = await prisma.deposit.findMany({
-      where: { vaquitaContractAddress: pool, depositIdHex: { not: null }, deletedAt: null },
+      where: { depositIdHex: { not: null }, deletedAt: null },
       select: { depositIdHex: true },
     });
     const depositIdHexes = Array.from(

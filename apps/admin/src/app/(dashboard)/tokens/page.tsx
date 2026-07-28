@@ -479,6 +479,12 @@ function OnchainSnapshotBody({ snapshot }: { snapshot: TokenOnchainSnapshot }) {
                 <span>
                   {p.totalDepositsFormatted} {symbol}
                 </span>
+                {p.positionsCount != null && (
+                  <span className="text-xs text-default-400">
+                    {' '}
+                    · {p.positionsCount} deposit{p.positionsCount === 1 ? '' : 's'}
+                  </span>
+                )}
                 {p.rewardPool !== '0' && <span className="text-xs text-default-400"> · rewards {p.rewardPoolFormatted}</span>}
               </div>
             ))}

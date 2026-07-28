@@ -33,6 +33,8 @@ export interface OnchainPeriod {
   totalDepositsFormatted: string;
   rewardPool: string;
   rewardPoolFormatted: string;
+  /** Live position count for this period, straight from the pool's counters. */
+  positionsCount: number | null;
 }
 
 export interface TokenOnchainSnapshot {
