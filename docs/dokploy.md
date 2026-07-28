@@ -41,9 +41,19 @@ El `Dockerfile` declara `ARG` para las `NEXT_PUBLIC_*` y consume secrets vía `-
 
 ### Build-time Arguments
 
+Todas las `NEXT_PUBLIC_*` son requeridas (zod en `clientEnv.ts` — el build falla
+si falta alguna):
+
 ```env
 NEXT_PUBLIC_SERVICES_URL=https://tu-api.dominio.com
-NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL=https://mainnet.sorobanrpc.com
+NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY=pub_mainnet_…
+NEXT_PUBLIC_BLEND_POOL_CONTRACT_ID=…
+NEXT_PUBLIC_BLEND_USDC_CONTRACT_ID=…
+NEXT_PUBLIC_BLEND_USDC_ISSUER=…
+NEXT_PUBLIC_BLEND_FEE_STROOPS=1000000
+GIT_SHA=<sha del commit, lo provee CI>
 ```
 
 > ℹ️ La red Stellar (mainnet/testnet) se deriva del prefijo de
@@ -59,8 +69,8 @@ Para las notificaciones de build (`notify.sh`):
 
 | ID del secret | Valor |
 |---|---|
-| `webhook_url` | URL del receptor de webhooks |
-| `webhook_token` | Token enviado en `x-webhook-token` |
+| `notification_webhook_url` | URL del receptor de webhooks |
+| `notification_webhook_token` | Token enviado en `x-webhook-token` |
 
 Estos solo se necesitan durante `docker build` para reportar `INSTALL_*` y `BUILD_*`. **No quedan en la imagen final**.
 
@@ -69,8 +79,8 @@ Estos solo se necesitan durante `docker build` para reportar `INSTALL_*` y `BUIL
 Para que el contenedor pueda emitir `RUNTIME-PING_START` al arrancar:
 
 ```env
-WEBHOOK_URL=https://tu-receptor.dominio.com/hook
-WEBHOOK_TOKEN=tu_token
+NOTIFICATION_WEBHOOK_URL=https://tu-receptor.dominio.com/hook
+NOTIFICATION_WEBHOOK_TOKEN=tu_token
 ```
 
 Si los omites, `notify.sh` simplemente no envía nada (la app arranca igual).
@@ -90,11 +100,13 @@ El monorepo usa `/notify.sh` (raíz) para emitir webhooks granulares por fase: `
 El `Dockerfile` usa BuildKit secrets:
 
 ```dockerfile
-RUN --mount=type=secret,id=webhook_url \
-    --mount=type=secret,id=webhook_token \
-    WEBHOOK_URL="$( [ -f /run/secrets/webhook_url ] && cat /run/secrets/webhook_url )" \
-    WEBHOOK_TOKEN="$( [ -f /run/secrets/webhook_token ] && cat /run/secrets/webhook_token )" \
-    ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/web...
+RUN --mount=type=secret,id=notification_webhook_url \
+    --mount=type=secret,id=notification_webhook_token \
+    sh -c '\
+      export NOTIFICATION_WEBHOOK_URL="$( [ -f /run/secrets/notification_webhook_url ] && cat /run/secrets/notification_webhook_url )"; \
+      export NOTIFICATION_WEBHOOK_TOKEN="$( [ -f /run/secrets/notification_webhook_token ] && cat /run/secrets/notification_webhook_token )"; \
+      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/web... \
+    '
 ```
 
 - El `[ -f ... ] &&` permite que el build no falle si los secrets no están definidos (modo dev local sin webhook).

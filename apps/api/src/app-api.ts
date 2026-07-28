@@ -2,10 +2,11 @@
 // since that package builds the Prisma adapter eagerly from process.env.DATABASE_URL
 // at import time (ESM evaluates all imports before any file-body statement runs).
 import 'dotenv/config';
-// Validate API-service-only secrets (AUTH_SESSION_SECRET, BADGE_SIGNING_SEED) at
-// startup — must run right after dotenv so a misconfigured deploy fails fast here
-// instead of as a runtime 401 or a mid-mint error.
-import './config/env';
+// Both env schemas (shared base + API-only) validate at import — right after
+// dotenv, so a misconfigured deploy fails fast here instead of as a runtime
+// 401 or a mid-mint error.
+import { env } from '@vaquita/shared';
+import { apiEnv } from './config/env';
 import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import pinoHttp from 'pino-http';
@@ -78,16 +79,16 @@ process.on('unhandledRejection', (reason) => {
   logger.fatal({ reason }, 'unhandledRejection');
 });
 
-const PORT = Number(process.env.PORT) || 3100;
+const PORT = env.PORT;
 
 app.listen(PORT, () => {
-  logger.info({ port: PORT, env: process.env.NODE_ENV ?? 'development' }, 'API listening');
+  logger.info({ port: PORT, env: env.NODE_ENV }, 'API listening');
 
   // DB-derived product metrics collector. Only runs when metrics are enabled
   // (no point aggregating if nothing scrapes /api/v1/metrics). Refresh interval
-  // is tunable via OBSERVABILITY_METRICS_REFRESH_MS (default 60s).
+  // is tunable via OBSERVABILITY_METRICS_REFRESH_MS.
   if (isMetricsEnabled()) {
-    const refreshMs = Number(process.env.OBSERVABILITY_METRICS_REFRESH_MS) || 60_000;
+    const refreshMs = apiEnv.OBSERVABILITY_METRICS_REFRESH_MS;
     startProductMetricsCollector(createPrismaProductStatsRepository(), refreshMs);
     logger.info({ refreshMs }, 'product metrics collector started');
   }

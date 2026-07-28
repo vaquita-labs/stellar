@@ -1,6 +1,7 @@
 import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { adminSecretOk } from '@/lib/adminSecret';
 
 // Server-side admin API for the `tokens` collection. Runs in the Next.js Node
 // server (never the browser) and talks to the same Postgres DB as apps/api via
@@ -10,18 +11,6 @@ import { z } from 'zod';
 export const runtime = 'nodejs';
 // Tokens are read live from the DB — never statically cached.
 export const dynamic = 'force-dynamic';
-
-/**
- * Same contract as apps/api's requireAdminSecret: if ADMIN_SECRET is set, the
- * request must echo it in `x-admin-secret`. If unset, the endpoint is open
- * (dev only). Note this is a SERVER env var (not NEXT_PUBLIC_), so the secret
- * itself never ships to the browser.
- */
-function adminSecretOk(req: NextRequest): boolean {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) return true;
-  return req.headers.get('x-admin-secret') === secret;
-}
 
 const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
 

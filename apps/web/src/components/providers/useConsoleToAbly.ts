@@ -1,6 +1,7 @@
 'use client';
 
 import { sendLogToAbly } from '@/core-ui/components';
+import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useEffect } from 'react';
 
 type ConsoleLevel = 'log' | 'info' | 'error' | 'warn';
@@ -13,7 +14,7 @@ type ConsoleLevel = 'log' | 'info' | 'error' | 'warn';
  */
 export function useConsoleToAbly() {
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') return;
+    if (clientEnv.NODE_ENV === 'development') return;
 
     const original: Record<ConsoleLevel, (...args: unknown[]) => void> = {
       log: console.log,

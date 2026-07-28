@@ -1,27 +1,43 @@
 import 'dotenv/config';
+import { z } from 'zod';
 import { prisma } from '@vaquita/db';
 import {
   prismaBridgeConfirmationQueue,
   runBridgeConfirmationBatch,
 } from '@vaquita/shared/services/cctp/worker';
 
-const readPositiveInteger = (name: string, fallback: number): number => {
-  const value = process.env[name];
-  if (!value) return fallback;
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new Error(`${name} must be a positive integer`);
-  }
-  return parsed;
-};
+// Worker-only env, todas requeridas y validadas al arrancar (el resto de las
+// envs del worker las valida el schema compartido de @vaquita/shared).
+const positiveInt = z
+  .string()
+  .regex(/^\d+$/)
+  .transform(Number)
+  .refine((n) => Number.isSafeInteger(n) && n > 0, 'must be a positive integer');
+
+const workerEnvSchema = z.object({
+  // 'true' corre un solo batch y sale (igual que --once); 'false' loopea.
+  BRIDGE_CONFIRMATION_ONCE: z.enum(['true', 'false']),
+  BRIDGE_CONFIRMATION_INTERVAL_MS: positiveInt,
+  BRIDGE_CONFIRMATION_BATCH_SIZE: positiveInt,
+  BRIDGE_CONFIRMATION_LEASE_MS: positiveInt,
+  BRIDGE_CONFIRMATION_STALE_AFTER_MS: positiveInt,
+});
+
+const parsedWorkerEnv = workerEnvSchema.safeParse(process.env);
+if (!parsedWorkerEnv.success) {
+  console.error('❌ Error en configuración de variables de entorno del bridge worker:');
+  console.error(parsedWorkerEnv.error.format());
+  process.exit(1);
+}
+const workerEnv = parsedWorkerEnv.data;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const once = process.argv.includes('--once') || process.env.BRIDGE_CONFIRMATION_ONCE === 'true';
-const intervalMs = readPositiveInteger('BRIDGE_CONFIRMATION_INTERVAL_MS', 60_000);
-const batchSize = readPositiveInteger('BRIDGE_CONFIRMATION_BATCH_SIZE', 20);
-const leaseMs = readPositiveInteger('BRIDGE_CONFIRMATION_LEASE_MS', 60_000);
-const staleAfterMs = readPositiveInteger('BRIDGE_CONFIRMATION_STALE_AFTER_MS', 24 * 60 * 60 * 1000);
+const once = process.argv.includes('--once') || workerEnv.BRIDGE_CONFIRMATION_ONCE === 'true';
+const intervalMs = workerEnv.BRIDGE_CONFIRMATION_INTERVAL_MS;
+const batchSize = workerEnv.BRIDGE_CONFIRMATION_BATCH_SIZE;
+const leaseMs = workerEnv.BRIDGE_CONFIRMATION_LEASE_MS;
+const staleAfterMs = workerEnv.BRIDGE_CONFIRMATION_STALE_AFTER_MS;
 
 let stopping = false;
 process.on('SIGTERM', () => {

@@ -1,17 +1,11 @@
 import { z } from 'zod';
 
 /**
- * API-service-only environment validation.
- *
- * These secrets are required by the API service but NOT by the bridge-worker
- * deploy — the worker runs from a separate image + env and never imports this
- * module (it only pulls `@vaquita/shared/services/cctp/worker`). Keeping them
- * out of @vaquita/shared's shared `config/env` means the worker is never forced
- * to carry API secrets it does not use.
- *
- * Validated at import time: the API refuses to boot if any is missing/malformed,
- * failing fast at startup instead of surfacing later as a runtime 401 (session)
- * or a mid-flow mint error (badge signing).
+ * API-service-only environment validation. The shared base schema
+ * (@vaquita/shared config/env) covers the vars the shared services read; this
+ * one covers what only the API service reads. Both are required sets — the API
+ * refuses to boot if any var is missing/malformed, failing fast at startup
+ * instead of surfacing later as a runtime error.
  *
  * dotenv is loaded by app-api.ts (`import 'dotenv/config'`) before this module,
  * so process.env is already populated when this runs.
@@ -24,13 +18,22 @@ const apiEnvSchema = z.object({
   AUTH_SESSION_SECRET: z
     .string()
     .min(32, 'AUTH_SESSION_SECRET is required and must be at least 32 chars (generate with `openssl rand -hex 32`)'),
-  // Ed25519 seed the API signs badge-mint vouchers with (see badges/signer.ts,
-  // getBadgeSigningKeypair). 64 hex chars = 32 bytes. Without it the whole badge
-  // mint flow is dead — it throws only at voucher/mint time, and badge-monitor
-  // skips silently — so require it up front. Generate: `openssl rand -hex 32`.
-  BADGE_SIGNING_SEED: z
-    .string()
-    .regex(/^[0-9a-fA-F]{64}$/, 'BADGE_SIGNING_SEED is required and must be 64 hex chars (32 bytes)'),
+  // Domain label used as the wallet-auth challenge's manage_data key.
+  AUTH_HOME_DOMAIN: z.string().min(1),
+  // 'false' logs instead of rejecting missing/invalid wallet sessions (escape
+  // hatch, e.g. while confirming every wallet type can sign challenges).
+  WALLET_AUTH_ENFORCE: z.enum(['true', 'false']),
+  // Admin endpoints require this exact value in the `x-admin-secret` header.
+  // Never empty: there is no "open mode".
+  // Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  ADMIN_SECRET: z.string().min(16, 'ADMIN_SECRET is required (min 16 chars) — admin endpoints are never open'),
+  // Pino log level.
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']),
+  // 'true' registers GET /api/v1/metrics (Prometheus exposition, private-only
+  // scraping) and starts the DB-derived product metrics collector.
+  OBSERVABILITY_METRICS_ENABLED: z.enum(['true', 'false']),
+  // Refresh interval (ms) for the product metrics collector.
+  OBSERVABILITY_METRICS_REFRESH_MS: z.string().regex(/^\d+$/).transform(Number),
 });
 
 const parsed = apiEnvSchema.safeParse(process.env);

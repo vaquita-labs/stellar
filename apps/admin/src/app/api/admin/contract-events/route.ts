@@ -3,17 +3,10 @@ import { prisma } from '@vaquita/db';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { formatUnits, rpcUrlFor, scanPoolEvents, type ParsedPoolEvent } from '@/lib/contractEvents';
+import { adminSecretOk } from '@/lib/adminSecret';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// Mirrors the guard in /api/admin/tokens: open when ADMIN_SECRET is unset,
-// otherwise require the matching x-admin-secret header.
-function adminSecretOk(req: NextRequest): boolean {
-  const secret = process.env.ADMIN_SECRET;
-  if (!secret) return true;
-  return req.headers.get('x-admin-secret') === secret;
-}
 
 const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
 

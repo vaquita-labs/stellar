@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { Address, Keypair, nativeToScVal } from '@stellar/stellar-sdk';
+import { env } from '../../config/env';
 
 /**
  * Builds the exact byte sequence the vaquita-badges contract hashes before verifying:
@@ -72,13 +73,9 @@ export function signBadgeClaim(
   return (keypair.sign(hash) as Buffer).toString('base64');
 }
 
-/** Load the badge signing keypair from BADGE_SIGNING_SEED env var (64-char hex = 32 bytes). */
+/** Badge signing keypair from the required BADGE_SIGNING_SEED env (64-char hex = 32 bytes). */
 export function getBadgeSigningKeypair(): Keypair {
-  const seedHex = process.env.BADGE_SIGNING_SEED ?? '';
-  if (seedHex.length !== 64) {
-    throw new Error('BADGE_SIGNING_SEED must be a 64-char hex string (32 bytes)');
-  }
-  return Keypair.fromRawEd25519Seed(Buffer.from(seedHex, 'hex'));
+  return Keypair.fromRawEd25519Seed(Buffer.from(env.BADGE_SIGNING_SEED, 'hex'));
 }
 
 /** Returns BADGE_SIGNING_SEED public key as raw 32-byte hex (for contract initialize). */

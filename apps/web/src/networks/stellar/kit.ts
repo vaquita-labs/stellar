@@ -4,8 +4,9 @@ import { Networks } from '@creit.tech/stellar-wallets-kit';
 export type StellarNetwork = 'mainnet' | 'testnet';
 
 export function getStellarNetwork(): StellarNetwork {
-  const key = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY ?? '';
-  return key.startsWith('pub_mainnet_') ? 'mainnet' : 'testnet';
+  return clientEnv.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY.startsWith('pub_mainnet_')
+    ? 'mainnet'
+    : 'testnet';
 }
 
 export function isMainnet(): boolean {

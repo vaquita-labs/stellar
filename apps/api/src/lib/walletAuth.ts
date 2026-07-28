@@ -10,6 +10,7 @@ import {
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import type { RequestHandler } from 'express';
 import { resolveNetworkPassphrase, sendError } from '@vaquita/shared';
+import { apiEnv } from '../config/env';
 import { logger } from './logger';
 
 /**
@@ -37,38 +38,32 @@ import { logger } from './logger';
  * challenges we minted, once), which is what the server signature provides in
  * stock SEP-10.
  *
- * Env:
- *  - AUTH_SESSION_SECRET     HMAC key for session tokens. Ephemeral if unset
- *                            (restarts log everyone out — fine in dev).
- *  - AUTH_HOME_DOMAIN        manage_data key label (default: vaquita.app).
- *  - STELLAR_NETWORK         REQUIRED (mainnet|testnet); the passphrase is
- *                            derived from it. The API refuses to start if it is
- *                            unset (see resolveNetworkPassphrase) so it can
- *                            never silently verify mainnet signatures against
- *                            the testnet hash.
- *  - WALLET_AUTH_ENFORCE     set to 'false' to log instead of reject (escape
- *                            hatch while rolling out, e.g. if a wallet type
- *                            turns out unable to sign challenges).
+ * Env (todas requeridas, validadas con zod al arrancar):
+ *  - AUTH_SESSION_SECRET     HMAC key for session tokens (apiEnv, min 32
+ *                            chars). Fixed across PM2 instances so tokens
+ *                            issued by one instance verify on another.
+ *  - AUTH_HOME_DOMAIN        manage_data key label (apiEnv).
+ *  - STELLAR_NETWORK         mainnet|testnet; the passphrase is derived from
+ *                            it. The API refuses to start if it is unset (see
+ *                            resolveNetworkPassphrase) so it can never
+ *                            silently verify mainnet signatures against the
+ *                            testnet hash.
+ *  - WALLET_AUTH_ENFORCE     'false' logs instead of rejecting (escape hatch
+ *                            while rolling out, e.g. if a wallet type turns
+ *                            out unable to sign challenges).
  */
 
 const CHALLENGE_TIMEOUT_SECONDS = 300;
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
-const HOME_DOMAIN = process.env.AUTH_HOME_DOMAIN ?? 'vaquita.app';
+const HOME_DOMAIN = apiEnv.AUTH_HOME_DOMAIN;
 // Resolved at module load: a misconfigured network throws here, failing API
 // startup with a clear error instead of silently defaulting to testnet.
 const NETWORK_PASSPHRASE = resolveNetworkPassphrase();
 
-export const isWalletAuthEnforced = process.env.WALLET_AUTH_ENFORCE !== 'false';
+export const isWalletAuthEnforced = apiEnv.WALLET_AUTH_ENFORCE === 'true';
 
-function loadSessionSecret(): Buffer {
-  const secret = process.env.AUTH_SESSION_SECRET;
-  if (secret) return Buffer.from(secret, 'utf8');
-  logger.warn('AUTH_SESSION_SECRET not set — using an ephemeral secret (restarts invalidate all sessions)');
-  return randomBytes(32);
-}
-
-const sessionSecret = loadSessionSecret();
+const sessionSecret = Buffer.from(apiEnv.AUTH_SESSION_SECRET, 'utf8');
 
 export function isValidWalletAddress(value: unknown): value is string {
   return typeof value === 'string' && StrKey.isValidEd25519PublicKey(value);

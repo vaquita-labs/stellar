@@ -72,9 +72,13 @@ GET /api/interest?depositId={depositId}
 Make sure these environment variables are set:
 
 ```bash
-NEXT_PUBLIC_STELLAR_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
-NEXT_PUBLIC_VAQUITA_POOL_CONTRACT_ID=your_contract_id_here
+NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL=https://mainnet.sorobanrpc.com
+NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 ```
+
+The active RPC is picked by the network derived from
+`NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY`; pool contract addresses come from the API
+config, not from env.
 
 ## Usage Examples
 

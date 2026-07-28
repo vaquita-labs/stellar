@@ -23,8 +23,6 @@ pnpm install
 ```bash
 pnpm dev:web        # Next.js frontend  → http://localhost:3101
 pnpm dev:api        # Express API       → http://localhost:3000
-pnpm dev:listener   # On-chain listener
-pnpm dev:job        # Deposits job
 pnpm dev:all        # All in parallel
 ```
 
@@ -34,8 +32,6 @@ pnpm dev:all        # All in parallel
 |------|-------------|
 | [`apps/web/`](apps/web/) | Gamified DeFi frontend (Next.js + R3F) |
 | [`apps/api/`](apps/api/) | HTTP API (Express) |
-| [`apps/listener/`](apps/listener/) | On-chain event listener |
-| [`apps/job-deposits/`](apps/job-deposits/) | Deposits history job |
 | [`apps/deployer/`](apps/deployer/) | DeFindex vault deployer |
 | [`contracts/`](contracts/) | Soroban contracts (`vaquita-pool`) |
 | [`packages/`](packages/) | Shared packages |

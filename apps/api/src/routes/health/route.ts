@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
     res,
     {
       service: 'ok',
-      env: process.env.NODE_ENV ?? 'development',
+      env: env.NODE_ENV,
       uptimeSec: Math.round(process.uptime()),
       ts: new Date().toISOString(),
     },

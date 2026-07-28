@@ -2,19 +2,20 @@
 // and the /api/auth route handlers (node runtime). Uses Web Crypto — available
 // in BOTH runtimes — so there is no Node-only `crypto`/`Buffer` dependency.
 
+import { getServerEnv } from '@/core-ui/config/serverEnv';
+
 export const SESSION_COOKIE = 'vaquita_admin_session';
 
 // Cookie lifetime: 7 days.
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
 /**
- * Server-only passcode. It is NOT prefixed with NEXT_PUBLIC_, so it never ships
- * to the browser. When unset the gate runs in "open mode" (dev convenience),
- * mirroring the existing ADMIN_SECRET contract used by the admin API routes.
+ * Server-only passcode (required, validated with zod). It is NOT prefixed with
+ * NEXT_PUBLIC_, so it never ships to the browser. There is no open mode: the
+ * gate is always on.
  */
-export function getPasscode(): string | undefined {
-  const v = process.env.ADMIN_PASSCODE;
-  return v && v.length > 0 ? v : undefined;
+export function getPasscode(): string {
+  return getServerEnv().ADMIN_PASSCODE;
 }
 
 // Constant message signed with the passcode to derive the session token.

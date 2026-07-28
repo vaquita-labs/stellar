@@ -20,7 +20,7 @@ import { clientEnv } from '@/core-ui/config/clientEnv';
  * value is stamped per build in next.config.ts (commit SHA or build
  * timestamp), so every deploy rolls it automatically — no manual bumping.
  */
-export const ACHIEVEMENT_CARD_VERSION = process.env.NEXT_PUBLIC_CARD_VERSION ?? 'dev';
+export const ACHIEVEMENT_CARD_VERSION = clientEnv.NEXT_PUBLIC_CARD_VERSION;
 
 export type CatalogAchievement = {
   id: string;

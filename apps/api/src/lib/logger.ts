@@ -1,6 +1,8 @@
 import { pino, type LoggerOptions } from 'pino';
+import { env } from '@vaquita/shared/config/env';
+import { apiEnv } from '../config/env';
 
-const isProd = process.env.NODE_ENV === 'production';
+const isProd = env.NODE_ENV === 'production';
 
 // Field names that must never reach a log sink in cleartext. Each is redacted
 // both at the top level and one level deep (the shapes we actually log), so
@@ -75,7 +77,7 @@ export const serializeReq = (req: ReqLogShape) => ({
 });
 
 const options: LoggerOptions = {
-  level: process.env.LOG_LEVEL ?? (isProd ? 'info' : 'debug'),
+  level: apiEnv.LOG_LEVEL,
   base: { service: '@vaquita/api' },
   redact: {
     paths: REDACT_PATHS,

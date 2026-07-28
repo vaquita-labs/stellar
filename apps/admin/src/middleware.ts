@@ -7,10 +7,6 @@ import { SESSION_COOKIE, getPasscode, isValidSession } from '@/lib/auth';
 export async function middleware(req: NextRequest) {
   const passcode = getPasscode();
 
-  // Open mode: no passcode configured → gate disabled (dev convenience),
-  // consistent with the ADMIN_SECRET "open when unset" behaviour in the API.
-  if (!passcode) return NextResponse.next();
-
   const { pathname, search } = req.nextUrl;
   const authed = await isValidSession(req.cookies.get(SESSION_COOKIE)?.value, passcode);
 

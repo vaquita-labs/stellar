@@ -26,9 +26,9 @@ export const useBlendPosition = (walletAddress?: string) => {
   const config = getBlendConfig();
 
   return useQuery<BlendPosition>({
-    queryKey: ['blend-position', getStellarNetwork(), config?.poolId, walletAddress],
+    queryKey: ['blend-position', getStellarNetwork(), config.poolId, walletAddress],
     queryFn: async () => {
-      if (!walletAddress || !config) return EMPTY;
+      if (!walletAddress) return EMPTY;
       const network = { rpc: getRpcUrl(), passphrase: getNetworkPassphrase() };
       const pool = await PoolV2.load(network, config.poolId);
       const reserve = pool.reserves.get(config.usdcId);
@@ -41,7 +41,7 @@ export const useBlendPosition = (walletAddress?: string) => {
         apy: (reserve.estSupplyApy ?? 0) * 100,
       };
     },
-    enabled: !!walletAddress && !!config,
+    enabled: !!walletAddress,
     // La posición solo cambia al depositar/retirar; 60s es de sobra y mantiene
     // el RPC tranquilo. Tras un depósito, invalidar esta query fuerza el refresh.
     staleTime: 60_000,

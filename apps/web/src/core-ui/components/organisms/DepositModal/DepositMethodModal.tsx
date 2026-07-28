@@ -1,10 +1,6 @@
 'use client';
 
-import {
-  directBlendSupply,
-  getBlendUsdcBalance,
-  isBlendDepositAvailable,
-} from '@/networks/stellar/blendDirect';
+import { directBlendSupply, getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
 import { Popover, PopoverContent, PopoverTrigger, Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, useAnimationControls } from 'framer-motion';
@@ -89,11 +85,6 @@ export function DepositMethodModal({
   const [blendUsdc, setBlendUsdc] = useState<number | null>(null);
   const available = blendUsdc ?? 0;
   const balanceIsLoading = blendUsdc === null;
-  // Gatea el CTA según haya un pool de Blend configurado para la red activa
-  // (resuelto en blendDirect, mismo criterio que usa el envío de la tx). Ya no
-  // se cablea a "mainnet": en testnet se habilita solo si hay pool apuntado.
-  const blendAvailable = isBlendDepositAvailable();
-
   // Cada apertura arranca en la selección de método.
   useEffect(() => {
     if (open) {
@@ -135,7 +126,7 @@ export function DepositMethodModal({
   // Igual que en el retiro: cualquier monto > 0 habilita el CTA. Exceder el
   // saldo se resuelve al presionar Review (gris + temblor), no con un botón
   // muerto que no explica nada.
-  const canReview = numericAmount > 0 && blendAvailable;
+  const canReview = numericAmount > 0;
 
   const shakeAmount = () => {
     setOverBalance(true);
@@ -429,17 +420,6 @@ export function DepositMethodModal({
         >
           {t('withdraw.review', 'Review')}
         </PressableButton>
-        {!blendAvailable ? (
-          <div className="flex items-start justify-center gap-1.5 text-xs text-gray-500">
-            <FiAlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-            <p>
-              {t(
-                'deposit.blend.unavailable',
-                'Direct deposits are not available on this network yet.',
-              )}
-            </p>
-          </div>
-        ) : null}
       </div>
     ) : step === 'confirm' ? (
       <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleConfirm}>

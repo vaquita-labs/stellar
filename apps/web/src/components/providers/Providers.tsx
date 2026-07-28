@@ -1,6 +1,7 @@
 'use client';
 
 import { AblyProvider } from '@/core-ui/components';
+import { clientEnv } from '@/core-ui/config/clientEnv';
 // Side-effect import: registers the `beforeinstallprompt` listener at bundle
 // evaluation, before the browser fires the (single) install event.
 import '@/core-ui/hooks/useInstallApp';
@@ -23,7 +24,7 @@ import { useAuthGate } from './useAuthGate';
 import { useConsoleToAbly } from './useConsoleToAbly';
 import { useViewportVh } from './useViewportVh';
 
-const POLLAR_API_KEY = process.env.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY ?? '';
+const POLLAR_API_KEY = clientEnv.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY;
 const POLLAR_NETWORK = getStellarNetwork();
 
 // One `WalletAdapter` per kit module (xBull, Lobstr, Freighter, …), registered

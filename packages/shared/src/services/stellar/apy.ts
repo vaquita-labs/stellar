@@ -1,6 +1,7 @@
 import type { Reserve } from '@blend-capital/blend-sdk';
 import { Networks } from '@stellar/stellar-sdk';
 import { ONE_DAY } from '../../config/constants';
+import { env } from '../../config/env';
 import { firstElement } from '../../helpers';
 import type { Network, TokenNetwork } from '../../types';
 import { fetchDefindexVaultApy, stellarNetworkNameToDefindexHttpNetwork } from './defindexApy';
@@ -77,15 +78,15 @@ export const getStellarApyData = async (
       totalDeposits > 0 ? (rewardPool * 100 * 12) / (totalDeposits * lockPeriodInMonths) : 0;
 
     const defindexNet = stellarNetworkNameToDefindexHttpNetwork(network.name);
-    const host = process.env.DEFINDEX_API_HOST?.trim();
-    const apiKey = process.env.DEFINDEX_API_KEY?.trim();
+    const host = env.DEFINDEX_API_HOST;
+    const apiKey = env.DEFINDEX_API_KEY;
     const vaultAddress =
       firstElement(tokenNetworkData.defindex_vault_contract_address ?? '')?.trim() || '';
 
     let protocolApy = 0;
     let lendingMarketName = 'Blend';
 
-    if (host && apiKey && vaultAddress && defindexNet) {
+    if (vaultAddress && defindexNet) {
       const apy = await fetchDefindexVaultApy({ host, apiKey, vaultAddress, network: defindexNet });
       if (apy != null) {
         protocolApy = apy;

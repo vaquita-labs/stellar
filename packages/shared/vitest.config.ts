@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
-// Valores dummy para los schemas requeridos (shared config/env + config/env de
-// la API): los tests unitarios importan módulos que validan el env al cargar,
-// pero nunca tocan servicios externos reales.
+// Valores dummy para el schema requerido de config/env.ts: los tests unitarios
+// importan módulos que validan el env al cargar, pero nunca tocan servicios
+// externos reales.
 const testEnv = {
   PORT: '3100',
   NODE_ENV: 'test',
@@ -19,13 +19,6 @@ const testEnv = {
   BRIDGE_STELLAR_RELAYER_SECRET: 'SB3KFXCTPHLDN37QMXNPPYYXOF5V4XCUAYVLF2YWYRXHJIGL2XOZQUAI',
   BRIDGE_STELLAR_RELAYER_FEE_STROOPS: '1000000',
   BRIDGE_STELLAR_RELAYER_TIMEOUT_SECONDS: '60',
-  AUTH_SESSION_SECRET: 'test-session-secret-0123456789abcdef',
-  AUTH_HOME_DOMAIN: 'vaquita.app',
-  WALLET_AUTH_ENFORCE: 'true',
-  ADMIN_SECRET: 'test-admin-secret-0123456789abcdef',
-  LOG_LEVEL: 'error',
-  OBSERVABILITY_METRICS_ENABLED: 'false',
-  OBSERVABILITY_METRICS_REFRESH_MS: '60000',
 };
 
 export default defineConfig({

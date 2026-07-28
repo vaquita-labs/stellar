@@ -1,13 +1,11 @@
+import { env } from '../../config/env';
 import { CCTP_NETWORKS, type CctpNetworkKey } from './index';
 import type { BridgeTransferRecord, CctpAttestationResult } from './transfers';
 
-const DEFAULT_IRIS_MAINNET = 'https://iris-api.circle.com';
-const DEFAULT_IRIS_TESTNET = 'https://iris-api-sandbox.circle.com';
-
-const irisBaseUrlForEnvironment = (environment: 'mainnet' | 'testnet'): string => {
-  if (process.env.CIRCLE_CCTP_IRIS_BASE_URL) return process.env.CIRCLE_CCTP_IRIS_BASE_URL;
-  return environment === 'testnet' ? DEFAULT_IRIS_TESTNET : DEFAULT_IRIS_MAINNET;
-};
+const irisBaseUrlForEnvironment = (environment: 'mainnet' | 'testnet'): string =>
+  environment === 'testnet'
+    ? env.CIRCLE_CCTP_IRIS_TESTNET_BASE_URL
+    : env.CIRCLE_CCTP_IRIS_MAINNET_BASE_URL;
 
 const irisBaseUrlFor = (row: BridgeTransferRecord): string => {
   return irisBaseUrlForEnvironment(CCTP_NETWORKS[row.sourceNetwork]?.environment ?? 'mainnet');

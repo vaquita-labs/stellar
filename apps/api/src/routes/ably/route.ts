@@ -1,5 +1,6 @@
 import * as Ably from 'ably';
 import { type Request, type Response, Router } from 'express';
+import { env } from '@vaquita/shared';
 import { requireAdminSecret } from '../../lib/adminSecret';
 
 const router = Router();
@@ -10,14 +11,8 @@ const router = Router();
  * raw TokenRequest JSON (NOT the standard `{ success, data }` envelope).
  */
 async function issueTokenRequest(req: Request, res: Response, capability: NonNullable<Ably.TokenParams['capability']>) {
-  const apiKey = process.env.ABLY_KEY;
-  if (!apiKey) {
-    req.log.error('ABLY_KEY is not configured');
-    return res.status(500).json({ success: false, message: 'Ably is not configured' });
-  }
-
   try {
-    const rest = new Ably.Rest({ key: apiKey });
+    const rest = new Ably.Rest({ key: env.ABLY_KEY });
     const tokenRequest = await rest.auth.createTokenRequest({ capability });
     return res.status(200).json(tokenRequest);
   } catch (err: any) {

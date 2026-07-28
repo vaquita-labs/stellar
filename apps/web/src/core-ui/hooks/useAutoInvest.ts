@@ -36,14 +36,11 @@ export const useIdleFunds = () => {
   const isCustodial = !!wallet && wallet.custody !== 'external';
   const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
   // Ocioso = SOLO el USDC que Blend acepta (mismo emisor). En testnet hay varios
-  // "USDC" de emisores distintos; sin este filtro detectábamos el equivocado y
-  // el supply fallaba con "trustline missing". Si no conocemos el emisor, caemos
-  // al match por código (en mainnet hay un solo USDC, así que no hay ambigüedad).
-  const blendUsdcIssuer = getBlendConfig()?.usdcIssuer;
+  // "USDC" de emisores distintos; sin este filtro se detecta el equivocado y
+  // el supply falla con "trustline missing".
+  const blendUsdcIssuer = getBlendConfig().usdcIssuer;
   const usdc = balances.find(
-    (b) =>
-      b.code?.toUpperCase() === 'USDC' &&
-      (blendUsdcIssuer ? b.issuer === blendUsdcIssuer : true)
+    (b) => b.code?.toUpperCase() === 'USDC' && b.issuer === blendUsdcIssuer
   );
   const idle = usdc ? Number(usdc.available) : 0;
 

@@ -2,12 +2,12 @@ import { z } from 'zod';
 
 const envClientSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']),
-  NEXT_PUBLIC_SERVICES_URL: z.string().min(1),
-  // Sent as the `x-admin-secret` header on admin write calls. Optional so dev
-  // works against a backend with no ADMIN_SECRET configured (open mode).
+  NEXT_PUBLIC_SERVICES_URL: z.url(),
+  // Sent as the `x-admin-secret` header on admin write calls. Required — must
+  // match the API's ADMIN_SECRET.
   // SECURITY: NEXT_PUBLIC_ vars ship to the browser — only acceptable because
   // the admin app is expected to live behind network/SSO access control.
-  NEXT_PUBLIC_ADMIN_SECRET: z.string().optional(),
+  NEXT_PUBLIC_ADMIN_SECRET: z.string().min(1),
 });
 
 const parsed = envClientSchema.safeParse({

@@ -7,86 +7,32 @@ import {
   scValToNative,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
-import {
-  getNetworkPassphrase,
-  getRpcUrl,
-  getStellarNetwork,
-  isMainnet,
-  type StellarNetwork,
-} from './kit';
+import { clientEnv } from '@/core-ui/config/clientEnv';
+import { getNetworkPassphrase, getRpcUrl } from './kit';
 import { describeOutcomeError, runWithErrorCapture } from './pollarError';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
-
-// Blend V2 pool + el USDC (reserva) que ese pool acepta, por red. Son solo los
-// defaults incrustados: cualquiera se puede pisar con las env NEXT_PUBLIC_BLEND_*
-// de abajo, así que mover un deployment (o cambiar de red) es solo apuntar la
-// var al lado correcto — sin "mainnet" cableado en la lógica.
-const BLEND_DEFAULTS: Record<StellarNetwork, { pool: string; usdc: string; usdcIssuer: string }> = {
-  mainnet: {
-    pool: 'CAJJZSGMMM3PD7N33TAPHGBUGTB43OC73HVIK2L2G6BNGGGYOSSYBXBD',
-    usdc: 'CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75',
-    // USDC oficial de Circle en mainnet (hay uno solo, no hay ambigüedad).
-    usdcIssuer: 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN',
-  },
-  testnet: {
-    pool: 'CCEBVDYM32YNYCVNRXQKDFFPISJJCV557CDZEIRBEE4NCV4KHPQ44HGF',
-    // El USDC de reserva del pool de testnet. Vacío ⇒ cae al USDC de la app
-    // (NEXT_PUBLIC_USDC_CONTRACT_ID) en getBlendConfig(). Si el pool usa otro
-    // asset, setealo con NEXT_PUBLIC_BLEND_USDC_CONTRACT_ID.
-    usdc: '',
-    // Emisor del USDC que envuelve el SAC de Blend en testnet (verificado on-chain
-    // vía name() del contrato). OJO: en testnet hay VARIOS USDC de emisores
-    // distintos; este es el ÚNICO que Blend acepta. En mainnet no pasa (uno solo).
-    usdcIssuer: 'GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56',
-  },
-};
 
 export interface BlendConfig {
   poolId: string;
   usdcId: string;
   /** Emisor (G-address) del USDC que acepta Blend. Sirve para no confundirlo con
-   *  otros USDC de otros emisores (relevante en testnet). Vacío = no chequear. */
+   *  otros USDC de otros emisores (relevante en testnet). */
   usdcIssuer: string;
   feeStroops: string;
 }
 
 /**
- * Resuelve el pool de Blend, el USDC que acepta y el fee para la red ACTIVA.
- * Prioridad de cada valor: env genérica (NEXT_PUBLIC_BLEND_*) → env legacy
- * mainnet (solo si la red es mainnet, por compatibilidad) → default incrustado
- * de la red. Devuelve `null` si no hay pool+USDC para esta red, de modo que el
- * UI pueda deshabilitar el depósito sin cablearse a "mainnet".
+ * Pool de Blend, USDC que acepta y fee para la red ACTIVA. Las cuatro envs son
+ * requeridas y vienen validadas de `clientEnv`, así que siempre hay config:
+ * apuntar un deployment a otra red es solo cambiar las NEXT_PUBLIC_BLEND_* —
+ * sin "mainnet" cableado en la lógica.
  */
-export const getBlendConfig = (): BlendConfig | null => {
-  const network = getStellarNetwork();
-  const defaults = BLEND_DEFAULTS[network];
-
-  const poolId =
-    process.env.NEXT_PUBLIC_BLEND_POOL_CONTRACT_ID ||
-    (isMainnet() ? process.env.NEXT_PUBLIC_BLEND_MAINNET_POOL_CONTRACT_ID : undefined) ||
-    defaults.pool;
-
-  const usdcId =
-    process.env.NEXT_PUBLIC_BLEND_USDC_CONTRACT_ID ||
-    (isMainnet() ? process.env.NEXT_PUBLIC_BLEND_MAINNET_USDC_CONTRACT_ID : undefined) ||
-    defaults.usdc ||
-    process.env.NEXT_PUBLIC_USDC_CONTRACT_ID ||
-    '';
-
-  const usdcIssuer =
-    process.env.NEXT_PUBLIC_BLEND_USDC_ISSUER || defaults.usdcIssuer || '';
-
-  const feeStroops =
-    process.env.NEXT_PUBLIC_BLEND_FEE_STROOPS ||
-    process.env.NEXT_PUBLIC_BLEND_MAINNET_FEE_STROOPS ||
-    '1000000';
-
-  if (!poolId || !usdcId) return null;
-  return { poolId, usdcId, usdcIssuer, feeStroops };
-};
-
-/** ¿Hay un pool de Blend configurado para la red activa? Gatea el CTA del modal. */
-export const isBlendDepositAvailable = (): boolean => getBlendConfig() !== null;
+export const getBlendConfig = (): BlendConfig => ({
+  poolId: clientEnv.NEXT_PUBLIC_BLEND_POOL_CONTRACT_ID,
+  usdcId: clientEnv.NEXT_PUBLIC_BLEND_USDC_CONTRACT_ID,
+  usdcIssuer: clientEnv.NEXT_PUBLIC_BLEND_USDC_ISSUER,
+  feeStroops: clientEnv.NEXT_PUBLIC_BLEND_FEE_STROOPS,
+});
 
 const toBaseUnits = (input: string, decimals: number): bigint => {
   const [wholeRaw = '0', fractionalRaw = ''] = input.trim().split('.');
@@ -139,9 +85,6 @@ const submitBlendRequest = async (
   }: { address: string; amount: string; decimals: number; max?: boolean },
 ): Promise<{ hash: string }> => {
   const config = getBlendConfig();
-  if (!config) {
-    throw new Error('Blend is not configured for this network');
-  }
   if (!address) throw new Error('No connected address');
 
   const binding = getPollarBinding();
@@ -220,7 +163,6 @@ export const directUsdcTransfer = async ({
   decimals: number;
 }): Promise<{ hash: string }> => {
   const config = getBlendConfig();
-  if (!config) throw new Error('Blend is not configured for this network');
 
   const binding = getPollarBinding();
   if (!binding) throw new Error('Pollar adapter is not bound yet. Connect your wallet first.');

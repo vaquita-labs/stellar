@@ -1,5 +1,5 @@
 import { Networks, rpc, scValToNative } from '@stellar/stellar-sdk';
-import { serverEnv } from '@/core-ui/config/serverEnv';
+import { getServerEnv } from '@/core-ui/config/serverEnv';
 
 // Soroban-RPC scanner for the Vaquita pool contract. It returns every event the
 // contract emitted in a date range — deposits/withdrawals plus admin calls
@@ -202,8 +202,8 @@ export async function scanPoolEvents(params: ScanParams): Promise<ScanResult> {
 /** RPC endpoint by network passphrase, from the required per-network env vars. */
 export const rpcUrlFor = (networkPassphrase: string | null | undefined): string =>
   networkPassphrase === Networks.PUBLIC
-    ? serverEnv.STELLAR_MAINNET_SOROBAN_RPC_URL
-    : serverEnv.STELLAR_TESTNET_SOROBAN_RPC_URL;
+    ? getServerEnv().STELLAR_MAINNET_SOROBAN_RPC_URL
+    : getServerEnv().STELLAR_TESTNET_SOROBAN_RPC_URL;
 
 /** Format a raw base-unit i128 string into a human decimal using token decimals. */
 export const formatUnits = (raw: string, decimals: number | null | undefined): string => {
