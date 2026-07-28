@@ -76,10 +76,11 @@ jobs:
             -H "x-webhook-token: $NOTIFICATION_WEBHOOK_TOKEN" \
             -d "$payload" || echo "[warn] notification failed, continuing"
 
-      - name: Merge DEPLOY_ID into existing build args
+      - name: Merge DEPLOY_ID and GIT_SHA into existing build args
         id: merge
         env:
           DEPLOY_ID: ${{ steps.ids.outputs.deploy_id }}
+          GIT_SHA: ${{ github.sha }}
           DOKPLOY_TOKEN: ${{ secrets.DOKPLOY_TOKEN }}
           APPLICATION_ID: ${{ secrets.DOKPLOY_APPLICATION_ID }}
         run: |
@@ -88,10 +89,10 @@ jobs:
           current_args=$(curl -fsSL "$DOKPLOY_HOST/api/application.one?applicationId=$APPLICATION_ID" \
             -H "x-api-key: $DOKPLOY_TOKEN" \
             | jq -r '.buildArgs // ""')
-          # Strip empty lines and any existing DEPLOY_ID, then append fresh one
-          new_args=$(printf '%s\n' "$current_args" | awk -v id="$DEPLOY_ID" '
-            $0 !~ /^DEPLOY_ID=/ && NF { print }
-            END { print "DEPLOY_ID=" id }
+          # Strip empty lines and any existing DEPLOY_ID/GIT_SHA, then append fresh ones
+          new_args=$(printf '%s\n' "$current_args" | awk -v id="$DEPLOY_ID" -v sha="$GIT_SHA" '
+            $0 !~ /^DEPLOY_ID=/ && $0 !~ /^GIT_SHA=/ && NF { print }
+            END { print "DEPLOY_ID=" id; print "GIT_SHA=" sha }
           ')
           # Save to env file (avoids quoting issues with multi-line strings)
           {
