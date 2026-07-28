@@ -5,7 +5,7 @@ import { usePollar } from '@pollar/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useConfigStore } from '../stores';
+import { useConfigStore, useReceiveModalStore } from '../stores';
 
 // Umbral mínimo (USDC, unidades humanas): no promptear ni gastar gas por polvo.
 const MIN_IDLE = 1;
@@ -32,6 +32,7 @@ export const useIdleFunds = () => {
   const { walletAddress, token } = useConfigStore();
   const queryClient = useQueryClient();
   const ready = usePollarReadyStore((s) => s.ready);
+  const receiveOpen = useReceiveModalStore((s) => s.isReceiveOpen);
 
   const [isInvesting, setIsInvesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,18 +52,21 @@ export const useIdleFunds = () => {
     : undefined;
   const idle = usdc ? Number(usdc.available) : 0;
 
-  // Detectar la plata ociosa apenas entra, sin depender de un reload. El home no
-  // pide el balance solo, así que: (1) lo traemos al montar, y (2) lo re-pollamos
-  // en intervalo mientras la wallet custodial está lista, porque el fondeo entra
-  // on-chain por fuera de la app (le mandan USDC a su dirección). Guardas: solo
-  // custodial + sesión Pollar restaurada (si no, la firma/DPoP falla); pausa
-  // cuando la pestaña está oculta (no gastar requests en background) y mientras
-  // hay un supply in-flight (no pisar su propio refresh). Al volver a la pestaña
-  // refrescamos enseguida en vez de esperar al próximo tick.
+  // (1) Fetch ÚNICO al montar/recargar el home: el home no pide el balance solo,
+  // así que lo traemos una vez para detectar plata ociosa apenas entra el usuario
+  // (nudge de `IdleFundsModal`). Espera a que la wallet custodial esté lista.
   useEffect(() => {
     if (!ready || !isCustodial || !walletAddress) return;
-
     void refreshWalletBalance();
+  }, [ready, isCustodial, walletAddress, refreshWalletBalance]);
+
+  // (2) Poll REPETIDO: solo mientras el modal "Receive USDC" está abierto, porque
+  // ahí el usuario espera que le entre la plata on-chain (le mandan USDC a su
+  // dirección) y no queremos pegarle al RPC en loop el resto del tiempo. Guardas:
+  // custodial + sesión Pollar restaurada; pausa con la pestaña oculta y mientras
+  // hay un supply in-flight. Al volver a la pestaña refrescamos enseguida.
+  useEffect(() => {
+    if (!receiveOpen || !ready || !isCustodial || !walletAddress) return;
 
     const tick = () => {
       if (inFlight.current || document.visibilityState === 'hidden') return;
@@ -78,7 +82,7 @@ export const useIdleFunds = () => {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [ready, isCustodial, walletAddress, refreshWalletBalance]);
+  }, [receiveOpen, ready, isCustodial, walletAddress, refreshWalletBalance]);
 
   const invest = useCallback(async () => {
     if (inFlight.current || !walletAddress || !token) return;

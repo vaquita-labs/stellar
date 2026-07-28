@@ -52,7 +52,7 @@ const INITIAL_STEPS: Record<StepKey, StepStatus> = {
  */
 export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModalProps) {
   const { t } = useTranslation();
-  const { wallet, refreshAssets, login } = usePollar();
+  const { wallet, refreshAssets, refreshWalletBalance, login } = usePollar();
   const walletAddress = wallet?.address ?? null;
   // Id del adapter on-chain (freighter, xbull, …) solo cuando la wallet es
   // externa; las custodiales (`internal` / `smart`) no se pueden reconectar.
@@ -153,6 +153,10 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
       });
       mark('swap', 'done');
       setUsdcReceived(quotedOut);
+      // El USDC ya aterrizó en la wallet custodial: refrescamos el balance para
+      // que el hook de plata ociosa (`useIdleFunds`) lo detecte acá mismo y
+      // ofrezca invertirlo — sin depender de un reload ni de pollear en loop.
+      void refreshWalletBalance();
       toast.success(t('wallet.fiat.receive.swapDone', 'Converted to USDC — done!'));
     } catch (e) {
       if (e instanceof AnclapCancelled) return;
@@ -227,6 +231,9 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
       });
       mark('swap', 'done');
       setUsdcReceived(quotedOut);
+      // Igual que en el flujo nuevo: el USDC ya está en la wallet, refrescamos el
+      // balance para que la detección de plata ociosa lo tome enseguida.
+      void refreshWalletBalance();
       toast.success(t('wallet.fiat.receive.swapDone', 'Converted to USDC — done!'));
     } catch (e) {
       if (e instanceof AnclapCancelled) return;

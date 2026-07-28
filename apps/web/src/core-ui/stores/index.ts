@@ -5,5 +5,6 @@ export * from './loader';
 export * from './map';
 export * from './config';
 export * from './privacy';
+export * from './receive-modal';
 export * from './resize';
 export * from './vaquita-positions';

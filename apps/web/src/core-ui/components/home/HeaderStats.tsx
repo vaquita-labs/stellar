@@ -1,18 +1,17 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
-import { AMOUNT_DECIMALS, floorAmount } from '@/core-ui/helpers/numbers';
 import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiHeadphones } from 'react-icons/fi';
 import {
+  useBlendUsdc,
   useDepositsComplete,
-  useLiveBlendUsdc,
   useProfileData,
   useProfileExperience,
   useProfileRewards,
@@ -31,6 +30,7 @@ import { DailyRewardChest } from './DailyRewardChest';
 import { MapClock } from './MapClock';
 import { MapQuickActions } from './MapQuickActions';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
+import { AccrualTerm, LiveBalance } from './LiveBalance';
 import { PressableButton } from '../molecules/PressableButton';
 
 export const HeaderStats = () => {
@@ -72,14 +72,18 @@ export const HeaderStats = () => {
   const { data: streakData, isLoading: streakLoading } = useProfileStreak();
   const { data: depositsData, isLoading: depositsLoading } = useDepositsComplete(walletAddress);
   // Posición de depósito directo a Blend (on-chain). Es el nivel base del
-  // portafolio: entra al total junto con los locks de Vaquita.
+  // portafolio: entra al total junto con los locks de Vaquita. Acá se usa la
+  // versión que NO tickea: el saldo se proyecta en vivo dentro de <LiveBalance>,
+  // fuera del render (ver el comentario del saldo más abajo).
   const {
     data: blendPosition,
     isLoading: blendLoading,
     isError: blendError,
     refetch: refetchBlend,
-    live: blendLive,
-  } = useLiveBlendUsdc(walletAddress);
+    settled: blendSettled,
+    ratePerMs: blendRatePerMs,
+    updatedAt: blendUpdatedAt,
+  } = useBlendUsdc(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
@@ -101,34 +105,32 @@ export const HeaderStats = () => {
       return { ...prev, [id]: earnings };
     });
   }, []);
-  // Saldo en vivo: capital + interés devengado hasta "ahora". Cada depósito
-  // reporta cuánto rinde por milisegundo, así que el contador avanza en el
-  // cliente sin volver a pedirle nada al servidor. Tick corto para que los
-  // últimos decimales se vean moverse.
-  const [clientNow, setClientNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setClientNow(Date.now()), 250);
-    return () => clearInterval(id);
-  }, []);
-
-  const accruedInterest = activeDeposits.reduce((acc, d) => {
-    const earnings = earningsById[d.id];
-    if (!earnings) return acc;
-    // Igual que en la card: la lista viene cacheada, así que el "ahora" real se
-    // deriva del reloj del servidor + lo transcurrido desde el fetch.
-    const now =
-      d.serverTimestamp && d.fetchedAtTimestamp
-        ? d.serverTimestamp + (clientNow - d.fetchedAtTimestamp)
-        : clientNow;
-    const elapsed = Math.max(0, now - d.createdTimestamp);
-    return acc + Math.min(earnings.maxInterest, earnings.ratePerMs * elapsed);
-  }, 0);
-
   // Total = locks (capital + interés devengado en vivo) + posición directa en
-  // Blend (nivel base, líquido). `blendLive` viene proyectado en vivo desde el
-  // hook compartido `useLiveBlendUsdc` — la MISMA fuente que usa el "Available"
-  // del retiro, así ambos corren juntos y muestran el mismo número (ver el hook).
-  const liveBalance = activeDepositsTotalAmount + accruedInterest + blendLive;
+  // Blend (nivel base, líquido). Se parte en dos: lo QUIETO va en `balanceBase`
+  // y lo que avanza solo en `liveTerms`, que <LiveBalance> proyecta y pinta en
+  // cada tick sin re-renderizar el header. El término de Blend sale de la MISMA
+  // tasa que usa el "Available" del retiro, así ambos corren juntos y muestran
+  // el mismo número (ver `useBlendUsdc`).
+  const balanceBase = activeDepositsTotalAmount + blendSettled;
+  const liveTerms = useMemo<AccrualTerm[]>(() => {
+    // Cada depósito reporta cuánto rinde por milisegundo, así que el contador
+    // avanza en el cliente sin volver a pedirle nada al servidor.
+    const terms = activeDeposits.flatMap<AccrualTerm>((d) => {
+      const earnings = earningsById[d.id];
+      if (!earnings) return [];
+      // Igual que en la card: la lista viene cacheada, así que el "ahora" real
+      // se deriva del reloj del servidor + lo transcurrido desde el fetch. Ese
+      // desfasaje se hornea en el ancla, y así el contador puede leer el reloj
+      // del cliente y nada más.
+      const skew = d.serverTimestamp && d.fetchedAtTimestamp ? d.fetchedAtTimestamp - d.serverTimestamp : 0;
+      return [{ ratePerMs: earnings.ratePerMs, maxInterest: earnings.maxInterest, anchor: d.createdTimestamp + skew }];
+    });
+    // Blend devenga desde el momento del fetch y no tiene vencimiento: sin tope.
+    if (blendUpdatedAt) {
+      terms.push({ ratePerMs: blendRatePerMs, maxInterest: Infinity, anchor: blendUpdatedAt });
+    }
+    return terms;
+  }, [activeDeposits, earningsById, blendRatePerMs, blendUpdatedAt]);
 
   // Reglas para NO asustar con la plata:
   // - `blendPending`: primer load sin valor en cache todavía. No mostramos un
@@ -141,24 +143,6 @@ export const HeaderStats = () => {
   const blendPending = blendLoading && !blendPosition;
   const blendFailed = blendError && !blendPosition;
   const balanceLoading = (depositsLoading && !depositsData) || blendPending;
-  // Con plata NUNCA redondeamos hacia arriba: `floorAmount` PISA a los 7 decimales
-  // nativos de USDC (nunca $6.0000000 con $5.9999995 reales), igual que el
-  // "Available" del retiro y el total del portfolio.
-  //
-  // Saldo con layout ESTABLE para que no "salte" mientras tickea en vivo: los
-  // dólares y centavos van grandes (solo cambian de ancho al sumar un dígito
-  // entero, algo rarísimo), y la precisión sub-centavo de USDC (hasta 5 decimales
-  // más) va chica y tenue al lado, con ancho tabular fijo. Antes, achicar la
-  // tipografía según el largo hacía que el número cambiara de tamaño en cada
-  // update (el saldo crece → cruza un umbral → salta de text-xl a text-lg).
-  const flooredBalance = floorAmount(liveBalance, AMOUNT_DECIMALS);
-  const [balanceInt, balanceDec = ''] = flooredBalance.toFixed(AMOUNT_DECIMALS).split('.');
-  const bigBalance = `$${Number(balanceInt).toLocaleString()}.${balanceDec.slice(0, 2)}`;
-  // Los 5 decimales restantes SIEMPRE se muestran, incluso en ceros ($0.00 →
-  // "00000"): así el saldo no queda "pelado" cuando es redondo y el ancho es casi
-  // constante (solo cambia con los dígitos enteros), que es lo que hace que la
-  // pastilla no salte.
-  const subCents = balanceDec.slice(2);
 
   const displayName = profileData?.nickname || profileData?.fullName || '';
 
@@ -277,10 +261,7 @@ export const HeaderStats = () => {
                     {hideBalance ? (
                       <span className="text-xl">••••</span>
                     ) : (
-                      <>
-                        <span className="text-xl">{bigBalance}</span>
-                        <span className="text-sm text-black/40">{subCents}</span>
-                      </>
+                      <LiveBalance base={balanceBase} terms={liveTerms} />
                     )}
                   </span>
                 )}
