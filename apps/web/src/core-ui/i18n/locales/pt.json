@@ -50,6 +50,14 @@
         "description": "Termine em #2 no ranking mensal.",
         "title": "Medalhista de Prata"
       },
+      "secret-launch": {
+        "description": "Você estava lá quando a Vaquita foi ao ar. Uma boas-vindas secreta do rebanho.",
+        "title": "Insider do Lançamento"
+      },
+      "starmaker-latam": {
+        "description": "Você esteve no StarMaker LATAM. Um selo que fica oculto até alguém te passar o código.",
+        "title": "StarMaker LATAM"
+      },
       "streak-master": {
         "description": "Alcance uma sequência de economia de 50 dias.",
         "title": "Mestre da Sequência"
@@ -1875,7 +1883,7 @@
     "title": "Portfólio",
     "total": "Total",
     "totalBalance": "Seu dinheiro",
-    "earning": "Ganho acumulado",
+    "earning": "Ganhos estimados",
     "invest": "Investir",
     "savings": "Poupança",
     "allocation": "Distribuição",

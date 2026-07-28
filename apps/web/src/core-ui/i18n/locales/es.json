@@ -50,6 +50,14 @@
         "description": "Termina #2 en la tabla mensual.",
         "title": "Medallista de Plata"
       },
+      "secret-launch": {
+        "description": "Estuviste ahí cuando Vaquita salió al aire. Una bienvenida secreta del rebaño.",
+        "title": "Insider del Lanzamiento"
+      },
+      "starmaker-latam": {
+        "description": "Estuviste en StarMaker LATAM. Una insignia que no aparece en la lista hasta que alguien te pasa el código.",
+        "title": "StarMaker LATAM"
+      },
       "streak-master": {
         "description": "Alcanza una racha de ahorro de 50 días.",
         "title": "Maestro de la Racha"
@@ -1941,7 +1949,7 @@
     "title": "Portafolio",
     "total": "Total",
     "totalBalance": "Tu dinero",
-    "earning": "Ganancia acumulada",
+    "earning": "Ganancias estimadas",
     "invest": "Invertir",
     "savings": "Ahorros",
     "allocation": "Distribución",

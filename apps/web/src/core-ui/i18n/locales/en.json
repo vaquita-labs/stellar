@@ -50,6 +50,14 @@
         "description": "Finish #2 on the monthly leaderboard.",
         "title": "Silver Medalist"
       },
+      "secret-launch": {
+        "description": "You were there when Vaquita went live. A secret welcome from the herd.",
+        "title": "Launch Insider"
+      },
+      "starmaker-latam": {
+        "description": "You were at StarMaker LATAM. A badge that stays hidden until someone hands you the code.",
+        "title": "StarMaker LATAM"
+      },
       "streak-master": {
         "description": "Reach a 50-day savings streak.",
         "title": "Streak Master"
@@ -1941,7 +1949,7 @@
     "title": "Portfolio",
     "total": "Total",
     "totalBalance": "Your money",
-    "earning": "Earned so far",
+    "earning": "Estimated earnings",
     "invest": "Invest",
     "savings": "Savings",
     "allocation": "Allocation",

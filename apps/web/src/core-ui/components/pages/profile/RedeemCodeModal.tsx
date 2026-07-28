@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiCamera, FiCheckCircle, FiX } from 'react-icons/fi';
+import { FiCheckCircle, FiX } from 'react-icons/fi';
 import { useIsMobile, useMintBadge, useRedeemAchievementCode } from '../../../hooks';
 import { SHEET_BACKDROP_ANIMATION, SHEET_CONTAINER_ANIMATION } from '../../molecules/AppModal';
 
@@ -17,6 +17,38 @@ interface RedeemCodeModalProps {
 type Phase = 'input' | 'scanning' | 'claiming' | 'reward';
 
 const QR_READER_ID = 'redeem-qr-reader';
+
+/**
+ * Alto del área realmente visible en px. En iOS el teclado NO achica `100dvh`
+ * ni el layout viewport, así que un bottom-sheet a `min-h-dvh` con el contenido
+ * centrado deja el input detrás del teclado. `window.visualViewport.height` sí
+ * refleja el espacio libre sobre el teclado; devolvemos ese alto para cachearlo
+ * en el contenedor del sheet y mantener input + footer siempre a la vista.
+ *
+ * Devuelve `null` mientras no haya medida (SSR / navegadores sin la API) para
+ * caer al layout por clases sin romper nada.
+ */
+function useVisualViewportHeight(active: boolean): number | null {
+  const [height, setHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!active || !vv) {
+      setHeight(null);
+      return;
+    }
+    const update = () => setHeight(vv.height);
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [active]);
+
+  return height;
+}
 
 /**
  * Modal for redeeming hidden / code-gated achievements.
@@ -34,6 +66,9 @@ const QR_READER_ID = 'redeem-qr-reader';
 export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  // Sólo seguimos al teclado en el sheet mobile abierto (en desktop el diálogo
+  // está centrado y no lo tapa nada).
+  const viewportHeight = useVisualViewportHeight(open && isMobile);
   const [phase, setPhase] = useState<Phase>('input');
   const [code, setCode] = useState('');
   const [reward, setReward] = useState<{ coinReward: number; xpReward: number; achievementKey: string } | null>(null);
@@ -79,6 +114,8 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
     };
   }, [stopScanner]);
 
+  // TODO: revisar el escaneo de QR — deshabilitado de momento (botón comentado en renderInput).
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleStartScan = useCallback(async () => {
     setPhase('scanning');
     try {
@@ -187,6 +224,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           className="w-full max-w-md h-12 px-4 rounded-md bg-white border border-black border-b-2 text-black text-base font-semibold tracking-wide placeholder:text-gray-400 placeholder:font-normal placeholder:tracking-normal outline-none focus:border-b-3 transition uppercase"
         />
 
+        {/* TODO: revisar el escaneo de QR — deshabilitado de momento.
         <button
           type="button"
           onClick={() => void handleStartScan()}
@@ -195,6 +233,7 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
           <FiCamera className="h-4 w-4" />
           {t('social.redeem.scanQr')}
         </button>
+        */}
       </div>
 
       <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
@@ -353,13 +392,26 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
         <Modal.Dialog
           className={
             isMobile
-              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh'
+              ? // `h-dvh` (no `max-h-dvh`): el diálogo se mantiene a pantalla completa
+                // anclado arriba aunque el contenido interno se recorte al abrir el
+                // teclado; si se encogiera, al estar anclado abajo caería tras el teclado.
+                'bg-background m-0! p-0! rounded-t-3xl border-0 h-dvh'
               : 'bg-background p-0! rounded-3xl border border-black border-b-2 w-full max-w-md h-[min(620px,90dvh)]'
           }
         >
           {/* El slide de entrada/salida lo hace el Modal.Container (SHEET_*);
               framer-motion acá no sirve: su `exit` nunca corre sin AnimatePresence. */}
-          <div className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}>
+          {/* En mobile cacheamos el alto al área visible (visualViewport) para que
+              el contenido centrado y el footer no queden detrás del teclado iOS;
+              el diálogo sigue anclado arriba, así que el sobrante queda oculto. */}
+          <div
+            className={`flex flex-col w-full ${isMobile ? 'h-full min-h-dvh' : 'h-full'}`}
+            style={
+              isMobile && viewportHeight
+                ? { height: `${viewportHeight}px`, minHeight: 0 }
+                : undefined
+            }
+          >
             {/* Header — solo la X, a la derecha como en el resto de los
                 modales de la app. */}
             <div className="sticky top-0 z-10 flex items-center justify-end px-4 py-3">
