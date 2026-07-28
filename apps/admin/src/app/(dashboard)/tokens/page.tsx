@@ -1,9 +1,18 @@
 'use client';
 
-import { addDangerToast, addSuccessToast } from '@/core-ui/components';
-import { type Token, type TokenCreatePayload, createToken, deleteToken, updateToken, useTokens } from '@/core-ui/hooks';
+import { AppModal, addDangerToast, addSuccessToast } from '@/core-ui/components';
+import {
+  type Token,
+  type TokenCreatePayload,
+  type TokenOnchainSnapshot,
+  createToken,
+  deleteToken,
+  fetchTokenOnchain,
+  updateToken,
+  useTokens,
+} from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
-import { Button, Card, Checkbox, Input } from '@vaquita/ui';
+import { Button, Checkbox, Input } from '@vaquita/ui';
 import { useState } from 'react';
 
 type FormState = {
@@ -58,6 +67,22 @@ const parseLockPeriods = (raw: string): number[] =>
 // Trim; a blank field becomes null (clears the column).
 const orNull = (v: string): string | null => (v.trim() ? v.trim() : null);
 
+// 604800 -> "7d", 3600 -> "1h", 90 -> "90s".
+const formatPeriod = (seconds: number): string => {
+  if (seconds % 86400 === 0 && seconds > 0) return `${seconds / 86400}d`;
+  if (seconds % 3600 === 0 && seconds > 0) return `${seconds / 3600}h`;
+  return `${seconds}s`;
+};
+
+// Lock periods are stored either in seconds or milliseconds; ms values for 7+
+// days are >= 1_000_000 (same heuristic as the shared stellar-sdk service).
+const formatLockPeriod = (value: number): string => formatPeriod(value >= 1_000_000 ? Math.trunc(value / 1000) : value);
+
+const shortAddress = (address: string): string =>
+  address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-6)}` : address;
+
+type OnchainState = { loading: boolean; data: TokenOnchainSnapshot | null };
+
 export default function Page() {
   const { data: tokens, refetch, isLoading } = useTokens();
 
@@ -66,6 +91,23 @@ export default function Page() {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  // Per-token on-chain snapshot panel; absent key = panel closed.
+  const [onchain, setOnchain] = useState<Record<number, OnchainState>>({});
+
+  const toggleOnchain = async (t: Token) => {
+    if (onchain[t.id]) {
+      setOnchain(({ [t.id]: _closed, ...rest }) => rest);
+      return;
+    }
+    setOnchain((s) => ({ ...s, [t.id]: { loading: true, data: null } }));
+    try {
+      const data = await fetchTokenOnchain(t.id);
+      setOnchain((s) => (s[t.id] ? { ...s, [t.id]: { loading: false, data } } : s));
+    } catch (err) {
+      setOnchain(({ [t.id]: _failed, ...rest }) => rest);
+      addDangerToast('On-chain lookup failed', (err as Error)?.message ?? 'Unknown error');
+    }
+  };
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -168,13 +210,24 @@ export default function Page() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {/* Inline create/edit form */}
-          {editing !== null && (
-            <Card className="flex flex-col gap-3 p-4">
-              <h2 className="text-base font-semibold text-black">
-                {editing === 'new' ? 'New token' : `Edit token #${editing}`}
-              </h2>
-
+          {/* Create/edit modal with every editable field */}
+          <AppModal
+            open={editing !== null}
+            onOpenChange={closeForm}
+            size="lg"
+            title={editing === 'new' ? 'New token' : `Edit token #${editing}`}
+            footer={
+              <>
+                <Button variant="ghost" onPress={closeForm} isDisabled={saving}>
+                  Cancel
+                </Button>
+                <Button variant="primary" onPress={submit} isDisabled={saving} isLoading={saving}>
+                  {editing === 'new' ? 'Create' : 'Save'}
+                </Button>
+              </>
+            }
+          >
+            <div className="flex flex-col gap-3">
               <div className="flex flex-wrap gap-3">
                 <Input
                   label="Name"
@@ -248,17 +301,8 @@ export default function Page() {
                 value={form.lockPeriods}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('lockPeriods', e.target.value)}
               />
-
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" onPress={closeForm} isDisabled={saving}>
-                  Cancel
-                </Button>
-                <Button variant="primary" onPress={submit} isDisabled={saving} isLoading={saving}>
-                  {editing === 'new' ? 'Create' : 'Save'}
-                </Button>
-              </div>
-            </Card>
-          )}
+            </div>
+          </AppModal>
 
           {/* Token list */}
           {(tokens?.length ?? 0) === 0 ? (
@@ -268,50 +312,172 @@ export default function Page() {
           ) : (
             <ul className="flex flex-col gap-2">
               {tokens?.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-black border-b-2 bg-white p-3 shadow-sm"
-                >
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{t.symbol}</span>
-                      <span className="text-sm text-default-500">{t.name}</span>
-                      {t.decimals != null && <span className="text-xs text-default-400">· {t.decimals} dec</span>}
+                <li key={t.id} className="flex flex-col gap-3 rounded-xl border border-black border-b-2 bg-white p-3 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{t.symbol}</span>
+                        <span className="text-sm text-default-500">{t.name}</span>
+                        {t.decimals != null && <span className="text-xs text-default-400">· {t.decimals} dec</span>}
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {t.isNative && <span className="rounded bg-default-100 px-1.5 text-xs">native</span>}
+                        {t.isGas && <span className="rounded bg-default-100 px-1.5 text-xs">gas</span>}
+                        <span
+                          className={`rounded px-1.5 text-xs ${
+                            t.isSupported ? 'bg-success-100 text-success-700' : 'bg-default-100 text-default-500'
+                          }`}
+                        >
+                          {t.isSupported ? 'supported' : 'unsupported'}
+                        </span>
+                        {t.lockPeriods.length > 0 && (
+                          <span className="rounded bg-default-100 px-1.5 text-xs" title={t.lockPeriods.join(', ')}>
+                            locks: {t.lockPeriods.map(formatLockPeriod).join(' · ')}
+                          </span>
+                        )}
+                      </div>
+                      <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
+                        <dt className="text-default-400">Contract</dt>
+                        <dd className="break-all font-mono text-default-500">{t.contractAddress ?? '—'}</dd>
+                        <dt className="text-default-400">Vaquita pool</dt>
+                        <dd className="break-all font-mono text-default-500">{t.vaquitaContractAddress ?? '—'}</dd>
+                        <dt className="text-default-400">DeFindex vault</dt>
+                        <dd className="break-all font-mono text-default-500">{t.defindexVaultContractAddress ?? '—'}</dd>
+                      </dl>
                     </div>
-                    <div className="flex flex-wrap gap-1">
-                      {t.isNative && <span className="rounded bg-default-100 px-1.5 text-xs">native</span>}
-                      {t.isGas && <span className="rounded bg-default-100 px-1.5 text-xs">gas</span>}
-                      <span
-                        className={`rounded px-1.5 text-xs ${
-                          t.isSupported ? 'bg-success-100 text-success-700' : 'bg-default-100 text-default-500'
-                        }`}
+                    <div className="flex shrink-0 gap-2">
+                      {t.vaquitaContractAddress && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onPress={() => toggleOnchain(t)}
+                          isDisabled={onchain[t.id]?.loading}
+                          isLoading={onchain[t.id]?.loading}
+                        >
+                          {onchain[t.id]?.data ? 'Hide on-chain' : 'On-chain'}
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" onPress={() => openEdit(t)} isDisabled={saving}>
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onPress={() => remove(t)}
+                        isDisabled={deletingId === t.id}
+                        isLoading={deletingId === t.id}
                       >
-                        {t.isSupported ? 'supported' : 'unsupported'}
-                      </span>
+                        Delete
+                      </Button>
                     </div>
-                    {t.contractAddress && (
-                      <span className="break-all font-mono text-xs text-default-400">{t.contractAddress}</span>
-                    )}
                   </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button size="sm" variant="ghost" onPress={() => openEdit(t)} isDisabled={saving}>
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onPress={() => remove(t)}
-                      isDisabled={deletingId === t.id}
-                      isLoading={deletingId === t.id}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+
+                  {/* On-chain snapshot: pool balances + per-address positions. */}
+                  {onchain[t.id]?.data && (
+                    <OnchainPanel snapshot={onchain[t.id].data as TokenOnchainSnapshot} />
+                  )}
                 </li>
               ))}
             </ul>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Read-only view of the pool's on-chain money: where it sits and who owns it. */
+function OnchainPanel({ snapshot }: { snapshot: TokenOnchainSnapshot }) {
+  const symbol = snapshot.token.symbol;
+  const stat = (label: string, value: string) => (
+    <div className="flex flex-col rounded-lg bg-default-50 px-2 py-1">
+      <span className="text-[10px] uppercase text-default-400">{label}</span>
+      <span className="text-sm font-semibold">{value}</span>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-default-200 bg-default-50/50 p-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-default-500">
+        <span className="rounded bg-default-100 px-1.5">{snapshot.network}</span>
+        {snapshot.paused != null && (
+          <span className={`rounded px-1.5 ${snapshot.paused ? 'bg-danger-100 text-danger-700' : 'bg-success-100 text-success-700'}`}>
+            {snapshot.paused ? 'paused' : 'active'}
+          </span>
+        )}
+        <span className="break-all font-mono">{snapshot.pool}</span>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {stat('Vault value', snapshot.vault.underlyingFormatted != null ? `${snapshot.vault.underlyingFormatted} ${symbol}` : '—')}
+        {stat('Vault shares', snapshot.vault.shares ?? '—')}
+        {stat('Idle in pool', snapshot.idleBalanceFormatted != null ? `${snapshot.idleBalanceFormatted} ${symbol}` : '—')}
+        {stat('Protocol fees', snapshot.protocolFeesFormatted != null ? `${snapshot.protocolFeesFormatted} ${symbol}` : '—')}
+        {stat('Open positions', snapshot.positionCount != null ? String(snapshot.positionCount) : '—')}
+      </div>
+
+      {snapshot.periods.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-default-500">Deposits by lock period</span>
+          <div className="flex flex-wrap gap-2">
+            {snapshot.periods.map((p) => (
+              <div key={p.periodSeconds} className="rounded-lg bg-default-50 px-2 py-1 text-sm">
+                <span className="font-semibold">{formatPeriod(p.periodSeconds)}</span>{' '}
+                <span>
+                  {p.totalDepositsFormatted} {symbol}
+                </span>
+                {p.rewardPool !== '0' && <span className="text-xs text-default-400"> · rewards {p.rewardPoolFormatted}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-semibold text-default-500">
+          Holders ({snapshot.coverage.livePositions} live positions from {snapshot.coverage.dbDepositIds} DB deposit ids)
+        </span>
+        {snapshot.holders.length === 0 ? (
+          <span className="text-sm text-default-400">No live positions found.</span>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-xs text-default-400">
+                <th className="py-1 font-medium">Address</th>
+                <th className="py-1 font-medium">Positions</th>
+                <th className="py-1 text-right font-medium">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {snapshot.holders.map((h) => (
+                <tr key={h.address} className="border-t border-default-100">
+                  <td className="py-1 font-mono text-xs" title={h.address}>
+                    {shortAddress(h.address)}
+                  </td>
+                  <td className="py-1">
+                    {h.positions.map((p) => (
+                      <span key={p.depositIdHex} className="mr-1 rounded bg-default-100 px-1 text-xs" title={p.depositIdHex}>
+                        {p.amountFormatted} · {formatPeriod(p.lockPeriodSeconds)} · unlocks{' '}
+                        {new Date(p.finalizationTime * 1000).toLocaleDateString()}
+                      </span>
+                    ))}
+                  </td>
+                  <td className="py-1 text-right font-semibold">
+                    {h.totalAmountFormatted} {symbol}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {snapshot.warnings.length > 0 && (
+        <ul className="flex flex-col gap-1 rounded-lg bg-warning-50 p-2 text-xs text-warning-700">
+          {snapshot.warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
       )}
     </div>
   );
