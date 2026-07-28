@@ -35,6 +35,9 @@ export type AchievementDetail = {
   /** Background color for the icon container. */
   accent?: string;
   claimState?: 'locked' | 'claimable' | 'pending_mint' | 'claimed' | 'minted';
+  /** Coins this badge pays out on claim, straight from the catalog. Lets the
+   *  modal advertise the reward BEFORE the mint returns the finalized amount. */
+  coinReward?: number;
 };
 
 interface AchievementModalProps {
@@ -171,6 +174,13 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
   };
 
   const claimed = !!achievement && isClaimed(achievement.id);
+
+  // Coins this claim is about to pay out, read from the catalog because the
+  // mint hasn't returned yet. Strictly a minting-screen affordance: once the
+  // reward lands the balance already includes it and the reveal announces the
+  // amount itself, so advertising it again would double-count the prize.
+  const showPendingCoins = phase === 'minting' && !!achievement?.coinReward;
+  const pendingCoins = Math.floor(achievement?.coinReward ?? 0);
 
   // Warm the story-format (9:16) share image while the user looks at the
   // modal, so the share tap can attach it instantly. Fetching on demand is
@@ -762,10 +772,34 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
                   className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white border border-black border-b-2 px-3 text-black"
                   aria-label={t('achievements.modal.goldCoins', '{{count}} gold coins', { count: goldCoins })}
                 >
-                  <Image src="/icons/global/coin.png" alt="" width={18} height={18} className="object-contain" />
+                  {/* Pulses in sync with the `+N` beside it (same duration/ease,
+                      no delay, so they peak together) — one coin reading as
+                      "these are going up", instead of a second icon that would
+                      read as a second currency. */}
+                  <motion.span
+                    className="inline-flex"
+                    animate={showPendingCoins ? { scale: [1, 1.15, 1] } : undefined}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <Image src="/icons/global/coin.png" alt="" width={18} height={18} className="object-contain" />
+                  </motion.span>
                   <span className="text-sm font-extrabold tabular-nums">
                     {Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
+                  {/* The reward on its way in, blinking next to the balance so the
+                      pair reads as total + incoming — without it the bare number
+                      looks like the prize itself. Green matches the `+N XP` pill
+                      on the reveal, so both increments share one colour. */}
+                  {showPendingCoins && (
+                    <motion.span
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                      className="text-sm font-extrabold tabular-nums text-[#3F9102] whitespace-nowrap"
+                      aria-label={t('achievements.modal.coinsPending', '+{{count}} coins', { count: pendingCoins })}
+                    >
+                      +{pendingCoins.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </motion.span>
+                  )}
                 </motion.div>
               ) : (
                 <span className="w-8" />

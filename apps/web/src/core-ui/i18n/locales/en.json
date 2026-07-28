@@ -91,6 +91,9 @@
     },
     "modal": {
       "claimingReward": "Claiming reward",
+      "coinsPending": "+{{count}} coins",
+      "coinsPending_one": "+{{count}} coin",
+      "coinsPending_other": "+{{count}} coins",
       "goldCoins": "{{count}} gold coins",
       "goldCoins_one": "{{count}} gold coin",
       "goldCoins_other": "{{count}} gold coins",

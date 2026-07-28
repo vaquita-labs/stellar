@@ -144,6 +144,7 @@ export const buildServerAchievements = (server: AchievementResponseDTO[] = []): 
       tier: a.tier as Badge['tier'],
       unlocked: a.unlocked || a.claimState === 'pending_mint',
       claimState: a.claimState,
+      coinReward: a.coinReward,
       date: a.claimedAt ?? undefined,
     }));
 
@@ -185,6 +186,7 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
         accent: a.accent ?? ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
         tier: a.tier as Badge['tier'],
         claimState: a.claimState,
+        coinReward: a.coinReward,
       };
 
       if (k && a.claimState !== 'pending_mint' && a.claimState !== 'minted' && a.claimState !== 'claimed') {

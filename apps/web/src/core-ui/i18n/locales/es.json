@@ -91,6 +91,9 @@
     },
     "modal": {
       "claimingReward": "Reclamando premio",
+      "coinsPending": "+{{count}} monedas",
+      "coinsPending_one": "+{{count}} moneda",
+      "coinsPending_other": "+{{count}} monedas",
       "goldCoins": "{{count}} monedas de oro",
       "goldCoins_one": "{{count}} moneda de oro",
       "goldCoins_other": "{{count}} monedas de oro",

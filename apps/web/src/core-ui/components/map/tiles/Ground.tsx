@@ -57,7 +57,9 @@ export const Ground = ({ mapObjects, worldType, onClickObject }: GroundProps) =>
           }
         }
 
-        // Si hay un objeto existente en esta posición y no es reemplazable (GRASS/EMPTY), mostrar botones de edición
+        // Si hay un tile colocado en esta posición (todo lo que no sea EMPTY),
+        // mostrar sus botones de edición: primero se quita y recién ahí la
+        // celda acepta otro objeto.
         if (mapObject && mapObject.type !== MapObjectType.EMPTY && !isReplaceablePosition(x, z)) {
           // Activar modo de edición para el objeto existente
           setEditingObjectPosition(position);
