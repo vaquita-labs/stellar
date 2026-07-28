@@ -28,7 +28,7 @@ const workerEnvSchema = z.object({
 
 const parsedWorkerEnv = workerEnvSchema.safeParse(process.env);
 if (!parsedWorkerEnv.success) {
-  console.error('❌ Error en configuración de variables de entorno del bridge worker:');
+  console.error('❌ Invalid environment configuration for the bridge worker:');
   console.error(parsedWorkerEnv.error.format());
   process.exit(1);
 }

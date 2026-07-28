@@ -41,7 +41,7 @@ const apiEnvSchema = z.object({
 const parsed = apiEnvSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ Error en configuración de variables de entorno del API service:');
+  console.error('❌ Invalid environment configuration for the API service:');
   console.error(parsed.error.format());
   process.exit(1); // stop the app when a required secret is missing
 }

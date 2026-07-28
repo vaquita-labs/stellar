@@ -24,9 +24,9 @@ export function getRelayerEnv(): RelayerEnv {
 
   const parsed = relayerEnvSchema.safeParse(process.env);
   if (!parsed.success) {
-    console.error('❌ Error en configuración de variables de entorno:');
+    console.error('❌ Invalid environment configuration:');
     console.error(parsed.error.format());
-    throw new Error('Variables de entorno inválidas');
+    throw new Error('Invalid environment variables');
   }
 
   cached = parsed.data;
