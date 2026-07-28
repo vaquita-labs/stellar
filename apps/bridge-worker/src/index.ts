@@ -1,5 +1,6 @@
-// MUST be first: loads .env.local/.env into process.env before @vaquita/db is
-// evaluated (it builds the Prisma adapter from DATABASE_URL at import time).
+// MUST be first: loads .env.local/.env into process.env before the imports
+// below and the worker schema underneath, which validate their env groups
+// against process.env as they are evaluated.
 import './loadEnv';
 import { z } from 'zod';
 import { prisma } from '@vaquita/db';
