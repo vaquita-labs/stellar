@@ -1,4 +1,6 @@
-import 'dotenv/config';
+// MUST be first: loads .env.local/.env into process.env before @vaquita/db is
+// evaluated (it builds the Prisma adapter from DATABASE_URL at import time).
+import './loadEnv';
 import { z } from 'zod';
 import { prisma } from '@vaquita/db';
 import { getRelayerEnv } from '@vaquita/shared/config/relayerEnv';

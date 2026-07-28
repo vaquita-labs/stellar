@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-dotenv.config();
+// .env.local takes precedence over .env, matching the Next.js apps.
+dotenv.config({ path: ['.env.local', '.env'] });
 
 // Base env shared by every backend service (API service and bridge-worker).
 // Code never reads process.env directly, always `env`. All required — the

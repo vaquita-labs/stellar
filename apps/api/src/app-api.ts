@@ -1,7 +1,8 @@
-// MUST be first: loads .env into process.env before @vaquita/db is evaluated,
-// since that package builds the Prisma adapter eagerly from process.env.DATABASE_URL
-// at import time (ESM evaluates all imports before any file-body statement runs).
-import 'dotenv/config';
+// MUST be first: loads .env.local/.env into process.env before @vaquita/db is
+// evaluated, since that package builds the Prisma adapter eagerly from
+// process.env.DATABASE_URL at import time (ESM evaluates all imports before
+// any file-body statement runs).
+import './config/loadEnv';
 // Both env schemas (shared base + API-only) validate at import — right after
 // dotenv, so a misconfigured deploy fails fast here instead of as a runtime
 // 401 or a mid-mint error.
