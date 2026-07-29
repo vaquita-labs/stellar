@@ -6,6 +6,8 @@ import {
   getVaultPosition,
   type DefindexVaultPosition,
 } from '@/networks/stellar/vaultQueries';
+import { projectBlendUsdc, useBlendPosition } from './useBlendPosition';
+import { useLiveTick } from './useLiveTick';
 
 const EMPTY: DefindexVaultPosition = { shares: 0n, usdc: 0 };
 
@@ -46,4 +48,45 @@ export const useDefindexVaultPosition = (walletAddress?: string) => {
     retry: 4,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
+};
+
+const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
+
+/**
+ * `useDefindexVaultPosition` + the ingredients to PROJECT the balance live: the
+ * on-chain snapshot (`settled`), how much it earns per millisecond (`ratePerMs`)
+ * and since when (`updatedAt`, the fetch time).
+ *
+ * The APY shown is the underlying **Blend supply APY** (reusing the existing
+ * `useBlendPosition` read — same ['blend-position'] query, deduped by react-query),
+ * NOT the vault's net APY. This over-states the real net yield (the vault takes a
+ * fee), an accepted acquisition trade-off for now (see spec §7).
+ */
+export const useVaultUsdc = (walletAddress?: string) => {
+  const query = useDefindexVaultPosition(walletAddress);
+  const blend = useBlendPosition(walletAddress);
+  const settled = query.data?.usdc ?? 0;
+  const apy = blend.data?.apy ?? 0;
+  const ratePerMs = (settled * (apy / 100)) / MS_PER_YEAR;
+
+  return { ...query, settled, apy, ratePerMs, updatedAt: query.dataUpdatedAt };
+};
+
+/**
+ * Like `useVaultUsdc` but adds `live`: the vault balance PROJECTED in real time =
+ * on-chain snapshot + estimated interest accrued since the last fetch, advancing
+ * with the shared tick. On the next refetch (60s) the snapshot snaps to the real
+ * value and the projection restarts from there. `keepPreviousData` on the
+ * underlying query means an RPC blip holds the last settled value (no flash to $0,
+ * no drop) and the projection keeps ticking from it. Re-renders ~4x/sec — safe in
+ * a panel/sheet, not on the 3D map (see `useLiveTick`).
+ */
+export const useLiveVaultUsdc = (walletAddress?: string) => {
+  const position = useVaultUsdc(walletAddress);
+  const now = useLiveTick();
+
+  return {
+    ...position,
+    live: projectBlendUsdc(position.settled, position.ratePerMs, position.updatedAt, now),
+  };
 };
