@@ -1319,7 +1319,7 @@ export const toProfileAchievementsResponseDTO = async (
       const claim = claimedById.get(a.id);
       const pendingClaim = activeClaimByKey.get(a.key);
       const mintedForKey = mintedByKey.has(a.key);
-      const exactRank: Record<string, number> = { 'first-place': 1, 'second-place': 2 };
+      const exactRank: Record<string, number> = { first_place: 1, second_place: 2 };
       const cycleRankEligible =
         a.key === Achievement.THIRD_PLACE
           ? leaderboardRank !== null && leaderboardRank >= 3 && leaderboardRank <= 10

@@ -75,22 +75,22 @@ const ICONS = '/icons/achievements';
  * `apps/supabase/migrations/20260529_achievement_rules.sql`.
  */
 export const FALLBACK_BADGE_META: CatalogBadgeMeta[] = [
-  { id: 'beta-tester', title: 'Beta Tester', description: 'You joined Vaquita during the beta. Thanks for helping us shape it.', icon: `${ICONS}/beta-tester2.png`, accent: 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)', tier: 'Founder' },
+  { id: 'beta_tester', title: 'Beta Tester', description: 'You joined Vaquita during the beta. Thanks for helping us shape it.', icon: `${ICONS}/beta-tester2.png`, accent: 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)', tier: 'Founder' },
   { id: 'rookie', title: 'Rookie', description: 'Earn your first 50 XP. Welcome to the herd.', icon: `${ICONS}/rookie.png`, accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', tier: 'Bronze' },
-  { id: 'week-warrior', title: 'Week Warrior', description: 'Reach a 7-day savings streak.', icon: `${ICONS}/week-warrior.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)', tier: 'Bronze' },
-  { id: 'first-deposit', title: 'First Deposit', description: 'Made your very first deposit in Vaquita.', icon: `${ICONS}/first-deposit.png`, accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', tier: 'Bronze' },
-  { id: 'first-friend', title: 'Crew Mate', description: 'Follow your first fellow vaquero.', icon: `${ICONS}/first-friend.png`, accent: 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)', tier: 'Bronze' },
-  { id: 'savings-starter', title: 'Savings Starter', description: 'Reach $100 USDC in cumulative deposits.', icon: `${ICONS}/savings-starter.png`, accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', tier: 'Silver' },
-  { id: 'trio-saver', title: 'Triple Threat', description: 'Keep 3 active deposits running at the same time.', icon: `${ICONS}/trio-saver.png`, accent: 'linear-gradient(180deg, #B89AFF 0%, #7C4DFF 100%)', tier: 'Silver' },
-  { id: 'month-master', title: 'Month Master', description: 'Reach a 30-day savings streak.', icon: `${ICONS}/month-master.png`, accent: 'linear-gradient(180deg, #FF8A65 0%, #E64A19 100%)', tier: 'Silver' },
+  { id: 'week_warrior', title: 'Week Warrior', description: 'Reach a 7-day savings streak.', icon: `${ICONS}/week-warrior.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)', tier: 'Bronze' },
+  { id: 'first_deposit', title: 'First Deposit', description: 'Made your very first deposit in Vaquita.', icon: `${ICONS}/first-deposit.png`, accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', tier: 'Bronze' },
+  { id: 'first_friend', title: 'Crew Mate', description: 'Follow your first fellow vaquero.', icon: `${ICONS}/first-friend.png`, accent: 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)', tier: 'Bronze' },
+  { id: 'savings_starter', title: 'Savings Starter', description: 'Reach $100 USDC in cumulative deposits.', icon: `${ICONS}/savings-starter.png`, accent: 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', tier: 'Silver' },
+  { id: 'trio_saver', title: 'Triple Threat', description: 'Keep 3 active deposits running at the same time.', icon: `${ICONS}/trio-saver.png`, accent: 'linear-gradient(180deg, #B89AFF 0%, #7C4DFF 100%)', tier: 'Silver' },
+  { id: 'month_master', title: 'Month Master', description: 'Reach a 30-day savings streak.', icon: `${ICONS}/month-master.png`, accent: 'linear-gradient(180deg, #FF8A65 0%, #E64A19 100%)', tier: 'Silver' },
   { id: 'explorer', title: 'Explorer', description: 'Earn 300 XP across all challenges.', icon: `${ICONS}/explorer.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)', tier: 'Silver' },
-  { id: 'streak-master', title: 'Streak Master', description: 'Reach a 50-day savings streak.', icon: `${ICONS}/streak-master.png`, accent: 'linear-gradient(180deg, #FFB347 0%, #FF7A00 100%)', tier: 'Gold' },
+  { id: 'streak_master', title: 'Streak Master', description: 'Reach a 50-day savings streak.', icon: `${ICONS}/streak-master.png`, accent: 'linear-gradient(180deg, #FFB347 0%, #FF7A00 100%)', tier: 'Gold' },
   { id: 'whale', title: 'Vaquita Whale', description: 'Reach 30,000 XP. Now THAT is dedication.', icon: `${ICONS}/whale.png`, accent: 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)', tier: 'Gold' },
-  { id: 'savings-baron', title: 'Savings Baron', description: 'Reach $10,000 USDC in cumulative deposits.', icon: `${ICONS}/savings-baron.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', tier: 'Gold' },
-  { id: 'century-saver', title: 'Century Saver', description: 'Reach a 100-day savings streak. Legendary.', icon: `${ICONS}/century-saver.png`, accent: 'linear-gradient(180deg, #FFD180 0%, #FF6F00 100%)', tier: 'Diamond' },
-  { id: 'third-place', title: 'Bronze Medalist', description: 'Finish in the top 10 on the monthly leaderboard.', icon: `${ICONS}/third-place.png`, accent: 'linear-gradient(180deg, #FFCC80 0%, #A05A2C 100%)', tier: 'Bronze' },
-  { id: 'second-place', title: 'Silver Medalist', description: 'Finish #2 on the monthly leaderboard.', icon: `${ICONS}/second-place.png`, accent: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)', tier: 'Silver' },
-  { id: 'first-place', title: 'Gold Medalist', description: 'Finish #1 on the monthly leaderboard.', icon: `${ICONS}/first-place.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', tier: 'Gold' },
+  { id: 'savings_baron', title: 'Savings Baron', description: 'Reach $10,000 USDC in cumulative deposits.', icon: `${ICONS}/savings-baron.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', tier: 'Gold' },
+  { id: 'century_saver', title: 'Century Saver', description: 'Reach a 100-day savings streak. Legendary.', icon: `${ICONS}/century-saver.png`, accent: 'linear-gradient(180deg, #FFD180 0%, #FF6F00 100%)', tier: 'Diamond' },
+  { id: 'third_place', title: 'Bronze Medalist', description: 'Finish in the top 10 on the monthly leaderboard.', icon: `${ICONS}/third-place.png`, accent: 'linear-gradient(180deg, #FFCC80 0%, #A05A2C 100%)', tier: 'Bronze' },
+  { id: 'second_place', title: 'Silver Medalist', description: 'Finish #2 on the monthly leaderboard.', icon: `${ICONS}/second-place.png`, accent: 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)', tier: 'Silver' },
+  { id: 'first_place', title: 'Gold Medalist', description: 'Finish #1 on the monthly leaderboard.', icon: `${ICONS}/first-place.png`, accent: 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', tier: 'Gold' },
 ];
 
 type KnownState = { progress?: { current: number; target: number }; unlocked: boolean };
@@ -109,19 +109,19 @@ const computeKnownState = (ctx: AchievementsCtx): Record<string, KnownState> => 
   const deposits = ctx.totalDeposits;
 
   return {
-    'beta-tester': { unlocked: isBetaTester },
+    beta_tester: { unlocked: isBetaTester },
     rookie: { progress: { current: Math.min(exp, 50), target: 50 }, unlocked: exp >= 50 },
-    'week-warrior': { progress: { current: Math.min(streak, 7), target: 7 }, unlocked: streak >= 7 },
-    'first-deposit': { unlocked: deposits >= 1 },
-    'first-friend': { progress: { current: Math.min(friends, 1), target: 1 }, unlocked: friends >= 1 },
-    'savings-starter': { progress: { current: Math.min(Math.floor(savings), 100), target: 100 }, unlocked: savings >= 100 },
-    'trio-saver': { progress: { current: Math.min(deposits, 3), target: 3 }, unlocked: deposits >= 3 },
-    'month-master': { progress: { current: Math.min(streak, 30), target: 30 }, unlocked: streak >= 30 },
+    week_warrior: { progress: { current: Math.min(streak, 7), target: 7 }, unlocked: streak >= 7 },
+    first_deposit: { unlocked: deposits >= 1 },
+    first_friend: { progress: { current: Math.min(friends, 1), target: 1 }, unlocked: friends >= 1 },
+    savings_starter: { progress: { current: Math.min(Math.floor(savings), 100), target: 100 }, unlocked: savings >= 100 },
+    trio_saver: { progress: { current: Math.min(deposits, 3), target: 3 }, unlocked: deposits >= 3 },
+    month_master: { progress: { current: Math.min(streak, 30), target: 30 }, unlocked: streak >= 30 },
     explorer: { progress: { current: Math.min(exp, 300), target: 300 }, unlocked: exp >= 300 },
-    'streak-master': { progress: { current: Math.min(streak, 50), target: 50 }, unlocked: streak >= 50 },
+    streak_master: { progress: { current: Math.min(streak, 50), target: 50 }, unlocked: streak >= 50 },
     whale: { progress: { current: Math.min(exp, 30000), target: 30000 }, unlocked: exp >= 30000 },
-    'savings-baron': { progress: { current: Math.min(Math.floor(savings), 10000), target: 10000 }, unlocked: savings >= 10000 },
-    'century-saver': { progress: { current: Math.min(streak, 100), target: 100 }, unlocked: streak >= 100 },
+    savings_baron: { progress: { current: Math.min(Math.floor(savings), 10000), target: 10000 }, unlocked: savings >= 10000 },
+    century_saver: { progress: { current: Math.min(streak, 100), target: 100 }, unlocked: streak >= 100 },
   };
 };
 
