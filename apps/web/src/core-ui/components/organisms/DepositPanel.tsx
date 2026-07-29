@@ -3,6 +3,7 @@
 import { isStellarNetwork } from '@/networks/stellar';
 import { directUsdcTransfer } from '@/networks/stellar/blendDirect';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
+import { PassiveMigrationSheet } from './PassiveMigrationSheet';
 import { usePollar } from '@pollar/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -240,6 +241,10 @@ export function DepositPanel() {
           address={pollarWallet?.address ?? walletAddress ?? ''}
         />
       )}
+      {/* Blocking legacy-Blend migration prompt: self-opens (and self-closes)
+          from the live Blend balance when the passive-vault flag is on. Inert
+          while dark. */}
+      <PassiveMigrationSheet walletAddress={walletAddress} />
     </div>
   );
 }
