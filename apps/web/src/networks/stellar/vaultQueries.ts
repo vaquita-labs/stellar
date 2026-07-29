@@ -9,6 +9,8 @@ import {
   TransactionBuilder,
   xdr,
 } from '@stellar/stellar-sdk';
+import i18n from '@/core-ui/i18n';
+import { useConfigStore } from '@/core-ui/stores';
 import type { NetworkResponseDTO } from '@/core-ui/types';
 import { getNetworkPassphrase, getRpcUrl } from './kit';
 
@@ -38,12 +40,52 @@ export const defindexVaultConfigForToken = (
 };
 
 /**
+ * Non-reactive read of the active token's DeFindex vault config, for imperative
+ * call sites (transaction submission). React code must derive it from the store
+ * subscription instead: `defindexVaultConfigForToken(useConfigStore(s => s.token))`.
+ */
+export const getDefindexVaultConfig = (): DefindexVaultConfig | null =>
+  defindexVaultConfigForToken(useConfigStore.getState().token);
+
+/**
  * Convert a raw i128 token amount (base units) into human USDC using the token's
  * decimal count. The vault reports share values in the underlying asset's base
  * units; the UI shows human amounts.
  */
 export const rawToUsdc = (raw: bigint, decimals: number): number =>
   Number(raw) / 10 ** decimals;
+
+// DeFindex vault ContractError code → i18n key (+ English fallback). Subset the
+// UI can actually hit on deposit/withdraw (the vault's full Errors enum is much
+// larger — governance/rebalance codes never reach an end user). Same shape and
+// per-call translation as POOL_ERROR_KEYS in poolQueries.ts.
+const VAULT_ERROR_KEYS: Record<number, { key: string; fallback: string }> = {
+  412: { key: 'errors.vault.insufficientBalance', fallback: 'Not enough balance' },
+  124: { key: 'errors.vault.amountOverTotalSupply', fallback: 'Amount exceeds the vault supply, please retry' },
+  114: { key: 'errors.vault.insufficientManagedFunds', fallback: "The vault can't cover this right now, please retry" },
+  451: { key: 'errors.vault.amountBelowMinDust', fallback: 'Amount is too small' },
+  452: { key: 'errors.vault.underlyingAmountBelowMin', fallback: 'Price moved past your limit, please retry' },
+  453: { key: 'errors.vault.bTokensAmountBelowMin', fallback: 'Price moved past your limit, please retry' },
+  410: { key: 'errors.vault.negativeNotAllowed', fallback: 'Invalid amount' },
+  417: { key: 'errors.vault.onlyPositiveAmount', fallback: 'Amount must be greater than zero' },
+  401: { key: 'errors.vault.notInitialized', fallback: 'Vault is not ready' },
+  418: { key: 'errors.vault.notAuthorized', fallback: 'Not authorized' },
+  130: { key: 'errors.vault.unauthorized', fallback: 'Not authorized' },
+};
+
+/**
+ * Parse a DeFindex vault contract error (e.g. "Error(Contract, #412)") into a
+ * human-readable message in the active language. Returns null when the error is
+ * not a recognized vault error, so callers can fall back to a generic message.
+ */
+export function parseVaultErrorMessage(err: unknown): string | null {
+  const str =
+    err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err ?? '');
+  const match = /Error\(Contract,\s*#(\d+)\)/.exec(str);
+  if (!match || !match[1]) return null;
+  const entry = VAULT_ERROR_KEYS[parseInt(match[1], 10)];
+  return entry ? i18n.t(entry.key, entry.fallback) : null;
+}
 
 export interface DefindexVaultPosition {
   /** df-token (share) balance held by the address. */

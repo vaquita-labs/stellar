@@ -1,6 +1,7 @@
 'use client';
 
-import { directBlendSupply, getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
+import { getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
+import { passiveDeposit } from '@/networks/stellar/vaultDirect';
 import { Popover, PopoverContent, PopoverTrigger, Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, useAnimationControls } from 'framer-motion';
@@ -154,7 +155,7 @@ export function DepositMethodModal({
       network: network?.networkName ?? null,
     });
     try {
-      await directBlendSupply({
+      await passiveDeposit({
         address: walletAddress,
         amount,
         decimals: token.decimals,
@@ -165,6 +166,7 @@ export function DepositMethodModal({
       // header y el PortfolioPanel reflejen el nuevo total sin esperar los 60s
       // de staleTime.
       void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+      void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
       setStep('success');
     } catch (e) {
       trackError('direct_blend_deposit_failed', {

@@ -1,4 +1,5 @@
-import { blendConfigForToken, directBlendSupply } from '@/networks/stellar/blendDirect';
+import { blendConfigForToken } from '@/networks/stellar/blendDirect';
+import { passiveDeposit } from '@/networks/stellar/vaultDirect';
 import { usePollarReadyStore } from '@/networks/stellar/wallet/pollarReady';
 import { toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
@@ -92,7 +93,7 @@ export const useIdleFunds = () => {
     setIsInvesting(true);
     setError(null);
     try {
-      const { hash } = await directBlendSupply({
+      const { hash } = await passiveDeposit({
         address: walletAddress,
         amount: String(amount),
         decimals: token.decimals,
@@ -105,6 +106,7 @@ export const useIdleFunds = () => {
       );
       await refreshWalletBalance();
       void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+      void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
     } catch (e) {
       // La firma custodial puede fallar por sesión (nonce) o falta de gas (XLM).
       // Mostramos el error en la pantalla y dejamos reintentar; no barremos solos.
