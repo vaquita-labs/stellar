@@ -3,7 +3,7 @@
 import { ASSETS } from '@/networks/anclap/anclap';
 import { useAnclapAuthStore } from '@/networks/anclap/anclapAuth';
 import { AnclapCancelled, AnclapError, assetParam, SepTransaction, useAnclap } from '@/networks/anclap/useAnclap';
-import { directBlendWithdraw } from '@/networks/stellar/blendDirect';
+import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import { Button, Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
@@ -181,7 +181,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
       // que sin este paso el swap no tendría USDC. `withdrawAll` cuando el monto
       // iguala el disponible (dispara el sentinel i128, evita dejar dust).
       mark('blend', 'running');
-      await directBlendWithdraw({
+      await passiveWithdraw({
         address: walletAddress,
         amount,
         decimals: token.decimals,

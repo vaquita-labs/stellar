@@ -9,7 +9,7 @@ import {
   useTransactions,
 } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { directBlendWithdraw } from '@/networks/stellar/blendDirect';
+import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import { Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, useAnimationControls } from 'framer-motion';
@@ -132,8 +132,9 @@ export function InvestModal({
     setActiveStep('preparing');
     setError(null);
     try {
-      // 1) Blend → wallet (mismo USDC/issuer que acepta el Vaquita pool).
-      await directBlendWithdraw({
+      // 1) Posición pasiva → wallet (mismo USDC/issuer que acepta el Vaquita pool).
+      // Con el flag on sale del vault DeFindex; si no, del retiro directo de Blend.
+      await passiveWithdraw({
         address: walletAddress,
         amount,
         decimals: token.decimals,
@@ -175,6 +176,7 @@ export function InvestModal({
 
       void refetchBlend();
       void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+      void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
       void queryClient.invalidateQueries({ queryKey: ['deposit'] });
       setStep('success');
     } catch (e) {

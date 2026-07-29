@@ -1,7 +1,8 @@
 'use client';
 
 import { isStellarNetwork } from '@/networks/stellar';
-import { directBlendWithdraw, directUsdcTransfer } from '@/networks/stellar/blendDirect';
+import { directUsdcTransfer } from '@/networks/stellar/blendDirect';
+import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import { usePollar } from '@pollar/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -177,13 +178,14 @@ export function DepositPanel() {
             // posición entera vía el sentinel i128. Un solo salto: 'sending'. ---
             if (pollarWallet?.custody === 'external') {
               onProgress('sending');
-              await directBlendWithdraw({
+              await passiveWithdraw({
                 address: walletAddress,
                 amount: String(amount),
                 decimals: token.decimals,
                 withdrawAll,
               });
               void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+              void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
               trackUserAction('withdraw_submitted', {
                 amount,
                 network: network?.networkName || null,
@@ -201,7 +203,7 @@ export function DepositPanel() {
             // Salto 1: Blend → custodial (mismo directBlendWithdraw que externa,
             // pero acá los fondos quedan en la wallet interna del usuario).
             onProgress('preparing');
-            await directBlendWithdraw({
+            await passiveWithdraw({
               address: walletAddress,
               amount: amountStr,
               decimals: token.decimals,
@@ -220,6 +222,7 @@ export function DepositPanel() {
             });
 
             void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+            void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
             trackUserAction('withdraw_submitted', {
               amount,
               network: network?.networkName || null,
