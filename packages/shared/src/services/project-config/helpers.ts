@@ -55,6 +55,7 @@ export const toProjectConfig = (
     vaquitaContractAddress: firstElement(token.vaquitaContractAddress ?? ''),
     issuer: token.issuer ?? null,
     blendPoolContractAddress: token.blendPoolContractAddress ?? null,
+    defindexVaultContractAddress: token.defindexVaultContractAddress ?? null,
   })),
   currencies: toCurrencies(config.currencies),
   languages: toLanguages(config.languages),

@@ -28,6 +28,10 @@ const envClientSchema = z.object({
   // reads a new field off a cached payload is not served stale objects that
   // predate it.
   NEXT_PUBLIC_QUERY_CACHE_VERSION: z.string().min(1),
+  // Rollout flag for passive deposits via the DeFindex vault. OPTIONAL and
+  // dark-by-default: unset/anything-but-"true" means off, so the vault path
+  // ships invisibly until this is explicitly set to "true". See featureFlags.ts.
+  NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: z.string().optional(),
 });
 
 // Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
@@ -41,6 +45,7 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_BLEND_FEE_STROOPS: process.env.NEXT_PUBLIC_BLEND_FEE_STROOPS,
   NEXT_PUBLIC_CARD_VERSION: process.env.NEXT_PUBLIC_CARD_VERSION,
   NEXT_PUBLIC_QUERY_CACHE_VERSION: process.env.NEXT_PUBLIC_QUERY_CACHE_VERSION,
+  NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: process.env.NEXT_PUBLIC_PASSIVE_VAULT_ENABLED,
 });
 
 if (!parsed.success) {

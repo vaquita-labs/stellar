@@ -57,6 +57,8 @@ export interface ProjectConfigTokenDTO {
   issuer: string | null;
   /** Blend V2 pool that accepts this token as reserve. */
   blendPoolContractAddress: string | null;
+  /** DeFindex vault this token is deposited into (shared with the locked pool). */
+  defindexVaultContractAddress: string | null;
 }
 
 /**

@@ -13,6 +13,7 @@ import { AppModal, useModalPresence } from '../../molecules/AppModal';
 import { DepositEarnings, DepositEarningsReporter } from '../../home/DepositEarningsReporter';
 import { AllocationDetailSheet } from './AllocationDetailSheet';
 import { BlendDetailSheet } from './BlendDetailSheet';
+import { VaultBalanceRow } from './VaultBalanceRow';
 import { InvestModal } from './InvestModal';
 import { PortfolioDonut } from './PortfolioDonut';
 import { AllocationStyle, getAllocationStyle } from './allocationStyles';
@@ -313,6 +314,7 @@ export function PortfolioPanel({
           </p>
         ) : (
           <div className="flex flex-col">
+            <VaultBalanceRow walletAddress={walletAddress} />
             {displayRows.map((row) => {
               const empty = row.amount <= 0;
               const investable = row.kind === 'lock' && row.lockPeriod != null;
