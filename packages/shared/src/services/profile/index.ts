@@ -900,6 +900,18 @@ export const getAllAchievements = async () => {
   }
 };
 
+const toCatalogAchievementDTO = (a: AchievementDocument): CatalogAchievementResponseDTO => ({
+  key: a.key,
+  name: a.name,
+  description: a.description,
+  tier: a.tier,
+  coinReward: a.coin_reward,
+  icon: a.icon ?? null,
+  accent: a.accent ?? null,
+  unlockType: a.unlock_type,
+  displayOrder: a.display_order ?? 0,
+});
+
 /**
  * Public, user-agnostic badge catalog for the web app to render instead of a
  * hardcoded list. Returns only `enabled`, non-`hidden` badges, ordered by
@@ -911,17 +923,30 @@ export const toCatalogAchievementsResponseDTO = async (): Promise<CatalogAchieve
   return data
     .filter((a) => a.enabled !== false && !a.hidden)
     .sort((x, y) => (x.display_order ?? 0) - (y.display_order ?? 0))
-    .map((a) => ({
-      key: a.key,
-      name: a.name,
-      description: a.description,
-      tier: a.tier,
-      coinReward: a.coin_reward,
-      icon: a.icon ?? null,
-      accent: a.accent ?? null,
-      unlockType: a.unlock_type,
-      displayOrder: a.display_order ?? 0,
-    }));
+    .map(toCatalogAchievementDTO);
+};
+
+/**
+ * Single-badge lookup by key, used to render share/OG cards for a badge the
+ * caller already knows the id of.
+ *
+ * Unlike {@link toCatalogAchievementsResponseDTO} this DOES resolve `hidden`
+ * badges. Hiding them from the list keeps redeem-code badges unenumerable —
+ * the property worth protecting — but a by-key lookup leaks nothing extra:
+ * the caller had to know the exact key, which it only gets from having earned
+ * the badge or from a share link someone published. Withholding them here just
+ * 404s the OG endpoint, which is what broke image download and link unfurls
+ * for every secret badge.
+ *
+ * Disabled (`enabled = false`) badges stay out: a retired badge should not
+ * mint fresh share cards.
+ */
+export const toCatalogAchievementByKeyResponseDTO = async (
+  key: string,
+): Promise<CatalogAchievementResponseDTO | null> => {
+  const { data } = await getAchievementByKey(key);
+  if (!data || data.enabled === false) return null;
+  return toCatalogAchievementDTO(data);
 };
 
 export const getClaimedAchievements = async (profileId: number) => {
