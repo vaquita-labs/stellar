@@ -449,22 +449,22 @@ export enum Reward {
 }
 
 export enum Achievement {
-  BETA_TESTER = 'beta-tester',
+  BETA_TESTER = 'beta_tester',
   ROOKIE = 'rookie',
-  WEEK_WARRIOR = 'week-warrior',
-  FIRST_DEPOSIT = 'first-deposit',
-  FIRST_FRIEND = 'first-friend',
-  SAVINGS_STARTER = 'savings-starter',
-  TRIO_SAVER = 'trio-saver',
-  MONTH_MASTER = 'month-master',
+  WEEK_WARRIOR = 'week_warrior',
+  FIRST_DEPOSIT = 'first_deposit',
+  FIRST_FRIEND = 'first_friend',
+  SAVINGS_STARTER = 'savings_starter',
+  TRIO_SAVER = 'trio_saver',
+  MONTH_MASTER = 'month_master',
   EXPLORER = 'explorer',
-  STREAK_MASTER = 'streak-master',
+  STREAK_MASTER = 'streak_master',
   WHALE = 'whale',
-  SAVINGS_BARON = 'savings-baron',
-  CENTURY_SAVER = 'century-saver',
-  THIRD_PLACE = 'third-place',
-  SECOND_PLACE = 'second-place',
-  FIRST_PLACE = 'first-place',
+  SAVINGS_BARON = 'savings_baron',
+  CENTURY_SAVER = 'century_saver',
+  THIRD_PLACE = 'third_place',
+  SECOND_PLACE = 'second_place',
+  FIRST_PLACE = 'first_place',
 }
 
 export interface AchievementResponseDTO {

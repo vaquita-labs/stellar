@@ -6,11 +6,11 @@
       "viewOnStellarExpert": "Ver en Stellar Expert"
     },
     "items": {
-      "beta-tester": {
+      "beta_tester": {
         "description": "Te uniste a Vaquita durante la beta. ¡Gracias por ayudarnos a darle forma!",
         "title": "Beta Tester"
       },
-      "century-saver": {
+      "century_saver": {
         "description": "Alcanza una racha de ahorro de 100 días. Legendario.",
         "title": "Ahorrador Centenario"
       },
@@ -18,19 +18,19 @@
         "description": "Gana 300 XP en todos los desafíos.",
         "title": "Explorador"
       },
-      "first-deposit": {
+      "first_deposit": {
         "description": "Hiciste tu primer depósito en Vaquita.",
         "title": "Primer Depósito"
       },
-      "first-friend": {
+      "first_friend": {
         "description": "Sigue a tu primer vaquero.",
         "title": "Compañero de Manada"
       },
-      "first-place": {
+      "first_place": {
         "description": "Termina #1 en la tabla mensual.",
         "title": "Medallista de Oro"
       },
-      "month-master": {
+      "month_master": {
         "description": "Alcanza una racha de ahorro de 30 días.",
         "title": "Maestro del Mes"
       },
@@ -38,39 +38,39 @@
         "description": "Gana tus primeros 50 XP. Bienvenido al rebaño.",
         "title": "Novato"
       },
-      "savings-baron": {
+      "savings_baron": {
         "description": "Acumula $10.000 USDC en depósitos.",
         "title": "Barón del Ahorro"
       },
-      "savings-starter": {
+      "savings_starter": {
         "description": "Acumula $100 USDC en depósitos.",
         "title": "Ahorrador Principiante"
       },
-      "second-place": {
+      "second_place": {
         "description": "Termina #2 en la tabla mensual.",
         "title": "Medallista de Plata"
       },
-      "secret-launch": {
+      "secret_launch": {
         "description": "Estuviste ahí cuando Vaquita salió al aire. Una bienvenida secreta del rebaño.",
         "title": "Insider del Lanzamiento"
       },
-      "starmaker-latam": {
+      "starmaker_latam": {
         "description": "Estuviste en StarMaker LATAM. Una insignia que no aparece en la lista hasta que alguien te pasa el código.",
         "title": "StarMaker LATAM"
       },
-      "streak-master": {
+      "streak_master": {
         "description": "Alcanza una racha de ahorro de 50 días.",
         "title": "Maestro de la Racha"
       },
-      "third-place": {
+      "third_place": {
         "description": "Termina en el top 10 de la tabla mensual.",
         "title": "Medallista de Bronce"
       },
-      "trio-saver": {
+      "trio_saver": {
         "description": "Mantén 3 depósitos activos al mismo tiempo.",
         "title": "Triple Amenaza"
       },
-      "week-warrior": {
+      "week_warrior": {
         "description": "Alcanza una racha de ahorro de 7 días.",
         "title": "Guerrero de la Semana"
       },

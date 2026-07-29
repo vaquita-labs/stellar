@@ -6,11 +6,11 @@
       "viewOnStellarExpert": "View on Stellar Expert"
     },
     "items": {
-      "beta-tester": {
+      "beta_tester": {
         "description": "You joined Vaquita during the beta. Thanks for helping us shape it.",
         "title": "Beta Tester"
       },
-      "century-saver": {
+      "century_saver": {
         "description": "Reach a 100-day savings streak. Legendary.",
         "title": "Century Saver"
       },
@@ -18,19 +18,19 @@
         "description": "Earn 300 XP across all challenges.",
         "title": "Explorer"
       },
-      "first-deposit": {
+      "first_deposit": {
         "description": "Made your very first deposit in Vaquita.",
         "title": "First Deposit"
       },
-      "first-friend": {
+      "first_friend": {
         "description": "Follow your first fellow vaquero.",
         "title": "Crew Mate"
       },
-      "first-place": {
+      "first_place": {
         "description": "Finish #1 on the monthly leaderboard.",
         "title": "Gold Medalist"
       },
-      "month-master": {
+      "month_master": {
         "description": "Reach a 30-day savings streak.",
         "title": "Month Master"
       },
@@ -38,39 +38,39 @@
         "description": "Earn your first 50 XP. Welcome to the herd.",
         "title": "Rookie"
       },
-      "savings-baron": {
+      "savings_baron": {
         "description": "Reach $10,000 USDC in cumulative deposits.",
         "title": "Savings Baron"
       },
-      "savings-starter": {
+      "savings_starter": {
         "description": "Reach $100 USDC in cumulative deposits.",
         "title": "Savings Starter"
       },
-      "second-place": {
+      "second_place": {
         "description": "Finish #2 on the monthly leaderboard.",
         "title": "Silver Medalist"
       },
-      "secret-launch": {
+      "secret_launch": {
         "description": "You were there when Vaquita went live. A secret welcome from the herd.",
         "title": "Launch Insider"
       },
-      "starmaker-latam": {
+      "starmaker_latam": {
         "description": "You were at StarMaker LATAM. A badge that stays hidden until someone hands you the code.",
         "title": "StarMaker LATAM"
       },
-      "streak-master": {
+      "streak_master": {
         "description": "Reach a 50-day savings streak.",
         "title": "Streak Master"
       },
-      "third-place": {
+      "third_place": {
         "description": "Finish in the top 10 on the monthly leaderboard.",
         "title": "Bronze Medalist"
       },
-      "trio-saver": {
+      "trio_saver": {
         "description": "Keep 3 active deposits running at the same time.",
         "title": "Triple Threat"
       },
-      "week-warrior": {
+      "week_warrior": {
         "description": "Reach a 7-day savings streak.",
         "title": "Week Warrior"
       },

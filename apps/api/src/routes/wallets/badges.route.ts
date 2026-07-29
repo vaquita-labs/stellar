@@ -52,9 +52,9 @@ const lifecycleError = (res: Response, status: number, code: string, message: st
   res.status(status).json({ status: 'error', code, message });
 
 const medalEligible = (achievementKey: string, rank: number | null): boolean => {
-  if (achievementKey === 'first-place') return rank === 1;
-  if (achievementKey === 'second-place') return rank === 2;
-  if (achievementKey === 'third-place') return rank !== null && rank >= 3 && rank <= 10;
+  if (achievementKey === 'first_place') return rank === 1;
+  if (achievementKey === 'second_place') return rank === 2;
+  if (achievementKey === 'third_place') return rank !== null && rank >= 3 && rank <= 10;
   return false;
 };
 
@@ -264,9 +264,9 @@ router.post(
       // Leaderboard badges: verify rank against the last closed cycle.
       const cycleId = await getLastClosedCycleId();
       const rank = await getLeaderboardRankForWallet(wallet, cycleId);
-      const exactRank: Record<string, number> = { 'first-place': 1, 'second-place': 2 };
+      const exactRank: Record<string, number> = { first_place: 1, second_place: 2 };
       const eligible =
-        achievementKey === 'third-place'
+        achievementKey === 'third_place'
           ? rank !== null && rank >= 3 && rank <= 10
           : rank === exactRank[achievementKey];
       if (!eligible) {

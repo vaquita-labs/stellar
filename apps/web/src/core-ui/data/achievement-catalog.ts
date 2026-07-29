@@ -3,10 +3,11 @@ import { clientEnv } from '@/core-ui/config/clientEnv';
 /**
  * Identity-level catalog of achievements (title / description / icon / accent).
  *
- * The backend is the single source of truth: the catalog is served by
- * `GET /api/v1/badges` and edited from the admin panel. There is deliberately
- * no static fallback — if the API is unreachable we surface nothing rather than
- * render badges that may no longer exist or whose copy is stale.
+ * The backend is the single source of truth: badges are served by
+ * `GET /api/v1/badges/:key` and edited from the admin panel. There is
+ * deliberately no static fallback — if the API is unreachable we surface
+ * nothing rather than render badges that may no longer exist or whose copy is
+ * stale.
  *
  * Decoupled from `profile-badges.ts` on purpose: the share/OG flow needs the
  * static metadata of an achievement without the user-specific signals (XP,
@@ -58,40 +59,36 @@ const toCatalogAchievement = (a: CatalogApiAchievement): CatalogAchievement => (
 });
 
 /**
- * Fetch the catalog from the backend (cached at the framework layer for 5 min).
- * Returns an empty catalog on any failure — callers then resolve to `null` and
- * 404 rather than showing stale hardcoded badges.
+ * Look up an achievement by id from the backend (cached at the framework layer
+ * for 5 min). Returns `null` for unknown ids, and whenever the backend is
+ * unavailable, so callers can 404 rather than render stale hardcoded badges.
+ *
+ * Resolves against `/badges/:key` rather than filtering the `/badges` list:
+ * the list omits `hidden` redeem-code badges to keep them unenumerable, which
+ * made every secret badge 404 here — no share card, no downloadable image, no
+ * link unfurl. The by-key route serves them because the caller already had to
+ * know the exact key to ask.
  */
-export const fetchCatalog = async (): Promise<Record<string, CatalogAchievement>> => {
-  try {
-    const res = await fetch(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/badges`, {
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) {
-      console.error(`Achievement catalog fetch failed: ${res.status} ${res.statusText}`);
-      return {};
-    }
-    const json = (await res.json()) as { data?: { achievements?: CatalogApiAchievement[] } };
-    const list = json?.data?.achievements;
-    if (!Array.isArray(list)) {
-      console.error('Achievement catalog response had no achievements array');
-      return {};
-    }
-    const map: Record<string, CatalogAchievement> = {};
-    for (const a of list) {
-      if (!a?.key) continue;
-      map[a.key] = toCatalogAchievement(a);
-    }
-    return map;
-  } catch (error) {
-    console.error('Achievement catalog fetch threw', error);
-    return {};
-  }
-};
-
-/** Look up an achievement by id from the backend catalog. Returns `null` for
- *  unknown ids (and whenever the catalog is unavailable) so callers can 404. */
 export const getCatalogAchievement = async (id: string): Promise<CatalogAchievement | null> => {
-  const catalog = await fetchCatalog();
-  return catalog[id] ?? null;
+  try {
+    const res = await fetch(
+      `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/badges/${encodeURIComponent(id)}`,
+      { next: { revalidate: 300 } },
+    );
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      console.error(`Achievement lookup failed for "${id}": ${res.status} ${res.statusText}`);
+      return null;
+    }
+    const json = (await res.json()) as { data?: { achievement?: CatalogApiAchievement } };
+    const achievement = json?.data?.achievement;
+    if (!achievement?.key) {
+      console.error(`Achievement lookup for "${id}" returned no achievement`);
+      return null;
+    }
+    return toCatalogAchievement(achievement);
+  } catch (error) {
+    console.error(`Achievement lookup for "${id}" threw`, error);
+    return null;
+  }
 };

@@ -58,7 +58,7 @@ export function AllAchievementsPage() {
   const totalDeposits = activeDeposits?.length ?? 0;
 
   const betaTester = useMemo(
-    () => achievementsData?.achievements?.find((a) => a.key === 'beta-tester'),
+    () => achievementsData?.achievements?.find((a) => a.key === 'beta_tester'),
     [achievementsData?.achievements]
   );
 
