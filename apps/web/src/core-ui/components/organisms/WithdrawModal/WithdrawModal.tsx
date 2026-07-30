@@ -99,10 +99,11 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         { key: 'sending', label: t('withdraw.steps.sending', 'Sending to your wallet') },
       ];
 
-  // Saldo retirable = la posición directa en Blend (líquida, sin lock), proyectada
-  // en vivo con `useLiveBlendUsdc` (la MISMA fuente que el header, así el saldo de
-  // arriba y el "Available" corren juntos y coinciden). Piso a 7 decimales (nunca
-  // hacia arriba) para no aparentar plata que no existe.
+  // Saldo retirable = la posición pasiva (líquida, sin lock: vault de DeFindex o
+  // Blend según el flag), proyectada en vivo con `useLivePassiveUsdc` (la MISMA
+  // fuente que el header, así el saldo de arriba y el "Available" corren juntos y
+  // coinciden). Piso a 7 decimales (nunca hacia arriba) para no aparentar plata
+  // que no existe.
   const available = floorAmount(primaryLiveUsdc, AMOUNT_DECIMALS);
 
   const handleBlendWithdraw = async () => {

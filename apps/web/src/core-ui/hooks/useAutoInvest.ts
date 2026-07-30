@@ -18,7 +18,8 @@ const IDLE_POLL_MS = 12_000;
 
 /**
  * Detecta USDC ocioso en la wallet CUSTODIAL (social login) y expone la acción
- * para invertirlo en Blend. Ya NO firma en silencio: la firma custodial de Pollar
+ * para invertirlo en la posición pasiva (el vault de DeFindex con el flag on, si
+ * no el supply directo a Blend). Ya NO firma en silencio: la firma custodial de Pollar
  * necesita salir de un gesto del usuario (si no, tira `SDK_AUTH_DPOP_USE_NONCE`),
  * y además mover plata ajena debe confirmarse. Por eso el disparo real es el botón
  * de la pantalla de "plata ociosa" (`IdleFundsModal`), y este hook solo decide
@@ -98,9 +99,11 @@ export const useIdleFunds = () => {
         amount: String(amount),
         decimals: token.decimals,
       });
-      console.info('[idle-funds] invested to Blend', { hash, amount });
+      console.info('[idle-funds] invested', { hash, amount });
+      // Destino-agnóstico a propósito: el router elige vault o Blend según el
+      // flag, y el usuario no tiene por qué conocer el protocolo de abajo.
       toast.success(
-        t('idleFunds.toast', 'We put ${{amount}} to work in Blend', {
+        t('idleFunds.toast', 'We put ${{amount}} to work', {
           amount: amount.toFixed(2),
         })
       );
