@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { FiExternalLink } from 'react-icons/fi';
 import { truncateDecimals } from '../../../helpers';
 import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
-import { useLiveBlendUsdc } from '../../../hooks';
+import { useLivePassiveUsdc } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
@@ -93,7 +93,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     live: blendLiveUsdc,
     isLoading: balanceIsLoading,
     refetch: refreshBalance,
-  } = useLiveBlendUsdc(walletAddress ?? undefined);
+  } = useLivePassiveUsdc(walletAddress ?? undefined);
   const balanceFormatted = floorAmount(blendLiveUsdc, AMOUNT_DECIMALS);
 
   const amountNum = Number(amount);

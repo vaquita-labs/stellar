@@ -3,7 +3,7 @@
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { formatTokenPrecise, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
-import { useApyByLockPeriods, useDepositsComplete, useLiveBlendUsdc } from '@/core-ui/hooks';
+import { useApyByLockPeriods, useDepositsComplete, useLivePassiveUsdc } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -56,9 +56,8 @@ export function PortfolioPanel({
   // `live`: saldo de Blend proyectado en vivo, la MISMA fuente que el header y el
   // "Available" del retiro, así el total del portfolio corre igual y coincide con
   // ellos (antes usaba el snapshot crudo y quedaba un decimal atrás).
-  const { data: blendPosition, isFetching: blendFetching, live: blendBalance } =
-    useLiveBlendUsdc(walletAddress);
-  const blendApy = blendPosition?.apy ?? 0;
+  const { apy: blendApy, isFetching: blendFetching, live: blendBalance } =
+    useLivePassiveUsdc(walletAddress);
 
   const router = useRouter();
   // Detalle de Blend (qué es + números).

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiHeadphones } from 'react-icons/fi';
 import {
-  useBlendUsdc,
+  usePassiveUsdc,
   useDepositsComplete,
   useProfileData,
   useProfileExperience,
@@ -83,7 +83,7 @@ export const HeaderStats = () => {
     settled: blendSettled,
     ratePerMs: blendRatePerMs,
     updatedAt: blendUpdatedAt,
-  } = useBlendUsdc(walletAddress);
+  } = usePassiveUsdc(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);

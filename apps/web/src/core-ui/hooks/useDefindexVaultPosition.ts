@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
 import { useConfigStore } from '@/core-ui/stores';
 import { getStellarNetwork } from '@/networks/stellar/kit';
 import {
@@ -6,7 +7,7 @@ import {
   getVaultPosition,
   type DefindexVaultPosition,
 } from '@/networks/stellar/vaultQueries';
-import { projectBlendUsdc, useBlendPosition } from './useBlendPosition';
+import { projectBlendUsdc, useBlendPosition, useBlendUsdc, useLiveBlendUsdc } from './useBlendPosition';
 import { useLiveTick } from './useLiveTick';
 
 const EMPTY: DefindexVaultPosition = { shares: 0n, usdc: 0 };
@@ -88,5 +89,67 @@ export const useLiveVaultUsdc = (walletAddress?: string) => {
   return {
     ...position,
     live: projectBlendUsdc(position.settled, position.ratePerMs, position.updatedAt, now),
+  };
+};
+
+/**
+ * Is the passive/flexible balance currently sourced from the DeFindex vault? True
+ * when the rollout flag is on AND the active token has a vault configured; false
+ * means the legacy Blend position is the source. The single switch every
+ * passive-balance surface reads, so they all agree.
+ */
+export const usePassiveVaultOn = (): boolean => {
+  const token = useConfigStore((s) => s.token);
+  return isPassiveVaultEnabled() && !!defindexVaultConfigForToken(token);
+};
+
+/**
+ * The passive/flexible position, from the vault when `usePassiveVaultOn` else from
+ * Blend — normalized so every surface (header, portfolio, withdraw, off-ramp) reads
+ * one shape and shows the SAME number. `usePassiveUsdc` is the non-live variant
+ * (snapshot + ratePerMs for callers that project themselves); `useLivePassiveUsdc`
+ * adds the ticking `live` value. Both sub-hooks run every render (react-query dedupes)
+ * so the switch never violates the rules of hooks.
+ */
+export const usePassiveUsdc = (walletAddress?: string) => {
+  const blend = useBlendUsdc(walletAddress);
+  const vault = useVaultUsdc(walletAddress);
+  const vaultOn = usePassiveVaultOn();
+  const src = vaultOn ? vault : blend;
+  return {
+    settled: src.settled,
+    apy: src.apy,
+    ratePerMs: src.ratePerMs,
+    updatedAt: src.updatedAt,
+    usdc: src.data?.usdc ?? 0,
+    data: src.data,
+    isFetching: src.isFetching,
+    isLoading: src.isLoading,
+    isError: src.isError,
+    error: src.error,
+    refetch: src.refetch,
+    vaultOn,
+  };
+};
+
+export const useLivePassiveUsdc = (walletAddress?: string) => {
+  const blend = useLiveBlendUsdc(walletAddress);
+  const vault = useLiveVaultUsdc(walletAddress);
+  const vaultOn = usePassiveVaultOn();
+  const src = vaultOn ? vault : blend;
+  return {
+    live: src.live,
+    settled: src.settled,
+    apy: src.apy,
+    ratePerMs: src.ratePerMs,
+    updatedAt: src.updatedAt,
+    usdc: src.data?.usdc ?? 0,
+    data: src.data,
+    isFetching: src.isFetching,
+    isLoading: src.isLoading,
+    isError: src.isError,
+    error: src.error,
+    refetch: src.refetch,
+    vaultOn,
   };
 };

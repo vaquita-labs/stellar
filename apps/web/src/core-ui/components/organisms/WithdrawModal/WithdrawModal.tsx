@@ -2,9 +2,7 @@
 
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
-import { useLiveBlendUsdc, useLiveVaultUsdc, usePassiveMigration } from '@/core-ui/hooks';
-import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
-import { defindexVaultConfigForToken } from '@/networks/stellar/vaultQueries';
+import { useLivePassiveUsdc, usePassiveMigration } from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { motion, useAnimationControls } from 'framer-motion';
@@ -43,17 +41,14 @@ function displayAmount(raw: string) {
  */
 export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: WithdrawModalProps) {
   const { t } = useTranslation();
-  const { walletAddress, token } = useConfigStore();
+  const { walletAddress } = useConfigStore();
   const { wallet } = usePollar();
   const { data: profile } = useProfileData();
   const savvy = !!profile?.cryptoSavvy;
-  const { live: blendLiveUsdc } = useLiveBlendUsdc(walletAddress);
-  const { live: vaultLiveUsdc } = useLiveVaultUsdc(walletAddress);
-  // With the passive-vault flag on, the withdrawable balance is the DeFindex vault
-  // position (funds migrated out of Blend); otherwise it's the legacy Blend
-  // position. The withdraw action itself already routes accordingly (passiveWithdraw).
-  const vaultOn = isPassiveVaultEnabled() && !!defindexVaultConfigForToken(token);
-  const primaryLiveUsdc = vaultOn ? vaultLiveUsdc : blendLiveUsdc;
+  // Withdrawable balance: the vault position when the passive-vault flag is on
+  // (funds migrated out of Blend), else the legacy Blend position. The withdraw
+  // action itself routes accordingly via passiveWithdraw.
+  const { live: primaryLiveUsdc, vaultOn } = useLivePassiveUsdc(walletAddress);
   // Leftover legacy Blend balance (should be 0 after migration): surfaced with its
   // own withdraw button so a user who still holds Blend can pull it out.
   const { blendBalance, hasBorrow, withdrawToWallet } = usePassiveMigration(walletAddress);
