@@ -454,6 +454,19 @@
       "vaultReturnedLessThanPrincipal": "Vault returned less than principal",
       "vaultReturnedZeroShares": "Vault returned zero shares",
       "vaultShareBalanceDecreased": "Vault share balance decreased unexpectedly"
+    },
+    "vault": {
+      "amountBelowMinDust": "Amount is too small",
+      "amountOverTotalSupply": "Amount exceeds the vault supply, please retry",
+      "bTokensAmountBelowMin": "Price moved past your limit, please retry",
+      "insufficientBalance": "Not enough balance",
+      "insufficientManagedFunds": "The vault can't cover this right now, please retry",
+      "negativeNotAllowed": "Invalid amount",
+      "notAuthorized": "Not authorized",
+      "notInitialized": "Vault is not ready",
+      "onlyPositiveAmount": "Amount must be greater than zero",
+      "unauthorized": "Not authorized",
+      "underlyingAmountBelowMin": "Price moved past your limit, please retry"
     }
   },
   "home": {
@@ -624,6 +637,14 @@
     "totalDeposits": {
       "bagAlt": "Total deposits"
     }
+  },
+  "idleFunds": {
+    "label": "You have idle funds",
+    "title": "Put your money to work",
+    "subtitle": "This USDC is just sitting there. Put it to work and start earning right away.",
+    "cta": "Start earning ${{amount}}",
+    "processing": "Investing...",
+    "toast": "We put ${{amount}} to work"
   },
   "leaderboard": {
     "card": {

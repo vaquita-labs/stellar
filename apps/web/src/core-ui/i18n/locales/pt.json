@@ -454,6 +454,19 @@
       "vaultReturnedLessThanPrincipal": "O vault retornou menos que o principal",
       "vaultReturnedZeroShares": "O vault retornou zero cotas",
       "vaultShareBalanceDecreased": "O saldo de cotas do vault diminuiu de forma inesperada"
+    },
+    "vault": {
+      "amountBelowMinDust": "O valor é muito pequeno",
+      "amountOverTotalSupply": "O valor excede o disponível no vault, tente novamente",
+      "bTokensAmountBelowMin": "O preço mudou além do seu limite, tente novamente",
+      "insufficientBalance": "Saldo insuficiente",
+      "insufficientManagedFunds": "O vault não consegue cobrir isso agora, tente novamente",
+      "negativeNotAllowed": "Valor inválido",
+      "notAuthorized": "Não autorizado",
+      "notInitialized": "O vault não está pronto",
+      "onlyPositiveAmount": "O valor deve ser maior que zero",
+      "unauthorized": "Não autorizado",
+      "underlyingAmountBelowMin": "O preço mudou além do seu limite, tente novamente"
     }
   },
   "home": {
@@ -624,6 +637,14 @@
     "totalDeposits": {
       "bagAlt": "Depósitos totais"
     }
+  },
+  "idleFunds": {
+    "label": "Você tem fundos parados",
+    "title": "Coloque seu dinheiro para trabalhar",
+    "subtitle": "Esse USDC está parado. Coloque-o para trabalhar e comece a ganhar agora mesmo.",
+    "cta": "Comece a ganhar ${{amount}}",
+    "processing": "Investindo...",
+    "toast": "Colocamos ${{amount}} para trabalhar"
   },
   "leaderboard": {
     "card": {
