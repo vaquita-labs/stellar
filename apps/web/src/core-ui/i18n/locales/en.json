@@ -2025,8 +2025,11 @@
   "migration": {
     "title": "Move your Blend funds",
     "body": "You have {{amount}} in Blend. To continue you need to move it.",
+    "bodyExternal": "You have {{amount}} in Blend. Move part or all of it into the Vault to earn with Vaquita.",
     "borrowBlocked": "You have an open Blend borrow against these funds. Repay it first, then you can move them.",
     "migrate": "Move to Vault",
-    "moving": "Moving…"
+    "moving": "Moving…",
+    "max": "Max",
+    "notNow": "Not now"
   }
 }

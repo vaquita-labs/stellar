@@ -2025,8 +2025,11 @@
   "migration": {
     "title": "Mueve tus fondos de Blend",
     "body": "Tienes {{amount}} en Blend. Para continuar necesitas moverlo.",
+    "bodyExternal": "Tienes {{amount}} en Blend. Mueve una parte o todo al Vault para ganar con Vaquita.",
     "borrowBlocked": "Tienes un préstamo abierto en Blend contra estos fondos. Devuélvelo primero y luego podrás moverlos.",
     "migrate": "Mover al Vault",
-    "moving": "Moviendo…"
+    "moving": "Moviendo…",
+    "max": "Máx",
+    "notNow": "Ahora no"
   }
 }
