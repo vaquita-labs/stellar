@@ -43,11 +43,11 @@ async function connect() {
 
 const client = await connect();
 try {
-  // Identify the target without printing credentials.
-  const { rows: [who] } = await client.query(
-    'SELECT current_database() AS db, inet_server_addr()::text AS host',
-  );
-  console.log(`\n📍 database=${who.db} host=${who.host ?? 'local'}\n`);
+  // Which environment this is, by connection host — the server's own
+  // inet_server_addr() is a private address behind the proxy and says nothing
+  // about prod vs staging. Credentials are stripped; only the domain prints.
+  const { rows: [who] } = await client.query('SELECT current_database() AS db');
+  console.log(`\n📍 host=${new URL(url).hostname}  database=${who.db}\n`);
 
   const { rows: badges } = await client.query(
     'SELECT key, name, enabled, hidden FROM achievements WHERE deleted_at IS NULL ORDER BY display_order, key',
@@ -57,8 +57,13 @@ try {
 
   console.log(`achievements: ${badges.length} filas — ${underscore.length} sin guion, ${hyphen.length} con guion`);
 
+  console.log('\nKeys ya alineadas (sin guion):');
+  for (const b of underscore) {
+    console.log(`   ${b.key}   [${b.enabled ? 'enabled' : 'disabled'}${b.hidden ? ', hidden' : ''}]`);
+  }
+
   if (hyphen.length === 0) {
-    console.log('✅ Sin keys con guion. Esta base ya está alineada con el código.\n');
+    console.log('\n✅ Sin keys con guion. Esta base ya está alineada con el código.\n');
   } else {
     console.log('\n⚠️  Keys con guion (el código NO las resuelve):');
     for (const b of hyphen) {
