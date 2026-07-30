@@ -22,6 +22,10 @@ const EMPTY: DefindexVaultPosition = { shares: 0n, usdc: 0 };
  * `balance(userWallet)` is exactly this user's passive position and never touches
  * pool shares.
  *
+ * Gated on the rollout flag as well as the vault config: while the flag is off
+ * every consumer discards this position in favour of the Blend one, so running
+ * the query would just be two RPC simulations per user per minute thrown away.
+ *
  * Money-safety mirrors `useBlendPosition`: the balance must never flash to $0 or
  * dip on a transient RPC blip. `keepPreviousData` holds the last known value
  * during refetches, background refetch keeps it fresh without a spinner, and
@@ -38,7 +42,7 @@ export const useDefindexVaultPosition = (walletAddress?: string) => {
       if (!walletAddress || !config) return EMPTY;
       return getVaultPosition(config, walletAddress);
     },
-    enabled: !!walletAddress && !!config,
+    enabled: isPassiveVaultEnabled() && !!walletAddress && !!config,
     // The position only changes on deposit/withdraw; 60s keeps the RPC calm.
     // After a deposit/withdraw, invalidating this query forces the refresh.
     staleTime: 60_000,
