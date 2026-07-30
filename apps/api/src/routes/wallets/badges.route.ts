@@ -51,7 +51,10 @@ const asyncHandler = <P = any, ResBody = any, ReqBody = any, ReqQuery = any>(
 const lifecycleError = (res: Response, status: number, code: string, message: string) =>
   res.status(status).json({ status: 'error', code, message });
 
-const medalEligible = (achievementKey: string, rank: number | null): boolean => {
+/** Podium eligibility for the cycle-rank badges. Compares the achievement key
+ *  as the database spells it — a hyphenated literal here matches nothing and
+ *  silently denies every medal. */
+export const medalEligible = (achievementKey: string, rank: number | null): boolean => {
   if (achievementKey === 'first_place') return rank === 1;
   if (achievementKey === 'second_place') return rank === 2;
   if (achievementKey === 'third_place') return rank !== null && rank >= 3 && rank <= 10;

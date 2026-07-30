@@ -23,7 +23,10 @@ interface BadgeMeta {
 
 const CDN = 'https://vaquita.fi/assets/badges';
 
-const BADGE_CATALOG: Record<string, BadgeMeta> = {
+/** Keyed by the on-chain `badgeType` (`contractBadgeTypeOf`), which is a Soroban
+ *  Symbol — so every key here must spell itself with `[a-zA-Z0-9_]` only. A key
+ *  the chain can never produce is an entry `getBadgeMetadata` can never reach. */
+export const BADGE_CATALOG: Record<string, BadgeMeta> = {
   first_place: {
     name: 'Vaquero de Oro',
     description: 'Awarded to the #1 ranked saver of the month on Vaquita. Soulbound — cannot be transferred.',
