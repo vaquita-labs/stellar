@@ -238,9 +238,11 @@ router.get('/network/:networkName/token/:tokenSymbol/lockPeriod/:lockPeriod/apy'
 
   let response: unknown = {};
   if (networkData.name === 'Stellar Testnet' || networkData.name === 'Stellar') {
-    // Headline protocolApy: DeFindex HTTP API (+ on-chain period for vaquitaApy). Blend pool reserve is not used:
-    // per-deposit vault yield is share/NAV via `getBlendInterest`, and Blend SDK often lags testnet pool storage.
-    response = await getStellarApyData(networkData, Number(lockPeriod), null, tokenNetworkData);
+    // Headline protocolApy: DeFindex HTTP API (+ on-chain period for vaquitaApy).
+    // Locked funds are forwarded to the DeFindex vault by the pool contract, so the
+    // vault's own APY is the rate that describes them; per-deposit yield is the
+    // share/NAV read in `getBlendInterest`.
+    response = await getStellarApyData(networkData, Number(lockPeriod), tokenNetworkData);
   } else if (networkData.name === 'Dummy') {
     response = getDummyApyData(Number(lockPeriod));
   } else {

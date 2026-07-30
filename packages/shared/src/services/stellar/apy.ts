@@ -1,4 +1,3 @@
-import type { Reserve } from '@blend-capital/blend-sdk';
 import { Networks } from '@stellar/stellar-sdk';
 import { ONE_DAY } from '../../config/constants';
 import { apiServicesEnv } from '../../config/apiServicesEnv';
@@ -39,7 +38,6 @@ export type StellarApyDisplayPayload = {
 export const getStellarApyData = async (
   network: Network,
   lockPeriodMs: number,
-  poolData: Reserve | null,
   tokenNetworkData: TokenNetwork,
 ): Promise<StellarApyDisplayPayload> => {
   const empty: StellarApyDisplayPayload = {
@@ -83,8 +81,11 @@ export const getStellarApyData = async (
     const vaultAddress =
       firstElement(tokenNetworkData.defindex_vault_contract_address ?? '')?.trim() || '';
 
+    // Named only once a rate actually comes back. An empty name makes the UI fall
+    // back to a generic "the lending protocol", so a failed lookup can never
+    // present 0% as a real rate from a protocol that was never queried.
     let protocolApy = 0;
-    let lendingMarketName = 'Blend';
+    let lendingMarketName = '';
 
     if (vaultAddress && defindexNet) {
       const apy = await fetchDefindexVaultApy({ host, apiKey, vaultAddress, network: defindexNet });
@@ -92,12 +93,6 @@ export const getStellarApyData = async (
         protocolApy = apy;
         lendingMarketName = 'DeFindex';
       }
-    }
-
-    if (protocolApy === 0 && poolData?.data?.bRate && poolData?.data?.dRate) {
-      const protocolApr = Number(poolData.data.bRate) / Number(poolData.data.dRate);
-      protocolApy = (Math.pow(1 + protocolApr / 100, 12) - 1) * 100;
-      lendingMarketName = 'Blend';
     }
 
     return {
