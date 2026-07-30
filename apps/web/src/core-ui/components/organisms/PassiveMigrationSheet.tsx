@@ -17,15 +17,15 @@ import { PressableButton } from '../molecules/PressableButton';
  */
 export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: string }) {
   const { t } = useTranslation();
-  const { needsMigration, hasBorrow, blendBalance, migrateToVault, withdrawToWallet } =
+  const { needsMigration, hasBorrow, blendBalance, migrateToVault } =
     usePassiveMigration(walletAddress);
-  const [busy, setBusy] = useState<null | 'migrate' | 'withdraw'>(null);
+  const [busy, setBusy] = useState<null | 'migrate'>(null);
   const [error, setError] = useState<string | null>(null);
   const [borrowDismissed, setBorrowDismissed] = useState(false);
 
   const open = needsMigration && !(hasBorrow && borrowDismissed);
 
-  const run = async (which: 'migrate' | 'withdraw', fn: () => Promise<void>) => {
+  const run = async (which: 'migrate', fn: () => Promise<void>) => {
     setBusy(which);
     setError(null);
     try {
@@ -65,26 +65,15 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
           </PressableButton>
         </>
       ) : (
-        <>
-          <PressableButton
-            variant="success"
-            disabled={busy !== null}
-            onClick={() => void run('migrate', () => migrateToVault(0))}
-          >
-            {busy === 'migrate'
-              ? t('migration.moving', 'Moving…')
-              : t('migration.migrate', 'Move to Vault')}
-          </PressableButton>
-          <PressableButton
-            variant="white"
-            disabled={busy !== null}
-            onClick={() => void run('withdraw', withdrawToWallet)}
-          >
-            {busy === 'withdraw'
-              ? t('migration.withdrawing', 'Withdrawing…')
-              : t('migration.withdraw', 'Withdraw to wallet')}
-          </PressableButton>
-        </>
+        <PressableButton
+          variant="success"
+          disabled={busy !== null}
+          onClick={() => void run('migrate', () => migrateToVault(0))}
+        >
+          {busy === 'migrate'
+            ? t('migration.moving', 'Moving…')
+            : t('migration.migrate', 'Move to Vault')}
+        </PressableButton>
       )}
 
       {error && <p className="text-sm text-error">{error}</p>}
