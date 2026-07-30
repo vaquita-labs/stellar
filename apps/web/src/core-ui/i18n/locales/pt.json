@@ -46,6 +46,10 @@
         "description": "Acumule $100 USDC em depósitos.",
         "title": "Poupador Iniciante"
       },
+      "second_deposit": {
+        "description": "Fez seu segundo depósito na Vaquita.",
+        "title": "Segundo Depósito"
+      },
       "second_place": {
         "description": "Termine em #2 no ranking mensal.",
         "title": "Medalhista de Prata"
@@ -69,6 +73,10 @@
       "trio_saver": {
         "description": "Mantenha 3 depósitos ativos ao mesmo tempo.",
         "title": "Ameaça Tripla"
+      },
+      "triple_saver": {
+        "description": "Você completou sua meta de 7 dias de economia!",
+        "title": "Meta de 7 Dias"
       },
       "week_warrior": {
         "description": "Alcance uma sequência de economia de 7 dias.",

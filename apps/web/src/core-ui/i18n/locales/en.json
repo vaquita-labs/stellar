@@ -46,6 +46,10 @@
         "description": "Reach $100 USDC in cumulative deposits.",
         "title": "Savings Starter"
       },
+      "second_deposit": {
+        "description": "Made your second deposit in Vaquita.",
+        "title": "Second Deposit"
+      },
       "second_place": {
         "description": "Finish #2 on the monthly leaderboard.",
         "title": "Silver Medalist"
@@ -69,6 +73,10 @@
       "trio_saver": {
         "description": "Keep 3 active deposits running at the same time.",
         "title": "Triple Threat"
+      },
+      "triple_saver": {
+        "description": "You completed your 7-day savings goal!",
+        "title": "7-Day Goal"
       },
       "week_warrior": {
         "description": "Reach a 7-day savings streak.",
