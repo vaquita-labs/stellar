@@ -8,6 +8,7 @@ export * from './useDeposit';
 export * from './useDeposits';
 export * from './useDepositsComplete';
 export * from './useDefindexVaultPosition';
+export * from './useVaultApy';
 export * from './usePassiveMigration';
 export * from './useFont';
 export * from './useHasHydrated';

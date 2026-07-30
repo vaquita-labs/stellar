@@ -8,8 +8,9 @@ import {
   getVaultPosition,
   type DefindexVaultPosition,
 } from '@/networks/stellar/vaultQueries';
-import { projectBlendUsdc, useBlendPosition, useBlendUsdc, useLiveBlendUsdc } from './useBlendPosition';
+import { projectBlendUsdc, useBlendUsdc, useLiveBlendUsdc } from './useBlendPosition';
 import { useLiveTick } from './useLiveTick';
+import { useVaultApy } from './useVaultApy';
 
 const EMPTY: DefindexVaultPosition = { shares: 0n, usdc: 0 };
 
@@ -63,16 +64,18 @@ const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
  * on-chain snapshot (`settled`), how much it earns per millisecond (`ratePerMs`)
  * and since when (`updatedAt`, the fetch time).
  *
- * The APY shown is the underlying **Blend supply APY** (reusing the existing
- * `useBlendPosition` read — same ['blend-position'] query, deduped by react-query),
- * NOT the vault's net APY. This over-states the real net yield (the vault takes a
- * fee), an accepted acquisition trade-off for now (see spec §7).
+ * The rate is the VAULT's own APY (`useVaultApy`), not Blend's supply APY: the
+ * vault takes a fee and runs its own strategy, so Blend's rate over-states this
+ * position. It also has to be the vault's, because it drives the live projection
+ * — projecting at a rate the settled balance does not actually grow at makes the
+ * number climb between fetches and snap back on every refetch. A vault reporting
+ * 0 therefore holds the balance still, which is what the money is doing.
  */
 export const useVaultUsdc = (walletAddress?: string) => {
   const query = useDefindexVaultPosition(walletAddress);
-  const blend = useBlendPosition(walletAddress);
+  const vaultApy = useVaultApy();
   const settled = query.data?.usdc ?? 0;
-  const apy = blend.data?.apy ?? 0;
+  const apy = vaultApy.data?.protocolApy ?? 0;
   const ratePerMs = (settled * (apy / 100)) / MS_PER_YEAR;
 
   return { ...query, settled, apy, ratePerMs, updatedAt: query.dataUpdatedAt };
