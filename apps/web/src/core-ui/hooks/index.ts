@@ -7,6 +7,8 @@ export * from './useClaimedAchievements';
 export * from './useDeposit';
 export * from './useDeposits';
 export * from './useDepositsComplete';
+export * from './useDefindexVaultPosition';
+export * from './usePassiveMigration';
 export * from './useFont';
 export * from './useHasHydrated';
 export * from './useInstallApp';
