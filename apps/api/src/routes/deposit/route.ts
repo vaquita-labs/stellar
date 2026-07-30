@@ -17,6 +17,7 @@ import {
   getNetworkByName,
   getStellarApyData,
   getTokenBySymbol,
+  getVaultApy,
   getTokenNetworkByNetworkIdTokenId,
   sendError,
   sendSuccess,
@@ -250,6 +251,43 @@ router.get('/network/:networkName/token/:tokenSymbol/lockPeriod/:lockPeriod/apy'
   }
 
   return sendSuccess(res, response, '');
+}));
+
+// The flexible (no-lock) position's rate. It sits in the same DeFindex vault the
+// pool forwards locked funds into, so this is the per-term endpoint's protocolApy
+// without the on-chain period read that only a lock period has.
+router.get('/network/:networkName/token/:tokenSymbol/vault/apy', asyncHandler(async (req, res) => {
+  const { networkName, tokenSymbol } = req.params;
+  req.log.info({ networkName, tokenSymbol }, 'GET /deposit/.../vault/apy');
+
+  const { data: networkData, error: networkError } = await getNetworkByName(networkName);
+  if (networkError || !networkData) {
+    req.log.error({ err: networkError, networkName }, 'Network not found');
+    return sendError(res, 'Network not found', networkError, 404);
+  }
+
+  const { data: tokenData, error: tokenError } = await getTokenBySymbol(tokenSymbol);
+  if (tokenError || !tokenData) {
+    req.log.error({ err: tokenError, tokenSymbol }, 'Token not found');
+    return sendError(res, 'Token not found', tokenError, 404);
+  }
+
+  const { data: tokenNetworkData, error: tokenNetworkError } =
+    await getTokenNetworkByNetworkIdTokenId(networkData.id, tokenData.id);
+  if (tokenNetworkError || !tokenNetworkData) {
+    req.log.error(
+      { err: tokenNetworkError, networkId: networkData.id, tokenId: tokenData.id },
+      'Token on network not found',
+    );
+    return sendError(res, 'Token on network not found', tokenNetworkError, 404);
+  }
+
+  if (networkData.name !== 'Stellar Testnet' && networkData.name !== 'Stellar') {
+    req.log.warn({ networkName: networkData.name }, 'No vault APY provider for network');
+    return sendSuccess(res, { protocolApy: 0, lendingMarketName: '' }, '');
+  }
+
+  return sendSuccess(res, await getVaultApy(networkData, tokenNetworkData), '');
 }));
 
 router.get('/network/:networkName/wallet/:walletAddress/complete', asyncHandler(async (req, res) => {

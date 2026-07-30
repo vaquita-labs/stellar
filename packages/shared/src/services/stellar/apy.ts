@@ -1,10 +1,8 @@
-import { Networks } from '@stellar/stellar-sdk';
 import { ONE_DAY } from '../../config/constants';
 import { apiServicesEnv } from '../../config/apiServicesEnv';
 import { firstElement } from '../../helpers';
 import type { Network, TokenNetwork } from '../../types';
 import { fetchDefindexVaultApy, stellarNetworkNameToDefindexHttpNetwork } from './defindexApy';
-import { requireSorobanRpcUrl } from './rpc';
 import { getPeriodData } from './stellar-sdk';
 
 const SECONDS_PER_MONTH_30D = 60 * 60 * 24 * 30;
@@ -35,6 +33,38 @@ export type StellarApyDisplayPayload = {
   lendingMarketName: string;
 };
 
+/** The vault's own rate, with the market named only once a rate came back. */
+export type VaultApyPayload = {
+  protocolApy: number;
+  lendingMarketName: string;
+};
+
+/**
+ * The DeFindex vault's APY for this token.
+ *
+ * One vault backs both sides of the product — the pool forwards locked funds into
+ * it, and the flexible balance is supplied to it directly — so this single rate
+ * describes both, and the per-term payload and the flexible position read it from
+ * here rather than each deriving their own.
+ *
+ * Returns 0 with no market name when the vault is unset or the lookup fails, so a
+ * failed read is never presented as a real rate.
+ */
+export const getVaultApy = async (network: Network, tokenNetworkData: TokenNetwork): Promise<VaultApyPayload> => {
+  const empty: VaultApyPayload = { protocolApy: 0, lendingMarketName: '' };
+  const defindexNet = stellarNetworkNameToDefindexHttpNetwork(network.name);
+  const vaultAddress = firstElement(tokenNetworkData.defindex_vault_contract_address ?? '')?.trim() || '';
+  if (!vaultAddress || !defindexNet) return empty;
+
+  const apy = await fetchDefindexVaultApy({
+    host: apiServicesEnv.DEFINDEX_API_HOST,
+    apiKey: apiServicesEnv.DEFINDEX_API_KEY,
+    vaultAddress,
+    network: defindexNet,
+  });
+  return apy != null ? { protocolApy: apy, lendingMarketName: 'DeFindex' } : empty;
+};
+
 export const getStellarApyData = async (
   network: Network,
   lockPeriodMs: number,
@@ -51,16 +81,10 @@ export const getStellarApyData = async (
   try {
     const lockPeriodSeconds = lockPeriodMs >= 1_000_000 ? Math.trunc(lockPeriodMs / 1000) : Math.trunc(lockPeriodMs);
     const poolAddr = firstElement(tokenNetworkData.vaquita_contract_address ?? '');
-    const periodOpts =
-      network.name === 'Stellar'
-        ? {
-            rpcUrl: requireSorobanRpcUrl('mainnet'),
-            networkPassphrase: Networks.PUBLIC,
-          }
-        : undefined;
-
+    // No per-network branch here: `getPeriodData` defaults to the active network
+    // (STELLAR_NETWORK), the same source every other on-chain read uses.
     const periodData = poolAddr
-      ? await getPeriodData(lockPeriodMs, poolAddr, periodOpts)
+      ? await getPeriodData(lockPeriodMs, poolAddr)
       : { rewardPool: '0', totalDeposits: '0', totalShares: '0' };
     const lockPeriodInMonths = lockPeriodSeconds / SECONDS_PER_MONTH_30D;
     const base = 10 ** 7;
@@ -75,25 +99,8 @@ export const getStellarApyData = async (
     const vaquitaApy =
       totalDeposits > 0 ? (rewardPool * 100 * 12) / (totalDeposits * lockPeriodInMonths) : 0;
 
-    const defindexNet = stellarNetworkNameToDefindexHttpNetwork(network.name);
-    const host = apiServicesEnv.DEFINDEX_API_HOST;
-    const apiKey = apiServicesEnv.DEFINDEX_API_KEY;
-    const vaultAddress =
-      firstElement(tokenNetworkData.defindex_vault_contract_address ?? '')?.trim() || '';
-
-    // Named only once a rate actually comes back. An empty name makes the UI fall
-    // back to a generic "the lending protocol", so a failed lookup can never
-    // present 0% as a real rate from a protocol that was never queried.
-    let protocolApy = 0;
-    let lendingMarketName = '';
-
-    if (vaultAddress && defindexNet) {
-      const apy = await fetchDefindexVaultApy({ host, apiKey, vaultAddress, network: defindexNet });
-      if (apy != null) {
-        protocolApy = apy;
-        lendingMarketName = 'DeFindex';
-      }
-    }
+    // Same vault the flexible position sits in, so both read the one rate.
+    const { protocolApy, lendingMarketName } = await getVaultApy(network, tokenNetworkData);
 
     return {
       rewardPool,
