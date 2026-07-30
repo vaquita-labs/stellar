@@ -27,11 +27,16 @@ export interface DefindexVaultConfig {
  * Resolve the DeFindex vault config from the active token row (DB → API → config
  * store), same source as the Blend and Vaquita-pool configs. Null while the config
  * has not loaded or when the token has no DeFindex vault configured.
+ *
+ * `decimals` is part of that contract: a token row without it reaches the client
+ * as 0 (see `toProjectConfig`), and every amount on this path is scaled by
+ * `10 ** decimals` — so a missing value would read balances 10⁷x too large and
+ * under-scale deposits. Treated as unconfigured rather than silently wrong.
  */
 export const defindexVaultConfigForToken = (
   token: NetworkResponseDTO['tokens'][number] | null,
 ): DefindexVaultConfig | null => {
-  if (!token?.defindexVaultContractAddress || !token.contractAddress) return null;
+  if (!token?.defindexVaultContractAddress || !token.contractAddress || !token.decimals) return null;
   return {
     vaultId: token.defindexVaultContractAddress,
     usdcId: token.contractAddress,
