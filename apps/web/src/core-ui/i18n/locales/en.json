@@ -1853,7 +1853,11 @@
     "success": {
       "subtitle": "Your funds are on their way to {{label}}.",
       "title": "Withdrawal sent!"
-    }
+    },
+    "blendLeftover": "In Blend",
+    "withdrawFromBlend": "Withdraw from Blend",
+    "withdrawing": "Withdrawing…",
+    "blendBorrow": "Repay your Blend borrow first"
   },
   "transactions": {
     "title": "Transactions",
@@ -1992,6 +1996,9 @@
       "successTitle": "Back in your savings!",
       "successSubtitle": "Your funds are flexible again and keep earning in your savings.",
       "cta": "Withdraw to your savings"
+    },
+    "vault": {
+      "label": "Vault · Flexible"
     }
   },
   "txError": {
@@ -2006,5 +2013,12 @@
       "10": "You don't have enough USDC in your wallet to cover this amount. Add funds and try again.",
       "13": "Your wallet needs to enable USDC first. Add the USDC trustline and try again."
     }
+  },
+  "migration": {
+    "title": "Move your Blend funds",
+    "body": "You have {{amount}} in Blend. To continue you need to move it.",
+    "borrowBlocked": "You have an open Blend borrow against these funds. Repay it first, then you can move them.",
+    "migrate": "Move to Vault",
+    "moving": "Moving…"
   }
 }

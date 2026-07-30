@@ -1853,7 +1853,11 @@
     "success": {
       "subtitle": "Tu dinero va en camino a {{label}}.",
       "title": "¡Retiro enviado!"
-    }
+    },
+    "blendLeftover": "En Blend",
+    "withdrawFromBlend": "Retirar de Blend",
+    "withdrawing": "Retirando…",
+    "blendBorrow": "Devuelve tu préstamo de Blend primero"
   },
   "transactions": {
     "title": "Transacciones",
@@ -1992,6 +1996,9 @@
       "successTitle": "¡De vuelta en tus ahorros!",
       "successSubtitle": "Tus fondos vuelven a estar flexibles y siguen generando rendimiento en tus ahorros.",
       "cta": "Retirar a tus ahorros"
+    },
+    "vault": {
+      "label": "Vault · Flexible"
     }
   },
   "txError": {
@@ -2006,5 +2013,12 @@
       "10": "No tenés suficiente USDC en tu wallet para cubrir este monto. Agregá fondos y volvé a intentar.",
       "13": "Tu wallet necesita habilitar USDC primero. Agregá la trustline de USDC y volvé a intentar."
     }
+  },
+  "migration": {
+    "title": "Mueve tus fondos de Blend",
+    "body": "Tienes {{amount}} en Blend. Para continuar necesitas moverlo.",
+    "borrowBlocked": "Tienes un préstamo abierto en Blend contra estos fondos. Devuélvelo primero y luego podrás moverlos.",
+    "migrate": "Mover al Vault",
+    "moving": "Moviendo…"
   }
 }

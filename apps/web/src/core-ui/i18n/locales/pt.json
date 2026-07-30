@@ -1787,7 +1787,11 @@
     "success": {
       "subtitle": "Seu dinheiro está a caminho de {{label}}.",
       "title": "Saque enviado!"
-    }
+    },
+    "blendLeftover": "Na Blend",
+    "withdrawFromBlend": "Retirar da Blend",
+    "withdrawing": "Retirando…",
+    "blendBorrow": "Quite seu empréstimo da Blend primeiro"
   },
   "transactions": {
     "title": "Transações",
@@ -1926,6 +1930,9 @@
       "successTitle": "De volta nas suas economias!",
       "successSubtitle": "Seus fundos estão flexíveis de novo e continuam rendendo nas suas economias.",
       "cta": "Sacar para suas economias"
+    },
+    "vault": {
+      "label": "Vault · Flexível"
     }
   },
   "txError": {
@@ -1940,5 +1947,12 @@
       "10": "Você não tem USDC suficiente na carteira para cobrir este valor. Adicione fundos e tente de novo.",
       "13": "Sua carteira precisa habilitar o USDC primeiro. Adicione a trustline de USDC e tente de novo."
     }
+  },
+  "migration": {
+    "title": "Mova seus fundos da Blend",
+    "body": "Você tem {{amount}} na Blend. Para continuar, você precisa movê-lo.",
+    "borrowBlocked": "Você tem um empréstimo aberto na Blend contra esses fundos. Quite-o primeiro para poder movê-los.",
+    "migrate": "Mover para o Vault",
+    "moving": "Movendo…"
   }
 }
