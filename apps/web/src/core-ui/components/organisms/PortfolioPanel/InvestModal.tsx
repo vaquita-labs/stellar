@@ -4,7 +4,7 @@ import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString }
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import {
   useApyByLockPeriods,
-  useBlendPosition,
+  usePassiveUsdc,
   useRestDeposit,
   useTransactions,
 } from '@/core-ui/hooks';
@@ -51,8 +51,10 @@ export function InvestModal({
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
   const queryClient = useQueryClient();
-  const { data: blendPosition, refetch: refetchBlend } = useBlendPosition(walletAddress);
-  const available = floorAmount(blendPosition?.usdc ?? 0, AMOUNT_DECIMALS);
+  // Fondos disponibles para invertir = la posición pasiva (vault DeFindex con el
+  // flag on, si no Blend). Es de donde sale la plata para lockear en el pool.
+  const { usdc: passiveUsdc, refetch: refetchBlend } = usePassiveUsdc(walletAddress);
+  const available = floorAmount(passiveUsdc, AMOUNT_DECIMALS);
 
   const lockPeriods = useMemo(
     () => [...(token?.lockPeriods ?? [])].filter((p) => p > 0).sort((a, b) => a - b),
