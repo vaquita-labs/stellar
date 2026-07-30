@@ -2,6 +2,7 @@
 
 import { AppModal, addDangerToast, addSuccessToast } from '@/core-ui/components';
 import {
+  type LockPeriodSync,
   type Token,
   type TokenCreatePayload,
   type TokenOnchainSnapshot,
@@ -84,6 +85,18 @@ const formatPeriod = (seconds: number): string => {
 // days are >= 1_000_000 (same heuristic as the shared stellar-sdk service).
 const formatLockPeriod = (value: number): string => formatPeriod(value >= 1_000_000 ? Math.trunc(value / 1000) : value);
 
+// Green when the app and the pool agree on the lock periods, red when they do
+// not, neutral when the pool's storage could not be read and there is no verdict.
+const lockSyncTone = (inSync: boolean | null): string =>
+  inSync === null
+    ? 'bg-default-100 text-default-500'
+    : inSync
+      ? 'bg-success-100 text-success-700'
+      : 'bg-danger-100 text-danger-700';
+
+const lockSyncLabel = (inSync: boolean | null): string =>
+  inSync === null ? 'locks unknown' : inSync ? 'locks in sync' : 'locks out of sync';
+
 const shortAddress = (address: string): string =>
   address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-6)}` : address;
 
@@ -97,6 +110,7 @@ export default function Page() {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [syncingPeriods, setSyncingPeriods] = useState(false);
   // Per-token on-chain snapshot, loaded automatically for every token that has
   // a pool address. Errors render inside the panel (no toast) so a token with a
   // bad address doesn't spam the page on every load.
@@ -158,6 +172,34 @@ export default function Page() {
       issuer: orNull(form.issuer),
       blendPoolContractAddress: orNull(form.blendPoolContractAddress),
     };
+  };
+
+  // Fill the lock periods field from the pool's SupportedLockPeriod map so the
+  // app can only offer periods a deposit will actually be accepted on. The field
+  // stays editable: a failed read must never block saving the rest of the token.
+  const syncLockPeriods = async () => {
+    if (typeof editing !== 'number') return;
+    setSyncingPeriods(true);
+    try {
+      const snapshot = await fetchTokenOnchain(editing);
+      const onChain = snapshot.lockPeriods.onChainSeconds;
+      if (onChain.length === 0) {
+        addDangerToast(
+          'Nothing to sync',
+          'The pool has no lock periods registered. Register one with add_lock_period before syncing, or the app would be left with no periods to offer.',
+        );
+        return;
+      }
+      // A zero period cannot exist on-chain (the constructor rejects it), so it
+      // is the app's own "no lock" entry and syncing must not drop it.
+      const keepNoLock = parseLockPeriods(form.lockPeriods).includes(0) ? [0] : [];
+      set('lockPeriods', [...keepNoLock, ...onChain.map((seconds) => seconds * 1000)].join(', '));
+      addSuccessToast('Synced', `Filled with ${onChain.length} period(s) from the pool. Save to apply.`);
+    } catch (err) {
+      addDangerToast('Sync failed', (err as Error)?.message ?? 'Could not read the pool.');
+    } finally {
+      setSyncingPeriods(false);
+    }
   };
 
   const submit = async () => {
@@ -329,12 +371,34 @@ export default function Page() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('blendPoolContractAddress', e.target.value)}
               />
 
-              <Input
-                label="Lock periods (comma separated)"
-                placeholder="e.g. 30, 60, 90"
-                value={form.lockPeriods}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('lockPeriods', e.target.value)}
-              />
+              <div className="flex flex-col gap-1">
+                <div className="flex items-end gap-2">
+                  <div className="grow">
+                    <Input
+                      label="Lock periods (milliseconds, comma separated)"
+                      placeholder="e.g. 604800000, 7776000000"
+                      value={form.lockPeriods}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('lockPeriods', e.target.value)}
+                    />
+                  </div>
+                  {typeof editing === 'number' && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onPress={syncLockPeriods}
+                      isDisabled={syncingPeriods || saving}
+                      isLoading={syncingPeriods}
+                    >
+                      Sync from contract
+                    </Button>
+                  )}
+                </div>
+                <span className="text-xs text-default-400">
+                  {typeof editing === 'number'
+                    ? 'Sync copies the periods the pool accepts. Anything else here makes deposits revert with InvalidPeriod (#4).'
+                    : 'Save the token with its pool address first, then reopen it to sync these from the contract.'}
+                </span>
+              </div>
             </div>
           </AppModal>
 
@@ -355,6 +419,15 @@ export default function Page() {
                         {t.decimals != null && <span className="text-xs text-default-400">· {t.decimals} dec</span>}
                       </div>
                       <div className="flex flex-wrap gap-1">
+                        <span
+                          className={`rounded px-1.5 text-xs font-medium ${
+                            t.readiness.usable
+                              ? 'bg-success-100 text-success-700'
+                              : 'bg-warning-100 text-warning-700'
+                          }`}
+                        >
+                          {t.readiness.usable ? '✓ shown in app' : 'hidden from app'}
+                        </span>
                         {t.isNative && <span className="rounded bg-default-100 px-1.5 text-xs">native</span>}
                         {t.isGas && <span className="rounded bg-default-100 px-1.5 text-xs">gas</span>}
                         <span
@@ -382,6 +455,20 @@ export default function Page() {
                         <dt className="text-default-400">Blend pool</dt>
                         <dd className="break-all font-mono text-default-500">{t.blendPoolContractAddress ?? '—'}</dd>
                       </dl>
+                      {!t.readiness.usable && (
+                        <div className="rounded-medium bg-warning-50 p-2 text-xs text-warning-700">
+                          <p className="font-medium">
+                            The app does not offer this token. Fill these in to publish it:
+                          </p>
+                          <ul className="mt-1 flex flex-col gap-1">
+                            {t.readiness.gaps.map((gap) => (
+                              <li key={gap.field}>
+                                <span className="font-medium">{gap.label}</span> — {gap.reason}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                     <div className="flex shrink-0 gap-2">
                       <Button size="sm" variant="ghost" onPress={() => openEdit(t)} isDisabled={saving}>
@@ -440,6 +527,72 @@ function OnchainPanel({ state, onRefresh }: { state: OnchainState | undefined; o
   );
 }
 
+/**
+ * Side-by-side of the lock periods the app offers and the ones the pool accepts.
+ * A period only the app knows makes every deposit on it revert with
+ * InvalidPeriod, so each offending entry is called out individually.
+ */
+function LockPeriodSyncPanel({ sync }: { sync: LockPeriodSync }) {
+  const chip = (seconds: number, mismatched: boolean) => (
+    <span
+      key={seconds}
+      className={`rounded px-1.5 py-0.5 ${mismatched ? 'bg-danger-100 text-danger-700' : 'bg-success-100 text-success-700'}`}
+    >
+      {formatPeriod(seconds)}
+    </span>
+  );
+
+  const row = (label: string, seconds: number[], mismatched: number[], emptyText: string) => (
+    <div className="flex flex-wrap items-center gap-1">
+      <span className="w-16 shrink-0 text-default-400">{label}</span>
+      {seconds.length === 0 ? (
+        <span className="text-default-400">{emptyText}</span>
+      ) : (
+        seconds.map((s) => chip(s, mismatched.includes(s)))
+      )}
+    </div>
+  );
+
+  const borderTone =
+    sync.inSync === null ? 'border-default-200' : sync.inSync ? 'border-success-200' : 'border-danger-200';
+
+  return (
+    <div className={`flex flex-col gap-2 rounded-lg border ${borderTone} p-2 text-xs`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold text-default-500">Lock periods</span>
+        <span className={`rounded px-1.5 ${lockSyncTone(sync.inSync)}`}>{lockSyncLabel(sync.inSync)}</span>
+      </div>
+
+      {row('On chain', sync.onChainSeconds, sync.missingInDbSeconds, 'none registered')}
+      {row('In DB', sync.dbSeconds, sync.missingOnChainSeconds, 'none configured')}
+
+      {sync.inSync === false && (
+        <div className="flex flex-col gap-1 text-danger-700">
+          {sync.missingOnChainSeconds.length > 0 && (
+            <p>
+              The app offers {sync.missingOnChainSeconds.map(formatPeriod).join(', ')} but the pool does not accept it —
+              those deposits revert with InvalidPeriod (#4). Register it on-chain with add_lock_period, or remove it
+              from this token.
+            </p>
+          )}
+          {sync.missingInDbSeconds.length > 0 && (
+            <p>
+              The pool accepts {sync.missingInDbSeconds.map(formatPeriod).join(', ')} but this token does not list it,
+              so nobody can choose it.
+            </p>
+          )}
+        </div>
+      )}
+
+      {sync.inSync === null && (
+        <p className="text-default-500">
+          The pool&apos;s instance storage could not be read, so these lists cannot be compared.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function OnchainSnapshotBody({ snapshot }: { snapshot: TokenOnchainSnapshot }) {
   const symbol = snapshot.token.symbol;
   const stat = (label: string, value: string) => (
@@ -458,8 +611,13 @@ function OnchainSnapshotBody({ snapshot }: { snapshot: TokenOnchainSnapshot }) {
             {snapshot.paused ? 'paused' : 'active'}
           </span>
         )}
+        <span className={`rounded px-1.5 ${lockSyncTone(snapshot.lockPeriods.inSync)}`}>
+          {lockSyncLabel(snapshot.lockPeriods.inSync)}
+        </span>
         <span className="break-all font-mono">{snapshot.pool}</span>
       </div>
+
+      <LockPeriodSyncPanel sync={snapshot.lockPeriods} />
 
       <div className="flex flex-wrap gap-2">
         {stat('Vault value', snapshot.vault.underlyingFormatted != null ? `${snapshot.vault.underlyingFormatted} ${symbol}` : '—')}
