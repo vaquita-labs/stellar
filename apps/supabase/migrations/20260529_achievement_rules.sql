@@ -61,19 +61,19 @@ UPDATE achievements SET unlock_type = 'manual'
 -- -----------------------------------------------------------------------------
 -- Backfill rule JSON for the eligibility-driven badges (mirrors the switch).
 -- -----------------------------------------------------------------------------
-UPDATE achievements SET rule = '{"all":[{"signal":"createdAt","op":"before","value":"2026-05-17T23:59:59Z"}]}'::jsonb WHERE key = 'beta-tester';
+UPDATE achievements SET rule = '{"all":[{"signal":"createdAt","op":"before","value":"2026-05-17T23:59:59Z"}]}'::jsonb WHERE key = 'beta_tester';
 UPDATE achievements SET rule = '{"all":[{"signal":"experience","op":">=","value":50}]}'::jsonb        WHERE key = 'rookie';
-UPDATE achievements SET rule = '{"all":[{"signal":"streakCount","op":">=","value":7}]}'::jsonb        WHERE key = 'week-warrior';
-UPDATE achievements SET rule = '{"all":[{"signal":"activeDeposits","op":">=","value":1}]}'::jsonb     WHERE key = 'first-deposit';
-UPDATE achievements SET rule = '{"all":[{"signal":"friendsCount","op":">=","value":1}]}'::jsonb       WHERE key = 'first-friend';
-UPDATE achievements SET rule = '{"all":[{"signal":"activeAmount","op":">=","value":100}]}'::jsonb     WHERE key = 'savings-starter';
-UPDATE achievements SET rule = '{"all":[{"signal":"activeDeposits","op":">=","value":3}]}'::jsonb     WHERE key = 'trio-saver';
-UPDATE achievements SET rule = '{"all":[{"signal":"streakCount","op":">=","value":30}]}'::jsonb       WHERE key = 'month-master';
+UPDATE achievements SET rule = '{"all":[{"signal":"streakCount","op":">=","value":7}]}'::jsonb        WHERE key = 'week_warrior';
+UPDATE achievements SET rule = '{"all":[{"signal":"activeDeposits","op":">=","value":1}]}'::jsonb     WHERE key = 'first_deposit';
+UPDATE achievements SET rule = '{"all":[{"signal":"friendsCount","op":">=","value":1}]}'::jsonb       WHERE key = 'first_friend';
+UPDATE achievements SET rule = '{"all":[{"signal":"activeAmount","op":">=","value":100}]}'::jsonb     WHERE key = 'savings_starter';
+UPDATE achievements SET rule = '{"all":[{"signal":"activeDeposits","op":">=","value":3}]}'::jsonb     WHERE key = 'trio_saver';
+UPDATE achievements SET rule = '{"all":[{"signal":"streakCount","op":">=","value":30}]}'::jsonb       WHERE key = 'month_master';
 UPDATE achievements SET rule = '{"all":[{"signal":"experience","op":">=","value":300}]}'::jsonb       WHERE key = 'explorer';
-UPDATE achievements SET rule = '{"all":[{"signal":"streakCount","op":">=","value":50}]}'::jsonb       WHERE key = 'streak-master';
+UPDATE achievements SET rule = '{"all":[{"signal":"streakCount","op":">=","value":50}]}'::jsonb       WHERE key = 'streak_master';
 UPDATE achievements SET rule = '{"all":[{"signal":"experience","op":">=","value":30000}]}'::jsonb     WHERE key = 'whale';
-UPDATE achievements SET rule = '{"all":[{"signal":"activeAmount","op":">=","value":10000}]}'::jsonb   WHERE key = 'savings-baron';
-UPDATE achievements SET rule = '{"all":[{"signal":"streakCount","op":">=","value":100}]}'::jsonb      WHERE key = 'century-saver';
+UPDATE achievements SET rule = '{"all":[{"signal":"activeAmount","op":">=","value":10000}]}'::jsonb   WHERE key = 'savings_baron';
+UPDATE achievements SET rule = '{"all":[{"signal":"streakCount","op":">=","value":100}]}'::jsonb      WHERE key = 'century_saver';
 
 -- Non-rule badges keep rule = NULL.
 UPDATE achievements SET rule = NULL WHERE unlock_type <> 'rule';
@@ -83,22 +83,22 @@ UPDATE achievements SET rule = NULL WHERE unlock_type <> 'rule';
 -- (apps/web/src/core-ui/data/achievement-catalog.ts) so the web app can stop
 -- hardcoding them and read everything from here.
 -- -----------------------------------------------------------------------------
-UPDATE achievements SET icon = '/icons/achievements/beta-tester2.png',   accent = 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)', display_order = 1  WHERE key = 'beta-tester';
+UPDATE achievements SET icon = '/icons/achievements/beta-tester2.png',   accent = 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)', display_order = 1  WHERE key = 'beta_tester';
 UPDATE achievements SET icon = '/icons/achievements/rookie.png',         accent = 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', display_order = 2  WHERE key = 'rookie';
-UPDATE achievements SET icon = '/icons/achievements/week-warrior.png',   accent = 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)', display_order = 3  WHERE key = 'week-warrior';
-UPDATE achievements SET icon = '/icons/achievements/first-deposit.png',  accent = 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', display_order = 4  WHERE key = 'first-deposit';
-UPDATE achievements SET icon = '/icons/achievements/first-friend.png',   accent = 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)', display_order = 5  WHERE key = 'first-friend';
-UPDATE achievements SET icon = '/icons/achievements/savings-starter.png',accent = 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', display_order = 6  WHERE key = 'savings-starter';
-UPDATE achievements SET icon = '/icons/achievements/trio-saver.png',     accent = 'linear-gradient(180deg, #B89AFF 0%, #7C4DFF 100%)', display_order = 7  WHERE key = 'trio-saver';
-UPDATE achievements SET icon = '/icons/achievements/month-master.png',   accent = 'linear-gradient(180deg, #FF8A65 0%, #E64A19 100%)', display_order = 8  WHERE key = 'month-master';
+UPDATE achievements SET icon = '/icons/achievements/week-warrior.png',   accent = 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)', display_order = 3  WHERE key = 'week_warrior';
+UPDATE achievements SET icon = '/icons/achievements/first-deposit.png',  accent = 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', display_order = 4  WHERE key = 'first_deposit';
+UPDATE achievements SET icon = '/icons/achievements/first-friend.png',   accent = 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)', display_order = 5  WHERE key = 'first_friend';
+UPDATE achievements SET icon = '/icons/achievements/savings-starter.png',accent = 'linear-gradient(180deg, #C6F1A8 0%, #58CC02 100%)', display_order = 6  WHERE key = 'savings_starter';
+UPDATE achievements SET icon = '/icons/achievements/trio-saver.png',     accent = 'linear-gradient(180deg, #B89AFF 0%, #7C4DFF 100%)', display_order = 7  WHERE key = 'trio_saver';
+UPDATE achievements SET icon = '/icons/achievements/month-master.png',   accent = 'linear-gradient(180deg, #FF8A65 0%, #E64A19 100%)', display_order = 8  WHERE key = 'month_master';
 UPDATE achievements SET icon = '/icons/achievements/explorer.png',       accent = 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)', display_order = 9  WHERE key = 'explorer';
-UPDATE achievements SET icon = '/icons/achievements/streak-master.png',  accent = 'linear-gradient(180deg, #FFB347 0%, #FF7A00 100%)', display_order = 10 WHERE key = 'streak-master';
+UPDATE achievements SET icon = '/icons/achievements/streak-master.png',  accent = 'linear-gradient(180deg, #FFB347 0%, #FF7A00 100%)', display_order = 10 WHERE key = 'streak_master';
 UPDATE achievements SET icon = '/icons/achievements/whale.png',          accent = 'linear-gradient(180deg, #BBDEFB 0%, #1E88E5 100%)', display_order = 11 WHERE key = 'whale';
-UPDATE achievements SET icon = '/icons/achievements/savings-baron.png',  accent = 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', display_order = 12 WHERE key = 'savings-baron';
-UPDATE achievements SET icon = '/icons/achievements/century-saver.png',  accent = 'linear-gradient(180deg, #FFD180 0%, #FF6F00 100%)', display_order = 13 WHERE key = 'century-saver';
-UPDATE achievements SET icon = '/icons/achievements/third-place.png',    accent = 'linear-gradient(180deg, #FFCC80 0%, #A05A2C 100%)', display_order = 14 WHERE key = 'third-place';
-UPDATE achievements SET icon = '/icons/achievements/second-place.png',   accent = 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)', display_order = 15 WHERE key = 'second-place';
-UPDATE achievements SET icon = '/icons/achievements/first-place.png',    accent = 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', display_order = 16 WHERE key = 'first-place';
+UPDATE achievements SET icon = '/icons/achievements/savings-baron.png',  accent = 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', display_order = 12 WHERE key = 'savings_baron';
+UPDATE achievements SET icon = '/icons/achievements/century-saver.png',  accent = 'linear-gradient(180deg, #FFD180 0%, #FF6F00 100%)', display_order = 13 WHERE key = 'century_saver';
+UPDATE achievements SET icon = '/icons/achievements/third-place.png',    accent = 'linear-gradient(180deg, #FFCC80 0%, #A05A2C 100%)', display_order = 14 WHERE key = 'third_place';
+UPDATE achievements SET icon = '/icons/achievements/second-place.png',   accent = 'linear-gradient(180deg, #E0E0E0 0%, #9E9E9E 100%)', display_order = 15 WHERE key = 'second_place';
+UPDATE achievements SET icon = '/icons/achievements/first-place.png',    accent = 'linear-gradient(180deg, #FFE082 0%, #FFA000 100%)', display_order = 16 WHERE key = 'first_place';
 
 -- Catalog is ordered by display_order; index it.
 CREATE INDEX IF NOT EXISTS achievements_display_order_idx

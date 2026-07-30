@@ -34,7 +34,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS achievements_code_unique
 -- this twice updates copy + keeps the same row.
 INSERT INTO achievements (key, name, description, tier, coin_reward, code, hidden)
 VALUES (
-  'secret-launch',
+  'secret_launch',
   'Launch Insider',
   'You were there when Vaquita went live. A secret welcome from the herd.',
   'Founder',
@@ -63,7 +63,7 @@ COMMIT;
 --   SELECT key, code, hidden FROM achievements WHERE hidden = TRUE;
 --
 --   -- Try redeeming as profile 1 (replace id):
---   SELECT * FROM claim_achievement(1, 'secret-launch');
+--   SELECT * FROM claim_achievement(1, 'secret_launch');
 --
 --   -- Verify coin credit:
 --   SELECT amount, type, created_at FROM profiles_rewards
