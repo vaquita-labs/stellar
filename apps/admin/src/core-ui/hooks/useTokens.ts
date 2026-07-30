@@ -1,12 +1,30 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useQuery } from '@tanstack/react-query';
 
+/** One field the app needs before it will offer a token, and what it breaks. */
+export interface TokenReadinessGap {
+  field: string;
+  label: string;
+  reason: string;
+}
+
+/**
+ * Whether the public project config publishes this token. Computed server-side
+ * from the same rule the config filters on, so the admin and the app can never
+ * disagree about which tokens are live.
+ */
+export interface TokenReadiness {
+  usable: boolean;
+  gaps: TokenReadinessGap[];
+}
+
 /**
  * Shape of a `tokens` row as returned by the admin API route. The route is
  * same-origin (Next.js Route Handler) and returns the Prisma object directly,
  * so fields are camelCase.
  */
 export interface Token {
+  readiness: TokenReadiness;
   id: number;
   name: string;
   symbol: string;
