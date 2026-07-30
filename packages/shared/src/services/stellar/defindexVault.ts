@@ -3,13 +3,11 @@ import {
   Contract,
   Keypair,
   nativeToScVal,
-  Networks,
   rpc,
   scValToNative,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
-
-const DEFAULT_SOROBAN_RPC = 'https://soroban-testnet.stellar.org';
+import { resolveSorobanNetwork, type SorobanCallOptions } from './rpc';
 
 function toBigIntSafe(v: unknown): bigint {
   if (typeof v === 'bigint') return v;
@@ -25,12 +23,15 @@ function toBigIntSafe(v: unknown): bigint {
 export async function getAssetAmountsPerShares(
   vaultContractId: string,
   vaultShares: bigint,
-  rpcUrl: string = DEFAULT_SOROBAN_RPC,
+  options?: SorobanCallOptions,
 ): Promise<bigint[] | null> {
   if (!vaultContractId) return null;
   if (vaultShares <= 0n) return [0n];
 
   try {
+    const active = resolveSorobanNetwork();
+    const rpcUrl = options?.rpcUrl ?? active.rpcUrl;
+    const networkPassphrase = options?.networkPassphrase ?? active.networkPassphrase;
     const contract = new Contract(vaultContractId);
     const server = new rpc.Server(rpcUrl);
     const keypair = Keypair.random();
@@ -41,7 +42,7 @@ export async function getAssetAmountsPerShares(
     );
     const transaction = new TransactionBuilder(account, {
       fee: '100',
-      networkPassphrase: Networks.TESTNET,
+      networkPassphrase,
     })
       .addOperation(operation)
       .setTimeout(30)
