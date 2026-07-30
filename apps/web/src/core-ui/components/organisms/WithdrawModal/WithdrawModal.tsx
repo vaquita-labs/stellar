@@ -2,7 +2,7 @@
 
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
-import { useLivePassiveUsdc, usePassiveMigration } from '@/core-ui/hooks';
+import { useLivePassiveUsdc, usePassiveLabel, usePassiveMigration } from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { motion, useAnimationControls } from 'framer-motion';
@@ -49,6 +49,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   // (funds migrated out of Blend), else the legacy Blend position. The withdraw
   // action itself routes accordingly via passiveWithdraw.
   const { live: primaryLiveUsdc, vaultOn } = useLivePassiveUsdc(walletAddress);
+  const passiveLabel = usePassiveLabel();
   // Leftover legacy Blend balance (should be 0 after migration): surfaced with its
   // own withdraw button so a user who still holds Blend can pull it out.
   const { blendBalance, hasBorrow, withdrawToWallet } = usePassiveMigration(walletAddress);
@@ -443,7 +444,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
         <span className="text-gray-500">{t('withdraw.fromLabel', 'From')}</span>
-        <span className="font-bold text-black">{t('portfolio.blend.label', 'Blend · Flexible')}</span>
+        <span className="font-bold text-black">{passiveLabel}</span>
       </div>
 
       {destination ? (

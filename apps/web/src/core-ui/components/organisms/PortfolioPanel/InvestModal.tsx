@@ -4,6 +4,7 @@ import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString }
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import {
   useApyByLockPeriods,
+  usePassiveLabel,
   usePassiveUsdc,
   useRestDeposit,
   useTransactions,
@@ -55,6 +56,7 @@ export function InvestModal({
   // flag on, si no Blend). Es de donde sale la plata para lockear en el pool.
   const { usdc: passiveUsdc, refetch: refetchBlend } = usePassiveUsdc(walletAddress);
   const available = floorAmount(passiveUsdc, AMOUNT_DECIMALS);
+  const passiveLabel = usePassiveLabel();
 
   const lockPeriods = useMemo(
     () => [...(token?.lockPeriods ?? [])].filter((p) => p > 0).sort((a, b) => a - b),
@@ -319,7 +321,7 @@ export function InvestModal({
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
         <span className="text-gray-500">{t('withdraw.fromLabel', 'From')}</span>
-        <span className="font-bold text-black">{t('portfolio.blend.label', 'Blend · Flexible')}</span>
+        <span className="font-bold text-black">{passiveLabel}</span>
       </div>
 
       {error ? <ErrorNotice error={error} /> : null}

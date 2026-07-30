@@ -1,6 +1,7 @@
 'use client';
 
 import { formatUsdAdaptive } from '@/core-ui/helpers/numbers';
+import { usePassiveLabel } from '@/core-ui/hooks';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
 
@@ -25,12 +26,13 @@ export function BlendDetailSheet({
   tokenSymbol = 'USDC',
 }: BlendDetailSheetProps) {
   const { t } = useTranslation();
+  const passiveLabel = usePassiveLabel();
 
   return (
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      title={t('portfolio.blend.label', 'Blend · Flexible')}
+      title={passiveLabel}
       size="md"
       // Apilado sobre el panel de Portfolio (igual que AllocationDetailSheet):
       // el botón vuelve al panel, no cierra todo con una X.

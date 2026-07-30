@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
 import { useConfigStore } from '@/core-ui/stores';
 import { getStellarNetwork } from '@/networks/stellar/kit';
@@ -101,6 +102,18 @@ export const useLiveVaultUsdc = (walletAddress?: string) => {
 export const usePassiveVaultOn = (): boolean => {
   const token = useConfigStore((s) => s.token);
   return isPassiveVaultEnabled() && !!defindexVaultConfigForToken(token);
+};
+
+/**
+ * The label for the flexible/passive position, flag-aware: "Vault · Flexible" when
+ * funds live in the DeFindex vault, else the legacy "Blend · Flexible". One source
+ * so every surface names it consistently.
+ */
+export const usePassiveLabel = (): string => {
+  const { t } = useTranslation();
+  return usePassiveVaultOn()
+    ? t('portfolio.vault.label', 'Vault · Flexible')
+    : t('portfolio.blend.label', 'Blend · Flexible');
 };
 
 /**
