@@ -47,6 +47,15 @@ export async function GET(req: NextRequest) {
       usdcId: token.contractAddress?.split(',')?.[0] ?? '',
       decimals: token.decimals ?? 7,
     });
+
+    // Persist the snapshot so the table shows this wallet on reload (the scrape
+    // batch uses the same upsert). Keyed by (wallet, token) → idempotent.
+    await prisma.walletOnchainBalance.upsert({
+      where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
+      create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, scrapedAt: new Date() },
+      update: { blendUsdc, vaultUsdc, scrapedAt: new Date(), lastError: null },
+    });
+
     return NextResponse.json({
       data: {
         wallet,

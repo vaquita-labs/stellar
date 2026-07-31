@@ -509,3 +509,23 @@ model Withdrawal {
   @@index([status], map: "idx_withdrawals_status")
   @@map("withdrawals")
 }
+
+// Admin-only snapshot of a wallet's on-chain USDC positions (Blend + DeFindex
+// vault), written by the admin Wallets tab scrapes/search. Read on-chain, cached
+// here so the tab loads instantly and only hits (rate-limited public) RPC on
+// demand. `tokenId` is a plain scalar (no FK — relations are app-layer here).
+model WalletOnchainBalance {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  walletAddress String    @map("wallet_address") @db.VarChar(100)
+  tokenId       Int       @map("token_id")
+  blendUsdc     Decimal   @default(0) @map("blend_usdc") @db.Decimal
+  vaultUsdc     Decimal   @default(0) @map("vault_usdc") @db.Decimal
+  scrapedAt     DateTime  @map("scraped_at") @db.Timestamptz(6)
+  lastError     String?   @map("last_error")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([walletAddress, tokenId], map: "wallet_onchain_balances_wallet_token_unique")
+  @@index([tokenId], map: "idx_wallet_onchain_balances_token_id")
+  @@map("wallet_onchain_balances")
+}

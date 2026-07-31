@@ -2,14 +2,18 @@
 
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { Button, Card, Input } from '@vaquita/ui';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-interface WalletResult {
+interface WalletRow {
   wallet: string;
-  network: string;
+  nickname: string | null;
+  email: string | null;
   blendUsdc: number;
   vaultUsdc: number;
   total: number;
+  lastError: string | null;
+  scrapedAt: string;
 }
 
 const adminHeaders = (): HeadersInit => ({
@@ -18,26 +22,38 @@ const adminHeaders = (): HeadersInit => ({
 });
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 7 });
+const shortWallet = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-5)}` : a);
+const shortTime = (iso: string) => new Date(iso).toLocaleString();
 
 export default function WalletsPage() {
+  const queryClient = useQueryClient();
   const [wallet, setWallet] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<WalletResult | null>(null);
+
+  const { data: rows = [], isLoading: listLoading } = useQuery<WalletRow[]>({
+    queryKey: ['admin', 'wallets'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/wallets', { headers: adminHeaders() });
+      const data = await res.json();
+      return (data?.data?.rows ?? []) as WalletRow[];
+    },
+  });
 
   const search = async () => {
     const addr = wallet.trim();
     if (!addr) return;
     setLoading(true);
     setError(null);
-    setResult(null);
     try {
       const res = await fetch(`/api/admin/wallets/onchain?wallet=${encodeURIComponent(addr)}`, {
         headers: adminHeaders(),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message ?? 'Lookup failed');
-      setResult(data.data as WalletResult);
+      // The read upserted a snapshot — refresh the table so the wallet shows.
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'wallets'] });
+      setWallet('');
     } catch (e) {
       setError((e as Error)?.message ?? 'Lookup failed');
     } finally {
@@ -46,10 +62,10 @@ export default function WalletsPage() {
   };
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="p-6 max-w-4xl">
       <h1 className="text-2xl font-bold mb-1">Wallets</h1>
       <p className="text-sm text-gray-500 mb-4">
-        Look up a wallet&apos;s on-chain Blend and DeFindex vault USDC.
+        On-chain Blend and DeFindex vault USDC per user. Search reads a wallet on-chain and adds it to the table.
       </p>
 
       <div className="flex items-start gap-2 mb-6">
@@ -69,27 +85,46 @@ export default function WalletsPage() {
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
-      {result && (
-        <Card className="p-4">
-          <p className="text-xs text-gray-500 break-all mb-3">
-            {result.wallet} · {result.network}
-          </p>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <div className="text-xs text-gray-500">Blend</div>
-              <div className="font-bold tabular-nums">{fmt(result.blendUsdc)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500">Vault</div>
-              <div className="font-bold tabular-nums">{fmt(result.vaultUsdc)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500">Total</div>
-              <div className="font-bold tabular-nums">{fmt(result.total)}</div>
-            </div>
-          </div>
-        </Card>
-      )}
+      <Card className="p-0 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-black/5 text-left text-xs text-gray-500">
+            <tr>
+              <th className="px-3 py-2 font-medium">Wallet</th>
+              <th className="px-3 py-2 font-medium">User</th>
+              <th className="px-3 py-2 font-medium text-right">Blend</th>
+              <th className="px-3 py-2 font-medium text-right">Vault</th>
+              <th className="px-3 py-2 font-medium text-right">Last read</th>
+            </tr>
+          </thead>
+          <tbody>
+            {listLoading ? (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-gray-400">
+                  Loading…
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-gray-400">
+                  No data yet — search a wallet to start.
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) => (
+                <tr key={r.wallet} className="border-t border-black/[0.06]">
+                  <td className="px-3 py-2 font-mono" title={r.wallet}>
+                    {shortWallet(r.wallet)}
+                  </td>
+                  <td className="px-3 py-2">{r.nickname ?? r.email ?? '—'}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(r.blendUsdc)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(r.vaultUsdc)}</td>
+                  <td className="px-3 py-2 text-right text-xs text-gray-500">{shortTime(r.scrapedAt)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </Card>
     </div>
   );
 }
