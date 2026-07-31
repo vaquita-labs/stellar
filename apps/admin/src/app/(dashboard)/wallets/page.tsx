@@ -16,6 +16,8 @@ interface WalletRow {
   scrapedAt: string;
 }
 
+const BATCH = 10;
+
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
   ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
@@ -31,6 +33,12 @@ export default function WalletsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Batch scrape cursor: how many profiles have been scraped so far.
+  const [scraping, setScraping] = useState(false);
+  const [cursor, setCursor] = useState(0);
+  const [total, setTotal] = useState<number | null>(null);
+  const [allDone, setAllDone] = useState(false);
+
   const { data: rows = [], isLoading: listLoading } = useQuery<WalletRow[]>({
     queryKey: ['admin', 'wallets'],
     queryFn: async () => {
@@ -39,6 +47,8 @@ export default function WalletsPage() {
       return (data?.data?.rows ?? []) as WalletRow[];
     },
   });
+
+  const failedWallets = rows.filter((r) => r.lastError).map((r) => r.wallet);
 
   const search = async () => {
     const addr = wallet.trim();
@@ -51,7 +61,6 @@ export default function WalletsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message ?? 'Lookup failed');
-      // The read upserted a snapshot — refresh the table so the wallet shows.
       await queryClient.invalidateQueries({ queryKey: ['admin', 'wallets'] });
       setWallet('');
     } catch (e) {
@@ -61,14 +70,46 @@ export default function WalletsPage() {
     }
   };
 
+  const runScrape = async (payload: { offset?: number; limit?: number; wallets?: string[] }) => {
+    setScraping(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/wallets/onchain/scrape', {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message ?? 'Scrape failed');
+      const { total: t, nextOffset } = data.data as { total: number; nextOffset: number | null };
+      setTotal(t);
+      if (payload.wallets == null) {
+        if (nextOffset == null) {
+          setAllDone(true);
+          setCursor(t);
+        } else {
+          setCursor(nextOffset);
+        }
+      }
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'wallets'] });
+    } catch (e) {
+      setError((e as Error)?.message ?? 'Scrape failed');
+    } finally {
+      setScraping(false);
+    }
+  };
+
+  const scrapedSoFar = total != null ? Math.min(cursor, total) : cursor;
+
   return (
     <div className="p-6 max-w-4xl">
       <h1 className="text-2xl font-bold mb-1">Wallets</h1>
       <p className="text-sm text-gray-500 mb-4">
-        On-chain Blend and DeFindex vault USDC per user. Search reads a wallet on-chain and adds it to the table.
+        On-chain Blend and DeFindex vault USDC per user. Scrape reads users in throttled batches; search reads any
+        wallet on demand.
       </p>
 
-      <div className="flex items-start gap-2 mb-6">
+      <div className="flex items-start gap-2 mb-4">
         <Input
           value={wallet}
           onChange={(e) => setWallet(e.target.value)}
@@ -78,9 +119,29 @@ export default function WalletsPage() {
           placeholder="Wallet address (G… or C…)"
           containerClassName="flex-1"
         />
-        <Button onPress={() => void search()} isDisabled={loading || !wallet.trim()} isLoading={loading}>
+        <Button onPress={() => void search()} isDisabled={loading || scraping || !wallet.trim()} isLoading={loading}>
           Search
         </Button>
+      </div>
+
+      <div className="flex items-center gap-3 mb-6">
+        <Button
+          onPress={() => void runScrape({ offset: cursor, limit: BATCH })}
+          isDisabled={scraping || allDone}
+          isLoading={scraping}
+        >
+          {allDone ? 'All scraped' : `Scrape next ${BATCH}`}
+        </Button>
+        {total != null && (
+          <span className="text-sm text-gray-500 tabular-nums">
+            scraped {scrapedSoFar} / {total}
+          </span>
+        )}
+        {failedWallets.length > 0 && (
+          <Button variant="secondary" onPress={() => void runScrape({ wallets: failedWallets })} isDisabled={scraping}>
+            Retry failed ({failedWallets.length})
+          </Button>
+        )}
       </div>
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
@@ -106,7 +167,7 @@ export default function WalletsPage() {
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-3 py-6 text-center text-gray-400">
-                  No data yet — search a wallet to start.
+                  No data yet — scrape a batch or search a wallet to start.
                 </td>
               </tr>
             ) : (
@@ -118,7 +179,15 @@ export default function WalletsPage() {
                   <td className="px-3 py-2">{r.nickname ?? r.email ?? '—'}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{fmt(r.blendUsdc)}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{fmt(r.vaultUsdc)}</td>
-                  <td className="px-3 py-2 text-right text-xs text-gray-500">{shortTime(r.scrapedAt)}</td>
+                  <td className="px-3 py-2 text-right text-xs text-gray-500">
+                    {r.lastError ? (
+                      <span className="text-red-600" title={r.lastError}>
+                        ⚠ error
+                      </span>
+                    ) : (
+                      shortTime(r.scrapedAt)
+                    )}
+                  </td>
                 </tr>
               ))
             )}
