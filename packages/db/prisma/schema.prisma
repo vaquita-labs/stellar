@@ -213,12 +213,15 @@ model Config {
 model Profile {
   id            Int       @id @default(autoincrement())
   walletAddress String    @unique(map: "profiles_wallet_unique") @map("wallet_address") @db.VarChar(100)
-  // Public URL segment (/leaderboard/<nickname>, /explore/<nickname>), so the
-  // charset is URL-safe lowercase only. Enforced in the DB by a check constraint
-  // Prisma can't express (kept here so `db pull` doesn't make it look absent):
+  // Public URL segment (/leaderboard/<nickname>, /explore/<nickname>) and the
+  // key the share card resolves a claim by, so it is unique among live
+  // profiles. The index is partial: a soft-deleted profile must not keep
+  // reserving a nickname a live one could take. The charset is URL-safe
+  // lowercase only, enforced in the DB by a check constraint Prisma can't
+  // express (kept here so `db pull` doesn't make it look absent):
   //   profiles_nickname_format:
   //     CHECK (nickname IS NULL OR nickname ~ '^[a-z0-9_]{3,32}$')
-  nickname      String?   @db.VarChar(50)
+  nickname      String?   @unique(map: "profiles_nickname_unique", where: raw("(nickname IS NOT NULL AND deleted_at IS NULL)")) @db.VarChar(50)
   fullName      String?   @map("full_name") @db.VarChar(100)
   email         String?   @db.VarChar(100)
 

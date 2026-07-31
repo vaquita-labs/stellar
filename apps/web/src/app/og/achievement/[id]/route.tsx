@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ImageResponse } from 'next/og';
 import type { NextRequest } from 'next/server';
-import { getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
+import { getBadgeClaim, getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
 
 /**
  * Open Graph image endpoint for shared achievements.
@@ -15,21 +15,19 @@ import { getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
  *    attached as a `File` to `navigator.share`, so image-first targets like
  *    Instagram Stories get a full-bleed card with no cropping.
  *
- * URL: `/og/achievement/<id>?u=<username>&date=<iso-date>&format=<og|story>`
+ * URL: `/og/achievement/<id>?u=<nickname>&format=<og|story>`
  *
- * Query params (all optional — used for personalization):
- *  - `u`      username to print on the card (e.g. `alex` → "· @alex").
- *  - `date`   ISO date string for when the badge was unlocked. Formatted as
- *             "MMM D, YYYY" to match the in-app pill.
+ * Query params (both optional):
+ *  - `u`      whose claim to render. It selects a record, it is not copy: the
+ *             byline and the unlock date are read from that record, so a
+ *             nickname with no claim on this badge renders neither. The card
+ *             therefore cannot assert an unlock that never happened.
  *  - `format` `story` for the 9:16 variant; anything else → 1200×630.
  *
  * Caching: served as a static asset (`Cache-Control: public, immutable`) keyed
- *  by the full query string, so each (id, username, date, format) combo gets
- *  cached once at the edge.
- *
- * Backend hookup (later): swap `getCatalogAchievement` for a real catalog
- *  fetch. The component tree below stays the same — it only consumes
- *  `{ title, description, icon, accent }`.
+ *  by the full query string. Content is a function of (id, nickname, format)
+ *  plus a claim date that never changes once written, so each combination is
+ *  safe to cache once at the edge.
  */
 
 // Force the Node runtime — `next/og` works on edge too, but the Node runtime
@@ -125,9 +123,15 @@ export async function GET(
   }
 
   const url = new URL(req.url);
-  const username = url.searchParams.get('u');
-  const date = formatDate(url.searchParams.get('date'));
   const story = url.searchParams.get('format') === 'story';
+
+  // The byline and the date are assertions about a person, so they come from
+  // the claim record rather than from the query string. `u` only names whose
+  // claim to look up: an unclaimed pair resolves to null and the card renders
+  // without either, so it can never state an unlock that did not happen.
+  const claim = await getBadgeClaim(id, url.searchParams.get('u') ?? '');
+  const username = claim?.nickname ?? null;
+  const date = formatDate(claim?.claimedAt ?? null);
 
   const origin = req.nextUrl.origin;
   const [iconUrl, logoUrl, fonts] = await Promise.all([

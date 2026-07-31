@@ -949,6 +949,38 @@ export const toCatalogAchievementByKeyResponseDTO = async (
   return toCatalogAchievementDTO(data);
 };
 
+/**
+ * When a given profile claimed a given badge, or null if it never did.
+ *
+ * The share card prints "earned by @nickname" over an unlock date. Both used to
+ * come from the query string, so the rendered image could assert a claim that
+ * never happened. This is the record that makes the claim checkable: the
+ * renderer resolves the pair and takes the date from here, and a pair with no
+ * row renders nothing at all.
+ *
+ * Matching is case-insensitive because the nickname arrives from a URL; the
+ * format check already restricts stored values to lowercase.
+ */
+export const getBadgeClaimForNickname = async (
+  achievementKey: string,
+  nickname: string,
+): Promise<{ nickname: string; claimedAt: string } | null> => {
+  try {
+    const row = await prisma.profileAchievement.findFirst({
+      where: {
+        achievement: { key: achievementKey, deletedAt: null },
+        profile: { nickname: { equals: nickname, mode: 'insensitive' }, deletedAt: null },
+      },
+      select: { claimedAt: true, profile: { select: { nickname: true } } },
+    });
+    if (!row?.profile?.nickname) return null;
+    return { nickname: row.profile.nickname, claimedAt: row.claimedAt.toISOString() };
+  } catch (error) {
+    console.error('Error on getBadgeClaimForNickname', error);
+    return null;
+  }
+};
+
 export const getClaimedAchievements = async (profileId: number) => {
   try {
     const rows = await prisma.profileAchievement.findMany({

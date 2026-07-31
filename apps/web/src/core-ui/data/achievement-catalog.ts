@@ -92,3 +92,44 @@ export const getCatalogAchievement = async (id: string): Promise<CatalogAchievem
     return null;
   }
 };
+
+/** A verified claim: this profile really did earn this badge, on this date. */
+export type BadgeClaim = {
+  /** The nickname as the profile stores it, not as the URL spelled it. */
+  nickname: string;
+  /** ISO timestamp of the claim, straight from the row. */
+  claimedAt: string;
+};
+
+/**
+ * Resolve a claim of `badgeId` by `nickname`, or `null` if there is none.
+ *
+ * The share card names a person and a date. Both used to be query params the
+ * renderer echoed straight onto the image, so anyone could produce a card
+ * asserting that any profile earned any badge on any date. Callers resolve the
+ * pair here instead and render only what comes back — an unresolved pair gets
+ * no byline and no date, so the image cannot claim something that did not
+ * happen.
+ */
+export const getBadgeClaim = async (badgeId: string, nickname: string): Promise<BadgeClaim | null> => {
+  const handle = nickname.trim();
+  if (!handle) return null;
+  try {
+    const res = await fetch(
+      `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/badges/${encodeURIComponent(badgeId)}` +
+        `/claim?nickname=${encodeURIComponent(handle)}`,
+      { next: { revalidate: 300 } },
+    );
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      console.error(`Claim lookup failed for "${badgeId}"/"${handle}": ${res.status} ${res.statusText}`);
+      return null;
+    }
+    const json = (await res.json()) as { data?: { claim?: BadgeClaim } };
+    const claim = json?.data?.claim;
+    return claim?.claimedAt ? claim : null;
+  } catch (error) {
+    console.error(`Claim lookup for "${badgeId}"/"${handle}" threw`, error);
+    return null;
+  }
+};
