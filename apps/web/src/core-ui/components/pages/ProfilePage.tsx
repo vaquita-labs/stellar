@@ -184,13 +184,16 @@ export function ProfilePage() {
     return '@vaquero';
   }, [profileData?.nickname, walletAddress]);
 
-  // Real account creation date from the backend ("joined 5 May 2026"). Falls
-  // back to the current date if the timestamp hasn't loaded yet.
-  // Formatted with the APP's language, not the browser's: `undefined` here read
-  // the OS locale, so a profile set to Spanish rendered "se unió el July 21".
+  // Real account creation date from the backend ("joined 5 May 2026"). Empty
+  // until the timestamp loads, and the caller drops the whole clause while it
+  // is: falling back to the current date makes every profile claim it was
+  // created today for as long as the request is in flight.
+  // Formatted with the APP's language, not the browser's: `undefined` here reads
+  // the OS locale, so a profile set to Spanish would render "se unió el July 21".
   const joinedLabel = useMemo(() => {
     const createdAt = profileData?.createdAt;
-    const date = createdAt ? new Date(createdAt) : new Date();
+    if (!createdAt) return '';
+    const date = new Date(createdAt);
     if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleDateString(i18n.language, {
       day: 'numeric',
@@ -364,7 +367,7 @@ export function ProfilePage() {
               screen, the join date is just context. */}
           <p className="text-xs font-bold tracking-wide text-gray-500 sm:text-sm">
             <Trans
-              i18nKey="profilePages.profile.handleJoined"
+              i18nKey={joinedLabel ? 'profilePages.profile.handleJoined' : 'profilePages.profile.handle'}
               values={{ handle, joinedLabel }}
               components={{ b: <strong className="text-base font-extrabold text-black sm:text-lg" /> }}
             />
@@ -450,7 +453,7 @@ export function ProfilePage() {
             />
             <SummaryItem
               icon="/icons/global/trophy.png"
-              value={unlockedAchievements.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              value={unlockedAchievements.toLocaleString(i18n.language, { maximumFractionDigits: 0 })}
               // "Medallas", no "Logros": el encabezado de la sección de abajo
               // ya dice Logros y repetir la palabra a dos líneas de distancia
               // hacía leer los dos números como el mismo dato dos veces.
@@ -458,12 +461,12 @@ export function ProfilePage() {
             />
             <SummaryItem
               icon="/icons/global/star.png"
-              value={`${Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })} XP`}
+              value={`${Math.floor(experience).toLocaleString(i18n.language, { maximumFractionDigits: 0 })} XP`}
               label={t('profilePages.profile.experience', 'Experience')}
             />
             <SummaryItem
               icon="/icons/global/coin.png"
-              value={Math.floor(goldCoins).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              value={Math.floor(goldCoins).toLocaleString(i18n.language, { maximumFractionDigits: 0 })}
               label={t('profilePages.profile.gold', 'Gold')}
             />
           </div>

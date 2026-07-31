@@ -70,6 +70,14 @@ const DEFAULT_ACCENT = ACCENT_BY_TIER.Founder;
 const ICONS = '/icons/achievements';
 
 /**
+ * Shown for a badge whose row carries no `icon` — the case for anything created
+ * from the admin panel without one. Deriving `${ICONS}/${key}.png` instead only
+ * guesses at a file: nothing ties a badge key to an asset on disk, and a miss
+ * reaches the browser as a 400 from the image optimizer and a broken tile.
+ */
+const PLACEHOLDER_ICON = '/icons/global/trophy.png';
+
+/**
  * Static metadata fallback for the built-in 16 badges, in display order. Used
  * when the backend catalog hasn't loaded. Mirrors the rows backfilled by
  * `apps/supabase/migrations/20260529_achievement_rules.sql`.
@@ -139,7 +147,7 @@ export const buildServerAchievements = (server: AchievementResponseDTO[] = []): 
       id: a.key,
       title: a.name,
       description: a.description,
-      icon: a.icon ?? `${ICONS}/${a.key}.png`,
+      icon: a.icon ?? PLACEHOLDER_ICON,
       accent: a.accent ?? ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
       tier: a.tier as Badge['tier'],
       unlocked: a.unlocked || a.claimState === 'pending_mint',
@@ -182,7 +190,7 @@ export const buildAchievements = (ctx: AchievementsCtx): Badge[] => {
         id: a.key,
         title: a.name,
         description: a.description,
-        icon: a.icon ?? `${ICONS}/${a.key}.png`,
+        icon: a.icon ?? PLACEHOLDER_ICON,
         accent: a.accent ?? ACCENT_BY_TIER[a.tier] ?? DEFAULT_ACCENT,
         tier: a.tier as Badge['tier'],
         claimState: a.claimState,

@@ -1064,6 +1064,7 @@
       "followingEmptyBody": "Sigue vaqueros desde la tabla de posiciones para verlos aquí.",
       "followingEmptyTitle": "Todavía no sigues a nadie",
       "gold": "Oro",
+      "handle": "<b>{{handle}}</b>",
       "handleJoined": "<b>{{handle}}</b> · se unió el {{joinedLabel}}",
       "mapLikes": "Likes",
       "seeAll": "Ver todo {{title}}",

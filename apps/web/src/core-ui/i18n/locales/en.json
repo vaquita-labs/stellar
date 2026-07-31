@@ -1064,6 +1064,7 @@
       "followingEmptyBody": "Follow vaqueros from the leaderboard to see them here.",
       "followingEmptyTitle": "Not following anyone yet",
       "gold": "Gold",
+      "handle": "<b>{{handle}}</b>",
       "handleJoined": "<b>{{handle}}</b> · joined {{joinedLabel}}",
       "mapLikes": "Likes",
       "seeAll": "See all {{title}}",
