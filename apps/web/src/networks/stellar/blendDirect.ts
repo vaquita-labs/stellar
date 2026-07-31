@@ -8,10 +8,11 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import { clientEnv } from '@/core-ui/config/clientEnv';
+import i18n from '@/core-ui/i18n';
 import { useConfigStore } from '@/core-ui/stores';
 import type { NetworkResponseDTO } from '@/core-ui/types';
 import { getNetworkPassphrase, getRpcUrl } from './kit';
-import { describeOutcomeError, runWithErrorCapture } from './pollarError';
+import { submitAndSettle } from './pollarError';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 
 export interface BlendConfig {
@@ -89,6 +90,9 @@ const encodeBlendRequest = (usdcId: string, requestType: RequestType, rawAmount:
  * decide el server, que es el único que puede aplicar la política de sponsorship
  * de la app; armándola en el browser el fee salía de la cuenta del usuario y un
  * custodial sin XLM moría con `txInsufficientBalance`.
+ *
+ * Devuelve el hash SOLO cuando el ledger confirmó (`submitAndSettle`), así el
+ * paso siguiente de un retiro en dos saltos no sale antes de que la plata esté.
  */
 const submitBlendRequest = async (
   requestType: RequestType,
@@ -109,10 +113,10 @@ const submitBlendRequest = async (
   const rawAmount = max ? I128_MAX : toBaseUnits(amount, decimals);
   if (rawAmount <= 0n) throw new Error('Amount must be greater than zero');
 
-  const { outcome, lastError } = await runWithErrorCapture(binding.client, () =>
-    binding.client.buildAndSignAndSubmitTx(
-      'invoke_contract',
-      {
+  return submitAndSettle(
+    binding.client,
+    () =>
+      binding.client.buildAndSignAndSubmitTx('invoke_contract', {
         contractId: config.poolId,
         method: 'submit',
         // submit(from, spender, to, requests): las tres direcciones son el usuario
@@ -123,13 +127,9 @@ const submitBlendRequest = async (
           { type: 'address', value: address },
           { type: 'vec', value: [encodeBlendRequest(config.usdcId, requestType, rawAmount)] },
         ],
-      },
-    ),
+      }),
+    'Blend transaction failed',
   );
-  if (outcome.status === 'error') {
-    throw new Error(describeOutcomeError(outcome, lastError, 'Blend transaction failed'));
-  }
-  return { hash: outcome.hash };
 };
 
 /**
@@ -206,42 +206,107 @@ export const directUsdcTransfer = async ({
     .build();
 
   const prepared = await server.prepareTransaction(transaction);
-  const { outcome, lastError } = await runWithErrorCapture(binding.client, () =>
-    binding.client.signAndSubmitTx(prepared.toXDR()),
+  return submitAndSettle(
+    binding.client,
+    () => binding.client.signAndSubmitTx(prepared.toXDR()),
+    'USDC transfer failed',
   );
-  if (outcome.status === 'error') {
-    throw new Error(describeOutcomeError(outcome, lastError, 'USDC transfer failed'));
-  }
-  return { hash: outcome.hash };
+};
+
+/**
+ * Lee el saldo USDC de una cuenta en unidades humanas simulando `balance()` del
+ * SAC. Tira si no puede leerlo: quien mide un movimiento con esto necesita
+ * distinguir "no tiene nada" de "no pude preguntar", porque tratar el segundo
+ * como cero convierte todo el saldo ocioso de la wallet en un falso ingreso.
+ */
+export const readUsdcBalance = async (address: string, decimals: number): Promise<number> => {
+  const config = getBlendConfig();
+  if (!config) throw new Error('Blend pool is not configured for this token');
+  if (!address) throw new Error('No connected address');
+
+  const server = new rpc.Server(getRpcUrl());
+  const usdc = new Contract(config.usdcId);
+  const account = await server.getAccount(address);
+  const tx = new TransactionBuilder(account, {
+    fee: '100',
+    networkPassphrase: getNetworkPassphrase(),
+  })
+    .addOperation(usdc.call('balance', Address.fromString(address).toScVal()))
+    .setTimeout(30)
+    .build();
+  const sim = await server.simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(sim) || !sim.result) throw new Error('USDC balance simulation failed');
+  const raw = scValToNative(sim.result.retval) as bigint;
+  return Number(raw) / 10 ** decimals;
 };
 
 /**
  * Lee (read-only) el saldo del USDC de Blend de una cuenta, en unidades humanas.
- * Se usa tras un retiro del Vaquita pool para saber "todo lo recibido" y volver a
- * depositarlo en Blend. Simula `balance()` del SAC; devuelve 0 ante cualquier error.
+ * Devuelve 0 ante cualquier error: es la variante para MOSTRAR un saldo, donde un
+ * RPC caído no debe romper la pantalla. Para medir un movimiento usá
+ * `readUsdcBalance` / `awaitUsdcCredit`.
  */
 export const getBlendUsdcBalance = async (address: string, decimals: number): Promise<number> => {
-  const config = getBlendConfig();
-  if (!config || !address) return 0;
   try {
-    const server = new rpc.Server(getRpcUrl());
-    const usdc = new Contract(config.usdcId);
-    const account = await server.getAccount(address);
-    const tx = new TransactionBuilder(account, {
-      fee: '100',
-      networkPassphrase: getNetworkPassphrase(),
-    })
-      .addOperation(usdc.call('balance', Address.fromString(address).toScVal()))
-      .setTimeout(30)
-      .build();
-    const sim = await server.simulateTransaction(tx);
-    if (rpc.Api.isSimulationError(sim) || !sim.result) return 0;
-    const raw = scValToNative(sim.result.retval) as bigint;
-    return Number(raw) / 10 ** decimals;
+    return await readUsdcBalance(address, decimals);
   } catch {
     return 0;
   }
 };
+
+// Cuánto esperamos a que el RPC refleje un movimiento que el ledger ya confirmó.
+// El nodo que consultamos acá no es el mismo que confirmó la transacción, así que
+// puede ir unos ledgers atrás (~5s cada uno).
+const CREDIT_POLL_INTERVAL_MS = 2_000;
+const CREDIT_MAX_POLLS = 10;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Devuelve, en unidades base, cuánto subió el saldo que devuelve `read` respecto
+ * de `balanceBefore`, esperando a que lo refleje.
+ *
+ * Es la medición que decide cuánta plata mueve el paso siguiente de un retiro en
+ * dos saltos, así que no puede adivinar: una lectura fallida se reintenta (nunca
+ * cuenta como saldo cero) y, si el ingreso nunca aparece, tira en vez de devolver
+ * 0 — la plata está en la wallet y el usuario tiene que enterarse, no ver un
+ * "listo" que no movió nada.
+ */
+export const awaitCredit = async (
+  read: () => Promise<number>,
+  decimals: number,
+  balanceBefore: number,
+  options: { intervalMs?: number; maxPolls?: number } = {},
+): Promise<bigint> => {
+  const intervalMs = options.intervalMs ?? CREDIT_POLL_INTERVAL_MS;
+  const maxPolls = options.maxPolls ?? CREDIT_MAX_POLLS;
+  const factor = 10 ** decimals;
+
+  for (let i = 0; i < maxPolls; i += 1) {
+    if (i > 0) await sleep(intervalMs);
+    try {
+      const balance = await read();
+      const credited = Math.floor((balance - balanceBefore) * factor);
+      if (credited > 0) return BigInt(credited);
+    } catch {
+      // RPC hiccup: reintentamos. Nunca se interpreta como "no entró nada".
+    }
+  }
+  throw new Error(
+    i18n.t(
+      'errors.transfer.creditNotVisible',
+      "We can't see the funds in your wallet yet. They're safe — check your balance in a minute and finish the deposit.",
+    ),
+  );
+};
+
+/** `awaitCredit` sobre el saldo USDC on-chain de `address`. */
+export const awaitUsdcCredit = (
+  address: string,
+  decimals: number,
+  balanceBefore: number,
+  options?: { intervalMs?: number; maxPolls?: number },
+): Promise<bigint> => awaitCredit(() => readUsdcBalance(address, decimals), decimals, balanceBefore, options);
 
 /**
  * @deprecated Usar `directBlendSupply`. Alias de compatibilidad: el nombre

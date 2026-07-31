@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { NetworkResponseDTO } from '@/core-ui/types';
+import { toBaseUnits } from './sorobanTx';
 import {
   applySlippageFloor,
   defindexVaultConfigForToken,
+  formatBaseUnits,
   parseVaultErrorMessage,
   rawToUsdc,
   usdcToShares,
@@ -120,5 +122,33 @@ describe('parseVaultErrorMessage', () => {
 
   it('returns null when the failure is not a contract error', () => {
     expect(parseVaultErrorMessage(new Error('network timeout'))).toBeNull();
+  });
+});
+
+describe('formatBaseUnits', () => {
+  it('renders a raw amount with the token decimals', () => {
+    expect(formatBaseUnits(2_830_008_070n, 7)).toBe('283.0008070');
+    expect(formatBaseUnits(1n, 7)).toBe('0.0000001');
+    expect(formatBaseUnits(0n, 7)).toBe('0.0000000');
+  });
+
+  it('pads amounts smaller than one whole unit', () => {
+    expect(formatBaseUnits(500n, 7)).toBe('0.0000500');
+  });
+
+  it('renders a negative amount', () => {
+    expect(formatBaseUnits(-2_830_008_070n, 7)).toBe('-283.0008070');
+  });
+
+  it('renders an integer token as-is', () => {
+    expect(formatBaseUnits(42n, 0)).toBe('42');
+  });
+
+  it('round-trips through toBaseUnits without losing a base unit', () => {
+    // The migration and withdraw flows hand this string straight to a deposit, so
+    // the value that comes back out has to be the exact delta that was measured.
+    for (const raw of [1n, 999n, 10_000_000n, 2_830_008_070n, 99_999_999_999n]) {
+      expect(toBaseUnits(formatBaseUnits(raw, 7), 7)).toBe(raw);
+    }
   });
 });

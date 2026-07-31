@@ -60,6 +60,20 @@ export const getDefindexVaultConfig = (): DefindexVaultConfig | null =>
 export const rawToUsdc = (raw: bigint, decimals: number): number =>
   Number(raw) / 10 ** decimals;
 
+/**
+ * Render a raw i128 amount as the decimal string the deposit/withdraw entry
+ * points take. Exact by construction: `toBaseUnits` on the result gives `raw`
+ * back, with no float in between — which matters when the amount being passed
+ * along is a balance delta that has to move in full.
+ */
+export const formatBaseUnits = (raw: bigint, decimals: number): string => {
+  if (decimals <= 0) return raw.toString();
+  const negative = raw < 0n;
+  const digits = (negative ? -raw : raw).toString().padStart(decimals + 1, '0');
+  const value = `${digits.slice(0, -decimals)}.${digits.slice(-decimals)}`;
+  return negative ? `-${value}` : value;
+};
+
 // DeFindex vault ContractError code → i18n key (+ English fallback). Subset the
 // UI can actually hit on deposit/withdraw (the vault's full Errors enum is much
 // larger — governance/rebalance codes never reach an end user). Same shape and

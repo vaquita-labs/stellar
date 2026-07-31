@@ -1,5 +1,5 @@
 import type { PollarClient, TransactionState, TxBuildBody } from '@pollar/core';
-import { describeOutcomeError, runWithErrorCapture } from './pollarError';
+import { submitAndSettle } from './pollarError';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 
 // TEST — remove before mainnet
@@ -52,8 +52,9 @@ type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' 
  * Invoke a Vaquita pool method via Pollar's `buildAndSignAndSubmitTx`, which
  * does build → sign → submit in one awaitable call (for external wallets it
  * composes `buildTx` + `signAndSubmitTx` internally and still drives the state
- * machine for modal UIs). We just `await` it and read the returned outcome —
- * no manual `onTransactionStateChange` subscription needed.
+ * machine for modal UIs). `submitAndSettle` turns its three-way outcome into a
+ * hash the ledger confirmed, or a throw — so a caller that gets a hash back can
+ * safely build the next step on top of it.
  *
  * The pool derives each position id on-chain as `sha256(caller || nonce)`, so
  * callers pass the client-supplied `nonce` (a `u64`) — NOT a precomputed id.
@@ -63,6 +64,12 @@ type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' 
 // in-flight request. A double-click or re-render that fires two identical
 // calls would otherwise open two Freighter popups. Keying by the full request
 // signature lets independent deposits/withdraws still run in parallel.
+//
+// The entry is released as soon as the transaction is broadcast, NOT when it
+// finishes confirming: the popup it guards against is long gone by then, and
+// holding it through confirmation would fold a deliberate second deposit of the
+// same amount (the vault's `deposit` args carry no nonce to tell them apart)
+// into the first one's hash, reporting two successes for one movement.
 const INFLIGHT_REQUESTS = new Map<string, Promise<{ hash: string }>>();
 
 function requestKey(params: InvokeContractParams): string {
@@ -81,20 +88,24 @@ export async function invokeViaPollar(
     return existing;
   }
 
-  const promise = (async () => {
-    const { outcome, lastError } = await runWithErrorCapture(client, () =>
-      client.buildAndSignAndSubmitTx('invoke_contract', params),
-    );
-    console.info(`[${logLabel}] outcome`, outcome.status, outcome);
-    if (outcome.status === 'error') {
-      throw new Error(describeOutcomeError(outcome, lastError, `Pollar ${params.method} failed`));
-    }
-    // Both 'success' (ledger-confirmed) and 'pending' (Horizon ack) carry a hash.
-    return { hash: outcome.hash };
-  })().finally(() => {
-    INFLIGHT_REQUESTS.delete(key);
-  });
+  let entry: Promise<{ hash: string }> | null = null;
+  const release = () => {
+    if (entry && INFLIGHT_REQUESTS.get(key) === entry) INFLIGHT_REQUESTS.delete(key);
+  };
 
+  const promise = submitAndSettle(
+    client,
+    () => client.buildAndSignAndSubmitTx('invoke_contract', params),
+    `Pollar ${params.method} failed`,
+    {
+      onBroadcast: (hash) => {
+        console.info(`[${logLabel}] broadcast`, hash);
+        release();
+      },
+    },
+  ).finally(release);
+
+  entry = promise;
   INFLIGHT_REQUESTS.set(key, promise);
   return promise;
 }
@@ -201,7 +212,16 @@ export async function mintBadge({
 }
 
 // TEST — remove before mainnet
-/** Adds a USDC trustline on Stellar testnet via Pollar. */
+/** Deadline for the whole change_trust round-trip. */
+const TRUSTLINE_TIMEOUT_MS = 90_000;
+
+/**
+ * Adds a USDC trustline on Stellar testnet via Pollar.
+ *
+ * Driven off the state machine rather than an awaited outcome, because the flow
+ * has to sign the built XDR itself. That means nothing resolves the promise if
+ * Pollar goes quiet, so the deadline is what guarantees the caller gets an answer.
+ */
 export async function addUsdcTrustline(): Promise<{ hash: string }> {
   const binding = getPollarBinding();
   if (!binding) throw new Error('Pollar adapter is not bound — log in first.');
@@ -209,17 +229,25 @@ export async function addUsdcTrustline(): Promise<{ hash: string }> {
 
   return new Promise<{ hash: string }>((resolve, reject) => {
     let settled = false;
-    // Use `let` + optional chaining so finish() is safe even if the Pollar
-    // callback fires synchronously before the assignment completes.
-    let unsubscribe: (() => void) | undefined;
+    // Filled in below, read here: `finish` has to exist before the deadline that
+    // calls it, and the deadline has to exist before `finish` can clear it. The
+    // bag breaks that cycle, and the optional reads keep `finish` safe even if
+    // Pollar's callback fires before an assignment lands.
+    const pending: { unsubscribe?: () => void; timer?: ReturnType<typeof setTimeout> } = {};
     const finish = (fn: () => void) => {
       if (settled) return;
       settled = true;
-      unsubscribe?.();
+      if (pending.timer) clearTimeout(pending.timer);
+      pending.unsubscribe?.();
       fn();
     };
 
-    unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
+    pending.timer = setTimeout(
+      () => finish(() => reject(new Error('change_trust timed out waiting for a result'))),
+      TRUSTLINE_TIMEOUT_MS,
+    );
+
+    pending.unsubscribe = client.onTransactionStateChange((state: TransactionState) => {
       if (state.step === 'built' && state.buildData?.unsignedXdr) {
         void client.signAndSubmitTx(state.buildData.unsignedXdr);
         return;
