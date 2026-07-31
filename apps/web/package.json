@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "gen:blur": "node scripts/gen-blur-placeholders.mjs"
   },
   "dependencies": {
     "@blend-capital/blend-sdk": "^3.2.2",
