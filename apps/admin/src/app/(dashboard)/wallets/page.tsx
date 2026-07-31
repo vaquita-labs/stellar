@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 
 interface WalletRow {
   wallet: string;
+  tokenId: number;
   nickname: string | null;
   email: string | null;
   blendUsdc: number;
@@ -62,6 +63,7 @@ export default function WalletsPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [nonZeroOnly, setNonZeroOnly] = useState(false);
   const [notMigratedOnly, setNotMigratedOnly] = useState(false);
+  const [tokenFilter, setTokenFilter] = useState<number | 'all'>('all');
 
   const { data: rows = [], isLoading: listLoading } = useQuery<WalletRow[]>({
     queryKey: ['admin', 'wallets'],
@@ -77,14 +79,20 @@ export default function WalletsPage() {
     return [...rows].sort((a, b) => (a[sortKey] - b[sortKey]) * dir);
   }, [rows, sortKey, sortDir]);
 
+  const tokenIds = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.tokenId))).sort((a, b) => a - b),
+    [rows],
+  );
+
   const filtered = useMemo(
     () =>
       sorted.filter((r) => {
+        if (tokenFilter !== 'all' && r.tokenId !== tokenFilter) return false;
         if (nonZeroOnly && r.blendUsdc === 0 && r.vaultUsdc === 0 && r.locked === 0) return false;
         if (notMigratedOnly && !(r.blendUsdc > 0 && r.vaultUsdc === 0)) return false;
         return true;
       }),
-    [sorted, nonZeroOnly, notMigratedOnly],
+    [sorted, tokenFilter, nonZeroOnly, notMigratedOnly],
   );
 
   const totals = useMemo(
@@ -106,9 +114,10 @@ export default function WalletsPage() {
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const exportCsv = () => {
-    const header = ['wallet', 'user', 'blend', 'vault', 'locked', 'total', 'status', 'last_read'];
+    const header = ['wallet', 'token_id', 'user', 'blend', 'vault', 'locked', 'total', 'status', 'last_read'];
     const lines = filtered.map((r) => [
       r.wallet,
+      r.tokenId,
       r.nickname ?? r.email ?? '',
       r.blendUsdc,
       r.vaultUsdc,
@@ -243,6 +252,21 @@ export default function WalletsPage() {
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
       <div className="flex items-center gap-4 mb-3">
+        <label className="flex items-center gap-2 text-sm text-black">
+          Token
+          <select
+            className="rounded-md border border-black/20 bg-white px-2 py-1 text-sm"
+            value={tokenFilter}
+            onChange={(e) => setTokenFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+          >
+            <option value="all">All</option>
+            {tokenIds.map((id) => (
+              <option key={id} value={id}>
+                #{id}
+              </option>
+            ))}
+          </select>
+        </label>
         <Checkbox
           checked={nonZeroOnly}
           onChange={(e) => setNonZeroOnly(e.target.checked)}
@@ -264,6 +288,7 @@ export default function WalletsPage() {
           <thead className="bg-black/5 text-left text-xs text-gray-500">
             <tr>
               <th className="px-3 py-2 font-medium">Wallet</th>
+              <th className="px-3 py-2 font-medium">Token</th>
               <th className="px-3 py-2 font-medium">User</th>
               {numTh('Blend', 'blendUsdc')}
               {numTh('Vault', 'vaultUsdc')}
@@ -276,13 +301,13 @@ export default function WalletsPage() {
           <tbody>
             {listLoading ? (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={9} className="px-3 py-6 text-center text-gray-400">
                   Loading…
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={9} className="px-3 py-6 text-center text-gray-400">
                   {rows.length === 0 ? 'No data yet — scrape a batch or search a wallet to start.' : 'No wallets match the filters.'}
                 </td>
               </tr>
@@ -290,10 +315,11 @@ export default function WalletsPage() {
               filtered.map((r) => {
                 const st = STATUS[statusOf(r)];
                 return (
-                  <tr key={r.wallet} className="border-t border-black/[0.06]">
+                  <tr key={`${r.wallet}-${r.tokenId}`} className="border-t border-black/[0.06]">
                     <td className="px-3 py-2 font-mono" title={r.wallet}>
                       {shortWallet(r.wallet)}
                     </td>
+                    <td className="px-3 py-2 tabular-nums">#{r.tokenId}</td>
                     <td className="px-3 py-2">{r.nickname ?? r.email ?? '—'}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{fmt(r.blendUsdc)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{fmt(r.vaultUsdc)}</td>
@@ -319,7 +345,7 @@ export default function WalletsPage() {
           {filtered.length > 0 && (
             <tfoot className="border-t-2 border-black/10 font-semibold">
               <tr>
-                <td className="px-3 py-2" colSpan={2}>
+                <td className="px-3 py-2" colSpan={3}>
                   Totals ({filtered.length})
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.blend)}</td>

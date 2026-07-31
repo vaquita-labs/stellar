@@ -7,12 +7,17 @@ export interface VaquitaPosition {
   amount: number;
 }
 
+/** Snapshot/positions key — never mix token ids, even on the same contract. */
+export const positionKey = (wallet: string, tokenId: number) => `${wallet}|${tokenId}`;
+
 /**
- * The wallets' active locked Vaquita-pool deposits, grouped by lock period, from
- * the deposits table (status=confirmed, no confirmed withdrawal). One query for
- * the whole batch. Returns [] for wallets with no active locked position.
+ * Active locked Vaquita-pool deposits for the given wallets, grouped by lock
+ * period AND token id, from the deposits table (status=confirmed, no confirmed
+ * withdrawal). One query for the whole set. Keyed by `${wallet}|${tokenId}`.
  */
-export async function getVaquitaPositionsByWallet(wallets: string[]): Promise<Map<string, VaquitaPosition[]>> {
+export async function getVaquitaPositionsByWalletToken(
+  wallets: string[],
+): Promise<Map<string, VaquitaPosition[]>> {
   const out = new Map<string, VaquitaPosition[]>();
   if (!wallets.length) return out;
 
@@ -20,24 +25,26 @@ export async function getVaquitaPositionsByWallet(wallets: string[]): Promise<Ma
     where: { walletAddress: { in: wallets }, deletedAt: null, status: 'confirmed' },
     select: {
       walletAddress: true,
+      tokenId: true,
       amount: true,
       lockPeriod: true,
       withdrawals: { select: { status: true } },
     },
   });
 
-  const byWallet = new Map<string, Map<number, number>>();
+  const grouped = new Map<string, Map<number, number>>();
   for (const d of deposits) {
     if (d.withdrawals.some((w) => w.status === 'confirmed')) continue;
+    const key = positionKey(d.walletAddress, d.tokenId);
     const period = d.lockPeriod != null ? Number(d.lockPeriod) : 0;
-    const perPeriod = byWallet.get(d.walletAddress) ?? new Map<number, number>();
+    const perPeriod = grouped.get(key) ?? new Map<number, number>();
     perPeriod.set(period, (perPeriod.get(period) ?? 0) + d.amount.toNumber());
-    byWallet.set(d.walletAddress, perPeriod);
+    grouped.set(key, perPeriod);
   }
 
-  for (const [wallet, perPeriod] of byWallet) {
+  for (const [key, perPeriod] of grouped) {
     out.set(
-      wallet,
+      key,
       Array.from(perPeriod.entries())
         .map(([period, amount]) => ({ period, amount }))
         .sort((a, b) => a.period - b.period),
