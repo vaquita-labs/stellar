@@ -81,9 +81,10 @@ const formatPeriod = (seconds: number): string => {
   return `${seconds}s`;
 };
 
-// Lock periods are stored either in seconds or milliseconds; ms values for 7+
-// days are >= 1_000_000 (same heuristic as the shared stellar-sdk service).
-const formatLockPeriod = (value: number): string => formatPeriod(value >= 1_000_000 ? Math.trunc(value / 1000) : value);
+// The `lock_periods` column is milliseconds, the unit the deposit flow divides
+// down to seconds before calling the pool. Rendering it any other way would
+// disagree with what the app does with the same number.
+const formatLockPeriod = (ms: number): string => formatPeriod(Math.trunc(ms / 1000));
 
 // Green when the app and the pool agree on the lock periods, red when they do
 // not, neutral when the pool's storage could not be read and there is no verdict.
