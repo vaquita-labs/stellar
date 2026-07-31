@@ -514,7 +514,7 @@ model Withdrawal {
 // vault), written by the admin Wallets tab scrapes/search. Read on-chain, cached
 // here so the tab loads instantly and only hits (rate-limited public) RPC on
 // demand. `tokenId` is a plain scalar (no FK — relations are app-layer here).
-model WalletOnchainBalance {
+model WalletBalance {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   walletAddress String    @map("wallet_address") @db.VarChar(100)
   tokenId       Int       @map("token_id")
@@ -528,7 +528,7 @@ model WalletOnchainBalance {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([walletAddress, tokenId], map: "wallet_onchain_balances_wallet_token_unique")
-  @@index([tokenId], map: "idx_wallet_onchain_balances_token_id")
-  @@map("wallet_onchain_balances")
+  @@unique([walletAddress, tokenId], map: "wallet_balances_wallet_token_unique")
+  @@index([tokenId], map: "idx_wallet_balances_token_id")
+  @@map("wallet_balances")
 }

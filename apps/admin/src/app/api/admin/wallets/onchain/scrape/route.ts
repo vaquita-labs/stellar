@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     const vaquitaPositions = (positionsByWallet.get(wallet) ?? []) as unknown as Prisma.InputJsonValue;
     try {
       const { blendUsdc, vaultUsdc } = await readWithBackoff(wallet, cfg);
-      await prisma.walletOnchainBalance.upsert({
+      await prisma.walletBalance.upsert({
         where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
         create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date() },
         update: { blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date(), lastError: null },
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       const message = e instanceof Error ? e.message : 'read failed';
       // Preserve the last good balances on failure — only stamp the error. The
       // Vaquita positions are DB-derived, so we can still refresh them.
-      await prisma.walletOnchainBalance.upsert({
+      await prisma.walletBalance.upsert({
         where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
         create: { walletAddress: wallet, tokenId: token.id, blendUsdc: 0, vaultUsdc: 0, vaquitaPositions, scrapedAt: new Date(), lastError: message },
         update: { vaquitaPositions, scrapedAt: new Date(), lastError: message },

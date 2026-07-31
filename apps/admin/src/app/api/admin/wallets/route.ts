@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
   }
 
-  const snapshots = await prisma.walletOnchainBalance.findMany({ orderBy: { scrapedAt: 'desc' } });
+  const snapshots = await prisma.walletBalance.findMany({ orderBy: { scrapedAt: 'desc' } });
 
   const wallets = Array.from(new Set(snapshots.map((s) => s.walletAddress)));
   const profiles = wallets.length

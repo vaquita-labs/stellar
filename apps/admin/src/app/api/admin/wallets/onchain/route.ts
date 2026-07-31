@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 
     // Persist the snapshot so the table shows this wallet on reload (the scrape
     // batch uses the same upsert). Keyed by (wallet, token) → idempotent.
-    await prisma.walletOnchainBalance.upsert({
+    await prisma.walletBalance.upsert({
       where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
       create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date() },
       update: { blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date(), lastError: null },

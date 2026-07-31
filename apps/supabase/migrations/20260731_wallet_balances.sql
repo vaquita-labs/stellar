@@ -7,7 +7,7 @@
 -- vaquita_positions: the wallet's locked Vaquita-pool deposits, broken down by
 -- lock period as a JSON array of { period, amount } (from the deposits table,
 -- active = confirmed & not withdrawn).
-CREATE TABLE IF NOT EXISTS "wallet_onchain_balances" (
+CREATE TABLE IF NOT EXISTS "wallet_balances" (
   "id"                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "wallet_address"    varchar(100) NOT NULL,
   "token_id"          integer      NOT NULL,
@@ -21,11 +21,11 @@ CREATE TABLE IF NOT EXISTS "wallet_onchain_balances" (
 );
 
 -- Safety for a table created by an earlier version of this migration.
-ALTER TABLE "wallet_onchain_balances"
+ALTER TABLE "wallet_balances"
   ADD COLUMN IF NOT EXISTS "vaquita_positions" jsonb NOT NULL DEFAULT '[]'::jsonb;
 
-CREATE UNIQUE INDEX IF NOT EXISTS wallet_onchain_balances_wallet_token_unique
-  ON "wallet_onchain_balances" ("wallet_address", "token_id");
+CREATE UNIQUE INDEX IF NOT EXISTS wallet_balances_wallet_token_unique
+  ON "wallet_balances" ("wallet_address", "token_id");
 
-CREATE INDEX IF NOT EXISTS idx_wallet_onchain_balances_token_id
-  ON "wallet_onchain_balances" ("token_id");
+CREATE INDEX IF NOT EXISTS idx_wallet_balances_token_id
+  ON "wallet_balances" ("token_id");
