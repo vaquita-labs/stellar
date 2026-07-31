@@ -42,12 +42,20 @@ export function PortfolioFlow({ mode }: PortfolioFlowProps) {
   // overlay con historial roto (no se podía volver al home). Por eso ahí cerramos
   // con estado local + limpieza de URL nativa, sin disparar navegación de Next.
   const [panelOpen, setPanelOpen] = useState(true);
-  const [positionsOpen, setPositionsOpen] = useState(hasPeriod);
+  // Las posiciones arrancan cerradas incluso con `?period` en la URL: las abre el
+  // efecto de abajo, o sea un commit después del panel. Dos modales montados en
+  // el MISMO commit corren su `ariaHideOutside` uno detrás del otro y se marcan
+  // `inert` mutuamente (react-aria solo desconecta el observer del anterior
+  // cuando el segundo abre más tarde): con los dos inert ningún tap llega al
+  // contenido, cae en el <body> y react-aria lo lee como click afuera, cerrando
+  // la hoja de arriba. Abrirlas escalonadas mantiene el stack sano.
+  const [positionsOpen, setPositionsOpen] = useState(false);
   const positionsMounted = useModalPresence(positionsOpen);
 
-  // Mantiene las posiciones en sync con `?period`: cubre el push de goToTerm y el
-  // back/forward del navegador en overlay. En page el valor inicial ya quedó
-  // sembrado y esto no vuelve a dispararse (cerramos sin tocar el param de Next).
+  // Mantiene las posiciones en sync con `?period`: las abre en el primer commit
+  // tras montar (carga directa / refresh con el param) y cubre el push de
+  // goToTerm y el back/forward del navegador en overlay. En page el cierre no
+  // toca el param de Next, así que no vuelve a dispararse.
   useEffect(() => {
     setPositionsOpen(hasPeriod);
   }, [hasPeriod]);
