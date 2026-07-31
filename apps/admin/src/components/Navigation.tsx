@@ -9,6 +9,7 @@ const navItems = [
   { href: '/home', icon: '/icons/home.svg', label: 'Home' },
   { href: '/leaderboard', icon: '/icons/leaderboard.svg', label: 'Leaderboard' },
   // { href: "/pools", icon: "/icons/pools.svg", label: "Pools" },
+  { href: '/wallets', icon: '/icons/bag.svg', label: 'Wallets' },
   { href: '/profile', icon: '/icons/profile.svg', label: 'Profile' },
 ];
 
