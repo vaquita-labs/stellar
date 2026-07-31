@@ -5,6 +5,7 @@ import type {
   ProjectConfigLanguageDTO,
   ProjectConfigResponseDTO,
 } from '../../types';
+import { isTokenUsable } from './readiness';
 
 /**
  * Coerces a `{ id, label, hint? }[]` Json column into a typed option list,
@@ -32,6 +33,11 @@ const toLanguages = (value: unknown): ProjectConfigLanguageDTO[] =>
 /**
  * Maps the singleton ProjectConfig + its tokens (Prisma rows) to the public DTO.
  * Token fields that used to live in `tokens_networks` are now on `tokens` directly.
+ *
+ * Only tokens the app can serve end to end are published (see `tokenReadiness`).
+ * A half-configured token does not fail loudly downstream — it reads a balance of
+ * 0, never detects incoming funds, or shows a 0% APY — so it is better never
+ * offered. The admin lists every token along with what each one is missing.
  */
 export const toProjectConfig = (
   config: Config,
@@ -42,7 +48,7 @@ export const toProjectConfig = (
   ...(config.badgesContractAddress
     ? { badgesContractAddress: config.badgesContractAddress }
     : {}),
-  tokens: tokens.map((token) => ({
+  tokens: tokens.filter(isTokenUsable).map((token) => ({
     isGas: token.isGas,
     isNative: token.isNative,
     isSupported: token.isSupported,
@@ -55,6 +61,7 @@ export const toProjectConfig = (
     vaquitaContractAddress: firstElement(token.vaquitaContractAddress ?? ''),
     issuer: token.issuer ?? null,
     blendPoolContractAddress: token.blendPoolContractAddress ?? null,
+    defindexVaultContractAddress: token.defindexVaultContractAddress ?? null,
   })),
   currencies: toCurrencies(config.currencies),
   languages: toLanguages(config.languages),

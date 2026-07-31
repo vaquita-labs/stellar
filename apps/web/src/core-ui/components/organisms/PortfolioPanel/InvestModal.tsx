@@ -4,12 +4,13 @@ import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString }
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import {
   useApyByLockPeriods,
-  useBlendPosition,
+  usePassiveLabel,
+  usePassiveUsdc,
   useRestDeposit,
   useTransactions,
 } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { directBlendWithdraw } from '@/networks/stellar/blendDirect';
+import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import { Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion, useAnimationControls } from 'framer-motion';
@@ -51,8 +52,11 @@ export function InvestModal({
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
   const queryClient = useQueryClient();
-  const { data: blendPosition, refetch: refetchBlend } = useBlendPosition(walletAddress);
-  const available = floorAmount(blendPosition?.usdc ?? 0, AMOUNT_DECIMALS);
+  // Fondos disponibles para invertir = la posición pasiva (vault DeFindex con el
+  // flag on, si no Blend). Es de donde sale la plata para lockear en el pool.
+  const { usdc: passiveUsdc, refetch: refetchBlend } = usePassiveUsdc(walletAddress);
+  const available = floorAmount(passiveUsdc, AMOUNT_DECIMALS);
+  const passiveLabel = usePassiveLabel();
 
   const lockPeriods = useMemo(
     () => [...(token?.lockPeriods ?? [])].filter((p) => p > 0).sort((a, b) => a - b),
@@ -132,8 +136,9 @@ export function InvestModal({
     setActiveStep('preparing');
     setError(null);
     try {
-      // 1) Blend → wallet (mismo USDC/issuer que acepta el Vaquita pool).
-      await directBlendWithdraw({
+      // 1) Posición pasiva → wallet (mismo USDC/issuer que acepta el Vaquita pool).
+      // Con el flag on sale del vault DeFindex; si no, del retiro directo de Blend.
+      await passiveWithdraw({
         address: walletAddress,
         amount,
         decimals: token.decimals,
@@ -175,6 +180,7 @@ export function InvestModal({
 
       void refetchBlend();
       void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+      void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
       void queryClient.invalidateQueries({ queryKey: ['deposit'] });
       setStep('success');
     } catch (e) {
@@ -315,7 +321,7 @@ export function InvestModal({
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
         <span className="text-gray-500">{t('withdraw.fromLabel', 'From')}</span>
-        <span className="font-bold text-black">{t('portfolio.blend.label', 'Blend · Flexible')}</span>
+        <span className="font-bold text-black">{passiveLabel}</span>
       </div>
 
       {error ? <ErrorNotice error={error} /> : null}

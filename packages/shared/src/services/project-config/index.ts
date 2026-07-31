@@ -3,6 +3,7 @@ import type { ProjectConfigResponseDTO } from '../../types';
 import { toProjectConfig } from './helpers';
 
 export { toProjectConfig };
+export { isTokenUsable, tokenReadiness, type TokenReadiness, type TokenReadinessGap } from './readiness';
 
 /**
  * Lightweight single-column read of the configured network name. Cheaper than

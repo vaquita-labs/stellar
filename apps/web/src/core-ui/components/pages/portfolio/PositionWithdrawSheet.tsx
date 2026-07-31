@@ -5,7 +5,8 @@ import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriod, useRestWithdrawal, useTransactions } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
-import { directBlendSupply, getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
+import { getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
+import { passiveDeposit } from '@/networks/stellar/vaultDirect';
 import { Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -144,7 +145,7 @@ export function PositionWithdrawSheet({
       const factor = 10 ** token.decimals;
       const receivedBase = Math.floor((balanceAfter - balanceBefore) * factor);
       if (receivedBase > 0) {
-        await directBlendSupply({
+        await passiveDeposit({
           address: walletAddress,
           amount: (receivedBase / factor).toFixed(token.decimals),
           decimals: token.decimals,
@@ -153,6 +154,7 @@ export function PositionWithdrawSheet({
 
       void queryClient.invalidateQueries({ queryKey: ['deposit'] });
       void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+      void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
       onWithdrawn?.();
       setStep('success');
     } catch (e) {

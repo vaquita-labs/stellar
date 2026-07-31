@@ -213,12 +213,15 @@ model Config {
 model Profile {
   id            Int       @id @default(autoincrement())
   walletAddress String    @unique(map: "profiles_wallet_unique") @map("wallet_address") @db.VarChar(100)
-  // Public URL segment (/leaderboard/<nickname>, /explore/<nickname>), so the
-  // charset is URL-safe lowercase only. Enforced in the DB by a check constraint
-  // Prisma can't express (kept here so `db pull` doesn't make it look absent):
+  // Public URL segment (/leaderboard/<nickname>, /explore/<nickname>) and the
+  // key the share card resolves a claim by, so it is unique among live
+  // profiles. The index is partial: a soft-deleted profile must not keep
+  // reserving a nickname a live one could take. The charset is URL-safe
+  // lowercase only, enforced in the DB by a check constraint Prisma can't
+  // express (kept here so `db pull` doesn't make it look absent):
   //   profiles_nickname_format:
   //     CHECK (nickname IS NULL OR nickname ~ '^[a-z0-9_]{3,32}$')
-  nickname      String?   @db.VarChar(50)
+  nickname      String?   @unique(map: "profiles_nickname_unique", where: raw("(nickname IS NOT NULL AND deleted_at IS NULL)")) @db.VarChar(50)
   fullName      String?   @map("full_name") @db.VarChar(100)
   email         String?   @db.VarChar(100)
 
@@ -505,4 +508,27 @@ model Withdrawal {
   @@index([depositId], map: "idx_withdrawals_deposit_id")
   @@index([status], map: "idx_withdrawals_status")
   @@map("withdrawals")
+}
+
+// Admin-only snapshot of a wallet's on-chain USDC positions (Blend + DeFindex
+// vault), written by the admin Wallets tab scrapes/search. Read on-chain, cached
+// here so the tab loads instantly and only hits (rate-limited public) RPC on
+// demand. `tokenId` is a plain scalar (no FK — relations are app-layer here).
+model WalletBalance {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  walletAddress String    @map("wallet_address") @db.VarChar(100)
+  tokenId       Int       @map("token_id")
+  blendUsdc     Decimal   @default(0) @map("blend_usdc") @db.Decimal
+  vaultUsdc     Decimal   @default(0) @map("vault_usdc") @db.Decimal
+  // Locked Vaquita-pool deposits by lock period: [{ period, amount }] (from the
+  // deposits table). Persisted so the snapshot row is a self-contained record.
+  vaquitaPositions Json   @default(dbgenerated("'[]'::jsonb")) @map("vaquita_positions")
+  scrapedAt     DateTime  @map("scraped_at") @db.Timestamptz(6)
+  lastError     String?   @map("last_error")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([walletAddress, tokenId], map: "wallet_balances_wallet_token_unique")
+  @@index([tokenId], map: "idx_wallet_balances_token_id")
+  @@map("wallet_balances")
 }

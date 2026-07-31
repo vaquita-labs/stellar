@@ -83,7 +83,7 @@ export function IdleFundsModal({
       <p className="text-sm text-gray-500 max-w-xs">
         {t(
           'idleFunds.subtitle',
-          'This USDC is just sitting there. Put it to work in Blend and start earning right away.',
+          'This USDC is just sitting there. Put it to work and start earning right away.',
         )}
       </p>
 

@@ -30,7 +30,7 @@ INSERT INTO achievements (
   -- que un INSERT a mano tiene que ponerlo o falla el NOT NULL.
   updated_at
 ) VALUES (
-  'starmaker-latam',
+  'starmaker_latam',
   'StarMaker LATAM',
   'Estuviste en StarMaker LATAM. Un badge que no aparece en la lista hasta que alguien te pasa el código.',
   'Founder',
@@ -48,7 +48,7 @@ ON CONFLICT (key) DO NOTHING;
 
 -- Verificación:
 --   SELECT key, hidden, unlock_type, code, enabled FROM achievements
---   WHERE key = 'starmaker-latam';
+--   WHERE key = 'starmaker_latam';
 --
 -- Para rotar el código sin tocar el badge ya reclamado por nadie:
---   UPDATE achievements SET code = '<nuevo>' WHERE key = 'starmaker-latam';
+--   UPDATE achievements SET code = '<nuevo>' WHERE key = 'starmaker_latam';

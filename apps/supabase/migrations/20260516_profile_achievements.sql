@@ -44,22 +44,22 @@ CREATE INDEX IF NOT EXISTS profiles_achievements_profile_idx
 -- tier mirrors `TIER_REWARD` in AchievementModal.tsx:
 --   Bronze 25 / Silver 50 / Gold 100 / Diamond 250 / Founder 500.
 INSERT INTO achievements (key, name, description, tier, coin_reward) VALUES
-  ('beta-tester',     'Beta Tester',     'You joined Vaquita during the beta. Thanks for helping us shape it.', 'Founder', 500),
+  ('beta_tester',     'Beta Tester',     'You joined Vaquita during the beta. Thanks for helping us shape it.', 'Founder', 500),
   ('rookie',          'Rookie',          'Earn your first 50 XP. Welcome to the herd.',                          'Bronze',   25),
-  ('week-warrior',    'Week Warrior',    'Reach a 7-day savings streak.',                                        'Bronze',   25),
-  ('first-deposit',   'First Deposit',   'Made your very first deposit in Vaquita.',                             'Bronze',   25),
-  ('first-friend',    'Crew Mate',       'Follow your first fellow vaquero.',                                    'Bronze',   25),
-  ('savings-starter', 'Savings Starter', 'Reach $100 USDC in cumulative deposits.',                              'Silver',   50),
-  ('trio-saver',      'Triple Threat',   'Keep 3 active deposits running at the same time.',                     'Silver',   50),
-  ('month-master',    'Month Master',    'Reach a 30-day savings streak.',                                       'Silver',   50),
+  ('week_warrior',    'Week Warrior',    'Reach a 7-day savings streak.',                                        'Bronze',   25),
+  ('first_deposit',   'First Deposit',   'Made your very first deposit in Vaquita.',                             'Bronze',   25),
+  ('first_friend',    'Crew Mate',       'Follow your first fellow vaquero.',                                    'Bronze',   25),
+  ('savings_starter', 'Savings Starter', 'Reach $100 USDC in cumulative deposits.',                              'Silver',   50),
+  ('trio_saver',      'Triple Threat',   'Keep 3 active deposits running at the same time.',                     'Silver',   50),
+  ('month_master',    'Month Master',    'Reach a 30-day savings streak.',                                       'Silver',   50),
   ('explorer',        'Explorer',        'Earn 300 XP across all challenges.',                                   'Silver',   50),
-  ('streak-master',   'Streak Master',   'Reach a 50-day savings streak.',                                       'Gold',    100),
+  ('streak_master',   'Streak Master',   'Reach a 50-day savings streak.',                                       'Gold',    100),
   ('whale',           'Vaquita Whale',   'Reach 30,000 XP. Now THAT is dedication.',                             'Gold',    100),
-  ('savings-baron',   'Savings Baron',   'Reach $10,000 USDC in cumulative deposits.',                           'Gold',    100),
-  ('century-saver',   'Century Saver',   'Reach a 100-day savings streak. Legendary.',                           'Diamond', 250),
-  ('third-place',     'Bronze Medalist', 'Finish #3 on the monthly leaderboard.',                                'Bronze',   25),
-  ('second-place',    'Silver Medalist', 'Finish #2 on the monthly leaderboard.',                                'Silver',   50),
-  ('first-place',     'Gold Medalist',   'Finish #1 on the monthly leaderboard.',                                'Gold',    100)
+  ('savings_baron',   'Savings Baron',   'Reach $10,000 USDC in cumulative deposits.',                           'Gold',    100),
+  ('century_saver',   'Century Saver',   'Reach a 100-day savings streak. Legendary.',                           'Diamond', 250),
+  ('third_place',     'Bronze Medalist', 'Finish #3 on the monthly leaderboard.',                                'Bronze',   25),
+  ('second_place',    'Silver Medalist', 'Finish #2 on the monthly leaderboard.',                                'Silver',   50),
+  ('first_place',     'Gold Medalist',   'Finish #1 on the monthly leaderboard.',                                'Gold',    100)
 ON CONFLICT (key) DO UPDATE
   SET name        = EXCLUDED.name,
       description = EXCLUDED.description,
@@ -124,10 +124,10 @@ COMMIT;
 --   SELECT COUNT(*) FROM achievements;
 --
 --   -- Claim once (replace 1 with a real profile id) — should return one row:
---   SELECT * FROM claim_achievement(1, 'beta-tester');
+--   SELECT * FROM claim_achievement(1, 'beta_tester');
 --
 --   -- Claim again — should raise unique_violation (SQLSTATE 23505):
---   SELECT * FROM claim_achievement(1, 'beta-tester');
+--   SELECT * FROM claim_achievement(1, 'beta_tester');
 --
 --   -- Confirm the coin credit landed:
 --   SELECT amount, type, created_at FROM profiles_rewards

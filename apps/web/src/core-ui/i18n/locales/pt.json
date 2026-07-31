@@ -6,11 +6,11 @@
       "viewOnStellarExpert": "Ver no Stellar Expert"
     },
     "items": {
-      "beta-tester": {
+      "beta_tester": {
         "description": "Você entrou no Vaquita durante o beta. Obrigado por nos ajudar a moldá-lo!",
         "title": "Beta Tester"
       },
-      "century-saver": {
+      "century_saver": {
         "description": "Alcance uma sequência de economia de 100 dias. Lendário.",
         "title": "Poupador Centenário"
       },
@@ -18,19 +18,19 @@
         "description": "Ganhe 300 XP em todos os desafios.",
         "title": "Explorador"
       },
-      "first-deposit": {
+      "first_deposit": {
         "description": "Você fez seu primeiro depósito no Vaquita.",
         "title": "Primeiro Depósito"
       },
-      "first-friend": {
+      "first_friend": {
         "description": "Siga o seu primeiro vaqueiro.",
         "title": "Companheiro de Rebanho"
       },
-      "first-place": {
+      "first_place": {
         "description": "Termine em #1 no ranking mensal.",
         "title": "Medalhista de Ouro"
       },
-      "month-master": {
+      "month_master": {
         "description": "Alcance uma sequência de economia de 30 dias.",
         "title": "Mestre do Mês"
       },
@@ -38,39 +38,47 @@
         "description": "Ganhe seus primeiros 50 XP. Bem-vindo ao rebanho.",
         "title": "Novato"
       },
-      "savings-baron": {
+      "savings_baron": {
         "description": "Acumule $10.000 USDC em depósitos.",
         "title": "Barão da Poupança"
       },
-      "savings-starter": {
+      "savings_starter": {
         "description": "Acumule $100 USDC em depósitos.",
         "title": "Poupador Iniciante"
       },
-      "second-place": {
+      "second_deposit": {
+        "description": "Mantenha 2 depósitos ativos ao mesmo tempo.",
+        "title": "Segundo Depósito"
+      },
+      "second_place": {
         "description": "Termine em #2 no ranking mensal.",
         "title": "Medalhista de Prata"
       },
-      "secret-launch": {
+      "secret_launch": {
         "description": "Você estava lá quando a Vaquita foi ao ar. Uma boas-vindas secreta do rebanho.",
         "title": "Insider do Lançamento"
       },
-      "starmaker-latam": {
+      "starmaker_latam": {
         "description": "Você esteve no StarMaker LATAM. Um selo que fica oculto até alguém te passar o código.",
         "title": "StarMaker LATAM"
       },
-      "streak-master": {
+      "streak_master": {
         "description": "Alcance uma sequência de economia de 50 dias.",
         "title": "Mestre da Sequência"
       },
-      "third-place": {
+      "third_place": {
         "description": "Termine no top 10 do ranking mensal.",
         "title": "Medalhista de Bronze"
       },
-      "trio-saver": {
+      "trio_saver": {
         "description": "Mantenha 3 depósitos ativos ao mesmo tempo.",
         "title": "Ameaça Tripla"
       },
-      "week-warrior": {
+      "triple_saver": {
+        "description": "Você completou sua meta de 7 dias de economia!",
+        "title": "Meta de 7 Dias"
+      },
+      "week_warrior": {
         "description": "Alcance uma sequência de economia de 7 dias.",
         "title": "Guerreiro da Semana"
       },
@@ -446,6 +454,19 @@
       "vaultReturnedLessThanPrincipal": "O vault retornou menos que o principal",
       "vaultReturnedZeroShares": "O vault retornou zero cotas",
       "vaultShareBalanceDecreased": "O saldo de cotas do vault diminuiu de forma inesperada"
+    },
+    "vault": {
+      "amountBelowMinDust": "O valor é muito pequeno",
+      "amountOverTotalSupply": "O valor excede o disponível no vault, tente novamente",
+      "bTokensAmountBelowMin": "O preço mudou além do seu limite, tente novamente",
+      "insufficientBalance": "Saldo insuficiente",
+      "insufficientManagedFunds": "O vault não consegue cobrir isso agora, tente novamente",
+      "negativeNotAllowed": "Valor inválido",
+      "notAuthorized": "Não autorizado",
+      "notInitialized": "O vault não está pronto",
+      "onlyPositiveAmount": "O valor deve ser maior que zero",
+      "unauthorized": "Não autorizado",
+      "underlyingAmountBelowMin": "O preço mudou além do seu limite, tente novamente"
     }
   },
   "home": {
@@ -616,6 +637,14 @@
     "totalDeposits": {
       "bagAlt": "Depósitos totais"
     }
+  },
+  "idleFunds": {
+    "label": "Você tem fundos parados",
+    "title": "Coloque seu dinheiro para trabalhar",
+    "subtitle": "Esse USDC está parado. Coloque-o para trabalhar e comece a ganhar agora mesmo.",
+    "cta": "Comece a ganhar ${{amount}}",
+    "processing": "Investindo...",
+    "toast": "Colocamos ${{amount}} para trabalhar"
   },
   "leaderboard": {
     "card": {
@@ -1787,7 +1816,11 @@
     "success": {
       "subtitle": "Seu dinheiro está a caminho de {{label}}.",
       "title": "Saque enviado!"
-    }
+    },
+    "blendLeftover": "Na Blend",
+    "withdrawFromBlend": "Retirar da Blend",
+    "withdrawing": "Retirando…",
+    "blendBorrow": "Quite seu empréstimo da Blend primeiro"
   },
   "transactions": {
     "title": "Transações",
@@ -1926,6 +1959,9 @@
       "successTitle": "De volta nas suas economias!",
       "successSubtitle": "Seus fundos estão flexíveis de novo e continuam rendendo nas suas economias.",
       "cta": "Sacar para suas economias"
+    },
+    "vault": {
+      "label": "Vault · Flexível"
     }
   },
   "txError": {
@@ -1940,5 +1976,15 @@
       "10": "Você não tem USDC suficiente na carteira para cobrir este valor. Adicione fundos e tente de novo.",
       "13": "Sua carteira precisa habilitar o USDC primeiro. Adicione a trustline de USDC e tente de novo."
     }
+  },
+  "migration": {
+    "title": "Mova seus fundos da Blend",
+    "body": "Você tem {{amount}} na Blend. Para continuar, você precisa movê-lo.",
+    "bodyExternal": "Você tem {{amount}} na Blend. Mova uma parte ou tudo para o Vault e ganhe com a Vaquita.",
+    "borrowBlocked": "Você tem um empréstimo aberto na Blend contra esses fundos. Quite-o primeiro para poder movê-los.",
+    "migrate": "Mover para o Vault",
+    "moving": "Movendo…",
+    "max": "Máx",
+    "notNow": "Agora não"
   }
 }

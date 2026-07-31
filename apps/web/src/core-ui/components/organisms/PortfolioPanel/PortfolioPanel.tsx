@@ -3,7 +3,7 @@
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { formatTokenPrecise, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
-import { useApyByLockPeriods, useDepositsComplete, useLiveBlendUsdc } from '@/core-ui/hooks';
+import { useApyByLockPeriods, useDepositsComplete, useLivePassiveUsdc } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -49,15 +49,15 @@ export function PortfolioPanel({
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
   const { data: depositsData, isFetching: depositsFetching } = useDepositsComplete(walletAddress);
-  // Nivel base del portafolio: depósito directo a Blend, líquido (sin lock).
-  // Se lee on-chain y va aparte de las allocations por plazo (no entra en el
-  // mover-fondos ni en los detalles de plazo, que son solo para locks).
-  // `live`: saldo de Blend proyectado en vivo, la MISMA fuente que el header y el
-  // "Available" del retiro, así el total del portfolio corre igual y coincide con
-  // ellos (antes usaba el snapshot crudo y quedaba un decimal atrás).
-  const { data: blendPosition, isFetching: blendFetching, live: blendBalance } =
-    useLiveBlendUsdc(walletAddress);
-  const blendApy = blendPosition?.apy ?? 0;
+  // Nivel base del portafolio: la posición pasiva, líquida (sin lock) — el vault
+  // de DeFindex con el flag on, si no el depósito directo a Blend. Se lee on-chain
+  // y va aparte de las allocations por plazo (no entra en el mover-fondos ni en
+  // los detalles de plazo, que son solo para locks).
+  // `live`: saldo proyectado en vivo, la MISMA fuente que el header y el
+  // "Available" del retiro, así el total del portfolio corre igual y coincide
+  // con ellos.
+  const { apy: passiveApy, isFetching: passiveFetching, live: passiveBalance } =
+    useLivePassiveUsdc(walletAddress);
 
   const router = useRouter();
   // Detalle de Blend (qué es + números).
@@ -161,7 +161,7 @@ export function PortfolioPanel({
   const lockTotal = allocations.reduce((acc, a) => acc + a.amount, 0);
   // Balance total del portafolio = locks + Blend (nivel base). Es el número que
   // el usuario espera ver como "todo lo que tiene invertido".
-  const totalAmount = lockTotal + blendBalance;
+  const totalAmount = lockTotal + passiveBalance;
   const totalEarnings = vaquitaEarnings + protocolEarnings;
 
   // Tras un invest/retiro, Blend (nivel base) y los depósitos (locks) se re-leen
@@ -172,7 +172,7 @@ export function PortfolioPanel({
   // valor estable y mostramos un spinner; al asentar ambas, snapea al valor real
   // (ya consistente), sin el salto. keepPreviousData en las queries evita el flash
   // a 0; esto evita además el bajón por desincronización entre las dos.
-  const isSyncing = depositsFetching || blendFetching;
+  const isSyncing = depositsFetching || passiveFetching;
   const lastStableTotalRef = useRef(totalAmount);
   if (!isSyncing) lastStableTotalRef.current = totalAmount;
   const displayTotal = isSyncing ? lastStableTotalRef.current : totalAmount;
@@ -185,8 +185,8 @@ export function PortfolioPanel({
       key: 'blend',
       kind: 'blend',
       label: t('portfolio.savings', 'Savings'),
-      amount: blendBalance,
-      apy: blendApy,
+      amount: passiveBalance,
+      apy: passiveApy,
       style: {
         // Ahorros = tu dinero líquido/disponible: la moneda USDC (el "capital
         // semilla" antes de plantarlo en un plazo), en el mismo estilo sticker.
@@ -209,7 +209,7 @@ export function PortfolioPanel({
       style: getAllocationStyle(i),
     }));
     return [blendRow, ...lockRows];
-  }, [allocations, blendBalance, blendApy, t]);
+  }, [allocations, passiveBalance, passiveApy, t]);
 
   // Orden de despliegue: primero lo que tiene fondos (de mayor a menor, así la
   // barra y la lista cuentan la misma historia), y al final los planes vacíos
@@ -422,8 +422,8 @@ export function PortfolioPanel({
         <BlendDetailSheet
           open={showBlendDetail}
           onOpenChange={() => setShowBlendDetail(false)}
-          amount={blendBalance}
-          apy={blendApy}
+          amount={passiveBalance}
+          apy={passiveApy}
           tokenSymbol={tokenSymbol}
         />
       ) : null}

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiHeadphones } from 'react-icons/fi';
 import {
-  useBlendUsdc,
+  usePassiveUsdc,
   useDepositsComplete,
   useProfileData,
   useProfileExperience,
@@ -83,7 +83,7 @@ export const HeaderStats = () => {
     settled: blendSettled,
     ratePerMs: blendRatePerMs,
     updatedAt: blendUpdatedAt,
-  } = useBlendUsdc(walletAddress);
+  } = usePassiveUsdc(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
   const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
@@ -105,12 +105,12 @@ export const HeaderStats = () => {
       return { ...prev, [id]: earnings };
     });
   }, []);
-  // Total = locks (capital + interés devengado en vivo) + posición directa en
-  // Blend (nivel base, líquido). Se parte en dos: lo QUIETO va en `balanceBase`
-  // y lo que avanza solo en `liveTerms`, que <LiveBalance> proyecta y pinta en
-  // cada tick sin re-renderizar el header. El término de Blend sale de la MISMA
-  // tasa que usa el "Available" del retiro, así ambos corren juntos y muestran
-  // el mismo número (ver `useBlendUsdc`).
+  // Total = locks (capital + interés devengado en vivo) + la posición pasiva
+  // (nivel base, líquido: vault de DeFindex o Blend según el flag). Se parte en
+  // dos: lo QUIETO va en `balanceBase` y lo que avanza solo en `liveTerms`, que
+  // <LiveBalance> proyecta y pinta en cada tick sin re-renderizar el header. El
+  // término pasivo sale de la MISMA tasa que usa el "Available" del retiro, así
+  // ambos corren juntos y muestran el mismo número (ver `usePassiveUsdc`).
   const balanceBase = activeDepositsTotalAmount + blendSettled;
   const liveTerms = useMemo<AccrualTerm[]>(() => {
     // Cada depósito reporta cuánto rinde por milisegundo, así que el contador

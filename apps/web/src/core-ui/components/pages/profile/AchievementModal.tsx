@@ -192,9 +192,10 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
       shareFileRef.current = null;
       return;
     }
+    // Only the nickname goes out: the renderer resolves the claim itself and
+    // takes the unlock date from it, so passing one would be ignored.
     const qs = new URLSearchParams({ format: 'story', v: ACHIEVEMENT_CARD_VERSION });
     if (username) qs.set('u', username);
-    if (achievement.date) qs.set('date', achievement.date);
     shareFileRef.current = fetch(`/og/achievement/${achievement.id}?${qs.toString()}`)
       .then(async (res) => {
         if (!res.ok) return null;
@@ -203,7 +204,7 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
       })
       .catch(() => null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, claimed, username, achievement?.id, achievement?.date]);
+  }, [open, claimed, username, achievement?.id]);
 
   if (!achievement) return null;
 
@@ -268,15 +269,15 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
    * unfurls the server-rendered image from `/og/achievement/<id>` — no
    * client-side image generation involved.
    *
-   * Personalization (`u`, `date`) is forwarded as query params; the OG
-   * endpoint renders them into the card. Falls back to the production
+   * Only `u` travels in the URL, and it names whose claim to render rather
+   * than what to print: the share page and the OG endpoint resolve the claim
+   * themselves and read the unlock date off it. Falls back to the production
    * origin during SSR so the URL is always absolute.
    */
   const buildShareUrl = (): string => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
     const qs = new URLSearchParams();
     if (username) qs.set('u', username);
-    if (achievement.date) qs.set('date', achievement.date);
     const query = qs.toString();
     return `${origin}/share/achievement/${achievement.id}${query ? `?${query}` : ''}`;
   };

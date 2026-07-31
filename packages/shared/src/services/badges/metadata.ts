@@ -23,8 +23,11 @@ interface BadgeMeta {
 
 const CDN = 'https://vaquita.fi/assets/badges';
 
-const BADGE_CATALOG: Record<string, BadgeMeta> = {
-  'first-place': {
+/** Keyed by the on-chain `badgeType` (`contractBadgeTypeOf`), which is a Soroban
+ *  Symbol — so every key here must spell itself with `[a-zA-Z0-9_]` only. A key
+ *  the chain can never produce is an entry `getBadgeMetadata` can never reach. */
+export const BADGE_CATALOG: Record<string, BadgeMeta> = {
+  first_place: {
     name: 'Vaquero de Oro',
     description: 'Awarded to the #1 ranked saver of the month on Vaquita. Soulbound — cannot be transferred.',
     imageFile: 'first-place.png',
@@ -33,7 +36,7 @@ const BADGE_CATALOG: Record<string, BadgeMeta> = {
     tier: 'Gold',
     rank: 1,
   },
-  'second-place': {
+  second_place: {
     name: 'Vaquero de Plata',
     description: 'Awarded to the #2 ranked saver of the month on Vaquita. Soulbound — cannot be transferred.',
     imageFile: 'second-place.png',
@@ -42,7 +45,7 @@ const BADGE_CATALOG: Record<string, BadgeMeta> = {
     tier: 'Silver',
     rank: 2,
   },
-  'third-place': {
+  third_place: {
     name: 'Vaquero de Bronce',
     description: 'Awarded to the #3 ranked saver of the month on Vaquita. Soulbound — cannot be transferred.',
     imageFile: 'third-place.png',

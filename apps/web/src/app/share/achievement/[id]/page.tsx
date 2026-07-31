@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ACHIEVEMENT_CARD_VERSION, getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
+import { ACHIEVEMENT_CARD_VERSION, getBadgeClaim, getCatalogAchievement } from '@/core-ui/data/achievement-catalog';
 
 /**
  * Public share page for achievements. Two jobs:
@@ -16,23 +16,18 @@ import { ACHIEVEMENT_CARD_VERSION, getCatalogAchievement } from '@/core-ui/data/
  *     `/og/achievement/[id]/route.tsx`. This is what makes the share flow
  *     "image-rich" without ever generating a PNG on the client.
  *
- * URL: `/share/achievement/<id>?u=<username>&date=<iso-date>`
+ * URL: `/share/achievement/<id>?u=<nickname>`
  *
- * Query params (all optional):
- *  - `u`     username to print on the OG image and the page.
- *  - `date`  ISO date string for the unlock date. Both the OG image and
- *            the page format it as "MMM D, YYYY".
- *
- * NOTE: this is mocked end-to-end. The achievement catalog is local
- *  (`achievement-catalog.ts`), so any user can land here without auth and
- *  see the badge. When the backend ships a real catalog and user lookup,
- *  swap `getCatalogAchievement` for a server-side fetch and (optionally)
- *  resolve the username from a public profile endpoint.
+ * Query param (optional):
+ *  - `u`  whose claim to render. It selects a record, it is not copy: the
+ *         byline and the unlock date come from that record, so a nickname with
+ *         no claim on this badge renders neither here nor on the OG image.
+ *         Anyone may link to anyone's card; what it states is still true.
  */
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ u?: string; date?: string }>;
+  searchParams: Promise<{ u?: string }>;
 };
 
 /** Build the absolute origin from the incoming request headers. Lets the
@@ -58,17 +53,21 @@ const formatDate = (iso?: string): string | null => {
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const { u, date } = await searchParams;
+  const { u: requested } = await searchParams;
   const achievement = await getCatalogAchievement(id);
   // Public, server-rendered unfurl/OG page: it has no signed-in profile to read
   // a locale from and must stay consistent for crawlers, so it renders in the
   // source language (English) rather than the client i18n runtime.
   if (!achievement) return { title: 'Achievement · Vaquita' };
 
+  // Naming someone in the unfurl is an assertion about them, so it survives
+  // only if the claim does.
+  const claim = requested ? await getBadgeClaim(id, requested) : null;
+  const u = claim?.nickname;
+
   const origin = await resolveOrigin();
   const pageQuery = new URLSearchParams();
   if (u) pageQuery.set('u', u);
-  if (date) pageQuery.set('date', date);
   const qs = pageQuery.toString();
 
   // `v` busts browser/CDN caches when the card design changes — the OG route
@@ -117,11 +116,14 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 
 export default async function SharedAchievementPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const { u: username, date } = await searchParams;
+  const { u: requested } = await searchParams;
   const achievement = await getCatalogAchievement(id);
   if (!achievement) notFound();
 
-  const formattedDate = formatDate(date);
+  // Byline and date come from the claim, never from the URL — see the header.
+  const claim = requested ? await getBadgeClaim(id, requested) : null;
+  const username = claim?.nickname;
+  const formattedDate = formatDate(claim?.claimedAt);
   const achievementTitle = achievement.title;
   const achievementDescription = achievement.description;
 

@@ -1,4 +1,5 @@
 import { prisma } from '@vaquita/db';
+import { tokenReadiness } from '@vaquita/shared/services/project-config/index';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminSecretOk } from '@/lib/adminSecret';
@@ -78,9 +79,13 @@ const invalidJson = () => NextResponse.json({ status: 'error', message: 'Invalid
 // must map it to Number before handing the row to NextResponse.json. The values
 // are millisecond durations, well within Number.MAX_SAFE_INTEGER.
 type TokenRow = Awaited<ReturnType<typeof prisma.token.findFirstOrThrow>>;
+// `readiness` says whether the app publishes this token and, when it does not,
+// which fields are missing and what each one breaks. The admin lists every token
+// either way — the public project config is the one that filters.
 const serializeToken = (token: TokenRow) => ({
   ...token,
   lockPeriods: token.lockPeriods.map(Number),
+  readiness: tokenReadiness(token),
 });
 
 // GET /api/admin/tokens — list every non-deleted token, ordered by id.

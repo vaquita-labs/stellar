@@ -211,7 +211,7 @@ export function ProfilePage() {
   }, [profileData?.avatarConfig, profileData?.walletAddress, walletAddress]);
 
   const betaTester = useMemo(
-    () => achievementsData?.achievements?.find((a) => a.key === 'beta-tester'),
+    () => achievementsData?.achievements?.find((a) => a.key === 'beta_tester'),
     [achievementsData?.achievements]
   );
 

@@ -6,11 +6,11 @@
       "viewOnStellarExpert": "View on Stellar Expert"
     },
     "items": {
-      "beta-tester": {
+      "beta_tester": {
         "description": "You joined Vaquita during the beta. Thanks for helping us shape it.",
         "title": "Beta Tester"
       },
-      "century-saver": {
+      "century_saver": {
         "description": "Reach a 100-day savings streak. Legendary.",
         "title": "Century Saver"
       },
@@ -18,19 +18,19 @@
         "description": "Earn 300 XP across all challenges.",
         "title": "Explorer"
       },
-      "first-deposit": {
+      "first_deposit": {
         "description": "Made your very first deposit in Vaquita.",
         "title": "First Deposit"
       },
-      "first-friend": {
+      "first_friend": {
         "description": "Follow your first fellow vaquero.",
         "title": "Crew Mate"
       },
-      "first-place": {
+      "first_place": {
         "description": "Finish #1 on the monthly leaderboard.",
         "title": "Gold Medalist"
       },
-      "month-master": {
+      "month_master": {
         "description": "Reach a 30-day savings streak.",
         "title": "Month Master"
       },
@@ -38,39 +38,47 @@
         "description": "Earn your first 50 XP. Welcome to the herd.",
         "title": "Rookie"
       },
-      "savings-baron": {
+      "savings_baron": {
         "description": "Reach $10,000 USDC in cumulative deposits.",
         "title": "Savings Baron"
       },
-      "savings-starter": {
+      "savings_starter": {
         "description": "Reach $100 USDC in cumulative deposits.",
         "title": "Savings Starter"
       },
-      "second-place": {
+      "second_deposit": {
+        "description": "Keep 2 active deposits running at the same time.",
+        "title": "Second Deposit"
+      },
+      "second_place": {
         "description": "Finish #2 on the monthly leaderboard.",
         "title": "Silver Medalist"
       },
-      "secret-launch": {
+      "secret_launch": {
         "description": "You were there when Vaquita went live. A secret welcome from the herd.",
         "title": "Launch Insider"
       },
-      "starmaker-latam": {
+      "starmaker_latam": {
         "description": "You were at StarMaker LATAM. A badge that stays hidden until someone hands you the code.",
         "title": "StarMaker LATAM"
       },
-      "streak-master": {
+      "streak_master": {
         "description": "Reach a 50-day savings streak.",
         "title": "Streak Master"
       },
-      "third-place": {
+      "third_place": {
         "description": "Finish in the top 10 on the monthly leaderboard.",
         "title": "Bronze Medalist"
       },
-      "trio-saver": {
+      "trio_saver": {
         "description": "Keep 3 active deposits running at the same time.",
         "title": "Triple Threat"
       },
-      "week-warrior": {
+      "triple_saver": {
+        "description": "You completed your 7-day savings goal!",
+        "title": "7-Day Goal"
+      },
+      "week_warrior": {
         "description": "Reach a 7-day savings streak.",
         "title": "Week Warrior"
       },
@@ -446,6 +454,19 @@
       "vaultReturnedLessThanPrincipal": "Vault returned less than principal",
       "vaultReturnedZeroShares": "Vault returned zero shares",
       "vaultShareBalanceDecreased": "Vault share balance decreased unexpectedly"
+    },
+    "vault": {
+      "amountBelowMinDust": "Amount is too small",
+      "amountOverTotalSupply": "Amount exceeds the vault supply, please retry",
+      "bTokensAmountBelowMin": "Price moved past your limit, please retry",
+      "insufficientBalance": "Not enough balance",
+      "insufficientManagedFunds": "The vault can't cover this right now, please retry",
+      "negativeNotAllowed": "Invalid amount",
+      "notAuthorized": "Not authorized",
+      "notInitialized": "Vault is not ready",
+      "onlyPositiveAmount": "Amount must be greater than zero",
+      "unauthorized": "Not authorized",
+      "underlyingAmountBelowMin": "Price moved past your limit, please retry"
     }
   },
   "home": {
@@ -616,6 +637,14 @@
     "totalDeposits": {
       "bagAlt": "Total deposits"
     }
+  },
+  "idleFunds": {
+    "label": "You have idle funds",
+    "title": "Put your money to work",
+    "subtitle": "This USDC is just sitting there. Put it to work and start earning right away.",
+    "cta": "Start earning ${{amount}}",
+    "processing": "Investing...",
+    "toast": "We put ${{amount}} to work"
   },
   "leaderboard": {
     "card": {
@@ -1853,7 +1882,11 @@
     "success": {
       "subtitle": "Your funds are on their way to {{label}}.",
       "title": "Withdrawal sent!"
-    }
+    },
+    "blendLeftover": "In Blend",
+    "withdrawFromBlend": "Withdraw from Blend",
+    "withdrawing": "Withdrawing…",
+    "blendBorrow": "Repay your Blend borrow first"
   },
   "transactions": {
     "title": "Transactions",
@@ -1992,6 +2025,9 @@
       "successTitle": "Back in your savings!",
       "successSubtitle": "Your funds are flexible again and keep earning in your savings.",
       "cta": "Withdraw to your savings"
+    },
+    "vault": {
+      "label": "Vault · Flexible"
     }
   },
   "txError": {
@@ -2006,5 +2042,15 @@
       "10": "You don't have enough USDC in your wallet to cover this amount. Add funds and try again.",
       "13": "Your wallet needs to enable USDC first. Add the USDC trustline and try again."
     }
+  },
+  "migration": {
+    "title": "Move your Blend funds",
+    "body": "You have {{amount}} in Blend. To continue you need to move it.",
+    "bodyExternal": "You have {{amount}} in Blend. Move part or all of it into the Vault to earn with Vaquita.",
+    "borrowBlocked": "You have an open Blend borrow against these funds. Repay it first, then you can move them.",
+    "migrate": "Move to Vault",
+    "moving": "Moving…",
+    "max": "Max",
+    "notNow": "Not now"
   }
 }

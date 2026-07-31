@@ -23,18 +23,18 @@ ALTER TABLE achievements
 -- Personal milestones — on-demand, no cycle
 UPDATE achievements SET refresh_policy = 'auto', cycle_scoped = FALSE
   WHERE key IN (
-    'beta-tester', 'rookie', 'week-warrior', 'first-deposit', 'first-friend',
-    'savings-starter', 'trio-saver', 'month-master', 'explorer',
-    'streak-master', 'whale', 'savings-baron', 'century-saver'
+    'beta_tester', 'rookie', 'week_warrior', 'first_deposit', 'first_friend',
+    'savings_starter', 'trio_saver', 'month_master', 'explorer',
+    'streak_master', 'whale', 'savings_baron', 'century_saver'
   );
 
 -- Leaderboard badges — on-demand signing, eligibility is rank-based + cycle-scoped
 UPDATE achievements SET refresh_policy = 'auto', cycle_scoped = TRUE
-  WHERE key IN ('first-place', 'second-place', 'third-place');
+  WHERE key IN ('first_place', 'second_place', 'third_place');
 
 -- Redeem-code / limited-edition — manual only
 UPDATE achievements SET refresh_policy = 'manual', cycle_scoped = FALSE
-  WHERE key IN ('churrasquito-05-2026', 'secret-launch');
+  WHERE key IN ('churrasquito_05_2026', 'secret_launch');
 
 COMMIT;
 

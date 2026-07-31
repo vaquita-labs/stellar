@@ -19,6 +19,11 @@ const sections: { href: string; title: string; description: string }[] = [
     description: 'Browse and inspect user deposits.',
   },
   {
+    href: '/wallets',
+    title: 'Wallet balances',
+    description: 'Per-user Blend, DeFindex vault and locked-pool balances, read on-chain.',
+  },
+  {
     href: '/badges',
     title: 'Badges',
     description: 'Manage achievement badges and their rewards.',

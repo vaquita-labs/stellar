@@ -83,6 +83,13 @@ interface InstanceState {
   blendToken: string | null;
   vaultAddress: string | null;
   periods: PeriodRow[];
+  /**
+   * Periods the pool will actually accept, straight from the SupportedLockPeriod
+   * map. This is what `deposit` checks before reverting with InvalidPeriod (#4) —
+   * `periods` above is a different map that only exists once a period has taken
+   * deposits, so it cannot answer "is this period allowed?".
+   */
+  supportedLockPeriods: number[];
 }
 
 /** Decode the pool's instance-storage map into the fields the admin cares about. */
@@ -95,6 +102,7 @@ function decodeInstanceStorage(entry: xdr.LedgerEntryData | undefined): Instance
     blendToken: null,
     vaultAddress: null,
     periods: [],
+    supportedLockPeriods: [],
   };
   const storage = entry?.contractData().val().instance().storage();
   if (!storage) return state;
@@ -111,7 +119,11 @@ function decodeInstanceStorage(entry: xdr.LedgerEntryData | undefined): Instance
     else if (name === 'EarlyWithdrawalFee') state.earlyWithdrawalFeeBps = toStringSafe(val);
     else if (name === 'BlendToken') state.blendToken = String(val);
     else if (name === 'DeFindexVaultAddress') state.vaultAddress = String(val);
-    else if (name === 'Periods') {
+    else if (name === 'SupportedLockPeriod') {
+      // remove_lock_period deletes the entry rather than flipping it, so a
+      // surviving `false` would still mean "not accepted".
+      if (val === true) state.supportedLockPeriods.push(Number(key?.[1] ?? 0));
+    } else if (name === 'Periods') {
       const period = val as { reward_pool?: unknown; total_deposits?: unknown };
       state.periods.push({
         periodSeconds: Number(key?.[1] ?? 0),
@@ -125,7 +137,32 @@ function decodeInstanceStorage(entry: xdr.LedgerEntryData | undefined): Instance
     period.positionsCount = countByPeriod.get(period.periodSeconds) ?? null;
   }
   state.periods.sort((a, b) => a.periodSeconds - b.periodSeconds);
+  state.supportedLockPeriods.sort((a, b) => a - b);
   return state;
+}
+
+/**
+ * Compare the lock periods the app offers (Token.lockPeriods, milliseconds)
+ * against the ones the pool accepts (SupportedLockPeriod, seconds). A period the
+ * DB advertises but the pool does not know makes every deposit on it revert.
+ *
+ * `instanceFound` false means the pool's instance storage could not be read, so
+ * there is no verdict to give and `inSync` stays null instead of lying green.
+ */
+function compareLockPeriods(dbMs: number[], onChainSeconds: number[], instanceFound: boolean) {
+  // The contract rejects a zero period at construction, so a 0 in the DB is the
+  // app's "no lock" entry and never has an on-chain counterpart to match.
+  const dbSeconds = dbMs.filter((ms) => ms > 0).map((ms) => ms / 1000);
+  const missingOnChainSeconds = dbSeconds.filter((s) => !onChainSeconds.includes(s));
+  const missingInDbSeconds = onChainSeconds.filter((s) => !dbSeconds.includes(s));
+  return {
+    onChainSeconds,
+    dbMs,
+    dbSeconds,
+    missingOnChainSeconds,
+    missingInDbSeconds,
+    inSync: instanceFound ? missingOnChainSeconds.length === 0 && missingInDbSeconds.length === 0 : null,
+  };
 }
 
 interface LivePosition {
@@ -195,7 +232,8 @@ export async function GET(req: NextRequest) {
     //    the token/vault addresses the pool is actually wired to on-chain.
     const instanceRes = await server.getLedgerEntries(instanceLedgerKey(pool));
     const instance = decodeInstanceStorage(instanceRes.entries[0]?.val);
-    if (!instanceRes.entries.length) warnings.push('Pool instance storage not found on this network.');
+    const instanceFound = instanceRes.entries.length > 0;
+    if (!instanceFound) warnings.push('Pool instance storage not found on this network.');
 
     const tokenContract =
       instance.blendToken ?? (token.contractAddress && StrKey.isValidContract(token.contractAddress) ? token.contractAddress : null);
@@ -283,6 +321,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const lockPeriods = compareLockPeriods(token.lockPeriods.map(Number), instance.supportedLockPeriods, instanceFound);
+    if (lockPeriods.missingOnChainSeconds.length > 0) {
+      warnings.push(
+        `The app offers lock period(s) ${lockPeriods.missingOnChainSeconds.join(', ')}s that the pool does not accept — deposits on them revert with InvalidPeriod (#4). Register them with add_lock_period or remove them from this token.`,
+      );
+    }
+
     return NextResponse.json({
       data: {
         network: networkPassphrase === Networks.PUBLIC ? 'mainnet' : 'testnet',
@@ -306,6 +351,7 @@ export async function GET(req: NextRequest) {
           totalDepositsFormatted: formatUnits(p.totalDeposits, decimals),
           rewardPoolFormatted: formatUnits(p.rewardPool, decimals),
         })),
+        lockPeriods,
         holders,
         coverage: {
           dbDepositIds: depositIdHexes.length,

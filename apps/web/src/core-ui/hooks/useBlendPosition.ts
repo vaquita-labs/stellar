@@ -10,9 +10,12 @@ export interface BlendPosition {
   usdc: number;
   /** APY de supply del pool para ese USDC, en porcentaje (ej. 0.1 = 0.1%). */
   apy: number;
+  /** Deuda (liabilities) del usuario en ese reserve, en USDC. >0 bloquea el
+   *  retiro total de Blend (health check), lo que importa para la migración. */
+  borrow: number;
 }
 
-const EMPTY: BlendPosition = { usdc: 0, apy: 0 };
+const EMPTY: BlendPosition = { usdc: 0, apy: 0, borrow: 0 };
 
 /**
  * Lee la posición de depósito DIRECTO a Blend del usuario, on-chain y en vivo.
@@ -38,9 +41,11 @@ export const useBlendPosition = (walletAddress?: string) => {
 
       const user = await pool.loadUser(walletAddress);
       const usdc = user.getCollateralFloat(reserve);
+      const borrow = user.getLiabilitiesFloat(reserve);
       return {
         usdc: Number.isFinite(usdc) ? usdc : 0,
         apy: (reserve.estSupplyApy ?? 0) * 100,
+        borrow: Number.isFinite(borrow) ? borrow : 0,
       };
     },
     enabled: !!walletAddress && !!config,

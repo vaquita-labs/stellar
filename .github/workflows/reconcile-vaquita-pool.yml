@@ -86,6 +86,8 @@ jobs:
       PORT: "3100"
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
+      STELLAR_TESTNET_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+      STELLAR_MAINNET_SOROBAN_RPC_URL: https://soroban-rpc.mainnet.stellar.gateway.fm
       STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
       VAQUITA_POOL_CONTRACT_ID: ${{ vars.VAQUITA_POOL_CONTRACT_ID }}
       RECONCILIATION_ENABLED: ${{ vars.RECONCILIATION_ENABLED }}
@@ -205,6 +207,8 @@ jobs:
       PORT: "3100"
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
+      STELLAR_TESTNET_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+      STELLAR_MAINNET_SOROBAN_RPC_URL: https://soroban-rpc.mainnet.stellar.gateway.fm
       STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
       VAQUITA_POOL_CONTRACT_ID: ${{ vars.VAQUITA_POOL_CONTRACT_ID }}
     steps:

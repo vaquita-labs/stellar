@@ -3,7 +3,7 @@
 import { ASSETS } from '@/networks/anclap/anclap';
 import { useAnclapAuthStore } from '@/networks/anclap/anclapAuth';
 import { AnclapCancelled, AnclapError, assetParam, SepTransaction, useAnclap } from '@/networks/anclap/useAnclap';
-import { directBlendWithdraw } from '@/networks/stellar/blendDirect';
+import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import { Button, Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { FiExternalLink } from 'react-icons/fi';
 import { truncateDecimals } from '../../../helpers';
 import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
-import { useLiveBlendUsdc } from '../../../hooks';
+import { useLivePassiveUsdc } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
@@ -93,7 +93,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     live: blendLiveUsdc,
     isLoading: balanceIsLoading,
     refetch: refreshBalance,
-  } = useLiveBlendUsdc(walletAddress ?? undefined);
+  } = useLivePassiveUsdc(walletAddress ?? undefined);
   const balanceFormatted = floorAmount(blendLiveUsdc, AMOUNT_DECIMALS);
 
   const amountNum = Number(amount);
@@ -181,7 +181,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
       // que sin este paso el swap no tendría USDC. `withdrawAll` cuando el monto
       // iguala el disponible (dispara el sentinel i128, evita dejar dust).
       mark('blend', 'running');
-      await directBlendWithdraw({
+      await passiveWithdraw({
         address: walletAddress,
         amount,
         decimals: token.decimals,

@@ -3,20 +3,15 @@ import {
   Contract,
   Keypair,
   nativeToScVal,
-  Networks,
   rpc,
   scValToNative,
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
+import { resolveSorobanNetwork, type SorobanCallOptions } from './rpc';
 
 const EMPTY = { rewardPool: '0', totalDeposits: '0', totalShares: '0' };
 
-const DEFAULT_SOROBAN_RPC = 'https://soroban-testnet.stellar.org';
-
-export type GetPeriodDataOptions = {
-  rpcUrl?: string;
-  networkPassphrase?: string;
-};
+export type GetPeriodDataOptions = SorobanCallOptions;
 
 function normalizeLockPeriodToSeconds(lockPeriod: number): number {
   if (!Number.isFinite(lockPeriod) || lockPeriod <= 0) return 0;
@@ -45,11 +40,14 @@ export type VaquitaPoolPosition = {
 export async function getVaquitaPoolPosition(
   poolContractId: string,
   depositIdHex: string,
-  rpcUrl: string = DEFAULT_SOROBAN_RPC,
+  options?: SorobanCallOptions,
 ): Promise<VaquitaPoolPosition | null> {
   if (!poolContractId || !depositIdHex) return null;
 
   try {
+    const active = resolveSorobanNetwork();
+    const rpcUrl = options?.rpcUrl ?? active.rpcUrl;
+    const networkPassphrase = options?.networkPassphrase ?? active.networkPassphrase;
     const contract = new Contract(poolContractId);
     const server = new rpc.Server(rpcUrl);
     const keypair = Keypair.random();
@@ -57,7 +55,7 @@ export async function getVaquitaPoolPosition(
     const operation = contract.call('get_position', nativeToScVal(depositIdHex, { type: 'string' }));
     const transaction = new TransactionBuilder(account, {
       fee: '100',
-      networkPassphrase: Networks.TESTNET,
+      networkPassphrase,
     })
       .addOperation(operation)
       .setTimeout(30)
@@ -87,8 +85,9 @@ export async function getVaquitaPoolPosition(
 async function getPeriodData(lockPeriod: number, contractId: string, options?: GetPeriodDataOptions) {
   try {
     const contract = new Contract(contractId);
-    const rpcUrl = options?.rpcUrl ?? DEFAULT_SOROBAN_RPC;
-    const networkPassphrase = options?.networkPassphrase ?? Networks.TESTNET;
+    const active = resolveSorobanNetwork();
+    const rpcUrl = options?.rpcUrl ?? active.rpcUrl;
+    const networkPassphrase = options?.networkPassphrase ?? active.networkPassphrase;
     const server = new rpc.Server(rpcUrl);
     
     // Create a dummy account for simulation
@@ -161,13 +160,12 @@ export { getPeriodData };
  * Returns `true` if deposits are currently paused, `false` otherwise.
  * Never throws — returns `false` on any error so callers degrade gracefully.
  */
-export async function getIsPoolPaused(
-  poolContractId: string,
-  rpcUrl: string = DEFAULT_SOROBAN_RPC,
-  networkPassphrase: string = Networks.TESTNET,
-): Promise<boolean> {
+export async function getIsPoolPaused(poolContractId: string, options?: SorobanCallOptions): Promise<boolean> {
   if (!poolContractId) return false;
   try {
+    const active = resolveSorobanNetwork();
+    const rpcUrl = options?.rpcUrl ?? active.rpcUrl;
+    const networkPassphrase = options?.networkPassphrase ?? active.networkPassphrase;
     const contract = new Contract(poolContractId);
     const server = new rpc.Server(rpcUrl);
     const keypair = Keypair.random();

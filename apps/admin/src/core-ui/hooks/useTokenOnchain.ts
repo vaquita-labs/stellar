@@ -37,6 +37,22 @@ export interface OnchainPeriod {
   positionsCount: number | null;
 }
 
+/** Whether the lock periods the app offers match the ones the pool accepts. */
+export interface LockPeriodSync {
+  /** Periods the pool accepts, from its SupportedLockPeriod map. */
+  onChainSeconds: number[];
+  /** Periods the app offers, in the milliseconds the `lock_periods` column stores. */
+  dbMs: number[];
+  /** The same DB periods in seconds, minus the zero entry, as actually compared. */
+  dbSeconds: number[];
+  /** Offered by the app but not accepted by the pool — deposits on these revert. */
+  missingOnChainSeconds: number[];
+  /** Accepted by the pool but not offered by the app, so nobody can pick them. */
+  missingInDbSeconds: number[];
+  /** null when the pool's instance storage could not be read, so there is no verdict. */
+  inSync: boolean | null;
+}
+
 export interface TokenOnchainSnapshot {
   network: 'mainnet' | 'testnet';
   pool: string;
@@ -57,6 +73,7 @@ export interface TokenOnchainSnapshot {
     underlyingFormatted: string | null;
   };
   periods: OnchainPeriod[];
+  lockPeriods: LockPeriodSync;
   /** Live on-chain positions grouped by owner address, biggest first. */
   holders: OnchainHolder[];
   coverage: {

@@ -5,7 +5,7 @@ import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 // TEST — remove before mainnet
 const USDC_TESTNET_ISSUER = 'GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56';
 
-function toBaseUnits(input: string, decimals: number): bigint {
+export function toBaseUnits(input: string, decimals: number): bigint {
   const [wRaw, fRaw = ''] = input.trim().split('.');
   const w = wRaw.replace(/^0+/, '') || '0';
   const f = fRaw.slice(0, decimals).padEnd(decimals, '0');
@@ -69,7 +69,7 @@ function requestKey(params: InvokeContractParams): string {
   return `${params.contractId}:${params.method}:${JSON.stringify(params.args)}`;
 }
 
-async function invokeViaPollar(
+export async function invokeViaPollar(
   client: PollarClient,
   params: InvokeContractParams,
   logLabel: string,
@@ -99,7 +99,7 @@ async function invokeViaPollar(
   return promise;
 }
 
-function requirePollarClient(): PollarClient {
+export function requirePollarClient(): PollarClient {
   const binding = getPollarBinding();
   if (!binding) {
     throw new Error(

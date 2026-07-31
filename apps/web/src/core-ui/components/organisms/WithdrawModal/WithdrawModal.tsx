@@ -2,7 +2,7 @@
 
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
-import { useLiveBlendUsdc } from '@/core-ui/hooks';
+import { useLivePassiveUsdc, usePassiveLabel, usePassiveMigration } from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { motion, useAnimationControls } from 'framer-motion';
@@ -45,7 +45,17 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const { wallet } = usePollar();
   const { data: profile } = useProfileData();
   const savvy = !!profile?.cryptoSavvy;
-  const { live: blendLiveUsdc } = useLiveBlendUsdc(walletAddress);
+  // Withdrawable balance: the vault position when the passive-vault flag is on
+  // (funds migrated out of Blend), else the legacy Blend position. The withdraw
+  // action itself routes accordingly via passiveWithdraw.
+  const { live: primaryLiveUsdc, vaultOn } = useLivePassiveUsdc(walletAddress);
+  const passiveLabel = usePassiveLabel();
+  // Leftover legacy Blend balance (should be 0 after migration): surfaced with its
+  // own withdraw button so a user who still holds Blend can pull it out.
+  const { blendBalance, hasBorrow, withdrawToWallet } = usePassiveMigration(walletAddress);
+  const showBlendLeftover = vaultOn && blendBalance > 0;
+  const [blendBusy, setBlendBusy] = useState(false);
+  const [blendError, setBlendError] = useState<string | null>(null);
   const { data: savedWallets = [], isLoading: walletsLoading } = useSavedWallets();
   const deleteWallet = useDeleteSavedWallet();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -89,11 +99,24 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         { key: 'sending', label: t('withdraw.steps.sending', 'Sending to your wallet') },
       ];
 
-  // Saldo retirable = la posición directa en Blend (líquida, sin lock), proyectada
-  // en vivo con `useLiveBlendUsdc` (la MISMA fuente que el header, así el saldo de
-  // arriba y el "Available" corren juntos y coinciden). Piso a 7 decimales (nunca
-  // hacia arriba) para no aparentar plata que no existe.
-  const available = floorAmount(blendLiveUsdc, AMOUNT_DECIMALS);
+  // Saldo retirable = la posición pasiva (líquida, sin lock: vault de DeFindex o
+  // Blend según el flag), proyectada en vivo con `useLivePassiveUsdc` (la MISMA
+  // fuente que el header, así el saldo de arriba y el "Available" corren juntos y
+  // coinciden). Piso a 7 decimales (nunca hacia arriba) para no aparentar plata
+  // que no existe.
+  const available = floorAmount(primaryLiveUsdc, AMOUNT_DECIMALS);
+
+  const handleBlendWithdraw = async () => {
+    setBlendBusy(true);
+    setBlendError(null);
+    try {
+      await withdrawToWallet();
+    } catch (e) {
+      setBlendError((e as Error)?.message ?? t('withdraw.error.generic', 'Something went wrong'));
+    } finally {
+      setBlendBusy(false);
+    }
+  };
 
   // Wallet propia sintética (login externo): el retiro vuelve al firmante.
   const ownWallet: SavedWallet | null =
@@ -253,6 +276,32 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         </button>
       </div>
 
+      {showBlendLeftover && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-black/15 bg-black/5 px-3 py-2">
+          <span className="text-sm text-gray-600">
+            {t('withdraw.blendLeftover', 'In Blend')}: {formatUsdPrecise(blendBalance)}
+          </span>
+          <div className="flex flex-col items-end">
+            <PressableButton
+              variant="white"
+              size="chip"
+              disabled={hasBorrow || blendBusy}
+              onClick={() => void handleBlendWithdraw()}
+            >
+              {blendBusy
+                ? t('withdraw.withdrawing', 'Withdrawing…')
+                : t('withdraw.withdrawFromBlend', 'Withdraw from Blend')}
+            </PressableButton>
+            {hasBorrow && (
+              <span className="mt-1 text-[11px] text-warning">
+                {t('withdraw.blendBorrow', 'Repay your Blend borrow first')}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+      {blendError && <p className="text-sm text-error">{blendError}</p>}
+
       {isExternalWallet ? (
         // Externa: destino fijo (tu wallet), sin selector.
         <div className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-2.5">
@@ -396,7 +445,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
         <span className="text-gray-500">{t('withdraw.fromLabel', 'From')}</span>
-        <span className="font-bold text-black">{t('portfolio.blend.label', 'Blend · Flexible')}</span>
+        <span className="font-bold text-black">{passiveLabel}</span>
       </div>
 
       {destination ? (
