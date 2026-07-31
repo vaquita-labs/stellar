@@ -389,7 +389,7 @@ const BadgeFormModal = ({
           <Input
             label="Icon (path or URL)"
             containerClassName="flex-1"
-            placeholder="/icons/achievements/<key>.png"
+            placeholder="/icons/achievements/rookie.png — blank shows a generic trophy"
             value={form.icon}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('icon', e.target.value)}
           />

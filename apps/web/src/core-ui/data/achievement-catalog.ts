@@ -48,12 +48,19 @@ type CatalogApiAchievement = {
 
 const VALID_TIERS: ReadonlySet<string> = new Set(['Bronze', 'Silver', 'Gold', 'Diamond', 'Founder']);
 
+/**
+ * Shown for a badge whose row carries no `icon`. Deriving the path from the key
+ * only guesses at a file: nothing ties a badge key to an asset on disk, and the
+ * OG renderer has no way to recover from a miss — it would emit a card with a
+ * hole where the badge goes.
+ */
+const PLACEHOLDER_ICON = '/icons/global/trophy.png';
+
 const toCatalogAchievement = (a: CatalogApiAchievement): CatalogAchievement => ({
   id: a.key,
   title: a.name,
   description: a.description,
-  // Convention when the row carries no explicit icon: `/icons/achievements/<key>.png`.
-  icon: a.icon ?? `/icons/achievements/${a.key}.png`,
+  icon: a.icon ?? PLACEHOLDER_ICON,
   accent: a.accent ?? undefined,
   tier: a.tier && VALID_TIERS.has(a.tier) ? (a.tier as CatalogAchievement['tier']) : undefined,
 });
