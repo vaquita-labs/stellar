@@ -1,6 +1,7 @@
 'use client';
 
 import { AMOUNT_DECIMALS, formatTokenPrecise, formatUsdPrecise } from '@/core-ui/helpers/numbers';
+import { humanizeTxError } from '@/core-ui/helpers/txError';
 import { Spinner } from '@heroui/react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -166,7 +167,7 @@ export function MoveFundsSheet({
       await onSubmit({ amount: numericAmount, from, to });
       setStep('success');
     } catch (e) {
-      setError((e as Error)?.message ?? t('common.somethingWentWrong', 'Something went wrong'));
+      setError(humanizeTxError(e, t).title);
       setStep('confirm');
     }
   };

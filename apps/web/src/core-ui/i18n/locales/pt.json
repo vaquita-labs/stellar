@@ -467,6 +467,9 @@
       "onlyPositiveAmount": "O valor deve ser maior que zero",
       "unauthorized": "Não autorizado",
       "underlyingAmountBelowMin": "O preço mudou além do seu limite, tente novamente"
+    },
+    "transfer": {
+      "creditNotVisible": "Ainda não vemos os fundos na sua carteira. Eles estão seguros: verifique seu saldo em um minuto e conclua o depósito."
     }
   },
   "home": {
@@ -1958,7 +1961,9 @@
       "note": "Seus fundos (mais juros) voltam para suas economias, onde ficam flexíveis e continuam rendendo.",
       "successTitle": "De volta nas suas economias!",
       "successSubtitle": "Seus fundos estão flexíveis de novo e continuam rendendo nas suas economias.",
-      "cta": "Sacar para suas economias"
+      "cta": "Sacar para suas economias",
+      "incompleteTitle": "Seu dinheiro está na sua carteira",
+      "incompleteSubtitle": "Tiramos da vaquinha, mas não conseguimos colocá-lo de volta nas suas economias. Nada foi perdido: deposite de novo quando quiser."
     },
     "vault": {
       "label": "Vault · Flexível"
@@ -1970,7 +1975,8 @@
     "trustline": "Sua carteira precisa habilitar o USDC primeiro. Adicione a trustline de USDC e tente de novo.",
     "balance": "Você não tem saldo suficiente para cobrir esta transação e a taxa de rede.",
     "network": "Não conseguimos conectar à rede. Verifique sua conexão e tente de novo.",
-    "timeout": "A transação demorou demais para confirmar. Tente novamente.",
+    "timeout": "A rede está demorando mais do que o normal. Verifique seu saldo antes de tentar de novo.",
+    "pending": "Sua transação foi enviada e ainda está confirmando. Verifique seu saldo em um minuto antes de tentar de novo.",
     "contractGeneric": "A rede rejeitou a transação. Tente novamente.",
     "contract": {
       "10": "Você não tem USDC suficiente na carteira para cobrir este valor. Adicione fundos e tente de novo.",

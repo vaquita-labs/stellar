@@ -467,6 +467,9 @@
       "onlyPositiveAmount": "El monto debe ser mayor a cero",
       "unauthorized": "No autorizado",
       "underlyingAmountBelowMin": "El precio se movió más allá de tu límite, intenta de nuevo"
+    },
+    "transfer": {
+      "creditNotVisible": "Todavía no vemos los fondos en tu wallet. Están seguros: revisá tu saldo en un minuto y completá el depósito."
     }
   },
   "home": {
@@ -2024,7 +2027,9 @@
       "note": "Tus fondos (más intereses) vuelven a tus ahorros, donde siguen flexibles y generando rendimiento.",
       "successTitle": "¡De vuelta en tus ahorros!",
       "successSubtitle": "Tus fondos vuelven a estar flexibles y siguen generando rendimiento en tus ahorros.",
-      "cta": "Retirar a tus ahorros"
+      "cta": "Retirar a tus ahorros",
+      "incompleteTitle": "Tu plata está en tu wallet",
+      "incompleteSubtitle": "La sacamos de la vaquita, pero no pudimos volver a ponerla en tus ahorros. No se perdió nada: depositala de nuevo cuando quieras."
     },
     "vault": {
       "label": "Vault · Flexible"
@@ -2036,7 +2041,8 @@
     "trustline": "Tu wallet necesita habilitar USDC primero. Agregá la trustline de USDC y volvé a intentar.",
     "balance": "No tenés saldo suficiente para cubrir esta transacción y su comisión de red.",
     "network": "No pudimos conectar con la red. Revisá tu conexión y volvé a intentar.",
-    "timeout": "La transacción tardó demasiado en confirmarse. Probá de nuevo.",
+    "timeout": "La red está tardando más de lo normal. Revisá tu saldo antes de volver a intentar.",
+    "pending": "Tu transacción se envió y todavía está confirmándose. Revisá tu saldo en un minuto antes de volver a intentar.",
     "contractGeneric": "La red rechazó la transacción. Probá de nuevo.",
     "contract": {
       "10": "No tenés suficiente USDC en tu wallet para cubrir este monto. Agregá fondos y volvé a intentar.",

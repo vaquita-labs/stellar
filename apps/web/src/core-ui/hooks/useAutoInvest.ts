@@ -1,4 +1,5 @@
 import { blendConfigForToken } from '@/networks/stellar/blendDirect';
+import { humanizeTxError } from '@/core-ui/helpers/txError';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
 import { usePollarReadyStore } from '@/networks/stellar/wallet/pollarReady';
 import { toast } from '@heroui/react';
@@ -114,7 +115,7 @@ export const useIdleFunds = () => {
       // La firma custodial puede fallar por sesión (nonce) o falta de gas (XLM).
       // Mostramos el error en la pantalla y dejamos reintentar; no barremos solos.
       console.warn('[idle-funds] invest failed', e);
-      setError((e as Error)?.message ?? t('withdraw.error.generic', 'Something went wrong'));
+      setError(humanizeTxError(e, t).title);
       throw e;
     } finally {
       inFlight.current = false;
