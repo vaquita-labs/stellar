@@ -1,9 +1,10 @@
 import { Networks, StrKey } from '@stellar/stellar-sdk';
-import { prisma } from '@vaquita/db';
+import { Prisma, prisma } from '@vaquita/db';
 import { getWalletPositions } from '@vaquita/shared/services/stellar/wallet-positions';
 import { NextResponse, type NextRequest } from 'next/server';
 import { rpcUrlFor } from '@/lib/contractEvents';
 import { adminSecretOk } from '@/lib/adminSecret';
+import { getVaquitaPositionsByWallet } from '@/lib/vaquitaPositions';
 
 // One wallet's on-chain USDC positions: how much it holds in the DeFindex vault
 // (new passive) and directly in Blend (legacy). Read-only, admin-gated. This is
@@ -48,12 +49,16 @@ export async function GET(req: NextRequest) {
       decimals: token.decimals ?? 7,
     });
 
+    // Locked Vaquita-pool positions by period (from the deposits table).
+    const vaquitaPositions = ((await getVaquitaPositionsByWallet([wallet])).get(wallet) ??
+      []) as unknown as Prisma.InputJsonValue;
+
     // Persist the snapshot so the table shows this wallet on reload (the scrape
     // batch uses the same upsert). Keyed by (wallet, token) → idempotent.
     await prisma.walletOnchainBalance.upsert({
       where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
-      create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, scrapedAt: new Date() },
-      update: { blendUsdc, vaultUsdc, scrapedAt: new Date(), lastError: null },
+      create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date() },
+      update: { blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date(), lastError: null },
     });
 
     return NextResponse.json({
@@ -62,6 +67,7 @@ export async function GET(req: NextRequest) {
         network: networkPassphrase === Networks.PUBLIC ? 'mainnet' : 'testnet',
         blendUsdc,
         vaultUsdc,
+        vaquitaPositions,
         total: blendUsdc + vaultUsdc,
       },
     });

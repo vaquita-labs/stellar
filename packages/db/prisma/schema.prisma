@@ -520,6 +520,9 @@ model WalletOnchainBalance {
   tokenId       Int       @map("token_id")
   blendUsdc     Decimal   @default(0) @map("blend_usdc") @db.Decimal
   vaultUsdc     Decimal   @default(0) @map("vault_usdc") @db.Decimal
+  // Locked Vaquita-pool deposits by lock period: [{ period, amount }] (from the
+  // deposits table). Persisted so the snapshot row is a self-contained record.
+  vaquitaPositions Json   @default(dbgenerated("'[]'::jsonb")) @map("vaquita_positions")
   scrapedAt     DateTime  @map("scraped_at") @db.Timestamptz(6)
   lastError     String?   @map("last_error")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

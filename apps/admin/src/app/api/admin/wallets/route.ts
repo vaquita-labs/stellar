@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
       blendUsdc,
       vaultUsdc,
       locked,
+      vaquitaPositions: s.vaquitaPositions,
       total: blendUsdc + vaultUsdc + locked,
       lastError: s.lastError,
       scrapedAt: s.scrapedAt.toISOString(),

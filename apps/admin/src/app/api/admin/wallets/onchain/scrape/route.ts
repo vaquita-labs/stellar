@@ -1,9 +1,10 @@
 import { Networks, StrKey } from '@stellar/stellar-sdk';
-import { prisma } from '@vaquita/db';
+import { Prisma, prisma } from '@vaquita/db';
 import { getWalletPositions, type WalletPositionConfig } from '@vaquita/shared/services/stellar/wallet-positions';
 import { NextResponse, type NextRequest } from 'next/server';
 import { rpcUrlFor } from '@/lib/contractEvents';
 import { adminSecretOk } from '@/lib/adminSecret';
+import { getVaquitaPositionsByWallet } from '@/lib/vaquitaPositions';
 
 // Throttled batch scrape for the Wallets tab, safe for public RPC: reads a page of
 // profiles (or an explicit wallet list, for retry-failed) SEQUENTIALLY with a delay
@@ -78,24 +79,30 @@ export async function POST(req: NextRequest) {
         .map((p) => p.walletAddress)
         .filter(isValidWallet);
 
+  // Locked Vaquita-pool positions by period (DB-only, so available even if the
+  // on-chain read for a wallet fails). One query for the whole batch.
+  const positionsByWallet = await getVaquitaPositionsByWallet(wallets);
+
   const results: { wallet: string; blendUsdc: number; vaultUsdc: number; lastError: string | null }[] = [];
   for (let i = 0; i < wallets.length; i++) {
     const wallet = wallets[i]!;
+    const vaquitaPositions = (positionsByWallet.get(wallet) ?? []) as unknown as Prisma.InputJsonValue;
     try {
       const { blendUsdc, vaultUsdc } = await readWithBackoff(wallet, cfg);
       await prisma.walletOnchainBalance.upsert({
         where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
-        create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, scrapedAt: new Date() },
-        update: { blendUsdc, vaultUsdc, scrapedAt: new Date(), lastError: null },
+        create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date() },
+        update: { blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date(), lastError: null },
       });
       results.push({ wallet, blendUsdc, vaultUsdc, lastError: null });
     } catch (e) {
       const message = e instanceof Error ? e.message : 'read failed';
-      // Preserve the last good balances on failure — only stamp the error.
+      // Preserve the last good balances on failure — only stamp the error. The
+      // Vaquita positions are DB-derived, so we can still refresh them.
       await prisma.walletOnchainBalance.upsert({
         where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
-        create: { walletAddress: wallet, tokenId: token.id, blendUsdc: 0, vaultUsdc: 0, scrapedAt: new Date(), lastError: message },
-        update: { scrapedAt: new Date(), lastError: message },
+        create: { walletAddress: wallet, tokenId: token.id, blendUsdc: 0, vaultUsdc: 0, vaquitaPositions, scrapedAt: new Date(), lastError: message },
+        update: { vaquitaPositions, scrapedAt: new Date(), lastError: message },
       });
       results.push({ wallet, blendUsdc: 0, vaultUsdc: 0, lastError: message });
     }
