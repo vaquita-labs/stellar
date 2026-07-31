@@ -79,7 +79,6 @@ export const CoinAnimation = ({ targetPosition, onComplete, coinCount = 8 }: Coi
             width={40}
             height={40}
             className="object-contain"
-            priority
           />
         </motion.div>
       ))}
