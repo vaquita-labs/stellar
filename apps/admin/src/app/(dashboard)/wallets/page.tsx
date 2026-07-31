@@ -1,7 +1,7 @@
 'use client';
 
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { Button, Card, Input } from '@vaquita/ui';
+import { Button, Card, Checkbox, Input } from '@vaquita/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
@@ -60,6 +60,8 @@ export default function WalletsPage() {
 
   const [sortKey, setSortKey] = useState<SortKey>('total');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [nonZeroOnly, setNonZeroOnly] = useState(false);
+  const [notMigratedOnly, setNotMigratedOnly] = useState(false);
 
   const { data: rows = [], isLoading: listLoading } = useQuery<WalletRow[]>({
     queryKey: ['admin', 'wallets'],
@@ -75,9 +77,19 @@ export default function WalletsPage() {
     return [...rows].sort((a, b) => (a[sortKey] - b[sortKey]) * dir);
   }, [rows, sortKey, sortDir]);
 
+  const filtered = useMemo(
+    () =>
+      sorted.filter((r) => {
+        if (nonZeroOnly && r.blendUsdc === 0 && r.vaultUsdc === 0 && r.locked === 0) return false;
+        if (notMigratedOnly && !(r.blendUsdc > 0 && r.vaultUsdc === 0)) return false;
+        return true;
+      }),
+    [sorted, nonZeroOnly, notMigratedOnly],
+  );
+
   const totals = useMemo(
     () =>
-      sorted.reduce(
+      filtered.reduce(
         (acc, r) => ({
           blend: acc.blend + r.blendUsdc,
           vault: acc.vault + r.vaultUsdc,
@@ -86,8 +98,33 @@ export default function WalletsPage() {
         }),
         { blend: 0, vault: 0, locked: 0, total: 0 },
       ),
-    [sorted],
+    [filtered],
   );
+
+  const csvCell = (v: string | number) => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const exportCsv = () => {
+    const header = ['wallet', 'user', 'blend', 'vault', 'locked', 'total', 'status', 'last_read'];
+    const lines = filtered.map((r) => [
+      r.wallet,
+      r.nickname ?? r.email ?? '',
+      r.blendUsdc,
+      r.vaultUsdc,
+      r.locked,
+      r.total,
+      statusOf(r),
+      r.lastError ? `error: ${r.lastError}` : r.scrapedAt,
+    ]);
+    const csv = [header, ...lines].map((row) => row.map(csvCell).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wallets-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const failedWallets = rows.filter((r) => r.lastError).map((r) => r.wallet);
   const scrapedSoFar = total != null ? Math.min(cursor, total) : cursor;
@@ -205,6 +242,23 @@ export default function WalletsPage() {
 
       {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
+      <div className="flex items-center gap-4 mb-3">
+        <Checkbox
+          checked={nonZeroOnly}
+          onChange={(e) => setNonZeroOnly(e.target.checked)}
+          label="Non-zero only"
+        />
+        <Checkbox
+          checked={notMigratedOnly}
+          onChange={(e) => setNotMigratedOnly(e.target.checked)}
+          label="Not migrated only"
+        />
+        <div className="flex-1" />
+        <Button variant="ghost" onPress={exportCsv} isDisabled={filtered.length === 0}>
+          Export CSV
+        </Button>
+      </div>
+
       <Card className="p-0 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-black/5 text-left text-xs text-gray-500">
@@ -226,14 +280,14 @@ export default function WalletsPage() {
                   Loading…
                 </td>
               </tr>
-            ) : sorted.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
-                  No data yet — scrape a batch or search a wallet to start.
+                  {rows.length === 0 ? 'No data yet — scrape a batch or search a wallet to start.' : 'No wallets match the filters.'}
                 </td>
               </tr>
             ) : (
-              sorted.map((r) => {
+              filtered.map((r) => {
                 const st = STATUS[statusOf(r)];
                 return (
                   <tr key={r.wallet} className="border-t border-black/[0.06]">
@@ -262,11 +316,11 @@ export default function WalletsPage() {
               })
             )}
           </tbody>
-          {sorted.length > 0 && (
+          {filtered.length > 0 && (
             <tfoot className="border-t-2 border-black/10 font-semibold">
               <tr>
                 <td className="px-3 py-2" colSpan={2}>
-                  Totals ({sorted.length})
+                  Totals ({filtered.length})
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.blend)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.vault)}</td>
