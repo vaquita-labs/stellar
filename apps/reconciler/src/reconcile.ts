@@ -14,7 +14,7 @@ import {
   type ReconciliationRunInput,
 } from '@vaquita/shared/services/reconciliation/index';
 
-import { logger } from '../lib/logger';
+import { logger } from './logger';
 
 type CliOptions = {
   fromLedger: number | null;

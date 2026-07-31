@@ -6,9 +6,6 @@
   "scripts": {
     "dev": "tsx watch src/app-api.ts",
     "start": "tsx src/app-api.ts",
-    "reconcile:devnet": "tsx src/scripts/reconcile.ts",
-    "reconcile:mainnet": "tsx src/scripts/reconcile.ts",
-    "reconcile:testnet": "tsx src/scripts/reconcile.ts",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

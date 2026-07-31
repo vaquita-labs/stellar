@@ -148,7 +148,7 @@ Scope guard:
 
 Append later:
 
-- Command: `pnpm --filter @vaquita/api reconcile:mainnet -- --start-ledger <ledger> --end-ledger <ledger> --dry-run=true --artifact reconciliation.json`
+- Command: `pnpm --filter @vaquita/reconciler reconcile:mainnet -- --start-ledger <ledger> --end-ledger <ledger> --dry-run=true --artifact reconciliation.json`
 - Configuration precedence:
   - Pool contract IDs: `--pool-contract-id`, then `VAQUITA_POOL_CONTRACT_IDS`, then `VAQUITA_POOL_CONTRACT_ID`, then project config token `vaquitaContractAddress` values.
   - RPC URL: `--rpc-url`, then `STELLAR_RPC_URL`, then `MAINNET_STELLAR_RPC_URL`.
