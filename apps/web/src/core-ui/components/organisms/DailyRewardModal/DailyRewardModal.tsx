@@ -3,6 +3,7 @@
 import { Button } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
+import { getBlurProps } from '@/core-ui/data/blur-placeholders.generated';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
@@ -167,11 +168,11 @@ export function DailyRewardModal({
                 style={{ width: chestPx, height: chestPx }}
               />
               <Image
-                src="/icons/global/shiny_chest_open.png"
+                src="/icons/global/shiny_chest_open.webp"
                 alt={t('rewards.daily.chestOpenAlt', 'Open chest')}
                 width={chestPx}
                 height={chestPx}
-                priority
+                {...getBlurProps('/icons/global/shiny_chest_open.webp')}
                 draggable={false}
                 className="relative pointer-events-none"
                 style={{ filter: 'drop-shadow(0 0 14px rgba(251, 191, 36, 0.9))' }}
@@ -189,7 +190,7 @@ export function DailyRewardModal({
               className="flex items-center justify-center gap-3"
             >
               <span className="text-5xl font-bold text-black">+{coinsToCollect}</span>
-              <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={64} height={64} priority draggable={false} className="pointer-events-none" />
+              <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={64} height={64} draggable={false} className="pointer-events-none" />
             </motion.div>
           </>
         ) : step === 'streak' ? (
@@ -210,7 +211,6 @@ export function DailyRewardModal({
                 alt={t('rewards.daily.streakAlt', 'streak')}
                 width={140}
                 height={140}
-                priority
                 draggable={false}
                 className="relative pointer-events-none"
                 style={{ filter: 'drop-shadow(0 0 16px rgba(251, 146, 60, 0.75))' }}
@@ -298,11 +298,11 @@ export function DailyRewardModal({
                 }
               >
                 <Image
-                  src="/icons/global/shiny_chest.png"
+                  src="/icons/global/shiny_chest.webp"
                   alt={t('rewards.daily.chestClosedAlt', 'Closed chest')}
                   width={chestPx}
                   height={chestPx}
-                  priority
+                  {...getBlurProps('/icons/global/shiny_chest.webp')}
                   draggable={false}
                   className="relative pointer-events-none"
                   style={{ filter: 'drop-shadow(0 0 10px rgba(251, 191, 36, 0.85))' }}

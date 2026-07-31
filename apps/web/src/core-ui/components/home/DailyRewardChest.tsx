@@ -119,7 +119,7 @@ export const DailyRewardChest = ({ variant = 'floating' }: { variant?: 'floating
         />
       )}
       <Image
-        src={canCollect ? '/icons/global/shiny_chest.png' : '/icons/global/chest.png'}
+        src={canCollect ? '/icons/global/shiny_chest.webp' : '/icons/global/chest.webp'}
         alt={t('home.dailyReward.chestAlt', 'Chest')}
         width={chestSize}
         height={chestSize}

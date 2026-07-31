@@ -37,7 +37,7 @@ export const MapQuickActions = () => {
     <div className="flex flex-col items-center gap-2">
       <Link href="/explore" aria-label={t('shell.nav.explore', 'Explore')} className="active:scale-95 transition-transform">
         <Image
-          src="/icons/navigation/world.png"
+          src="/icons/navigation/world.webp"
           alt={t('shell.nav.explore', 'Explore')}
           width={40}
           height={40}

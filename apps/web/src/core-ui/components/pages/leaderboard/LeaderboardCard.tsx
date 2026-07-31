@@ -46,9 +46,9 @@ export type LeaderboardCardData = {
 /** Top-3 medals as art, not emoji: the emoji rendered differently on every
  *  platform and clashed with the rest of the game's icon set. */
 const MEDALS: Record<number, string> = {
-  1: '/icons/global/gold_medal.png',
-  2: '/icons/global/silver_medal.png',
-  3: '/icons/global/bronze_medal.png',
+  1: '/icons/global/gold_medal.webp',
+  2: '/icons/global/silver_medal.webp',
+  3: '/icons/global/bronze_medal.webp',
 };
 
 /* ------------------------------------------------------------------ */
