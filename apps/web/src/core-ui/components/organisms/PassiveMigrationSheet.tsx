@@ -6,6 +6,7 @@ import { AMOUNT_DECIMALS, floorAmount, formatUsdAdaptive } from '@/core-ui/helpe
 import { usePassiveMigration } from '@/core-ui/hooks/usePassiveMigration';
 import { AmountKeypad } from '../molecules/AmountKeypad';
 import { AppModal } from '../molecules/AppModal';
+import { ErrorNotice } from '../molecules/ErrorNotice';
 import { PressableButton } from '../molecules/PressableButton';
 
 /**
@@ -27,7 +28,9 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
   const { t } = useTranslation();
   const { needsMigration, isExternal, hasBorrow, blendBalance, migrateToVault } = usePassiveMigration(walletAddress);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
+  // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
+  const [error, setError] = useState<unknown>(null);
   const [dismissed, setDismissed] = useState(false);
   const [amount, setAmount] = useState('');
 
@@ -49,7 +52,7 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
       await migrateToVault(chosen);
       setAmount('');
     } catch (e) {
-      setError((e as Error)?.message ?? t('withdraw.error.generic', 'Something went wrong'));
+      setError(e ?? new Error(t('withdraw.error.generic', 'Something went wrong')));
     } finally {
       setBusy(false);
     }
@@ -122,7 +125,7 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
         </PressableButton>
       )}
 
-      {error && <p className="text-sm text-error">{error}</p>}
+      {error ? <ErrorNotice error={error} /> : null}
     </AppModal>
   );
 }
