@@ -3,7 +3,7 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { Button, Card, Input } from '@vaquita/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface WalletRow {
   wallet: string;
@@ -11,10 +11,14 @@ interface WalletRow {
   email: string | null;
   blendUsdc: number;
   vaultUsdc: number;
+  locked: number;
   total: number;
   lastError: string | null;
   scrapedAt: string;
 }
+
+type SortKey = 'blendUsdc' | 'vaultUsdc' | 'locked' | 'total';
+type Status = 'migrated' | 'not-migrated' | 'partial' | 'empty';
 
 const BATCH = 10;
 
@@ -27,17 +31,35 @@ const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 
 const shortWallet = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-5)}` : a);
 const shortTime = (iso: string) => new Date(iso).toLocaleString();
 
+// Migration status from the passive numbers only (Locked doesn't affect it).
+const statusOf = (r: WalletRow): Status => {
+  const hasBlend = r.blendUsdc > 0;
+  const hasVault = r.vaultUsdc > 0;
+  if (hasBlend && hasVault) return 'partial';
+  if (hasVault) return 'migrated';
+  if (hasBlend) return 'not-migrated';
+  return 'empty';
+};
+const STATUS: Record<Status, { label: string; cls: string }> = {
+  migrated: { label: 'Migrated', cls: 'bg-green-100 text-green-700' },
+  'not-migrated': { label: 'Not migrated', cls: 'bg-amber-100 text-amber-700' },
+  partial: { label: 'Partial', cls: 'bg-blue-100 text-blue-700' },
+  empty: { label: 'Empty', cls: 'bg-gray-100 text-gray-500' },
+};
+
 export default function WalletsPage() {
   const queryClient = useQueryClient();
   const [wallet, setWallet] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Batch scrape cursor: how many profiles have been scraped so far.
   const [scraping, setScraping] = useState(false);
   const [cursor, setCursor] = useState(0);
   const [total, setTotal] = useState<number | null>(null);
   const [allDone, setAllDone] = useState(false);
+
+  const [sortKey, setSortKey] = useState<SortKey>('total');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const { data: rows = [], isLoading: listLoading } = useQuery<WalletRow[]>({
     queryKey: ['admin', 'wallets'],
@@ -48,7 +70,36 @@ export default function WalletsPage() {
     },
   });
 
+  const sorted = useMemo(() => {
+    const dir = sortDir === 'desc' ? -1 : 1;
+    return [...rows].sort((a, b) => (a[sortKey] - b[sortKey]) * dir);
+  }, [rows, sortKey, sortDir]);
+
+  const totals = useMemo(
+    () =>
+      sorted.reduce(
+        (acc, r) => ({
+          blend: acc.blend + r.blendUsdc,
+          vault: acc.vault + r.vaultUsdc,
+          locked: acc.locked + r.locked,
+          total: acc.total + r.total,
+        }),
+        { blend: 0, vault: 0, locked: 0, total: 0 },
+      ),
+    [sorted],
+  );
+
   const failedWallets = rows.filter((r) => r.lastError).map((r) => r.wallet);
+  const scrapedSoFar = total != null ? Math.min(cursor, total) : cursor;
+
+  const toggleSort = (k: SortKey) => {
+    if (sortKey === k) setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
+    else {
+      setSortKey(k);
+      setSortDir('desc');
+    }
+  };
+  const sortArrow = (k: SortKey) => (sortKey === k ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '');
 
   const search = async () => {
     const addr = wallet.trim();
@@ -99,14 +150,22 @@ export default function WalletsPage() {
     }
   };
 
-  const scrapedSoFar = total != null ? Math.min(cursor, total) : cursor;
+  const numTh = (label: string, k: SortKey) => (
+    <th
+      className="px-3 py-2 font-medium text-right cursor-pointer select-none whitespace-nowrap"
+      onClick={() => toggleSort(k)}
+    >
+      {label}
+      {sortArrow(k)}
+    </th>
+  );
 
   return (
-    <div className="p-6 max-w-4xl">
+    <div className="p-6 max-w-5xl">
       <h1 className="text-2xl font-bold mb-1">Wallets</h1>
       <p className="text-sm text-gray-500 mb-4">
-        On-chain Blend and DeFindex vault USDC per user. Scrape reads users in throttled batches; search reads any
-        wallet on demand.
+        Per-user balances: Blend + Vault read on-chain, Locked from the pool deposits. Scrape reads users in throttled
+        batches; search reads any wallet on demand.
       </p>
 
       <div className="flex items-start gap-2 mb-4">
@@ -152,46 +211,71 @@ export default function WalletsPage() {
             <tr>
               <th className="px-3 py-2 font-medium">Wallet</th>
               <th className="px-3 py-2 font-medium">User</th>
-              <th className="px-3 py-2 font-medium text-right">Blend</th>
-              <th className="px-3 py-2 font-medium text-right">Vault</th>
+              {numTh('Blend', 'blendUsdc')}
+              {numTh('Vault', 'vaultUsdc')}
+              {numTh('Locked', 'locked')}
+              {numTh('Total', 'total')}
+              <th className="px-3 py-2 font-medium">Status</th>
               <th className="px-3 py-2 font-medium text-right">Last read</th>
             </tr>
           </thead>
           <tbody>
             {listLoading ? (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
                   Loading…
                 </td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-gray-400">
+                <td colSpan={8} className="px-3 py-6 text-center text-gray-400">
                   No data yet — scrape a batch or search a wallet to start.
                 </td>
               </tr>
             ) : (
-              rows.map((r) => (
-                <tr key={r.wallet} className="border-t border-black/[0.06]">
-                  <td className="px-3 py-2 font-mono" title={r.wallet}>
-                    {shortWallet(r.wallet)}
-                  </td>
-                  <td className="px-3 py-2">{r.nickname ?? r.email ?? '—'}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{fmt(r.blendUsdc)}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{fmt(r.vaultUsdc)}</td>
-                  <td className="px-3 py-2 text-right text-xs text-gray-500">
-                    {r.lastError ? (
-                      <span className="text-red-600" title={r.lastError}>
-                        ⚠ error
-                      </span>
-                    ) : (
-                      shortTime(r.scrapedAt)
-                    )}
-                  </td>
-                </tr>
-              ))
+              sorted.map((r) => {
+                const st = STATUS[statusOf(r)];
+                return (
+                  <tr key={r.wallet} className="border-t border-black/[0.06]">
+                    <td className="px-3 py-2 font-mono" title={r.wallet}>
+                      {shortWallet(r.wallet)}
+                    </td>
+                    <td className="px-3 py-2">{r.nickname ?? r.email ?? '—'}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmt(r.blendUsdc)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmt(r.vaultUsdc)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmt(r.locked)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums font-semibold">{fmt(r.total)}</td>
+                    <td className="px-3 py-2">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${st.cls}`}>{st.label}</span>
+                    </td>
+                    <td className="px-3 py-2 text-right text-xs text-gray-500">
+                      {r.lastError ? (
+                        <span className="text-red-600" title={r.lastError}>
+                          ⚠ error
+                        </span>
+                      ) : (
+                        shortTime(r.scrapedAt)
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
+          {sorted.length > 0 && (
+            <tfoot className="border-t-2 border-black/10 font-semibold">
+              <tr>
+                <td className="px-3 py-2" colSpan={2}>
+                  Totals ({sorted.length})
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.blend)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.vault)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.locked)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(totals.total)}</td>
+                <td className="px-3 py-2" colSpan={2} />
+              </tr>
+            </tfoot>
+          )}
         </table>
       </Card>
     </div>

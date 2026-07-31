@@ -24,9 +24,24 @@ export async function GET(req: NextRequest) {
     : [];
   const byWallet = new Map(profiles.map((p) => [p.walletAddress, p]));
 
+  // Locked = the wallet's active locked-pool deposits (confirmed, not yet
+  // withdrawn), summed from the deposits table. DB-only, no RPC — always current.
+  const deposits = wallets.length
+    ? await prisma.deposit.findMany({
+        where: { walletAddress: { in: wallets }, deletedAt: null, status: 'confirmed' },
+        select: { walletAddress: true, amount: true, withdrawals: { select: { status: true } } },
+      })
+    : [];
+  const lockedByWallet = new Map<string, number>();
+  for (const d of deposits) {
+    if (d.withdrawals.some((w) => w.status === 'confirmed')) continue;
+    lockedByWallet.set(d.walletAddress, (lockedByWallet.get(d.walletAddress) ?? 0) + d.amount.toNumber());
+  }
+
   const rows = snapshots.map((s) => {
     const blendUsdc = s.blendUsdc.toNumber();
     const vaultUsdc = s.vaultUsdc.toNumber();
+    const locked = lockedByWallet.get(s.walletAddress) ?? 0;
     const profile = byWallet.get(s.walletAddress);
     return {
       wallet: s.walletAddress,
@@ -34,7 +49,8 @@ export async function GET(req: NextRequest) {
       email: profile?.email ?? null,
       blendUsdc,
       vaultUsdc,
-      total: blendUsdc + vaultUsdc,
+      locked,
+      total: blendUsdc + vaultUsdc + locked,
       lastError: s.lastError,
       scrapedAt: s.scrapedAt.toISOString(),
     };
