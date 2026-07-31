@@ -145,7 +145,7 @@ jobs:
           fallback="${RECONCILIATION_FALLBACK_LOOKBACK_LEDGERS:-500}"
           artifact="artifacts/reconciliation-${TARGET_ENVIRONMENT}.json"
 
-          pnpm --filter @vaquita/api "${script}" -- \
+          pnpm --filter @vaquita/reconciler "${script}" -- \
             --dry-run="${dry_run}" \
             --advance-cursor=true \
             --overlap-ledgers="${overlap}" \
@@ -258,7 +258,7 @@ jobs:
             args+=("--to-ledger=${TO_LEDGER}")
           fi
 
-          pnpm --filter @vaquita/api "${script}" -- "${args[@]}"
+          pnpm --filter @vaquita/reconciler "${script}" -- "${args[@]}"
 
       - name: Write Step Summary
         if: always()
