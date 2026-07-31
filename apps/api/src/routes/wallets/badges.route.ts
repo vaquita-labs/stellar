@@ -31,6 +31,7 @@ import {
   toBadgeSymbol,
   toClaimPayload,
   toProfileAchievementsResponseDTO,
+  verifyTxSucceeded,
 } from '@vaquita/shared';
 
 // All routes are mounted under `/wallets/:wallet/badges`, so `:wallet` is a
@@ -578,6 +579,22 @@ router.post(
     }
     if (resolved.cycleId !== cycleId) {
       return lifecycleError(res, 409, 'STALE_LEADERBOARD_CYCLE', 'This badge voucher is for an expired award cycle.');
+    }
+
+    // The rewards below are real balance, so the mint has to be a fact on chain,
+    // not a hash the caller says landed. The voucher stays pending on anything
+    // short of SUCCESS, which leaves the badge retryable.
+    const verdict = await verifyTxSucceeded(txHash);
+    if (verdict !== 'SUCCESS') {
+      req.log.warn({ wallet, badgeType, cycleId, txHash, verdict }, 'Badge mint not confirmed on chain');
+      return lifecycleError(
+        res,
+        409,
+        'TX_NOT_CONFIRMED',
+        verdict === 'FAILED'
+          ? 'The mint transaction was rejected by the network.'
+          : 'The mint transaction is not confirmed on chain yet. Try again in a moment.',
+      );
     }
 
     const confirmedClaim = await confirmBadgeClaim(wallet, badgeType, cycleId, txHash);

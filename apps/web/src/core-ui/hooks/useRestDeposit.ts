@@ -47,6 +47,13 @@ export const useRestDeposit = () => {
     [network?.networkName, walletAddress]
   );
 
+  /**
+   * Records the confirmed deposit against its row. The server verifies the hash
+   * on chain before writing, so it can refuse (409) while its RPC has not caught
+   * up — the deposit itself is already on chain either way, and reconciliation
+   * repairs the row from the deposit event. Reports the refusal instead of
+   * claiming success so it shows up in the logs rather than nowhere.
+   */
   const confirmDeposit = useCallback(
     async (payload: { id: number; txHash: string; depositIdHex: string; transactionRaw: string }) => {
       const response = await fetch(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/confirm`, {
@@ -54,7 +61,11 @@ export const useRestDeposit = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        console.warn('[confirmDeposit] server did not record the deposit', response.status, data);
+        return { success: false };
+      }
       console.info('confirm deposit data', data);
       return { success: true };
     },
@@ -68,8 +79,12 @@ export const useRestDeposit = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
-      console.info('confirm deposit data', data);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        console.warn('[failDeposit] server did not record the failure', response.status, data);
+        return { success: false };
+      }
+      console.info('fail deposit data', data);
       return { success: true };
     },
     []
