@@ -29,8 +29,9 @@ export async function GET(req: NextRequest) {
   // The passive/vault token = the supported token wired to a DeFindex vault;
   // fall back to USDC by symbol.
   const token =
-    (await prisma.token.findFirst({ where: { defindexVaultContractAddress: { not: null }, deletedAt: null } })) ??
-    (await prisma.token.findFirst({ where: { symbol: 'USDC', deletedAt: null } }));
+    (await prisma.token.findFirst({
+      where: { isSupported: true, defindexVaultContractAddress: { not: null }, deletedAt: null },
+    })) ?? (await prisma.token.findFirst({ where: { isSupported: true, symbol: 'USDC', deletedAt: null } }));
   if (!token) {
     return NextResponse.json({ status: 'error', message: 'No USDC/vault token configured' }, { status: 404 });
   }

@@ -45,8 +45,9 @@ export async function POST(req: NextRequest) {
   const offset = Math.max(0, Number(body.offset ?? 0));
 
   const token =
-    (await prisma.token.findFirst({ where: { defindexVaultContractAddress: { not: null }, deletedAt: null } })) ??
-    (await prisma.token.findFirst({ where: { symbol: 'USDC', deletedAt: null } }));
+    (await prisma.token.findFirst({
+      where: { isSupported: true, defindexVaultContractAddress: { not: null }, deletedAt: null },
+    })) ?? (await prisma.token.findFirst({ where: { isSupported: true, symbol: 'USDC', deletedAt: null } }));
   if (!token) {
     return NextResponse.json({ status: 'error', message: 'No USDC/vault token configured' }, { status: 404 });
   }
