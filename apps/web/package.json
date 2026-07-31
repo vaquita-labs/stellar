@@ -8,7 +8,7 @@
     "dev:https": "next dev --turbopack -p 3101 --experimental-https",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "format": "prettier --write ."
