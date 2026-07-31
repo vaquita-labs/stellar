@@ -32,6 +32,10 @@ const envClientSchema = z.object({
   // dark-by-default: unset/anything-but-"true" means off, so the vault path
   // ships invisibly until this is explicitly set to "true". See featureFlags.ts.
   NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: z.string().optional(),
+  // Flag for the blocking "install the app" screen shown to mobile users right
+  // after login. OPTIONAL and off-by-default: unset/anything-but-"true" means
+  // the prompt never appears. See featureFlags.ts.
+  NEXT_PUBLIC_INSTALL_PROMPT_ENABLED: z.string().optional(),
 });
 
 // Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
@@ -46,6 +50,7 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_CARD_VERSION: process.env.NEXT_PUBLIC_CARD_VERSION,
   NEXT_PUBLIC_QUERY_CACHE_VERSION: process.env.NEXT_PUBLIC_QUERY_CACHE_VERSION,
   NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: process.env.NEXT_PUBLIC_PASSIVE_VAULT_ENABLED,
+  NEXT_PUBLIC_INSTALL_PROMPT_ENABLED: process.env.NEXT_PUBLIC_INSTALL_PROMPT_ENABLED,
 });
 
 if (!parsed.success) {

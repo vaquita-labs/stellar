@@ -1,10 +1,19 @@
 import type { TFunction } from 'i18next';
+import { isTxPendingError } from '@/networks/stellar/pollarError';
 
 export interface HumanTxError {
   /** Mensaje corto y legible para mostrar arriba (una frase). */
   title: string;
   /** El texto crudo del error, para el botón de copiar / "ver detalles". */
   raw: string;
+  /**
+   * La transacción salió a la red y todavía puede confirmar. La UI no debe
+   * ofrecer un reintento acá: la primera puede llegar igual y el usuario pagaría
+   * dos veces.
+   */
+  pending?: boolean;
+  /** Hash de la transacción en vuelo, para linkear al explorador. */
+  hash?: string;
 }
 
 // Errores de contrato conocidos → explicación humana y accionable (qué pasó +
@@ -40,6 +49,20 @@ export const humanizeTxError = (
   const tr = (key: string, fallback: string, opts?: Record<string, unknown>) =>
     t ? t(key, fallback, opts) : fallback;
   const generic = tr('txError.generic', "We couldn't complete the transaction. Please try again in a moment.");
+
+  // Salió a la red pero todavía no confirmó. No es un fallo, y decirle "probá de
+  // nuevo" sería invitarlo a mandar la misma plata dos veces.
+  if (isTxPendingError(error)) {
+    return {
+      title: tr(
+        'txError.pending',
+        'Your transaction was sent and is still confirming. Check your balance in a minute before trying again.',
+      ),
+      raw,
+      pending: true,
+      hash: error.hash,
+    };
+  }
 
   if (!raw) return { title: generic, raw };
 
@@ -77,8 +100,14 @@ export const humanizeTxError = (
   if (/network|fetch|connection|offline|econn|dns|failed to fetch/i.test(raw)) {
     return { title: tr('txError.network', "We couldn't reach the network. Check your connection and try again."), raw };
   }
+  // Un texto de timeout puede venir de antes de firmar (reintentar es gratis) o
+  // de una tx ya enviada (reintentar la duplica). Sin saber cuál es, el mensaje
+  // manda a mirar el saldo primero en vez de prometer que es seguro repetir.
   if (/timeout|timed out|deadline|expired|too long/i.test(raw)) {
-    return { title: tr('txError.timeout', 'The transaction took too long to confirm. Please try again.'), raw };
+    return {
+      title: tr('txError.timeout', 'The network is taking longer than usual. Check your balance before trying again.'),
+      raw,
+    };
   }
 
   // Sin patrón conocido (incluye genéricos del SDK tipo "Pollar withdraw

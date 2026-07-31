@@ -7,4 +7,5 @@ export * from './passphrase';
 export * from './rpc';
 export * from './events';
 export * from './poolErrors';
+export * from './txStatus';
 export * from './wallet-positions';

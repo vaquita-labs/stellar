@@ -65,7 +65,9 @@ export function DepositMethodModal({
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
   const [step, setStep] = useState<Step>('method');
   const [amount, setAmount] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
+  // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
+  const [error, setError] = useState<unknown>(null);
   // Se enciende cuando el usuario intenta revisar un monto mayor al disponible:
   // apaga el número a gris y dispara el temblor. Se apaga al seguir tecleando.
   const [overBalance, setOverBalance] = useState(false);
@@ -174,7 +176,7 @@ export function DepositMethodModal({
         token: token.symbol,
         network: network?.networkName ?? null,
       });
-      setError((e as Error)?.message ?? t('withdraw.error.generic', 'Something went wrong'));
+      setError(e ?? new Error(t('withdraw.error.generic', 'Something went wrong')));
       setStep('confirm');
     }
   };

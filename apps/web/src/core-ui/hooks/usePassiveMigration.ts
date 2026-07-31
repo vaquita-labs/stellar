@@ -3,9 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
 import { useConfigStore } from '@/core-ui/stores';
-import { directBlendWithdraw, getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
+import { awaitUsdcCredit, directBlendWithdraw, readUsdcBalance } from '@/networks/stellar/blendDirect';
 import { vaultDeposit } from '@/networks/stellar/vaultDirect';
-import { defindexVaultConfigForToken } from '@/networks/stellar/vaultQueries';
+import { defindexVaultConfigForToken, formatBaseUnits } from '@/networks/stellar/vaultQueries';
 import { useBlendPosition } from './useBlendPosition';
 
 /**
@@ -53,33 +53,36 @@ export const usePassiveMigration = (walletAddress?: string) => {
    * Two non-atomic txs; if the deposit is interrupted, the withdrawn funds are
    * safe in the wallet and the user resumes at a normal deposit. Only the delta
    * the withdraw actually produced is deposited — the rest of the wallet is
-   * never swept.
+   * never swept. The withdraw is ledger-confirmed before the delta is measured,
+   * and `awaitUsdcCredit` waits for the RPC to catch up, so a slow node can no
+   * longer make the migration a silent no-op.
    */
   const migrateToVault = useCallback(
     async (amount?: number) => {
       if (!walletAddress || !token) throw new Error('Wallet or token not ready');
-      const factor = 10 ** decimals;
       // null = move the whole position; a number = that partial amount.
       const partial = amount != null && amount > 0 && amount < blendBalance ? amount : null;
 
-      const walletBefore = await getBlendUsdcBalance(walletAddress, decimals);
+      const walletBefore = await readUsdcBalance(walletAddress, decimals);
       await directBlendWithdraw({
         address: walletAddress,
         amount: partial != null ? partial.toFixed(decimals) : '0',
         decimals,
         withdrawAll: partial == null,
       });
-      const walletAfter = await getBlendUsdcBalance(walletAddress, decimals);
 
-      const receivedBase = Math.max(0, Math.floor((walletAfter - walletBefore) * factor));
-      if (receivedBase > 0) {
+      // The withdraw is on chain from here on, so the Blend position has to be
+      // refreshed even if the deposit leg fails: the prompt reads off it.
+      try {
+        const receivedBase = await awaitUsdcCredit(walletAddress, decimals, walletBefore);
         await vaultDeposit({
           address: walletAddress,
-          amount: (receivedBase / factor).toFixed(decimals),
+          amount: formatBaseUnits(receivedBase, decimals),
           decimals,
         });
+      } finally {
+        refresh();
       }
-      refresh();
     },
     [walletAddress, token, decimals, blendBalance, refresh],
   );

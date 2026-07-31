@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { FiExternalLink } from 'react-icons/fi';
 import { truncateDecimals } from '../../../helpers';
 import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
+import { humanizeTxError } from '../../../helpers/txError';
 import { useLivePassiveUsdc } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
@@ -244,8 +245,9 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     } catch (e) {
       // Cancelación (el usuario cerró el modal durante la espera): no es error.
       if (e instanceof AnclapCancelled) return;
-      const msg = e instanceof AnclapError || e instanceof Error ? e.message : String(e);
-      setError(msg);
+      // Humanizamos acá porque este `error` es un string (comparte estado con los
+      // textos de estado de Anclap), así que no llega entero a un `ErrorNotice`.
+      setError(humanizeTxError(e, t).title);
       // Marca el paso en curso como error.
       setSteps((prev) => {
         const next = { ...prev };
@@ -299,8 +301,9 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
       toast.success(t('wallet.fiat.send.settled', 'Withdrawal completed on Anclap.'));
     } catch (e) {
       if (e instanceof AnclapCancelled) return;
-      const msg = e instanceof AnclapError || e instanceof Error ? e.message : String(e);
-      setError(msg);
+      // Humanizamos acá porque este `error` es un string (comparte estado con los
+      // textos de estado de Anclap), así que no llega entero a un `ErrorNotice`.
+      setError(humanizeTxError(e, t).title);
       setSteps((prev) => {
         const next = { ...prev };
         (Object.keys(next) as StepKey[]).forEach((k) => {

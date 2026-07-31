@@ -2,6 +2,7 @@ import type { TxBuildBody } from '@pollar/core';
 import { Asset, rpc } from '@stellar/stellar-sdk';
 import type { BridgeNetworkKey } from '@/core-ui/hooks';
 import { getNetworkPassphrase, getRpcUrl, getStellarNetwork } from './kit';
+import { submitAndSettle } from './pollarError';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 
 type StellarCctpConfig = {
@@ -116,24 +117,27 @@ export const buildStellarCctpApproveParams = ({
   };
 };
 
+/**
+ * Approve the TokenMessenger to move `amount` of the wallet's USDC. The burn is a
+ * separate transaction that reads this allowance from the ledger, so the hash is
+ * returned only once the approval is confirmed there.
+ */
 export const approveStellarCctpSpend = async ({
   sourceWallet,
   ...input
 }: StellarCctpApproveInput): Promise<{ hash: string }> => {
   assertStellarNetworkMatches(input.sourceNetwork);
   const client = assertPollarSourceWallet(sourceWallet);
-  const outcome = await client.buildAndSignAndSubmitTx(
-    'invoke_contract',
-    buildStellarCctpApproveParams({
-      sourceWallet,
-      ...input,
-      expirationLedger: await getApprovalExpirationLedger(),
-    }),
+  const params = buildStellarCctpApproveParams({
+    sourceWallet,
+    ...input,
+    expirationLedger: await getApprovalExpirationLedger(),
+  });
+  return submitAndSettle(
+    client,
+    () => client.buildAndSignAndSubmitTx('invoke_contract', params),
+    'Stellar USDC approval failed',
   );
-  if (outcome.status === 'error') {
-    throw new Error(outcome.details ?? 'Stellar USDC approval failed');
-  }
-  return { hash: outcome.hash };
 };
 
 export const buildStellarToEvmBurnParams = ({
@@ -166,18 +170,21 @@ export const buildStellarToEvmBurnParams = ({
   };
 };
 
+/**
+ * Burn the USDC on Stellar so Circle's attestation service can mint it on the EVM
+ * side. The attestation is keyed on the burn landing in a ledger, so the hash is
+ * returned only once it did.
+ */
 export const signStellarToEvmSourceBurn = async ({
   sourceWallet,
   ...input
 }: StellarToEvmBurnInput): Promise<{ hash: string }> => {
   assertStellarNetworkMatches(input.sourceNetwork);
   const client = assertPollarSourceWallet(sourceWallet);
-  const outcome = await client.buildAndSignAndSubmitTx(
-    'invoke_contract',
-    buildStellarToEvmBurnParams({ sourceWallet, ...input }),
+  const params = buildStellarToEvmBurnParams({ sourceWallet, ...input });
+  return submitAndSettle(
+    client,
+    () => client.buildAndSignAndSubmitTx('invoke_contract', params),
+    'Stellar CCTP burn failed',
   );
-  if (outcome.status === 'error') {
-    throw new Error(outcome.details ?? 'Stellar CCTP burn failed');
-  }
-  return { hash: outcome.hash };
 };

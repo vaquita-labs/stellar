@@ -21,6 +21,7 @@ import {
   getTokenNetworkByNetworkIdTokenId,
   sendError,
   sendSuccess,
+  verifyTxSucceeded,
   toDepositResponseDTO,
   tryParsePoolError,
 } from '@vaquita/shared';
@@ -109,6 +110,15 @@ router.post('/confirm', asyncHandler(async (req, res) => {
   if (!id || !txHash) {
     req.log.warn({ id, txHash }, 'Missing id or txHash');
     return sendError(res, 'Missing id or txHash', null, 400);
+  }
+
+  // A deposit row marked confirmed is the position the user sees and withdraws
+  // against, so the transaction has to have landed. Anything short of SUCCESS
+  // leaves the row untouched — the client can retry, or mark it failed.
+  const verdict = await verifyTxSucceeded(txHash);
+  if (verdict !== 'SUCCESS') {
+    req.log.warn({ id, txHash, verdict }, 'Deposit transaction not confirmed on chain');
+    return sendError(res, 'Deposit transaction is not confirmed on chain', { verdict }, 409);
   }
 
   const result = await confirmDepositWithTx(id, depositIdHex, txHash, transactionRaw);

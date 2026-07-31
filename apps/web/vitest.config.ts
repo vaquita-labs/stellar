@@ -4,8 +4,8 @@ import { defineConfig } from 'vitest/config';
 // Dummy client env for unit tests: importing app modules pulls in `clientEnv`,
 // which validates NEXT_PUBLIC_* at load time (see core-ui/config/clientEnv.ts).
 // Tests never touch real RPC/services — these just satisfy the schema so imports
-// don't throw. The passive-vault flag is intentionally left UNSET so the default
-// (dark/off) is what tests observe.
+// don't throw. The passive-vault and install-prompt flags are intentionally left
+// UNSET so the default (dark/off) is what tests observe.
 // NODE_ENV is set to 'test' by vitest itself, so it's omitted here (typing it in
 // this object would clash with ProcessEnv's narrow NODE_ENV union).
 const testEnv = {

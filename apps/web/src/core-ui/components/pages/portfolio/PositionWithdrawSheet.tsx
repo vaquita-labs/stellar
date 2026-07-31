@@ -5,8 +5,9 @@ import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriod, useRestWithdrawal, useTransactions } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
-import { getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
+import { awaitUsdcCredit, readUsdcBalance } from '@/networks/stellar/blendDirect';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
+import { formatBaseUnits } from '@/networks/stellar/vaultQueries';
 import { Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -17,7 +18,9 @@ import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { PressableButton } from '../../molecules/PressableButton';
 
-type Step = 'detail' | 'confirm' | 'processing' | 'success';
+// `incomplete`: el retiro está en el ledger pero el redepósito no se completó.
+// Es terminal — la posición ya no existe, así que no hay retiro que reintentar.
+type Step = 'detail' | 'confirm' | 'processing' | 'success' | 'incomplete';
 type ActiveStep = 'withdrawing' | 'toBlend';
 
 /** Tile de una unidad del contador (días/horas/min/seg), estilo crema limpio. */
@@ -64,7 +67,9 @@ export function PositionWithdrawSheet({
 
   const [step, setStep] = useState<Step>('detail');
   const [activeStep, setActiveStep] = useState<ActiveStep | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
+  // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
+  const [error, setError] = useState<unknown>(null);
 
   // Contador en vivo: re-render cada segundo mientras el usuario mira el detalle
   // o la confirmación (no hace falta seguir tickeando durante el retiro).
@@ -117,10 +122,16 @@ export function PositionWithdrawSheet({
     setStep('processing');
     setActiveStep('withdrawing');
     setError(null);
+    // Una vez que el retiro está en el ledger la posición ya no existe: si falla
+    // el segundo salto NO se puede volver a 'confirm', porque reintentar sería
+    // retirar algo que ya se retiró.
+    let withdrawn = false;
     try {
-      // Saldo USDC de la wallet ANTES de retirar: a Blend va SOLO el delta que
-      // produce este retiro, nunca todo el saldo (si no barreríamos plata suelta).
-      const balanceBefore = await getBlendUsdcBalance(walletAddress, token.decimals);
+      // Saldo USDC de la wallet ANTES de retirar: a la posición pasiva va SOLO el
+      // delta que produce este retiro, nunca todo el saldo (si no barreríamos
+      // plata suelta). Se lee estricto: un RPC caído leído como 0 convertiría el
+      // saldo ocioso del usuario en un falso ingreso.
+      const balanceBefore = await readUsdcBalance(walletAddress, token.decimals);
 
       // 1) Vaquita pool → wallet. The pool re-derives the id from the caller +
       // the position's nonce, so we pass the stored nonce.
@@ -137,20 +148,18 @@ export function PositionWithdrawSheet({
           typeof v === 'bigint' ? v.toString() : v,
         ),
       });
+      withdrawn = true;
 
-      // 2) Solo lo recibido (delta) → Blend. Truncamos (floor) a los decimales
-      // del token para nunca pedir más de lo que entró.
+      // 2) Solo lo recibido (delta) → posición pasiva. El retiro ya está en el
+      // ledger, así que el ingreso existe: esperamos a que el RPC lo vea en vez
+      // de leer una vez y depositar 0.
       setActiveStep('toBlend');
-      const balanceAfter = await getBlendUsdcBalance(walletAddress, token.decimals);
-      const factor = 10 ** token.decimals;
-      const receivedBase = Math.floor((balanceAfter - balanceBefore) * factor);
-      if (receivedBase > 0) {
-        await passiveDeposit({
-          address: walletAddress,
-          amount: (receivedBase / factor).toFixed(token.decimals),
-          decimals: token.decimals,
-        });
-      }
+      const receivedBase = await awaitUsdcCredit(walletAddress, token.decimals, balanceBefore);
+      await passiveDeposit({
+        address: walletAddress,
+        amount: formatBaseUnits(receivedBase, token.decimals),
+        decimals: token.decimals,
+      });
 
       void queryClient.invalidateQueries({ queryKey: ['deposit'] });
       void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
@@ -158,7 +167,18 @@ export function PositionWithdrawSheet({
       onWithdrawn?.();
       setStep('success');
     } catch (e) {
-      setError((e as Error)?.message ?? t('withdraw.error.generic', 'Something went wrong'));
+      setError(e ?? new Error(t('withdraw.error.generic', 'Something went wrong')));
+      if (withdrawn) {
+        // La plata salió del pool y está en la wallet. Refrescamos para que la
+        // posición desaparezca de la lista y cerramos en un paso terminal: el
+        // usuario completa el depósito desde la pantalla normal.
+        void queryClient.invalidateQueries({ queryKey: ['deposit'] });
+        void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+        void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
+        onWithdrawn?.();
+        setStep('incomplete');
+        return;
+      }
       setStep('confirm');
     }
   };
@@ -347,11 +367,30 @@ export function PositionWithdrawSheet({
     </div>
   );
 
+  const incompleteStep = (
+    <div className="flex flex-col items-center justify-center gap-4 py-8">
+      <div className="flex items-center justify-center w-20 h-20 rounded-full bg-warning border border-black border-b-4">
+        <FiAlertTriangle className="w-10 h-10 text-black" strokeWidth={2.5} />
+      </div>
+      <p className="text-lg font-bold text-black text-center">
+        {t('portfolio.withdraw.incompleteTitle', 'Your money is in your wallet')}
+      </p>
+      <p className="text-sm text-gray-500 text-center">
+        {t(
+          'portfolio.withdraw.incompleteSubtitle',
+          "We got it out of the vaquita, but couldn't move it back into your savings. Nothing was lost — deposit it again whenever you want.",
+        )}
+      </p>
+      {error ? <ErrorNotice error={error} /> : null}
+    </div>
+  );
+
   const STEP_CONTENT: Record<Step, React.ReactNode> = {
     detail: detailStep,
     confirm: confirmStep,
     processing: processingStep,
     success: successStep,
+    incomplete: incompleteStep,
   };
 
   const footer =
@@ -385,7 +424,12 @@ export function PositionWithdrawSheet({
         {t('withdraw.processingHint', 'This may take a few seconds.')}
       </p>
     ) : (
-      <PressableButton variant="success" size="cta" className="py-2.5!" onClick={onOpenChange}>
+      <PressableButton
+        variant={step === 'incomplete' ? 'white' : 'success'}
+        size="cta"
+        className="py-2.5!"
+        onClick={onOpenChange}
+      >
         {t('common.done', 'Done')}
       </PressableButton>
     );
@@ -395,7 +439,9 @@ export function PositionWithdrawSheet({
       ? t('deposit.confirm.title', 'Confirm withdrawal')
       : step === 'success'
         ? t('portfolio.withdraw.successTitle', 'Back in your savings!')
-        : formatTimeDeposit(deposit?.lockPeriod ?? 0);
+        : step === 'incomplete'
+          ? t('portfolio.withdraw.incompleteTitle', 'Your money is in your wallet')
+          : formatTimeDeposit(deposit?.lockPeriod ?? 0);
 
   return (
     <AppModal

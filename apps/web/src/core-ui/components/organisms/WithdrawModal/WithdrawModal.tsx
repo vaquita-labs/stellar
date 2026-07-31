@@ -55,7 +55,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const { blendBalance, hasBorrow, withdrawToWallet } = usePassiveMigration(walletAddress);
   const showBlendLeftover = vaultOn && blendBalance > 0;
   const [blendBusy, setBlendBusy] = useState(false);
-  const [blendError, setBlendError] = useState<string | null>(null);
+  // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
+  // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
+  const [blendError, setBlendError] = useState<unknown>(null);
   const { data: savedWallets = [], isLoading: walletsLoading } = useSavedWallets();
   const deleteWallet = useDeleteSavedWallet();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -67,7 +69,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const [step, setStep] = useState<WithdrawStep>('method');
   const [amount, setAmount] = useState('');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
+  // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
+  const [error, setError] = useState<unknown>(null);
   // Se enciende cuando el usuario intenta revisar un monto mayor al disponible:
   // pinta el número en gris y dispara el temblor. Se apaga al seguir tecleando.
   const [overBalance, setOverBalance] = useState(false);
@@ -112,7 +116,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     try {
       await withdrawToWallet();
     } catch (e) {
-      setBlendError((e as Error)?.message ?? t('withdraw.error.generic', 'Something went wrong'));
+      setBlendError(e ?? new Error(t('withdraw.error.generic', 'Something went wrong')));
     } finally {
       setBlendBusy(false);
     }
@@ -218,7 +222,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       });
       setStep('success');
     } catch (e) {
-      setError((e as Error)?.message ?? t('withdraw.error.generic', 'Something went wrong'));
+      setError(e ?? new Error(t('withdraw.error.generic', 'Something went wrong')));
       setStep('confirm');
     }
   };
@@ -300,7 +304,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           </div>
         </div>
       )}
-      {blendError && <p className="text-sm text-error">{blendError}</p>}
+      {blendError ? <ErrorNotice error={blendError} /> : null}
 
       {isExternalWallet ? (
         // Externa: destino fijo (tu wallet), sin selector.

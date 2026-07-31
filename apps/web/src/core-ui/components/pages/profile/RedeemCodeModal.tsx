@@ -1,6 +1,7 @@
 'use client';
 
 import { Modal, toast } from '@heroui/react';
+import { humanizeTxError } from '@/core-ui/helpers/txError';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -181,8 +182,10 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
       setReward({ coinReward: minted.coinReward, xpReward: minted.xpReward, achievementKey });
       setPhase('reward');
     } catch (err) {
-      const message = (err as Error)?.message ?? t('common.somethingWentWrong');
-      toast.danger(t('social.redeem.redeemErrorTitle'), { description: message });
+      // El mint es una transacción, así que el error puede ser uno tipado (firma
+      // cancelada, tx todavía confirmándose): lo pasamos por el mapeo amable en
+      // vez de volcar el mensaje crudo en el toast.
+      toast.danger(t('social.redeem.redeemErrorTitle'), { description: humanizeTxError(err, t).title });
       setPhase('input');
     }
   }, [code, mintBadge, redeem, t]);

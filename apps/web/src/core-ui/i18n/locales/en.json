@@ -467,6 +467,9 @@
       "onlyPositiveAmount": "Amount must be greater than zero",
       "unauthorized": "Not authorized",
       "underlyingAmountBelowMin": "Price moved past your limit, please retry"
+    },
+    "transfer": {
+      "creditNotVisible": "We can't see the funds in your wallet yet. They're safe — check your balance in a minute and finish the deposit."
     }
   },
   "home": {
@@ -2024,7 +2027,9 @@
       "note": "Your funds (plus interest) go back to your savings, where they stay flexible and keep earning.",
       "successTitle": "Back in your savings!",
       "successSubtitle": "Your funds are flexible again and keep earning in your savings.",
-      "cta": "Withdraw to your savings"
+      "cta": "Withdraw to your savings",
+      "incompleteTitle": "Your money is in your wallet",
+      "incompleteSubtitle": "We got it out of the vaquita, but couldn't move it back into your savings. Nothing was lost — deposit it again whenever you want."
     },
     "vault": {
       "label": "Vault · Flexible"
@@ -2036,7 +2041,8 @@
     "trustline": "Your wallet needs to enable USDC first. Add the USDC trustline and try again.",
     "balance": "You don't have enough balance to cover this transaction and its network fee.",
     "network": "We couldn't reach the network. Check your connection and try again.",
-    "timeout": "The transaction took too long to confirm. Please try again.",
+    "timeout": "The network is taking longer than usual. Check your balance before trying again.",
+    "pending": "Your transaction was sent and is still confirming. Check your balance in a minute before trying again.",
     "contractGeneric": "The network rejected the transaction. Please try again.",
     "contract": {
       "10": "You don't have enough USDC in your wallet to cover this amount. Add funds and try again.",

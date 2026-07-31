@@ -69,7 +69,9 @@ export function InvestModal({
   const [step, setStep] = useState<Step>('amount');
   const [amount, setAmount] = useState('');
   const [selectedLock, setSelectedLock] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
+  // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
+  const [error, setError] = useState<unknown>(null);
   const [overBalance, setOverBalance] = useState(false);
   const [isMax, setIsMax] = useState(false);
   // Salto en curso durante "processing" (para el stepper). 'preparing' = retiro
@@ -184,7 +186,7 @@ export function InvestModal({
       void queryClient.invalidateQueries({ queryKey: ['deposit'] });
       setStep('success');
     } catch (e) {
-      setError((e as Error)?.message ?? t('withdraw.error.generic', 'Something went wrong'));
+      setError(e ?? new Error(t('withdraw.error.generic', 'Something went wrong')));
       setStep('amount');
     }
   };

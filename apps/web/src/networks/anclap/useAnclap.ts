@@ -1,6 +1,7 @@
 'use client';
 
 import { getHorizonUrl, getNetworkPassphrase } from '@/networks/stellar/kit';
+import { isTxPendingError, submitAndSettle } from '@/networks/stellar/pollarError';
 import { ANCLAP_HOME } from '@/networks/anclap/anclap';
 import { usePollar } from '@pollar/react';
 import { Asset, BASE_FEE, Horizon, Memo, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
@@ -99,6 +100,22 @@ function recordToAsset(r: { asset_type: string; asset_code?: string; asset_issue
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Ejecuta una submisión y devuelve su hash confirmado, traduciendo el fallo a
+ * `AnclapError` para que el modal lo muestre como cualquier otro paso del flujo.
+ * Pasan tal cual los errores que YA dicen algo más preciso: un `TxPendingError`
+ * (no es un fallo, la tx puede confirmar) y un `AnclapCancelled` (que dejaría de
+ * reconocerse como cancelación si lo re-envolviéramos).
+ */
+const settleAsAnclap = async (run: () => Promise<{ hash: string }>, fallback: string): Promise<{ hash: string }> => {
+  try {
+    return await run();
+  } catch (e) {
+    if (isTxPendingError(e) || e instanceof AnclapError) throw e;
+    throw new AnclapError((e as Error)?.message || fallback);
+  }
+};
 
 /**
  * Primitivas del flujo Anclap (off/on-ramp) sobre los Route Handlers de
@@ -339,13 +356,14 @@ export function useAnclap() {
       if (signed.status !== 'signed') {
         throw new AnclapError(signed.details ?? 'No se pudo firmar el pago al anchor.');
       }
-      const outcome = await submitTx(signed.signedXdr);
-      if (outcome.status === 'error') {
-        throw new AnclapError(outcome.details ?? outcome.resultCode ?? 'El pago al anchor falló.');
-      }
-      return { hash: outcome.hash };
+      // El anchor acredita el fiat mirando el pago EN EL LEDGER, así que no
+      // seguimos al paso de espera hasta que la red lo confirmó.
+      return settleAsAnclap(
+        () => submitAndSettle(getClient(), () => submitTx(signed.signedXdr), 'El pago al anchor falló.'),
+        'El pago al anchor falló.',
+      );
     },
-    [signTx, submitTx],
+    [signTx, submitTx, getClient],
   );
 
   // ----- Swap on-chain (path payment strict send) vía Pollar -----
@@ -391,20 +409,28 @@ export function useAnclap() {
       const quote = await quoteStrictSend({ send, sendAmount, dest });
       const destMin = (Number(quote.destAmount) * (1 - slippagePct / 100)).toFixed(7);
 
-      const outcome = await buildAndSignAndSubmitTx('path_payment_strict_send', {
-        destination: account,
-        sendAsset: send,
-        sendAmount,
-        destAsset: dest,
-        destMin,
-        path: quote.path,
-      });
-      if (outcome.status === 'error') {
-        throw new AnclapError(outcome.details ?? outcome.resultCode ?? 'El swap falló.');
-      }
-      return { hash: outcome.hash, quotedOut: quote.destAmount, destMin };
+      // El retiro SEP-24 que sigue mueve los ARS que deja este swap, así que el
+      // paso solo termina cuando el ledger lo confirmó.
+      const { hash } = await settleAsAnclap(
+        () =>
+          submitAndSettle(
+            getClient(),
+            () =>
+              buildAndSignAndSubmitTx('path_payment_strict_send', {
+                destination: account,
+                sendAsset: send,
+                sendAmount,
+                destAsset: dest,
+                destMin,
+                path: quote.path,
+              }),
+            'El swap falló.',
+          ),
+        'El swap falló.',
+      );
+      return { hash, quotedOut: quote.destAmount, destMin };
     },
-    [quoteStrictSend, buildAndSignAndSubmitTx],
+    [quoteStrictSend, buildAndSignAndSubmitTx, getClient],
   );
 
   return {
