@@ -13,6 +13,7 @@ import { useConfigStore } from '@/core-ui/stores';
 import type { NetworkResponseDTO } from '@/core-ui/types';
 import { getNetworkPassphrase, getRpcUrl } from './kit';
 import { submitAndSettle } from './pollarError';
+import { readTransferCredit } from './txCredit';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
 
 export interface BlendConfig {
@@ -86,10 +87,15 @@ const encodeBlendRequest = (usdcId: string, requestType: RequestType, rawAmount:
  *
  * La operación la ARMA POLLAR: le pasamos la intención (`invoke_contract` +
  * contrato + método + args) y su backend hace build → simulate → firma → submit
- * en un solo round-trip (`/tx/build-sign-submit`). Así el fee y el patrocinio los
- * decide el server, que es el único que puede aplicar la política de sponsorship
- * de la app; armándola en el browser el fee salía de la cuenta del usuario y un
- * custodial sin XLM moría con `txInsufficientBalance`.
+ * en un solo round-trip (`/tx/build-sign-submit`), así el fee y los recursos
+ * Soroban los calcula el server contra el estado real de la red en vez de que el
+ * browser los estime.
+ *
+ * Quién paga ese fee es una decisión aparte y también del server: el patrocinio
+ * se aplica al FIRMAR, por fee-bump, sobre cualquier XDR — venga de `/tx/build`
+ * o del cliente — y está prendido por default salvo que la config de la app diga
+ * lo contrario (`skipSponsorship` es el opt-out). Por eso `directUsdcTransfer`
+ * puede armar la suya en el browser sin dejar al custodial sin XLM afuera.
  *
  * Devuelve el hash SOLO cuando el ledger confirmó (`submitAndSettle`), así el
  * paso siguiente de un retiro en dos saltos no sale antes de que la plata esté.
@@ -377,13 +383,30 @@ export const awaitCredit = async (
   );
 };
 
-/** `awaitCredit` sobre el saldo USDC on-chain de `address`. */
-export const awaitUsdcCredit = (
+/**
+ * Cuánto USDC recibió `address` por el movimiento que se acaba de confirmar.
+ *
+ * Con `hash`, lo lee de los eventos `transfer` de esa transacción: es el monto
+ * exacto y no hay ventana en la que una transferencia entrante ajena se sume al
+ * total. Cuando eso no da una respuesta — la transacción todavía no llegó a este
+ * RPC, o el meta no trae los eventos — cae a medir por diferencia de saldo, que
+ * es aproximado pero nunca deja el flujo trabado.
+ */
+export const awaitUsdcCredit = async (
   address: string,
   decimals: number,
   balanceBefore: number,
-  options?: { intervalMs?: number; maxPolls?: number },
-): Promise<bigint> => awaitCredit(() => readUsdcBalance(address, decimals), decimals, balanceBefore, options);
+  options: { hash?: string; intervalMs?: number; maxPolls?: number } = {},
+): Promise<bigint> => {
+  const { hash, ...pollOptions } = options;
+  const config = getBlendConfig();
+
+  if (hash && config) {
+    const credited = await readTransferCredit(hash, config.usdcId, address);
+    if (credited !== null && credited > 0n) return credited;
+  }
+  return awaitCredit(() => readUsdcBalance(address, decimals), decimals, balanceBefore, pollOptions);
+};
 
 /**
  * @deprecated Usar `directBlendSupply`. Alias de compatibilidad: el nombre
