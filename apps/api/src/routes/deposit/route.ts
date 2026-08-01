@@ -2,6 +2,7 @@ import { type NextFunction, type Request, type RequestHandler, type Response, Ro
 import { v4 } from 'uuid';
 import {
   confirmDepositWithTx,
+  countOpenPositionsByLockPeriod,
   createDepositByNames,
   creteConfirmWithdrawal,
   creteWithdrawal,
@@ -247,7 +248,7 @@ router.get('/network/:networkName/token/:tokenSymbol/lockPeriod/:lockPeriod/apy'
     return sendError(res, 'Token on network not found', tokenNetworkError, 404);
   }
 
-  let response: unknown = {};
+  let response: Record<string, unknown> = {};
   if (networkData.name === 'Stellar Testnet' || networkData.name === 'Stellar') {
     // Headline protocolApy: DeFindex HTTP API (+ on-chain period for vaquitaApy).
     // Locked funds are forwarded to the DeFindex vault by the pool contract, so the
@@ -259,6 +260,10 @@ router.get('/network/:networkName/token/:tokenSymbol/lockPeriod/:lockPeriod/apy'
   } else {
     req.log.warn({ networkName: networkData.name }, 'No APY provider for network');
   }
+
+  // Social-proof numbers the portfolio shows instead of the (misleading) APY:
+  // reward pool comes from the payload above; open-position count is DB-derived.
+  response.openPositions = await countOpenPositionsByLockPeriod(Number(lockPeriod));
 
   return sendSuccess(res, response, '');
 }));

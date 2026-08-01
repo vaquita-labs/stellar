@@ -9,6 +9,8 @@ export type ApyData = {
   lendingMarketName: string;
   rewardPool: number;
   totalDeposits: number;
+  /** Open positions currently in this term's pool — social proof, not a rate. */
+  openPositions: number;
   interestModelNote?: string;
 };
 
@@ -18,6 +20,7 @@ const EMPTY_APY: ApyData = {
   lendingMarketName: '',
   rewardPool: 0,
   totalDeposits: 0,
+  openPositions: 0,
   interestModelNote: undefined,
 };
 
@@ -43,6 +46,7 @@ export const apyQueryOptions = (networkName: string | undefined, tokenSymbol: st
         lendingMarketName: data?.data?.lendingMarketName ?? '',
         rewardPool: data?.data?.rewardPool ?? 0,
         totalDeposits: data?.data?.totalDeposits ?? 0,
+        openPositions: data?.data?.openPositions ?? 0,
         interestModelNote: typeof data?.data?.interestModelNote === 'string' ? data.data.interestModelNote : undefined,
       };
     } catch (error) {

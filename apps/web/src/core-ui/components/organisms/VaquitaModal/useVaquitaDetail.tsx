@@ -10,6 +10,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { getInterestData } from '../../../helpers';
+import { formatUsd } from '../../../helpers/numbers';
 import { useApyByLockPeriod, useProfileData, useTransactions, useWithdrawalTime } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { DepositResponseDTO, DepositStatus, DepositWithdrawalState } from '../../../types';
@@ -349,11 +350,15 @@ export const useVaquitaDetail = ({
         <div className="flex flex-col gap-1 bg-white border border-black border-b-2 rounded-md px-4 py-3">
           <span className="text-xs font-medium text-default-600 uppercase tracking-wide">{t('deposit.confirm.youWillReceive', 'You will receive')}</span>
           <span className="text-2xl font-bold text-success tabular-nums break-all leading-tight">
-            {finalAmount.toFixed(2)} <span className="text-base">{token?.symbol}</span>
+            {/* Real: capital garantizado (el premio lo liquida el contrato al retirar
+                y no se puede calcular antes). Tutorial: el monto demo de siempre. */}
+            {(simulate ? finalAmount : deposit.amount).toFixed(2)} <span className="text-base">{token?.symbol}</span>
           </span>
         </div>
 
-        {inLockPeriod && (
+        {/* La caja "Vas a perder ±X" solo en el tutorial (número demo). En real no
+            prometemos un monto: la advertencia de forfeit de abajo lo cubre. */}
+        {inLockPeriod && simulate && (
           <div className="flex flex-col gap-1 bg-white border border-black border-b-2 rounded-md px-4 py-3">
             <span className="text-xs font-medium text-default-600 uppercase tracking-wide">{t('deposit.confirm.youWillLose', 'You will lose')}</span>
             <span className="text-xl font-bold text-danger tabular-nums break-all leading-tight line-through decoration-2">
@@ -403,9 +408,13 @@ export const useVaquitaDetail = ({
         <span className="text-3xl font-bold text-black tabular-nums">
           {deposit.amount.toFixed(2)} {token?.symbol}
         </span>
-        <span className="text-sm font-semibold text-success tabular-nums">
-          +{totalInterest.toFixed(2)} {token?.symbol} {t('deposit.detail.estAbbrev', 'est.')}
-        </span>
+        {/* La ganancia estimada en USD solo en el tutorial (número demo). En real
+            no se puede prometer un monto: varía con la gente del pool. */}
+        {simulate && (
+          <span className="text-sm font-semibold text-success tabular-nums">
+            +{totalInterest.toFixed(2)} {token?.symbol} {t('deposit.detail.estAbbrev', 'est.')}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-3">
@@ -436,33 +445,42 @@ export const useVaquitaDetail = ({
       </div>
 
       <div className="flex flex-col gap-1.5 bg-default-50 border border-black/10 rounded-md p-3">
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1.5">
-            <span className="text-default-500">{t('deposit.detail.vaquitaInterest', 'Vaquita interest')}</span>
-            {/* APY del lock period de ESTE depósito (dataApy ya se pide por depósito);
-                el agregado del Bank Rewards no puede mostrarlo porque mezcla locks. */}
-            {dataApy && (
-              <span className="text-[10px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                {dataApy.vaquitaApy.toFixed(2)}% APY
+        {simulate ? (
+          <>
+            {/* Tutorial: desglose demo del interés (número controlado, didáctico). */}
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-default-500">{t('deposit.detail.vaquitaInterest', 'Vaquita interest')}</span>
+              <span className="font-semibold text-primary tabular-nums">
+                +{vaquitaInterest.toFixed(2)} {token?.symbol}
               </span>
-            )}
-          </span>
-          <span className="font-semibold text-primary tabular-nums">
-            +{vaquitaInterest.toFixed(2)} {token?.symbol}
-          </span>
-        </div>
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-default-500">{t('deposit.detail.protocolInterest', 'Protocol interest')}</span>
-          <span className="font-semibold text-primary tabular-nums">
-            +{protocolInterest.toFixed(2)} {token?.symbol}
-          </span>
-        </div>
-        <div className="flex items-center justify-between text-xs border-t border-black/10 pt-1.5 mt-0.5">
-          <span className="font-medium text-black">{t('deposit.detail.totalEstEarnings', 'Total est. earnings')}</span>
-          <span className="font-bold text-success tabular-nums">
-            +{totalInterest.toFixed(2)} {token?.symbol}
-          </span>
-        </div>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-default-500">{t('deposit.detail.protocolInterest', 'Protocol interest')}</span>
+              <span className="font-semibold text-primary tabular-nums">
+                +{protocolInterest.toFixed(2)} {token?.symbol}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs border-t border-black/10 pt-1.5 mt-0.5">
+              <span className="font-medium text-black">{t('deposit.detail.totalEstEarnings', 'Total est. earnings')}</span>
+              <span className="font-bold text-success tabular-nums">
+                +{totalInterest.toFixed(2)} {token?.symbol}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Real: lo cierto del plazo — premios del pool + depósitos abiertos —
+                en vez de un interés proyectado y engañoso. */}
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-default-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
+              <span className="font-semibold text-black tabular-nums">{formatUsd(dataApy?.rewardPool ?? 0)}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-default-500">{t('portfolio.detail.depositors', 'Open deposits')}</span>
+              <span className="font-semibold text-black tabular-nums">{dataApy?.openPositions ?? 0}</span>
+            </div>
+          </>
+        )}
         {txHashRow && <div className="border-t border-black/10 pt-1.5 mt-0.5">{txHashRow}</div>}
       </div>
     </div>

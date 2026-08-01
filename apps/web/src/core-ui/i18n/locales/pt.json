@@ -98,7 +98,7 @@
       "claimExpired": "Este resgate expirou. Reabra o selo e tente novamente.",
       "soulbound": "Este selo não pode ser transferido depois de cunhado.",
       "unauthorized": "Não foi possível verificar este prêmio. Tente novamente.",
-      "editionCapReached": "Este selo esgotou — não há mais edições disponíveis.",
+      "editionCapReached": "Este selo esgotou. Não há mais edições disponíveis.",
       "paused": "A cunhagem está pausada no momento. Tente novamente mais tarde.",
       "notReady": "Os selos não estão disponíveis no momento. Tente novamente mais tarde.",
       "rejected": "Você cancelou a solicitação na sua carteira.",
@@ -288,7 +288,7 @@
       "cta": "Depositar nas suas economias",
       "destination": "Blend",
       "mainnetOnly": "Depósitos diretos só estão disponíveis na mainnet da Stellar.",
-      "notTracked": "Seu USDC começa a render na hora, sem período de bloqueio — retire quando quiser.",
+      "notTracked": "Seu USDC começa a render na hora, sem período de bloqueio. Retire quando quiser.",
       "processing": "Processando depósito...",
       "processingStep": "Depositando nas suas economias",
       "unavailable": "Depósitos diretos ainda não estão disponíveis nesta rede.",
@@ -324,6 +324,7 @@
       "earlyWithdrawalPrefix": "As recompensas por saque antecipado serão",
       "forfeited": "perdidas",
       "readyToClaim": "Sua vaquita está pronta para resgatar.",
+      "rewardsOnTop": "Mais a sua parte dos prêmios do pool",
       "sendTransaction": "Confirme para enviar a transação.",
       "timesUp": "Acabou o tempo!",
       "title": "Confirmar saque",
@@ -670,8 +671,8 @@
       "you": "Você"
     },
     "direction": {
-      "ascending": "Ordenar do menor para o maior — alternar ordem",
-      "descending": "Ordenar do maior para o menor — alternar ordem"
+      "ascending": "Ordenar do menor para o maior, alternar ordem",
+      "descending": "Ordenar do maior para o menor, alternar ordem"
     },
     "empty": {
       "description": "Seja o primeiro a subir no ranking: comece uma sequência de depósitos e você vai aparecer aqui.",
@@ -823,7 +824,7 @@
       "iosStep2Prefix": "Depois toque em",
       "iosStep2Action": "“Adicionar à Tela de Início”",
       "installedBody": "A Vaquita está instalada! Abra-a pela tela inicial para desbloquear sua carteira.",
-      "installedHint": "Você já pode fechar esta aba — a partir de agora abra a Vaquita pelo ícone do app.",
+      "installedHint": "Você já pode fechar esta aba. A partir de agora abra a Vaquita pelo ícone do app.",
       "pullHint": "Já instalou? Puxe para baixo para atualizar"
     },
     "intro": {
@@ -1135,8 +1136,8 @@
       "streakMissed": "Sequência perdida",
       "subtitle": "Como seu hábito de economizar está evoluindo.",
       "title": "Resumo",
-      "todayStreakKept": "Hoje — sequência mantida",
-      "todayStreakMissed": "Hoje — sequência perdida",
+      "todayStreakKept": "Hoje: sequência mantida",
+      "todayStreakMissed": "Hoje: sequência perdida",
       "totalExperience": "Experiência total",
       "xpLevel": "XP e nível",
       "xpLevelSub": "Progresso até o próximo nível",
@@ -1456,7 +1457,7 @@
       "starLabel_one": "{{count}} estrela",
       "starLabel_other": "{{count}} estrelas",
       "subtitle": "Conte o que está funcionando, o que não está e o que você gostaria que o Vaquita fizesse.",
-      "successBody": "A gente lê cada mensagem — e é sério.",
+      "successBody": "A gente lê cada mensagem. E é sério.",
       "successTitle": "Obrigado pelo feedback (simulação)!",
       "title": "Feedback"
     },
@@ -1482,7 +1483,7 @@
       "emailSupport": "Suporte por e-mail",
       "faqs": {
         "apy": {
-          "a": "Seu APY é o APY base do protocolo (por exemplo, mercados de empréstimo) mais qualquer recompensa do Vaquita ativa no seu período de bloqueio. O detalhamento aparece no cabeçalho da tela inicial — toque no seu saldo para expandir.",
+          "a": "Seu APY é o APY base do protocolo (por exemplo, mercados de empréstimo) mais qualquer recompensa do Vaquita ativa no seu período de bloqueio. O detalhamento aparece no cabeçalho da tela inicial. Toque no seu saldo para expandir.",
           "q": "Como meu APY é calculado?"
         },
         "badges": {
@@ -1494,7 +1495,7 @@
           "q": "O Vaquita guarda meu dinheiro?"
         },
         "streak": {
-          "a": "Todo dia que você abre o app e tem pelo menos um depósito ativo, sua sequência aumenta em 1. Se perder um dia, a sequência zera — a menos que você tenha um congelador de sequência (em breve).",
+          "a": "Todo dia que você abre o app e tem pelo menos um depósito ativo, sua sequência aumenta em 1. Se perder um dia, a sequência zera, a menos que você tenha um congelador de sequência (em breve).",
           "q": "Como funcionam as sequências?"
         },
         "support": {
@@ -1578,7 +1579,7 @@
       "noQrDetected": "Nenhum QR detectado",
       "noQrDetectedBody": "Centralize o QR no quadro e garanta uma boa iluminação.",
       "nowFollowing": "Agora seguindo {{handle}}",
-      "ownQr": "Esse é o seu próprio QR — compartilhe com um amigo!",
+      "ownQr": "Esse é o seu próprio QR. Compartilhe com um amigo!",
       "qrAlt": "Código QR de {{handle}}",
       "qrButtonLabel": "Compartilhar QR do perfil",
       "qrLoadFailed": "Não foi possível carregar o QR. Verifique sua conexão.",
@@ -1666,7 +1667,7 @@
     "coach": {
       "depositConfirm": {
         "title": "Confirme seu depósito",
-        "body": "Você vai depositar {{amount}} {{currency}} — é só uma demo, sem dinheiro de verdade."
+        "body": "Você vai depositar {{amount}} {{currency}}. É só uma demo, sem dinheiro de verdade."
       },
       "selectDeposit": {
         "title": "Encontre seu depósito",
@@ -1907,7 +1908,7 @@
     "loadingMore": "Carregando mais vaqueros",
     "caughtUp": {
       "title": "Você já conheceu todo mundo",
-      "description": "Você já segue todos os vaqueros por aqui. Volte mais tarde — sempre aparecem mundos novos."
+      "description": "Você já segue todos os vaqueros por aqui. Volte mais tarde. Sempre aparecem mundos novos."
     },
     "error": {
       "title": "Não foi possível carregar os vaqueros"
@@ -1930,12 +1931,25 @@
     "sum": "Total",
     "manage": "Gerenciar distribuição",
     "empty": "Ainda não há prazos de poupança disponíveis.",
+    "poolRewards": "{{amount}} em prêmios",
+    "depositCount_one": "{{count}} depósito",
+    "depositCount_other": "{{count}} depósitos",
+    "row": {
+      "ready": "Pronto",
+      "timeLeft": "restante",
+      "withdrawn": "Sacado",
+      "withdrawnEarly": "Sacado antes",
+      "error": "Erro"
+    },
     "detail": {
       "description": "Descrição",
-      "descriptionText": "Os fundos guardados por {{period}} recebem uma parcela maior do fundo de recompensas da Vaquita. Quanto mais longo o prazo, maior o APY.",
+      "descriptionText": "Os fundos guardados por {{period}} recebem uma parte do fundo de recompensas da Vaquita: o prêmio dividido entre todos deste prazo.",
+      "portfolioShare": "{{pct}}% do seu portfólio",
       "withdrawPeriod": "Período de saque",
-      "vaquitaApy": "APY do fundo da Vaquita",
-      "marketApy": "APY de {{market}}",
+      "rewardsPool": "Prêmios do pool",
+      "tvl": "TVL",
+      "depositors": "Depósitos abertos",
+      "estimateNote": "Os prêmios são divididos entre todos do pool e podem mudar conforme as pessoas entram ou saem.",
       "tokenNote": "Os saldos são exibidos em {{token}}."
     },
     "move": {

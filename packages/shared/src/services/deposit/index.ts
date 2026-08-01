@@ -427,8 +427,11 @@ export const getDepositsByTransactionHash = async (transactionHash: string) => {
 const getDepositsByNetworkIdWalletAddress = async (_networkId: number, walletAddress: string) => {
   try {
     // Single-network: filter by wallet only (deposits no longer carry a network_id).
+    // `deletedAt: null` es clave: sin él, un depósito soft-borrado (ej. de un pool
+    // contract viejo, o una posición que ya no existe on-chain) seguía apareciendo
+    // como posición en el portafolio — el soft-delete no ocultaba nada.
     const rows = await prisma.deposit.findMany({
-      where: { walletAddress },
+      where: { walletAddress, deletedAt: null },
       include: depositInclude,
     });
     return { data: rows.map(row => toDepositWithState(toDepositShape(row))), error: null, cached: false };
@@ -449,10 +452,40 @@ export const getCachedDepositsByNetworkIdWalletAddress = async (networkId: numbe
 export const getDepositsByNetworkId = async (_networkId: number) => {
   try {
     // Single-network: every deposit belongs to the one configured network.
-    const rows = await prisma.deposit.findMany({ include: depositInclude });
+    // Excluimos soft-borrados (misma razón que la query por wallet): no deben
+    // contarse ni listarse como posiciones vivas.
+    const rows = await prisma.deposit.findMany({ where: { deletedAt: null }, include: depositInclude });
     return { data: rows.map(row => toDepositWithState(toDepositShape(row))), error: null };
   } catch (error) {
     return { data: [] as DepositWithState[], error: error as Error };
+  }
+};
+
+/**
+ * How many open positions this lock period currently holds. "Open" = the same
+ * live-deposit shape the app shows: confirmed on-chain, no confirmed withdrawal.
+ * Counts POSITIONS, not distinct wallets — one wallet with two deposits in the
+ * same term counts twice (matches the on-chain PositionCountForPeriod notion).
+ *
+ * This is the social-proof number the portfolio shows next to the reward pool,
+ * replacing the misleading APY. `lockPeriodMs` is the same ms value the APY
+ * endpoint receives; deposits store `lock_period` in that unit.
+ */
+export const countOpenPositionsByLockPeriod = async (lockPeriodMs: number): Promise<number> => {
+  try {
+    return await prisma.deposit.count({
+      where: {
+        lockPeriod: BigInt(Math.trunc(lockPeriodMs)),
+        deletedAt: null,
+        status: DepositStatus.CONFIRMED,
+        transactionHash: { not: null },
+        depositIdHex: { not: null },
+        withdrawals: { none: { status: WithdrawalStatus.CONFIRMED } },
+      },
+    });
+  } catch (error) {
+    console.error('countOpenPositionsByLockPeriod', error);
+    return 0;
   }
 };
 

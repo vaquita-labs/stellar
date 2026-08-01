@@ -39,7 +39,7 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      title={t('deposit.receive.title', 'Receive USDC')}
+      title={t('deposit.receive.title', 'Deposit')}
       size="md"
       bodyClassName="flex flex-col gap-4 pb-6"
     >

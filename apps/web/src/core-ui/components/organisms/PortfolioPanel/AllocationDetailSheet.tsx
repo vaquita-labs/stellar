@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUsdAdaptive } from '@/core-ui/helpers/numbers';
+import { formatUsd, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
@@ -14,6 +14,8 @@ interface AllocationDetailSheetProps {
   allocation: Allocation;
   style: AllocationStyle;
   tokenSymbol?: string;
+  /** Qué porción de TODO tu portafolio está en este plazo (para el subtítulo). */
+  portfolioPct: number;
   /** Abre la lista de posiciones de este plazo para retirar. */
   onWithdraw: () => void;
 }
@@ -28,10 +30,10 @@ export function AllocationDetailSheet({
   allocation,
   style,
   tokenSymbol = 'USDC',
+  portfolioPct,
   onWithdraw,
 }: AllocationDetailSheetProps) {
   const { t } = useTranslation();
-  const market = allocation.lendingMarketName || t('deposit.bank.theLendingProtocol', 'the lending protocol');
 
   return (
     <AppModal
@@ -61,7 +63,9 @@ export function AllocationDetailSheet({
         <p className="min-w-0 truncate text-4xl font-bold text-black tabular-nums">{formatUsdAdaptive(allocation.amount)}</p>
         <span className={`w-10 h-10 rounded-full shrink-0 ${style.solid}`} />
       </div>
-      <p className="-mt-3 text-sm font-bold text-success tabular-nums">{allocation.apy.toFixed(2)}% APR</p>
+      <p className="-mt-3 text-sm text-black tabular-nums">
+        {t('portfolio.detail.portfolioShare', '{{pct}}% of your portfolio', { pct: portfolioPct.toFixed(1) })}
+      </p>
 
       <div>
         <p className="text-xs text-gray-500 mb-1">{t('portfolio.detail.description', 'Description')}</p>
@@ -80,17 +84,24 @@ export function AllocationDetailSheet({
           <span className="font-bold text-black">{formatTimeDeposit(allocation.lockPeriod)}</span>
         </div>
         <div className="flex items-center justify-between py-2.5 text-sm">
-          <span className="text-gray-500">{t('portfolio.detail.vaquitaApy', 'Vaquita pool APY')}</span>
-          <span className="font-bold text-black tabular-nums">{allocation.vaquitaApy.toFixed(2)}%</span>
+          <span className="text-gray-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
+          <span className="font-bold text-black tabular-nums">{formatUsd(allocation.rewardPool)}</span>
+        </div>
+        <div className="flex items-center justify-between py-2.5 text-sm">
+          <span className="text-gray-500">{t('portfolio.detail.tvl', 'TVL')}</span>
+          <span className="font-bold text-black tabular-nums">{formatUsd(allocation.totalDeposits)}</span>
         </div>
         <div className="flex items-center justify-between gap-3 py-2.5 text-sm">
-          <span className="text-gray-500 truncate">{t('portfolio.detail.marketApy', '{{market}} APY', { market })}</span>
-          <span className="font-bold text-black tabular-nums shrink-0">{allocation.protocolApy.toFixed(2)}%</span>
+          <span className="text-gray-500 truncate">{t('portfolio.detail.depositors', 'Open deposits')}</span>
+          <span className="font-bold text-black tabular-nums shrink-0">{allocation.openPositions}</span>
         </div>
       </div>
 
       <p className="text-xs text-gray-500">
-        {t('portfolio.detail.estimateNote', 'APR is an estimate and may change over time.')}
+        {t(
+          'portfolio.detail.estimateNote',
+          'Rewards are shared among everyone in this pool and can change as people join or leave.',
+        )}
       </p>
     </AppModal>
   );

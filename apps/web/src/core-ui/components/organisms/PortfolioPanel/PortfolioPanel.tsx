@@ -6,13 +6,13 @@ import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useDepositsComplete, useLivePassiveUsdc } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight, FiPocket } from 'react-icons/fi';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
-import { DepositEarnings, DepositEarningsReporter } from '../../home/DepositEarningsReporter';
 import { AllocationDetailSheet } from './AllocationDetailSheet';
 import { BlendDetailSheet } from './BlendDetailSheet';
+import { PoolMeta } from './PoolMeta';
 import { InvestModal } from './InvestModal';
 import { PortfolioDonut } from './PortfolioDonut';
 import { AllocationStyle, getAllocationStyle } from './allocationStyles';
@@ -37,7 +37,11 @@ interface PortfolioRow {
   lockPeriod?: number;
   label: string;
   amount: number;
+  /** Solo filas 'blend': el APY real del vault (líquido). Los locks no muestran %. */
   apy: number;
+  /** Solo filas 'lock': premios del pool + posiciones abiertas (en vez del %). */
+  rewardPool?: number;
+  openPositions?: number;
   style: AllocationStyle;
 }
 
@@ -105,37 +109,6 @@ export function PortfolioPanel({
     [depositsData],
   );
 
-  // Ganancia estimada: cada depósito reporta su proyección según el APY de su
-  // propio lock period (mismo cálculo que la card). Antes lo agregaba el
-  // HeaderStats y lo pasaba por props; como el panel ya no vive dentro del
-  // header (se abre por la ruta /portafolio), lo calcula él mismo.
-  const [earningsById, setEarningsById] = useState<Record<number, DepositEarnings>>({});
-  const reportEarnings = useCallback((id: number, earnings: DepositEarnings) => {
-    setEarningsById((prev) => {
-      const current = prev[id];
-      if (
-        current &&
-        current.vaquita === earnings.vaquita &&
-        current.protocol === earnings.protocol &&
-        current.ratePerMs === earnings.ratePerMs
-      ) {
-        return prev;
-      }
-      return { ...prev, [id]: earnings };
-    });
-  }, []);
-  const { vaquitaEarnings, protocolEarnings } = activeDeposits.reduce(
-    (acc, d) => {
-      const earnings = earningsById[d.id];
-      if (earnings) {
-        acc.vaquitaEarnings += earnings.vaquita;
-        acc.protocolEarnings += earnings.protocol;
-      }
-      return acc;
-    },
-    { vaquitaEarnings: 0, protocolEarnings: 0 },
-  );
-
   // Capital por plazo: los depósitos activos agrupados por su propio lockPeriod.
   const allocations: Allocation[] = useMemo(() => {
     const amountByLockPeriod = activeDeposits.reduce<Record<number, number>>((acc, deposit) => {
@@ -153,6 +126,9 @@ export function PortfolioPanel({
         vaquitaApy: apy?.vaquitaApy ?? 0,
         protocolApy: apy?.protocolApy ?? 0,
         lendingMarketName: apy?.lendingMarketName,
+        rewardPool: apy?.rewardPool ?? 0,
+        openPositions: apy?.openPositions ?? 0,
+        totalDeposits: apy?.totalDeposits ?? 0,
       };
     });
   }, [activeDeposits, lockPeriods, byLockPeriod]);
@@ -162,7 +138,6 @@ export function PortfolioPanel({
   // Balance total del portafolio = locks + Blend (nivel base). Es el número que
   // el usuario espera ver como "todo lo que tiene invertido".
   const totalAmount = lockTotal + passiveBalance;
-  const totalEarnings = vaquitaEarnings + protocolEarnings;
 
   // Tras un invest/retiro, Blend (nivel base) y los depósitos (locks) se re-leen
   // por separado y asientan en momentos distintos: si ponés 2 de Blend en un
@@ -206,6 +181,8 @@ export function PortfolioPanel({
       label: a.label,
       amount: a.amount,
       apy: a.apy,
+      rewardPool: a.rewardPool,
+      openPositions: a.openPositions,
       style: getAllocationStyle(i),
     }));
     return [blendRow, ...lockRows];
@@ -249,10 +226,6 @@ export function PortfolioPanel({
 
   return (
     <>
-      {/* Reporta la ganancia estimada de cada depósito activo para el header. */}
-      {activeDeposits.map((d) => (
-        <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
-      ))}
       <AppModal
         open={open}
         onOpenChange={onOpenChange}
@@ -287,12 +260,6 @@ export function PortfolioPanel({
               </>
             }
           />
-          {totalEarnings > 0 ? (
-            <p className="text-sm text-gray-500">
-              {t('portfolio.earning', 'Estimated earnings')}{' '}
-              <span className="font-bold text-success tabular-nums">+{formatUsdAdaptive(totalEarnings)}</span>
-            </p>
-          ) : null}
           {totalAmount > 0 ? (
             <p className="text-xs text-gray-500">
               {t('portfolio.distributed', 'Spread across {{funded}} of {{total}} options', {
@@ -346,10 +313,18 @@ export function PortfolioPanel({
                       >
                         {row.label}
                       </span>
-                      <span className="block text-xs text-gray-500 tabular-nums">
-                        {empty ? `${t('portfolio.noFunds', 'No funds')} · ` : ''}
-                        {row.apy.toFixed(2)}% APY
-                      </span>
+                      {row.kind === 'lock' ? (
+                        <PoolMeta
+                          rewardPool={row.rewardPool ?? 0}
+                          openPositions={row.openPositions ?? 0}
+                          className="text-xs text-gray-500"
+                        />
+                      ) : (
+                        <span className="block text-xs text-gray-500 tabular-nums">
+                          {empty ? `${t('portfolio.noFunds', 'No funds')} · ` : ''}
+                          {row.apy.toFixed(2)}% APY
+                        </span>
+                      )}
                     </span>
                   </button>
 
@@ -414,6 +389,7 @@ export function PortfolioPanel({
           allocation={detailView.allocation}
           style={getAllocationStyle(detailView.index)}
           tokenSymbol={tokenSymbol}
+          portfolioPct={pctOf(detailView.allocation.amount)}
           onWithdraw={() => goToTerm(detailView.allocation.lockPeriod)}
         />
       ) : null}
