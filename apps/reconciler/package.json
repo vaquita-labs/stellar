@@ -1,0 +1,23 @@
+{
+  "name": "@vaquita/reconciler",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "reconcile:devnet": "tsx src/reconcile.ts",
+    "reconcile:testnet": "tsx src/reconcile.ts",
+    "reconcile:mainnet": "tsx src/reconcile.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^15.1.0",
+    "@vaquita/db": "workspace:*",
+    "@vaquita/shared": "workspace:*",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}
