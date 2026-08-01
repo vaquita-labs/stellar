@@ -15,6 +15,12 @@ export interface Allocation {
   vaquitaApy: number;
   protocolApy: number;
   lendingMarketName?: string;
+  /** Premios del pool de este plazo (USDC), lo cierto que sí mostramos. */
+  rewardPool: number;
+  /** Posiciones abiertas en este plazo (prueba social, no un rate). */
+  openPositions: number;
+  /** TVL del pool de este plazo: total depositado on-chain (USDC). */
+  totalDeposits: number;
 }
 
 export interface PortfolioPanelProps {

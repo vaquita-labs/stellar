@@ -198,7 +198,7 @@ export function ClaimRewardModal({ onDone }: ClaimRewardModalProps) {
       footer={renderFooter()}
     >
       <div className="relative h-28 w-28">
-        <Image src="/vaquita/vaquita_isotipo.svg" alt="Vaquita" fill sizes="112px" className="object-contain" priority />
+        <Image src="/vaquita/vaquita_isotipo.svg" alt="Vaquita" fill sizes="112px" className="object-contain" />
         {/* decorative coin overlay */}
         <div className="absolute -bottom-1 -right-1 h-12 w-12">
           <Image src="/icons/global/coin.png" alt="" fill sizes="48px" className="object-contain drop-shadow" />

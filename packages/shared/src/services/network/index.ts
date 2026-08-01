@@ -81,7 +81,14 @@ export const getNetworkByName = async (networkName: string): Promise<ServiceResu
 
 export const getTokenBySymbol = async (tokenSymbol: string): Promise<ServiceResult<Token | null>> => {
   try {
-    const token = await prisma.token.findFirst({ where: { symbol: tokenSymbol, deletedAt: null } });
+    // Un símbolo puede tener más de una fila (ej. una vieja/no soportada quedó sin
+    // borrar). Sin filtrar por `isSupported`, `findFirst` podía devolver la fila
+    // equivocada y leer su pool contract — de ahí salían premios/APY de otro vault.
+    // Nos quedamos SIEMPRE con la soportada, y ordenamos para que sea determinista.
+    const token = await prisma.token.findFirst({
+      where: { symbol: tokenSymbol, deletedAt: null, isSupported: true },
+      orderBy: { id: 'asc' },
+    });
     return { data: token ? toTokenShape(token) : null, error: null };
   } catch (error) {
     return { data: null, error: error as Error };

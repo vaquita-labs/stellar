@@ -98,7 +98,7 @@
       "claimExpired": "This claim expired. Please reopen the badge and try again.",
       "soulbound": "This badge can't be transferred once minted.",
       "unauthorized": "We couldn't verify this reward. Please try again.",
-      "editionCapReached": "This badge is sold out — no more editions are available.",
+      "editionCapReached": "This badge is sold out. No more editions are available.",
       "paused": "Minting is paused right now. Please try again later.",
       "notReady": "Badges aren't available right now. Please try again later.",
       "rejected": "You cancelled the request in your wallet.",
@@ -324,6 +324,7 @@
       "earlyWithdrawalPrefix": "Early withdrawal rewards will be",
       "forfeited": "forfeited",
       "readyToClaim": "Your vaquita is ready to claim.",
+      "rewardsOnTop": "Plus your share of the pool rewards",
       "sendTransaction": "Confirm to send the transaction.",
       "timesUp": "Time's up!",
       "title": "Confirm withdrawal",
@@ -469,7 +470,7 @@
       "underlyingAmountBelowMin": "Price moved past your limit, please retry"
     },
     "transfer": {
-      "creditNotVisible": "We can't see the funds in your wallet yet. They're safe — check your balance in a minute and finish the deposit."
+      "creditNotVisible": "We can't see the funds in your wallet yet. They're safe. Check your balance in a minute and finish the deposit."
     }
   },
   "home": {
@@ -823,7 +824,7 @@
       "iosStep2Prefix": "Then tap",
       "iosStep2Action": "“Add to Home Screen”",
       "installedBody": "Vaquita is installed! Open it from your home screen to unlock your wallet.",
-      "installedHint": "You can close this tab — from now on open Vaquita from the app icon.",
+      "installedHint": "You can close this tab. From now on open Vaquita from the app icon.",
       "pullHint": "Already installed? Pull down to refresh"
     },
     "intro": {
@@ -1578,7 +1579,7 @@
       "noQrDetected": "No QR detected",
       "noQrDetectedBody": "Center the QR in the frame and make sure it has good lighting.",
       "nowFollowing": "Now following {{handle}}",
-      "ownQr": "That's your own QR — share it with a friend!",
+      "ownQr": "That's your own QR. Share it with a friend!",
       "qrAlt": "QR code for {{handle}}",
       "qrButtonLabel": "Share profile QR",
       "qrLoadFailed": "Couldn't load the QR. Check your connection.",
@@ -1731,7 +1732,7 @@
         "connect": "Connect your wallet first.",
         "deposit": "Deposit",
         "details": "Details",
-        "empty": "No history loaded yet — tap Refresh.",
+        "empty": "No history loaded yet. Tap Refresh.",
         "none": "No transactions yet.",
         "phase": {
           "completed": "Completed",
@@ -1749,7 +1750,7 @@
         "authOk": "Authenticated with Anclap (JWT obtained).",
         "cta": "Continue",
         "depositHelper": "Only have Argentine pesos? Deposit with ARS",
-        "depositStarted": "Deposit started — continue on Anclap.",
+        "depositStarted": "Deposit started. Continue on Anclap.",
         "description": "Buy ARS with Anclap and receive it in your wallet, then we convert it to USDC automatically.",
         "jwtPreview": "JWT:",
         "openAnclap": "Open Anclap",
@@ -1758,7 +1759,7 @@
         "stepCredit": "Wait for ARS credit",
         "stepDeposit": "SEP-24 · Start deposit",
         "stepSwap": "Convert ARS → USDC",
-        "swapDone": "Converted to USDC — done!",
+        "swapDone": "Converted to USDC. Done!",
         "title": "Argentina (ARS)",
         "usdcReceived": "≈ {{amount}} USDC received",
         "waitingHint": "Complete the deposit on Anclap. We are waiting for the ARS to be credited…"
@@ -1784,7 +1785,7 @@
         "settled": "Withdrawal completed on Anclap.",
         "title": "Send fiat (ARS)",
         "waitingHint": "Complete the withdrawal on Anclap. We are waiting for the confirmation…",
-        "withdrawStarted": "Withdrawal started — continue on Anclap."
+        "withdrawStarted": "Withdrawal started. Continue on Anclap."
       }
     },
     "page": {
@@ -1973,7 +1974,7 @@
     "loadingMore": "Loading more vaqueros",
     "caughtUp": {
       "title": "You've met everyone",
-      "description": "You already follow every vaquero around. Come back later — new worlds show up all the time."
+      "description": "You already follow every vaquero around. Come back later. New worlds show up all the time."
     },
     "error": {
       "title": "Couldn't load vaqueros"
@@ -1996,12 +1997,25 @@
     "sum": "Total",
     "manage": "Manage allocations",
     "empty": "No saving terms available yet.",
+    "poolRewards": "{{amount}} in rewards",
+    "depositCount_one": "{{count}} deposit",
+    "depositCount_other": "{{count}} deposits",
+    "row": {
+      "ready": "Ready",
+      "timeLeft": "left",
+      "withdrawn": "Withdrawn",
+      "withdrawnEarly": "Withdrawn early",
+      "error": "Error"
+    },
     "detail": {
       "description": "Description",
-      "descriptionText": "Funds saved for {{period}} earn a bigger share of the Vaquita reward pool. The longer the term, the higher the APR.",
+      "descriptionText": "Funds saved for {{period}} earn a share of the Vaquita reward pool. It's the prize everyone in this term splits.",
+      "portfolioShare": "{{pct}}% of your portfolio",
       "withdrawPeriod": "Withdraw period",
-      "vaquitaApy": "Vaquita pool APR",
-      "marketApy": "{{market}} APY",
+      "rewardsPool": "Pool rewards",
+      "tvl": "TVL",
+      "depositors": "Open deposits",
+      "estimateNote": "Rewards are shared among everyone in this pool and can change as people join or leave.",
       "tokenNote": "Balances are shown in {{token}}."
     },
     "move": {
@@ -2030,7 +2044,7 @@
       "successSubtitle": "Your funds are flexible again and keep earning in your savings.",
       "cta": "Withdraw to your savings",
       "incompleteTitle": "Your money is in your wallet",
-      "incompleteSubtitle": "We got it out of the vaquita, but couldn't move it back into your savings. Nothing was lost — deposit it again whenever you want."
+      "incompleteSubtitle": "We got it out of the vaquita, but couldn't move it back into your savings. Nothing was lost. Deposit it again whenever you want."
     },
     "vault": {
       "label": "Vault · Flexible"

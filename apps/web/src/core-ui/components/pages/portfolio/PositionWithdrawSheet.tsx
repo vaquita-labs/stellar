@@ -1,6 +1,6 @@
 'use client';
 
-import { getInterestData } from '@/core-ui/helpers';
+import { formatUsd } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriod, useRestWithdrawal, useTransactions } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
@@ -59,7 +59,7 @@ export function PositionWithdrawSheet({
   onWithdrawn?: () => void;
 }) {
   const { t } = useTranslation();
-  const { walletAddress, token, network } = useConfigStore();
+  const { walletAddress, token } = useConfigStore();
   const queryClient = useQueryClient();
   const { transactionWithdraw } = useTransactions();
   const { confirmWithdrawal } = useRestWithdrawal();
@@ -108,14 +108,7 @@ export function PositionWithdrawSheet({
     seconds: secRemaining % 60,
   };
 
-  // Interés proyectado del plazo (mismo cálculo que la card del depósito).
-  const interest = getInterestData(network!, dataApy, deposit?.amount ?? 0, deposit?.lockPeriod ?? 0);
-  const vaquitaInterest = interest.vaquitaInterest;
-  const protocolInterest = interest.protocolInterest + interest.blendInterest;
-  const totalInterest = interest.totalInterest;
   const amount = deposit?.amount ?? 0;
-  // A tiempo cobrás capital + interés; antes de tiempo solo el capital (perdés el premio).
-  const finalReceive = inLock ? amount : amount + totalInterest;
 
   const handleWithdraw = async () => {
     if (!deposit || !token || !walletAddress || !transactionWithdraw) return;
@@ -196,9 +189,6 @@ export function PositionWithdrawSheet({
         <p className="text-3xl font-bold text-black tabular-nums">
           {amount.toFixed(2)} <span className="text-xl font-semibold">{token?.symbol}</span>
         </p>
-        <p className="text-sm font-bold text-success tabular-nums">
-          +{totalInterest.toFixed(2)} {token?.symbol} {t('deposit.detail.estAbbrev', 'est.')}
-        </p>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -224,31 +214,17 @@ export function PositionWithdrawSheet({
         ) : null}
       </div>
 
+      {/* En vez de un interés proyectado (que variaba con la gente del pool y
+          prometía un número que no se cumplía), mostramos lo cierto del plazo:
+          el pool de premios y cuántos depósitos hay adentro. */}
       <div className="divide-y divide-black/10">
-        <div className="flex items-center justify-between gap-3 py-2 text-xs">
-          <span className="flex items-center gap-1.5 text-gray-500">
-            {t('deposit.detail.vaquitaInterest', 'Vaquita interest')}
-            {dataApy ? (
-              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary whitespace-nowrap">
-                {dataApy.vaquitaApy.toFixed(2)}% APY
-              </span>
-            ) : null}
-          </span>
-          <span className="font-bold text-black tabular-nums shrink-0">
-            +{vaquitaInterest.toFixed(2)} {token?.symbol}
-          </span>
+        <div className="flex items-center justify-between py-2 text-xs">
+          <span className="text-gray-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
+          <span className="font-bold text-black tabular-nums">{formatUsd(dataApy?.rewardPool ?? 0)}</span>
         </div>
         <div className="flex items-center justify-between py-2 text-xs">
-          <span className="text-gray-500">{t('deposit.detail.protocolInterest', 'Protocol interest')}</span>
-          <span className="font-bold text-black tabular-nums">
-            +{protocolInterest.toFixed(2)} {token?.symbol}
-          </span>
-        </div>
-        <div className="flex items-center justify-between py-2 text-xs">
-          <span className="font-bold text-black">{t('deposit.detail.totalEstEarnings', 'Total est. earnings')}</span>
-          <span className="font-bold text-success tabular-nums">
-            +{totalInterest.toFixed(2)} {token?.symbol}
-          </span>
+          <span className="text-gray-500">{t('portfolio.detail.depositors', 'Open deposits')}</span>
+          <span className="font-bold text-black tabular-nums">{dataApy?.openPositions ?? 0}</span>
         </div>
       </div>
     </div>
@@ -264,35 +240,32 @@ export function PositionWithdrawSheet({
           {t('deposit.confirm.youWillReceive', 'You will receive')}
         </p>
         <p className={`text-4xl font-bold tabular-nums ${inLock ? 'text-black' : 'text-success'}`}>
-          {finalReceive.toFixed(2)} <span className="text-2xl font-semibold">{token?.symbol}</span>
+          {amount.toFixed(2)} <span className="text-2xl font-semibold">{token?.symbol}</span>
         </p>
       </div>
 
       {inLock ? (
         <>
-          <div className="flex items-center justify-between rounded-lg bg-error/10 px-3.5 py-2.5">
-            <span className="flex items-center gap-2 text-sm font-semibold text-error">
-              <FiAlertTriangle className="h-4 w-4 shrink-0" />
-              {t('deposit.confirm.youWillLose', 'You will lose')}
-            </span>
-            <span className="text-sm font-bold text-error tabular-nums">
-              −{totalInterest.toFixed(2)} {token?.symbol}
+          {/* Advertencia cualitativa, SIN monto: el premio no se puede calcular de
+              antemano (varía según cuánta gente entre/salga del pool), así que
+              prometer "vas a perder −X" era engañoso. Solo avisamos que se pierde. */}
+          <div className="flex items-center gap-2 rounded-lg bg-error/10 px-3.5 py-2.5">
+            <FiAlertTriangle className="h-4 w-4 shrink-0 text-error" />
+            <span className="text-sm font-semibold text-error">
+              {t('deposit.confirm.earlyWithdrawalPrefix', 'Early withdrawal rewards will be')}{' '}
+              <span className="font-bold">{t('deposit.confirm.forfeited', 'forfeited')}</span>.
             </span>
           </div>
-          <p className="text-center text-xs text-gray-500">
-            {t('deposit.confirm.earlyWithdrawalPrefix', 'Early withdrawal rewards will be')}{' '}
-            <span className="font-semibold text-error">{t('deposit.confirm.forfeited', 'forfeited')}</span>.
-          </p>
         </>
       ) : (
         <>
-          <div className="flex items-center justify-between rounded-lg bg-success/10 px-3.5 py-2.5">
-            <span className="flex items-center gap-2 text-sm font-semibold text-success">
-              <FiCheckCircle className="h-4 w-4 shrink-0" />
-              {t('deposit.confirm.youWillEarn', 'You will earn')}
-            </span>
-            <span className="text-sm font-bold text-success tabular-nums">
-              +{totalInterest.toFixed(2)} {token?.symbol}
+          {/* Ya venció: cobra el capital (el número grande) MÁS su parte de los
+              premios del pool. El premio exacto lo liquida el contrato al retirar,
+              así que lo decimos de forma cualitativa en vez de un monto inventado. */}
+          <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3.5 py-2.5">
+            <FiCheckCircle className="h-4 w-4 shrink-0 text-success" />
+            <span className="text-sm font-semibold text-success">
+              {t('deposit.confirm.rewardsOnTop', 'Plus your share of the pool rewards')}
             </span>
           </div>
           <p className="text-center text-xs text-gray-500">

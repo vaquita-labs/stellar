@@ -1,6 +1,6 @@
 'use client';
 
-import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
+import { AMOUNT_DECIMALS, floorAmount, formatUsd, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import {
   useApyByLockPeriods,
@@ -98,9 +98,8 @@ export function InvestModal({
   }, [open, lockPeriods, initialLockPeriod]);
 
   const numericAmount = Number(amount || '0');
-  const apyOf = (lp: number) =>
-    (byLockPeriod[lp]?.vaquitaApy ?? 0) + (byLockPeriod[lp]?.protocolApy ?? 0);
-  const selectedApy = selectedLock != null ? apyOf(selectedLock) : 0;
+  // En vez del % (que era premios/depósitos anualizado y engañoso), cada plazo
+  // muestra lo cierto: su pool de premios + cuántos depósitos hay (ver PoolMeta).
   const canReview = numericAmount > 0 && selectedLock != null;
 
   const shakeAmount = () => {
@@ -250,9 +249,6 @@ export function InvestModal({
               ? formatTimeDeposit(selectedLock)
               : t('invest.selectTerm', 'Select a term')}
           </span>
-          <span className="block text-xs font-bold text-success tabular-nums">
-            {selectedApy.toFixed(2)}% APR
-          </span>
         </span>
         <HiOutlineSelector className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
@@ -274,28 +270,36 @@ export function InvestModal({
 
   // --- Paso: elegir plazo/APY (filas simples, no cards) ----------------------
   const termStep = (
-    <div className="flex flex-col">
-      {lockPeriods.map((lp, i) => (
-        <button
-          key={lp}
-          type="button"
-          onClick={() => {
-            setSelectedLock(lp);
-            setStep('amount');
-          }}
-          className={`w-full flex items-center gap-3 px-2 py-3 text-left transition active:bg-black/[0.04] ${
-            i > 0 ? 'border-t border-black/10' : ''
-          }`}
-        >
-          <span className="flex-1 min-w-0">
-            <span className="block text-sm font-bold text-black">{formatTimeDeposit(lp)}</span>
-            <span className="block text-xs font-bold text-success tabular-nums">
-              {apyOf(lp).toFixed(2)}% APR
+    <div className="flex flex-col gap-2">
+      {lockPeriods.map((lp) => {
+        const isSelected = selectedLock === lp;
+        return (
+          <button
+            key={lp}
+            type="button"
+            aria-pressed={isSelected}
+            onClick={() => {
+              setSelectedLock(lp);
+              setStep('amount');
+            }}
+            // El plazo elegido se identifica con fondo + borde resaltado (no con un
+            // check al costado): se lee de un vistazo cuál está activo.
+            className={`w-full flex items-center gap-3 rounded-2xl border px-3 py-3 text-left transition active:translate-y-0.5 ${
+              isSelected ? 'border-success bg-success/10' : 'border-black/10 bg-transparent hover:bg-black/[0.03]'
+            }`}
+          >
+            <span className={`flex-1 min-w-0 text-sm font-bold ${isSelected ? 'text-success' : 'text-black'}`}>
+              {formatTimeDeposit(lp)}
             </span>
-          </span>
-          {selectedLock === lp ? <FiCheck className="w-5 h-5 text-success shrink-0" /> : null}
-        </button>
-      ))}
+            {/* Solo el tamaño del pool de premios, al otro extremo (sin "N deposits"). */}
+            <span className="text-sm font-bold text-success tabular-nums shrink-0">
+              {t('portfolio.poolRewards', '{{amount}} in rewards', {
+                amount: formatUsd(byLockPeriod[lp]?.rewardPool ?? 0),
+              })}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 
@@ -317,8 +321,10 @@ export function InvestModal({
       </div>
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
-        <span className="text-gray-500">{t('invest.review.apyLabel', 'APR')}</span>
-        <span className="font-bold text-success tabular-nums">{selectedApy.toFixed(2)}%</span>
+        <span className="text-gray-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
+        <span className="font-bold text-success tabular-nums">
+          {formatUsd(selectedLock != null ? byLockPeriod[selectedLock]?.rewardPool ?? 0 : 0)}
+        </span>
       </div>
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">

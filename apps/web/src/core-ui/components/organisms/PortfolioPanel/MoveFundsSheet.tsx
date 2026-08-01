@@ -1,16 +1,17 @@
 'use client';
 
-import { AMOUNT_DECIMALS, formatTokenPrecise, formatUsdPrecise } from '@/core-ui/helpers/numbers';
+import { AMOUNT_DECIMALS, formatTokenPrecise, formatUsd, formatUsdPrecise } from '@/core-ui/helpers/numbers';
 import { humanizeTxError } from '@/core-ui/helpers/txError';
 import { Spinner } from '@heroui/react';
 import { motion, useAnimationControls } from 'framer-motion';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiArrowRight, FiCheck, FiRepeat } from 'react-icons/fi';
 import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { getAllocationStyle } from './allocationStyles';
+import { PoolMeta } from './PoolMeta';
 import { Allocation, MoveFundsStep } from './types';
 
 interface MoveFundsSheetProps {
@@ -32,18 +33,6 @@ interface MoveFundsSheetProps {
 function displayAmount(raw: string) {
   if (raw === '') return '$0.00';
   return `$${raw}`;
-}
-
-/** APY combinado (ponderado por capital) de una distribución de fondos. */
-function blendApy(amounts: Map<number, number>, allocations: Allocation[]) {
-  let total = 0;
-  let weighted = 0;
-  for (const a of allocations) {
-    const amount = amounts.get(a.lockPeriod) ?? 0;
-    total += amount;
-    weighted += amount * a.apy;
-  }
-  return total > 0 ? weighted / total : 0;
 }
 
 /**
@@ -103,23 +92,8 @@ export function MoveFundsSheet({
   const numericAmount = Number(amount || '0');
   const canReview = numericAmount > 0 && !!from && !!to;
 
-  // APY combinado antes y después del movimiento: la única señal que le importa
-  // al usuario para decidir, y la que se muestra en la confirmación.
-  const { currentApy, projectedApy } = useMemo(() => {
-    const current = new Map(allocations.map((a) => [a.lockPeriod, a.amount]));
-    const projected = new Map(current);
-    if (from && to && numericAmount > 0) {
-      const moved = Math.min(numericAmount, from.amount);
-      projected.set(from.lockPeriod, (projected.get(from.lockPeriod) ?? 0) - moved);
-      projected.set(to.lockPeriod, (projected.get(to.lockPeriod) ?? 0) + moved);
-    }
-    return {
-      currentApy: blendApy(current, allocations),
-      projectedApy: blendApy(projected, allocations),
-    };
-  }, [allocations, from, to, numericAmount]);
-
-  const apyDelta = projectedApy - currentApy;
+  // En vez del APY ponderado (premios/depósito anualizado, engañoso), mostramos
+  // lo cierto del plazo destino: su pool de premios + depósitos (ver PoolMeta).
 
   const shakeAmount = () => {
     setOverBalance(true);
@@ -199,10 +173,11 @@ export function MoveFundsSheet({
         >
           {displayAmount(amount)}
         </motion.p>
-        <p className="mt-1 text-xs text-gray-500">
-          {t('portfolio.move.yourApy', 'Your APY')}:{' '}
-          <span className="font-bold text-black tabular-nums">{projectedApy.toFixed(2)}%</span>
-        </p>
+        <PoolMeta
+          rewardPool={to?.rewardPool ?? 0}
+          openPositions={to?.openPositions ?? 0}
+          className="mt-1 text-xs text-gray-500"
+        />
       </div>
 
       <div>
@@ -253,11 +228,8 @@ export function MoveFundsSheet({
       </div>
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
-        <span className="text-gray-500">{t('portfolio.move.apyChange', 'APY change')}</span>
-        <span className={`font-bold tabular-nums ${apyDelta >= 0 ? 'text-success' : 'text-error'}`}>
-          {apyDelta >= 0 ? '+' : ''}
-          {apyDelta.toFixed(2)}%
-        </span>
+        <span className="text-gray-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
+        <span className="font-bold text-black tabular-nums">{formatUsd(to?.rewardPool ?? 0)}</span>
       </div>
 
       {error ? <p className="text-sm text-error font-semibold">{error}</p> : null}

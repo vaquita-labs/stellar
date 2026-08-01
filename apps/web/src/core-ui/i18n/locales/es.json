@@ -98,7 +98,7 @@
       "claimExpired": "Este reclamo expiró. Vuelve a abrir la insignia e inténtalo de nuevo.",
       "soulbound": "Esta insignia no se puede transferir una vez acuñada.",
       "unauthorized": "No pudimos verificar este premio. Inténtalo de nuevo.",
-      "editionCapReached": "Esta insignia está agotada — no quedan ediciones disponibles.",
+      "editionCapReached": "Esta insignia está agotada. No quedan ediciones disponibles.",
       "paused": "La acuñación está pausada en este momento. Inténtalo más tarde.",
       "notReady": "Las insignias no están disponibles en este momento. Inténtalo más tarde.",
       "rejected": "Cancelaste la solicitud en tu wallet.",
@@ -288,7 +288,7 @@
       "cta": "Depositar en tus ahorros",
       "destination": "Blend",
       "mainnetOnly": "Los depósitos directos solo están disponibles en la mainnet de Stellar.",
-      "notTracked": "Tu USDC empieza a generar rendimiento al instante, sin período de bloqueo — retiralo cuando quieras.",
+      "notTracked": "Tu USDC empieza a generar rendimiento al instante, sin período de bloqueo. Retiralo cuando quieras.",
       "processing": "Procesando depósito...",
       "processingStep": "Depositando en tus ahorros",
       "unavailable": "Los depósitos directos aún no están disponibles en esta red.",
@@ -324,6 +324,7 @@
       "earlyWithdrawalPrefix": "Las recompensas por retiro anticipado se",
       "forfeited": "perderán",
       "readyToClaim": "Tu vaquita está lista para reclamar.",
+      "rewardsOnTop": "Más tu parte de los premios del pool",
       "sendTransaction": "Confirma para enviar la transacción.",
       "timesUp": "¡Se acabó el tiempo!",
       "title": "Confirmar retiro",
@@ -670,8 +671,8 @@
       "you": "Tú"
     },
     "direction": {
-      "ascending": "Ordenar de menor a mayor — cambiar orden",
-      "descending": "Ordenar de mayor a menor — cambiar orden"
+      "ascending": "Ordenar de menor a mayor, cambiar orden",
+      "descending": "Ordenar de mayor a menor, cambiar orden"
     },
     "empty": {
       "description": "Sé el primero en escalar posiciones: empieza una racha de depósitos y aparecerás aquí.",
@@ -823,7 +824,7 @@
       "iosStep2Prefix": "Y después tocá",
       "iosStep2Action": "“Agregar a inicio”",
       "installedBody": "¡Vaquita está instalada! Abrila desde tu pantalla de inicio para desbloquear tu billetera.",
-      "installedHint": "Ya podés cerrar esta pestaña — de ahora en más abrí Vaquita desde el ícono de la app.",
+      "installedHint": "Ya podés cerrar esta pestaña. De ahora en más abrí Vaquita desde el ícono de la app.",
       "pullHint": "¿Ya la instalaste? Tirá hacia abajo para recargar"
     },
     "intro": {
@@ -1135,8 +1136,8 @@
       "streakMissed": "Racha perdida",
       "subtitle": "Cómo va creciendo tu hábito de ahorro.",
       "title": "Resumen",
-      "todayStreakKept": "Hoy — racha mantenida",
-      "todayStreakMissed": "Hoy — racha perdida",
+      "todayStreakKept": "Hoy: racha mantenida",
+      "todayStreakMissed": "Hoy: racha perdida",
       "totalExperience": "Experiencia total",
       "xpLevel": "XP y nivel",
       "xpLevelSub": "Avance hacia tu próximo nivel",
@@ -1666,7 +1667,7 @@
     "coach": {
       "depositConfirm": {
         "title": "Confirma tu depósito",
-        "body": "Depositarás {{amount}} {{currency}} — es solo una demo, sin dinero real."
+        "body": "Depositarás {{amount}} {{currency}}. Es solo una demo, sin dinero real."
       },
       "selectDeposit": {
         "title": "Encuentra tu depósito",
@@ -1731,7 +1732,7 @@
         "connect": "Conecta tu wallet primero.",
         "deposit": "Depósito",
         "details": "Detalles",
-        "empty": "Sin historial cargado — toca Actualizar.",
+        "empty": "Sin historial cargado. Toca Actualizar.",
         "none": "Todavía no hay transacciones.",
         "phase": {
           "completed": "Completado",
@@ -1749,7 +1750,7 @@
         "authOk": "Autenticado con Anclap (JWT obtenido).",
         "cta": "Continuar",
         "depositHelper": "¿Solo tenés pesos argentinos? Depositá con ARS",
-        "depositStarted": "Depósito iniciado — continúa en Anclap.",
+        "depositStarted": "Depósito iniciado. Continúa en Anclap.",
         "description": "Compra ARS con Anclap y recíbelos en tu wallet; luego lo convertimos a USDC automáticamente.",
         "jwtPreview": "JWT:",
         "openAnclap": "Abrir Anclap",
@@ -1758,7 +1759,7 @@
         "stepCredit": "Esperar acreditación de ARS",
         "stepDeposit": "SEP-24 · Iniciar depósito",
         "stepSwap": "Convertir ARS → USDC",
-        "swapDone": "Convertido a USDC — ¡listo!",
+        "swapDone": "Convertido a USDC. ¡Listo!",
         "title": "Argentina (ARS)",
         "usdcReceived": "≈ {{amount}} USDC recibidos",
         "waitingHint": "Completa el depósito en Anclap. Estamos esperando que se acrediten los ARS…"
@@ -1784,7 +1785,7 @@
         "settled": "Retiro completado en Anclap.",
         "title": "Enviar fiat (ARS)",
         "waitingHint": "Completa el retiro en Anclap. Estamos esperando la confirmación…",
-        "withdrawStarted": "Retiro iniciado — continúa en Anclap."
+        "withdrawStarted": "Retiro iniciado. Continúa en Anclap."
       }
     },
     "page": {
@@ -1973,7 +1974,7 @@
     "loadingMore": "Cargando más vaqueros",
     "caughtUp": {
       "title": "Ya conociste a todos",
-      "description": "Ya seguís a todos los vaqueros por acá. Volvé más tarde — siempre aparecen mundos nuevos."
+      "description": "Ya seguís a todos los vaqueros por acá. Volvé más tarde. Siempre aparecen mundos nuevos."
     },
     "error": {
       "title": "No pudimos cargar los vaqueros"
@@ -1996,12 +1997,25 @@
     "sum": "Total",
     "manage": "Gestionar distribución",
     "empty": "Todavía no hay plazos de ahorro disponibles.",
+    "poolRewards": "{{amount}} en premios",
+    "depositCount_one": "{{count}} depósito",
+    "depositCount_other": "{{count}} depósitos",
+    "row": {
+      "ready": "Listo",
+      "timeLeft": "restante",
+      "withdrawn": "Retirado",
+      "withdrawnEarly": "Retirado antes",
+      "error": "Error"
+    },
     "detail": {
       "description": "Descripción",
-      "descriptionText": "Los fondos ahorrados por {{period}} reciben una porción mayor del fondo de recompensas de Vaquita. Cuanto más largo el plazo, más alto el APY.",
+      "descriptionText": "Los fondos ahorrados por {{period}} reciben una parte del fondo de recompensas de Vaquita: el premio que se reparte entre todos los de este plazo.",
+      "portfolioShare": "{{pct}}% de tu portafolio",
       "withdrawPeriod": "Periodo de retiro",
-      "vaquitaApy": "APY del fondo de Vaquita",
-      "marketApy": "APY de {{market}}",
+      "rewardsPool": "Premios del pool",
+      "tvl": "TVL",
+      "depositors": "Depósitos abiertos",
+      "estimateNote": "Los premios se reparten entre todos los del pool y pueden cambiar a medida que entra o sale gente.",
       "tokenNote": "Los saldos se muestran en {{token}}."
     },
     "move": {

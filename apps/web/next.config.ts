@@ -10,6 +10,15 @@ const nextConfig: NextConfig = {
   // the proxied host lets those dev requests through. No effect on prod builds.
   allowedDevOrigins: ['app.local.vaquita.fi'],
   outputFileTracingRoot: path.join(__dirname, '../../'),
+  images: {
+    // Serve AVIF first (smaller than WebP for these gradient/photographic
+    // icons), fall back to WebP. Next only emitted WebP before this block.
+    formats: ['image/avif', 'image/webp'],
+    // Keep an optimized variant on disk for a year instead of re-encoding the
+    // source on nearly every request — the self-hosted optimizer has no CDN in
+    // front of it, so this is the only durable cache for /_next/image output.
+    minimumCacheTTL: 31536000,
+  },
   // Public profiles used to hang off /leaderboard/<username>, and that is the
   // URL baked into every share link and QR handed out so far. The screen is now
   // /explore, so keep the old shape resolving instead of 404ing links that are
