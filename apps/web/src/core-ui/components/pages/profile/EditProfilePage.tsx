@@ -226,8 +226,13 @@ export function EditProfilePage({ onBack }: { onBack?: () => void } = {}) {
             {emailError && <p className="text-xs text-red-600 mt-1.5">{emailError}</p>}
           </div>
 
-          {/* Flags — dev/testing only */}
-          <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-black/30 bg-black/[0.02] p-3">
+          {/*
+            AI-MARKER: PROFILE_FLAGS_TESTING_PANEL — dev/testing-only "Profile flags" panel
+            (Onboarding completed / Tutorial completed toggles). Hidden from the UI on purpose.
+            To restore, uncomment this block. Related handlers still exist: `handleToggleFlag`,
+            `savingFlag`, `onboardingCompleted`, `tutorialCompleted` and the `FlagToggle` component.
+          */}
+          {/* <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-black/30 bg-black/[0.02] p-3">
             <div className="flex items-center justify-between gap-2 px-1">
               <span className="text-xs font-extrabold uppercase tracking-wider text-gray-500">
                 {t('profilePages.edit.profileFlags', 'Profile flags')}
@@ -252,7 +257,7 @@ export function EditProfilePage({ onBack }: { onBack?: () => void } = {}) {
               isSaving={savingFlag === 'tutorial'}
               onChange={(checked) => handleToggleFlag('tutorial', checked)}
             />
-          </div>
+          </div> */}
         </section>
 
         {/* Actions */}
