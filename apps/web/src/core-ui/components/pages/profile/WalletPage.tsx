@@ -14,6 +14,8 @@ import { PageLayout } from '../../molecules';
 import { ReceiveFiatModal } from '../../organisms/FiatModals/ReceiveFiatModal';
 import { SendFiatModal } from '../../organisms/FiatModals/SendFiatModal';
 import { BridgeUsdcModal } from './BridgeUsdcModal';
+import { WalletReceiveModal } from './WalletReceiveModal';
+import { WalletSendModal } from './WalletSendModal';
 
 const LogoByType: Record<string, ReactNode> = {
   Stellar: <Image src="/chains/stellar.png" alt="Stellar" width={20} height={20} className="rounded-sm" />,
@@ -22,11 +24,13 @@ const LogoByType: Record<string, ReactNode> = {
 export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
-  const { walletAddress, network } = useConfigStore();
+  const { walletAddress, network, token } = useConfigStore();
   const { data: profile } = useProfileData();
   const cryptoMode = profile?.cryptoSavvy ?? false;
-  const { openWalletBalanceModal, openSendModal, openReceiveModal } = usePollar();
+  const { openWalletBalanceModal } = usePollar();
   const [bridgeOpen, setBridgeOpen] = useState(searchParams.get('bridge') === '1');
+  const [receiveOpen, setReceiveOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sendFiatOpen, setSendFiatOpen] = useState(false);
   const [receiveFiatOpen, setReceiveFiatOpen] = useState(searchParams.get('onramp') === '1');
@@ -92,7 +96,7 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
         <section className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={openReceiveModal}
+            onClick={() => setReceiveOpen(true)}
             className="relative w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black hover:bg-[#F5FBFF] transition"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#DDF4FF] border border-[#84D8FF]">
@@ -103,7 +107,7 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
           </button>
           <button
             type="button"
-            onClick={openSendModal}
+            onClick={() => setSendOpen(true)}
             className="relative w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black hover:bg-[#F5FBFF] transition"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#DDF4FF] border border-[#84D8FF]">
@@ -169,6 +173,17 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
         />
         <SendFiatModal open={sendFiatOpen} onOpenChange={() => setSendFiatOpen(false)} />
         <ReceiveFiatModal open={receiveFiatOpen} onOpenChange={() => setReceiveFiatOpen(false)} />
+        <WalletReceiveModal
+          open={receiveOpen}
+          onOpenChange={() => setReceiveOpen(false)}
+          address={walletAddress ?? ''}
+        />
+        <WalletSendModal
+          open={sendOpen}
+          onOpenChange={() => setSendOpen(false)}
+          address={walletAddress ?? ''}
+          token={token}
+        />
     </PageLayout>
   );
 }

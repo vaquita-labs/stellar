@@ -387,6 +387,16 @@
     },
     "processing": "Procesando...",
     "processingShort": "Procesando",
+    "receive": {
+      "title": "Depósito",
+      "subtitle": "Enviá USDC en Stellar a esta dirección. Aparecerá en tu balance, listo para invertir.",
+      "addressLabel": "Tu dirección",
+      "copy": "Copiar",
+      "copyAria": "Copiar dirección",
+      "copied": "Copiado",
+      "minDeposit": "Depósito mínimo: $1 USDC.",
+      "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
+    },
     "savingsStats": {
       "infoAlt": "info"
     },
@@ -1827,6 +1837,28 @@
       "saveChanges": "Guardar cambios",
       "title": "Perfil",
       "walletLabel": "Wallet"
+    },
+    "receive": {
+      "title": "Recibir",
+      "subtitle": "Compartí tu dirección de Stellar para recibir cualquier activo.",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
+    },
+    "send": {
+      "title": "Enviar",
+      "asset": "Activo",
+      "available": "Disponible: {{amount}} {{symbol}}",
+      "amount": "Monto",
+      "max": "MÁX",
+      "insufficient": "No tenés suficiente {{symbol}} en tu wallet.",
+      "destination": "Wallet de destino",
+      "destinationPlaceholder": "G…",
+      "invalidAddress": "Eso no parece una dirección de Stellar válida.",
+      "sameAddress": "No podés enviar a tu propia dirección.",
+      "cta": "Enviar",
+      "sending": "Enviando…",
+      "success": "Enviaste {{amount}} {{symbol}}"
     }
   },
   "referrals": {

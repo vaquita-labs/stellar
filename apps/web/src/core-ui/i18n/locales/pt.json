@@ -387,6 +387,16 @@
     },
     "processing": "Processando...",
     "processingShort": "Processando",
+    "receive": {
+      "title": "Depósito",
+      "subtitle": "Envie USDC na Stellar para este endereço. Aparecerá no seu saldo, pronto para investir.",
+      "addressLabel": "Seu endereço",
+      "copy": "Copiar",
+      "copyAria": "Copiar endereço",
+      "copied": "Copiado",
+      "minDeposit": "Depósito mínimo: $1 USDC.",
+      "warning": "Envie apenas ativos da Stellar para este endereço. Fundos enviados de outra rede são perdidos."
+    },
     "savingsStats": {
       "infoAlt": "info"
     },
@@ -1767,6 +1777,28 @@
         "groupConnect": "Conectar com a Anclap",
         "groupSend": "Enviar ARS para a Anclap"
       }
+    },
+    "receive": {
+      "title": "Receber",
+      "subtitle": "Compartilhe seu endereço Stellar para receber qualquer ativo.",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "warning": "Envie apenas ativos Stellar para este endereço. Fundos enviados de outra rede são perdidos."
+    },
+    "send": {
+      "title": "Enviar",
+      "asset": "Ativo",
+      "available": "Disponível: {{amount}} {{symbol}}",
+      "amount": "Valor",
+      "max": "MÁX",
+      "insufficient": "Você não tem {{symbol}} suficiente na sua carteira.",
+      "destination": "Carteira de destino",
+      "destinationPlaceholder": "G…",
+      "invalidAddress": "Isso não parece um endereço Stellar válido.",
+      "sameAddress": "Você não pode enviar para o seu próprio endereço.",
+      "cta": "Enviar",
+      "sending": "Enviando…",
+      "success": "Enviou {{amount}} {{symbol}}"
     }
   },
   "referrals": {

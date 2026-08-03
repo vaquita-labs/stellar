@@ -387,6 +387,16 @@
     },
     "processing": "Processing...",
     "processingShort": "Processing",
+    "receive": {
+      "title": "Deposit",
+      "subtitle": "Send USDC on Stellar to this address. It will show up in your balance, ready to invest.",
+      "addressLabel": "Your address",
+      "copy": "Copy",
+      "copyAria": "Copy address",
+      "copied": "Copied",
+      "minDeposit": "Minimum deposit: $1 USDC.",
+      "warning": "Only send Stellar assets to this address. Funds sent from another network are lost."
+    },
     "savingsStats": {
       "infoAlt": "info"
     },
@@ -1827,6 +1837,28 @@
       "saveChanges": "Save changes",
       "title": "Profile",
       "walletLabel": "Wallet"
+    },
+    "receive": {
+      "title": "Receive",
+      "subtitle": "Share your Stellar address to receive any asset.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "warning": "Only send Stellar assets to this address. Funds sent from another network are lost."
+    },
+    "send": {
+      "title": "Send",
+      "asset": "Asset",
+      "available": "Available: {{amount}} {{symbol}}",
+      "amount": "Amount",
+      "max": "MAX",
+      "insufficient": "Not enough {{symbol}} in your wallet.",
+      "destination": "Destination wallet",
+      "destinationPlaceholder": "G…",
+      "invalidAddress": "That doesn't look like a valid Stellar address.",
+      "sameAddress": "You can't send to your own address.",
+      "cta": "Send",
+      "sending": "Sending…",
+      "success": "Sent {{amount}} {{symbol}}"
     }
   },
   "referrals": {
