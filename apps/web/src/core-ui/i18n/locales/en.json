@@ -1215,7 +1215,9 @@
       "streakTitle_other": "You now have a {{count}}-day streak!",
       "success_one": "You earned {{count}} coin!",
       "success_other": "You earned {{count}} coins!",
-      "title": "Daily Reward"
+      "title": "Daily Reward",
+      "xpAlt": "experience",
+      "xpTitle": "You earned experience!"
     },
     "experience": {
       "description": "You earn XP every time you save and keep your streak. Reach new levels to show off your saving progress!",

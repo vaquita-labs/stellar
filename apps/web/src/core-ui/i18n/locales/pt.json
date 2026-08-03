@@ -1215,7 +1215,9 @@
       "streakTitle_other": "Agora você tem uma sequência de {{count}} dias!",
       "success_one": "Você ganhou {{count}} moeda!",
       "success_other": "Você ganhou {{count}} moedas!",
-      "title": "Recompensa diária"
+      "title": "Recompensa diária",
+      "xpAlt": "experiência",
+      "xpTitle": "Você ganhou experiência!"
     },
     "experience": {
       "description": "Você ganha XP toda vez que poupa e mantém sua sequência. Alcance novos níveis para mostrar seu progresso de poupança!",

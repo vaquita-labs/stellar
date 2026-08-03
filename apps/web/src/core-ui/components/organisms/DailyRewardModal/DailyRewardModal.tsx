@@ -13,8 +13,9 @@ import { PressableButton } from '../../molecules/PressableButton';
 // Pantallas del modal:
 //  - confirm: cofre cerrado + "mantener presionado" (no revela el monto).
 //  - reward:  cofre abierto + monedas ganadas + botón "Siguiente".
+//  - xp:      estrella + experiencia ganada + botón "Siguiente".
 //  - streak:  llama + racha actual + botón "Listo" (cierra).
-type Step = 'confirm' | 'reward' | 'streak';
+type Step = 'confirm' | 'reward' | 'xp' | 'streak';
 
 // Cuánto hay que mantener presionado el cofre para abrirlo (ms). El anillo de
 // progreso se llena en este tiempo; soltar antes lo reinicia.
@@ -24,6 +25,7 @@ export function DailyRewardModal({
   open,
   onOpenChange,
   coinsToCollect,
+  experienceToCollect,
   streakDays,
   onCollect,
 }: DailyRewardModalProps) {
@@ -115,6 +117,10 @@ export function DailyRewardModal({
   // y racha; la pantalla inicial se avanza manteniendo presionado el cofre.
   const footer =
     step === 'reward' ? (
+      <PressableButton variant="primary" size="cta" className="!py-3.5" onClick={() => setStep('xp')}>
+        {t('rewards.daily.nextButton', 'Next')}
+      </PressableButton>
+    ) : step === 'xp' ? (
       <PressableButton variant="primary" size="cta" className="!py-3.5" onClick={() => setStep('streak')}>
         {t('rewards.daily.nextButton', 'Next')}
       </PressableButton>
@@ -191,6 +197,44 @@ export function DailyRewardModal({
             >
               <span className="text-5xl font-bold text-black">+{coinsToCollect}</span>
               <Image src="/icons/global/coin.png" alt={t('rewards.daily.coinsAlt', 'coins')} width={64} height={64} draggable={false} className="pointer-events-none" />
+            </motion.div>
+          </>
+        ) : step === 'xp' ? (
+          <>
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0, y: 8 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 16 }}
+              className="relative flex items-center justify-center"
+            >
+              <span
+                aria-hidden
+                className="absolute inset-0 m-auto rounded-full bg-primary blur-2xl opacity-50"
+                style={{ width: chestPx, height: chestPx }}
+              />
+              <Image
+                src="/icons/global/star.png"
+                alt={t('rewards.daily.xpAlt', 'experience')}
+                width={chestPx}
+                height={chestPx}
+                draggable={false}
+                className="relative pointer-events-none"
+                style={{ filter: 'drop-shadow(0 0 14px rgba(99, 102, 241, 0.75))' }}
+              />
+            </motion.div>
+
+            <p className="text-xl font-bold text-black">
+              {t('rewards.daily.xpTitle', 'You earned experience!')}
+            </p>
+
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.15, type: 'spring', stiffness: 260, damping: 18 }}
+              className="flex items-center justify-center gap-3"
+            >
+              <span className="text-5xl font-bold text-black">+{experienceToCollect}</span>
+              <span className="text-2xl font-bold text-gray-500">XP</span>
             </motion.div>
           </>
         ) : step === 'streak' ? (

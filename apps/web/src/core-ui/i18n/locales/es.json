@@ -1215,7 +1215,9 @@
       "streakTitle_other": "¡Ahora llevás {{count}} días de racha!",
       "success_one": "¡Ganaste {{count}} moneda!",
       "success_other": "¡Ganaste {{count}} monedas!",
-      "title": "Recompensa diaria"
+      "title": "Recompensa diaria",
+      "xpAlt": "experiencia",
+      "xpTitle": "¡Ganaste experiencia!"
     },
     "experience": {
       "description": "Ganas XP cada vez que ahorras y mantienes tu racha. ¡Alcanza nuevos niveles para mostrar tu progreso de ahorro!",
