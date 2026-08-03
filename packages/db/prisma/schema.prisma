@@ -139,6 +139,7 @@ model SavedWallet {
   profileId Int       @map("profile_id")
   label     String    @db.VarChar(60)
   address   String    @db.VarChar(128)
+  memo      String?   @db.VarChar(64)
   network   String    @db.VarChar(40)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)

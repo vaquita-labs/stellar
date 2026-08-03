@@ -1,7 +1,7 @@
 'use client';
 
 import { truncateMiddle } from '@/core-ui/helpers/strings';
-import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
+import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, MIN_USDC, truncatedAmountString } from '@/core-ui/helpers/numbers';
 import { useLivePassiveUsdc, usePassiveLabel, usePassiveMigration } from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
@@ -130,6 +130,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           label: t('withdraw.ownWallet', 'Your wallet'),
           address: ownAddress,
           network: 'stellar',
+          memo: null,
           createdTimestamp: 0,
           updatedTimestamp: 0,
         }
@@ -159,9 +160,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   }, [isExternalWallet, savedWallets, selectedWalletId]);
 
   const numericAmount = Number(amount || '0');
-  // El botón se habilita con cualquier monto > 0. Exceder el saldo o faltar
-  // destino se resuelven al presionar Review, no con un botón muerto.
-  const canReview = numericAmount > 0;
+  // Mínimo 1 USDC para retirar (mismo piso que el depósito y que valida el
+  // backend). Por debajo el botón queda gris y el aviso de mínimo lo explica.
+  // Exceder el saldo o faltar destino se resuelven al presionar Review.
+  const canReview = numericAmount >= MIN_USDC;
 
   const shakeAmount = () => {
     setOverBalance(true);
@@ -278,6 +280,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         >
           {t('withdraw.available', 'Available')}: {formatUsdPrecise(available)}
         </button>
+        <p className="mt-1 text-xs text-gray-400">
+          {t('withdraw.minWithdraw', 'Minimum withdrawal: $1 USDC.')}
+        </p>
       </div>
 
       {showBlendLeftover && (
@@ -357,6 +362,11 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
                 <span className="block text-xs text-gray-500">
                   {truncateMiddle(selectedWallet.address, 6, 5)}
                 </span>
+                {selectedWallet.memo ? (
+                  <span className="block text-xs text-gray-400 truncate">
+                    {t('withdraw.memoLabel', 'Memo')}: {selectedWallet.memo}
+                  </span>
+                ) : null}
               </>
             ) : walletsLoading ? (
               <span className="block animate-pulse">
@@ -458,6 +468,11 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-black truncate">{destination.label}</p>
             <p className="text-xs text-gray-500">{truncateMiddle(destination.address, 6, 5)}</p>
+            {destination.memo ? (
+              <p className="text-xs text-gray-400 truncate">
+                {t('withdraw.memoLabel', 'Memo')}: {destination.memo}
+              </p>
+            ) : null}
           </div>
         </div>
       ) : null}

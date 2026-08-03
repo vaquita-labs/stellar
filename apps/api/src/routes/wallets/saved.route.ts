@@ -23,6 +23,7 @@ const router = Router();
 
 const LABEL_MAX = 60;
 const ADDRESS_MAX = 128;
+const MEMO_MAX = 64;
 
 // Whitelist derived from the networks the product actually supports, so adding a
 // chain in one place doesn't leave this route silently rejecting it.
@@ -35,11 +36,11 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const isUniqueViolation = (err: unknown): boolean =>
   typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2002';
 
-type Validated = { label: string; address: string; network: string };
+type Validated = { label: string; address: string; memo: string | null; network: string };
 
 /** Validates a create payload, returning either the cleaned fields or a user-facing message. */
 function validateCreate(body: unknown): { ok: true; value: Validated } | { ok: false; message: string } {
-  const raw = (body ?? {}) as { label?: unknown; address?: unknown; network?: unknown };
+  const raw = (body ?? {}) as { label?: unknown; address?: unknown; memo?: unknown; network?: unknown };
 
   const labelResult = validateLabel(raw.label);
   if (!labelResult.ok) return labelResult;
@@ -51,13 +52,21 @@ function validateCreate(body: unknown): { ok: true; value: Validated } | { ok: f
   }
   if (/\s/.test(address)) return { ok: false, message: 'The address cannot contain spaces.' };
 
+  // Memo is optional: some exchanges require a memo/tag to credit the deposit,
+  // most self-custody wallets need none. A blank memo collapses to null.
+  const memoRaw = typeof raw.memo === 'string' ? raw.memo.trim() : '';
+  if (memoRaw.length > MEMO_MAX) {
+    return { ok: false, message: `The memo must be at most ${MEMO_MAX} characters.` };
+  }
+  const memo = memoRaw.length > 0 ? memoRaw : null;
+
   const network = typeof raw.network === 'string' ? raw.network.trim() : '';
   if (!network) return { ok: false, message: 'A network is required.' };
   if (!SUPPORTED_NETWORKS.has(network)) {
     return { ok: false, message: `Unsupported network: ${network}` };
   }
 
-  return { ok: true, value: { label: labelResult.value.label, address, network } };
+  return { ok: true, value: { label: labelResult.value.label, address, memo, network } };
 }
 
 function validateLabel(value: unknown): { ok: true; value: { label: string } } | { ok: false; message: string } {

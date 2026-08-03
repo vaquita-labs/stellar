@@ -4,7 +4,7 @@ import { Button, Spinner, toast } from '@heroui/react';
 import { StrKey } from '@stellar/stellar-sdk';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdContentPaste } from 'react-icons/md';
+import { MdClose, MdContentPaste, MdOutlineStickyNote2 } from 'react-icons/md';
 import { useIsMobile } from '../../../hooks';
 import { SavedWallet, useCreateSavedWallet } from '../../../hooks/useSavedWallets';
 import { useConfigStore } from '../../../stores';
@@ -54,6 +54,10 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
 
   const [label, setLabel] = useState('');
   const [address, setAddress] = useState('');
+  const [memo, setMemo] = useState('');
+  // El memo arranca colapsado: es opcional (solo algunos exchanges lo piden), así
+  // que se muestra como un chip que se despliega para no cargar el formulario.
+  const [memoOpen, setMemoOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const addressInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,6 +69,7 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
   const networkSlug = toNetworkSlug(network?.networkName ?? '');
   const trimmedLabel = label.trim();
   const trimmedAddress = address.trim();
+  const trimmedMemo = memo.trim();
   const addressValid = isValidAddressForNetwork(trimmedAddress, networkSlug);
   // El error de formato se muestra solo si ya hay algo escrito (no en vacío).
   const addressFormatError = trimmedAddress.length > 0 && !addressValid;
@@ -114,6 +119,7 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
       const wallet = await createWallet.mutateAsync({
         label: trimmedLabel,
         address: trimmedAddress,
+        memo: trimmedMemo || undefined,
         network: networkSlug,
       });
       onCreated(wallet);
@@ -174,6 +180,59 @@ export function AddWalletForm({ onCreated }: AddWalletFormProps) {
           network: network?.networkName ?? '—',
         })}
       </p>
+
+      {/* Memo opcional. Colapsado es un chip; al abrir se despliega el campo con una
+          transición de alto (grid-rows 0fr→1fr) tipo acordeón/carrusel. */}
+      {!memoOpen ? (
+        <button
+          type="button"
+          onClick={() => setMemoOpen(true)}
+          disabled={createWallet.isPending}
+          className="self-start flex items-center gap-2 rounded-full border border-black border-b-2 bg-white h-9 px-3.5 text-sm font-bold text-black hover:bg-black/5 active:border-b active:translate-y-[1px] transition disabled:opacity-50"
+        >
+          <MdOutlineStickyNote2 className="w-4 h-4" />
+          {t('withdraw.addWallet.memo', 'Memo')}
+        </button>
+      ) : null}
+
+      <div
+        className={
+          'grid transition-all duration-300 ease-out ' +
+          (memoOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0')
+        }
+      >
+        <div className="overflow-hidden">
+          <label className="flex flex-col gap-1">
+            <span className="flex items-center justify-between text-xs font-bold text-black">
+              {t('withdraw.addWallet.memoField', 'Memo')}
+              <button
+                type="button"
+                onClick={() => {
+                  setMemoOpen(false);
+                  setMemo('');
+                }}
+                disabled={createWallet.isPending}
+                aria-label={t('common.close', 'Close')}
+                className="flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:bg-black/5 hover:text-black transition disabled:opacity-50"
+              >
+                <MdClose className="w-4 h-4" />
+              </button>
+            </span>
+            <input
+              type="text"
+              placeholder={t('withdraw.addWallet.memoPlaceholder', 'e.g. 1234567')}
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              maxLength={64}
+              disabled={createWallet.isPending}
+              className={inputClasses}
+            />
+            <span className="text-xs text-gray-500">
+              {t('withdraw.addWallet.memoHint', 'Some exchanges require a memo or tag to credit your deposit.')}
+            </span>
+          </label>
+        </div>
+      </div>
 
       {addressFormatError ? (
         <p className="text-sm text-error font-semibold">

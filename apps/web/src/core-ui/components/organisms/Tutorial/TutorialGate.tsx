@@ -21,7 +21,10 @@ export function TutorialGate({ children }: { children: ReactNode }) {
   const { data, isLoading, isError } = useProfileData();
 
   const decided = isAuthenticated && !isLoading && !isError && !!data;
-  const needsTutorial = decided && !data.tutorialCompleted;
+  // AI-MARKER: TUTORIAL_DISABLED_GLOBALLY — el tutorial está desactivado para todos
+  // (los usuarios nuevos NO son redirigidos a /tutorial). Para reactivarlo, restaurar:
+  //   const needsTutorial = decided && !data?.tutorialCompleted;
+  const needsTutorial = false && decided && !data?.tutorialCompleted;
   const onTutorial = pathname === TUTORIAL_ROUTE;
 
   useEffect(() => {

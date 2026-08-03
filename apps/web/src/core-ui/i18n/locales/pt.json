@@ -387,6 +387,16 @@
     },
     "processing": "Processando...",
     "processingShort": "Processando",
+    "receive": {
+      "title": "Depósito",
+      "subtitle": "Envie USDC na Stellar para este endereço. Aparecerá no seu saldo, pronto para investir.",
+      "addressLabel": "Seu endereço",
+      "copy": "Copiar",
+      "copyAria": "Copiar endereço",
+      "copied": "Copiado",
+      "minDeposit": "Depósito mínimo: $1 USDC.",
+      "warning": "Envie apenas ativos da Stellar para este endereço. Fundos enviados de outra rede são perdidos."
+    },
     "savingsStats": {
       "infoAlt": "info"
     },
@@ -1215,7 +1225,9 @@
       "streakTitle_other": "Agora você tem uma sequência de {{count}} dias!",
       "success_one": "Você ganhou {{count}} moeda!",
       "success_other": "Você ganhou {{count}} moedas!",
-      "title": "Recompensa diária"
+      "title": "Recompensa diária",
+      "xpAlt": "experiência",
+      "xpTitle": "Você ganhou experiência!"
     },
     "experience": {
       "description": "Você ganha XP toda vez que poupa e mantém sua sequência. Alcance novos níveis para mostrar seu progresso de poupança!",
@@ -1753,6 +1765,44 @@
       "saveChanges": "Salvar alterações",
       "title": "Perfil",
       "walletLabel": "Wallet"
+    },
+    "fiat": {
+      "receive": {
+        "groupConnect": "Conectar com a Anclap",
+        "groupBuy": "Comprar e receber ARS",
+        "groupConvert": "Converter para USDC"
+      },
+      "send": {
+        "groupConvert": "Converter para ARS",
+        "groupConnect": "Conectar com a Anclap",
+        "groupSend": "Enviar ARS para a Anclap"
+      }
+    },
+    "receive": {
+      "title": "Receber",
+      "subtitle": "Compartilhe seu endereço Stellar para receber qualquer ativo.",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "warning": "Envie apenas ativos Stellar para este endereço. Fundos enviados de outra rede são perdidos."
+    },
+    "send": {
+      "title": "Enviar",
+      "asset": "Ativo",
+      "available": "Disponível: {{amount}} {{symbol}}",
+      "amount": "Valor",
+      "max": "MÁX",
+      "insufficient": "Você não tem {{symbol}} suficiente na sua carteira.",
+      "destination": "Carteira de destino",
+      "destinationPlaceholder": "G…",
+      "invalidAddress": "Isso não parece um endereço Stellar válido.",
+      "sameAddress": "Você não pode enviar para o seu próprio endereço.",
+      "cta": "Enviar",
+      "sending": "Enviando…",
+      "success": "Enviou {{amount}} {{symbol}}",
+      "memo": "Memo",
+      "memoPlaceholder": "ex. 1234567",
+      "memoHint": "Algumas corretoras exigem um memo ou tag para creditar seu depósito.",
+      "memoInvalid": "O memo é muito longo (máx. 28 caracteres)."
     }
   },
   "referrals": {
@@ -1782,6 +1832,10 @@
       "invalidAddress": "Isso não parece um endereço válido de {{network}}",
       "labelField": "Nome",
       "labelPlaceholder": "ex. Minha exchange",
+      "memo": "Memo",
+      "memoField": "Memo",
+      "memoHint": "Algumas exchanges exigem um memo ou tag para creditar seu depósito.",
+      "memoPlaceholder": "ex. 1234567",
       "networkHint": "Este endereço precisa ser da rede {{network}}.",
       "paste": "Colar",
       "pasteInvalid": "Isso não parece um endereço válido de {{network}}",
@@ -1813,6 +1867,7 @@
     },
     "methodLabel": "Método",
     "methodWallet": "Carteira",
+    "minWithdraw": "Saque mínimo: $1 USDC.",
     "noWallets": "Você ainda não tem carteiras salvas",
     "processing": "Processando saque...",
     "processingHint": "Isso pode levar alguns segundos.",
@@ -1825,7 +1880,8 @@
     "blendLeftover": "Na Blend",
     "withdrawFromBlend": "Retirar da Blend",
     "withdrawing": "Retirando…",
-    "blendBorrow": "Quite seu empréstimo da Blend primeiro"
+    "blendBorrow": "Quite seu empréstimo da Blend primeiro",
+    "memoLabel": "Memo"
   },
   "transactions": {
     "title": "Transações",

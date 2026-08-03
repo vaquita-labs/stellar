@@ -387,6 +387,16 @@
     },
     "processing": "Procesando...",
     "processingShort": "Procesando",
+    "receive": {
+      "title": "Depósito",
+      "subtitle": "Enviá USDC en Stellar a esta dirección. Aparecerá en tu balance, listo para invertir.",
+      "addressLabel": "Tu dirección",
+      "copy": "Copiar",
+      "copyAria": "Copiar dirección",
+      "copied": "Copiado",
+      "minDeposit": "Depósito mínimo: $1 USDC.",
+      "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
+    },
     "savingsStats": {
       "infoAlt": "info"
     },
@@ -1215,7 +1225,9 @@
       "streakTitle_other": "¡Ahora llevás {{count}} días de racha!",
       "success_one": "¡Ganaste {{count}} moneda!",
       "success_other": "¡Ganaste {{count}} monedas!",
-      "title": "Recompensa diaria"
+      "title": "Recompensa diaria",
+      "xpAlt": "experiencia",
+      "xpTitle": "¡Ganaste experiencia!"
     },
     "experience": {
       "description": "Ganas XP cada vez que ahorras y mantienes tu racha. ¡Alcanza nuevos niveles para mostrar tu progreso de ahorro!",
@@ -1762,7 +1774,10 @@
         "swapDone": "Convertido a USDC. ¡Listo!",
         "title": "Argentina (ARS)",
         "usdcReceived": "≈ {{amount}} USDC recibidos",
-        "waitingHint": "Completa el depósito en Anclap. Estamos esperando que se acrediten los ARS…"
+        "waitingHint": "Completa el depósito en Anclap. Estamos esperando que se acrediten los ARS…",
+        "groupConnect": "Conectar con Anclap",
+        "groupBuy": "Comprar y recibir ARS",
+        "groupConvert": "Convertir a USDC"
       },
       "send": {
         "arsReceived": "≈ {{amount}} ARS obtenidos en el swap",
@@ -1785,7 +1800,10 @@
         "settled": "Retiro completado en Anclap.",
         "title": "Enviar fiat (ARS)",
         "waitingHint": "Completa el retiro en Anclap. Estamos esperando la confirmación…",
-        "withdrawStarted": "Retiro iniciado. Continúa en Anclap."
+        "withdrawStarted": "Retiro iniciado. Continúa en Anclap.",
+        "groupConvert": "Convertir a ARS",
+        "groupConnect": "Conectar con Anclap",
+        "groupSend": "Enviar ARS a Anclap"
       }
     },
     "page": {
@@ -1819,6 +1837,32 @@
       "saveChanges": "Guardar cambios",
       "title": "Perfil",
       "walletLabel": "Wallet"
+    },
+    "receive": {
+      "title": "Recibir",
+      "subtitle": "Compartí tu dirección de Stellar para recibir cualquier activo.",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
+    },
+    "send": {
+      "title": "Enviar",
+      "asset": "Activo",
+      "available": "Disponible: {{amount}} {{symbol}}",
+      "amount": "Monto",
+      "max": "MÁX",
+      "insufficient": "No tenés suficiente {{symbol}} en tu wallet.",
+      "destination": "Wallet de destino",
+      "destinationPlaceholder": "G…",
+      "invalidAddress": "Eso no parece una dirección de Stellar válida.",
+      "sameAddress": "No podés enviar a tu propia dirección.",
+      "cta": "Enviar",
+      "sending": "Enviando…",
+      "success": "Enviaste {{amount}} {{symbol}}",
+      "memo": "Memo",
+      "memoPlaceholder": "ej. 1234567",
+      "memoHint": "Algunos exchanges piden un memo o tag para acreditar tu depósito.",
+      "memoInvalid": "El memo es demasiado largo (máx. 28 caracteres)."
     }
   },
   "referrals": {
@@ -1848,6 +1892,10 @@
       "invalidAddress": "Eso no parece una dirección válida de {{network}}",
       "labelField": "Nombre",
       "labelPlaceholder": "ej. Mi exchange",
+      "memo": "Memo",
+      "memoField": "Memo",
+      "memoHint": "Algunos exchanges piden un memo o tag para acreditar tu depósito.",
+      "memoPlaceholder": "ej. 1234567",
       "networkHint": "Esta dirección tiene que ser de la red {{network}}.",
       "paste": "Pegar",
       "pasteInvalid": "Eso no parece una dirección válida de {{network}}",
@@ -1879,6 +1927,7 @@
     },
     "methodLabel": "Método",
     "methodWallet": "Wallet",
+    "minWithdraw": "Retiro mínimo: $1 USDC.",
     "noWallets": "Todavía no tenés wallets guardadas",
     "processing": "Procesando retiro...",
     "processingHint": "Esto puede tardar unos segundos.",
@@ -1891,7 +1940,8 @@
     "blendLeftover": "En Blend",
     "withdrawFromBlend": "Retirar de Blend",
     "withdrawing": "Retirando…",
-    "blendBorrow": "Devuelve tu préstamo de Blend primero"
+    "blendBorrow": "Devuelve tu préstamo de Blend primero",
+    "memoLabel": "Memo"
   },
   "transactions": {
     "title": "Transacciones",

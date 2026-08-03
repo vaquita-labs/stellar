@@ -387,6 +387,16 @@
     },
     "processing": "Processing...",
     "processingShort": "Processing",
+    "receive": {
+      "title": "Deposit",
+      "subtitle": "Send USDC on Stellar to this address. It will show up in your balance, ready to invest.",
+      "addressLabel": "Your address",
+      "copy": "Copy",
+      "copyAria": "Copy address",
+      "copied": "Copied",
+      "minDeposit": "Minimum deposit: $1 USDC.",
+      "warning": "Only send Stellar assets to this address. Funds sent from another network are lost."
+    },
     "savingsStats": {
       "infoAlt": "info"
     },
@@ -1215,7 +1225,9 @@
       "streakTitle_other": "You now have a {{count}}-day streak!",
       "success_one": "You earned {{count}} coin!",
       "success_other": "You earned {{count}} coins!",
-      "title": "Daily Reward"
+      "title": "Daily Reward",
+      "xpAlt": "experience",
+      "xpTitle": "You earned experience!"
     },
     "experience": {
       "description": "You earn XP every time you save and keep your streak. Reach new levels to show off your saving progress!",
@@ -1762,7 +1774,10 @@
         "swapDone": "Converted to USDC. Done!",
         "title": "Argentina (ARS)",
         "usdcReceived": "≈ {{amount}} USDC received",
-        "waitingHint": "Complete the deposit on Anclap. We are waiting for the ARS to be credited…"
+        "waitingHint": "Complete the deposit on Anclap. We are waiting for the ARS to be credited…",
+        "groupConnect": "Connect with Anclap",
+        "groupBuy": "Buy & receive ARS",
+        "groupConvert": "Convert to USDC"
       },
       "send": {
         "arsReceived": "≈ {{amount}} ARS swapped",
@@ -1785,7 +1800,10 @@
         "settled": "Withdrawal completed on Anclap.",
         "title": "Send fiat (ARS)",
         "waitingHint": "Complete the withdrawal on Anclap. We are waiting for the confirmation…",
-        "withdrawStarted": "Withdrawal started. Continue on Anclap."
+        "withdrawStarted": "Withdrawal started. Continue on Anclap.",
+        "groupConvert": "Convert to ARS",
+        "groupConnect": "Connect with Anclap",
+        "groupSend": "Send ARS to Anclap"
       }
     },
     "page": {
@@ -1819,6 +1837,32 @@
       "saveChanges": "Save changes",
       "title": "Profile",
       "walletLabel": "Wallet"
+    },
+    "receive": {
+      "title": "Receive",
+      "subtitle": "Share your Stellar address to receive any asset.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "warning": "Only send Stellar assets to this address. Funds sent from another network are lost."
+    },
+    "send": {
+      "title": "Send",
+      "asset": "Asset",
+      "available": "Available: {{amount}} {{symbol}}",
+      "amount": "Amount",
+      "max": "MAX",
+      "insufficient": "Not enough {{symbol}} in your wallet.",
+      "destination": "Destination wallet",
+      "destinationPlaceholder": "G…",
+      "invalidAddress": "That doesn't look like a valid Stellar address.",
+      "sameAddress": "You can't send to your own address.",
+      "cta": "Send",
+      "sending": "Sending…",
+      "success": "Sent {{amount}} {{symbol}}",
+      "memo": "Memo",
+      "memoPlaceholder": "e.g. 1234567",
+      "memoHint": "Some exchanges require a memo or tag to credit your deposit.",
+      "memoInvalid": "The memo is too long (max 28 characters)."
     }
   },
   "referrals": {
@@ -1848,6 +1892,10 @@
       "invalidAddress": "That doesn't look like a valid {{network}} address",
       "labelField": "Name",
       "labelPlaceholder": "e.g. My exchange",
+      "memo": "Memo",
+      "memoField": "Memo",
+      "memoHint": "Some exchanges require a memo or tag to credit your deposit.",
+      "memoPlaceholder": "e.g. 1234567",
       "networkHint": "This address must be on the {{network}} network.",
       "paste": "Paste",
       "pasteInvalid": "That doesn't look like a valid {{network}} address",
@@ -1879,6 +1927,7 @@
     },
     "methodLabel": "Method",
     "methodWallet": "Wallet",
+    "minWithdraw": "Minimum withdrawal: $1 USDC.",
     "noWallets": "You have no saved wallets yet",
     "processing": "Processing withdrawal...",
     "processingHint": "This may take a few seconds.",
@@ -1891,7 +1940,8 @@
     "blendLeftover": "In Blend",
     "withdrawFromBlend": "Withdraw from Blend",
     "withdrawing": "Withdrawing…",
-    "blendBorrow": "Repay your Blend borrow first"
+    "blendBorrow": "Repay your Blend borrow first",
+    "memoLabel": "Memo"
   },
   "transactions": {
     "title": "Transactions",

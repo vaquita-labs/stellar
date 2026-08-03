@@ -9,6 +9,8 @@ export interface SavedWallet {
   id: string;
   label: string;
   address: string;
+  /** Optional destination memo/tag; null when the wallet needs none. */
+  memo: string | null;
   network: string;
   createdTimestamp: number;
   updatedTimestamp: number;
@@ -17,6 +19,7 @@ export interface SavedWallet {
 export interface CreateSavedWalletInput {
   label: string;
   address: string;
+  memo?: string | null;
   network: string;
 }
 

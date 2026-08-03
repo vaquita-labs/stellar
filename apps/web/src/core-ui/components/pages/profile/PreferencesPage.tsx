@@ -127,18 +127,41 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   const { t } = useTranslation();
+
+  // "SOON" rows are locked: a visible-but-disabled switch and a dimmed,
+  // non-interactive card so the option reads as coming later, not togglable.
+  if (showSoon) {
+    return (
+      <div className="relative flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white cursor-not-allowed select-none">
+        <div className="flex flex-col min-w-0 opacity-60">
+          <span className="text-[15px] font-extrabold text-black">{label}</span>
+          <span className="text-xs text-gray-500">{description}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[10px] font-bold uppercase tracking-wide bg-primary text-black border border-black rounded-sm px-1.5 py-0.5">
+            {t('common.soon')}
+          </span>
+          <Switch isSelected={value} isDisabled aria-label={label}>
+            <Switch.Control>
+              <Switch.Thumb />
+            </Switch.Control>
+          </Switch>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <label className="relative flex items-center justify-between gap-4 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white cursor-pointer hover:bg-[#FFF7E6] transition">
-      {showSoon && (
-        <span className="absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wide bg-primary text-black border border-black rounded-sm px-1.5 py-0.5">
-          {t('common.soon')}
-        </span>
-      )}
       <div className="flex flex-col min-w-0">
         <span className="text-[15px] font-extrabold text-black">{label}</span>
         <span className="text-xs text-gray-500">{description}</span>
       </div>
-      <Switch isSelected={value} onChange={(v) => onChange(v)} aria-label={label} />
+      <Switch isSelected={value} onChange={(v) => onChange(v)} aria-label={label}>
+        <Switch.Control>
+          <Switch.Thumb />
+        </Switch.Control>
+      </Switch>
     </label>
   );
 }
@@ -226,8 +249,8 @@ export function PreferencesPage({ onBack }: { onBack?: () => void } = {}) {
   const [savingCurrency, setSavingCurrency] = useState(false);
 
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [hapticFeedback, setHapticFeedback] = useState(true);
-  const [autoplaySounds, setAutoplaySounds] = useState(true);
+  const [hapticFeedback, setHapticFeedback] = useState(false);
+  const [autoplaySounds, setAutoplaySounds] = useState(false);
 
   const [cryptoSavvy, setCryptoSavvy] = useState(false);
   const [savingCryptoSavvy, setSavingCryptoSavvy] = useState(false);

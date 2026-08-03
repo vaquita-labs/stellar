@@ -120,20 +120,9 @@ export function AvatarEditorPage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      {/* Top bar — randomise / title / close. La X de cerrar va SIEMPRE a la
-          derecha (convención de toda la app); el dado queda a la izquierda. */}
+      {/* Top bar — close / title / randomise. La X de cerrar va a la izquierda
+          y el dado a la derecha. */}
       <div className="flex shrink-0 items-center justify-between gap-2 px-4 py-3">
-        <button
-          type="button"
-          onClick={() => setConfig(randomAvatarConfig())}
-          aria-label={t('profilePages.avatar.randomize', 'Surprise me')}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-black border-b-2 bg-white text-black transition hover:bg-black/5"
-        >
-          <LuDices className="h-5 w-5" />
-        </button>
-        <span className="text-base font-extrabold text-black">
-          {t('profilePages.avatar.title', 'Edit avatar')}
-        </span>
         <button
           type="button"
           onClick={() => router.push('/profile')}
@@ -141,6 +130,17 @@ export function AvatarEditorPage() {
           className="flex h-9 w-9 items-center justify-center rounded-full border border-black border-b-2 bg-white text-black transition hover:bg-black/5"
         >
           <FiX className="h-5 w-5" />
+        </button>
+        <span className="text-base font-extrabold text-black">
+          {t('profilePages.avatar.title', 'Edit avatar')}
+        </span>
+        <button
+          type="button"
+          onClick={() => setConfig(randomAvatarConfig())}
+          aria-label={t('profilePages.avatar.randomize', 'Surprise me')}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-black border-b-2 bg-white text-black transition hover:bg-black/5"
+        >
+          <LuDices className="h-5 w-5" />
         </button>
       </div>
 

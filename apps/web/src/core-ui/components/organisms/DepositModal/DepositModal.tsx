@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 } from 'uuid';
-import { formatTimeDeposit, getQuickAmounts, truncateDecimals } from '../../../helpers';
+import { formatTimeDeposit, getQuickAmounts, MIN_USDC, truncateDecimals } from '../../../helpers';
 import { useAnalytics, useRestDeposit, useTransactions } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
@@ -54,11 +54,12 @@ export function DepositModal({
       })) || [];
   const effectiveLockPeriod = simulate ? simulateLockMs : lockPeriod;
   const amountNum = Number(amount);
+  // Mínimo 1 USDC para depositar (mismo piso que valida el backend).
   const isDisabled =
     !amount ||
     amount === '' ||
-    amountNum <= 0 ||
     isNaN(amountNum) ||
+    amountNum < MIN_USDC ||
     !effectiveLockPeriod ||
     !network ||
     !token ||

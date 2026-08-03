@@ -1,26 +1,26 @@
 'use client';
 
-import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiCheck, FiCopy } from 'react-icons/fi';
 import QRCode from 'react-qr-code';
 import { AppModal } from '../../molecules/AppModal';
 
-interface ReceiveModalProps {
+interface WalletReceiveModalProps {
   open: boolean;
   onOpenChange: () => void;
-  /** Dirección Stellar del usuario a la que recibir USDC (su wallet custodial). */
+  /** Dirección Stellar del usuario a la que recibir cualquier activo. */
   address: string;
 }
 
 /**
- * Modal nativo (estilo app) para RECIBIR USDC a la propia dirección. Reemplaza al
- * `openReceiveModal` de Pollar, que tiene otro look. Para el usuario social/
- * custodial es su vía de fondeo: comparte su dirección (QR o texto), le entra USDC
- * y de ahí se pone a invertir.
+ * Modal nativo (estilo app) para RECIBIR activos a la propia dirección Stellar.
+ * Reemplaza al `openReceiveModal` de Pollar en la pantalla Wallet, que trae otro
+ * look y, al vivir fuera del portal HeroUI, no se dejaba cerrar bien. Al ser un
+ * `AppModal` (HeroUI) se apila sobre el panel Wallet, recibe clics y bloquea el
+ * scroll solo, sin pelear con `inert`.
  */
-export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps) {
+export function WalletReceiveModal({ open, onOpenChange, address }: WalletReceiveModalProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
@@ -39,50 +39,42 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      title={t('deposit.receive.title', 'Deposit')}
+      title={t('wallet.receive.title', 'Receive')}
       size="md"
       bodyClassName="flex flex-col gap-4 pb-6"
     >
-      <p className="text-sm text-gray-500 text-center">
-        {t(
-          'deposit.receive.subtitle',
-          'Send USDC on Stellar to this address. It will show up in your balance, ready to invest.',
-        )}
-      </p>
-
-      {/* Disclaimer de monto mínimo: por debajo de $1 el fondeo no vale la pena (fees/redondeo). */}
-      <p className="text-center text-xs font-semibold text-black">
-        {t('deposit.receive.minDeposit', 'Minimum deposit: $1 USDC.')}
-      </p>
-
       {/* QR de la dirección, en caja blanca redondeada (estilo app). */}
       <div className="mx-auto w-fit rounded-xl border border-black border-b-2 bg-white p-4">
         <QRCode
           value={address || ' '}
-          size={168}
+          size={180}
           bgColor="#ffffff"
           fgColor="#1a1a1a"
-          className="h-[168px] w-[168px]"
+          className="h-[180px] w-[180px]"
         />
       </div>
 
-      {/* Dirección TRUNCADA (no ocupa 4 renglones) + copiar inline. */}
-      <div className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-2.5">
-        <span className="flex-1 min-w-0">
-          <span className="block text-xs text-gray-500">{t('deposit.receive.addressLabel', 'Your address')}</span>
-          <span className="block text-sm font-mono text-black truncate">
-            {address ? truncateMiddle(address, 8, 8) : '—'}
-          </span>
+      <p className="text-sm text-gray-500 text-center">
+        {t(
+          'wallet.receive.subtitle',
+          'Share your Stellar address to receive any asset.',
+        )}
+      </p>
+
+      {/* Dirección completa + copiar. */}
+      <div className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3">
+        <span className="flex-1 min-w-0 text-sm font-mono text-black break-all">
+          {address || '—'}
         </span>
         <button
           type="button"
           onClick={handleCopy}
           disabled={!address}
-          aria-label={t('deposit.receive.copyAria', 'Copy address')}
+          aria-label={t('wallet.receive.copy', 'Copy')}
           className="flex items-center gap-1.5 shrink-0 rounded-md border border-black border-b-2 bg-[#DDF4FF] px-3 py-2 text-black text-xs font-semibold transition active:translate-y-0.5 hover:bg-[#c4ecff] disabled:opacity-50"
         >
           {copied ? <FiCheck className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
-          {copied ? t('deposit.receive.copied', 'Copied') : t('deposit.receive.copy', 'Copy')}
+          {copied ? t('wallet.receive.copied', 'Copied') : t('wallet.receive.copy', 'Copy')}
         </button>
       </div>
 
@@ -90,7 +82,7 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
         <FiAlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <p>
           {t(
-            'deposit.receive.warning',
+            'wallet.receive.warning',
             'Only send Stellar assets to this address. Funds sent from another network are lost.',
           )}
         </p>

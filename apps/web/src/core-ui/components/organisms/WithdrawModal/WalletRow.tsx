@@ -90,6 +90,11 @@ export function WalletRow({ wallet, selected, deleting, onSelect, onDelete }: Wa
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-bold text-black truncate">{wallet.label}</span>
           <span className="block text-xs text-gray-500">{truncateMiddle(wallet.address, 6, 5)}</span>
+          {wallet.memo ? (
+            <span className="block text-xs text-gray-400 truncate">
+              {t('withdraw.memoLabel', 'Memo')}: {wallet.memo}
+            </span>
+          ) : null}
         </span>
         <span
           role="button"

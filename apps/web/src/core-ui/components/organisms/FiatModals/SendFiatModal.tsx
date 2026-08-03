@@ -29,7 +29,14 @@ interface SendFiatModalProps {
 
 type StepKey = 'blend' | 'trustline' | 'swap' | 'challenge' | 'sign' | 'token' | 'withdraw' | 'transfer' | 'settled';
 
-const IMPLEMENTED: StepKey[] = ['blend', 'trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'transfer', 'settled'];
+// Los 9 pasos internos mueven la lógica, pero al usuario le mostramos solo 3
+// grupos (3 candados) para que se entienda qué se está haciendo sin abrumar con
+// el detalle técnico de SEP-10/SEP-24.
+const GROUPS: { key: string; members: StepKey[] }[] = [
+  { key: 'convert', members: ['blend', 'trustline', 'swap'] },
+  { key: 'connect', members: ['challenge', 'sign', 'token'] },
+  { key: 'send', members: ['withdraw', 'transfer', 'settled'] },
+];
 
 const ARS = 'ARS';
 const USDC = 'USDC';
@@ -325,18 +332,20 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     login({ provider: walletType });
   };
 
-  const stepLabels: Record<StepKey, string> = {
-    blend: t('wallet.fiat.send.stepBlend', 'Withdraw from Blend'),
-    trustline: t('wallet.fiat.send.stepTrustline', 'Activate ARS trustline'),
-    swap: t('wallet.fiat.send.stepSwap', 'Swap USDC → ARS'),
-    challenge: t('wallet.fiat.send.stepChallenge', 'SEP-10 · Request challenge'),
-    sign: t('wallet.fiat.send.stepSign', 'SEP-10 · Sign (wallet)'),
-    token: t('wallet.fiat.send.stepToken', 'SEP-10 · Get Anclap JWT'),
-    withdraw: t('wallet.fiat.send.stepWithdraw', 'SEP-24 · Start withdrawal'),
-    transfer: t('wallet.fiat.send.stepTransfer', 'Send ARS to Anclap'),
-    settled: t('wallet.fiat.send.stepSettled', 'Wait for Anclap confirmation'),
+  const groupLabels: Record<string, string> = {
+    convert: t('wallet.fiat.send.groupConvert', 'Convert to ARS'),
+    connect: t('wallet.fiat.send.groupConnect', 'Connect with Anclap'),
+    send: t('wallet.fiat.send.groupSend', 'Send ARS to Anclap'),
   };
-  const order: StepKey[] = ['blend', 'trustline', 'swap', 'challenge', 'sign', 'token', 'withdraw', 'transfer', 'settled'];
+  // Estado de un grupo = el peor/más avanzado de sus pasos internos:
+  // error > running > done (todos) > idle.
+  const groupStatus = (members: StepKey[]): StepStatus => {
+    const st = members.map((m) => steps[m]);
+    if (st.some((s) => s === 'error')) return 'error';
+    if (st.some((s) => s === 'running')) return 'running';
+    if (st.every((s) => s === 'done')) return 'done';
+    return 'idle';
+  };
 
   return (
     <AppModal
@@ -382,11 +391,11 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
 
       {/* Stepper del flujo off-ramp. */}
       <FiatStepList
-        steps={order.map((key) => ({
-          key,
-          label: stepLabels[key],
-          status: steps[key],
-          implemented: IMPLEMENTED.includes(key),
+        steps={GROUPS.map((g) => ({
+          key: g.key,
+          label: groupLabels[g.key],
+          status: groupStatus(g.members),
+          implemented: true,
         }))}
       />
 

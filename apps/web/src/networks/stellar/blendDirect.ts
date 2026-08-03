@@ -213,6 +213,83 @@ export const directUsdcTransfer = async ({
   );
 };
 
+/** Memo opcional de un pago clásico: texto (≤28 bytes) o id numérico (uint64). */
+export type StellarMemo = { type: 'text' | 'id'; value: string };
+
+const MEMO_TEXT_MAX_BYTES = 28;
+const MEMO_ID_MAX = (1n << 64n) - 1n; // uint64 máx
+
+/** ¿El string es un entero que entra en un uint64? Entonces es un MEMO_ID. */
+const isNumericMemoId = (v: string): boolean => {
+  if (!/^\d+$/.test(v)) return false;
+  try {
+    return BigInt(v) <= MEMO_ID_MAX;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Auto-detecta el tipo de memo de Stellar a partir de un string, sin pedirle al
+ * usuario que elija: un número que entra en uint64 → `id` (lo que piden casi todos
+ * los exchanges: "memo/tag" numérico); cualquier otra cosa → `text`. Devuelve
+ * `null` si está vacío (memo opcional) o si no es un memo válido (texto > 28 bytes).
+ * Compartido entre el Send de la wallet y el retiro a una wallet externa.
+ */
+export const resolveMemo = (raw: string | null | undefined): StellarMemo | null => {
+  const v = (raw ?? '').trim();
+  if (!v) return null;
+  if (isNumericMemoId(v)) return { type: 'id', value: v };
+  if (new TextEncoder().encode(v).length <= MEMO_TEXT_MAX_BYTES) return { type: 'text', value: v };
+  return null;
+};
+
+/**
+ * Envía USDC (el de la red activa) a otra cuenta con un PAGO CLÁSICO de Stellar
+ * (`Operation.payment`), construido/firmado/enviado por Pollar (`buildAndSignAndSubmitTx`)
+ * y por eso PATROCINADO: funciona con 0 XLM, igual que el swap y `directUsdcTransfer`.
+ *
+ * A diferencia del `transfer` del SAC de Soroban, un pago clásico es el que los
+ * EXCHANGES detectan y acreditan —con su memo— y también lo lee cualquier wallet o
+ * el balance del SAC (para una cuenta G el saldo clásico y el del SAC son el mismo).
+ * Por eso es la vía universal para "Enviar": cubre exchanges Y wallets con un solo
+ * camino. El destino debe tener trustline al USDC para recibir.
+ *
+ * `memo` es opcional pero clave para depósitos a exchanges: `text` (≤28 bytes) o
+ * `id` (entero uint64), según lo pida el exchange. El monto va en unidades humanas
+ * (string), como el resto de los builds de Pollar.
+ */
+export const sponsoredUsdcPayment = async ({
+  to,
+  amount,
+  memo,
+}: {
+  to: string;
+  amount: string;
+  memo?: StellarMemo;
+}): Promise<{ hash: string }> => {
+  const config = getBlendConfig();
+  if (!config) throw new Error('Blend pool is not configured for this token');
+
+  const binding = getPollarBinding();
+  if (!binding) throw new Error('Pollar adapter is not bound yet. Connect your wallet first.');
+
+  if (!(Number(amount) > 0)) throw new Error('Amount must be greater than zero');
+
+  return submitAndSettle(
+    binding.client,
+    () =>
+      binding.client.sendPayment({
+        destination: to,
+        amount, // decimal string en unidades humanas (lo que espera Pollar)
+        // USDC son 4 caracteres → alphanum4. El issuer sale del token activo.
+        asset: { type: 'credit_alphanum4', code: 'USDC', issuer: config.usdcIssuer },
+        options: memo ? { memo } : undefined,
+      }),
+    'USDC payment failed',
+  );
+};
+
 /**
  * Lee el saldo USDC de una cuenta en unidades humanas simulando `balance()` del
  * SAC. Tira si no puede leerlo: quien mide un movimiento con esto necesita
