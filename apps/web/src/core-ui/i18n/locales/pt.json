@@ -1755,6 +1755,18 @@
       "saveChanges": "Salvar alterações",
       "title": "Perfil",
       "walletLabel": "Wallet"
+    },
+    "fiat": {
+      "receive": {
+        "groupConnect": "Conectar com a Anclap",
+        "groupBuy": "Comprar e receber ARS",
+        "groupConvert": "Converter para USDC"
+      },
+      "send": {
+        "groupConvert": "Converter para ARS",
+        "groupConnect": "Conectar com a Anclap",
+        "groupSend": "Enviar ARS para a Anclap"
+      }
     }
   },
   "referrals": {

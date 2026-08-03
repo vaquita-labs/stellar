@@ -1764,7 +1764,10 @@
         "swapDone": "Convertido a USDC. ¡Listo!",
         "title": "Argentina (ARS)",
         "usdcReceived": "≈ {{amount}} USDC recibidos",
-        "waitingHint": "Completa el depósito en Anclap. Estamos esperando que se acrediten los ARS…"
+        "waitingHint": "Completa el depósito en Anclap. Estamos esperando que se acrediten los ARS…",
+        "groupConnect": "Conectar con Anclap",
+        "groupBuy": "Comprar y recibir ARS",
+        "groupConvert": "Convertir a USDC"
       },
       "send": {
         "arsReceived": "≈ {{amount}} ARS obtenidos en el swap",
@@ -1787,7 +1790,10 @@
         "settled": "Retiro completado en Anclap.",
         "title": "Enviar fiat (ARS)",
         "waitingHint": "Completa el retiro en Anclap. Estamos esperando la confirmación…",
-        "withdrawStarted": "Retiro iniciado. Continúa en Anclap."
+        "withdrawStarted": "Retiro iniciado. Continúa en Anclap.",
+        "groupConvert": "Convertir a ARS",
+        "groupConnect": "Conectar con Anclap",
+        "groupSend": "Enviar ARS a Anclap"
       }
     },
     "page": {

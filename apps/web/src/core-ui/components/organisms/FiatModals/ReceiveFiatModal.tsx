@@ -27,7 +27,14 @@ interface ReceiveFiatModalProps {
 
 type StepKey = 'trustline' | 'challenge' | 'sign' | 'token' | 'deposit' | 'credit' | 'swap';
 
-const IMPLEMENTED: StepKey[] = ['trustline', 'challenge', 'sign', 'token', 'deposit', 'credit', 'swap'];
+// Los 7 pasos internos mueven la lógica, pero al usuario le mostramos solo 3
+// grupos (3 candados) para que se entienda qué se está haciendo sin abrumar con
+// el detalle técnico de SEP-10/SEP-24.
+const GROUPS: { key: string; members: StepKey[] }[] = [
+  { key: 'connect', members: ['trustline', 'challenge', 'sign', 'token'] },
+  { key: 'buy', members: ['deposit', 'credit'] },
+  { key: 'convert', members: ['swap'] },
+];
 
 const ARS = 'ARS';
 const USDC = 'USDC';
@@ -260,16 +267,20 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
     login({ provider: walletType });
   };
 
-  const stepLabels: Record<StepKey, string> = {
-    trustline: t('wallet.fiat.send.stepTrustline', 'Activate ARS trustline'),
-    challenge: t('wallet.fiat.send.stepChallenge', 'SEP-10 · Request challenge'),
-    sign: t('wallet.fiat.send.stepSign', 'SEP-10 · Sign (wallet)'),
-    token: t('wallet.fiat.send.stepToken', 'SEP-10 · Get Anclap JWT'),
-    deposit: t('wallet.fiat.receive.stepDeposit', 'SEP-24 · Start deposit'),
-    credit: t('wallet.fiat.receive.stepCredit', 'Wait for ARS credit'),
-    swap: t('wallet.fiat.receive.stepSwap', 'Convert ARS → USDC'),
+  const groupLabels: Record<string, string> = {
+    connect: t('wallet.fiat.receive.groupConnect', 'Connect with Anclap'),
+    buy: t('wallet.fiat.receive.groupBuy', 'Buy & receive ARS'),
+    convert: t('wallet.fiat.receive.groupConvert', 'Convert to USDC'),
   };
-  const order: StepKey[] = ['trustline', 'challenge', 'sign', 'token', 'deposit', 'credit', 'swap'];
+  // Estado de un grupo = el peor/más avanzado de sus pasos internos:
+  // error > running > done (todos) > idle.
+  const groupStatus = (members: StepKey[]): StepStatus => {
+    const st = members.map((m) => steps[m]);
+    if (st.some((s) => s === 'error')) return 'error';
+    if (st.some((s) => s === 'running')) return 'running';
+    if (st.every((s) => s === 'done')) return 'done';
+    return 'idle';
+  };
 
   return (
     <AppModal
@@ -309,11 +320,11 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
       </p>
 
       <FiatStepList
-        steps={order.map((key) => ({
-          key,
-          label: stepLabels[key],
-          status: steps[key],
-          implemented: IMPLEMENTED.includes(key),
+        steps={GROUPS.map((g) => ({
+          key: g.key,
+          label: groupLabels[g.key],
+          status: groupStatus(g.members),
+          implemented: true,
         }))}
       />
 
