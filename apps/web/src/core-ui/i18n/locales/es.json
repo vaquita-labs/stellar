@@ -1546,6 +1546,7 @@
       "cameraErrorBody": "Se denegó el acceso a la cámara o no está disponible.",
       "cameraErrorTitle": "No se pudo iniciar la cámara",
       "claim": "Reclamar",
+      "codeNotFoundBody": "No encontramos ese código. Revisa que esté bien escrito e intenta de nuevo.",
       "codePlaceholder": "EJ: VAQUITA-LAUNCH-2026",
       "coinsReward_one": "¡{{count}} moneda!",
       "coinsReward_other": "¡{{count}} monedas!",
