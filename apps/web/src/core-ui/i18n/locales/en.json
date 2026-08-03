@@ -1858,7 +1858,11 @@
       "sameAddress": "You can't send to your own address.",
       "cta": "Send",
       "sending": "Sending…",
-      "success": "Sent {{amount}} {{symbol}}"
+      "success": "Sent {{amount}} {{symbol}}",
+      "memo": "Memo",
+      "memoPlaceholder": "e.g. 1234567",
+      "memoHint": "Some exchanges require a memo or tag to credit your deposit.",
+      "memoInvalid": "The memo is too long (max 28 characters)."
     }
   },
   "referrals": {
@@ -1923,6 +1927,7 @@
     },
     "methodLabel": "Method",
     "methodWallet": "Wallet",
+    "minWithdraw": "Minimum withdrawal: $1 USDC.",
     "noWallets": "You have no saved wallets yet",
     "processing": "Processing withdrawal...",
     "processingHint": "This may take a few seconds.",
@@ -1935,7 +1940,8 @@
     "blendLeftover": "In Blend",
     "withdrawFromBlend": "Withdraw from Blend",
     "withdrawing": "Withdrawing…",
-    "blendBorrow": "Repay your Blend borrow first"
+    "blendBorrow": "Repay your Blend borrow first",
+    "memoLabel": "Memo"
   },
   "transactions": {
     "title": "Transactions",

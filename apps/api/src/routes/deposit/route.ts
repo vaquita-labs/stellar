@@ -20,6 +20,7 @@ import {
   getTokenBySymbol,
   getVaultApy,
   getTokenNetworkByNetworkIdTokenId,
+  MIN_USDC_AMOUNT,
   sendError,
   sendSuccess,
   verifyTxSucceeded,
@@ -160,6 +161,17 @@ router.post('/withdraw', asyncHandler(async (req, res) => {
   if (!depositId) {
     req.log.warn({ depositId }, 'Missing depositId');
     return sendError(res, 'Missing depositId', null, 400);
+  }
+
+  // Mínimo 1 USDC: no se retira una posición por debajo del mínimo (mismo piso que
+  // el depósito). El retiro saca la posición entera, así que validamos su monto.
+  const { data: positionToWithdraw } = await getDepositsById(Number(depositId));
+  if (positionToWithdraw && positionToWithdraw.amount < MIN_USDC_AMOUNT) {
+    req.log.warn(
+      { depositId, amount: positionToWithdraw.amount },
+      'Withdrawal below minimum',
+    );
+    return sendError(res, `El retiro mínimo es ${MIN_USDC_AMOUNT} USDC`, null, 400);
   }
 
   const result = await creteWithdrawal({

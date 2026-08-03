@@ -5,7 +5,8 @@ import { usePollar } from '@pollar/react';
 import { StrKey } from '@stellar/stellar-sdk';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { blendConfigForToken, directUsdcTransfer } from '@/networks/stellar/blendDirect';
+import { MdClose, MdOutlineStickyNote2 } from 'react-icons/md';
+import { blendConfigForToken, resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
 import { humanizeTxError } from '../../../helpers/txError';
 import type { NetworkResponseDTO } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
@@ -35,8 +36,16 @@ const sanitizeAmount = (raw: string, decimals: number): string => {
  * al `openSendModal` de Pollar en la pantalla Wallet, que trae otro look y, al
  * vivir fuera del portal HeroUI, no se dejaba cerrar bien. A propósito es de UN
  * SOLO token (el USDC de la red activa): no hay selector de asset ni de red.
- * El envío va por `directUsdcTransfer` (transfer del SAC, patrocinado por Pollar),
- * así que funciona aunque la wallet no tenga XLM.
+ *
+ * El envío va por `sponsoredUsdcPayment`: un PAGO CLÁSICO de Stellar patrocinado
+ * por Pollar. Es clásico para que los EXCHANGES lo acrediten (con su memo), y
+ * patrocinado para que funcione aunque la wallet no tenga XLM. Para una cuenta G
+ * el saldo clásico y el del SAC son el mismo, así que también sirve para mandar a
+ * cualquier wallet: un solo camino cubre exchanges y wallets.
+ *
+ * El MEMO es opcional pero clave para depósitos a exchanges (muchos lo exigen).
+ * Un solo campo (como el modal de retiro): el tipo se auto-detecta —número →
+ * MEMO_ID, texto → MEMO_TEXT— así el usuario no tiene que elegirlo.
  */
 export function WalletSendModal({ open, onOpenChange, address, token }: WalletSendModalProps) {
   const { t } = useTranslation();
@@ -44,6 +53,10 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
 
   const [amount, setAmount] = useState('');
   const [destination, setDestination] = useState('');
+  const [memo, setMemo] = useState('');
+  // El memo arranca colapsado (chip), igual que el modal de retiro: es opcional y
+  // no queremos cargar el formulario para quien no lo necesita.
+  const [memoOpen, setMemoOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
   const symbol = token?.symbol ?? 'USDC';
@@ -69,6 +82,8 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
     setWasOpen(open);
     setAmount('');
     setDestination('');
+    setMemo('');
+    setMemoOpen(false);
   }
 
   // Refrescar el balance al abrir SÍ es trabajo de efecto: sincroniza con un
@@ -87,7 +102,12 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
   const amountValid = amount !== '' && amountNum > 0 && amountNum <= available;
   const amountError = amount !== '' && amountNum > 0 && amountNum > available;
 
-  const canSend = destValid && amountValid && !sending && !!address;
+  const trimmedMemo = memo.trim();
+  const resolvedMemo = resolveMemo(memo);
+  // Solo es inválido si hay algo escrito que no resuelve (texto > 28 bytes).
+  const memoError = trimmedMemo.length > 0 && resolvedMemo === null;
+
+  const canSend = destValid && amountValid && !memoError && !sending && !!address;
 
   const handleMax = () => {
     if (available > 0) setAmount(String(available));
@@ -97,7 +117,11 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
     if (!canSend) return;
     setSending(true);
     try {
-      await directUsdcTransfer({ from: address, to: trimmedDest, amount, decimals });
+      await sponsoredUsdcPayment({
+        to: trimmedDest,
+        amount,
+        memo: resolvedMemo ?? undefined,
+      });
       toast.success(
         t('wallet.send.success', 'Sent {{amount}} {{symbol}}', {
           amount: amountNum.toFixed(2),
@@ -212,6 +236,63 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
           </p>
         )}
       </div>
+
+      {/* Memo (opcional): clave para depósitos a exchanges. Colapsado es un chip
+          que se despliega (acordeón), como en el modal de retiro. El tipo (text /
+          id) se auto-detecta, así que es un solo campo. */}
+      {!memoOpen ? (
+        <button
+          type="button"
+          onClick={() => setMemoOpen(true)}
+          disabled={sending}
+          className="self-start flex items-center gap-2 rounded-full border border-black border-b-2 bg-white h-9 px-3.5 text-sm font-bold text-black hover:bg-black/5 active:border-b active:translate-y-[1px] transition disabled:opacity-50"
+        >
+          <MdOutlineStickyNote2 className="w-4 h-4" />
+          {t('wallet.send.memo', 'Memo')}
+        </button>
+      ) : (
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-xs font-semibold text-gray-600">
+              {t('wallet.send.memo', 'Memo')}
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setMemoOpen(false);
+                setMemo('');
+              }}
+              disabled={sending}
+              aria-label={t('common.close', 'Close')}
+              className="flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:bg-black/5 hover:text-black transition disabled:opacity-50"
+            >
+              <MdClose className="w-4 h-4" />
+            </button>
+          </div>
+          <input
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder={t('wallet.send.memoPlaceholder', 'e.g. 1234567')}
+            maxLength={64}
+            disabled={sending}
+            spellCheck={false}
+            autoComplete="off"
+            className={
+              'w-full rounded-lg border bg-white px-4 py-3 text-sm font-mono text-black outline-none placeholder:text-gray-400 ' +
+              (memoError ? 'border-error border-b-2' : 'border-black border-b-2')
+            }
+          />
+          {memoError ? (
+            <p className="mt-1 text-xs text-error">
+              {t('wallet.send.memoInvalid', 'The memo is too long (max 28 characters).')}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-400">
+              {t('wallet.send.memoHint', 'Some exchanges require a memo or tag to credit your deposit.')}
+            </p>
+          )}
+        </div>
+      )}
     </AppModal>
   );
 }

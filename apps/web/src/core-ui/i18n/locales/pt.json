@@ -1798,7 +1798,11 @@
       "sameAddress": "Você não pode enviar para o seu próprio endereço.",
       "cta": "Enviar",
       "sending": "Enviando…",
-      "success": "Enviou {{amount}} {{symbol}}"
+      "success": "Enviou {{amount}} {{symbol}}",
+      "memo": "Memo",
+      "memoPlaceholder": "ex. 1234567",
+      "memoHint": "Algumas corretoras exigem um memo ou tag para creditar seu depósito.",
+      "memoInvalid": "O memo é muito longo (máx. 28 caracteres)."
     }
   },
   "referrals": {
@@ -1863,6 +1867,7 @@
     },
     "methodLabel": "Método",
     "methodWallet": "Carteira",
+    "minWithdraw": "Saque mínimo: $1 USDC.",
     "noWallets": "Você ainda não tem carteiras salvas",
     "processing": "Processando saque...",
     "processingHint": "Isso pode levar alguns segundos.",
@@ -1875,7 +1880,8 @@
     "blendLeftover": "Na Blend",
     "withdrawFromBlend": "Retirar da Blend",
     "withdrawing": "Retirando…",
-    "blendBorrow": "Quite seu empréstimo da Blend primeiro"
+    "blendBorrow": "Quite seu empréstimo da Blend primeiro",
+    "memoLabel": "Memo"
   },
   "transactions": {
     "title": "Transações",

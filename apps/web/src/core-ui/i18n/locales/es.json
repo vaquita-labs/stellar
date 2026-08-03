@@ -1858,7 +1858,11 @@
       "sameAddress": "No podés enviar a tu propia dirección.",
       "cta": "Enviar",
       "sending": "Enviando…",
-      "success": "Enviaste {{amount}} {{symbol}}"
+      "success": "Enviaste {{amount}} {{symbol}}",
+      "memo": "Memo",
+      "memoPlaceholder": "ej. 1234567",
+      "memoHint": "Algunos exchanges piden un memo o tag para acreditar tu depósito.",
+      "memoInvalid": "El memo es demasiado largo (máx. 28 caracteres)."
     }
   },
   "referrals": {
@@ -1923,6 +1927,7 @@
     },
     "methodLabel": "Método",
     "methodWallet": "Wallet",
+    "minWithdraw": "Retiro mínimo: $1 USDC.",
     "noWallets": "Todavía no tenés wallets guardadas",
     "processing": "Procesando retiro...",
     "processingHint": "Esto puede tardar unos segundos.",
@@ -1935,7 +1940,8 @@
     "blendLeftover": "En Blend",
     "withdrawFromBlend": "Retirar de Blend",
     "withdrawing": "Retirando…",
-    "blendBorrow": "Devuelve tu préstamo de Blend primero"
+    "blendBorrow": "Devuelve tu préstamo de Blend primero",
+    "memoLabel": "Memo"
   },
   "transactions": {
     "title": "Transacciones",

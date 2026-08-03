@@ -16,6 +16,7 @@ import {
   AMOUNT_DECIMALS,
   floorAmount,
   formatUsdPrecise,
+  MIN_USDC,
   truncatedAmountString,
   truncateMiddle,
 } from '../../../helpers';
@@ -126,10 +127,11 @@ export function DepositMethodModal({
   const accountName =
     profile?.nickname || (walletAddress ? truncateMiddle(walletAddress, 6, 5) : '—');
   const numericAmount = Number(amount || '0');
-  // Igual que en el retiro: cualquier monto > 0 habilita el CTA. Exceder el
-  // saldo se resuelve al presionar Review (gris + temblor), no con un botón
-  // muerto que no explica nada.
-  const canReview = numericAmount > 0;
+  // Mínimo 1 USDC para depositar (mismo piso que valida el backend). Por debajo
+  // el CTA queda gris, pero el aviso de mínimo bajo el saldo explica por qué —no
+  // es un botón muerto sin contexto. Exceder el saldo se resuelve al presionar
+  // Review (gris + temblor).
+  const canReview = numericAmount >= MIN_USDC;
 
   const shakeAmount = () => {
     setOverBalance(true);
@@ -257,6 +259,9 @@ export function DepositMethodModal({
             `${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available)}`
           )}
         </button>
+        <p className="mt-1 text-xs text-gray-400">
+          {t('deposit.receive.minDeposit', 'Minimum deposit: $1 USDC.')}
+        </p>
       </div>
 
       {/* Origen de los fondos: la cuenta Vaquita del usuario. A diferencia del

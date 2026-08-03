@@ -1,7 +1,7 @@
 'use client';
 
 import { isStellarNetwork } from '@/networks/stellar';
-import { directUsdcTransfer } from '@/networks/stellar/blendDirect';
+import { resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import { PassiveMigrationSheet } from './PassiveMigrationSheet';
 import { usePollar } from '@pollar/react';
@@ -211,15 +211,16 @@ export function DepositPanel() {
               withdrawAll,
             });
 
-            // Salto 2: custodial → wallet externa elegida. USDC transfer SOROBAN
-            // (no `sendPayment` clásico): esa vía la patrocina Pollar, así que
-            // funciona con 0 XLM. El destino debe tener trustline al USDC.
+            // Salto 2: custodial → wallet externa elegida. PAGO CLÁSICO patrocinado
+            // por Pollar (`sendPayment`): funciona con 0 XLM Y —a diferencia del
+            // transfer SAC de Soroban— es lo que los EXCHANGES detectan y acreditan,
+            // con su MEMO (el que cargó el usuario al guardar la wallet; tipo id/text
+            // auto-detectado). El destino debe tener trustline al USDC.
             onProgress('sending');
-            await directUsdcTransfer({
-              from: walletAddress,
+            await sponsoredUsdcPayment({
               to: wallet.address,
               amount: amountStr,
-              decimals: token.decimals,
+              memo: resolveMemo(wallet.memo) ?? undefined,
             });
 
             void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
