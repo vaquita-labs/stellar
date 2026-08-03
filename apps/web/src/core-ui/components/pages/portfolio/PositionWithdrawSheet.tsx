@@ -147,7 +147,9 @@ export function PositionWithdrawSheet({
       // ledger, así que el ingreso existe: esperamos a que el RPC lo vea en vez
       // de leer una vez y depositar 0.
       setActiveStep('toBlend');
-      const receivedBase = await awaitUsdcCredit(walletAddress, token.decimals, balanceBefore);
+      const receivedBase = await awaitUsdcCredit(walletAddress, token.decimals, balanceBefore, {
+        hash: txHash,
+      });
       await passiveDeposit({
         address: walletAddress,
         amount: formatBaseUnits(receivedBase, token.decimals),

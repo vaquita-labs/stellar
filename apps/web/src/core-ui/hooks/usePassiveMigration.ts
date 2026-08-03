@@ -64,7 +64,7 @@ export const usePassiveMigration = (walletAddress?: string) => {
       const partial = amount != null && amount > 0 && amount < blendBalance ? amount : null;
 
       const walletBefore = await readUsdcBalance(walletAddress, decimals);
-      await directBlendWithdraw({
+      const { hash } = await directBlendWithdraw({
         address: walletAddress,
         amount: partial != null ? partial.toFixed(decimals) : '0',
         decimals,
@@ -74,7 +74,7 @@ export const usePassiveMigration = (walletAddress?: string) => {
       // The withdraw is on chain from here on, so the Blend position has to be
       // refreshed even if the deposit leg fails: the prompt reads off it.
       try {
-        const receivedBase = await awaitUsdcCredit(walletAddress, decimals, walletBefore);
+        const receivedBase = await awaitUsdcCredit(walletAddress, decimals, walletBefore, { hash });
         await vaultDeposit({
           address: walletAddress,
           amount: formatBaseUnits(receivedBase, decimals),
