@@ -1728,6 +1728,11 @@
     }
   },
   "wallet": {
+    "balanceModal": {
+      "onStellar": "on Stellar",
+      "refresh": "Refresh",
+      "title": "Balance"
+    },
     "editProfile": {
       "guest": "Guest",
       "nicknameError": "Error on saving nickname",
@@ -1812,6 +1817,7 @@
       "balance": "Balance",
       "buyArs": "Buy ARS",
       "copied": "Copied",
+      "copy": "Copy",
       "copyAddress": "Copy address",
       "copyError": "Could not copy",
       "getAssets": "Get assets",

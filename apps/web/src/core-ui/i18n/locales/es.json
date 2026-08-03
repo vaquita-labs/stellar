@@ -1728,6 +1728,11 @@
     }
   },
   "wallet": {
+    "balanceModal": {
+      "onStellar": "en Stellar",
+      "refresh": "Actualizar",
+      "title": "Saldo"
+    },
     "editProfile": {
       "guest": "Invitado",
       "nicknameError": "Hubo un error al guardar el apodo",
@@ -1812,6 +1817,7 @@
       "balance": "Saldo",
       "buyArs": "Comprar ARS",
       "copied": "¡Copiada!",
+      "copy": "Copiar",
       "copyAddress": "Copiar dirección",
       "copyError": "No se pudo copiar",
       "getAssets": "Recibe activos",

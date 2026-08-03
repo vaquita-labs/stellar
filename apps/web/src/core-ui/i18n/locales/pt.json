@@ -1728,6 +1728,11 @@
     }
   },
   "wallet": {
+    "balanceModal": {
+      "onStellar": "na Stellar",
+      "refresh": "Atualizar",
+      "title": "Saldo"
+    },
     "editProfile": {
       "guest": "Convidado",
       "nicknameError": "Erro ao salvar o apelido",
@@ -1743,6 +1748,7 @@
       "addressCopied": "Endereço copiado!",
       "balance": "Saldo",
       "copied": "Copiado!",
+      "copy": "Copiar",
       "copyAddress": "Copiar endereço",
       "copyError": "Não foi possível copiar",
       "getAssets": "Receba ativos",

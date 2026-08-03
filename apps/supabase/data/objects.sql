@@ -8,6 +8,7 @@ INSERT INTO "public"."map_objects" ("type", "size", "variants", "prices", "free_
 ('bush', '1,1,1', '0', '40', '0', null, now()),
 ('tree', '1,1,1', '0', '60', '1', null, now()),
 ('tree', '1,1,1', '4', '90', '0', null, now()),
+('tree', '1,1,1', '6', '80', '0', null, now()),
 -- Terreno
 ('rock', '1,1,1', '3', '120', '1', null, now()),
 -- Estructuras
