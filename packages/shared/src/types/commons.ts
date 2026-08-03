@@ -545,6 +545,8 @@ export interface SavedWalletResponseDTO {
   id: string;
   label: string;
   address: string;
+  /** Optional destination memo/tag (exchanges that require one); null when unset. */
+  memo: string | null;
   network: string;
   createdTimestamp: number;
   updatedTimestamp: number;

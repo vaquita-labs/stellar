@@ -20,6 +20,7 @@ export const toSavedWalletResponseDTO = (row: SavedWallet): SavedWalletResponseD
   id: row.id,
   label: row.label,
   address: row.address,
+  memo: row.memo,
   network: row.network,
   createdTimestamp: row.createdAt.getTime(),
   updatedTimestamp: row.updatedAt.getTime(),
@@ -44,13 +45,20 @@ export const createSavedWallet = async ({
   profileId,
   label,
   address,
+  memo,
   network,
 }: {
   profileId: number;
   label: string;
   address: string;
+  memo?: string | null;
   network: string;
 }): Promise<SavedWallet> => {
+  // Empty/blank memo is stored as NULL: "no memo" and "" mean the same thing to
+  // the destination, and NULL keeps the column honest for the "requires a memo"
+  // question later in the flow.
+  const memoValue = memo && memo.trim().length > 0 ? memo.trim() : null;
+
   const softDeleted = await prisma.savedWallet.findFirst({
     where: { profileId, address, network, deletedAt: { not: null } },
   });
@@ -58,12 +66,12 @@ export const createSavedWallet = async ({
   if (softDeleted) {
     return prisma.savedWallet.update({
       where: { id: softDeleted.id },
-      data: { label, deletedAt: null },
+      data: { label, memo: memoValue, deletedAt: null },
     });
   }
 
   return prisma.savedWallet.create({
-    data: { profileId, label, address, network },
+    data: { profileId, label, address, memo: memoValue, network },
   });
 };
 
