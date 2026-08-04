@@ -174,17 +174,34 @@ export function RedeemCodeModal({ open, onOpenChange }: RedeemCodeModalProps) {
       return;
     }
     setPhase('claiming');
+
+    // El canje de código es una simple validación contra la base (código
+    // inexistente / ya no canjeable), no una transacción. Si la pasamos por
+    // humanizeTxError, ningún patrón matchea y cae al genérico de "no se pudo
+    // completar la transacción", que confunde al usuario porque no hubo
+    // ninguna transacción todavía. Por eso este paso tiene su propio catch
+    // con un mensaje amigable y específico.
+    let achievementKey = '';
     try {
       const result = await redeem.mutateAsync(trimmed);
-      const achievementKey = result?.achievementKey ?? '';
-      if (!achievementKey) throw new Error(t('common.somethingWentWrong'));
+      achievementKey = result?.achievementKey ?? '';
+      if (!achievementKey) throw new Error('Missing achievement key');
+    } catch {
+      toast.danger(t('social.redeem.redeemErrorTitle'), {
+        description: t('social.redeem.codeNotFoundBody'),
+      });
+      setPhase('input');
+      return;
+    }
+
+    try {
       const minted = await mintBadge.mutateAsync(achievementKey);
       setReward({ coinReward: minted.coinReward, xpReward: minted.xpReward, achievementKey });
       setPhase('reward');
     } catch (err) {
-      // El mint es una transacción, así que el error puede ser uno tipado (firma
-      // cancelada, tx todavía confirmándose): lo pasamos por el mapeo amable en
-      // vez de volcar el mensaje crudo en el toast.
+      // El mint sí es una transacción, así que el error puede ser uno tipado
+      // (firma cancelada, tx todavía confirmándose): lo pasamos por el mapeo
+      // amable en vez de volcar el mensaje crudo en el toast.
       toast.danger(t('social.redeem.redeemErrorTitle'), { description: humanizeTxError(err, t).title });
       setPhase('input');
     }

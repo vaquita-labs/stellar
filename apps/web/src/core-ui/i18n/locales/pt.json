@@ -1556,6 +1556,7 @@
       "cameraErrorBody": "O acesso à câmera foi negado ou está indisponível.",
       "cameraErrorTitle": "Não foi possível iniciar a câmera",
       "claim": "Resgatar",
+      "codeNotFoundBody": "Não encontramos esse código. Verifique se está digitado corretamente e tente novamente.",
       "codePlaceholder": "EX: VAQUITA-LAUNCH-2026",
       "coinsReward_one": "{{count}} moeda!",
       "coinsReward_other": "{{count}} moedas!",
