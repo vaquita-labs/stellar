@@ -1,9 +1,9 @@
 import { MapObject, MapObjectType } from '@/core-ui/types';
 import * as THREE from 'three';
-import { TILE_HEIGHT, TILE_SIZE } from '../../constants';
-import { BuildContext } from '../../types';
-import { getPalette } from '../palette';
-import { addBoxes, BoxSpec, getSharedRoundedTileGeometry, TILE_CORNER_RADIUS } from '../recipe';
+import { TILE_HEIGHT, TILE_SIZE } from '@/core-ui/components/map/constants';
+import { BuildContext } from '@/core-ui/components/map/types';
+import { getPalette } from '@/core-ui/components/map/tiles/palette';
+import { addBoxes, BoxSpec, getSharedRoundedTileGeometry, TILE_CORNER_RADIUS } from '@/core-ui/components/map/tiles/recipe';
 
 // El agua queda 0.2 por debajo del pasto (se ve la orilla) y TERMINA apenas
 // bajo la superficie del mar (WaterBackground en y=-0.85): el bloque no debe

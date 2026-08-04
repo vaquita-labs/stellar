@@ -588,6 +588,15 @@
         "barn": {
           "default": "Granero"
         },
+        "windmill": {
+          "default": "Molino"
+        },
+        "well": {
+          "default": "Pozo"
+        },
+        "lamp": {
+          "default": "Farol"
+        },
         "leaderboard": {
           "default": "Podio"
         }

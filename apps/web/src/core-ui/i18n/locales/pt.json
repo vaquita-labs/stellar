@@ -588,6 +588,15 @@
         "barn": {
           "default": "Celeiro"
         },
+        "windmill": {
+          "default": "Moinho"
+        },
+        "well": {
+          "default": "Poço"
+        },
+        "lamp": {
+          "default": "Lampião"
+        },
         "leaderboard": {
           "default": "Pódio"
         }

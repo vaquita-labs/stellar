@@ -51,7 +51,9 @@ export function Building({
             variant: 0,
             rotation: rotationKey.split(',').map(Number) as [number, number, number],
           },
-          { worldType: BUILDING_WORLD, font, tileXZ: [position[0], position[2]], neighborTypeAt }
+          // animated: el render normal anima partes con R3F (aspas del molino),
+          // así el builder las omite de la geometría fusionada (Extras las pone).
+          { worldType: BUILDING_WORLD, font, tileXZ: [position[0], position[2]], neighborTypeAt, animated: true }
         )
       ),
     [definition, position, type, font, rotationKey, neighborTypeAt]

@@ -34,6 +34,8 @@ export interface BoxSpec {
    * silueta del objeto según el ángulo de cámara.
    */
   outline?: number;
+  /** rotación en Y (radianes) de la caja; el instancing la preserva (matrixWorld). */
+  rotationY?: number;
   /** default true */
   castShadow?: boolean;
   /** default true */
@@ -47,7 +49,7 @@ export const OUTLINE_COLOR = '#1f1a12';
 // interpolarla. Singleton de sesión: material.dispose() no dispone texturas,
 // así que sobrevive a los rebuilds del mapa.
 let toonGradientMap: THREE.DataTexture | null = null;
-const getToonGradientMap = (): THREE.DataTexture => {
+export const getToonGradientMap = (): THREE.DataTexture => {
   if (!toonGradientMap) {
     const bands = new Uint8Array([120, 190, 255]);
     toonGradientMap = new THREE.DataTexture(bands, bands.length, 1, THREE.RedFormat);
@@ -73,7 +75,7 @@ const SHADE_X = 0.78;
 const SHADE_Z = 0.9;
 const SHADE_BOTTOM = 0.55;
 
-const applyFaceShade = (geometry: THREE.BufferGeometry) => {
+export const applyFaceShade = (geometry: THREE.BufferGeometry) => {
   const normals = geometry.getAttribute('normal');
   const colors = new Float32Array(normals.count * 3);
   for (let i = 0; i < normals.count; i++) {
@@ -102,6 +104,30 @@ export const getSharedBoxGeometry = (width: number, height: number, depth: numbe
   }
   return geometry;
 };
+
+// Cache de geometrías redondeadas no-caja (cilindro/cono/toro/esfera) para los
+// objetos toon como edificios. Mismo patrón que getSharedBoxGeometry: faceShade
+// horneado una vez + userData.shared para que disposeObject/merge no las liberen
+// y varias instancias reusen la misma geometría (menos allocs y memoria).
+const roundGeometryCache = new Map<string, THREE.BufferGeometry>();
+const cacheRound = (key: string, create: () => THREE.BufferGeometry): THREE.BufferGeometry => {
+  let geometry = roundGeometryCache.get(key);
+  if (!geometry) {
+    geometry = create();
+    applyFaceShade(geometry);
+    geometry.userData.shared = true;
+    roundGeometryCache.set(key, geometry);
+  }
+  return geometry;
+};
+export const getSharedCylinderGeometry = (radiusTop: number, radiusBottom: number, height: number, segments = 18): THREE.BufferGeometry =>
+  cacheRound(`cyl|${radiusTop}|${radiusBottom}|${height}|${segments}`, () => new THREE.CylinderGeometry(radiusTop, radiusBottom, height, segments));
+export const getSharedConeGeometry = (radius: number, height: number, segments = 18): THREE.BufferGeometry =>
+  cacheRound(`cone|${radius}|${height}|${segments}`, () => new THREE.ConeGeometry(radius, height, segments));
+export const getSharedTorusGeometry = (radius: number, tube: number, radialSegments = 10, tubularSegments = 22): THREE.BufferGeometry =>
+  cacheRound(`torus|${radius}|${tube}|${radialSegments}|${tubularSegments}`, () => new THREE.TorusGeometry(radius, tube, radialSegments, tubularSegments));
+export const getSharedSphereGeometry = (radius: number, widthSegments = 10, heightSegments = 8): THREE.BufferGeometry =>
+  cacheRound(`sphere|${radius}|${widthSegments}|${heightSegments}`, () => new THREE.SphereGeometry(radius, widthSegments, heightSegments));
 
 // Radio en planta de las esquinas de la costa (donde el terreno dobla).
 export const TILE_CORNER_RADIUS = 0.24;
@@ -172,6 +198,7 @@ export const addBoxes = (group: THREE.Group, origin: [number, number, number], s
     mesh.castShadow = spec.castShadow ?? true;
     mesh.receiveShadow = spec.receiveShadow ?? true;
     mesh.position.set(origin[0] + spec.at[0], origin[1] + spec.at[1], origin[2] + spec.at[2]);
+    if (spec.rotationY) mesh.rotation.y = spec.rotationY;
     group.add(mesh);
 
     if (spec.outline) {
@@ -186,6 +213,7 @@ export const addBoxes = (group: THREE.Group, origin: [number, number, number], s
       outlineMesh.castShadow = false;
       outlineMesh.receiveShadow = false;
       outlineMesh.position.copy(mesh.position);
+      outlineMesh.rotation.copy(mesh.rotation);
       group.add(outlineMesh);
     }
   }

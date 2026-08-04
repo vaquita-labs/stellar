@@ -32,6 +32,13 @@ export interface BuildContext {
    * fondo plano y no sobre el mar.
    */
   dryEdges?: boolean;
+  /**
+   * El render normal (Building.tsx) anima ciertas partes con componentes R3F
+   * (p.ej. las aspas del molino), así que el builder debe OMITIRLAS de la
+   * geometría fusionada para no duplicarlas. En edición/preview (sin React)
+   * queda falsy y las partes se incluyen estáticas.
+   */
+  animated?: boolean;
 }
 
 export type ObjectBuilder = (mapObject: MapObject, ctx: BuildContext) => THREE.Object3D;

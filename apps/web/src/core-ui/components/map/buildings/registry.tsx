@@ -1,9 +1,24 @@
 import { MapObject, MapObjectType, WorldType } from '@/core-ui/types';
-import { ComponentType } from 'react';
+import { useDayCycleStore } from '@/core-ui/stores';
+import { useFrame } from '@react-three/fiber';
+import { ComponentType, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { disposeObject } from '../helpers';
 import { getPalette } from '../tiles/palette';
 import { addTerrainTile } from '../tiles/recipe';
-import { getBankGroup, getBarnGroup, getLeaderboardGroup } from '../tiles/objects';
+import {
+  buildLampGlass,
+  buildWindmillSails,
+  getBankGroup,
+  getBarnGroup,
+  getLampGroup,
+  getLeaderboardGroup,
+  getWellGroup,
+  getWindmillGroup,
+  LAMP_GLASS_Y,
+  LAMP_GLOW,
+  WINDMILL_HUB,
+} from '../tiles/objects';
 import { ObjectBuilder } from '../types';
 import Coin from './Coin';
 
@@ -78,6 +93,53 @@ const withGrassTerrain =
     return group;
   };
 
+// Aspas del molino girando (R3F): en el mapa normal se animan aparte de la
+// geometría fusionada (getWindmillGroup las omite con ctx.animated). La posición
+// suma BUILDING_LIFT porque el edificio va levantado sobre el pasto (ver
+// withGrassTerrain) y las aspas deben calzar con la torre.
+const WindmillSails = () => {
+  const ref = useRef<THREE.Group>(null);
+  const sails = useMemo(() => buildWindmillSails(), []);
+  useEffect(() => () => disposeObject(sails), [sails]);
+  useFrame((_, delta) => {
+    if (ref.current) ref.current.rotation.z += delta * 0.7;
+  });
+  return (
+    <group ref={ref} position={[WINDMILL_HUB[0], WINDMILL_HUB[1] + BUILDING_LIFT, WINDMILL_HUB[2]]}>
+      <primitive object={sails} />
+    </group>
+  );
+};
+
+// Farol encendiéndose de noche (R3F): lee dayProgress y sube la emisión del
+// vidrio + una PointLight cálida cuando oscurece. El vidrio va aparte de la
+// geometría fusionada (getLampGroup lo omite con ctx.animated). La luz suma
+// BUILDING_LIFT como el resto del edificio.
+const smoothstep = (a: number, b: number, x: number): number => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+const LampGlow = () => {
+  const lightRef = useRef<THREE.PointLight>(null);
+  const glass = useMemo(() => buildLampGlass(), []);
+  const mat = glass.userData.glassMat as THREE.MeshToonMaterial;
+  useEffect(() => () => disposeObject(glass), [glass]);
+  useFrame(() => {
+    // day ≈ 1 entre el amanecer (~0.25) y el atardecer (~0.75); night = 1 − day.
+    const p = useDayCycleStore.getState().dayProgress;
+    const day = smoothstep(0.22, 0.3, p) * (1 - smoothstep(0.7, 0.8, p));
+    const night = 1 - day;
+    mat.emissiveIntensity = night * 1.4;
+    if (lightRef.current) lightRef.current.intensity = night * 2.2;
+  });
+  return (
+    <group position={[0, LAMP_GLASS_Y + BUILDING_LIFT, 0]}>
+      <primitive object={glass} />
+      <pointLight ref={lightRef} color={LAMP_GLOW} distance={3.0} decay={2} intensity={0} castShadow={false} />
+    </group>
+  );
+};
+
 export const BUILDINGS: Partial<Record<MapObjectType, BuildingDefinition>> = {
   [MapObjectType.BANK]: {
     build: withGrassTerrain(MapObjectType.BANK, getBankGroup),
@@ -88,6 +150,25 @@ export const BUILDINGS: Partial<Record<MapObjectType, BuildingDefinition>> = {
     // 4.7 ≈ 3π/2: el granero quedaba enterrado/mal orientado con 0
     build: withGrassTerrain(MapObjectType.BARN, (o, { worldType }) => getBarnGroup(o, worldType)),
     baseRotation: [0, 4.7, 0],
+  },
+  [MapObjectType.WINDMILL]: {
+    // Frente (aspas/puerta) en −Z; misma orientación que el granero para que
+    // la fachada mire a la cámara. Las aspas giran vía Extras (WindmillSails).
+    build: withGrassTerrain(MapObjectType.WINDMILL, (o, ctx) => getWindmillGroup(o, ctx)),
+    baseRotation: [0, 4.7, 0],
+    Extras: WindmillSails,
+  },
+  [MapObjectType.WELL]: {
+    // Frente (manivela) en −Z, mirando a la cámara como el resto.
+    build: withGrassTerrain(MapObjectType.WELL, (o, { worldType }) => getWellGroup(o, worldType)),
+    baseRotation: [0, 4.7, 0],
+  },
+  [MapObjectType.LAMP]: {
+    // Simétrico (baseRotation no importa). El vidrio se enciende de noche via
+    // LampGlow (Extras); getLampGroup lo omite en el mapa normal (ctx.animated).
+    build: withGrassTerrain(MapObjectType.LAMP, (o, ctx) => getLampGroup(o, ctx)),
+    baseRotation: [0, 0, 0],
+    Extras: LampGlow,
   },
   [MapObjectType.LEADERBOARD]: {
     build: withGrassTerrain(MapObjectType.LEADERBOARD, (o, { worldType, font }) =>

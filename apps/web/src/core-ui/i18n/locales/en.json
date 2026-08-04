@@ -588,6 +588,15 @@
         "barn": {
           "default": "Barn"
         },
+        "windmill": {
+          "default": "Windmill"
+        },
+        "well": {
+          "default": "Well"
+        },
+        "lamp": {
+          "default": "Lamp"
+        },
         "leaderboard": {
           "default": "Podium"
         }

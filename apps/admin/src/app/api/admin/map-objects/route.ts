@@ -30,6 +30,9 @@ const MAP_OBJECT_TYPES = [
   'road',
   'bank',
   'barn',
+  'windmill',
+  'well',
+  'lamp',
   'leaderboard',
   'clock',
 ] as const;

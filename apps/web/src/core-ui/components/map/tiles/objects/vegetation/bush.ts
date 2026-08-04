@@ -1,8 +1,8 @@
 import { MapObject, WorldType } from '@/core-ui/types';
 import * as THREE from 'three';
-import { BuildContext } from '../../types';
-import { getPalette, WorldPalette } from '../palette';
-import { addBoxes, addFixedTerrainTile, BoxSpec, OUTLINE_COLOR } from '../recipe';
+import { BuildContext } from '@/core-ui/components/map/types';
+import { getPalette, WorldPalette } from '@/core-ui/components/map/tiles/palette';
+import { addBoxes, addFixedTerrainTile, BoxSpec, OUTLINE_COLOR } from '@/core-ui/components/map/tiles/recipe';
 
 // ---------------------------------------------------------------------------
 // Formas: cada función devuelve la receta de una silueta de arbusto o de un

@@ -53,7 +53,7 @@ const COMMON = {
   flowerWarm: '#FF8A4A',
   flowerLight: '#FFF4E0',
   flowerCore: '#FFD95C',
-  pumpkin: '#FF6B1A',
+  pumpkin: '#FB8B2E',
   deadWood: '#5C4F47',
   dark: '#000000',
   sand: '#A4876A',

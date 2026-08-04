@@ -450,8 +450,17 @@ export enum MapObjectType {
   ROAD = 'road',
   BANK = 'bank',
   BARN = 'barn',
+  WINDMILL = 'windmill',
+  WELL = 'well',
+  LAMP = 'lamp',
   LEADERBOARD = 'leaderboard',
   /** Ítem de HUD (no se coloca en el mapa): desbloquea la card de la hora. */
   CLOCK = 'clock',
+  // Tipos-paraguas para escalar a muchos ítems: cada uno agrupa muchas
+  // `variant` (ver tiles/objects/<categoría>/catalog.ts). El backend
+  // (map_objects) elige qué variantes existen y su precio.
+  DECORATION = 'decoration',
+  SEASONAL = 'seasonal',
+  COLLECTIBLE = 'collectible',
   EMPTY = 'empty',
 }

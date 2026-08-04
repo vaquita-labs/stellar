@@ -1,8 +1,8 @@
 import { MapObject } from '@/core-ui/types';
 import * as THREE from 'three';
-import { BuildContext } from '../../types';
-import { getPalette } from '../palette';
-import { addFixedTerrainTile } from '../recipe';
+import { BuildContext } from '@/core-ui/components/map/types';
+import { getPalette } from '@/core-ui/components/map/tiles/palette';
+import { addFixedTerrainTile } from '@/core-ui/components/map/tiles/recipe';
 
 // Tile de pasto: capa de pasto + tierra + contorno del mapa en lados
 // expuestos (todo lo arma addTerrainTile). El damero sutil de dos tonos

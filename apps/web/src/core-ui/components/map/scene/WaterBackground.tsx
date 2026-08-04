@@ -1,7 +1,7 @@
 'use client';
 
 import { TILE_HEIGHT } from '@/core-ui/components/map/constants';
-import { getFallStreaksTexture } from '@/core-ui/components/map/tiles/objects/water';
+import { getFallStreaksTexture } from '@/core-ui/components/map/tiles/objects/terrain/water';
 import { getPalette } from '@/core-ui/components/map/tiles/palette';
 import { WAVE_MOTION } from '@/core-ui/components/map/tiles/recipe';
 import { WorldType } from '@/core-ui/types';

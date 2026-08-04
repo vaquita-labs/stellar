@@ -9,10 +9,14 @@ INSERT INTO "public"."map_objects" ("type", "size", "variants", "prices", "free_
 ('tree', '1,1,1', '0', '60', '1', null, now()),
 ('tree', '1,1,1', '4', '90', '0', null, now()),
 ('tree', '1,1,1', '6', '80', '0', null, now()),
--- Terreno
+-- Terreno / caminos
 ('rock', '1,1,1', '3', '120', '1', null, now()),
--- Estructuras
+('road', '1,1,1', '0', '20', '0', null, now()),
+-- Estructuras / decoración (free_items = 0: solo por compra o grant de admin)
 ('clock', '1,1,1', '0', '350', '0', null, now()),
+('windmill', '1,1,1', '0', '350', '0', null, now()),
+('well', '1,1,1', '0', '250', '0', null, now()),
+('lamp', '1,1,1', '0', '150', '0', null, now()),
 -- Eliminados (soft delete)
 ('bank', '1,1,1', '0', '500', '0', '2026-07-04 10:26:12.026411+00', now())
     ON CONFLICT ("type", "variants") DO UPDATE SET
