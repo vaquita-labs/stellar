@@ -561,6 +561,7 @@
         "tree": {
           "0": "Árbol",
           "4": "Palmera",
+          "6": "Calabaza",
           "default": "Árbol"
         },
         "rock": {

@@ -561,6 +561,7 @@
         "tree": {
           "0": "Tree",
           "4": "Palm",
+          "6": "Pumpkin",
           "default": "Tree"
         },
         "rock": {

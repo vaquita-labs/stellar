@@ -3,7 +3,7 @@ import { MapObject, WorldType } from '@/core-ui/types';
 import * as THREE from 'three';
 import { BuildContext } from '../../types';
 import { getPalette, WorldPalette } from '../palette';
-import { addBoxes, addTerrainTile, BoxSpec, OUTLINE_COLOR } from '../recipe';
+import { addBoxes, addFixedTerrainTile, BoxSpec, OUTLINE_COLOR } from '../recipe';
 
 // ---------------------------------------------------------------------------
 // Formas: cada función devuelve la receta (lista de cajas) de una silueta de
@@ -144,36 +144,47 @@ const bigCactus = (color: string): BoxSpec[] => [
 const PUMPKIN_OUTLINE = 0.02;
 
 /**
- * Calabaza toon: tres gajos verticales redondeados (uno central + dos
- * laterales más bajos), TODOS de la misma profundidad y con la base apoyada en
- * la superficie del tile (recipe-local y = −0.5). Al compartir profundidad la
- * silueta de costado queda limpia (un solo contorno) y los surcos entre gajos
- * se leen tanto de frente como desde arriba. Tallo verde embutido en el tope y
- * —en bosque— carita tallada. Diseño validado renderizándolo con el mismo
- * pipeline toon (gradient map + faceShade + inverted-hull) de recipe.ts.
+ * Calabaza toon: un núcleo central GRANDE y redondo (domina la planta, la hace
+ * redonda) con cuatro bultos cardinales (±X, ±Z) más bajos que insinúan los
+ * gajos. Al tener volumen en los cuatro lados se lee como calabaza desde
+ * cualquier rotación de cámara, y el núcleo dominante evita que la planta se
+ * vea como una cruz (una versión con brazos y núcleo chico sí lo hacía). Todos
+ * los lóbulos apoyan la base en la superficie del tile (recipe-local y = −0.5).
+ * Tallo verde embutido en el tope del núcleo y —en bosque— carita tallada sobre
+ * el bulto +Z. Diseño validado renderizándolo (orbitando la cámara + vista
+ * cenital) con el mismo pipeline toon (gradient map + faceShade + inverted-hull)
+ * de recipe.ts.
  */
 const pumpkin = (body: string, dark: string, stem: string, withEyes: boolean): BoxSpec[] => {
-  const depth = 0.72;
-  // Un gajo: caja redondeada toon apoyada en la superficie (bottom = −0.5).
-  const lobe = (w: number, h: number, dx: number): BoxSpec => ({
+  const CORE_H = 0.58;
+  const ARM_H = 0.5;
+  const ARM_OFF = 0.3; // desplazamiento del bulto respecto del centro
+  // Un lóbulo: caja redondeada toon con la base en la superficie (bottom = −0.5).
+  const lobe = (w: number, h: number, d: number, dx: number, dz: number): BoxSpec => ({
     ...TOON,
-    size: [w, h, depth],
-    at: [dx, -0.5 + h / 2, 0],
+    size: [w, h, d],
+    at: [dx, -0.5 + h / 2, dz],
     color: body,
     bevel: 0.12,
     outline: PUMPKIN_OUTLINE,
   });
   const specs: BoxSpec[] = [
-    lobe(0.36, 0.58, 0), // gajo central (más alto y ancho)
-    lobe(0.3, 0.48, 0.29), // gajo derecho
-    lobe(0.3, 0.48, -0.29), // gajo izquierdo
-    // Tallo verde embutido en el tope del gajo central (top ≈ 0.08).
-    { ...TOON, size: [0.12, 0.16, 0.12], at: [0, 0.13, 0], color: stem, bevel: 0.03, outline: PUMPKIN_OUTLINE },
+    // Núcleo GRANDE y redondo: domina la planta (rellena las diagonales) para
+    // que no se lea como una cruz. Los cuatro bultos cardinales, más bajos y
+    // salientes apenas, insinúan los gajos y mantienen el volumen desde
+    // cualquier rotación.
+    lobe(0.6, CORE_H, 0.6, 0, 0), // núcleo
+    lobe(0.26, ARM_H, 0.48, ARM_OFF, 0), // bulto +X
+    lobe(0.26, ARM_H, 0.48, -ARM_OFF, 0), // bulto −X
+    lobe(0.48, ARM_H, 0.26, 0, ARM_OFF), // bulto +Z
+    lobe(0.48, ARM_H, 0.26, 0, -ARM_OFF), // bulto −Z
+    // Tallo verde embutido en el tope del núcleo (top ≈ 0.08).
+    { ...TOON, size: [0.12, 0.16, 0.12], at: [0, -0.5 + CORE_H + 0.05, 0], color: stem, bevel: 0.03, outline: PUMPKIN_OUTLINE },
   ];
   if (withEyes) {
-    // Ojos tallados: parches negros planos sobre la cara frontal del gajo
-    // central (z = 0.38, apenas por delante de la cara en depth/2 = 0.36).
-    const z = depth / 2 + 0.02;
+    // Ojos tallados: parches negros planos por delante de la cara del bulto +Z
+    // (cara en z = ARM_OFF + 0.26/2 = 0.43; los ojos van apenas más afuera).
+    const z = ARM_OFF + 0.13 + 0.02;
     specs.push(
       { size: [0.1, 0.12, 0.02], at: [-0.11, -0.16, z], color: dark, material: 'basic', castShadow: false, receiveShadow: false },
       { size: [0.1, 0.12, 0.02], at: [0.11, -0.16, z], color: dark, material: 'basic', castShadow: false, receiveShadow: false }
@@ -209,12 +220,14 @@ const TREE_VARIANTS: Record<WorldType, (p: WorldPalette) => BoxSpec[][]> = {
   [WorldType.VOLCANO]: (p) => [pumpkin(p.pumpkin, p.dark, p.leafDark, false), deadTree(p.deadWood), deadTree(p.deadWood)],
 };
 
-export const getTreeGroup = ({ position: [x, , z], variant }: MapObject, ctx: BuildContext) => {
+export const getTreeGroup = ({ position: [x, , z], variant, rotation }: MapObject, ctx: BuildContext) => {
   const { worldType } = ctx;
   const palette = getPalette(worldType);
   const group = new THREE.Group();
 
-  addTerrainTile(group, x, z, palette.treeTerrain, ctx);
+  // El terreno queda fijo a la grilla (contra-rotado); solo la decoración
+  // (árbol/calabaza) rota con la rotación del usuario.
+  addFixedTerrainTile(group, x, z, palette.treeTerrain, ctx, rotation?.[1] ?? 0);
 
   const variants = (TREE_VARIANTS[worldType] || TREE_VARIANTS[WorldType.FOREST])(palette);
   const recipe = variants[variant];

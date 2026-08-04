@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { TILE_HEIGHT, TILE_SIZE } from '../../constants';
 import { BuildContext } from '../../types';
 import { getPalette } from '../palette';
-import { addBoxes, addTerrainTile, BoxSpec, OUTLINE_COLOR } from '../recipe';
+import { addBoxes, addFixedTerrainTile, BoxSpec, OUTLINE_COLOR } from '../recipe';
 
 // Variantes: [alto de la losa, alto del pilar de esquina (opcional)],
 // como fracción de TILE_HEIGHT. El índice del array es el `variant`.
@@ -66,11 +66,12 @@ const rockRecipe = (slabHeight: number, pillarHeight: number | undefined, color:
   return specs;
 };
 
-export const getRockGroup = ({ position: [x, , z], variant }: MapObject, ctx: BuildContext) => {
+export const getRockGroup = ({ position: [x, , z], variant, rotation }: MapObject, ctx: BuildContext) => {
   const palette = getPalette(ctx.worldType);
   const group = new THREE.Group();
 
-  addTerrainTile(group, x, z, palette.rock, ctx);
+  // Terreno fijo a la grilla; solo la roca rota.
+  addFixedTerrainTile(group, x, z, palette.rock, ctx, rotation?.[1] ?? 0);
 
   const spec = ROCK_VARIANTS[variant];
   if (spec) {

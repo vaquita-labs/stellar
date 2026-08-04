@@ -512,6 +512,30 @@ const getSharedCornerSkirtGeometry = (): THREE.BufferGeometry => {
   return cornerSkirtGeometry;
 };
 
+// Igual que addTerrainTile pero dentro de un subgrupo CONTRA-ROTADO por
+// -rotationY. El contorno de costa del terreno son piezas DIRECCIONALES
+// (calculadas según los vecinos, en coordenadas de grilla). Como el grupo del
+// objeto se rota con la rotación del usuario (el wrapper de Ground/staticWorld),
+// sin esto la costa gira junto con el objeto y sus líneas caen en los bordes
+// equivocados. Contra-rotando el terreno queda fijo a la grilla mientras la
+// decoración de arriba (árbol, calabaza, roca…) sí rota. Mismo patrón que
+// withGrassTerrain de los edificios (buildings/registry.tsx). El tile se
+// construye en el origen (x=z=0 en todos los llamadores reales), así que el
+// pivote de la contra-rotación coincide con el centro del tile.
+export const addFixedTerrainTile = (
+  group: THREE.Group,
+  x: number,
+  z: number,
+  color: string,
+  ctx: BuildContext,
+  rotationY: number
+) => {
+  const terrain = new THREE.Group();
+  addTerrainTile(terrain, x, z, color, ctx);
+  terrain.rotation.y = -rotationY;
+  group.add(terrain);
+};
+
 // Bloque base que ocupa el tile completo bajo un objeto, con la misma
 // estructura que el tile de pasto: capa superior del color del objeto y
 // tierra debajo, para que en los bordes de la isla se lea igual que el resto
