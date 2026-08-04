@@ -141,15 +141,42 @@ const bigCactus = (color: string): BoxSpec[] => [
   { size: [0.1, 0.1, 0.4], at: [0, -0.5, 0], color },
 ];
 
-/** Calabaza (con o sin ojos). Escalada 0.8 y apoyada sobre el tile. */
-const pumpkin = (body: string, dark: string, withEyes: boolean): BoxSpec[] => {
-  const s = 0.8;
-  const at = (x: number, y: number, z: number): [number, number, number] => [x * s, -0.65 + y * s, z * s];
-  const specs: BoxSpec[] = [{ size: [0.7 * s, 0.7 * s, 0.7 * s], at: at(0, 0, 0), color: body, receiveShadow: false }];
+const PUMPKIN_OUTLINE = 0.02;
+
+/**
+ * Calabaza toon: tres gajos verticales redondeados (uno central + dos
+ * laterales más bajos), TODOS de la misma profundidad y con la base apoyada en
+ * la superficie del tile (recipe-local y = −0.5). Al compartir profundidad la
+ * silueta de costado queda limpia (un solo contorno) y los surcos entre gajos
+ * se leen tanto de frente como desde arriba. Tallo verde embutido en el tope y
+ * —en bosque— carita tallada. Diseño validado renderizándolo con el mismo
+ * pipeline toon (gradient map + faceShade + inverted-hull) de recipe.ts.
+ */
+const pumpkin = (body: string, dark: string, stem: string, withEyes: boolean): BoxSpec[] => {
+  const depth = 0.72;
+  // Un gajo: caja redondeada toon apoyada en la superficie (bottom = −0.5).
+  const lobe = (w: number, h: number, dx: number): BoxSpec => ({
+    ...TOON,
+    size: [w, h, depth],
+    at: [dx, -0.5 + h / 2, 0],
+    color: body,
+    bevel: 0.12,
+    outline: PUMPKIN_OUTLINE,
+  });
+  const specs: BoxSpec[] = [
+    lobe(0.36, 0.58, 0), // gajo central (más alto y ancho)
+    lobe(0.3, 0.48, 0.29), // gajo derecho
+    lobe(0.3, 0.48, -0.29), // gajo izquierdo
+    // Tallo verde embutido en el tope del gajo central (top ≈ 0.08).
+    { ...TOON, size: [0.12, 0.16, 0.12], at: [0, 0.13, 0], color: stem, bevel: 0.03, outline: PUMPKIN_OUTLINE },
+  ];
   if (withEyes) {
+    // Ojos tallados: parches negros planos sobre la cara frontal del gajo
+    // central (z = 0.38, apenas por delante de la cara en depth/2 = 0.36).
+    const z = depth / 2 + 0.02;
     specs.push(
-      { size: [0.1 * s, 0.1 * s, 0.01 * s], at: at(-0.2, 0.18, 0.35), color: dark, castShadow: false, receiveShadow: false },
-      { size: [0.1 * s, 0.1 * s, 0.01 * s], at: at(0.15, 0.18, 0.35), color: dark, castShadow: false, receiveShadow: false }
+      { size: [0.1, 0.12, 0.02], at: [-0.11, -0.16, z], color: dark, material: 'basic', castShadow: false, receiveShadow: false },
+      { size: [0.1, 0.12, 0.02], at: [0.11, -0.16, z], color: dark, material: 'basic', castShadow: false, receiveShadow: false }
     );
   }
   return specs;
@@ -175,11 +202,11 @@ const TREE_VARIANTS: Record<WorldType, (p: WorldPalette) => BoxSpec[][]> = {
     cactus(p.cactus),
     palmTree(p.trunk, p.leafDark, p.deadWood),
     bigCactus(p.cactus),
-    pumpkin(p.pumpkin, p.dark, true),
+    pumpkin(p.pumpkin, p.dark, p.leafDark, true),
     deadTree(p.deadWood),
   ],
   [WorldType.DESERT]: (p) => [cactus(p.sand), palmTree(p.sand, p.leaf, p.deadWood), bigCactus(p.trunk)],
-  [WorldType.VOLCANO]: (p) => [pumpkin(p.pumpkin, p.dark, false), deadTree(p.deadWood), deadTree(p.deadWood)],
+  [WorldType.VOLCANO]: (p) => [pumpkin(p.pumpkin, p.dark, p.leafDark, false), deadTree(p.deadWood), deadTree(p.deadWood)],
 };
 
 export const getTreeGroup = ({ position: [x, , z], variant }: MapObject, ctx: BuildContext) => {

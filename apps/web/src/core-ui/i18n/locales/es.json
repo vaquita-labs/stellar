@@ -1546,6 +1546,7 @@
       "cameraErrorBody": "Se denegó el acceso a la cámara o no está disponible.",
       "cameraErrorTitle": "No se pudo iniciar la cámara",
       "claim": "Reclamar",
+      "codeNotFoundBody": "No encontramos ese código. Revisa que esté bien escrito e intenta de nuevo.",
       "codePlaceholder": "EJ: VAQUITA-LAUNCH-2026",
       "coinsReward_one": "¡{{count}} moneda!",
       "coinsReward_other": "¡{{count}} monedas!",
@@ -1728,6 +1729,11 @@
     }
   },
   "wallet": {
+    "balanceModal": {
+      "onStellar": "en Stellar",
+      "refresh": "Actualizar",
+      "title": "Saldo"
+    },
     "editProfile": {
       "guest": "Invitado",
       "nicknameError": "Hubo un error al guardar el apodo",
@@ -1812,6 +1818,7 @@
       "balance": "Saldo",
       "buyArs": "Comprar ARS",
       "copied": "¡Copiada!",
+      "copy": "Copiar",
       "copyAddress": "Copiar dirección",
       "copyError": "No se pudo copiar",
       "getAssets": "Recibe activos",

@@ -1546,6 +1546,7 @@
       "cameraErrorBody": "Camera access was denied or unavailable.",
       "cameraErrorTitle": "Could not start camera",
       "claim": "Claim",
+      "codeNotFoundBody": "We couldn't find that code. Double-check it for typos and try again.",
       "codePlaceholder": "E.G: VAQUITA-LAUNCH-2026",
       "coinsReward_one": "{{count}} coin!",
       "coinsReward_other": "{{count}} coins!",
@@ -1728,6 +1729,11 @@
     }
   },
   "wallet": {
+    "balanceModal": {
+      "onStellar": "on Stellar",
+      "refresh": "Refresh",
+      "title": "Balance"
+    },
     "editProfile": {
       "guest": "Guest",
       "nicknameError": "Error on saving nickname",
@@ -1812,6 +1818,7 @@
       "balance": "Balance",
       "buyArs": "Buy ARS",
       "copied": "Copied",
+      "copy": "Copy",
       "copyAddress": "Copy address",
       "copyError": "Could not copy",
       "getAssets": "Get assets",
