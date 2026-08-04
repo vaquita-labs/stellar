@@ -1,0 +1,185 @@
+name: Vaquita Vault Invest / Rebalance
+
+# Moves the DeFindex vault's idle USDC into a strategy via rebalance(Invest).
+# There is no vault-level "invest mode" flag — new pool deposits already invest
+# through the adapter; this workflow is the lever for the existing IDLE balance.
+# Choose a specific raw amount, or invest_all_idle to deploy the whole idle
+# balance. Defaults to a dry run (simulate only) — you must set dry_run=false to
+# actually move funds.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: GitHub Environment (secrets/vars + approvals)
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      strategy_address:
+        description: Strategy contract to invest into
+        required: true
+        default: CDB2WMKQQNVZMEBY7Q7GZ5C7E7IAFSNMZ7GGVD6WKTCEWK7XOIAVZSAP
+        type: string
+      invest_all_idle:
+        description: Invest the vault's entire idle balance (ignores 'amount')
+        required: false
+        default: false
+        type: boolean
+      amount:
+        description: Raw i128 amount to invest (token decimals, USDC = 7). Ignored if invest_all_idle=true.
+        required: false
+        type: string
+      dry_run:
+        description: Simulate only (no submission). Set false to actually move funds.
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  STELLAR_CLI_VERSION: "25.1.0"
+
+jobs:
+  invest:
+    name: Invest / rebalance (${{ inputs.target_environment }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment }}
+    concurrency:
+      group: vaquita-vault-invest-${{ inputs.target_environment }}
+      cancel-in-progress: false
+    env:
+      TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+      # DeFindex vault contract (mainnet prod: CB2U6PWS225PXWOAYGFIAWXYJBQHBWBQHEPC6NU2M257DKBRLBGMUPUZ)
+      VAULT_CONTRACT_ID: ${{ vars.DEFINDEX_VAULT_CONTRACT_ID }}
+      # Rebalance manager address (must match the secret key below).
+      # mainnet prod: GAK54P23T25XN3IO2NUOS25ZDYJBDBWA44XFQ4GUZOP7UDWI3JRY2YUB
+      REBALANCE_MANAGER_ADDRESS: ${{ vars.REBALANCE_MANAGER_ADDRESS }}
+      REBALANCE_MANAGER_SECRET_KEY: ${{ secrets.REBALANCE_MANAGER_SECRET_KEY }}
+      STELLAR_RPC_URL: ${{ vars.STELLAR_RPC_URL }}
+      STELLAR_NETWORK_PASSPHRASE: ${{ vars.STELLAR_NETWORK_PASSPHRASE }}
+      STRATEGY_ADDRESS: ${{ inputs.strategy_address }}
+      INVEST_ALL_IDLE: ${{ inputs.invest_all_idle }}
+      AMOUNT_INPUT: ${{ inputs.amount }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      # Cap on the inclusion fee (stroops) so the tx isn't dropped during mainnet
+      # surge pricing; the network only charges what inclusion actually requires.
+      INCLUSION_FEE: "1000000"
+    steps:
+      - name: Install Stellar CLI
+        run: |
+          set -euo pipefail
+          case "$(uname -m)" in
+            x86_64) triple=x86_64-unknown-linux-gnu ;;
+            aarch64) triple=aarch64-unknown-linux-gnu ;;
+            *) echo "unsupported runner architecture: $(uname -m)"; exit 1 ;;
+          esac
+          ver="${STELLAR_CLI_VERSION}"
+          url="https://github.com/stellar/stellar-cli/releases/download/v${ver}/stellar-cli-${ver}-${triple}.tar.gz"
+          curl -fsSL "$url" | tar xz
+          mkdir -p "${HOME}/.local/bin"
+          install -m 755 stellar "${HOME}/.local/bin/stellar"
+          rm -f stellar
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+
+      - name: Validate configuration
+        run: |
+          set -euo pipefail
+          missing=0
+          for v in VAULT_CONTRACT_ID REBALANCE_MANAGER_ADDRESS REBALANCE_MANAGER_SECRET_KEY \
+                   STELLAR_RPC_URL STELLAR_NETWORK_PASSPHRASE STRATEGY_ADDRESS; do
+            if [ -z "${!v:-}" ]; then echo "Missing required config: ${v}"; missing=1; fi
+          done
+          [ "${missing}" -eq 0 ] || { echo "Set the missing secrets/vars on the ${TARGET_ENVIRONMENT} environment."; exit 1; }
+          echo "Environment:  ${TARGET_ENVIRONMENT}"
+          echo "Vault:        ${VAULT_CONTRACT_ID}"
+          echo "Strategy:     ${STRATEGY_ADDRESS}"
+          echo "Manager:      ${REBALANCE_MANAGER_ADDRESS}"
+
+      - name: Resolve amount (read idle balance)
+        id: amt
+        run: |
+          set -euo pipefail
+
+          # fetch_total_managed_funds is read-only; --send=no simulates and
+          # returns the JSON allocation array on stdout.
+          FUNDS="$(stellar contract invoke \
+            --id "${VAULT_CONTRACT_ID}" \
+            --source-account "${REBALANCE_MANAGER_SECRET_KEY}" \
+            --rpc-url "${STELLAR_RPC_URL}" \
+            --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" \
+            --send=no \
+            -- fetch_total_managed_funds 2>/dev/null || true)"
+
+          # Robustly extract the JSON array even if diagnostics leak onto stdout.
+          FUNDS_JSON="$(printf '%s' "${FUNDS}" | grep -oE '\[.*\]' | tail -1)"
+          if [ -z "${FUNDS_JSON}" ]; then
+            echo "Could not read fetch_total_managed_funds. Raw output:"; echo "${FUNDS}"; exit 1
+          fi
+          echo "Managed funds: ${FUNDS_JSON}"
+
+          IDLE="$(printf '%s' "${FUNDS_JSON}" | jq -r '.[0].idle_amount')"
+          echo "Idle amount (raw): ${IDLE}"
+
+          if [ "${INVEST_ALL_IDLE}" = "true" ]; then
+            AMOUNT="${IDLE}"
+          else
+            AMOUNT="${AMOUNT_INPUT}"
+          fi
+
+          case "${AMOUNT}" in
+            ''|*[!0-9]*) echo "amount must be a positive integer (raw token units), got '${AMOUNT}'"; exit 1 ;;
+          esac
+          if [ "${AMOUNT}" = "0" ]; then echo "amount is 0 — nothing to invest"; exit 1; fi
+          if [ "${AMOUNT}" -gt "${IDLE}" ]; then
+            echo "amount (${AMOUNT}) exceeds idle balance (${IDLE}) — the vault can only invest idle funds"; exit 1
+          fi
+
+          echo "amount=${AMOUNT}" >> "${GITHUB_OUTPUT}"
+          echo "idle=${IDLE}" >> "${GITHUB_OUTPUT}"
+
+      - name: Rebalance (Invest)
+        run: |
+          set -euo pipefail
+          AMOUNT="${{ steps.amt.outputs.amount }}"
+
+          # Instruction::Invest(strategy_address, amount) — tuple enum variant.
+          INSTRUCTIONS="[{\"Invest\":[\"${STRATEGY_ADDRESS}\",\"${AMOUNT}\"]}]"
+          echo "Instructions: ${INSTRUCTIONS}"
+
+          SEND="yes"
+          if [ "${DRY_RUN}" = "true" ]; then SEND="no"; fi
+          echo "dry_run=${DRY_RUN} -> --send=${SEND}"
+
+          stellar contract invoke \
+            --id "${VAULT_CONTRACT_ID}" \
+            --source-account "${REBALANCE_MANAGER_SECRET_KEY}" \
+            --rpc-url "${STELLAR_RPC_URL}" \
+            --network-passphrase "${STELLAR_NETWORK_PASSPHRASE}" \
+            --inclusion-fee "${INCLUSION_FEE}" \
+            --send="${SEND}" \
+            -- \
+            rebalance \
+            --caller "${REBALANCE_MANAGER_ADDRESS}" \
+            --instructions "${INSTRUCTIONS}"
+
+      - name: Write step summary
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "## Vaquita Vault invest / rebalance"
+            echo
+            echo "- Environment: ${TARGET_ENVIRONMENT}"
+            echo "- Vault: \`${VAULT_CONTRACT_ID}\`"
+            echo "- Strategy: \`${STRATEGY_ADDRESS}\`"
+            echo "- Invest all idle: ${INVEST_ALL_IDLE}"
+            echo "- Amount (raw): ${{ steps.amt.outputs.amount }}"
+            echo "- Idle at run (raw): ${{ steps.amt.outputs.idle }}"
+            echo "- Dry run: ${DRY_RUN}"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } >> "${GITHUB_STEP_SUMMARY}"
