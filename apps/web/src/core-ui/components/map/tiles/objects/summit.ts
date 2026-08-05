@@ -147,8 +147,10 @@ export function getSummitGroup(_: MapObject, ctx: BuildContext): THREE.Group {
     addLine('Sao Paulo', 0.052, 0.005, textMat);
     addLine('2026', 0.092, -0.11, textMat);
   }
-  plaque.position.set(0, 0.24, -0.33);
-  plaque.rotation.x = -0.28;
+  // Reclinada HACIA ATRÁS (tope hacia la losa), como lápida apoyada contra el
+  // monumento: inclinada al frente se veía despegada/cayéndose desde atrás.
+  plaque.position.set(0, 0.24, -0.31);
+  plaque.rotation.x = 0.28;
   g.add(plaque);
 
   // Bandera de Brasil ADELANTE (rincón frontal, a la izquierda del

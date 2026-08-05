@@ -32,3 +32,4 @@ export * from './useTransactions';
 export * from './useUsers';
 export * from './useVaquitaMood';
 export * from './useWithdrawalTime';
+export * from './usePushNotifications';

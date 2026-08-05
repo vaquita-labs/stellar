@@ -13,10 +13,11 @@ import { toonMesh } from './toon-mesh';
 // ---------------------------------------------------------------------------
 // Farol de calle (decoración que SE PRENDE DE NOCHE). Poste de metal oscuro con
 // base de bronce y una linterna hexagonal con vidrio cálido arriba. El vidrio
-// GLOW y una PointLight se encienden de noche: eso reacciona al ciclo día/noche
-// (dayProgress) así que vive en el componente Extras `LampGlow` (registry.tsx).
-// En preview/edición (sin React) el vidrio va estático (apagado). El buje/marco
-// metálico es siempre estático. Radialmente simétrico → baseRotation no importa.
+// GLOW y un halo aditivo (sprite) se encienden de noche: eso reacciona al ciclo
+// día/noche (dayProgress) así que vive en el componente Extras `LampGlow`
+// (registry.tsx). En preview/edición (sin React) el vidrio va estático
+// (apagado). El buje/marco metálico es siempre estático. Radialmente simétrico
+// → baseRotation no importa.
 // ---------------------------------------------------------------------------
 
 const METAL = '#3B3F46';
@@ -55,6 +56,41 @@ export const buildLampGlass = (): THREE.Group => {
   grp.add(outline);
   grp.userData.glassMat = mat;
   return grp;
+};
+
+/**
+ * Material del halo nocturno, COMPARTIDO por todos los faroles del mapa
+ * (singleton a nivel módulo, nunca se dispone). Reemplaza a la PointLight que
+ * tenía cada farol: cada luz puntual es global en three — con N faroles el
+ * shader de TODOS los materiales iluminados de la escena iteraba N luces por
+ * píxel (aunque estuvieran apagadas), y colocar/quitar uno recompilaba todos
+ * los shaders. El sprite aditivo cuesta 1 draw call por farol y 0 luces.
+ * `LampGlow` (registry.tsx) escribe `opacity` cada frame según la noche; como
+ * el valor es el mismo para todos los faroles, compartir el material es seguro.
+ */
+let lampHaloMaterial: THREE.SpriteMaterial | null = null;
+export const getLampHaloMaterial = (): THREE.SpriteMaterial => {
+  if (lampHaloMaterial) return lampHaloMaterial;
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const c = canvas.getContext('2d')!;
+  // Gradiente radial cálido (LAMP_GLOW) → transparente.
+  const grad = c.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0, 'rgba(255, 183, 51, 0.9)');
+  grad.addColorStop(0.4, 'rgba(255, 183, 51, 0.35)');
+  grad.addColorStop(1, 'rgba(255, 183, 51, 0)');
+  c.fillStyle = grad;
+  c.fillRect(0, 0, size, size);
+  lampHaloMaterial = new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(canvas),
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0,
+  });
+  return lampHaloMaterial;
 };
 
 /**

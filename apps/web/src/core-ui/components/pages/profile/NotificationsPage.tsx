@@ -4,7 +4,7 @@ import { toast } from '@heroui/react';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiBell, FiLoader, FiMail, FiTrendingUp, FiUsers, FiZap } from 'react-icons/fi';
-import { useProfileData, useRestProfile } from '../../../hooks';
+import { useProfileData, usePushNotifications, useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { DEFAULT_NOTIFICATION_PREFERENCES, NotificationPreferenceKey } from '../../../types';
 import { PageLayout } from '../../molecules';
@@ -70,6 +70,7 @@ export function NotificationsPage({ onBack }: { onBack?: () => void } = {}) {
 
   const [values, setValues] = useState(DEFAULT_NOTIFICATION_PREFERENCES);
   const [saving, setSaving] = useState<NotificationPreferenceKey | null>(null);
+  const { supported: pushSupported, enablePush, disablePush } = usePushNotifications();
 
   // Hydrate from the saved profile preferences once (and after each refetch).
   useEffect(() => {
@@ -95,6 +96,27 @@ export function NotificationsPage({ onBack }: { onBack?: () => void } = {}) {
     setValues({ ...prev, [key]: value }); // optimistic; reverted on failure
     setSaving(key);
     try {
+      // El toggle de push también maneja la suscripción real del dispositivo:
+      // encenderlo pide el permiso del navegador (este click es el gesto que
+      // iOS exige) y registra la suscripción; apagarlo la da de baja.
+      if (key === 'push' && value && pushSupported) {
+        const result = await enablePush();
+        if (result === 'denied') {
+          setValues(prev);
+          toast.warning(
+            t(
+              'profilePages.notifications.pushDenied',
+              'Notifications are blocked for this app in your browser settings.'
+            ),
+            { timeout: 4000 }
+          );
+          return;
+        }
+      }
+      if (key === 'push' && !value) {
+        void disablePush();
+      }
+
       const { success, message } = await saveNotificationPreferences({ [key]: value });
       if (success) {
         refetch();

@@ -12,6 +12,7 @@ import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '..
 import { useModalPresence } from '../molecules/AppModal';
 import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
 import { MapObjects } from './buildings/MapObjects';
+import { AdaptiveResolution } from './scene/AdaptiveResolution';
 import { SceneCamera } from './scene/SceneCamera';
 import { SceneControls } from './scene/SceneControls';
 import { WaterBackground } from './scene/WaterBackground';
@@ -174,6 +175,7 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
         // that stack a header above the map (leaderboard detail) don't scroll.
         className="h-full"
       >
+        <AdaptiveResolution />
         <DayCycleSky />
         {/* Montar la cámara cuando el mapa ya cargó (aunque venga vacío — los
             perfiles nuevos arrancan sin tiles): se inicializa una única vez y

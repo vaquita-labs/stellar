@@ -119,7 +119,13 @@ export const DayCycleSky = () => {
     shadowElapsedRef.current += delta;
     if (shadowElapsedRef.current >= SHADOW_UPDATE_INTERVAL) {
       shadowElapsedRef.current = 0;
-      gl.shadowMap.needsUpdate = true;
+      // De noche la directional está en 0 y no hay sombra visible: se saltea
+      // el pase entero (~40% del ciclo de juego gratis). El umbral > 0 cubre
+      // el fade del atardecer, así la sombra se sigue actualizando mientras
+      // todavía se ve desvanecerse.
+      if (values.directional > 0.001) {
+        gl.shadowMap.needsUpdate = true;
+      }
     }
   });
 

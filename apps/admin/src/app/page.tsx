@@ -39,6 +39,11 @@ const sections: { href: string; title: string; description: string }[] = [
     description: 'Catalog of placeable map elements: variants, prices and free units.',
   },
   {
+    href: '/notifications',
+    title: 'Notifications',
+    description: 'Send in-app + push notifications to everyone or specific users.',
+  },
+  {
     href: '/listening',
     title: 'Listening',
     description: 'Live on-chain event listener and transactions.',

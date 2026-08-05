@@ -825,6 +825,10 @@
     },
     "markAllRead": "Mark all as read",
     "messages": {
+      "adminMessage": {
+        "body": "{{body}}",
+        "title": "{{title}}"
+      },
       "achievementUnlocked": {
         "body": "You earned the \"{{name}}\" badge.",
         "title": "Trophy unlocked!"
@@ -880,6 +884,12 @@
       "installedBody": "Vaquita is installed! Open it from your home screen to unlock your wallet.",
       "installedHint": "You can close this tab. From now on open Vaquita from the app icon.",
       "pullHint": "Already installed? Pull down to refresh"
+    },
+    "pushNudge": {
+      "title": "Turn on notifications",
+      "body": "Get a heads-up when your savings earn rewards or your streak is about to break.",
+      "enable": "Turn on",
+      "later": "Maybe later"
     },
     "intro": {
       "goToSlide": "Go to slide {{number}}",
@@ -1080,6 +1090,7 @@
         }
       },
       "emailRequired": "Add your email in Edit profile to enable this.",
+      "pushDenied": "Notifications are blocked for this app in your browser settings.",
       "sections": {
         "activity": {
           "title": "Activity"

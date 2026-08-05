@@ -276,6 +276,7 @@ model Profile {
   profileRewards      ProfileReward[]
   notifications       Notification[]
   savedWallets        SavedWallet[]
+  pushSubscriptions   PushSubscription[]
 
   // Unidirectional follow graph. `following` are edges where this profile is the
   // follower; `followers` are edges where it is the followee.
@@ -363,6 +364,51 @@ model Notification {
 
   @@index([profileId, createdAt(sort: Desc)], map: "idx_notifications_profile_created")
   @@map("notifications")
+}
+
+/// Web-push subscription of one device (browser/installed PWA). `endpoint` is
+/// globally unique — a device belongs to exactly one wallet, and re-subscribing
+/// after a login switch re-parents the row (upsert by endpoint). Rows are
+/// pruned lazily when the push service returns 404/410 on send.
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  profileId Int      @map("profile_id")
+  /// Push-service URL (FCM/APNs web push). Long — keep it TEXT.
+  endpoint  String   @unique(map: "push_subscriptions_endpoint_key")
+  /// Client public key (base64url) for payload encryption.
+  p256dh    String   @db.VarChar(200)
+  /// Client auth secret (base64url) for payload encryption.
+  auth      String   @db.VarChar(100)
+  userAgent String?  @map("user_agent") @db.VarChar(300)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId], map: "idx_push_subscriptions_profile")
+  @@map("push_subscriptions")
+}
+
+/// Historial de envíos de notificaciones desde el admin. Cada fila es una
+/// "campaña": snapshot del mensaje, la audiencia elegida y los contadores del
+/// resultado del push (el in-app va aparte, vía la tabla notifications).
+model PushCampaign {
+  id         Int      @id @default(autoincrement())
+  title      String   @db.VarChar(120)
+  body       String   @db.VarChar(500)
+  link       String?  @db.VarChar(300)
+  /// 'all' | 'usernames'
+  audience   String   @db.VarChar(20)
+  /// Sólo para audience='usernames': los nicknames pedidos.
+  usernames  Json?
+  /// Perfiles que recibieron la notificación in-app.
+  recipients Int      @default(0)
+  pushSent   Int      @default(0) @map("push_sent")
+  pushFailed Int      @default(0) @map("push_failed")
+  pushPruned Int      @default(0) @map("push_pruned")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt(sort: Desc)], map: "idx_push_campaigns_created")
+  @@map("push_campaigns")
 }
 
 model ProfileAchievement {

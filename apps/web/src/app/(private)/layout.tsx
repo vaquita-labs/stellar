@@ -2,6 +2,8 @@ import {
   ClaimGate,
   FollowLinkCapture,
   PendingFollowConsumer,
+  PushNudge,
+  PushSubscriptionSync,
   RequireAuth,
   TutorialGate,
   UsernameGate,
@@ -31,6 +33,8 @@ export default function PrivateLayout({
           <TutorialGate>
             <ClaimGate>
               <PendingFollowConsumer />
+              <PushSubscriptionSync />
+              <PushNudge />
               <main className="flex-1 min-h-0 overflow-auto">{children}</main>
               {/* Dentro de los gates: el overlay solo se pinta para usuarios
                   autenticados y onboarded, igual que el contenido. */}

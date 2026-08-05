@@ -12,12 +12,12 @@ import {
   getBankGroup,
   getBarnGroup,
   getLampGroup,
+  getLampHaloMaterial,
   getLeaderboardGroup,
   getSummitGroup,
   getWellGroup,
   getWindmillGroup,
   LAMP_GLASS_Y,
-  LAMP_GLOW,
   WINDMILL_HUB,
 } from '../tiles/objects';
 import { ObjectBuilder } from '../types';
@@ -113,17 +113,26 @@ const WindmillSails = () => {
 };
 
 // Farol encendiéndose de noche (R3F): lee dayProgress y sube la emisión del
-// vidrio + una PointLight cálida cuando oscurece. El vidrio va aparte de la
-// geometría fusionada (getLampGroup lo omite con ctx.animated). La luz suma
-// BUILDING_LIFT como el resto del edificio.
+// vidrio + la opacidad de un halo aditivo cuando oscurece. NO usa PointLight:
+// una luz por farol multiplica el costo de iluminación de toda la escena y
+// recompila los shaders al colocar/quitar (ver getLampHaloMaterial). El vidrio
+// va aparte de la geometría fusionada (getLampGroup lo omite con ctx.animated).
+// El halo suma BUILDING_LIFT como el resto del edificio.
 const smoothstep = (a: number, b: number, x: number): number => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
 const LampGlow = () => {
-  const lightRef = useRef<THREE.PointLight>(null);
   const glass = useMemo(() => buildLampGlass(), []);
   const mat = glass.userData.glassMat as THREE.MeshToonMaterial;
+  // Material compartido entre todos los faroles: no se dispone al desmontar
+  // (dispose={null}); el Sprite en sí no tiene geometría propia que liberar.
+  const halo = useMemo(() => {
+    const sprite = new THREE.Sprite(getLampHaloMaterial());
+    sprite.scale.setScalar(1.1);
+    sprite.visible = false;
+    return sprite;
+  }, []);
   useEffect(() => () => disposeObject(glass), [glass]);
   useFrame(() => {
     // day ≈ 1 entre el amanecer (~0.25) y el atardecer (~0.75); night = 1 − day.
@@ -131,12 +140,16 @@ const LampGlow = () => {
     const day = smoothstep(0.22, 0.3, p) * (1 - smoothstep(0.7, 0.8, p));
     const night = 1 - day;
     mat.emissiveIntensity = night * 1.4;
-    if (lightRef.current) lightRef.current.intensity = night * 2.2;
+    // La opacidad es global (material compartido): cada farol escribe el mismo
+    // valor, la última escritura gana y es idéntica. De día el sprite se oculta
+    // para no pagar su draw call.
+    halo.material.opacity = night * 0.55;
+    halo.visible = night > 0.02;
   });
   return (
     <group position={[0, LAMP_GLASS_Y + BUILDING_LIFT, 0]}>
       <primitive object={glass} />
-      <pointLight ref={lightRef} color={LAMP_GLOW} distance={3.0} decay={2} intensity={0} castShadow={false} />
+      <primitive object={halo} dispose={null} />
     </group>
   );
 };
