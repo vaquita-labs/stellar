@@ -40,6 +40,8 @@ export const CATEGORY_OF: Record<MapObjectType, MapObjectCategory> = {
   // encenderse de noche.
   [MapObjectType.LAMP]: MapObjectCategory.DECORATION,
   [MapObjectType.LEADERBOARD]: MapObjectCategory.BUILDING,
+  // Monumento conmemorativo: se renderiza por el mecanismo de "building".
+  [MapObjectType.SUMMIT]: MapObjectCategory.BUILDING,
   // CLOCK es un desbloqueo de HUD (no se coloca): lo dejamos bajo BUILDING por
   // ser una compra funcional, hasta que exista una categoría de HUD si hace falta.
   [MapObjectType.CLOCK]: MapObjectCategory.BUILDING,

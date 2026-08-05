@@ -32,9 +32,10 @@ const envClientSchema = z.object({
   // dark-by-default: unset/anything-but-"true" means off, so the vault path
   // ships invisibly until this is explicitly set to "true". See featureFlags.ts.
   NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: z.string().optional(),
-  // Flag for the blocking "install the app" screen shown to mobile users right
-  // after login. OPTIONAL and off-by-default: unset/anything-but-"true" means
-  // the prompt never appears. See featureFlags.ts.
+  // Flag for the "install the app" step shown to mobile users on the login
+  // screen (after the intro, before authenticating). OPTIONAL and
+  // off-by-default: unset/anything-but-"true" means the step never appears.
+  // See featureFlags.ts.
   NEXT_PUBLIC_INSTALL_PROMPT_ENABLED: z.string().optional(),
 });
 

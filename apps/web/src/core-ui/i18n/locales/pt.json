@@ -600,6 +600,9 @@
         },
         "leaderboard": {
           "default": "Pódio"
+        },
+        "summit": {
+          "default": "Summit São Paulo 2026"
         }
       }
     },
@@ -866,8 +869,8 @@
     },
     "install": {
       "title": "Tenha a experiência completa",
-      "finalStep": "Este é o último passo!",
       "body": "Adicione a Vaquita à sua tela inicial para desbloquear sua carteira e começar a usá-la.",
+      "continueBrowser": "Continuar no navegador",
       "installButton": "Adicionar à tela inicial",
       "iosStep1Prefix": "Toque no",
       "iosShare": "ícone de Compartilhar",

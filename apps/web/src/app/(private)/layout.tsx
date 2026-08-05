@@ -1,7 +1,6 @@
 import {
   ClaimGate,
   FollowLinkCapture,
-  InstallGate,
   PendingFollowConsumer,
   RequireAuth,
   TutorialGate,
@@ -24,22 +23,21 @@ export default function PrivateLayout({
           redirect can drop them. Consumed after onboarding (below). */}
       <FollowLinkCapture />
       <RequireAuth>
-        {/* Apenas te logueás (y sólo en móvil): exige instalar la app en el
-            inicio antes que nada. Transparente en desktop y cuando ya corre
-            como app instalada. */}
-        <InstallGate>
-          <UsernameGate>
-            <TutorialGate>
-              <ClaimGate>
-                <PendingFollowConsumer />
-                <main className="flex-1 min-h-0 overflow-auto">{children}</main>
-                {/* Dentro de los gates: el overlay solo se pinta para usuarios
-                    autenticados y onboarded, igual que el contenido. */}
-                {modal}
-              </ClaimGate>
-            </TutorialGate>
-          </UsernameGate>
-        </InstallGate>
+        {/* El empujón de instalar la app vive en /login (antes de autenticarse):
+            así el usuario instala primero y se loguea UNA sola vez dentro de la
+            app — en iOS el storage de la app instalada no comparte la sesión
+            con el navegador. */}
+        <UsernameGate>
+          <TutorialGate>
+            <ClaimGate>
+              <PendingFollowConsumer />
+              <main className="flex-1 min-h-0 overflow-auto">{children}</main>
+              {/* Dentro de los gates: el overlay solo se pinta para usuarios
+                  autenticados y onboarded, igual que el contenido. */}
+              {modal}
+            </ClaimGate>
+          </TutorialGate>
+        </UsernameGate>
       </RequireAuth>
     </>
   );

@@ -454,6 +454,8 @@ export enum MapObjectType {
   WELL = 'well',
   LAMP = 'lamp',
   LEADERBOARD = 'leaderboard',
+  /** Monumento conmemorativo "Summit São Paulo 2026". */
+  SUMMIT = 'summit',
   /** Ítem de HUD (no se coloca en el mapa): desbloquea la card de la hora. */
   CLOCK = 'clock',
   // Tipos-paraguas para escalar a muchos ítems: cada uno agrupa muchas

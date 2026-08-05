@@ -19,10 +19,11 @@ export const dismissInstallPrompt = () => {
 /**
  * `true` si este dispositivo ya vio la pantalla de instalar alguna vez.
  *
- * Lee localStorage en el inicializador (lazy) en vez de un efecto: <InstallGate>
- * sólo monta en cliente (dentro de <RequireAuth>, que devuelve null hasta
- * autenticar), así que es seguro y evita el parpadeo de la pantalla para quien
- * ya la descartó. No es reactivo a propósito: el descarte dispara un reload.
+ * Lee localStorage en el inicializador (lazy) en vez de un efecto: LoginPage
+ * recién lo evalúa tras su propio gate de hidratación (devuelve null hasta
+ * leer localStorage), así que es seguro y evita el parpadeo de la pantalla
+ * para quien ya la descartó. No es reactivo a propósito: dentro de la sesión
+ * el avance lo maneja el estado local de LoginPage (`installSkipped`).
  */
 export const useInstallDismissed = (): boolean => {
   const [dismissed] = useState(
