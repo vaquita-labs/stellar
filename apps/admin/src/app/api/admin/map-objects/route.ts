@@ -34,6 +34,7 @@ const MAP_OBJECT_TYPES = [
   'well',
   'lamp',
   'leaderboard',
+  'summit',
   'clock',
 ] as const;
 

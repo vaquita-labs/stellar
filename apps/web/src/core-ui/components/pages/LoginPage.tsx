@@ -1,11 +1,12 @@
 'use client';
 
 import StellarAuthButtons from '@/components/profile/StellarAuthButtons';
-import { OnboardingIntro } from '@/core-ui/components';
-import { useIntroSeen, useIsAuthenticated } from '@/core-ui/hooks';
+import { InstallPrompt, OnboardingIntro } from '@/core-ui/components';
+import { isInstallPromptEnabled } from '@/core-ui/config/featureFlags';
+import { useInstallApp, useInstallDismissed, useIntroSeen, useIsAuthenticated } from '@/core-ui/hooks';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
@@ -18,6 +19,15 @@ export default function LoginPage() {
   // no reaparece al recargar. Sin env var (el env es global al build y no sabe
   // si este dispositivo ya lo vio).
   const { hydrated, seen, markSeen, replay } = useIntroSeen();
+
+  // Paso "instalá la app" ANTES del login (móvil, una vez por dispositivo).
+  // El orden importa: en iOS la app instalada no comparte storage con el
+  // navegador, así que loguearse antes de instalar = loguearse dos veces.
+  // `installSkipped` avanza en esta sesión sin reload ("continuar en el
+  // navegador"); `useInstallDismissed` (no reactivo) cubre los reloads.
+  const { isStandalone, isMobile } = useInstallApp();
+  const installDismissed = useInstallDismissed();
+  const [installSkipped, setInstallSkipped] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -34,8 +44,16 @@ export default function LoginPage() {
     return null;
   }
 
-  if (!seen) {
+  // En standalone se salta el intro: quien abre la app instalada ya pasó por el
+  // flujo en el navegador (intro → instalar), y como el storage no se comparte
+  // la marca `seen` no viaja — sin esto el onboarding se repetiría entero.
+  if (!seen && !isStandalone) {
     return <OnboardingIntro onFinish={markSeen} />;
+  }
+
+  // Después del intro y antes del login: empujón de instalación (no bloqueante).
+  if (isInstallPromptEnabled() && isMobile && !isStandalone && !installDismissed && !installSkipped) {
+    return <InstallPrompt onContinue={() => setInstallSkipped(true)} />;
   }
 
   return (

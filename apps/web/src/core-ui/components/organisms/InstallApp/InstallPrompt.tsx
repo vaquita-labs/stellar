@@ -106,20 +106,24 @@ function usePullToRefresh(onRefresh: () => void) {
 }
 
 /**
- * Pantalla bloqueante que exige instalar la PWA antes de usar la wallet.
- * La monta <InstallGate> sólo en móvil y cuando NO corremos como app instalada.
+ * Pantalla que empuja a instalar la PWA ANTES de loguearse (la monta LoginPage
+ * en móvil, después del intro y sólo cuando NO corremos como app instalada).
+ * El orden importa: en iOS la app instalada no comparte storage con el
+ * navegador, así que loguearse primero significaba loguearse DOS veces. Al
+ * instalar primero, el login ocurre una sola vez, ya dentro de la app.
  *
  * - Android/Chromium: hay API nativa (`beforeinstallprompt`), así que mostramos
  *   un botón que dispara el prompt. Aceptar instala la app pero ESTA pestaña
  *   sigue en el navegador (no standalone), por eso al aceptar pasamos a un
- *   estado "abrila desde tu inicio" en vez de dejar entrar.
+ *   estado "abrila desde tu inicio".
  * - iOS (y móviles sin API): no hay forma programática, mostramos las
  *   instrucciones manuales Compartir → "Agregar a inicio".
  *
- * Tirá hacia abajo (pull-to-refresh) para recargar: si ya estás corriendo como
- * app instalada, el gate se re-evalúa y esta pantalla desaparece → home.
+ * No es bloqueante: `onContinue` ("continuar en el navegador") sigue al login
+ * en la pestaña actual. Tirá hacia abajo (pull-to-refresh) para recargar si ya
+ * la abriste como app instalada.
  */
-export function InstallPrompt() {
+export function InstallPrompt({ onContinue }: { onContinue?: () => void }) {
   const { t } = useTranslation();
   const { canInstall, promptInstall } = useInstallApp();
   const [installing, setInstalling] = useState(false);
@@ -227,9 +231,6 @@ export function InstallPrompt() {
               </>
             ) : (
               <>
-                <p className="text-[15px] font-semibold text-black/80">
-                  {t('onboarding.install.finalStep', 'This is the final step!')}
-                </p>
                 <p className="text-[15px] leading-relaxed text-black/70">
                   {t(
                     'onboarding.install.body',
@@ -272,6 +273,16 @@ export function InstallPrompt() {
                       </span>
                     </li>
                   </ol>
+                )}
+
+                {/* Escape no bloqueante: seguir al login en esta misma pestaña. */}
+                {onContinue && (
+                  <button
+                    onClick={onContinue}
+                    className="mt-1 text-sm font-semibold text-black/50 hover:text-black underline underline-offset-2 transition"
+                  >
+                    {t('onboarding.install.continueBrowser', 'Continue in the browser')}
+                  </button>
                 )}
 
                 {/* Pista del gesto: tirá para abajo para recargar y entrar si ya

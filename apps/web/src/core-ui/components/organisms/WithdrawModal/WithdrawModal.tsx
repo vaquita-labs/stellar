@@ -73,7 +73,8 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
   const [error, setError] = useState<unknown>(null);
   // Se enciende cuando el usuario intenta revisar un monto mayor al disponible:
-  // pinta el número en gris y dispara el temblor. Se apaga al seguir tecleando.
+  // pinta el número en rojo, dispara el temblor y bloquea Review. Se apaga al
+  // seguir tecleando (o al tocar Available / cambiar de wallet).
   const [overBalance, setOverBalance] = useState(false);
   // Tocó "Available" (retirar todo): dispara el sentinel i128 de blendDirect.
   const [isMax, setIsMax] = useState(false);
@@ -162,8 +163,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const numericAmount = Number(amount || '0');
   // Mínimo 1 USDC para retirar (mismo piso que el depósito y que valida el
   // backend). Por debajo el botón queda gris y el aviso de mínimo lo explica.
-  // Exceder el saldo o faltar destino se resuelven al presionar Review.
-  const canReview = numericAmount >= MIN_USDC;
+  // Exceder el saldo se detecta al presionar Review: tiembla + número en rojo
+  // y el botón queda bloqueado hasta que modifique el monto (tecleo/Available/
+  // cambio de wallet apagan `overBalance`). Faltar destino sí navega a elegirlo.
+  const canReview = numericAmount >= MIN_USDC && !overBalance;
 
   const shakeAmount = () => {
     setOverBalance(true);
@@ -264,7 +267,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         <motion.p
           animate={amountControls}
           className={`text-4xl font-bold ${
-            overBalance || amount === '' ? 'text-gray-400' : 'text-black'
+            overBalance ? 'text-red-500' : amount === '' ? 'text-gray-400' : 'text-black'
           }`}
         >
           {displayAmount(amount)}

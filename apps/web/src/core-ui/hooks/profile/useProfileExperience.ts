@@ -1,4 +1,5 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
+import { ONE_MINUTE } from '@/core-ui/config/constants';
 import { useConfigStore } from '@/core-ui/stores';
 import { ProfileExperienceResponseDTO } from '@/core-ui/types';
 import { useQuery } from '@tanstack/react-query';
@@ -25,5 +26,16 @@ export const useProfileExperience = (walletAddressOverride?: string) => {
       return profile;
     },
     enabled: !!network?.networkName && !!walletAddress,
+    // El XP crece continuamente en el server (√amount × √horas del dinero
+    // trabajando), así que un valor cacheado queda viejo apenas se escribe. Con
+    // el default global (staleTime: Infinity + persistencia en localStorage) el
+    // header quedaba congelado en un XP de sesiones pasadas mientras el
+    // leaderboard (staleTime: 0 + refetch) mostraba el actual: dos números
+    // distintos para el mismo perfil. Se revalida al montar y cada 5 min, la
+    // misma cadencia que `useWeeklyLeague`, para que ambos corran juntos.
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: ONE_MINUTE * 5,
   });
 };

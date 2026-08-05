@@ -600,6 +600,9 @@
         },
         "leaderboard": {
           "default": "Podium"
+        },
+        "summit": {
+          "default": "Summit Sao Paulo 2026"
         }
       }
     },
@@ -866,8 +869,8 @@
     },
     "install": {
       "title": "Get the full experience",
-      "finalStep": "This is the final step!",
       "body": "Add Vaquita to your home screen to unlock your wallet and start using it.",
+      "continueBrowser": "Continue in the browser",
       "installButton": "Add to home screen",
       "iosStep1Prefix": "Tap the",
       "iosShare": "Share icon",

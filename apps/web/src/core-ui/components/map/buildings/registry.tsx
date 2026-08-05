@@ -13,6 +13,7 @@ import {
   getBarnGroup,
   getLampGroup,
   getLeaderboardGroup,
+  getSummitGroup,
   getWellGroup,
   getWindmillGroup,
   LAMP_GLASS_Y,
@@ -169,6 +170,11 @@ export const BUILDINGS: Partial<Record<MapObjectType, BuildingDefinition>> = {
     build: withGrassTerrain(MapObjectType.LAMP, (o, ctx) => getLampGroup(o, ctx)),
     baseRotation: [0, 0, 0],
     Extras: LampGlow,
+  },
+  [MapObjectType.SUMMIT]: {
+    // Frente (placa y flecha) en −Z, mirando a la cámara como el pozo.
+    build: withGrassTerrain(MapObjectType.SUMMIT, (o, ctx) => getSummitGroup(o, ctx)),
+    baseRotation: [0, 4.7, 0],
   },
   [MapObjectType.LEADERBOARD]: {
     build: withGrassTerrain(MapObjectType.LEADERBOARD, (o, { worldType, font }) =>

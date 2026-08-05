@@ -600,6 +600,9 @@
         },
         "leaderboard": {
           "default": "Podio"
+        },
+        "summit": {
+          "default": "Summit Sao Paulo 2026"
         }
       }
     },
@@ -866,8 +869,8 @@
     },
     "install": {
       "title": "Aprovechá la experiencia completa",
-      "finalStep": "¡Este es el último paso!",
       "body": "Agregá Vaquita a tu pantalla de inicio para desbloquear tu billetera y empezar a usarla.",
+      "continueBrowser": "Continuar en el navegador",
       "installButton": "Agregar a inicio",
       "iosStep1Prefix": "Tocá el",
       "iosShare": "ícono de Compartir",

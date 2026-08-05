@@ -15,7 +15,7 @@ import { useMemo, useState } from 'react';
 
 // Mirror of MapObjectType (apps/web/src/core-ui/types/commons.ts) minus
 // `empty` (the null tile). Keep in sync with the API route's enum.
-const MAP_OBJECT_TYPES = ['grass', 'water', 'bush', 'rock', 'tree', 'road', 'bank', 'barn', 'leaderboard', 'clock'];
+const MAP_OBJECT_TYPES = ['grass', 'water', 'bush', 'rock', 'tree', 'road', 'bank', 'barn', 'leaderboard', 'summit', 'clock'];
 
 // The form keeps every field as a string; numbers are parsed in buildVariants.
 type VariantRowState = { variant: string; price: string; freeItems: string };

@@ -8,6 +8,7 @@ export * from './windmill';
 export * from './well';
 export * from './lamp';
 export * from './leaderboard';
+export * from './summit';
 
 // Categorías de objetos-receta (una carpeta cada una).
 export * from './terrain'; // GRASS, WATER, ROAD, ROCK
