@@ -436,7 +436,8 @@
       "title": "Select method",
       "wallet": {
         "subtitle": "Deposit from a crypto wallet",
-        "title": "Wallet"
+        "title": "Wallet",
+        "receiveSubtitle": "Receive USDC to your address"
       }
     }
   },
@@ -656,10 +657,16 @@
       "streakAlt": "Streak",
       "apyAria": "Portfolio",
       "boostAria": "Referral boost",
-      "greeting": "Hi,"
+      "greeting": "Hi,",
+      "balanceRetry": "Retry loading balance",
+      "balanceSyncError": "Couldn't load your Blend balance. Tap to retry."
     },
     "totalDeposits": {
       "bagAlt": "Total deposits"
+    },
+    "dailyReward": {
+      "chestAlt": "Chest",
+      "chestAria": "Daily reward"
     }
   },
   "idleFunds": {
@@ -750,6 +757,30 @@
     "anchored": {
       "title": "Showing your part of the board",
       "backToTop": "Back to #1"
+    },
+    "league": {
+      "demotionZone": "Demotion zone",
+      "divisionLocked": "{{division}} division — locked",
+      "divisionTitle": "{{division}} Division",
+      "empty": {
+        "description": "Save this week to earn XP — your first deposit already puts you on the board.",
+        "title": "Nobody in this division yet"
+      },
+      "preview": {
+        "back": "Back to my division",
+        "description": "You only compete against savers in your own division.",
+        "lockedTitle": "Reach {{xp}} XP to unlock {{division}}",
+        "pastTitle": "You already cleared {{division}}"
+      },
+      "promotionZone": "Promotion zone",
+      "remaining": {
+        "days": "{{n}} days",
+        "hours": "{{n}} hours",
+        "minutes": "{{n}} minutes"
+      },
+      "rules": "The board resets every Monday. The top {{promote}} move up a division, the bottom {{demote}} drop one.",
+      "rulesFirstDivision": "In the first division nobody drops — you can only climb.",
+      "xpValue": "{{xp}} XP"
     }
   },
   "nav": {
@@ -1315,7 +1346,8 @@
       "shop": "Shop",
       "soon": "Soon",
       "dailyReward": "Daily reward",
-      "shopWithItems": "{{count}} items to place"
+      "shopWithItems": "{{count}} items to place",
+      "primaryAriaLabel": "Primary"
     },
     "notFound": {
       "backHome": "Go back to home",
@@ -1880,6 +1912,16 @@
       "memoPlaceholder": "e.g. 1234567",
       "memoHint": "Some exchanges require a memo or tag to credit your deposit.",
       "memoInvalid": "The memo is too long (max 28 characters)."
+    },
+    "bridge": {
+      "actionFailed": "Bridge action failed",
+      "approvalReady": "USDC approval confirmed. You can now send.",
+      "depositHelper": "Need Stellar USDC? Bridge from Base or Ethereum",
+      "noInjectedWallet": "No EVM wallet found",
+      "stellarApprovalReady": "Stellar USDC approval confirmed. Press Send from Stellar again to continue.",
+      "subtitle": "Move USDC between EVM and Stellar",
+      "switchFailed": "Network switch failed",
+      "title": "Send USDC"
     }
   },
   "referrals": {
@@ -1958,7 +2000,15 @@
     "withdrawFromBlend": "Withdraw from Blend",
     "withdrawing": "Withdrawing…",
     "blendBorrow": "Repay your Blend borrow first",
-    "memoLabel": "Memo"
+    "memoLabel": "Memo",
+    "fromLabel": "From",
+    "ownWallet": "Your wallet",
+    "steps": {
+      "blendWithdraw": "Withdrawing from Blend",
+      "externalSavvy": "Withdrawing from Blend to your wallet",
+      "preparing": "Getting your money ready",
+      "sending": "Sending to your wallet"
+    }
   },
   "transactions": {
     "title": "Transactions",
@@ -2083,7 +2133,8 @@
       "tvl": "TVL",
       "depositors": "Open deposits",
       "estimateNote": "Rewards are shared among everyone in this pool and can change as people join or leave.",
-      "tokenNote": "Balances are shown in {{token}}."
+      "tokenNote": "Balances are shown in {{token}}.",
+      "marketApy": "{{market}} APY"
     },
     "move": {
       "title": "Move funds",
@@ -2115,7 +2166,37 @@
     },
     "vault": {
       "label": "Vault · Flexible"
-    }
+    },
+    "blend": {
+      "anytime": "Anytime",
+      "detailText": "Your USDC earns yield in Blend, a lending protocol on Stellar. There is no lock period, so you can withdraw your money whenever you want.",
+      "label": "Blend · Flexible",
+      "yieldSource": "Yield source"
+    },
+    "filters": {
+      "status": "Status",
+      "statuses": {
+        "failed": "With error",
+        "locked": "Still locked",
+        "ready": "Ready to withdraw",
+        "withdrawn": "Withdrawn"
+      },
+      "term": "Term"
+    },
+    "info": {
+      "earned": "Earned",
+      "failedNote": "This operation did not complete. No funds are locked here.",
+      "opened": "Opened",
+      "term": "Term",
+      "withdrawnOn": "Withdrawn on"
+    },
+    "list": {
+      "empty": "No positions to show.",
+      "emptyHint": "Your locked savings will show up here.",
+      "showMore_one": "Show more ({{count}})",
+      "showMore_other": "Show more ({{count}})"
+    },
+    "positionsTitle": "Your positions"
   },
   "txError": {
     "generic": "We couldn't complete the transaction. Please try again in a moment.",
@@ -2140,5 +2221,20 @@
     "moving": "Moving…",
     "max": "Max",
     "notNow": "Not now"
+  },
+  "invest": {
+    "review": {
+      "termLabel": "Term",
+      "title": "Review"
+    },
+    "selectTerm": "Select a term",
+    "steps": {
+      "locking": "Locking in {{term}}",
+      "preparing": "Getting your money ready"
+    },
+    "success": {
+      "subtitle": "Your USDC is now locked and earning.",
+      "title": "Invested!"
+    }
   }
 }
