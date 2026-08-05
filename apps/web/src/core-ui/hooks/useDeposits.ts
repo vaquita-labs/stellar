@@ -14,6 +14,12 @@ export const useDeposits = (_walletAddress?: string) => {
       try {
         const url = `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.networkName}/wallet/${walletAddress}`;
         const response = await fetch(url);
+
+        // Es plata: un 5xx tiene que fallar, no resolver vacío. `fetch` solo
+        // lanza en fallo de red, así que sin este chequeo una respuesta de error
+        // con body JSON pasa como éxito y `deposits` queda en [].
+        if (!response.ok) throw new Error(`deposit → HTTP ${response.status}`);
+
         const data = await response.json();
 
         const deposits = ((data?.data?.deposits ?? []) as DepositSummaryResponseDTO[]).map((deposit) => {
@@ -32,15 +38,18 @@ export const useDeposits = (_walletAddress?: string) => {
           deposits,
         };
       } catch (error) {
+        // Se loguea (la consola va a Ably vía useConsoleToAbly) y se relanza.
+        // Devolver una lista vacía acá sería un éxito falso: pisaría el último
+        // dato bueno, lo persistiría a localStorage y los retries de abajo nunca
+        // correrían (solo se disparan sobre errores lanzados).
         console.error('useDeposits', error);
-        return {
-          deposits: [],
-          totals: {},
-        };
+        throw error;
       }
     },
     // No polling: invalidated by the Ably `deposits-changes` channel on
     // deposit/withdraw (see ListenDepositsChanges).
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     enabled: !!network?.networkName && !!walletAddress,
   });
 };

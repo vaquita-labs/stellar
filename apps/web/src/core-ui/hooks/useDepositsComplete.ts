@@ -16,6 +16,11 @@ export const useDepositsComplete = (_walletAddress?: string) => {
           `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.networkName}/wallet/${walletAddress}/complete`
         );
 
+        // Es plata: un 5xx tiene que fallar, no resolver vacío. `fetch` solo
+        // lanza en fallo de red, así que sin este chequeo una respuesta de error
+        // con body JSON pasa como éxito y `deposits` queda en [].
+        if (!response.ok) throw new Error(`deposit/complete → HTTP ${response.status}`);
+
         const data = await response.json();
 
         const fetchedAtTimestamp = Date.now();
@@ -56,15 +61,31 @@ export const useDepositsComplete = (_walletAddress?: string) => {
           totals: data?.data?.totals,
         };
       } catch (error) {
+        // Se loguea (la consola va a Ably vía useConsoleToAbly) y se relanza.
+        // Devolver un portafolio vacío acá sería un éxito falso: pisaría el
+        // último saldo bueno, lo persistiría a localStorage como $0 y los retries
+        // de abajo nunca correrían (solo se disparan sobre errores lanzados).
+        // Lanzando, react-query mantiene en pantalla el último dato bueno.
         console.error('error on useDepositsComplete', error);
-        return {
-          deposits: [],
-          totals: {},
-        };
+        throw error;
       }
     },
-    // No polling: deposit data only changes on deposit/withdraw, which the
-    // Ably `deposits-changes` channel invalidates (see ListenDepositsChanges).
+    // Overrides the global 24h staleTime + `refetchOn*: false` defaults. Those
+    // defaults leave the Ably `deposits-changes` channel (see
+    // ListenDepositsChanges) as the only refresh path, so a deposit or withdraw
+    // made from another session lands here only if this tab happened to be open
+    // and connected at that exact moment — otherwise the persisted localStorage
+    // balance stays on screen for a full day.
+    //
+    // The persistence still does its job: the cached value paints instantly on
+    // load, and these only add the revalidation behind it (no spinner, the old
+    // value stays visible while `isFetching`).
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     enabled: !!network?.networkName && !!walletAddress,
   });
 };
