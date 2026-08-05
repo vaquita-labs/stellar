@@ -650,7 +650,7 @@
       "title": "Shop",
       "tabsLabel": "Shop sections",
       "tabCatalog": "Catalog",
-      "tabCollection": "My collection"
+      "tabCollection": "Unlocked"
     },
     "stats": {
       "experienceAlt": "Experience",
@@ -2123,14 +2123,13 @@
     "savings": "Savings",
     "allocation": "Allocation",
     "distributed": "Spread across {{funded}} of {{total}} options",
-    "ofTotal": "{{pct}}% of total",
+    "ofTotal": "{{pct}}% of your total",
     "noFunds": "No funds",
     "sum": "Total",
     "manage": "Manage allocations",
     "empty": "No saving terms available yet.",
     "poolRewards": "{{amount}} in rewards",
-    "depositCount_one": "{{count}} deposit",
-    "depositCount_other": "{{count}} deposits",
+    "inThePool": "{{value}} in the pool",
     "row": {
       "ready": "Ready",
       "timeLeft": "left",

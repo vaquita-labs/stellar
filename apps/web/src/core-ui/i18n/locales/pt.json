@@ -650,7 +650,7 @@
       "title": "Loja",
       "tabsLabel": "Seções da loja",
       "tabCatalog": "Catálogo",
-      "tabCollection": "Minha coleção"
+      "tabCollection": "Desbloqueados"
     },
     "stats": {
       "experienceAlt": "Experiência",
@@ -2123,14 +2123,13 @@
     "savings": "Poupança",
     "allocation": "Distribuição",
     "distributed": "Distribuído em {{funded}} de {{total}} opções",
-    "ofTotal": "{{pct}}% do total",
+    "ofTotal": "{{pct}}% do seu total",
     "noFunds": "Sem fundos",
     "sum": "Total",
     "manage": "Gerenciar distribuição",
     "empty": "Ainda não há prazos de poupança disponíveis.",
     "poolRewards": "{{amount}} em prêmios",
-    "depositCount_one": "{{count}} depósito",
-    "depositCount_other": "{{count}} depósitos",
+    "inThePool": "{{value}} no pote",
     "row": {
       "ready": "Pronto",
       "timeLeft": "restante",

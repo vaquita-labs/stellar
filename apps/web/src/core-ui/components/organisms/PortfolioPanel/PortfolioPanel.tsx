@@ -6,7 +6,7 @@ import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useDepositsComplete, useLivePassiveUsdc } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { useRouter } from 'next/navigation';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight, FiPocket } from 'react-icons/fi';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
@@ -39,9 +39,9 @@ interface PortfolioRow {
   amount: number;
   /** Solo filas 'blend': el APY real del vault (líquido). Los locks no muestran %. */
   apy: number;
-  /** Solo filas 'lock': premios del pool + posiciones abiertas (en vez del %). */
+  /** Solo filas 'lock': premios del pool + capital depositado (en vez del %). */
   rewardPool?: number;
-  openPositions?: number;
+  totalDeposits?: number;
   style: AllocationStyle;
 }
 
@@ -52,7 +52,20 @@ export function PortfolioPanel({
 }: PortfolioPanelProps) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
-  const { data: depositsData, isFetching: depositsFetching } = useDepositsComplete(walletAddress);
+  const {
+    data: depositsData,
+    isFetching: depositsFetching,
+    refetch: refetchDeposits,
+  } = useDepositsComplete(walletAddress);
+
+  // Abrir el panel revalida los depósitos. El caché persistido pinta al toque
+  // los últimos valores conocidos y este refetch los corrige si otra sesión
+  // depositó/retiró mientras este tab no estaba escuchando el canal de Ably.
+  // Va sobre `open` y no sobre el montaje porque el panel queda montado detrás
+  // de la hoja de posiciones (ver PortfolioFlow): reabrirlo no lo remonta.
+  useEffect(() => {
+    if (open) refetchDeposits();
+  }, [open, refetchDeposits]);
   // Nivel base del portafolio: la posición pasiva, líquida (sin lock) — el vault
   // de DeFindex con el flag on, si no el depósito directo a Blend. Se lee on-chain
   // y va aparte de las allocations por plazo (no entra en el mover-fondos ni en
@@ -182,7 +195,7 @@ export function PortfolioPanel({
       amount: a.amount,
       apy: a.apy,
       rewardPool: a.rewardPool,
-      openPositions: a.openPositions,
+      totalDeposits: a.totalDeposits,
       style: getAllocationStyle(i),
     }));
     return [blendRow, ...lockRows];
@@ -316,7 +329,7 @@ export function PortfolioPanel({
                       {row.kind === 'lock' ? (
                         <PoolMeta
                           rewardPool={row.rewardPool ?? 0}
-                          openPositions={row.openPositions ?? 0}
+                          totalDeposits={row.totalDeposits ?? 0}
                           className="text-xs text-gray-500"
                         />
                       ) : (
@@ -355,7 +368,7 @@ export function PortfolioPanel({
                           {formatUsdAdaptive(row.amount)}
                         </span>
                         <span className="text-xs text-gray-500 tabular-nums leading-tight">
-                          {t('portfolio.ofTotal', '{{pct}}% of total', {
+                          {t('portfolio.ofTotal', '{{pct}}% of your total', {
                             pct: pctOf(row.amount).toFixed(1),
                           })}
                         </span>

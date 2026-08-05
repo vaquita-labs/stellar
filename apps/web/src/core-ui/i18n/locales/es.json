@@ -650,7 +650,7 @@
       "title": "Tienda",
       "tabsLabel": "Secciones de la tienda",
       "tabCatalog": "Catálogo",
-      "tabCollection": "Mi colección"
+      "tabCollection": "Desbloqueados"
     },
     "stats": {
       "experienceAlt": "Experiencia",
@@ -2123,14 +2123,13 @@
     "savings": "Ahorros",
     "allocation": "Distribución",
     "distributed": "Repartido en {{funded}} de {{total}} opciones",
-    "ofTotal": "{{pct}}% del total",
+    "ofTotal": "{{pct}}% de tu total",
     "noFunds": "Sin fondos",
     "sum": "Total",
     "manage": "Gestionar distribución",
     "empty": "Todavía no hay plazos de ahorro disponibles.",
     "poolRewards": "{{amount}} en premios",
-    "depositCount_one": "{{count}} depósito",
-    "depositCount_other": "{{count}} depósitos",
+    "inThePool": "{{value}} en el pozo",
     "row": {
       "ready": "Listo",
       "timeLeft": "restante",
