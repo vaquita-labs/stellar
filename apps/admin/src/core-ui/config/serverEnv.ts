@@ -17,6 +17,10 @@ const envServerSchema = z.object({
   ADMIN_SECRET: z.string().min(16, 'ADMIN_SECRET is required (min 16 chars) — admin routes are never open'),
   // Passcode that gates EVERY admin route (enforced by src/middleware.ts).
   ADMIN_PASSCODE: z.string().min(8, 'ADMIN_PASSCODE is required (min 8 chars) — the login gate is never open'),
+  // Base URL of the API service, for server-to-server calls (e.g. the
+  // notifications route proxies campaign sends there). Same value the browser
+  // uses; listed here because server code must not import clientEnv.
+  SERVICES_URL: z.url(),
 });
 
 type ServerEnv = z.infer<typeof envServerSchema>;
@@ -37,6 +41,7 @@ export function getServerEnv(): ServerEnv {
     DATABASE_URL: process.env.DATABASE_URL,
     ADMIN_SECRET: process.env.ADMIN_SECRET,
     ADMIN_PASSCODE: process.env.ADMIN_PASSCODE,
+    SERVICES_URL: process.env.NEXT_PUBLIC_SERVICES_URL,
   });
 
   if (!parsed.success) {

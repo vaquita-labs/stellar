@@ -825,6 +825,10 @@
     },
     "markAllRead": "Marcar todas como lidas",
     "messages": {
+      "adminMessage": {
+        "body": "{{body}}",
+        "title": "{{title}}"
+      },
       "achievementUnlocked": {
         "body": "Você ganhou o emblema \"{{name}}\".",
         "title": "Troféu desbloqueado!"
@@ -880,6 +884,12 @@
       "installedBody": "A Vaquita está instalada! Abra-a pela tela inicial para desbloquear sua carteira.",
       "installedHint": "Você já pode fechar esta aba. A partir de agora abra a Vaquita pelo ícone do app.",
       "pullHint": "Já instalou? Puxe para baixo para atualizar"
+    },
+    "pushNudge": {
+      "title": "Ative as notificações",
+      "body": "Fique sabendo quando suas economias renderem recompensas ou sua sequência estiver prestes a quebrar.",
+      "enable": "Ativar",
+      "later": "Talvez depois"
     },
     "intro": {
       "goToSlide": "Ir para o slide {{number}}",
@@ -1080,6 +1090,7 @@
         }
       },
       "emailRequired": "Adicione seu e-mail em Editar perfil para ativar.",
+      "pushDenied": "As notificações estão bloqueadas para este app nas configurações do seu navegador.",
       "sections": {
         "activity": {
           "title": "Atividade"

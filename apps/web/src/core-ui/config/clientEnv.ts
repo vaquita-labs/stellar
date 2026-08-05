@@ -37,6 +37,9 @@ const envClientSchema = z.object({
   // off-by-default: unset/anything-but-"true" means the step never appears.
   // See featureFlags.ts.
   NEXT_PUBLIC_INSTALL_PROMPT_ENABLED: z.string().optional(),
+  // VAPID public key for web push (pair of apps/api VAPID_PRIVATE_KEY).
+  // OPTIONAL: unset/empty disables the whole push-subscription UI.
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
 });
 
 // Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
@@ -52,6 +55,7 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_QUERY_CACHE_VERSION: process.env.NEXT_PUBLIC_QUERY_CACHE_VERSION,
   NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: process.env.NEXT_PUBLIC_PASSIVE_VAULT_ENABLED,
   NEXT_PUBLIC_INSTALL_PROMPT_ENABLED: process.env.NEXT_PUBLIC_INSTALL_PROMPT_ENABLED,
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
 });
 
 if (!parsed.success) {
