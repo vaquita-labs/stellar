@@ -39,9 +39,9 @@ interface PortfolioRow {
   amount: number;
   /** Solo filas 'blend': el APY real del vault (líquido). Los locks no muestran %. */
   apy: number;
-  /** Solo filas 'lock': premios del pool + posiciones abiertas (en vez del %). */
+  /** Solo filas 'lock': premios del pool + capital depositado (en vez del %). */
   rewardPool?: number;
-  openPositions?: number;
+  totalDeposits?: number;
   style: AllocationStyle;
 }
 
@@ -195,7 +195,7 @@ export function PortfolioPanel({
       amount: a.amount,
       apy: a.apy,
       rewardPool: a.rewardPool,
-      openPositions: a.openPositions,
+      totalDeposits: a.totalDeposits,
       style: getAllocationStyle(i),
     }));
     return [blendRow, ...lockRows];
@@ -329,7 +329,7 @@ export function PortfolioPanel({
                       {row.kind === 'lock' ? (
                         <PoolMeta
                           rewardPool={row.rewardPool ?? 0}
-                          openPositions={row.openPositions ?? 0}
+                          totalDeposits={row.totalDeposits ?? 0}
                           className="text-xs text-gray-500"
                         />
                       ) : (
@@ -368,7 +368,7 @@ export function PortfolioPanel({
                           {formatUsdAdaptive(row.amount)}
                         </span>
                         <span className="text-xs text-gray-500 tabular-nums leading-tight">
-                          {t('portfolio.ofTotal', '{{pct}}% of total', {
+                          {t('portfolio.ofTotal', '{{pct}}% of your total', {
                             pct: pctOf(row.amount).toFixed(1),
                           })}
                         </span>

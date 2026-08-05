@@ -99,7 +99,7 @@ export function InvestModal({
 
   const numericAmount = Number(amount || '0');
   // En vez del % (que era premios/depósitos anualizado y engañoso), cada plazo
-  // muestra lo cierto: su pool de premios + cuántos depósitos hay (ver PoolMeta).
+  // muestra lo cierto: su pool de premios + cuánto capital hay en el pool (ver PoolMeta).
   const canReview = numericAmount > 0 && selectedLock != null;
 
   const shakeAmount = () => {

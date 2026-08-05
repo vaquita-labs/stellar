@@ -175,7 +175,7 @@ export function MoveFundsSheet({
         </motion.p>
         <PoolMeta
           rewardPool={to?.rewardPool ?? 0}
-          openPositions={to?.openPositions ?? 0}
+          totalDeposits={to?.totalDeposits ?? 0}
           className="mt-1 text-xs text-gray-500"
         />
       </div>

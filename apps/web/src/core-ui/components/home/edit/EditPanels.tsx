@@ -56,7 +56,7 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(open);
-  const [activeTab, setActiveTab] = useState<EditTab>('catalog');
+  const [activeTab, setActiveTab] = useState<EditTab>('collection');
   const { saveMapObjects } = useRestProfile();
   const { refetch } = useSyncMapObjects();
 
@@ -198,8 +198,8 @@ export function EditPanels({ open, onOpenChange }: EditPanelsProps) {
                       ariaLabel={t('home.shop.tabsLabel', 'Shop sections')}
                       spaced
                       tabs={[
+                        { key: 'collection', label: t('home.shop.tabCollection', 'Unlocked') },
                         { key: 'catalog', label: t('home.shop.tabCatalog', 'Catalog') },
-                        { key: 'collection', label: t('home.shop.tabCollection', 'My collection') },
                       ]}
                     />
                   </div>
