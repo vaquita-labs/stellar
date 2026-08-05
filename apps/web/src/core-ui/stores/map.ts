@@ -17,7 +17,7 @@ export type ObjectItem = {
  * (WorldMap) en vez de quedar flotando sobre el agua.
  */
 export const isWalkableType = (type?: MapObjectType): boolean =>
-  type === MapObjectType.BUSH || type === MapObjectType.GRASS;
+  type === MapObjectType.BUSH || type === MapObjectType.GRASS || type === MapObjectType.ROAD;
 
 export enum EditionMode {
   SELECT = 'select',

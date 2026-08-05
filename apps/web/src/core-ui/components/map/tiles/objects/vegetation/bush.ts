@@ -1,8 +1,8 @@
 import { MapObject, WorldType } from '@/core-ui/types';
 import * as THREE from 'three';
-import { BuildContext } from '../../types';
-import { getPalette, WorldPalette } from '../palette';
-import { addBoxes, addTerrainTile, BoxSpec, OUTLINE_COLOR } from '../recipe';
+import { BuildContext } from '@/core-ui/components/map/types';
+import { getPalette, WorldPalette } from '@/core-ui/components/map/tiles/palette';
+import { addBoxes, addFixedTerrainTile, BoxSpec, OUTLINE_COLOR } from '@/core-ui/components/map/tiles/recipe';
 
 // ---------------------------------------------------------------------------
 // Formas: cada función devuelve la receta de una silueta de arbusto o de un
@@ -161,12 +161,13 @@ const BUSH_VARIANTS: Record<WorldType, (p: WorldPalette) => BoxSpec[][]> = {
   [WorldType.VOLCANO]: (p) => [skull(p.bone, p.dark)],
 };
 
-export const getBushGroup = ({ position: [x, , z], variant }: MapObject, ctx: BuildContext) => {
+export const getBushGroup = ({ position: [x, , z], variant, rotation }: MapObject, ctx: BuildContext) => {
   const { worldType } = ctx;
   const palette = getPalette(worldType);
   const group = new THREE.Group();
 
-  addTerrainTile(group, x, z, palette.bushTerrain, ctx);
+  // Terreno fijo a la grilla; solo el arbusto rota.
+  addFixedTerrainTile(group, x, z, palette.bushTerrain, ctx, rotation?.[1] ?? 0);
 
   const variants = (BUSH_VARIANTS[worldType] || BUSH_VARIANTS[WorldType.FOREST])(palette);
   const recipe = variants[variant] ?? variants[0];

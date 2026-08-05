@@ -436,7 +436,8 @@
       "title": "Selecione o método",
       "wallet": {
         "subtitle": "Deposite de uma wallet cripto",
-        "title": "Wallet"
+        "title": "Wallet",
+        "receiveSubtitle": "Receba USDC no seu endereço"
       }
     }
   },
@@ -561,6 +562,7 @@
         "tree": {
           "0": "Árvore",
           "4": "Palmeira",
+          "6": "Abóbora",
           "default": "Árvore"
         },
         "rock": {
@@ -586,6 +588,15 @@
         },
         "barn": {
           "default": "Celeiro"
+        },
+        "windmill": {
+          "default": "Moinho"
+        },
+        "well": {
+          "default": "Poço"
+        },
+        "lamp": {
+          "default": "Lampião"
         },
         "leaderboard": {
           "default": "Pódio"
@@ -646,10 +657,16 @@
       "streakAlt": "Sequência",
       "apyAria": "Portfólio",
       "boostAria": "Boost de indicações",
-      "greeting": "Olá,"
+      "greeting": "Olá,",
+      "balanceRetry": "Tentar carregar o saldo novamente",
+      "balanceSyncError": "Não foi possível carregar seu saldo da Blend. Toque para tentar de novo."
     },
     "totalDeposits": {
       "bagAlt": "Depósitos totais"
+    },
+    "dailyReward": {
+      "chestAlt": "Baú",
+      "chestAria": "Recompensa diária"
     }
   },
   "idleFunds": {
@@ -740,6 +757,30 @@
     "anchored": {
       "title": "Mostrando a sua parte da tabela",
       "backToTop": "Voltar ao #1"
+    },
+    "league": {
+      "demotionZone": "Zona de rebaixamento",
+      "divisionLocked": "Divisão {{division}} — bloqueada",
+      "divisionTitle": "Divisão {{division}}",
+      "empty": {
+        "description": "Economize esta semana para ganhar XP — seu primeiro depósito já te coloca no ranking.",
+        "title": "Ainda não há ninguém nesta divisão"
+      },
+      "preview": {
+        "back": "Voltar para minha divisão",
+        "description": "Você só compete com poupadores da sua própria divisão.",
+        "lockedTitle": "Alcance {{xp}} XP para desbloquear {{division}}",
+        "pastTitle": "Você já passou por {{division}}"
+      },
+      "promotionZone": "Zona de promoção",
+      "remaining": {
+        "days": "{{n}} dias",
+        "hours": "{{n}} horas",
+        "minutes": "{{n}} minutos"
+      },
+      "rules": "O ranking reinicia toda segunda-feira. Os {{promote}} primeiros sobem de divisão e os {{demote}} últimos descem uma.",
+      "rulesFirstDivision": "Na primeira divisão ninguém desce — você só pode subir.",
+      "xpValue": "{{xp}} XP"
     }
   },
   "nav": {
@@ -1305,7 +1346,8 @@
       "shop": "Loja",
       "soon": "Em breve",
       "dailyReward": "Recompensa",
-      "shopWithItems": "{{count}} objetos para colocar"
+      "shopWithItems": "{{count}} objetos para colocar",
+      "primaryAriaLabel": "Principal"
     },
     "notFound": {
       "backHome": "Voltar para o início",
@@ -1759,7 +1801,11 @@
       "selfCustodyTitle": "Wallet de autocustódia",
       "send": "Enviar",
       "title": "Wallet",
-      "transferAssets": "Transfira ativos"
+      "transferAssets": "Transfira ativos",
+      "buyArs": "Comprar ARS",
+      "receiveFiat": "Receber fiat",
+      "sellArs": "Vender para ARS",
+      "sendFiat": "Enviar fiat"
     },
     "profile": {
       "addFriends": "Adicionar amigos",
@@ -1777,12 +1823,68 @@
       "receive": {
         "groupConnect": "Conectar com a Anclap",
         "groupBuy": "Comprar e receber ARS",
-        "groupConvert": "Converter para USDC"
+        "groupConvert": "Converter para USDC",
+        "authOk": "Autenticado com a Anclap (JWT obtido).",
+        "cta": "Continuar",
+        "depositHelper": "Só tem pesos argentinos? Deposite com ARS",
+        "depositStarted": "Depósito iniciado. Continue na Anclap.",
+        "description": "Compre ARS com a Anclap e receba na sua carteira; depois convertemos para USDC automaticamente.",
+        "jwtPreview": "JWT:",
+        "openAnclap": "Abrir Anclap",
+        "processing": "Processando…",
+        "reconnect": "Reconectar carteira",
+        "stepCredit": "Aguardar crédito de ARS",
+        "stepDeposit": "SEP-24 · Iniciar depósito",
+        "stepSwap": "Converter ARS → USDC",
+        "swapDone": "Convertido para USDC. Pronto!",
+        "title": "Argentina (ARS)",
+        "usdcReceived": "≈ {{amount}} USDC recebidos",
+        "waitingHint": "Conclua o depósito na Anclap. Estamos aguardando o crédito dos ARS…"
       },
       "send": {
         "groupConvert": "Converter para ARS",
         "groupConnect": "Conectar com a Anclap",
-        "groupSend": "Enviar ARS para a Anclap"
+        "groupSend": "Enviar ARS para a Anclap",
+        "arsReceived": "≈ {{amount}} ARS obtidos no swap",
+        "authOk": "Autenticado com a Anclap (JWT obtido).",
+        "cta": "Enviar",
+        "insufficient": "Saldo de USDC insuficiente.",
+        "jwtPreview": "JWT:",
+        "openAnclap": "Abrir Anclap",
+        "processing": "Processando…",
+        "reconnect": "Reconectar carteira",
+        "stepChallenge": "SEP-10 · Solicitar challenge",
+        "stepSign": "SEP-10 · Assinar (carteira)",
+        "stepSwap": "Swap USDC → ARS",
+        "stepToken": "SEP-10 · Obter JWT da Anclap",
+        "stepSettled": "Aguardar confirmação da Anclap",
+        "stepTransfer": "Enviar ARS para a Anclap",
+        "stepBlend": "Sacar da Blend",
+        "stepTrustline": "Ativar trustline de ARS",
+        "stepWithdraw": "SEP-24 · Iniciar saque",
+        "settled": "Saque concluído na Anclap.",
+        "title": "Enviar fiat (ARS)",
+        "waitingHint": "Conclua o saque na Anclap. Estamos aguardando a confirmação…",
+        "withdrawStarted": "Saque iniciado. Continue na Anclap."
+      },
+      "authenticated": "Conectado à Anclap",
+      "history": {
+        "connect": "Conecte sua carteira primeiro.",
+        "deposit": "Depósito",
+        "details": "Detalhes",
+        "empty": "Nenhum histórico carregado. Toque em Atualizar.",
+        "none": "Ainda não há transações.",
+        "phase": {
+          "completed": "Concluído",
+          "processing": "Processando no anchor",
+          "started": "Iniciado",
+          "userTransfer": "Transferência do usuário"
+        },
+        "refresh": "Atualizar",
+        "refreshing": "Atualizando…",
+        "resumeHint": "Toque em uma transação para continuar de onde parou.",
+        "title": "Histórico de transações",
+        "withdraw": "Saque"
       }
     },
     "receive": {
@@ -1810,6 +1912,16 @@
       "memoPlaceholder": "ex. 1234567",
       "memoHint": "Algumas corretoras exigem um memo ou tag para creditar seu depósito.",
       "memoInvalid": "O memo é muito longo (máx. 28 caracteres)."
+    },
+    "bridge": {
+      "actionFailed": "A ação da ponte falhou",
+      "approvalReady": "Aprovação de USDC confirmada. Agora você pode enviar.",
+      "depositHelper": "Precisa de USDC na Stellar? Faça a ponte a partir da Base ou Ethereum",
+      "noInjectedWallet": "Nenhuma carteira EVM encontrada",
+      "stellarApprovalReady": "Aprovação de USDC na Stellar confirmada. Pressione Enviar da Stellar novamente para continuar.",
+      "subtitle": "Mova USDC entre EVM e Stellar",
+      "switchFailed": "Não foi possível trocar de rede",
+      "title": "Enviar USDC"
     }
   },
   "referrals": {
@@ -1888,7 +2000,15 @@
     "withdrawFromBlend": "Retirar da Blend",
     "withdrawing": "Retirando…",
     "blendBorrow": "Quite seu empréstimo da Blend primeiro",
-    "memoLabel": "Memo"
+    "memoLabel": "Memo",
+    "fromLabel": "De",
+    "ownWallet": "Sua carteira",
+    "steps": {
+      "blendWithdraw": "Sacando da Blend",
+      "externalSavvy": "Sacando da Blend para sua carteira",
+      "preparing": "Preparando seu dinheiro",
+      "sending": "Enviando para sua carteira"
+    }
   },
   "transactions": {
     "title": "Transações",
@@ -2013,7 +2133,8 @@
       "tvl": "TVL",
       "depositors": "Depósitos abertos",
       "estimateNote": "Os prêmios são divididos entre todos do pool e podem mudar conforme as pessoas entram ou saem.",
-      "tokenNote": "Os saldos são exibidos em {{token}}."
+      "tokenNote": "Os saldos são exibidos em {{token}}.",
+      "marketApy": "APY de {{market}}"
     },
     "move": {
       "title": "Mover fundos",
@@ -2045,7 +2166,37 @@
     },
     "vault": {
       "label": "Vault · Flexível"
-    }
+    },
+    "blend": {
+      "anytime": "A qualquer momento",
+      "detailText": "Seu USDC rende na Blend, um protocolo de empréstimos na Stellar. Não há período de bloqueio, então você pode sacar seu dinheiro quando quiser.",
+      "label": "Blend · Flexível",
+      "yieldSource": "Fonte de rendimento"
+    },
+    "filters": {
+      "status": "Status",
+      "statuses": {
+        "failed": "Com erro",
+        "locked": "Ainda bloqueado",
+        "ready": "Pronto para sacar",
+        "withdrawn": "Sacado"
+      },
+      "term": "Prazo"
+    },
+    "info": {
+      "earned": "Rendimento",
+      "failedNote": "Esta operação não foi concluída. Não há fundos bloqueados aqui.",
+      "opened": "Aberto",
+      "term": "Prazo",
+      "withdrawnOn": "Sacado em"
+    },
+    "list": {
+      "empty": "Nenhuma posição para mostrar.",
+      "emptyHint": "Suas economias bloqueadas aparecerão aqui.",
+      "showMore_one": "Ver mais ({{count}})",
+      "showMore_other": "Ver mais ({{count}})"
+    },
+    "positionsTitle": "Suas posições"
   },
   "txError": {
     "generic": "Não conseguimos concluir a transação. Tente novamente em instantes.",
@@ -2070,5 +2221,20 @@
     "moving": "Movendo…",
     "max": "Máx",
     "notNow": "Agora não"
+  },
+  "invest": {
+    "review": {
+      "termLabel": "Prazo",
+      "title": "Revisar"
+    },
+    "selectTerm": "Escolha um prazo",
+    "steps": {
+      "locking": "Bloqueando por {{term}}",
+      "preparing": "Preparando seu dinheiro"
+    },
+    "success": {
+      "subtitle": "Seu USDC já está bloqueado e rendendo.",
+      "title": "Investido!"
+    }
   }
 }

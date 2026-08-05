@@ -4,9 +4,12 @@ import { BUILDINGS } from '../buildings/registry';
 import { BuildContext, ObjectBuilder } from '../types';
 import {
   getBushGroup,
+  getCollectibleGroup,
+  getDecorationGroup,
   getGrassGroup,
   getRoadGroup,
   getRockGroup,
+  getSeasonalGroup,
   getTreeGroup,
   getWaterGroup,
 } from './objects';
@@ -39,7 +42,10 @@ const BUILDERS: Partial<Record<MapObjectType, ObjectBuilder>> = {
   [MapObjectType.GRASS]: (o, ctx) => getGrassGroup(o, ctx),
   [MapObjectType.BUSH]: (o, ctx) => getBushGroup(o, ctx),
   [MapObjectType.TREE]: (o, ctx) => getTreeGroup(o, ctx),
-  [MapObjectType.ROAD]: (o, { worldType }) => getRoadGroup(o, worldType),
+  [MapObjectType.SEASONAL]: (o, ctx) => getSeasonalGroup(o, ctx),
+  [MapObjectType.DECORATION]: (o, ctx) => getDecorationGroup(o, ctx),
+  [MapObjectType.COLLECTIBLE]: (o, ctx) => getCollectibleGroup(o, ctx),
+  [MapObjectType.ROAD]: (o, ctx) => getRoadGroup(o, ctx),
   ...buildingBuilders,
   [MapObjectType.EMPTY]: getEmptyHitPlane,
 };

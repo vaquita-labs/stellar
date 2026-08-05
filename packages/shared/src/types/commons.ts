@@ -534,9 +534,16 @@ export enum MapObjectType {
   ROAD = 'road',
   BANK = 'bank',
   BARN = 'barn',
+  WINDMILL = 'windmill',
+  WELL = 'well',
+  LAMP = 'lamp',
   LEADERBOARD = 'leaderboard',
   /** Ítem de HUD (no se coloca en el mapa): desbloquea la card de la hora. */
   CLOCK = 'clock',
+  // Tipos-paraguas para escalar decoraciones (ver apps/web tiles/objects/<cat>).
+  DECORATION = 'decoration',
+  SEASONAL = 'seasonal',
+  COLLECTIBLE = 'collectible',
   EMPTY = 'empty',
 }
 

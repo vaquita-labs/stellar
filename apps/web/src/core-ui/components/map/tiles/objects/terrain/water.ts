@@ -1,9 +1,9 @@
 import { MapObject, MapObjectType } from '@/core-ui/types';
 import * as THREE from 'three';
-import { TILE_HEIGHT, TILE_SIZE } from '../../constants';
-import { BuildContext } from '../../types';
-import { getPalette } from '../palette';
-import { addBoxes, BoxSpec, getSharedRoundedTileGeometry, TILE_CORNER_RADIUS } from '../recipe';
+import { TILE_HEIGHT, TILE_SIZE } from '@/core-ui/components/map/constants';
+import { BuildContext } from '@/core-ui/components/map/types';
+import { getPalette } from '@/core-ui/components/map/tiles/palette';
+import { addBoxes, BoxSpec, getSharedRoundedTileGeometry, TILE_CORNER_RADIUS } from '@/core-ui/components/map/tiles/recipe';
 
 // El agua queda 0.2 por debajo del pasto (se ve la orilla) y TERMINA apenas
 // bajo la superficie del mar (WaterBackground en y=-0.85): el bloque no debe
@@ -124,9 +124,14 @@ const getSharedFallQuadGeometry = (length: number, phase: number): THREE.PlaneGe
   return geometry;
 };
 
-export const getWaterGroup = ({ position: [x, , z] }: MapObject, ctx: BuildContext) => {
+export const getWaterGroup = ({ position: [x, , z], rotation }: MapObject, ctx: BuildContext) => {
   const palette = getPalette(ctx.worldType);
   const group = new THREE.Group();
+  // El bloque de agua tiene esquinas redondeadas y caras de cascada
+  // DIRECCIONALES (calculadas según los vecinos, en coordenadas de grilla).
+  // Todo el contenido va en un subgrupo contra-rotado para que quede fijo a la
+  // grilla aunque el tile se rote en edición (mismo criterio que el terreno).
+  const content = new THREE.Group();
 
   // Esquinas redondeadas del bloque de agua y lados de caída (cascadas).
   let cornerMask = 0;
@@ -168,7 +173,7 @@ export const getWaterGroup = ({ position: [x, , z] }: MapObject, ctx: BuildConte
     waterMesh.castShadow = true;
     waterMesh.receiveShadow = true;
     waterMesh.position.set(x, WATER_ORIGIN_Y + WATER_HEIGHT / 2, z);
-    group.add(waterMesh);
+    content.add(waterMesh);
   } else {
     specs.push({ size: [TILE_SIZE, WATER_HEIGHT, TILE_SIZE], at: [0, 0, 0], color: palette.water, material: 'lambert', faceShade: true });
   }
@@ -207,10 +212,13 @@ export const getWaterGroup = ({ position: [x, , z] }: MapObject, ctx: BuildConte
       z + (alongX ? dz * (TILE_SIZE / 2 + 0.008) : mid)
     );
     quad.castShadow = false;
-    group.add(quad);
+    content.add(quad);
   }
 
-  addBoxes(group, [x, WATER_ORIGIN_Y, z], specs);
+  addBoxes(content, [x, WATER_ORIGIN_Y, z], specs);
+
+  content.rotation.y = -(rotation?.[1] ?? 0);
+  group.add(content);
 
   return group;
 };

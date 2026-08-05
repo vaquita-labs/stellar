@@ -436,7 +436,8 @@
       "title": "Selecciona el método",
       "wallet": {
         "subtitle": "Deposita desde una wallet cripto",
-        "title": "Wallet"
+        "title": "Wallet",
+        "receiveSubtitle": "Recibí USDC en tu dirección"
       }
     }
   },
@@ -561,6 +562,7 @@
         "tree": {
           "0": "Árbol",
           "4": "Palmera",
+          "6": "Calabaza",
           "default": "Árbol"
         },
         "rock": {
@@ -586,6 +588,15 @@
         },
         "barn": {
           "default": "Granero"
+        },
+        "windmill": {
+          "default": "Molino"
+        },
+        "well": {
+          "default": "Pozo"
+        },
+        "lamp": {
+          "default": "Farol"
         },
         "leaderboard": {
           "default": "Podio"
@@ -646,10 +657,16 @@
       "streakAlt": "Racha",
       "apyAria": "Portafolio",
       "boostAria": "Boost de referidos",
-      "greeting": "Hola,"
+      "greeting": "Hola,",
+      "balanceRetry": "Reintentar cargar el saldo",
+      "balanceSyncError": "No pudimos cargar tu saldo de Blend. Tocá para reintentar."
     },
     "totalDeposits": {
       "bagAlt": "Depósitos totales"
+    },
+    "dailyReward": {
+      "chestAlt": "Cofre",
+      "chestAria": "Recompensa diaria"
     }
   },
   "idleFunds": {
@@ -740,6 +757,30 @@
     "anchored": {
       "title": "Mostrando tu tramo de la tabla",
       "backToTop": "Volver al #1"
+    },
+    "league": {
+      "demotionZone": "Zona de descenso",
+      "divisionLocked": "División {{division}} — bloqueada",
+      "divisionTitle": "División {{division}}",
+      "empty": {
+        "description": "Ahorrá esta semana para ganar XP; tu primer depósito ya te pone en la tabla.",
+        "title": "Todavía no hay nadie en esta división"
+      },
+      "preview": {
+        "back": "Volver a mi división",
+        "description": "Solo competís con ahorradores de tu propia división.",
+        "lockedTitle": "Alcanzá {{xp}} XP para desbloquear {{division}}",
+        "pastTitle": "Ya superaste {{division}}"
+      },
+      "promotionZone": "Zona de ascenso",
+      "remaining": {
+        "days": "{{n}} días",
+        "hours": "{{n}} horas",
+        "minutes": "{{n}} minutos"
+      },
+      "rules": "La tabla se reinicia cada lunes. Los primeros {{promote}} suben de división y los últimos {{demote}} bajan una.",
+      "rulesFirstDivision": "En la primera división nadie baja: solo podés subir.",
+      "xpValue": "{{xp}} XP"
     }
   },
   "nav": {
@@ -1305,7 +1346,8 @@
       "shop": "Tienda",
       "soon": "Pronto",
       "dailyReward": "Recompensa",
-      "shopWithItems": "{{count}} objetos por colocar"
+      "shopWithItems": "{{count}} objetos por colocar",
+      "primaryAriaLabel": "Principal"
     },
     "notFound": {
       "backHome": "Volver al inicio",
@@ -1870,6 +1912,16 @@
       "memoPlaceholder": "ej. 1234567",
       "memoHint": "Algunos exchanges piden un memo o tag para acreditar tu depósito.",
       "memoInvalid": "El memo es demasiado largo (máx. 28 caracteres)."
+    },
+    "bridge": {
+      "actionFailed": "Falló la acción del bridge",
+      "approvalReady": "Aprobación de USDC confirmada. Ya podés enviar.",
+      "depositHelper": "¿Necesitás USDC en Stellar? Pasalo desde Base o Ethereum",
+      "noInjectedWallet": "No se encontró ninguna wallet EVM",
+      "stellarApprovalReady": "Aprobación de USDC en Stellar confirmada. Presioná Enviar desde Stellar de nuevo para continuar.",
+      "subtitle": "Mové USDC entre EVM y Stellar",
+      "switchFailed": "No se pudo cambiar de red",
+      "title": "Enviar USDC"
     }
   },
   "referrals": {
@@ -1948,7 +2000,15 @@
     "withdrawFromBlend": "Retirar de Blend",
     "withdrawing": "Retirando…",
     "blendBorrow": "Devuelve tu préstamo de Blend primero",
-    "memoLabel": "Memo"
+    "memoLabel": "Memo",
+    "fromLabel": "Desde",
+    "ownWallet": "Tu wallet",
+    "steps": {
+      "blendWithdraw": "Retirando de Blend",
+      "externalSavvy": "Retirando de Blend a tu wallet",
+      "preparing": "Preparando tu dinero",
+      "sending": "Enviando a tu wallet"
+    }
   },
   "transactions": {
     "title": "Transacciones",
@@ -2073,7 +2133,8 @@
       "tvl": "TVL",
       "depositors": "Depósitos abiertos",
       "estimateNote": "Los premios se reparten entre todos los del pool y pueden cambiar a medida que entra o sale gente.",
-      "tokenNote": "Los saldos se muestran en {{token}}."
+      "tokenNote": "Los saldos se muestran en {{token}}.",
+      "marketApy": "APY de {{market}}"
     },
     "move": {
       "title": "Mover fondos",
@@ -2105,7 +2166,37 @@
     },
     "vault": {
       "label": "Vault · Flexible"
-    }
+    },
+    "blend": {
+      "anytime": "Cuando quieras",
+      "detailText": "Tu USDC genera rendimiento en Blend, un protocolo de préstamos en Stellar. No hay período de bloqueo, así que podés retirar tu dinero cuando quieras.",
+      "label": "Blend · Flexible",
+      "yieldSource": "Fuente de rendimiento"
+    },
+    "filters": {
+      "status": "Estado",
+      "statuses": {
+        "failed": "Con error",
+        "locked": "Aún bloqueado",
+        "ready": "Listo para retirar",
+        "withdrawn": "Retirado"
+      },
+      "term": "Plazo"
+    },
+    "info": {
+      "earned": "Ganado",
+      "failedNote": "Esta operación no se completó. No hay fondos bloqueados acá.",
+      "opened": "Abierto",
+      "term": "Plazo",
+      "withdrawnOn": "Retirado el"
+    },
+    "list": {
+      "empty": "No hay posiciones para mostrar.",
+      "emptyHint": "Tus ahorros bloqueados aparecerán acá.",
+      "showMore_one": "Ver más ({{count}})",
+      "showMore_other": "Ver más ({{count}})"
+    },
+    "positionsTitle": "Tus posiciones"
   },
   "txError": {
     "generic": "No pudimos completar la transacción. Probá de nuevo en un momento.",
@@ -2130,5 +2221,20 @@
     "moving": "Moviendo…",
     "max": "Máx",
     "notNow": "Ahora no"
+  },
+  "invest": {
+    "review": {
+      "termLabel": "Plazo",
+      "title": "Revisar"
+    },
+    "selectTerm": "Elegí un plazo",
+    "steps": {
+      "locking": "Bloqueando por {{term}}",
+      "preparing": "Preparando tu dinero"
+    },
+    "success": {
+      "subtitle": "Tu USDC ya está bloqueado y generando.",
+      "title": "¡Invertido!"
+    }
   }
 }
