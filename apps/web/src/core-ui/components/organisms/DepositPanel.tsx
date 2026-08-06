@@ -1,5 +1,6 @@
 'use client';
 
+import type { CorridorCode } from '@/networks/pollar/ramps';
 import { isStellarNetwork } from '@/networks/stellar';
 import { resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
@@ -15,6 +16,7 @@ import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositM
 import { ReceiveModal } from './DepositModal/ReceiveModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
 import { SendFiatModal } from './FiatModals/SendFiatModal';
+import { SendFiatRampModal } from './FiatModals/SendFiatRampModal';
 import { WithdrawModal } from './WithdrawModal';
 import { PressableButton } from '../molecules/PressableButton';
 
@@ -31,6 +33,12 @@ export function DepositPanel() {
   const isWithdrawMounted = useModalPresence(isWithdrawOpen);
   const [isSendFiatOpen, setIsSendFiatOpen] = useState(false);
   const isSendFiatMounted = useModalPresence(isSendFiatOpen);
+  // Brasil y Colombia salen por los ramps de Pollar, no por Anclap: mismo modal
+  // para los dos, parametrizado por corredor. El corredor va aparte del abierto/
+  // cerrado para que no se pierda mientras el modal corre su animación de salida.
+  const [rampCountry, setRampCountry] = useState<CorridorCode>('BR');
+  const [isRampOpen, setIsRampOpen] = useState(false);
+  const isRampMounted = useModalPresence(isRampOpen);
   // Modal nativo de recibir (fondeo del usuario social a su dirección custodial).
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const isReceiveMounted = useModalPresence(isReceiveOpen);
@@ -41,7 +49,7 @@ export function DepositPanel() {
     setReceiveOpenGlobal(isReceiveOpen);
     return () => setReceiveOpenGlobal(false);
   }, [isReceiveOpen, setReceiveOpenGlobal]);
-  const [ isDepositing, setIsDepositing ] = useState(false);
+  const [isDepositing, setIsDepositing] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { wallet: pollarWallet } = usePollar();
   const queryClient = useQueryClient();
@@ -62,9 +70,7 @@ export function DepositPanel() {
       className="absolute bottom-4 left-0 flex flex-col items-center justify-center w-full gap-1"
     >
       {isStellar && isPaused && (
-        <p className="text-sm text-warning font-semibold">
-          {t('deposit.panel.paused', 'Deposits are temporarily paused')}
-        </p>
+        <p className="text-sm text-warning font-semibold">{t('deposit.panel.paused', 'Deposits are temporarily paused')}</p>
       )}
       <div className="w-full max-w-xl px-1 flex gap-1">
         <PressableButton
@@ -128,6 +134,9 @@ export function DepositPanel() {
       <CountryPickerModal
         open={countryFlow !== null}
         onOpenChange={() => setCountryFlow(null)}
+        // El depósito sólo entra por Anclap (ARS); el retiro suma los corredores
+        // de Pollar (Brasil y Colombia).
+        available={countryFlow === 'withdraw' ? ['AR', 'BR', 'CO'] : ['AR']}
         onBack={() => {
           const flow = countryFlow;
           setCountryFlow(null);
@@ -141,8 +150,12 @@ export function DepositPanel() {
             network: network?.networkName || null,
           });
           setCountryFlow(null);
-          if (flow === 'withdraw') setIsSendFiatOpen(true);
-          else setIsReceiveFiatOpen(true);
+          if (flow === 'withdraw') {
+            if (countryCode === 'BR' || countryCode === 'CO') {
+              setRampCountry(countryCode);
+              setIsRampOpen(true);
+            } else setIsSendFiatOpen(true);
+          } else setIsReceiveFiatOpen(true);
         }}
       />
       <DepositModal
@@ -232,8 +245,17 @@ export function DepositPanel() {
           }}
         />
       )}
-      {isSendFiatMounted && (
-        <SendFiatModal open={isSendFiatOpen} onOpenChange={() => setIsSendFiatOpen(false)} />
+      {isSendFiatMounted && <SendFiatModal open={isSendFiatOpen} onOpenChange={() => setIsSendFiatOpen(false)} />}
+      {isRampMounted && (
+        <SendFiatRampModal
+          open={isRampOpen}
+          country={rampCountry}
+          onOpenChange={() => setIsRampOpen(false)}
+          onBack={() => {
+            setIsRampOpen(false);
+            setCountryFlow('withdraw');
+          }}
+        />
       )}
       {isReceiveMounted && (
         <ReceiveModal

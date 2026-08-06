@@ -12,6 +12,12 @@ interface CountryPickerModalProps {
   /** Vuelve al selector de método. */
   onBack?: () => void;
   onSelect: (countryCode: CountryCode) => void;
+  /**
+   * Países operativos para el flujo que abrió el picker. El on-ramp y el
+   * off-ramp no cubren los mismos: Brasil sólo tiene retiro (Pix), así
+   * que aparece habilitado en el off-ramp y como "próximamente" en el depósito.
+   */
+  available?: CountryCode[];
 }
 
 export type CountryCode = 'AR' | 'BO' | 'BR' | 'MX' | 'CO' | 'PE';
@@ -20,17 +26,16 @@ interface Country {
   code: CountryCode;
   name: string;
   flag: string;
-  available: boolean;
 }
 
 /** El orden fija primero los países operativos y después los que vienen. */
 const COUNTRIES: Country[] = [
-  { code: 'AR', name: 'Argentina', flag: '🇦🇷', available: true },
-  { code: 'BO', name: 'Bolivia', flag: '🇧🇴', available: false },
-  { code: 'BR', name: 'Brasil', flag: '🇧🇷', available: false },
-  { code: 'MX', name: 'México', flag: '🇲🇽', available: false },
-  { code: 'CO', name: 'Colombia', flag: '🇨🇴', available: false },
-  { code: 'PE', name: 'Perú', flag: '🇵🇪', available: false },
+  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
+  { code: 'BR', name: 'Brasil', flag: '🇧🇷' },
+  { code: 'BO', name: 'Bolivia', flag: '🇧🇴' },
+  { code: 'MX', name: 'México', flag: '🇲🇽' },
+  { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
+  { code: 'PE', name: 'Perú', flag: '🇵🇪' },
 ];
 
 /** Sin acentos y en minúsculas, para que "mexico" encuentre "México". */
@@ -42,15 +47,16 @@ const normalize = (value: string) =>
     .trim();
 
 /**
- * Paso previo al on-ramp: en qué país está el usuario. Define con qué proveedor
- * y moneda local se hace el depósito, así que se elige antes de arrancar el
- * flujo de fiat.
+ * Paso previo al on-ramp y al off-ramp: en qué país está el usuario. Define con
+ * qué proveedor y moneda local se opera (Argentina/ARS con Anclap, Brasil/BRL
+ * con los ramps de Pollar), así que se elige antes de arrancar el flujo de fiat.
  */
 export function CountryPickerModal({
   open,
   onOpenChange,
   onBack,
   onSelect,
+  available = ['AR'],
 }: CountryPickerModalProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
@@ -61,9 +67,13 @@ export function CountryPickerModal({
 
   const results = useMemo(() => {
     const q = normalize(query);
-    if (!q) return COUNTRIES;
-    return COUNTRIES.filter((c) => normalize(c.name).includes(q));
-  }, [query]);
+    const matches = q ? COUNTRIES.filter((c) => normalize(c.name).includes(q)) : COUNTRIES;
+    // Los operativos arriba: cuáles lo son depende del flujo, así que el orden
+    // se arma acá y no en la constante.
+    return [...matches].sort(
+      (a, b) => Number(available.includes(b.code)) - Number(available.includes(a.code)),
+    );
+  }, [query, available]);
 
   return (
     <AppModal
@@ -88,7 +98,7 @@ export function CountryPickerModal({
 
       <div className="flex flex-col gap-2">
         {results.map((country) =>
-          country.available ? (
+          available.includes(country.code) ? (
             <PressableButton variant="white" size="row"
               key={country.code}
               onClick={() => onSelect(country.code)}>

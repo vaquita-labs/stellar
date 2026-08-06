@@ -13,7 +13,7 @@ import { truncateDecimals } from '../../../helpers';
 import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
 import { humanizeTxError } from '../../../helpers/txError';
 import { useLivePassiveUsdc } from '../../../hooks';
-import { useConfigStore } from '../../../stores';
+import { useConfigStore, useOfframpStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
 import { TokenSymbol } from '../../molecules/MoneyInput/types';
@@ -75,6 +75,11 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     sendToAnchor,
   } = useAnclap();
   const setSharedJwt = useAnclapAuthStore((s) => s.setJwt);
+  // El USDC que este flujo saca de Blend no es plata ociosa: sin esta marca, el
+  // gate de `useIdleFunds` lo devuelve al vault entre el retiro y el swap y el
+  // retiro se queda sin fondos a mitad de camino.
+  const setOfframpActive = useOfframpStore((s) => s.setOfframpActive);
+  useEffect(() => () => setOfframpActive(false), [setOfframpActive]);
 
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
@@ -176,6 +181,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
   const handleSend = async () => {
     if (isDisabled || !walletAddress || !token) return;
     setBusy(true);
+    setOfframpActive(true);
     setError(null);
     setShowReconnect(false);
     setJwt(null);
@@ -268,6 +274,9 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     } finally {
       setWaiting(false);
       setBusy(false);
+      // Se libera pase lo que pase: si el envío falló, ese USDC SÍ quedó ocioso en
+      // la wallet y el gate tiene que poder ofrecer devolverlo al vault.
+      setOfframpActive(false);
     }
   };
 
@@ -278,7 +287,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     const failed = tx.status ? FAILED.has(tx.status) : false;
     const done = tx.status === 'completed';
 
-    setError(failed ? tx.message ?? tx.status ?? null : null);
+    setError(failed ? (tx.message ?? tx.status ?? null) : null);
     setShowReconnect(false);
     setAmount('');
     setArsReceived(tx.amount_in ?? tx.amount_out ?? null);
@@ -301,6 +310,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     if (done || failed) return; // terminal: sólo mostramos el estado
 
     setBusy(true);
+    setOfframpActive(true);
     try {
       // Reanuda el tramo final: si aún falta el form en Anclap, se espera; luego
       // paga los ARS al anchor y espera la confirmación.
@@ -322,6 +332,9 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     } finally {
       setWaiting(false);
       setBusy(false);
+      // Se libera pase lo que pase: si el envío falló, ese USDC SÍ quedó ocioso en
+      // la wallet y el gate tiene que poder ofrecer devolverlo al vault.
+      setOfframpActive(false);
     }
   };
 
@@ -387,7 +400,9 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
         min={MIN_USDC}
       />
 
-      {overBalance && <p className="text-danger text-xs -mt-2">{t('wallet.fiat.send.insufficient', 'Insufficient USDC balance.')}</p>}
+      {overBalance && (
+        <p className="text-danger text-xs -mt-2">{t('wallet.fiat.send.insufficient', 'Insufficient USDC balance.')}</p>
+      )}
 
       {/* Stepper del flujo off-ramp. */}
       <FiatStepList
