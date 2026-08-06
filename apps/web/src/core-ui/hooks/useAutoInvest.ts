@@ -7,7 +7,7 @@ import { usePollar } from '@pollar/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useConfigStore, useReceiveModalStore } from '../stores';
+import { useConfigStore, useOfframpStore, useReceiveModalStore } from '../stores';
 
 // Umbral mínimo (USDC, unidades humanas): no promptear ni gastar gas por polvo.
 const MIN_IDLE = 1;
@@ -36,6 +36,7 @@ export const useIdleFunds = () => {
   const queryClient = useQueryClient();
   const ready = usePollarReadyStore((s) => s.ready);
   const receiveOpen = useReceiveModalStore((s) => s.isReceiveOpen);
+  const offrampActive = useOfframpStore((s) => s.isOfframpActive);
 
   const [isInvesting, setIsInvesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +107,7 @@ export const useIdleFunds = () => {
       toast.success(
         t('idleFunds.toast', 'We put ${{amount}} to work', {
           amount: amount.toFixed(2),
-        })
+        }),
       );
       await refreshWalletBalance();
       void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
@@ -125,7 +126,11 @@ export const useIdleFunds = () => {
 
   // ¿Mostrar la pantalla de plata ociosa? Custodial + sesión lista + hay USDC
   // ocioso sobre el umbral. Es un nudge cerrable, así que no hace falta opt-out.
-  const shouldPrompt = ready && isCustodial && idle >= MIN_IDLE;
+  //
+  // Con un off-ramp en curso NO se promptea: ese USDC acaba de salir del vault
+  // para pagarle a la rampa, así que no está ocioso. Devolverlo al vault deja al
+  // proveedor sin nada que cobrar y el retiro colgado.
+  const shouldPrompt = ready && isCustodial && idle >= MIN_IDLE && !offrampActive;
 
   return { idle, shouldPrompt, invest, isInvesting, error, clearError: () => setError(null) };
 };

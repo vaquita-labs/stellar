@@ -281,14 +281,14 @@ importers:
         specifier: ^3.1.0
         version: 3.1.0(tailwind-merge@3.4.0)(tailwindcss@4.3.1)
       '@pollar/core':
-        specifier: ^0.11.2
-        version: 0.11.2
+        specifier: 0.11.3-rc.1
+        version: 0.11.3-rc.1
       '@pollar/react':
-        specifier: ^0.11.2
-        version: 0.11.2(@pollar/core@0.11.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: 0.11.3-rc.1
+        version: 0.11.3-rc.1(@pollar/core@0.11.3-rc.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@pollar/stellar-wallets-kit-adapter':
         specifier: ^0.11.2
-        version: 0.11.2(@creit.tech/stellar-wallets-kit@2.3.0(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.3(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@7.5.11(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.17)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.7)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.7))(utf-8-validate@6.0.6)(zod@4.4.3))(@pollar/core@0.11.2)
+        version: 0.11.2(@creit.tech/stellar-wallets-kit@2.3.0(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.3(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@7.5.11(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.17)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.7)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.7))(utf-8-validate@6.0.6)(zod@4.4.3))(@pollar/core@0.11.3-rc.1)
       '@react-three/drei':
         specifier: ^10.7.7
         version: 10.7.7(@react-three/fiber@9.6.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.184.0))(@types/react@19.2.17)(@types/three@0.184.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.184.0)
@@ -1372,8 +1372,8 @@ packages:
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
 
-  '@pollar/core@0.11.2':
-    resolution: {integrity: sha512-guBAipc7CsbUDpf9kCXmy2h+mygtfbkf79mtHG+Y+NOu/NrGFC5kP4/+ZQ3UmllchT+4VH7fwFG4AL5X+ex0/g==}
+  '@pollar/core@0.11.3-rc.1':
+    resolution: {integrity: sha512-gIztUzlPTmOzepQPULb1KIfyzYYQd5rGnOTfPwIuw9GxtIdmQQN6fP6/LYY+mdRoBUyngaY7t1eF4dlsUUBMTg==}
     engines: {node: '>=20'}
     peerDependencies:
       expo-secure-store: '>=12'
@@ -1384,11 +1384,11 @@ packages:
       react-native-keychain:
         optional: true
 
-  '@pollar/react@0.11.2':
-    resolution: {integrity: sha512-4InpQwyNQdq8pEpEnzFRbEvBl+sKGHOFQ6GIAxhK2HVJxIweOkMCuKmmaX47zFEH1195FDkYV7QslJKs84OIBQ==}
+  '@pollar/react@0.11.3-rc.1':
+    resolution: {integrity: sha512-Qicc1A8342wPt6rw4ecE+miSF5KU6GRKhrNB4U7emdcCRO6DLq0wVxznRhgf1RDwReeGpo+R1A8zeBM8fjyITA==}
     engines: {node: '>=20'}
     peerDependencies:
-      '@pollar/core': ^0.11.2
+      '@pollar/core': ^0.11.3-rc.1
       react: '>=18'
       react-dom: '>=18'
 
@@ -7792,25 +7792,25 @@ snapshots:
 
   '@pinojs/redact@0.4.0': {}
 
-  '@pollar/core@0.11.2':
+  '@pollar/core@0.11.3-rc.1':
     dependencies:
       '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@stellar/freighter-api': 6.0.0
       openapi-fetch: 0.17.0
 
-  '@pollar/react@0.11.2(@pollar/core@0.11.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@pollar/react@0.11.3-rc.1(@pollar/core@0.11.3-rc.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@pollar/core': 0.11.2
+      '@pollar/core': 0.11.3-rc.1
       '@simplewebauthn/browser': 13.3.0
       qr.js: 0.0.0
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  '@pollar/stellar-wallets-kit-adapter@0.11.2(@creit.tech/stellar-wallets-kit@2.3.0(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.3(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@7.5.11(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.17)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.7)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.7))(utf-8-validate@6.0.6)(zod@4.4.3))(@pollar/core@0.11.2)':
+  '@pollar/stellar-wallets-kit-adapter@0.11.2(@creit.tech/stellar-wallets-kit@2.3.0(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.3(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@7.5.11(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.17)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.7)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.7))(utf-8-validate@6.0.6)(zod@4.4.3))(@pollar/core@0.11.3-rc.1)':
     dependencies:
       '@creit.tech/stellar-wallets-kit': 2.3.0(@stellar/stellar-sdk@15.1.0)(@trezor/connect@9.7.3(@solana/sysvars@5.5.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@6.0.3))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(tslib@2.8.1)(typescript@6.0.3)(utf-8-validate@6.0.6)(ws@7.5.11(bufferutil@4.1.0)(utf-8-validate@6.0.6)))(@types/react@19.2.17)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(near-api-js@5.1.1)(react@19.2.7)(tslib@2.8.1)(typescript@6.0.3)(use-sync-external-store@1.6.0(react@19.2.7))(utf-8-validate@6.0.6)(zod@4.4.3)
-      '@pollar/core': 0.11.2
+      '@pollar/core': 0.11.3-rc.1
 
   '@preact/signals-core@1.14.2': {}
 

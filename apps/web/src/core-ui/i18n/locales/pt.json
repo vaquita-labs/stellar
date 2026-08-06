@@ -1834,6 +1834,76 @@
       "walletLabel": "Wallet"
     },
     "fiat": {
+      "authenticated": "Conectado à Anclap",
+      "history": {
+        "connect": "Conecte sua carteira primeiro.",
+        "deposit": "Depósito",
+        "details": "Detalhes",
+        "empty": "Nenhum histórico carregado. Toque em Atualizar.",
+        "none": "Ainda não há transações.",
+        "phase": {
+          "completed": "Concluído",
+          "processing": "Processando no anchor",
+          "started": "Iniciado",
+          "userTransfer": "Transferência do usuário"
+        },
+        "refresh": "Atualizar",
+        "refreshing": "Atualizando…",
+        "resumeHint": "Toque em uma transação para continuar de onde parou.",
+        "title": "Histórico de transações",
+        "withdraw": "Saque"
+      },
+      "ramp": {
+        "amountLabel": "Quanto você quer receber?",
+        "balance": "Disponível nas suas reservas: {{balance}} USDC",
+        "balanceLoading": "Lendo suas reservas…",
+        "continue": "Continuar",
+        "corridorOff": "Este corredor ainda não está disponível.",
+        "costUsdc": "≈ {{amount}} USDC",
+        "country": {
+          "BR": "Brasil",
+          "CO": "Colômbia"
+        },
+        "cta": "Sacar",
+        "doneHint": "Você já pode fechar esta janela.",
+        "err": {
+          "anchorError": "O provedor recusou a solicitação. Tente de novo em instantes.",
+          "assetNotEnabled": "Esta moeda não está disponível para essa rota no momento.",
+          "generic": "Não foi possível concluir o saque.",
+          "insufficientQuote": "Este saque custa {{cost}} USDC e suas reservas têm {{balance}}.",
+          "kycRequired": "O provedor precisa verificar sua identidade para continuar.",
+          "noRoutes": "Nenhuma rota disponível para {{amount}} {{currency}}. Tente outro valor.",
+          "paymentNotOnChain": "O provedor informou um pagamento ({{hash}}) que nunca chegou à rede. Seu USDC continua na sua carteira.",
+          "paymentNotSubmitted": "O provedor aceitou o saque mas nunca enviou o pagamento on-chain. Seu USDC está na sua carteira — tente de novo.",
+          "providerNotConfigured": "Este provedor ainda não está configurado para o app.",
+          "quoteExpired": "A cotação expirou. Peça uma nova e tente de novo.",
+          "unknownCost": "A cotação não informou quanto USDC custa este saque.",
+          "walletUnsupported": "Este tipo de carteira não pode ser usado neste saque."
+        },
+        "etaLabel": "Tempo estimado",
+        "feeLabel": "Taxa",
+        "groupCreate": "Entregar para {{provider}}",
+        "groupFunds": "Sacar das suas reservas",
+        "groupPayout": "Pagar via {{rail}}",
+        "kycHint": "O provedor precisa verificar sua identidade antes de pagar.",
+        "kycNoLink": "O provedor está revisando sua identidade. Pode demorar um pouco.",
+        "kycStarted": "Verificação pendente — conclua com o provedor.",
+        "limitMax": "O máximo para esta rota é {{amount}} {{currency}}.",
+        "limitMin": "O mínimo para esta rota é {{amount}} {{currency}}.",
+        "noLiquidity": "{{rail}} está indisponível no momento.",
+        "openKyc": "Abrir verificação",
+        "openTos": "Abrir termos",
+        "paymentSent": "Pagamento on-chain enviado: {{hash}}",
+        "quoting": "Procurando uma rota…",
+        "settled": "Saque pago via {{rail}}.",
+        "settling": "Seu USDC chegou na {{provider}} e o pagamento via {{rail}} está a caminho. Pode demorar — você já pode fechar esta janela.",
+        "title": "Sacar para {{country}} ({{currency}})",
+        "usdcSpent": "{{amount}} USDC saíram das suas reservas",
+        "waitingHint": "Estamos aguardando a confirmação do provedor…",
+        "waitingReady": "Aguardando {{provider}} liquidar o pagamento… (costuma levar {{eta}})",
+        "youReceive": "Você recebe",
+        "youSend": "Sai das suas reservas"
+      },
       "receive": {
         "groupConnect": "Conectar com a Anclap",
         "groupBuy": "Comprar e receber ARS",
@@ -1880,25 +1950,6 @@
         "title": "Enviar fiat (ARS)",
         "waitingHint": "Conclua o saque na Anclap. Estamos aguardando a confirmação…",
         "withdrawStarted": "Saque iniciado. Continue na Anclap."
-      },
-      "authenticated": "Conectado à Anclap",
-      "history": {
-        "connect": "Conecte sua carteira primeiro.",
-        "deposit": "Depósito",
-        "details": "Detalhes",
-        "empty": "Nenhum histórico carregado. Toque em Atualizar.",
-        "none": "Ainda não há transações.",
-        "phase": {
-          "completed": "Concluído",
-          "processing": "Processando no anchor",
-          "started": "Iniciado",
-          "userTransfer": "Transferência do usuário"
-        },
-        "refresh": "Atualizar",
-        "refreshing": "Atualizando…",
-        "resumeHint": "Toque em uma transação para continuar de onde parou.",
-        "title": "Histórico de transações",
-        "withdraw": "Saque"
       }
     },
     "receive": {
