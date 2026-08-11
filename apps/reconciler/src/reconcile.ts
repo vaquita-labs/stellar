@@ -159,13 +159,51 @@ const resolveOptions = async (): Promise<CliOptions> => {
   };
 };
 
+const HEALTH_RETRY_ATTEMPTS = 3;
+const HEALTH_RETRY_DELAY_MS = 15_000;
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+// stellar-sdk rethrows JSON-RPC error payloads verbatim, so these are plain
+// { code, message } objects rather than Error instances.
+const errorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object' && 'message' in error) return String((error as { message: unknown }).message);
+  return String(error);
+};
+
+// stellar-rpc fails getHealth when its last ingested ledger is older than the
+// node's max healthy latency (30s by default). The node is lagging behind the
+// network, not broken — a later ledger close normally clears it.
+const isLedgerLatencyError = (error: unknown): boolean =>
+  /since last known ledger closed is too high/i.test(errorMessage(error));
+
 const fetchLedgerBounds = async (rpcUrl: string): Promise<{ oldestLedger: number; latestLedger: number }> => {
   const server = new rpc.Server(rpcUrl);
-  const health = await server.getHealth();
-  return {
-    oldestLedger: Number(health.oldestLedger),
-    latestLedger: Number(health.latestLedger),
-  };
+
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const health = await server.getHealth();
+      return {
+        oldestLedger: Number(health.oldestLedger),
+        latestLedger: Number(health.latestLedger),
+      };
+    } catch (error: unknown) {
+      if (attempt >= HEALTH_RETRY_ATTEMPTS || !isLedgerLatencyError(error)) throw error;
+      logger.warn(
+        {
+          event: 'reconciliation_rpc_health_retry',
+          attempt,
+          max_attempts: HEALTH_RETRY_ATTEMPTS,
+          retry_delay_ms: HEALTH_RETRY_DELAY_MS,
+          error: errorMessage(error),
+        },
+        'RPC reported a lagging ledger — retrying health probe',
+      );
+      await sleep(HEALTH_RETRY_DELAY_MS);
+    }
+  }
 };
 
 const fetchEvents = (rpcUrl: string) => async (input: ReconciliationRunInput): Promise<RawReconciliationEvent[]> => {
@@ -196,12 +234,62 @@ const fetchEvents = (rpcUrl: string) => async (input: ReconciliationRunInput): P
   return collected;
 };
 
+const baseArtifact = (options: CliOptions): Record<string, unknown> => ({
+  workflow_name: `local-reconcile-${options.network}`,
+  environment: process.env.GITHUB_ENVIRONMENT ?? process.env.NODE_ENV ?? 'local',
+  network: options.network,
+  network_passphrase: options.networkPassphrase,
+  commit_sha: process.env.GITHUB_SHA ?? null,
+  run_id: process.env.GITHUB_RUN_ID ?? null,
+  actor: process.env.GITHUB_ACTOR ?? process.env.USER ?? null,
+});
+
+const emitArtifact = (artifactPath: string | null, artifact: Record<string, unknown>): void => {
+  const json = `${JSON.stringify(artifact, null, 2)}\n`;
+  if (artifactPath) {
+    mkdirSync(dirname(artifactPath), { recursive: true });
+    writeFileSync(artifactPath, json, 'utf8');
+    console.error(`reconciliation artifact written: ${artifactPath}`);
+  }
+  process.stdout.write(json);
+};
+
 const main = async () => {
   loadDotEnvIfPresent();
   const options = await resolveOptions();
+
+  // Probe the RPC before touching the database so a skipped run costs no queries.
+  let bounds: { oldestLedger: number; latestLedger: number };
+  try {
+    bounds = await fetchLedgerBounds(options.rpcUrl);
+  } catch (error: unknown) {
+    if (!isLedgerLatencyError(error)) throw error;
+    // Soft skip: the cursor is untouched and overlapLedgers makes the next run
+    // re-scan this window, so a lagging RPC must not fail the scheduled job.
+    logger.warn(
+      {
+        event: 'reconciliation_skipped_rpc_lagging',
+        job: options.job,
+        network: options.network,
+        attempts: HEALTH_RETRY_ATTEMPTS,
+        error: errorMessage(error),
+      },
+      'RPC still lagging after retries — skipping this run; the next run re-scans the gap',
+    );
+    emitArtifact(options.artifactPath, {
+      ...baseArtifact(options),
+      phase: 'reconciliation_skipped',
+      job: options.job,
+      skipped: true,
+      skip_reason: 'rpc_ledger_latency',
+      skip_message: errorMessage(error),
+    });
+    return;
+  }
+
+  const { oldestLedger, latestLedger } = bounds;
   const deps = createPrismaReconciliationDependencies(prisma);
   const cursorState = await deps.loadState();
-  const { oldestLedger, latestLedger } = await fetchLedgerBounds(options.rpcUrl);
   const range = resolveReconciliationLedgerRange({
     state: cursorState,
     job: options.job,
@@ -249,14 +337,9 @@ const main = async () => {
   );
 
   const artifact = {
-    workflow_name: `local-reconcile-${options.network}`,
+    ...baseArtifact(options),
     phase: options.dryRun ? 'reconciliation_dry_run' : 'reconciliation_repair',
-    environment: process.env.GITHUB_ENVIRONMENT ?? process.env.NODE_ENV ?? 'local',
-    network: options.network,
-    network_passphrase: options.networkPassphrase,
-    commit_sha: process.env.GITHUB_SHA ?? null,
-    run_id: process.env.GITHUB_RUN_ID ?? null,
-    actor: process.env.GITHUB_ACTOR ?? process.env.USER ?? null,
+    skipped: false,
     range_source: range.source,
     range_clamped: range.clamped,
     requested_start_ledger: range.requestedStartLedger,
@@ -268,13 +351,7 @@ const main = async () => {
     ...result,
   };
 
-  const json = `${JSON.stringify(artifact, null, 2)}\n`;
-  if (options.artifactPath) {
-    mkdirSync(dirname(options.artifactPath), { recursive: true });
-    writeFileSync(options.artifactPath, json, 'utf8');
-    console.error(`reconciliation artifact written: ${options.artifactPath}`);
-  }
-  process.stdout.write(json);
+  emitArtifact(options.artifactPath, artifact);
 };
 
 let exitCode = 0;

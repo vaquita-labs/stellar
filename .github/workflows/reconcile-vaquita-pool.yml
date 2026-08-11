@@ -171,6 +171,12 @@ jobs:
               const fs = require("node:fs");
               const artifact = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
               const counts = artifact.counts ?? {};
+              if (artifact.skipped) {
+                console.log(`- Status: skipped (${artifact.skip_reason})`);
+                console.log(`- Detail: ${artifact.skip_message}`);
+                console.log("- No ledgers scanned and cursor unchanged; the next run re-scans this window.");
+                process.exit(0);
+              }
               console.log(`- Range: ${artifact.startLedger} to ${artifact.endLedger} (${artifact.range_source})`);
               console.log(`- Dry run: ${artifact.dryRun}`);
               console.log(`- Advance cursor: ${artifact.advanceCursor}`);
@@ -279,6 +285,12 @@ jobs:
               const fs = require("node:fs");
               const artifact = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
               const counts = artifact.counts ?? {};
+              if (artifact.skipped) {
+                console.log(`- Status: skipped (${artifact.skip_reason})`);
+                console.log(`- Detail: ${artifact.skip_message}`);
+                console.log("- No ledgers scanned and cursor unchanged; the next run re-scans this window.");
+                process.exit(0);
+              }
               console.log(`- Range: ${artifact.startLedger} to ${artifact.endLedger} (${artifact.range_source})`);
               console.log(`- Dry run: ${artifact.dryRun}`);
               console.log(`- Advance cursor: ${artifact.advanceCursor}`);
