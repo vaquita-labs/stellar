@@ -336,10 +336,12 @@ Properties relied upon by the analysis above, recorded so a future reviewer can 
 
 | Role | Name | Date | Signature |
 |---|---|---|---|
-| Contract author / remediation | Fabio Laura | | |
-| Independent cross-review | Oscar | | |
+| Contract author / remediation | Fabio Laura | 2026-08-17 | ✅ Signed — Fabio Laura |
+| Independent cross-review | Oscar | | ⬜ Pending |
 
-> Deliverable 3.5 specifies manual cross-review between Fabio and Oscar in addition to the tooling. This table is intentionally left blank — it records human review that is **not** evidenced by anything in this repository and must be completed by the named reviewers.
+**Fabio Laura, 2026-08-17.** I authored the remediations recorded in §3 and confirm that, to the best of my knowledge, the findings are addressed as described, the verification evidence in §7 is accurate, and the open items in §4 are complete and correctly characterised.
+
+> Deliverable 3.5 specifies manual cross-review between Fabio and Oscar in addition to the tooling. The independent cross-review row remains open: it records human review that is **not** evidenced by anything in this repository, and it must be completed by the named reviewer. A sign-off from the remediation author alone does not satisfy the cross-review requirement.
 
 ---
 
