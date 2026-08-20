@@ -3,6 +3,7 @@ import { apiServicesEnv } from '../../config/apiServicesEnv';
 import { cached, firstElement } from '../../helpers';
 import type { Network, TokenNetwork } from '../../types';
 import { fetchDefindexVaultApy, stellarNetworkNameToDefindexHttpNetwork } from './defindexApy';
+import { readVaultApySnapshot, writeVaultApySnapshot } from './vaultApySnapshot';
 import { getPeriodData } from './stellar-sdk';
 
 const SECONDS_PER_MONTH_30D = 60 * 60 * 24 * 30;
@@ -42,6 +43,12 @@ export type StellarApyDisplayPayload = {
   lendingMarketName: string;
 };
 
+/**
+ * A vault rate plus where it came from: `live` marks a fresh upstream read,
+ * as opposed to one recovered from the snapshot table during an outage.
+ */
+type VaultApyRead = { apy: number; live: boolean };
+
 /** The vault's own rate, with the market named only once a rate came back. */
 export type VaultApyPayload = {
   protocolApy: number;
@@ -62,8 +69,8 @@ export type VaultApyPayload = {
  * Cached per vault for `VAULT_APY_TTL_MS`, shared across both callers and
  * deduplicated across concurrent requests, so the DeFindex API sees roughly one
  * call per vault per TTL regardless of traffic. While DeFindex is failing the
- * last known rate is served rather than 0 — though only for as long as this
- * process lives, since the cache is in-memory.
+ * last known rate is served rather than 0, first from memory and — on a cold
+ * process, where memory has nothing — from the `vault_apy_snapshots` table.
  */
 export const getVaultApy = async (network: Network, tokenNetworkData: TokenNetwork): Promise<VaultApyPayload> => {
   const empty: VaultApyPayload = { protocolApy: 0, lendingMarketName: '' };
@@ -71,18 +78,34 @@ export const getVaultApy = async (network: Network, tokenNetworkData: TokenNetwo
   const vaultAddress = firstElement(tokenNetworkData.defindex_vault_contract_address ?? '')?.trim() || '';
   if (!vaultAddress || !defindexNet) return empty;
 
-  const apy = await cached(
+  const read = await cached<VaultApyRead | null>(
     `defindex:apy:${defindexNet}:${vaultAddress}`,
-    () =>
-      fetchDefindexVaultApy({
+    async () => {
+      const live = await fetchDefindexVaultApy({
         host: apiServicesEnv.DEFINDEX_API_HOST,
         apiKey: apiServicesEnv.DEFINDEX_API_KEY,
         vaultAddress,
         network: defindexNet,
-      }),
-    { ttlMs: VAULT_APY_TTL_MS, negativeTtlMs: VAULT_APY_NEGATIVE_TTL_MS },
+      });
+      if (live != null) {
+        // Best-effort, not awaited: refreshing the durable floor must not slow
+        // down or fail a request that already has its answer.
+        void writeVaultApySnapshot(defindexNet, vaultAddress, live);
+        return { apy: live, live: true };
+      }
+      const stored = await readVaultApySnapshot(defindexNet, vaultAddress);
+      return stored != null ? { apy: stored, live: false } : null;
+    },
+    {
+      ttlMs: VAULT_APY_TTL_MS,
+      negativeTtlMs: VAULT_APY_NEGATIVE_TTL_MS,
+      // A snapshot is a degraded answer, not a live read: serve it, but keep
+      // retrying on the short TTL and never let it become the in-memory
+      // last-good value that would then be held over as if it were one.
+      isNegative: (value) => value == null || !value.live,
+    },
   );
-  return apy != null ? { protocolApy: apy, lendingMarketName: 'DeFindex' } : empty;
+  return read != null ? { protocolApy: read.apy, lendingMarketName: 'DeFindex' } : empty;
 };
 
 export const getStellarApyData = async (
