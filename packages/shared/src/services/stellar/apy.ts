@@ -1,11 +1,20 @@
 import { ONE_DAY } from '../../config/constants';
 import { apiServicesEnv } from '../../config/apiServicesEnv';
-import { firstElement } from '../../helpers';
+import { cached, firstElement } from '../../helpers';
 import type { Network, TokenNetwork } from '../../types';
 import { fetchDefindexVaultApy, stellarNetworkNameToDefindexHttpNetwork } from './defindexApy';
 import { getPeriodData } from './stellar-sdk';
 
 const SECONDS_PER_MONTH_30D = 60 * 60 * 24 * 30;
+
+/**
+ * The vault APY is a 7-day annualised figure, so it barely moves minute to
+ * minute; ten minutes of staleness is invisible to users and keeps this well
+ * clear of DeFindex's rate limit. A failed lookup is retried far sooner so a
+ * transient error does not linger.
+ */
+const VAULT_APY_TTL_MS = 10 * 60 * 1000;
+const VAULT_APY_NEGATIVE_TTL_MS = 30 * 1000;
 
 export const VAQUITA_APY_DUMMY = {
   [ONE_DAY * 7]: 10,
@@ -49,6 +58,12 @@ export type VaultApyPayload = {
  *
  * Returns 0 with no market name when the vault is unset or the lookup fails, so a
  * failed read is never presented as a real rate.
+ *
+ * Cached per vault for `VAULT_APY_TTL_MS`, shared across both callers and
+ * deduplicated across concurrent requests, so the DeFindex API sees roughly one
+ * call per vault per TTL regardless of traffic. While DeFindex is failing the
+ * last known rate is served rather than 0 — though only for as long as this
+ * process lives, since the cache is in-memory.
  */
 export const getVaultApy = async (network: Network, tokenNetworkData: TokenNetwork): Promise<VaultApyPayload> => {
   const empty: VaultApyPayload = { protocolApy: 0, lendingMarketName: '' };
@@ -56,12 +71,17 @@ export const getVaultApy = async (network: Network, tokenNetworkData: TokenNetwo
   const vaultAddress = firstElement(tokenNetworkData.defindex_vault_contract_address ?? '')?.trim() || '';
   if (!vaultAddress || !defindexNet) return empty;
 
-  const apy = await fetchDefindexVaultApy({
-    host: apiServicesEnv.DEFINDEX_API_HOST,
-    apiKey: apiServicesEnv.DEFINDEX_API_KEY,
-    vaultAddress,
-    network: defindexNet,
-  });
+  const apy = await cached(
+    `defindex:apy:${defindexNet}:${vaultAddress}`,
+    () =>
+      fetchDefindexVaultApy({
+        host: apiServicesEnv.DEFINDEX_API_HOST,
+        apiKey: apiServicesEnv.DEFINDEX_API_KEY,
+        vaultAddress,
+        network: defindexNet,
+      }),
+    { ttlMs: VAULT_APY_TTL_MS, negativeTtlMs: VAULT_APY_NEGATIVE_TTL_MS },
+  );
   return apy != null ? { protocolApy: apy, lendingMarketName: 'DeFindex' } : empty;
 };
 
