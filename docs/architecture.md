@@ -1,7 +1,7 @@
 # Vaquita — System Architecture
 
 **Version:** 1.0 · 2026-08-14
-**Code state:** branch `dev` @ `603807a`
+**Code state:** branch `dev` @ `603807a` — the last code-bearing commit at the time of writing. Contract sources are unchanged since `990711a`.
 **Audience:** engineers, auditors, and reviewers of Deliverable 3.5
 
 ---

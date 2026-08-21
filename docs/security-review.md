@@ -2,7 +2,7 @@
 
 **Scope:** `contracts/vaquita-pool` + `contracts/vaquita-badges` (Soroban / Rust, `#![no_std]`, target `wasm32v1-none`)
 **Review period:** 2026-07-27 → 2026-08-14
-**Code state reviewed:** branch `dev` @ `603807a`
+**Contract sources reviewed:** `990711a` — the last commit touching `contracts/**/*.rs`, and still the current state of the contract code. Commits after it change only application code and documentation, so the findings below remain verifiable at any later revision.
 **Tools:** Almanax (AI-assisted review) · CoinFabrik Scout (`cargo-scout-audit` 0.3.16) · xycloo soroban-analyzer
 **Verification:** every remediation claim below was re-checked against source on 2026-08-14; test suite and coverage re-run from a clean state.
 
@@ -271,7 +271,7 @@ Checking vaquita-pool v0.0.0 (/…/contracts/vaquita-pool)
 
 ## 6. Deployment status — must be completed before sign-off
 
-Everything in §3 is verified **in source on `dev` @ `603807a`**. That is a statement about the code, not about the running system.
+Everything in §3 is verified **in source at `990711a`**, the current state of the contract sources. That is a statement about the code, not about the running system.
 
 | Question | Status |
 |---|---|
@@ -288,7 +288,7 @@ If mainnet still runs a pre-fix WASM, ship via the timelocked upgrade flow: `pro
 
 ## 7. Verification evidence
 
-Re-run from a clean state on 2026-08-14 against `dev` @ `603807a`:
+Re-run from a clean state on 2026-08-14, against contract sources at `990711a`:
 
 ```
 $ cargo test --workspace
