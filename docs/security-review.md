@@ -179,7 +179,7 @@ None are exploitable. Listed so nothing is silently dropped.
 | **O1** | Lock-period ceiling (2 y) exceeds position TTL (~90 d) | LOW | This review |
 | **O2** | `soroban-sdk` five major versions behind | INFO | Scout |
 | **O3** | `update_upgrade_timelock_secs` emits no event (both contracts) | INFO | Scout |
-| **O4** | DeFindex vault WASM provenance record is untracked/incomplete | INFO | Scout + this review |
+| **O4** | DeFindex vault WASM has no pinned upstream source revision | INFO | Scout + this review |
 | **O5** | Fixed WASM not confirmed deployed | — | This review (§6) |
 | **O6** | Phase-2 cross-stack migration not fully validated | — | Team checklist |
 | **O7** | Scout can report a false all-clear in CI | — | This review (§5.3) |
@@ -208,10 +208,10 @@ Both `pool/upgrade.rs:127-141` and `badges/upgrade.rs:123-133` write `DataKey::U
 
 `pool/defindex_vault.rs` uses `contractimport!` on a vendored binary. Better than scout implied — the WASM **is** committed, and its SHA-256 matches the documented value (verified: `f345228d…16be`). Two gaps remain:
 
-1. The `README.md` recording that provenance is **untracked** (still showing as `??` in git status), so the record itself isn't in the repo.
-2. The source commit field is a placeholder: *"(see git log for the commit that introduced this file)"* — there is no pinned upstream revision.
+1. ~~The `README.md` recording that provenance is untracked, so the record itself isn't in the repo.~~ **Resolved** — committed alongside this revision; the recorded SHA-256 was re-verified against the binary at that time.
+2. The source commit field is a placeholder: *"(see git log for the commit that introduced this file)"* — there is no pinned upstream revision. **Still open.** Nothing in this repository records which `paltalabs/defindex` commit produced the binary, so it cannot be recovered from here: it has to come from whoever vendored it.
 
-Fix: commit the README and record the actual upstream commit hash.
+Remaining fix: replace the placeholder with the actual upstream commit hash. Until then the binary is verifiable against its own recorded hash, but not traceable to a source revision.
 
 ---
 
