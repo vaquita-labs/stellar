@@ -99,8 +99,6 @@ pnpm workspace monorepo. Workspace members are declared in `pnpm-workspace.yaml`
 | `contracts/` | Soroban Rust workspace: `vaquita-pool`, `vaquita-badges`. | — (Cargo) |
 | `analytics/` | Analytics workspace. | ✅ |
 
-> **Stale directories.** `apps/listener/` and `apps/job-deposits/` contain only leftover `node_modules` — no source, and they are not workspace members. Their responsibilities were absorbed by `apps/reconciler`. They should be deleted; documentation referring to them (including `CLAUDE.md`) is out of date.
-
 ### Commands
 
 ```bash
@@ -338,9 +336,8 @@ Carried forward from `docs/security-review.md` §4 so it is visible in one place
 1. **`soroban-sdk` is five majors behind** (22.0.3 → 27.0.6). Largest real gap; needs a planned migration with a storage/TTL semantics re-audit.
 2. **Lock-period ceiling (2 y) exceeds position TTL (~90 d).** Long-locked positions archive before maturity and need on-demand restore; the frontend does not currently do this. Latent unless a >90 d period is configured.
 3. **No event on `update_upgrade_timelock_secs`** in either contract — a security-relevant admin action invisible to off-chain monitors.
-4. **DeFindex vault WASM provenance incomplete** — binary is committed and its SHA-256 matches, but the README recording it is untracked and the upstream commit is a placeholder.
-5. **Stale app directories** `apps/listener/`, `apps/job-deposits/` should be removed, and `CLAUDE.md` updated to match the real topology.
-6. **Cross-stack nonce migration not fully validated** — the ABI change from `deposit_id: String` to `nonce: u64` is implemented across DB/API/web but still needs an end-to-end testnet smoke test.
+4. **DeFindex vault WASM has no pinned upstream revision** — the binary is committed, its SHA-256 matches, and the provenance README is now tracked, but the source commit field is still a placeholder and cannot be resolved from this repository.
+5. **Cross-stack nonce migration not fully validated** — the ABI change from `deposit_id: String` to `nonce: u64` is implemented across DB/API/web but still needs an end-to-end testnet smoke test.
 
 ---
 
