@@ -77,12 +77,15 @@ Lines 99.67% / Regions 95.96% (all >95%); full suite **169 tests green**. Contra
 
 ### P1. `add_lock_period` unbounded + no overflow bound
 - Finding: `1d4e7d58` (LOW); ties into f620e7c9 (D/S1 below).
-- Adding a `MAX_LOCK_PERIOD_SECS` cap (consistent with the existing "≤30 days" invariant documented in
-  `positions.rs`) rejects periods an admin could previously add. Safe given current config uses ≤30d, but it
-  removes an admin capability → flagged.
-- **Status: ✅ DONE.** `MAX_LOCK_PERIOD_SECS = 30 days` enforced in `__constructor` (assert) and
-  `add_lock_period` (`LockPeriodExceedsMax`). This makes the S1 `finalization_time` overflow
-  unreachable (kept as defense-in-depth).
+- Adding a `MAX_LOCK_PERIOD_SECS` cap rejects periods an admin could previously add. It removes an admin
+  capability → flagged.
+- **Status: ✅ DONE.** `MAX_LOCK_PERIOD_SECS` enforced in `__constructor` (assert) and `add_lock_period`
+  (`LockPeriodExceedsMax`). This makes the S1 `finalization_time` overflow unreachable (kept as
+  defense-in-depth).
+- The cap was originally 30 days, matching the invariant then documented in `positions.rs`. It was raised to
+  **2 years** in `990711a`; `lib.rs:34` is the current value. Note that this now exceeds
+  `POSITION_TTL_EXTEND_TO` (~90 days), so a long-locked position can archive before it matures — tracked as
+  open item O1 in `security-review.md`, not by this checklist.
 
 ### P2. Badges: enforce a **minimum** upgrade timelock
 - Finding part of `2ce344e3` (MED).
@@ -138,8 +141,9 @@ Then:
 - **apps/api** — expose/compute the next nonce per wallet; update deposit/withdraw invoke construction.
 - **apps/listener** + **apps/job-deposits** — event decoding: `deposit_id` is now `BytesN<32>` (hex),
   emitted in the deposit/withdraw events; persist alongside the wallet's `nonce`.
-- The new contract's constructor now rejects lock periods > 30 days and timelock < 1 hour — set deploy
-  config (`POOL_LOCK_PERIODS`, `POOL_UPGRADE_TIMELOCK_SECS`, badges timelock) accordingly.
+- The new contract's constructor now rejects lock periods above `MAX_LOCK_PERIOD_SECS` (2 years, see
+  `lib.rs:34`) and timelock < 1 hour — set deploy config (`POOL_LOCK_PERIODS`,
+  `POOL_UPGRADE_TIMELOCK_SECS`, badges timelock) accordingly.
 
 ---
 
