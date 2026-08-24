@@ -337,11 +337,36 @@ Properties relied upon by the analysis above, recorded so a future reviewer can 
 | Role | Name | Date | Signature |
 |---|---|---|---|
 | Contract author / remediation | Fabio Laura | 2026-08-17 | ✅ Signed — Fabio Laura |
-| Independent cross-review | Oscar | | ⬜ Pending |
+| Independent cross-review | Oscar Gauss Carvajal Yucra | 2026-08-24 | ✅ Signed — Oscar Gauss Carvajal Yucra |
 
 **Fabio Laura, 2026-08-17.** I authored the remediations recorded in §3 and confirm that, to the best of my knowledge, the findings are addressed as described, the verification evidence in §7 is accurate, and the open items in §4 are complete and correctly characterised.
 
-> Deliverable 3.5 specifies manual cross-review between Fabio and Oscar in addition to the tooling. The independent cross-review row remains open: it records human review that is **not** evidenced by anything in this repository, and it must be completed by the named reviewer. A sign-off from the remediation author alone does not satisfy the cross-review requirement.
+**Oscar Gauss Carvajal Yucra, 2026-08-24.** I performed the independent cross-review required by Deliverable 3.5. I authored none of the remediations recorded in §3.
+
+**Re-executed from a clean toolchain**, against the contract sources at `990711a`:
+
+- `make test` — 57 badges + 112 pool = **169 tests, 0 failures, 0 warnings**.
+- `make coverage` — **Functions 97/97 (100.00%) · Lines 1206/1210 (99.67%) · Regions 1877/1956 (95.96%)**, reproducing the §7 figures exactly.
+
+**Read against source.** All twelve remediations marked RESOLVED are present and behave as described, including the exact balance-delta guard and error variant 26 for `02a02675`, the contract-derived `sha256(caller ‖ nonce)` position key for `1e484c83`, the per-position `token` plus fail-closed repoint for `038e5c7a`, the execute-time lock re-check for `284b1ad9`, and the checked vector access for `95153d60`. Open items O2, O3 and O4 are accurately characterised: the SDK pin is `22.0.3` (`contracts/Cargo.toml:17`), neither `update_upgrade_timelock_secs` emits an event, and the vendored DeFindex WASM matches its recorded SHA-256 while its upstream commit field remains a placeholder. Test-only state hooks are correctly isolated — `mock_defindex_vault.rs` by a file-level `#![cfg(test)]`, and `VaquitaPool::test_corrupt_total_principal` by a per-function `#[cfg(test)]`.
+
+**Raised by this cross-review.** None are exploitable; they are recorded here so that nothing is carried silently:
+
+| # | Item |
+|---|---|
+| **C1** | `f620e7c9` has no regression test. §7 lists a "`finalization_time` overflow revert" in `security_fixes.rs`; that file contains no such test, and no test in either crate exercises the `checked_add` guard on `finalization_time`. Under the §2 vocabulary, RESOLVED requires test coverage. |
+| **C2** | `docs/admin-key-rotation-runbook.md` step 3 invokes `update_signing_key --caller <ADMIN_ADDRESS> --new_key …`, but the entry point takes only `new_key`. The documented command cannot succeed. |
+| **C3** | Neither contract can change its admin. `DataKey::Admin` is written once, in each `__constructor`, and never again. The runbook's pre-mainnet migration to a 2-of-3 multisig is therefore not executable without a contract upgrade, and §8 does not record that the admin address is immutable. |
+| **C4** | `VaquitaBadges::migrate` is public and unauthenticated, while `VaquitaPool::migrate` is `require_owner`-gated. The body is empty in v1, so the present risk is nil — but it is the same badges/pool parity gap that produced `284b1ad9`. |
+| **C5** | `pool/upgrade.rs:26` reads the timelock as `.unwrap_or(0)` (fail-open); badges uses `.unwrap_or(DEFAULT_TIMELOCK_SECS)` (fail-safe). Unreachable while instance storage is live, but the safer default belongs in the contract holding the funds. |
+| **C6** | The pool computes `ready_at` with `saturating_add`, badges with `checked_add`. §8 presents the two as one shared upgrade model. |
+| **C7** | The two crates document contradictory values for the same network parameter: `positions.rs:24` states a maximum entry TTL of ~180 days, `badges/storage.rs:9` states 365 days. The O1 argument depends on that figure. |
+| **C8** | §7 and `docs/architecture.md` §3 both present `cargo test --workspace` as a standalone command. From a clean tree it fails: the upgrade and event tests `include_bytes!` the compiled WASM, so the build must run first. `make test` and the CI workflow both do; the documentation does not say so. |
+| **C9** | §3.2 cites a test named `lock_forever_blocks_execute`; the test is `execute_upgrade_blocked_after_lock`. |
+
+**Not covered by this signature.** I did not re-run the three scanners, and I did not independently reproduce the team-reported testnet validation of `02a02675`. Deployment status remains as recorded in §6.
+
+> Deliverable 3.5 specifies manual cross-review between Fabio and Oscar in addition to the tooling. Both rows are now signed. The mainnet deployment row in §6 remains open and is covered by neither signature.
 
 ---
 
