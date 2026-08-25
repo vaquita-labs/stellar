@@ -11,6 +11,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
     "format": "prettier --write .",
     "gen:blur": "node scripts/gen-blur-placeholders.mjs"
   },
@@ -55,6 +59,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.62.1",
     "@react-types/shared": "^3.35.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "^25.9.1",
