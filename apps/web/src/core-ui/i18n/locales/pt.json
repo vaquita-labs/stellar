@@ -288,8 +288,10 @@
         "rewards": "Moedas, medalhas, experiência e demais itens do app não têm valor monetário, não podem ser trocados por dinheiro e podem ser ajustados ou removidos."
       },
       "noAdvice": {
-        "heading": "6. Não é aconselhamento",
-        "body": "Nada no Serviço constitui aconselhamento financeiro, de investimento, jurídico, tributário ou contábil, nem recomendação para realizar qualquer operação. Não somos seu corretor, consultor ou fiduciário. Você decide por conta própria e deve buscar orientação profissional se precisar."
+        "heading": "6. Não é aconselhamento nem serviço financeiro",
+        "body": "Nada no Serviço constitui aconselhamento financeiro, de investimento, jurídico, tributário ou contábil, nem recomendação para realizar qualquer operação. Não somos seu corretor, consultor ou fiduciário. Você decide por conta própria e deve buscar orientação profissional se precisar.",
+        "notLicensed": "A Vaquita não é um banco. Não possuímos autorização bancária, de moeda eletrônica, de instituição de pagamento, de valores mobiliários, de investimento ou equivalente em nenhuma jurisdição, e não prestamos serviços bancários, de transmissão de recursos, de intermediação ou de investimento. Seu depósito não é uma conta de depósito e não gera qualquer direito de crédito contra nós.",
+        "software": "O que oferecemos é software que permite interagir com contratos inteligentes públicos e com protocolos e parceiros terceiros. Não somos parte desses protocolos, não os controlamos e não garantimos seu funcionamento."
       },
       "risks": {
         "heading": "7. Riscos",
