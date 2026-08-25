@@ -3,8 +3,11 @@
 import React from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { LegalLayout } from './LegalLayout';
+import { TERMS_LAST_UPDATED } from './version';
 
-export const TERMS_LAST_UPDATED = '2026-05-11';
+export { TERMS_LAST_UPDATED };
+
+const bold = { b: <strong /> };
 
 export function TermsPage() {
   const { t } = useTranslation();
@@ -15,25 +18,49 @@ export function TermsPage() {
       <h2>{t('auth.terms.service.heading')}</h2>
       <p>{t('auth.terms.service.body')}</p>
 
-      <h2>{t('auth.terms.eligibility.heading')}</h2>
-      <p>{t('auth.terms.eligibility.body')}</p>
+      <h2>{t('auth.terms.beta.heading')}</h2>
+      <p>{t('auth.terms.beta.body')}</p>
 
-      <h2>{t('auth.terms.wallet.heading')}</h2>
+      <h2>{t('auth.terms.eligibility.heading')}</h2>
       <ul>
-        <li>{t('auth.terms.wallet.security')}</li>
-        <li>{t('auth.terms.wallet.noMove')}</li>
-        <li>{t('auth.terms.wallet.irreversible')}</li>
+        {['age', 'jurisdiction', 'local', 'breach'].map((key) => (
+          <li key={key}>{t(`auth.terms.eligibility.${key}`)}</li>
+        ))}
       </ul>
 
+      <h2>{t('auth.terms.custody.heading')}</h2>
+      <p>{t('auth.terms.custody.intro')}</p>
+      <ul>
+        <li>
+          <Trans i18nKey="auth.terms.custody.self" components={bold} />
+        </li>
+        <li>
+          <Trans i18nKey="auth.terms.custody.managed" components={bold} />
+        </li>
+      </ul>
+      <p>{t('auth.terms.custody.responsibility')}</p>
+
+      <h2>{t('auth.terms.deposits.heading')}</h2>
+      <ul>
+        {['lock', 'early', 'onTime', 'variable', 'noInsurance', 'rewards'].map((key) => (
+          <li key={key}>{t(`auth.terms.deposits.${key}`)}</li>
+        ))}
+      </ul>
+
+      <h2>{t('auth.terms.noAdvice.heading')}</h2>
+      <p>{t('auth.terms.noAdvice.body')}</p>
+
       <h2>{t('auth.terms.risks.heading')}</h2>
-      <p>{t('auth.terms.risks.body')}</p>
+      <p>
+        <Trans i18nKey="auth.terms.risks.body" components={{ a: <a href="/risk" /> }} />
+      </p>
 
       <h2>{t('auth.terms.acceptableUse.heading')}</h2>
       <p>{t('auth.terms.acceptableUse.intro')}</p>
       <ul>
-        <li>{t('auth.terms.acceptableUse.unlawful')}</li>
-        <li>{t('auth.terms.acceptableUse.disrupt')}</li>
-        <li>{t('auth.terms.acceptableUse.impersonate')}</li>
+        {['unlawful', 'disrupt', 'impersonate'].map((key) => (
+          <li key={key}>{t(`auth.terms.acceptableUse.${key}`)}</li>
+        ))}
       </ul>
 
       <h2>{t('auth.terms.ip.heading')}</h2>
@@ -42,6 +69,17 @@ export function TermsPage() {
       <h2>{t('auth.terms.disclaimers.heading')}</h2>
       <p>{t('auth.terms.disclaimers.body')}</p>
 
+      <h2>{t('auth.terms.liability.heading')}</h2>
+      <p>{t('auth.terms.liability.body')}</p>
+      <p>{t('auth.terms.liability.cap')}</p>
+      <p>{t('auth.terms.liability.exclusions')}</p>
+
+      <h2>{t('auth.terms.indemnity.heading')}</h2>
+      <p>{t('auth.terms.indemnity.body')}</p>
+
+      <h2>{t('auth.terms.termination.heading')}</h2>
+      <p>{t('auth.terms.termination.body')}</p>
+
       <h2>{t('auth.terms.changes.heading')}</h2>
       <p>{t('auth.terms.changes.body')}</p>
 
@@ -49,7 +87,7 @@ export function TermsPage() {
       <p>
         <Trans
           i18nKey="auth.terms.contact.body"
-          components={{ a: <a href="mailto:hello@vaquita.finance" /> }}
+          components={{ a: <a href="mailto:hello@vaquita.fi" /> }}
         />
       </p>
     </LegalLayout>

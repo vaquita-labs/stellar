@@ -31,6 +31,7 @@ import {
   toProfileExperienceResponseDTO,
   toProfileMapObjectsAvailableResponseDTO,
   toProfileMapObjectsResponseDTO,
+  getAcceptedPolicyVersion,
   toProfileResponseDTO,
   toProfileRewardsResponseDTO,
   toProfileStreakResponseDTO,
@@ -59,7 +60,11 @@ router.get('/wallet/:walletAddress', async (req, res) => {
     return sendError(res, errorMessage, errors, 404);
   }
 
-  return sendSuccess(res, toProfileResponseDTO(await getNetworkName(), profileData));
+  const [networkName, legalAcceptedVersion] = await Promise.all([
+    getNetworkName(),
+    getAcceptedPolicyVersion(profileData.id),
+  ]);
+  return sendSuccess(res, toProfileResponseDTO(networkName, profileData, legalAcceptedVersion));
 });
 
 router.get('/wallet/:walletAddress/data', async (req, res) => {
@@ -73,7 +78,14 @@ router.get('/wallet/:walletAddress/data', async (req, res) => {
     return sendError(res, errorMessage, errors, 404);
   }
 
-  return sendSuccess(res, toProfileResponseDTO(await getNetworkName(), profileData));
+  // The acceptance gate reads this endpoint, so the accepted version has to be
+  // real here (the list/nickname endpoints below leave it '' — nothing gates on
+  // those, and a per-row lookup there would be an N+1).
+  const [networkName, legalAcceptedVersion] = await Promise.all([
+    getNetworkName(),
+    getAcceptedPolicyVersion(profileData.id),
+  ]);
+  return sendSuccess(res, toProfileResponseDTO(networkName, profileData, legalAcceptedVersion));
 });
 
 router.get('/wallet/:walletAddress/experience', async (req, res) => {

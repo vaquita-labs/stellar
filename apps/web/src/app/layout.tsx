@@ -9,7 +9,7 @@ export { viewport } from './viewport';
 
 export const metadata: Metadata = {
   title: 'Vaquita App',
-  description: 'La forma más segura y divertida de generar ahorros con el poder de la blockchain',
+  description: 'La forma más divertida de generar ahorros con el poder de la blockchain',
   applicationName: 'Vaquita',
   // iOS ignores the manifest for Add to Home Screen; these tags make the
   // installed shortcut open full-screen with the right name and icon.

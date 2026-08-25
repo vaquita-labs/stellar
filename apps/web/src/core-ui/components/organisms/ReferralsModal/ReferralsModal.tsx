@@ -11,7 +11,7 @@ import { PressableButton } from '../../molecules/PressableButton';
 
 // Página externa que explica cómo funcionan los referidos (qué cuenta como un
 // referido activo, cómo se acumula el APY). Un solo lugar para cambiar la URL.
-const REFERRALS_LEARN_MORE_URL = 'https://vaquita.finance/referrals';
+const REFERRALS_LEARN_MORE_URL = 'https://vaquita.fi/referrals';
 
 /**
  * Referidos: explica cómo el APY sube por tramos según los referidos activos y

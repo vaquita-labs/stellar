@@ -499,7 +499,17 @@ export const getMapObjectsAvailableData = async () => {
   };
 };
 
-export const toProfileResponseDTO = (networkName: string, profile: Profile): ProfileResponseDTO => {
+/**
+ * `legalAcceptedVersion` is passed in rather than read here: the mapper is
+ * synchronous and is also used to map a whole list of profiles, where a
+ * per-row acceptance lookup would be an N+1. The single-profile endpoints the
+ * acceptance gate reads pass the real value; list endpoints leave it ''.
+ */
+export const toProfileResponseDTO = (
+  networkName: string,
+  profile: Profile,
+  legalAcceptedVersion = '',
+): ProfileResponseDTO => {
 
   // Defaults merged under whatever the user saved (the column may be NULL or
   // partial). The email channel requires an email address on the profile, so a
@@ -520,6 +530,7 @@ export const toProfileResponseDTO = (networkName: string, profile: Profile): Pro
     onboardingCompleted: profile.onboarding_completed ?? false,
     tutorialCompleted: profile.tutorial_completed ?? false,
     cryptoSavvy: profile.crypto_savvy ?? false,
+    legalAcceptedVersion,
     language: profile.language ?? '',
     currency: profile.currency ?? '',
     notificationPreferences,

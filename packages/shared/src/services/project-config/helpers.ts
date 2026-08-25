@@ -6,6 +6,7 @@ import type {
   ProjectConfigResponseDTO,
 } from '../../types';
 import { isTokenUsable } from './readiness';
+import { DEFAULT_LEGAL_POLICY_VERSION } from '../legal';
 
 /**
  * Coerces a `{ id, label, hint? }[]` Json column into a typed option list,
@@ -65,4 +66,5 @@ export const toProjectConfig = (
   })),
   currencies: toCurrencies(config.currencies),
   languages: toLanguages(config.languages),
+  legalPolicyVersion: config.legalPolicyVersion || DEFAULT_LEGAL_POLICY_VERSION,
 });

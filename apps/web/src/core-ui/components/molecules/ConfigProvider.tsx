@@ -8,6 +8,7 @@ import { useLoading } from '@/core-ui/stores';
 import { useConfigStore } from '@/core-ui/stores';
 import { NetworkResponseDTO } from '../../types';
 import { BootLoader } from './BootLoader';
+import { LEGAL_POLICY_VERSION } from '../pages/legal/version';
 
 /**
  * Shape returned by `GET /api/v1/config` (single-network `ProjectConfigResponseDTO`):
@@ -22,6 +23,7 @@ type ProjectConfigResponse = {
   tokens: NetworkResponseDTO['tokens'];
   currencies?: NetworkResponseDTO['currencies'];
   languages?: NetworkResponseDTO['languages'];
+  legalPolicyVersion?: string;
 };
 
 const transformConfig = (data: unknown): NetworkResponseDTO | null => {
@@ -38,6 +40,9 @@ const transformConfig = (data: unknown): NetworkResponseDTO | null => {
     tokens,
     currencies: config.currencies ?? [],
     languages: config.languages ?? [],
+    // Falls back to the bundled constant: an empty required version would make
+    // every acceptance check pass, silently disabling the gate.
+    legalPolicyVersion: config.legalPolicyVersion || LEGAL_POLICY_VERSION,
   };
 };
 

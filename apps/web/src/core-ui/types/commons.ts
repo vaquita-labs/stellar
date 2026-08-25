@@ -61,6 +61,10 @@ export interface NetworkResponseDTO {
   }[];
   currencies: CurrencyDTO[];
   languages: LanguageDTO[];
+  /** Bundle version of the Privacy Policy / Terms / Risk Disclosure the user
+   *  must currently have accepted. Served from the API so a revision re-gates
+   *  everyone without a frontend deploy. */
+  legalPolicyVersion: string;
 }
 
 export interface DepositSummaryResponseDTO {
@@ -162,6 +166,10 @@ export interface ProfileResponseDTO {
   onboardingCompleted: boolean;
   tutorialCompleted: boolean;
   cryptoSavvy: boolean;
+  /** Legal bundle version this profile last accepted, '' if never. Compared to
+   *  `NetworkResponseDTO.legalPolicyVersion` by string equality — any mismatch
+   *  re-gates the user. */
+  legalAcceptedVersion: string;
   // Per-user display preferences (option ids from the project config lists).
   // Empty string until the user picks one.
   language: string;

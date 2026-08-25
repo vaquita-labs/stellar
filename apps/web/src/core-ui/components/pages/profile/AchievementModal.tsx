@@ -276,7 +276,7 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
    * origin during SSR so the URL is always absolute.
    */
   const buildShareUrl = (): string => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.finance';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://vaquita.fi';
     const qs = new URLSearchParams();
     if (username) qs.set('u', username);
     const query = qs.toString();

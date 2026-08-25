@@ -159,92 +159,249 @@
       "logoAlt": "Logo de Vaquita",
       "viewIntroAgain": "Ver la intro de nuevo",
       "welcomeSubtitle": "Regístrate para empezar a ahorrar de forma segura",
-      "welcomeTitle": "Bienvenido"
+      "welcomeTitle": "Bienvenido",
+      "legalNotice": "Al continuar aceptás nuestros <terms>Términos del Servicio</terms> y nuestra <privacy>Política de Privacidad</privacy>, y confirmás que leíste la <risk>Declaración de Riesgos</risk>."
     },
     "privacy": {
-      "changes": {
-        "body": "Actualizaremos la fecha de “Última actualización” de arriba cada vez que esta política cambie. Los cambios importantes también se anunciarán en la app.",
-        "heading": "6. Cambios"
-      },
-      "children": {
-        "body": "Vaquita no está dirigida a menores de 13 años y no recopilamos datos de ellos a sabiendas.",
-        "heading": "5. Menores de edad"
-      },
-      "choices": {
-        "delete": "Escríbenos a <a>privacy@vaquita.finance</a> para solicitar la eliminación de los datos de tu perfil.",
-        "disconnect": "Desconecta tu wallet en cualquier momento desde la pantalla de Ajustes.",
-        "heading": "4. Tus opciones",
-        "hideBalance": "Activa <b>Ocultar saldo</b> en Ajustes → Configuración de privacidad para ocultar los montos en pantalla."
+      "title": "Política de Privacidad",
+      "intro": "Esta Política de Privacidad explica qué información personal recopila Vaquita cuando usás la app, por qué la recopilamos, con quién la compartimos y qué derechos tenés sobre ella.",
+      "scope": {
+        "heading": "1. A qué se aplica esta política",
+        "body": "Vaquita es una app de ahorro y gamificación construida sobre la red Stellar. Algunas partes de la experiencia las operamos nosotros; otras — la infraestructura de billeteras, las rampas de entrada y salida de dinero fiat, y la propia blockchain pública — las operan terceros que tratan tus datos bajo sus propias políticas. Esta política describe lo que hacemos nosotros y nombra a esos terceros para que puedas encontrar las suyas."
       },
       "collect": {
-        "heading": "1. Información que recopilamos",
-        "profile": "<b>Datos de perfil.</b> Apodo y correo opcionales, si decides proporcionarlos.",
-        "usage": "<b>Datos de uso.</b> Analíticas agregadas y no identificables sobre qué pantallas visitas, que usamos para mejorar la app.",
-        "wallet": "<b>Dirección de la wallet.</b> Cuando conectas una wallet, leemos su dirección pública para poder mostrarte tus saldos y actividad."
+        "heading": "2. Información que recopilamos",
+        "intro": "Recopilamos las siguientes categorías de información:",
+        "account": "<b>Cuenta y perfil.</b> Tu dirección de billetera, y el apodo, correo electrónico, avatar, idioma y moneda de visualización, y preferencias de notificación que elijas configurar. Tu apodo y tu avatar son públicos: aparecen en tu perfil, en la tabla de posiciones y en los enlaces de logros que compartas.",
+        "financial": "<b>Registros de transacciones.</b> Depósitos, retiros, montos, plazos de bloqueo, hashes de transacción, las billeteras de cobro que guardes y las transferencias entre redes, incluida la dirección de la contraparte.",
+        "social": "<b>Datos sociales y de juego.</b> A quién seguís y quién te sigue, los «me gusta» dados y recibidos en tu mundo 3D, las relaciones de referidos, insignias, rachas, experiencia, recompensas dentro de la app, la disposición e inventario de tu mundo, y tus notificaciones.",
+        "device": "<b>Datos técnicos y del dispositivo.</b> Cuando te conectás, registramos un identificador de sesión junto con el user agent, la plataforma y el idioma de tu navegador. Si activás las notificaciones push, guardamos el endpoint push que emite el servicio de tu navegador y sus claves de cifrado.",
+        "diagnostics": "<b>Diagnósticos.</b> Recopilamos eventos de error y diagnóstico de la aplicación para detectar y corregir fallas. Pueden incluir tu dirección de billetera y detalles de transacciones cuando forman parte de la falla que se reporta.",
+        "kyc": "<b>Verificación de identidad.</b> Si usás una rampa de entrada o salida de dinero fiat, nuestro socio recopila la información de identidad que le exige su regulador — que puede incluir tu nombre completo, correo electrónico, identificación fiscal, documentos de identidad y datos bancarios, de Pix o de PSE. Eso lo recopila el socio, en sus sistemas, bajo su política de privacidad. Nosotros recibimos el estado resultante, no tus documentos."
+      },
+      "use": {
+        "heading": "3. Cómo usamos esta información",
+        "operate": "Para operar la app: mostrar tus saldos, posiciones, progreso de ahorro, mundo y recompensas.",
+        "transactions": "Para preparar, enviar y hacer seguimiento de tus transacciones on-chain, y conciliarlas contra la blockchain.",
+        "rewards": "Para calcular tablas de posiciones, rachas, insignias y recompensas por referidos, y para autorizar la emisión de insignias.",
+        "comms": "Para enviarte las notificaciones dentro de la app y push que hayas activado.",
+        "abuse": "Para detectar, investigar y prevenir fraudes, abusos e incidentes de seguridad.",
+        "legal": "Para cumplir nuestras obligaciones legales y regulatorias, y para hacer cumplir nuestros Términos del Servicio."
+      },
+      "share": {
+        "heading": "4. Con quién la compartimos",
+        "intro": "No vendemos tu información personal. La compartimos con los siguientes proveedores, cada uno únicamente para la finalidad indicada:",
+        "pollar": "<b>Pollar</b> — infraestructura de inicio de sesión y billeteras. Si iniciás sesión con correo electrónico o con una red social, Pollar crea y opera una billetera en tu nombre y custodia sus claves. Pollar también opera nuestra rampa de salida a dinero fiat y recopila los datos de identidad y bancarios descritos arriba.",
+        "anclap": "<b>Anclap</b> — rampas de entrada y salida a monedas locales, mediante los estándares SEP-24 y SEP-12 de Stellar. Anclap realiza su propia verificación de identidad en una ventana alojada por ellos.",
+        "ably": "<b>Ably</b> — entrega de mensajes en tiempo real para actualizaciones en vivo y eventos de diagnóstico.",
+        "infra": "<b>Nuestra propia infraestructura.</b> La base de datos y la analítica de producto corren en servidores que controlamos.",
+        "observability": "<b>Grafana Cloud</b> — almacenamiento de logs y métricas del servidor, usado para monitoreo de disponibilidad y diagnóstico de fallas.",
+        "push": "<b>Servicios push</b> — el proveedor push de tu navegador, como Google o Apple, entrega las notificaciones push a tu dispositivo.",
+        "qr": "<b>Generación de códigos QR</b> — cuando abrís el panel de compartir, el enlace que se codifica se envía a un servicio de imágenes QR de terceros.",
+        "embeds": "<b>Tutoriales integrados</b> — partes del onboarding y del tutorial incrustan contenido de un proveedor de demos externo, que puede establecer sus propias cookies.",
+        "rpc": "<b>Infraestructura blockchain</b> — tu navegador consulta directamente servidores públicos de RPC y Horizon de Stellar. Esos operadores pueden ver tu dirección IP junto con la dirección de billetera consultada.",
+        "dune": "<b>Dune</b> — publicamos la actividad de los contratos, que contiene direcciones de billetera ya públicas on-chain, con fines de analítica.",
+        "legal": "También podemos divulgar información cuando la ley nos lo exija, o cuando sea necesario para establecer, ejercer o defender una acción legal."
+      },
+      "onchain": {
+        "heading": "5. Los datos en blockchain son públicos y permanentes",
+        "body": "Los depósitos, retiros e insignias quedan registrados en la red Stellar. Esos datos son públicos, permanentes y están fuera de nuestro control. No podemos editarlos ni borrarlos, y una solicitud de eliminación no puede quitarlos. Cualquiera puede vincular una dirección de billetera con todo su historial de transacciones, y con cualquier apodo o perfil que hayas hecho público."
+      },
+      "transfers": {
+        "heading": "6. Transferencias internacionales",
+        "body": "Atendemos usuarios en varios países, y algunos de nuestros proveedores almacenan datos fuera de tu país de residencia — en particular, nuestro almacenamiento de logs y métricas está ubicado en los Estados Unidos. Cuando la ley lo exige, aplicamos las garantías adecuadas para esas transferencias."
+      },
+      "storage": {
+        "heading": "7. Cookies y almacenamiento local",
+        "intro": "La app de Vaquita no instala cookies propias de publicidad ni de rastreo. Sí guarda lo siguiente en tu navegador:",
+        "session": "El token de sesión de tu billetera, que mantiene tu sesión iniciada.",
+        "cache": "Una caché de los datos de la app cargados recientemente, para que las pantallas abran al instante.",
+        "prefs": "Tus preferencias y el estado de la interfaz: idioma, si los saldos están ocultos y qué avisos descartaste.",
+        "thirdParty": "El contenido de terceros incrustado, como los tutoriales guiados, puede instalar sus propias cookies, que no controlamos."
+      },
+      "retention": {
+        "heading": "8. Cuánto tiempo la conservamos",
+        "body": "Conservamos los registros de perfil y de transacciones mientras exista tu cuenta y, después, durante el tiempo que los necesitemos para cumplir obligaciones legales, contables y de prevención del fraude. Los datos de diagnóstico y de logs se conservan por un período limitado y luego se descartan. Los datos escritos en la blockchain no se pueden borrar en absoluto."
+      },
+      "rights": {
+        "heading": "9. Tus derechos",
+        "intro": "Según dónde vivas, podés tener derecho a:",
+        "access": "Solicitar una copia de la información personal que tenemos sobre vos.",
+        "correct": "Que se corrija la información inexacta.",
+        "delete": "Pedirnos que eliminemos los datos de tu perfil.",
+        "portability": "Recibir tus datos en un formato portable.",
+        "object": "Oponerte a determinados tratamientos, o pedirnos que los limitemos.",
+        "complain": "Presentar un reclamo ante tu autoridad local de protección de datos.",
+        "exercise": "Para ejercer cualquiera de estos derechos, escribí a <a>privacy@vaquita.fi</a> desde el correo de tu perfil, o contactanos indicando la dirección de billetera correspondiente. Responderemos dentro del plazo que exija tu legislación local.",
+        "limits": "Hay dos límites que se aplican siempre. No podemos borrar nada registrado en la blockchain. Y cuando un socio recopiló tus documentos de identidad directamente para cumplir sus propias obligaciones regulatorias, tendrás que ejercer tus derechos ante ese socio.",
+        "regional": "Si estás en el Espacio Económico Europeo o en el Reino Unido, tratamos tus datos para ejecutar nuestro contrato con vos, por nuestro interés legítimo en mantener el Servicio seguro, con tu consentimiento cuando lo diste, y para cumplir nuestras obligaciones legales. Si estás en California, no vendemos ni compartimos información personal en el sentido que la CCPA da a esos términos. Los usuarios de Brasil, Argentina, Colombia y Perú tienen derechos equivalentes bajo sus leyes nacionales de protección de datos."
+      },
+      "security": {
+        "heading": "10. Seguridad",
+        "body": "Restringimos el acceso a nuestros sistemas y limitamos quién puede llegar a los datos de producción. Ningún sistema es perfectamente seguro, y seguís siendo responsable de la seguridad de tu propia billetera, tu método de recuperación y tu dispositivo."
+      },
+      "children": {
+        "heading": "11. Menores de edad",
+        "body": "Vaquita no está destinada a menores de 18 años y no recopilamos información de menores de forma consciente. Si creés que un menor nos dio información, contactanos y la eliminaremos."
+      },
+      "changes": {
+        "heading": "12. Cambios en esta política",
+        "body": "Actualizaremos la fecha al inicio de esta página cada vez que esta política cambie. Si un cambio es sustancial, te pediremos que revises y aceptes la política actualizada antes de seguir usando la app."
       },
       "contact": {
-        "body": "¿Tienes preguntas? Escríbenos a <a>privacy@vaquita.finance</a>.",
-        "heading": "7. Contacto"
-      },
-      "dont": {
-        "custody": "No tenemos la custodia de tus fondos ni de tus llaves privadas.",
-        "heading": "3. Lo que NO hacemos",
-        "sell": "No vendemos tus datos personales.",
-        "share": "No compartimos la dirección de tu wallet con anunciantes externos."
-      },
-      "intro": "Tu privacidad nos importa. Esta Política de Privacidad explica qué información recopila Vaquita, cómo la usamos y las opciones que tienes.",
-      "title": "Política de Privacidad",
-      "use": {
-        "abuse": "Para detectar abusos y mantener seguro el Servicio.",
-        "emails": "Para enviar correos transaccionales o notificaciones a las que te suscribiste.",
-        "heading": "2. Cómo usamos la información",
-        "operate": "Para operar la app, mostrar tu progreso de ahorro y desbloquear recompensas."
+        "heading": "13. Contacto",
+        "body": "Para cualquier consulta o solicitud sobre privacidad, escribí a <a>privacy@vaquita.fi</a>."
       }
     },
     "terms": {
-      "acceptableUse": {
-        "disrupt": "Intentar interrumpir, hacer ingeniería inversa o comprometer el Servicio.",
-        "heading": "5. Uso aceptable",
-        "impersonate": "Falsear tu identidad o hacerte pasar por otras personas.",
-        "intro": "Te comprometes a no:",
-        "unlawful": "Usar el Servicio para actividades ilícitas o para evadir sanciones."
+      "title": "Términos del Servicio",
+      "intro": "Estos Términos del Servicio rigen tu uso de Vaquita. Al usar la app, los aceptás. Si no estás de acuerdo, no uses el Servicio.",
+      "service": {
+        "heading": "1. El Servicio",
+        "body": "Vaquita es una app de ahorro y gamificación sobre la red Stellar. Depositás una stablecoin admitida en un fondo con bloqueo temporal, y esos fondos se enrutan a una bóveda de rendimiento de un tercero. El interés que se pierde por retiros anticipados se redistribuye entre los usuarios que mantienen hasta el vencimiento. Vaquita también incluye insignias, tablas de posiciones y un mundo 3D, que son funciones de entretenimiento sin valor monetario."
       },
-      "changes": {
-        "body": "Podemos actualizar estos Términos de vez en cuando. Actualizaremos la fecha de “Última actualización” de arriba. El uso continuado del Servicio tras los cambios significa que aceptas los Términos actualizados.",
-        "heading": "8. Cambios"
-      },
-      "contact": {
-        "body": "¿Tienes preguntas? Escríbenos a <a>hello@vaquita.finance</a>.",
-        "heading": "9. Contacto"
-      },
-      "disclaimers": {
-        "body": "El Servicio se ofrece “tal cual”, sin garantías de ningún tipo. En la máxima medida permitida por la ley, no asumimos responsabilidad por daños indirectos, incidentales o consecuentes derivados de tu uso del Servicio.",
-        "heading": "7. Avisos legales"
+      "beta": {
+        "heading": "2. Software en beta",
+        "body": "El Servicio es software en beta, provisto «tal cual» y «según disponibilidad». Puede contener defectos, puede interrumpirse o discontinuarse en cualquier momento, y las funciones pueden cambiar o eliminarse sin aviso. No comprometas fondos que no puedas permitirte perder."
       },
       "eligibility": {
-        "body": "Debes tener al menos 18 años y capacidad legal para celebrar un contrato en tu jurisdicción. Eres responsable de asegurarte de que tu uso del Servicio esté permitido por la ley local.",
-        "heading": "2. Elegibilidad"
+        "heading": "3. Elegibilidad y jurisdicción",
+        "age": "Debés tener al menos 18 años y capacidad legal para celebrar un contrato vinculante.",
+        "jurisdiction": "Declarás que no sos residente ni te encontrás en ningún país o territorio sujeto a sanciones económicas integrales, y que no figurás en ninguna lista de sanciones o de partes restringidas de los Estados Unidos, la Unión Europea, el Reino Unido o las Naciones Unidas.",
+        "local": "Sos responsable de determinar si tu uso del Servicio es lícito donde vivís. Podemos restringir el acceso desde cualquier jurisdicción en cualquier momento, con o sin aviso.",
+        "breach": "Si alguna de estas declaraciones deja de ser cierta, debés dejar de usar el Servicio."
       },
-      "intro": "Bienvenido a Vaquita. Al crear una cuenta, conectar una wallet o usar de cualquier otra forma la app de Vaquita (el “Servicio”), aceptas estos Términos del Servicio (los “Términos”). Por favor, léelos con atención.",
-      "ip": {
-        "body": "El nombre de Vaquita, el logo, la mascota vaquita y las ilustraciones dentro de la app nos pertenecen. Recibes una licencia limitada e intransferible para usar el Servicio con fines personales y no comerciales.",
-        "heading": "6. Propiedad intelectual"
+      "custody": {
+        "heading": "4. Tu billetera y la custodia",
+        "intro": "Cómo se custodian tus fondos depende de cómo iniciaste sesión:",
+        "self": "<b>Billetera de autocustodia.</b> Si conectás tu propia billetera, vos tenés tus claves. Nosotros nunca accedemos a ellas y no podemos mover, congelar ni recuperar tus fondos.",
+        "managed": "<b>Billetera administrada.</b> Si iniciás sesión con correo electrónico o con una red social, nuestro socio de infraestructura crea y opera una billetera para vos, custodia las claves y firma transacciones siguiendo tus instrucciones. Nosotros tampoco tenemos esas claves, pero estás confiando en ese socio en lugar de en tu propia custodia de claves.",
+        "responsibility": "Sos responsable de mantener seguros tus credenciales de acceso, tu método de recuperación y tu dispositivo. Las transacciones on-chain son irreversibles: no podemos revertirlas, cancelarlas ni reembolsarlas, y los fondos enviados a una dirección equivocada no se pueden recuperar."
+      },
+      "deposits": {
+        "heading": "5. Depósitos, plazos de bloqueo y recompensas",
+        "lock": "Al depositar, elegís un plazo de bloqueo. Tu capital se devuelve cuando retirás.",
+        "early": "Si retirás antes de que termine tu plazo de bloqueo, perdés el interés generado por ese depósito. El interés perdido va al fondo de recompensas, menos una comisión del protocolo.",
+        "onTime": "Si mantenés hasta el vencimiento, recibís tu capital, el rendimiento generado y una parte proporcional del fondo de recompensas.",
+        "variable": "Los rendimientos son variables, los generan protocolos de terceros y nunca están garantizados. Cualquier tasa que se muestre en la app es una estimación; el monto final se determina al momento del retiro.",
+        "noInsurance": "Los depósitos en Vaquita no son depósitos bancarios. No están asegurados ni garantizados por la FDIC, por ningún sistema de garantía de depósitos, ni por ninguna aseguradora pública o privada. Podés perder parte o la totalidad de tus fondos.",
+        "rewards": "Las monedas, insignias, experiencia y demás objetos dentro de la app no tienen valor monetario, no se pueden canjear por dinero y pueden ajustarse o eliminarse."
+      },
+      "noAdvice": {
+        "heading": "6. No es asesoramiento",
+        "body": "Nada en el Servicio constituye asesoramiento financiero, de inversión, legal, fiscal o contable, ni una recomendación para realizar ninguna operación. No somos tu corredor, asesor ni fiduciario. Vos decidís por tu cuenta, y deberías buscar asesoramiento profesional si lo necesitás."
       },
       "risks": {
-        "body": "Las criptomonedas son volátiles y los protocolos de contratos inteligentes conllevan riesgos técnicos y económicos. Los rendimientos, las insignias y las recompensas dentro de la app no están garantizados y pueden cambiar en cualquier momento. No deposites más de lo que puedas permitirte perder.",
-        "heading": "4. Riesgos"
+        "heading": "7. Riesgos",
+        "body": "Los activos digitales y los protocolos de contratos inteligentes conllevan riesgos significativos, incluida la pérdida total de los fondos. Antes de depositar, leé la <a>Declaración de Riesgos</a>, que forma parte de estos Términos."
       },
-      "service": {
-        "body": "Vaquita es una experiencia de ahorro gamificada que te permite depositar fondos en bóvedas de contratos inteligentes de autocustodia en las blockchains compatibles. Vaquita no tiene custodia: tú controlas tu wallet y tus fondos en todo momento.",
-        "heading": "1. El Servicio"
+      "acceptableUse": {
+        "heading": "8. Uso aceptable",
+        "intro": "Te comprometés a no:",
+        "unlawful": "Usar el Servicio para nada ilícito, incluidos el lavado de dinero, la financiación del terrorismo o la elusión de sanciones.",
+        "disrupt": "Atacar, interrumpir, sobrecargar o intentar obtener acceso no autorizado al Servicio o a su infraestructura.",
+        "impersonate": "Hacerte pasar por otra persona, ni manipular tablas de posiciones, referidos o recompensas mediante cuentas falsas o automatizadas."
       },
-      "title": "Términos del Servicio",
-      "wallet": {
-        "heading": "3. Tu wallet y tus fondos",
-        "irreversible": "Las transacciones en blockchain son irreversibles. Verifica siempre dos veces antes de firmar.",
-        "noMove": "Vaquita nunca puede mover fondos de tu wallet en tu nombre.",
-        "security": "Eres el único responsable de la seguridad de tu wallet, tus llaves y tu frase de recuperación."
+      "ip": {
+        "heading": "9. Propiedad intelectual",
+        "body": "El nombre Vaquita, el logo, las ilustraciones, los recursos 3D y la interfaz son nuestros o de nuestros licenciantes. No podés copiarlos ni reutilizarlos sin permiso. Esto no restringe tu uso de los contratos inteligentes de código abierto subyacentes bajo sus propias licencias."
+      },
+      "disclaimers": {
+        "heading": "10. Exclusión de garantías",
+        "body": "En la máxima medida permitida por la ley, el Servicio se provee sin garantías de ningún tipo, expresas o implícitas, incluida cualquier garantía de comerciabilidad, idoneidad para un fin determinado, titularidad o no infracción. No garantizamos que el Servicio sea ininterrumpido, puntual, seguro o libre de errores, ni que se obtenga rendimiento alguno. No somos responsables de los actos, omisiones, fallas o insolvencia de ningún protocolo, bóveda, puente, proveedor de billeteras o socio de rampas de terceros."
+      },
+      "liability": {
+        "heading": "11. Limitación de responsabilidad",
+        "body": "En la máxima medida permitida por la ley, no seremos responsables por daños indirectos, incidentales, especiales, consecuentes, ejemplares o punitivos, ni por lucro cesante o pérdida de ingresos, datos o activos digitales, derivados del Servicio o relacionados con él, ya sea por contrato, responsabilidad extracontractual o cualquier otra teoría, y con independencia de que se nos hubiera advertido de esa posibilidad.",
+        "cap": "Nuestra responsabilidad total frente a vos por todas las reclamaciones relacionadas con el Servicio se limita al mayor de estos dos montos: las comisiones que efectivamente recibimos de vos en los doce meses anteriores al hecho que originó la reclamación, o cien dólares estadounidenses.",
+        "exclusions": "Nada en estos Términos excluye ni limita la responsabilidad que no pueda excluirse legalmente, incluidas la derivada de fraude, la de muerte o lesiones personales causadas por negligencia, ni ningún derecho que te corresponda como consumidor y sea irrenunciable."
+      },
+      "indemnity": {
+        "heading": "12. Indemnidad",
+        "body": "Aceptás indemnizarnos y mantenernos indemnes frente a cualquier reclamación, pérdida, responsabilidad o gasto derivado de tu uso del Servicio, de tu incumplimiento de estos Términos, o de tu violación de cualquier ley o de los derechos de un tercero."
+      },
+      "termination": {
+        "heading": "13. Suspensión y terminación",
+        "body": "Podemos suspender o dar por terminado tu acceso al Servicio en cualquier momento, incluso cuando creamos que incumpliste estos Términos o cuando mantener el acceso nos exponga a un riesgo legal o regulatorio. Tu capacidad de interactuar directamente con los contratos inteligentes usando tu propia billetera no depende de nuestra app."
+      },
+      "changes": {
+        "heading": "14. Cambios",
+        "body": "Podemos actualizar estos Términos. La fecha al inicio de esta página siempre muestra la versión vigente. Si un cambio es sustancial, te pediremos que revises y aceptes los Términos actualizados antes de seguir usando la app."
+      },
+      "contact": {
+        "heading": "15. Contacto",
+        "body": "¿Consultas sobre estos Términos? Escribí a <a>hello@vaquita.fi</a>."
       }
+    },
+    "risk": {
+      "title": "Declaración de Riesgos",
+      "intro": "Esta declaración describe los principales riesgos de usar Vaquita. Forma parte de los Términos del Servicio. Leela antes de depositar.",
+      "beta": {
+        "heading": "1. Software en beta",
+        "body": "Vaquita está en beta. La app y los contratos que la respaldan son nuevos, siguen en desarrollo y pueden contener defectos. Las funciones pueden cambiar o dejar de funcionar sin aviso. Empezá con montos que puedas permitirte perder."
+      },
+      "smartContract": {
+        "heading": "2. Riesgo de contratos inteligentes",
+        "body": "Tus fondos quedan en poder de contratos inteligentes. Un error de programación, un exploit económico o una interacción imprevista entre contratos puede provocar la pérdida parcial o total. La revisión de seguridad reduce este riesgo pero no lo elimina, y no todos los componentes de la ruta han sido auditados de forma independiente."
+      },
+      "thirdParty": {
+        "heading": "3. Riesgo de protocolos de terceros",
+        "body": "Los depósitos se enrutan a una bóveda de rendimiento de un tercero, que a su vez presta a través de un protocolo de préstamos de un tercero. No controlamos esos protocolos. Una falla, un exploit, una configuración incorrecta, una decisión de gobernanza o un cierre en cualquiera de ellos puede afectar tus fondos e impedir el retiro."
+      },
+      "noInsurance": {
+        "heading": "4. Sin seguro ni garantía",
+        "body": "Tu depósito no es un depósito bancario. No está asegurado ni garantizado por la FDIC, por ningún sistema nacional de garantía de depósitos, ni por ninguna aseguradora pública o privada. Si se pierden fondos, no hay ningún esquema de compensación del cual recuperarlos."
+      },
+      "yield": {
+        "heading": "5. El rendimiento es variable y no está garantizado",
+        "body": "El rendimiento proviene de mercados de préstamos de terceros y cambia continuamente según la oferta y la demanda. Cualquier tasa que se muestre en la app es una estimación basada en las condiciones actuales, no una promesa. El monto efectivo se determina cuando retirás y puede ser menor al mostrado, incluso cero."
+      },
+      "lock": {
+        "heading": "6. Plazos de bloqueo y retiro anticipado",
+        "body": "Al depositar te comprometés a un plazo de bloqueo. Si retirás antes de que termine, perdés el interés generado por ese depósito; se redistribuye entre los usuarios que mantuvieron hasta el vencimiento, menos una comisión del protocolo. Tu capital se devuelve, pero mientras tanto tus fondos son ilíquidos y no existe un mercado secundario para una posición bloqueada."
+      },
+      "stablecoin": {
+        "heading": "7. Riesgo de la stablecoin",
+        "body": "Los depósitos están denominados en una stablecoin cuyo valor depende de su emisor y de sus reservas. Una stablecoin puede perder su paridad, y su emisor puede congelar direcciones o incluirlas en listas negras. Ninguna de las dos cosas está bajo nuestro control."
+      },
+      "bridge": {
+        "heading": "8. Riesgo de los puentes entre redes",
+        "body": "Mover fondos entre redes depende de infraestructura de puentes de terceros. Las transferencias por puentes pueden demorarse o fallar, y los puentes han sido históricamente objetivo de exploits de gran magnitud."
+      },
+      "custody": {
+        "heading": "9. Riesgo de billetera y claves",
+        "body": "Si usás una billetera de autocustodia, perder tus claves o tu frase de recuperación significa perder tus fondos de forma permanente: nadie puede restaurarlos. Si usás una billetera administrada, dependés de que nuestro socio de infraestructura siga disponible y seguro. Las transacciones on-chain no se pueden revertir, y los fondos enviados a una dirección equivocada no se pueden recuperar."
+      },
+      "regulatory": {
+        "heading": "10. Riesgo regulatorio y fiscal",
+        "body": "Las reglas aplicables a los activos digitales y a los productos que generan rendimiento no están consolidadas y varían según el país. Un cambio normativo o una acción regulatoria podría restringir tu acceso al Servicio, obligarnos a modificar o discontinuar funciones, o afectar el valor de tu posición. Sos responsable de determinar y pagar los impuestos que te correspondan."
+      },
+      "availability": {
+        "heading": "11. Disponibilidad",
+        "body": "La app, sus proveedores de infraestructura y la red subyacente pueden sufrir caídas. Durante una caída podrías no poder depositar ni retirar a través de la app, aunque una billetera de autocustodia siempre puede interactuar directamente con los contratos."
+      },
+      "ack": {
+        "heading": "12. Reconocimiento",
+        "body": "Al usar Vaquita confirmás que leíste esta declaración, que entendés que podés perder los fondos que deposites, y que estás depositando únicamente lo que podés permitirte perder."
+      }
+    },
+    "legalGate": {
+      "title": "Antes de continuar",
+      "intro": "Revisá y aceptá los documentos que rigen tu uso de Vaquita.",
+      "summaryHeading": "En resumen",
+      "summaryData": "Guardamos tu dirección de billetera, tu perfil y tu actividad, y compartimos datos con los socios que operan billeteras, rampas e infraestructura.",
+      "summaryOnchain": "Los depósitos, retiros e insignias quedan registrados públicamente en la blockchain y no se pueden borrar.",
+      "summaryRisk": "Vaquita es software en beta. Los depósitos no están asegurados, el rendimiento no está garantizado y retirar antes de tiempo hace que pierdas tu interés.",
+      "readFull": "Leé los documentos completos:",
+      "privacyLink": "Política de Privacidad",
+      "termsLink": "Términos del Servicio",
+      "riskLink": "Declaración de Riesgos",
+      "acceptPolicies": "Leí y acepto la <privacy>Política de Privacidad</privacy>, los <terms>Términos del Servicio</terms> y la <risk>Declaración de Riesgos</risk>.",
+      "acceptEligibility": "Tengo al menos 18 años, no soy residente ni me encuentro en una jurisdicción sancionada o restringida, y no figuro en ninguna lista de sanciones.",
+      "confirm": "Aceptar y continuar",
+      "saving": "Guardando…",
+      "error": "No pudimos registrar tu aceptación. Intentá de nuevo.",
+      "versionLabel": "Versión {{version}}"
     }
   },
   "common": {
@@ -1182,7 +1339,8 @@
       "installIosIntro": "Agrega Vaquita a tu pantalla de inicio para abrirla como una app:",
       "installIosStep1": "Toca el botón Compartir en tu navegador.",
       "installIosStep2": "Desliza hacia abajo y toca \"Agregar a pantalla de inicio\".",
-      "installIosStep3": "Toca \"Agregar\" para confirmar."
+      "installIosStep3": "Toca \"Agregar\" para confirmar.",
+      "riskDisclosure": "Declaración de riesgos"
     },
     "summary": {
       "depositsChartAria": "Depósitos de las últimas 6 semanas",
@@ -1567,7 +1725,7 @@
           "q": "¿Cómo funcionan las rachas?"
         },
         "support": {
-          "a": "Escríbenos a hello@vaquita.finance y te responderemos en menos de 48 horas. Cuando lancemos Comentarios, podrás enviar mensajes directamente desde la app.",
+          "a": "Escríbenos a hello@vaquita.fi y te responderemos en menos de 48 horas. Cuando lancemos Comentarios, podrás enviar mensajes directamente desde la app.",
           "q": "¿Cómo contacto a soporte?"
         },
         "what-is": {
@@ -1992,7 +2150,7 @@
   "referrals": {
     "activeReferrals": "Referidos activos",
     "apyBonus": "Bonus de APY",
-    "description": "Gana recompensas recurrentes mientras tus amigos ahorran. Cada referido activo suma APY extra sobre tu tasa base.",
+    "description": "Gana recompensas recurrentes mientras tus amigos ahorran. Cada referido activo puede mejorar tu tasa: las recompensas son variables y no están garantizadas.",
     "earningsLabel": "Ganancias por referidos",
     "invite": "Invitar amigos",
     "nextTier": "Invita a {{count}} más para llegar a",

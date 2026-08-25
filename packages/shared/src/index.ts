@@ -35,3 +35,4 @@ export * from './services/mapLikes';
 export * from './services/referral';
 export * from './services/notifications';
 export * from './services/savedWallet';
+export * from './services/legal';

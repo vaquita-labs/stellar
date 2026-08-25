@@ -561,7 +561,7 @@ export function ShareProfileModal({
       if (walletAddress) return buildFollowUrl(window.location.origin, walletAddress);
       return window.location.href;
     }
-    return 'https://vaquita.finance';
+    return 'https://vaquita.fi';
   }, [profileUrl, walletAddress]);
 
   const handleCopy = async () => {

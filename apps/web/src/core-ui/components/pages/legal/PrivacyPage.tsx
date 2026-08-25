@@ -3,8 +3,12 @@
 import React from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { LegalLayout } from './LegalLayout';
+import { PRIVACY_LAST_UPDATED } from './version';
 
-export const PRIVACY_LAST_UPDATED = '2026-05-11';
+export { PRIVACY_LAST_UPDATED };
+
+const mailto = { a: <a href="mailto:privacy@vaquita.fi" /> };
+const bold = { b: <strong /> };
 
 export function PrivacyPage() {
   const { t } = useTranslation();
@@ -12,46 +16,69 @@ export function PrivacyPage() {
     <LegalLayout title={t('auth.privacy.title')} lastUpdated={PRIVACY_LAST_UPDATED}>
       <p>{t('auth.privacy.intro')}</p>
 
+      <h2>{t('auth.privacy.scope.heading')}</h2>
+      <p>{t('auth.privacy.scope.body')}</p>
+
       <h2>{t('auth.privacy.collect.heading')}</h2>
+      <p>{t('auth.privacy.collect.intro')}</p>
       <ul>
-        <li>
-          <Trans i18nKey="auth.privacy.collect.wallet" components={{ b: <strong /> }} />
-        </li>
-        <li>
-          <Trans i18nKey="auth.privacy.collect.profile" components={{ b: <strong /> }} />
-        </li>
-        <li>
-          <Trans i18nKey="auth.privacy.collect.usage" components={{ b: <strong /> }} />
-        </li>
+        {['account', 'financial', 'social', 'device', 'diagnostics', 'kyc'].map((key) => (
+          <li key={key}>
+            <Trans i18nKey={`auth.privacy.collect.${key}`} components={bold} />
+          </li>
+        ))}
       </ul>
 
       <h2>{t('auth.privacy.use.heading')}</h2>
       <ul>
-        <li>{t('auth.privacy.use.operate')}</li>
-        <li>{t('auth.privacy.use.emails')}</li>
-        <li>{t('auth.privacy.use.abuse')}</li>
+        {['operate', 'transactions', 'rewards', 'comms', 'abuse', 'legal'].map((key) => (
+          <li key={key}>{t(`auth.privacy.use.${key}`)}</li>
+        ))}
       </ul>
 
-      <h2>{t('auth.privacy.dont.heading')}</h2>
+      <h2>{t('auth.privacy.share.heading')}</h2>
+      <p>{t('auth.privacy.share.intro')}</p>
       <ul>
-        <li>{t('auth.privacy.dont.sell')}</li>
-        <li>{t('auth.privacy.dont.custody')}</li>
-        <li>{t('auth.privacy.dont.share')}</li>
+        {['pollar', 'anclap', 'ably', 'infra', 'observability', 'push', 'qr', 'embeds', 'rpc', 'dune'].map((key) => (
+          <li key={key}>
+            <Trans i18nKey={`auth.privacy.share.${key}`} components={bold} />
+          </li>
+        ))}
+      </ul>
+      <p>{t('auth.privacy.share.legal')}</p>
+
+      <h2>{t('auth.privacy.onchain.heading')}</h2>
+      <p>{t('auth.privacy.onchain.body')}</p>
+
+      <h2>{t('auth.privacy.transfers.heading')}</h2>
+      <p>{t('auth.privacy.transfers.body')}</p>
+
+      <h2>{t('auth.privacy.storage.heading')}</h2>
+      <p>{t('auth.privacy.storage.intro')}</p>
+      <ul>
+        {['session', 'cache', 'prefs', 'thirdParty'].map((key) => (
+          <li key={key}>{t(`auth.privacy.storage.${key}`)}</li>
+        ))}
       </ul>
 
-      <h2>{t('auth.privacy.choices.heading')}</h2>
+      <h2>{t('auth.privacy.retention.heading')}</h2>
+      <p>{t('auth.privacy.retention.body')}</p>
+
+      <h2>{t('auth.privacy.rights.heading')}</h2>
+      <p>{t('auth.privacy.rights.intro')}</p>
       <ul>
-        <li>
-          <Trans i18nKey="auth.privacy.choices.hideBalance" components={{ b: <strong /> }} />
-        </li>
-        <li>{t('auth.privacy.choices.disconnect')}</li>
-        <li>
-          <Trans
-            i18nKey="auth.privacy.choices.delete"
-            components={{ a: <a href="mailto:privacy@vaquita.finance" /> }}
-          />
-        </li>
+        {['access', 'correct', 'delete', 'portability', 'object', 'complain'].map((key) => (
+          <li key={key}>{t(`auth.privacy.rights.${key}`)}</li>
+        ))}
       </ul>
+      <p>
+        <Trans i18nKey="auth.privacy.rights.exercise" components={mailto} />
+      </p>
+      <p>{t('auth.privacy.rights.limits')}</p>
+      <p>{t('auth.privacy.rights.regional')}</p>
+
+      <h2>{t('auth.privacy.security.heading')}</h2>
+      <p>{t('auth.privacy.security.body')}</p>
 
       <h2>{t('auth.privacy.children.heading')}</h2>
       <p>{t('auth.privacy.children.body')}</p>
@@ -61,10 +88,7 @@ export function PrivacyPage() {
 
       <h2>{t('auth.privacy.contact.heading')}</h2>
       <p>
-        <Trans
-          i18nKey="auth.privacy.contact.body"
-          components={{ a: <a href="mailto:privacy@vaquita.finance" /> }}
-        />
+        <Trans i18nKey="auth.privacy.contact.body" components={mailto} />
       </p>
     </LegalLayout>
   );

@@ -204,6 +204,11 @@ model Config {
   // Reconciliation cursors and last-run summaries keyed by job and contract ID.
   // Used by mainnet chain-event repair workflows; dry runs must not advance it.
   reconciliationState    Json     @default("{}") @map("reconciliation_state")
+  // Bundle version of the Privacy Policy / Terms / Risk Disclosure that users
+  // must currently have accepted (date string, e.g. '2026-08-25'). Lives here
+  // rather than in the frontend bundle so a material revision re-gates every
+  // user without a deploy. Compared by string equality — any change re-gates.
+  legalPolicyVersion     String   @default("2026-08-25") @map("legal_policy_version") @db.VarChar(20)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -291,6 +296,10 @@ model Profile {
   // `mapLikesReceived` are the hearts its own map collected.
   mapLikesGiven    MapLike[] @relation("mapLikesGiven")
   mapLikesReceived MapLike[] @relation("mapLikesReceived")
+
+  // Every time this profile accepted the legal bundle. Append-only history, not
+  // a flag — see LegalAcceptance.
+  legalAcceptances LegalAcceptance[]
 
   @@map("profiles")
 }
@@ -578,4 +587,42 @@ model WalletBalance {
   @@unique([walletAddress, tokenId], map: "wallet_balances_wallet_token_unique")
   @@index([tokenId], map: "idx_wallet_balances_token_id")
   @@map("wallet_balances")
+}
+
+/// Append-only record of a user accepting the Privacy Policy / Terms of Service
+/// / Risk Disclosure bundle. One row per acceptance — a boolean on Profile would
+/// be overwritten by the next policy revision and lose the evidence of what was
+/// agreed the first time.
+///
+/// Deliberately has NO database-level foreign key on profileId (matching the
+/// rest of this schema, where relations are enforced in the application layer).
+/// That is load-bearing here: the acceptance is evidence about a wallet and must
+/// outlive the profile row, so `walletAddress` is denormalized alongside it.
+///
+/// No IP address is stored — the API drops IPs from its logs by design, and
+/// collecting them to infer jurisdiction would widen the privacy footprint the
+/// policy has to disclose. `countryCode` is populated only when an upstream
+/// proxy provides a coarse country header.
+model LegalAcceptance {
+  id            Int    @id @default(autoincrement())
+  profileId     Int    @map("profile_id")
+  walletAddress String @map("wallet_address") @db.VarChar(100)
+  /// Bundle version accepted, matched against Config.legalPolicyVersion.
+  policyVersion String @map("policy_version") @db.VarChar(20)
+  /// Per-document versions inside the bundle: { privacy, terms, risk }.
+  acceptedDocuments Json @default("{}") @map("accepted_documents") @db.JsonB
+  /// The separate eligibility representation: 18+, not resident in a sanctioned
+  /// or restricted jurisdiction, not on a sanctions list.
+  jurisdictionAttested Boolean @default(false) @map("jurisdiction_attested")
+  countryCode   String?  @map("country_code") @db.Char(2)
+  userAgent     String?  @map("user_agent") @db.VarChar(300)
+  locale        String?  @db.VarChar(10)
+  acceptedAt    DateTime @default(now()) @map("accepted_at") @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id])
+
+  @@index([profileId, acceptedAt(sort: Desc)], map: "idx_legal_acceptances_profile")
+  @@index([walletAddress], map: "idx_legal_acceptances_wallet")
+  @@map("legal_acceptances")
 }
