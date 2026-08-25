@@ -12,6 +12,7 @@
     "dev:all": "pnpm -r --parallel --filter='./apps/*' dev",
     "build": "pnpm -r --filter='./packages/*' --filter='./apps/*' build",
     "typecheck": "pnpm -r --filter='./packages/*' --filter='./apps/*' typecheck",
+    "test": "pnpm -r --if-present --filter='./packages/*' --filter='./apps/*' test",
     "db:generate": "pnpm --filter @vaquita/db generate",
     "db:push": "pnpm --filter @vaquita/db db:push",
     "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'pnpm-lock.yaml' -delete"

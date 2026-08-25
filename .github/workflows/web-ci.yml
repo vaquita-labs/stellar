@@ -42,3 +42,72 @@ jobs:
 
       - name: Typecheck web
         run: pnpm --filter @vaquita/web typecheck
+
+  web-test:
+    name: Web Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Every suite writes a JUnit file into test-results/ at the repo root;
+      # the summary and artifact steps below read that directory, so they run
+      # even when a suite fails. Test env values live in each vitest.config.ts.
+      - name: Test shared package
+        run: pnpm --filter @vaquita/shared test --reporter=default --reporter=junit --outputFile="$GITHUB_WORKSPACE/test-results/shared.xml"
+
+      - name: Test avatar package
+        run: pnpm --filter @vaquita/avatar test --reporter=default --reporter=junit --outputFile="$GITHUB_WORKSPACE/test-results/avatar.xml"
+
+      - name: Test web
+        run: pnpm --filter @vaquita/web test --reporter=default --reporter=junit --outputFile="$GITHUB_WORKSPACE/test-results/web.xml"
+
+      - name: Summarize test results
+        if: always()
+        run: |
+          node - <<'JS' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require("fs");
+          const path = require("path");
+          const dir = path.join(process.env.GITHUB_WORKSPACE, "test-results");
+          const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith(".xml")).sort() : [];
+          const count = (tag, key) => Number(tag.match(new RegExp(`\\b${key}="(\\d+)"`))?.[1] ?? 0);
+          const text = (s) => s.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+          const lines = ["## Vitest results", "", "| Suite | Tests | Failures | Errors |", "|---|---:|---:|---:|"];
+          const failed = [];
+          for (const file of files) {
+            const xml = fs.readFileSync(path.join(dir, file), "utf8");
+            const root = xml.match(/<testsuites\b[^>]*>/)?.[0] ?? "";
+            const suite = path.basename(file, ".xml");
+            const failures = count(root, "failures");
+            const errors = count(root, "errors");
+            lines.push(`| ${failures + errors ? "❌" : "✅"} ${suite} | ${count(root, "tests")} | ${failures} | ${errors} |`);
+            for (const m of xml.matchAll(/<testcase\b([^>]*[^/>])>(?:(?!<\/testcase>)[\s\S])*?<(?:failure|error)\b/g)) {
+              const name = text(m[1].match(/\bname="([^"]*)"/)?.[1] ?? "?");
+              const cls = text(m[1].match(/\bclassname="([^"]*)"/)?.[1] ?? "");
+              failed.push(`- \`${suite}\` ${cls} › ${name}`);
+            }
+          }
+          if (files.length === 0) lines.push("| (no JUnit reports found) | | | |");
+          if (failed.length) lines.push("", "### Failed tests", "", ...failed);
+          console.log(lines.join("\n"));
+          JS
+
+      - name: Upload JUnit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-vitest-junit
+          path: test-results/*.xml
+          if-no-files-found: ignore

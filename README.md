@@ -26,6 +26,15 @@ pnpm dev:api        # Express API       → http://localhost:3000
 pnpm dev:all        # All in parallel
 ```
 
+## Testing
+
+```bash
+pnpm test                         # every workspace package that defines a test script
+pnpm --filter @vaquita/web test   # a single package
+```
+
+Vitest suites run in the **API CI** and **Web CI** workflows. Each run prints a per-package pass/fail table (with the names of any failed tests) on the job summary page and uploads the JUnit XML as a `*-vitest-junit` artifact. Contract tests are covered by **Contracts CI**; see [`contracts/README.md`](contracts/README.md).
+
 ## Layout
 
 | Path | Description |
