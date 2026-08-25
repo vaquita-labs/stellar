@@ -17,7 +17,7 @@ import {
 } from '../../../hooks';
 import { buildAchievements } from '../../../data/profile-badges';
 import { useConfigStore } from '../../../stores';
-import { AchievementDetail, AchievementModal } from './AchievementModal';
+import { AchievementModal } from './AchievementModal';
 import { BadgeTile } from './BadgeTile';
 import { PersonalRecords } from './PersonalRecords';
 import { RedeemCodeModal } from './RedeemCodeModal';
@@ -31,12 +31,13 @@ const formatDate = (iso: string) =>
 
 export function AllAchievementsPage() {
   const { t } = useTranslation();
-  // The detail modal needs both the catalog row (for display) and whether the
-  // user has met the unlock condition, so it can pick Claim vs progress UI.
-  const [selected, setSelected] = useState<{
-    achievement: AchievementDetail;
-    unlocked: boolean;
-  } | null>(null);
+  // Only the id is held: the modal reads its row out of the live `achievements`
+  // list below, so a signal that lands while the sheet is open (the follow count
+  // behind "Crew Mate", a deposit, the streak) reaches it. Storing the row
+  // itself would freeze the badge as it looked at the moment of the tap —
+  // an award unlocked a beat later would keep rendering its locked progress
+  // and never offer its Claim button.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [redeemOpen, setRedeemOpen] = useState(false);
 
   const { walletAddress } = useConfigStore();
@@ -76,6 +77,10 @@ export function AllAchievementsPage() {
       }),
     [totalStreak, totalDeposits, experience, activeDepositsTotalAmount, betaTester, achievementsData?.achievements, followCounts?.following]
   );
+
+  // Resolved on every render from the list above, so the open sheet shows the
+  // badge as it is now rather than as it was when the tile was tapped.
+  const selected = selectedId ? (achievements.find((b) => b.id === selectedId) ?? null) : null;
 
   const earned = achievements.filter((b) => b.unlocked && isClaimed(b.id)).length;
   const today = useMemo(() => formatDate(new Date().toISOString()), []);
@@ -128,7 +133,7 @@ export function AllAchievementsPage() {
                   size="lg"
                   showTitle
                   claimable={(badge.claimState === 'pending_mint' || badge.unlocked) && !isClaimed(badge.id)}
-                  onPress={() => setSelected({ achievement: badge, unlocked: badge.unlocked })}
+                  onPress={() => setSelectedId(badge.id)}
                 />
               ))}
             </div>
@@ -137,11 +142,11 @@ export function AllAchievementsPage() {
       </div>
 
       <AchievementModal
-        achievement={selected?.achievement ?? null}
+        achievement={selected ?? null}
         unlocked={selected?.unlocked ?? false}
-        open={!!selected}
+        open={!!selectedId}
         onOpenChange={(o) => {
-          if (!o) setSelected(null);
+          if (!o) setSelectedId(null);
         }}
       />
 
