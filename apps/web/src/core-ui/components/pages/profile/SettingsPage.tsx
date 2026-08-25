@@ -344,6 +344,12 @@ export function SettingsPage({
               >
                 {t('profilePages.settings.privacyPolicy', 'Privacy policy')}
               </Link>
+              <Link
+                href="/risk"
+                className="text-xs font-extrabold uppercase tracking-wider text-primary hover:text-primary/80 transition"
+              >
+                {t('profilePages.settings.riskDisclosure', 'Risk disclosure')}
+              </Link>
             </div>
           </div>
         </div>

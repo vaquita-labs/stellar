@@ -7,7 +7,7 @@ import { useInstallApp, useInstallDismissed, useIntroSeen, useIsAuthenticated } 
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -95,6 +95,20 @@ export default function LoginPage() {
             <div className="w-full flex flex-col gap-2">
               <StellarAuthButtons />
             </div>
+
+            {/* Aviso previo al login. La aceptación real se registra en el
+                LegalGate después de autenticarse; esto solo evita que el gate
+                aparezca por sorpresa. */}
+            <p className="text-center text-xs leading-relaxed text-black/50 [&_a]:font-semibold [&_a]:text-black/70 [&_a]:underline [&_a]:underline-offset-2">
+              <Trans
+                i18nKey="auth.login.legalNotice"
+                components={{
+                  terms: <a href="/terms" target="_blank" rel="noopener noreferrer" />,
+                  privacy: <a href="/privacy" target="_blank" rel="noopener noreferrer" />,
+                  risk: <a href="/risk" target="_blank" rel="noopener noreferrer" />,
+                }}
+              />
+            </p>
 
             {/* Botón para volver a ver el intro (testeo / replay) */}
             <button

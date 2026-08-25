@@ -11,19 +11,19 @@ const FAQS: FaqEntry[] = [
   {
     id: 'what-is',
     q: 'What is Vaquita?',
-    a: 'Vaquita is a non-custodial savings app that lets you deposit funds into audited DeFi vaults on supported blockchains. We add gamification (streaks, badges, XP) to help you stick to your saving goals.',
+    a: 'Vaquita is a savings app that lets you deposit funds into third-party DeFi yield vaults on supported blockchains. We add gamification (streaks, badges, XP) to help you stick to your saving goals. Vaquita is in beta — see the Risk Disclosure before depositing.',
     tags: ['getting started'],
   },
   {
     id: 'custody',
     q: 'Does Vaquita hold my money?',
-    a: 'No. Vaquita is fully non-custodial. Your funds live in smart contracts and only you, with your wallet keys, can move them. We never see or touch your private keys.',
+    a: 'We never hold your keys. If you connect your own wallet, only you can move your funds. If you signed in with email or a social login, a wallet is created and operated for you by our infrastructure partner, who holds the keys and signs on your instruction — you are relying on that partner rather than on your own key custody. Either way, your deposited funds live in smart contracts, and neither we nor the partner can take them.',
     tags: ['security', 'wallet'],
   },
   {
     id: 'apy',
     q: 'How is my APY calculated?',
-    a: "Your APY is the underlying protocol APY (e.g. lending markets) plus any Vaquita rewards active for your lock period. The breakdown is shown in the home header — tap your balance to expand it.",
+    a: "Your APY is the underlying protocol APY (e.g. lending markets) plus any Vaquita rewards active for your lock period. The breakdown is shown in the home header — tap your balance to expand it. Rates are variable estimates, not guarantees: the amount you actually receive is determined at withdrawal.",
     tags: ['yield', 'apy'],
   },
   {
@@ -35,7 +35,7 @@ const FAQS: FaqEntry[] = [
   {
     id: 'withdraw',
     q: 'Can I withdraw my money anytime?',
-    a: "If you chose a flexible lock period (0 days), yes. Locked deposits release after their term ends. Withdrawing before the term is not supported in this version.",
+    a: "Yes, at any time. If you withdraw before your lock period ends, you get your principal back but forfeit the interest earned on that deposit — it goes to the reward pool for the users who hold to maturity, less a protocol fee. Hold to maturity and you get your principal, the yield, and a share of that reward pool.",
     tags: ['wallet', 'withdrawals'],
   },
   {
@@ -47,7 +47,7 @@ const FAQS: FaqEntry[] = [
   {
     id: 'support',
     q: 'How do I contact support?',
-    a: "Email us at hello@vaquita.finance and we'll get back within 48 hours. Once Feedback ships, you'll be able to send messages right from the app.",
+    a: "Email us at hello@vaquita.fi and we'll get back within 48 hours. Once Feedback ships, you'll be able to send messages right from the app.",
     tags: ['support'],
   },
 ];
@@ -152,7 +152,7 @@ export function HelpCenterPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a
-            href="mailto:hello@vaquita.finance"
+            href="mailto:hello@vaquita.fi"
             className="flex items-center gap-3 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white hover:-translate-y-0.5 hover:bg-[#FFF7E6] transition"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-md bg-[#DDF4FF] border border-[#84D8FF] text-black">
@@ -162,7 +162,7 @@ export function HelpCenterPage() {
               <span className="text-sm font-extrabold text-black">
                 {t('social.help.emailSupport')}
               </span>
-              <span className="text-xs text-gray-600">hello@vaquita.finance</span>
+              <span className="text-xs text-gray-600">hello@vaquita.fi</span>
             </div>
           </a>
           <div className="flex items-center gap-3 px-4 py-4 rounded-2xl border border-black border-b-2 bg-white opacity-60">

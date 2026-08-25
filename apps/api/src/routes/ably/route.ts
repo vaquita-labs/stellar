@@ -27,10 +27,13 @@ async function issueTokenRequest(req: Request, res: Response, capability: NonNul
 
 /**
  * Capabilities scoped to what the web app uses. Deliberately NO `subscribe` on
- * `logs`: clients only mirror their own console there, they must not be able to
- * read other clients' logs.
+ * `logs` or on `register-customer`: clients only ever publish their own
+ * diagnostics and session registration, and must not be able to read anyone
+ * else's. (`register-customer` carries user agent, platform and language, so a
+ * subscribe grant there let any visitor enumerate other visitors' sessions.)
+ * Only the admin token below gets subscribe.
  *   - `logs`                  → publish (console mirroring)
- *   - `register-customer`     → publish + subscribe (session registration)
+ *   - `register-customer`     → publish (session registration)
  *   - `deposits-changes`      → subscribe (deposit cache invalidation)
  *   - `notifications-changes` → subscribe (notification feed invalidation)
  *
@@ -40,7 +43,7 @@ router.get('/token', async (req, res) => {
   req.log.info('GET /ably/token');
   return issueTokenRequest(req, res, {
     logs: ['publish'],
-    'register-customer': ['publish', 'subscribe'],
+    'register-customer': ['publish'],
     'deposits-changes': ['subscribe'],
     'notifications-changes': ['subscribe'],
   });

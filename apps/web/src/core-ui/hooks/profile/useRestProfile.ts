@@ -82,6 +82,31 @@ export const useRestProfile = () => {
     [networkName, walletAddress]
   );
 
+  // Record acceptance of the legal bundle (Privacy Policy + Terms + Risk
+  // Disclosure). The wallet is taken from the session on the server, not from
+  // the URL, so there is no wallet param here — an acceptance must only ever be
+  // written for a wallet whose control was proven.
+  const acceptLegal = useCallback(
+    async (payload: { policyVersion: string; jurisdictionAttested: boolean; locale?: string }) => {
+      const response = await authFetch(
+        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/legal/accept`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        walletAddress
+      );
+      const data = await response.json();
+
+      return {
+        success: data?.status === 'success',
+        message: data?.message as string | undefined,
+      };
+    },
+    [walletAddress]
+  );
+
   // Persist the user's display preferences (language / currency). The API
   // validates each id against the active project config; an unknown id comes
   // back as a failure with a message.
@@ -206,6 +231,7 @@ export const useRestProfile = () => {
     saveNickname,
     saveProfile,
     saveProfileFlags,
+    acceptLegal,
     saveProfilePreferences,
     saveNotificationPreferences,
     saveAvatar,

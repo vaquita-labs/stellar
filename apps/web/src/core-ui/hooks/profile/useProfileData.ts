@@ -34,6 +34,9 @@ export const useProfileData = (walletAddressOverride?: string) => {
           ...DEFAULT_NOTIFICATION_PREFERENCES,
           ...(data?.data?.notificationPreferences ?? {}),
         },
+        // `''` when never accepted, or when the read failed server-side: both
+        // must re-show the gate rather than wave the user through.
+        legalAcceptedVersion: data?.data?.legalAcceptedVersion ?? '',
         createdAt: data?.data?.createdAt ?? '',
       };
 

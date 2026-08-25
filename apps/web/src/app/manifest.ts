@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: '/',
     name: 'Vaquita',
     short_name: 'Vaquita',
-    description: 'La forma más segura y divertida de generar ahorros con el poder de la blockchain',
+    description: 'La forma más divertida de generar ahorros con el poder de la blockchain',
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait',

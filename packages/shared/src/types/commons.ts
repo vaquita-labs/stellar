@@ -92,6 +92,10 @@ export interface ProjectConfigResponseDTO {
   tokens: ProjectConfigTokenDTO[];
   currencies: ProjectConfigCurrencyDTO[];
   languages: ProjectConfigLanguageDTO[];
+  /** Bundle version of the Privacy Policy / Terms / Risk Disclosure the user
+   *  must currently have accepted. Served from config so a revision re-gates
+   *  everyone without a frontend deploy. */
+  legalPolicyVersion: string;
 }
 
 export interface DepositSummaryResponseDTO {
@@ -187,6 +191,11 @@ export interface ProfileResponseDTO {
   onboardingCompleted: boolean;
   tutorialCompleted: boolean;
   cryptoSavvy: boolean;
+  /** Legal bundle version this profile last accepted, '' if never. The client
+   *  gate compares it to `ProjectConfigResponseDTO.legalPolicyVersion` by
+   *  string equality — any mismatch re-gates. Populated only by the
+   *  single-profile endpoints the gate reads; list endpoints leave it ''. */
+  legalAcceptedVersion: string;
   // Per-user display preferences (option ids from the project config lists).
   // Empty string until the user picks one.
   language: string;
