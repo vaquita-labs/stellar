@@ -1,0 +1,98 @@
+name: Web E2E
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - ".github/workflows/e2e.yml"
+  workflow_dispatch:
+  schedule:
+    # Nightly at 06:00 UTC — catches drift in the testnet API/contracts that a
+    # PR would not touch.
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: read
+
+# On-chain specs move one shared testnet wallet; two runs at once would race on
+# its sequence number, so runs queue instead of overlapping.
+concurrency:
+  group: web-e2e
+  cancel-in-progress: false
+
+jobs:
+  web-e2e:
+    name: Web E2E (chromium)
+    runs-on: ubuntu-latest
+    # Testnet credentials live in the `dev` environment, alongside the other
+    # testnet keys the deploy and ops workflows read.
+    environment: dev
+    timeout-minutes: 45
+    env:
+      CI: "1"
+      # Build-time flag that aliases @pollar/react to the local-key signer shim.
+      # Never set this in deploy workflows or the Dockerfile.
+      E2E_TEST_SIGNER: "1"
+      E2E_SERVICES_URL: ${{ secrets.E2E_SERVICES_URL || 'https://api.testnet.development.vaquita.fi' }}
+      E2E_POLLAR_PUBLISHABLE_KEY: ${{ secrets.E2E_POLLAR_PUBLISHABLE_KEY }}
+      E2E_STELLAR_SECRET: ${{ secrets.E2E_STELLAR_SECRET }}
+      # Client env the build needs; the E2E_* values above are what the app reads.
+      NEXT_PUBLIC_SERVICES_URL: ${{ secrets.E2E_SERVICES_URL || 'https://api.testnet.development.vaquita.fi' }}
+      NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY: ${{ secrets.E2E_POLLAR_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_STELLAR_MAINNET_SOROBAN_RPC_URL: https://mainnet.sorobanrpc.com
+      NEXT_PUBLIC_STELLAR_TESTNET_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+      NEXT_PUBLIC_BLEND_FEE_STROOPS: "1000000"
+      NEXT_PUBLIC_CARD_VERSION: e2e
+      NEXT_PUBLIC_QUERY_CACHE_VERSION: e2e
+      NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @vaquita/web exec playwright install --with-deps chromium
+
+      - name: Build web with the e2e signer
+        run: pnpm --filter @vaquita/web build
+
+      - name: Run end-to-end suite
+        run: pnpm --filter @vaquita/web test:e2e --project=chromium
+
+      - name: Pass rate
+        if: always()
+        working-directory: apps/web
+        run: node scripts/e2e-pass-rate.mjs e2e-results/results.json
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 30
+
+      - name: Upload raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            apps/web/e2e-results/
+            apps/web/test-results/
+          retention-days: 30

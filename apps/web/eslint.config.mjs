@@ -18,6 +18,12 @@ const eslintConfig = [
   {
     settings: { react: { version: '19.2' } },
   },
+  // Playwright fixtures hand each fixture a `use` callback; it is not a React
+  // hook, so the hooks rule has nothing to say about the end-to-end suite.
+  {
+    files: ['e2e/**/*.ts'],
+    rules: { 'react-hooks/rules-of-hooks': 'off' },
+  },
 ];
 
 export default eslintConfig;

@@ -46,7 +46,76 @@ type WithdrawParams = {
   nonce: bigint | number | string;
 };
 
-type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' }>['params'];
+export type InvokeContractParams = Extract<TxBuildBody, { operation: 'invoke_contract' }>['params'];
+
+/**
+ * `invoke_contract` payload for `VaquitaPool::deposit(caller, nonce, amount, period)`.
+ * Pure: the same args reach Pollar from `getSorobanTx().deposit` and reach the
+ * testnet integration suite directly, so both exercise one argument encoding.
+ */
+export function buildDepositArgs({
+  address,
+  contractId,
+  nonce,
+  humanAmount,
+  amount,
+  period,
+  tokenDecimals = 7,
+}: Common & DepositParams): InvokeContractParams {
+  const amt =
+    humanAmount != null && humanAmount !== ''
+      ? toBaseUnits(String(humanAmount), tokenDecimals)
+      : amount != null
+        ? amount
+        : (() => {
+            throw new Error('Provide humanAmount or amount');
+          })();
+
+  return {
+    contractId,
+    method: 'deposit',
+    args: [
+      { type: 'address', value: address },
+      { type: 'u64',     value: assertU64(nonce) },
+      { type: 'i128',    value: amt.toString() },
+      { type: 'u64',     value: BigInt(period ?? 604800n).toString() },
+    ],
+  };
+}
+
+/** `invoke_contract` payload for `VaquitaPool::withdraw(caller, nonce)`. */
+export function buildWithdrawArgs({ address, contractId, nonce }: Common & WithdrawParams): InvokeContractParams {
+  return {
+    contractId,
+    method: 'withdraw',
+    args: [
+      { type: 'address', value: address },
+      { type: 'u64',     value: assertU64(nonce) },
+    ],
+  };
+}
+
+/** `invoke_contract` payload for `VaquitaBadges::mint_badge(wallet, badge_type, cycle_id, expiry, signature)`. */
+export function buildMintBadgeArgs({
+  address,
+  badgeContractId,
+  badgeType,
+  cycleId,
+  expiry,
+  signature,
+}: MintBadgeParams): InvokeContractParams {
+  return {
+    contractId: badgeContractId,
+    method: 'mint_badge',
+    args: [
+      { type: 'address', value: address },
+      { type: 'symbol',  value: badgeType },
+      { type: 'u32',     value: cycleId },
+      { type: 'u64',     value: expiry.toString() },
+      { type: 'bytes',   value: signature },
+    ],
+  };
+}
 
 /**
  * Invoke a Vaquita pool method via Pollar's `buildAndSignAndSubmitTx`, which
@@ -130,31 +199,11 @@ export function getSorobanTx({ address, contractId }: Common) {
   }: DepositParams) => {
     if (!address) throw new Error('No connected address');
 
-    const amt =
-      humanAmount != null && humanAmount !== ''
-        ? toBaseUnits(String(humanAmount), tokenDecimals)
-        : amount != null
-          ? amount
-          : (() => {
-              throw new Error('Provide humanAmount or amount');
-            })();
+    const params = buildDepositArgs({ address, contractId, nonce, humanAmount, amount, period, tokenDecimals });
 
     const client = requirePollarClient();
-    console.info('[sorobanTx:deposit] routing via Pollar buildTx', { nonce, amt, contractId });
-    return await invokeViaPollar(
-      client,
-      {
-        contractId,
-        method: 'deposit',
-        args: [
-          { type: 'address', value: address },
-          { type: 'u64',     value: assertU64(nonce) },
-          { type: 'i128',    value: amt.toString() },
-          { type: 'u64',     value: BigInt(period ?? 604800n).toString() },
-        ],
-      },
-      'pollar-deposit',
-    );
+    console.info('[sorobanTx:deposit] routing via Pollar buildTx', { nonce, contractId, args: params.args });
+    return await invokeViaPollar(client, params, 'pollar-deposit');
   };
 
   const withdraw = async ({ nonce }: WithdrawParams) => {
@@ -162,18 +211,7 @@ export function getSorobanTx({ address, contractId }: Common) {
 
     const client = requirePollarClient();
     console.info('[sorobanTx:withdraw] routing via Pollar buildTx', { nonce, contractId });
-    return await invokeViaPollar(
-      client,
-      {
-        contractId,
-        method: 'withdraw',
-        args: [
-          { type: 'address', value: address },
-          { type: 'u64',     value: assertU64(nonce) },
-        ],
-      },
-      'pollar-withdraw',
-    );
+    return await invokeViaPollar(client, buildWithdrawArgs({ address, contractId, nonce }), 'pollar-withdraw');
   };
 
   return { deposit, withdraw };
@@ -196,17 +234,7 @@ export async function mintBadge({
   console.info('[sorobanTx:mintBadge] routing via Pollar buildTx', { badgeType, cycleId, badgeContractId });
   return invokeViaPollar(
     client,
-    {
-      contractId: badgeContractId,
-      method: 'mint_badge',
-      args: [
-        { type: 'address', value: address },
-        { type: 'symbol',  value: badgeType },
-        { type: 'u32',     value: cycleId },
-        { type: 'u64',     value: expiry.toString() },
-        { type: 'bytes',   value: signature },
-      ],
-    },
+    buildMintBadgeArgs({ address, badgeContractId, badgeType, cycleId, expiry, signature }),
     'pollar-mint-badge',
   );
 }
