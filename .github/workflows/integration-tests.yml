@@ -1,0 +1,88 @@
+name: Integration Tests (testnet)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Nightly, 06:00 UTC: catches a testnet reset or a contract redeploy that
+    # leaves the frontend's contract calls pointing at stale ABI/addresses.
+    - cron: "0 6 * * *"
+  pull_request:
+    paths:
+      - "apps/web/src/networks/**"
+      - "apps/web/vitest.integration.config.ts"
+      - "contracts/**"
+      - ".github/workflows/integration-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  # The suite drives one funded testnet account whose sequence number must
+  # advance in order, so runs never overlap.
+  group: integration-tests
+  cancel-in-progress: false
+
+jobs:
+  web-contract-integration:
+    name: Web ↔ Soroban contracts (testnet)
+    runs-on: ubuntu-latest
+    # Testnet credentials live in the `dev` environment, alongside the other
+    # testnet keys the deploy and ops workflows read.
+    environment: dev
+    env:
+      JUNIT_FILE: ${{ github.workspace }}/integration-junit.xml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # INTEGRATION_STELLAR_SECRET is a repository secret holding a funded
+      # TESTNET key. When it is absent (forks, or not configured yet) every test
+      # skips and the job stays green — the summary below makes that visible.
+      - name: Run testnet integration suite
+        env:
+          INTEGRATION_STELLAR_SECRET: ${{ secrets.INTEGRATION_STELLAR_SECRET }}
+          INTEGRATION_JUNIT_FILE: ${{ env.JUNIT_FILE }}
+        run: pnpm --filter @vaquita/web test:integration
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-junit
+          path: ${{ env.JUNIT_FILE }}
+          if-no-files-found: warn
+
+      - name: Summarize results
+        if: always()
+        env:
+          SECRET_CONFIGURED: ${{ secrets.INTEGRATION_STELLAR_SECRET != '' }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "$JUNIT_FILE" ]; then
+            echo "Integration tests: no JUnit report produced" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          read -r total failures errors skipped < <(node -e '
+            const xml = require("fs").readFileSync(process.env.JUNIT_FILE, "utf8");
+            const m = /<testsuites[^>]*>/.exec(xml)?.[0] ?? "";
+            const n = (a) => Number(new RegExp(`${a}="(\\d+)"`).exec(m)?.[1] ?? 0);
+            console.log(n("tests"), n("failures"), n("errors"), n("skipped"));
+          ')
+          passed=$((total - failures - errors - skipped))
+          echo "Integration tests: ${passed}/${total} passed (${skipped} skipped, $((failures + errors)) failed)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$SECRET_CONFIGURED" != "true" ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "INTEGRATION_STELLAR_SECRET is not configured, so the suite skipped itself." >> "$GITHUB_STEP_SUMMARY"
+          fi

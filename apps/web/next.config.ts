@@ -1,7 +1,18 @@
 import path from 'node:path';
 import type { NextConfig } from 'next';
 
+// End-to-end runs only: `E2E_TEST_SIGNER=1` swaps `@pollar/react` for the shim
+// in `e2e/shim`, which logs the app in with a local Stellar keypair instead of
+// Pollar's hosted modal. The alias is absent from the config otherwise, so a
+// regular build never resolves (or bundles) anything under `e2e/`. Dev and
+// build both run on Turbopack here, hence a single `turbopack.resolveAlias`.
+const e2eSignerAlias: Pick<NextConfig, 'turbopack'> =
+  process.env.E2E_TEST_SIGNER === '1'
+    ? { turbopack: { resolveAlias: { '@pollar/react': './e2e/shim/pollar-react.tsx' } } }
+    : {};
+
 const nextConfig: NextConfig = {
+  ...e2eSignerAlias,
   output: 'standalone',
   // Dev-only: Next 16 blocks requests to its internal dev assets (/_next/*,
   // HMR websocket) coming from any origin other than localhost. When the app is
