@@ -1,0 +1,84 @@
+# E2E Coverage Map
+
+Maps each requirement of SCF deliverable 3.4 "End to End Testing" to the artifact that proves it.
+
+**Completion criteria (verbatim):** *Automated end-to-end test suite covering onboarding, deposits, withdrawals, and leaderboard/NFT badge interactions with integration tests validating smart contract interactions with the frontend. Manual regression testing across supported wallets (Freighter, Albedo, and ≥3 additional wallets). CI pipeline report showing successful test runs with ≥95% pass rate across all critical user flows.*
+
+Allowed status values: `planned` · `implemented` (artifact exists and passes locally) · `passing` (a CI run proves it; evidence link filled). Evidence links are filled once the branch is pushed and the workflows have run.
+
+---
+
+## 1. Requirement → artifact
+
+| # | Requirement | Layer | Artifact | Command | Workflow | Status | Evidence link |
+|---|---|---|---|---|---|---|---|
+| R1 | Onboarding flow | Playwright e2e | `apps/web/e2e/onboarding.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 3 specs pass locally | |
+| R2 | Deposits | Playwright e2e | `apps/web/e2e/deposit.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 2 specs pass locally | |
+| R3 | Withdrawals (matured + early) | Playwright e2e | `apps/web/e2e/withdraw.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 2 specs pass locally | |
+| R4 | Leaderboard interactions | Playwright e2e | `apps/web/e2e/leaderboard.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 3 specs pass locally | |
+| R5 | NFT badge interactions (claim + mint) | Playwright e2e | `apps/web/e2e/badges.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 2 specs pass locally | |
+| R6 | Contract ↔ frontend integration | Integration (testnet) | `apps/web/src/networks/stellar/__integration__/` | `pnpm --filter @vaquita/web test:integration` | `.github/workflows/integration-tests.yml` | `implemented` — 10/10 pass against testnet | |
+| R7 | Contract behaviour (deposit, withdraw, mint, governance) | Rust unit/property tests | `contracts/vaquita-pool/src/test/`, `contracts/vaquita-badges/src/test/` — 169 tests | `cd contracts && make test` | `.github/workflows/contracts-ci.yml` | `implemented` | |
+| R8 | Contract coverage ≥ 80 % lines | Rust coverage | `contracts/lcov.info`, `contracts/coverage-html/` | `cd contracts && make coverage` | `.github/workflows/contracts-ci.yml` → Codecov (`codecov.yml`, flag `contracts`) | `implemented` | |
+| R9 | Frontend unit tests (tx error mapping, feature flags, Soroban tx builders, vault/Blend queries) | Vitest | `apps/web/src/**/*.test.ts` | `pnpm --filter @vaquita/web test` | `.github/workflows/web-ci.yml` | `implemented` — 101 tests pass | |
+| R10 | API unit tests | Vitest | `apps/api/src/**/*.test.ts`, `packages/shared/src/**/*.test.ts` | `pnpm --filter @vaquita/api test`, `pnpm --filter @vaquita/shared test` | `.github/workflows/api-ci.yml` | `implemented` — 132 tests pass | |
+| R11 | Manual regression across wallets (Freighter, Albedo, ≥3 more) | Manual | [`wallet-regression-matrix.md`](./wallet-regression-matrix.md) §7 + `docs/qa/evidence/<run-id>/results.md` | — | — | `planned` — protocol written, run not yet executed | |
+| R12 | CI report with ≥ 95 % pass rate on critical flows | CI | Workflow run summaries + uploaded Playwright/Vitest reports (see §3) | — | `e2e.yml`, `integration-tests.yml`, `contracts-ci.yml` | `planned` — needs a pushed branch and the repository secrets | |
+
+---
+
+## 2. Flow → layer cross-reference
+
+Which layer exercises which part of each critical flow. `●` covered · `○` partial · `—` not at this layer.
+
+| Flow | Rust contract tests (R7) | Vitest unit (R9/R10) | Integration testnet (R6) | Playwright e2e (R1–R5) | Manual wallets (R11) |
+|---|---|---|---|---|---|
+| Wallet connect / session restore | — | — | — | ● (mocked wallet) | ● (real wallets) |
+| SEP-10-style API session (`walletSession.ts`) | — | ○ | ● | ● | ● |
+| Onboarding (nickname, intro, tutorial, welcome reward) | — | — | — | ● | ● |
+| Deposit `deposit(caller, nonce, amount, period)` | ● | ● (`sorobanTx.test.ts`, `txCredit.test.ts`) | ● | ● | ● |
+| Withdraw at maturity (principal + yield + reward share) | ● | — | ● | ● | ● |
+| Early withdraw (principal only, fee to protocol, yield to reward pool) | ● (`security_fixes.rs`, `conservation.rs`) | — | ● | ● | ● |
+| Solvency invariant | ● (randomised property test) | — | ○ (`check_solvency` read) | — | — |
+| Leaderboard ranking + badge modal | — | — | — | ● | ● |
+| Badge claim signing (`GET /api/v1/claim/:network`) | — | ● (shared badge services) | ● | ● | ● |
+| Badge mint `mint_badge` (signature verify, soulbound, edition cap) | ● | ● (`badgeErrors.ts` mapping) | ● | ● | ● |
+| Transaction error mapping (rejected, trustline, balance, network, pending) | — | ● (`txError.test.ts`, `pollarError.test.ts`) | — | ○ | ● |
+| Passive vault deposit / withdraw / migration (flag) | — | ● (`vaultQueries.test.ts`, `blendDirect.test.ts`) | ○ | ○ | ● (W-13) |
+| Pause / upgrade governance | ● (`upgrade.rs`) | — | — | — | — |
+
+---
+
+## 3. CI report sources
+
+Fill the run links when submitting. One row per workflow; the "critical flows pass rate" is computed from the e2e and integration runs only (contract and unit suites are expected at 100 %).
+
+| Workflow | Trigger | Report artifact | Run URL | Passed / total | Pass rate |
+|---|---|---|---|---|---|
+| `.github/workflows/e2e.yml` | | Playwright HTML report + JUnit | | | |
+| `.github/workflows/integration-tests.yml` | | Vitest JUnit / JSON | | | |
+| `.github/workflows/contracts-ci.yml` | push `main`/`dev` + PR on `contracts/**` | `contracts-lcov`, `contracts-coverage-html`; Codecov | | 169 / 169 | |
+| `.github/workflows/web-ci.yml` | PR on `apps/web/**`, `packages/**` | job log | | | |
+| `.github/workflows/api-ci.yml` | PR on `apps/api/**`, `packages/**` | job log | | | |
+
+**Critical-flow pass rate for the submission** = passed ÷ total over `e2e.yml` + `integration-tests.yml` on the submitted commit, plus the manual matrix tally (§7 of the wallet matrix). Each is reported separately; all three must be ≥ 95 %.
+
+| Source | Passed / total | Rate |
+|---|---|---|
+| Automated e2e (`e2e.yml`) | | |
+| Integration (`integration-tests.yml`) | | |
+| Manual wallet matrix | | |
+
+---
+
+## 4. Known gaps
+
+Recorded so the reviewer sees them before finding them. Update as they close.
+
+| Gap | Impact | Covered by | Status |
+|---|---|---|---|
+| Automated e2e cannot drive real extension popups; wallet signing is stubbed at the Pollar adapter boundary | Real wallet UI, reject button, network selector | Manual matrix R11 | by design |
+| Testnet Blend / DeFindex addresses change on every testnet reset (`contracts/README.md`) | Integration suite needs re-pointing after a reset | `/api/v1/config` as single source of truth in the suite | |
+| Positions with lock period > ~90 d archive before maturity (`docs/architecture.md` §9.2) | Matured-withdraw on long periods needs a TTL restore first | Not covered; latent unless a > 90 d period is configured | |
+| Nonce ABI migration (`deposit_id: String` → `nonce: u64`) needs an end-to-end testnet smoke (`docs/architecture.md` §9.5) | Deposit/withdraw join key | R6 + W-05/W-06/W-07 | |
+| Lobstr is mainnet-only | No testnet coverage for that wallet | Manual run on the mainnet build | |
