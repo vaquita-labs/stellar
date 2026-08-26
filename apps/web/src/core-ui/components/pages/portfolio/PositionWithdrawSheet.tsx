@@ -6,6 +6,7 @@ import { useApyByLockPeriod, useRestWithdrawal, useTransactions } from '@/core-u
 import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
 import { awaitUsdcCredit, readUsdcBalance } from '@/networks/stellar/blendDirect';
+import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
 import { formatBaseUnits } from '@/networks/stellar/vaultQueries';
 import { Spinner } from '@heroui/react';
@@ -70,6 +71,9 @@ export function PositionWithdrawSheet({
   // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
   // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
   const [error, setError] = useState<unknown>(null);
+  // El retiro ya salió a la red y todavía puede confirmar. No es un fallo del
+  // que se pueda rehacer: apaga el reintento del CTA (ver `footer`).
+  const txPending = isTxPendingError(error);
 
   // Contador en vivo: re-render cada segundo mientras el usuario mira el detalle
   // o la confirmación (no hace falta seguir tickeando durante el retiro).
@@ -382,18 +386,27 @@ export function PositionWithdrawSheet({
         {t('deposit.withdraw.button', 'Withdraw')}
       </PressableButton>
     ) : step === 'confirm' ? (
-      <PressableButton
-        variant={inLock ? 'danger' : 'success'}
-        size="cta"
-        className="py-2.5!"
-        onClick={handleWithdraw}
-      >
-        {error
-          ? t('common.retry', 'Retry')
-          : inLock
-            ? t('deposit.withdraw.withdrawAnyway', 'Withdraw anyway')
-            : t('portfolio.withdraw.cta', 'Withdraw to your savings')}
-      </PressableButton>
+      // El retiro ya está en vuelo: reintentar mandaría un segundo `withdraw`
+      // sobre una posición que el primero puede estar cerrando en este momento.
+      // Solo queda cerrar y mirar el saldo; el hash lo muestra `ErrorNotice`.
+      txPending ? (
+        <PressableButton variant="white" size="cta" className="py-2.5!" onClick={onOpenChange}>
+          {t('common.close', 'Close')}
+        </PressableButton>
+      ) : (
+        <PressableButton
+          variant={inLock ? 'danger' : 'success'}
+          size="cta"
+          className="py-2.5!"
+          onClick={handleWithdraw}
+        >
+          {error
+            ? t('common.retry', 'Retry')
+            : inLock
+              ? t('deposit.withdraw.withdrawAnyway', 'Withdraw anyway')
+              : t('portfolio.withdraw.cta', 'Withdraw to your savings')}
+        </PressableButton>
+      )
     ) : step === 'processing' ? (
       <p className="w-full text-center text-xs text-gray-500">
         {t('withdraw.processingHint', 'This may take a few seconds.')}
