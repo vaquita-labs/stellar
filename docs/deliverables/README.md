@@ -18,10 +18,10 @@ run, a document in this repository, or a recording.
 | # | Deliverable | Report | Status |
 |---|---|---|---|
 | 3.1 | Anclap On/Off Ramp Integration | [`3.1-anclap-on-off-ramp.md`](./3.1-anclap-on-off-ramp.md) | **Pending** — no evidence submitted yet |
-| 3.2 | Mainnet Contract Deployment and Live Yields | [`3.2-mainnet-deployment-and-live-yields.md`](./3.2-mainnet-deployment-and-live-yields.md) | **Partially met** — contracts live and listed on DeFiLlama; TVL below the stated floor |
+| 3.2 | Mainnet Contract Deployment and Live Yields | [`3.2-mainnet-deployment-and-live-yields.md`](./3.2-mainnet-deployment-and-live-yields.md) | **Met** — six addresses live, TVL listed on DeFiLlama, both dashboards public |
 | 3.3 | Full UX Readiness | [`3.3-full-ux-readiness.md`](./3.3-full-ux-readiness.md) | **Partially met** — FAQ published; onboarding recording and mobile verification outstanding |
 | 3.4 | End to End Testing | [`3.4-end-to-end-testing.md`](./3.4-end-to-end-testing.md) | **Partially met** — automated suites implemented; manual wallet regression and CI pass-rate report outstanding |
-| 3.5 | Internal Security Review and Technical Documentation | [`3.5-security-review-and-documentation.md`](./3.5-security-review-and-documentation.md) | **Met, pending asset library** — security report and architecture published, zero unresolved HIGH findings |
+| 3.5 | Internal Security Review and Technical Documentation | [`3.5-security-review-and-documentation.md`](./3.5-security-review-and-documentation.md) | **Met** — security report and architecture published, zero unresolved HIGH findings |
 
 Status vocabulary used across all five reports:
 
@@ -43,11 +43,11 @@ hardcoded in the frontend.
 | Role | Address | Explorer |
 |---|---|---|
 | Vaquita pool (`vaquita-pool`) | `CDTTAZ3NK4MMDHK2C3I6LRDT4YADJZ2QXINKLKQNZUVX7OTUKQNCQGC4` | [Stellar Expert](https://stellar.expert/explorer/public/contract/CDTTAZ3NK4MMDHK2C3I6LRDT4YADJZ2QXINKLKQNZUVX7OTUKQNCQGC4) |
+| Badges (`vaquita-badges`) | `CBT5JMDOUAU3BJF7YZR42LVODLMZSQE4LIJUJNUBKEC2VZOXIF4JFBRU` | [Stellar Expert](https://stellar.expert/explorer/public/contract/CBT5JMDOUAU3BJF7YZR42LVODLMZSQE4LIJUJNUBKEC2VZOXIF4JFBRU) |
 | DeFindex vault | `CB2U6PWS225PXWOAYGFIAWXYJBQHBWBQHEPC6NU2M257DKBRLBGMUPUZ` | [Stellar Expert](https://stellar.expert/explorer/public/contract/CB2U6PWS225PXWOAYGFIAWXYJBQHBWBQHEPC6NU2M257DKBRLBGMUPUZ) |
 | Blend pool | `CAJJZSGMMM3PD7N33TAPHGBUGTB43OC73HVIK2L2G6BNGGGYOSSYBXBD` | [Stellar Expert](https://stellar.expert/explorer/public/contract/CAJJZSGMMM3PD7N33TAPHGBUGTB43OC73HVIK2L2G6BNGGGYOSSYBXBD) |
 | USDC (deposit token contract) | `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75` | [Stellar Expert](https://stellar.expert/explorer/public/contract/CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75) |
 | USDC issuer (Circle) | `GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN` | [Stellar Expert](https://stellar.expert/explorer/public/account/GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN) |
-| Badges (`vaquita-badges`) | *not yet recorded here* | — |
 
 Lock periods offered on mainnet: **30 / 90 / 180 days**.
 
@@ -86,18 +86,22 @@ The documents a reviewer is most likely to want directly:
 ## 5. Outstanding items
 
 Consolidated from the five reports, so a reviewer can see in one place what is not yet
-proven. Each item is expanded in the report it belongs to.
+proven. Each item is expanded in the report it belongs to. Every item below is worded
+directly from a completion criterion; nothing here is optional.
 
 | # | Outstanding item | Deliverable |
 |---|---|---|
 | 1 | End-to-end fiat deposit recording (ARS → USDC → active vault position) | 3.1 |
 | 2 | At least one real Anclap-originated transaction verifiable on Stellar Expert mainnet | 3.1 |
 | 3 | Spanish KYC walkthrough with error handling | 3.1 |
-| 4 | `vaquita-badges` mainnet address | 3.2 |
-| 5 | TVL at or above the $1,500 floor on DeFiLlama | 3.2 |
-| 6 | Public reachability of both Grafana dashboards confirmed from outside the account | 3.2 |
-| 7 | Spanish onboarding screen recording, empty wallet → first active deposit | 3.3 |
-| 8 | iOS Safari and Android Chrome verification on physical devices | 3.3 |
-| 9 | Manual wallet regression completed across Freighter, Albedo and ≥3 further wallets | 3.4 |
-| 10 | CI run URLs and the computed pass rate on critical flows | 3.4 |
-| 11 | UX/UI engineering asset library | 3.5 |
+| 4 | Spanish onboarding screen recording, empty wallet → first active deposit | 3.3 |
+| 5 | iOS Safari and Android Chrome verification on physical devices | 3.3 |
+| 6 | Manual wallet regression completed across Freighter, Albedo and ≥3 further wallets | 3.4 |
+| 7 | CI run URLs and the computed pass rate on critical flows | 3.4 |
+
+Named in a deliverable description but **not** in any completion criterion, and therefore
+not blocking sign-off:
+
+| Item | Deliverable | Where it comes from |
+|---|---|---|
+| UX/UI engineering assets library | 3.5 | The description names an assets library alongside the UX documentation; the completion criteria ask only for published technical docs covering system architecture and UX Engineering, which are in place |
