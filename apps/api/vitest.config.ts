@@ -9,6 +9,7 @@ const testEnv = {
   DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
   STELLAR_MAINNET_SOROBAN_RPC_URL: 'https://mainnet.sorobanrpc.test',
   STELLAR_TESTNET_SOROBAN_RPC_URL: 'https://testnet.sorobanrpc.test',
+  STELLAR_NETWORK: 'testnet',
   ABLY_KEY: 'test.key:secret',
   BADGE_SIGNING_SEED: '0'.repeat(64),
   MAINNET_LAUNCH_TIMESTAMP: '1750000000000',
