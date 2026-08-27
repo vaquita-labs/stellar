@@ -204,7 +204,18 @@ export function useRampOnramp() {
     [getClient],
   );
 
-  return { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp, readOnrampTransaction };
+  /**
+   * Dónde está parada la verificación de identidad del usuario con el proveedor
+   * de ramps.
+   *
+   * Se expone cruda —sin espera adentro— porque quién decide cuánto esperar y
+   * cuándo cortar es la pantalla, que es la única que sabe si sigue abierta.
+   */
+  const readKycStatus = useCallback(async (): Promise<{ hasApproved: boolean }> => {
+    return await getClient().getRampKycStatus();
+  }, [getClient]);
+
+  return { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp, readOnrampTransaction, readKycStatus };
 }
 
 /** ¿La cuenta ya tiene la trustline del asset? Cuenta inexistente = no. */

@@ -3,6 +3,7 @@
 import { type PaymentInstructions, readPaymentInstructions } from '@/networks/pollar/onrampPayment';
 import { type OnrampScreen, receivedUsdcFrom, screenFor, shouldPoll, terminalStatusFor } from '@/networks/pollar/onrampFlow';
 import { fetchPendingPurchase, markPurchaseTerminal, recordPurchase } from '@/networks/pollar/onrampApi';
+import { isKycRequiredError, kycNeededBy, waitForKycApproval } from '@/networks/pollar/kycWait';
 import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
 import { type OnrampCorridor, type OnrampCorridorCode, useRampOnramp, usdcOutOf } from '@/networks/pollar/rampsOnramp';
 import type { RampQuote, RampTxStatus } from '@pollar/core';
@@ -15,6 +16,7 @@ import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { OnrampQrScreen } from './OnrampQrScreen';
 import { OnrampStatusScreen } from './OnrampStatusScreen';
+import { OnrampVerifyScreen } from './OnrampVerifyScreen';
 import { RAMP_FIELD_CLASS, RampFieldList } from './RampFieldList';
 
 interface ReceiveFiatRampModalProps {
@@ -35,8 +37,12 @@ const POLL_MS = 8000;
 /** El reloj del modal: un tick por segundo alcanza para la cuenta regresiva. */
 const TICK_MS = 1000;
 
-/** Elegir cuánto gastar, los datos que pida el proveedor, y pagar el QR. */
-type Phase = 'amount' | 'details' | 'paying';
+/**
+ * Elegir cuánto gastar, los datos que pida el proveedor, y pagar el QR.
+ * `verifying` se cuela entre los datos y el QR cuando el proveedor no vende
+ * hasta haber verificado al usuario.
+ */
+type Phase = 'amount' | 'details' | 'verifying' | 'paying';
 
 /** Decimales con los que se muestra el USDC estimado. */
 const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2);
@@ -56,7 +62,8 @@ const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2
  */
 export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: ReceiveFiatRampModalProps) {
   const { t } = useTranslation();
-  const { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp, readOnrampTransaction } = useRampOnramp();
+  const { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp, readOnrampTransaction, readKycStatus } =
+    useRampOnramp();
   const { wallet, refreshAssets } = usePollar();
   const walletAddress = wallet?.address ?? null;
 
@@ -71,6 +78,10 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const [txId, setTxId] = useState<string | null>(null);
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
   const [providerStatus, setProviderStatus] = useState<RampTxStatus | null>(null);
+  // Verificación de identidad: el link del proveedor cuando publica uno, y si se
+  // dejó de esperar por haber tardado demasiado.
+  const [kycUrl, setKycUrl] = useState<string | null>(null);
+  const [kycTimedOut, setKycTimedOut] = useState(false);
   const [providerAmount, setProviderAmount] = useState<{ amount: number; currency: string } | null>(null);
   // Lo pagado y lo estimado se guardan aparte del formulario porque al retomar
   // una compra vienen del registro, no de lo que el usuario tenga escrito.
@@ -250,6 +261,32 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     };
   }, [open, phase, setRampActive, setAwaitingFunds]);
 
+  // Mientras la pantalla de verificación está abierta se le pregunta al
+  // proveedor por la aprobación. Deja de preguntar apenas la pantalla se cierra
+  // o el usuario se va a otro paso: el efecto se limpia y el ciclo corta solo.
+  useEffect(() => {
+    if (!open || phase !== 'verifying') return;
+    let cancelled = false;
+    void (async () => {
+      const outcome = await waitForKycApproval({ readStatus: readKycStatus, shouldStop: () => cancelled });
+      if (cancelled) return;
+      if (outcome === 'timeout') {
+        setKycTimedOut(true);
+        return;
+      }
+      if (outcome === 'approved') {
+        // La cotización venció mientras duraba el trámite —valen 15 minutos— así
+        // que se pide una nueva sobre el mismo monto y el usuario confirma la
+        // compra con el precio de ahora. No se compra sola: es plata suya.
+        setRequote((n) => n + 1);
+        setPhase('details');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, phase, readKycStatus]);
+
   // Qué pantalla corresponde sale de una sola función pura sobre lo que dijo el
   // proveedor y el reloj: acá no se decide nada.
   const expiresAt = instructions?.expiresAt ?? null;
@@ -321,6 +358,21 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const fieldsValid = fieldsAreValid(fields, values);
 
   /**
+   * Manda al usuario a verificarse: abre el link del proveedor si publica uno, y
+   * en los dos casos deja la pantalla esperando la aprobación.
+   *
+   * Abrir el link acá y no en un efecto es a propósito: sale del click del
+   * usuario, que es lo único que el navegador no bloquea como popup.
+   */
+  const startVerification = (url: string | null) => {
+    setKycUrl(url);
+    setKycTimedOut(false);
+    setFailure(null);
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    setPhase('verifying');
+  };
+
+  /**
    * Trustline → compra → registro → QR, en ese orden y sin saltearse ninguno.
    *
    * La trustline va PRIMERO porque es la única falla que le cuesta plata al
@@ -341,10 +393,9 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       setStep('creating');
       const created = await createOnramp({ corridor, quote, amountFiat: amountNum, walletAddress, values });
 
-      // El KYC del proveedor se resuelve en otra pantalla; hasta que exista, lo
-      // honesto es decir que la compra no puede seguir por acá.
-      if (created.kycRequired) {
-        setFailure(t('wallet.fiat.onramp.err.kycRequired', 'The provider needs to verify your identity first.'));
+      const need = kycNeededBy(created);
+      if (need) {
+        startVerification(need.url);
         return;
       }
 
@@ -379,7 +430,10 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       setNow(new Date());
       setPhase('paying');
     } catch (e) {
-      setFailure(messageOf(e));
+      // Pollar contesta lo mismo de dos formas: un 200 con `kycRequired` o este
+      // error. Las dos van a la pantalla de verificación, no a un error.
+      if (isKycRequiredError(e)) startVerification(null);
+      else setFailure(messageOf(e));
     } finally {
       setStep(null);
       setBusy(false);
@@ -407,14 +461,21 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     closed.current = null;
     setInstructions(null);
     setUnrecorded(false);
+    setKycUrl(null);
+    setKycTimedOut(false);
     setFailure(null);
     setResult(null);
     setRequote((n) => n + 1);
     setPhase('amount');
   };
 
+  // El formulario (monto, cotización, campos) es de los dos primeros pasos; en la
+  // verificación y en el pago la pantalla es otra y no debe quedar nada suyo
+  // asomando debajo.
+  const showForm = phase === 'amount' || phase === 'details';
+
   const footer =
-    phase === 'paying' ? null : phase === 'amount' ? (
+    phase !== 'amount' && phase !== 'details' ? null : phase === 'amount' ? (
       <PressableButton variant="success" size="cta" onClick={() => setPhase('details')} disabled={!usable || !!corridorOff}>
         {t('wallet.fiat.onramp.continue', 'Continue')}
       </PressableButton>
@@ -440,11 +501,22 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       size="md"
       // Con el QR en pantalla no hay vuelta atrás: el código ya existe del lado
       // del proveedor y "volver" sólo llevaría a crear otro sobre el mismo pago.
-      onBack={phase === 'paying' ? undefined : phase === 'details' ? () => setPhase('amount') : onBack}
+      onBack={
+        phase === 'paying'
+          ? undefined
+          : phase === 'details'
+            ? () => setPhase('amount')
+            : // Desde la verificación se vuelve a los datos, no al selector de
+              // país: el usuario ya eligió dónde compra y rehacer ese camino no
+              // adelanta el trámite.
+              phase === 'verifying'
+              ? () => setPhase('details')
+              : onBack
+      }
       bodyClassName="flex flex-col gap-4 pb-2"
       footer={footer}
     >
-      {phase !== 'paying' && corridorOff && (
+      {showForm && corridorOff && (
         <p className="rounded-md border border-black border-b-2 bg-[#FFF4DD] px-3 py-2 text-xs font-semibold text-black">
           {corridorOff}
         </p>
@@ -474,13 +546,13 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         </div>
       )}
 
-      {phase !== 'paying' && resuming && (
+      {showForm && resuming && (
         <p className="flex items-center gap-2 text-xs text-gray-500">
           <Spinner size="sm" color="current" /> {t('wallet.fiat.onramp.resuming', 'Checking for a purchase in progress…')}
         </p>
       )}
 
-      {phase !== 'paying' && quoting && (
+      {showForm && quoting && (
         <p className="flex items-center gap-2 text-xs text-gray-500">
           <Spinner size="sm" color="current" /> {t('wallet.fiat.onramp.quoting', 'Finding a route…')}
         </p>
@@ -488,7 +560,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
 
       {/* --- Ruta elegida. Se muestra aunque el monto esté fuera de límites: el
           usuario necesita ver la comisión y el mínimo para corregirlo. --- */}
-      {phase !== 'paying' && quote && !quoting && (
+      {showForm && quote && !quoting && (
         <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="font-bold text-black">{quote.provider}</span>
@@ -545,6 +617,16 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         />
       )}
 
+      {/* --- La compra está frenada hasta que el proveedor verifique al usuario. --- */}
+      {phase === 'verifying' && (
+        <OnrampVerifyScreen
+          url={kycUrl}
+          timedOut={kycTimedOut}
+          onOpen={() => kycUrl && window.open(kycUrl, '_blank', 'noopener,noreferrer')}
+          onRestart={restart}
+        />
+      )}
+
       {/* --- Pantalla de pago: el QR y los datos del proveedor. --- */}
       {phase === 'paying' && instructions && (screen === 'paying' || screen === 'expired') && (
         <OnrampQrScreen
@@ -589,7 +671,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
 
       {failure && <p className="text-sm font-medium text-red-600">{failure}</p>}
 
-      {phase !== 'paying' && error && <p className="text-sm font-medium text-red-600">{error}</p>}
+      {showForm && error && <p className="text-sm font-medium text-red-600">{error}</p>}
     </AppModal>
   );
 }
