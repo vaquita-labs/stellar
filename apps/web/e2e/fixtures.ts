@@ -65,7 +65,11 @@ export async function primePage(page: Page, signer: Signer): Promise<void> {
  * promise for the console line is set up before navigation so a fast login
  * can never be missed.
  */
-export async function openSignedIn(page: Page, path = '/home'): Promise<void> {
+export async function openSignedIn(
+  page: Page,
+  path = '/home',
+  { acceptLegal = true }: { acceptLegal?: boolean } = {},
+): Promise<void> {
   const loggedIn = new Promise<void>((resolve, reject) => {
     const onConsole = (message: ConsoleMessage) => {
       const text = message.text();
@@ -83,6 +87,45 @@ export async function openSignedIn(page: Page, path = '/home'): Promise<void> {
   await loggedIn;
   // The app shell only renders private routes once the wallet address is mirrored into the store.
   await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 });
+  // `LegalGate` replaces the whole private tree until the wallet has accepted
+  // the current bundle, so every fresh wallet meets it before anything else.
+  // `legal.spec.ts` passes `acceptLegal: false` to test the gate itself.
+  if (acceptLegal) await acceptLegalGateIfShown(page);
+}
+
+/**
+ * Accept the legal bundle when the gate is up, and report whether it was.
+ *
+ * A wallet that has already accepted the current version never sees it, so the
+ * gate is awaited against the screens that replace it rather than with a fixed
+ * pause. The acceptance is confirmed by the POST the modal sends, not by the
+ * modal closing: the button also clears on a failure the app renders inline.
+ */
+export async function acceptLegalGateIfShown(page: Page): Promise<boolean> {
+  const heading = page.getByRole('heading', { name: 'Before you continue' });
+  const username = page.getByRole('heading', { name: 'Choose your username' });
+  const homeDeposit = page.getByRole('button', { name: 'Deposit' });
+  await expect(heading.or(username).or(homeDeposit).first()).toBeVisible({ timeout: 60_000 });
+  if (!(await heading.isVisible())) return false;
+
+  const gate = dialog(page);
+  // Two separate boxes on purpose: the documents, and the eligibility attestation.
+  const boxes = gate.getByRole('checkbox');
+  await expect(boxes).toHaveCount(2);
+  const confirm = gate.getByRole('button', { name: 'Accept and continue' });
+  await expect(confirm).toBeDisabled();
+  await boxes.nth(0).check();
+  await boxes.nth(1).check();
+  await expect(confirm).toBeEnabled();
+
+  const recorded = page.waitForResponse(
+    (r) => r.url().includes('/legal/accept') && r.request().method() === 'POST' && r.status() < 400,
+    { timeout: 60_000 },
+  );
+  await confirm.click();
+  await recorded;
+  await expect(heading).toBeHidden({ timeout: 30_000 });
+  return true;
 }
 
 /**
