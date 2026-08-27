@@ -1,6 +1,6 @@
 'use client';
 
-import type { RampQuote, RampsOnrampResponse } from '@pollar/core';
+import type { RampQuote, RampsOnrampResponse, RampsTransactionResponse } from '@pollar/core';
 import { usePollar } from '@pollar/react';
 import { useCallback } from 'react';
 import { getBlendConfig } from '@/networks/stellar/blendDirect';
@@ -185,7 +185,26 @@ export function useRampOnramp() {
     [getClient],
   );
 
-  return { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp };
+  /**
+   * Estado actual de la compra según el proveedor, con las instrucciones de pago
+   * incluidas.
+   *
+   * Es lo que hace posible retomar desde otro dispositivo: alcanza con el id de
+   * transacción para volver a tener el QR, los datos y el vencimiento, sin nada
+   * guardado localmente.
+   */
+  const readOnrampTransaction = useCallback(
+    async (txId: string): Promise<RampsTransactionResponse> => {
+      try {
+        return await getClient().getRampTransaction(txId);
+      } catch (e) {
+        throw asRampError(e, 'No se pudo consultar el estado de la compra.');
+      }
+    },
+    [getClient],
+  );
+
+  return { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp, readOnrampTransaction };
 }
 
 /** ¿La cuenta ya tiene la trustline del asset? Cuenta inexistente = no. */

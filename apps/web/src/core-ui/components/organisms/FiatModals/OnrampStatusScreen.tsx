@@ -1,0 +1,105 @@
+'use client';
+
+import { Spinner } from '@heroui/react';
+import { useTranslation } from 'react-i18next';
+import { PressableButton } from '../../molecules/PressableButton';
+
+interface OnrampStatusScreenProps {
+  /** En qué terminó (o en qué sigue) la compra. */
+  screen: 'processing' | 'settled' | 'failed';
+  /** USDC acreditado, o null cuando nadie puede afirmarlo. */
+  receivedUsdc: number | null;
+  /** Lo que el usuario pagó, en moneda local. */
+  amountFiat: string;
+  currency: string;
+  /** Lo que dijo el proveedor al rechazar, si dijo algo. */
+  reason?: string | null;
+  /** Cerrar el modal con la compra terminada. */
+  onDone: () => void;
+  /** Volver a empezar después de un rechazo. */
+  onRestart: () => void;
+}
+
+/** Decimales con los que se muestra el USDC. */
+const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2);
+
+/**
+ * Lo que pasa después de pagar: esperando la acreditación, acreditada, o
+ * rechazada.
+ *
+ * El rechazo se dice distinto del vencimiento a propósito: en un código vencido
+ * no se cobró nada, y en un rechazo el usuario puede haber pagado y necesita
+ * saber que hay plata que reclamar.
+ */
+export function OnrampStatusScreen({
+  screen,
+  receivedUsdc,
+  amountFiat,
+  currency,
+  reason,
+  onDone,
+  onRestart,
+}: OnrampStatusScreenProps) {
+  const { t } = useTranslation();
+
+  if (screen === 'processing') {
+    return (
+      <div className="flex flex-col items-center gap-3 py-6 text-center">
+        <Spinner size="lg" color="current" />
+        <p className="text-sm font-bold text-black">{t('wallet.fiat.onramp.processingTitle', 'Payment received')}</p>
+        <p className="text-xs text-gray-500">
+          {t(
+            'wallet.fiat.onramp.processingBody',
+            'The provider is sending your USDC. You can close this — it arrives on its own.',
+          )}
+        </p>
+        <PressableButton variant="success" size="cta" onClick={onDone}>
+          {t('wallet.fiat.onramp.close', 'Close')}
+        </PressableButton>
+      </div>
+    );
+  }
+
+  if (screen === 'failed') {
+    return (
+      <div className="flex flex-col items-center gap-3 py-6 text-center">
+        <p className="text-3xl">😕</p>
+        <p className="text-sm font-bold text-black">{t('wallet.fiat.onramp.failedTitle', 'The purchase did not go through')}</p>
+        <p className="text-xs text-gray-500">
+          {reason ??
+            t(
+              'wallet.fiat.onramp.failedBody',
+              'The provider rejected it. If your bank already took the money, it will be returned — keep the receipt.',
+            )}
+        </p>
+        <PressableButton variant="success" size="cta" onClick={onRestart}>
+          {t('wallet.fiat.onramp.restart', 'Start a new purchase')}
+        </PressableButton>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-6 text-center">
+      <p className="text-3xl">🎉</p>
+      <p className="text-sm font-bold text-black">{t('wallet.fiat.onramp.settledTitle', 'Your USDC is in your wallet')}</p>
+      {receivedUsdc != null ? (
+        <p className="text-2xl font-bold text-black">
+          {t('wallet.fiat.onramp.settledAmount', '{{amount}} USDC', { amount: usdcLabel(receivedUsdc) })}
+        </p>
+      ) : (
+        // Retomada desde otro dispositivo no hay estimación local ni monto del
+        // proveedor: decir un número inventado sería peor que no decir ninguno.
+        <p className="text-xs text-gray-500">
+          {t('wallet.fiat.onramp.settledNoAmount', 'The USDC was credited to your wallet.')}
+        </p>
+      )}
+      <p className="text-xs text-gray-500">
+        {t('wallet.fiat.onramp.settledPaid', 'You paid {{amount}} {{currency}}.', { amount: amountFiat, currency })}
+      </p>
+      <PressableButton variant="success" size="cta" onClick={onDone}>
+        {t('wallet.fiat.onramp.close', 'Close')}
+      </PressableButton>
+    </div>
+  );
+}

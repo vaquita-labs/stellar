@@ -66,3 +66,31 @@ export async function fetchPendingPurchase(
   if ((state !== 'pending' && state !== 'expired') || !data?.data?.purchase) return null;
   return { state, purchase: data.data.purchase };
 }
+
+/** Cómo terminó una compra, tal como lo guarda el servidor. */
+export type TerminalPurchaseStatus = 'settled' | 'expired' | 'failed';
+
+/**
+ * Cierra la compra del lado del servidor para que deje de ofrecerse al volver.
+ *
+ * Devuelve si el servidor la dio por cerrada. No cerrarla no rompe nada
+ * inmediato —la compra simplemente sigue apareciendo como pendiente— así que
+ * quien llama no tiene por qué frenar el flujo por esto.
+ */
+export async function markPurchaseTerminal(
+  walletAddress: string,
+  id: string,
+  status: TerminalPurchaseStatus,
+  errorReason?: string | null,
+): Promise<boolean> {
+  const response = await authFetch(
+    `${base()}/purchases/${encodeURIComponent(id)}/terminal`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, errorReason: errorReason ?? null }),
+    },
+    walletAddress,
+  );
+  return response.ok;
+}

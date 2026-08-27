@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   findPendingOnrampPurchase,
+  markOnrampPurchaseTerminal,
   prismaOnrampPurchaseRepository,
   recordOnrampPurchase,
   sendError,
@@ -102,6 +103,43 @@ router.post('/purchases', requireSessionWallet, async (req, res) => {
   } catch (err) {
     req.log.error({ err, walletAddress, providerTxId }, 'Failed to record on-ramp purchase');
     return sendError(res, 'Failed to record on-ramp purchase', err, 500);
+  }
+});
+
+/**
+ * Cierra una compra: acreditada, vencida o rechazada.
+ *
+ * Sólo la wallet de la sesión puede cerrar la suya, y el servicio ignora el
+ * segundo cierre — el poller del modal y el usuario volviendo a la pantalla
+ * pueden llegar los dos, y el que llega tarde no puede convertir una compra ya
+ * acreditada en una fallida.
+ */
+router.post('/purchases/:id/terminal', requireSessionWallet, async (req, res) => {
+  const walletAddress = getSessionWallet(res);
+  const id = asString(req.params.id);
+  const { status, errorReason } = req.body ?? {};
+  req.log.info({ walletAddress, purchaseId: id, status }, 'POST /onramp/purchases/:id/terminal');
+
+  if (!id) return sendError(res, 'Missing purchase id.', null, 400);
+  if (status !== 'settled' && status !== 'expired' && status !== 'failed') {
+    return sendError(res, 'status must be one of: settled, expired, failed.', null, 400);
+  }
+
+  try {
+    const purchase = await markOnrampPurchaseTerminal(prismaOnrampPurchaseRepository, {
+      walletAddress,
+      id,
+      status,
+      errorReason: asString(errorReason),
+    });
+    // Una compra que no existe o es de otra wallet es lo mismo para quien llama:
+    // no hay nada que pueda cerrar.
+    if (!purchase) return sendError(res, 'Purchase not found.', null, 404);
+
+    return sendSuccess(res, { id: purchase.id, status: purchase.status });
+  } catch (err) {
+    req.log.error({ err, walletAddress, purchaseId: id }, 'Failed to close on-ramp purchase');
+    return sendError(res, 'Failed to close on-ramp purchase', err, 500);
   }
 });
 

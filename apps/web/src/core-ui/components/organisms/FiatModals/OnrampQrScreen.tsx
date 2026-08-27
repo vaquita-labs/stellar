@@ -15,12 +15,11 @@ interface OnrampQrScreenProps {
   imageSrc: string | null;
   fields: RampInstructionField[];
   expiresAt: Date | null;
+  /** Ahora, según el reloj del modal: el mismo con el que decide qué pantalla va. */
+  now: Date;
   /** Empezar de nuevo cuando el código venció. */
   onRestart: () => void;
 }
-
-/** El reloj del modal: un tick por segundo alcanza para una cuenta regresiva. */
-const TICK_MS = 1000;
 
 /**
  * La pantalla de pago: el QR, los datos del proveedor y cuánto queda para que
@@ -32,7 +31,7 @@ const TICK_MS = 1000;
  * cuando ya está frente a la app del banco. La imagen del proveedor queda sólo
  * como último recurso, para cuando no publica el payload.
  */
-export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, onRestart }: OnrampQrScreenProps) {
+export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRestart }: OnrampQrScreenProps) {
   const { t } = useTranslation();
   const [qrFile, setQrFile] = useState<File | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
@@ -40,7 +39,6 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, onRestart
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [now, setNow] = useState(() => new Date());
 
   // Cómo se mide el dispositivo se resuelve una sola vez, al montar: `matchMedia`
   // y `navigator` no existen en el render del servidor.
@@ -76,13 +74,6 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, onRestart
       if (url) URL.revokeObjectURL(url);
     };
   }, [payload]);
-
-  // La cuenta regresiva sólo corre si hay vencimiento que mostrar.
-  useEffect(() => {
-    if (!expiresAt) return;
-    const timer = setInterval(() => setNow(new Date()), TICK_MS);
-    return () => clearInterval(timer);
-  }, [expiresAt]);
 
   const { expired, label } = countdownFrom(expiresAt, now);
   const shownSrc = qrUrl ?? (qrError || !payload ? imageSrc : null);
