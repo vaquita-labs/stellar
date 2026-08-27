@@ -78,7 +78,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * es lo que la UI traduce a un mensaje entendible (cotización vencida, KYC
  * pendiente, monto fuera de límites…).
  */
-function asRampError(e: unknown, fallback: string): RampError {
+export function asRampError(e: unknown, fallback: string): RampError {
   if (e instanceof RampError) return e;
   if (isPollarApiError(e)) return new RampError(e.details ?? e.message ?? fallback, e.code);
   return new RampError((e as Error)?.message || fallback);

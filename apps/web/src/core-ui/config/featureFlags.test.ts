@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isInstallPromptEnabled, isPassiveVaultEnabled } from './featureFlags';
+import { isBoliviaOnrampEnabled, isInstallPromptEnabled, isPassiveVaultEnabled } from './featureFlags';
 
 describe('isPassiveVaultEnabled', () => {
   it('is off by default when the env flag is unset (dark launch)', () => {
@@ -12,5 +12,12 @@ describe('isInstallPromptEnabled', () => {
   it('is off when the env flag is unset, so the install screen never blocks', () => {
     // vitest.config.ts intentionally leaves NEXT_PUBLIC_INSTALL_PROMPT_ENABLED unset.
     expect(isInstallPromptEnabled()).toBe(false);
+  });
+});
+
+describe('isBoliviaOnrampEnabled', () => {
+  it('is off when the env flag is unset, so Bolivia stays "coming soon"', () => {
+    // vitest.config.ts intentionally leaves NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED unset.
+    expect(isBoliviaOnrampEnabled()).toBe(false);
   });
 });

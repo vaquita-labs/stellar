@@ -2013,6 +2013,37 @@
         "title": "Histórico de transações",
         "withdraw": "Saque"
       },
+      "onramp": {
+        "amountLabel": "Quanto você quer gastar?",
+        "continue": "Continuar",
+        "corridorOff": "Este corredor ainda não está disponível.",
+        "country": {
+          "BO": "Bolívia"
+        },
+        "err": {
+          "anchorError": "O provedor recusou a solicitação. Tente de novo em instantes.",
+          "assetNotEnabled": "Esta moeda não está disponível para essa rota no momento.",
+          "generic": "Não foi possível cotar a compra.",
+          "kycRequired": "O provedor precisa verificar sua identidade para continuar.",
+          "noRoutes": "Nenhuma rota disponível para {{amount}} {{currency}}. Tente outro valor.",
+          "providerNotConfigured": "Este provedor ainda não está configurado para o app.",
+          "quoteExpired": "A cotação expirou. Peça uma nova e tente de novo.",
+          "walletUnsupported": "Este tipo de carteira não pode ser usado nesta compra."
+        },
+        "etaLabel": "Tempo estimado",
+        "feeLabel": "Taxa",
+        "hint": "Você paga um código QR pelo app do seu banco.",
+        "limitMax": "O máximo para esta rota é {{amount}} {{currency}}.",
+        "limitMin": "O mínimo para esta rota é {{amount}} {{currency}}.",
+        "limits": "Entre {{min}} e {{max}} {{currency}}.",
+        "notYet": "A etapa de pagamento chega na próxima atualização.",
+        "outUsdc": "≈ {{amount}} USDC",
+        "quoting": "Procurando uma rota…",
+        "rateLabel": "Cotação",
+        "title": "Comprar USDC na {{country}} ({{currency}})",
+        "youPay": "Você paga",
+        "youReceive": "Você recebe"
+      },
       "ramp": {
         "amountLabel": "Quanto você quer receber?",
         "balance": "Disponível nas suas reservas: {{balance}} USDC",

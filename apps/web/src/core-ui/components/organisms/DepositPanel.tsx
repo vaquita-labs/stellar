@@ -1,5 +1,6 @@
 'use client';
 
+import { isBoliviaOnrampEnabled } from '@/core-ui/config/featureFlags';
 import type { CorridorCode } from '@/networks/pollar/ramps';
 import { isStellarNetwork } from '@/networks/stellar';
 import { resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
@@ -15,6 +16,7 @@ import { useModalPresence } from '../molecules/AppModal';
 import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
 import { ReceiveModal } from './DepositModal/ReceiveModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
+import { ReceiveFiatRampModal } from './FiatModals/ReceiveFiatRampModal';
 import { SendFiatModal } from './FiatModals/SendFiatModal';
 import { SendFiatRampModal } from './FiatModals/SendFiatRampModal';
 import { WithdrawModal } from './WithdrawModal';
@@ -39,6 +41,11 @@ export function DepositPanel() {
   const [rampCountry, setRampCountry] = useState<CorridorCode>('BR');
   const [isRampOpen, setIsRampOpen] = useState(false);
   const isRampMounted = useModalPresence(isRampOpen);
+  // Bolivia entra por los ramps de Pollar (compra de USDC pagando un QR), no por
+  // Anclap: modal propio, detrás de flag mientras el corredor se termina.
+  const [isOnrampOpen, setIsOnrampOpen] = useState(false);
+  const isOnrampMounted = useModalPresence(isOnrampOpen);
+  const boliviaOnramp = isBoliviaOnrampEnabled();
   // Modal nativo de recibir (fondeo del usuario social a su dirección custodial).
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const isReceiveMounted = useModalPresence(isReceiveOpen);
@@ -134,9 +141,10 @@ export function DepositPanel() {
       <CountryPickerModal
         open={countryFlow !== null}
         onOpenChange={() => setCountryFlow(null)}
-        // El depósito sólo entra por Anclap (ARS); el retiro suma los corredores
-        // de Pollar (Brasil y Colombia).
-        available={countryFlow === 'withdraw' ? ['AR', 'BR', 'CO'] : ['AR']}
+        // El depósito entra por Anclap (ARS) y, con el flag prendido, por el
+        // corredor de Pollar de Bolivia (BOB); el retiro suma los corredores de
+        // Pollar de Brasil y Colombia.
+        available={countryFlow === 'withdraw' ? ['AR', 'BR', 'CO'] : boliviaOnramp ? ['AR', 'BO'] : ['AR']}
         onBack={() => {
           const flow = countryFlow;
           setCountryFlow(null);
@@ -155,7 +163,8 @@ export function DepositPanel() {
               setRampCountry(countryCode);
               setIsRampOpen(true);
             } else setIsSendFiatOpen(true);
-          } else setIsReceiveFiatOpen(true);
+          } else if (countryCode === 'BO') setIsOnrampOpen(true);
+          else setIsReceiveFiatOpen(true);
         }}
       />
       <DepositModal
@@ -242,6 +251,17 @@ export function DepositPanel() {
               amount,
               network: network?.networkName || null,
             });
+          }}
+        />
+      )}
+      {isOnrampMounted && (
+        <ReceiveFiatRampModal
+          open={isOnrampOpen}
+          country="BO"
+          onOpenChange={() => setIsOnrampOpen(false)}
+          onBack={() => {
+            setIsOnrampOpen(false);
+            setCountryFlow('deposit');
           }}
         />
       )}

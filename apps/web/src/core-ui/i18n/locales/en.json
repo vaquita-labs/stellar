@@ -1980,6 +1980,37 @@
         "title": "Transaction history",
         "withdraw": "Withdraw"
       },
+      "onramp": {
+        "amountLabel": "How much do you want to spend?",
+        "continue": "Continue",
+        "corridorOff": "This corridor is not enabled yet.",
+        "country": {
+          "BO": "Bolivia"
+        },
+        "err": {
+          "anchorError": "The provider rejected the request. Try again in a moment.",
+          "assetNotEnabled": "This currency is not available for that route right now.",
+          "generic": "The purchase could not be quoted.",
+          "kycRequired": "The provider needs to verify your identity before continuing.",
+          "noRoutes": "No route available for {{amount}} {{currency}}. Try a different amount.",
+          "providerNotConfigured": "This provider is not configured for the app yet.",
+          "quoteExpired": "The quote expired. Request a new one and try again.",
+          "walletUnsupported": "This wallet type cannot be used for this purchase."
+        },
+        "etaLabel": "Estimated time",
+        "feeLabel": "Fee",
+        "hint": "You pay a QR code with your bank app.",
+        "limitMax": "The maximum for this route is {{amount}} {{currency}}.",
+        "limitMin": "The minimum for this route is {{amount}} {{currency}}.",
+        "limits": "Between {{min}} and {{max}} {{currency}}.",
+        "notYet": "The payment step is coming in the next update.",
+        "outUsdc": "≈ {{amount}} USDC",
+        "quoting": "Finding a route…",
+        "rateLabel": "Rate",
+        "title": "Buy USDC in {{country}} ({{currency}})",
+        "youPay": "You pay",
+        "youReceive": "You receive"
+      },
       "ramp": {
         "amountLabel": "How much do you want to receive?",
         "balance": "Available in savings: {{balance}} USDC",
