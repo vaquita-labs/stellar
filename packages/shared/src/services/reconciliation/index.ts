@@ -184,6 +184,7 @@ export const createPrismaReconciliationDependencies = (
               depositId: true,
               status: true,
               transactionHash: true,
+              reward: true,
             },
           },
         },
@@ -258,12 +259,13 @@ export const createPrismaReconciliationDependencies = (
         },
       });
     },
-    applyWithdrawalRepair: async ({ type, depositDbId, withdrawalDbId, event }) => {
+    applyWithdrawalRepair: async ({ type, depositDbId, withdrawalDbId, event, reward }) => {
       const data = {
         status: WithdrawalStatus.CONFIRMED,
         transactionHash: event.txHash,
         transactionEventRaw: JSON.stringify(event.raw),
         confirmedAt: event.ledgerClosedAt ? new Date(event.ledgerClosedAt) : new Date(),
+        ...(reward ? { reward } : {}),
       };
       if (type === 'confirm_withdrawal' && withdrawalDbId) {
         await prisma.withdrawal.update({ where: { id: withdrawalDbId }, data });
