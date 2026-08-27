@@ -20,7 +20,7 @@ import { FiExternalLink } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
 import { useLivePassiveUsdc } from '../../../hooks';
-import { useConfigStore, useOfframpStore } from '../../../stores';
+import { useConfigStore, useRampActiveStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { FiatStepList, StepStatus } from './FiatStepList';
@@ -92,8 +92,8 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   // Mientras dura el flujo, el USDC que sacamos del vault NO es plata ociosa: sin
   // esto el gate de `useIdleFunds` lo devuelve al vault y la rampa se queda sin
   // nada que cobrar.
-  const setOfframpActive = useOfframpStore((s) => s.setOfframpActive);
-  useEffect(() => () => setOfframpActive(false), [setOfframpActive]);
+  const setRampActive = useRampActiveStore((s) => s.setRampActive);
+  useEffect(() => () => setRampActive(false), [setRampActive]);
 
   const [corridor, setCorridor] = useState<Corridor | null>(null);
   const [phase, setPhase] = useState<Phase>('amount');
@@ -286,7 +286,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     setUsdcSpent(null);
     setPaymentHash(null);
     setSettling(false);
-    setOfframpActive(true);
+    setRampActive(true);
 
     try {
       // 1) Sacar del vault a la wallet el USDC que cuesta el retiro. Va PRIMERO
@@ -426,7 +426,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       setBusy(false);
       // Se libera pase lo que pase: si el retiro falló, ese USDC SÍ quedó ocioso
       // en la wallet y el gate tiene que poder ofrecer devolverlo al vault.
-      setOfframpActive(false);
+      setRampActive(false);
     }
   };
 

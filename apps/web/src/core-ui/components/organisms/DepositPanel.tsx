@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnalytics, useIsPoolPaused } from '../../hooks';
-import { useMapStore, useConfigStore, useReceiveModalStore } from '../../stores';
+import { useMapStore, useConfigStore, useAwaitingFundsStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
 import { ReceiveModal } from './DepositModal/ReceiveModal';
@@ -49,13 +49,13 @@ export function DepositPanel() {
   // Modal nativo de recibir (fondeo del usuario social a su dirección custodial).
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const isReceiveMounted = useModalPresence(isReceiveOpen);
-  // Publicamos "recibir abierto" al store para que el poll de plata ociosa
+  // Publicamos que el usuario está esperando plata para que el poll de ociosa
   // (`useIdleFunds`, en otro subárbol) sepa cuándo pollear el balance custodial.
-  const setReceiveOpenGlobal = useReceiveModalStore((s) => s.setReceiveOpen);
+  const setAwaitingFunds = useAwaitingFundsStore((s) => s.setAwaitingFunds);
   useEffect(() => {
-    setReceiveOpenGlobal(isReceiveOpen);
-    return () => setReceiveOpenGlobal(false);
-  }, [isReceiveOpen, setReceiveOpenGlobal]);
+    setAwaitingFunds(isReceiveOpen);
+    return () => setAwaitingFunds(false);
+  }, [isReceiveOpen, setAwaitingFunds]);
   const [isDepositing, setIsDepositing] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { wallet: pollarWallet } = usePollar();

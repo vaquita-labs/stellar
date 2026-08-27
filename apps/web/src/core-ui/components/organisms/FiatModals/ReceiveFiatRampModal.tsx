@@ -10,6 +10,7 @@ import { usePollar } from '@pollar/react';
 import { Spinner } from '@heroui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAwaitingFundsStore, useRampActiveStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { OnrampQrScreen } from './OnrampQrScreen';
@@ -229,6 +230,25 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     const timer = setInterval(() => setNow(new Date()), TICK_MS);
     return () => clearInterval(timer);
   }, [phase]);
+
+  // Mientras la pantalla de pago está abierta hay una compra a medio camino: el
+  // USDC que se acredite es de ella y no plata que quedó quieta, así que el
+  // prompt de invertir no debe taparla. Al cerrarse la marca se apaga y el
+  // prompt vuelve a ofrecerse, igual que después de cualquier otro depósito.
+  //
+  // Al mismo tiempo el balance se consulta seguido: la plata entra por fuera de
+  // la app —el usuario paga desde el banco— y nadie nos avisa cuando llega.
+  const setRampActive = useRampActiveStore((s) => s.setRampActive);
+  const setAwaitingFunds = useAwaitingFundsStore((s) => s.setAwaitingFunds);
+  useEffect(() => {
+    const paying = open && phase === 'paying';
+    setRampActive(paying);
+    setAwaitingFunds(paying);
+    return () => {
+      setRampActive(false);
+      setAwaitingFunds(false);
+    };
+  }, [open, phase, setRampActive, setAwaitingFunds]);
 
   // Qué pantalla corresponde sale de una sola función pura sobre lo que dijo el
   // proveedor y el reloj: acá no se decide nada.

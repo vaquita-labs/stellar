@@ -7,7 +7,7 @@ import { usePollar } from '@pollar/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useConfigStore, useOfframpStore, useReceiveModalStore } from '../stores';
+import { useConfigStore, useRampActiveStore, useAwaitingFundsStore } from '../stores';
 
 // Umbral mínimo (USDC, unidades humanas): no promptear ni gastar gas por polvo.
 const MIN_IDLE = 1;
@@ -35,8 +35,8 @@ export const useIdleFunds = () => {
   const { walletAddress, token } = useConfigStore();
   const queryClient = useQueryClient();
   const ready = usePollarReadyStore((s) => s.ready);
-  const receiveOpen = useReceiveModalStore((s) => s.isReceiveOpen);
-  const offrampActive = useOfframpStore((s) => s.isOfframpActive);
+  const awaitingFunds = useAwaitingFundsStore((s) => s.isAwaitingFunds);
+  const rampActive = useRampActiveStore((s) => s.isRampActive);
 
   const [isInvesting, setIsInvesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,13 +64,14 @@ export const useIdleFunds = () => {
     void refreshWalletBalance();
   }, [ready, isCustodial, walletAddress, refreshWalletBalance]);
 
-  // (2) Poll REPETIDO: solo mientras el modal "Receive USDC" está abierto, porque
-  // ahí el usuario espera que le entre la plata on-chain (le mandan USDC a su
-  // dirección) y no queremos pegarle al RPC en loop el resto del tiempo. Guardas:
+  // (2) Poll REPETIDO: solo mientras el usuario está esperando que le entre la
+  // plata —mirando su dirección en "Receive USDC", o el QR de una compra con
+  // moneda local—, porque ahí llega por fuera de la app y nadie nos avisa. El
+  // resto del tiempo no le pegamos al RPC en loop. Guardas:
   // custodial + sesión Pollar restaurada; pausa con la pestaña oculta y mientras
   // hay un supply in-flight. Al volver a la pestaña refrescamos enseguida.
   useEffect(() => {
-    if (!receiveOpen || !ready || !isCustodial || !walletAddress) return;
+    if (!awaitingFunds || !ready || !isCustodial || !walletAddress) return;
 
     const tick = () => {
       if (inFlight.current || document.visibilityState === 'hidden') return;
@@ -86,7 +87,7 @@ export const useIdleFunds = () => {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [receiveOpen, ready, isCustodial, walletAddress, refreshWalletBalance]);
+  }, [awaitingFunds, ready, isCustodial, walletAddress, refreshWalletBalance]);
 
   const invest = useCallback(async () => {
     if (inFlight.current || !walletAddress || !token) return;
@@ -127,10 +128,13 @@ export const useIdleFunds = () => {
   // ¿Mostrar la pantalla de plata ociosa? Custodial + sesión lista + hay USDC
   // ocioso sobre el umbral. Es un nudge cerrable, así que no hace falta opt-out.
   //
-  // Con un off-ramp en curso NO se promptea: ese USDC acaba de salir del vault
-  // para pagarle a la rampa, así que no está ocioso. Devolverlo al vault deja al
-  // proveedor sin nada que cobrar y el retiro colgado.
-  const shouldPrompt = ready && isCustodial && idle >= MIN_IDLE && !offrampActive;
+  // Con una rampa en curso NO se promptea. En el off-ramp ese USDC acaba de
+  // salir del vault para pagarle a la rampa: devolverlo deja al proveedor sin
+  // nada que cobrar y el retiro colgado. En el on-ramp la compra puede
+  // acreditarse con la pantalla de pago todavía abierta, y taparla con el prompt
+  // interrumpe algo que el usuario está haciendo. Al cerrarse la pantalla la
+  // marca se apaga y el prompt se ofrece como después de cualquier depósito.
+  const shouldPrompt = ready && isCustodial && idle >= MIN_IDLE && !rampActive;
 
   return { idle, shouldPrompt, invest, isInvesting, error, clearError: () => setError(null) };
 };
