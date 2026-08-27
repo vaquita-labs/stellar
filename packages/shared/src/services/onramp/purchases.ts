@@ -74,12 +74,27 @@ export async function recordOnrampPurchase(
 }
 
 /**
+ * Cuánto se sigue ofreciendo una compra después de que venció su código.
+ *
+ * Es largo a propósito: cerrarla la saca de la pantalla para siempre, y el
+ * usuario que vuelve al rato —el pago quedó a medias, cerró la app, la retoma
+ * después de comer— todavía tiene que encontrarla. Recién cuando pasó un día
+ * entero deja de ser una compra a medias y pasa a ser una fila abandonada.
+ */
+export const ONRAMP_ABANDON_GRACE_MS = 24 * 60 * 60 * 1000;
+
+/**
  * La compra que esa wallet dejó a medias, para volver a mostrarla.
  *
  * El vencimiento se calcula acá y no se guarda: nadie corre un job que marque
  * vencidas las compras, así que el estado en la tabla se queda en `pending` para
  * siempre. Ya pagada (`paid`) el vencimiento del QR no significa nada — el
  * proveedor está acreditando y hay que seguir esperando.
+ *
+ * Leer es además el único momento en que alguien mira estas filas, así que es
+ * acá donde se cierra la que venció hace tanto que ya nadie va a volver por
+ * ella. Sin esto queda `pending` para siempre y le tapa la pantalla a la compra
+ * siguiente.
  */
 export async function findPendingOnrampPurchase(
   repository: OnrampPurchaseRepository,
@@ -90,7 +105,19 @@ export async function findPendingOnrampPurchase(
   if (!purchase) return { state: 'none' };
 
   const ranOut = purchase.status === 'pending' && !!purchase.expiresAt && purchase.expiresAt.getTime() <= now.getTime();
-  return ranOut ? { state: 'expired', purchase } : { state: 'pending', purchase };
+  if (!ranOut) return { state: 'pending', purchase };
+
+  if (now.getTime() - purchase.expiresAt!.getTime() > ONRAMP_ABANDON_GRACE_MS) {
+    try {
+      await markOnrampPurchaseTerminal(repository, { walletAddress, id: purchase.id, status: 'expired' });
+      return { state: 'none' };
+    } catch {
+      // No poder cerrarla no puede romper la lectura: sigue abierta, así que se
+      // devuelve como lo que es y se vuelve a intentar en la próxima.
+    }
+  }
+
+  return { state: 'expired', purchase };
 }
 
 export interface MarkOnrampPurchaseTerminalInput {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   findPendingOnrampPurchase,
   markOnrampPurchaseTerminal,
+  ONRAMP_ABANDON_GRACE_MS,
   recordOnrampPurchase,
   type OnrampPurchaseRecord,
   type OnrampPurchaseRepository,
@@ -143,5 +144,60 @@ describe('an unpaid purchase whose QR ran out', () => {
     await repo.update(purchase.id, { status: 'paid' });
 
     expect((await findPendingOnrampPurchase(repo, 'GABC', NOW)).state).toBe('pending');
+  });
+});
+
+describe('a purchase nobody came back for', () => {
+  const EXPIRED_AT = new Date('2026-08-26T12:30:00.000Z');
+  /** Bastante después del vencimiento como para no ser alguien que sigue mirando. */
+  const MUCH_LATER = new Date('2026-08-28T12:30:00.000Z');
+
+  it('stops being offered once it has been expired for far too long', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    await recordOnrampPurchase(repo, { ...PURCHASE, expiresAt: EXPIRED_AT });
+
+    expect((await findPendingOnrampPurchase(repo, 'GABC', MUCH_LATER)).state).toBe('none');
+    // Y sigue sin ofrecerse: el cierre quedó guardado, no fue sólo esta lectura.
+    expect((await findPendingOnrampPurchase(repo, 'GABC', MUCH_LATER)).state).toBe('none');
+  });
+
+  it('is still offered while it is only just expired', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    await recordOnrampPurchase(repo, { ...PURCHASE, expiresAt: EXPIRED_AT });
+
+    // El usuario que vuelve al rato tiene que encontrar su compra, no una
+    // pantalla en blanco: acá todavía se le ofrece.
+    const soonAfter = new Date(EXPIRED_AT.getTime() + ONRAMP_ABANDON_GRACE_MS);
+    expect((await findPendingOnrampPurchase(repo, 'GABC', soonAfter)).state).toBe('expired');
+  });
+
+  it('is never closed by the clock once the provider took the payment', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    const purchase = await recordOnrampPurchase(repo, { ...PURCHASE, expiresAt: EXPIRED_AT });
+    await repo.update(purchase.id, { status: 'paid' });
+
+    // Pagada y acreditándose: el vencimiento del QR ya no dice nada, y cerrarla
+    // dejaría al usuario sin pantalla con la plata en el aire.
+    expect((await findPendingOnrampPurchase(repo, 'GABC', MUCH_LATER)).state).toBe('pending');
+  });
+
+  it('is never closed when the provider published no expiry at all', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    await recordOnrampPurchase(repo, PURCHASE);
+
+    // Inventarle una vida al código mataría uno que el banco habría aceptado.
+    expect((await findPendingOnrampPurchase(repo, 'GABC', MUCH_LATER)).state).toBe('pending');
+  });
+
+  it('is still handed back when the close itself fails', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    await recordOnrampPurchase(repo, { ...PURCHASE, expiresAt: EXPIRED_AT });
+    repo.update = async () => {
+      throw new Error('database is down');
+    };
+
+    // No poder cerrarla no puede romper la lectura: la compra sigue abierta, así
+    // que decir que sigue abierta es lo honesto.
+    expect((await findPendingOnrampPurchase(repo, 'GABC', MUCH_LATER)).state).toBe('expired');
   });
 });

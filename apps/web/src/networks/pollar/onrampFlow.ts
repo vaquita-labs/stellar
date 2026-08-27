@@ -50,3 +50,25 @@ export function receivedUsdcFrom(tx: { amount: number; currency: string }, estim
   if (tx.currency?.toUpperCase() === 'USDC' && Number.isFinite(tx.amount)) return tx.amount;
   return estimate != null && Number.isFinite(estimate) ? estimate : null;
 }
+
+/** Qué hacer al reabrir el modal sobre una compra que quedó registrada. */
+export type ResumeAction = 'restart' | 'resume';
+
+/**
+ * Si la compra registrada se retoma en pantalla o se descarta y se vuelve al
+ * monto.
+ *
+ * Se descarta sólo cuando las dos fuentes coinciden: el servidor la da por
+ * vencida y el proveedor confirma que nunca vio el pago. Con el estado del
+ * proveedor desconocido —la consulta falló— se retoma: cerrar una compra que no
+ * se pudo verificar es cómo una compra acreditada pierde su pantalla de éxito.
+ */
+export function resumeActionFor({
+  state,
+  providerStatus,
+}: {
+  state: 'pending' | 'expired';
+  providerStatus: RampTxStatus | null;
+}): ResumeAction {
+  return state === 'expired' && providerStatus === 'pending' ? 'restart' : 'resume';
+}

@@ -1,7 +1,14 @@
 'use client';
 
 import { type PaymentInstructions, readPaymentInstructions } from '@/networks/pollar/onrampPayment';
-import { type OnrampScreen, receivedUsdcFrom, screenFor, shouldPoll, terminalStatusFor } from '@/networks/pollar/onrampFlow';
+import {
+  type OnrampScreen,
+  receivedUsdcFrom,
+  resumeActionFor,
+  screenFor,
+  shouldPoll,
+  terminalStatusFor,
+} from '@/networks/pollar/onrampFlow';
 import { fetchPendingPurchase, markPurchaseTerminal, recordPurchase } from '@/networks/pollar/onrampApi';
 import { isKycRequiredError, kycNeededBy, waitForKycApproval } from '@/networks/pollar/kycWait';
 import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
@@ -203,6 +210,12 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // funciona en un teléfono que nunca vio la compra, no hace falta nada guardado
   // acá. Si el pago se acreditó mientras el usuario no estaba, el estado del
   // proveedor manda y la pantalla que aparece es la de compra acreditada.
+  //
+  // Un código vencido que el proveedor confirma sin pagar no se muestra: se
+  // cierra acá y el usuario aparece en el monto, con el suyo ya escrito y la
+  // cotización de ahora cargando. La compra nueva NO se crea sola —un código
+  // vencido no prueba que nadie lo pagó, y el que pagó sobre la hora pagaría dos
+  // veces con bolivianos de verdad—, así que el último paso lo da él.
   useEffect(() => {
     if (!open || !walletAddress) return;
     let cancelled = false;
@@ -211,15 +224,34 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       try {
         const found = await fetchPendingPurchase(walletAddress);
         if (cancelled || !found) return;
-        const tx = await readOnrampTransaction(found.purchase.providerTxId);
+        // El fallo de esta consulta no puede tirar abajo el rescate: sin
+        // respuesta del proveedor no se cierra nada y la compra sigue en pie.
+        const tx = await readOnrampTransaction(found.purchase.providerTxId).catch(() => null);
         if (cancelled) return;
+
+        if (resumeActionFor({ state: found.state, providerStatus: tx?.status ?? null }) === 'restart') {
+          void markPurchaseTerminal(walletAddress, found.purchase.id, 'expired').catch(() => {
+            // Que no cierre sólo deja la fila abierta un rato más; el barrido de
+            // la lectura la termina cerrando.
+          });
+          setAmountFiat(found.purchase.amountFiat);
+          return;
+        }
 
         setPurchaseId(found.purchase.id);
         setTxId(found.purchase.providerTxId);
         setPaid({ amount: found.purchase.amountFiat, currency: found.purchase.currency });
-        setProviderStatus(tx.status);
-        setProviderAmount({ amount: tx.amount, currency: tx.currency });
-        setInstructions(readPaymentInstructions(tx));
+
+        if (!tx) {
+          // Sin proveedor no hay QR que dibujar, pero la pantalla de vencida no
+          // lo necesita: alcanza con el vencimiento que ya guardó el servidor.
+          if (!found.purchase.expiresAt) return;
+          setInstructions({ payload: null, imageSrc: null, fields: [], expiresAt: new Date(found.purchase.expiresAt) });
+        } else {
+          setProviderStatus(tx.status);
+          setProviderAmount({ amount: tx.amount, currency: tx.currency });
+          setInstructions(readPaymentInstructions(tx));
+        }
         setNow(new Date());
         setPhase('paying');
       } catch {

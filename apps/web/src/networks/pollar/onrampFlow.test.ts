@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { receivedUsdcFrom, screenFor, shouldPoll, terminalStatusFor } from './onrampFlow';
+import { receivedUsdcFrom, resumeActionFor, screenFor, shouldPoll, terminalStatusFor } from './onrampFlow';
 
 const now = new Date('2026-08-27T12:00:00Z');
 const soon = new Date('2026-08-27T12:05:00Z');
@@ -70,5 +70,27 @@ describe('receivedUsdcFrom', () => {
 
   it('no inventa un monto cuando no hay ni informe ni estimación', () => {
     expect(receivedUsdcFrom({ amount: 100, currency: 'BOB' }, null)).toBeNull();
+  });
+});
+
+describe('resumeActionFor', () => {
+  it('sends the user back to the amount step when the code expired unpaid', () => {
+    // Vencido y el proveedor confirma que nunca vio un pago: mostrarle el QR
+    // muerto sólo lo obliga a apretar "empezar de nuevo" a mano.
+    expect(resumeActionFor({ state: 'expired', providerStatus: 'pending' })).toBe('restart');
+  });
+
+  it('keeps the expired screen when the provider could not be reached', () => {
+    // Sin respuesta no hay confirmación de que nadie pagó, y cerrar a ciegas es
+    // cómo una compra acreditada pierde su pantalla de éxito.
+    expect(resumeActionFor({ state: 'expired', providerStatus: null })).toBe('resume');
+  });
+
+  it('still restores a purchase that got credited after its code expired', () => {
+    expect(resumeActionFor({ state: 'expired', providerStatus: 'completed' })).toBe('resume');
+  });
+
+  it('leaves a live code alone', () => {
+    expect(resumeActionFor({ state: 'pending', providerStatus: 'pending' })).toBe('resume');
   });
 });
