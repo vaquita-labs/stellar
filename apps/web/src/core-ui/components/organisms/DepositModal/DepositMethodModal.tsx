@@ -1,6 +1,7 @@
 'use client';
 
 import { getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
+import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
 import { Popover, PopoverContent, PopoverTrigger, Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -69,6 +70,9 @@ export function DepositMethodModal({
   // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
   // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
   const [error, setError] = useState<unknown>(null);
+  // El depósito ya salió a la red y todavía puede confirmar. No es un fallo del
+  // que se pueda rehacer: apaga el reintento del CTA (ver `footer`).
+  const txPending = isTxPendingError(error);
   // Se enciende cuando el usuario intenta revisar un monto mayor al disponible:
   // apaga el número a gris y dispara el temblor. Se apaga al seguir tecleando.
   const [overBalance, setOverBalance] = useState(false);
@@ -431,9 +435,19 @@ export function DepositMethodModal({
         </PressableButton>
       </div>
     ) : step === 'confirm' ? (
-      <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleConfirm}>
-        {error ? t('common.retry', 'Retry') : t('deposit.blend.cta', 'Deposit to your savings')}
-      </PressableButton>
+      // Con la transacción en vuelo el único botón honesto es cerrar: volver a
+      // pulsar "Reintentar" mandaría un segundo depósito mientras el primero
+      // todavía puede entrar al ledger, y el usuario pagaría dos veces. El hash
+      // para seguirla lo muestra `ErrorNotice`.
+      txPending ? (
+        <PressableButton variant="white" size="cta" className="py-2.5!" onClick={onOpenChange}>
+          {t('common.close', 'Close')}
+        </PressableButton>
+      ) : (
+        <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleConfirm}>
+          {error ? t('common.retry', 'Retry') : t('deposit.blend.cta', 'Deposit to your savings')}
+        </PressableButton>
+      )
     ) : step === 'processing' ? (
       <p className="w-full text-center text-xs text-gray-500">
         {t('withdraw.processingHint', 'This may take a few seconds.')}

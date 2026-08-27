@@ -184,4 +184,79 @@ describe('reconciliation matcher', () => {
       }),
     ]);
   });
+
+  it('carries the reward of a matured withdrawal into the planned repair', () => {
+    const result = matchReconciliationEvents(
+      [withdrawEvent({ rewardRaw: '1900000' })],
+      [dbDeposit({ status: DepositStatus.CONFIRMED })],
+      [dbToken()],
+    );
+
+    expect(result.plannedWithdrawalRepairs).toEqual([
+      expect.objectContaining({ type: 'create_confirmed_withdrawal', reward: '0.19' }),
+    ]);
+  });
+
+  it('leaves the reward unset for an early withdrawal, which pays none', () => {
+    const result = matchReconciliationEvents(
+      [withdrawEvent({ rewardRaw: '0', matured: false })],
+      [dbDeposit({ status: DepositStatus.CONFIRMED })],
+      [dbToken()],
+    );
+
+    expect(result.plannedWithdrawalRepairs).toHaveLength(1);
+    expect(result.plannedWithdrawalRepairs[0]).not.toHaveProperty('reward');
+  });
+
+  it('backfills the reward of a withdrawal the API confirmed without one', () => {
+    const event = withdrawEvent({ rewardRaw: '1900000' });
+    const result = matchReconciliationEvents(
+      [event],
+      [
+        dbDeposit({
+          status: DepositStatus.CONFIRMED,
+          withdrawals: [
+            {
+              id: 55,
+              depositId: 1,
+              status: WithdrawalStatus.CONFIRMED,
+              transactionHash: event.txHash,
+              reward: null,
+            },
+          ],
+        }),
+      ],
+      [dbToken()],
+    );
+
+    expect(result.plannedWithdrawalRepairs).toEqual([
+      expect.objectContaining({ type: 'confirm_withdrawal', withdrawalDbId: 55, reward: '0.19' }),
+    ]);
+    expect(result.skippedEvents).toEqual([]);
+  });
+
+  it('skips a confirmed withdrawal that already carries its reward', () => {
+    const event = withdrawEvent({ rewardRaw: '1900000' });
+    const result = matchReconciliationEvents(
+      [event],
+      [
+        dbDeposit({
+          status: DepositStatus.CONFIRMED,
+          withdrawals: [
+            {
+              id: 55,
+              depositId: 1,
+              status: WithdrawalStatus.CONFIRMED,
+              transactionHash: event.txHash,
+              reward: '0.19',
+            },
+          ],
+        }),
+      ],
+      [dbToken()],
+    );
+
+    expect(result.plannedWithdrawalRepairs).toEqual([]);
+    expect(result.skippedEvents).toEqual([event]);
+  });
 });
