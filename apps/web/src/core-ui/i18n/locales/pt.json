@@ -2016,6 +2016,8 @@
       "onramp": {
         "amountLabel": "Quanto você quer gastar?",
         "continue": "Continuar",
+        "copied": "Copiado",
+        "copy": "Copiar",
         "corridorOff": "Este corredor ainda não está disponível.",
         "country": {
           "BO": "Bolívia"
@@ -2032,16 +2034,28 @@
           "walletUnsupported": "Este tipo de carteira não pode ser usado nesta compra."
         },
         "etaLabel": "Tempo estimado",
+        "expiredBody": "Nada foi cobrado. Comece de novo para obter um código novo com uma cotação atualizada.",
+        "expiredTitle": "Este código expirou",
+        "expiresIn": "Expira em {{time}}",
         "feeLabel": "Taxa",
         "hint": "Você paga um código QR pelo app do seu banco.",
         "limitMax": "O máximo para esta rota é {{amount}} {{currency}}.",
         "limitMin": "O mínimo para esta rota é {{amount}} {{currency}}.",
         "limits": "Entre {{min}} e {{max}} {{currency}}.",
-        "notYet": "A etapa de pagamento chega na próxima atualização.",
+        "longPress": "Pressione e segure o código para salvá-lo nas suas fotos.",
         "outUsdc": "≈ {{amount}} USDC",
+        "payHint": "Pague este QR pelo app do seu banco. O USDC chega sozinho.",
+        "qrAlt": "Código QR de pagamento",
         "quoting": "Procurando uma rota…",
         "rateLabel": "Cotação",
+        "restart": "Começar uma nova compra",
+        "save": "Salvar QR no meu celular",
+        "saved": "Salvo",
+        "stepCreating": "Pedindo o código de pagamento ao provedor…",
+        "stepTrustline": "Preparando sua carteira para receber USDC…",
         "title": "Comprar USDC na {{country}} ({{currency}})",
+        "unrecorded": "Mantenha esta tela aberta: não conseguimos salvar sua compra e talvez você não consiga voltar a ela.",
+        "working": "Preparando sua compra…",
         "youPay": "Você paga",
         "youReceive": "Você recebe"
       },

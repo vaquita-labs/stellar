@@ -1983,6 +1983,8 @@
       "onramp": {
         "amountLabel": "¿Cuánto querés gastar?",
         "continue": "Continuar",
+        "copied": "Copiado",
+        "copy": "Copiar",
         "corridorOff": "Este corredor todavía no está habilitado.",
         "country": {
           "BO": "Bolivia"
@@ -1999,16 +2001,28 @@
           "walletUnsupported": "Este tipo de wallet no se puede usar para esta compra."
         },
         "etaLabel": "Tiempo estimado",
+        "expiredBody": "No se cobró nada. Empezá de nuevo para obtener un código nuevo con una cotización fresca.",
+        "expiredTitle": "Este código venció",
+        "expiresIn": "Vence en {{time}}",
         "feeLabel": "Comisión",
         "hint": "Pagás un código QR desde la app de tu banco.",
         "limitMax": "El máximo para esta ruta es {{amount}} {{currency}}.",
         "limitMin": "El mínimo para esta ruta es {{amount}} {{currency}}.",
         "limits": "Entre {{min}} y {{max}} {{currency}}.",
-        "notYet": "El paso del pago llega en la próxima actualización.",
+        "longPress": "Mantené apretado el código para guardarlo en tus fotos.",
         "outUsdc": "≈ {{amount}} USDC",
+        "payHint": "Pagá este QR desde la app de tu banco. El USDC llega solo.",
+        "qrAlt": "Código QR de pago",
         "quoting": "Buscando una ruta…",
         "rateLabel": "Cotización",
+        "restart": "Empezar una compra nueva",
+        "save": "Guardar QR en mi teléfono",
+        "saved": "Guardado",
+        "stepCreating": "Pidiéndole el código de pago al proveedor…",
+        "stepTrustline": "Preparando tu billetera para recibir USDC…",
         "title": "Comprar USDC en {{country}} ({{currency}})",
+        "unrecorded": "No cierres esta pantalla: no pudimos guardar tu compra y puede que no puedas volver a ella.",
+        "working": "Preparando tu compra…",
         "youPay": "Pagás",
         "youReceive": "Recibís"
       },

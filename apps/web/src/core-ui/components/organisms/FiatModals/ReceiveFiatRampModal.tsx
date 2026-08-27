@@ -1,13 +1,17 @@
 'use client';
 
+import { type PaymentInstructions, readPaymentInstructions } from '@/networks/pollar/onrampPayment';
+import { recordPurchase } from '@/networks/pollar/onrampApi';
 import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
 import { type OnrampCorridor, type OnrampCorridorCode, useRampOnramp, usdcOutOf } from '@/networks/pollar/rampsOnramp';
 import type { RampQuote } from '@pollar/core';
+import { usePollar } from '@pollar/react';
 import { Spinner } from '@heroui/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
+import { OnrampQrScreen } from './OnrampQrScreen';
 import { RAMP_FIELD_CLASS, RampFieldList } from './RampFieldList';
 
 interface ReceiveFiatRampModalProps {
@@ -22,8 +26,8 @@ interface ReceiveFiatRampModalProps {
 /** Espera antes de cotizar mientras el usuario sigue tipeando el monto. */
 const QUOTE_DEBOUNCE_MS = 450;
 
-/** Elegir cuánto gastar, y después los datos que pida el proveedor. */
-type Phase = 'amount' | 'details';
+/** Elegir cuánto gastar, los datos que pida el proveedor, y pagar el QR. */
+type Phase = 'amount' | 'details' | 'paying';
 
 /** Decimales con los que se muestra el USDC estimado. */
 const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2);
@@ -43,14 +47,24 @@ const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2
  */
 export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: ReceiveFiatRampModalProps) {
   const { t } = useTranslation();
-  const { resolveCorridor, quoteFiat } = useRampOnramp();
+  const { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp } = useRampOnramp();
+  const { wallet, refreshAssets } = usePollar();
+  const walletAddress = wallet?.address ?? null;
 
   const [phase, setPhase] = useState<Phase>('amount');
+  const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<'trustline' | 'creating' | null>(null);
+  const [instructions, setInstructions] = useState<PaymentInstructions | null>(null);
+  const [unrecorded, setUnrecorded] = useState(false);
+  // Se incrementa para forzar una cotización nueva sobre el MISMO monto, que es
+  // lo que hace falta al volver de un código vencido: la cotización vieja venció
+  // con él y crear la compra con ella fallaría.
+  const [requote, setRequote] = useState(0);
+  const [failure, setFailure] = useState<string | null>(null);
   const [amountFiat, setAmountFiat] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
   const [corridor, setCorridor] = useState<OnrampCorridor | null>(null);
   const [corridorOff, setCorridorOff] = useState<string | null>(null);
-  const [notYet, setNotYet] = useState(false);
   // El resultado de cotizar se guarda JUNTO AL MONTO que lo produjo. Así no hay
   // que ir limpiándolo a mano cada vez que el usuario cambia el número: si el
   // monto guardado no es el que está escrito, el resultado está viejo y no se
@@ -149,7 +163,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [corridor, amountFiat]);
+  }, [corridor, amountFiat, requote]);
 
   // Sólo vale el resultado del monto que está escrito ahora; el de cualquier
   // otro es de una tecla anterior y todavía se está recotizando.
@@ -169,8 +183,76 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const fields: RampField[] = quote?.requiredFields ?? [];
   const fieldsValid = fieldsAreValid(fields, values);
 
+  /**
+   * Trustline → compra → registro → QR, en ese orden y sin saltearse ninguno.
+   *
+   * La trustline va PRIMERO porque es la única falla que le cuesta plata al
+   * usuario: un QR emitido contra una wallet que no puede recibir USDC se paga
+   * igual, con bolivianos reales, y el proveedor no tiene dónde acreditar. Si
+   * falla, no se crea nada.
+   */
+  const handleBuy = async () => {
+    if (!quote || !corridor || !walletAddress || busy) return;
+    setBusy(true);
+    setFailure(null);
+    setUnrecorded(false);
+    try {
+      setStep('trustline');
+      await ensureUsdcTrustline(walletAddress);
+      await refreshAssets();
+
+      setStep('creating');
+      const created = await createOnramp({ corridor, quote, amountFiat: amountNum, walletAddress, values });
+
+      // El KYC del proveedor se resuelve en otra pantalla; hasta que exista, lo
+      // honesto es decir que la compra no puede seguir por acá.
+      if (created.kycRequired) {
+        setFailure(t('wallet.fiat.onramp.err.kycRequired', 'The provider needs to verify your identity first.'));
+        return;
+      }
+
+      const read = readPaymentInstructions(created);
+
+      // El registro va ANTES de mostrar el QR: sin el id de transacción guardado
+      // no hay forma de volver a esta pantalla. Que falle no puede esconder un
+      // código que el proveedor ya emitió y que el usuario puede pagar — el USDC
+      // llega igual; lo que se pierde es poder retomar la pantalla.
+      try {
+        const recorded = await recordPurchase(walletAddress, {
+          providerTxId: created.txId,
+          provider: created.provider,
+          country: corridor.country,
+          amountFiat,
+          currency: corridor.currency,
+          expiresAt: read.expiresAt?.toISOString() ?? null,
+        });
+        if (!recorded) setUnrecorded(true);
+      } catch {
+        setUnrecorded(true);
+      }
+
+      setInstructions(read);
+      setPhase('paying');
+    } catch (e) {
+      setFailure(messageOf(e));
+    } finally {
+      setStep(null);
+      setBusy(false);
+    }
+  };
+
+  /** Vuelve al monto para pedir un código nuevo, con cotización fresca. */
+  const restart = () => {
+    setInstructions(null);
+    setUnrecorded(false);
+    setFailure(null);
+    setResult(null);
+    setRequote((n) => n + 1);
+    setPhase('amount');
+  };
+
   const footer =
-    phase === 'amount' ? (
+    phase === 'paying' ? null : phase === 'amount' ? (
       <PressableButton variant="success" size="cta" onClick={() => setPhase('details')} disabled={!usable || !!corridorOff}>
         {t('wallet.fiat.onramp.continue', 'Continue')}
       </PressableButton>
@@ -178,12 +260,10 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       <PressableButton
         variant="success"
         size="cta"
-        // El pago del QR llega en la parte siguiente; hasta entonces el botón
-        // sólo confirma que los datos están completos.
-        onClick={() => setNotYet(true)}
-        disabled={!fieldsValid || !usable}
+        onClick={() => void handleBuy()}
+        disabled={!fieldsValid || !usable || busy || !walletAddress}
       >
-        {t('wallet.fiat.onramp.cta', 'Buy USDC')}
+        {busy ? t('wallet.fiat.onramp.working', 'Preparing your purchase…') : t('wallet.fiat.onramp.cta', 'Buy USDC')}
       </PressableButton>
     );
 
@@ -196,11 +276,13 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         currency: currency || country,
       })}
       size="md"
-      onBack={phase === 'details' ? () => setPhase('amount') : onBack}
+      // Con el QR en pantalla no hay vuelta atrás: el código ya existe del lado
+      // del proveedor y "volver" sólo llevaría a crear otro sobre el mismo pago.
+      onBack={phase === 'paying' ? undefined : phase === 'details' ? () => setPhase('amount') : onBack}
       bodyClassName="flex flex-col gap-4 pb-2"
       footer={footer}
     >
-      {corridorOff && (
+      {phase !== 'paying' && corridorOff && (
         <p className="rounded-md border border-black border-b-2 bg-[#FFF4DD] px-3 py-2 text-xs font-semibold text-black">
           {corridorOff}
         </p>
@@ -220,10 +302,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
               type="text"
               inputMode="decimal"
               value={amountFiat}
-              onChange={(e) => {
-                setNotYet(false);
-                setAmountFiat(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'));
-              }}
+              onChange={(e) => setAmountFiat(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))}
               placeholder="0.00"
               className={RAMP_FIELD_CLASS}
             />
@@ -233,7 +312,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         </div>
       )}
 
-      {quoting && (
+      {phase !== 'paying' && quoting && (
         <p className="flex items-center gap-2 text-xs text-gray-500">
           <Spinner size="sm" color="current" /> {t('wallet.fiat.onramp.quoting', 'Finding a route…')}
         </p>
@@ -241,7 +320,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
 
       {/* --- Ruta elegida. Se muestra aunque el monto esté fuera de límites: el
           usuario necesita ver la comisión y el mínimo para corregirlo. --- */}
-      {quote && !quoting && (
+      {phase !== 'paying' && quote && !quoting && (
         <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="font-bold text-black">{quote.provider}</span>
@@ -292,21 +371,44 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         <RampFieldList
           fields={fields}
           values={values}
-          onChange={(key, value) => {
-            setNotYet(false);
-            setValues((prev) => ({ ...prev, [key]: value }));
-          }}
+          onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+          disabled={busy}
           idPrefix="onramp"
         />
       )}
 
-      {notYet && (
-        <p className="rounded-md border border-black border-b-2 bg-[#DDF4FF] px-3 py-2 text-xs font-semibold text-black">
-          {t('wallet.fiat.onramp.notYet', 'The payment step is coming in the next update.')}
+      {/* --- Pantalla de pago: el QR y los datos del proveedor. --- */}
+      {phase === 'paying' && instructions && (
+        <OnrampQrScreen
+          payload={instructions.payload}
+          imageSrc={instructions.imageSrc}
+          fields={instructions.fields}
+          expiresAt={instructions.expiresAt}
+          onRestart={restart}
+        />
+      )}
+
+      {unrecorded && (
+        <p className="rounded-md border border-black border-b-2 bg-[#FFF4DD] px-3 py-2 text-xs font-semibold text-black">
+          {t(
+            'wallet.fiat.onramp.unrecorded',
+            'Keep this screen open: we could not save your purchase, so you may not be able to return to it.',
+          )}
         </p>
       )}
 
-      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+      {step && (
+        <p className="flex items-center gap-2 text-xs text-gray-500">
+          <Spinner size="sm" color="current" />{' '}
+          {step === 'trustline'
+            ? t('wallet.fiat.onramp.stepTrustline', 'Preparing your wallet to receive USDC…')
+            : t('wallet.fiat.onramp.stepCreating', 'Asking the provider for your payment code…')}
+        </p>
+      )}
+
+      {failure && <p className="text-sm font-medium text-red-600">{failure}</p>}
+
+      {phase !== 'paying' && error && <p className="text-sm font-medium text-red-600">{error}</p>}
     </AppModal>
   );
 }

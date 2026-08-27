@@ -1,9 +1,11 @@
 'use client';
 
-import type { RampQuote } from '@pollar/core';
+import type { RampQuote, RampsOnrampResponse } from '@pollar/core';
 import { usePollar } from '@pollar/react';
 import { useCallback } from 'react';
-import { asRampError } from './ramps';
+import { getBlendConfig } from '@/networks/stellar/blendDirect';
+import { getHorizonUrl } from '@/networks/stellar/kit';
+import { asRampError, RampError } from './ramps';
 
 /**
  * Corredores de ON-ramp que la app expone hoy. Son otro conjunto que los de
@@ -64,7 +66,7 @@ export function usdcOutOf(amountFiat: number, quote: Pick<RampQuote, 'rate'>): n
  * en moneda local → ver cuánto USDC entra, con qué comisión y en cuánto tiempo.
  */
 export function useRampOnramp() {
-  const { getClient } = usePollar();
+  const { getClient, setTrustline } = usePollar();
 
   /**
    * Corredor tal como lo publica Pollar para esta app, o `null` si el país no
@@ -114,5 +116,83 @@ export function useRampOnramp() {
     [getClient],
   );
 
-  return { resolveCorridor, quoteFiat };
+  /**
+   * Deja la wallet en condiciones de RECIBIR el USDC antes de crear la compra.
+   *
+   * Es el paso más importante del flujo y va primero a propósito: si el QR se
+   * emite contra una wallet sin trustline, el usuario paga bolivianos reales y
+   * el proveedor no tiene dónde acreditar. Falla ruidosamente — no crear la
+   * compra es siempre mejor que crearla sin dónde entregar.
+   *
+   * La trustline la paga la app (sponsorship de Pollar queda encendido), así que
+   * un usuario que nunca tuvo XLM puede comprar igual.
+   */
+  const ensureUsdcTrustline = useCallback(
+    async (walletAddress: string): Promise<void> => {
+      const issuer = getBlendConfig()?.usdcIssuer;
+      if (!issuer) {
+        throw new RampError('No hay un USDC configurado para esta red.');
+      }
+      // Se pregunta a Horizon y no al estado de Pollar: ese estado se queda viejo
+      // dentro del mismo handler async y volvería a pedir la trustline cada vez.
+      if (await accountHasTrustline(walletAddress, 'USDC', issuer)) return;
+
+      const outcome = await setTrustline({ code: 'USDC', issuer });
+      if (outcome.status === 'error') {
+        throw new RampError(outcome.details ?? 'No se pudo activar la trustline de USDC.');
+      }
+    },
+    [setTrustline],
+  );
+
+  /**
+   * Crea la compra con una cotización ya elegida y devuelve las instrucciones de
+   * pago (el QR entre ellas).
+   *
+   * Del formulario sólo viajan las claves que el body de on-ramp acepta: a
+   * diferencia del off-ramp, `/ramps/onramp` no tiene `fields` ni `bankDetails`
+   * —el usuario no entrega una cuenta de destino, paga un QR—, así que cualquier
+   * otro campo que pida la cotización no tiene dónde ir.
+   */
+  const createOnramp = useCallback(
+    async (args: {
+      corridor: OnrampCorridor;
+      quote: RampQuote;
+      amountFiat: number;
+      walletAddress?: string;
+      values: Record<string, string>;
+    }): Promise<RampsOnrampResponse> => {
+      const { corridor, quote, amountFiat, walletAddress, values } = args;
+
+      const body: Parameters<ReturnType<typeof getClient>['createOnRamp']>[0] = {
+        quoteId: quote.quoteId,
+        amount: amountFiat,
+        currency: corridor.currency,
+        country: corridor.country,
+      };
+      if (walletAddress) body.walletAddress = walletAddress;
+      const email = (values.email ?? '').trim();
+      const fullName = (values.fullName ?? '').trim();
+      if (email) body.email = email;
+      if (fullName) body.fullName = fullName;
+
+      try {
+        return await getClient().createOnRamp(body);
+      } catch (e) {
+        throw asRampError(e, 'No se pudo iniciar la compra.');
+      }
+    },
+    [getClient],
+  );
+
+  return { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp };
+}
+
+/** ¿La cuenta ya tiene la trustline del asset? Cuenta inexistente = no. */
+async function accountHasTrustline(account: string, code: string, issuer: string): Promise<boolean> {
+  const res = await fetch(`${getHorizonUrl()}/accounts/${encodeURIComponent(account)}`, { cache: 'no-store' });
+  if (res.status === 404) return false;
+  if (!res.ok) throw new RampError(`No se pudo leer la cuenta en Horizon (HTTP ${res.status}).`);
+  const data = (await res.json()) as { balances?: Array<{ asset_code?: string; asset_issuer?: string }> };
+  return (data.balances ?? []).some((b) => b.asset_code?.toUpperCase() === code.toUpperCase() && b.asset_issuer === issuer);
 }
