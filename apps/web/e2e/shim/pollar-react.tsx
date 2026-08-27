@@ -33,6 +33,11 @@ type ProviderProps = ComponentProps<typeof real.PollarProvider>;
 /** Clients whose auto-login already started; keyed by instance so StrictMode's double effect stays idempotent. */
 const started = new WeakSet<object>();
 
+/** How many times a failed connection is retried before the spec is told the login failed. */
+const LOGIN_RETRIES = 3;
+/** Multiplied by the attempt number, so the waits grow 1s, 2s, 3s. */
+const LOGIN_RETRY_BACKOFF_MS = 1_000;
+
 function E2EAutoLogin() {
   const { getClient, login } = real.usePollar();
 
@@ -50,11 +55,26 @@ function E2EAutoLogin() {
         return;
       }
       started.add(client);
+      let attempt = 0;
       const unsubscribe = client.onAuthStateChange((state) => {
         if (state.step === 'authenticated') {
           console.info('[e2e-signer] logged in as', state.session.wallet?.address);
           unsubscribe();
         } else if (state.step === 'error') {
+          // Connecting to Pollar fails intermittently (`WALLET_CONNECT_FAILED`)
+          // when a run opens many sessions in a row. Retrying the connection is
+          // far cheaper than letting the spec fail and having Playwright replay
+          // the whole test, which would resubmit its on-chain transactions.
+          // The failure line is only emitted once the retries are spent, so a
+          // genuinely broken login still fails the spec.
+          if (attempt < LOGIN_RETRIES && !cancelled) {
+            attempt += 1;
+            console.info('[e2e-signer] login attempt failed, retrying:', state.errorCode);
+            setTimeout(() => {
+              if (!cancelled) login({ provider: E2E_ADAPTER_ID });
+            }, attempt * LOGIN_RETRY_BACKOFF_MS);
+            return;
+          }
           console.error('[e2e-signer] login failed:', state.errorCode, state.message);
           unsubscribe();
         }
