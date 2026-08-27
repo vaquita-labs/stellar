@@ -18,7 +18,7 @@ proves it.
 | 3.1 | Anclap On/Off Ramp Integration | [`3.1-anclap-on-off-ramp.md`](./3.1-anclap-on-off-ramp.md) | **Met** |
 | 3.2 | Mainnet Contract Deployment and Live Yields | [`3.2-mainnet-deployment-and-live-yields.md`](./3.2-mainnet-deployment-and-live-yields.md) | **Met** |
 | 3.3 | Full UX Readiness | [`3.3-full-ux-readiness.md`](./3.3-full-ux-readiness.md) | In progress |
-| 3.4 | End to End Testing | [`3.4-end-to-end-testing.md`](./3.4-end-to-end-testing.md) | Partially met |
+| 3.4 | End to End Testing | [`3.4-end-to-end-testing.md`](./3.4-end-to-end-testing.md) | **Met** |
 | 3.5 | Internal Security Review and Technical Documentation | [`3.5-security-review-and-documentation.md`](./3.5-security-review-and-documentation.md) | **Met** |
 
 ## 2. Mainnet addresses
