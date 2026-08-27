@@ -44,7 +44,7 @@ The matrix is run per external wallet. One social-login column is kept as the co
 
 ## 2. Supported wallets
 
-Minimum set for sign-off: **Freighter, Albedo, xBull, Rabet, Hana** — the deliverable's "Freighter, Albedo, and ≥3 additional wallets". Lobstr is mainnet-only and therefore optional (see §3). Kit version at the time of writing: `@creit.tech/stellar-wallets-kit` 2.3.0, `@pollar/stellar-wallets-kit-adapter` 0.11.2 (see `apps/web/package.json` / lockfile for the resolved versions of the build under test).
+Minimum set for sign-off: **Freighter, Albedo, xBull, Rabet** plus a fifth signing path — Hana was the intended fifth but marks Stellar `INELIGIBLE` (run 2026-08-25-38cdf27, F-17), so that run used the **Pollar social login**, which is the embedded wallet rather than an external one — the deliverable's "Freighter, Albedo, and ≥3 additional wallets". Lobstr is mainnet-only and therefore optional (see §3). Kit version at the time of writing: `@creit.tech/stellar-wallets-kit` 2.3.0, `@pollar/stellar-wallets-kit-adapter` 0.11.2 (see `apps/web/package.json` / lockfile for the resolved versions of the build under test).
 
 | Wallet | Kit id | Type | Works in | Network switching | Install |
 |---|---|---|---|---|---|
@@ -53,7 +53,7 @@ Minimum set for sign-off: **Freighter, Albedo, xBull, Rabet, Hana** — the deli
 | xBull | `xbull` | Browser extension, PWA, mobile app | Chrome, Firefox, Edge (extension); any browser via PWA | Follows the network the app requests; the extension also has its own network selector. | https://xbull.app |
 | Lobstr *(optional)* | `lobstr` | Mobile app paired through the LOBSTR signer browser extension (deep link / QR) | Chrome, Edge (extension); mobile app iOS / Android | **Mainnet only.** Testnet cells are N/A; this wallet is run against the mainnet build. | https://lobstr.co · extension from the Chrome Web Store |
 | Rabet | `rabet` | Browser extension (+ mobile app) | Chrome, Firefox, Edge, Brave | Extension settings → Network toggle. | https://rabet.io |
-| Hana | `hana` | Browser extension (+ mobile app) | Chrome, Edge | Extension settings → Network. | https://hanawallet.io |
+| Hana *(not usable)* | `hana` | Browser extension (+ mobile app) | Chrome, Edge | **Stellar is listed `INELIGIBLE`** and cannot be activated, so the wallet holds no Stellar account (run 2026-08-25-38cdf27, F-17). | https://hanawallet.io |
 
 Also present in the modal but not part of the sign-off set: Bitget, CactusLink, Fordefi, HOT Wallet, Klever, OneKey. Record them under "Additional wallets" in §7 if they are exercised.
 
@@ -75,7 +75,7 @@ a blocker.
 | Albedo | ✓ | Firefox, Safari, Edge, iOS Safari, Android Chrome |
 | xBull | ✓ | Firefox, Edge; PWA on Safari and mobile |
 | Rabet | ✓ | Firefox, Edge, Brave |
-| Hana | ✓ | Edge; mobile app |
+| Hana | N/A — no Stellar account | — |
 | Social login (control) | ✓ | any browser |
 | Lobstr *(optional)* | N/A — mainnet-only | Chrome / Edge against the mainnet build |
 
@@ -85,7 +85,7 @@ The completion criteria name four flows: onboarding, deposits, withdrawals, and
 leaderboard/NFT badge interactions. The cases that cover them, run on all five
 wallets, are the sign-off set:
 
-**W-01, W-04, W-05a, W-07, W-08, W-09.**
+**W-01, W-05a, W-07, W-08, W-09.**
 
 `W-06` (withdraw at maturity) is deliberately **not** in this set: the shortest
 lock period the testnet pool offers is 7 days, so no position opened during a run
@@ -93,7 +93,13 @@ can mature inside it. The matured payout (principal + yield + reward share) is
 proven by the Rust contract tests (R7) and the principal path by the testnet
 integration suite (R6); the manual pass covers withdrawal through `W-07`.
 
-The remaining cases of §5 (`W-02`, `W-03`, `W-05b/c`, `W-06`, `W-10`–`W-15`) stay
+`W-04` (onboarding) is also outside the set: the completion criteria name
+onboarding for the **automated** suite, where `apps/web/e2e/onboarding.spec.ts`
+covers it (R1); the manual sentence names wallets, not flows. The manual set
+therefore keeps the cases that end in a wallet signature. `W-04` is still run and
+recorded in the extended table.
+
+The remaining cases of §5 (`W-02`, `W-03`, `W-04`, `W-05b/c`, `W-06`, `W-10`–`W-15`) stay
 in the protocol as the fuller regression. They are recorded in the extended table
 of §7 when exercised and are excluded from the pass rate when not.
 
@@ -105,6 +111,7 @@ of §7 when exercised and are excluded from the pass rate when not.
 - Wallet extension/app installed, unlocked, set to the network under test.
 - Browser DevTools open on the Console tab; console errors are part of the evidence.
 - Fresh profile for `W-04` (a wallet address never seen by the API), reusable profile for everything else.
+- A brand-new address is stopped by a legal-consent gate (*"Before you continue"* / *"Antes de continuar"*: Privacy Policy, Terms of Service, Risk Disclosure) before it reaches `/home`. The tester accepts it — it is a legal acceptance on their account, not something automation may click. It applies to external wallets and to the social login alike.
 - For `W-06` a position whose `finalization_time` has passed. Use a short lock period on testnet (`add_lock_period` from `contracts/Makefile`) or a position created in a previous run.
 
 Local storage keys that carry state between reloads and must be cleared for a "clean" case: `pollar:session`, `pollar:walletType`, `wallet:adapter`, `swk:address`, `vaquita-wallet-session`, `vaquita-rq-cache`.
@@ -164,11 +171,23 @@ Expected: taken nickname is refused with an inline message; free nickname persis
 
 Run once per period offered by the deposit modal (`tokens[].lockPeriods` from `/api/v1/config`; sub-cases `W-05a`, `W-05b`, `W-05c` in the order the modal lists them, e.g. 7 d / 3 m / 6 m).
 
-1. Home → deposit. In `DepositMethodModal` choose **Wallet** (Ext: continue with existing USDC; Cust: receive-to-address, then continue).
-2. Enter an amount above the minimum and below the on-chain balance; pick the lock period.
-3. Confirm. Sign in the wallet.
+Money reaches a lock period in two hops, and the wallet balance is not investable
+directly. Home → **Deposit** is the flexible Blend path (no lock, case `W-13`);
+the locked `deposit(caller, nonce, amount, period)` lives in **Portfolio →
+Invest** and spends the flexible savings.
 
-Expected: progress state shown; `deposit(caller, nonce, amount, period)` succeeds; success screen links to the explorer; the new vaquita appears in `/portafolio?period=<period>` with the countdown; `/transactions` lists the deposit; the Ably `deposits-changes` refresh updates the balance without a manual reload. Record the tx hash.
+1. Home → **Deposit** → **Wallet**. Enter an amount above the minimum and confirm.
+   Sign once (Ext; Cust signs server-side). This funds the flexible savings.
+2. Open **Portfolio** → the lock period → **Invest**. Enter the amount and confirm.
+3. Sign **twice**: the vault withdraw that frees the money, then the pool deposit
+   that locks it. The modal shows both steps ("Getting your money ready" →
+   "Locking in 7 days").
+
+Expected: `deposit(caller, nonce, amount, period)` succeeds; the position appears
+in `/portafolio?period=<period>` with its countdown; the API reports the position
+as `deposit_success`. Record both tx hashes. Note that the progress state renders
+before the wallet prompt is answered, so a pending signature looks like a stall
+(F-14), and an unattended prompt surfaces as a network error (F-09).
 
 ### W-06 · Withdraw matured position — critical · All · outside the sign-off set (§3)
 
@@ -177,19 +196,31 @@ while the shortest testnet lock period is 7 days. Run it only after an admin has
 added a short lock period (`make add-lock-period` in `contracts/`), or against a
 position left by an earlier run.
 
-1. Open the position from `/portafolio` → detail (`VaquitaModal`).
-2. Withdraw. Sign.
+1. Open the position from `/portafolio?period=<period>` → its detail sheet. A
+   matured position reads *"Ready to withdraw — 100 %"* with no forfeit warning.
+2. Withdraw. Confirm: the sheet promises the principal **plus the share of the
+   pool rewards**.
+3. Sign **twice**: pool withdraw, then the deposit back into the flexible savings.
 
-Expected: payout = principal + yield + reward share; detail shows the "withdrawn on time" state (`WITHDRAW_SUCCESS`); balance in wallet (Ext) or custodial account (Cust) increases by the payout. Record the tx hash.
+Expected: payout = principal + reward share, and it lands in the **flexible
+savings**, not in the signing wallet — the wallet USDC balance does not move.
+Verify the payout by the savings delta. Record both tx hashes.
+
+Known defect: the API records the position as `withdraw_success_early`, the same
+state as a forfeited withdrawal, because the withdrawal's `reward` column is never
+written (F-18). Read the payout, not the state, until that fix ships.
 
 ### W-07 · Withdraw early (forfeited yield) — critical · All
 
 Precondition: position still locked.
 
-1. Open the position detail. The early-withdrawal notice states that rewards will be forfeited.
-2. Withdraw. Sign.
+1. Open the position detail. It reads *"Locked"* with the countdown.
+2. Withdraw. The confirmation warns in red that the rewards will be forfeited.
+3. Sign **twice**: pool withdraw, then the deposit back into the flexible savings.
 
-Expected: payout = principal only; detail shows **Withdrawn early** (`WITHDRAW_SUCCESS_EARLY`) with the forfeited amount greyed; no error toast. Record the tx hash.
+Expected: payout = principal only, landing in the **flexible savings** rather than
+the wallet; the API reports the position as `withdraw_success_early`; no error
+toast. Record both tx hashes.
 
 ### W-08 · Leaderboard renders and badge modal opens — All
 
@@ -284,14 +315,21 @@ note / issue: <link>
 
 Leave cells empty until run; an empty cell counts as not run, never as PASS.
 
-| Wallet · Browser | W-01 | W-04 | W-05a | W-07 | W-08 | W-09 |
-|---|---|---|---|---|---|---|
-| Freighter · Chrome | | | | | | |
-| Albedo · Chrome | | | | | | |
-| xBull · Chrome | | | | | | |
-| Rabet · Chrome | | | | | | |
-| Hana · Chrome | | | | | | |
-| Social login · Chrome (control) | N/A | | | | | |
+| Wallet · Browser | W-01 | W-05a | W-07 | W-08 | W-09 |
+|---|---|---|---|---|---|
+| Freighter · Chrome | PASS | PASS | PASS | PASS | PASS |
+| xBull · Chrome | PASS | PASS | PASS | PASS | PASS |
+| Rabet · Chrome | PASS | PASS | PASS | PASS | PASS |
+| Social login (Pollar) · Chrome | N/A | PASS | PASS | PASS | PASS |
+| Albedo · Chrome | BLOCKED | BLOCKED | BLOCKED | BLOCKED | BLOCKED |
+| Hana · Chrome | N/A | N/A | N/A | N/A | N/A |
+
+Run 2026-08-25-38cdf27 · **19 / 19 PASS** · 27 transactions verified on-chain.
+The filled run, with transaction hashes, screenshots and findings, is in
+[`evidence/2026-08-25-38cdf27/results.md`](./evidence/2026-08-25-38cdf27/results.md).
+**BLOCKED** = the wallet's own service was unreachable (`albedo.link` outage);
+**N/A** = the case or the wallet does not apply (Hana cannot hold a Stellar
+account; the social login has no external wallet to connect).
 
 ### Extended cases (recorded when exercised)
 
@@ -362,6 +400,6 @@ Collected per cell, at the moment of the expected result.
 
 **Where:** `docs/qa/evidence/<run-id>/` in the repository for screenshots under ~200 KB each; larger recordings in the team drive folder linked from the run header. The folder also holds `results.md` — a copy of the filled §6 + §7 for that run, so the matrix in this file can be reset for the next run while the history stays.
 
-**Console and network logs:** export the DevTools console (right-click → Save as) once per column into `<run-id>_<wallet>_<browser>_console.log`.
+**Console and network:** the completion criteria ask for wallets, not logs, so no console export is required. DevTools stays open on the Console tab and the console is read during each case — §8 rule 4 still applies. Export a log only when it backs a finding, and name it `<run-id>_<wallet>_<browser>_console.log`.
 
 **SCF submission:** reference (a) the permalink of `docs/qa/evidence/<run-id>/results.md` at the submitted commit, (b) the CI run URLs listed in [`e2e-coverage-map.md`](./e2e-coverage-map.md), and (c) one explorer link per critical on-chain case (W-05, W-06, W-07, W-09) per wallet. Do not attach raw wallet secret material, seed phrases or session tokens in any evidence file.
