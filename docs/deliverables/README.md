@@ -9,7 +9,7 @@ run, a document in this repository, or a recording.
 **Tranche:** 3 — Mainnet
 **Repository:** [`vaquita-labs/stellar`](https://github.com/vaquita-labs/stellar)
 **Network under review:** Stellar mainnet (public network)
-**Last updated:** 2026-08-26
+**Last updated:** 2026-08-27
 
 ---
 
@@ -17,16 +17,17 @@ run, a document in this repository, or a recording.
 
 | # | Deliverable | Report | Status |
 |---|---|---|---|
-| 3.1 | Anclap On/Off Ramp Integration | [`3.1-anclap-on-off-ramp.md`](./3.1-anclap-on-off-ramp.md) | **Pending** — no evidence submitted yet |
+| 3.1 | Anclap On/Off Ramp Integration | [`3.1-anclap-on-off-ramp.md`](./3.1-anclap-on-off-ramp.md) | **Awaiting artifact** — integration in place, KYC served in Spanish by the anchor; demo recording pending |
 | 3.2 | Mainnet Contract Deployment and Live Yields | [`3.2-mainnet-deployment-and-live-yields.md`](./3.2-mainnet-deployment-and-live-yields.md) | **Met** — six addresses live, TVL listed on DeFiLlama, both dashboards public |
 | 3.3 | Full UX Readiness | [`3.3-full-ux-readiness.md`](./3.3-full-ux-readiness.md) | **Partially met** — FAQ published; onboarding recording and mobile verification outstanding |
-| 3.4 | End to End Testing | [`3.4-end-to-end-testing.md`](./3.4-end-to-end-testing.md) | **Partially met** — automated suites implemented; manual wallet regression and CI pass-rate report outstanding |
+| 3.4 | End to End Testing | [`3.4-end-to-end-testing.md`](./3.4-end-to-end-testing.md) | **In progress** — automated suites implemented; manual wallet regression being filled, CI pass-rate report follows |
 | 3.5 | Internal Security Review and Technical Documentation | [`3.5-security-review-and-documentation.md`](./3.5-security-review-and-documentation.md) | **Met** — security report and architecture published, zero unresolved HIGH findings |
 
 Status vocabulary used across all five reports:
 
 - **Met** — every completion criterion has a verifiable artifact linked.
 - **Partially met** — at least one criterion is proven and at least one is not.
+- **Awaiting artifact** — the work is done; the evidence that shows it is not yet linked.
 - **Pending** — no criterion is proven yet.
 
 A criterion is only marked as proven when the artifact is reachable by a third party
@@ -91,9 +92,9 @@ directly from a completion criterion; nothing here is optional.
 
 | # | Outstanding item | Deliverable |
 |---|---|---|
-| 1 | End-to-end fiat deposit recording (ARS → USDC → active vault position) | 3.1 |
+| 1 | Demo recording (ARS → USDC → active vault position) | 3.1 |
 | 2 | At least one real Anclap-originated transaction verifiable on Stellar Expert mainnet | 3.1 |
-| 3 | Spanish KYC walkthrough with error handling | 3.1 |
+| 3 | Ramp error states: what the app shows for each outcome the anchor returns | 3.1 |
 | 4 | Spanish onboarding screen recording, empty wallet → first active deposit | 3.3 |
 | 5 | iOS Safari and Android Chrome verification on physical devices | 3.3 |
 | 6 | Manual wallet regression completed across Freighter, Albedo and ≥3 further wallets | 3.4 |
