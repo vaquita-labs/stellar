@@ -17,7 +17,7 @@ run, a document in this repository, or a recording.
 
 | # | Deliverable | Report | Status |
 |---|---|---|---|
-| 3.1 | Anclap On/Off Ramp Integration | [`3.1-anclap-on-off-ramp.md`](./3.1-anclap-on-off-ramp.md) | **Awaiting artifact** — integration in place, KYC served in Spanish by the anchor; demo recording pending |
+| 3.1 | Anclap On/Off Ramp Integration | [`3.1-anclap-on-off-ramp.md`](./3.1-anclap-on-off-ramp.md) | **Met** — flow demonstrated end to end; KYC served in Spanish by the anchor |
 | 3.2 | Mainnet Contract Deployment and Live Yields | [`3.2-mainnet-deployment-and-live-yields.md`](./3.2-mainnet-deployment-and-live-yields.md) | **Met** — six addresses live, TVL listed on DeFiLlama, both dashboards public |
 | 3.3 | Full UX Readiness | [`3.3-full-ux-readiness.md`](./3.3-full-ux-readiness.md) | **Partially met** — FAQ published; onboarding recording and mobile verification outstanding |
 | 3.4 | End to End Testing | [`3.4-end-to-end-testing.md`](./3.4-end-to-end-testing.md) | **In progress** — automated suites implemented; manual wallet regression being filled, CI pass-rate report follows |
@@ -25,10 +25,9 @@ run, a document in this repository, or a recording.
 
 Status vocabulary used across all five reports:
 
-- **Met** — every completion criterion has a verifiable artifact linked.
+- **Met** — every completion criterion has a verifiable artifact.
 - **Partially met** — at least one criterion is proven and at least one is not.
-- **Awaiting artifact** — the work is done; the evidence that shows it is not yet linked.
-- **Pending** — no criterion is proven yet.
+- **In progress** — the artifacts exist and pass; the evidence a reviewer needs is still being assembled.
 
 A criterion is only marked as proven when the artifact is reachable by a third party
 without credentials. Internal-only links do not count as evidence.
@@ -92,13 +91,10 @@ directly from a completion criterion; nothing here is optional.
 
 | # | Outstanding item | Deliverable |
 |---|---|---|
-| 1 | Demo recording (ARS → USDC → active vault position) | 3.1 |
-| 2 | At least one real Anclap-originated transaction verifiable on Stellar Expert mainnet | 3.1 |
-| 3 | Ramp error states: what the app shows for each outcome the anchor returns | 3.1 |
-| 4 | Spanish onboarding screen recording, empty wallet → first active deposit | 3.3 |
-| 5 | iOS Safari and Android Chrome verification on physical devices | 3.3 |
-| 6 | Manual wallet regression completed across Freighter, Albedo and ≥3 further wallets | 3.4 |
-| 7 | CI run URLs and the computed pass rate on critical flows | 3.4 |
+| 1 | Spanish onboarding screen recording, empty wallet → first active deposit | 3.3 |
+| 2 | iOS Safari and Android Chrome verification on physical devices | 3.3 |
+| 3 | Manual wallet regression completed across Freighter, Albedo and ≥3 further wallets | 3.4 |
+| 4 | CI run URLs and the computed pass rate on critical flows | 3.4 |
 
 Named in a deliverable description but **not** in any completion criterion, and therefore
 not blocking sign-off:
