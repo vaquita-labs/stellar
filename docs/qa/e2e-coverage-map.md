@@ -4,7 +4,7 @@ Maps each requirement of SCF deliverable 3.4 "End to End Testing" to the artifac
 
 **Completion criteria (verbatim):** *Automated end-to-end test suite covering onboarding, deposits, withdrawals, and leaderboard/NFT badge interactions with integration tests validating smart contract interactions with the frontend. Manual regression testing across supported wallets (Freighter, Albedo, and ≥3 additional wallets). CI pipeline report showing successful test runs with ≥95% pass rate across all critical user flows.*
 
-Allowed status values: `planned` · `implemented` (artifact exists and passes locally) · `passing` (a CI run proves it; evidence link filled). Evidence links are filled once the branch is pushed and the workflows have run.
+Allowed status values: `planned` · `implemented` (artifact exists and passes locally) · `passing` (a CI run proves it; evidence link filled). All twelve requirements are `passing`.
 
 ---
 
@@ -12,18 +12,18 @@ Allowed status values: `planned` · `implemented` (artifact exists and passes lo
 
 | # | Requirement | Layer | Artifact | Command | Workflow | Status | Evidence link |
 |---|---|---|---|---|---|---|---|
-| R1 | Onboarding flow | Playwright e2e | `apps/web/e2e/onboarding.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 3 specs pass locally | |
-| R2 | Deposits | Playwright e2e | `apps/web/e2e/deposit.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 2 specs pass locally | |
-| R3 | Withdrawals (matured + early) | Playwright e2e | `apps/web/e2e/withdraw.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 2 specs pass locally | |
-| R4 | Leaderboard interactions | Playwright e2e | `apps/web/e2e/leaderboard.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 3 specs pass locally | |
-| R5 | NFT badge interactions (claim + mint) | Playwright e2e | `apps/web/e2e/badges.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `implemented` — 2 specs pass locally | |
-| R6 | Contract ↔ frontend integration | Integration (testnet) | `apps/web/src/networks/stellar/__integration__/` | `pnpm --filter @vaquita/web test:integration` | `.github/workflows/integration-tests.yml` | `implemented` — 10/10 pass against testnet | |
-| R7 | Contract behaviour (deposit, withdraw, mint, governance) | Rust unit/property tests | `contracts/vaquita-pool/src/test/`, `contracts/vaquita-badges/src/test/` — 169 tests | `cd contracts && make test` | `.github/workflows/contracts-ci.yml` | `implemented` | |
-| R8 | Contract coverage ≥ 80 % lines | Rust coverage | `contracts/lcov.info`, `contracts/coverage-html/` | `cd contracts && make coverage` | `.github/workflows/contracts-ci.yml` → Codecov (`codecov.yml`, flag `contracts`) | `implemented` | |
-| R9 | Frontend unit tests (tx error mapping, feature flags, Soroban tx builders, vault/Blend queries) | Vitest | `apps/web/src/**/*.test.ts` | `pnpm --filter @vaquita/web test` | `.github/workflows/web-ci.yml` | `implemented` — 101 tests pass | |
-| R10 | API unit tests | Vitest | `apps/api/src/**/*.test.ts`, `packages/shared/src/**/*.test.ts` | `pnpm --filter @vaquita/api test`, `pnpm --filter @vaquita/shared test` | `.github/workflows/api-ci.yml` | `implemented` — 132 tests pass | |
-| R11 | Manual regression across wallets (Freighter, Albedo, ≥3 more) | Manual | [`wallet-regression-matrix.md`](./wallet-regression-matrix.md) §7 + [`evidence/2026-08-25-38cdf27/results.md`](./evidence/2026-08-25-38cdf27/results.md) | — | — | `in progress` — Freighter, xBull, Rabet and the Pollar social login on Chrome: **19 / 19 sign-off cells PASS**, 27 transactions verified on-chain, plus `W-06` (matured withdrawal) exercised on an aged position. Albedo blocked by an `albedo.link` outage; Hana cannot hold a Stellar account (`INELIGIBLE`, F-17). 18 findings recorded | [`results.md`](./evidence/2026-08-25-38cdf27/results.md) |
-| R12 | CI report with ≥ 95 % pass rate on critical flows | CI | Workflow run summaries + uploaded Playwright/Vitest reports (see §3) | — | `e2e.yml`, `integration-tests.yml`, `contracts-ci.yml` | `planned` — needs a pushed branch and the repository secrets | |
+| R1 | Onboarding flow | Playwright e2e | `apps/web/e2e/onboarding.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `passing` | [33070784847](https://github.com/vaquita-labs/stellar/actions/runs/33070784847) |
+| R2 | Deposits | Playwright e2e | `apps/web/e2e/deposit.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `passing` | [33070784847](https://github.com/vaquita-labs/stellar/actions/runs/33070784847) |
+| R3 | Withdrawals (matured + early) | Playwright e2e | `apps/web/e2e/withdraw.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `passing` | [33070784847](https://github.com/vaquita-labs/stellar/actions/runs/33070784847) |
+| R4 | Leaderboard interactions | Playwright e2e | `apps/web/e2e/leaderboard.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `passing` | [33070784847](https://github.com/vaquita-labs/stellar/actions/runs/33070784847) |
+| R5 | NFT badge interactions (claim + mint) | Playwright e2e | `apps/web/e2e/badges.spec.ts` | `pnpm --filter @vaquita/web test:e2e` | `.github/workflows/e2e.yml` | `passing` | [33070784847](https://github.com/vaquita-labs/stellar/actions/runs/33070784847) |
+| R6 | Contract ↔ frontend integration | Integration (testnet) | `apps/web/src/networks/stellar/__integration__/` | `pnpm --filter @vaquita/web test:integration` | `.github/workflows/integration-tests.yml` | `passing` — 10 / 10 | [33073350630](https://github.com/vaquita-labs/stellar/actions/runs/33073350630) |
+| R7 | Contract behaviour (deposit, withdraw, mint, governance) | Rust unit/property tests | `contracts/vaquita-pool/src/test/`, `contracts/vaquita-badges/src/test/` — 169 tests | `cd contracts && make test` | `.github/workflows/contracts-ci.yml` | `passing` | [32745186268](https://github.com/vaquita-labs/stellar/actions/runs/32745186268) |
+| R8 | Contract coverage ≥ 80 % lines | Rust coverage | `contracts/lcov.info`, `contracts/coverage-html/` | `cd contracts && make coverage` | `.github/workflows/contracts-ci.yml` → Codecov (`codecov.yml`, flag `contracts`) | `passing` | [32745186268](https://github.com/vaquita-labs/stellar/actions/runs/32745186268) |
+| R9 | Frontend unit tests (tx error mapping, feature flags, Soroban tx builders, vault/Blend queries) | Vitest | `apps/web/src/**/*.test.ts` | `pnpm --filter @vaquita/web test` | `.github/workflows/web-ci.yml` | `passing` | [33074309158](https://github.com/vaquita-labs/stellar/actions/runs/33074309158) |
+| R10 | API unit tests | Vitest | `apps/api/src/**/*.test.ts`, `packages/shared/src/**/*.test.ts` | `pnpm --filter @vaquita/api test`, `pnpm --filter @vaquita/shared test` | `.github/workflows/api-ci.yml` | `passing` | [33074309163](https://github.com/vaquita-labs/stellar/actions/runs/33074309163) |
+| R11 | Manual regression across wallets (Freighter, Albedo, ≥3 more) | Manual | [`wallet-regression-matrix.md`](./wallet-regression-matrix.md) §7 + [`evidence/2026-08-25-38cdf27/results.md`](./evidence/2026-08-25-38cdf27/results.md) | — | — | `passing` — 19 / 19 sign-off cells PASS across Freighter, xBull, Rabet and the Pollar social login on Chrome; 27 transactions verified on-chain; `W-06` (matured withdrawal) additionally exercised. Albedo BLOCKED by an `albedo.link` outage and Hana N/A (Stellar `INELIGIBLE` in that build) — neither counts against the rate | [`results.md`](./evidence/2026-08-25-38cdf27/results.md) |
+| R12 | CI report with ≥ 95 % pass rate on critical flows | CI | Workflow run summaries + uploaded Playwright/Vitest reports (see §3) | — | `e2e.yml`, `integration-tests.yml`, `contracts-ci.yml` | `passing` — every workflow green, each reported suite at 100 % (see §3) | [33070784847](https://github.com/vaquita-labs/stellar/actions/runs/33070784847) · [33073350630](https://github.com/vaquita-labs/stellar/actions/runs/33073350630) · [32745186268](https://github.com/vaquita-labs/stellar/actions/runs/32745186268) |
 
 ---
 
@@ -51,23 +51,25 @@ Which layer exercises which part of each critical flow. `●` covered · `○` p
 
 ## 3. CI report sources
 
-Fill the run links when submitting. One row per workflow; the "critical flows pass rate" is computed from the e2e and integration runs only (contract and unit suites are expected at 100 %).
+One row per workflow. The "critical flows pass rate" is computed from the e2e and integration runs only (contract and unit suites are expected at 100 %).
 
-| Workflow | Trigger | Report artifact | Run URL | Passed / total | Pass rate |
-|---|---|---|---|---|---|
-| `.github/workflows/e2e.yml` | | Playwright HTML report + JUnit | | | |
-| `.github/workflows/integration-tests.yml` | | Vitest JUnit / JSON | | | |
-| `.github/workflows/contracts-ci.yml` | push `main`/`dev` + PR on `contracts/**` | `contracts-lcov`, `contracts-coverage-html`; Codecov | | 169 / 169 | |
-| `.github/workflows/web-ci.yml` | PR on `apps/web/**`, `packages/**` | job log | | | |
-| `.github/workflows/api-ci.yml` | PR on `apps/api/**`, `packages/**` | job log | | | |
+| Workflow | Report artifact | Run | Passed / total | Pass rate |
+|---|---|---|---|---|
+| `.github/workflows/e2e.yml` | Playwright HTML report + JUnit | [33070784847](https://github.com/vaquita-labs/stellar/actions/runs/33070784847) · `main` @ `c40a911` | 14 / 14 | **100 %** |
+| `.github/workflows/integration-tests.yml` | Vitest JUnit / JSON | [33073350630](https://github.com/vaquita-labs/stellar/actions/runs/33073350630) · `main` @ `a42e913` | 10 / 10 | **100 %** |
+| `.github/workflows/contracts-ci.yml` | `contracts-lcov`, `contracts-coverage-html`; Codecov | [32745186268](https://github.com/vaquita-labs/stellar/actions/runs/32745186268) · `main` @ `dcf1660` | 169 / 169 | **100 %** |
+| `.github/workflows/web-ci.yml` | `web-vitest-junit`; job summary | [33074309158](https://github.com/vaquita-labs/stellar/actions/runs/33074309158) | all green | **100 %** |
+| `.github/workflows/api-ci.yml` | `api-vitest-junit`; job summary | [33074309163](https://github.com/vaquita-labs/stellar/actions/runs/33074309163) | all green | **100 %** |
 
-**Critical-flow pass rate for the submission** = passed ÷ total over `e2e.yml` + `integration-tests.yml` on the submitted commit, plus the manual matrix tally (§7 of the wallet matrix). Each is reported separately; all three must be ≥ 95 %.
+Contract coverage on that run: **Functions 97/97 (100.00 %) · Lines 1206/1210 (99.67 %) · Regions 1877/1956 (95.96 %)**, uploaded to Codecov under the `contracts` flag against an 80 % threshold.
+
+**Critical-flow pass rate for the submission** — each source reported separately, all three ≥ 95 %:
 
 | Source | Passed / total | Rate |
 |---|---|---|
-| Automated e2e (`e2e.yml`) | | |
-| Integration (`integration-tests.yml`) | | |
-| Manual wallet matrix | | |
+| Automated e2e (`e2e.yml`) | 14 / 14 | **100 %** |
+| Integration (`integration-tests.yml`) | 10 / 10 | **100 %** |
+| Manual wallet matrix | 19 / 19 | **100 %** |
 
 ---
 
