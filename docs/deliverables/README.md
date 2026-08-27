@@ -20,6 +20,7 @@ run, a document in this repository, or a recording.
 | 3.1 | Anclap On/Off Ramp Integration | [`3.1-anclap-on-off-ramp.md`](./3.1-anclap-on-off-ramp.md) | **Met** — flow demonstrated end to end; KYC served in Spanish by the anchor |
 | 3.2 | Mainnet Contract Deployment and Live Yields | [`3.2-mainnet-deployment-and-live-yields.md`](./3.2-mainnet-deployment-and-live-yields.md) | **Met** — six addresses live, TVL listed on DeFiLlama, both dashboards public |
 | 3.3 | Full UX Readiness | [`3.3-full-ux-readiness.md`](./3.3-full-ux-readiness.md) | **Partially met** — FAQ published; onboarding recording and mobile verification outstanding |
+| | *Work plan behind 3.3* | [`3.3-ux-readiness-work-plan.md`](./3.3-ux-readiness-work-plan.md) | Owners, breakdown and schedule |
 | 3.4 | End to End Testing | [`3.4-end-to-end-testing.md`](./3.4-end-to-end-testing.md) | **In progress** — automated suites implemented; manual wallet regression being filled, CI pass-rate report follows |
 | 3.5 | Internal Security Review and Technical Documentation | [`3.5-security-review-and-documentation.md`](./3.5-security-review-and-documentation.md) | **Met** — security report and architecture published, zero unresolved HIGH findings |
 
