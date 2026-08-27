@@ -49,6 +49,8 @@ export function TermsPage() {
 
       <h2>{t('auth.terms.noAdvice.heading')}</h2>
       <p>{t('auth.terms.noAdvice.body')}</p>
+      <p>{t('auth.terms.noAdvice.notLicensed')}</p>
+      <p>{t('auth.terms.noAdvice.software')}</p>
 
       <h2>{t('auth.terms.risks.heading')}</h2>
       <p>

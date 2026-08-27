@@ -67,6 +67,8 @@ export interface ReconciliationWithdrawalRecord {
   depositId: number;
   status: WithdrawalStatus | string;
   transactionHash: string | null;
+  /** Decimal column; `null` while the withdrawal has no reward recorded. */
+  reward?: { toString(): string } | number | string | null;
 }
 
 export interface ReconciliationDepositRecord {
@@ -108,6 +110,8 @@ export interface PlannedWithdrawalRepair {
   depositDbId: number;
   withdrawalDbId?: number;
   event: NormalizedWithdrawEvent;
+  /** Reward paid by the pool, as a decimal string; absent when the event pays none. */
+  reward?: string;
 }
 
 export interface AmbiguousReconciliationEvent {

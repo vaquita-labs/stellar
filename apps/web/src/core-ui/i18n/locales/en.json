@@ -288,8 +288,10 @@
         "rewards": "Coins, badges, experience and other in-app items have no monetary value, cannot be exchanged for money, and may be adjusted or removed."
       },
       "noAdvice": {
-        "heading": "6. No advice",
-        "body": "Nothing in the Service is financial, investment, legal, tax or accounting advice, and nothing in it is a recommendation to enter into any transaction. We are not your broker, adviser or fiduciary. You decide for yourself, and should take professional advice if you need it."
+        "heading": "6. No advice and no financial services",
+        "body": "Nothing in the Service is financial, investment, legal, tax or accounting advice, and nothing in it is a recommendation to enter into any transaction. We are not your broker, adviser or fiduciary. You decide for yourself, and should take professional advice if you need it.",
+        "notLicensed": "Vaquita is not a bank. We hold no banking, e-money, payment institution, securities, investment or equivalent authorisation in any jurisdiction, and we do not provide banking, money transmission, brokerage or investment services. Your deposit is not a deposit account and creates no claim against us.",
+        "software": "What we provide is software that lets you interact with public smart contracts and with third-party protocols and partners. We are not a party to those protocols, do not control them, and do not guarantee their performance."
       },
       "risks": {
         "heading": "7. Risks",

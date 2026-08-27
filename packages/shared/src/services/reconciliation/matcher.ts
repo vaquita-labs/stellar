@@ -3,12 +3,14 @@ import type {
   AmbiguousReconciliationEvent,
   NormalizedReconciliationEvent,
   NormalizedDepositEvent,
+  NormalizedWithdrawEvent,
   PlannedCreateDepositRepair,
   PlannedDepositRepair,
   PlannedWithdrawalRepair,
   ReconciliationDepositRecord,
   ReconciliationMatchResult,
   ReconciliationTokenRecord,
+  ReconciliationWithdrawalRecord,
 } from './types';
 
 const sameText = (a: string | null | undefined, b: string): boolean => (a ?? '').toLowerCase() === b.toLowerCase();
@@ -51,6 +53,23 @@ const rawAmountToDecimalString = (raw: string, decimals: number | null | undefin
   const fraction = padded.slice(padded.length - decimalPlaces).replace(/0+$/, '');
   return fraction ? `${whole}.${fraction}` : whole;
 };
+
+/**
+ * The reward the pool paid, in token units. `rawAmountToDecimalString` answers
+ * null for a zero reward, which is exactly what an early withdrawal emits: the
+ * column stays empty and the withdrawal keeps reading as early.
+ */
+const rewardFor = (
+  event: NormalizedWithdrawEvent,
+  tokens: ReconciliationTokenRecord[],
+): string | null => {
+  const token = tokens.find((candidate) => sameText(candidate.contractAddress, event.token));
+  if (!token) return null;
+  return rawAmountToDecimalString(event.rewardRaw, token.decimals);
+};
+
+const hasReward = (withdrawal: ReconciliationWithdrawalRecord): boolean =>
+  withdrawal.reward != null && Number(withdrawal.reward.toString()) > 0;
 
 const lockPeriodMsFor = (event: NormalizedDepositEvent): number | null => {
   const lockPeriodMs = event.lockPeriod * 1000;
@@ -139,11 +158,30 @@ export const matchReconciliationEvents = (
       continue;
     }
 
+    const reward = rewardFor(event, tokens);
+
     const confirmedWithdrawals = deposit.withdrawals.filter(
       (withdrawal) => withdrawal.status === WithdrawalStatus.CONFIRMED,
     );
-    if (confirmedWithdrawals.some((withdrawal) => sameText(withdrawal.transactionHash, event.txHash))) {
-      skippedEvents.push(event);
+    const alreadyConfirmed = confirmedWithdrawals.find((withdrawal) =>
+      sameText(withdrawal.transactionHash, event.txHash),
+    );
+    if (alreadyConfirmed) {
+      // A withdrawal confirmed through the API carries no reward: the client only
+      // knows the hash. The event does carry it, and the matured/early state, the
+      // leaderboard's on-time detection and the cycle badges all read that column,
+      // so backfill it here instead of skipping the event.
+      if (!reward || hasReward(alreadyConfirmed)) {
+        skippedEvents.push(event);
+        continue;
+      }
+      plannedWithdrawalRepairs.push({
+        type: 'confirm_withdrawal',
+        depositDbId: deposit.id,
+        withdrawalDbId: alreadyConfirmed.id,
+        event,
+        reward,
+      });
       continue;
     }
 
@@ -159,12 +197,14 @@ export const matchReconciliationEvents = (
         depositDbId: deposit.id,
         withdrawalDbId: withdrawal.id,
         event,
+        ...(reward ? { reward } : {}),
       });
     } else {
       plannedWithdrawalRepairs.push({
         type: 'create_confirmed_withdrawal',
         depositDbId: deposit.id,
         event,
+        ...(reward ? { reward } : {}),
       });
     }
   }
