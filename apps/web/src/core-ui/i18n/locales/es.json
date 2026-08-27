@@ -1987,6 +1987,7 @@
         "country": {
           "BO": "Bolivia"
         },
+        "cta": "Comprar USDC",
         "err": {
           "anchorError": "El proveedor rechazó el pedido. Probá de nuevo en un momento.",
           "assetNotEnabled": "Esta moneda no está disponible para esa ruta por ahora.",

@@ -2020,6 +2020,7 @@
         "country": {
           "BO": "Bolívia"
         },
+        "cta": "Comprar USDC",
         "err": {
           "anchorError": "O provedor recusou a solicitação. Tente de novo em instantes.",
           "assetNotEnabled": "Esta moeda não está disponível para essa rota no momento.",

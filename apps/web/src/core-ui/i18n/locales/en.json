@@ -1987,6 +1987,7 @@
         "country": {
           "BO": "Bolivia"
         },
+        "cta": "Buy USDC",
         "err": {
           "anchorError": "The provider rejected the request. Try again in a moment.",
           "assetNotEnabled": "This currency is not available for that route right now.",

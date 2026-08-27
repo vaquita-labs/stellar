@@ -1,6 +1,6 @@
 'use client';
 
-import { RampError } from '@/networks/pollar/ramps';
+import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
 import { type OnrampCorridor, type OnrampCorridorCode, useRampOnramp, usdcOutOf } from '@/networks/pollar/rampsOnramp';
 import type { RampQuote } from '@pollar/core';
 import { Spinner } from '@heroui/react';
@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
+import { RAMP_FIELD_CLASS, RampFieldList } from './RampFieldList';
 
 interface ReceiveFiatRampModalProps {
   open: boolean;
@@ -18,29 +19,23 @@ interface ReceiveFiatRampModalProps {
   onBack?: () => void;
 }
 
-// Códigos de error de los endpoints de ramps que tienen un mensaje propio; el
-// resto cae al texto que mande Pollar.
-const ERROR_KEYS: Record<string, string> = {
-  SDK_RAMPS_QUOTE_EXPIRED: 'quoteExpired',
-  SDK_RAMPS_ASSET_NOT_ENABLED: 'assetNotEnabled',
-  SDK_RAMPS_KYC_REQUIRED: 'kycRequired',
-  SDK_RAMPS_WALLET_UNSUPPORTED: 'walletUnsupported',
-  SDK_RAMPS_PROVIDER_NOT_CONFIGURED: 'providerNotConfigured',
-  SDK_RAMPS_ANCHOR_ERROR: 'anchorError',
-  SDK_RAMPS_BRIDGE_ERROR: 'anchorError',
-};
-
 /** Espera antes de cotizar mientras el usuario sigue tipeando el monto. */
 const QUOTE_DEBOUNCE_MS = 450;
+
+/** Elegir cuánto gastar, y después los datos que pida el proveedor. */
+type Phase = 'amount' | 'details';
 
 /** Decimales con los que se muestra el USDC estimado. */
 const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2);
 
 /**
- * Compra de USDC con moneda local (hoy sólo Bolivia/BOB). Esta primera parte
- * llega hasta la cotización: el usuario escribe cuánto quiere gastar y ve, en
- * vivo, cuánto USDC entra, con qué comisión y en cuánto tiempo. El pago del QR
- * y la acreditación llegan después.
+ * Compra de USDC con moneda local (hoy sólo Bolivia/BOB). Va en dos pasos: el
+ * monto —con la cotización actualizándose en vivo mientras se escribe— y después
+ * los datos que pida el proveedor. El pago del QR y la acreditación llegan
+ * después.
+ *
+ * El formulario de datos no tiene nada boliviano cableado: los campos salen de
+ * la cotización elegida y los dibuja el mismo componente que usa el off-ramp.
  *
  * El monto se pide en MONEDA LOCAL porque es la unidad con la que cotizan los
  * endpoints de ramps, y además es como el usuario piensa la compra: paga
@@ -50,7 +45,9 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const { t } = useTranslation();
   const { resolveCorridor, quoteFiat } = useRampOnramp();
 
+  const [phase, setPhase] = useState<Phase>('amount');
   const [amountFiat, setAmountFiat] = useState('');
+  const [values, setValues] = useState<Record<string, string>>({});
   const [corridor, setCorridor] = useState<OnrampCorridor | null>(null);
   const [corridorOff, setCorridorOff] = useState<string | null>(null);
   const [notYet, setNotYet] = useState(false);
@@ -67,14 +64,12 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const amountNum = Number(amountFiat);
   const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
 
-  /** Traduce un fallo de ramps: código conocido → texto propio; si no, el de Pollar. */
-  const messageOf = (e: unknown): string => {
-    const code = e instanceof RampError ? e.code : undefined;
-    const key = code ? ERROR_KEYS[code] : undefined;
-    if (key) return t(`wallet.fiat.onramp.err.${key}`);
-    if (e instanceof Error && e.message) return e.message;
-    return t('wallet.fiat.onramp.err.generic', 'The purchase could not be quoted.');
-  };
+  const messageOf = (e: unknown): string =>
+    rampErrorMessage(
+      e,
+      (leaf) => t(`wallet.fiat.onramp.err.${leaf}`),
+      t('wallet.fiat.onramp.err.generic', 'The purchase could not be quoted.'),
+    );
 
   /** Límites de la ruta, en moneda local. Devuelve el mensaje o null si entra. */
   const limitProblem = (best: RampQuote, amount: number): string | null => {
@@ -168,21 +163,29 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // que decide si se puede seguir, no la existencia de la cotización.
   const usable = !!quote && !error && !quoting;
 
-  const fieldClass =
-    'w-full rounded-md border border-black border-b-2 bg-white h-11 px-3 text-sm text-black placeholder:text-gray-400 outline-none focus:border-b-3 disabled:opacity-60';
+  // Qué datos pide el proveedor lo define la cotización elegida: no hay ningún
+  // campo boliviano cableado acá. Si la ruta no pide nada, el paso queda vacío y
+  // el botón habilitado, que es exactamente lo que corresponde.
+  const fields: RampField[] = quote?.requiredFields ?? [];
+  const fieldsValid = fieldsAreValid(fields, values);
 
-  const footer = (
-    <PressableButton
-      variant="success"
-      size="cta"
-      // El pago del QR llega en la parte siguiente; hasta entonces el botón sólo
-      // confirma que la cotización es utilizable.
-      onClick={() => setNotYet(true)}
-      disabled={!usable || !!corridorOff}
-    >
-      {t('wallet.fiat.onramp.continue', 'Continue')}
-    </PressableButton>
-  );
+  const footer =
+    phase === 'amount' ? (
+      <PressableButton variant="success" size="cta" onClick={() => setPhase('details')} disabled={!usable || !!corridorOff}>
+        {t('wallet.fiat.onramp.continue', 'Continue')}
+      </PressableButton>
+    ) : (
+      <PressableButton
+        variant="success"
+        size="cta"
+        // El pago del QR llega en la parte siguiente; hasta entonces el botón
+        // sólo confirma que los datos están completos.
+        onClick={() => setNotYet(true)}
+        disabled={!fieldsValid || !usable}
+      >
+        {t('wallet.fiat.onramp.cta', 'Buy USDC')}
+      </PressableButton>
+    );
 
   return (
     <AppModal
@@ -193,7 +196,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         currency: currency || country,
       })}
       size="md"
-      onBack={onBack}
+      onBack={phase === 'details' ? () => setPhase('amount') : onBack}
       bodyClassName="flex flex-col gap-4 pb-2"
       footer={footer}
     >
@@ -205,28 +208,30 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
 
       {/* --- Monto en MONEDA LOCAL: es la unidad con la que cotizan los endpoints
           de ramps, y es lo que el usuario va a pagar desde el banco. --- */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-semibold text-gray-500" htmlFor="onramp-amount">
-          {t('wallet.fiat.onramp.amountLabel', 'How much do you want to spend?')}
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="w-8 shrink-0 text-lg font-bold text-black">{symbol}</span>
-          <input
-            id="onramp-amount"
-            type="text"
-            inputMode="decimal"
-            value={amountFiat}
-            onChange={(e) => {
-              setNotYet(false);
-              setAmountFiat(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'));
-            }}
-            placeholder="0.00"
-            className={fieldClass}
-          />
-          <span className="shrink-0 text-sm font-semibold text-gray-500">{currency}</span>
+      {phase === 'amount' && (
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-semibold text-gray-500" htmlFor="onramp-amount">
+            {t('wallet.fiat.onramp.amountLabel', 'How much do you want to spend?')}
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="w-8 shrink-0 text-lg font-bold text-black">{symbol}</span>
+            <input
+              id="onramp-amount"
+              type="text"
+              inputMode="decimal"
+              value={amountFiat}
+              onChange={(e) => {
+                setNotYet(false);
+                setAmountFiat(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'));
+              }}
+              placeholder="0.00"
+              className={RAMP_FIELD_CLASS}
+            />
+            <span className="shrink-0 text-sm font-semibold text-gray-500">{currency}</span>
+          </div>
+          <p className="text-xs text-gray-500">{t('wallet.fiat.onramp.hint', 'You pay a QR code with your bank app.')}</p>
         </div>
-        <p className="text-xs text-gray-500">{t('wallet.fiat.onramp.hint', 'You pay a QR code with your bank app.')}</p>
-      </div>
+      )}
 
       {quoting && (
         <p className="flex items-center gap-2 text-xs text-gray-500">
@@ -280,6 +285,19 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
             </p>
           )}
         </div>
+      )}
+
+      {/* --- Datos que pide el proveedor para esta ruta. --- */}
+      {phase === 'details' && (
+        <RampFieldList
+          fields={fields}
+          values={values}
+          onChange={(key, value) => {
+            setNotYet(false);
+            setValues((prev) => ({ ...prev, [key]: value }));
+          }}
+          idPrefix="onramp"
+        />
       )}
 
       {notYet && (
