@@ -129,9 +129,16 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
           <img
             src={shownSrc}
             alt={t('wallet.fiat.onramp.qrAlt', 'Payment QR code')}
-            className="h-64 w-64 rounded-lg border border-black border-b-2 bg-white p-2"
+            className="h-64 w-64 rounded-lg border border-black border-b-2 bg-white object-contain p-2"
           />
-        ) : qrError ? (
+        ) : payload && !qrError ? (
+          // El spinner sólo mientras se rasteriza un payload que SÍ existe: es
+          // una espera con final. Sin payload no hay nada que esperar, y dejarlo
+          // girando fue el bug — el usuario miraba un cargando eterno.
+          <div className="flex h-64 w-64 items-center justify-center rounded-lg border border-black border-b-2 bg-white">
+            <Spinner size="sm" color="current" />
+          </div>
+        ) : payload ? (
           // Sin canvas y sin imagen del proveedor no queda QR que mostrar, pero
           // el payload SÍ se puede pegar a mano en la app del banco: es peor
           // dejar al usuario mirando un spinner eterno con la compra ya creada.
@@ -139,8 +146,15 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
             {payload}
           </p>
         ) : (
-          <div className="flex h-64 w-64 items-center justify-center rounded-lg border border-black border-b-2 bg-white">
-            <Spinner size="sm" color="current" />
+          // Compra retomada sin poder leerla del proveedor: no tenemos ni código
+          // ni imagen. Se dice, en vez de fingir que algo está por aparecer.
+          <div className="flex h-64 w-64 items-center justify-center rounded-lg border border-black border-b-2 bg-white p-4 text-center">
+            <p className="text-xs text-gray-500">
+              {t(
+                'wallet.fiat.onramp.qrUnavailable',
+                'We could not load the payment code. Start again to get a new one.',
+              )}
+            </p>
           </div>
         )}
 

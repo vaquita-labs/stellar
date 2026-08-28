@@ -2025,6 +2025,7 @@
         "processingBody": "The provider is sending your USDC. You can close this — it arrives on its own.",
         "processingTitle": "Payment received",
         "qrAlt": "Payment QR code",
+        "qrUnavailable": "We could not load the payment code. Start again to get a new one.",
         "quoting": "Finding a route…",
         "rateLabel": "Rate",
         "restart": "Start a new purchase",
