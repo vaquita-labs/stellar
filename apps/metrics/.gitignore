@@ -1,0 +1,17 @@
+# Solo reglas propias de esta app; lo común (deps, env, logs, IDE) vive en el
+# .gitignore del root.
+
+# next.js
+/.next/
+/out/
+/build
+next-env.d.ts
+
+# testing
+/coverage
+
+# vercel
+.vercel
+
+# certs
+*.pem

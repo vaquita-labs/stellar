@@ -8,6 +8,7 @@
     "dev:bridge-worker": "pnpm --filter @vaquita/bridge-worker dev",
     "dev:app": "pnpm --filter @vaquita/web dev",
     "dev:admin": "pnpm --filter @vaquita/admin dev",
+    "dev:metrics": "pnpm --filter @vaquita/metrics dev",
     "dev": "pnpm --parallel --filter @vaquita/api --filter @vaquita/admin --filter @vaquita/web dev",
     "dev:all": "pnpm -r --parallel --filter='./apps/*' dev",
     "build": "pnpm -r --filter='./packages/*' --filter='./apps/*' build",
