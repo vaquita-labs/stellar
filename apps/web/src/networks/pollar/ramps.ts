@@ -15,7 +15,7 @@ import { useCallback } from 'react';
 import { waitForKycApproval as waitForApproval } from './kycWait';
 
 /** Corredores de off-ramp que la app expone hoy. */
-export type CorridorCode = 'BR' | 'CO';
+export type CorridorCode = 'BR' | 'CO' | 'BO';
 
 export interface Corridor {
   country: CorridorCode;
@@ -32,12 +32,20 @@ export interface Corridor {
 
 /**
  * El proveedor, el rail y los campos del formulario los decide Pollar por
- * cotización (Brasil sale por Pix, Colombia por PSE o Bre-B con Abroad); de este
- * lado sólo se fija cómo se escribe el monto, y la moneda la pisa el server.
+ * cotización (Brasil sale por Pix, Colombia por PSE o Bre-B con Abroad, Bolivia
+ * por ACH a la cuenta que cargue el usuario); de este lado sólo se fija cómo se
+ * escribe el monto, y la moneda la pisa el server.
+ *
+ * OJO con Bolivia: que el país aparezca en `getRampCountries` NO dice que se
+ * pueda retirar —esa lista trae país y moneda, sin dirección ni rail—, así que
+ * lo único que lo confirma es una cotización `offramp` en BOB que vuelva con
+ * quotes. Por eso el corredor queda detrás de flag hasta comprobarlo en
+ * mainnet.
  */
 export const CORRIDORS: Record<CorridorCode, Corridor> = {
   BR: { country: 'BR', currency: 'BRL', symbol: 'R$' },
   CO: { country: 'CO', currency: 'COP', symbol: '$' },
+  BO: { country: 'BO', currency: 'BOB', symbol: 'Bs' },
 };
 
 /** Rails cuya liquidez publica Pollar; el resto no se puede consultar. */

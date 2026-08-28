@@ -531,6 +531,14 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         currency: currency || country,
       })}
       size="md"
+      // Con el QR en pantalla tampoco se cierra tocando afuera: el usuario está
+      // yendo y viniendo a la app del banco con el código a la vista, y un toque
+      // al borde le tapa la pantalla justo cuando la necesita. La X y "volver a
+      // empezar" siguen ahí, que son cierres deliberados.
+      // Las dos condiciones: `screenFor` devuelve 'paying' por defecto (sin
+      // estado del proveedor todavía), así que sin mirar la fase se trabaría
+      // también la pantalla donde se elige el monto.
+      isDismissable={!(phase === 'paying' && screen === 'paying')}
       // Con el QR en pantalla no hay vuelta atrás: el código ya existe del lado
       // del proveedor y "volver" sólo llevaría a crear otro sobre el mismo pago.
       onBack={

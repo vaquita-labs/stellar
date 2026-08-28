@@ -2058,6 +2058,7 @@
         "processingBody": "O provedor está enviando seus USDC. Pode fechar: eles chegam sozinhos.",
         "processingTitle": "Pagamento recebido",
         "qrAlt": "Código QR de pagamento",
+        "qrUnavailable": "Não conseguimos carregar o código de pagamento. Comece de novo para obter um novo.",
         "quoting": "Procurando uma rota…",
         "rateLabel": "Cotação",
         "restart": "Começar uma nova compra",
