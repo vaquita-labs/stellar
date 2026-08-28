@@ -10,7 +10,12 @@ import { useTranslation } from 'react-i18next';
 import { useConfigStore, useRampActiveStore, useAwaitingFundsStore } from '../stores';
 
 // Umbral mínimo (USDC, unidades humanas): no promptear ni gastar gas por polvo.
-const MIN_IDLE = 1;
+//
+// No es un mínimo del vault ni de Blend —ninguno de los dos pide uno—, es
+// nuestro: abajo de esto la comisión de red se come lo que rinde. Estaba en 1, y
+// un balance de 0,99993 quedaba afuera por 7 diezmilésimas sin que nada lo
+// explicara en pantalla; 0,1 deja pasar esos casos y sigue frenando el polvo.
+const MIN_IDLE = 0.1;
 
 // Cada cuánto re-consultamos el balance custodial mientras el usuario está en el
 // home. La plata puede entrar on-chain por fuera de la app (le mandan USDC a su
