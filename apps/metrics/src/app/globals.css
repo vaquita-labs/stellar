@@ -1,0 +1,30 @@
+@import '@fontsource/rubik/latin.css' layer(base);
+
+@import 'tailwindcss';
+
+/* Shared UI lib lives outside this app, so point Tailwind at its source. */
+@source '../../../../packages/ui/src';
+
+@theme {
+  --color-primary: #f5a161;
+  --color-success: #34c759;
+  --color-error: #f3616f;
+  --color-background: #fef5e4;
+  --color-black: #262626;
+  --font-sans: Rubik, sans-serif;
+  /* Chart series — validated with the dataviz palette checker (light surface). */
+  --color-series-1: #d9712b;
+  --color-series-2: #2f6fed;
+  --color-series-3: #1f9d6b;
+  --color-series-4: #8b5cf6;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+  background: var(--color-background);
+  color: var(--color-black);
+  @apply font-sans;
+}

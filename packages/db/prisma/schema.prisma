@@ -100,6 +100,37 @@ model Deposit {
   @@map("deposits")
 }
 
+/// Compra de USDC con moneda local (on-ramp). Existe por una sola razón: la API
+/// de ramps no tiene endpoint de listado, así que el `providerTxId` que devuelve
+/// la creación es el ÚNICO handle sobre una compra en curso. Perderlo deja al
+/// usuario pagado y sin pantalla a la que volver, y guardarlo sólo en el
+/// navegador no sobrevive ni a cambiar de dispositivo ni a la limpieza de
+/// storage de Safari móvil.
+///
+/// `status`: pending | paid | settled | expired | failed. `expired` (venció el
+/// QR sin pagar) se distingue de `failed` (el proveedor la rechazó) porque al
+/// usuario le corresponde un mensaje distinto en cada caso.
+model OnrampPurchase {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  walletAddress String    @map("wallet_address") @db.VarChar(128)
+  providerTxId  String    @map("provider_tx_id") @db.VarChar(128)
+  provider      String    @db.VarChar(64)
+  country       String    @db.Char(2)
+  amountFiat    String    @map("amount_fiat") @db.VarChar(80)
+  currency      String    @db.VarChar(8)
+  status        String    @default("pending") @db.VarChar(32)
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(6)
+  lastPolledAt  DateTime? @map("last_polled_at") @db.Timestamptz(6)
+  errorReason   String?   @map("error_reason")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([provider, providerTxId], map: "onramp_purchases_provider_tx_unique")
+  @@index([walletAddress, updatedAt], map: "idx_onramp_purchases_wallet_pending")
+  @@map("onramp_purchases")
+}
+
 model BridgeTransfer {
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   direction            String    @db.VarChar(32)

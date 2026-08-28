@@ -12,6 +12,7 @@ import {
 import { getHorizonUrl } from '@/networks/stellar/kit';
 import { usePollar } from '@pollar/react';
 import { useCallback } from 'react';
+import { waitForKycApproval as waitForApproval } from './kycWait';
 
 /** Corredores de off-ramp que la app expone hoy. */
 export type CorridorCode = 'BR' | 'CO';
@@ -78,7 +79,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * es lo que la UI traduce a un mensaje entendible (cotización vencida, KYC
  * pendiente, monto fuera de límites…).
  */
-function asRampError(e: unknown, fallback: string): RampError {
+export function asRampError(e: unknown, fallback: string): RampError {
   if (e instanceof RampError) return e;
   if (isPollarApiError(e)) return new RampError(e.details ?? e.message ?? fallback, e.code);
   return new RampError((e as Error)?.message || fallback);
@@ -277,20 +278,10 @@ export function useRampOfframp() {
    */
   const waitForKycApproval = useCallback(
     async (opts: { shouldStop?: () => boolean; intervalMs?: number; timeoutMs?: number } = {}): Promise<void> => {
-      const { shouldStop, intervalMs = 10_000, timeoutMs = 30 * 60 * 1000 } = opts;
-      const start = Date.now();
-      for (;;) {
-        if (shouldStop?.()) throw new RampCancelled('Seguimiento cancelado.');
-        try {
-          const { hasApproved } = await getClient().getRampKycStatus();
-          if (hasApproved) return;
-        } catch {
-          // Todavía sin registro del usuario en el proveedor: se sigue esperando.
-        }
-        if (Date.now() - start > timeoutMs) {
-          throw new RampError('Se agotó el tiempo esperando la verificación. Volvé a intentar más tarde.');
-        }
-        await sleep(intervalMs);
+      const outcome = await waitForApproval({ ...opts, readStatus: () => getClient().getRampKycStatus() });
+      if (outcome === 'cancelled') throw new RampCancelled('Seguimiento cancelado.');
+      if (outcome === 'timeout') {
+        throw new RampError('Se agotó el tiempo esperando la verificación. Volvé a intentar más tarde.');
       }
     },
     [getClient],

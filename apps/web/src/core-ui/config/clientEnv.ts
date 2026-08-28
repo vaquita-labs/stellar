@@ -40,6 +40,12 @@ const envClientSchema = z.object({
   // VAPID public key for web push (pair of apps/api VAPID_PRIVATE_KEY).
   // OPTIONAL: unset/empty disables the whole push-subscription UI.
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
+  // Rollout flag for the Bolivia (BOB) on-ramp. OPTIONAL and dark-by-default:
+  // unset/anything-but-"true" keeps Bolivia listed as "coming soon" in the
+  // deposit country picker. The corridor only exists on MAINNET, so turning it
+  // on against a testnet build shows a country that can never quote.
+  // See featureFlags.ts.
+  NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED: z.string().optional(),
 });
 
 // Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
@@ -56,6 +62,7 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: process.env.NEXT_PUBLIC_PASSIVE_VAULT_ENABLED,
   NEXT_PUBLIC_INSTALL_PROMPT_ENABLED: process.env.NEXT_PUBLIC_INSTALL_PROMPT_ENABLED,
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+  NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED: process.env.NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED,
 });
 
 if (!parsed.success) {

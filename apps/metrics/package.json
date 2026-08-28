@@ -1,0 +1,35 @@
+{
+  "name": "@vaquita/metrics",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 3103",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@fontsource/rubik": "^5.2.8",
+    "@tailwindcss/postcss": "^4.3.0",
+    "@vaquita/db": "workspace:*",
+    "@vaquita/ui": "workspace:*",
+    "next": "^16.2.7",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "recharts": "^3.3.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^10.4.1",
+    "eslint-config-next": "^16.2.7",
+    "postcss": "^8.5.15",
+    "prettier": "^3.8.3",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3"
+  }
+}

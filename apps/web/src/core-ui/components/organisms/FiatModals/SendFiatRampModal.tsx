@@ -9,6 +9,7 @@ import {
   useRampOfframp,
   usdcCostOf,
 } from '@/networks/pollar/ramps';
+import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import type { RampQuote, RampTxStatus } from '@pollar/core';
 import { Spinner, toast } from '@heroui/react';
@@ -19,10 +20,11 @@ import { FiExternalLink } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
 import { useLivePassiveUsdc } from '../../../hooks';
-import { useConfigStore, useOfframpStore } from '../../../stores';
+import { useConfigStore, useRampActiveStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { FiatStepList, StepStatus } from './FiatStepList';
+import { RAMP_FIELD_CLASS, RampFieldList } from './RampFieldList';
 
 interface SendFiatRampModalProps {
   open: boolean;
@@ -35,7 +37,6 @@ interface SendFiatRampModalProps {
 
 type Phase = 'amount' | 'details' | 'run';
 type StepKey = 'funds' | 'create' | 'payout';
-type RampField = NonNullable<RampQuote['requiredFields']>[number];
 
 /**
  * El USDC sale del vault ANTES de crear el retiro. Con wallet custodial, Pollar
@@ -46,36 +47,6 @@ type RampField = NonNullable<RampQuote['requiredFields']>[number];
 const STEP_ORDER: StepKey[] = ['funds', 'create', 'payout'];
 
 const INITIAL_STEPS: Record<StepKey, StepStatus> = { create: 'idle', funds: 'idle', payout: 'idle' };
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// Códigos de error de los endpoints de ramps que tienen un mensaje propio; el
-// resto cae al texto que mande Pollar.
-const ERROR_KEYS: Record<string, string> = {
-  SDK_RAMPS_QUOTE_EXPIRED: 'quoteExpired',
-  SDK_RAMPS_ASSET_NOT_ENABLED: 'assetNotEnabled',
-  SDK_RAMPS_KYC_REQUIRED: 'kycRequired',
-  SDK_RAMPS_WALLET_UNSUPPORTED: 'walletUnsupported',
-  SDK_RAMPS_PROVIDER_NOT_CONFIGURED: 'providerNotConfigured',
-  SDK_RAMPS_ANCHOR_ERROR: 'anchorError',
-  SDK_RAMPS_BRIDGE_ERROR: 'anchorError',
-};
-
-/** Placeholder del campo, que puede depender de la opción elegida en otro. */
-function placeholderFor(field: RampField, fields: RampField[], values: Record<string, string>): string {
-  if (field.placeholderFrom) {
-    const source = fields.find((f) => f.key === field.placeholderFrom);
-    const chosen = source?.options?.find((o) => o.value === values[field.placeholderFrom as string]);
-    if (chosen?.placeholder) return chosen.placeholder;
-  }
-  return field.placeholder ?? field.label;
-}
-
-function fieldIsValid(field: RampField, raw: string | undefined): boolean {
-  const value = (raw ?? '').trim();
-  if (!value) return field.optional === true;
-  return field.type === 'email' ? EMAIL_RE.test(value) : true;
-}
 
 /** USDC con los decimales de la app, redondeado hacia arriba para no quedar corto. */
 function ceilUsdc(value: number): number {
@@ -121,8 +92,8 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   // Mientras dura el flujo, el USDC que sacamos del vault NO es plata ociosa: sin
   // esto el gate de `useIdleFunds` lo devuelve al vault y la rampa se queda sin
   // nada que cobrar.
-  const setOfframpActive = useOfframpStore((s) => s.setOfframpActive);
-  useEffect(() => () => setOfframpActive(false), [setOfframpActive]);
+  const setRampActive = useRampActiveStore((s) => s.setRampActive);
+  useEffect(() => () => setRampActive(false), [setRampActive]);
 
   const [corridor, setCorridor] = useState<Corridor | null>(null);
   const [phase, setPhase] = useState<Phase>('amount');
@@ -197,16 +168,14 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const fields: RampField[] = quote?.requiredFields ?? [];
   const amountNum = Number(amountFiat);
   const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
-  const fieldsValid = fields.every((f) => fieldIsValid(f, values[f.key]));
+  const fieldsValid = fieldsAreValid(fields, values);
 
-  /** Traduce un fallo de ramps: código conocido → texto propio; si no, el de Pollar. */
-  const messageOf = (e: unknown): string => {
-    const code = e instanceof RampError ? e.code : undefined;
-    const key = code ? ERROR_KEYS[code] : undefined;
-    if (key) return t(`wallet.fiat.ramp.err.${key}`);
-    if (e instanceof Error && e.message) return e.message;
-    return t('wallet.fiat.ramp.err.generic', 'The withdrawal could not be completed.');
-  };
+  const messageOf = (e: unknown): string =>
+    rampErrorMessage(
+      e,
+      (leaf) => t(`wallet.fiat.ramp.err.${leaf}`),
+      t('wallet.fiat.ramp.err.generic', 'The withdrawal could not be completed.'),
+    );
 
   const fail = (e: unknown) => {
     setError(messageOf(e));
@@ -317,7 +286,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     setUsdcSpent(null);
     setPaymentHash(null);
     setSettling(false);
-    setOfframpActive(true);
+    setRampActive(true);
 
     try {
       // 1) Sacar del vault a la wallet el USDC que cuesta el retiro. Va PRIMERO
@@ -457,7 +426,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       setBusy(false);
       // Se libera pase lo que pase: si el retiro falló, ese USDC SÍ quedó ocioso
       // en la wallet y el gate tiene que poder ofrecer devolverlo al vault.
-      setOfframpActive(false);
+      setRampActive(false);
     }
   };
 
@@ -469,9 +438,6 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     funds: t('wallet.fiat.ramp.groupFunds', 'Withdraw from your savings'),
     payout: t('wallet.fiat.ramp.groupPayout', 'Pay out via {{rail}}', { rail }),
   };
-
-  const fieldClass =
-    'w-full rounded-md border border-black border-b-2 bg-white h-11 px-3 text-sm text-black placeholder:text-gray-400 outline-none focus:border-b-3 disabled:opacity-60';
 
   const footer =
     phase === 'amount' ? (
@@ -542,7 +508,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
               onChange={(e) => setAmountFiat(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))}
               disabled={busy}
               placeholder="0.00"
-              className={fieldClass}
+              className={RAMP_FIELD_CLASS}
             />
             <span className="shrink-0 text-sm font-semibold text-gray-500">{currency}</span>
           </div>
@@ -586,40 +552,12 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             </div>
           </div>
 
-          {fields.map((field) => (
-            <div key={field.key} className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-500" htmlFor={`ramp-${field.key}`}>
-                {field.label}
-              </label>
-              {field.type === 'select' ? (
-                <select
-                  id={`ramp-${field.key}`}
-                  value={values[field.key] ?? ''}
-                  onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                  disabled={busy}
-                  className={fieldClass}
-                >
-                  <option value="">{field.placeholder ?? field.label}</option>
-                  {(field.options ?? []).map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id={`ramp-${field.key}`}
-                  type={field.type === 'email' ? 'email' : field.type === 'tel' ? 'tel' : 'text'}
-                  value={values[field.key] ?? ''}
-                  onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                  disabled={busy}
-                  placeholder={placeholderFor(field, fields, values)}
-                  className={fieldClass}
-                />
-              )}
-              {field.hint && <p className="text-[11px] text-gray-400">{field.hint}</p>}
-            </div>
-          ))}
+          <RampFieldList
+            fields={fields}
+            values={values}
+            onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+            disabled={busy}
+          />
         </>
       )}
 

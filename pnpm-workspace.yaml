@@ -5,6 +5,7 @@ packages:
   - 'apps/deployer'
   - 'apps/web'
   - 'apps/admin'
+  - 'apps/metrics'
   - 'analytics'
   - 'packages/*'
 allowBuilds:
