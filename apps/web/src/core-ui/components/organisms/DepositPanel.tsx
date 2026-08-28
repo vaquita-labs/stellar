@@ -1,6 +1,6 @@
 'use client';
 
-import { isBoliviaOnrampEnabled } from '@/core-ui/config/featureFlags';
+import { isBoliviaOfframpEnabled, isBoliviaOnrampEnabled } from '@/core-ui/config/featureFlags';
 import type { CorridorCode } from '@/networks/pollar/ramps';
 import { isStellarNetwork } from '@/networks/stellar';
 import { resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
@@ -46,6 +46,7 @@ export function DepositPanel() {
   const [isOnrampOpen, setIsOnrampOpen] = useState(false);
   const isOnrampMounted = useModalPresence(isOnrampOpen);
   const boliviaOnramp = isBoliviaOnrampEnabled();
+  const boliviaOfframp = isBoliviaOfframpEnabled();
   // Modal nativo de recibir (fondeo del usuario social a su dirección custodial).
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const isReceiveMounted = useModalPresence(isReceiveOpen);
@@ -143,8 +144,16 @@ export function DepositPanel() {
         onOpenChange={() => setCountryFlow(null)}
         // El depósito entra por Anclap (ARS) y, con el flag prendido, por el
         // corredor de Pollar de Bolivia (BOB); el retiro suma los corredores de
-        // Pollar de Brasil y Colombia.
-        available={countryFlow === 'withdraw' ? ['AR', 'BR', 'CO'] : boliviaOnramp ? ['AR', 'BO'] : ['AR']}
+        // Pollar de Brasil y Colombia, y con su propio flag el de Bolivia.
+        available={
+          countryFlow === 'withdraw'
+            ? boliviaOfframp
+              ? ['AR', 'BR', 'CO', 'BO']
+              : ['AR', 'BR', 'CO']
+            : boliviaOnramp
+              ? ['AR', 'BO']
+              : ['AR']
+        }
         onBack={() => {
           const flow = countryFlow;
           setCountryFlow(null);
@@ -159,7 +168,8 @@ export function DepositPanel() {
           });
           setCountryFlow(null);
           if (flow === 'withdraw') {
-            if (countryCode === 'BR' || countryCode === 'CO') {
+            // Los corredores de Pollar comparten modal; Argentina sigue por Anclap.
+            if (countryCode === 'BR' || countryCode === 'CO' || countryCode === 'BO') {
               setRampCountry(countryCode);
               setIsRampOpen(true);
             } else setIsSendFiatOpen(true);

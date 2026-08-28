@@ -31,3 +31,17 @@ export const isInstallPromptEnabled = (): boolean =>
  */
 export const isBoliviaOnrampEnabled = (): boolean =>
   clientEnv.NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED === 'true';
+
+/**
+ * The Bolivia (BOB) off-ramp: sell USDC and get paid in bolivianos to your own
+ * bank account over ACH. Separate flag from the on-ramp because they are
+ * different products behind different providers and will not go live on the
+ * same day — sharing one would light up the other by accident.
+ *
+ * Dark by default, and it stays dark until a live `offramp` quote for BOB comes
+ * back with quotes: `getRampCountries` returns only country + currency, with no
+ * direction and no rails, so nothing in the API confirms a payout corridor
+ * exists for our credentials. MAINNET-ONLY, like the buy side.
+ */
+export const isBoliviaOfframpEnabled = (): boolean =>
+  clientEnv.NEXT_PUBLIC_BOLIVIA_OFFRAMP_ENABLED === 'true';
