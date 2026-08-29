@@ -9,6 +9,11 @@ import {
   useRampOfframp,
   usdcCostOf,
 } from '@/networks/pollar/ramps';
+import {
+  advanceWithdrawal,
+  markWithdrawalTerminal,
+  startWithdrawal,
+} from '@/networks/pollar/offrampApi';
 import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import type { RampQuote, RampTxStatus } from '@pollar/core';
@@ -75,7 +80,7 @@ function ceilUsdc(value: number): number {
 export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendFiatRampModalProps) {
   const { t } = useTranslation();
   const { token } = useConfigStore();
-  const { wallet, refreshAssets } = usePollar();
+  const { wallet, refreshAssets, refreshWalletBalance } = usePollar();
   const walletAddress = wallet?.address ?? null;
 
   const {
@@ -95,6 +100,24 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const setRampActive = useRampActiveStore((s) => s.setRampActive);
   useEffect(() => () => setRampActive(false), [setRampActive]);
 
+  // Al cerrarse el modal —terminado, fallado, o abandonado a mitad— el USDC que
+  // sacamos del vault puede haber quedado en la wallet sin llegar nunca a la
+  // rampa: el retiro salió del vault en el paso 1 y cualquier error posterior lo
+  // deja ahí. Se refresca el balance custodial para que el gate de plata ociosa
+  // (`useIdleFunds`, que vive en otro subárbol y sólo pollea mientras se espera
+  // plata) lo VEA y ofrezca devolverlo al vault, en vez de que aparezca recién
+  // en el próximo reload.
+  //
+  // Ofrecer y no hacerlo solo es a propósito: la firma custodial de Pollar tiene
+  // que salir de un gesto del usuario, así que el redepósito lo dispara el botón
+  // de `IdleFundsModal`. La marca se libera primero porque, mientras está
+  // puesta, ese gate no promptea.
+  useEffect(() => {
+    if (open) return;
+    setRampActive(false);
+    void refreshWalletBalance();
+  }, [open, setRampActive, refreshWalletBalance]);
+
   const [corridor, setCorridor] = useState<Corridor | null>(null);
   const [phase, setPhase] = useState<Phase>('amount');
   const [amountFiat, setAmountFiat] = useState('');
@@ -111,6 +134,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const [tosUrl, setTosUrl] = useState<string | null>(null);
   const [usdcSpent, setUsdcSpent] = useState<number | null>(null);
   const [paymentHash, setPaymentHash] = useState<string | null>(null);
+  // Id de la fila que sigue este retiro del lado del servidor. En un ref y no en
+  // estado porque lo lee `handleRun` mientras corre: un re-render de por medio
+  // le daría el valor viejo y el avance se anotaría en la nada.
+  const trackedId = useRef<string | null>(null);
   // El pago salió y el proveedor todavía está acreditando: en curso, no fallado.
   const [settling, setSettling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -303,7 +330,21 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       const costIssue = costProblem(cost);
       if (costIssue) throw new RampError(costIssue);
       const toWithdraw = Math.min(ceilUsdc(cost as number), balance);
-      await passiveWithdraw({
+
+      // La fila se abre ANTES de sacar del vault, no después de crear con el
+      // proveedor: si el retiro se cae en el medio, la plata ya se movió y esta
+      // es la única constancia de que existió. Best-effort — no poder
+      // registrarlo no puede impedir un retiro que el usuario pidió.
+      trackedId.current = await startWithdrawal(walletAddress, {
+        country: corridor.country,
+        amountFiat: String(amountNum),
+        currency: corridor.currency,
+        provider: quote.provider,
+        rail: quote.rail,
+        usdcAmount: String(toWithdraw),
+      });
+
+      const { hash: vaultHash } = await passiveWithdraw({
         address: walletAddress,
         amount: String(toWithdraw),
         decimals: token.decimals,
@@ -312,6 +353,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       await refreshAssets();
       setUsdcSpent(toWithdraw);
       mark('funds', 'done');
+      void advanceWithdrawal(walletAddress, trackedId.current, {
+        step: 'create',
+        vaultWithdrawHash: vaultHash,
+      });
 
       // 2) Crear el retiro por el monto en moneda local. Si el proveedor pide KYC
       // hay que esperar la aprobación y volver a cotizar, porque la cotización
@@ -351,6 +396,15 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       }
       setTxStatus(result.status);
       mark('create', 'done');
+      // Recién acá existe el retiro para el proveedor. `active` puede no ser la
+      // cotización original: si hubo KYC se recotizó, y el proveedor y el rail
+      // que valen son los de la que se usó.
+      void advanceWithdrawal(walletAddress, trackedId.current, {
+        step: 'payout',
+        providerTxId: result.txId,
+        provider: active.provider,
+        rail: active.rail,
+      });
 
       // 3) Confirmar que el pago on-chain salió. El acuse es `stellarTxHash`, no
       // el 200: con wallet custodial ya viene en la respuesta de crear; si no
@@ -385,6 +439,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         }
       }
       setPaymentHash(hash ?? null);
+      if (hash) void advanceWithdrawal(walletAddress, trackedId.current, { paymentHash: hash });
 
       // El hash que informa el proveedor NO prueba que la plata se haya movido:
       // es el de la transacción que armó, y viene igual si nunca se difundió. Se
@@ -413,14 +468,25 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       setWaiting(false);
       if (finalStatus === 'completed') {
         mark('payout', 'done');
+        void markWithdrawalTerminal(walletAddress, trackedId.current, 'settled');
+        trackedId.current = null;
         toast.success(t('wallet.fiat.ramp.settled', 'Withdrawal paid out via {{rail}}.', { rail: active.rail }));
       } else {
+        // Sigue acreditando: no se cierra la fila, porque el retiro todavía no
+        // terminó. Si el usuario no vuelve, la ventana de gracia la cierra sola.
         setSettling(true);
       }
     } catch (e) {
-      // Cancelación (el usuario cerró el modal durante la espera): no es error.
+      // Cancelación (el usuario cerró el modal durante la espera): no es error, y
+      // la fila queda ABIERTA a propósito — el retiro sigue su curso del lado del
+      // proveedor y el usuario puede volver. La ventana de gracia la cierra si
+      // nadie vuelve.
       if (e instanceof RampCancelled) return;
       fail(e);
+      // Acá sí falló: se cierra con el motivo, que es lo que después explica
+      // dónde quedó la plata.
+      void markWithdrawalTerminal(walletAddress, trackedId.current, 'failed', messageOf(e));
+      trackedId.current = null;
     } finally {
       setWaiting(false);
       setBusy(false);
@@ -472,9 +538,16 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      // Durante la espera dejamos cerrar (el KYC del proveedor puede tardar); el
-      // polling se aborta solo. En los pasos rápidos (firmas) bloqueamos.
-      isDismissable={!busy || waiting}
+      // Con el retiro en curso no se cierra tocando afuera: la plata ya salió
+      // del vault y está en camino a la rampa, y un toque al borde en medio de
+      // eso deja al usuario sin la única pantalla que le dice dónde quedó. Antes
+      // se permitía durante la espera del KYC, que es la parte más larga y
+      // justamente la más fácil de cerrar sin querer.
+      //
+      // La X sigue ahí a propósito: la espera del proveedor puede no terminar
+      // nunca, y el polling se aborta solo al cerrar. Es un cierre deliberado,
+      // no un accidente.
+      isDismissable={!busy}
       title={t('wallet.fiat.ramp.title', 'Withdraw to {{country}} ({{currency}})', {
         country: countryName,
         currency: currency || country,

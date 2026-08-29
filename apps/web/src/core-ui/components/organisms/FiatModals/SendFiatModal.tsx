@@ -60,7 +60,7 @@ const INITIAL_STEPS: Record<StepKey, StepStatus> = {
 export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
   const { t } = useTranslation();
   const { token, setToken } = useConfigStore();
-  const { wallet, refreshAssets, login } = usePollar();
+  const { wallet, refreshAssets, refreshWalletBalance, login } = usePollar();
   const walletAddress = wallet?.address ?? null;
   // Id del adapter on-chain (freighter, xbull, …) solo cuando la wallet es
   // externa; las custodiales (`internal` / `smart`) no se pueden reconectar.
@@ -80,6 +80,17 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
   // retiro se queda sin fondos a mitad de camino.
   const setRampActive = useRampActiveStore((s) => s.setRampActive);
   useEffect(() => () => setRampActive(false), [setRampActive]);
+
+  // Mismo cierre que en el retiro por Pollar (`SendFiatRampModal`): el USDC sale
+  // de Blend en el primer paso, así que cualquier corte posterior lo deja en la
+  // wallet. Al cerrarse el modal se libera la marca y se refresca el balance
+  // custodial, para que el gate de plata ociosa lo vea enseguida y ofrezca
+  // devolverlo al vault en lugar de dejarlo suelto hasta el próximo reload.
+  useEffect(() => {
+    if (open) return;
+    setRampActive(false);
+    void refreshWalletBalance();
+  }, [open, setRampActive, refreshWalletBalance]);
 
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
@@ -364,9 +375,11 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      // Durante la espera de confirmación dejamos cerrar (puede tardar); el
-      // polling se aborta solo. En los pasos rápidos (firmas) bloqueamos.
-      isDismissable={!busy || waiting}
+      // Con el retiro en curso no se cierra tocando afuera: el USDC ya salió de
+      // Blend y está en camino al anchor, y perder la pantalla ahí deja al
+      // usuario sin saber dónde quedó su plata. La X sigue disponible, que es un
+      // cierre deliberado y aborta el polling solo.
+      isDismissable={!busy}
       title={t('wallet.fiat.send.title', 'Send fiat (ARS)')}
       size="md"
       bodyClassName="flex flex-col gap-4 pb-6"
