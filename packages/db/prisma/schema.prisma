@@ -131,6 +131,46 @@ model OnrampPurchase {
   @@map("onramp_purchases")
 }
 
+/// Retiro a moneda local (off-ramp). Espejo de {@link OnrampPurchase} y, como
+/// ella, existe porque la API de ramps no tiene endpoint de listado: el
+/// `providerTxId` es el único handle sobre un retiro en curso.
+///
+/// La diferencia está en CUÁNDO se abre la fila. El USDC sale del vault en el
+/// primer paso, antes de que el proveedor sepa nada, así que la fila se crea
+/// ANTES de ese retiro y `providerTxId`/`provider` quedan en null hasta que la
+/// creación responde. Una fila que nunca los tuvo es un retiro que movió plata
+/// del usuario y no llegó a la rampa — el caso que esta tabla existe para no
+/// perder.
+///
+/// `step`: funds | create | payout (los mismos del stepper del modal).
+/// `status`: pending | settled | failed | abandoned.
+///
+/// Lo reporta el cliente: es rastro para soporte, no un libro contable.
+model OfframpWithdrawal {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  walletAddress     String    @map("wallet_address") @db.VarChar(128)
+  providerTxId      String?   @map("provider_tx_id") @db.VarChar(128)
+  provider          String?   @db.VarChar(64)
+  country           String    @db.Char(2)
+  rail              String?   @db.VarChar(16)
+  amountFiat        String    @map("amount_fiat") @db.VarChar(80)
+  currency          String    @db.VarChar(8)
+  usdcAmount        String?   @map("usdc_amount") @db.VarChar(80)
+  vaultWithdrawHash String?   @map("vault_withdraw_hash") @db.VarChar(80)
+  paymentHash       String?   @map("payment_hash") @db.VarChar(80)
+  step              String    @default("funds") @db.VarChar(16)
+  status            String    @default("pending") @db.VarChar(32)
+  errorReason       String?   @map("error_reason")
+  lastPolledAt      DateTime? @map("last_polled_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([provider, providerTxId], map: "offramp_withdrawals_provider_tx_unique")
+  @@index([walletAddress, updatedAt], map: "idx_offramp_withdrawals_wallet_pending")
+  @@map("offramp_withdrawals")
+}
+
 model BridgeTransfer {
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   direction            String    @db.VarChar(32)

@@ -36,4 +36,5 @@ export * from './services/referral';
 export * from './services/notifications';
 export * from './services/savedWallet';
 export * from './services/legal';
+export * from './services/offramp';
 export * from './services/onramp';
