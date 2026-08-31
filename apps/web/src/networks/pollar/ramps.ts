@@ -95,19 +95,25 @@ export function asRampError(e: unknown, fallback: string): RampError {
 
 /**
  * Cuánto USDC cuesta recibir `amountFiat` en moneda local, según la cotización.
- * `rate` viene como FIAT POR 1 USDC, así que el costo es la división.
+ * `rate` viene como FIAT POR 1 USDC, así que el costo es la división — redondeada
+ * hacia ARRIBA al centavo, porque ESO es lo que el proveedor cobra: Pollar arma el
+ * pago on-chain en centavos enteros (para costos de 1.7901542 y 1.8773182 USDC
+ * cobró 1.80 y 1.88), y fondear la división exacta deja la wallet corta y el pago
+ * muere en el ledger con PAYMENT_UNDERFUNDED.
  *
- * Es la ÚNICA forma de saberlo antes de crear el retiro, y hace falta antes
- * porque el USDC tiene que estar en la wallet para que el proveedor pueda
- * cobrarlo. Los proveedores que usamos no publican instrucciones de depósito con
- * un monto exacto, así que quien la llama redondea hacia arriba para no quedar
- * corto y valida el resultado contra el saldo.
+ * Es la ÚNICA forma de saberlo antes de crear el retiro —la cotización no publica
+ * el monto exacto en USDC, sólo `rate`—, y hace falta antes porque el USDC tiene
+ * que estar en la wallet para que el proveedor pueda cobrarlo. El sobrante del
+ * redondeo (menos de un centavo) queda en la wallet del usuario.
  */
 export function usdcCostOf(amountFiat: number, quote: Pick<RampQuote, 'rate'>): number | null {
   const rate = Number(quote.rate);
   if (!Number.isFinite(rate) || rate <= 0) return null;
   const cost = amountFiat / rate;
-  return Number.isFinite(cost) && cost > 0 ? cost : null;
+  if (!Number.isFinite(cost) || cost <= 0) return null;
+  // `toFixed` antes del ceil para que el ruido de coma flotante (1.1 * 100 da
+  // 110.00000000000001) no infle el cobro un centavo de más.
+  return Math.ceil(Number((cost * 100).toFixed(6))) / 100;
 }
 
 /**

@@ -53,12 +53,6 @@ const STEP_ORDER: StepKey[] = ['funds', 'create', 'payout'];
 
 const INITIAL_STEPS: Record<StepKey, StepStatus> = { create: 'idle', funds: 'idle', payout: 'idle' };
 
-/** USDC con los decimales de la app, redondeado hacia arriba para no quedar corto. */
-function ceilUsdc(value: number): number {
-  const factor = 10 ** AMOUNT_DECIMALS;
-  return Math.ceil(value * factor) / factor;
-}
-
 /**
  * Off-ramp de fiat sobre los endpoints de ramps de Pollar, para cualquiera de los
  * corredores que la app expone (Brasil por Pix, Colombia por PSE o Bre-B con
@@ -321,15 +315,16 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       // on-chain en el mismo momento de crear: si el USDC no está en la wallet no
       // hay con qué pagar y el retiro queda en `pending` sin hash para siempre.
       //
-      // El monto sale de la cotización (`rate` = fiat por 1 USDC) redondeado hacia
-      // ARRIBA, porque quedarse corto por decimales haría fallar el pago. El
-      // sobrante queda en la wallet del usuario y `useIdleFunds` lo ofrece
-      // reinvertir.
+      // El monto es el cobro real del proveedor (`usdcCostOf`: la cotización al
+      // centavo, hacia arriba), SIN recortarlo al saldo: retirar menos que el
+      // cobro garantiza un pago corto que falla en el ledger, y `costProblem` ya
+      // rechazó el retiro si no entra en el saldo. El sobrante del redondeo queda
+      // en la wallet del usuario y `useIdleFunds` lo ofrece reinvertir.
       mark('funds', 'running');
       const cost = usdcCostOf(amountNum, quote);
       const costIssue = costProblem(cost);
       if (costIssue) throw new RampError(costIssue);
-      const toWithdraw = Math.min(ceilUsdc(cost as number), balance);
+      const toWithdraw = cost as number;
 
       // La fila se abre ANTES de sacar del vault, no después de crear con el
       // proveedor: si el retiro se cae en el medio, la plata ya se movió y esta
@@ -611,7 +606,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <span>{t('wallet.fiat.ramp.youSend', 'Leaves your savings')}</span>
                 <span className="font-semibold text-black">
-                  {t('wallet.fiat.ramp.costUsdc', '≈ {{amount}} USDC', { amount: ceilUsdc(usdcCost) })}
+                  {t('wallet.fiat.ramp.costUsdc', '≈ {{amount}} USDC', { amount: usdcCost })}
                 </span>
               </div>
             )}
