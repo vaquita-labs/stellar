@@ -40,18 +40,6 @@ const envClientSchema = z.object({
   // VAPID public key for web push (pair of apps/api VAPID_PRIVATE_KEY).
   // OPTIONAL: unset/empty disables the whole push-subscription UI.
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
-  // Rollout flag for the Bolivia (BOB) on-ramp. OPTIONAL and dark-by-default:
-  // unset/anything-but-"true" keeps Bolivia listed as "coming soon" in the
-  // deposit country picker. The corridor only exists on MAINNET, so turning it
-  // on against a testnet build shows a country that can never quote.
-  // See featureFlags.ts.
-  NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED: z.string().optional(),
-  // Flag del OFF-ramp de Bolivia (retirar a una cuenta por ACH). Va aparte del
-  // de compra a propósito: son dos productos con proveedores distintos y no
-  // tienen por qué habilitarse el mismo día, así que un flag compartido
-  // encendería el otro sin querer. Mismo default: sin "true", Bolivia sigue
-  // "próximamente" en el picker de retiro. Ver featureFlags.ts.
-  NEXT_PUBLIC_BOLIVIA_OFFRAMP_ENABLED: z.string().optional(),
 });
 
 // Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
@@ -68,8 +56,6 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: process.env.NEXT_PUBLIC_PASSIVE_VAULT_ENABLED,
   NEXT_PUBLIC_INSTALL_PROMPT_ENABLED: process.env.NEXT_PUBLIC_INSTALL_PROMPT_ENABLED,
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED: process.env.NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED,
-  NEXT_PUBLIC_BOLIVIA_OFFRAMP_ENABLED: process.env.NEXT_PUBLIC_BOLIVIA_OFFRAMP_ENABLED,
 });
 
 if (!parsed.success) {

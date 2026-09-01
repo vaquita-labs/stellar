@@ -178,12 +178,24 @@ export const getVaultTotals = async (
 };
 
 /**
- * Convert a USDC amount (raw base units) into vault shares, floored so it never
- * rounds up past the user's holdings: `shares = usdcRaw * totalSupply / totalManaged`.
- * BigInt division truncates toward zero (both operands positive → floor).
+ * Convert a USDC amount (raw base units) into vault shares, rounded UP:
+ * `shares = ceil(usdcRaw * totalSupply / totalManaged)`.
+ *
+ * Up, not down. Once the vault has appreciated a share is worth more than one
+ * USDC, so flooring the conversion throws away a fraction of a share and the
+ * vault pays out `floor(shares * totalManaged / totalSupply)` — one base unit
+ * SHORT of what was asked for. The portfolio withdraw loses that stroop
+ * silently, but the fiat off-ramps hand the provider an exact quoted amount and
+ * it rejects the payment ("needs 0.96 USDC, wallet holds 0.9599999"). Rounding
+ * up restores the invariant that withdrawing X delivers at least X:
+ * `floor(ceil(x·S/M)·M/S) >= x`.
+ *
+ * The extra share can push the request past what the holder actually owns, so
+ * every caller caps the result at their balance — asking for the whole position
+ * then burns exactly the position, which is what it did before.
  */
 export const usdcToShares = (usdcRaw: bigint, totalSupply: bigint, totalManaged: bigint): bigint =>
-  totalManaged <= 0n ? 0n : (usdcRaw * totalSupply) / totalManaged;
+  totalManaged <= 0n ? 0n : (usdcRaw * totalSupply + totalManaged - 1n) / totalManaged;
 
 /** Apply a basis-point floor to a raw amount (for min_amounts_out). */
 export const applySlippageFloor = (raw: bigint, bps: number): bigint =>

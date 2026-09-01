@@ -68,7 +68,7 @@ export async function fetchPendingPurchase(
 }
 
 /** Cómo terminó una compra, tal como lo guarda el servidor. */
-export type TerminalPurchaseStatus = 'settled' | 'expired' | 'failed';
+export type TerminalPurchaseStatus = 'settled' | 'expired' | 'failed' | 'cancelled';
 
 /**
  * Cierra la compra del lado del servidor para que deje de ofrecerse al volver.

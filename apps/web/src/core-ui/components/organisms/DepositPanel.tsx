@@ -1,6 +1,6 @@
 'use client';
 
-import { isBoliviaOfframpEnabled, isBoliviaOnrampEnabled } from '@/core-ui/config/featureFlags';
+import { useRampCountries } from '@/networks/pollar/rampCountries';
 import type { CorridorCode } from '@/networks/pollar/ramps';
 import { isStellarNetwork } from '@/networks/stellar';
 import { resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
@@ -42,11 +42,15 @@ export function DepositPanel() {
   const [isRampOpen, setIsRampOpen] = useState(false);
   const isRampMounted = useModalPresence(isRampOpen);
   // Bolivia entra por los ramps de Pollar (compra de USDC pagando un QR), no por
-  // Anclap: modal propio, detrás de flag mientras el corredor se termina.
+  // Anclap: modal propio.
   const [isOnrampOpen, setIsOnrampOpen] = useState(false);
   const isOnrampMounted = useModalPresence(isOnrampOpen);
-  const boliviaOnramp = isBoliviaOnrampEnabled();
-  const boliviaOfframp = isBoliviaOfframpEnabled();
+  // Quién habilita Bolivia es el proveedor, no un flag de build. La lista se pide
+  // recién cuando el usuario abre alguna puerta de fiat —no en cada home— y se
+  // arranca desde el modal de método/retiro, un paso antes del picker, para que
+  // llegue a tiempo y el país no aparezca apagado un instante.
+  const { supports: rampSupports } = useRampCountries(isMethodOpen || isWithdrawOpen || countryFlow !== null);
+  const bolivia = rampSupports('BO');
   // Modal nativo de recibir (fondeo del usuario social a su dirección custodial).
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const isReceiveMounted = useModalPresence(isReceiveOpen);
@@ -142,15 +146,20 @@ export function DepositPanel() {
       <CountryPickerModal
         open={countryFlow !== null}
         onOpenChange={() => setCountryFlow(null)}
-        // El depósito entra por Anclap (ARS) y, con el flag prendido, por el
-        // corredor de Pollar de Bolivia (BOB); el retiro suma los corredores de
-        // Pollar de Brasil y Colombia, y con su propio flag el de Bolivia.
+        // El depósito entra por Anclap (ARS) y, si el proveedor lo tiene
+        // habilitado, por el corredor de Pollar de Bolivia (BOB); el retiro suma
+        // los de Brasil y Colombia.
+        //
+        // Argentina no se consulta porque no es de Pollar —es Anclap— y Brasil y
+        // Colombia tampoco: la lista no trae dirección, así que un país que sólo
+        // figure para compra apagaría un retiro que hoy funciona. Bolivia sí,
+        // que es la que se está habilitando.
         available={
           countryFlow === 'withdraw'
-            ? boliviaOfframp
+            ? bolivia
               ? ['AR', 'BR', 'CO', 'BO']
               : ['AR', 'BR', 'CO']
-            : boliviaOnramp
+            : bolivia
               ? ['AR', 'BO']
               : ['AR']
         }

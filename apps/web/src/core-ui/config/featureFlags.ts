@@ -6,8 +6,7 @@ import { clientEnv } from './clientEnv';
  * rollout is flipped by setting NEXT_PUBLIC_PASSIVE_VAULT_ENABLED=true at build
  * time (its absence keeps prod on the legacy direct-to-Blend path).
  */
-export const isPassiveVaultEnabled = (): boolean =>
-  clientEnv.NEXT_PUBLIC_PASSIVE_VAULT_ENABLED === 'true';
+export const isPassiveVaultEnabled = (): boolean => clientEnv.NEXT_PUBLIC_PASSIVE_VAULT_ENABLED === 'true';
 
 /**
  * The "add the app to your home screen" step mobile users hit on the login
@@ -18,30 +17,10 @@ export const isPassiveVaultEnabled = (): boolean =>
  * means nobody is ever interrupted by it. The manual "Install app" row in
  * Settings is unaffected — it stays available regardless of this flag.
  */
-export const isInstallPromptEnabled = (): boolean =>
-  clientEnv.NEXT_PUBLIC_INSTALL_PROMPT_ENABLED === 'true';
+export const isInstallPromptEnabled = (): boolean => clientEnv.NEXT_PUBLIC_INSTALL_PROMPT_ENABLED === 'true';
 
-/**
- * The Bolivia (BOB) on-ramp: buy USDC with bolivianos by paying a QR with any
- * Bolivian bank app. Dark-by-default, so the country stays greyed out in the
- * deposit picker until NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED=true is set at build
- * time. The corridor is MAINNET-ONLY — the provider publishes nothing on
- * testnet — so a testnet build with the flag on can open the modal but will
- * never get a quote.
- */
-export const isBoliviaOnrampEnabled = (): boolean =>
-  clientEnv.NEXT_PUBLIC_BOLIVIA_ONRAMP_ENABLED === 'true';
-
-/**
- * The Bolivia (BOB) off-ramp: sell USDC and get paid in bolivianos to your own
- * bank account over ACH. Separate flag from the on-ramp because they are
- * different products behind different providers and will not go live on the
- * same day — sharing one would light up the other by accident.
- *
- * Dark by default, and it stays dark until a live `offramp` quote for BOB comes
- * back with quotes: `getRampCountries` returns only country + currency, with no
- * direction and no rails, so nothing in the API confirms a payout corridor
- * exists for our credentials. MAINNET-ONLY, like the buy side.
- */
-export const isBoliviaOfframpEnabled = (): boolean =>
-  clientEnv.NEXT_PUBLIC_BOLIVIA_OFFRAMP_ENABLED === 'true';
+// Los corredores de Bolivia (BOB) tuvieron un flag por punta acá. Ya no: quién
+// los habilita es Pollar, y se le pregunta en vivo con `useRampCountries`
+// (`networks/pollar/rampCountries.ts`). Un flag de build decía lo que nosotros
+// creíamos el día del deploy — de ahí que testnet mostrara un país que no podía
+// cotizar; el endpoint dice lo que el proveedor tiene habilitado hoy.

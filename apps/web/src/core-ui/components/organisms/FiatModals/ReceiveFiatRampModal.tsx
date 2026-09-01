@@ -9,7 +9,12 @@ import {
   shouldPoll,
   terminalStatusFor,
 } from '@/networks/pollar/onrampFlow';
-import { fetchPendingPurchase, markPurchaseTerminal, recordPurchase } from '@/networks/pollar/onrampApi';
+import {
+  fetchPendingPurchase,
+  markPurchaseTerminal,
+  recordPurchase,
+  type TerminalPurchaseStatus,
+} from '@/networks/pollar/onrampApi';
 import { isKycRequiredError, kycNeededBy, waitForKycApproval } from '@/networks/pollar/kycWait';
 import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
 import { type OnrampCorridor, type OnrampCorridorCode, useRampOnramp, usdcOutOf } from '@/networks/pollar/rampsOnramp';
@@ -486,9 +491,13 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
    * Acá SÍ se cierra la compra vieja: pedir un código nuevo es abandonar el
    * anterior, y dejarlo abierto haría que la próxima vez que el usuario entre le
    * aparezca un QR que ya decidió no pagar.
+   *
+   * `closing` es con qué queda registrada la que se abandona, y no sale siempre
+   * de la pantalla: el usuario que cancela un código todavía vivo no lo dejó
+   * vencer, y contar las dos cosas juntas taparía cuál de los dos problemas
+   * tenemos.
    */
-  const restart = () => {
-    const closing = terminalStatusFor(screen) ?? 'expired';
+  const restartWith = (closing: TerminalPurchaseStatus) => {
     if (walletAddress && purchaseId) {
       void markPurchaseTerminal(walletAddress, purchaseId, closing).catch(() => {});
     }
@@ -508,6 +517,12 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     setRequote((n) => n + 1);
     setPhase('amount');
   };
+
+  /** Abandonar por donde venía la pantalla: vencida, rechazada o acreditada. */
+  const restart = () => restartWith(terminalStatusFor(screen) ?? 'expired');
+
+  /** Abandonar un código que todavía servía, porque el usuario lo pidió. */
+  const cancel = () => restartWith('cancelled');
 
   // El formulario (monto, cotización, campos) es de los dos primeros pasos; en la
   // verificación y en el pago la pantalla es otra y no debe quedar nada suyo
@@ -682,6 +697,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           expiresAt={instructions.expiresAt}
           now={now}
           onRestart={restart}
+          onCancel={cancel}
         />
       )}
 
