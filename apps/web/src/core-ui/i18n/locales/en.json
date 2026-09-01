@@ -393,7 +393,7 @@
       "summaryHeading": "In short",
       "summaryData": "We store your wallet address, profile and activity, and share data with the partners that run wallets, ramps and infrastructure.",
       "summaryOnchain": "Deposits, withdrawals and badges are recorded publicly on the blockchain and cannot be deleted.",
-      "summaryRisk": "Vaquita is beta software. Deposits are not insured, yield is not guaranteed, and withdrawing early forfeits your interest.",
+      "summaryRisk": "Vaquita is beta software, and withdrawing early forfeits your interest.",
       "readFull": "Read the full documents:",
       "privacyLink": "Privacy Policy",
       "termsLink": "Terms of Service",

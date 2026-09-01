@@ -393,7 +393,7 @@
       "summaryHeading": "En resumen",
       "summaryData": "Guardamos tu dirección de billetera, tu perfil y tu actividad, y compartimos datos con los socios que operan billeteras, rampas e infraestructura.",
       "summaryOnchain": "Los depósitos, retiros e insignias quedan registrados públicamente en la blockchain y no se pueden borrar.",
-      "summaryRisk": "Vaquita es software en beta. Los depósitos no están asegurados, el rendimiento no está garantizado y retirar antes de tiempo hace que pierdas tu interés.",
+      "summaryRisk": "Vaquita es software en beta y retirar antes de tiempo hace que pierdas tu interés.",
       "readFull": "Leé los documentos completos:",
       "privacyLink": "Política de Privacidad",
       "termsLink": "Términos del Servicio",
