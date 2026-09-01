@@ -83,20 +83,18 @@ export const useRestProfile = () => {
   );
 
   // Record acceptance of the legal bundle (Privacy Policy + Terms + Risk
-  // Disclosure). The wallet is taken from the session on the server, not from
-  // the URL, so there is no wallet param here — an acceptance must only ever be
-  // written for a wallet whose control was proven.
+  // Disclosure). Plain `fetch`, on purpose: `authFetch` first makes the wallet
+  // sign a challenge to mint a session token, and on a brand-new wallet that
+  // signature fails often enough that users were left stuck on the gate — which
+  // blocks the whole app — with nothing to do about it. The wallet travels in
+  // the body and the server trusts it (see apps/api/src/routes/legal/route.ts).
   const acceptLegal = useCallback(
     async (payload: { policyVersion: string; jurisdictionAttested: boolean; locale?: string }) => {
-      const response = await authFetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/legal/accept`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-        walletAddress
-      );
+      const response = await fetch(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/legal/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, walletAddress }),
+      });
       const data = await response.json();
 
       return {
