@@ -119,9 +119,12 @@ export const vaultWithdrawAll = async ({ address }: { address: string }): Promis
 };
 
 /**
- * Withdraw a specific USDC amount from the vault. Converts USDC→shares floored
- * (`usdcToShares`) and capped at the user's actual balance so it never
- * over-requests; min_amounts_out is the requested USDC minus the slippage floor.
+ * Withdraw a specific USDC amount from the vault. Converts USDC→shares rounded
+ * UP (`usdcToShares`) so the burn covers the amount asked for — flooring it left
+ * the payout one base unit short and the fiat off-ramps, which hand the provider
+ * an exact quoted amount, bounced on the difference. The result is capped at the
+ * user's actual share balance, so the extra share can never over-request;
+ * min_amounts_out is the requested USDC minus the slippage floor.
  */
 export const vaultWithdrawUsdc = async ({
   address,

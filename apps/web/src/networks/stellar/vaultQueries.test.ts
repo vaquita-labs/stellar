@@ -78,9 +78,26 @@ describe('usdcToShares', () => {
     expect(usdcToShares(100n, 100n, 200n)).toBe(50n);
   });
 
-  it('floors so it never rounds up past what the user holds', () => {
-    // 10 * 3 / 7 = 4.28… → 4
-    expect(usdcToShares(10n, 3n, 7n)).toBe(4n);
+  it('rounds up so the burn covers the amount asked for', () => {
+    // 10 * 3 / 7 = 4.28… → 5. Flooring to 4 pays back 4 * 7 / 3 = 9, one unit
+    // short — the shortfall the fiat off-ramps reject.
+    expect(usdcToShares(10n, 3n, 7n)).toBe(5n);
+  });
+
+  it('never leaves the payout short of the request', () => {
+    // La ida y vuelta completa: convertir a shares y volver a USDC como lo hace
+    // el vault (floor) nunca puede devolver menos de lo pedido.
+    const totalSupply = 1_000_000n;
+    const totalManaged = 1_349_517n; // vault apreciado, ratio feo a propósito
+    for (const usdcRaw of [1n, 9_600_000n, 349_500_765n, 10_000_000n, 7n]) {
+      const shares = usdcToShares(usdcRaw, totalSupply, totalManaged);
+      expect((shares * totalManaged) / totalSupply).toBeGreaterThanOrEqual(usdcRaw);
+    }
+  });
+
+  it('does not round up an exact conversion', () => {
+    // 100 * 100 / 200 = 50 justo: sin resto no hay share de más que quemar.
+    expect(usdcToShares(100n, 100n, 200n)).toBe(50n);
   });
 
   it('returns zero shares for an empty vault instead of dividing by zero', () => {
