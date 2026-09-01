@@ -138,3 +138,23 @@ body {
         transform: translate(calc(-50% + var(--drift, 0px)), -160px) scale(calc(var(--scale, 1) * 0.85)) rotate(var(--spin, 0deg));
     }
 }
+
+/* Guiño único de los accesos rápidos del mapa (ver `useHudHint`): tres
+   sacudidas cortas con pausa entre medio, para que el HUD se vea vivo la
+   primera vez sin quedar zumbando. Se anula con reduced-motion. */
+@keyframes hud-hint {
+    0%, 55%, 100% { transform: translateX(0) rotate(0deg); }
+    65% { transform: translateX(-2px) rotate(-7deg); }
+    75% { transform: translateX(2px) rotate(7deg); }
+    85% { transform: translateX(-1px) rotate(-3deg); }
+}
+
+.animate-hud-hint {
+    animation: hud-hint 2.2s ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-hud-hint {
+        animation: none;
+    }
+}

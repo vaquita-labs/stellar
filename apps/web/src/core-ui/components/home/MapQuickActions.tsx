@@ -1,17 +1,20 @@
 'use client';
 
-import { useUnplacedMapItemsCount } from '@/core-ui/hooks';
+import { useHudHint, useUnplacedMapItemsCount } from '@/core-ui/hooks';
 import { EditionMode, useMapStore } from '@/core-ui/stores';
 import Image from 'next/image';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
+import { MapIconButton } from '../molecules/MapIconButton';
 
 /**
  * Accesos rápidos que flotan sobre el mapa, apilados debajo del cofre. Sustituyen
  * a la barra de navegación inferior: la tienda abre el modo edición del mapa (no
  * navega), mientras que el leaderboard y explorar van a su propia ruta con back
  * propio. Orden: explorar, leaderboard, tienda.
+ *
+ * Cada acceso es un [MapIconButton]: círculo con el borde de la app, etiqueta
+ * debajo y el mismo hundido que el resto de los botones.
  */
 export const MapQuickActions = () => {
   const { t } = useTranslation();
@@ -24,6 +27,7 @@ export const MapQuickActions = () => {
   // donde el mapa arranca vacío y ya hay ítems gratis esperando).
   const unplacedItems = useUnplacedMapItemsCount();
   const hasUnplacedItems = unplacedItems > 0;
+  const hintRef = useHudHint();
 
   const openShop = () => {
     if (pathname !== '/home') {
@@ -34,67 +38,41 @@ export const MapQuickActions = () => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <Link href="/explore" aria-label={t('shell.nav.explore', 'Explore')} className="active:scale-95 transition-transform">
-        <Image
-          src="/icons/navigation/world.webp"
-          alt={t('shell.nav.explore', 'Explore')}
-          width={40}
-          height={40}
-          className="object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
-          priority
-        />
-      </Link>
+    <div ref={hintRef} className="flex flex-col items-center gap-2">
+      <MapIconButton
+        href="/explore"
+        label={t('shell.nav.explore', 'Explore')}
+        ariaLabel={t('shell.nav.explore', 'Explore')}
+        icon={<Image src="/icons/navigation/world.webp" alt="" width={28} height={28} className="object-contain" priority />}
+      />
 
-      <Link
+      <MapIconButton
         href="/leaderboard"
-        aria-label={t('shell.nav.leaderboard', 'Leaderboard')}
-        className="active:scale-95 transition-transform"
-      >
-        <Image
-          src="/icons/navigation/leaderboard.png"
-          alt={t('shell.nav.leaderboard', 'Leaderboard')}
-          width={40}
-          height={40}
-          className="object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
-          priority
-        />
-      </Link>
+        label={t('shell.nav.leaderboard', 'Leaderboard')}
+        ariaLabel={t('shell.nav.leaderboard', 'Leaderboard')}
+        icon={
+          <Image src="/icons/navigation/leaderboard.png" alt="" width={28} height={28} className="object-contain" priority />
+        }
+      />
 
-      <button
-        type="button"
+      <MapIconButton
         onClick={openShop}
-        aria-label={
+        label={t('shell.nav.shop', 'Shop')}
+        ariaLabel={
           hasUnplacedItems
             ? t('shell.nav.shopWithItems', '{{count}} items to place', { count: unplacedItems })
             : t('shell.nav.shop', 'Shop')
         }
-        className="relative bg-transparent active:scale-95 transition-transform"
-      >
-        {hasUnplacedItems && (
-          <span
-            aria-hidden
-            className="absolute inset-0 -m-1 rounded-full bg-amber-300/40 blur-md animate-pulse motion-reduce:animate-none"
-          />
-        )}
-        <Image
-          src="/icons/navigation/shop.png"
-          alt={t('shell.nav.shop', 'Shop')}
-          width={40}
-          height={40}
-          className={`relative object-contain ${
-            hasUnplacedItems
-              ? 'drop-shadow-[0_0_8px_rgba(252,211,77,0.95)]'
-              : 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]'
-          }`}
-          priority
-        />
-        {hasUnplacedItems && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-[18px] text-center shadow-md">
-            {unplacedItems > 99 ? '99+' : unplacedItems}
-          </span>
-        )}
-      </button>
+        highlighted={hasUnplacedItems}
+        icon={<Image src="/icons/navigation/shop.png" alt="" width={28} height={28} className="object-contain" priority />}
+        badge={
+          hasUnplacedItems ? (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-[18px] text-center shadow-md">
+              {unplacedItems > 99 ? '99+' : unplacedItems}
+            </span>
+          ) : null
+        }
+      />
     </div>
   );
 };

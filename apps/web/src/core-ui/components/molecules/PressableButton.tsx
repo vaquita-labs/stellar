@@ -71,9 +71,20 @@ const SIZE_CLASSES: Record<PressableButtonSize, string> = {
   chip: 'justify-center rounded-md px-2.5 py-1 text-xs font-bold border-b-2 active:border-b-[1px] active:translate-y-[1px]',
 };
 
+/**
+ * El anillo de foco es parte del contrato del botón, no un extra: sin él, quien
+ * navega con teclado (y todo el escritorio) no tiene NINGUNA señal de qué está
+ * seleccionado, porque el único feedback del componente es el hundido, que solo
+ * existe mientras se mantiene apretado. Se usa `outline` y no `ring` a propósito:
+ * `outline` no lo recorta el `overflow` de los contenedores ni compite con el
+ * borde inferior grueso, que sí es un `border`.
+ */
+export const FOCUS_RING_CLASSES = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black';
+
 const BASE_CLASSES =
   'inline-flex items-center gap-2 border transition ' +
-  'disabled:opacity-50 disabled:pointer-events-none disabled:active:translate-y-0';
+  FOCUS_RING_CLASSES +
+  ' disabled:opacity-50 disabled:pointer-events-none disabled:active:translate-y-0';
 
 export function PressableButton({
   children,
@@ -91,13 +102,7 @@ export function PressableButton({
   onTouchEnd,
   onWheel,
 }: PressableButtonProps) {
-  const classes = [
-    BASE_CLASSES,
-    SIZE_CLASSES[size],
-    VARIANT_CLASSES[variant],
-    fullWidth ? 'w-full' : '',
-    className,
-  ]
+  const classes = [BASE_CLASSES, SIZE_CLASSES[size], VARIANT_CLASSES[variant], fullWidth ? 'w-full' : '', className]
     .filter(Boolean)
     .join(' ');
 
