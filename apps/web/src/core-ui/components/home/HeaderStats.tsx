@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertCircle, FiHeadphones } from 'react-icons/fi';
+import { FiAlertCircle, FiChevronRight, FiHeadphones } from 'react-icons/fi';
 import {
   usePassiveUsdc,
   useDepositsComplete,
@@ -216,7 +216,7 @@ export const HeaderStats = () => {
           <Link
             href="/profile"
             aria-label={t('home.stats.profileAria', 'Profile')}
-            className="group relative shrink-0 transition active:translate-y-[2px]"
+            className="group relative shrink-0 transition active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black rounded-full"
           >
             <VaquitaAvatarCircle
               config={profileData?.avatarConfig}
@@ -224,13 +224,21 @@ export const HeaderStats = () => {
               alt={t('home.stats.profileAlt', 'Profile')}
               className="h-16 w-16 border-2 border-black border-b-[6px] transition group-active:border-b-2"
             />
+            {/* El borde solo no alcanzaba: la foto se leía como un retrato del
+                header. El chevron dice que abre algo. */}
+            <span
+              aria-hidden
+              className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-black bg-white"
+            >
+              <FiChevronRight className="h-3 w-3 text-black" />
+            </span>
           </Link>
 
           <div className="flex flex-col min-w-0 flex-1 gap-1">
             {/* Saludo traducido + el username con @ en negrita. Si todavía no
                 hay perfil no se renderiza para no reservar una línea vacía. */}
             {displayName && (
-              <p className="text-xs text-black/70 leading-none truncate">
+              <p className="text-xs text-black/80 leading-none truncate">
                 {t('home.stats.greeting', 'Hi,')} <span className="font-bold text-black">@{displayName}</span>
               </p>
             )}
@@ -265,6 +273,10 @@ export const HeaderStats = () => {
                     )}
                   </span>
                 )}
+                {/* La pastilla es crema clara con un número adentro: sin esto se
+                    lee como un campo de texto, no como el acceso al portafolio.
+                    El chevron es la señal de "esto abre algo". */}
+                <FiChevronRight aria-hidden className="h-5 w-5 shrink-0 text-black/60" />
               </PressableButton>
               {/* Nunca ocultamos que un saldo no se pudo confirmar: si Blend
                   falló y no hay valor en cache, el total mostrado NO incluye esa
@@ -301,81 +313,86 @@ export const HeaderStats = () => {
           <Link
             href="/concierge"
             aria-label={t('concierge.buttonAria', 'Concierge')}
-            className="relative shrink-0 self-start w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px]"
+            className="relative shrink-0 self-start w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
           >
             <FiHeadphones className="w-4 h-4 text-black" />
           </Link>
         </div>
       </div>
 
-      {/* Offsets en px fijos (no las clases rem de Tailwind) para que la
+      {/* Racha, monedas y experiencia ABREN cada uno su modal. Como fila de
+          números sueltos se leían como un panel de datos, así que cada uno es
+          un <PressableButton> chip: el mismo borde, el mismo hundido y el mismo
+          anillo de foco que cualquier otro botón de la app.
+
+          La banda va de borde a borde, igual que el bloque naranja de arriba:
+          el FONDO ocupa todo el ancho y solo el contenido se centra en
+          `max-w-xl`. En móvil da lo mismo (la pantalla es más angosta que ese
+          tope), pero en escritorio la barra dejaba de tocar los bordes y
+          quedaba como una isla flotante en medio del mapa. Sigue translúcida
+          porque es de donde cuelga el cartel del reloj (ver <MapClockCard>,
+          cuyas cuerdas suben hasta este borde inferior).
+
+          Offsets en px fijos (no las clases rem de Tailwind) para que la
           distancia al bloque naranja sea la misma en todos los dispositivos,
           aunque el usuario tenga el tamaño de fuente del sistema agrandado. */}
-      <div className="absolute left-0 right-0 -bottom-[36px] px-1 z-20 pointer-events-none">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white/60 backdrop-blur-md rounded-lg px-3 py-1.5  pointer-events-auto">
-          <button
-            type="button"
-            onClick={() => setShowStreakModal(true)}
-            className="flex items-center gap-1.5 flex-1 justify-center bg-transparent"
-          >
-            {streakLoading && !streakData ? (
-              <Spinner size="sm" color="current" />
-            ) : (
-              <>
-                <Image
-                  src="/icons/global/streak_face.png"
-                  alt={t('home.stats.streakAlt', 'Streak')}
-                  width={20}
-                  height={20}
-                  className="object-contain"
-                  priority
-                  style={hasActiveStreak ? {} : { filter: 'grayscale(100%)' }}
-                />
-                <span className="text-xs font-bold text-black tabular-nums">
-                  {totalStreak}
-                </span>
-              </>
-            )}
-          </button>
+      <div className="absolute left-0 right-0 -bottom-[36px] z-20 pointer-events-none">
+        <div className="bg-white/40 backdrop-blur-md pointer-events-auto">
+          <div className="max-w-xl mx-auto flex items-center justify-between gap-2 px-2 py-1.5">
+            <PressableButton
+              variant="white"
+              size="chip"
+              onClick={() => setShowStreakModal(true)}
+              ariaLabel={t('home.stats.streakAlt', 'Streak')}
+              className="flex-1"
+            >
+              {streakLoading && !streakData ? (
+                <Spinner size="sm" color="current" />
+              ) : (
+                <>
+                  <Image
+                    src="/icons/global/streak_face.png"
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="object-contain"
+                    priority
+                    style={hasActiveStreak ? {} : { filter: 'grayscale(100%)' }}
+                  />
+                  <span className="text-xs font-bold text-black tabular-nums">{totalStreak}</span>
+                </>
+              )}
+            </PressableButton>
 
-          <div className="w-px h-4 bg-black/10" />
+            <PressableButton
+              variant="white"
+              size="chip"
+              onClick={() => setShowCoinsModal(true)}
+              ariaLabel={t('home.stats.goldCoinAlt', 'Gold Coin')}
+              className="flex-1"
+            >
+              {/* La ref del destino de la animación de monedas va en el contenido,
+                  no en el botón: <PressableButton> no reenvía refs y el centro del
+                  ícono es mejor blanco que el centro del chip entero. */}
+              <span ref={setGoldCoinRef} className="flex items-center gap-2">
+                <Image src="/icons/global/coin.png" alt="" width={20} height={20} className="object-contain" priority />
+                <span className="text-xs font-bold text-black tabular-nums">{goldCoins}</span>
+              </span>
+            </PressableButton>
 
-          <button
-            ref={setGoldCoinRef}
-            type="button"
-            onClick={() => setShowCoinsModal(true)}
-            className="flex items-center gap-1.5 flex-1 justify-center bg-transparent"
-          >
-            <Image
-              src="/icons/global/coin.png"
-              alt={t('home.stats.goldCoinAlt', 'Gold Coin')}
-              width={20}
-              height={20}
-              className="object-contain"
-              priority
-            />
-            <span className="text-xs font-bold text-black tabular-nums">{goldCoins}</span>
-          </button>
-
-          <div className="w-px h-4 bg-black/10" />
-
-          <button
-            type="button"
-            onClick={() => setShowExperienceModal(true)}
-            className="flex items-center gap-1.5 flex-1 justify-center bg-transparent"
-          >
-            <Image
-              src="/icons/global/star.png"
-              alt={t('home.stats.experienceAlt', 'Experience')}
-              width={20}
-              height={20}
-              className="object-contain"
-              priority
-            />
-            <span className="text-xs font-bold text-black tabular-nums">
-              {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </span>
-          </button>
+            <PressableButton
+              variant="white"
+              size="chip"
+              onClick={() => setShowExperienceModal(true)}
+              ariaLabel={t('home.stats.experienceAlt', 'Experience')}
+              className="flex-1"
+            >
+              <Image src="/icons/global/star.png" alt="" width={20} height={20} className="object-contain" priority />
+              <span className="text-xs font-bold text-black tabular-nums">
+                {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </span>
+            </PressableButton>
+          </div>
         </div>
       </div>
 

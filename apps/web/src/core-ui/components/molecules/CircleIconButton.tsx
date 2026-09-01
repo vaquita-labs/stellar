@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { FOCUS_RING_CLASSES } from './PressableButton';
 
 export type CircleIconButtonVariant = 'primary' | 'white';
 /** `md` (32px) para el back de páginas; `sm` (28px) para los headers de modal. */
@@ -37,10 +38,18 @@ const SIZE_CLASSES: Record<CircleIconButtonSize, string> = {
   md: 'w-8 h-8',
 };
 
+/**
+ * Mismo gesto que [PressableButton]: al presionar, el borde inferior se achica
+ * exactamente lo que baja el botón, así el alto total no cambia y no salta el
+ * layout. Antes bajaba 2px sin achicar el borde, así que el círculo crecía al
+ * tocarlo y el hundido se leía distinto que en el resto de la app.
+ */
 const BASE_CLASSES =
   'inline-flex items-center justify-center rounded-full border border-black border-b-2 ' +
-  'text-black shrink-0 transition-all active:translate-y-0.5 ' +
-  'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0';
+  'text-black shrink-0 transition active:border-b-[1px] active:translate-y-[1px] ' +
+  FOCUS_RING_CLASSES +
+  ' disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 ' +
+  'disabled:active:border-b-2';
 
 export function CircleIconButton({
   icon,

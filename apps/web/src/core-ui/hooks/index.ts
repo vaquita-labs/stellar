@@ -12,6 +12,7 @@ export * from './useVaultApy';
 export * from './usePassiveMigration';
 export * from './useFont';
 export * from './useHasHydrated';
+export * from './useHudHint';
 export * from './useInstallApp';
 export * from './useInstallDismissed';
 export * from './useIntroSeen';

@@ -1,4 +1,4 @@
-import { prisma } from '@vaquita/db';
+import { Prisma, prisma } from '@vaquita/db';
 import { fmtInt, fmtPct, fmtUsd } from '@/lib/format';
 
 // The weekly report: one markdown document a teammate can paste into Slack,
@@ -41,7 +41,24 @@ export type WeeklyReport = {
   markdown: string;
 };
 
-async function periodStats(from: Date, to: Date): Promise<PeriodStats> {
+// `onramp_purchases` is absent on older environments, and a missing relation
+// fails the whole statement at parse time. The report probes for it once and
+// swaps in a literal zero when it is gone, so every period stays a single
+// round-trip. A temporary stand-in table is not an option: the transaction-mode
+// pooler returns the connection after each statement, so the next query lands on
+// a different backend where that table does not exist.
+async function hasOnrampPurchases(): Promise<boolean> {
+  const [row] = await prisma.$queryRaw<{ present: boolean }[]>`
+    select to_regclass('public.onramp_purchases') is not null as present
+  `;
+  return row?.present ?? false;
+}
+
+async function periodStats(from: Date, to: Date, onramp: boolean): Promise<PeriodStats> {
+  const onrampSettled = onramp
+    ? Prisma.sql`(select count(*) from onramp_purchases where deleted_at is null and status = 'settled' and updated_at >= ${from} and updated_at < ${to})::int`
+    : Prisma.sql`0::int`;
+
   const [row] = await prisma.$queryRaw<PeriodStats[]>`
     with c as (
       select wallet_address, amount, coalesce(confirmed_at, created_at) as ts, id
@@ -69,7 +86,7 @@ async function periodStats(from: Date, to: Date): Promise<PeriodStats> {
       (select count(*) from badge_claims where deleted_at is null and confirmed_at >= ${from} and confirmed_at < ${to})::int as badges,
       (select count(*) from follows where created_at >= ${from} and created_at < ${to})::int as follows,
       (select count(distinct profile_id) from profiles_rewards where reason = 'daily-checkin' and created_at >= ${from} and created_at < ${to})::int as checkin_users,
-      (select count(*) from onramp_purchases where deleted_at is null and status = 'settled' and updated_at >= ${from} and updated_at < ${to})::int as onramp_settled,
+      ${onrampSettled} as onramp_settled,
       ((select coalesce(sum(amount), 0) from c where ts < ${to}) - (select coalesce(sum(principal), 0) from wd where ts < ${to}))::float8 as tvl_end
   `;
   return row!;
@@ -97,19 +114,12 @@ export async function weeklyReport(to: Date = new Date(), envLabel = ''): Promis
   const from = new Date(to.getTime() - week);
   const prevFrom = new Date(from.getTime() - week);
 
-  // onramp_purchases may not exist on older environments: fall back to a
-  // version of the same query without it rather than lose the whole report.
-  const safePeriod = async (a: Date, b: Date): Promise<PeriodStats> => {
-    try {
-      return await periodStats(a, b);
-    } catch (err) {
-      if (!/onramp_purchases/.test(String(err))) throw err;
-      await prisma.$executeRaw`create temporary table if not exists onramp_purchases (deleted_at timestamptz, status text, updated_at timestamptz)`;
-      return periodStats(a, b);
-    }
-  };
-
-  const [current, previous, all] = await Promise.all([safePeriod(from, to), safePeriod(prevFrom, from), totals()]);
+  const onramp = await hasOnrampPurchases();
+  const [current, previous, all] = await Promise.all([
+    periodStats(from, to, onramp),
+    periodStats(prevFrom, from, onramp),
+    totals(),
+  ]);
   const markdown = renderMarkdown({ from, to, current, previous, totals: all, envLabel });
   return { from, to, current, previous, totals: all, markdown };
 }
