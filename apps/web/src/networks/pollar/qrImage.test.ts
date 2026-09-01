@@ -1,6 +1,6 @@
 import jsQR from 'jsqr';
 import { describe, expect, it } from 'vitest';
-import { type QrPixels, renderQrPixels, saveQrImage } from './qrImage';
+import { pngFileFromDataUrl, type QrPixels, renderQrPixels, saveQrImage } from './qrImage';
 
 // Un payload con la forma de un QR interoperable boliviano (EMVCo): campos
 // tag-length-value y un CRC al final.
@@ -76,6 +76,23 @@ describe('renderQrPixels', () => {
       expect(g).toBe(b);
       expect([0, 255]).toContain(r);
     }
+  });
+});
+
+describe('pngFileFromDataUrl', () => {
+  it('turns the provider data URL into a shareable PNG file with the same bytes', async () => {
+    const file = pngFileFromDataUrl('data:image/png;base64,aGk=', 'vaquita-qr.png');
+
+    expect(file?.name).toBe('vaquita-qr.png');
+    expect(file?.type).toBe('image/png');
+    expect(new Uint8Array(await file!.arrayBuffer())).toEqual(new Uint8Array([104, 105])); // "hi"
+  });
+
+  it('refuses anything that is not a base64 PNG, rather than sharing a broken file', () => {
+    // Un SVG no va a Fotos y un base64 roto daría un archivo que no abre; en los
+    // dos casos queda el long-press sobre la imagen, que sigue funcionando.
+    expect(pngFileFromDataUrl('data:image/svg+xml;utf8,%3Csvg%3E', 'qr.png')).toBeNull();
+    expect(pngFileFromDataUrl('data:image/png;base64,@@no-base64@@', 'qr.png')).toBeNull();
   });
 });
 
