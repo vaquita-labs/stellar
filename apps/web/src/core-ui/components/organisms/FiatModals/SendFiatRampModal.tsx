@@ -9,11 +9,7 @@ import {
   RampError,
   useRampOfframp,
 } from '@/networks/pollar/ramps';
-import {
-  advanceWithdrawal,
-  markWithdrawalTerminal,
-  startWithdrawal,
-} from '@/networks/pollar/offrampApi';
+import { advanceWithdrawal, markWithdrawalTerminal, startWithdrawal } from '@/networks/pollar/offrampApi';
 import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import type { RampTxStatus } from '@pollar/core';
@@ -512,9 +508,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
 
   const rail = quote?.rail ?? '';
   const groupLabels: Record<StepKey, string> = {
-    create: t('wallet.fiat.ramp.groupCreate', 'Start the withdrawal with {{provider}}', {
-      provider: quote?.provider ?? '',
-    }),
+    create: t('wallet.fiat.ramp.groupCreate', 'Start the withdrawal'),
     funds: t('wallet.fiat.ramp.groupFunds', 'Withdraw from your savings'),
     payout: t('wallet.fiat.ramp.groupPayout', 'Pay out via {{rail}}', { rail }),
   };
@@ -611,8 +605,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       {phase === 'details' && quote && (
         <>
           <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
+            {/* El nombre del proveedor no se muestra: el usuario cobra por un
+                rail (QR, ACH), y quién lo liquida es un detalle nuestro. */}
             <div className="flex items-center justify-between">
-              <span className="font-bold text-black">{quote.provider}</span>
+              <span className="font-bold text-black">{t('wallet.fiat.ramp.routeLabel', 'Payout method')}</span>
               <span className="text-xs font-semibold text-gray-500">{quote.rail}</span>
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500">
@@ -660,8 +656,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
               liquidar. Sin este aviso el último paso parece trabado. */}
           {waiting && steps.payout === 'running' && !settling && (
             <p className="text-xs text-gray-500">
-              {t('wallet.fiat.ramp.waitingReady', 'Waiting for {{provider}} to settle the payment…', {
-                provider: quote?.provider ?? '',
+              {t('wallet.fiat.ramp.waitingReady', 'Waiting for the payment to settle…', {
                 eta: quote?.estimatedTime ?? '',
               })}
             </p>
@@ -673,8 +668,8 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             <p className="rounded-md border border-black border-b-2 bg-[#DDF4FF] px-3 py-2 text-xs font-semibold text-black">
               {t(
                 'wallet.fiat.ramp.settling',
-                'Your USDC reached {{provider}} and the {{rail}} payout is on its way. It can take a while — you can close this window.',
-                { provider: quote?.provider ?? '', rail },
+                'Your USDC was received and the {{rail}} payout is on its way. It can take a while — you can close this window.',
+                { rail },
               )}
             </p>
           )}
