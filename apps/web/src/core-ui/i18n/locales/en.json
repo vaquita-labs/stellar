@@ -2007,7 +2007,6 @@
         "expiresIn": "Expires in {{time}}",
         "failedBody": "The provider rejected it. If your bank already took the money, it will be returned — keep the receipt.",
         "failedTitle": "The purchase did not go through",
-        "feeLabel": "Fee",
         "hint": "You pay a QR code with your bank app.",
         "kycLinkBody": "We opened the verification in another tab. Finish it there and come back — the purchase continues on its own.",
         "kycNoLinkBody": "They are reviewing it now. This can take a while — leave this open and we will continue as soon as you are approved.",
@@ -2050,8 +2049,9 @@
         "balanceLoading": "Reading your savings…",
         "continue": "Continue",
         "corridorOff": "This corridor is not enabled yet.",
-        "costUsdc": "≈ {{amount}} USDC",
+        "costUsdc": "{{amount}} USDC",
         "country": {
+          "BO": "Bolivia",
           "BR": "Brazil",
           "CO": "Colombia"
         },
@@ -2072,7 +2072,6 @@
           "walletUnsupported": "This wallet type cannot be used for this withdrawal."
         },
         "etaLabel": "Estimated time",
-        "feeLabel": "Fee",
         "groupCreate": "Hand it to {{provider}}",
         "groupFunds": "Withdraw from your savings",
         "groupPayout": "Pay out via {{rail}}",

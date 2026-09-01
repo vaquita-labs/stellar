@@ -2040,7 +2040,6 @@
         "expiresIn": "Expira em {{time}}",
         "failedBody": "O provedor recusou. Se o seu banco já cobrou, o valor será devolvido — guarde o comprovante.",
         "failedTitle": "A compra não foi concluída",
-        "feeLabel": "Taxa",
         "hint": "Você paga um código QR pelo app do seu banco.",
         "kycLinkBody": "Abrimos a verificação em outra aba. Conclua por lá e volte — a compra continua sozinha.",
         "kycNoLinkBody": "Estão analisando agora. Pode demorar um pouco: deixe esta tela aberta e continuamos assim que aprovarem.",
@@ -2083,8 +2082,9 @@
         "balanceLoading": "Lendo suas reservas…",
         "continue": "Continuar",
         "corridorOff": "Este corredor ainda não está disponível.",
-        "costUsdc": "≈ {{amount}} USDC",
+        "costUsdc": "{{amount}} USDC",
         "country": {
+          "BO": "Bolívia",
           "BR": "Brasil",
           "CO": "Colômbia"
         },
@@ -2105,7 +2105,6 @@
           "walletUnsupported": "Este tipo de carteira não pode ser usado neste saque."
         },
         "etaLabel": "Tempo estimado",
-        "feeLabel": "Taxa",
         "groupCreate": "Entregar para {{provider}}",
         "groupFunds": "Sacar das suas reservas",
         "groupPayout": "Pagar via {{rail}}",

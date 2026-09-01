@@ -1,11 +1,11 @@
 'use client';
 
-import type { RampQuote, RampsOnrampResponse, RampsTransactionResponse } from '@pollar/core';
+import type { RampsOnrampResponse, RampsTransactionResponse } from '@pollar/core';
 import { usePollar } from '@pollar/react';
 import { useCallback } from 'react';
 import { getBlendConfig } from '@/networks/stellar/blendDirect';
 import { getHorizonUrl } from '@/networks/stellar/kit';
-import { asRampError, RampError } from './ramps';
+import { asRampError, type RampQuote, RampError } from './ramps';
 
 /**
  * Corredores de ON-ramp que la app expone hoy. Son otro conjunto que los de
@@ -41,12 +41,15 @@ export const ONRAMP_CORRIDORS: Record<OnrampCorridorCode, OnrampCorridor> = {
 };
 
 /**
- * Cuánto USDC deja `amountFiat` en moneda local, según la cotización. `rate`
- * viene como FIAT POR 1 USDC —igual que en el off-ramp—, así que el USDC que
- * entra es la división.
+ * How much USDC `amountFiat` in local currency buys, per the quote. `rate` comes
+ * as FIAT PER 1 USDC, so the incoming USDC is the division.
  *
- * Es una estimación: el monto final lo confirma el proveedor cuando acredita, y
- * puede moverse si el QR se paga mucho después de cotizar.
+ * Dividing is valid here: `cryptoAmount` is `null` on an on-ramp — the provider
+ * only fixes it when it credits — and nothing is pre-funded, so a cent of
+ * difference breaks no payment.
+ *
+ * It is an estimate: the provider confirms the final amount when it credits, and
+ * it can move if the QR is paid long after the quote.
  */
 export function usdcOutOf(amountFiat: number, quote: Pick<RampQuote, 'rate'>): number | null {
   const rate = Number(quote.rate);

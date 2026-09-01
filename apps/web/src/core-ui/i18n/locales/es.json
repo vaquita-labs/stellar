@@ -2007,7 +2007,6 @@
         "expiresIn": "Vence en {{time}}",
         "failedBody": "El proveedor la rechazó. Si tu banco ya te cobró, te lo van a devolver: guardá el comprobante.",
         "failedTitle": "La compra no se completó",
-        "feeLabel": "Comisión",
         "hint": "Pagás un código QR desde la app de tu banco.",
         "kycLinkBody": "Abrimos la verificación en otra pestaña. Terminala ahí y volvé — la compra sigue sola.",
         "kycNoLinkBody": "La están revisando. Puede tardar un rato: dejá esta pantalla abierta y seguimos apenas te aprueben.",
@@ -2050,8 +2049,9 @@
         "balanceLoading": "Leyendo tus ahorros…",
         "continue": "Continuar",
         "corridorOff": "Este corredor todavía no está habilitado.",
-        "costUsdc": "≈ {{amount}} USDC",
+        "costUsdc": "{{amount}} USDC",
         "country": {
+          "BO": "Bolivia",
           "BR": "Brasil",
           "CO": "Colombia"
         },
@@ -2072,7 +2072,6 @@
           "walletUnsupported": "Este tipo de wallet no se puede usar para este retiro."
         },
         "etaLabel": "Tiempo estimado",
-        "feeLabel": "Comisión",
         "groupCreate": "Entregar a {{provider}}",
         "groupFunds": "Sacar de tus ahorros",
         "groupPayout": "Pagar por {{rail}}",

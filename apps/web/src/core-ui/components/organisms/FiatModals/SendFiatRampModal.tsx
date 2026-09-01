@@ -5,9 +5,9 @@ import {
   type CorridorCode,
   isLiquidityRail,
   RampCancelled,
+  type RampQuote,
   RampError,
   useRampOfframp,
-  usdcCostOf,
 } from '@/networks/pollar/ramps';
 import {
   advanceWithdrawal,
@@ -16,7 +16,7 @@ import {
 } from '@/networks/pollar/offrampApi';
 import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
-import type { RampQuote, RampTxStatus } from '@pollar/core';
+import type { RampTxStatus } from '@pollar/core';
 import { Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
@@ -54,22 +54,38 @@ const STEP_ORDER: StepKey[] = ['funds', 'create', 'payout'];
 const INITIAL_STEPS: Record<StepKey, StepStatus> = { create: 'idle', funds: 'idle', payout: 'idle' };
 
 /**
- * Off-ramp de fiat sobre los endpoints de ramps de Pollar, para cualquiera de los
- * corredores que la app expone (Brasil por Pix, Colombia por PSE o Bre-B con
- * Abroad). Comparte el esqueleto de {@link SendFiatModal} (Argentina/Anclap): un
- * stepper de tres candados, la plata sale del vault a la wallet ANTES de
- * entregarse a la rampa, y el polling se aborta si el usuario cierra el modal.
+ * The fiat the quote SETTLES, which is not necessarily the one that was asked
+ * for: the provider quotes on the crypto side, so asking for 12 BOB lands near
+ * it — at 12.13 — and that is what reaches the bank. This is the amount on
+ * screen; the requested one only serves to quote.
  *
- * La diferencia grande está en la unidad del monto. En Anclap el swap USDC → ARS
- * lo hacemos nosotros, así que ese modal pide USDC; acá el monto se elige en
- * MONEDA LOCAL porque `/ramps/quote` filtra los proveedores por la moneda fiat
- * del corredor y cotizar en USDC devuelve la lista vacía. Cuánto USDC cuesta se
- * muestra en la confirmación y sale de la propia cotización, que es la única tasa
- * válida acá.
+ * Falls back to the requested amount when the quote does not carry it, since
+ * that is all there is to go on.
+ */
+const settledFiatOf = (quote: RampQuote | null, requested: number): number => {
+  const settled = Number(quote?.fiatAmount);
+  return Number.isFinite(settled) && settled > 0 ? settled : requested;
+};
+
+/**
+ * Fiat off-ramp over Pollar's ramps endpoints, for any of the corridors the app
+ * exposes (Brazil over Pix, Colombia over PSE or Bre-B with Abroad). It shares
+ * the skeleton of {@link SendFiatModal} (Argentina/Anclap): a three-lock
+ * stepper, the money leaves the vault for the wallet BEFORE it is handed to the
+ * ramp, and the polling aborts if the user closes the modal.
  *
- * Nada del corredor está cableado más allá del símbolo: la moneda sale de
- * `getRampCountries`, y el rail, el proveedor y los campos del formulario los
- * define la cotización. Sumar un país es agregarlo a `CORRIDORS` y al selector.
+ * The big difference is the unit of the amount. With Anclap we run the
+ * USDC → ARS swap ourselves, so that modal asks for USDC; here the amount is
+ * chosen in LOCAL CURRENCY because `/ramps/quote` filters providers by the
+ * corridor's fiat currency and quoting in USDC returns an empty list. The quote
+ * publishes what it costs in USDC (`cryptoAmount`) and the confirmation shows
+ * it, along with the fiat that actually settles (`fiatAmount`), which may not be
+ * what the user typed.
+ *
+ * Nothing about the corridor is hardcoded beyond the symbol: the currency comes
+ * from `getRampCountries`, and the rail, the provider and the form fields are
+ * decided by the quote. Adding a country means adding it to `CORRIDORS` and to
+ * the picker.
  */
 export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendFiatRampModalProps) {
   const { t } = useTranslation();
@@ -190,6 +206,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const amountNum = Number(amountFiat);
   const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
   const fieldsValid = fieldsAreValid(fields, values);
+  const receiveFiat = settledFiatOf(quote, amountNum);
 
   const messageOf = (e: unknown): string =>
     rampErrorMessage(
@@ -210,11 +227,11 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   };
 
   /**
-   * Cuánto USDC cuesta el monto pedido según una cotización, validado contra el
-   * saldo. Devuelve el mensaje de error si no se puede pagar, o null si entra.
+   * Validates the cost the quote publishes against the balance. Returns the
+   * error message when it cannot be paid, or null when it fits.
    */
-  const costProblem = (cost: number | null): string | null => {
-    if (cost == null) {
+  const costProblem = (cost: number | null | undefined): string | null => {
+    if (cost == null || !Number.isFinite(cost) || cost <= 0) {
       return t('wallet.fiat.ramp.err.unknownCost', 'The quote did not report how much USDC this withdrawal costs.');
     }
     if (cost > balance) {
@@ -268,9 +285,9 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         );
         return;
       }
-      // El usuario escribió reales o pesos, así que recién ahora —con el `rate` de
-      // la cotización— se sabe si el retiro entra en el saldo.
-      const cost = usdcCostOf(amountNum, best);
+      // The user typed reais or bolivianos, so only now — with the cost the
+      // quote publishes — is it known whether the withdrawal fits the balance.
+      const cost = best.cryptoAmount;
       const problem = costProblem(cost);
       if (problem) {
         setError(problem);
@@ -288,7 +305,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         }
       }
       setQuote(best);
-      setUsdcCost(cost);
+      setUsdcCost(cost ?? null);
       setPhase('details');
     } catch (e) {
       setError(messageOf(e));
@@ -310,18 +327,20 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     setRampActive(true);
 
     try {
-      // 1) Sacar del vault a la wallet el USDC que cuesta el retiro. Va PRIMERO
-      // porque, con wallet custodial, `createOfframp` arma y envía el pago
-      // on-chain en el mismo momento de crear: si el USDC no está en la wallet no
-      // hay con qué pagar y el retiro queda en `pending` sin hash para siempre.
+      // 1) Move the USDC the withdrawal costs from the vault to the wallet. It
+      // goes FIRST because, with a custodial wallet, `createOfframp` builds and
+      // sends the on-chain payment at the very moment it creates: with no USDC
+      // in the wallet there is nothing to pay with and the withdrawal sits in
+      // `pending` with no hash forever.
       //
-      // El monto es el cobro real del proveedor (`usdcCostOf`: la cotización al
-      // centavo, hacia arriba), SIN recortarlo al saldo: retirar menos que el
-      // cobro garantiza un pago corto que falla en el ledger, y `costProblem` ya
-      // rechazó el retiro si no entra en el saldo. El sobrante del redondeo queda
-      // en la wallet del usuario y `useIdleFunds` lo ofrece reinvertir.
+      // The amount is `quote.cryptoAmount`, the EXACT charge fixed at quote
+      // time. Dividing the requested fiat by `rate` lands on a different number,
+      // because `rate` is published against the fiat that settles and the charge
+      // is rounded to the cent. It is not clamped to the balance either:
+      // withdrawing less than the charge guarantees a short payment, and
+      // `costProblem` already rejected the withdrawal if it does not fit.
       mark('funds', 'running');
-      const cost = usdcCostOf(amountNum, quote);
+      const cost = quote.cryptoAmount;
       const costIssue = costProblem(cost);
       if (costIssue) throw new RampError(costIssue);
       const toWithdraw = cost as number;
@@ -332,7 +351,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       // registrarlo no puede impedir un retiro que el usuario pidió.
       trackedId.current = await startWithdrawal(walletAddress, {
         country: corridor.country,
-        amountFiat: String(amountNum),
+        amountFiat: String(receiveFiat),
         currency: corridor.currency,
         provider: quote.provider,
         rail: quote.rail,
@@ -379,14 +398,14 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             }),
           );
         }
-        // La tasa pudo moverse mientras duraba el KYC: se revalida contra el saldo
-        // antes de seguir, con la cotización nueva.
-        const freshCost = usdcCostOf(amountNum, fresh);
+        // The rate can move while the KYC runs, so the cost of the new quote is
+        // revalidated against the balance before going on.
+        const freshCost = fresh.cryptoAmount;
         const problem = costProblem(freshCost);
         if (problem) throw new RampError(problem);
         active = fresh;
         setQuote(fresh);
-        setUsdcCost(freshCost);
+        setUsdcCost(freshCost ?? null);
         result = await createOfframp({ corridor, quote: fresh, amountFiat: amountNum, walletAddress, values });
       }
       setTxStatus(result.status);
@@ -599,21 +618,17 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{t('wallet.fiat.ramp.youReceive', 'You receive')}</span>
               <span className="font-semibold text-black">
-                {symbol} {amountNum} {currency}
+                {symbol} {receiveFiat} {currency}
               </span>
             </div>
             {usdcCost != null && (
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <span>{t('wallet.fiat.ramp.youSend', 'Leaves your savings')}</span>
                 <span className="font-semibold text-black">
-                  {t('wallet.fiat.ramp.costUsdc', '≈ {{amount}} USDC', { amount: usdcCost })}
+                  {t('wallet.fiat.ramp.costUsdc', '{{amount}} USDC', { amount: usdcCost })}
                 </span>
               </div>
             )}
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{t('wallet.fiat.ramp.feeLabel', 'Fee')}</span>
-              <span className="font-semibold text-black">{quote.fee}%</span>
-            </div>
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{t('wallet.fiat.ramp.etaLabel', 'Estimated time')}</span>
               <span className="font-semibold text-black">{quote.estimatedTime}</span>
