@@ -2,7 +2,7 @@
 
 import {
   isPollarApiError,
-  type RampQuote,
+  type RampQuote as PollarRampQuote,
   type RampRail,
   type RampTxStatus,
   type RampsCompleteResponse,
@@ -13,6 +13,38 @@ import { getHorizonUrl } from '@/networks/stellar/kit';
 import { usePollar } from '@pollar/react';
 import { useCallback } from 'react';
 import { waitForKycApproval as waitForApproval } from './kycWait';
+
+/**
+ * A `/ramps/quote` quote plus the amounts the response carries and
+ * `@pollar/core` 0.11.3 does not type. All five come straight from the provider
+ * and none of them can be reconstructed on this side:
+ *
+ * - `fiatAmount`: the fiat the quote actually settles, which is not necessarily
+ *   the one that was asked for — the provider quotes on the crypto side, so
+ *   asking for 12 BOB lands NEAR it, at 12.13. This is the amount to show,
+ *   because it is what reaches the bank, and it is what `rate` is published
+ *   against.
+ * - `cryptoAmount`: the EXACT USDC debited from the wallet on an off-ramp. It is
+ *   fixed at quote time and charged unchanged. `null` on an on-ramp.
+ * - `expiresAt`: when Pollar's quote dies (15 minutes). This is the deadline
+ *   that applies: past it, `SDK_RAMPS_QUOTE_EXPIRED`. Any countdown in the UI
+ *   runs against this one.
+ * - `providerExpiresAt`: when the provider's own quote dies (~60s), or `null`.
+ *   Informational only: Pollar re-quotes with the same parameters when it
+ *   creates the order, so the user can take as long as they want on the form
+ *   and there is no deadline to beat.
+ * - `availableAmount`: the fiat covered by the WALLET balance, or `null` when
+ *   Pollar cannot read it. `null` is not zero, and neither value gates anything
+ *   here: our balance lives in the vault and reaches the wallet only in step 1
+ *   of the withdrawal, so this is always 0 or `null`.
+ */
+export type RampQuote = PollarRampQuote & {
+  fiatAmount?: number | null;
+  cryptoAmount?: number | null;
+  expiresAt?: string | null;
+  providerExpiresAt?: string | null;
+  availableAmount?: number | null;
+};
 
 /** Corredores de off-ramp que la app expone hoy. */
 export type CorridorCode = 'BR' | 'CO' | 'BO';
@@ -94,29 +126,6 @@ export function asRampError(e: unknown, fallback: string): RampError {
 }
 
 /**
- * Cuánto USDC cuesta recibir `amountFiat` en moneda local, según la cotización.
- * `rate` viene como FIAT POR 1 USDC, así que el costo es la división — redondeada
- * hacia ARRIBA al centavo, porque ESO es lo que el proveedor cobra: Pollar arma el
- * pago on-chain en centavos enteros (para costos de 1.7901542 y 1.8773182 USDC
- * cobró 1.80 y 1.88), y fondear la división exacta deja la wallet corta y el pago
- * muere en el ledger con PAYMENT_UNDERFUNDED.
- *
- * Es la ÚNICA forma de saberlo antes de crear el retiro —la cotización no publica
- * el monto exacto en USDC, sólo `rate`—, y hace falta antes porque el USDC tiene
- * que estar en la wallet para que el proveedor pueda cobrarlo. El sobrante del
- * redondeo (menos de un centavo) queda en la wallet del usuario.
- */
-export function usdcCostOf(amountFiat: number, quote: Pick<RampQuote, 'rate'>): number | null {
-  const rate = Number(quote.rate);
-  if (!Number.isFinite(rate) || rate <= 0) return null;
-  const cost = amountFiat / rate;
-  if (!Number.isFinite(cost) || cost <= 0) return null;
-  // `toFixed` antes del ceil para que el ruido de coma flotante (1.1 * 100 da
-  // 110.00000000000001) no infle el cobro un centavo de más.
-  return Math.ceil(Number((cost * 100).toFixed(6))) / 100;
-}
-
-/**
  * Off-ramp de fiat sobre los endpoints de ramps de Pollar (`/ramps/*`). Pollar
  * hace de frente único: elige el anchor por corredor, corre el KYC del proveedor
  * y arma el pago on-chain del retiro, así que acá no hay ninguna API key de
@@ -171,14 +180,16 @@ export function useRampOfframp() {
   );
 
   /**
-   * Cotizaciones del off-ramp del corredor, mejor primero (Pollar ya las ordena).
-   * Se cotiza por la MONEDA LOCAL que el usuario quiere recibir, no por el USDC
-   * que sale: `/ramps/quote` elige los proveedores comparando `currency` contra el
-   * `fiat_currency` del corredor, así que mandar "USDC" no matchea ninguno y
-   * devuelve la lista vacía sin siquiera consultar a Abroad ni a Bridge.
+   * The corridor's off-ramp quotes, best first (Pollar already sorts them).
+   * Quoting happens in the LOCAL CURRENCY the user wants to receive, not in the
+   * USDC that leaves: `/ramps/quote` picks providers by matching `currency`
+   * against the corridor's `fiat_currency`, so sending "USDC" matches none and
+   * returns an empty list without even asking Abroad or Bridge.
    *
-   * Por lo mismo, `minAmount`/`maxAmount` y `rate` de cada cotización vienen en
-   * moneda local (`rate` = fiat por 1 USDC).
+   * For the same reason `minAmount`/`maxAmount` and `rate` come in local
+   * currency (`rate` = fiat per 1 USDC). The amounts to operate on are
+   * `fiatAmount` and `cryptoAmount`, not the requested one and not a division by
+   * `rate`.
    */
   const quoteFiat = useCallback(
     async (corridor: Corridor, amountFiat: number): Promise<RampQuote[]> => {
@@ -232,16 +243,17 @@ export function useRampOfframp() {
   );
 
   /**
-   * Crea el retiro con una cotización ya elegida. Los valores del formulario se
-   * reparten como espera la API: el campo con `bankType` es la cuenta de destino
-   * (la chave Pix, la cuenta PSE…), los que coinciden con una clave estándar del
-   * body van sueltos, y el resto viaja en `fields`.
+   * Creates the withdrawal with an already chosen quote. The form values are
+   * split the way the API expects them: the field carrying `bankType` is the
+   * destination account (the Pix key, the PSE account…), the ones matching a
+   * standard body key travel loose, and the rest go inside `fields`.
    *
-   * OJO con el orden: para una wallet CUSTODIAL, Pollar tiene las llaves y arma,
-   * firma y envía el pago on-chain acá mismo —la respuesta ya vuelve con
-   * `stellarTxHash`—, sin pasar por `completeWithdraw` ni publicar instrucciones
-   * de depósito. Así que el USDC tiene que estar en la wallet ANTES de llamar a
-   * esto: si no, no hay con qué pagar y el retiro queda en `pending` sin hash.
+   * Watch the order: for a CUSTODIAL wallet Pollar holds the keys and builds,
+   * signs and sends the on-chain payment right here — the response already
+   * carries `stellarTxHash` — without going through `completeWithdraw` or
+   * publishing deposit instructions. So the USDC has to be in the wallet BEFORE
+   * this call: otherwise there is nothing to pay with and the withdrawal sits in
+   * `pending` with no hash. `quote.cryptoAmount` says exactly how much that is.
    */
   const createOfframp = useCallback(
     async (args: {
@@ -254,9 +266,14 @@ export function useRampOfframp() {
       const { corridor, quote, amountFiat, walletAddress, values } = args;
       const STANDARD_KEYS = new Set(['email', 'fullName', 'taxId', 'qrCode']);
 
-      // Mismo par monto/moneda con el que se cotizó: la moneda local que el
-      // usuario va a recibir. Cuánto USDC cuesta lo resuelve el proveedor y lo
-      // publica en las instrucciones de depósito de la transacción.
+      // The same amount/currency pair the quote was asked for: the REQUESTED
+      // amount in local currency, not the one the quote settles. Pollar
+      // re-quotes with these parameters when it creates the order, so sending
+      // the settled figure (12.13 for the 12 that were asked) orders a different
+      // withdrawal.
+      //
+      // How much USDC it charges is already fixed in `quote.cryptoAmount`, which
+      // is what got funded into the wallet before reaching this point.
       const body: Parameters<ReturnType<typeof getClient>['createOffRamp']>[0] = {
         quoteId: quote.quoteId,
         amount: amountFiat,

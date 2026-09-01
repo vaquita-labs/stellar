@@ -18,6 +18,7 @@ import { usePollar } from '@pollar/react';
 import { Spinner } from '@heroui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { formatTokenPrecise } from '../../../helpers/numbers';
 import { useAwaitingFundsStore, useRampActiveStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -53,6 +54,13 @@ type Phase = 'amount' | 'details' | 'verifying' | 'paying';
 
 /** Decimales con los que se muestra el USDC estimado. */
 const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2);
+
+/**
+ * The rate is a plain division, so it lands on a repeating decimal often enough
+ * (13.513513513513514 BOB per USDC) that printing it raw is what the user sees.
+ * Two decimals is the precision the amounts themselves are quoted in.
+ */
+const RATE_DECIMALS = 2;
 
 /**
  * Compra de USDC con moneda local (hoy sólo Bolivia/BOB). Va en dos pasos: el
@@ -598,8 +606,8 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         </p>
       )}
 
-      {/* --- Ruta elegida. Se muestra aunque el monto esté fuera de límites: el
-          usuario necesita ver la comisión y el mínimo para corregirlo. --- */}
+      {/* --- The chosen route. It shows even when the amount is out of range,
+          because the limits are what tell the user how to fix it. --- */}
       {showForm && quote && !quoting && (
         <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
           <div className="flex items-center justify-between">
@@ -623,12 +631,8 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>{t('wallet.fiat.onramp.rateLabel', 'Rate')}</span>
             <span className="font-semibold text-black">
-              {quote.rate} {currency} / USDC
+              {formatTokenPrecise(quote.rate, RATE_DECIMALS)} {currency} / USDC
             </span>
-          </div>
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>{t('wallet.fiat.onramp.feeLabel', 'Fee')}</span>
-            <span className="font-semibold text-black">{quote.fee}%</span>
           </div>
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>{t('wallet.fiat.onramp.etaLabel', 'Estimated time')}</span>
