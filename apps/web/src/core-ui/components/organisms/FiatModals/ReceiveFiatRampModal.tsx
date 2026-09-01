@@ -610,8 +610,10 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           because the limits are what tell the user how to fix it. --- */}
       {showForm && quote && !quoting && (
         <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
+          {/* El nombre del proveedor no se muestra: el usuario paga por un
+              rail (QR, ACH), y quién lo liquida es un detalle nuestro. */}
           <div className="flex items-center justify-between">
-            <span className="font-bold text-black">{quote.provider}</span>
+            <span className="font-bold text-black">{t('wallet.fiat.onramp.routeLabel', 'Payment method')}</span>
             <span className="text-xs font-semibold text-gray-500">{quote.rail}</span>
           </div>
           <div className="flex items-center justify-between text-xs text-gray-500">

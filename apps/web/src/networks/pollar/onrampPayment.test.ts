@@ -35,23 +35,24 @@ describe('readPaymentInstructions', () => {
     );
 
     expect(read.payload).toBeNull();
-    expect(read.imageSrc).toBe('data:image/png;base64,aGk=');
+    expect(read.imageSrc).toBe('data:image/jpeg;base64,aGk=');
   });
 
-  it('renders the provider PNG even when not marked inline-safe — a bitmap in an img runs nothing', () => {
-    // La forma exacta con la que Stereum manda el QR en producción: PNG base64,
-    // sin payload, `inlineSafe: false`. Descartarlo por la marca dejaba la
-    // pantalla en "no pudimos cargar el código" con la compra ya creada.
+  it('shows any base64 bitmap as JPEG, whatever the provider labels it or marks it', () => {
+    // La forma exacta con la que Stereum manda el QR en producción: bytes JPEG
+    // bajo un `mediaType` que dice PNG, sin payload, `inlineSafe: false`.
+    // Descartarlo por la marca dejaba la pantalla en "no pudimos cargar el
+    // código" con la compra ya creada.
     const read = readPaymentInstructions(
       withScannable({
         kind: 'opaque',
         payload: null,
         payloadLabel: null,
-        image: { mediaType: 'image/png', encoding: 'base64', data: 'aGk=', inlineSafe: false },
+        image: { mediaType: 'image/png', encoding: 'base64', data: '/9j/4AAQ', inlineSafe: false },
       }),
     );
 
-    expect(read.imageSrc).toBe('data:image/png;base64,aGk=');
+    expect(read.imageSrc).toBe('data:image/jpeg;base64,/9j/4AAQ');
   });
 
   it('percent-encodes a utf8 SVG instead of labelling it base64, which would not render', () => {
