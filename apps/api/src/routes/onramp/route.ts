@@ -107,7 +107,7 @@ router.post('/purchases', requireSessionWallet, async (req, res) => {
 });
 
 /**
- * Cierra una compra: acreditada, vencida o rechazada.
+ * Cierra una compra: acreditada, vencida, rechazada o cancelada por el usuario.
  *
  * Sólo la wallet de la sesión puede cerrar la suya, y el servicio ignora el
  * segundo cierre — el poller del modal y el usuario volviendo a la pantalla
@@ -121,8 +121,8 @@ router.post('/purchases/:id/terminal', requireSessionWallet, async (req, res) =>
   req.log.info({ walletAddress, purchaseId: id, status }, 'POST /onramp/purchases/:id/terminal');
 
   if (!id) return sendError(res, 'Missing purchase id.', null, 400);
-  if (status !== 'settled' && status !== 'expired' && status !== 'failed') {
-    return sendError(res, 'status must be one of: settled, expired, failed.', null, 400);
+  if (status !== 'settled' && status !== 'expired' && status !== 'failed' && status !== 'cancelled') {
+    return sendError(res, 'status must be one of: settled, expired, failed, cancelled.', null, 400);
   }
 
   try {

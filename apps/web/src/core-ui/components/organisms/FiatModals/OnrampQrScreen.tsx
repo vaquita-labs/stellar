@@ -19,6 +19,8 @@ interface OnrampQrScreenProps {
   now: Date;
   /** Empezar de nuevo cuando el código venció. */
   onRestart: () => void;
+  /** Abandonar un código que TODAVÍA sirve, a pedido del usuario. */
+  onCancel: () => void;
 }
 
 /**
@@ -31,7 +33,7 @@ interface OnrampQrScreenProps {
  * cuando ya está frente a la app del banco. La imagen del proveedor queda sólo
  * como último recurso, para cuando no publica el payload.
  */
-export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRestart }: OnrampQrScreenProps) {
+export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRestart, onCancel }: OnrampQrScreenProps) {
   const { t } = useTranslation();
   const [qrFile, setQrFile] = useState<File | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
@@ -39,6 +41,7 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   // Cómo se mide el dispositivo se resuelve una sola vez, al montar: `matchMedia`
   // y `navigator` no existen en el render del servidor.
@@ -158,10 +161,7 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
           // ni imagen. Se dice, en vez de fingir que algo está por aparecer.
           <div className="flex h-64 w-64 items-center justify-center rounded-lg border border-black border-b-2 bg-white p-4 text-center">
             <p className="text-xs text-gray-500">
-              {t(
-                'wallet.fiat.onramp.qrUnavailable',
-                'We could not load the payment code. Start again to get a new one.',
-              )}
+              {t('wallet.fiat.onramp.qrUnavailable', 'We could not load the payment code. Start again to get a new one.')}
             </p>
           </div>
         )}
@@ -205,6 +205,43 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
             </div>
           ))}
         </div>
+      )}
+
+      {/* --- Salida para el código que no sirve: el que no cargó, o el que el
+          usuario decidió no pagar. Sin esto queda encerrado hasta que venza,
+          porque el servidor sigue ofreciendo la compra abierta al reabrir.
+
+          Va como texto y no como botón, y con confirmación de por medio, por
+          una razón concreta: que el QR siga en pantalla NO prueba que nadie lo
+          pagó. El que ya pagó desde el banco y cancela acá vuelve a comprar y
+          paga dos veces, con bolivianos de verdad. Por eso lo que se confirma
+          es la afirmación —"no lo pagué"— y no la acción. --- */}
+      {confirmingCancel ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-black border-b-2 bg-[#FFF4DD] p-3">
+          <p className="text-sm font-bold text-black">{t('wallet.fiat.onramp.cancelTitle', 'Cancel this payment code?')}</p>
+          <p className="text-xs text-gray-600">
+            {t(
+              'wallet.fiat.onramp.cancelBody',
+              'Only if you have not paid it yet. If you already paid from your bank, your USDC is on its way — cancelling now and buying again would charge you twice.',
+            )}
+          </p>
+          <div className="flex flex-col gap-2">
+            <PressableButton variant="danger" size="md" fullWidth onClick={onCancel}>
+              {t('wallet.fiat.onramp.cancelConfirm', 'I have not paid — cancel it')}
+            </PressableButton>
+            <PressableButton variant="white" size="md" fullWidth onClick={() => setConfirmingCancel(false)}>
+              {t('wallet.fiat.onramp.cancelKeep', 'Keep this code')}
+            </PressableButton>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setConfirmingCancel(true)}
+          className="self-center text-xs font-semibold text-gray-500 underline underline-offset-2 hover:text-black"
+        >
+          {t('wallet.fiat.onramp.cancel', 'Cancel and start over')}
+        </button>
       )}
     </div>
   );

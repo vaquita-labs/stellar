@@ -100,6 +100,37 @@ describe('markOnrampPurchaseTerminal', () => {
     expect(second?.errorReason).toBeNull();
   });
 
+  it('frees the wallet when the user cancels a code that had not run out yet', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    // Vence recién en media hora: el usuario la abandona teniendo código vivo.
+    const purchase = await recordOnrampPurchase(repo, {
+      ...PURCHASE,
+      expiresAt: new Date('2026-08-26T12:30:00.000Z'),
+    });
+
+    const closed = await markOnrampPurchaseTerminal(repo, {
+      walletAddress: 'GABC',
+      id: purchase.id,
+      status: 'cancelled',
+    });
+
+    // Cancelada queda registrada como tal —no como vencida— y deja de tapar la
+    // pantalla, que es todo el punto de poder cancelar.
+    expect(closed?.status).toBe('cancelled');
+    expect((await findPendingOnrampPurchase(repo, 'GABC', new Date('2026-08-26T12:10:00.000Z'))).state).toBe('none');
+  });
+
+  it('will not reopen a cancelled purchase to call it expired later', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    const purchase = await recordOnrampPurchase(repo, PURCHASE);
+    const args = { walletAddress: 'GABC', id: purchase.id } as const;
+
+    await markOnrampPurchaseTerminal(repo, { ...args, status: 'cancelled' });
+    const second = await markOnrampPurchaseTerminal(repo, { ...args, status: 'expired' });
+
+    expect(second?.status).toBe('cancelled');
+  });
+
   it('refuses to finish a purchase that belongs to another wallet', async () => {
     const repo = new MemoryOnrampPurchaseRepository();
     const purchase = await recordOnrampPurchase(repo, PURCHASE);

@@ -9,11 +9,17 @@
  * que el servicio se prueba entero con un fake en memoria.
  */
 
-/** `expired` (venció el QR sin pagar) NO es `failed` (el proveedor la rechazó). */
-export type OnrampPurchaseStatus = 'pending' | 'paid' | 'settled' | 'expired' | 'failed';
+/**
+ * Los tres finales sin acreditar se distinguen porque cada uno cuenta otra cosa:
+ * `expired` venció el QR sin que nadie lo pagara, `failed` la rechazó el
+ * proveedor, y `cancelled` la abandonó el usuario a mano teniendo el código
+ * todavía vivo. Mezclarlos haría ilegible el embudo — el que cancela eligió irse
+ * y el que dejó vencer se distrajo, y no se arreglan igual.
+ */
+export type OnrampPurchaseStatus = 'pending' | 'paid' | 'settled' | 'expired' | 'failed' | 'cancelled';
 
 /** Estados en los que la compra ya terminó y no hay nada que retomar. */
-export const TERMINAL_ONRAMP_STATUSES: OnrampPurchaseStatus[] = ['settled', 'expired', 'failed'];
+export const TERMINAL_ONRAMP_STATUSES: OnrampPurchaseStatus[] = ['settled', 'expired', 'failed', 'cancelled'];
 
 export interface OnrampPurchaseRecord {
   id: string;
@@ -124,7 +130,7 @@ export interface MarkOnrampPurchaseTerminalInput {
   /** Siempre la de la sesión: nadie puede terminar la compra de otro. */
   walletAddress: string;
   id: string;
-  status: Extract<OnrampPurchaseStatus, 'settled' | 'expired' | 'failed'>;
+  status: Extract<OnrampPurchaseStatus, 'settled' | 'expired' | 'failed' | 'cancelled'>;
   errorReason?: string | null;
 }
 

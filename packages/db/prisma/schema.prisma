@@ -107,9 +107,10 @@ model Deposit {
 /// navegador no sobrevive ni a cambiar de dispositivo ni a la limpieza de
 /// storage de Safari móvil.
 ///
-/// `status`: pending | paid | settled | expired | failed. `expired` (venció el
-/// QR sin pagar) se distingue de `failed` (el proveedor la rechazó) porque al
-/// usuario le corresponde un mensaje distinto en cada caso.
+/// `status`: pending | paid | settled | expired | failed | cancelled. Los tres
+/// finales sin acreditar se distinguen porque cuentan cosas distintas: `expired`
+/// venció el QR sin que nadie lo pagara, `failed` la rechazó el proveedor y
+/// `cancelled` la abandonó el usuario a mano con el código todavía vivo.
 model OnrampPurchase {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   walletAddress String    @map("wallet_address") @db.VarChar(128)
