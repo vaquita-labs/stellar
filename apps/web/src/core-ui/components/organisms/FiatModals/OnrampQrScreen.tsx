@@ -2,7 +2,7 @@
 
 import type { RampInstructionField } from '@pollar/core';
 import { countdownFrom, type SaveAffordance, saveAffordanceFor } from '@/networks/pollar/onrampPayment';
-import { renderQrPngFile, saveQrImage } from '@/networks/pollar/qrImage';
+import { pngFileFromDataUrl, renderQrPngFile, saveQrImage } from '@/networks/pollar/qrImage';
 import { Spinner } from '@heroui/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,6 +51,14 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
     });
   }, []);
 
+  // Sin payload el QR es el PNG que dibujó el proveedor (Stereum manda sólo
+  // eso): se envuelve como File para que el botón de guardar exista igual.
+  const providerFile = useMemo(
+    () => (!payload && imageSrc ? pngFileFromDataUrl(imageSrc, 'vaquita-qr.png') : null),
+    [payload, imageSrc],
+  );
+  const shareFile = qrFile ?? providerFile;
+
   // Rasterizar el QR es asíncrono (pasa por un canvas), así que se hace una vez
   // por payload y se guarda el File: es el mismo que después se comparte.
   useEffect(() => {
@@ -79,10 +87,10 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
   const shownSrc = qrUrl ?? (qrError || !payload ? imageSrc : null);
 
   const handleSave = async () => {
-    if (!qrFile) return;
+    if (!shareFile) return;
     setSaving(true);
     try {
-      const outcome = await saveQrImage(qrFile);
+      const outcome = await saveQrImage(shareFile);
       setSaved(outcome !== 'manual');
     } catch {
       // Compartir cancelado por el usuario: no es un error que valga mostrar.
@@ -164,7 +172,7 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
           </p>
         )}
 
-        {affordance === 'share' && qrFile && (
+        {affordance === 'share' && shareFile && (
           <PressableButton variant="success" size="cta" onClick={handleSave} disabled={saving}>
             {saved ? t('wallet.fiat.onramp.saved', 'Saved') : t('wallet.fiat.onramp.save', 'Save QR to my phone')}
           </PressableButton>

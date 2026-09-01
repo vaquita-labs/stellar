@@ -44,13 +44,17 @@ const EXPIRES_KEY = 'expires_at';
 /**
  * La imagen del proveedor como data URL, o null si no se puede usar.
  *
- * `inlineSafe` es del proveedor y se respeta: una imagen marcada como no segura
- * es SVG con contenido activo, y meterla en un `<img>` de nuestro origen es
- * exactamente lo que esa marca pide evitar. Sin imagen la pantalla igual sirve
- * (quedan los campos copiables); con un SVG hostil, no.
+ * `inlineSafe` NO marca contenido hostil: distingue el SVG que Pollar dibuja
+ * (inyectable como markup, sigue el tema) del bitmap propio del proveedor, que
+ * según el SDK "must go through `<img src="data:...">`" — exactamente lo que se
+ * hace acá. Stereum manda su QR así: PNG en base64, `payload` en null e
+ * `inlineSafe` en false; descartarlo por la marca dejaba la pantalla sin ningún
+ * código que pagar. Un PNG dentro de un `<img>` no ejecuta nada, así que sólo se
+ * descarta el SVG no marcado seguro, que sí puede traer contenido activo.
  */
 function imageSrcOf(image: NonNullable<RampScannable['image']> | undefined): string | null {
-  if (!image?.data || image.inlineSafe === false) return null;
+  if (!image?.data) return null;
+  if (image.mediaType !== 'image/png' && image.inlineSafe === false) return null;
   // El proveedor manda SVG en texto plano: etiquetarlo `base64` no lo decodifica
   // y el `<img>` queda roto sin ninguna señal.
   return image.encoding === 'utf8'

@@ -100,6 +100,13 @@ export function Providers({ children }: { children: ReactNode }) {
           apiKey: POLLAR_API_KEY,
           walletAdapters,
           stellarNetwork: POLLAR_NETWORK,
+          // El SDK aborta cada request a los 10s por defecto, y crear un ramp
+          // tarda más que eso: el proveedor cotiza, emite el QR y —con wallet
+          // custodial— Pollar arma, firma y ENVÍA el pago on-chain dentro del
+          // mismo POST. Cortarlo a los 10s deja la operación viva del lado del
+          // servidor y al usuario con un "Request timed out" y sin QR. Un minuto
+          // es el techo con sentido: es lo que vive la cotización del proveedor.
+          requestTimeoutMs: 60_000,
         }}
       >
         <PollarBridge />
