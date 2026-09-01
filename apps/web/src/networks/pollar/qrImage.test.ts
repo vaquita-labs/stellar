@@ -88,7 +88,15 @@ describe('pngFileFromDataUrl', () => {
     expect(new Uint8Array(await file!.arrayBuffer())).toEqual(new Uint8Array([104, 105])); // "hi"
   });
 
-  it('refuses anything that is not a base64 PNG, rather than sharing a broken file', () => {
+  it('keeps the JPEG the provider actually sends, with a matching extension', async () => {
+    const file = pngFileFromDataUrl('data:image/jpeg;base64,aGk=', 'vaquita-qr.png');
+
+    expect(file?.name).toBe('vaquita-qr.jpg');
+    expect(file?.type).toBe('image/jpeg');
+    expect(new Uint8Array(await file!.arrayBuffer())).toEqual(new Uint8Array([104, 105]));
+  });
+
+  it('refuses anything that is not a base64 bitmap, rather than sharing a broken file', () => {
     // Un SVG no va a Fotos y un base64 roto daría un archivo que no abre; en los
     // dos casos queda el long-press sobre la imagen, que sigue funcionando.
     expect(pngFileFromDataUrl('data:image/svg+xml;utf8,%3Csvg%3E', 'qr.png')).toBeNull();

@@ -80,18 +80,21 @@ export function renderQrPixels(payload: string, opts: RenderOpts = {}): QrPixels
 }
 
 /**
- * El PNG del proveedor (data URL base64) como File, para compartirlo o
- * guardarlo igual que el QR propio. Stereum no publica el payload crudo —manda
- * el código ya dibujado— así que este es el único camino a la galería en ese
- * corredor. Null si el src no es un PNG base64: un SVG no va a Fotos, y sin
- * archivo la pantalla igual sirve con el long-press sobre la imagen.
+ * El bitmap del proveedor (data URL base64, PNG o JPEG) como File, para
+ * compartirlo o guardarlo igual que el QR propio. Stereum no publica el payload
+ * crudo —manda el código ya dibujado— así que este es el único camino a la
+ * galería en ese corredor. Null si el src no es un bitmap base64: un SVG no va
+ * a Fotos, y sin archivo la pantalla igual sirve con el long-press sobre la
+ * imagen. La extensión del archivo sigue al tipo real.
  */
 export function pngFileFromDataUrl(src: string, filename: string): File | null {
-  const prefix = 'data:image/png;base64,';
-  if (!src.startsWith(prefix)) return null;
+  const match = /^data:(image\/(?:png|jpeg));base64,/.exec(src);
+  if (!match) return null;
+  const type = match[1];
   try {
-    const bytes = Uint8Array.from(atob(src.slice(prefix.length)), (c) => c.charCodeAt(0));
-    return new File([bytes], filename, { type: 'image/png' });
+    const bytes = Uint8Array.from(atob(src.slice(match[0].length)), (c) => c.charCodeAt(0));
+    const name = type === 'image/jpeg' ? filename.replace(/\.png$/, '.jpg') : filename;
+    return new File([bytes], name, { type });
   } catch {
     return null;
   }

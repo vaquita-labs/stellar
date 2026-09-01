@@ -44,22 +44,18 @@ const EXPIRES_KEY = 'expires_at';
 /**
  * La imagen del proveedor como data URL, o null si no se puede usar.
  *
- * `inlineSafe` NO marca contenido hostil: distingue el SVG que Pollar dibuja
- * (inyectable como markup, sigue el tema) del bitmap propio del proveedor, que
- * según el SDK "must go through `<img src="data:...">`" — exactamente lo que se
- * hace acá. Stereum manda su QR así: PNG en base64, `payload` en null e
- * `inlineSafe` en false; descartarlo por la marca dejaba la pantalla sin ningún
- * código que pagar. Un PNG dentro de un `<img>` no ejecuta nada, así que sólo se
+ * Todo bitmap en base64 va derecho al `<img>` como JPEG: es lo que manda
+ * Stereum (los bytes son JFIF aunque el `mediaType` diga PNG, y `inlineSafe`
+ * viene en false), y un bitmap dentro de un `<img>` no ejecuta nada. Sólo se
  * descarta el SVG no marcado seguro, que sí puede traer contenido activo.
  */
 function imageSrcOf(image: NonNullable<RampScannable['image']> | undefined): string | null {
   if (!image?.data) return null;
-  if (image.mediaType !== 'image/png' && image.inlineSafe === false) return null;
+  if (image.encoding === 'base64') return `data:image/jpeg;base64,${image.data}`;
+  if (image.inlineSafe === false) return null;
   // El proveedor manda SVG en texto plano: etiquetarlo `base64` no lo decodifica
   // y el `<img>` queda roto sin ninguna señal.
-  return image.encoding === 'utf8'
-    ? `data:${image.mediaType};utf8,${encodeURIComponent(image.data)}`
-    : `data:${image.mediaType};base64,${image.data}`;
+  return `data:${image.mediaType};utf8,${encodeURIComponent(image.data)}`;
 }
 
 /** Estado de la cuenta regresiva del QR. */
