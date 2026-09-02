@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 } from 'uuid';
-import { formatTimeDeposit, getQuickAmounts, MIN_USDC, truncateDecimals } from '../../../helpers';
+import { formatTimeDeposit, formatUsdPrecise, getQuickAmounts, MIN_USDC, truncateDecimals } from '../../../helpers';
 import { useAnalytics, useRestDeposit, useTransactions } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
@@ -270,7 +270,18 @@ export function DepositModal({
               balanceIsLoading={balanceIsLoading}
               // Tutorial: monto fijo, no se puede editar ni cambiar el token.
               disabled={simulate}
+              min={MIN_USDC}
             />
+            {/* El mínimo se dice antes de que el botón se apague: un CTA muerto
+                sin explicación es lo que se quiere evitar. En el tutorial no va,
+                que ahí el monto viene puesto. */}
+            {!simulate && (
+              <p className="text-xs text-gray-400">
+                {t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
+                  amount: formatUsdPrecise(MIN_USDC, 2),
+                })}
+              </p>
+            )}
             <div className={`flex justify-between gap-2 ${simulate ? 'hidden' : ''}`}>
               {Array.isArray(quickAmounts) &&
                 quickAmounts.map((value: number) => (

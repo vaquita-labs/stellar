@@ -31,13 +31,17 @@ export const formatUsd = (amount: number) =>
 export const AMOUNT_DECIMALS = 7;
 
 /**
- * Monto mínimo (en USDC) para mover plata: depositar y retirar exigen >= 1 USDC.
- * Por debajo, los fees/redondeo on-chain se comen el movimiento y no vale la pena.
+ * Monto mínimo (en USDC) para mover plata: depositar, retirar, poner a rendir.
  * Es la MISMA regla que valida el backend (`MIN_USDC_AMOUNT` en @vaquita/shared);
- * si cambia una, cambiá la otra. El front la usa para deshabilitar/ mostrar aviso;
- * el back es la autoridad que rechaza el request.
+ * si cambia una, cambiá la otra. El front la usa para deshabilitar y avisar; el
+ * back es la autoridad que rechaza el request.
+ *
+ * Se declara como string y se deriva el número, no al revés: el gate de ejecución
+ * compara en unidades base y `toBaseUnits('0.1', 7)` es exacto, mientras que
+ * `String(0.1)` depende de cómo imprima el float. Un solo lugar donde tocarlo.
  */
-export const MIN_USDC = 1;
+export const MIN_USDC_STR = '0.1';
+export const MIN_USDC = Number(MIN_USDC_STR);
 
 /**
  * Piso a `digits` decimales, robusto ante el ruido binario del float. `num*10^d`

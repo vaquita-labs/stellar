@@ -4,11 +4,14 @@ import { useConfigStore } from '@/core-ui/stores';
 import { useMemo, useState } from 'react';
 import { IoMdSync } from 'react-icons/io';
 import { useTranslation } from 'react-i18next';
+import { MIN_USDC } from '@/core-ui/helpers/numbers';
 import { MoneyInputProps, TokenSymbol } from './types';
 
+// Los stablecoins usan el mínimo único de la app; ETH y BTC nunca llegaron a un
+// flujo real, así que su piso queda como estaba.
 const TOKEN_RULES: Record<TokenSymbol, { min?: number; max?: number; maxDecimals: number }> = {
-  USDC: { min: 1, max: 1_000_000_000, maxDecimals: 6 },
-  USDT: { min: 1, max: 1_000_000_000, maxDecimals: 6 },
+  USDC: { min: MIN_USDC, max: 1_000_000_000, maxDecimals: 6 },
+  USDT: { min: MIN_USDC, max: 1_000_000_000, maxDecimals: 6 },
   ETH: { min: 0.00001, max: 10_000_000_000, maxDecimals: 5 },
   BTC: { min: 0.0000001, max: 100_000_000_000, maxDecimals: 6 },
 };

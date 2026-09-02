@@ -553,7 +553,7 @@
       "copy": "Copy",
       "copyAria": "Copy address",
       "copied": "Copied",
-      "minDeposit": "Minimum deposit: $1 USDC.",
+      "minDeposit": "Minimum deposit: {{amount}} USDC.",
       "warning": "Only send Stellar assets to this address. Funds sent from another network are lost."
     },
     "savingsStats": {
@@ -2287,7 +2287,7 @@
     },
     "methodLabel": "Method",
     "methodWallet": "Wallet",
-    "minWithdraw": "Minimum withdrawal: $1 USDC.",
+    "minWithdraw": "Minimum withdrawal: {{amount}} USDC.",
     "noWallets": "You have no saved wallets yet",
     "processing": "Processing withdrawal...",
     "processingHint": "This may take a few seconds.",

@@ -3,7 +3,7 @@
 import { Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiTrendingUp } from 'react-icons/fi';
-import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
+import { formatTokenPrecise, formatUsdPrecise, MIN_USDC } from '@/core-ui/helpers/numbers';
 import { AppModal } from '../molecules/AppModal';
 import { PressableButton } from '../molecules/PressableButton';
 
@@ -42,6 +42,10 @@ export function IdleFundsModal({
   // "$0,73" —más plata de la que el usuario tiene— y el botón prometía invertir
   // un monto que no existe. Es lo que hace el resto de las pantallas de plata.
   const amount = formatTokenPrecise(idle, 2);
+  // El nudge sólo aparece por encima del mínimo, pero el saldo puede bajar entre
+  // que aparece y que el usuario aprieta —le sale un pago, cierra y vuelve—. Sin
+  // esto el botón se apretaba y no pasaba nada: `invest()` cortaba en silencio.
+  const belowMin = idle < MIN_USDC;
 
   return (
     <AppModal
@@ -60,7 +64,7 @@ export function IdleFundsModal({
           size="cta"
           className="py-2.5!"
           onClick={onInvest}
-          disabled={investing}
+          disabled={investing || belowMin}
         >
           {investing ? (
             <>
@@ -91,6 +95,16 @@ export function IdleFundsModal({
           'This USDC is just sitting there. Put it to work and start earning right away.',
         )}
       </p>
+
+      {/* El mínimo se dice sólo cuando frena: en una pantalla sin campo donde
+          escribir, un piso que ya se cumple no le sirve a nadie. */}
+      {belowMin && (
+        <p className="text-xs text-gray-400">
+          {t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
+            amount: formatUsdPrecise(MIN_USDC, 2),
+          })}
+        </p>
+      )}
 
       {error ? (
         <div className="flex items-start gap-2 text-sm text-error font-semibold max-w-xs">

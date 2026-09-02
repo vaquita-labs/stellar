@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiExternalLink } from 'react-icons/fi';
 import { truncateDecimals } from '../../../helpers';
-import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
+import { AMOUNT_DECIMALS, floorAmount, MIN_USDC } from '../../../helpers/numbers';
 import { humanizeTxError } from '../../../helpers/txError';
 import { useLivePassiveUsdc } from '../../../hooks';
 import { useConfigStore, useRampActiveStore } from '../../../stores';
@@ -40,7 +40,6 @@ const GROUPS: { key: string; members: StepKey[] }[] = [
 
 const ARS = 'ARS';
 const USDC = 'USDC';
-const MIN_USDC = 0.1;
 
 // Estados terminales de una tx SEP-24 (no hay nada que reanudar).
 const FAILED = new Set(['error', 'refunded', 'expired', 'no_market', 'too_small', 'too_large']);

@@ -553,7 +553,7 @@
       "copy": "Copiar",
       "copyAria": "Copiar endereço",
       "copied": "Copiado",
-      "minDeposit": "Depósito mínimo: $1 USDC.",
+      "minDeposit": "Depósito mínimo: {{amount}} USDC.",
       "warning": "Envie apenas ativos da Stellar para este endereço. Fundos enviados de outra rede são perdidos."
     },
     "savingsStats": {
@@ -2287,7 +2287,7 @@
     },
     "methodLabel": "Método",
     "methodWallet": "Carteira",
-    "minWithdraw": "Saque mínimo: $1 USDC.",
+    "minWithdraw": "Saque mínimo: {{amount}} USDC.",
     "noWallets": "Você ainda não tem carteiras salvas",
     "processing": "Processando saque...",
     "processingHint": "Isso pode levar alguns segundos.",

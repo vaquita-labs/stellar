@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { floorAmount, formatTokenAdaptive, formatTokenPrecise, formatUsdPrecise, truncatedAmountString } from './numbers';
+import { toBaseUnits } from '@/networks/stellar/sorobanTx';
+import {
+  floorAmount,
+  formatTokenAdaptive,
+  formatTokenPrecise,
+  formatUsdPrecise,
+  MIN_USDC,
+  MIN_USDC_STR,
+  truncatedAmountString,
+} from './numbers';
 
 describe('floorAmount', () => {
   // La regresión que motivó todo esto: un saldo de 0,7299999 en la cuenta se
@@ -48,5 +57,31 @@ describe('truncatedAmountString', () => {
     expect(truncatedAmountString(3.001234)).toBe('3.001234');
     expect(truncatedAmountString(4)).toBe('4');
     expect(truncatedAmountString(0.7299999)).toBe('0.7299999');
+  });
+});
+
+describe('MIN_USDC', () => {
+  // apps/web no depende de @vaquita/shared —las constantes están espejadas a
+  // mano—, así que acá se clava el valor y del otro lado se clava el mismo. El
+  // que cambie uno solo rompe el test del lado que tocó y ve el comentario.
+  // El backend es la autoridad: `MIN_USDC_AMOUNT` en packages/shared.
+  it('vale 0,1 USDC, el mismo piso que valida el backend', () => {
+    expect(MIN_USDC).toBe(0.1);
+  });
+
+  // El gate de ejecución compara en unidades base, y para eso necesita el
+  // string exacto. `String(0.1)` hoy da '0.1', pero derivar el número del
+  // string y no al revés es lo que garantiza que sigan siendo el mismo valor.
+  it('deriva el número del string y no al revés', () => {
+    expect(Number(MIN_USDC_STR)).toBe(MIN_USDC);
+    expect(toBaseUnits(MIN_USDC_STR, 7)).toBe(1_000_000n);
+  });
+
+  // Los pisos reales medidos sobre mainnet el 2026-09-02: ~0,000001 USDC en el
+  // vault de DeFindex, ~0,0001 en Blend. El mínimo de la app tiene que quedar
+  // por encima de los dos o el depósito se acepta en pantalla y falla en cadena.
+  it('queda por encima del piso de polvo de la cadena', () => {
+    expect(MIN_USDC).toBeGreaterThan(0.0001);
+    expect(formatUsdPrecise(MIN_USDC, 2)).toBe('$0.10');
   });
 });

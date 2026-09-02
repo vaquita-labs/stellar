@@ -1,5 +1,5 @@
 import { blendConfigForToken, readUsdcBalanceRaw } from '@/networks/stellar/blendDirect';
-import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
+import { formatTokenPrecise, formatUsdPrecise, MIN_USDC, MIN_USDC_STR } from '@/core-ui/helpers/numbers';
 import { humanizeTxError } from '@/core-ui/helpers/txError';
 import { toBaseUnits } from '@/networks/stellar/sorobanTx';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
@@ -12,17 +12,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfigStore, useRampActiveStore, useAwaitingFundsStore } from '../stores';
 
-// Umbral mínimo para no promptear ni gastar gas por polvo. Como string primero
-// y número después: el gate de ejecución compara en unidades base contra el
-// saldo exacto de la cadena, y derivar las dos formas de una sola fuente evita
-// que se separen si algún día cambia el número.
+// El umbral para no promptear ni gastar gas por polvo es el mismo mínimo que el
+// resto de los flujos de monto: antes esto tenía uno propio (0,1) distinto del
+// del depósito (1), así que la app pedía dos mínimos según por dónde entraras.
 //
 // OJO: esto es NUESTRO umbral, no el del vault. El vault tiene su propio piso
-// (#451 AmountBelowMinDust) y todavía no sabemos cuál es; si resulta ser mayor
-// que esto, el depósito va a seguir fallando —pero ahora la pantalla dice por
-// qué en vez del genérico.
-const MIN_IDLE_STR = '0.1';
-const MIN_IDLE = Number(MIN_IDLE_STR);
+// (#451 AmountBelowMinDust), medido en ~0,000001 USDC sobre mainnet, así que
+// 0,1 pasa cómodo. Si algún día el piso de la cadena subiera por encima, el
+// depósito falla igual pero la pantalla ahora dice por qué en vez del genérico.
 
 // Cada cuánto re-consultamos el balance custodial mientras el usuario está en el
 // home. La plata puede entrar on-chain por fuera de la app (le mandan USDC a su
@@ -103,7 +100,7 @@ export const useIdleFunds = () => {
 
   const invest = useCallback(async () => {
     if (inFlight.current || !walletAddress || !token) return;
-    if (idle < MIN_IDLE) return;
+    if (idle < MIN_USDC) return;
     inFlight.current = true;
     setIsInvesting(true);
     setError(null);
@@ -126,7 +123,17 @@ export const useIdleFunds = () => {
         readFailed = true;
         throw e;
       }
-      if (raw < toBaseUnits(MIN_IDLE_STR, token.decimals)) return;
+      // El saldo de la cadena puede haber bajado del mínimo desde que se abrió la
+      // pantalla. Antes se cortaba en silencio y el botón quedaba muerto sin
+      // decir nada; ahora dice cuál es el piso.
+      if (raw < toBaseUnits(MIN_USDC_STR, token.decimals)) {
+        setError(
+          t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
+            amount: formatUsdPrecise(MIN_USDC, 2),
+          }),
+        );
+        return;
+      }
 
       const amount = formatBaseUnits(raw, token.decimals);
       const { hash } = await passiveDeposit({
@@ -173,7 +180,7 @@ export const useIdleFunds = () => {
   // acreditarse con la pantalla de pago todavía abierta, y taparla con el prompt
   // interrumpe algo que el usuario está haciendo. Al cerrarse la pantalla la
   // marca se apaga y el prompt se ofrece como después de cualquier depósito.
-  const shouldPrompt = ready && isCustodial && idle >= MIN_IDLE && !rampActive;
+  const shouldPrompt = ready && isCustodial && idle >= MIN_USDC && !rampActive;
 
   return { idle, shouldPrompt, invest, isInvesting, error, clearError: () => setError(null) };
 };

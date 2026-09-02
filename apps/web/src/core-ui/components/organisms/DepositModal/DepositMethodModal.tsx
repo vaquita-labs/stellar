@@ -252,7 +252,9 @@ export function DepositMethodModal({
           )}
         </button>
         <p className="mt-1 text-xs text-gray-400">
-          {t('deposit.receive.minDeposit', 'Minimum deposit: $1 USDC.')}
+          {t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
+            amount: formatUsdPrecise(MIN_USDC, 2),
+          })}
         </p>
       </div>
 
