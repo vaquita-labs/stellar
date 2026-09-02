@@ -1982,7 +1982,6 @@
         "withdraw": "Withdraw"
       },
       "onramp": {
-        "amountLabel": "How much do you want to spend?",
         "close": "Close",
         "continue": "Continue",
         "copied": "Copied",

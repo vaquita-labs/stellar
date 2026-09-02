@@ -7,6 +7,7 @@ import { motion, useAnimationControls } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiArrowRight, FiCheck, FiRepeat } from 'react-icons/fi';
+import { AmountDisplay } from '../../molecules/AmountDisplay';
 import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -27,12 +28,6 @@ interface MoveFundsSheetProps {
    * posición entera pagando al firmante (contracts/vaquita-pool/src/lib.rs:168).
    */
   onSubmit: (params: { amount: number; from: Allocation; to: Allocation }) => Promise<void>;
-}
-
-/** Formatea el monto tal cual lo teclea el usuario ('' → $0.00, '1.' → $1.). */
-function displayAmount(raw: string) {
-  if (raw === '') return '$0.00';
-  return `$${raw}`;
 }
 
 /**
@@ -167,12 +162,7 @@ export function MoveFundsSheet({
   const amountStep = (
     <div className="flex flex-col gap-4">
       <div className="text-center pt-1">
-        <motion.p
-          animate={amountControls}
-          className={`text-4xl font-bold ${overBalance || amount === '' ? 'text-gray-400' : 'text-black'}`}
-        >
-          {displayAmount(amount)}
-        </motion.p>
+        <AmountDisplay value={amount} controls={amountControls} muted={overBalance || amount === ''} size="lg" />
         <PoolMeta
           rewardPool={to?.rewardPool ?? 0}
           totalDeposits={to?.totalDeposits ?? 0}

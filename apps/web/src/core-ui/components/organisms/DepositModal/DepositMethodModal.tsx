@@ -23,6 +23,7 @@ import {
 } from '../../../helpers';
 import { useAnalytics, useBlendPosition, useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { AmountDisplay } from '../../molecules/AmountDisplay';
 import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
@@ -40,12 +41,6 @@ interface DepositMethodModalProps {
 }
 
 type Step = 'method' | 'amount' | 'confirm' | 'processing' | 'success';
-
-/** Formatea el monto tecleado tal cual lo escribe el usuario ('' → $0.00, '1.' → $1.). */
-function displayAmount(raw: string) {
-  if (raw === '') return '$0.00';
-  return `$${raw}`;
-}
 
 /**
  * Paso previo al form de depósito: el usuario elige cómo fondear su cuenta
@@ -240,14 +235,7 @@ export function DepositMethodModal({
     // chicas y se corta el monto, que es justo lo que el usuario mira.
     <div className="flex flex-col gap-2.5">
       <div className="text-center">
-        <motion.p
-          animate={amountControls}
-          className={`text-3xl font-bold ${
-            overBalance || amount === '' ? 'text-gray-400' : 'text-black'
-          }`}
-        >
-          {displayAmount(amount)}
-        </motion.p>
+        <AmountDisplay value={amount} controls={amountControls} muted={overBalance || amount === ''} />
         <button
           type="button"
           onClick={() => {
