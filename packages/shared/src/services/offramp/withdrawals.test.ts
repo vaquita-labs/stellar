@@ -9,6 +9,11 @@ import {
   type OfframpWithdrawalRepository,
 } from './withdrawals';
 
+// El repo fake sella todas las filas con esta fecha, así que TODA lectura tiene
+// que pasarla como `now`. Con el reloj real, `findOpenOfframpWithdrawal` mide la
+// distancia contra hoy y a las 24 horas de escrito el test empieza a dar
+// `abandoned` para filas que el test acaba de crear: los tres asserts que la
+// omitían pasaron el 29 de agosto y venían fallando desde el 30.
 const START = new Date('2026-08-29T12:00:00.000Z');
 
 /** Fake en memoria: el servicio se prueba entero sin base de datos. */
@@ -79,7 +84,7 @@ describe('advanceOfframpWithdrawal', () => {
       vaultWithdrawHash: 'hash-vault',
       usdcAmount: '50.1',
     });
-    const found = await findOpenOfframpWithdrawal(repo, 'GABC');
+    const found = await findOpenOfframpWithdrawal(repo, 'GABC', START);
 
     expect(found?.step).toBe('create');
     expect(found?.vaultWithdrawHash).toBe('hash-vault');
@@ -94,7 +99,7 @@ describe('advanceOfframpWithdrawal', () => {
     // El paso del pago no sabe nada del hash del vault: no puede borrarlo.
     await advanceOfframpWithdrawal(repo, { ...args, step: 'payout', paymentHash: 'hash-pay' });
 
-    const found = await findOpenOfframpWithdrawal(repo, 'GABC');
+    const found = await findOpenOfframpWithdrawal(repo, 'GABC', START);
     expect(found?.vaultWithdrawHash).toBe('hash-vault');
     expect(found?.paymentHash).toBe('hash-pay');
   });
@@ -104,7 +109,7 @@ describe('advanceOfframpWithdrawal', () => {
     const started = await startOfframpWithdrawal(repo, WITHDRAWAL);
 
     expect(await advanceOfframpWithdrawal(repo, { walletAddress: 'GXYZ', id: started.id, step: 'payout' })).toBeNull();
-    expect((await findOpenOfframpWithdrawal(repo, 'GABC'))?.step).toBe('funds');
+    expect((await findOpenOfframpWithdrawal(repo, 'GABC', START))?.step).toBe('funds');
   });
 
   it('cannot reopen a withdrawal that already finished', async () => {
@@ -123,14 +128,14 @@ describe('advanceOfframpWithdrawal', () => {
 describe('findOpenOfframpWithdrawal', () => {
   it('yields nothing for a wallet with nothing in flight', async () => {
     const repo = new MemoryOfframpWithdrawalRepository();
-    expect(await findOpenOfframpWithdrawal(repo, 'GABC')).toBeNull();
+    expect(await findOpenOfframpWithdrawal(repo, 'GABC', START)).toBeNull();
   });
 
   it('never hands one wallet another wallet\'s withdrawal', async () => {
     const repo = new MemoryOfframpWithdrawalRepository();
     await startOfframpWithdrawal(repo, WITHDRAWAL);
 
-    expect(await findOpenOfframpWithdrawal(repo, 'GXYZ')).toBeNull();
+    expect(await findOpenOfframpWithdrawal(repo, 'GXYZ', START)).toBeNull();
   });
 
   it('gives up on a row nobody came back for, keeping it as the record of a failure', async () => {
@@ -163,7 +168,7 @@ describe('markOfframpWithdrawalTerminal', () => {
 
     await markOfframpWithdrawalTerminal(repo, { walletAddress: 'GABC', id: started.id, status: 'settled' });
 
-    expect(await findOpenOfframpWithdrawal(repo, 'GABC')).toBeNull();
+    expect(await findOpenOfframpWithdrawal(repo, 'GABC', START)).toBeNull();
   });
 
   it('keeps the first outcome when the same withdrawal is closed twice', async () => {
