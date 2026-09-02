@@ -30,3 +30,13 @@ export function sanitizeNickname(value: string): string {
 export function isNicknameFormatValid(nickname: string): boolean {
   return NICKNAME_FORMAT_REGEX.test(nickname);
 }
+
+/**
+ * Lleva lo que el usuario escribió al segmento que la API espera en
+ * `/profile/nickname/:nickname`. El `@` es una convención nuestra de la UI: en
+ * un nickname no es un carácter legal (`NICKNAME_FORMAT_REGEX`), así que
+ * mandarlo tal cual da 404.
+ */
+export function nicknameSegment(input: string): string {
+  return sanitizeNickname(input.trim().replace(/^@+/, ''));
+}

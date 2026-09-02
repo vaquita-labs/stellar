@@ -2,11 +2,15 @@
 
 import { Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
-import { StrKey } from '@stellar/stellar-sdk';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MdClose, MdOutlineStickyNote2 } from 'react-icons/md';
 import { blendConfigForToken, resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
+import { useWalletByUsername } from '@/core-ui/hooks/profile/useWalletByUsername';
+import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
+import { classifyDestination } from '../../../helpers/sendDestination';
+import { formatTokenPrecise, truncatedAmountString } from '../../../helpers/numbers';
+import { truncateMiddle } from '../../../helpers/strings';
 import { humanizeTxError } from '../../../helpers/txError';
 import type { NetworkResponseDTO } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
@@ -92,11 +96,32 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
     if (open) void refreshWalletBalance();
   }, [open, refreshWalletBalance]);
 
-  const trimmedDest = destination.trim();
-  const destValid =
-    (StrKey.isValidEd25519PublicKey(trimmedDest) || StrKey.isValidMed25519PublicKey(trimmedDest)) &&
-    trimmedDest !== address;
-  const destError = trimmedDest.length > 0 && !destValid;
+  // Destino: una G… o un @usuario. El @ se resuelve contra la API de perfiles;
+  // lo que se firma es SIEMPRE la dirección resuelta, nunca el texto tipeado.
+  const parsedDest = classifyDestination(destination);
+  const handle = parsedDest.kind === 'handle' ? parsedDest.value : '';
+  const lookup = useWalletByUsername(handle);
+  const resolving = parsedDest.kind === 'handle' && lookup.isLoading;
+  const handleNotFound = parsedDest.kind === 'handle' && lookup.notFound;
+  const destAddress =
+    parsedDest.kind === 'address' ? parsedDest.value : parsedDest.kind === 'handle' ? lookup.walletAddress : null;
+
+  // El auto-envío se chequea contra la dirección RESUELTA: alguien puede tipear
+  // su propio @usuario, y comparar solo el texto lo dejaría pasar.
+  const isSelf = !!destAddress && destAddress === address;
+
+  // ¿La cuenta destino puede recibir USDC? Un pago clásico a una cuenta sin
+  // trustline rebota con `op_no_trust`, y el mensaje que `txError` tiene para
+  // eso está escrito para el que ENVÍA — acá diría exactamente lo contrario.
+  const trustline = useUsdcTrustline(isSelf ? null : destAddress, blendUsdcIssuer);
+  const destBlocked = trustline.data === 'missing' || trustline.data === 'unfunded';
+  // Si Horizon no contesta no bloqueamos: la caída de Horizon no puede dejar la
+  // pantalla inservible, y si la trustline falta igual la cadena lo rechaza —
+  // con el mensaje correcto, ahora que el error del vault ya no se pierde.
+  const destCheckFailed = !!destAddress && !isSelf && trustline.isError;
+
+  const destValid = !!destAddress && !isSelf && !destBlocked;
+  const destError = parsedDest.kind === 'invalid' || handleNotFound || isSelf || destBlocked;
 
   const amountNum = Number(amount);
   const amountValid = amount !== '' && amountNum > 0 && amountNum <= available;
@@ -107,18 +132,20 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
   // Solo es inválido si hay algo escrito que no resuelve (texto > 28 bytes).
   const memoError = trimmedMemo.length > 0 && resolvedMemo === null;
 
-  const canSend = destValid && amountValid && !memoError && !sending && !!address;
+  const canSend = destValid && amountValid && !memoError && !sending && !resolving && !!address;
 
+  // Truncado, no `String(available)`: el float del balance puede imprimir un
+  // dígito más de los que la cadena tiene, y ese monto se rechaza.
   const handleMax = () => {
-    if (available > 0) setAmount(String(available));
+    if (available > 0) setAmount(truncatedAmountString(available, decimals));
   };
 
   const handleSend = async () => {
-    if (!canSend) return;
+    if (!canSend || !destAddress) return;
     setSending(true);
     try {
       await sponsoredUsdcPayment({
-        to: trimmedDest,
+        to: destAddress,
         amount,
         memo: resolvedMemo ?? undefined,
       });
@@ -169,7 +196,9 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
           <span className="text-sm font-semibold text-black">{symbol}</span>
           <span className="text-xs text-gray-500">
             {t('wallet.send.available', 'Available: {{amount}} {{symbol}}', {
-              amount: available.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+              // Truncado: `toLocaleString` redondea hacia arriba y mostraba más
+              // saldo del que hay (0,7299999 → "0,73").
+              amount: formatTokenPrecise(available, 2),
               symbol,
             })}
           </span>
@@ -219,7 +248,7 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
         <input
           value={destination}
           onChange={(e) => setDestination(e.target.value)}
-          placeholder={t('wallet.send.destinationPlaceholder', 'G…')}
+          placeholder={t('wallet.send.destinationPlaceholder', 'G… or @username')}
           disabled={sending}
           spellCheck={false}
           autoComplete="off"
@@ -228,13 +257,48 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
             (destError ? 'border-error border-b-2' : 'border-black border-b-2')
           }
         />
-        {destError && (
+
+        {/* Un solo renglón de estado bajo el campo, en este orden: primero lo que
+            invalida el destino, y recién al final la confirmación. Mostrar la G…
+            resuelta es el punto: lo que el usuario aprueba es la dirección. */}
+        {parsedDest.kind === 'invalid' ? (
           <p className="mt-1 text-xs text-error">
-            {trimmedDest === address
-              ? t('wallet.send.sameAddress', "You can't send to your own address.")
-              : t('wallet.send.invalidAddress', "That doesn't look like a valid Stellar address.")}
+            {t('wallet.send.invalidAddress', "That doesn't look like a valid Stellar address.")}
           </p>
-        )}
+        ) : isSelf ? (
+          <p className="mt-1 text-xs text-error">
+            {t('wallet.send.sameAddress', "You can't send to your own address.")}
+          </p>
+        ) : handleNotFound ? (
+          <p className="mt-1 text-xs text-error">
+            {t('wallet.send.handleNotFound', "We couldn't find that user.")}
+          </p>
+        ) : resolving ? (
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+            <Spinner size="sm" color="current" />
+            {t('wallet.send.resolving', 'Looking up…')}
+          </p>
+        ) : trustline.data === 'unfunded' ? (
+          <p className="mt-1 text-xs text-error">
+            {t('wallet.send.destUnfunded', "That account isn't active on Stellar yet, so it can't receive USDC.")}
+          </p>
+        ) : trustline.data === 'missing' ? (
+          <p className="mt-1 text-xs text-error">
+            {t(
+              'wallet.send.destNoTrustline',
+              "This account hasn't enabled USDC yet. Ask them to open the app once, then try again.",
+            )}
+          </p>
+        ) : destCheckFailed ? (
+          <p className="mt-1 text-xs text-gray-500">
+            {t('wallet.send.destCheckFailed', "We couldn't check that account. You can still try sending.")}
+          </p>
+        ) : destAddress && parsedDest.kind === 'handle' ? (
+          <p className="mt-1 text-xs text-gray-500">
+            <span className="font-semibold text-black">@{handle}</span>{' '}
+            <span className="font-mono">{truncateMiddle(destAddress, 6, 5)}</span>
+          </p>
+        ) : null}
       </div>
 
       {/* Memo (opcional): clave para depósitos a exchanges. Colapsado es un chip
