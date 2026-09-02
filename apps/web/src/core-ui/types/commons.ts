@@ -154,6 +154,10 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
 };
 
 export interface ProfileResponseDTO {
+  /** Id interno del perfil. OPCIONAL: sólo lo devuelve el endpoint del perfil
+   *  propio (`/profile/wallet/:w/data`), no los de lista. Es la clave de usuario
+   *  del analytics — la dirección de la wallet no se usa como clave. */
+  id?: string;
   networkName: string;
   walletAddress: string;
   email: string;

@@ -43,6 +43,20 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // PostHog detrás de nuestro propio dominio. `i.posthog.com` está en todas las
+  // listas de bloqueo, así que sin esto una parte de los eventos desaparece sin
+  // ruido y los números quedan mal de una forma que nadie puede detectar. Es lo
+  // mismo que ya se hacía con Umami sirviendo el tracker desde /va.js.
+  async rewrites() {
+    return [
+      { source: '/ingest/static/:path*', destination: 'https://us-assets.i.posthog.com/static/:path*' },
+      { source: '/ingest/array/:path*', destination: 'https://us-assets.i.posthog.com/array/:path*' },
+      { source: '/ingest/:path*', destination: 'https://us.i.posthog.com/:path*' },
+    ];
+  },
+  // Los endpoints de PostHog terminan en barra y Next, por default, redirige
+  // 308 para sacársela: el POST del evento se pierde en el camino.
+  skipTrailingSlashRedirect: true,
   // @vaquita/avatar ships raw TS (exports ./src/index.ts) — transpile it too.
   transpilePackages: ['@vaquita/ui', '@vaquita/avatar'],
 };

@@ -19,6 +19,19 @@ export const isPassiveVaultEnabled = (): boolean => clientEnv.NEXT_PUBLIC_PASSIV
  */
 export const isInstallPromptEnabled = (): boolean => clientEnv.NEXT_PUBLIC_INSTALL_PROMPT_ENABLED === 'true';
 
+/**
+ * Analytics. Pide LAS DOS cosas: el interruptor en "true" y una clave de
+ * proyecto. Una clave sin flag es un entorno que todavía no se quiere medir; un
+ * flag sin clave sería `posthog.init(undefined)`, que arranca la librería para
+ * mandar todo a un proyecto que no existe. Sin las dos, nada se inicializa y la
+ * app se comporta igual que antes de que el analytics existiera.
+ */
+export const isPostHogEnabled = (): boolean =>
+  clientEnv.NEXT_PUBLIC_POSTHOG_ENABLED === 'true' && !!clientEnv.NEXT_PUBLIC_POSTHOG_KEY;
+
+/** Host al que posthog-js manda los eventos. Ver NEXT_PUBLIC_POSTHOG_HOST. */
+export const posthogHost = (): string => clientEnv.NEXT_PUBLIC_POSTHOG_HOST || '/ingest';
+
 // Los corredores de Bolivia (BOB) tuvieron un flag por punta acá. Ya no: quién
 // los habilita es Pollar, y se le pregunta en vivo con `useRampCountries`
 // (`networks/pollar/rampCountries.ts`). Un flag de build decía lo que nosotros

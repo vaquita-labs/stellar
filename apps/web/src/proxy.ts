@@ -32,7 +32,11 @@ const BLOCKED_COUNTRIES = new Set(
 // The legal documents must stay reachable from everywhere, including from a
 // blocked country — a disclosure nobody can open is not a disclosure. `/blocked`
 // itself is excluded so the redirect cannot loop.
-const ALWAYS_ALLOWED = ['/privacy', '/terms', '/risk', '/blocked'];
+// `/ingest` es el rewrite del analytics (next.config.ts), no una pantalla: hoy
+// esto es inerte, pero apenas el proxy de arriba empiece a mandar el header, los
+// POST de eventos de un país bloqueado se reescribirían a `/blocked` y la
+// librería recibiría HTML donde espera JSON.
+const ALWAYS_ALLOWED = ['/privacy', '/terms', '/risk', '/blocked', '/ingest'];
 
 const readCountry = (request: NextRequest): string | null => {
   for (const header of COUNTRY_HEADERS) {

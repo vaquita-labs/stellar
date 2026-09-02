@@ -40,6 +40,18 @@ const envClientSchema = z.object({
   // VAPID public key for web push (pair of apps/api VAPID_PRIVATE_KEY).
   // OPTIONAL: unset/empty disables the whole push-subscription UI.
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
+  // PostHog project API key (`phc_…`). OPTIONAL: sin clave no se inicializa
+  // nada y la app se comporta igual que antes de que existiera el analytics —
+  // que es exactamente el estado de un entorno cuyo panel todavía no se llenó.
+  NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
+  // A dónde manda los eventos posthog-js. Por default es '/ingest', el rewrite
+  // de next.config.ts contra el propio dominio: `i.posthog.com` está en todas
+  // las listas de bloqueo y sin el proxy los eventos desaparecen sin ruido.
+  // Se deja override por si algún entorno no puede reescribir.
+  NEXT_PUBLIC_POSTHOG_HOST: z.string().optional(),
+  // Interruptor aparte de la clave: permite apagar el analytics en un entorno
+  // sin borrarle la clave del panel. OPTIONAL y apagado por default.
+  NEXT_PUBLIC_POSTHOG_ENABLED: z.string().optional(),
 });
 
 // Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
@@ -56,6 +68,9 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: process.env.NEXT_PUBLIC_PASSIVE_VAULT_ENABLED,
   NEXT_PUBLIC_INSTALL_PROMPT_ENABLED: process.env.NEXT_PUBLIC_INSTALL_PROMPT_ENABLED,
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+  NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+  NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+  NEXT_PUBLIC_POSTHOG_ENABLED: process.env.NEXT_PUBLIC_POSTHOG_ENABLED,
 });
 
 if (!parsed.success) {

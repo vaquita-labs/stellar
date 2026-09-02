@@ -19,6 +19,8 @@ export const useProfileData = (walletAddressOverride?: string) => {
       const data = await response.json();
 
       const profile: ProfileResponseDTO = {
+        // Sólo este endpoint lo trae; queda `undefined` en el resto.
+        id: data?.data?.id || undefined,
         networkName: data?.data?.networkName || '',
         walletAddress: data?.data?.walletAddress || '',
         email: data?.data?.email || '',

@@ -19,7 +19,7 @@ import { PlaceModeHint } from './PlaceModeHint';
 export function HomePage() {
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { isLoading } = useDeposits(walletAddress);
-  const { trackPageView, trackUserAction } = useAnalytics();
+  const { trackUserAction } = useAnalytics();
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   const isEditingMap = useMapStore((store) => store.isEditingMap);
   const setIsEditingMap = useMapStore((store) => store.setIsEditingMap);
@@ -29,11 +29,6 @@ export function HomePage() {
   const [showBankAPYModal, setShowBankAPYModal] = useState(false);
   const bankAPYModalMounted = useModalPresence(showBankAPYModal);
   const [coinAnimationTarget, setCoinAnimationTarget] = useState<{ x: number; y: number } | null>(null);
-
-  // Track page view when component mounts
-  useEffect(() => {
-    trackPageView('home');
-  }, [trackPageView]);
 
   // Track when user has wallet connected
   useEffect(() => {
