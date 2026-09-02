@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TxPendingError } from '@/networks/stellar/pollarError';
+import { parseVaultError } from '@/networks/stellar/vaultError';
 import { humanizeTxError } from './txError';
 
 describe('humanizeTxError', () => {
@@ -27,6 +28,24 @@ describe('humanizeTxError', () => {
   it('maps an unknown contract error to the generic rejection', () => {
     expect(humanizeTxError(new Error('Error(Contract, #999)')).title).toBe(
       'The network rejected the transaction. Please try again.',
+    );
+  });
+
+  it('explica el rechazo del vault y conserva el código para el log', () => {
+    // Este es el caso de la pantalla de fondos ociosos: antes el código se
+    // perdía en el rethrow y esto devolvía el genérico.
+    const result = humanizeTxError(parseVaultError(new Error('HostError: Error(Contract, #451)')));
+
+    expect(result.title).toBe('Amount is too small');
+    expect(result.raw).toContain('#451');
+  });
+
+  it('no matchea el texto traducido, solo el error tipado', () => {
+    // Si algún día alguien "arregla" esto agregando /too small/i a la escalera
+    // de regex, esta prueba se rompe: ese atajo funciona en inglés y se cae en
+    // cuanto el usuario tiene la app en español.
+    expect(humanizeTxError(new Error('Amount is too small')).title).toBe(
+      "We couldn't complete the transaction. Please try again in a moment.",
     );
   });
 

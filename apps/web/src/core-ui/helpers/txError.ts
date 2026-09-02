@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import { isTxPendingError } from '@/networks/stellar/pollarError';
+import { isVaultContractError } from '@/networks/stellar/vaultError';
 
 export interface HumanTxError {
   /** Mensaje corto y legible para mostrar arriba (una frase). */
@@ -62,6 +63,14 @@ export const humanizeTxError = (
       pending: true,
       hash: error.hash,
     };
+  }
+
+  // El vault ya nos dijo el motivo y lo trae tipado. Va ANTES de la escalera de
+  // regex a propósito: el `message` de este error es nuestra propia traducción,
+  // así que matchearlo por texto funcionaría en inglés y se rompería en cuanto
+  // el usuario tenga la app en español.
+  if (isVaultContractError(error)) {
+    return { title: tr(error.i18nKey, error.fallback), raw: error.raw };
   }
 
   if (!raw) return { title: generic, raw };
