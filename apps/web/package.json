@@ -37,8 +37,6 @@
     "@types/papaparse": "^5.5.2",
     "@vaquita/avatar": "workspace:*",
     "@vaquita/ui": "workspace:*",
-    "@vercel/analytics": "^2.0.1",
-    "@vercel/speed-insights": "^2.0.0",
     "ably": "^2.21.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.40.0",
