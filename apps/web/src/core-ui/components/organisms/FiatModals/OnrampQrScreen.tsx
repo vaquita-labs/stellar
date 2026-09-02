@@ -133,8 +133,10 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
       </p>
 
       {/* --- El código. Fondo blanco fijo: viaja a la galería y de ahí a la app
-          del banco, donde no hay ningún tema oscuro que lo compense. --- */}
-      <div className="flex flex-col items-center gap-3">
+          del banco, donde no hay ningún tema oscuro que lo compense.
+          `data-ph-block`: el QR codifica un pago bancario real y el enmascarado
+          de texto del replay no lo toca, porque son píxeles. --- */}
+      <div data-ph-block className="flex flex-col items-center gap-3">
         {shownSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

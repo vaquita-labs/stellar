@@ -52,6 +52,9 @@ const envClientSchema = z.object({
   // Interruptor aparte de la clave: permite apagar el analytics en un entorno
   // sin borrarle la clave del panel. OPTIONAL y apagado por default.
   NEXT_PUBLIC_POSTHOG_ENABLED: z.string().optional(),
+  // Grabación de sesión. Aparte del flag general y apagado: no se prende hasta
+  // que /privacy diga que se graban sesiones, quién las guarda y por cuánto.
+  NEXT_PUBLIC_SESSION_REPLAY_ENABLED: z.string().optional(),
 });
 
 // Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
@@ -71,6 +74,7 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
   NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
   NEXT_PUBLIC_POSTHOG_ENABLED: process.env.NEXT_PUBLIC_POSTHOG_ENABLED,
+  NEXT_PUBLIC_SESSION_REPLAY_ENABLED: process.env.NEXT_PUBLIC_SESSION_REPLAY_ENABLED,
 });
 
 if (!parsed.success) {

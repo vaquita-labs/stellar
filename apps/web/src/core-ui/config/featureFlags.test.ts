@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isInstallPromptEnabled, isPassiveVaultEnabled, isPostHogEnabled, posthogHost } from './featureFlags';
+import {
+  isInstallPromptEnabled,
+  isPassiveVaultEnabled,
+  isPostHogEnabled,
+  isSessionReplayEnabled,
+  posthogHost,
+} from './featureFlags';
 
 describe('isPassiveVaultEnabled', () => {
   it('is off by default when the env flag is unset (dark launch)', () => {
@@ -22,6 +28,14 @@ describe('isPostHogEnabled', () => {
   // que no existe. vitest.config.ts deja las dos variables sin setear.
   it('is off when neither the flag nor the key is set', () => {
     expect(isPostHogEnabled()).toBe(false);
+  });
+});
+
+describe('isSessionReplayEnabled', () => {
+  // Se graba la pantalla del usuario, con su saldo y su dirección: el default
+  // tiene que ser "no" y quedarse en "no" hasta que /privacy lo diga.
+  it('is off when the env flag is unset', () => {
+    expect(isSessionReplayEnabled()).toBe(false);
   });
 });
 

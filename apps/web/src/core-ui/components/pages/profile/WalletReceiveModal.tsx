@@ -43,8 +43,10 @@ export function WalletReceiveModal({ open, onOpenChange, address }: WalletReceiv
       size="md"
       bodyClassName="flex flex-col gap-4 pb-6"
     >
-      {/* QR de la dirección, en caja blanca redondeada (estilo app). */}
-      <div className="mx-auto w-fit rounded-xl border border-black border-b-2 bg-white p-4">
+      {/* QR de la dirección, en caja blanca redondeada (estilo app).
+          `data-ph-block`: es la dirección de la wallet dibujada en píxeles, que
+          el enmascarado de texto del replay no alcanza. */}
+      <div data-ph-block className="mx-auto w-fit rounded-xl border border-black border-b-2 bg-white p-4">
         <QRCode
           value={address || ' '}
           size={180}

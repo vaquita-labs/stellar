@@ -1,7 +1,7 @@
 'use client';
 
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import { isPostHogEnabled, posthogHost } from '@/core-ui/config/featureFlags';
+import { isPostHogEnabled, isSessionReplayEnabled, posthogHost } from '@/core-ui/config/featureFlags';
 import { usePathname } from 'next/navigation';
 import posthog from 'posthog-js';
 import { ReactNode, useEffect } from 'react';
@@ -28,10 +28,25 @@ const start = () => {
     // recargar el documento, así que el automático se pierde los cambios de
     // ruta del cliente, que son casi todos.
     capture_pageview: false,
-    // El replay de sesión llega aparte y apagado: esta app tiene el saldo, la
-    // dirección de la wallet y el QR de un pago bancario renderizados en el
-    // DOM, y `/privacy` todavía no dice que se graban sesiones.
-    disable_session_recording: true,
+    // El replay tiene su propio flag y arranca apagado: /privacy todavía no dice
+    // que se graban sesiones, y la app no tiene mecanismo de consentimiento.
+    disable_session_recording: !isSessionReplayEnabled(),
+    // Se empieza CERRADO y se destapa a mano lo que haga falta, nunca al revés:
+    // destapar de más se arregla, taparlo después no —el dato ya salió y ya está
+    // guardado en un tercero—.
+    session_recording: {
+      // `maskAllInputs` tapa lo que se escribe; el saldo, el valor del
+      // portafolio, la dirección de la wallet y el nickname son texto
+      // RENDERIZADO, y eso sólo lo tapa el selector.
+      maskAllInputs: true,
+      maskTextSelector: '*',
+      // Lo que ni siquiera es texto: el QR del pago y el de la dirección.
+      blockSelector: '[data-ph-block]',
+      // El home es react-three-fiber: grabar el canvas sería grabar el mundo 3D
+      // entero, cuadro por cuadro, para nada. Es el default, pero se deja
+      // explícito porque el proyecto de PostHog puede prenderlo por remoto.
+      captureCanvas: { recordCanvas: false },
+    },
     // Sólo se crea persona cuando llamamos a `identify` (ver PostHogIdentify).
     // Un anónimo que nunca se loguea no genera un perfil de persona.
     person_profiles: 'identified_only',
