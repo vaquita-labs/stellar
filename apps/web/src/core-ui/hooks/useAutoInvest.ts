@@ -1,6 +1,9 @@
-import { blendConfigForToken } from '@/networks/stellar/blendDirect';
+import { blendConfigForToken, readUsdcBalanceRaw } from '@/networks/stellar/blendDirect';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { humanizeTxError } from '@/core-ui/helpers/txError';
+import { toBaseUnits } from '@/networks/stellar/sorobanTx';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
+import { formatBaseUnits } from '@/networks/stellar/vaultQueries';
 import { usePollarReadyStore } from '@/networks/stellar/wallet/pollarReady';
 import { toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
@@ -9,13 +12,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfigStore, useRampActiveStore, useAwaitingFundsStore } from '../stores';
 
-// Umbral mínimo (USDC, unidades humanas): no promptear ni gastar gas por polvo.
+// Umbral mínimo para no promptear ni gastar gas por polvo. Como string primero
+// y número después: el gate de ejecución compara en unidades base contra el
+// saldo exacto de la cadena, y derivar las dos formas de una sola fuente evita
+// que se separen si algún día cambia el número.
 //
-// No es un mínimo del vault ni de Blend —ninguno de los dos pide uno—, es
-// nuestro: abajo de esto la comisión de red se come lo que rinde. Estaba en 1, y
-// un balance de 0,99993 quedaba afuera por 7 diezmilésimas sin que nada lo
-// explicara en pantalla; 0,1 deja pasar esos casos y sigue frenando el polvo.
-const MIN_IDLE = 0.1;
+// OJO: esto es NUESTRO umbral, no el del vault. El vault tiene su propio piso
+// (#451 AmountBelowMinDust) y todavía no sabemos cuál es; si resulta ser mayor
+// que esto, el depósito va a seguir fallando —pero ahora la pantalla dice por
+// qué en vez del genérico.
+const MIN_IDLE_STR = '0.1';
+const MIN_IDLE = Number(MIN_IDLE_STR);
 
 // Cada cuánto re-consultamos el balance custodial mientras el usuario está en el
 // home. La plata puede entrar on-chain por fuera de la app (le mandan USDC a su
@@ -96,15 +103,35 @@ export const useIdleFunds = () => {
 
   const invest = useCallback(async () => {
     if (inFlight.current || !walletAddress || !token) return;
-    const amount = idle;
-    if (amount < MIN_IDLE) return;
+    if (idle < MIN_IDLE) return;
     inFlight.current = true;
     setIsInvesting(true);
     setError(null);
+    // El error de leer el saldo no es un error de transacción: `humanizeTxError`
+    // lo mandaría al genérico y el usuario leería "no pudimos completar la
+    // transacción" cuando en realidad no se intentó ninguna.
+    let readFailed = false;
     try {
+      // El monto sale de la cadena, no del balance cacheado de Pollar. Ese
+      // cache es un float que ya perdió precisión y puede estar viejo, y acá el
+      // usuario no elige cuánto: apretó "poner a trabajar TODO", así que el
+      // número tiene que ser exactamente el que tiene la cuenta. `formatBaseUnits`
+      // lo lleva a string sin float en el medio.
+      let raw: bigint;
+      try {
+        raw = await readUsdcBalanceRaw(walletAddress);
+      } catch (e) {
+        // Nunca caemos al número cacheado: depositar un monto viejo es peor que
+        // no depositar nada.
+        readFailed = true;
+        throw e;
+      }
+      if (raw < toBaseUnits(MIN_IDLE_STR, token.decimals)) return;
+
+      const amount = formatBaseUnits(raw, token.decimals);
       const { hash } = await passiveDeposit({
         address: walletAddress,
-        amount: String(amount),
+        amount,
         decimals: token.decimals,
       });
       console.info('[idle-funds] invested', { hash, amount });
@@ -112,17 +139,24 @@ export const useIdleFunds = () => {
       // flag, y el usuario no tiene por qué conocer el protocolo de abajo.
       toast.success(
         t('idleFunds.toast', 'We put ${{amount}} to work', {
-          amount: amount.toFixed(2),
+          amount: formatTokenPrecise(Number(amount), 2),
         }),
       );
       await refreshWalletBalance();
       void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
       void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
     } catch (e) {
-      // La firma custodial puede fallar por sesión (nonce) o falta de gas (XLM).
-      // Mostramos el error en la pantalla y dejamos reintentar; no barremos solos.
-      console.warn('[idle-funds] invest failed', e);
-      setError(humanizeTxError(e, t).title);
+      // La firma custodial puede fallar por sesión (nonce) o falta de gas (XLM),
+      // y el vault puede rechazar por su propio piso de polvo. Mostramos el
+      // error en la pantalla y dejamos reintentar; no barremos solos.
+      // Logueamos el crudo además del título: cuando Pollar se come el error de
+      // contrato es lo único que queda para saber qué pasó.
+      console.warn('[idle-funds] invest failed', humanizeTxError(e, t).raw, e);
+      setError(
+        readFailed
+          ? t('idleFunds.balanceUnavailable', "We couldn't read your balance right now. Try again in a moment.")
+          : humanizeTxError(e, t).title,
+      );
       throw e;
     } finally {
       inFlight.current = false;

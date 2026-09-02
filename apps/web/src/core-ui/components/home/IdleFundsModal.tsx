@@ -3,6 +3,7 @@
 import { Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiTrendingUp } from 'react-icons/fi';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { AppModal } from '../molecules/AppModal';
 import { PressableButton } from '../molecules/PressableButton';
 
@@ -37,6 +38,10 @@ export function IdleFundsModal({
   dismissable,
 }: IdleFundsModalProps) {
   const { t } = useTranslation();
+  // Truncado, no redondeado: con 0,7299999 en la cuenta, `toFixed(2)` mostraba
+  // "$0,73" —más plata de la que el usuario tiene— y el botón prometía invertir
+  // un monto que no existe. Es lo que hace el resto de las pantallas de plata.
+  const amount = formatTokenPrecise(idle, 2);
 
   return (
     <AppModal
@@ -62,7 +67,7 @@ export function IdleFundsModal({
               <Spinner size="sm" color="current" /> {t('idleFunds.processing', 'Investing...')}
             </>
           ) : (
-            t('idleFunds.cta', 'Start earning ${{amount}}', { amount: idle.toFixed(2) })
+            t('idleFunds.cta', 'Start earning ${{amount}}', { amount })
           )}
         </PressableButton>
       }
@@ -76,7 +81,7 @@ export function IdleFundsModal({
           {t('idleFunds.label', 'You have idle funds')}
         </p>
         <p className="mt-2 text-5xl font-bold text-black tabular-nums leading-none">
-          ${idle.toFixed(2)}
+          ${amount}
         </p>
       </div>
 

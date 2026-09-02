@@ -837,7 +837,8 @@
     "subtitle": "This USDC is just sitting there. Put it to work and start earning right away.",
     "cta": "Start earning ${{amount}}",
     "processing": "Investing...",
-    "toast": "We put ${{amount}} to work"
+    "toast": "We put ${{amount}} to work",
+    "balanceUnavailable": "We couldn't read your balance right now. Try again in a moment."
   },
   "leaderboard": {
     "card": {
