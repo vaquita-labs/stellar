@@ -55,6 +55,10 @@ const envClientSchema = z.object({
   // Grabación de sesión. Aparte del flag general y apagado: no se prende hasta
   // que /privacy diga que se graban sesiones, quién las guarda y por cuánto.
   NEXT_PUBLIC_SESSION_REPLAY_ENABLED: z.string().optional(),
+  // Casilla de soporte detrás de la tarjeta "Email" del Concierge. OPTIONAL:
+  // sin valor se usa la casilla por default de `supportEmail()`, así que la
+  // tarjeta nunca queda sin destino. Ver featureFlags.ts.
+  NEXT_PUBLIC_SUPPORT_EMAIL: z.string().optional(),
 });
 
 // Literal process.env.* references: Next.js only injects NEXT_PUBLIC_ values
@@ -75,6 +79,7 @@ const parsed = envClientSchema.safeParse({
   NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
   NEXT_PUBLIC_POSTHOG_ENABLED: process.env.NEXT_PUBLIC_POSTHOG_ENABLED,
   NEXT_PUBLIC_SESSION_REPLAY_ENABLED: process.env.NEXT_PUBLIC_SESSION_REPLAY_ENABLED,
+  NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
 });
 
 if (!parsed.success) {

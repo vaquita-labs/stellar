@@ -33,6 +33,8 @@ type LinkRow = {
   label: string;
   description?: string;
   href?: string;
+  /** Destino fuera de la app: se abre en otra pestaña, no por el router. */
+  external?: boolean;
   onPress?: () => void;
   disabled?: boolean;
   badge?: string;
@@ -132,6 +134,15 @@ function SettingsRow({ row }: { row: Row }) {
     return <div aria-disabled="true">{shell}</div>;
   }
   if (row.href) {
+    // Un <Link> a un dominio externo se lo come el router: fuera de la app va
+    // como <a> a otra pestaña, así Ajustes queda abierto atrás.
+    if (row.external) {
+      return (
+        <a href={row.href} target="_blank" rel="noopener noreferrer" className="block hover:bg-[#FFF7E6] transition">
+          {shell}
+        </a>
+      );
+    }
     return (
       <Link href={row.href} className="block hover:bg-[#FFF7E6] transition">
         {shell}
@@ -159,6 +170,9 @@ function Section({ title, rows }: { title: string; rows: Row[] }) {
     </section>
   );
 }
+
+/** FAQ pública del sitio: destino de la fila "Centro de ayuda". */
+const HELP_CENTER_URL = 'https://www.vaquita.fi/#faq';
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
@@ -286,8 +300,8 @@ export function SettingsPage({
       icon: <FiHelpCircle />,
       label: t('profilePages.settings.help', 'Help center'),
       description: t('profilePages.settings.helpDesc', 'FAQ and account support.'),
-      disabled: true,
-      badge: t('common.soon'),
+      href: HELP_CENTER_URL,
+      external: true,
     },
     {
       kind: 'link',

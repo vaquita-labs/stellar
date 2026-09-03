@@ -29,6 +29,17 @@ export const isInstallPromptEnabled = (): boolean => clientEnv.NEXT_PUBLIC_INSTA
 export const isPostHogEnabled = (): boolean =>
   clientEnv.NEXT_PUBLIC_POSTHOG_ENABLED === 'true' && !!clientEnv.NEXT_PUBLIC_POSTHOG_KEY;
 
+/**
+ * Casilla de soporte a la que escribe la tarjeta "Email" del Concierge. La
+ * variable es OPTIONAL a propósito: si un entorno no la setea, la tarjeta
+ * sigue abriendo un mail a esta casilla en vez de quedarse sin destino. Se
+ * cambia sin tocar código apuntando NEXT_PUBLIC_SUPPORT_EMAIL a la casilla
+ * compartida del equipo.
+ */
+const DEFAULT_SUPPORT_EMAIL = 'leaconti10@gmail.com';
+
+export const supportEmail = (): string => clientEnv.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || DEFAULT_SUPPORT_EMAIL;
+
 /** Host al que posthog-js manda los eventos. Ver NEXT_PUBLIC_POSTHOG_HOST. */
 export const posthogHost = (): string => clientEnv.NEXT_PUBLIC_POSTHOG_HOST || '/ingest';
 
