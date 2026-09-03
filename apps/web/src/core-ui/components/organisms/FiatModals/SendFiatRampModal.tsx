@@ -17,7 +17,9 @@ import { Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BsBank2 } from 'react-icons/bs';
 import { FiExternalLink, FiPlus } from 'react-icons/fi';
+import { HiOutlineSelector } from 'react-icons/hi';
 import { railLabel, truncateMiddle } from '../../../helpers';
 import { AMOUNT_DECIMALS, FIAT_DECIMALS, floorAmount } from '../../../helpers/numbers';
 import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
@@ -34,7 +36,7 @@ import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { FiatStepList, StepStatus } from './FiatStepList';
 import { RampFieldList, RAMP_FIELD_CLASS } from './RampFieldList';
-import { SavedBankList } from './SavedBankList';
+import { accountHint, SavedBankList } from './SavedBankList';
 
 interface SendFiatRampModalProps {
   open: boolean;
@@ -45,7 +47,13 @@ interface SendFiatRampModalProps {
   onBack?: () => void;
 }
 
-type Phase = 'amount' | 'details' | 'run';
+/**
+ * `bank` se mete ENTRE el monto y la confirmación a propósito: los datos del
+ * banco son lo único que el usuario tiene que tipear, y pedirlos en la misma
+ * pantalla que la cotización mezcla "completá esto" con "confirmá esto". Con el
+ * destino ya elegido, `details` no pide nada: muestra lo que va a pasar.
+ */
+type Phase = 'amount' | 'bank' | 'details' | 'run';
 type StepKey = 'funds' | 'create' | 'payout';
 
 /**
@@ -155,6 +163,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const [phase, setPhase] = useState<Phase>('amount');
   const [amountFiat, setAmountFiat] = useState('');
   const [quote, setQuote] = useState<RampQuote | null>(null);
+  // Monto con el que se pidió la cotización que está guardada. Cambiar el monto
+  // no la borra —el destino elegido sigue valiendo— pero la marca vieja: la
+  // cotización fija el precio de UN monto, y seguir con la de otro cobraría mal.
+  const [quotedFor, setQuotedFor] = useState<number | null>(null);
   const [usdcCost, setUsdcCost] = useState<number | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
 
@@ -247,6 +259,18 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   // proveedor cambian por país, así que ofrecer una cuenta de Brasil para un
   // retiro a Bolivia sólo llenaría el formulario con datos que no aplican.
   const bankAccounts = savedBanks.filter((a) => a.country === country);
+
+  // Cómo se resume el destino en la fila del monto y en la confirmación. El
+  // nombre sale de la cuenta guardada si se eligió una; si se tipeó a mano no
+  // hay nombre todavía, así que se dice qué es y se muestra el enmascarado.
+  // Vacío = no hay destino: recién ahí la fila invita a elegir uno.
+  const selectedBank = bankAccounts.find((a) => a.id === selectedBankId) ?? null;
+  const destinationHint = accountHint(values, fields);
+  const destinationLabel = selectedBank
+    ? selectedBank.label
+    : destinationHint
+      ? t('wallet.fiat.ramp.destination.newAccount', 'New account')
+      : null;
 
   /**
    * Carga una cuenta guardada en el formulario. Se copian sólo las claves que la
@@ -343,8 +367,19 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   };
 
   // --- Paso 1: cotizar el monto en moneda local ------------------------------
-  const handleQuote = async () => {
-    if (!amountValid || busy || !corridor) return;
+  /**
+   * Deja una cotización válida para el monto que está en pantalla y la devuelve,
+   * o `null` si el monto no se puede cotizar (y deja el motivo en `error`).
+   *
+   * Se llama desde los dos lugares que salen del paso del monto —elegir cuenta y
+   * continuar— porque el formulario del banco no existe sin cotización: los
+   * campos que pide el proveedor viajan en `requiredFields`, así que hasta que no
+   * hay ruta no se sabe si el corredor pide CPF, cédula o email. Si ya hay una
+   * cotización para ESTE monto no se vuelve a pedir.
+   */
+  const ensureQuote = async (): Promise<RampQuote | null> => {
+    if (!amountValid || busy || !corridor) return null;
+    if (quote && quotedFor === amountNum) return quote;
     setBusy(true);
     setError(null);
     try {
@@ -359,7 +394,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             currency,
           }),
         );
-        return;
+        return null;
       }
       // Los límites vienen en la moneda con la que se cotizó, o sea la local.
       if (best.minAmount != null && amountNum < best.minAmount) {
@@ -369,7 +404,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             currency,
           }),
         );
-        return;
+        return null;
       }
       if (best.maxAmount != null && amountNum > best.maxAmount) {
         setError(
@@ -378,7 +413,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             currency,
           }),
         );
-        return;
+        return null;
       }
       // The user typed reais or bolivianos, so only now — with the cost the
       // quote publishes — is it known whether the withdrawal fits the balance.
@@ -386,7 +421,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       const problem = costProblem(cost);
       if (problem) {
         setError(problem);
-        return;
+        return null;
       }
       // La liquidez se consulta por el rail que resolvió la cotización (Pix o
       // Bre-B); PSE y el resto no la publican y se dejan pasar.
@@ -399,17 +434,53 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
                 rail: railLabel(best.rail, t),
               }),
           );
-          return;
+          return null;
         }
       }
       setQuote(best);
+      setQuotedFor(amountNum);
       setUsdcCost(cost ?? null);
-      setPhase('details');
+      return best;
     } catch (e) {
       setError(messageOf(e));
+      return null;
     } finally {
       setBusy(false);
     }
+  };
+
+  /**
+   * Abrir el selector de cuenta desde la fila de destino del paso del monto.
+   *
+   * Sin monto no se puede: la ruta se cotiza por monto y los campos del banco
+   * vienen con la ruta. En vez de dejar la fila apagada sin explicación, se dice
+   * en la misma línea que ya usa el error del monto —justo arriba de la fila—.
+   */
+  const openBank = async () => {
+    if (!amountValid) {
+      setError(
+        t(
+          'wallet.fiat.ramp.destination.needAmount',
+          'Enter the amount first: which details your bank needs depends on the payout route.',
+        ),
+      );
+      return;
+    }
+    if (await ensureQuote()) setPhase('bank');
+  };
+
+  /**
+   * El CTA del paso del monto. Si todavía no hay datos del banco lleva a
+   * elegirlos en vez de rebotar: es el único dato que falta y la pantalla
+   * siguiente no es donde se piden.
+   */
+  const handleContinue = async () => {
+    const fresh = await ensureQuote();
+    if (!fresh) return;
+    // Contra los campos de la cotización RECIÉN traída, no contra `fields`, que
+    // todavía es el del render anterior. Si el proveedor agregó un campo desde
+    // la última vez, esto es lo que lo detecta.
+    setPhase(fieldsAreValid(fresh.requiredFields ?? [], values) ? 'details' : 'bank');
   };
 
   // --- Paso 2: ejecutar el retiro -------------------------------------------
@@ -508,6 +579,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         if (problem) throw new RampError(problem);
         active = fresh;
         setQuote(fresh);
+        setQuotedFor(amountNum);
         setUsdcCost(freshCost ?? null);
         result = await createOfframp({ corridor, quote: fresh, amountFiat: amountNum, walletAddress, values });
       }
@@ -641,7 +713,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       <PressableButton
         variant="success"
         size="cta"
-        onClick={handleQuote}
+        onClick={handleContinue}
         disabled={!amountValid || busy || !!corridorOff || !corridor || !walletAddress}
       >
         {busy ? (
@@ -651,6 +723,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         ) : (
           t('wallet.fiat.ramp.continue', 'Continue')
         )}
+      </PressableButton>
+    ) : phase === 'bank' ? (
+      <PressableButton variant="success" size="cta" onClick={() => setPhase('details')} disabled={!fieldsValid || busy}>
+        {t('wallet.fiat.ramp.continue', 'Continue')}
       </PressableButton>
     ) : phase === 'details' ? (
       <PressableButton variant="success" size="cta" onClick={handleRun} disabled={!fieldsValid || busy || !token}>
@@ -683,7 +759,13 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         currency: currency || country,
       })}
       size="md"
-      onBack={phase === 'details' ? () => setPhase('amount') : onBack}
+      onBack={
+        phase === 'details'
+          ? () => setPhase('bank')
+          : phase === 'bank'
+            ? () => setPhase('amount')
+            : onBack
+      }
       // Con el teclado en el cuerpo, el aire de las otras fases hace scrollear
       // el sheet en pantallas chicas y lo primero que se corta es el monto.
       bodyClassName={`flex flex-col pb-2 ${phase === 'amount' ? 'gap-2.5' : 'gap-4'}`}
@@ -712,43 +794,47 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           // local, así que no hay un "máximo" que tipear sin la cotización.
           // Por lo mismo va sin `max`: el tope de la ruta llega recién con la
           // cotización y aparecería a mitad de tipear, con las teclas dejando
-          // de responder sin decir por qué. `handleQuote` lo explica.
+          // de responder sin decir por qué. `ensureQuote` lo explica.
           disabled={busy}
           compact
-        />
+        >
+          {/* El destino, acá y no en la confirmación: los datos del banco son lo
+              único que hay que tipear en todo el retiro, y pedirlos recién en la
+              pantalla de confirmar obliga a leer una cotización antes de saber
+              adónde va la plata. Tocar cotiza primero —el formulario del
+              proveedor no existe sin ruta— y por eso pide el monto antes. */}
+          <PressableButton
+            variant="white"
+            size="row"
+            onClick={() => void openBank()}
+            disabled={busy || !corridor || !!corridorOff}
+          >
+            <BsBank2 className="w-6 h-6 text-black shrink-0" />
+            <span className="flex-1 min-w-0 text-left">
+              {destinationLabel ? (
+                <>
+                  <span className="block text-sm font-bold text-black truncate">{destinationLabel}</span>
+                  {destinationHint ? (
+                    <span className="block font-mono text-[11px] text-gray-500">{destinationHint}</span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="block text-sm font-bold text-black">
+                  {t('wallet.fiat.ramp.destination.select', 'Select bank account')}
+                </span>
+              )}
+            </span>
+            <HiOutlineSelector className="w-5 h-5 text-black shrink-0" />
+          </PressableButton>
+        </AmountStep>
       )}
 
-      {/* --- Ruta elegida + datos que pide el proveedor (los define la cotización). --- */}
-      {phase === 'details' && quote && (
+      {/* --- Destino: cuentas guardadas + el formulario del proveedor. --- */}
+      {phase === 'bank' && (
         <>
-          <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
-            {/* El nombre del proveedor no se muestra: el usuario cobra por un
-                rail (QR, transferencia), y quién lo liquida es un detalle
-                nuestro. El rail va con el nombre que la gente conoce, no con la
-                sigla que manda el proveedor. */}
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-black">{t('wallet.fiat.ramp.routeLabel', 'Payout method')}</span>
-              <span className="text-xs font-semibold text-gray-500">{railLabel(quote.rail, t)}</span>
-            </div>
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{t('wallet.fiat.ramp.youReceive', 'You receive')}</span>
-              <span className="font-semibold text-black">
-                {symbol} {receiveFiat} {currency}
-              </span>
-            </div>
-            {usdcCost != null && (
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>{t('wallet.fiat.ramp.youSend', 'Leaves your savings')}</span>
-                <span className="font-semibold text-black">
-                  {t('wallet.fiat.ramp.costUsdc', '{{amount}} USDC', { amount: usdcCost })}
-                </span>
-              </div>
-            )}
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>{t('wallet.fiat.ramp.etaLabel', 'Estimated time')}</span>
-              <span className="font-semibold text-black">{quote.estimatedTime}</span>
-            </div>
-          </div>
+          <p className="text-sm font-bold text-black">
+            {t('wallet.fiat.ramp.destination.pickTitle', 'Where do you want to receive the money?')}
+          </p>
 
           <SavedBankList
             accounts={bankAccounts}
@@ -761,6 +847,9 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             onDelete={handleDeleteBank}
           />
 
+          {/* El formulario queda visible aunque se haya elegido una cuenta
+              guardada: lo que el proveedor pide pudo cambiar desde que se
+              guardó, y el usuario tiene que poder ver qué va a mandar. */}
           <RampFieldList
             fields={fields}
             values={values}
@@ -778,7 +867,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
               —el retiro funciona sin tocarlo— y nombrar la cuenta es parte de
               guardarla: sin nombre, dos cuentas del mismo banco no se
               distinguen en la lista. */}
-          {fieldsValid && !saveBankOpen && (
+          {fieldsValid && !saveBankOpen && !selectedBank && (
             <button
               type="button"
               onClick={() => setSaveBankOpen(true)}
@@ -835,6 +924,67 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
               </div>
             </div>
           )}
+        </>
+      )}
+
+      {/* --- Ruta elegida + datos que pide el proveedor (los define la cotización). --- */}
+      {phase === 'details' && quote && (
+        <>
+          <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
+            {/* El nombre del proveedor no se muestra: el usuario cobra por un
+                rail (QR, transferencia), y quién lo liquida es un detalle
+                nuestro. El rail va con el nombre que la gente conoce, no con la
+                sigla que manda el proveedor. */}
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-black">{t('wallet.fiat.ramp.routeLabel', 'Payout method')}</span>
+              <span className="text-xs font-semibold text-gray-500">{railLabel(quote.rail, t)}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>{t('wallet.fiat.ramp.youReceive', 'You receive')}</span>
+              <span className="font-semibold text-black">
+                {symbol} {receiveFiat} {currency}
+              </span>
+            </div>
+            {usdcCost != null && (
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>{t('wallet.fiat.ramp.youSend', 'Leaves your savings')}</span>
+                <span className="font-semibold text-black">
+                  {t('wallet.fiat.ramp.costUsdc', '{{amount}} USDC', { amount: usdcCost })}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>{t('wallet.fiat.ramp.etaLabel', 'Estimated time')}</span>
+              <span className="font-semibold text-black">{quote.estimatedTime}</span>
+            </div>
+          </div>
+
+          {/* El destino ya está elegido: acá sólo se comprueba, y "Cambiar"
+              vuelve al paso donde se elige. Es la última pantalla antes de que
+              la plata salga del vault, así que tiene que decir a qué cuenta va
+              sin obligar a recordarlo del paso anterior. */}
+          <div className="flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-3 py-2.5">
+            <BsBank2 className="w-6 h-6 text-black shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block text-[11px] font-semibold text-gray-500">
+                {t('wallet.fiat.ramp.destination.title', 'Destination')}
+              </span>
+              <span className="block text-sm font-bold text-black truncate">
+                {destinationLabel ?? t('wallet.fiat.ramp.destination.select', 'Select bank account')}
+              </span>
+              {destinationHint ? (
+                <span className="block font-mono text-[11px] text-gray-500">{destinationHint}</span>
+              ) : null}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPhase('bank')}
+              disabled={busy}
+              className="shrink-0 text-xs font-bold text-black underline underline-offset-2 disabled:opacity-50"
+            >
+              {t('wallet.fiat.ramp.destination.change', 'Change')}
+            </button>
+          </div>
         </>
       )}
 

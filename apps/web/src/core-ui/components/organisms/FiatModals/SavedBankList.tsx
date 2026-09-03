@@ -21,20 +21,24 @@ interface SavedBankListProps {
 }
 
 /**
- * Resumen de una cuenta guardada, para poder distinguir dos del mismo banco sin
- * mostrar el número entero.
+ * Resumen de una cuenta, para poder distinguir dos del mismo banco sin mostrar
+ * el número entero.
  *
  * No hay una "columna del número de cuenta": qué campos existen lo decide la
  * cotización. Así que se toma el último campo de texto que tenga valor —en los
  * corredores de hoy es el número de cuenta o la clave de cobro— y se muestran
  * sólo los últimos cuatro caracteres. Si no hay ninguno, no se muestra nada: es
  * preferible a inventar un identificador.
+ *
+ * Toma el diccionario de valores y no la cuenta entera porque la fila de destino
+ * del paso del monto tiene que resumir igual una cuenta guardada que uno tipeado
+ * a mano, que todavía no es una fila en ningún lado.
  */
-function accountHint(account: SavedBankAccount, fields: RampField[]): string {
-  const candidates = fields.filter((f) => f.type !== 'select' && (account.fields[f.key] ?? '').trim().length > 0);
+export function accountHint(values: Record<string, string>, fields: RampField[]): string {
+  const candidates = fields.filter((f) => f.type !== 'select' && (values[f.key] ?? '').trim().length > 0);
   const last = candidates[candidates.length - 1];
   if (!last) return '';
-  const value = account.fields[last.key].trim();
+  const value = values[last.key].trim();
   return value.length <= 4 ? value : `••••${value.slice(-4)}`;
 }
 
@@ -76,7 +80,7 @@ export function SavedBankList({
       {accounts.map((account) => {
         const selected = account.id === selectedId;
         const confirming = account.id === confirmId;
-        const hint = accountHint(account, fields);
+        const hint = accountHint(account.fields, fields);
 
         return (
           <div

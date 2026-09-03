@@ -952,9 +952,7 @@
     "title": "Concierge",
     "buttonAria": "Concierge",
     "chat": "Chatea con nosotros",
-    "email": "Email",
-    "telegramTitle": "¿Querés estar al día?",
-    "telegramBody": "Unite a nuestro canal oficial de Telegram"
+    "email": "Email"
   },
   "notificationsCenter": {
     "bellAria": "Notificaciones",
@@ -2054,6 +2052,14 @@
           "CO": "Colombia"
         },
         "cta": "Retirar",
+        "destination": {
+          "change": "Cambiar",
+          "needAmount": "Poné el monto primero: qué datos pide tu banco depende de la ruta de pago.",
+          "newAccount": "Cuenta nueva",
+          "pickTitle": "¿A dónde querés recibir la plata?",
+          "select": "Elegí una cuenta bancaria",
+          "title": "Destino"
+        },
         "doneHint": "Ya podés cerrar esta ventana.",
         "err": {
           "anchorError": "El proveedor rechazó el pedido. Probá de nuevo en un momento.",

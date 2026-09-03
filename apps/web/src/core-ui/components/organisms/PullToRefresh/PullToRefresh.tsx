@@ -7,11 +7,18 @@ import { ReactNode, useCallback, useRef } from 'react';
 import { FiRefreshCw } from 'react-icons/fi';
 
 /**
- * Routes where a downward drag already means something else. The home map is a
- * WebGL canvas that pans with the same finger movement and never scrolls, so a
- * pull there would fight the camera.
+ * Marks the element a screen offers as the handle for the pull. Only screens in
+ * {@link ORIGIN_ONLY_ROUTES} need one.
  */
-const NO_PULL_ROUTES = ['/home'];
+const PULL_ORIGIN_SELECTOR = '[data-pull-origin]';
+
+/**
+ * Routes where a downward drag over the body already means something else. The
+ * home map is a WebGL canvas that pans with the same finger movement and never
+ * scrolls, so the pull is confined to the header that sits above it. A screen
+ * listed here without a marked handle simply has no pull.
+ */
+const ORIGIN_ONLY_ROUTES = ['/home'];
 
 /** How far above the top edge the indicator parks while idle. */
 const INDICATOR_HIDDEN_PX = 44;
@@ -28,7 +35,7 @@ export function PullToRefresh({ className, children }: { className?: string; chi
   const containerRef = useRef<HTMLElement>(null);
   const queryClient = useQueryClient();
   const pathname = usePathname();
-  const enabled = !NO_PULL_ROUTES.some((route) => pathname?.startsWith(route));
+  const originOnly = ORIGIN_ONLY_ROUTES.some((route) => pathname?.startsWith(route));
 
   // `type: 'active'` limits both the invalidation and the refetch to queries
   // that currently have a mounted observer, which is exactly the screen under
@@ -36,7 +43,10 @@ export function PullToRefresh({ className, children }: { className?: string; chi
   // catalog, map objects, badges — and write that back to localStorage.
   const onRefresh = useCallback(() => queryClient.invalidateQueries({ type: 'active' }), [queryClient]);
 
-  const { distance, pulling, armed, refreshing } = usePullToRefresh(containerRef, { onRefresh, enabled });
+  const { distance, pulling, armed, refreshing } = usePullToRefresh(containerRef, {
+    onRefresh,
+    originSelector: originOnly ? PULL_ORIGIN_SELECTOR : undefined,
+  });
 
   const visible = distance > 0 || refreshing;
 

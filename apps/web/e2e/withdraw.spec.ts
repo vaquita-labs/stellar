@@ -11,8 +11,12 @@ import { usdcBalance } from './testnet-usdc';
  * skips with a clear message when the position is short.
  */
 const WITHDRAW_USDC = '1';
-/** Cómo se ve `MIN_USDC` (0,1) ya formateado: `formatUsdPrecise(0.1, 2)`. */
-const MIN_WITHDRAW_LABEL = '$0.10';
+/**
+ * Cómo se ve `MIN_USDC` (0,1) ya formateado: `formatTokenPrecise(0.1, 2)`.
+ * Sin `$`: la línea termina en " USDC.", así que el símbolo de dólar la haría
+ * decir la moneda dos veces. El chip de "Available" sí lo lleva.
+ */
+const MIN_WITHDRAW_LABEL = '0.10';
 
 test.describe('withdraw', () => {
   test.describe.configure({ mode: 'serial' });
