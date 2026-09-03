@@ -3,6 +3,7 @@ export * from './map';
 export * from './nickname';
 export * from './numbers';
 export * from './network';
+export * from './rampRail';
 export * from './strings';
 export * from './time';
 export * from './user';

@@ -3,7 +3,7 @@
 import { addSuccessToast, PageLayout, WithHydrated, formatTransactionTime } from '@/core-ui/components/molecules';
 import { formatTimeDeposit } from '@/core-ui/helpers';
 import { AppTransaction, buildTransactions, TransactionStatus } from '@/core-ui/helpers/transactions';
-import { useDepositsComplete } from '@/core-ui/hooks';
+import { useCryptoMode, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 import { useRouter } from 'next/navigation';
@@ -66,6 +66,12 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
   const router = useRouter();
   const { walletAddress, network } = useConfigStore();
   const { data, isLoading } = useDepositsComplete(walletAddress);
+  // Todo lo on-chain de esta pantalla —el hash, copiarlo, el explorador y
+  // compartir— vive detrás de "Sé de cripto". Para el resto, el movimiento se
+  // explica solo con monto, origen, destino y estado; el hash sólo agrega una
+  // cadena de 64 caracteres que no significa nada y un link que se abre a una
+  // pantalla en inglés llena de jerga.
+  const cryptoMode = useCryptoMode();
   // Colapsado por defecto: la mayoría de las veces alcanza con el estado.
   const [showHistory, setShowHistory] = useState(false);
 
@@ -74,7 +80,9 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
     [data, transactionId],
   );
 
-  const explorerUrl = transaction?.transactionHash ? stellarExpertTxUrl(transaction.transactionHash, network?.type) : '';
+  const showHash = cryptoMode && !!transaction?.transactionHash;
+  const explorerUrl =
+    showHash && transaction?.transactionHash ? stellarExpertTxUrl(transaction.transactionHash, network?.type) : '';
 
   const copyHash = async () => {
     if (!transaction?.transactionHash) return;
@@ -157,7 +165,7 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
                   </span>
                 </DataRow>
               )}
-              {transaction.transactionHash && (
+              {showHash && transaction.transactionHash && (
                 <DataRow label={t('transactions.details.transactionId', 'Transaction ID')}>
                   <span className="inline-flex items-center gap-2">
                     <span className="font-mono text-xs">{shortHash(transaction.transactionHash)}</span>

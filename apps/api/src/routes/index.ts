@@ -20,6 +20,7 @@ import profileRoutes from './profile/route';
 import referralRoutes from './referral/route';
 import timeRoutes from './time/route';
 import userRoutes from './user/route';
+import savedBankRoutes from './wallets/savedBanks.route';
 import savedWalletRoutes from './wallets/saved.route';
 import walletBadgeRoutes from './wallets/badges.route';
 
@@ -40,6 +41,9 @@ router.use('/badges', badgeCatalogRoutes);
 router.use('/bridge', bridgeRoutes);
 router.use('/config', configRoutes);
 router.use('/profile', profileRoutes);
+// Antes que `/wallets/saved`: los dos comparten prefijo y montar el más
+// específico primero deja el ruteo sin depender de cómo corta segmentos Express.
+router.use('/wallets/saved-banks', savedBankRoutes);
 router.use('/wallets/saved', savedWalletRoutes);
 router.use('/wallets/:wallet/badges', walletBadgeRoutes);
 router.use('/deposit', depositRoutes);

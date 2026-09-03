@@ -2082,8 +2082,10 @@
         "youPay": "Você paga",
         "youReceive": "Você recebe"
       },
+      "rail": {
+        "ach": "Transferência bancária"
+      },
       "ramp": {
-        "amountLabel": "Quanto você quer receber?",
         "balance": "Disponível nas suas reservas: {{balance}} USDC",
         "balanceLoading": "Lendo suas reservas…",
         "continue": "Continuar",
@@ -2103,8 +2105,9 @@
           "insufficientQuote": "Este saque custa {{cost}} USDC e suas reservas têm {{balance}}.",
           "kycRequired": "O provedor precisa verificar sua identidade para continuar.",
           "noRoutes": "Nenhuma rota disponível para {{amount}} {{currency}}. Tente outro valor.",
+          "paymentFailed": "O pagamento não pôde ser concluído. Seu USDC continua na sua carteira.",
           "paymentNotOnChain": "O provedor informou um pagamento ({{hash}}) que nunca chegou à rede. Seu USDC continua na sua carteira.",
-          "paymentNotSubmitted": "O provedor aceitou o saque mas nunca enviou o pagamento on-chain. Seu USDC está na sua carteira — tente de novo.",
+          "paymentNotSubmitted": "O provedor aceitou o saque mas nunca enviou o pagamento. Seu USDC está na sua carteira — tente de novo.",
           "providerNotConfigured": "Este provedor ainda não está configurado para o app.",
           "quoteExpired": "A cotação expirou. Peça uma nova e tente de novo.",
           "unknownCost": "A cotação não informou quanto USDC custa este saque.",
@@ -2126,6 +2129,17 @@
         "quoting": "Procurando uma rota…",
         "settled": "Saque pago via {{rail}}.",
         "routeLabel": "Forma de recebimento",
+        "savedBanks": {
+          "add": "Salvar esta conta",
+          "confirmDelete": "Excluir?",
+          "deleteError": "Não foi possível excluir a conta",
+          "labelField": "Dê um nome à conta",
+          "labelPlaceholder": "ex. Minha conta do banco",
+          "save": "Salvar",
+          "saveError": "Não foi possível salvar a conta",
+          "saved": "Conta salva",
+          "title": "Suas contas salvas"
+        },
         "settling": "Seu USDC foi recebido e o pagamento via {{rail}} está a caminho. Pode demorar — você já pode fechar esta janela.",
         "title": "Sacar para {{country}} ({{currency}})",
         "usdcSpent": "{{amount}} USDC saíram das suas reservas",
@@ -2243,6 +2257,11 @@
   },
   "withdraw": {
     "addMethod": "Adicionar método",
+    "addNickname": {
+      "cta": "Adicionar usuário",
+      "field": "Usuário",
+      "placeholder": "usuário"
+    },
     "addWallet": {
       "addressField": "Endereço",
       "addressPlaceholder": "Endereço de destino",

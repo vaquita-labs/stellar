@@ -23,6 +23,7 @@ import { usePollar } from '@pollar/react';
 import { Spinner } from '@heroui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { railLabel } from '../../../helpers/rampRail';
 import { formatTokenPrecise } from '../../../helpers/numbers';
 import { useAwaitingFundsStore, useRampActiveStore } from '../../../stores';
 import { AmountDisplay } from '../../molecules/AmountDisplay';
@@ -636,10 +637,12 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       {showForm && quote && !quoting && (
         <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
           {/* El nombre del proveedor no se muestra: el usuario paga por un
-              rail (QR, ACH), y quién lo liquida es un detalle nuestro. */}
+              rail (QR, transferencia), y quién lo liquida es un detalle
+              nuestro. El rail va con el nombre que la gente conoce, no con la
+              sigla que manda el proveedor. */}
           <div className="flex items-center justify-between">
             <span className="font-bold text-black">{t('wallet.fiat.onramp.routeLabel', 'Payment method')}</span>
-            <span className="text-xs font-semibold text-gray-500">{quote.rail}</span>
+            <span className="text-xs font-semibold text-gray-500">{railLabel(quote.rail, t)}</span>
           </div>
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>{t('wallet.fiat.onramp.youPay', 'You pay')}</span>

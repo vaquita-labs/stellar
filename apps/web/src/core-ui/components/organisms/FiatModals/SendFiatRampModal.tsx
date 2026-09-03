@@ -17,15 +17,25 @@ import { Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiExternalLink } from 'react-icons/fi';
-import { truncateMiddle } from '../../../helpers';
+import { FiExternalLink, FiPlus } from 'react-icons/fi';
+import { railLabel, truncateMiddle } from '../../../helpers';
 import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
-import { useLivePassiveUsdc } from '../../../hooks';
+import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
+import {
+  type SavedBankAccount,
+  useCreateSavedBankAccount,
+  useDeleteSavedBankAccount,
+  useSavedBankAccounts,
+} from '../../../hooks/useSavedBankAccounts';
 import { useConfigStore, useRampActiveStore } from '../../../stores';
+import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
+import { AmountDisplay } from '../../molecules/AmountDisplay';
+import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { FiatStepList, StepStatus } from './FiatStepList';
-import { RAMP_FIELD_CLASS, RampFieldList } from './RampFieldList';
+import { RampFieldList, RAMP_FIELD_CLASS } from './RampFieldList';
+import { SavedBankList } from './SavedBankList';
 
 interface SendFiatRampModalProps {
   open: boolean;
@@ -48,6 +58,12 @@ type StepKey = 'funds' | 'create' | 'payout';
 const STEP_ORDER: StepKey[] = ['funds', 'create', 'payout'];
 
 const INITIAL_STEPS: Record<StepKey, StepStatus> = { create: 'idle', funds: 'idle', payout: 'idle' };
+
+/**
+ * Decimales que se pueden teclear en moneda local. Dos, no los 7 del USDC:
+ * centavos de boliviano o de real es todo lo que el proveedor liquida.
+ */
+const FIAT_DECIMALS = 2;
 
 /**
  * The fiat the quote SETTLES, which is not necessarily the one that was asked
@@ -85,9 +101,12 @@ const settledFiatOf = (quote: RampQuote | null, requested: number): number => {
  */
 export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendFiatRampModalProps) {
   const { t } = useTranslation();
-  const { token } = useConfigStore();
+  const { token, network } = useConfigStore();
   const { wallet, refreshAssets, refreshWalletBalance } = usePollar();
   const walletAddress = wallet?.address ?? null;
+  // El hash del pago —y el link al explorador— sólo con "Sé de cripto": para el
+  // resto, lo que importa es que la plata salió y en cuánto llega al banco.
+  const cryptoMode = useCryptoMode();
 
   const {
     resolveCorridor,
@@ -130,6 +149,18 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const [quote, setQuote] = useState<RampQuote | null>(null);
   const [usdcCost, setUsdcCost] = useState<number | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+
+  // Cuentas bancarias guardadas: el espejo de las wallets guardadas del retiro a
+  // cripto. Existe para no retipear documento y número de cuenta en cada retiro,
+  // que es donde un dígito de más manda la plata a otra persona.
+  const { data: savedBanks = [], isLoading: banksLoading } = useSavedBankAccounts();
+  const createBank = useCreateSavedBankAccount();
+  const deleteBank = useDeleteSavedBankAccount();
+  const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
+  const [pendingDeleteBankId, setPendingDeleteBankId] = useState<string | null>(null);
+  const [saveBankOpen, setSaveBankOpen] = useState(false);
+  const [saveBankLabel, setSaveBankLabel] = useState('');
+  const [saveBankError, setSaveBankError] = useState<string | null>(null);
 
   const [corridorOff, setCorridorOff] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -203,6 +234,61 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
   const fieldsValid = fieldsAreValid(fields, values);
   const receiveFiat = settledFiatOf(quote, amountNum);
+
+  // Sólo las cuentas del corredor que se está usando: los campos que pide el
+  // proveedor cambian por país, así que ofrecer una cuenta de Brasil para un
+  // retiro a Bolivia sólo llenaría el formulario con datos que no aplican.
+  const bankAccounts = savedBanks.filter((a) => a.country === country);
+
+  /**
+   * Carga una cuenta guardada en el formulario. Se copian sólo las claves que la
+   * cotización de HOY pide: si el proveedor sacó un campo, arrastrarlo lo
+   * mandaría igual; si agregó uno, queda vacío y el usuario lo completa.
+   */
+  const applyBankAccount = (account: SavedBankAccount) => {
+    const next: Record<string, string> = {};
+    for (const field of fields) {
+      const value = account.fields[field.key];
+      if (typeof value === 'string' && value.length > 0) next[field.key] = value;
+    }
+    setValues(next);
+    setSelectedBankId(account.id);
+    setSaveBankOpen(false);
+    setSaveBankError(null);
+  };
+
+  const handleDeleteBank = async (id: string) => {
+    setPendingDeleteBankId(id);
+    try {
+      await deleteBank.mutateAsync(id);
+      if (selectedBankId === id) setSelectedBankId(null);
+    } catch (e) {
+      toast.danger((e as Error)?.message ?? t('wallet.fiat.ramp.savedBanks.deleteError', 'Could not delete the account'));
+    } finally {
+      setPendingDeleteBankId(null);
+    }
+  };
+
+  const handleSaveBank = async () => {
+    const label = saveBankLabel.trim();
+    if (!label || !fieldsValid || !corridor) return;
+    setSaveBankError(null);
+    try {
+      const saved = await createBank.mutateAsync({
+        label,
+        country,
+        currency: corridor.currency,
+        rail: quote?.rail ?? null,
+        fields: values,
+      });
+      setSelectedBankId(saved.id);
+      setSaveBankOpen(false);
+      setSaveBankLabel('');
+      toast.success(t('wallet.fiat.ramp.savedBanks.saved', 'Account saved'));
+    } catch (e) {
+      setSaveBankError((e as Error)?.message ?? t('wallet.fiat.ramp.savedBanks.saveError', 'Could not save the account'));
+    }
+  };
 
   const messageOf = (e: unknown): string =>
     rampErrorMessage(
@@ -295,7 +381,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         const liquidity = await railLiquidity(best.rail);
         if (!liquidity.available) {
           setError(
-            liquidity.message ?? t('wallet.fiat.ramp.noLiquidity', '{{rail}} is temporarily unavailable.', { rail: best.rail }),
+            liquidity.message ??
+              t('wallet.fiat.ramp.noLiquidity', '{{rail}} is temporarily unavailable.', {
+                rail: railLabel(best.rail, t),
+              }),
           );
           return;
         }
@@ -443,7 +532,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           throw new RampError(
             t(
               'wallet.fiat.ramp.err.paymentNotSubmitted',
-              'The provider accepted the withdrawal but never sent the on-chain payment. Your USDC is in your wallet — try again.',
+              'The provider accepted the withdrawal but never sent the payment. Your USDC is in your wallet — try again.',
             ),
           );
         }
@@ -457,12 +546,20 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       // llegó a un ledger el USDC sigue en la wallet y esperar la acreditación
       // sería esperar para siempre.
       if (hash && !(await confirmOnLedger(hash, { shouldStop: () => !openRef.current }))) {
+        // El hash sólo sirve a quien lo pueda buscar: sin "Sé de cripto" el
+        // mensaje dice lo único accionable —el pago no salió y la plata sigue
+        // en la wallet—.
         throw new RampError(
-          t(
-            'wallet.fiat.ramp.err.paymentNotOnChain',
-            'The provider reported a payment ({{hash}}) that never reached the network. Your USDC is still in your wallet.',
-            { hash: truncateMiddle(hash, 6, 6) },
-          ),
+          cryptoMode
+            ? t(
+                'wallet.fiat.ramp.err.paymentNotOnChain',
+                'The provider reported a payment ({{hash}}) that never reached the network. Your USDC is still in your wallet.',
+                { hash: truncateMiddle(hash, 6, 6) },
+              )
+            : t(
+                'wallet.fiat.ramp.err.paymentFailed',
+                'The payment could not be completed. Your USDC is still in your wallet.',
+              ),
         );
       }
 
@@ -480,7 +577,9 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         mark('payout', 'done');
         void markWithdrawalTerminal(walletAddress, trackedId.current, 'settled');
         trackedId.current = null;
-        toast.success(t('wallet.fiat.ramp.settled', 'Withdrawal paid out via {{rail}}.', { rail: active.rail }));
+        toast.success(
+          t('wallet.fiat.ramp.settled', 'Withdrawal paid out via {{rail}}.', { rail: railLabel(active.rail, t) }),
+        );
       } else {
         // Sigue acreditando: no se cierra la fila, porque el retiro todavía no
         // terminó. Si el usuario no vuelve, la ventana de gracia la cierra sola.
@@ -506,12 +605,20 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     }
   };
 
-  const rail = quote?.rail ?? '';
+  const rail = railLabel(quote?.rail, t);
   const groupLabels: Record<StepKey, string> = {
     create: t('wallet.fiat.ramp.groupCreate', 'Start the withdrawal'),
     funds: t('wallet.fiat.ramp.groupFunds', 'Withdraw from your savings'),
     payout: t('wallet.fiat.ramp.groupPayout', 'Pay out via {{rail}}', { rail }),
   };
+
+  // La línea bajo el número grande. El error tiene prioridad porque es lo que
+  // explica por qué el monto no sirve; el saldo es el default útil.
+  const amountNote = error
+    ? error
+    : balanceIsLoading
+      ? t('wallet.fiat.ramp.balanceLoading', 'Reading your savings…')
+      : t('wallet.fiat.ramp.balance', 'Available in savings: {{balance}} USDC', { balance });
 
   const footer =
     phase === 'amount' ? (
@@ -562,7 +669,9 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       })}
       size="md"
       onBack={phase === 'details' ? () => setPhase('amount') : onBack}
-      bodyClassName="flex flex-col gap-4 pb-2"
+      // Con el teclado en el cuerpo, el aire de las otras fases hace scrollear
+      // el sheet en pantallas chicas y lo primero que se corta es el monto.
+      bodyClassName={`flex flex-col pb-2 ${phase === 'amount' ? 'gap-2.5' : 'gap-4'}`}
       footer={footer}
     >
       {corridorOff && (
@@ -575,30 +684,37 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           de ramps. Cuánto USDC cuesta se resuelve con la cotización y se muestra
           en la confirmación. --- */}
       {phase === 'amount' && (
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-gray-500" htmlFor="ramp-amount">
-            {t('wallet.fiat.ramp.amountLabel', 'How much do you want to receive?')}
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="w-8 shrink-0 text-lg font-bold text-black">{symbol}</span>
-            <input
-              id="ramp-amount"
-              type="text"
-              inputMode="decimal"
-              value={amountFiat}
-              onChange={(e) => setAmountFiat(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))}
-              disabled={busy}
-              placeholder="0.00"
-              className={RAMP_FIELD_CLASS}
-            />
-            <span className="shrink-0 text-sm font-semibold text-gray-500">{currency}</span>
-          </div>
-          <p className="text-xs text-gray-500">
-            {balanceIsLoading
-              ? t('wallet.fiat.ramp.balanceLoading', 'Reading your savings…')
-              : t('wallet.fiat.ramp.balance', 'Available in savings: {{balance}} USDC', { balance })}
-          </p>
+        <div className="text-center">
+          <AmountDisplay
+            value={amountFiat}
+            symbol={symbol || currency}
+            symbolPosition="suffix"
+            muted={amountFiat === '' || !!error}
+          />
+          {/* Una sola línea abajo del número, siempre presente, para que la
+              pantalla no salte al cotizar: el problema si lo hay, y si no,
+              cuánto hay en los ahorros para gastar. */}
+          <p className={`mt-1 text-xs ${error ? 'font-medium text-red-600' : 'text-gray-400'}`}>{amountNote}</p>
         </div>
+      )}
+
+      {phase === 'amount' && (
+        <AmountKeypad
+          value={amountFiat}
+          // Tocar una tecla borra el error: lo dijo un monto que ya no es el que
+          // está en pantalla, y si quedara puesto el número seguiría en gris con
+          // un cartel rojo que no le corresponde.
+          onValueChange={(next) => {
+            setAmountFiat(next);
+            setError(null);
+          }}
+          maxDecimals={FIAT_DECIMALS}
+          // Sin tope: el máximo de la ruta llega recién con la cotización, así
+          // que un tope acá aparecería a mitad de tipear y las teclas dejarían
+          // de responder sin decir por qué. `handleQuote` lo explica.
+          disabled={busy}
+          compact
+        />
       )}
 
       {/* --- Ruta elegida + datos que pide el proveedor (los define la cotización). --- */}
@@ -606,10 +722,12 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         <>
           <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
             {/* El nombre del proveedor no se muestra: el usuario cobra por un
-                rail (QR, ACH), y quién lo liquida es un detalle nuestro. */}
+                rail (QR, transferencia), y quién lo liquida es un detalle
+                nuestro. El rail va con el nombre que la gente conoce, no con la
+                sigla que manda el proveedor. */}
             <div className="flex items-center justify-between">
               <span className="font-bold text-black">{t('wallet.fiat.ramp.routeLabel', 'Payout method')}</span>
-              <span className="text-xs font-semibold text-gray-500">{quote.rail}</span>
+              <span className="text-xs font-semibold text-gray-500">{railLabel(quote.rail, t)}</span>
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{t('wallet.fiat.ramp.youReceive', 'You receive')}</span>
@@ -631,12 +749,91 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             </div>
           </div>
 
+          <SavedBankList
+            accounts={bankAccounts}
+            fields={fields}
+            selectedId={selectedBankId}
+            loading={banksLoading}
+            disabled={busy}
+            deletingId={pendingDeleteBankId}
+            onSelect={applyBankAccount}
+            onDelete={handleDeleteBank}
+          />
+
           <RampFieldList
             fields={fields}
             values={values}
-            onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+            onChange={(key, value) => {
+              setValues((prev) => ({ ...prev, [key]: value }));
+              // Editar un campo despega el formulario de la cuenta guardada:
+              // lo que se va a mandar ya no es lo que dice esa fila.
+              setSelectedBankId(null);
+            }}
             disabled={busy}
           />
+
+          {/* Guardar la cuenta: sólo cuando ya está completa, porque guardar a
+              medias devuelve un formulario que hay que terminar igual. Es opt-in
+              —el retiro funciona sin tocarlo— y nombrar la cuenta es parte de
+              guardarla: sin nombre, dos cuentas del mismo banco no se
+              distinguen en la lista. */}
+          {fieldsValid && !saveBankOpen && (
+            <button
+              type="button"
+              onClick={() => setSaveBankOpen(true)}
+              disabled={busy}
+              className="self-start flex items-center gap-2 rounded-full border border-black border-b-2 bg-white h-9 px-3.5 text-sm font-bold text-black hover:bg-black/5 active:border-b active:translate-y-[1px] transition disabled:opacity-50"
+            >
+              <FiPlus className="w-4 h-4" />
+              {t('wallet.fiat.ramp.savedBanks.add', 'Save this account')}
+            </button>
+          )}
+
+          {fieldsValid && saveBankOpen && (
+            <div className="flex flex-col gap-2 rounded-lg border border-black border-b-2 bg-white p-3">
+              <label className="text-xs font-semibold text-gray-500" htmlFor="ramp-save-bank-label">
+                {t('wallet.fiat.ramp.savedBanks.labelField', 'Name this account')}
+              </label>
+              <input
+                id="ramp-save-bank-label"
+                type="text"
+                value={saveBankLabel}
+                onChange={(e) => {
+                  setSaveBankLabel(e.target.value);
+                  if (saveBankError) setSaveBankError(null);
+                }}
+                maxLength={60}
+                disabled={busy || createBank.isPending}
+                placeholder={t('wallet.fiat.ramp.savedBanks.labelPlaceholder', 'e.g. My bank account')}
+                className={RAMP_FIELD_CLASS}
+              />
+              {saveBankError ? <p className="text-xs font-semibold text-red-600">{saveBankError}</p> : null}
+              <div className="flex items-center gap-2">
+                <PressableButton
+                  variant="white"
+                  size="cta"
+                  className="py-2!"
+                  onClick={() => {
+                    setSaveBankOpen(false);
+                    setSaveBankError(null);
+                  }}
+                  disabled={createBank.isPending}
+                >
+                  {t('common.cancel', 'Cancel')}
+                </PressableButton>
+                <PressableButton
+                  variant="success"
+                  size="cta"
+                  className="py-2!"
+                  onClick={handleSaveBank}
+                  disabled={!saveBankLabel.trim() || createBank.isPending}
+                >
+                  {createBank.isPending ? <Spinner size="sm" color="current" /> : null}
+                  {t('wallet.fiat.ramp.savedBanks.save', 'Save')}
+                </PressableButton>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -680,9 +877,11 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             </p>
           )}
 
-          {paymentHash && (
+          {/* Detalle on-chain: sólo con "Sé de cripto". Al resto no le dice nada
+              y el paso de arriba ya cuenta en qué anda el retiro. */}
+          {cryptoMode && paymentHash && (
             <a
-              href={`https://stellar.expert/explorer/public/tx/${paymentHash}`}
+              href={stellarExpertTxUrl(paymentHash, network?.type)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-gray-500 underline decoration-dotted underline-offset-2 hover:text-black"
@@ -734,7 +933,9 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         </>
       )}
 
-      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+      {/* En la fase del monto el error ya se lee bajo el número; repetirlo acá
+          empujaría el teclado fuera de la pantalla. */}
+      {error && phase !== 'amount' && <p className="text-sm font-medium text-red-600">{error}</p>}
     </AppModal>
   );
 }
