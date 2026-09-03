@@ -63,3 +63,26 @@ export function rampErrorMessage(error: unknown, translate: (leafKey: string) =>
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 }
+
+/**
+ * Qué selects tienen que arrancar con una opción puesta, y con cuál.
+ *
+ * Un select obligatorio con opciones no tiene un "sin elegir" que signifique
+ * algo: la lista de bancos de un corredor es cerrada, así que el placeholder
+ * ("Banco") sólo agrega un toque para llegar a un valor que igual hay que dar.
+ * Los opcionales se quedan vacíos: ahí "ninguno" sí es una respuesta.
+ *
+ * Devuelve únicamente lo que falta escribir, o `null` cuando no hay nada — así
+ * el efecto que lo aplica deja de setear estado apenas el formulario está
+ * completo, en vez de volver a pisar los mismos valores en cada render.
+ */
+export function selectDefaults(fields: RampField[], values: Record<string, string>): Record<string, string> | null {
+  const patch: Record<string, string> = {};
+  for (const field of fields) {
+    if (field.type !== 'select' || field.optional === true) continue;
+    if ((values[field.key] ?? '') !== '') continue;
+    const first = field.options?.[0];
+    if (first) patch[field.key] = first.value;
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
+}

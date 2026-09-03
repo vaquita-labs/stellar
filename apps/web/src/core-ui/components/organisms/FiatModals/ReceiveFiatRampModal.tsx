@@ -16,16 +16,16 @@ import {
   type TerminalPurchaseStatus,
 } from '@/networks/pollar/onrampApi';
 import { isKycRequiredError, kycNeededBy, waitForKycApproval } from '@/networks/pollar/kycWait';
-import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
+import { fieldsAreValid, type RampField, rampErrorMessage, selectDefaults } from '@/networks/pollar/rampFields';
 import { type OnrampCorridor, type OnrampCorridorCode, useRampOnramp, usdcOutOf } from '@/networks/pollar/rampsOnramp';
 import type { RampQuote, RampTxStatus } from '@pollar/core';
 import { usePollar } from '@pollar/react';
 import { Spinner } from '@heroui/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { railLabel } from '../../../helpers/rampRail';
 import { FIAT_DECIMALS, formatTokenPrecise } from '../../../helpers/numbers';
-import { useAwaitingFundsStore, useRampActiveStore } from '../../../stores';
+import { useAwaitingFundsStore, usePendingCreditStore, useRampActiveStore } from '../../../stores';
 import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -110,7 +110,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const [requote, setRequote] = useState(0);
   const [failure, setFailure] = useState<string | null>(null);
   const [amountFiat, setAmountFiat] = useState('');
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [typedValues, setValues] = useState<Record<string, string>>({});
   const [corridor, setCorridor] = useState<OnrampCorridor | null>(null);
   const [corridorOff, setCorridorOff] = useState<string | null>(null);
   // El resultado de cotizar se guarda JUNTO AL MONTO que lo produjo. Así no hay
@@ -331,6 +331,19 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // proveedor y el reloj: acá no se decide nada.
   const expiresAt = instructions?.expiresAt ?? null;
   const screen: OnrampScreen = screenFor({ providerStatus, expiresAt, now });
+
+  // El pago ya está confirmado y la pantalla lo dice, pero el USDC entra
+  // después: hasta que llegue, el saldo del header muestra un número que
+  // sabemos viejo. La marca lo pone a parpadear —plata en vuelo, no un error— y
+  // la apaga `AutoInvest` cuando la plata aterriza y ofrece el vault pasivo.
+  // Se prende también en `settled` porque el proveedor da la compra por
+  // acreditada antes de que el balance on-chain que lee el header la vea.
+  const startPendingCredit = usePendingCreditStore((s) => s.startPendingCredit);
+  useEffect(() => {
+    if (!open || phase !== 'paying') return;
+    if (screen !== 'processing' && screen !== 'settled') return;
+    startPendingCredit();
+  }, [open, phase, screen, startPendingCredit]);
   const receivedUsdc = providerAmount ? receivedUsdcFrom(providerAmount, estimate) : estimate;
 
   // Mientras la compra pueda cambiar sola se le pregunta al proveedor. Un error
@@ -406,7 +419,22 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // Qué datos pide el proveedor lo define la cotización elegida: no hay ningún
   // campo boliviano cableado acá. Si la ruta no pide nada, el paso queda vacío y
   // el botón habilitado, que es exactamente lo que corresponde.
-  const fields: RampField[] = quote?.requiredFields ?? [];
+  const fields = useMemo<RampField[]>(() => quote?.requiredFields ?? [], [quote]);
+  /**
+   * Lo que el formulario muestra y manda: lo tipeado más el default de cada
+   * select obligatorio que todavía está vacío (ver `selectDefaults`).
+   *
+   * El default entra en los valores y no sólo en lo que se ve porque el
+   * Continuar los mira: uno puramente visual dejaría el banco elegido en
+   * pantalla y el botón gris. Y se deriva en el render en vez de escribirse con
+   * un efecto para que el estado siga guardando sólo lo que el usuario tipeó
+   * —el `onChange` de la lista significa "lo editó él", y en el retiro eso
+   * despega el formulario de la cuenta guardada.
+   */
+  const values = useMemo(
+    () => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }),
+    [fields, typedValues],
+  );
   const fieldsValid = fieldsAreValid(fields, values);
 
   /**

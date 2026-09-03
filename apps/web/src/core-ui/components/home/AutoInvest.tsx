@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useIdleFunds } from '../../hooks/useAutoInvest';
+import { usePendingCreditStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { IdleFundsModal } from './IdleFundsModal';
 
@@ -24,10 +25,19 @@ export function AutoInvest() {
     prevIdle.current = idle;
   }, [idle]);
 
+  // Abrir esta pantalla es la señal de que la plata que se estaba esperando ya
+  // llegó: el saldo del header deja de parpadear acá y no en la rampa, que para
+  // entonces hace rato que se cerró.
+  const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
+
   useEffect(() => {
     if (shouldPrompt && !dismissed) setOpen(true);
     else if (!shouldPrompt) setOpen(false);
   }, [shouldPrompt, dismissed]);
+
+  useEffect(() => {
+    if (open) clearPendingCredit();
+  }, [open, clearPendingCredit]);
 
   const mounted = useModalPresence(open);
 

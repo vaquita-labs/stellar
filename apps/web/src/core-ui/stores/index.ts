@@ -9,3 +9,4 @@ export * from './ramp-active';
 export * from './awaiting-funds';
 export * from './resize';
 export * from './vaquita-positions';
+export * from './pending-credit';
