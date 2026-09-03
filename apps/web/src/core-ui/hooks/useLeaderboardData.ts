@@ -4,6 +4,7 @@ import { useConfigStore } from '@/core-ui/stores';
 import { LeaderboardResponseDTO } from '@/core-ui/types';
 import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { ONE_MINUTE } from '../config/constants';
+import { VOLATILE_QUERY_OPTIONS } from '../config/queryFreshness';
 
 export const LEADERBOARD_PAGE_SIZE = 20;
 
@@ -142,8 +143,9 @@ export const useLeaderboardData = (params: LeaderboardViewParams = {}) => {
     // which keeps deep scrolls consistent at the cost of one request per page.
     refetchInterval: ONE_MINUTE * 5,
     enabled: !!network?.networkName,
-    refetchOnReconnect: true,
-    refetchOnWindowFocus: true,
+    ...VOLATILE_QUERY_OPTIONS,
+    // The ranking is a live scoreboard: every visit reads the current standing
+    // rather than the one cached on the last visit.
     refetchOnMount: 'always',
   });
 };

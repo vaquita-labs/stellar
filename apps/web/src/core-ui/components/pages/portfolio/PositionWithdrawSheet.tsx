@@ -439,7 +439,9 @@ export function PositionWithdrawSheet({
       size="lg"
       // En confirm, la flecha atrás vuelve al detalle (mismo modal, sin abrir otro).
       onBack={step === 'confirm' ? () => setStep('detail') : undefined}
-      isDismissable={step !== 'processing'}
+      // Los flujos de plata no se cierran tocando afuera en ningún paso (ver
+      // WithdrawModal): sólo la X.
+      isDismissable={false}
       hideClose={step === 'processing'}
       bodyClassName={'flex flex-col gap-3 pb-2'}
       footer={footer}

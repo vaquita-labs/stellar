@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiExternalLink, FiPlus } from 'react-icons/fi';
 import { railLabel, truncateMiddle } from '../../../helpers';
-import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
+import { AMOUNT_DECIMALS, FIAT_DECIMALS, floorAmount } from '../../../helpers/numbers';
 import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
 import {
   type SavedBankAccount,
@@ -29,8 +29,7 @@ import {
 } from '../../../hooks/useSavedBankAccounts';
 import { useConfigStore, useRampActiveStore } from '../../../stores';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
-import { AmountDisplay } from '../../molecules/AmountDisplay';
-import { AmountKeypad } from '../../molecules/AmountKeypad';
+import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { FiatStepList, StepStatus } from './FiatStepList';
@@ -60,12 +59,6 @@ const STEP_ORDER: StepKey[] = ['funds', 'create', 'payout'];
 const INITIAL_STEPS: Record<StepKey, StepStatus> = { create: 'idle', funds: 'idle', payout: 'idle' };
 
 /**
- * Decimales que se pueden teclear en moneda local. Dos, no los 7 del USDC:
- * centavos de boliviano o de real es todo lo que el proveedor liquida.
- */
-const FIAT_DECIMALS = 2;
-
-/**
  * The fiat the quote SETTLES, which is not necessarily the one that was asked
  * for: the provider quotes on the crypto side, so asking for 12 BOB lands near
  * it — at 12.13 — and that is what reaches the bank. This is the amount on
@@ -78,6 +71,21 @@ const settledFiatOf = (quote: RampQuote | null, requested: number): number => {
   const settled = Number(quote?.fiatAmount);
   return Number.isFinite(settled) && settled > 0 ? settled : requested;
 };
+
+/**
+ * Margin added on top of the quote when pulling USDC out of the vault. The
+ * provider charges `cryptoAmount` to the stroop and rejects the withdrawal if
+ * the wallet is even one short, and how much the vault actually pays out is
+ * decided by ITS rounding when it unwinds the position — not by the shares we
+ * ask it to burn. A tenth of a cent absorbs that gap.
+ *
+ * The leftover stays in the wallet: it is far below the minimum the idle-funds
+ * gate acts on, so it neither prompts nor blocks anything.
+ */
+const FUNDING_DUST = 0.0001;
+
+/** USDC to pull from the vault to cover a quote, quantized to the stroop. */
+const fundingAmount = (cost: number): number => floorAmount(cost + FUNDING_DUST, AMOUNT_DECIMALS);
 
 /**
  * Fiat off-ramp over Pollar's ramps endpoints, for any of the corridors the app
@@ -311,17 +319,22 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   /**
    * Validates the cost the quote publishes against the balance. Returns the
    * error message when it cannot be paid, or null when it fits.
+   *
+   * What has to fit is the cost PLUS {@link FUNDING_DUST}, not the cost alone:
+   * a balance that covers the quote exactly leaves no room for the vault's
+   * payout rounding, and the withdrawal would die at the provider with the
+   * money already out of savings.
    */
   const costProblem = (cost: number | null | undefined): string | null => {
     if (cost == null || !Number.isFinite(cost) || cost <= 0) {
       return t('wallet.fiat.ramp.err.unknownCost', 'The quote did not report how much USDC this withdrawal costs.');
     }
-    if (cost > balance) {
+    if (fundingAmount(cost) > balance) {
       return t(
         'wallet.fiat.ramp.err.insufficientQuote',
-        'This withdrawal costs {{cost}} USDC and your savings hold {{balance}}.',
+        'This withdrawal needs {{needed}} USDC in your savings and you have {{balance}}. Try a smaller amount.',
         {
-          cost,
+          needed: fundingAmount(cost),
           balance,
         },
       );
@@ -418,17 +431,22 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       // in the wallet there is nothing to pay with and the withdrawal sits in
       // `pending` with no hash forever.
       //
-      // The amount is `quote.cryptoAmount`, the EXACT charge fixed at quote
+      // The charge is `quote.cryptoAmount`, the EXACT figure fixed at quote
       // time. Dividing the requested fiat by `rate` lands on a different number,
       // because `rate` is published against the fiat that settles and the charge
-      // is rounded to the cent. It is not clamped to the balance either:
-      // withdrawing less than the charge guarantees a short payment, and
-      // `costProblem` already rejected the withdrawal if it does not fit.
+      // is rounded to the cent.
+      //
+      // What leaves the vault is that charge plus `FUNDING_DUST`: asking for the
+      // exact figure lands under it once the vault rounds its payout, and the
+      // provider rejects a wallet that is a single stroop short. It is not
+      // clamped to the balance either — withdrawing less than the charge
+      // guarantees a short payment, and `costProblem` already rejected the
+      // withdrawal if the funded amount does not fit.
       mark('funds', 'running');
       const cost = quote.cryptoAmount;
       const costIssue = costProblem(cost);
       if (costIssue) throw new RampError(costIssue);
-      const toWithdraw = cost as number;
+      const toWithdraw = fundingAmount(cost as number);
 
       // La fila se abre ANTES de sacar del vault, no después de crear con el
       // proveedor: si el retiro se cae en el medio, la plata ya se movió y esta
@@ -612,13 +630,11 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     payout: t('wallet.fiat.ramp.groupPayout', 'Pay out via {{rail}}', { rail }),
   };
 
-  // La línea bajo el número grande. El error tiene prioridad porque es lo que
-  // explica por qué el monto no sirve; el saldo es el default útil.
-  const amountNote = error
-    ? error
-    : balanceIsLoading
-      ? t('wallet.fiat.ramp.balanceLoading', 'Reading your savings…')
-      : t('wallet.fiat.ramp.balance', 'Available in savings: {{balance}} USDC', { balance });
+  // Lo que dice la línea bajo el número cuando NO hay problema (el error lo pisa
+  // dentro de `AmountStep`): cuánto hay en los ahorros para gastar.
+  const amountHint = balanceIsLoading
+    ? t('wallet.fiat.ramp.balanceLoading', 'Reading your savings…')
+    : t('wallet.fiat.ramp.balance', 'Available in savings: {{balance}} USDC', { balance });
 
   const footer =
     phase === 'amount' ? (
@@ -653,16 +669,15 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      // Con el retiro en curso no se cierra tocando afuera: la plata ya salió
+      // Regla de todos los flujos de plata: no se cierran tocando afuera en
+      // NINGÚN paso. Acá pesa doble — con el retiro en curso la plata ya salió
       // del vault y está en camino a la rampa, y un toque al borde en medio de
-      // eso deja al usuario sin la única pantalla que le dice dónde quedó. Antes
-      // se permitía durante la espera del KYC, que es la parte más larga y
-      // justamente la más fácil de cerrar sin querer.
+      // eso deja al usuario sin la única pantalla que le dice dónde quedó.
       //
       // La X sigue ahí a propósito: la espera del proveedor puede no terminar
       // nunca, y el polling se aborta solo al cerrar. Es un cierre deliberado,
       // no un accidente.
-      isDismissable={!busy}
+      isDismissable={false}
       title={t('wallet.fiat.ramp.title', 'Withdraw to {{country}} ({{currency}})', {
         country: countryName,
         currency: currency || country,
@@ -684,33 +699,19 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           de ramps. Cuánto USDC cuesta se resuelve con la cotización y se muestra
           en la confirmación. --- */}
       {phase === 'amount' && (
-        <div className="text-center">
-          <AmountDisplay
-            value={amountFiat}
-            symbol={symbol || currency}
-            symbolPosition="suffix"
-            muted={amountFiat === '' || !!error}
-          />
-          {/* Una sola línea abajo del número, siempre presente, para que la
-              pantalla no salte al cotizar: el problema si lo hay, y si no,
-              cuánto hay en los ahorros para gastar. */}
-          <p className={`mt-1 text-xs ${error ? 'font-medium text-red-600' : 'text-gray-400'}`}>{amountNote}</p>
-        </div>
-      )}
-
-      {phase === 'amount' && (
-        <AmountKeypad
+        <AmountStep
           value={amountFiat}
-          // Tocar una tecla borra el error: lo dijo un monto que ya no es el que
-          // está en pantalla, y si quedara puesto el número seguiría en gris con
-          // un cartel rojo que no le corresponde.
-          onValueChange={(next) => {
-            setAmountFiat(next);
-            setError(null);
-          }}
-          maxDecimals={FIAT_DECIMALS}
-          // Sin tope: el máximo de la ruta llega recién con la cotización, así
-          // que un tope acá aparecería a mitad de tipear y las teclas dejarían
+          onValueChange={setAmountFiat}
+          decimals={FIAT_DECIMALS}
+          symbol={symbol || currency}
+          symbolPosition="suffix"
+          error={error}
+          onErrorClear={() => setError(null)}
+          hint={amountHint}
+          // Sin chip de saldo: el saldo está en USDC y acá se teclea moneda
+          // local, así que no hay un "máximo" que tipear sin la cotización.
+          // Por lo mismo va sin `max`: el tope de la ruta llega recién con la
+          // cotización y aparecería a mitad de tipear, con las teclas dejando
           // de responder sin decir por qué. `handleQuote` lo explica.
           disabled={busy}
           compact

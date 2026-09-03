@@ -2,27 +2,25 @@
 
 import { isNewDepositHandled } from '@/networks/helpers';
 import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
-import {
-  Button,
-  Description,
-  Label,
-  ListBox,
-  Select,
-  Spinner,
-  toast,
-} from '@heroui/react';
+import { Description, Label, ListBox, Select, Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 } from 'uuid';
-import { formatTimeDeposit, formatUsdPrecise, getQuickAmounts, MIN_USDC, truncateDecimals } from '../../../helpers';
+import {
+  AMOUNT_DECIMALS,
+  formatTimeDeposit,
+  formatTokenPrecise,
+  getQuickAmounts,
+  MIN_USDC,
+  truncateDecimals,
+} from '../../../helpers';
 import { useAnalytics, useRestDeposit, useTransactions } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
-import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
-import { TokenSymbol } from '../../molecules/MoneyInput/types';
 import { DepositModalProps } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
 
@@ -39,7 +37,7 @@ export function DepositModal({
   const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [amount, setAmount] = useState<string>('');
-  const { token, lockPeriod, setLockPeriod, walletAddress, setToken, network } = useConfigStore();
+  const { token, lockPeriod, setLockPeriod, walletAddress, network } = useConfigStore();
   const { getNextNonce, createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactions();
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
@@ -216,7 +214,9 @@ export function DepositModal({
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      isDismissable={!balanceIsLoading && !isDepositing}
+      // Los flujos de plata no se cierran tocando afuera en ningún paso (ver
+      // WithdrawModal): sólo la X.
+      isDismissable={false}
       title={t('deposit.modal.title', 'Deposit')}
       titleIcon="/icons/bag.svg"
       titleIconAlt="deposit"
@@ -259,57 +259,27 @@ export function DepositModal({
           </Select>
 
           <div className="flex flex-col gap-2">
-            <MoneyInput
-              balanceFormatted={balanceFormatted.toString()}
-              tokenSymbol={token?.symbol as TokenSymbol}
+            {/* En el tutorial el monto viene puesto: sin chips, sin saldo y sin
+                mínimo, que ahí no hay nada que decidir ni que corregir. */}
+            <AmountStep
               value={amount}
-              onValueChange={(v) => setAmount(v)}
-              onTokenChange={(t) => setToken(t)}
-              onReloadBalance={refreshWalletBalance}
-              loading={isDepositing}
-              balanceIsLoading={balanceIsLoading}
-              // Tutorial: monto fijo, no se puede editar ni cambiar el token.
-              disabled={simulate}
-              min={MIN_USDC}
+              onValueChange={setAmount}
+              decimals={AMOUNT_DECIMALS}
+              compact
+              disabled={simulate || isDepositing}
+              available={simulate ? null : balanceFormatted}
+              availableLoading={balanceIsLoading}
+              presets={simulate ? undefined : quickAmounts}
+              // El mínimo se dice antes de que el botón se apague: un CTA muerto
+              // sin explicación es lo que se quiere evitar.
+              hint={
+                simulate
+                  ? undefined
+                  : t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
+                      amount: formatTokenPrecise(MIN_USDC, 2),
+                    })
+              }
             />
-            {/* El mínimo se dice antes de que el botón se apague: un CTA muerto
-                sin explicación es lo que se quiere evitar. En el tutorial no va,
-                que ahí el monto viene puesto. */}
-            {!simulate && (
-              <p className="text-xs text-gray-400">
-                {t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
-                  amount: formatUsdPrecise(MIN_USDC, 2),
-                })}
-              </p>
-            )}
-            <div className={`flex justify-between gap-2 ${simulate ? 'hidden' : ''}`}>
-              {Array.isArray(quickAmounts) &&
-                quickAmounts.map((value: number) => (
-                  <Button
-                    key={value}
-                    onPress={
-                      isDepositing
-                        ? undefined
-                        : () => {
-                            setAmount(value.toString());
-                          }
-                    }
-                    className={
-                      'flex-1 bg-transparent border border-black border-b-2 text-black rounded-md hover:bg-primary' +
-                      (Number(amount) === value ? ' bg-primary' : '')
-                    }
-                  >
-                    {value}
-                  </Button>
-                ))}
-              <Button
-                key={'MAX'}
-                onPress={isDepositing ? undefined : () => setAmount(balanceFormatted.toString())}
-                className="flex-1 bg-transparent border border-black border-b-2 text-black rounded-md hover:bg-primary"
-              >
-                MAX
-              </Button>
-            </div>
             {!simulate && (
               <Link
                 href="/profile/wallet?bridge=1"

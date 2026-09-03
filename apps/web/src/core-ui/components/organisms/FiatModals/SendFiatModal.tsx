@@ -10,13 +10,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiExternalLink } from 'react-icons/fi';
 import { truncateDecimals } from '../../../helpers';
-import { AMOUNT_DECIMALS, floorAmount, MIN_USDC } from '../../../helpers/numbers';
+import { AMOUNT_DECIMALS, floorAmount, formatTokenPrecise, MIN_USDC } from '../../../helpers/numbers';
 import { humanizeTxError } from '../../../helpers/txError';
 import { useLivePassiveUsdc } from '../../../hooks';
 import { useConfigStore, useRampActiveStore } from '../../../stores';
+import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
-import { MoneyInput } from '../../molecules/MoneyInput/MoneyInput';
-import { TokenSymbol } from '../../molecules/MoneyInput/types';
 import { FiatAuthBadge } from './FiatAuthBadge';
 import { FiatStepList, StepStatus } from './FiatStepList';
 import { FiatTxHistory } from './FiatTxHistory';
@@ -58,7 +57,7 @@ const INITIAL_STEPS: Record<StepKey, StepStatus> = {
 
 export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
   const { t } = useTranslation();
-  const { token, setToken } = useConfigStore();
+  const { token } = useConfigStore();
   const { wallet, refreshAssets, refreshWalletBalance, login } = usePollar();
   const walletAddress = wallet?.address ?? null;
   // Id del adapter on-chain (freighter, xbull, …) solo cuando la wallet es
@@ -374,11 +373,12 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      // Con el retiro en curso no se cierra tocando afuera: el USDC ya salió de
-      // Blend y está en camino al anchor, y perder la pantalla ahí deja al
-      // usuario sin saber dónde quedó su plata. La X sigue disponible, que es un
-      // cierre deliberado y aborta el polling solo.
-      isDismissable={!busy}
+      // No se cierra tocando afuera en ningún paso (ver WithdrawModal). Con el
+      // retiro en curso además importa el destino: el USDC ya salió de Blend y
+      // está en camino al anchor, y perder la pantalla ahí deja al usuario sin
+      // saber dónde quedó su plata. La X sigue disponible, que es un cierre
+      // deliberado y aborta el polling solo.
+      isDismissable={false}
       title={t('wallet.fiat.send.title', 'Send fiat (ARS)')}
       size="md"
       bodyClassName="flex flex-col gap-4 pb-6"
@@ -400,21 +400,21 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
         )
       }
     >
-      <MoneyInput
-        balanceFormatted={balanceFormatted.toString()}
-        tokenSymbol={token?.symbol as TokenSymbol}
+      {/* `overBalance` se deriva del monto, así que la línea vuelve sola al
+          mínimo en cuanto se borra un dígito: no hace falta `onErrorClear`. */}
+      <AmountStep
         value={amount}
-        onValueChange={(v) => setAmount(v)}
-        onTokenChange={(t) => setToken(t)}
-        onReloadBalance={refreshBalance}
-        loading={busy}
-        balanceIsLoading={balanceIsLoading}
-        min={MIN_USDC}
+        onValueChange={setAmount}
+        decimals={AMOUNT_DECIMALS}
+        compact
+        disabled={busy}
+        available={balanceFormatted}
+        availableLoading={balanceIsLoading}
+        error={overBalance ? t('wallet.fiat.send.insufficient', 'Insufficient USDC balance.') : null}
+        hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
+          amount: formatTokenPrecise(MIN_USDC, 2),
+        })}
       />
-
-      {overBalance && (
-        <p className="text-danger text-xs -mt-2">{t('wallet.fiat.send.insufficient', 'Insufficient USDC balance.')}</p>
-      )}
 
       {/* Stepper del flujo off-ramp. */}
       <FiatStepList

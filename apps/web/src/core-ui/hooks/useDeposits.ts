@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { clientEnv } from '../config/clientEnv';
+import { LIVE_QUERY_OPTIONS } from '../config/queryFreshness';
 import { useConfigStore } from '../stores';
 import { DepositSummaryResponseDTO } from '../types';
 
@@ -46,8 +47,11 @@ export const useDeposits = (_walletAddress?: string) => {
         throw error;
       }
     },
-    // No polling: invalidated by the Ably `deposits-changes` channel on
-    // deposit/withdraw (see ListenDepositsChanges).
+    // No polling: the Ably `deposits-changes` channel (see
+    // ListenDepositsChanges) pushes the change when it happens, and this preset
+    // covers the rest — a deposit made on another device, or with this tab
+    // closed, shows up on the next mount, focus or reconnect.
+    ...LIVE_QUERY_OPTIONS,
     retry: 3,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     enabled: !!network?.networkName && !!walletAddress,

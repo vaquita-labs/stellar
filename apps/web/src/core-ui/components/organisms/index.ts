@@ -6,6 +6,7 @@ export * from './HorizontalCarousel';
 export * from './WalletButton';
 export * from './EditProfileModal';
 export * from './LoaderLayout';
+export * from './PullToRefresh';
 export * from './LockPeriodModal';
 export * from './SavingsStats';
 export * from './VaquitasListModal';

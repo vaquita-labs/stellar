@@ -31,6 +31,13 @@ export const formatUsd = (amount: number) =>
 export const AMOUNT_DECIMALS = 7;
 
 /**
+ * Decimales del monto en MONEDA LOCAL (los ramps). No es `AMOUNT_DECIMALS`: acá
+ * el usuario teclea pesos/bolivianos, y ningún proveedor de fiat cotiza más allá
+ * del centavo. Es el mismo 2 para tipear el monto y para mostrar la cotización.
+ */
+export const FIAT_DECIMALS = 2;
+
+/**
  * Monto mínimo (en USDC) para mover plata: depositar, retirar, poner a rendir.
  * Es la MISMA regla que valida el backend (`MIN_USDC_AMOUNT` en @vaquita/shared);
  * si cambia una, cambiá la otra. El front la usa para deshabilitar y avisar; el

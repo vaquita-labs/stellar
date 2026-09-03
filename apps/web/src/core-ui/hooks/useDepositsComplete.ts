@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { LIVE_QUERY_OPTIONS } from '../config/queryFreshness';
 import { clientEnv } from '../config/clientEnv';
 import { useConfigStore } from '../stores';
 import { DepositResponseDTO, TotalDepositsResponseDTO } from '../types';
@@ -13,7 +14,7 @@ export const useDepositsComplete = (_walletAddress?: string) => {
     queryFn: async () => {
       try {
         const response = await fetch(
-          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.networkName}/wallet/${walletAddress}/complete`
+          `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${network?.networkName}/wallet/${walletAddress}/complete`,
         );
 
         // Es plata: un 5xx tiene que fallar, no resolver vacío. `fetch` solo
@@ -37,9 +38,7 @@ export const useDepositsComplete = (_walletAddress?: string) => {
             protocolInterest: Number(deposit.protocolInterest),
             blendInterest: Number(deposit.blendInterest),
             vaultInterest:
-              deposit.vaultInterest !== undefined && deposit.vaultInterest !== null
-                ? Number(deposit.vaultInterest)
-                : undefined,
+              deposit.vaultInterest !== undefined && deposit.vaultInterest !== null ? Number(deposit.vaultInterest) : undefined,
             depositIdHex: deposit.depositIdHex,
             // The pool re-derives the position id from the caller + this nonce,
             // so withdrawing is impossible without it.
@@ -70,20 +69,12 @@ export const useDepositsComplete = (_walletAddress?: string) => {
         throw error;
       }
     },
-    // Overrides the global 24h staleTime + `refetchOn*: false` defaults. Those
-    // defaults leave the Ably `deposits-changes` channel (see
-    // ListenDepositsChanges) as the only refresh path, so a deposit or withdraw
-    // made from another session lands here only if this tab happened to be open
-    // and connected at that exact moment — otherwise the persisted localStorage
-    // balance stays on screen for a full day.
-    //
-    // The persistence still does its job: the cached value paints instantly on
-    // load, and these only add the revalidation behind it (no spinner, the old
-    // value stays visible while `isFetching`).
-    staleTime: 0,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    // This list is the transactions screen, so it never serves a stale page: the
+    // Ably `deposits-changes` channel (see ListenDepositsChanges) only reaches a
+    // tab that was open and connected at that moment, and the preset covers a
+    // deposit or withdraw made anywhere else. The persisted value still paints
+    // instantly on load and stays visible while `isFetching`.
+    ...LIVE_QUERY_OPTIONS,
     retry: 3,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     enabled: !!network?.networkName && !!walletAddress,

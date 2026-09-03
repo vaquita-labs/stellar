@@ -1,5 +1,6 @@
 import { PoolV2 } from '@blend-capital/blend-sdk';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { VOLATILE_QUERY_OPTIONS } from '../config/queryFreshness';
 import { useConfigStore } from '@/core-ui/stores';
 import { blendConfigForToken } from '@/networks/stellar/blendDirect';
 import { getNetworkPassphrase, getRpcUrl, getStellarNetwork } from '@/networks/stellar/kit';
@@ -49,21 +50,16 @@ export const useBlendPosition = (walletAddress?: string) => {
       };
     },
     enabled: !!walletAddress && !!config,
-    // La posición solo cambia al depositar/retirar; 60s es de sobra y mantiene
-    // el RPC tranquilo. Tras un depósito, invalidar esta query fuerza el refresh.
-    staleTime: 60_000,
     // --- Robustez con dinero ---------------------------------------------------
     // Es plata: el saldo NO puede parpadear a $0 ni bajar por un blip del RPC.
     // 1) keepPreviousData: durante un refetch se sigue mostrando el último valor
     //    conocido, nunca `undefined` a mitad de camino.
     placeholderData: keepPreviousData,
-    // 2) Refresco en background al volver al home / foco: la lectura on-chain se
-    //    actualiza sin spinner (el valor persistido sigue en pantalla). Pisa a
-    //    propósito el refetchOnMount:false global, porque el saldo debe estar al
-    //    día. Al no haber `undefined`, no hay flash a cero.
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    // 2) El preset revalida al montar, al volver el foco y al reconectar, con
+    //    60s de gracia para no martillar el RPC. El valor persistido sigue en
+    //    pantalla mientras corre el refetch, así que no hay spinner ni flash a
+    //    cero. Tras un depósito, invalidar esta query fuerza el refresh igual.
+    ...VOLATILE_QUERY_OPTIONS,
     // 3) Reintentos con backoff: un parpadeo del RPC no debe convertirse en
     //    "no sé cuánto tenés". Recién tras varios fallos se considera error.
     retry: 4,

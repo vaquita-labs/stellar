@@ -5,7 +5,7 @@ import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
 import { Popover, PopoverContent, PopoverTrigger, Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { motion, useAnimationControls } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { usePollar } from '@pollar/react';
 import { useEffect, useState } from 'react';
@@ -16,15 +16,14 @@ import { IoWalletOutline } from 'react-icons/io5';
 import {
   AMOUNT_DECIMALS,
   floorAmount,
+  formatTokenPrecise,
   formatUsdPrecise,
   MIN_USDC,
-  truncatedAmountString,
   truncateMiddle,
 } from '../../../helpers';
 import { useAnalytics, useBlendPosition, useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
-import { AmountDisplay } from '../../molecules/AmountDisplay';
-import { AmountKeypad } from '../../molecules/AmountKeypad';
+import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -71,7 +70,7 @@ export function DepositMethodModal({
   // Se enciende cuando el usuario intenta revisar un monto mayor al disponible:
   // apaga el número a gris y dispara el temblor. Se apaga al seguir tecleando.
   const [overBalance, setOverBalance] = useState(false);
-  const amountControls = useAnimationControls();
+  const { controls: amountControls, shake } = useAmountShake();
 
   const queryClient = useQueryClient();
   const { refreshWalletBalance, wallet } = usePollar();
@@ -134,10 +133,7 @@ export function DepositMethodModal({
 
   const shakeAmount = () => {
     setOverBalance(true);
-    void amountControls.start({
-      x: [0, -8, 8, -6, 6, -3, 3, 0],
-      transition: { duration: 0.45, ease: 'easeInOut' },
-    });
+    shake();
   };
 
   const handleReview = () => {
@@ -230,34 +226,23 @@ export function DepositMethodModal({
 
   // --- Paso: monto -----------------------------------------------------------
   const amountStep = (
-    // Todo el paso está apretado a propósito: con el teclado + el CTA + el aviso
-    // de red, cualquier aire de más obliga a scrollear el sheet en pantallas
-    // chicas y se corta el monto, que es justo lo que el usuario mira.
-    <div className="flex flex-col gap-2.5">
-      <div className="text-center">
-        <AmountDisplay value={amount} controls={amountControls} muted={overBalance || amount === ''} />
-        <button
-          type="button"
-          onClick={() => {
-            setAmount(truncatedAmountString(available));
-            if (overBalance) setOverBalance(false);
-          }}
-          disabled={balanceIsLoading}
-          className="mt-1 inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10 disabled:opacity-60"
-        >
-          {balanceIsLoading ? (
-            <span className="h-3 w-20 rounded bg-black/10 animate-pulse" />
-          ) : (
-            `${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available)}`
-          )}
-        </button>
-        <p className="mt-1 text-xs text-gray-400">
-          {t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
-            amount: formatUsdPrecise(MIN_USDC, 2),
-          })}
-        </p>
-      </div>
-
+    // `compact` a propósito: con el teclado + el CTA + el aviso de red, cualquier
+    // aire de más obliga a scrollear el sheet en pantallas chicas y se corta el
+    // monto, que es justo lo que el usuario mira.
+    <AmountStep
+      value={amount}
+      onValueChange={setAmount}
+      decimals={AMOUNT_DECIMALS}
+      compact
+      controls={amountControls}
+      available={available}
+      availableLoading={balanceIsLoading}
+      error={overBalance ? t('withdraw.exceedsBalance', "That's more than you have available.") : null}
+      onErrorClear={() => setOverBalance(false)}
+      hint={t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
+        amount: formatTokenPrecise(MIN_USDC, 2),
+      })}
+    >
       {/* Origen de los fondos: la cuenta Vaquita del usuario. A diferencia del
           retiro no hay selector — el USDC solo puede salir de acá. */}
       <div className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-2.5">
@@ -277,17 +262,7 @@ export function DepositMethodModal({
           </span>
         </span>
       </div>
-
-      <AmountKeypad
-        value={amount}
-        onValueChange={(next) => {
-          setAmount(next);
-          if (overBalance) setOverBalance(false);
-        }}
-        maxDecimals={AMOUNT_DECIMALS}
-        compact
-      />
-    </div>
+    </AmountStep>
   );
 
   // --- Paso: confirmación ----------------------------------------------------
@@ -454,8 +429,10 @@ export function DepositMethodModal({
       onOpenChange={onOpenChange}
       title={STEP_TITLE[step]}
       size="md"
-      // Durante la transacción el sheet no se puede cerrar ni volver atrás.
-      isDismissable={step !== 'processing'}
+      // Los flujos de plata no se cierran tocando afuera en ningún paso (ver
+      // WithdrawModal): sólo la X.
+      isDismissable={false}
+      // Durante la transacción tampoco se puede cerrar ni volver atrás.
       hideClose={step === 'processing'}
       onBack={backTarget ? () => setStep(backTarget) : undefined}
       bodyClassName={'flex flex-col gap-3 ' + (footer ? 'pb-2' : 'pb-6')}

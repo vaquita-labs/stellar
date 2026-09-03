@@ -1920,16 +1920,6 @@
     "cloud": {
       "alt": "cloud"
     },
-    "moneyInput": {
-      "currency": "Currency",
-      "invalidNumber": "Invalid number",
-      "label": "Amount to deposit",
-      "max": "Max {{max}}",
-      "maxDecimals_one": "Max {{count}} decimal",
-      "maxDecimals_other": "Max {{count}} decimals",
-      "min": "Min {{min}}",
-      "totalBalance": "Total balance: ${{balance}}"
-    },
     "table": {
       "action": "Action",
       "exportCsv": "Export CSV",
@@ -2069,7 +2059,7 @@
           "anchorError": "The provider rejected the request. Try again in a moment.",
           "assetNotEnabled": "This currency is not available for that route right now.",
           "generic": "The withdrawal could not be completed.",
-          "insufficientQuote": "This withdrawal costs {{cost}} USDC and your savings hold {{balance}}.",
+          "insufficientQuote": "This withdrawal needs {{needed}} USDC in your savings and you have {{balance}}. Try a smaller amount.",
           "kycRequired": "The provider needs to verify your identity before continuing.",
           "noRoutes": "No route available for {{amount}} {{currency}}. Try a different amount.",
           "paymentFailed": "The payment could not be completed. Your USDC is still in your wallet.",
@@ -2281,6 +2271,7 @@
     },
     "amountLabel": "Amount",
     "available": "Available",
+    "exceedsBalance": "That's more than you have available.",
     "confirm": {
       "title": "Confirm withdrawal"
     },
@@ -2537,7 +2528,6 @@
     "borrowBlocked": "You have an open Blend borrow against these funds. Repay it first, then you can move them.",
     "migrate": "Move to Vault",
     "moving": "Moving…",
-    "max": "Max",
     "notNow": "Not now"
   },
   "invest": {

@@ -171,7 +171,9 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
       onOpenChange={onOpenChange}
       title={t('wallet.send.title', 'Send')}
       size="md"
-      isDismissable={!sending}
+      // Los flujos de plata no se cierran tocando afuera en ningún paso (ver
+      // WithdrawModal): sólo la X.
+      isDismissable={false}
       hideClose={sending}
       bodyClassName="flex flex-col gap-4 pb-6"
       footer={

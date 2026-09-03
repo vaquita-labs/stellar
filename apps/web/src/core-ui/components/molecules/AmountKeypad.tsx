@@ -18,9 +18,9 @@ interface AmountKeypadProps {
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del'] as const;
 
 /**
- * Teclado numérico in-app para montos. A diferencia de `MoneyInput` (que es un
- * <input> y depende del teclado nativo del OS), acá el usuario nunca ve el
- * teclado del sistema: el sheet no se reacomoda ni tapa el CTA en mobile.
+ * Teclado numérico in-app para montos. A diferencia de un <input>, que depende
+ * del teclado nativo del OS, acá el usuario nunca ve el teclado del sistema: el
+ * sheet no se reacomoda ni tapa el CTA en mobile.
  *
  * Solo maneja el string del monto; la validación de negocio (mínimo, saldo
  * disponible) vive en el consumidor, que es quien sabe contra qué comparar.

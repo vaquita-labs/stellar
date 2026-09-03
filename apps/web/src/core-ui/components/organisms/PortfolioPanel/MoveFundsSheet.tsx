@@ -1,14 +1,13 @@
 'use client';
 
-import { AMOUNT_DECIMALS, formatTokenPrecise, formatUsd, formatUsdPrecise } from '@/core-ui/helpers/numbers';
+import { AMOUNT_DECIMALS, MIN_USDC, formatTokenPrecise, formatUsd, formatUsdPrecise } from '@/core-ui/helpers/numbers';
 import { humanizeTxError } from '@/core-ui/helpers/txError';
 import { Spinner } from '@heroui/react';
-import { motion, useAnimationControls } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiArrowRight, FiCheck, FiRepeat } from 'react-icons/fi';
-import { AmountDisplay } from '../../molecules/AmountDisplay';
-import { AmountKeypad } from '../../molecules/AmountKeypad';
+import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { getAllocationStyle } from './allocationStyles';
@@ -52,9 +51,10 @@ export function MoveFundsSheet({
   const [toLockPeriod, setToLockPeriod] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Se enciende al intentar revisar un monto mayor al disponible en el origen:
-  // apaga el número y dispara el temblor. Se apaga al seguir tecleando.
+  // apaga el número, lo hace temblar y escribe el motivo en la línea de nota.
+  // Se apaga al seguir tecleando.
   const [overBalance, setOverBalance] = useState(false);
-  const amountControls = useAnimationControls();
+  const { controls: amountControls, shake } = useAmountShake();
 
   // Los montos se refrescan solos cuando vuelve la lista de depósitos, así que
   // `allocations` cambia de identidad seguido. El reset de abajo solo debe
@@ -85,17 +85,16 @@ export function MoveFundsSheet({
   const toStyle = getAllocationStyle(allocations.findIndex((a) => a.lockPeriod === toLockPeriod));
 
   const numericAmount = Number(amount || '0');
-  const canReview = numericAmount > 0 && !!from && !!to;
+  // El mínimo es el mismo que en depósito y retiro: mover es retirar y volver a
+  // depositar, así que el piso del contrato aplica igual.
+  const canReview = numericAmount >= MIN_USDC && !!from && !!to;
 
   // En vez del APY ponderado (premios/depósito anualizado, engañoso), mostramos
   // lo cierto del plazo destino: su pool de premios + depósitos (ver PoolMeta).
 
   const shakeAmount = () => {
     setOverBalance(true);
-    void amountControls.start({
-      x: [0, -8, 8, -6, 6, -3, 3, 0],
-      transition: { duration: 0.45, ease: 'easeInOut' },
-    });
+    shake();
   };
 
   /** Avanza el lado indicado al siguiente plazo, saltándose el del otro lado. */
@@ -160,16 +159,21 @@ export function MoveFundsSheet({
 
   // --- Paso: monto -----------------------------------------------------------
   const amountStep = (
-    <div className="flex flex-col gap-4">
-      <div className="text-center pt-1">
-        <AmountDisplay value={amount} controls={amountControls} muted={overBalance || amount === ''} size="lg" />
-        <PoolMeta
-          rewardPool={to?.rewardPool ?? 0}
-          totalDeposits={to?.totalDeposits ?? 0}
-          className="mt-1 text-xs text-gray-500"
-        />
-      </div>
-
+    <AmountStep
+      value={amount}
+      onValueChange={setAmount}
+      decimals={AMOUNT_DECIMALS}
+      size="lg"
+      controls={amountControls}
+      available={from?.amount ?? null}
+      error={overBalance ? t('withdraw.exceedsBalance', "That's more than you have available.") : null}
+      onErrorClear={() => setOverBalance(false)}
+      hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
+        amount: formatTokenPrecise(MIN_USDC, 2),
+      })}
+    >
+      {/* El par origen/destino va entre el número y el teclado: es lo que decide
+          contra qué saldo se compara lo que se está tecleando. */}
       <div>
         <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
           <span>{t('portfolio.move.from', 'From')}</span>
@@ -187,17 +191,15 @@ export function MoveFundsSheet({
           </button>
           {sidePill('to')}
         </div>
+        {/* Las cifras del plazo destino, pegadas a la pastilla que las cambia y
+            no bajo el monto: ahí abajo va el mínimo/el error. */}
+        <PoolMeta
+          rewardPool={to?.rewardPool ?? 0}
+          totalDeposits={to?.totalDeposits ?? 0}
+          className="mt-1.5 text-right text-xs text-gray-500"
+        />
       </div>
-
-      <AmountKeypad
-        value={amount}
-        onValueChange={(next) => {
-          setAmount(next);
-          if (overBalance) setOverBalance(false);
-        }}
-        maxDecimals={AMOUNT_DECIMALS}
-      />
-    </div>
+    </AmountStep>
   );
 
   // --- Paso: confirmación ----------------------------------------------------
@@ -293,8 +295,10 @@ export function MoveFundsSheet({
       onOpenChange={onOpenChange}
       title={STEP_TITLE[step]}
       size="md"
-      // Durante la transacción la hoja no se puede cerrar ni volver atrás.
-      isDismissable={step !== 'processing'}
+      // Los flujos de plata no se cierran tocando afuera en ningún paso (ver
+      // WithdrawModal): sólo la X.
+      isDismissable={false}
+      // Durante la transacción tampoco se puede cerrar ni volver atrás.
       hideClose={step === 'processing'}
       onBack={step === 'confirm' ? () => setStep('amount') : undefined}
       bodyClassName={'flex flex-col gap-3 ' + (footer ? 'pb-2' : 'pb-6')}

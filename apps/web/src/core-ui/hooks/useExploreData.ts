@@ -2,6 +2,7 @@ import { resolveAvatarConfig, type AvatarConfig } from '@vaquita/avatar';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
 import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
+import { VOLATILE_QUERY_OPTIONS } from '../config/queryFreshness';
 import { useState } from 'react';
 
 export const EXPLORE_PAGE_SIZE = 10;
@@ -90,6 +91,7 @@ export const useExploreData = ({ seed }: { seed: string }) => {
       lastPage.hasMore ? lastPage.offset + lastPage.rows.length : undefined,
     placeholderData: keepPreviousData,
     enabled: !!network?.networkName && !!viewerWallet,
+    ...VOLATILE_QUERY_OPTIONS,
     // The feed is a browsing surface, not a source of truth: refetching it on
     // every focus would reshuffle nothing (the seed is pinned) but would keep
     // re-fetching every loaded page for no visible gain.

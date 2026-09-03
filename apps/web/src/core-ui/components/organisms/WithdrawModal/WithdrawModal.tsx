@@ -1,11 +1,11 @@
 'use client';
 
 import { truncateMiddle } from '@/core-ui/helpers/strings';
-import { AMOUNT_DECIMALS, floorAmount, formatUsdPrecise, MIN_USDC, truncatedAmountString } from '@/core-ui/helpers/numbers';
+import { AMOUNT_DECIMALS, floorAmount, formatTokenPrecise, formatUsdPrecise, MIN_USDC } from '@/core-ui/helpers/numbers';
 import { useLivePassiveUsdc, usePassiveLabel, usePassiveMigration } from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
-import { motion, useAnimationControls } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
@@ -15,7 +15,7 @@ import { IoWalletOutline } from 'react-icons/io5';
 import { useProfileData } from '../../../hooks';
 import { SavedWallet, useDeleteSavedWallet, useSavedWallets } from '../../../hooks/useSavedWallets';
 import { useConfigStore } from '../../../stores';
-import { AmountKeypad } from '../../molecules/AmountKeypad';
+import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { AddNicknameForm } from './AddNicknameForm';
@@ -23,12 +23,6 @@ import { AddWalletForm } from './AddWalletForm';
 import { WalletRow } from './WalletRow';
 import { WithdrawModalProps, WithdrawProgressStep, WithdrawStep } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
-
-/** Formatea el monto tecleado tal cual lo escribe el usuario ('' → $0.00, '1.' → $1.). */
-function displayAmount(raw: string) {
-  if (raw === '') return '$0.00';
-  return `$${raw}`;
-}
 
 /**
  * Flujo de retiro del home. Retira de BLEND (nivel líquido normal), y el destino
@@ -74,14 +68,15 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
   const [error, setError] = useState<unknown>(null);
   // Se enciende cuando el usuario intenta revisar un monto mayor al disponible:
-  // pinta el número en rojo, dispara el temblor y bloquea Review. Se apaga al
-  // seguir tecleando (o al tocar Available / cambiar de wallet).
+  // apaga el número, lo hace temblar, escribe el motivo donde estaba el mínimo y
+  // bloquea Review. Se apaga al seguir tecleando (o al tocar Available / cambiar
+  // de wallet).
   const [overBalance, setOverBalance] = useState(false);
   // Tocó "Available" (retirar todo): dispara el sentinel i128 de blendDirect.
   const [isMax, setIsMax] = useState(false);
   // Salto en curso durante el "processing" (para el progreso animado).
   const [activeStep, setActiveStep] = useState<WithdrawProgressStep | null>(null);
-  const amountControls = useAnimationControls();
+  const { controls: amountControls, shake } = useAmountShake();
 
   // Pasos visibles del retiro. Externa = 1 salto (a su wallet); social = 2
   // (preparar de Blend → enviar a la externa). Copy humano por default; con
@@ -171,10 +166,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
   const shakeAmount = () => {
     setOverBalance(true);
-    void amountControls.start({
-      x: [0, -8, 8, -6, 6, -3, 3, 0],
-      transition: { duration: 0.45, ease: 'easeInOut' },
-    });
+    shake();
   };
 
   const handleReview = () => {
@@ -263,34 +255,25 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
 
   // --- Paso: monto -----------------------------------------------------------
   const amountStep = (
-    <div className="flex flex-col gap-4">
-      <div className="text-center pt-1">
-        <motion.p
-          animate={amountControls}
-          className={`text-4xl font-bold ${
-            overBalance ? 'text-red-500' : amount === '' ? 'text-gray-400' : 'text-black'
-          }`}
-        >
-          {displayAmount(amount)}
-        </motion.p>
-        <button
-          type="button"
-          onClick={() => {
-            setAmount(truncatedAmountString(available));
-            setIsMax(true);
-            if (overBalance) setOverBalance(false);
-          }}
-          className="mt-1 inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10"
-        >
-          {t('withdraw.available', 'Available')}: {formatUsdPrecise(available)}
-        </button>
-        <p className="mt-1 text-xs text-gray-400">
-          {t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
-            amount: formatUsdPrecise(MIN_USDC, 2),
-          })}
-        </p>
-      </div>
-
+    <AmountStep
+      value={amount}
+      onValueChange={(next) => {
+        setAmount(next);
+        setIsMax(false);
+      }}
+      decimals={AMOUNT_DECIMALS}
+      size="lg"
+      controls={amountControls}
+      available={available}
+      // Tocar "Available" es pedir retirar TODO: el sentinel i128 de blendDirect
+      // depende de esta bandera, no del monto tecleado.
+      onMax={() => setIsMax(true)}
+      error={overBalance ? t('withdraw.exceedsBalance', "That's more than you have available.") : null}
+      onErrorClear={() => setOverBalance(false)}
+      hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
+        amount: formatTokenPrecise(MIN_USDC, 2),
+      })}
+    >
       {showBlendLeftover && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-black/15 bg-black/5 px-3 py-2">
           <span className="text-sm text-gray-600">
@@ -392,17 +375,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           )}
         </PressableButton>
       )}
-
-      <AmountKeypad
-        value={amount}
-        onValueChange={(next) => {
-          setAmount(next);
-          setIsMax(false);
-          if (overBalance) setOverBalance(false);
-        }}
-        maxDecimals={AMOUNT_DECIMALS}
-      />
-    </div>
+    </AmountStep>
   );
 
   // --- Paso: elegir cuenta (social) ------------------------------------------
@@ -638,8 +611,13 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       onOpenChange={onOpenChange}
       title={STEP_TITLE[step]}
       size="md"
-      // Durante la transacción el sheet no se puede cerrar ni volver atrás.
-      isDismissable={step !== 'processing'}
+      // Regla de todos los flujos de plata: no se cierran tocando afuera en
+      // NINGÚN paso. Un toque al borde a mitad de tipear el monto o de elegir
+      // destino borra todo lo hecho, y el borde es lo más fácil de tocar sin
+      // querer con el sheet ocupando media pantalla. La X es el único cierre, y
+      // ahí sí es deliberado.
+      isDismissable={false}
+      // Durante la transacción tampoco se puede cerrar ni volver atrás.
       hideClose={step === 'processing'}
       onBack={backTarget ? () => setStep(backTarget) : undefined}
       bodyClassName={'flex flex-col gap-3 ' + (footer ? 'pb-2' : 'pb-6')}
