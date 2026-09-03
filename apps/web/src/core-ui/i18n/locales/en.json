@@ -789,6 +789,10 @@
       "saveErrorTitle": "Could not save your map",
       "saveErrorDesc": "Check your connection and try again."
     },
+    "map": {
+      "reload": "Reload map",
+      "unavailable": "The map could not be loaded."
+    },
     "music": {
       "low": "Low volume",
       "mute": "Mute music",

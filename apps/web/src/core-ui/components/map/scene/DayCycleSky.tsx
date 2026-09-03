@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { getGameDayProgress, useDayCycleStore } from '@/core-ui/stores';
 import { useMapStore } from '@/core-ui/stores';
+import { getShadowMapSize } from './deviceTier';
 
 type SkyKey = {
   at: number;
@@ -68,6 +69,9 @@ const interpolate = (progress: number) => {
 const SHADOW_UPDATE_INTERVAL = 0.1;
 
 export const DayCycleSky = () => {
+  // Rendering the shadow map costs a full pass over the scene at this
+  // resolution, so it follows the device's budget.
+  const shadowMapSize = getShadowMapSize();
   const { scene, gl } = useThree();
   const editingObjectPosition = useMapStore((s) => s.editingObjectPosition);
 
@@ -137,8 +141,8 @@ export const DayCycleSky = () => {
         castShadow
         intensity={1.2}
         position={[3, 15, -15]}
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        shadow-mapSize-width={shadowMapSize}
+        shadow-mapSize-height={shadowMapSize}
         shadow-camera-far={60}
         shadow-camera-left={-20}
         shadow-camera-right={20}
