@@ -2087,6 +2087,14 @@
           "CO": "Colômbia"
         },
         "cta": "Sacar",
+        "destination": {
+          "change": "Alterar",
+          "needAmount": "Informe o valor primeiro: quais dados o seu banco pede depende da rota de pagamento.",
+          "newAccount": "Nova conta",
+          "pickTitle": "Onde você quer receber o dinheiro?",
+          "select": "Escolha uma conta bancária",
+          "title": "Destino"
+        },
         "doneHint": "Você já pode fechar esta janela.",
         "err": {
           "anchorError": "O provedor recusou a solicitação. Tente de novo em instantes.",

@@ -2054,6 +2054,14 @@
           "CO": "Colombia"
         },
         "cta": "Withdraw",
+        "destination": {
+          "change": "Change",
+          "needAmount": "Enter the amount first: which details your bank needs depends on the payout route.",
+          "newAccount": "New account",
+          "pickTitle": "Where do you want to receive the money?",
+          "select": "Select bank account",
+          "title": "Destination"
+        },
         "doneHint": "You can close this window.",
         "err": {
           "anchorError": "The provider rejected the request. Try again in a moment.",
