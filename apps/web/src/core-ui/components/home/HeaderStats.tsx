@@ -235,20 +235,15 @@ export const HeaderStats = () => {
             aria-label={t('home.stats.profileAria', 'Profile')}
             className="group relative shrink-0 transition active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black rounded-full"
           >
+            {/* Sin chevron encima: el borde grueso que se hunde al tocarlo ya
+                dice que es un botón, y la insignia le comía la esquina a la
+                cara. */}
             <VaquitaAvatarCircle
               config={profileData?.avatarConfig}
               seed={profileData?.walletAddress || walletAddress || ''}
               alt={t('home.stats.profileAlt', 'Profile')}
               className="h-16 w-16 border-2 border-black border-b-[6px] transition group-active:border-b-2"
             />
-            {/* El borde solo no alcanzaba: la foto se leía como un retrato del
-                header. El chevron dice que abre algo. */}
-            <span
-              aria-hidden
-              className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-black bg-white"
-            >
-              <FiChevronRight className="h-3 w-3 text-black" />
-            </span>
           </Link>
 
           <div className="flex flex-col min-w-0 flex-1 gap-1">
