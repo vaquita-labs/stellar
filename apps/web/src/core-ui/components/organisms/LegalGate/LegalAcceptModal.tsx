@@ -81,7 +81,6 @@ export function LegalAcceptModal({ policyVersion, onAccept }: LegalAcceptModalPr
         <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-4 text-sm leading-relaxed text-black/70">
           <li>{t('auth.legalGate.summaryData')}</li>
           <li>{t('auth.legalGate.summaryOnchain')}</li>
-          <li>{t('auth.legalGate.summaryRisk')}</li>
         </ul>
       </div>
 
