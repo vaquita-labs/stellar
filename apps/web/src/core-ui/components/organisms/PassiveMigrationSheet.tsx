@@ -2,9 +2,15 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AMOUNT_DECIMALS, floorAmount, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
+import {
+  AMOUNT_DECIMALS,
+  floorAmount,
+  formatTokenPrecise,
+  formatUsdAdaptive,
+  MIN_USDC,
+} from '@/core-ui/helpers/numbers';
 import { usePassiveMigration } from '@/core-ui/hooks/usePassiveMigration';
-import { AmountKeypad } from '../molecules/AmountKeypad';
+import { AmountStep } from '../molecules/AmountStep';
 import { AppModal } from '../molecules/AppModal';
 import { ErrorNotice } from '../molecules/ErrorNotice';
 import { PressableButton } from '../molecules/PressableButton';
@@ -43,7 +49,10 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
   // the position actually holds.
   const maxAmount = floorAmount(blendBalance, AMOUNT_DECIMALS);
   const numericAmount = Number(amount || '0');
-  const amountIsValid = numericAmount > 0 && numericAmount <= maxAmount;
+  // Mismo piso que el resto de los flujos, salvo que en Blend haya quedado MENOS
+  // que el mínimo: ese resto tiene que poder salir igual o queda encerrado.
+  const minAmount = Math.min(MIN_USDC, maxAmount);
+  const amountIsValid = numericAmount >= minAmount && numericAmount <= maxAmount;
 
   const run = async (chosen?: number) => {
     setBusy(true);
@@ -62,7 +71,9 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
     <AppModal
       open={open}
       onOpenChange={() => closable && setDismissed(true)}
-      isDismissable={closable}
+      // Los flujos de plata no se cierran tocando afuera en ningún paso (ver
+      // WithdrawModal): sólo la X, que además acá desaparece mientras migra.
+      isDismissable={false}
       hideClose={!closable}
       title={t('migration.title', 'Move your Blend funds')}
       size="md"
@@ -96,20 +107,19 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
         </>
       ) : isExternal ? (
         <>
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-3xl font-bold text-black tabular-nums">${amount === '' ? '0.00' : amount}</span>
-            <PressableButton variant="white" size="chip" disabled={busy} onClick={() => setAmount(String(maxAmount))}>
-              {t('migration.max', 'Max')}
-            </PressableButton>
-          </div>
-
-          <AmountKeypad
+          <AmountStep
             value={amount}
             onValueChange={setAmount}
-            maxDecimals={AMOUNT_DECIMALS}
-            max={maxAmount}
-            disabled={busy}
+            decimals={AMOUNT_DECIMALS}
             compact
+            disabled={busy}
+            // Techo duro: el teclado no deja tipear más de lo que hay en Blend,
+            // así que acá el monto nunca puede pasarse (no hay temblor).
+            max={maxAmount}
+            available={maxAmount}
+            hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
+              amount: formatTokenPrecise(minAmount, 2),
+            })}
           />
 
           <PressableButton variant="success" disabled={busy || !amountIsValid} onClick={() => void run(numericAmount)}>

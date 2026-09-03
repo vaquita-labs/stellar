@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiExternalLink, FiPlus } from 'react-icons/fi';
 import { railLabel, truncateMiddle } from '../../../helpers';
-import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
+import { AMOUNT_DECIMALS, FIAT_DECIMALS, floorAmount } from '../../../helpers/numbers';
 import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
 import {
   type SavedBankAccount,
@@ -29,8 +29,7 @@ import {
 } from '../../../hooks/useSavedBankAccounts';
 import { useConfigStore, useRampActiveStore } from '../../../stores';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
-import { AmountDisplay } from '../../molecules/AmountDisplay';
-import { AmountKeypad } from '../../molecules/AmountKeypad';
+import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { FiatStepList, StepStatus } from './FiatStepList';
@@ -58,12 +57,6 @@ type StepKey = 'funds' | 'create' | 'payout';
 const STEP_ORDER: StepKey[] = ['funds', 'create', 'payout'];
 
 const INITIAL_STEPS: Record<StepKey, StepStatus> = { create: 'idle', funds: 'idle', payout: 'idle' };
-
-/**
- * Decimales que se pueden teclear en moneda local. Dos, no los 7 del USDC:
- * centavos de boliviano o de real es todo lo que el proveedor liquida.
- */
-const FIAT_DECIMALS = 2;
 
 /**
  * The fiat the quote SETTLES, which is not necessarily the one that was asked
@@ -637,13 +630,11 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     payout: t('wallet.fiat.ramp.groupPayout', 'Pay out via {{rail}}', { rail }),
   };
 
-  // La línea bajo el número grande. El error tiene prioridad porque es lo que
-  // explica por qué el monto no sirve; el saldo es el default útil.
-  const amountNote = error
-    ? error
-    : balanceIsLoading
-      ? t('wallet.fiat.ramp.balanceLoading', 'Reading your savings…')
-      : t('wallet.fiat.ramp.balance', 'Available in savings: {{balance}} USDC', { balance });
+  // Lo que dice la línea bajo el número cuando NO hay problema (el error lo pisa
+  // dentro de `AmountStep`): cuánto hay en los ahorros para gastar.
+  const amountHint = balanceIsLoading
+    ? t('wallet.fiat.ramp.balanceLoading', 'Reading your savings…')
+    : t('wallet.fiat.ramp.balance', 'Available in savings: {{balance}} USDC', { balance });
 
   const footer =
     phase === 'amount' ? (
@@ -678,16 +669,15 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      // Con el retiro en curso no se cierra tocando afuera: la plata ya salió
+      // Regla de todos los flujos de plata: no se cierran tocando afuera en
+      // NINGÚN paso. Acá pesa doble — con el retiro en curso la plata ya salió
       // del vault y está en camino a la rampa, y un toque al borde en medio de
-      // eso deja al usuario sin la única pantalla que le dice dónde quedó. Antes
-      // se permitía durante la espera del KYC, que es la parte más larga y
-      // justamente la más fácil de cerrar sin querer.
+      // eso deja al usuario sin la única pantalla que le dice dónde quedó.
       //
       // La X sigue ahí a propósito: la espera del proveedor puede no terminar
       // nunca, y el polling se aborta solo al cerrar. Es un cierre deliberado,
       // no un accidente.
-      isDismissable={!busy}
+      isDismissable={false}
       title={t('wallet.fiat.ramp.title', 'Withdraw to {{country}} ({{currency}})', {
         country: countryName,
         currency: currency || country,
@@ -709,33 +699,19 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           de ramps. Cuánto USDC cuesta se resuelve con la cotización y se muestra
           en la confirmación. --- */}
       {phase === 'amount' && (
-        <div className="text-center">
-          <AmountDisplay
-            value={amountFiat}
-            symbol={symbol || currency}
-            symbolPosition="suffix"
-            muted={amountFiat === '' || !!error}
-          />
-          {/* Una sola línea abajo del número, siempre presente, para que la
-              pantalla no salte al cotizar: el problema si lo hay, y si no,
-              cuánto hay en los ahorros para gastar. */}
-          <p className={`mt-1 text-xs ${error ? 'font-medium text-red-600' : 'text-gray-400'}`}>{amountNote}</p>
-        </div>
-      )}
-
-      {phase === 'amount' && (
-        <AmountKeypad
+        <AmountStep
           value={amountFiat}
-          // Tocar una tecla borra el error: lo dijo un monto que ya no es el que
-          // está en pantalla, y si quedara puesto el número seguiría en gris con
-          // un cartel rojo que no le corresponde.
-          onValueChange={(next) => {
-            setAmountFiat(next);
-            setError(null);
-          }}
-          maxDecimals={FIAT_DECIMALS}
-          // Sin tope: el máximo de la ruta llega recién con la cotización, así
-          // que un tope acá aparecería a mitad de tipear y las teclas dejarían
+          onValueChange={setAmountFiat}
+          decimals={FIAT_DECIMALS}
+          symbol={symbol || currency}
+          symbolPosition="suffix"
+          error={error}
+          onErrorClear={() => setError(null)}
+          hint={amountHint}
+          // Sin chip de saldo: el saldo está en USDC y acá se teclea moneda
+          // local, así que no hay un "máximo" que tipear sin la cotización.
+          // Por lo mismo va sin `max`: el tope de la ruta llega recién con la
+          // cotización y aparecería a mitad de tipear, con las teclas dejando
           // de responder sin decir por qué. `handleQuote` lo explica.
           disabled={busy}
           compact

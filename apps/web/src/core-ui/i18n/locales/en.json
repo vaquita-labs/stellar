@@ -1920,16 +1920,6 @@
     "cloud": {
       "alt": "cloud"
     },
-    "moneyInput": {
-      "currency": "Currency",
-      "invalidNumber": "Invalid number",
-      "label": "Amount to deposit",
-      "max": "Max {{max}}",
-      "maxDecimals_one": "Max {{count}} decimal",
-      "maxDecimals_other": "Max {{count}} decimals",
-      "min": "Min {{min}}",
-      "totalBalance": "Total balance: ${{balance}}"
-    },
     "table": {
       "action": "Action",
       "exportCsv": "Export CSV",
@@ -2281,6 +2271,7 @@
     },
     "amountLabel": "Amount",
     "available": "Available",
+    "exceedsBalance": "That's more than you have available.",
     "confirm": {
       "title": "Confirm withdrawal"
     },
@@ -2537,7 +2528,6 @@
     "borrowBlocked": "You have an open Blend borrow against these funds. Repay it first, then you can move them.",
     "migrate": "Move to Vault",
     "moving": "Moving…",
-    "max": "Max",
     "notNow": "Not now"
   },
   "invest": {

@@ -1920,16 +1920,6 @@
     "cloud": {
       "alt": "nuvem"
     },
-    "moneyInput": {
-      "currency": "Moeda",
-      "invalidNumber": "Número inválido",
-      "label": "Valor a depositar",
-      "max": "Máximo {{max}}",
-      "maxDecimals_one": "Máximo {{count}} casa decimal",
-      "maxDecimals_other": "Máximo {{count}} casas decimais",
-      "min": "Mínimo {{min}}",
-      "totalBalance": "Saldo total: ${{balance}}"
-    },
     "table": {
       "action": "Ação",
       "exportCsv": "Exportar CSV",
@@ -2281,6 +2271,7 @@
     },
     "amountLabel": "Valor",
     "available": "Disponível",
+    "exceedsBalance": "É mais do que você tem disponível.",
     "confirm": {
       "title": "Confirmar saque"
     },
@@ -2537,7 +2528,6 @@
     "borrowBlocked": "Você tem um empréstimo aberto na Blend contra esses fundos. Quite-o primeiro para poder movê-los.",
     "migrate": "Mover para o Vault",
     "moving": "Movendo…",
-    "max": "Máx",
     "notNow": "Agora não"
   },
   "invest": {

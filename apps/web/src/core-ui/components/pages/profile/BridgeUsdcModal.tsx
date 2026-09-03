@@ -609,6 +609,9 @@ export function BridgeUsdcModal({ open, onOpenChange, stellarWallet }: BridgeUsd
       onOpenChange={onOpenChange}
       title={t('wallet.bridge.title', 'Send USDC')}
       size="lg"
+      // Los flujos de plata no se cierran tocando afuera en ningún paso (ver
+      // WithdrawModal): sólo la X.
+      isDismissable={false}
       bodyClassName="flex flex-col gap-4 pb-6"
     >
       <section className="flex flex-col gap-3 rounded-lg border border-black border-b-2 bg-white p-4">

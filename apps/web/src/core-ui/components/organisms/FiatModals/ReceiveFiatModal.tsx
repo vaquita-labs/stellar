@@ -286,9 +286,11 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      // Durante la espera de acreditación dejamos cerrar (puede tardar); el
-      // polling se aborta solo. En los pasos rápidos (firmas) bloqueamos.
-      isDismissable={!busy || waiting}
+      // No se cierra tocando afuera en ningún paso (ver WithdrawModal). Antes se
+      // dejaba durante la espera de acreditación, que es la parte más larga y
+      // justamente la más fácil de cerrar sin querer. Para salir de ahí está la
+      // X, que es un cierre deliberado y aborta el polling solo.
+      isDismissable={false}
       // Durante una firma o el swap, volver atrás dejaría el flujo a medias.
       onBack={onBack && !busy ? onBack : undefined}
       title={t('wallet.fiat.receive.title', 'Argentina (ARS)')}

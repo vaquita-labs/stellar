@@ -1,6 +1,13 @@
 'use client';
 
-import { AMOUNT_DECIMALS, floorAmount, formatUsd, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
+import {
+  AMOUNT_DECIMALS,
+  floorAmount,
+  formatTokenPrecise,
+  formatUsd,
+  formatUsdPrecise,
+  MIN_USDC,
+} from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import {
   useApyByLockPeriods,
@@ -13,23 +20,18 @@ import { useConfigStore } from '@/core-ui/stores';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import { Spinner } from '@heroui/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { motion, useAnimationControls } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheck } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
 import { v4 } from 'uuid';
-import { AmountKeypad } from '../../molecules/AmountKeypad';
+import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { PressableButton } from '../../molecules/PressableButton';
 
 type Step = 'amount' | 'term' | 'review' | 'processing' | 'success';
-
-function displayAmount(raw: string) {
-  if (raw === '') return '$0.00';
-  return `$${raw}`;
-}
 
 /**
  * "Invertir": crea una posición con lock en el Vaquita pool. Estilo teclado (como
@@ -77,7 +79,7 @@ export function InvestModal({
   // Salto en curso durante "processing" (para el stepper). 'preparing' = retiro
   // de Blend; 'locking' = depósito al tramo.
   const [activeStep, setActiveStep] = useState<'preparing' | 'locking' | null>(null);
-  const amountControls = useAnimationControls();
+  const { controls: amountControls, shake } = useAmountShake();
 
   useEffect(() => {
     if (open) {
@@ -100,14 +102,13 @@ export function InvestModal({
   const numericAmount = Number(amount || '0');
   // En vez del % (que era premios/depósitos anualizado y engañoso), cada plazo
   // muestra lo cierto: su pool de premios + cuánto capital hay en el pool (ver PoolMeta).
-  const canReview = numericAmount > 0 && selectedLock != null;
+  // Mismo piso que depósito y retiro: el backend lo rechaza igual, así que
+  // conviene decirlo antes de firmar.
+  const canReview = numericAmount >= MIN_USDC && selectedLock != null;
 
   const shakeAmount = () => {
     setOverBalance(true);
-    void amountControls.start({
-      x: [0, -8, 8, -6, 6, -3, 3, 0],
-      transition: { duration: 0.45, ease: 'easeInOut' },
-    });
+    shake();
   };
 
   // Cambiar de plazo con swipe vertical (o rueda) sobre el selector: arriba =
@@ -193,76 +194,63 @@ export function InvestModal({
   // --- Paso: monto -----------------------------------------------------------
   const amountStep = (
     <div className="flex flex-col gap-2.5">
-      <div className="text-center">
-        <motion.p
-          animate={amountControls}
-          className={`text-3xl font-bold ${overBalance || amount === '' ? 'text-gray-400' : 'text-black'}`}
-        >
-          {displayAmount(amount)}
-        </motion.p>
-        <button
-          type="button"
-          onClick={() => {
-            setAmount(truncatedAmountString(available));
-            setIsMax(true);
-            if (overBalance) setOverBalance(false);
-          }}
-          className="mt-1 inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10"
-        >
-          {`${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available)}`}
-        </button>
-      </div>
-
-      {/* Selector de PLAZO/APY: cambiás con swipe vertical (o rueda), o tap para
-          la lista completa. El ⇅ lo sugiere. Texto corto: plazo + APY. */}
-      <PressableButton
-        variant="white"
-        size="row"
-        className="touch-pan-x select-none"
-        onClick={() => {
-          if (swipedRef.current) {
-            swipedRef.current = false;
-            return;
-          }
-          setStep('term');
-        }}
-        onTouchStart={(e) => {
-          touchStartY.current = e.touches[0].clientY;
-          swipedRef.current = false;
-        }}
-        onTouchEnd={(e) => {
-          if (touchStartY.current === null) return;
-          const dy = e.changedTouches[0].clientY - touchStartY.current;
-          touchStartY.current = null;
-          if (Math.abs(dy) > 30) {
-            swipedRef.current = true;
-            cycleTerm(dy < 0 ? 1 : -1);
-          }
-        }}
-        onWheel={(e) => {
-          if (Math.abs(e.deltaY) > 10) cycleTerm(e.deltaY > 0 ? 1 : -1);
-        }}
-      >
-        <span className="flex-1 min-w-0 text-left">
-          <span className="block text-sm font-bold text-black truncate">
-            {selectedLock != null
-              ? formatTimeDeposit(selectedLock)
-              : t('invest.selectTerm', 'Select a term')}
-          </span>
-        </span>
-        <HiOutlineSelector className="w-5 h-5 text-black shrink-0" />
-      </PressableButton>
-
-      <AmountKeypad
+      <AmountStep
         value={amount}
         onValueChange={(next) => {
           setAmount(next);
           setIsMax(false);
-          if (overBalance) setOverBalance(false);
         }}
-        maxDecimals={AMOUNT_DECIMALS}
+        decimals={AMOUNT_DECIMALS}
         compact
-      />
+        controls={amountControls}
+        available={available}
+        // "Available" = invertir todo lo pasivo: el retiro previo de Blend usa el
+        // sentinel, no el monto tecleado.
+        onMax={() => setIsMax(true)}
+        error={overBalance ? t('withdraw.exceedsBalance', "That's more than you have available.") : null}
+        onErrorClear={() => setOverBalance(false)}
+        hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
+          amount: formatTokenPrecise(MIN_USDC, 2),
+        })}
+      >
+        {/* Selector de PLAZO/APY: cambiás con swipe vertical (o rueda), o tap para
+            la lista completa. El ⇅ lo sugiere. Texto corto: plazo + APY. */}
+        <PressableButton
+          variant="white"
+          size="row"
+          className="touch-pan-x select-none"
+          onClick={() => {
+            if (swipedRef.current) {
+              swipedRef.current = false;
+              return;
+            }
+            setStep('term');
+          }}
+          onTouchStart={(e) => {
+            touchStartY.current = e.touches[0].clientY;
+            swipedRef.current = false;
+          }}
+          onTouchEnd={(e) => {
+            if (touchStartY.current === null) return;
+            const dy = e.changedTouches[0].clientY - touchStartY.current;
+            touchStartY.current = null;
+            if (Math.abs(dy) > 30) {
+              swipedRef.current = true;
+              cycleTerm(dy < 0 ? 1 : -1);
+            }
+          }}
+          onWheel={(e) => {
+            if (Math.abs(e.deltaY) > 10) cycleTerm(e.deltaY > 0 ? 1 : -1);
+          }}
+        >
+          <span className="flex-1 min-w-0 text-left">
+            <span className="block text-sm font-bold text-black truncate">
+              {selectedLock != null ? formatTimeDeposit(selectedLock) : t('invest.selectTerm', 'Select a term')}
+            </span>
+          </span>
+          <HiOutlineSelector className="w-5 h-5 text-black shrink-0" />
+        </PressableButton>
+      </AmountStep>
 
       {error ? <ErrorNotice error={error} /> : null}
     </div>
@@ -323,7 +311,7 @@ export function InvestModal({
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
         <span className="text-gray-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
         <span className="font-bold text-success tabular-nums">
-          {formatUsd(selectedLock != null ? byLockPeriod[selectedLock]?.rewardPool ?? 0 : 0)}
+          {formatUsd(selectedLock != null ? (byLockPeriod[selectedLock]?.rewardPool ?? 0) : 0)}
         </span>
       </div>
 
@@ -462,7 +450,9 @@ export function InvestModal({
       onOpenChange={onOpenChange}
       title={STEP_TITLE[step]}
       size="md"
-      isDismissable={step !== 'processing'}
+      // Los flujos de plata no se cierran tocando afuera en ningún paso (ver
+      // WithdrawModal): sólo la X.
+      isDismissable={false}
       // Convención de la app: la X (cerrar) va a la derecha y blanca. Los pasos
       // raíz (`amount`) y `success` cierran el modal → muestran la X. `term` y
       // `review` son navegación interna (vuelven al monto) → flecha atrás a la

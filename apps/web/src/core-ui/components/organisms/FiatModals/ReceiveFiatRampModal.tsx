@@ -24,10 +24,9 @@ import { Spinner } from '@heroui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { railLabel } from '../../../helpers/rampRail';
-import { formatTokenPrecise } from '../../../helpers/numbers';
+import { FIAT_DECIMALS, formatTokenPrecise } from '../../../helpers/numbers';
 import { useAwaitingFundsStore, useRampActiveStore } from '../../../stores';
-import { AmountDisplay } from '../../molecules/AmountDisplay';
-import { AmountKeypad } from '../../molecules/AmountKeypad';
+import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { OnrampQrScreen } from './OnrampQrScreen';
@@ -62,13 +61,6 @@ type Phase = 'amount' | 'details' | 'verifying' | 'paying';
 
 /** Decimales con los que se muestra el USDC estimado. */
 const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2);
-
-/**
- * The rate is a plain division, so it lands on a repeating decimal often enough
- * (13.513513513513514 BOB per USDC) that printing it raw is what the user sees.
- * Two decimals is the precision the amounts themselves are quoted in.
- */
-const RATE_DECIMALS = 2;
 
 /**
  * Compra de USDC con moneda local (hoy sólo Bolivia/BOB). Va en dos pasos: el
@@ -399,18 +391,17 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // que decide si se puede seguir, no la existencia de la cotización.
   const usable = !!quote && !error && !quoting;
 
-  // La única línea que acompaña al monto mientras se teclea. Prioridad: lo que
-  // está mal, después el rango que la ruta acepta, y recién si todavía no hay
-  // cotización cómo se va a pagar.
-  const amountNote =
-    error ??
-    (quote && (quote.minAmount != null || quote.maxAmount != null)
+  // Lo que dice la línea bajo el monto cuando NO hay problema (el error lo pisa
+  // dentro de `AmountStep`): el rango que la ruta acepta, y recién si todavía no
+  // hay cotización, cómo se va a pagar.
+  const amountHint =
+    quote && (quote.minAmount != null || quote.maxAmount != null)
       ? t('wallet.fiat.onramp.limits', 'Between {{min}} and {{max}} {{currency}}.', {
           min: quote.minAmount ?? '—',
           max: quote.maxAmount ?? '—',
           currency,
         })
-      : t('wallet.fiat.onramp.hint', 'You pay a QR code with your bank app.'));
+      : t('wallet.fiat.onramp.hint', 'You pay a QR code with your bank app.');
 
   // Qué datos pide el proveedor lo define la cotización elegida: no hay ningún
   // campo boliviano cableado acá. Si la ruta no pide nada, el paso queda vacío y
@@ -561,65 +552,13 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       </PressableButton>
     );
 
-  return (
-    <AppModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t('wallet.fiat.onramp.title', 'Buy USDC in {{country}} ({{currency}})', {
-        country: countryName,
-        currency: currency || country,
-      })}
-      size="md"
-      // Con el QR en pantalla tampoco se cierra tocando afuera: el usuario está
-      // yendo y viniendo a la app del banco con el código a la vista, y un toque
-      // al borde le tapa la pantalla justo cuando la necesita. La X y "volver a
-      // empezar" siguen ahí, que son cierres deliberados.
-      // Las dos condiciones: `screenFor` devuelve 'paying' por defecto (sin
-      // estado del proveedor todavía), así que sin mirar la fase se trabaría
-      // también la pantalla donde se elige el monto.
-      isDismissable={!(phase === 'paying' && screen === 'paying')}
-      // Con el QR en pantalla no hay vuelta atrás: el código ya existe del lado
-      // del proveedor y "volver" sólo llevaría a crear otro sobre el mismo pago.
-      onBack={
-        phase === 'paying'
-          ? undefined
-          : phase === 'details'
-            ? () => setPhase('amount')
-            : // Desde la verificación se vuelve a los datos, no al selector de
-              // país: el usuario ya eligió dónde compra y rehacer ese camino no
-              // adelanta el trámite.
-              phase === 'verifying'
-              ? () => setPhase('details')
-              : onBack
-      }
-      // Con el teclado en el cuerpo, el aire de las otras fases hace scrollear el
-      // sheet en pantallas chicas y lo primero que se corta es el monto.
-      bodyClassName={`flex flex-col pb-2 ${phase === 'amount' ? 'gap-2.5' : 'gap-4'}`}
-      footer={footer}
-    >
-      {showForm && corridorOff && (
-        <p className="rounded-md border border-black border-b-2 bg-[#FFF4DD] px-3 py-2 text-xs font-semibold text-black">
-          {corridorOff}
-        </p>
-      )}
-
-      {/* --- Monto en MONEDA LOCAL: es la unidad con la que cotizan los endpoints
-          de ramps, y es lo que el usuario va a pagar desde el banco. --- */}
-      {phase === 'amount' && (
-        <div className="text-center">
-          <AmountDisplay
-            value={amountFiat}
-            symbol={symbol || currency}
-            symbolPosition="suffix"
-            muted={amountFiat === '' || !!error}
-          />
-          {/* Una sola línea abajo del número, siempre presente, para que la
-              pantalla no salte cuando llega la cotización: el problema si lo hay,
-              si no los límites de la ruta, y antes de cotizar cómo se paga. */}
-          <p className={`mt-1 text-xs ${error ? 'font-medium text-red-600' : 'text-gray-400'}`}>{amountNote}</p>
-        </div>
-      )}
-
+  /**
+   * La ruta cotizada: se dibuja igual en los dos pasos del formulario, pero en
+   * distinto lugar (entre monto y teclado mientras se teclea, sola en los datos),
+   * así que vive en una variable en vez de repetirse.
+   */
+  const routeCard = (
+    <>
       {showForm && resuming && (
         <p className="flex items-center gap-2 text-xs text-gray-500">
           <Spinner size="sm" color="current" /> {t('wallet.fiat.onramp.resuming', 'Checking for a purchase in progress…')}
@@ -661,33 +600,87 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>{t('wallet.fiat.onramp.rateLabel', 'Rate')}</span>
             <span className="font-semibold text-black">
-              {formatTokenPrecise(quote.rate, RATE_DECIMALS)} {currency} / USDC
+              {formatTokenPrecise(quote.rate, FIAT_DECIMALS)} {currency} / USDC
             </span>
           </div>
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>{t('wallet.fiat.onramp.etaLabel', 'Estimated time')}</span>
             <span className="font-semibold text-black">{quote.estimatedTime}</span>
           </div>
-          {/* Los límites de la ruta no van acá sino arriba del teclado: son lo
-              que le dice al usuario cómo arreglar un monto que no entra, y ahí
-              los lee mientras tipea. */}
+          {/* Los límites de la ruta no van acá sino en la línea bajo el monto:
+              son lo que le dice al usuario cómo arreglar un monto que no entra,
+              y ahí los lee mientras tipea. */}
         </div>
       )}
+    </>
+  );
 
-      {/* El teclado va después de la ruta y no pegado al número: lo que cambia
-          al tipear es la cotización, y queda a la vista entre los dos. */}
-      {phase === 'amount' && (
-        <AmountKeypad
+  return (
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('wallet.fiat.onramp.title', 'Buy USDC in {{country}} ({{currency}})', {
+        country: countryName,
+        currency: currency || country,
+      })}
+      size="md"
+      // Regla de todos los flujos de plata: no se cierran tocando afuera en
+      // NINGÚN paso. Con el QR en pantalla pesa doble — el usuario está yendo y
+      // viniendo a la app del banco con el código a la vista, y un toque al
+      // borde le tapa la pantalla justo cuando la necesita. La X y "volver a
+      // empezar" siguen ahí, que son cierres deliberados.
+      isDismissable={false}
+      // Con el QR en pantalla no hay vuelta atrás: el código ya existe del lado
+      // del proveedor y "volver" sólo llevaría a crear otro sobre el mismo pago.
+      onBack={
+        phase === 'paying'
+          ? undefined
+          : phase === 'details'
+            ? () => setPhase('amount')
+            : // Desde la verificación se vuelve a los datos, no al selector de
+              // país: el usuario ya eligió dónde compra y rehacer ese camino no
+              // adelanta el trámite.
+              phase === 'verifying'
+              ? () => setPhase('details')
+              : onBack
+      }
+      // Con el teclado en el cuerpo, el aire de las otras fases hace scrollear el
+      // sheet en pantallas chicas y lo primero que se corta es el monto.
+      bodyClassName={`flex flex-col pb-2 ${phase === 'amount' ? 'gap-2.5' : 'gap-4'}`}
+      footer={footer}
+    >
+      {showForm && corridorOff && (
+        <p className="rounded-md border border-black border-b-2 bg-[#FFF4DD] px-3 py-2 text-xs font-semibold text-black">
+          {corridorOff}
+        </p>
+      )}
+
+      {/* --- Monto en MONEDA LOCAL: es la unidad con la que cotizan los endpoints
+          de ramps, y es lo que el usuario va a pagar desde el banco. Mientras se
+          teclea, la ruta va ENTRE el número y el teclado: es justo lo que cambia
+          al escribir, así que queda a la vista de los dos. En el paso de datos ya
+          no hay teclado y la misma ruta se muestra sola. --- */}
+      {phase === 'amount' ? (
+        <AmountStep
           value={amountFiat}
           onValueChange={setAmountFiat}
           // Dos decimales, no los 7 del USDC: centavos de boliviano es todo lo
           // que el proveedor cotiza, y es la misma precisión del tipo de cambio.
-          maxDecimals={RATE_DECIMALS}
-          // Sin tope: `maxAmount` llega recién con la cotización, así que un tope
-          // acá aparecería a mitad de tipear y las teclas dejarían de responder
-          // sin decir por qué. El monto fuera de rango lo explica `limitProblem`.
+          decimals={FIAT_DECIMALS}
+          symbol={symbol || currency}
+          symbolPosition="suffix"
+          error={error}
+          hint={amountHint}
+          // Sin chip de saldo —la plata sale del banco, no de acá— y sin tope:
+          // `maxAmount` llega recién con la cotización, así que un tope acá
+          // aparecería a mitad de tipear y las teclas dejarían de responder sin
+          // decir por qué. El monto fuera de rango lo explica `limitProblem`.
           compact
-        />
+        >
+          {routeCard}
+        </AmountStep>
+      ) : (
+        routeCard
       )}
 
       {/* --- Datos que pide el proveedor para esta ruta. --- */}
