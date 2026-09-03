@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getJson, postJson } from '../api/http';
+import { VOLATILE_QUERY_OPTIONS } from '../config/queryFreshness';
 import { useConfigStore } from '../stores';
 
 export type NotificationType = 'deposit' | 'reward' | 'streak' | 'friend' | 'system';
@@ -36,6 +37,9 @@ export const useNotifications = () => {
   return useQuery<NotificationsResponseDTO | null>({
     queryKey: notificationsQueryKey(walletAddress),
     queryFn: () => getJson<NotificationsResponseDTO>(`/notifications/wallet/${walletAddress}`),
+    // Notifications are written by the backend, not by this session, so the
+    // realtime channel is the only thing that would ever refresh them.
+    ...VOLATILE_QUERY_OPTIONS,
     enabled: !!walletAddress,
   });
 };

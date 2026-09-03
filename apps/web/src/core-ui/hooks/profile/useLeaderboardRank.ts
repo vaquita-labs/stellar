@@ -2,6 +2,7 @@
 
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
+import { VOLATILE_QUERY_OPTIONS } from '@/core-ui/config/queryFreshness';
 import { useQuery } from '@tanstack/react-query';
 
 export const useLeaderboardRank = () => {
@@ -18,6 +19,9 @@ export const useLeaderboardRank = () => {
       const body = await res.json();
       return body.data ?? null;
     },
+    ...VOLATILE_QUERY_OPTIONS,
+    // The rank chip moves with other people's deposits, so it revalidates on
+    // mount and reconnect; five minutes of grace keeps it off the render path.
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });

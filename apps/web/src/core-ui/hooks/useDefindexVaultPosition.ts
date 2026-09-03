@@ -1,13 +1,10 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { VOLATILE_QUERY_OPTIONS } from '../config/queryFreshness';
 import { useTranslation } from 'react-i18next';
 import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
 import { useConfigStore } from '@/core-ui/stores';
 import { getStellarNetwork } from '@/networks/stellar/kit';
-import {
-  defindexVaultConfigForToken,
-  getVaultPosition,
-  type DefindexVaultPosition,
-} from '@/networks/stellar/vaultQueries';
+import { defindexVaultConfigForToken, getVaultPosition, type DefindexVaultPosition } from '@/networks/stellar/vaultQueries';
 import { projectBlendUsdc, useBlendUsdc, useLiveBlendUsdc } from './useBlendPosition';
 import { useLiveTick } from './useLiveTick';
 import { useVaultApy } from './useVaultApy';
@@ -44,14 +41,12 @@ export const useDefindexVaultPosition = (walletAddress?: string) => {
       return getVaultPosition(config, walletAddress);
     },
     enabled: isPassiveVaultEnabled() && !!walletAddress && !!config,
-    // The position only changes on deposit/withdraw; 60s keeps the RPC calm.
-    // After a deposit/withdraw, invalidating this query forces the refresh.
-    staleTime: 60_000,
     // It's money: never a $0 flash mid-refetch, never a dip on an RPC blip.
     placeholderData: keepPreviousData,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
+    // Revalidates on mount, focus and reconnect, with 60s of grace so the RPC
+    // stays calm. Invalidating this query after a deposit/withdraw still forces
+    // an immediate refresh.
+    ...VOLATILE_QUERY_OPTIONS,
     retry: 4,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
   });
@@ -118,9 +113,7 @@ export const usePassiveVaultOn = (): boolean => {
  */
 export const usePassiveLabel = (): string => {
   const { t } = useTranslation();
-  return usePassiveVaultOn()
-    ? t('portfolio.vault.label', 'Vault · Flexible')
-    : t('portfolio.blend.label', 'Blend · Flexible');
+  return usePassiveVaultOn() ? t('portfolio.vault.label', 'Vault · Flexible') : t('portfolio.blend.label', 'Blend · Flexible');
 };
 
 /**
