@@ -105,7 +105,35 @@ describe('pngFileFromDataUrl', () => {
 });
 
 describe('saveQrImage', () => {
-  it('hands the image to the share sheet when the device can share files', async () => {
+  it('downloads the file even on a device that could share it', async () => {
+    // El botón dice "guardar". Abrir la hoja de compartir teniendo cómo bajar el
+    // archivo le pedía al usuario elegir app y buscar "Guardar imagen" adentro.
+    const clicks: { href: string; download: string }[] = [];
+    const anchor = {
+      href: '',
+      download: '',
+      click: () => clicks.push({ href: anchor.href, download: anchor.download }),
+    };
+    const shared: File[][] = [];
+    const platform = {
+      navigator: {
+        canShare: () => true,
+        share: async ({ files }: { files: File[] }) => {
+          shared.push(files);
+        },
+      },
+      document: { createElement: () => anchor },
+      createObjectURL: () => 'blob:qr',
+    };
+
+    const outcome = await saveQrImage(FILE, platform);
+
+    expect(outcome).toBe('downloaded');
+    expect(clicks).toEqual([{ href: 'blob:qr', download: 'vaquita-qr.png' }]);
+    expect(shared).toEqual([]);
+  });
+
+  it('falls back to the share sheet when the device cannot download', async () => {
     const shared: File[][] = [];
     const platform = {
       navigator: {
@@ -120,25 +148,6 @@ describe('saveQrImage', () => {
 
     expect(outcome).toBe('shared');
     expect(shared).toEqual([[FILE]]);
-  });
-
-  it('falls back to a download anchor when the device cannot share files', async () => {
-    const anchor = {
-      href: '',
-      download: '',
-      click: () => clicks.push({ href: anchor.href, download: anchor.download }),
-    };
-    const clicks: { href: string; download: string }[] = [];
-    const platform = {
-      navigator: { canShare: () => false, share: async () => {} },
-      document: { createElement: () => anchor },
-      createObjectURL: () => 'blob:qr',
-    };
-
-    const outcome = await saveQrImage(FILE, platform);
-
-    expect(outcome).toBe('downloaded');
-    expect(clicks).toEqual([{ href: 'blob:qr', download: 'vaquita-qr.png' }]);
   });
 
   // Es el caso de Safari en iOS: ni compartir archivos ni un `<a download>` que

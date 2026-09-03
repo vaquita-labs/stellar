@@ -131,18 +131,21 @@ export interface SavePlatform {
 
 /**
  * Guarda el QR en el dispositivo, eligiendo la estrategia por lo que soporte el
- * navegador. Requiere un gesto del usuario: tanto compartir como descargar se
+ * navegador. Requiere un gesto del usuario: tanto descargar como compartir se
  * bloquean si se llaman fuera de un click.
+ *
+ * La descarga va PRIMERO. Compartir arranca antes lo abría la hoja de compartir
+ * del sistema, que es otra cosa que lo que pide el botón: el usuario tocaba
+ * "Guardar" y le aparecía una lista de apps a las que mandar el código, con
+ * "Guardar imagen" escondido entre ellas y un toque más lejos. Un `<a download>`
+ * deja el archivo en el dispositivo sin preguntar nada, que es lo que el botón
+ * promete.
+ *
+ * Compartir queda de respaldo para los navegadores donde la descarga no existe
+ * (sin `createObjectURL` o con un `<a>` sin `download`): ahí la hoja de
+ * compartir sigue siendo el único camino a la galería.
  */
 export async function saveQrImage(file: File, platform: SavePlatform = browserPlatform()): Promise<SaveOutcome> {
-  const nav = platform.navigator;
-  // `canShare({ files })` es el único chequeo confiable: hay navegadores con
-  // `share` que igual rechazan archivos.
-  if (nav?.share && nav.canShare?.({ files: [file] })) {
-    await nav.share({ files: [file] });
-    return 'shared';
-  }
-
   const anchor = platform.document?.createElement('a');
   // `download` puede no existir: ahí el click abriría la imagen en vez de
   // guardarla, que es peor que no ofrecer el botón.
@@ -155,6 +158,14 @@ export async function saveQrImage(file: File, platform: SavePlatform = browserPl
     // navegadores con la descarga a medio empezar y sin archivo.
     setTimeout(() => platform.revokeObjectURL?.(url), 0);
     return 'downloaded';
+  }
+
+  const nav = platform.navigator;
+  // `canShare({ files })` es el único chequeo confiable: hay navegadores con
+  // `share` que igual rechazan archivos.
+  if (nav?.share && nav.canShare?.({ files: [file] })) {
+    await nav.share({ files: [file] });
+    return 'shared';
   }
 
   return 'manual';

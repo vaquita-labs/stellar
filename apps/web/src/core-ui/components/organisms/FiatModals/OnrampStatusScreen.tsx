@@ -1,5 +1,6 @@
 'use client';
 
+import { supportEmail } from '@/core-ui/config/featureFlags';
 import { Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -62,8 +63,11 @@ export function OnrampStatusScreen({
             'wallet.fiat.onramp.processingHelp',
             "If it hasn't arrived after 15 minutes, keep your bank receipt and write to us:",
           )}{' '}
-          <a href="mailto:hello@vaquita.fi" className="font-semibold text-primary">
-            hello@vaquita.fi
+          {/* La casilla sale de `supportEmail()`, no escrita a mano: es la misma
+              que usa el Concierge y se cambia por entorno con
+              NEXT_PUBLIC_SUPPORT_EMAIL, sin tocar esta pantalla. */}
+          <a href={`mailto:${supportEmail()}`} className="font-semibold text-primary">
+            {supportEmail()}
           </a>
         </p>
         <PressableButton variant="success" size="cta" onClick={onDone}>
