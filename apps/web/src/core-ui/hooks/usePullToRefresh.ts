@@ -24,6 +24,16 @@ export type PullToRefreshState = {
   refreshing: boolean;
 };
 
+/** The gesture started inside an element the screen marked as a valid handle. */
+const insideOrigin = (target: EventTarget | null, container: HTMLElement, selector: string) => {
+  let node = target instanceof Element ? target : null;
+  while (node && node !== container) {
+    if (node.matches(selector)) return true;
+    node = node.parentElement;
+  }
+  return false;
+};
+
 /** An ancestor already scrolled down owns the gesture: it has content to pull back. */
 const insideScrolledArea = (target: EventTarget | null, container: HTMLElement) => {
   let node = target instanceof Element ? target : null;
@@ -52,10 +62,15 @@ const buzz = (ms: number) => {
  * The gesture is claimed only when it starts at the top of the container and
  * moves down: an upward or sideways drag stays with the scroller and the
  * carousels underneath.
+ *
+ * `originSelector` narrows where the pull may begin. A screen whose body owns
+ * the same drag — the home map pans with it — marks a handle instead, and a
+ * touch that starts anywhere else is left alone. It fails closed: if nothing on
+ * screen matches the selector, there is no pull.
  */
 export const usePullToRefresh = (
   containerRef: RefObject<HTMLElement | null>,
-  { onRefresh, enabled = true }: { onRefresh: () => Promise<unknown> | unknown; enabled?: boolean },
+  { onRefresh, originSelector }: { onRefresh: () => Promise<unknown> | unknown; originSelector?: string },
 ): PullToRefreshState => {
   const [distance, setDistance] = useState(0);
   const [pulling, setPulling] = useState(false);
@@ -70,7 +85,7 @@ export const usePullToRefresh = (
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !enabled) return;
+    if (!container) return;
 
     let tracking = false;
     let decided = false;
@@ -91,6 +106,7 @@ export const usePullToRefresh = (
     const onTouchStart = (event: TouchEvent) => {
       if (refreshingNow || event.touches.length !== 1) return;
       if (container.scrollTop > 0) return;
+      if (originSelector && !insideOrigin(event.target, container, originSelector)) return;
       if (insideScrolledArea(event.target, container)) return;
       startY = event.touches[0].clientY;
       startX = event.touches[0].clientX;
@@ -130,8 +146,12 @@ export const usePullToRefresh = (
       setDistance(next);
     };
 
-    const onTouchEnd = async () => {
+    const onTouchEnd = async (event: TouchEvent) => {
       if (!tracking) return;
+      // The pull may have started on the avatar or the balance. Movement alone
+      // does not always cancel the tap, so a pull that owned the gesture also
+      // swallows the click it would otherwise synthesize.
+      if (decided && event.cancelable) event.preventDefault();
       const shouldRefresh = decided && pulled >= THRESHOLD_PX;
       tracking = false;
       decided = false;
@@ -164,7 +184,8 @@ export const usePullToRefresh = (
     container.addEventListener('touchstart', onTouchStart, { passive: true });
     // Not passive: the handler calls preventDefault once the pull is its own gesture.
     container.addEventListener('touchmove', onTouchMove, { passive: false });
-    container.addEventListener('touchend', onTouchEnd, { passive: true });
+    // Not passive either: a pull that ran swallows the click on release.
+    container.addEventListener('touchend', onTouchEnd, { passive: false });
     container.addEventListener('touchcancel', reset, { passive: true });
 
     return () => {
@@ -174,7 +195,7 @@ export const usePullToRefresh = (
       container.removeEventListener('touchend', onTouchEnd);
       container.removeEventListener('touchcancel', reset);
     };
-  }, [containerRef, enabled]);
+  }, [containerRef, originSelector]);
 
   return { distance, pulling, armed: distance >= THRESHOLD_PX, refreshing };
 };
