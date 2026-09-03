@@ -1,6 +1,6 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { ONE_MINUTE } from '@/core-ui/config/constants';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 import { useConfigStore } from '../stores';
 
 export type ApyData = {
@@ -14,16 +14,6 @@ export type ApyData = {
   interestModelNote?: string;
 };
 
-const EMPTY_APY: ApyData = {
-  protocolApy: 0,
-  vaquitaApy: 0,
-  lendingMarketName: '',
-  rewardPool: 0,
-  totalDeposits: 0,
-  openPositions: 0,
-  interestModelNote: undefined,
-};
-
 /**
  * Opciones de la query de APY para UN lock period. Se extraen para poder pedir
  * varios a la vez (`useApyByLockPeriods`) compartiendo exactamente la misma
@@ -33,28 +23,38 @@ const EMPTY_APY: ApyData = {
 export const apyQueryOptions = (networkName: string | undefined, tokenSymbol: string, lockPeriod: number) => ({
   queryKey: ['deposit', 'network', networkName, 'token', tokenSymbol, 'lockPeriod', lockPeriod, 'apy'],
   queryFn: async (): Promise<ApyData | null> => {
-    try {
-      const response = await fetch(
-        `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${networkName}/token/${tokenSymbol}/lockPeriod/${lockPeriod}/apy`
-      );
+    // Tira el error en vez de resolver con ceros: un fallo tiene que ser un
+    // ERROR (react-query reintenta y `placeholderData` deja el último valor en
+    // pantalla), no un 0 exitoso que pisa el pozo cacheado con $0.
+    const response = await fetch(
+      `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/deposit/network/${networkName}/token/${tokenSymbol}/lockPeriod/${lockPeriod}/apy`
+    );
+    if (!response.ok) throw new Error(`apy request failed: ${response.status}`);
 
-      const data = await response.json();
+    const data = await response.json();
 
-      return {
-        protocolApy: data?.data?.protocolApy ?? 0,
-        vaquitaApy: data?.data?.vaquitaApy ?? 0,
-        lendingMarketName: data?.data?.lendingMarketName ?? '',
-        rewardPool: data?.data?.rewardPool ?? 0,
-        totalDeposits: data?.data?.totalDeposits ?? 0,
-        openPositions: data?.data?.openPositions ?? 0,
-        interestModelNote: typeof data?.data?.interestModelNote === 'string' ? data.data.interestModelNote : undefined,
-      };
-    } catch (error) {
-      console.error('useDepositsApy', error);
-      return EMPTY_APY;
-    }
+    return {
+      protocolApy: data?.data?.protocolApy ?? 0,
+      vaquitaApy: data?.data?.vaquitaApy ?? 0,
+      lendingMarketName: data?.data?.lendingMarketName ?? '',
+      rewardPool: data?.data?.rewardPool ?? 0,
+      totalDeposits: data?.data?.totalDeposits ?? 0,
+      openPositions: data?.data?.openPositions ?? 0,
+      interestModelNote: typeof data?.data?.interestModelNote === 'string' ? data.data.interestModelNote : undefined,
+    };
   },
+  // Mismo motivo que en `useVaultApy`: son números compartidos (rate y pozo) que
+  // se mueven durante el día, y con el staleTime global de 24h +
+  // refetchOnMount:false cada dispositivo pintaba lo último que hubiera cacheado
+  // en localStorage — dos teléfonos de la MISMA cuenta mostrando pozos distintos.
+  staleTime: ONE_MINUTE,
+  refetchOnMount: true,
+  refetchOnWindowFocus: true,
+  refetchOnReconnect: true,
   refetchInterval: ONE_MINUTE * 5,
+  // Es plata en pantalla: nunca parpadear a $0 mientras revalida.
+  placeholderData: keepPreviousData,
+  retry: 2,
   enabled: !!networkName && lockPeriod > 0,
 });
 
