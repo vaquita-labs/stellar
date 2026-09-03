@@ -553,13 +553,36 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         decimals: token.decimals,
         withdrawAll: toWithdraw >= balance,
       });
+      // El hash se anota apenas existe y sin avanzar de paso: si la confirmación
+      // de acá abajo se agota, esta fila es lo único que le dice a soporte dónde
+      // quedó la plata.
+      void advanceWithdrawal(walletAddress, trackedId.current, { vaultWithdrawHash: vaultHash });
+
+      // Pollar devuelve el hash cuando DIFUNDIÓ la transacción, no cuando el
+      // ledger la incluyó: `submitAndSettle` sólo espera confirmación si el SDK
+      // contesta `pending`, y con `success` da por buena la difusión. El paso
+      // que sigue le pide al proveedor que cobre de ESTA wallet, así que sin
+      // esperar el ledger le pedimos que cobre plata que todavía no llegó. El
+      // 2026-09-03 pasó exactamente eso: el retiro se creó 20:53:39 y el retiro
+      // del vault entró recién 20:54:20 — Stereum lo rechazó con "wallet holds
+      // 0" y el USDC quedó tirado en la wallet.
+      //
+      // 120s son ~3x el peor caso visto. Agotarlos corta el retiro, que es el
+      // desenlace seguro: la plata queda en la wallet y el gate de plata ociosa
+      // ofrece devolverla al vault.
+      if (!(await confirmOnLedger(vaultHash, { shouldStop: () => !openRef.current, timeoutMs: 120_000 }))) {
+        throw new RampError(
+          t(
+            'wallet.fiat.ramp.err.vaultNotConfirmed',
+            'The withdrawal from your savings has not confirmed on the network yet. Your USDC is safe — try again in a minute.',
+          ),
+        );
+      }
+
       await refreshAssets();
       setUsdcSpent(toWithdraw);
       mark('funds', 'done');
-      void advanceWithdrawal(walletAddress, trackedId.current, {
-        step: 'create',
-        vaultWithdrawHash: vaultHash,
-      });
+      void advanceWithdrawal(walletAddress, trackedId.current, { step: 'create' });
 
       // 2) Crear el retiro por el monto en moneda local. Si el proveedor pide KYC
       // hay que esperar la aprobación y volver a cotizar, porque la cotización

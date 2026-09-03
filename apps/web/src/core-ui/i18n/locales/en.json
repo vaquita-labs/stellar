@@ -2078,6 +2078,7 @@
           "providerNotConfigured": "This provider is not configured for the app yet.",
           "quoteExpired": "The quote expired. Request a new one and try again.",
           "unknownCost": "The quote did not report how much USDC this withdrawal costs.",
+          "vaultNotConfirmed": "The withdrawal from your savings has not confirmed on the network yet. Your USDC is safe — try again in a minute.",
           "walletUnsupported": "This wallet type cannot be used for this withdrawal."
         },
         "etaLabel": "Estimated time",

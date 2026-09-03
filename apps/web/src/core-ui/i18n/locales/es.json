@@ -2078,6 +2078,7 @@
           "providerNotConfigured": "Este proveedor todavía no está configurado para la app.",
           "quoteExpired": "La cotización venció. Pedí una nueva y probá otra vez.",
           "unknownCost": "La cotización no informó cuánto USDC cuesta este retiro.",
+          "vaultNotConfirmed": "El retiro de tus ahorros todavía no se confirmó en la red. Tu USDC está a salvo — probá de nuevo en un minuto.",
           "walletUnsupported": "Este tipo de wallet no se puede usar para este retiro."
         },
         "etaLabel": "Tiempo estimado",
