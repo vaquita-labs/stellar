@@ -30,13 +30,12 @@ export const isPostHogEnabled = (): boolean =>
   clientEnv.NEXT_PUBLIC_POSTHOG_ENABLED === 'true' && !!clientEnv.NEXT_PUBLIC_POSTHOG_KEY;
 
 /**
- * Casilla de soporte a la que escribe la tarjeta "Email" del Concierge. La
- * variable es OPTIONAL a propósito: si un entorno no la setea, la tarjeta
- * sigue abriendo un mail a esta casilla en vez de quedarse sin destino. Se
- * cambia sin tocar código apuntando NEXT_PUBLIC_SUPPORT_EMAIL a la casilla
- * compartida del equipo.
+ * Casilla de soporte: la tarjeta "Email" del Concierge y la pantalla de estado
+ * de la rampa escriben acá. La variable es OPTIONAL a propósito: si un entorno
+ * no la setea, el mailto sigue teniendo destino en vez de quedar vacío. Se
+ * cambia sin tocar código apuntando NEXT_PUBLIC_SUPPORT_EMAIL a otra casilla.
  */
-const DEFAULT_SUPPORT_EMAIL = 'leaconti10@gmail.com';
+const DEFAULT_SUPPORT_EMAIL = 'support@vaquita.fi';
 
 export const supportEmail = (): string => clientEnv.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || DEFAULT_SUPPORT_EMAIL;
 
