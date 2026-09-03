@@ -9,7 +9,13 @@ const MAX_PULL_PX = 96;
 /** Fraction of the finger movement the indicator follows, so the pull feels elastic. */
 const RESISTANCE = 0.5;
 /** Movement under this is noise: the gesture has no direction yet. */
-const DIRECTION_SLOP_PX = 8;
+const DIRECTION_SLOP_PX = 16;
+/**
+ * How much the downward travel must beat the sideways travel before the pull
+ * claims the gesture. A drag that is merely more vertical than horizontal is not
+ * enough: on a short screen an ordinary scroll starts with exactly that wobble.
+ */
+const DIRECTION_RATIO = 1.5;
 /** Floor for the spinner, so a refresh answered from cache still reads as an action. */
 const MIN_SPIN_MS = 450;
 
@@ -122,13 +128,22 @@ export const usePullToRefresh = (
 
       if (!decided) {
         if (Math.abs(dy) < DIRECTION_SLOP_PX && Math.abs(dx) < DIRECTION_SLOP_PX) return;
-        // Up, or mostly sideways: the scroller and the carousels keep it.
-        if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) {
+        // Up, or not decisively downward: the scroller and the carousels keep it.
+        if (dy <= 0 || dy < Math.abs(dx) * DIRECTION_RATIO) {
           tracking = false;
           return;
         }
         decided = true;
         setPulling(true);
+      }
+
+      // The finger came back to its starting point. Hand the gesture back
+      // instead of holding it for the rest of the touch, which is what left a
+      // short screen feeling stuck: a drag that began with a downward wobble
+      // stayed captured however far it then travelled up.
+      if (dy <= 0) {
+        reset();
+        return;
       }
 
       // Content moved under the finger (momentum from a previous flick).
@@ -140,7 +155,7 @@ export const usePullToRefresh = (
       // Claim the gesture, or the container rubber-bands under the indicator.
       if (event.cancelable) event.preventDefault();
 
-      const next = Math.min(MAX_PULL_PX, (dy - DIRECTION_SLOP_PX) * RESISTANCE);
+      const next = Math.max(0, Math.min(MAX_PULL_PX, (dy - DIRECTION_SLOP_PX) * RESISTANCE));
       if (next >= THRESHOLD_PX && pulled < THRESHOLD_PX) buzz(8);
       pulled = next;
       setDistance(next);
