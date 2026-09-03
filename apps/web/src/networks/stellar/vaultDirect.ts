@@ -7,11 +7,11 @@ import {
   getVaultShares,
   getVaultTotals,
   getVaultUsdcForShares,
-  parseVaultErrorMessage,
   usdcToShares,
   WITHDRAW_SLIPPAGE_BPS,
   type DefindexVaultConfig,
 } from './vaultQueries';
+import { parseVaultError } from './vaultError';
 
 export interface PassiveDepositInput {
   address: string;
@@ -24,10 +24,15 @@ export interface PassiveWithdrawInput extends PassiveDepositInput {
   withdrawAll?: boolean;
 }
 
-/** Map a recognized vault ContractError to a readable message, else rethrow. */
+/**
+ * Vuelve a tirar un rechazo del vault como `VaultContractError`, que lleva el
+ * código adentro. Antes acá se tiraba un `Error` con la frase traducida y el
+ * código se perdía: `humanizeTxError` matchea contra el `Error(Contract, #N)`
+ * literal, así que sin él todos los rechazos del vault —el #451 del polvo entre
+ * ellos— caían en el genérico y el usuario nunca se enteraba de por qué.
+ */
 const rethrowVaultError = (e: unknown): never => {
-  const friendly = parseVaultErrorMessage(e);
-  throw friendly ? new Error(friendly) : (e as Error);
+  throw parseVaultError(e) ?? (e as Error);
 };
 
 /**

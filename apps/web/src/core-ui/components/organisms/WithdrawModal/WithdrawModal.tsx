@@ -284,7 +284,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           {t('withdraw.available', 'Available')}: {formatUsdPrecise(available)}
         </button>
         <p className="mt-1 text-xs text-gray-400">
-          {t('withdraw.minWithdraw', 'Minimum withdrawal: $1 USDC.')}
+          {t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
+            amount: formatUsdPrecise(MIN_USDC, 2),
+          })}
         </p>
       </div>
 

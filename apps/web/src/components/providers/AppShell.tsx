@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { ReactNode } from 'react';
 import { ListenDepositsChanges } from './ListenDepositsChanges';
 import { ListenNotificationsChanges } from './ListenNotificationsChanges';
+import { PostHogIdentify } from './PostHogIdentify';
 import { WalletProviderSync } from './WalletProviderSync';
 
 const Main = ({ children, withSidebar }: { children: ReactNode; withSidebar: boolean }) => {
@@ -16,6 +17,7 @@ const Main = ({ children, withSidebar }: { children: ReactNode; withSidebar: boo
       style={{ height: 'var(--100VH)', minHeight: 'var(--100VH)', maxHeight: 'var(--100VH)', overflow: 'hidden' }}
     >
       <WalletProviderSync />
+      <PostHogIdentify />
       <ConfigProvider>
         <ProfileDataProvider>{children}</ProfileDataProvider>
       </ConfigProvider>

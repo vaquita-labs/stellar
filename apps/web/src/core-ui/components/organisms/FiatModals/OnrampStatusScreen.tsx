@@ -50,8 +50,21 @@ export function OnrampStatusScreen({
         <p className="text-xs text-gray-500">
           {t(
             'wallet.fiat.onramp.processingBody',
-            'The provider is sending your USDC. You can close this — it arrives on its own.',
+            'Your USDC usually arrives in a few minutes, and can take up to 15. You can close this — it lands in your wallet on its own.',
           )}
+        </p>
+        {/* Quien paga y cierra no vuelve a ver esta pantalla salvo que reabra el
+            modal, así que tiene que alcanzarle con leerla una vez: qué esperar,
+            hasta cuándo, y qué hacer si no pasa. El comprobante del banco es lo
+            único que permite rastrear un pago que no acreditó. */}
+        <p className="text-[11px] text-gray-400">
+          {t(
+            'wallet.fiat.onramp.processingHelp',
+            "If it hasn't arrived after 15 minutes, keep your bank receipt and write to us:",
+          )}{' '}
+          <a href="mailto:hello@vaquita.fi" className="font-semibold text-primary">
+            hello@vaquita.fi
+          </a>
         </p>
         <PressableButton variant="success" size="cta" onClick={onDone}>
           {t('wallet.fiat.onramp.close', 'Close')}

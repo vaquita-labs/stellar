@@ -25,12 +25,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatTokenPrecise } from '../../../helpers/numbers';
 import { useAwaitingFundsStore, useRampActiveStore } from '../../../stores';
+import { AmountDisplay } from '../../molecules/AmountDisplay';
+import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { OnrampQrScreen } from './OnrampQrScreen';
 import { OnrampStatusScreen } from './OnrampStatusScreen';
 import { OnrampVerifyScreen } from './OnrampVerifyScreen';
-import { RAMP_FIELD_CLASS, RampFieldList } from './RampFieldList';
+import { RampFieldList } from './RampFieldList';
 
 interface ReceiveFiatRampModalProps {
   open: boolean;
@@ -396,6 +398,19 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // que decide si se puede seguir, no la existencia de la cotización.
   const usable = !!quote && !error && !quoting;
 
+  // La única línea que acompaña al monto mientras se teclea. Prioridad: lo que
+  // está mal, después el rango que la ruta acepta, y recién si todavía no hay
+  // cotización cómo se va a pagar.
+  const amountNote =
+    error ??
+    (quote && (quote.minAmount != null || quote.maxAmount != null)
+      ? t('wallet.fiat.onramp.limits', 'Between {{min}} and {{max}} {{currency}}.', {
+          min: quote.minAmount ?? '—',
+          max: quote.maxAmount ?? '—',
+          currency,
+        })
+      : t('wallet.fiat.onramp.hint', 'You pay a QR code with your bank app.'));
+
   // Qué datos pide el proveedor lo define la cotización elegida: no hay ningún
   // campo boliviano cableado acá. Si la ruta no pide nada, el paso queda vacío y
   // el botón habilitado, que es exactamente lo que corresponde.
@@ -576,7 +591,9 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
               ? () => setPhase('details')
               : onBack
       }
-      bodyClassName="flex flex-col gap-4 pb-2"
+      // Con el teclado en el cuerpo, el aire de las otras fases hace scrollear el
+      // sheet en pantallas chicas y lo primero que se corta es el monto.
+      bodyClassName={`flex flex-col pb-2 ${phase === 'amount' ? 'gap-2.5' : 'gap-4'}`}
       footer={footer}
     >
       {showForm && corridorOff && (
@@ -588,24 +605,17 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       {/* --- Monto en MONEDA LOCAL: es la unidad con la que cotizan los endpoints
           de ramps, y es lo que el usuario va a pagar desde el banco. --- */}
       {phase === 'amount' && (
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-semibold text-gray-500" htmlFor="onramp-amount">
-            {t('wallet.fiat.onramp.amountLabel', 'How much do you want to spend?')}
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="w-8 shrink-0 text-lg font-bold text-black">{symbol}</span>
-            <input
-              id="onramp-amount"
-              type="text"
-              inputMode="decimal"
-              value={amountFiat}
-              onChange={(e) => setAmountFiat(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))}
-              placeholder="0.00"
-              className={RAMP_FIELD_CLASS}
-            />
-            <span className="shrink-0 text-sm font-semibold text-gray-500">{currency}</span>
-          </div>
-          <p className="text-xs text-gray-500">{t('wallet.fiat.onramp.hint', 'You pay a QR code with your bank app.')}</p>
+        <div className="text-center">
+          <AmountDisplay
+            value={amountFiat}
+            symbol={symbol || currency}
+            symbolPosition="suffix"
+            muted={amountFiat === '' || !!error}
+          />
+          {/* Una sola línea abajo del número, siempre presente, para que la
+              pantalla no salte cuando llega la cotización: el problema si lo hay,
+              si no los límites de la ruta, y antes de cotizar cómo se paga. */}
+          <p className={`mt-1 text-xs ${error ? 'font-medium text-red-600' : 'text-gray-400'}`}>{amountNote}</p>
         </div>
       )}
 
@@ -655,16 +665,26 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
             <span>{t('wallet.fiat.onramp.etaLabel', 'Estimated time')}</span>
             <span className="font-semibold text-black">{quote.estimatedTime}</span>
           </div>
-          {(quote.minAmount != null || quote.maxAmount != null) && (
-            <p className="pt-1 text-[11px] text-gray-400">
-              {t('wallet.fiat.onramp.limits', 'Between {{min}} and {{max}} {{currency}}.', {
-                min: quote.minAmount ?? '—',
-                max: quote.maxAmount ?? '—',
-                currency,
-              })}
-            </p>
-          )}
+          {/* Los límites de la ruta no van acá sino arriba del teclado: son lo
+              que le dice al usuario cómo arreglar un monto que no entra, y ahí
+              los lee mientras tipea. */}
         </div>
+      )}
+
+      {/* El teclado va después de la ruta y no pegado al número: lo que cambia
+          al tipear es la cotización, y queda a la vista entre los dos. */}
+      {phase === 'amount' && (
+        <AmountKeypad
+          value={amountFiat}
+          onValueChange={setAmountFiat}
+          // Dos decimales, no los 7 del USDC: centavos de boliviano es todo lo
+          // que el proveedor cotiza, y es la misma precisión del tipo de cambio.
+          maxDecimals={RATE_DECIMALS}
+          // Sin tope: `maxAmount` llega recién con la cotización, así que un tope
+          // acá aparecería a mitad de tipear y las teclas dejarían de responder
+          // sin decir por qué. El monto fuera de rango lo explica `limitProblem`.
+          compact
+        />
       )}
 
       {/* --- Datos que pide el proveedor para esta ruta. --- */}
@@ -733,7 +753,10 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
 
       {failure && <p className="text-sm font-medium text-red-600">{failure}</p>}
 
-      {showForm && error && <p className="text-sm font-medium text-red-600">{error}</p>}
+      {/* En el paso del monto el error ya se muestra debajo del número, que es
+          donde el usuario está mirando; acá abajo sería el mismo texto dos veces
+          y encima tapado por el teclado. */}
+      {phase === 'details' && error && <p className="text-sm font-medium text-red-600">{error}</p>}
     </AppModal>
   );
 }

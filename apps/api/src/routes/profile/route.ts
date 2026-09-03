@@ -85,7 +85,12 @@ router.get('/wallet/:walletAddress/data', async (req, res) => {
     getNetworkName(),
     getAcceptedPolicyVersion(profileData.id),
   ]);
-  return sendSuccess(res, toProfileResponseDTO(networkName, profileData, legalAcceptedVersion));
+  // El `id` va sólo acá y no en el mapper: éste es el endpoint del perfil
+  // propio, y los de lista devuelven muchos perfiles a la vez.
+  return sendSuccess(res, {
+    ...toProfileResponseDTO(networkName, profileData, legalAcceptedVersion),
+    id: String(profileData.id),
+  });
 });
 
 router.get('/wallet/:walletAddress/experience', async (req, res) => {

@@ -20,6 +20,7 @@ import { ChannelProvider } from 'ably/react';
 import { ReactNode, useState } from 'react';
 import { AppShell } from './AppShell';
 import { GameClockSync } from './GameClockSync';
+import { PostHogProvider } from './PostHogProvider';
 import { useAuthGate } from './useAuthGate';
 import { useConsoleToAbly } from './useConsoleToAbly';
 import { useViewportVh } from './useViewportVh';
@@ -94,6 +95,7 @@ export function Providers({ children }: { children: ReactNode }) {
       }}
     >
       <I18nProvider>
+      <PostHogProvider>
       <PollarProvider
         client={{
           baseUrl: 'https://sdk.api.pollar.xyz',
@@ -122,6 +124,7 @@ export function Providers({ children }: { children: ReactNode }) {
           </ChannelProvider>
         </AblyProvider>
       </PollarProvider>
+      </PostHogProvider>
       </I18nProvider>
     </PersistQueryClientProvider>
   );

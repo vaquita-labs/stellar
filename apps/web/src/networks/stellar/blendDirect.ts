@@ -297,12 +297,17 @@ export const sponsoredUsdcPayment = async ({
 };
 
 /**
- * Lee el saldo USDC de una cuenta en unidades humanas simulando `balance()` del
- * SAC. Tira si no puede leerlo: quien mide un movimiento con esto necesita
- * distinguir "no tiene nada" de "no pude preguntar", porque tratar el segundo
- * como cero convierte todo el saldo ocioso de la wallet en un falso ingreso.
+ * Lee el saldo USDC de una cuenta en UNIDADES BASE (stroops) simulando
+ * `balance()` del SAC. Tira si no puede leerlo: quien mide un movimiento con
+ * esto necesita distinguir "no tiene nada" de "no pude preguntar", porque tratar
+ * el segundo como cero convierte todo el saldo ocioso de la wallet en un falso
+ * ingreso.
+ *
+ * Devolver el bigint es el punto: pasarlo a float y volver pierde precisión, y
+ * el que quiere depositar TODO el saldo necesita el número exacto que tiene la
+ * cadena. `formatBaseUnits` lo lleva a string sin float en el medio.
  */
-export const readUsdcBalance = async (address: string, decimals: number): Promise<number> => {
+export const readUsdcBalanceRaw = async (address: string): Promise<bigint> => {
   const config = getBlendConfig();
   if (!config) throw new Error('Blend pool is not configured for this token');
   if (!address) throw new Error('No connected address');
@@ -319,9 +324,15 @@ export const readUsdcBalance = async (address: string, decimals: number): Promis
     .build();
   const sim = await server.simulateTransaction(tx);
   if (rpc.Api.isSimulationError(sim) || !sim.result) throw new Error('USDC balance simulation failed');
-  const raw = scValToNative(sim.result.retval) as bigint;
-  return Number(raw) / 10 ** decimals;
+  return scValToNative(sim.result.retval) as bigint;
 };
+
+/**
+ * Igual que `readUsdcBalanceRaw` pero en unidades humanas, para cuando el saldo
+ * se va a mostrar o comparar y no a mover.
+ */
+export const readUsdcBalance = async (address: string, decimals: number): Promise<number> =>
+  Number(await readUsdcBalanceRaw(address)) / 10 ** decimals;
 
 /**
  * Lee (read-only) el saldo del USDC de Blend de una cuenta, en unidades humanas.

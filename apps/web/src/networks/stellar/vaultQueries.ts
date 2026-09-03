@@ -9,10 +9,10 @@ import {
   TransactionBuilder,
   xdr,
 } from '@stellar/stellar-sdk';
-import i18n from '@/core-ui/i18n';
 import { useConfigStore } from '@/core-ui/stores';
 import type { NetworkResponseDTO } from '@/core-ui/types';
 import { getNetworkPassphrase, getRpcUrl } from './kit';
+import { parseVaultError } from './vaultError';
 
 export interface DefindexVaultConfig {
   /** The DeFindex vault contract (also the df-token whose `balance` is the position). */
@@ -74,36 +74,17 @@ export const formatBaseUnits = (raw: bigint, decimals: number): string => {
   return negative ? `-${value}` : value;
 };
 
-// DeFindex vault ContractError code → i18n key (+ English fallback). Subset the
-// UI can actually hit on deposit/withdraw (the vault's full Errors enum is much
-// larger — governance/rebalance codes never reach an end user). Same shape and
-// per-call translation as POOL_ERROR_KEYS in poolQueries.ts.
-const VAULT_ERROR_KEYS: Record<number, { key: string; fallback: string }> = {
-  412: { key: 'errors.vault.insufficientBalance', fallback: 'Not enough balance' },
-  124: { key: 'errors.vault.amountOverTotalSupply', fallback: 'Amount exceeds the vault supply, please retry' },
-  114: { key: 'errors.vault.insufficientManagedFunds', fallback: "The vault can't cover this right now, please retry" },
-  451: { key: 'errors.vault.amountBelowMinDust', fallback: 'Amount is too small' },
-  452: { key: 'errors.vault.underlyingAmountBelowMin', fallback: 'Price moved past your limit, please retry' },
-  453: { key: 'errors.vault.bTokensAmountBelowMin', fallback: 'Price moved past your limit, please retry' },
-  410: { key: 'errors.vault.negativeNotAllowed', fallback: 'Invalid amount' },
-  417: { key: 'errors.vault.onlyPositiveAmount', fallback: 'Amount must be greater than zero' },
-  401: { key: 'errors.vault.notInitialized', fallback: 'Vault is not ready' },
-  418: { key: 'errors.vault.notAuthorized', fallback: 'Not authorized' },
-  130: { key: 'errors.vault.unauthorized', fallback: 'Not authorized' },
-};
-
 /**
  * Parse a DeFindex vault contract error (e.g. "Error(Contract, #412)") into a
  * human-readable message in the active language. Returns null when the error is
  * not a recognized vault error, so callers can fall back to a generic message.
+ *
+ * El mapa vive en `./vaultError` junto con `VaultContractError`, que es lo que
+ * hay que tirar cuando el error va a viajar: esta función se queda solo con la
+ * frase y pierde el código.
  */
 export function parseVaultErrorMessage(err: unknown): string | null {
-  const str =
-    err instanceof Error ? err.message : typeof err === 'string' ? err : JSON.stringify(err ?? '');
-  const match = /Error\(Contract,\s*#(\d+)\)/.exec(str);
-  if (!match || !match[1]) return null;
-  const entry = VAULT_ERROR_KEYS[parseInt(match[1], 10)];
-  return entry ? i18n.t(entry.key, entry.fallback) : null;
+  return parseVaultError(err)?.message ?? null;
 }
 
 export interface DefindexVaultPosition {

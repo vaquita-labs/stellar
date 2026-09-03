@@ -164,7 +164,9 @@ describe('formatBaseUnits', () => {
   it('round-trips through toBaseUnits without losing a base unit', () => {
     // The migration and withdraw flows hand this string straight to a deposit, so
     // the value that comes back out has to be the exact delta that was measured.
-    for (const raw of [1n, 999n, 10_000_000n, 2_830_008_070n, 99_999_999_999n]) {
+    // 7_299_999n es el saldo exacto que rompió el depósito de fondos ociosos en
+    // producción: lo que se manda a la cadena ahora sale de acá, no de un float.
+    for (const raw of [1n, 999n, 7_299_999n, 10_000_000n, 2_830_008_070n, 99_999_999_999n]) {
       expect(toBaseUnits(formatBaseUnits(raw, 7), 7)).toBe(raw);
     }
   });

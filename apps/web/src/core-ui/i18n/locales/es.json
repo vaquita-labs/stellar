@@ -553,7 +553,7 @@
       "copy": "Copiar",
       "copyAria": "Copiar dirección",
       "copied": "Copiado",
-      "minDeposit": "Depósito mínimo: $1 USDC.",
+      "minDeposit": "Depósito mínimo: {{amount}} USDC.",
       "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
     },
     "savingsStats": {
@@ -837,7 +837,8 @@
     "subtitle": "Este USDC está ahí sin hacer nada. Ponlo a trabajar y empieza a ganar de una vez.",
     "cta": "Empieza a ganar ${{amount}}",
     "processing": "Invirtiendo...",
-    "toast": "Pusimos ${{amount}} a trabajar"
+    "toast": "Pusimos ${{amount}} a trabajar",
+    "balanceUnavailable": "No pudimos leer tu saldo ahora mismo. Inténtalo de nuevo en un momento."
   },
   "leaderboard": {
     "card": {
@@ -1981,7 +1982,6 @@
         "withdraw": "Retiro"
       },
       "onramp": {
-        "amountLabel": "¿Cuánto querés gastar?",
         "close": "Cerrar",
         "continue": "Continuar",
         "copied": "Copiado",
@@ -2021,7 +2021,8 @@
         "longPress": "Mantené apretado el código para guardarlo en tus fotos.",
         "outUsdc": "≈ {{amount}} USDC",
         "payHint": "Pagá este QR desde la app de tu banco. El USDC llega solo.",
-        "processingBody": "El proveedor está enviando tus USDC. Podés cerrar: llegan solos.",
+        "processingBody": "Tus USDC suelen llegar en unos minutos, y pueden tardar hasta 15. Podés cerrar: caen solos en tu wallet.",
+        "processingHelp": "Si a los 15 minutos no llegaron, guardá el comprobante del banco y escribinos:",
         "processingTitle": "Pago recibido",
         "qrAlt": "Código QR de pago",
         "qrUnavailable": "No pudimos cargar el código de pago. Empezá de nuevo para obtener uno nuevo.",
@@ -2197,9 +2198,14 @@
       "max": "MÁX",
       "insufficient": "No tenés suficiente {{symbol}} en tu wallet.",
       "destination": "Wallet de destino",
-      "destinationPlaceholder": "G…",
+      "destinationPlaceholder": "G… o @usuario",
       "invalidAddress": "Eso no parece una dirección de Stellar válida.",
       "sameAddress": "No podés enviar a tu propia dirección.",
+      "handleNotFound": "No encontramos a ese usuario.",
+      "resolving": "Buscando…",
+      "destUnfunded": "Esa cuenta todavía no está activa en Stellar, así que no puede recibir USDC.",
+      "destNoTrustline": "Esta cuenta todavía no habilitó USDC. Pedile que abra la app una vez y probá de nuevo.",
+      "destCheckFailed": "No pudimos verificar esa cuenta. Igual podés intentar el envío.",
       "cta": "Enviar",
       "sending": "Enviando…",
       "success": "Enviaste {{amount}} {{symbol}}",
@@ -2281,7 +2287,7 @@
     },
     "methodLabel": "Método",
     "methodWallet": "Wallet",
-    "minWithdraw": "Retiro mínimo: $1 USDC.",
+    "minWithdraw": "Retiro mínimo: {{amount}} USDC.",
     "noWallets": "Todavía no tenés wallets guardadas",
     "processing": "Procesando retiro...",
     "processingHint": "Esto puede tardar unos segundos.",
