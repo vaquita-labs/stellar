@@ -2102,7 +2102,7 @@
           "anchorError": "O provedor recusou a solicitação. Tente de novo em instantes.",
           "assetNotEnabled": "Esta moeda não está disponível para essa rota no momento.",
           "generic": "Não foi possível concluir o saque.",
-          "insufficientQuote": "Este saque custa {{cost}} USDC e suas reservas têm {{balance}}.",
+          "insufficientQuote": "Este saque precisa de {{needed}} USDC nas suas reservas e você tem {{balance}}. Tente um valor menor.",
           "kycRequired": "O provedor precisa verificar sua identidade para continuar.",
           "noRoutes": "Nenhuma rota disponível para {{amount}} {{currency}}. Tente outro valor.",
           "paymentFailed": "O pagamento não pôde ser concluído. Seu USDC continua na sua carteira.",

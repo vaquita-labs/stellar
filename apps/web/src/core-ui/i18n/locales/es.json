@@ -2069,7 +2069,7 @@
           "anchorError": "El proveedor rechazó el pedido. Probá de nuevo en un momento.",
           "assetNotEnabled": "Esta moneda no está disponible para esa ruta por ahora.",
           "generic": "No se pudo completar el retiro.",
-          "insufficientQuote": "Este retiro cuesta {{cost}} USDC y en tus ahorros hay {{balance}}.",
+          "insufficientQuote": "Este retiro necesita {{needed}} USDC en tus ahorros y tenés {{balance}}. Probá con un monto menor.",
           "kycRequired": "El proveedor necesita verificar tu identidad para continuar.",
           "noRoutes": "No hay ruta disponible para {{amount}} {{currency}}. Probá con otro monto.",
           "paymentFailed": "El pago no se pudo completar. Tu USDC sigue en tu wallet.",

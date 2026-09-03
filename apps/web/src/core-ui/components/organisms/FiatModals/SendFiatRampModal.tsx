@@ -80,6 +80,21 @@ const settledFiatOf = (quote: RampQuote | null, requested: number): number => {
 };
 
 /**
+ * Margin added on top of the quote when pulling USDC out of the vault. The
+ * provider charges `cryptoAmount` to the stroop and rejects the withdrawal if
+ * the wallet is even one short, and how much the vault actually pays out is
+ * decided by ITS rounding when it unwinds the position — not by the shares we
+ * ask it to burn. A tenth of a cent absorbs that gap.
+ *
+ * The leftover stays in the wallet: it is far below the minimum the idle-funds
+ * gate acts on, so it neither prompts nor blocks anything.
+ */
+const FUNDING_DUST = 0.0001;
+
+/** USDC to pull from the vault to cover a quote, quantized to the stroop. */
+const fundingAmount = (cost: number): number => floorAmount(cost + FUNDING_DUST, AMOUNT_DECIMALS);
+
+/**
  * Fiat off-ramp over Pollar's ramps endpoints, for any of the corridors the app
  * exposes (Brazil over Pix, Colombia over PSE or Bre-B with Abroad). It shares
  * the skeleton of {@link SendFiatModal} (Argentina/Anclap): a three-lock
@@ -311,17 +326,22 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   /**
    * Validates the cost the quote publishes against the balance. Returns the
    * error message when it cannot be paid, or null when it fits.
+   *
+   * What has to fit is the cost PLUS {@link FUNDING_DUST}, not the cost alone:
+   * a balance that covers the quote exactly leaves no room for the vault's
+   * payout rounding, and the withdrawal would die at the provider with the
+   * money already out of savings.
    */
   const costProblem = (cost: number | null | undefined): string | null => {
     if (cost == null || !Number.isFinite(cost) || cost <= 0) {
       return t('wallet.fiat.ramp.err.unknownCost', 'The quote did not report how much USDC this withdrawal costs.');
     }
-    if (cost > balance) {
+    if (fundingAmount(cost) > balance) {
       return t(
         'wallet.fiat.ramp.err.insufficientQuote',
-        'This withdrawal costs {{cost}} USDC and your savings hold {{balance}}.',
+        'This withdrawal needs {{needed}} USDC in your savings and you have {{balance}}. Try a smaller amount.',
         {
-          cost,
+          needed: fundingAmount(cost),
           balance,
         },
       );
@@ -418,17 +438,22 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       // in the wallet there is nothing to pay with and the withdrawal sits in
       // `pending` with no hash forever.
       //
-      // The amount is `quote.cryptoAmount`, the EXACT charge fixed at quote
+      // The charge is `quote.cryptoAmount`, the EXACT figure fixed at quote
       // time. Dividing the requested fiat by `rate` lands on a different number,
       // because `rate` is published against the fiat that settles and the charge
-      // is rounded to the cent. It is not clamped to the balance either:
-      // withdrawing less than the charge guarantees a short payment, and
-      // `costProblem` already rejected the withdrawal if it does not fit.
+      // is rounded to the cent.
+      //
+      // What leaves the vault is that charge plus `FUNDING_DUST`: asking for the
+      // exact figure lands under it once the vault rounds its payout, and the
+      // provider rejects a wallet that is a single stroop short. It is not
+      // clamped to the balance either — withdrawing less than the charge
+      // guarantees a short payment, and `costProblem` already rejected the
+      // withdrawal if the funded amount does not fit.
       mark('funds', 'running');
       const cost = quote.cryptoAmount;
       const costIssue = costProblem(cost);
       if (costIssue) throw new RampError(costIssue);
-      const toWithdraw = cost as number;
+      const toWithdraw = fundingAmount(cost as number);
 
       // La fila se abre ANTES de sacar del vault, no después de crear con el
       // proveedor: si el retiro se cae en el medio, la plata ya se movió y esta

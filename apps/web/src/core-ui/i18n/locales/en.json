@@ -2069,7 +2069,7 @@
           "anchorError": "The provider rejected the request. Try again in a moment.",
           "assetNotEnabled": "This currency is not available for that route right now.",
           "generic": "The withdrawal could not be completed.",
-          "insufficientQuote": "This withdrawal costs {{cost}} USDC and your savings hold {{balance}}.",
+          "insufficientQuote": "This withdrawal needs {{needed}} USDC in your savings and you have {{balance}}. Try a smaller amount.",
           "kycRequired": "The provider needs to verify your identity before continuing.",
           "noRoutes": "No route available for {{amount}} {{currency}}. Try a different amount.",
           "paymentFailed": "The payment could not be completed. Your USDC is still in your wallet.",
