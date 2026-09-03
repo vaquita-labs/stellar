@@ -2111,6 +2111,7 @@
           "providerNotConfigured": "Este provedor ainda não está configurado para o app.",
           "quoteExpired": "A cotação expirou. Peça uma nova e tente de novo.",
           "unknownCost": "A cotação não informou quanto USDC custa este saque.",
+          "vaultNotConfirmed": "O saque das suas economias ainda não foi confirmado na rede. Seu USDC está seguro — tente de novo em um minuto.",
           "walletUnsupported": "Este tipo de carteira não pode ser usado neste saque."
         },
         "etaLabel": "Tempo estimado",

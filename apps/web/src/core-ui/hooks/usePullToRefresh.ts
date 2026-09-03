@@ -78,9 +78,8 @@ const buzz = (ms: number) => {
  * The browser's own gesture never fires here: `html` and `body` are pinned to
  * the viewport height with `overflow: hidden`, so the document never scrolls
  * and never overscrolls, and an installed (standalone) window drops the gesture
- * regardless. This reproduces it, and hands the refresh back to the caller
- * instead of reloading — a reload would replay the whole boot: rehydration, the
- * gates and the 3D world.
+ * regardless. This reproduces the gesture and hands the refresh itself to the
+ * caller, which decides what refreshing means.
  *
  * The listeners live on the document rather than on one container, because the
  * surfaces that need the gesture are not all in the same subtree: pages render
