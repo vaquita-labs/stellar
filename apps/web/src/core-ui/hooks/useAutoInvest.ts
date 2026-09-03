@@ -10,7 +10,7 @@ import { usePollar } from '@pollar/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useConfigStore, useRampActiveStore, useAwaitingFundsStore } from '../stores';
+import { useConfigStore, useRampActiveStore, useAwaitingFundsStore, usePendingCreditStore } from '../stores';
 
 // El umbral para no promptear ni gastar gas por polvo es el mismo mínimo que el
 // resto de los flujos de monto: antes esto tenía uno propio (0,1) distinto del
@@ -46,6 +46,10 @@ export const useIdleFunds = () => {
   const ready = usePollarReadyStore((s) => s.ready);
   const awaitingFunds = useAwaitingFundsStore((s) => s.isAwaitingFunds);
   const rampActive = useRampActiveStore((s) => s.isRampActive);
+  // Hay plata comprada que todavía no aterrizó. Se selecciona como booleano
+  // a propósito: `pendingUntil` es un timestamp nuevo en cada compra y
+  // remontaría el poll al azar; lo único que importa acá es si hay o no.
+  const pendingCredit = usePendingCreditStore((s) => s.pendingUntil != null);
 
   const [isInvesting, setIsInvesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,12 +79,20 @@ export const useIdleFunds = () => {
 
   // (2) Poll REPETIDO: solo mientras el usuario está esperando que le entre la
   // plata —mirando su dirección en "Receive USDC", o el QR de una compra con
-  // moneda local—, porque ahí llega por fuera de la app y nadie nos avisa. El
-  // resto del tiempo no le pegamos al RPC en loop. Guardas:
+  // moneda local—, porque ahí llega por fuera de la app y nadie nos avisa.
+  //
+  // Sigue corriendo con la rampa YA CERRADA mientras haya un crédito en vuelo
+  // (`pendingCredit`): el proveedor da la compra por hecha antes de que el USDC
+  // aterrice, y si el poll se apaga al cerrar el modal nadie vuelve a mirar el
+  // saldo. Esa era la falla: la plata llegaba, el saldo seguía en 0 para la app,
+  // el prompt del vault no salía y el header parpadeaba hasta el timeout; sólo
+  // un reload —que dispara el fetch (1)— lo destrababa.
+  //
+  // El resto del tiempo no le pegamos al RPC en loop. Guardas:
   // custodial + sesión Pollar restaurada; pausa con la pestaña oculta y mientras
   // hay un supply in-flight. Al volver a la pestaña refrescamos enseguida.
   useEffect(() => {
-    if (!awaitingFunds || !ready || !isCustodial || !walletAddress) return;
+    if ((!awaitingFunds && !pendingCredit) || !ready || !isCustodial || !walletAddress) return;
 
     const tick = () => {
       if (inFlight.current || document.visibilityState === 'hidden') return;
@@ -96,7 +108,7 @@ export const useIdleFunds = () => {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [awaitingFunds, ready, isCustodial, walletAddress, refreshWalletBalance]);
+  }, [awaitingFunds, pendingCredit, ready, isCustodial, walletAddress, refreshWalletBalance]);
 
   const invest = useCallback(async () => {
     if (inFlight.current || !walletAddress || !token) return;
