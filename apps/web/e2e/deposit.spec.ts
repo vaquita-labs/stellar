@@ -11,6 +11,10 @@ import { ensureTestnetUsdc } from './testnet-usdc';
  * possible, e.g. the faucet being down.
  */
 const DEPOSIT_USDC = '1';
+/** Cómo se ve `MIN_USDC` (0,1) ya formateado: `formatUsdPrecise(0.1, 2)`. */
+const MIN_DEPOSIT_LABEL = '$0.10';
+/** Debajo del mínimo, para el caso que espera el CTA apagado. */
+const BELOW_MINIMUM = '0.05';
 
 test.describe('deposit', () => {
   test.describe.configure({ mode: 'serial' });
@@ -34,7 +38,7 @@ test.describe('deposit', () => {
     await expect(available).toBeVisible({ timeout: 60_000 });
     const onChain = parseAvailable((await available.textContent()) ?? '');
     expect(onChain).toBeGreaterThanOrEqual(Number(DEPOSIT_USDC));
-    await expect(page.getByText('Minimum deposit: $1 USDC.')).toBeVisible();
+    await expect(page.getByText(`Minimum deposit: ${MIN_DEPOSIT_LABEL} USDC.`)).toBeVisible();
 
     const review = dialog(page).getByRole('button', { name: 'Review' });
     await typeAmount(page, DEPOSIT_USDC);
@@ -61,12 +65,12 @@ test.describe('deposit', () => {
     const onChain = parseAvailable((await available.textContent()) ?? '');
 
     const review = dialog(page).getByRole('button', { name: 'Review' });
-    // Under the $1 minimum the CTA stays disabled; the minimum note explains why.
-    await typeAmount(page, '0.5');
+    // Under the minimum the CTA stays disabled; the minimum note explains why.
+    await typeAmount(page, BELOW_MINIMUM);
     await expect(review).toBeDisabled();
 
     // More than the wallet holds: the CTA is live but refuses to advance.
-    await clearAmount(page, 3);
+    await clearAmount(page, BELOW_MINIMUM.length);
     await typeAmount(page, String(Math.ceil(onChain) + 1));
     await expect(review).toBeEnabled();
     await review.click();
