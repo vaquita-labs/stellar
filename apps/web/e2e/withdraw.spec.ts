@@ -11,6 +11,8 @@ import { usdcBalance } from './testnet-usdc';
  * skips with a clear message when the position is short.
  */
 const WITHDRAW_USDC = '1';
+/** Cómo se ve `MIN_USDC` (0,1) ya formateado: `formatUsdPrecise(0.1, 2)`. */
+const MIN_WITHDRAW_LABEL = '$0.10';
 
 test.describe('withdraw', () => {
   test.describe.configure({ mode: 'serial' });
@@ -32,7 +34,7 @@ test.describe('withdraw', () => {
       inSavings < Number(WITHDRAW_USDC),
       `savings position holds ${inSavings} USDC (< ${WITHDRAW_USDC}); the deposit spec must land first`,
     );
-    await expect(page.getByText('Minimum withdrawal: $1 USDC.')).toBeVisible();
+    await expect(page.getByText(`Minimum withdrawal: ${MIN_WITHDRAW_LABEL} USDC.`)).toBeVisible();
     // An external wallet always withdraws to itself.
     await expect(page.getByText('Your wallet')).toBeVisible();
 
