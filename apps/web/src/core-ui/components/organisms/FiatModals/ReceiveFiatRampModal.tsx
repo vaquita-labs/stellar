@@ -581,9 +581,15 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     );
 
   /**
-   * La ruta cotizada: se dibuja igual en los dos pasos del formulario, pero en
-   * distinto lugar (entre monto y teclado mientras se teclea, sola en los datos),
-   * así que vive en una variable en vez de repetirse.
+   * El estado de la cotización mientras se arma la compra, y —recién en el paso
+   * de los datos— la ruta ya cotizada. Se dibuja en distinto lugar según el
+   * paso (entre monto y teclado mientras se teclea, sola en los datos), así que
+   * vive en una variable en vez de repetirse.
+   *
+   * En el paso del monto el desglose NO se muestra: es exactamente el mismo que
+   * el del paso siguiente, y ahí el usuario ya lo tiene delante justo antes de
+   * pagar. Repetirlo mientras teclea sólo empujaba el teclado hacia abajo con
+   * un número que además cambia con cada tecla.
    */
   const routeCard = (
     <>
@@ -599,9 +605,9 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         </p>
       )}
 
-      {/* --- The chosen route. It shows even when the amount is out of range,
-          because the limits are what tell the user how to fix it. --- */}
-      {showForm && quote && !quoting && (
+      {/* --- The chosen route, on the step right before paying: what you pay,
+          what you get, at what rate and how long it takes. --- */}
+      {phase === 'details' && quote && !quoting && (
         <div className="flex flex-col gap-1 rounded-lg border border-black border-b-2 bg-white p-3 text-sm">
           {/* El nombre del proveedor no se muestra: el usuario paga por un
               rail (QR, transferencia), y quién lo liquida es un detalle
