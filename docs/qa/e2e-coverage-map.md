@@ -44,6 +44,8 @@ Which layer exercises which part of each critical flow. `●` covered · `○` p
 | Badge claim signing (`GET /api/v1/claim/:network`) | — | ● (shared badge services) | ● | ● | ● |
 | Badge mint `mint_badge` (signature verify, soulbound, edition cap) | ● | ● (`badgeErrors.ts` mapping) | ● | ● | ● |
 | Transaction error mapping (rejected, trustline, balance, network, pending) | — | ● (`txError.test.ts`, `pollarError.test.ts`) | — | ○ | ● |
+| Fiat on-ramp (BOB/ARS: quote, provider fields, QR, crediting) | — | ● (`rampFields.test.ts`, `onrampFlow.test.ts`, `onrampPayment.test.ts`, `qrImage.test.ts`) | — | ○ (country picker only) | ● |
+| Fiat off-ramp (bank: saved accounts, quote, send) | — | ● (`rampFields.test.ts`, `rampCountries.test.ts`) | — | — | ● |
 | Passive vault deposit / withdraw / migration (flag) | — | ● (`vaultQueries.test.ts`, `blendDirect.test.ts`) | ○ | ○ | ● (W-13) |
 | Pause / upgrade governance | ● (`upgrade.rs`) | — | — | — | — |
 
@@ -84,6 +86,8 @@ Recorded so the reviewer sees them before finding them. Update as they close.
 | Positions with lock period > ~90 d archive before maturity (`docs/architecture.md` §9.2) | Matured-withdraw on long periods needs a TTL restore first | Not covered; latent unless a > 90 d period is configured | |
 | A matured withdrawal is recorded by the API as `withdraw_success_early`, the same state as a forfeited one | Portfolio history and any state-driven reporting will say the saver lost interest when they were paid in full (payout verified correct: 1.80 principal → 1.9906779 received) | Manual run 2026-08-25-38cdf27, finding F-18 | open |
 | Nonce ABI migration (`deposit_id: String` → `nonce: u64`) needs an end-to-end testnet smoke (`docs/architecture.md` §9.5) | Deposit/withdraw join key | R6 + W-05/W-06/W-07 | |
+| The fiat ramps have no automated coverage past the country picker: crediting needs a real bank payment through a provider that only operates on mainnet | The whole local-currency purchase and the bank withdrawal. A bug here reaches production with no suite noticing — it did on 2026-09-03: with the purchase credited, the app stopped re-reading the balance and the vault prompt never appeared (fixed in `a67dfe28`) | Vitest over the pure parts (`screenFor`, `selectDefaults`, `qrImage`) + the manual matrix | open |
+| An on-ramp purchase's status is written only by the modal open on the user's phone: the API never asks the provider, and `onramp_purchases.lastPolledAt` has no writer anywhere in the repo | Someone who pays and closes the app is recorded exactly like someone who never paid. No retry, no alert, and the two are indistinguishable from the database | Nothing; found by hand by cross-checking against the chain (`apps/api/tmp/2026-09-03-uncredited-onramps.ts`) | open |
 | Lobstr is mainnet-only | No testnet coverage for that wallet | Manual run on the mainnet build | |
 | The welcome reward is gated on `tutorialCompleted`, a flag only the globally disabled tutorial writes, so no new user is ever offered it | R11 `W-04` cannot pass until the gate is fixed; the reward itself works and credits 1 USDC on-chain | Manual run 2026-08-25-38cdf27, finding F-07 (`ClaimGate.tsx` / `TutorialGate.tsx`) | open |
 | The wallet session token `vaquita-wallet-session` survives *Sign out* | A later user of the same browser inherits a live API session | Manual run 2026-08-25-38cdf27, finding F-05 | open |
