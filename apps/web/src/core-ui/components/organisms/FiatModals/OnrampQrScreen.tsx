@@ -50,6 +50,7 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
     const probe = new File([new Blob([''])], 'qr.png', { type: 'image/png' });
     return saveAffordanceFor({
       coarsePointer: window.matchMedia?.('(pointer: coarse)').matches ?? false,
+      canDownload: typeof URL.createObjectURL === 'function' && 'download' in document.createElement('a'),
       canShareFiles: navigator.canShare?.({ files: [probe] }) ?? false,
     });
   }, []);
@@ -60,10 +61,10 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
     () => (!payload && imageSrc ? pngFileFromDataUrl(imageSrc, 'vaquita-qr.png') : null),
     [payload, imageSrc],
   );
-  const shareFile = qrFile ?? providerFile;
+  const saveFile = qrFile ?? providerFile;
 
   // Rasterizar el QR es asíncrono (pasa por un canvas), así que se hace una vez
-  // por payload y se guarda el File: es el mismo que después se comparte.
+  // por payload y se guarda el File: es el mismo que después baja al dispositivo.
   useEffect(() => {
     if (!payload) return;
     let cancelled = false;
@@ -90,13 +91,14 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
   const shownSrc = qrUrl ?? (qrError || !payload ? imageSrc : null);
 
   const handleSave = async () => {
-    if (!shareFile) return;
+    if (!saveFile) return;
     setSaving(true);
     try {
-      const outcome = await saveQrImage(shareFile);
+      const outcome = await saveQrImage(saveFile);
       setSaved(outcome !== 'manual');
     } catch {
-      // Compartir cancelado por el usuario: no es un error que valga mostrar.
+      // Guardado cancelado por el usuario (la hoja de compartir del respaldo se
+      // puede cerrar sin elegir nada): no es un error que valga mostrar.
     } finally {
       setSaving(false);
     }
@@ -174,7 +176,7 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
           </p>
         )}
 
-        {affordance === 'share' && shareFile && (
+        {affordance === 'save' && saveFile && (
           <PressableButton variant="success" size="cta" onClick={handleSave} disabled={saving}>
             {saved ? t('wallet.fiat.onramp.saved', 'Saved') : t('wallet.fiat.onramp.save', 'Save QR to my phone')}
           </PressableButton>

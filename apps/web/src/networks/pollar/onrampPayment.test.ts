@@ -148,17 +148,23 @@ describe('countdownFrom', () => {
 });
 
 describe('saveAffordanceFor', () => {
-  it('offers the save button on a phone that can share files', () => {
-    expect(saveAffordanceFor({ coarsePointer: true, canShareFiles: true })).toBe('share');
+  it('offers the save button on a phone that can download the file', () => {
+    // Descargar alcanza: es lo que `saveQrImage` intenta primero, así que el
+    // botón no depende de que además exista la hoja de compartir.
+    expect(saveAffordanceFor({ coarsePointer: true, canDownload: true, canShareFiles: false })).toBe('save');
   });
 
-  it('falls back to a long-press instruction on a phone that cannot share files', () => {
+  it('still offers it on a phone that can only share files', () => {
+    expect(saveAffordanceFor({ coarsePointer: true, canDownload: false, canShareFiles: true })).toBe('save');
+  });
+
+  it('falls back to a long-press instruction on a phone that can do neither', () => {
     // Sin nada visible el usuario se queda mirando un QR que no sabe guardar, y
     // el pago pasa por otra app: tiene que salir de la galería.
-    expect(saveAffordanceFor({ coarsePointer: true, canShareFiles: false })).toBe('longPress');
+    expect(saveAffordanceFor({ coarsePointer: true, canDownload: false, canShareFiles: false })).toBe('longPress');
   });
 
   it('offers nothing on a desktop, where the code is scanned off the screen', () => {
-    expect(saveAffordanceFor({ coarsePointer: false, canShareFiles: false })).toBe('none');
+    expect(saveAffordanceFor({ coarsePointer: false, canDownload: true, canShareFiles: true })).toBe('none');
   });
 });

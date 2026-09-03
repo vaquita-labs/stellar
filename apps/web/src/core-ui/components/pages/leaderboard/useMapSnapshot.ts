@@ -7,7 +7,11 @@ import { requestMapSnapshot } from './mapSnapshot';
 
 /**
  * Fetches a wallet's map objects (only once `enabled`) and turns them into a
- * static PNG data URL via {@link requestMapSnapshot}. Returns null until ready.
+ * static PNG via {@link requestMapSnapshot}. Returns null until ready.
+ *
+ * The snapshot arrives as a Blob shared through the module's cache, and the URL
+ * built here belongs to this hook alone: it is released on unmount, so the bytes
+ * live exactly as long as something is showing them.
  */
 export function useMapSnapshot(walletAddress: string, enabled: boolean): string | null {
   const { data } = useProfileMapObjectsByWallet(walletAddress, enabled);
@@ -16,7 +20,18 @@ export function useMapSnapshot(walletAddress: string, enabled: boolean): string 
 
   useEffect(() => {
     if (!enabled || !objects || objects.length === 0) return;
-    return requestMapSnapshot(walletAddress, objects, WorldType.FOREST, setUrl);
+
+    let objectUrl: string | null = null;
+    const cancel = requestMapSnapshot(walletAddress, objects, WorldType.FOREST, (image) => {
+      objectUrl = URL.createObjectURL(image);
+      setUrl(objectUrl);
+    });
+
+    return () => {
+      cancel();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setUrl(null);
+    };
   }, [enabled, objects, walletAddress]);
 
   return url;

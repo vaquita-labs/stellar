@@ -7,11 +7,16 @@ import { MapObject, MapObjectType, WorldType } from '@/core-ui/types';
 import * as THREE from 'three';
 
 /**
- * Renders a player's map to a static PNG (data URL) once, off-screen, through a
- * SINGLE reused WebGL context. The card then shows that image as a plain <img>,
- * so the preview scrolls natively glued to the card — no overlay canvas, no
- * compositor desync. The map is static, so a bitmap looks identical to a live
- * scene while being far cheaper and perfectly anchored.
+ * Renders a player's map to a static PNG once, off-screen, through a SINGLE
+ * reused WebGL context. The card then shows that image as a plain <img>, so the
+ * preview scrolls natively glued to the card — no overlay canvas, no compositor
+ * desync. The map is static, so a bitmap looks identical to a live scene while
+ * being far cheaper and perfectly anchored.
+ *
+ * The image travels as a Blob rather than a data URL: base64 would hold every
+ * cached snapshot in the JS heap, a third larger than the bytes themselves. Each
+ * consumer turns the Blob into its own object URL and releases it when it goes
+ * away, so an eviction here never blanks a preview still on screen.
  */
 
 const BASE_W = 480;
@@ -31,14 +36,43 @@ const OCEAN_EXTENT = 500;
  */
 const BOARD_BOX = new THREE.Box3(
   new THREE.Vector3(-0.5, -TILE_HEIGHT * 2, -0.5),
-  new THREE.Vector3(MAP_SIZE - 0.5, TILE_HEIGHT * 3, MAP_SIZE - 0.5)
+  new THREE.Vector3(MAP_SIZE - 0.5, TILE_HEIGHT * 3, MAP_SIZE - 0.5),
 );
 let renderer: THREE.WebGLRenderer | null = null;
 let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
 let ocean: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial> | null = null;
 
+/**
+ * A page may hold only so many WebGL contexts (~16 in Chrome) and the browser
+ * drops the oldest ones to stay under that budget — the live map among them. So
+ * this renderer, which only works in bursts while cards scroll into view, hands
+ * its context back once the queue has been idle this long instead of holding a
+ * slot for the rest of the session. `ensureRenderer` builds it again on the next
+ * request, at the cost of a few milliseconds.
+ */
+const RENDERER_IDLE_MS = 5_000;
+let releaseTimer = 0;
+
+function releaseRenderer() {
+  if (!renderer) return;
+  ocean?.geometry.dispose();
+  ocean?.material.dispose();
+  renderer.dispose();
+  renderer.forceContextLoss();
+  renderer = null;
+  scene = null;
+  camera = null;
+  ocean = null;
+}
+
+function scheduleRelease() {
+  window.clearTimeout(releaseTimer);
+  releaseTimer = window.setTimeout(releaseRenderer, RENDERER_IDLE_MS);
+}
+
 function ensureRenderer() {
+  window.clearTimeout(releaseTimer);
   if (renderer) return;
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
@@ -57,7 +91,7 @@ function ensureRenderer() {
   // Color is set per snapshot from the world palette in renderSnapshot.
   ocean = new THREE.Mesh(
     new THREE.PlaneGeometry(OCEAN_EXTENT * 2, OCEAN_EXTENT * 2),
-    new THREE.MeshLambertMaterial({ side: THREE.DoubleSide })
+    new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }),
   );
   ocean.rotation.x = -Math.PI / 2;
   ocean.position.y = -TILE_HEIGHT * 0.85; // same water level as WaterBackground
@@ -97,11 +131,7 @@ function fitCamera(cam: THREE.PerspectiveCamera) {
   let hy = 0;
   const corner = new THREE.Vector3();
   for (let i = 0; i < 8; i++) {
-    corner.set(
-      i & 1 ? box.max.x : box.min.x,
-      i & 2 ? box.max.y : box.min.y,
-      i & 4 ? box.max.z : box.min.z
-    );
+    corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z);
     corner.project(cam);
     hx = Math.max(hx, Math.abs(corner.x));
     hy = Math.max(hy, Math.abs(corner.y));
@@ -113,7 +143,7 @@ function fitCamera(cam: THREE.PerspectiveCamera) {
   }
 }
 
-function renderSnapshot(objects: MapObject[], worldType: WorldType): string {
+async function renderSnapshot(objects: MapObject[], worldType: WorldType): Promise<Blob | null> {
   ensureRenderer();
 
   const root = new THREE.Group();
@@ -126,9 +156,7 @@ function renderSnapshot(objects: MapObject[], worldType: WorldType): string {
       Array.isArray(o.rotation) && o.rotation.length === 3
         ? [o.rotation[0] || 0, o.rotation[1] || 0, o.rotation[2] || 0]
         : [0, 0, 0];
-    const rotation = isBuildingType(o.type)
-      ? composeBuildingRotation(o.type, userRotation)
-      : userRotation;
+    const rotation = isBuildingType(o.type) ? composeBuildingRotation(o.type, userRotation) : userRotation;
     const wrapper = new THREE.Group();
     wrapper.position.set(o.position[0], o.position[1], o.position[2]);
     wrapper.rotation.set(rotation[0], rotation[1], rotation[2]);
@@ -141,20 +169,23 @@ function renderSnapshot(objects: MapObject[], worldType: WorldType): string {
   scene!.add(root);
   fitCamera(camera!);
   renderer!.render(scene!, camera!);
-  const url = renderer!.domElement.toDataURL('image/png');
+  const canvas = renderer!.domElement;
 
   scene!.remove(root);
   disposeObject(root);
-  return url;
+
+  // `preserveDrawingBuffer` is what keeps the frame readable after the render
+  // call returns, which is what lets toBlob read it on a later tick.
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 }
 
 /* ------------------------------------------------------------------ */
 /* Cache + one-per-frame queue (so a screenful of cards doesn't hitch)  */
 /* ------------------------------------------------------------------ */
 
-const cache = new Map<string, string>();
+const cache = new Map<string, Blob>();
 const MAX_CACHE = 80;
-const queue: Array<() => void> = [];
+const queue: Array<() => Promise<void>> = [];
 let pumping = false;
 
 /**
@@ -177,10 +208,16 @@ function hashObjects(objects: MapObject[]): string {
 function pump() {
   if (pumping) return;
   pumping = true;
-  const step = () => {
-    queue.shift()?.();
-    if (queue.length) requestAnimationFrame(step);
-    else pumping = false;
+  const step = async () => {
+    // Awaited so the shared canvas is only read by one snapshot at a time, and
+    // so the renderer is not handed back while a read is still pending.
+    await queue.shift()?.();
+    if (queue.length) {
+      requestAnimationFrame(step);
+      return;
+    }
+    pumping = false;
+    scheduleRelease();
   };
   requestAnimationFrame(step);
 }
@@ -195,7 +232,7 @@ export function requestMapSnapshot(
   walletAddress: string,
   objects: MapObject[],
   worldType: WorldType,
-  onReady: (url: string) => void
+  onReady: (image: Blob) => void,
 ): () => void {
   const cacheKey = `${walletAddress}:${hashObjects(objects)}`;
   const cached = cache.get(cacheKey);
@@ -205,12 +242,15 @@ export function requestMapSnapshot(
   }
 
   let cancelled = false;
-  queue.push(() => {
+  queue.push(async () => {
     if (cancelled) return;
-    const url = renderSnapshot(objects, worldType);
-    cache.set(cacheKey, url);
+    const image = await renderSnapshot(objects, worldType);
+    if (!image) return;
+    // The render is worth keeping even if this caller walked away: the key is
+    // the map's own content, so whoever asks next is asking for this image.
+    cache.set(cacheKey, image);
     if (cache.size > MAX_CACHE) cache.delete(cache.keys().next().value as string);
-    onReady(url);
+    if (!cancelled) onReady(image);
   });
   pump();
 

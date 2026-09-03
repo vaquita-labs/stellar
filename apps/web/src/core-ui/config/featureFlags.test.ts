@@ -52,6 +52,6 @@ describe('supportEmail', () => {
   // La tarjeta "Email" del Concierge abre un mailto: con lo que devuelva esto,
   // así que un entorno sin la variable no puede quedarse con un destino vacío.
   it('falls back to the default mailbox when the env var is unset', () => {
-    expect(supportEmail()).toBe('leaconti10@gmail.com');
+    expect(supportEmail()).toBe('support@vaquita.fi');
   });
 });

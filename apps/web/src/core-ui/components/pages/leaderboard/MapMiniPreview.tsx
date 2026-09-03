@@ -17,8 +17,7 @@ function DottedBackdrop() {
     <div
       className="absolute inset-0"
       style={{
-        backgroundImage:
-          'radial-gradient(circle, rgba(0,0,0,0.18) 1px, transparent 1.5px)',
+        backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.18) 1px, transparent 1.5px)',
         backgroundSize: '14px 14px',
       }}
     />
@@ -48,7 +47,7 @@ export function MapMiniPreview({ walletAddress, caption, badge }: MapMiniPreview
           observer.disconnect();
         }
       },
-      { rootMargin: '200px' }
+      { rootMargin: '200px' },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -57,13 +56,10 @@ export function MapMiniPreview({ walletAddress, caption, badge }: MapMiniPreview
   const snapshot = useMapSnapshot(walletAddress, isVisible);
 
   return (
-    <div
-      ref={tileRef}
-      className="relative w-full aspect-[16/9] overflow-hidden rounded-lg bg-[#FAF6EE]"
-    >
+    <div ref={tileRef} className="relative w-full aspect-[16/9] overflow-hidden rounded-lg bg-[#FAF6EE]">
       {snapshot ? (
         // eslint-disable-next-line @next/next/no-img-element -- a runtime-generated
-        // data URL; next/image can't optimize it and would only add overhead.
+        // object URL; next/image can't optimize it and would only add overhead.
         <img src={snapshot} alt="" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <DottedBackdrop />
