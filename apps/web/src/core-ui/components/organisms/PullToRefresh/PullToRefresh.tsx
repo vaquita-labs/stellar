@@ -2,29 +2,32 @@
 
 import { PULL_TO_REFRESH_THRESHOLD_PX, usePullToRefresh } from '@/core-ui/hooks';
 import { useQueryClient } from '@tanstack/react-query';
-import { usePathname } from 'next/navigation';
-import { ReactNode, useCallback, useRef } from 'react';
+import { ReactNode, useCallback } from 'react';
 import { FiRefreshCw } from 'react-icons/fi';
 
 /**
- * Marks the element a screen offers as the handle for the pull. Only screens in
- * {@link ORIGIN_ONLY_ROUTES} need one.
+ * Marks the subtrees the pull must never claim. Only the home map carries it:
+ * it is a WebGL canvas that pans with the same downward drag, and it never
+ * scrolls, so without this the gesture would fight the camera.
  */
-const PULL_ORIGIN_SELECTOR = '[data-pull-origin]';
+const PULL_IGNORE_SELECTOR = '[data-pull-ignore]';
 
-/**
- * Routes where a downward drag over the body already means something else. The
- * home map is a WebGL canvas that pans with the same finger movement and never
- * scrolls, so the pull is confined to the header that sits above it. A screen
- * listed here without a marked handle simply has no pull.
- */
-const ORIGIN_ONLY_ROUTES = ['/home'];
-
-/** How far above the top edge the indicator parks while idle. */
+/** How far above the surface's top edge the indicator parks while idle. */
 const INDICATOR_HIDDEN_PX = 44;
 
 /**
- * The app's main scroll region, with pull-to-refresh on it.
+ * Above the modal backdrop, so the indicator stays visible when the pull
+ * happens inside a panel or a sheet.
+ */
+const INDICATOR_Z = 60;
+
+/**
+ * The app's main scroll region, plus the pull-to-refresh indicator for the
+ * whole app.
+ *
+ * The gesture itself is bound to the document (see `usePullToRefresh`), because
+ * panels and sheets are portalled outside this subtree. The indicator is fixed
+ * and follows whichever surface is being pulled.
  *
  * Refreshing refetches the queries the current screen has mounted, and nothing
  * else. It deliberately does not reload the page: that would replay
@@ -32,31 +35,35 @@ const INDICATOR_HIDDEN_PX = 44;
  * same data.
  */
 export function PullToRefresh({ className, children }: { className?: string; children: ReactNode }) {
-  const containerRef = useRef<HTMLElement>(null);
   const queryClient = useQueryClient();
-  const pathname = usePathname();
-  const originOnly = ORIGIN_ONLY_ROUTES.some((route) => pathname?.startsWith(route));
 
   // `type: 'active'` limits both the invalidation and the refetch to queries
-  // that currently have a mounted observer, which is exactly the screen under
-  // the finger. A bare invalidate would also mark the persisted cache stale —
-  // catalog, map objects, badges — and write that back to localStorage.
+  // that currently have a mounted observer, which is exactly what is on screen.
+  // A bare invalidate would also mark the persisted cache stale — catalog, map
+  // objects, badges — and write that back to localStorage.
   const onRefresh = useCallback(() => queryClient.invalidateQueries({ type: 'active' }), [queryClient]);
 
-  const { distance, pulling, armed, refreshing } = usePullToRefresh(containerRef, {
+  const { distance, pulling, armed, refreshing, anchor } = usePullToRefresh({
     onRefresh,
-    originSelector: originOnly ? PULL_ORIGIN_SELECTOR : undefined,
+    ignoreSelector: PULL_IGNORE_SELECTOR,
   });
 
   const visible = distance > 0 || refreshing;
 
   return (
-    <main ref={containerRef} className={className}>
-      {/* Sticky row of zero height: the indicator hangs from the top of the
-          scroller without taking space or pushing the content down. */}
-      <div className="sticky top-0 z-30 flex h-0 justify-center" aria-hidden="true">
+    <>
+      <main className={className}>{children}</main>
+      <div
+        className="pointer-events-none fixed flex justify-center"
+        style={{
+          zIndex: INDICATOR_Z,
+          top: anchor?.top ?? 0,
+          left: anchor?.left ?? 0,
+          width: anchor?.width ?? '100%',
+        }}
+        aria-hidden="true"
+      >
         <div
-          className="mt-0 flex items-center justify-center"
           style={{
             transform: `translateY(${distance - INDICATOR_HIDDEN_PX}px)`,
             opacity: visible ? Math.min(1, distance / PULL_TO_REFRESH_THRESHOLD_PX) : 0,
@@ -77,7 +84,6 @@ export function PullToRefresh({ className, children }: { className?: string; chi
           </span>
         </div>
       </div>
-      {children}
-    </main>
+    </>
   );
 }

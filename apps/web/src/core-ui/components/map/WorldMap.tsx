@@ -136,6 +136,9 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
 
   return (
     <div
+      // `data-pull-ignore`: el mundo 3D hace paneo con el mismo arrastre hacia
+      // abajo que el pull-to-refresh, así que el gesto no puede empezar acá.
+      data-pull-ignore
       className="relative w-full flex-1 h-full"
       style={isAvailable ? undefined : { filter: 'grayscale(70%) brightness(100%)', opacity: 0.4 }}
     >
