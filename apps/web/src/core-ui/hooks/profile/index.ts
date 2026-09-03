@@ -1,3 +1,4 @@
+export * from './useCryptoMode';
 export * from './useDismissSuggestion';
 export * from './useFollowCounts';
 export * from './useFollowList';

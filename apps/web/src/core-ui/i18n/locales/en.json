@@ -2049,8 +2049,10 @@
         "youPay": "You pay",
         "youReceive": "You receive"
       },
+      "rail": {
+        "ach": "Bank Transfer"
+      },
       "ramp": {
-        "amountLabel": "How much do you want to receive?",
         "balance": "Available in savings: {{balance}} USDC",
         "balanceLoading": "Reading your savings…",
         "continue": "Continue",
@@ -2070,8 +2072,9 @@
           "insufficientQuote": "This withdrawal costs {{cost}} USDC and your savings hold {{balance}}.",
           "kycRequired": "The provider needs to verify your identity before continuing.",
           "noRoutes": "No route available for {{amount}} {{currency}}. Try a different amount.",
+          "paymentFailed": "The payment could not be completed. Your USDC is still in your wallet.",
           "paymentNotOnChain": "The provider reported a payment ({{hash}}) that never reached the network. Your USDC is still in your wallet.",
-          "paymentNotSubmitted": "The provider accepted the withdrawal but never sent the on-chain payment. Your USDC is in your wallet — try again.",
+          "paymentNotSubmitted": "The provider accepted the withdrawal but never sent the payment. Your USDC is in your wallet — try again.",
           "providerNotConfigured": "This provider is not configured for the app yet.",
           "quoteExpired": "The quote expired. Request a new one and try again.",
           "unknownCost": "The quote did not report how much USDC this withdrawal costs.",
