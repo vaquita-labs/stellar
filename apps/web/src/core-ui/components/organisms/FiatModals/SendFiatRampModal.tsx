@@ -10,12 +10,12 @@ import {
   useRampOfframp,
 } from '@/networks/pollar/ramps';
 import { advanceWithdrawal, markWithdrawalTerminal, startWithdrawal } from '@/networks/pollar/offrampApi';
-import { fieldsAreValid, type RampField, rampErrorMessage } from '@/networks/pollar/rampFields';
+import { fieldsAreValid, type RampField, rampErrorMessage, selectDefaults } from '@/networks/pollar/rampFields';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import type { RampTxStatus } from '@pollar/core';
 import { Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
 import { FiExternalLink, FiPlus } from 'react-icons/fi';
@@ -168,7 +168,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   // cotización fija el precio de UN monto, y seguir con la de otro cobraría mal.
   const [quotedFor, setQuotedFor] = useState<number | null>(null);
   const [usdcCost, setUsdcCost] = useState<number | null>(null);
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [typedValues, setValues] = useState<Record<string, string>>({});
 
   // Cuentas bancarias guardadas: el espejo de las wallets guardadas del retiro a
   // cripto. Existe para no retipear documento y número de cuenta en cada retiro,
@@ -249,7 +249,22 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const currency = corridor?.currency ?? '';
   const symbol = corridor?.symbol ?? '';
   const countryName = t(`wallet.fiat.ramp.country.${country}`, country);
-  const fields: RampField[] = quote?.requiredFields ?? [];
+  const fields = useMemo<RampField[]>(() => quote?.requiredFields ?? [], [quote]);
+  /**
+   * Lo que el formulario muestra y manda: lo tipeado más el default de cada
+   * select obligatorio que todavía está vacío (ver `selectDefaults`).
+   *
+   * El default entra en los valores y no sólo en lo que se ve porque el
+   * Continuar los mira: uno puramente visual dejaría el banco elegido en
+   * pantalla y el botón gris. Y se deriva en el render en vez de escribirse con
+   * un efecto para que el estado siga guardando sólo lo que el usuario tipeó
+   * —el `onChange` de la lista significa "lo editó él", y en el retiro eso
+   * despega el formulario de la cuenta guardada.
+   */
+  const values = useMemo(
+    () => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }),
+    [fields, typedValues],
+  );
   const amountNum = Number(amountFiat);
   const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
   const fieldsValid = fieldsAreValid(fields, values);

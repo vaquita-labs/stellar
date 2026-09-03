@@ -17,7 +17,7 @@ import {
   useProfileRewards,
   useProfileStreak,
 } from '../../hooks';
-import { GOLD_COIN, useElementPositionsStore, useHideBalance } from '../../stores';
+import { GOLD_COIN, useElementPositionsStore, useHideBalance, usePendingCreditStore } from '../../stores';
 import { PageHeader } from '../molecules';
 import { useModalPresence } from '../molecules/AppModal';
 import {
@@ -62,6 +62,21 @@ export const HeaderStats = () => {
   const experienceModalMounted = useModalPresence(showExperienceModal);
   const { walletAddress, token } = useConfigStore();
   const hideBalance = useHideBalance();
+  // Después de comprar con moneda local la plata tarda en acreditarse, y hasta
+  // que entra, el saldo de acá muestra un número que ya sabemos viejo. Mientras
+  // dura esa espera la pastilla parpadea: no es un error ni un saldo cargando,
+  // es plata en camino. Se apaga cuando la plata llega y `AutoInvest` ofrece
+  // invertirla, o al vencer la ventana del proveedor: ese final feliz puede no
+  // pasar nunca (wallet externa, prompt en opt-out, un pago que nadie acredita)
+  // y un saldo titilando para siempre sería peor que uno quieto.
+  const pendingUntil = usePendingCreditStore((s) => s.pendingUntil);
+  const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
+  const balancePending = pendingUntil != null;
+  useEffect(() => {
+    if (pendingUntil == null) return;
+    const timer = setTimeout(clearPendingCredit, Math.max(0, pendingUntil - Date.now()));
+    return () => clearTimeout(timer);
+  }, [pendingUntil, clearPendingCredit]);
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
   const setEditMode = useMapStore((s) => s.setEditMode);
@@ -259,7 +274,7 @@ export const HeaderStats = () => {
                 // SIEMPRE mostramos los 7 decimales, el número es más largo y de
                 // ancho casi constante, así que la pastilla queda snug y estable.
                 // Alineada a la izquierda, mismo borde que el saludo.
-                className="w-fit max-w-full self-start justify-start min-w-0 py-2"
+                className={`w-fit max-w-full self-start justify-start min-w-0 py-2${balancePending ? ' animate-pulse' : ''}`}
               >
                 {balanceLoading ? (
                   <Spinner size="sm" color="current" />

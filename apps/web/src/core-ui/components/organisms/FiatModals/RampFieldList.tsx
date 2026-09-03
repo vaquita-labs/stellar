@@ -39,7 +39,15 @@ export function RampFieldList({ fields, values, onChange, disabled, idPrefix = '
               disabled={disabled}
               className={RAMP_FIELD_CLASS}
             >
-              <option value="">{field.placeholder ?? field.label}</option>
+              {/* El placeholder ("Banco") sólo se ofrece cuando elegir nada es
+                  una respuesta válida: en un select obligatorio ya viene puesta
+                  la primera opción (ver `selectDefaults`) y volver a vacío sólo
+                  serviría para trabar el Continuar. Mientras el valor todavía no
+                  se escribió se muestra igual, así el frame previo al efecto no
+                  aparenta un banco elegido que el formulario no tiene. */}
+              {field.optional === true || !values[field.key] ? (
+                <option value="">{field.placeholder ?? field.label}</option>
+              ) : null}
               {(field.options ?? []).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
