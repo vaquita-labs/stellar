@@ -952,9 +952,7 @@
     "title": "Concierge",
     "buttonAria": "Concierge",
     "chat": "Chatea con nosotros",
-    "email": "Email",
-    "telegramTitle": "¿Querés estar al día?",
-    "telegramBody": "Unite a nuestro canal oficial de Telegram"
+    "email": "Email"
   },
   "notificationsCenter": {
     "bellAria": "Notificaciones",
