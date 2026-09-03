@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUsdPrecise, MIN_USDC } from '@/core-ui/helpers/numbers';
+import { formatTokenPrecise, MIN_USDC } from '@/core-ui/helpers/numbers';
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +54,7 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
       {/* Disclaimer de monto mínimo: el piso lo pone MIN_USDC, así que el número
           sale del mismo lugar que lo valida y no de la traducción. */}
       <p className="text-center text-xs font-semibold text-black">
-        {t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', { amount: formatUsdPrecise(MIN_USDC, 2) })}
+        {t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', { amount: formatTokenPrecise(MIN_USDC, 2) })}
       </p>
 
       {/* QR de la dirección, en caja blanca redondeada (estilo app). */}

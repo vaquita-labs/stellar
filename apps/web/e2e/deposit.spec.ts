@@ -11,8 +11,12 @@ import { ensureTestnetUsdc } from './testnet-usdc';
  * possible, e.g. the faucet being down.
  */
 const DEPOSIT_USDC = '1';
-/** Cómo se ve `MIN_USDC` (0,1) ya formateado: `formatUsdPrecise(0.1, 2)`. */
-const MIN_DEPOSIT_LABEL = '$0.10';
+/**
+ * Cómo se ve `MIN_USDC` (0,1) ya formateado: `formatTokenPrecise(0.1, 2)`.
+ * Sin `$`: la línea termina en " USDC.", así que el símbolo de dólar la haría
+ * decir la moneda dos veces. El chip de "Available" sí lo lleva.
+ */
+const MIN_DEPOSIT_LABEL = '0.10';
 /** Debajo del mínimo, para el caso que espera el CTA apagado. */
 const BELOW_MINIMUM = '0.05';
 
