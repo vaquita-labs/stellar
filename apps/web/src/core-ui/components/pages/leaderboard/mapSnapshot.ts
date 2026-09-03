@@ -31,14 +31,43 @@ const OCEAN_EXTENT = 500;
  */
 const BOARD_BOX = new THREE.Box3(
   new THREE.Vector3(-0.5, -TILE_HEIGHT * 2, -0.5),
-  new THREE.Vector3(MAP_SIZE - 0.5, TILE_HEIGHT * 3, MAP_SIZE - 0.5)
+  new THREE.Vector3(MAP_SIZE - 0.5, TILE_HEIGHT * 3, MAP_SIZE - 0.5),
 );
 let renderer: THREE.WebGLRenderer | null = null;
 let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
 let ocean: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial> | null = null;
 
+/**
+ * A page may hold only so many WebGL contexts (~16 in Chrome) and the browser
+ * drops the oldest ones to stay under that budget — the live map among them. So
+ * this renderer, which only works in bursts while cards scroll into view, hands
+ * its context back once the queue has been idle this long instead of holding a
+ * slot for the rest of the session. `ensureRenderer` builds it again on the next
+ * request, at the cost of a few milliseconds.
+ */
+const RENDERER_IDLE_MS = 5_000;
+let releaseTimer = 0;
+
+function releaseRenderer() {
+  if (!renderer) return;
+  ocean?.geometry.dispose();
+  ocean?.material.dispose();
+  renderer.dispose();
+  renderer.forceContextLoss();
+  renderer = null;
+  scene = null;
+  camera = null;
+  ocean = null;
+}
+
+function scheduleRelease() {
+  window.clearTimeout(releaseTimer);
+  releaseTimer = window.setTimeout(releaseRenderer, RENDERER_IDLE_MS);
+}
+
 function ensureRenderer() {
+  window.clearTimeout(releaseTimer);
   if (renderer) return;
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
@@ -57,7 +86,7 @@ function ensureRenderer() {
   // Color is set per snapshot from the world palette in renderSnapshot.
   ocean = new THREE.Mesh(
     new THREE.PlaneGeometry(OCEAN_EXTENT * 2, OCEAN_EXTENT * 2),
-    new THREE.MeshLambertMaterial({ side: THREE.DoubleSide })
+    new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }),
   );
   ocean.rotation.x = -Math.PI / 2;
   ocean.position.y = -TILE_HEIGHT * 0.85; // same water level as WaterBackground
@@ -97,11 +126,7 @@ function fitCamera(cam: THREE.PerspectiveCamera) {
   let hy = 0;
   const corner = new THREE.Vector3();
   for (let i = 0; i < 8; i++) {
-    corner.set(
-      i & 1 ? box.max.x : box.min.x,
-      i & 2 ? box.max.y : box.min.y,
-      i & 4 ? box.max.z : box.min.z
-    );
+    corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z);
     corner.project(cam);
     hx = Math.max(hx, Math.abs(corner.x));
     hy = Math.max(hy, Math.abs(corner.y));
@@ -126,9 +151,7 @@ function renderSnapshot(objects: MapObject[], worldType: WorldType): string {
       Array.isArray(o.rotation) && o.rotation.length === 3
         ? [o.rotation[0] || 0, o.rotation[1] || 0, o.rotation[2] || 0]
         : [0, 0, 0];
-    const rotation = isBuildingType(o.type)
-      ? composeBuildingRotation(o.type, userRotation)
-      : userRotation;
+    const rotation = isBuildingType(o.type) ? composeBuildingRotation(o.type, userRotation) : userRotation;
     const wrapper = new THREE.Group();
     wrapper.position.set(o.position[0], o.position[1], o.position[2]);
     wrapper.rotation.set(rotation[0], rotation[1], rotation[2]);
@@ -179,8 +202,12 @@ function pump() {
   pumping = true;
   const step = () => {
     queue.shift()?.();
-    if (queue.length) requestAnimationFrame(step);
-    else pumping = false;
+    if (queue.length) {
+      requestAnimationFrame(step);
+      return;
+    }
+    pumping = false;
+    scheduleRelease();
   };
   requestAnimationFrame(step);
 }
@@ -195,7 +222,7 @@ export function requestMapSnapshot(
   walletAddress: string,
   objects: MapObject[],
   worldType: WorldType,
-  onReady: (url: string) => void
+  onReady: (url: string) => void,
 ): () => void {
   const cacheKey = `${walletAddress}:${hashObjects(objects)}`;
   const cached = cache.get(cacheKey);
