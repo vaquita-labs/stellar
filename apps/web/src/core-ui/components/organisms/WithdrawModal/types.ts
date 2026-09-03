@@ -4,6 +4,7 @@ export type WithdrawStep =
   | 'method'
   | 'amount'
   | 'account'
+  | 'username'
   | 'addWallet'
   | 'addNickname'
   | 'confirm'

@@ -2298,16 +2298,22 @@
       "wallet": {
         "title": "Wallet",
         "subtitle": "Withdraw to a crypto wallet"
+      },
+      "username": {
+        "title": "Username",
+        "subtitle": "Send to a Vaquita user"
       }
     },
     "methodLabel": "Method",
     "methodWallet": "Wallet",
     "minWithdraw": "Minimum withdrawal: {{amount}} USDC.",
+    "noUsernames": "You have no saved users yet",
     "noWallets": "You have no saved wallets yet",
     "processing": "Processing withdrawal...",
     "processingHint": "This may take a few seconds.",
     "review": "Review",
     "selectAccount": "Select account",
+    "selectUsername": "Select user",
     "success": {
       "subtitle": "Your funds are on their way to {{label}}.",
       "title": "Withdrawal sent!"
