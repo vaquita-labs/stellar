@@ -224,6 +224,36 @@ model SavedWallet {
   @@map("saved_wallets")
 }
 
+/// Bank account the user saved for the fiat off-ramp, the mirror of
+/// {@link SavedWallet} on the other side of the withdraw flow: it exists so
+/// nobody retypes their ID number and account number on every withdrawal.
+///
+/// `fields` is `{ [field.key]: value }` exactly as `quote.requiredFields`
+/// describes it — the provider decides which fields a corridor asks for, so
+/// adding one must not need a migration. `country`/`currency`/`rail` stay as
+/// columns because they are what filters the list for the current corridor.
+///
+/// CAREFUL: `fields` holds real personal data (full name, tax ID, e-mail,
+/// account number). It is stored as typed, unencrypted, and is only ever read
+/// back to its own owner — the profile always comes from the session token.
+model SavedBankAccount {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId Int       @map("profile_id")
+  label     String    @db.VarChar(60)
+  country   String    @db.Char(2)
+  currency  String    @db.VarChar(8)
+  rail      String?   @db.VarChar(16)
+  fields    Json      @default("{}")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([profileId], map: "idx_saved_bank_accounts_profile_id")
+  @@map("saved_bank_accounts")
+}
+
 /// Global catalog of placeable map elements. `variants`, `prices` and
 /// `free_items` are positionally-aligned CSV lists: index i of each column
 /// describes the same variant (see getMapObjectsAvailableData in
@@ -353,6 +383,7 @@ model Profile {
   profileRewards      ProfileReward[]
   notifications       Notification[]
   savedWallets        SavedWallet[]
+  savedBankAccounts   SavedBankAccount[]
   pushSubscriptions   PushSubscription[]
 
   // Unidirectional follow graph. `following` are edges where this profile is the

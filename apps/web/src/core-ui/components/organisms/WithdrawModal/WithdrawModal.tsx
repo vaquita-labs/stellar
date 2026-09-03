@@ -9,7 +9,7 @@ import { motion, useAnimationControls } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
-import { FiCheck, FiChevronRight, FiPlus } from 'react-icons/fi';
+import { FiAtSign, FiCheck, FiChevronRight, FiPlus } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
 import { IoWalletOutline } from 'react-icons/io5';
 import { useProfileData } from '../../../hooks';
@@ -18,6 +18,7 @@ import { useConfigStore } from '../../../stores';
 import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
+import { AddNicknameForm } from './AddNicknameForm';
 import { AddWalletForm } from './AddWalletForm';
 import { WalletRow } from './WalletRow';
 import { WithdrawModalProps, WithdrawProgressStep, WithdrawStep } from './types';
@@ -451,6 +452,17 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         </span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
+
+      {/* La otra forma de nombrar un destino: por usuario de Vaquita, sin pedir
+          la dirección. Termina en la misma lista —lo que se guarda siempre es
+          la dirección— así que va acá abajo y no en otra pantalla. */}
+      <PressableButton variant="white" size="row" onClick={() => setStep('addNickname')}>
+        <FiAtSign className="w-6 h-6 text-black shrink-0" />
+        <span className="flex-1 text-sm font-bold text-black">
+          {t('withdraw.addNickname.cta', 'Add username')}
+        </span>
+        <FiChevronRight className="w-5 h-5 text-black shrink-0" />
+      </PressableButton>
     </div>
   );
 
@@ -567,6 +579,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         }}
       />
     ),
+    addNickname: (
+      <AddNicknameForm
+        onCreated={(w: SavedWallet) => {
+          setSelectedWalletId(w.id);
+          setStep('amount');
+        }}
+      />
+    ),
     confirm: confirmStep,
     processing: processingStep,
     success: successStep,
@@ -577,6 +597,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     amount: t('deposit.withdraw.button', 'Withdraw'),
     account: t('withdraw.selectAccount', 'Select account'),
     addWallet: t('withdraw.addMethod', 'Add method'),
+    addNickname: t('withdraw.addNickname.cta', 'Add username'),
     confirm: t('withdraw.confirm.title', 'Confirm withdrawal'),
     processing: t('deposit.withdraw.button', 'Withdraw'),
     success: t('deposit.withdraw.button', 'Withdraw'),
@@ -587,6 +608,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     amount: 'method',
     account: 'amount',
     addWallet: 'account',
+    addNickname: 'account',
     confirm: 'amount',
   };
   const backTarget = BACK_TARGET[step];

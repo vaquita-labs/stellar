@@ -2096,6 +2096,17 @@
         "quoting": "Finding a route…",
         "settled": "Withdrawal paid out via {{rail}}.",
         "routeLabel": "Payout method",
+        "savedBanks": {
+          "add": "Save this account",
+          "confirmDelete": "Delete?",
+          "deleteError": "Could not delete the account",
+          "labelField": "Name this account",
+          "labelPlaceholder": "e.g. My bank account",
+          "save": "Save",
+          "saveError": "Could not save the account",
+          "saved": "Account saved",
+          "title": "Your saved accounts"
+        },
         "settling": "Your USDC was received and the {{rail}} payout is on its way. It can take a while — you can close this window.",
         "title": "Withdraw to {{country}} ({{currency}})",
         "usdcSpent": "{{amount}} USDC left your savings",
@@ -2246,6 +2257,11 @@
   },
   "withdraw": {
     "addMethod": "Add method",
+    "addNickname": {
+      "cta": "Add username",
+      "field": "Username",
+      "placeholder": "username"
+    },
     "addWallet": {
       "addressField": "Address",
       "addressPlaceholder": "Destination address",

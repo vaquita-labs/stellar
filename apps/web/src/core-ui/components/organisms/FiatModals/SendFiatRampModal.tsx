@@ -17,10 +17,16 @@ import { Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiExternalLink } from 'react-icons/fi';
+import { FiExternalLink, FiPlus } from 'react-icons/fi';
 import { railLabel, truncateMiddle } from '../../../helpers';
 import { AMOUNT_DECIMALS, floorAmount } from '../../../helpers/numbers';
 import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
+import {
+  type SavedBankAccount,
+  useCreateSavedBankAccount,
+  useDeleteSavedBankAccount,
+  useSavedBankAccounts,
+} from '../../../hooks/useSavedBankAccounts';
 import { useConfigStore, useRampActiveStore } from '../../../stores';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 import { AmountDisplay } from '../../molecules/AmountDisplay';
@@ -28,7 +34,8 @@ import { AmountKeypad } from '../../molecules/AmountKeypad';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { FiatStepList, StepStatus } from './FiatStepList';
-import { RampFieldList } from './RampFieldList';
+import { RampFieldList, RAMP_FIELD_CLASS } from './RampFieldList';
+import { SavedBankList } from './SavedBankList';
 
 interface SendFiatRampModalProps {
   open: boolean;
@@ -143,6 +150,18 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const [usdcCost, setUsdcCost] = useState<number | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
 
+  // Cuentas bancarias guardadas: el espejo de las wallets guardadas del retiro a
+  // cripto. Existe para no retipear documento y número de cuenta en cada retiro,
+  // que es donde un dígito de más manda la plata a otra persona.
+  const { data: savedBanks = [], isLoading: banksLoading } = useSavedBankAccounts();
+  const createBank = useCreateSavedBankAccount();
+  const deleteBank = useDeleteSavedBankAccount();
+  const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
+  const [pendingDeleteBankId, setPendingDeleteBankId] = useState<string | null>(null);
+  const [saveBankOpen, setSaveBankOpen] = useState(false);
+  const [saveBankLabel, setSaveBankLabel] = useState('');
+  const [saveBankError, setSaveBankError] = useState<string | null>(null);
+
   const [corridorOff, setCorridorOff] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [waiting, setWaiting] = useState(false);
@@ -215,6 +234,61 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
   const fieldsValid = fieldsAreValid(fields, values);
   const receiveFiat = settledFiatOf(quote, amountNum);
+
+  // Sólo las cuentas del corredor que se está usando: los campos que pide el
+  // proveedor cambian por país, así que ofrecer una cuenta de Brasil para un
+  // retiro a Bolivia sólo llenaría el formulario con datos que no aplican.
+  const bankAccounts = savedBanks.filter((a) => a.country === country);
+
+  /**
+   * Carga una cuenta guardada en el formulario. Se copian sólo las claves que la
+   * cotización de HOY pide: si el proveedor sacó un campo, arrastrarlo lo
+   * mandaría igual; si agregó uno, queda vacío y el usuario lo completa.
+   */
+  const applyBankAccount = (account: SavedBankAccount) => {
+    const next: Record<string, string> = {};
+    for (const field of fields) {
+      const value = account.fields[field.key];
+      if (typeof value === 'string' && value.length > 0) next[field.key] = value;
+    }
+    setValues(next);
+    setSelectedBankId(account.id);
+    setSaveBankOpen(false);
+    setSaveBankError(null);
+  };
+
+  const handleDeleteBank = async (id: string) => {
+    setPendingDeleteBankId(id);
+    try {
+      await deleteBank.mutateAsync(id);
+      if (selectedBankId === id) setSelectedBankId(null);
+    } catch (e) {
+      toast.danger((e as Error)?.message ?? t('wallet.fiat.ramp.savedBanks.deleteError', 'Could not delete the account'));
+    } finally {
+      setPendingDeleteBankId(null);
+    }
+  };
+
+  const handleSaveBank = async () => {
+    const label = saveBankLabel.trim();
+    if (!label || !fieldsValid || !corridor) return;
+    setSaveBankError(null);
+    try {
+      const saved = await createBank.mutateAsync({
+        label,
+        country,
+        currency: corridor.currency,
+        rail: quote?.rail ?? null,
+        fields: values,
+      });
+      setSelectedBankId(saved.id);
+      setSaveBankOpen(false);
+      setSaveBankLabel('');
+      toast.success(t('wallet.fiat.ramp.savedBanks.saved', 'Account saved'));
+    } catch (e) {
+      setSaveBankError((e as Error)?.message ?? t('wallet.fiat.ramp.savedBanks.saveError', 'Could not save the account'));
+    }
+  };
 
   const messageOf = (e: unknown): string =>
     rampErrorMessage(
@@ -675,12 +749,91 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             </div>
           </div>
 
+          <SavedBankList
+            accounts={bankAccounts}
+            fields={fields}
+            selectedId={selectedBankId}
+            loading={banksLoading}
+            disabled={busy}
+            deletingId={pendingDeleteBankId}
+            onSelect={applyBankAccount}
+            onDelete={handleDeleteBank}
+          />
+
           <RampFieldList
             fields={fields}
             values={values}
-            onChange={(key, value) => setValues((prev) => ({ ...prev, [key]: value }))}
+            onChange={(key, value) => {
+              setValues((prev) => ({ ...prev, [key]: value }));
+              // Editar un campo despega el formulario de la cuenta guardada:
+              // lo que se va a mandar ya no es lo que dice esa fila.
+              setSelectedBankId(null);
+            }}
             disabled={busy}
           />
+
+          {/* Guardar la cuenta: sólo cuando ya está completa, porque guardar a
+              medias devuelve un formulario que hay que terminar igual. Es opt-in
+              —el retiro funciona sin tocarlo— y nombrar la cuenta es parte de
+              guardarla: sin nombre, dos cuentas del mismo banco no se
+              distinguen en la lista. */}
+          {fieldsValid && !saveBankOpen && (
+            <button
+              type="button"
+              onClick={() => setSaveBankOpen(true)}
+              disabled={busy}
+              className="self-start flex items-center gap-2 rounded-full border border-black border-b-2 bg-white h-9 px-3.5 text-sm font-bold text-black hover:bg-black/5 active:border-b active:translate-y-[1px] transition disabled:opacity-50"
+            >
+              <FiPlus className="w-4 h-4" />
+              {t('wallet.fiat.ramp.savedBanks.add', 'Save this account')}
+            </button>
+          )}
+
+          {fieldsValid && saveBankOpen && (
+            <div className="flex flex-col gap-2 rounded-lg border border-black border-b-2 bg-white p-3">
+              <label className="text-xs font-semibold text-gray-500" htmlFor="ramp-save-bank-label">
+                {t('wallet.fiat.ramp.savedBanks.labelField', 'Name this account')}
+              </label>
+              <input
+                id="ramp-save-bank-label"
+                type="text"
+                value={saveBankLabel}
+                onChange={(e) => {
+                  setSaveBankLabel(e.target.value);
+                  if (saveBankError) setSaveBankError(null);
+                }}
+                maxLength={60}
+                disabled={busy || createBank.isPending}
+                placeholder={t('wallet.fiat.ramp.savedBanks.labelPlaceholder', 'e.g. My bank account')}
+                className={RAMP_FIELD_CLASS}
+              />
+              {saveBankError ? <p className="text-xs font-semibold text-red-600">{saveBankError}</p> : null}
+              <div className="flex items-center gap-2">
+                <PressableButton
+                  variant="white"
+                  size="cta"
+                  className="py-2!"
+                  onClick={() => {
+                    setSaveBankOpen(false);
+                    setSaveBankError(null);
+                  }}
+                  disabled={createBank.isPending}
+                >
+                  {t('common.cancel', 'Cancel')}
+                </PressableButton>
+                <PressableButton
+                  variant="success"
+                  size="cta"
+                  className="py-2!"
+                  onClick={handleSaveBank}
+                  disabled={!saveBankLabel.trim() || createBank.isPending}
+                >
+                  {createBank.isPending ? <Spinner size="sm" color="current" /> : null}
+                  {t('wallet.fiat.ramp.savedBanks.save', 'Save')}
+                </PressableButton>
+              </div>
+            </div>
+          )}
         </>
       )}
 

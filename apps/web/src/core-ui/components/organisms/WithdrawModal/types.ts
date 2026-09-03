@@ -5,6 +5,7 @@ export type WithdrawStep =
   | 'amount'
   | 'account'
   | 'addWallet'
+  | 'addNickname'
   | 'confirm'
   | 'processing'
   | 'success';

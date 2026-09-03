@@ -2129,6 +2129,17 @@
         "quoting": "Procurando uma rota…",
         "settled": "Saque pago via {{rail}}.",
         "routeLabel": "Forma de recebimento",
+        "savedBanks": {
+          "add": "Salvar esta conta",
+          "confirmDelete": "Excluir?",
+          "deleteError": "Não foi possível excluir a conta",
+          "labelField": "Dê um nome à conta",
+          "labelPlaceholder": "ex. Minha conta do banco",
+          "save": "Salvar",
+          "saveError": "Não foi possível salvar a conta",
+          "saved": "Conta salva",
+          "title": "Suas contas salvas"
+        },
         "settling": "Seu USDC foi recebido e o pagamento via {{rail}} está a caminho. Pode demorar — você já pode fechar esta janela.",
         "title": "Sacar para {{country}} ({{currency}})",
         "usdcSpent": "{{amount}} USDC saíram das suas reservas",
@@ -2246,6 +2257,11 @@
   },
   "withdraw": {
     "addMethod": "Adicionar método",
+    "addNickname": {
+      "cta": "Adicionar usuário",
+      "field": "Usuário",
+      "placeholder": "usuário"
+    },
     "addWallet": {
       "addressField": "Endereço",
       "addressPlaceholder": "Endereço de destino",

@@ -578,6 +578,25 @@ export interface SavedWalletsResponseDTO {
   savedWallets: SavedWalletResponseDTO[];
 }
 
+/** A bank account the user saved for the fiat off-ramp. */
+export interface SavedBankAccountResponseDTO {
+  id: string;
+  label: string;
+  /** ISO-3166 alpha-2 of the corridor the account belongs to. */
+  country: string;
+  currency: string;
+  /** Payout rail of the quote it was saved with; null when the provider didn't publish one. */
+  rail: string | null;
+  /** `{ [field.key]: value }`, shaped by the quote's `requiredFields`. */
+  fields: Record<string, string>;
+  createdTimestamp: number;
+  updatedTimestamp: number;
+}
+
+export interface SavedBankAccountsResponseDTO {
+  savedBankAccounts: SavedBankAccountResponseDTO[];
+}
+
 /** One boost tier: reaching `referrals` active referrals adds `bonus` APY points. */
 export interface ReferralTierDTO {
   referrals: number;
