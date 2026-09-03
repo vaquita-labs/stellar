@@ -2298,16 +2298,22 @@
       "wallet": {
         "title": "Carteira",
         "subtitle": "Saque para uma carteira cripto"
+      },
+      "username": {
+        "title": "Usuário",
+        "subtitle": "Envie para um usuário da Vaquita"
       }
     },
     "methodLabel": "Método",
     "methodWallet": "Carteira",
     "minWithdraw": "Saque mínimo: {{amount}} USDC.",
+    "noUsernames": "Você ainda não salvou usuários",
     "noWallets": "Você ainda não tem carteiras salvas",
     "processing": "Processando saque...",
     "processingHint": "Isso pode levar alguns segundos.",
     "review": "Revisar",
     "selectAccount": "Selecionar conta",
+    "selectUsername": "Selecionar usuário",
     "success": {
       "subtitle": "Seu dinheiro está a caminho de {{label}}.",
       "title": "Saque enviado!"

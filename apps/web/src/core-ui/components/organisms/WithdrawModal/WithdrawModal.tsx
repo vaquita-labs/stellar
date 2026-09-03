@@ -32,7 +32,8 @@ import { PressableButton } from '../../molecules/PressableButton';
  *   - Social/CUSTODIAL: la plata queda en la wallet interna, así que el usuario
  *     elige una wallet EXTERNA de destino (picker de wallets guardadas). El envío
  *     real a esa dirección se cablea aparte; por ahora el picker queda restaurado.
- * La rama "Bank" es el off-ramp a fiat.
+ * La rama "Bank" es el off-ramp a fiat, y "Username" es la misma rama social
+ * pero nombrando el destino por usuario de Vaquita en vez de por dirección.
  */
 export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: WithdrawModalProps) {
   const { t } = useTranslation();
@@ -64,6 +65,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const [step, setStep] = useState<WithdrawStep>('method');
   const [amount, setAmount] = useState('');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
+  // Cuál de las dos listas de destino se está usando. Por abajo es lo mismo —lo
+  // guardado siempre es una dirección—, pero decide a qué lista vuelve el
+  // selector del paso del monto y dónde termina el back del alta.
+  const [destinationKind, setDestinationKind] = useState<'wallet' | 'username'>('wallet');
+  // A la lista de usuarios se entra por dos lados —desde "Elegir método", antes
+  // de tipear nada, y desde el selector de destino del paso del monto—, así que
+  // el back se guarda al entrar en vez de adivinarlo desde el estado.
+  const [usernameOrigin, setUsernameOrigin] = useState<WithdrawStep>('method');
   // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
   // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
   const [error, setError] = useState<unknown>(null);
@@ -133,6 +142,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         }
       : null;
 
+  // Las dos listas salen de la misma tabla: `AddNicknameForm` guarda el destino
+  // con el `@` adelante en el label, y es lo único que distingue "le mando a una
+  // persona" de "le mando a una cuenta". Si alguien le pone `@algo` de nombre a
+  // una dirección, aparece entre los usuarios: sigue siendo un destino suyo,
+  // elegible, sólo que listado del otro lado.
+  const usernameWallets = savedWallets.filter((w) => w.label.startsWith('@'));
+  const addressWallets = savedWallets.filter((w) => !w.label.startsWith('@'));
+
   const selectedWallet = savedWallets.find((w) => w.id === selectedWalletId) ?? null;
   // Destino efectivo: la propia para externos, la elegida para social.
   const destination = ownWallet ?? selectedWallet;
@@ -141,6 +158,8 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   useEffect(() => {
     if (open) {
       setStep('method');
+      setDestinationKind('wallet');
+      setUsernameOrigin('method');
       setAmount('');
       setError(null);
       setOverBalance(false);
@@ -176,7 +195,8 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     }
     // Monto válido pero sin destino (social sin wallet elegida): elegir/crear.
     if (!destination) {
-      setStep('account');
+      setUsernameOrigin('amount');
+      setStep(destinationKind === 'username' ? 'username' : 'account');
       return;
     }
     setStep('confirm');
@@ -239,7 +259,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           </span>
         </span>
       </PressableButton>
-      <PressableButton variant="white" size="row" onClick={() => setStep('amount')}>
+      <PressableButton
+        variant="white"
+        size="row"
+        onClick={() => {
+          setDestinationKind('wallet');
+          setStep('amount');
+        }}
+      >
         <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-bold text-black">
@@ -250,6 +277,35 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           </span>
         </span>
       </PressableButton>
+
+      {/* Mandarle a un usuario de Vaquita es su propio método, no una opción
+          escondida adentro de "Wallet": el que se la manda a una persona no
+          está pensando en direcciones ni en redes, y no tiene por qué pasar por
+          una pantalla que le pide eso.
+
+          Sólo para login social: con wallet externa el pool le paga al firmante,
+          así que el destino es fijo y elegir a otro no cambiaría nada. */}
+      {!isExternalWallet ? (
+        <PressableButton
+          variant="white"
+          size="row"
+          onClick={() => {
+            setDestinationKind('username');
+            setUsernameOrigin('method');
+            setStep('username');
+          }}
+        >
+          <FiAtSign className="w-6 h-6 text-black shrink-0" />
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-bold text-black">
+              {t('withdraw.method.username.title', 'Username')}
+            </span>
+            <span className="block text-xs text-gray-500">
+              {t('withdraw.method.username.subtitle', 'Send to a Vaquita user')}
+            </span>
+          </span>
+        </PressableButton>
+      ) : null}
     </div>
   );
 
@@ -324,7 +380,8 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
               swipedRef.current = false;
               return;
             }
-            setStep('account');
+            setUsernameOrigin('amount');
+            setStep(destinationKind === 'username' ? 'username' : 'account');
           }}
           onTouchStart={(e) => {
             touchStartY.current = e.touches[0].clientY;
@@ -378,10 +435,24 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     </AmountStep>
   );
 
+  // Placeholder de carga, igual para las dos listas de destino.
+  const walletSkeleton = Array.from({ length: 2 }).map((_, i) => (
+    <div
+      key={i}
+      className="w-full flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3 animate-pulse"
+    >
+      <span className="w-6 h-6 shrink-0 rounded bg-black/10" />
+      <span className="flex-1">
+        <span className="block h-3.5 w-24 rounded bg-black/10" />
+        <span className="mt-1.5 block h-3 w-32 rounded bg-black/10" />
+      </span>
+    </div>
+  ));
+
   // --- Paso: elegir cuenta (social) ------------------------------------------
   const accountStep = (
     <div className="flex flex-col gap-2">
-      {savedWallets.map((w) => (
+      {addressWallets.map((w) => (
         <WalletRow
           key={w.id}
           wallet={w}
@@ -395,22 +466,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         />
       ))}
 
-      {walletsLoading && savedWallets.length === 0
-        ? Array.from({ length: 2 }).map((_, i) => (
-            <div
-              key={i}
-              className="w-full flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3 animate-pulse"
-            >
-              <span className="w-6 h-6 shrink-0 rounded bg-black/10" />
-              <span className="flex-1">
-                <span className="block h-3.5 w-24 rounded bg-black/10" />
-                <span className="mt-1.5 block h-3 w-32 rounded bg-black/10" />
-              </span>
-            </div>
-          ))
-        : null}
+      {walletsLoading && addressWallets.length === 0 ? walletSkeleton : null}
 
-      {savedWallets.length === 0 && !walletsLoading ? (
+      {addressWallets.length === 0 && !walletsLoading ? (
         <p className="text-sm text-gray-500 text-center py-4">
           {t('withdraw.noWallets', 'You have no saved wallets yet')}
         </p>
@@ -425,10 +483,39 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         </span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
+    </div>
+  );
 
-      {/* La otra forma de nombrar un destino: por usuario de Vaquita, sin pedir
-          la dirección. Termina en la misma lista —lo que se guarda siempre es
-          la dirección— así que va acá abajo y no en otra pantalla. */}
+  // --- Paso: elegir usuario (social) -----------------------------------------
+  // Misma forma que la lista de wallets, con lo que corresponde a una persona:
+  // el alta pide un `@usuario` y no una dirección, y el vacío no habla de
+  // wallets guardadas.
+  const usernameStep = (
+    <div className="flex flex-col gap-2">
+      {usernameWallets.map((w) => (
+        <WalletRow
+          key={w.id}
+          wallet={w}
+          selected={w.id === selectedWalletId}
+          deleting={deleteWallet.isPending && pendingDeleteId === w.id}
+          onSelect={() => {
+            setSelectedWalletId(w.id);
+            setStep('amount');
+          }}
+          onDelete={() => handleDeleteWallet(w.id)}
+        />
+      ))}
+
+      {walletsLoading && usernameWallets.length === 0 ? walletSkeleton : null}
+
+      {usernameWallets.length === 0 && !walletsLoading ? (
+        <p className="text-sm text-gray-500 text-center py-4">
+          {t('withdraw.noUsernames', 'You have no saved users yet')}
+        </p>
+      ) : null}
+
+      <div className="border-t border-black/10 my-1" />
+
       <PressableButton variant="white" size="row" onClick={() => setStep('addNickname')}>
         <FiAtSign className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 text-sm font-bold text-black">
@@ -544,6 +631,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     method: methodStep,
     amount: amountStep,
     account: accountStep,
+    username: usernameStep,
     addWallet: (
       <AddWalletForm
         onCreated={(w: SavedWallet) => {
@@ -569,6 +657,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     method: t('withdraw.method.title', 'Select method'),
     amount: t('deposit.withdraw.button', 'Withdraw'),
     account: t('withdraw.selectAccount', 'Select account'),
+    username: t('withdraw.selectUsername', 'Select user'),
     addWallet: t('withdraw.addMethod', 'Add method'),
     addNickname: t('withdraw.addNickname.cta', 'Add username'),
     confirm: t('withdraw.confirm.title', 'Confirm withdrawal'),
@@ -581,10 +670,13 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     amount: 'method',
     account: 'amount',
     addWallet: 'account',
-    addNickname: 'account',
+    // El alta por usuario ahora se abre desde su propia lista, no desde la de
+    // wallets: el back tiene que devolver ahí.
+    addNickname: 'username',
     confirm: 'amount',
   };
-  const backTarget = BACK_TARGET[step];
+  const backTarget: WithdrawStep | undefined =
+    step === 'username' ? usernameOrigin : BACK_TARGET[step];
 
   const footer =
     step === 'amount' ? (
