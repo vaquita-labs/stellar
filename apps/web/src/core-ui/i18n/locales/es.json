@@ -789,6 +789,10 @@
       "saveErrorTitle": "No se pudo guardar tu mapa",
       "saveErrorDesc": "Revisa tu conexión e inténtalo de nuevo."
     },
+    "map": {
+      "reload": "Recargar mapa",
+      "unavailable": "No se pudo cargar el mapa."
+    },
     "music": {
       "low": "Volumen bajo",
       "mute": "Silenciar música",

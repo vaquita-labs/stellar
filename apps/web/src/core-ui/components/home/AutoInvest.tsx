@@ -20,21 +20,28 @@ export function AutoInvest() {
   const [dismissed, setDismissed] = useState(false);
   const prevIdle = useRef(0);
 
-  useEffect(() => {
-    if (idle > prevIdle.current + 0.01) setDismissed(false);
-    prevIdle.current = idle;
-  }, [idle]);
-
-  // Abrir esta pantalla es la señal de que la plata que se estaba esperando ya
-  // llegó: el saldo del header deja de parpadear acá y no en la rampa, que para
-  // entonces hace rato que se cerró.
+  // Que el saldo ocioso suba es LA señal de que la plata en vuelo aterrizó, así
+  // que acá también se apaga el parpadeo del header. No alcanza con apagarlo al
+  // abrir esta pantalla: una compra chica (por debajo del mínimo para invertir)
+  // acredita igual y nunca abre nada, y el saldo quedaba parpadeando hasta el
+  // vencimiento de 15 minutos aunque la plata ya estuviera a la vista.
   const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
+
+  useEffect(() => {
+    if (idle > prevIdle.current + 0.01) {
+      setDismissed(false);
+      clearPendingCredit();
+    }
+    prevIdle.current = idle;
+  }, [idle, clearPendingCredit]);
 
   useEffect(() => {
     if (shouldPrompt && !dismissed) setOpen(true);
     else if (!shouldPrompt) setOpen(false);
   }, [shouldPrompt, dismissed]);
 
+  // Y también al abrir la pantalla, que es el desenlace esperado: para entonces
+  // la rampa hace rato que se cerró y no puede apagarlo ella.
   useEffect(() => {
     if (open) clearPendingCredit();
   }, [open, clearPendingCredit]);

@@ -218,9 +218,7 @@ export const HeaderStats = () => {
   }
 
   return (
-    // `data-pull-origin`: el header es el único asidero del pull-to-refresh en
-    // el home, porque el mapa de abajo hace paneo con el mismo arrastre.
-    <div className="w-full relative" data-pull-origin>
+    <div className="w-full relative">
       {/* Reporta la ganancia estimada de cada depósito activo para el desglose. */}
       {activeDeposits.map((d) => (
         <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />

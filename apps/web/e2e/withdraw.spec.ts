@@ -28,6 +28,11 @@ test.describe('withdraw', () => {
     await page.getByRole('button', { name: 'Withdraw' }).click();
     await expect(page.getByRole('heading', { name: 'Select method' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Withdraw to your bank account/ })).toBeVisible();
+    // Mandarle a un `@usuario` es un método aparte, y sólo existe con login
+    // social: con wallet externa el pool le paga al firmante, así que ofrecer
+    // elegir a otro prometería algo que el retiro no hace. Estas specs corren
+    // con clave local —wallet externa—, así que acá el método NO tiene que estar.
+    await expect(page.getByRole('button', { name: /Send to a Vaquita user/ })).toHaveCount(0);
     await page.getByRole('button', { name: /Withdraw to a crypto wallet/ }).click();
 
     await expect(dialog(page).getByRole('heading', { name: 'Withdraw' })).toBeVisible();

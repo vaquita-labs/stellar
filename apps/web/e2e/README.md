@@ -8,12 +8,24 @@ deliverable names:
 | --------------------- | ----------------------------------------------------------------- | --------- |
 | `onboarding.spec.ts`  | first sign-in → username prompt → home; session restore; auth gate | no        |
 | `deposit.spec.ts`     | home → Deposit → Wallet → amount → confirm → "Deposit sent!"       | yes       |
+| `deposit.spec.ts`     | home → Deposit → Bank → country picker (the on-ramp stops there)   | no        |
 | `withdraw.spec.ts`    | home → Withdraw → Wallet → amount → confirm → "Withdrawal sent!"   | yes       |
 | `leaderboard.spec.ts` | weekly league board, own "You" row, open a saver's world           | no        |
 | `badges.spec.ts`      | follow → "Crew Mate" unlocks → Claim award → `mint_badge` → reward | yes       |
 
 The suite runs on one worker, serially, in file order: `deposit` leaves the
 savings position `withdraw` drains, and every spec moves the same funded wallet.
+
+Every spec runs on an **external** wallet — `local-key-adapter.ts` declares
+`custody = 'external'` — so anything that exists only under social login (the
+withdraw "Username" method, the idle-funds prompt, the passive vault) is not
+reachable here. That is why a spec sometimes asserts something is *absent*:
+see `withdraw.spec.ts`.
+
+The local-currency on-ramp is covered up to the country picker and no further.
+Picking a country asks the provider for a real quote and opens a QR somebody
+has to actually pay, so the rest of that flow lives in the manual matrix
+(`docs/qa/wallet-regression-matrix.md`).
 
 ## Running locally
 

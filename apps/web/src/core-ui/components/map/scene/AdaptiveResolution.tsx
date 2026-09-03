@@ -2,6 +2,7 @@
 
 import { PerformanceMonitor } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
+import { getMaxDpr } from './deviceTier';
 
 // El fill-rate escala con el CUADRADO del dpr (ver el comentario del Canvas en
 // WorldMap): pasar de 1.5 a 1 recorta ~55% de los píxeles. En máquinas con GPU
@@ -11,8 +12,8 @@ import { useThree } from '@react-three/fiber';
 
 /** Piso: nunca renderizar por debajo de la resolución CSS. */
 const MIN_DPR = 1;
-/** Tope: el mismo límite que el `dpr={[1, 1.5]}` del Canvas. */
-const maxDpr = () => Math.min(Math.max(window.devicePixelRatio, MIN_DPR), 1.5);
+/** Ceiling: the device tier's own cap, the same one the Canvas is created with. */
+const maxDpr = () => Math.min(Math.max(window.devicePixelRatio, MIN_DPR), getMaxDpr());
 
 /**
  * Arranca al tope y deja que drei mida el FPS real: si se sostiene bajo

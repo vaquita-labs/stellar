@@ -84,4 +84,27 @@ test.describe('deposit', () => {
     await dialog(page).getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('button', { name: 'Deposit' })).toBeVisible();
   });
+
+  /**
+   * La otra rama de "Elegir método": la que fondea con moneda local. Se corta en
+   * el selector de país a propósito — elegir uno pide una cotización real al
+   * proveedor y abre un QR que alguien tendría que pagar de verdad, así que el
+   * resto del on-ramp no es automatizable y vive en la matriz manual.
+   *
+   * Lo que sí prueba: que el botón lleva a algún lado. Es la entrada de un flujo
+   * que ya se rompió en producción, y hasta acá nadie verificaba más que su
+   * existencia.
+   */
+  test('routes the local-currency method to the country picker', async ({ homePage: page }) => {
+    await page.getByRole('button', { name: 'Deposit' }).click();
+    await page.getByRole('button', { name: /Deposit with your local currency/ }).click();
+
+    await expect(page.getByRole('heading', { name: 'Select your country' })).toBeVisible();
+
+    // Cerrar el selector vuelve al home, no al paso del método: el método se
+    // cerró al abrirlo (`onOnramp` en `DepositPanel`).
+    await dialog(page).getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByRole('heading', { name: 'Select your country' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Deposit' })).toBeVisible();
+  });
 });

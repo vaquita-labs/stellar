@@ -4,10 +4,12 @@ import { Billboard, Text } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
-import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
-import { useMapStore, useConfigStore, useSyncMapObjects, isWalkableType } from '../../stores';
+import { useAnalytics, useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
+import { useMapStore, useConfigStore, useSyncMapObjects, isWalkableType, useIsTabVisible } from '../../stores';
+import { Button } from '../atoms';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
 import { useModalPresence } from '../molecules/AppModal';
 import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
@@ -23,6 +25,8 @@ import { getMapCenter } from './helpers';
 import { ObjectGlow } from './edit/ObjectGlow';
 import { SpotlightPositionUpdater } from './edit/SpotlightPositionUpdater';
 import { TileSpotlightUpdater } from './edit/TileSpotlightUpdater';
+import { getMaxDpr, prefersAntialias } from './scene/deviceTier';
+import { useWebGLRecovery } from './scene/useWebGLRecovery';
 import { Vaquita } from './vaquita';
 
 const PLACEHOLDER_VAQUITA: DepositSummaryResponseDTO = {
@@ -66,23 +70,21 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
   const userWalletAddress = useConfigStore((store) => store.walletAddress);
   const center = useMemo(() => getMapCenter(currentTiles), [currentTiles]);
 
-  // Chrome limita ~16 contextos WebGL por pestaña: al crear uno de más, mata
-  // el más viejo y ese canvas queda muerto (carita triste). Si el contexto del
-  // mapa se pierde, se remonta el Canvas vía key para crear uno nuevo; al
-  // desmontar se libera el contexto de inmediato con forceContextLoss para no
-  // agotar el cupo navegando entre pantallas.
-  const [canvasKey, setCanvasKey] = useState(0);
-  const glRef = useRef<THREE.WebGLRenderer | null>(null);
-  const unmountedRef = useRef(false);
+  const { t } = useTranslation();
+  // The scene renders only while the tab is in front. Running in the background
+  // it spends GPU on frames nobody sees, and that pressure is what leads mobile
+  // browsers and Chrome to reclaim the map's WebGL context.
+  const isTabVisible = useIsTabVisible();
+  const { trackUserAction } = useAnalytics();
 
-  useEffect(() => {
-    unmountedRef.current = false;
-    return () => {
-      unmountedRef.current = true;
-      glRef.current?.forceContextLoss();
-      glRef.current = null;
-    };
-  }, []);
+  const handleContextLost = useCallback(
+    (attempt: number, willRetry: boolean) => {
+      trackUserAction('map_context_lost', { attempt, willRetry, tabVisible: isTabVisible });
+    },
+    [trackUserAction, isTabVisible],
+  );
+
+  const { canvasKey, exhausted, registerRenderer, retry } = useWebGLRecovery({ onContextLost: handleContextLost });
 
   // Mapa de otro jugador (vista de leaderboard): la vaquita es solo decorativa.
   // El humor y el modal de estado son datos del ESPECTADOR y no tienen sentido
@@ -136,6 +138,9 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
 
   return (
     <div
+      // `data-pull-ignore`: el mundo 3D hace paneo con el mismo arrastre hacia
+      // abajo que el pull-to-refresh, así que el gesto no puede empezar acá.
+      data-pull-ignore
       className="relative w-full flex-1 h-full"
       style={isAvailable ? undefined : { filter: 'grayscale(70%) brightness(100%)', opacity: 0.4 }}
     >
@@ -146,30 +151,26 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
         // cae en PCFShadowMap igual, pero logueando un warning por cada
         // render del shadow map.
         shadows="percentage"
-        gl={{ antialias: true }}
-        // El fill-rate escala con el CUADRADO del dpr: a 2 son 4× los píxeles
-        // de 1, y el antialias los multiplica otra vez — es lo más caro de la
-        // escena, más que cualquier shader. Con esta paleta plana el tope en
-        // 1.5 casi no se nota y recorta ~45% de píxeles. Se prefiere bajar el
-        // dpr antes que apagar el antialias: sin él los bordes duros de los
-        // tiles quedan escalonados.
-        dpr={[1, 1.5]}
+        // Fill rate is the most expensive thing on screen, more than any shader,
+        // and it scales with the SQUARE of the dpr — at 2 that is 4x the pixels
+        // of 1, which antialias then multiplies again. Both are context creation
+        // settings, so the device tier decides them here: full detail where
+        // there is budget for it, and on low-end devices the flat palette gives
+        // up little by rendering at 1x without antialias.
+        gl={{ antialias: prefersAntialias() }}
+        dpr={[1, getMaxDpr()]}
+        // Hidden tabs get no frames at all: the browser already throttles the
+        // loop there, and the frames it does hand out are spent on a scene
+        // nobody is looking at.
+        frameloop={isTabVisible ? 'always' : 'never'}
         onCreated={({ gl }) => {
-          glRef.current = gl;
+          registerRenderer(gl);
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFShadowMap;
           // El shadow map no se re-renderiza solo cada frame: DayCycleSky lo
           // marca needsUpdate a intervalos (la luz se mueve muy lento).
           gl.shadowMap.autoUpdate = false;
           gl.shadowMap.needsUpdate = true;
-          gl.domElement.addEventListener('webglcontextlost', (event) => {
-            // Sin preventDefault el navegador da el contexto por perdido de
-            // forma definitiva y no permite crear el reemplazo.
-            event.preventDefault();
-            if (!unmountedRef.current) {
-              setCanvasKey((key) => key + 1);
-            }
-          });
         }}
         // h-full (not h-dvh): the canvas must track its container, so screens
         // that stack a header above the map (leaderboard detail) don't scroll.
@@ -213,6 +214,16 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
         <TileSpotlightUpdater />
         <ObjectGlow />
       </Canvas>
+      {/* Every automatic rebuild was spent, so the canvas stays blank: say so
+          and hand the reload over instead of showing an empty rectangle. */}
+      {exhausted && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background px-6 text-center">
+          <p className="text-sm text-black/70">{t('home.map.unavailable', 'The map could not be loaded.')}</p>
+          <Button size="sm" variant="white" onPress={retry}>
+            {t('home.map.reload', 'Reload map')}
+          </Button>
+        </div>
+      )}
       {vaquitasListModalMounted && (
         <VaquitasListModal open={showVaquitasListModal} onOpenChange={() => setShowVaquitasListModal(false)} />
       )}
@@ -226,9 +237,7 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
           onCollect={handleCollectDailyReward}
         />
       )}
-      {moodModalMounted && (
-        <MoodMessageModal open={showMoodModal} onOpenChange={() => setShowMoodModal(false)} mood={mood} />
-      )}
+      {moodModalMounted && <MoodMessageModal open={showMoodModal} onOpenChange={() => setShowMoodModal(false)} mood={mood} />}
     </div>
   );
 };
