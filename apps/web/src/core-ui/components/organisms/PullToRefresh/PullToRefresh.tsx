@@ -1,7 +1,6 @@
 'use client';
 
 import { PULL_TO_REFRESH_THRESHOLD_PX, usePullToRefresh } from '@/core-ui/hooks';
-import { useQueryClient } from '@tanstack/react-query';
 import { ReactNode, useCallback } from 'react';
 import { FiRefreshCw } from 'react-icons/fi';
 
@@ -29,19 +28,20 @@ const INDICATOR_Z = 60;
  * panels and sheets are portalled outside this subtree. The indicator is fixed
  * and follows whichever surface is being pulled.
  *
- * Refreshing refetches the queries the current screen has mounted, and nothing
- * else. It deliberately does not reload the page: that would replay
- * rehydration, the gates and the 3D world to end up on the same route with the
- * same data.
+ * Refreshing reloads the document, the same as the browser's own reload button.
+ * It is the heavy option on purpose: it replays rehydration, the gates and the
+ * 3D world, and it also picks up a new deployment, which refetching alone never
+ * does. Note that the persisted query cache lives in localStorage and survives
+ * a reload, so data that is still fresh by its own rules comes back from there.
  */
 export function PullToRefresh({ className, children }: { className?: string; children: ReactNode }) {
-  const queryClient = useQueryClient();
-
-  // `type: 'active'` limits both the invalidation and the refetch to queries
-  // that currently have a mounted observer, which is exactly what is on screen.
-  // A bare invalidate would also mark the persisted cache stale — catalog, map
-  // objects, badges — and write that back to localStorage.
-  const onRefresh = useCallback(() => queryClient.invalidateQueries({ type: 'active' }), [queryClient]);
+  // The returned promise never settles on purpose: the reload tears the page
+  // down, and until it does the indicator should keep spinning rather than snap
+  // back as if the refresh had finished.
+  const onRefresh = useCallback(() => {
+    window.location.reload();
+    return new Promise<void>(() => {});
+  }, []);
 
   const { distance, pulling, armed, refreshing, anchor } = usePullToRefresh({
     onRefresh,
