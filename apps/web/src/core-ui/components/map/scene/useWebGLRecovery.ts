@@ -4,22 +4,44 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 
 /**
- * Keeps the map's WebGL context alive across losses.
+ * Watches the map and keeps it on screen.
  *
- * A page may hold only so many WebGL contexts (~16 in Chrome) and the browser
- * drops the oldest ones to stay under that budget; mobile browsers also drop
- * them while the page sits in the background. Neither path raises a JS error —
- * the canvas just stops painting and the map reads as a blank rectangle — so
- * recovery hangs on the `webglcontextlost` event, and the Canvas is rebuilt
- * through `canvasKey` to obtain a fresh context.
+ * Every way the map has been seen to disappear is silent: no exception, no
+ * console output, nothing a user could report beyond "it went blank". A page
+ * may hold only so many WebGL contexts (~16 in Chrome) and the browser drops the
+ * oldest to stay under that budget; a canvas rebuilt while the tab is hidden
+ * never gets measured; an ancestor left mid-animation can be transparent or
+ * parked off screen while the scene renders at full speed behind it.
+ *
+ * So the map is inspected on a timer rather than waited on for an event: the
+ * context is repaired when it can be, and every episode is reported through
+ * `onIssue` / `onRecovered` so the next one leaves a trace instead of a guess.
  */
 
 /** Remounts spent on automatic recovery before the manual reload is offered. */
 const MAX_ATTEMPTS = 3;
 /** A context that survives this long counts as healthy and refunds the budget. */
 const HEALTHY_AFTER_MS = 30_000;
-/** How often a visible map is checked for a loss that reached no listener. */
+/** How often a visible map is checked. */
 const HEALTH_CHECK_MS = 2_000;
+/**
+ * Consecutive failed checks before an episode is reported. Mounting and layout
+ * settle within one pass, and reporting those would bury the real cases.
+ */
+const CHECKS_BEFORE_REPORTING = 2;
+/** Below this an ancestor's opacity leaves nothing for the eye. */
+const MIN_VISIBLE_OPACITY = 0.05;
+
+/** Why the map is not on screen, ordered from cheapest to detect. */
+export type MapIssue =
+  /** The GPU took the context back; nothing can paint until it is rebuilt. */
+  | 'context_lost'
+  /** The canvas never took its container's size, so it paints into nothing. */
+  | 'canvas_unmeasured'
+  /** The canvas is laid out entirely outside the viewport. */
+  | 'offscreen'
+  /** An ancestor is transparent or hidden, so the scene renders unseen. */
+  | 'transparent';
 
 export type WebGLRecovery = {
   /** Remount key for the Canvas: a new value builds a fresh context. */
@@ -35,22 +57,32 @@ export type WebGLRecovery = {
 type Options = {
   /** Runs on every loss with the attempt number and whether a rebuild follows. */
   onContextLost?: (attempt: number, willRetry: boolean) => void;
+  /** Runs once when the map stops being visible, with what it was measured to be. */
+  onIssue?: (issue: MapIssue, detail: { canvas: string; container: string }) => void;
+  /** Runs once when the map comes back, with how long the episode lasted. */
+  onRecovered?: (issue: MapIssue, seconds: number) => void;
 };
 
-export const useWebGLRecovery = ({ onContextLost }: Options = {}): WebGLRecovery => {
+export const useWebGLRecovery = ({ onContextLost, onIssue, onRecovered }: Options = {}): WebGLRecovery => {
   const [canvasKey, setCanvasKey] = useState(0);
   const [exhausted, setExhausted] = useState(false);
   const attemptsRef = useRef(0);
   const glRef = useRef<THREE.WebGLRenderer | null>(null);
   const detachRef = useRef<(() => void) | null>(null);
   const mountedRef = useRef(true);
-  // Read through a ref so `registerRenderer` keeps a stable identity: it is
+  /** The episode being lived through: what is wrong, since when, for how many checks. */
+  const episodeRef = useRef<{ issue: MapIssue; since: number; checks: number; reported: boolean } | null>(null);
+  // Read through refs so `registerRenderer` keeps a stable identity: it is
   // handed to the Canvas's `onCreated`, which runs once per context.
   const onContextLostRef = useRef(onContextLost);
+  const onIssueRef = useRef(onIssue);
+  const onRecoveredRef = useRef(onRecovered);
 
   useEffect(() => {
     onContextLostRef.current = onContextLost;
-  }, [onContextLost]);
+    onIssueRef.current = onIssue;
+    onRecoveredRef.current = onRecovered;
+  }, [onContextLost, onIssue, onRecovered]);
 
   /** Spends one rebuild from the budget, or gives up once it runs out. */
   const spendAttempt = useCallback(() => {
@@ -114,41 +146,91 @@ export const useWebGLRecovery = ({ onContextLost }: Options = {}): WebGLRecovery
     setCanvasKey((key) => key + 1);
   }, []);
 
-  // Two states leave a canvas that never paints, and neither announces itself:
-  //
-  // - A context lost between the renderer being built and this hook wiring
-  //   itself to it reaches no listener, so the state is read from the context
-  //   directly rather than waited for as an event.
-  // - R3F sizes the canvas from a ResizeObserver on its container, and those
-  //   callbacks are not delivered while the tab is hidden: a canvas rebuilt in
-  //   the background keeps the 300x150 default even once its context is healthy.
-  //
-  // Both are checked after every rebuild and whenever the tab comes back.
   useEffect(() => {
+    /** Walks up from the canvas looking for an ancestor that hides everything. */
+    const isHiddenByAncestor = (canvas: HTMLCanvasElement): boolean => {
+      for (let node: HTMLElement | null = canvas; node && node !== document.body; node = node.parentElement) {
+        const style = window.getComputedStyle(node);
+        if (style.visibility === 'hidden' || style.display === 'none') return true;
+        if (Number(style.opacity) < MIN_VISIBLE_OPACITY) return true;
+      }
+      return false;
+    };
+
+    /** What is wrong with the map right now, or null when it is on screen. */
+    const findIssue = (): MapIssue | null => {
+      const gl = glRef.current;
+      const canvas = gl?.domElement;
+      const container = canvas?.parentElement;
+      if (!gl || !canvas || !container) return null;
+      // A rebuild in flight still has the previous renderer in `glRef`, and its
+      // context is lost by definition. Judging the map by a canvas the document
+      // no longer holds would spend the whole budget on a single loss.
+      if (!canvas.isConnected) return null;
+
+      if (gl.getContext().isContextLost()) return 'context_lost';
+
+      const box = container.getBoundingClientRect();
+      // A container laid out to nothing is a screen in transition, not a fault.
+      if (box.width < 1 || box.height < 1) return null;
+
+      if (Math.abs(canvas.clientWidth - box.width) >= 1 || Math.abs(canvas.clientHeight - box.height) >= 1) {
+        return 'canvas_unmeasured';
+      }
+
+      // Catches a container parked outside the viewport by an animation that
+      // never ran: the scene keeps rendering where nobody can see it.
+      const rect = canvas.getBoundingClientRect();
+      const offscreen = rect.bottom <= 0 || rect.right <= 0 || rect.top >= window.innerHeight || rect.left >= window.innerWidth;
+      if (offscreen) return 'offscreen';
+
+      if (isHiddenByAncestor(canvas)) return 'transparent';
+
+      return null;
+    };
+
+    const describe = (): { canvas: string; container: string } => {
+      const canvas = glRef.current?.domElement;
+      const container = canvas?.parentElement;
+      const box = container?.getBoundingClientRect();
+      return {
+        canvas: canvas ? `${canvas.width}x${canvas.height}` : 'none',
+        container: box ? `${Math.round(box.width)}x${Math.round(box.height)}` : 'none',
+      };
+    };
+
     const inspectCanvas = () => {
       // A hidden tab has nothing to repair yet, and rebuilding there would spend
       // the budget on a map nobody is looking at.
       if (document.visibilityState !== 'visible') return;
 
-      const gl = glRef.current;
-      const canvas = gl?.domElement;
-      const container = canvas?.parentElement;
-      if (!gl || !canvas || !container) return;
-      // A rebuild in flight still has the previous renderer in `glRef`, and its
-      // context is lost by definition. Judging the map by a canvas the document
-      // no longer holds would spend the whole budget on a single loss.
-      if (!canvas.isConnected) return;
+      const issue = findIssue();
+      const episode = episodeRef.current;
 
-      if (gl.getContext().isContextLost()) {
-        spendAttempt();
+      if (!issue) {
+        if (episode?.reported) {
+          onRecoveredRef.current?.(episode.issue, Math.round((Date.now() - episode.since) / 1000));
+        }
+        episodeRef.current = null;
         return;
       }
 
-      const { width, height } = container.getBoundingClientRect();
-      if (width < 1 || height < 1) return;
-      if (Math.abs(canvas.clientWidth - width) < 1 && Math.abs(canvas.clientHeight - height) < 1) return;
+      if (episode?.issue === issue) {
+        episode.checks += 1;
+      } else {
+        episodeRef.current = { issue, since: Date.now(), checks: 1, reported: false };
+      }
 
-      window.dispatchEvent(new Event('resize'));
+      const current = episodeRef.current;
+      if (current && !current.reported && current.checks >= CHECKS_BEFORE_REPORTING) {
+        current.reported = true;
+        onIssueRef.current?.(issue, describe());
+      }
+
+      // Repair what can be repaired. `offscreen` and `transparent` are someone
+      // else's layout, so they are only reported.
+      if (issue === 'context_lost') spendAttempt();
+      if (issue === 'canvas_unmeasured') window.dispatchEvent(new Event('resize'));
     };
 
     const handleVisibilityChange = () => {

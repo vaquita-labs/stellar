@@ -26,7 +26,7 @@ import { ObjectGlow } from './edit/ObjectGlow';
 import { SpotlightPositionUpdater } from './edit/SpotlightPositionUpdater';
 import { TileSpotlightUpdater } from './edit/TileSpotlightUpdater';
 import { getMaxDpr, prefersAntialias } from './scene/deviceTier';
-import { useWebGLRecovery } from './scene/useWebGLRecovery';
+import { useWebGLRecovery, type MapIssue } from './scene/useWebGLRecovery';
 import { Vaquita } from './vaquita';
 
 const PLACEHOLDER_VAQUITA: DepositSummaryResponseDTO = {
@@ -84,7 +84,27 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
     [trackUserAction, isTabVisible],
   );
 
-  const { canvasKey, exhausted, registerRenderer, retry } = useWebGLRecovery({ onContextLost: handleContextLost });
+  // Every way the map has gone blank was silent, so the state of the map itself
+  // is reported: what it was measured to be, and how long it stayed that way.
+  const handleIssue = useCallback(
+    (issue: MapIssue, detail: { canvas: string; container: string }) => {
+      trackUserAction('map_not_visible', { issue, canvas: detail.canvas, container: detail.container });
+    },
+    [trackUserAction],
+  );
+
+  const handleRecovered = useCallback(
+    (issue: MapIssue, seconds: number) => {
+      trackUserAction('map_visible_again', { issue, seconds });
+    },
+    [trackUserAction],
+  );
+
+  const { canvasKey, exhausted, registerRenderer, retry } = useWebGLRecovery({
+    onContextLost: handleContextLost,
+    onIssue: handleIssue,
+    onRecovered: handleRecovered,
+  });
 
   // Mapa de otro jugador (vista de leaderboard): la vaquita es solo decorativa.
   // El humor y el modal de estado son datos del ESPECTADOR y no tienen sentido
