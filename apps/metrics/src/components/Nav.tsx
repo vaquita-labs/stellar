@@ -10,6 +10,7 @@ const links = [
   { href: '/users', label: 'Users' },
   { href: '/campaigns', label: 'Campaigns' },
   { href: '/deposits', label: 'Deposits' },
+  { href: '/ramps', label: 'Ramps' },
   { href: '/retention', label: 'Retention' },
   { href: '/engagement', label: 'Engagement' },
   { href: '/report', label: 'Weekly report' },
