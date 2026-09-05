@@ -1,6 +1,7 @@
 'use client';
 
 import { formatUsd, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
+import { estimateRewardShare } from '@/core-ui/helpers/rewards';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
@@ -94,6 +95,18 @@ export function AllocationDetailSheet({
         <div className="flex items-center justify-between gap-3 py-2.5 text-sm">
           <span className="text-gray-500 truncate">{t('portfolio.detail.depositors', 'Open deposits')}</span>
           <span className="font-bold text-black tabular-nums shrink-0">{allocation.openPositions}</span>
+        </div>
+        {/* Pozo y TVL son del PLAZO; esta fila es la única que habla de vos. Sin ella
+            el pozo entero se leía como propio (con $4 de pozo y $183 de TVL, $32
+            depositados cobran $0.70). `allocation.amount` ya está dentro del TVL, así
+            que el denominador va tal cual. */}
+        <div className="flex items-center justify-between gap-3 py-2.5 text-sm">
+          <span className="text-gray-500 truncate">
+            {t('portfolio.detail.yourShareEstimate', 'Your estimated share')}
+          </span>
+          <span className="font-bold text-success tabular-nums shrink-0">
+            {formatUsd(estimateRewardShare(allocation.rewardPool, allocation.totalDeposits, allocation.amount))}
+          </span>
         </div>
       </div>
 

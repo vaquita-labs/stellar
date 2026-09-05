@@ -597,6 +597,28 @@ export interface SavedBankAccountsResponseDTO {
   savedBankAccounts: SavedBankAccountResponseDTO[];
 }
 
+/**
+ * A bug report or a piece of feedback sent from the Concierge.
+ *
+ * `userAgent` and `walletAddress` are deliberately absent: the DTO is what the
+ * admin inbox renders, and neither is needed to triage a report on screen.
+ */
+export interface FeedbackPostResponseDTO {
+  id: string;
+  /** 'bug' | 'feedback' */
+  kind: string;
+  title: string;
+  details: string;
+  /** 'open' | 'planned' | 'in_progress' | 'done' | 'closed' */
+  status: string;
+  /** UI language at submit time — tells the triager which locale the copy came from. */
+  locale: string | null;
+  /** In-app route the report was opened from. A path, never a full URL. */
+  appPath: string | null;
+  createdTimestamp: number;
+  updatedTimestamp: number;
+}
+
 /** One boost tier: reaching `referrals` active referrals adds `bonus` APY points. */
 export interface ReferralTierDTO {
   referrals: number;

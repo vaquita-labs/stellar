@@ -23,6 +23,12 @@ import router from './routes';
 const app = express();
 
 app.use(cors());
+// Reports can carry up to 3 screenshots of 2 MB, base64-encoded (~33% overhead),
+// so the feedback path gets its own parser. It is mounted BEFORE the global one
+// because whichever runs first sets `req.body` and the other then skips: leaving
+// the 100 KB default in front would reject the upload before it ever reaches the
+// route. Every other endpoint keeps that default.
+app.use('/api/v1/feedback', express.json({ limit: '9mb' }));
 app.use(express.json());
 app.use(httpMetricsMiddleware);
 

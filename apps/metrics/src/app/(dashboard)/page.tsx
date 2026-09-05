@@ -6,6 +6,7 @@ import { fmtInt, fmtPct, fmtUsd } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
 import { depositKpis, depositSeries } from '@/lib/queries/deposits';
 import { signupSeries, userKpis } from '@/lib/queries/users';
+import { sampleAge, vaultTvl } from '@/lib/queries/vault';
 import { parseRange } from '@/lib/range';
 import Link from 'next/link';
 
@@ -16,11 +17,12 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 export default async function OverviewPage({ searchParams }: Props) {
   const range = parseRange(await searchParams);
   const w = await sqlWindow(range);
-  const [users, deposits, signups, series] = await Promise.all([
+  const [users, deposits, signups, series, vault] = await Promise.all([
     userKpis(w),
     depositKpis(w),
     signupSeries(w),
     depositSeries(w),
+    vaultTvl(w),
   ]);
   const prev = w.hasPrev;
 
@@ -62,11 +64,22 @@ export default async function OverviewPage({ searchParams }: Props) {
           previous={prev ? deposits.volume_prev : undefined}
           hint="confirmed USDC in range"
         />
-        <KpiTile
-          label="Locked principal"
-          value={fmtUsd(deposits.tvl)}
-          hint={`${fmtInt(deposits.active_positions)} open positions now`}
-        />
+        {/* The vault is the real TVL: principal plus accrued yield plus flexible
+            balances. Falls back to the ledger figure on environments that have
+            not sampled the vault yet. */}
+        {vault ? (
+          <KpiTile
+            label="Vault TVL"
+            value={fmtUsd(vault.current)}
+            hint={`DeFindex vault · read ${sampleAge(vault.fetchedAt)}`}
+          />
+        ) : (
+          <KpiTile
+            label="Locked principal"
+            value={fmtUsd(deposits.tvl)}
+            hint={`${fmtInt(deposits.active_positions)} open positions now`}
+          />
+        )}
         <KpiTile
           label="Activation"
           value={users.activation_cohort ? fmtPct(users.activated_ever / users.activation_cohort) : '—'}
@@ -99,14 +112,25 @@ export default async function OverviewPage({ searchParams }: Props) {
         >
           <TimeSeriesBars rows={series} series={[{ key: 'volume', label: 'Deposited', kind: 'usd' }]} />
         </ChartCard>
-        <ChartCard
-          title="Locked principal (TVL)"
-          hint="Confirmed principal minus withdrawn principal, at the end of each bucket"
-          rows={series}
-          filename={`tvl-${range.key}-${range.bucket}`}
-        >
-          <TimeSeriesLine rows={series} series={[{ key: 'tvl', label: 'Locked principal', kind: 'usd' }]} />
-        </ChartCard>
+        {vault ? (
+          <ChartCard
+            title="Vault TVL"
+            hint="DeFindex vault total managed funds, last reading of each bucket"
+            rows={vault.series}
+            filename={`vault-tvl-${range.key}-${range.bucket}`}
+          >
+            <TimeSeriesLine rows={vault.series} series={[{ key: 'vault_tvl', label: 'Vault TVL', kind: 'usd' }]} />
+          </ChartCard>
+        ) : (
+          <ChartCard
+            title="Locked principal (TVL)"
+            hint="Confirmed principal minus withdrawn principal, at the end of each bucket"
+            rows={series}
+            filename={`tvl-${range.key}-${range.bucket}`}
+          >
+            <TimeSeriesLine rows={series} series={[{ key: 'tvl', label: 'Locked principal', kind: 'usd' }]} />
+          </ChartCard>
+        )}
       </div>
     </>
   );

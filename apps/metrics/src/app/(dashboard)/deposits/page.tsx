@@ -6,6 +6,7 @@ import { CategoryBars, TimeSeriesBars, TimeSeriesLine } from '@/components/chart
 import { fmtInt, fmtLockPeriod, fmtPct, fmtUsd } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
 import { byLockPeriod, depositKpis, depositSeries, topDepositors } from '@/lib/queries/deposits';
+import { sampleAge, vaultTvl } from '@/lib/queries/vault';
 import { parseRange } from '@/lib/range';
 
 export const dynamic = 'force-dynamic';
@@ -15,14 +16,19 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 export default async function DepositsPage({ searchParams }: Props) {
   const range = parseRange(await searchParams);
   const w = await sqlWindow(range);
-  const [kpis, series, periods, top] = await Promise.all([
+  const [kpis, series, periods, top, vault] = await Promise.all([
     depositKpis(w),
     depositSeries(w),
     byLockPeriod(w),
     topDepositors(w),
+    vaultTvl(w),
   ]);
   const prev = w.hasPrev;
   const periodRows = periods.map((p) => ({ period: fmtLockPeriod(p.lock_period_ms), ...p }));
+  // Both series come from the same `generate_series`, so the buckets line up by
+  // index; joining by label anyway keeps that an assumption we do not depend on.
+  const vaultByBucket = new Map(vault?.series.map((r) => [r.bucket, r.vault_tvl]) ?? []);
+  const tvlRows = series.map((r) => ({ ...r, vault_tvl: vaultByBucket.get(r.bucket) ?? null }));
 
   return (
     <>
@@ -56,11 +62,21 @@ export default async function DepositsPage({ searchParams }: Props) {
           previous={prev ? kpis.depositors_prev : undefined}
           hint="unique wallets in range"
         />
-        <KpiTile
-          label="Locked principal"
-          value={fmtUsd(kpis.tvl)}
-          hint={`${fmtInt(kpis.active_positions)} open positions now`}
-        />
+        {/* Vault TVL is the headline number when we have it: the ledger figure
+            counts principal only, so it reads low by whatever the vault earned. */}
+        {vault ? (
+          <KpiTile
+            label="Vault TVL"
+            value={fmtUsd(vault.current)}
+            hint={`read ${sampleAge(vault.fetchedAt)} · ${fmtUsd(kpis.tvl)} locked principal`}
+          />
+        ) : (
+          <KpiTile
+            label="Locked principal"
+            value={fmtUsd(kpis.tvl)}
+            hint={`${fmtInt(kpis.active_positions)} open positions now`}
+          />
+        )}
         <KpiTile
           label="Repeat depositors"
           value={kpis.wallets_all ? fmtPct(kpis.repeat_wallets / kpis.wallets_all) : '—'}
@@ -97,12 +113,26 @@ export default async function DepositsPage({ searchParams }: Props) {
           />
         </ChartCard>
         <ChartCard
-          title="Locked principal (TVL)"
-          hint="Confirmed principal minus withdrawn principal, at the end of each bucket"
-          rows={series}
+          title={vault ? 'TVL' : 'Locked principal (TVL)'}
+          hint={
+            vault
+              ? 'DeFindex vault total vs. the deposits ledger — the gap is accrued yield and flexible balances'
+              : 'Confirmed principal minus withdrawn principal, at the end of each bucket'
+          }
+          rows={tvlRows}
           filename={`tvl-${range.key}-${range.bucket}`}
         >
-          <TimeSeriesLine rows={series} series={[{ key: 'tvl', label: 'Locked principal', kind: 'usd' }]} />
+          <TimeSeriesLine
+            rows={tvlRows}
+            series={
+              vault
+                ? [
+                    { key: 'vault_tvl', label: 'Vault TVL', kind: 'usd' },
+                    { key: 'tvl', label: 'Locked principal', kind: 'usd' },
+                  ]
+                : [{ key: 'tvl', label: 'Locked principal', kind: 'usd' }]
+            }
+          />
         </ChartCard>
         <ChartCard
           title="Inflow vs outflow"

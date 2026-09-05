@@ -1,4 +1,5 @@
 import {
+  AttributionFlush,
   ClaimGate,
   FollowLinkCapture,
   LegalGate,
@@ -38,6 +39,9 @@ export default function PrivateLayout({
             <TutorialGate>
               <ClaimGate>
                 <PendingFollowConsumer />
+                {/* Dentro de los gates: recién acá hay wallet a la que
+                    atribuir el aterrizaje guardado en la primera visita. */}
+                <AttributionFlush />
                 <PushSubscriptionSync />
                 <PushNudge />
                 {/* The app's scroll region, and the only place a pull-to-refresh

@@ -27,6 +27,8 @@ export * from './useNotifications';
 export * from './profile';
 export * from './useProfilesByAverageDepositsData';
 export * from './useRestDeposit';
+export * from './useFeedbackBoard';
+export * from './useSubmitFeedback';
 export * from './useIsPoolPaused';
 export * from './useRestWithdrawal';
 export * from './useTransactions';

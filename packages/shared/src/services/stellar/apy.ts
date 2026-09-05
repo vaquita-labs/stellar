@@ -4,6 +4,7 @@ import { cached, firstElement } from '../../helpers';
 import type { Network, TokenNetwork } from '../../types';
 import { fetchDefindexVaultApy, stellarNetworkNameToDefindexHttpNetwork } from './defindexApy';
 import { readVaultApySnapshot, writeVaultApySnapshot } from './vaultApySnapshot';
+import { sampleVaultTvl } from './vaultTvlSnapshot';
 import { getPeriodData } from './stellar-sdk';
 
 const SECONDS_PER_MONTH_30D = 60 * 60 * 24 * 30;
@@ -77,6 +78,11 @@ export const getVaultApy = async (network: Network, tokenNetworkData: TokenNetwo
   const defindexNet = stellarNetworkNameToDefindexHttpNetwork(network.name);
   const vaultAddress = firstElement(tokenNetworkData.defindex_vault_contract_address ?? '')?.trim() || '';
   if (!vaultAddress || !defindexNet) return empty;
+
+  // Ride along on the rate lookup to sample vault TVL for the metrics dashboard.
+  // Not awaited and self-throttled to one on-chain read per vault per 10 minutes:
+  // this endpoint is on the portfolio's load path and owes the user nothing here.
+  void sampleVaultTvl(network, tokenNetworkData);
 
   const read = await cached<VaultApyRead | null>(
     `defindex:apy:${defindexNet}:${vaultAddress}`,

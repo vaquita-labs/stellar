@@ -1,6 +1,7 @@
 'use client';
 
 import { formatUsd } from '@/core-ui/helpers/numbers';
+import { estimateRewardShare } from '@/core-ui/helpers/rewards';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriod, useRestWithdrawal, useTransactions } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
@@ -220,19 +221,35 @@ export function PositionWithdrawSheet({
         ) : null}
       </div>
 
-      {/* En vez de un interés proyectado (que variaba con la gente del pool y
-          prometía un número que no se cumplía), mostramos lo cierto del plazo:
-          el pool de premios y cuántos depósitos hay adentro. */}
+      {/* Lo cierto del plazo (pozo + depósitos abiertos) y, separado, lo que le toca
+          a ESTA posición. Antes iba solo el pozo entero, que se leía como propio; la
+          parte real es a prorrata del capital, igual que `calculate_reward` en el
+          contrato. Sigue sin ser una promesa —el pozo se reparte en vivo—, por eso va
+          la nota de abajo y no un interés proyectado. */}
       <div className="divide-y divide-black/10">
         <div className="flex items-center justify-between py-2 text-xs">
           <span className="text-gray-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
           <span className="font-bold text-black tabular-nums">{formatUsd(dataApy?.rewardPool ?? 0)}</span>
+        </div>
+        {/* `amount` ya está contado en el TVL del plazo: denominador sin sumarle nada. */}
+        <div className="flex items-center justify-between py-2 text-xs">
+          <span className="text-gray-500">{t('portfolio.detail.yourShareEstimate', 'Your estimated share')}</span>
+          <span className="font-bold text-success tabular-nums">
+            {formatUsd(estimateRewardShare(dataApy?.rewardPool ?? 0, dataApy?.totalDeposits ?? 0, amount))}
+          </span>
         </div>
         <div className="flex items-center justify-between py-2 text-xs">
           <span className="text-gray-500">{t('portfolio.detail.depositors', 'Open deposits')}</span>
           <span className="font-bold text-black tabular-nums">{dataApy?.openPositions ?? 0}</span>
         </div>
       </div>
+
+      <p className="text-xs text-gray-500">
+        {t(
+          'portfolio.detail.estimateNote',
+          'Rewards are shared among everyone in this pool and can change as people join or leave.',
+        )}
+      </p>
     </div>
   );
 

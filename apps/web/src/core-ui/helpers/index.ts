@@ -4,6 +4,7 @@ export * from './nickname';
 export * from './numbers';
 export * from './network';
 export * from './rampRail';
+export * from './rewards';
 export * from './strings';
 export * from './time';
 export * from './user';

@@ -254,6 +254,123 @@ model SavedBankAccount {
   @@map("saved_bank_accounts")
 }
 
+/// A bug report or a piece of feedback sent from inside the app (Concierge →
+/// "Report a bug" / "Send feedback"). Both kinds share one shape — a short
+/// title and a details body — because they are triaged differently, not filled
+/// in differently.
+///
+/// `locale`, `userAgent` and `appPath` are filled in by the server, never by
+/// the client: they are the cheap stand-in for the screenshot upload that was
+/// deliberately deferred. `walletAddress` is denormalized (like
+/// LegalAcceptance) so a report survives the deletion of the profile that
+/// filed it.
+///
+/// `kind` and `status` are constrained by CHECKs that live in
+/// packages/db/sql/feedback_posts_enums.sql — Prisma cannot express them and
+/// `db push` would drop them.
+model FeedbackPost {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId     Int?      @map("profile_id")
+  walletAddress String    @map("wallet_address") @db.VarChar(64)
+  /// 'bug' | 'feedback'
+  kind          String    @db.VarChar(10)
+  title         String    @db.VarChar(120)
+  details       String    @default("")
+  /// 'open' | 'planned' | 'in_progress' | 'done' | 'closed'
+  status        String    @default("open") @db.VarChar(20)
+  locale        String?   @db.VarChar(8)
+  userAgent     String?   @map("user_agent")
+  appPath       String?   @map("app_path") @db.VarChar(200)
+  /// Denormalized `feedback_votes` count. The board's default order is by votes,
+  /// and an aggregate over the join cannot be indexed; written in the same
+  /// transaction as the vote.
+  voteCount     Int       @default(0) @map("vote_count")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  profile     Profile?              @relation(fields: [profileId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  attachments FeedbackAttachment[]
+  votes       FeedbackVote[]
+
+  @@index([kind, status, createdAt(sort: Desc)], map: "idx_feedback_posts_triage")
+  @@index([profileId, createdAt(sort: Desc)], map: "idx_feedback_posts_profile_created")
+  @@index([kind, voteCount(sort: Desc), createdAt(sort: Desc)], map: "idx_feedback_posts_board")
+  @@map("feedback_posts")
+}
+
+/// A screenshot attached to a report. The bytes live in Postgres because the
+/// project has no object store: the client downscales and recompresses before
+/// upload and the API caps each file at 2 MB, which keeps that honest. Moving to
+/// a bucket later only changes where `data` comes from.
+model FeedbackAttachment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId      String   @map("post_id") @db.Uuid
+  /// 'image/png' | 'image/jpeg' | 'image/webp' — enforced by a CHECK constraint.
+  contentType String   @map("content_type") @db.VarChar(40)
+  byteSize    Int      @map("byte_size")
+  data        Bytes
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  post FeedbackPost @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([postId], map: "idx_feedback_attachments_post")
+  @@map("feedback_attachments")
+}
+
+/// One upvote by one profile on one report. The unique pair is what makes the
+/// client's toggle idempotent: a double tap or a retried request cannot count twice.
+model FeedbackVote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  profileId Int      @map("profile_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  post    FeedbackPost @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profile Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([postId, profileId], map: "feedback_votes_post_profile_unique")
+  @@index([profileId], map: "idx_feedback_votes_profile")
+  @@map("feedback_votes")
+}
+
+/// A marketing campaign: one shareable code plus the default UTM parameters the
+/// admin panel builds its links from.
+///
+/// `code` lives in a different namespace from `profiles.referralCode` (6 chars
+/// from an unambiguous alphabet). Attribution resolves campaign first and user
+/// referral second, so a collision would let a campaign swallow someone's
+/// personal code — the admin create path validates against both, which a CHECK
+/// constraint could not do across tables.
+///
+/// Soft-deleted rather than deleted, and the unique index on `code` is partial
+/// so retiring a campaign frees its code for the next one.
+model Campaign {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique(map: "campaigns_code_unique", where: raw("(deleted_at IS NULL)")) @db.VarChar(32)
+  name        String    @db.VarChar(120)
+
+  /// Defaults for the generated link, not a filter: whatever actually arrives
+  /// in the query string is stored on the profile regardless of these.
+  source      String?   @db.VarChar(60)
+  medium      String?   @db.VarChar(60)
+  content     String?   @db.VarChar(120)
+  landingPath String?   @map("landing_path") @db.VarChar(200)
+
+  startsAt    DateTime? @map("starts_at") @db.Timestamptz(6)
+  endsAt      DateTime? @map("ends_at") @db.Timestamptz(6)
+  isActive    Boolean   @default(true) @map("is_active")
+  notes       String?
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  profiles    Profile[]
+
+  @@map("campaigns")
+}
+
 /// Global catalog of placeable map elements. `variants`, `prices` and
 /// `free_items` are positionally-aligned CSV lists: index i of each column
 /// describes the same variant (see getMapObjectsAvailableData in
@@ -369,6 +486,20 @@ model Profile {
   referralCode  String?   @unique(map: "profiles_referral_code_unique") @map("referral_code") @db.VarChar(12)
   referredById  Int?      @map("referred_by_id")
 
+  /// Where this profile came from, captured on the first visit and written
+  /// ONCE — the same never-overwrite rule as `referredById`, for the same
+  /// reason: a later organic visit must not steal the conversion from the
+  /// campaign that actually brought the user in.
+  ///
+  /// `campaignId` is the resolved campaign (what you group and count by);
+  /// `attribution` is the raw first-touch blob — `utm_source/medium/campaign/
+  /// content`, `referrer`, `landedAt`. Keeping the raw form alongside the
+  /// resolved id is what lets us answer questions we haven't thought of yet
+  /// without having thrown the data away. A user referral code does NOT land
+  /// here: it still routes through `referredById`.
+  campaignId    Int?      @map("campaign_id")
+  attribution   Json?     @db.JsonB
+
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
@@ -404,6 +535,14 @@ model Profile {
   // a flag — see LegalAcceptance.
   legalAcceptances LegalAcceptance[]
 
+  // Bug reports and feedback sent from the Concierge. Nullable on the other
+  // side: a report outlives the profile that filed it.
+  feedbackPosts FeedbackPost[]
+  feedbackVotes FeedbackVote[]
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([campaignId, createdAt], map: "idx_profiles_campaign_created")
   @@map("profiles")
 }
 
@@ -743,4 +882,26 @@ model VaultApySnapshot {
 
   @@id([network, vaultAddress])
   @@map("vault_apy_snapshots")
+}
+
+/// Append-only samples of the DeFindex vault's total managed funds — the real
+/// TVL behind the product, as opposed to the deposits ledger's locked principal
+/// (which excludes accrued yield and flexible balances).
+///
+/// Written best-effort from the API's vault-APY path, so samples follow traffic
+/// rather than a fixed cadence. Readers must take the LAST sample in a bucket,
+/// not an average, since an uneven sampling rate would otherwise weight busy
+/// hours more heavily. Derived state — safe to truncate, at the cost of history.
+model VaultTvlSnapshot {
+  id           BigInt   @id @default(autoincrement())
+  network      String   @db.VarChar(20)
+  vaultAddress String   @map("vault_address") @db.VarChar(128)
+  /// Idle + invested, in human units (already scaled by the token's decimals).
+  totalManaged Float    @map("total_managed")
+  /// Vault shares outstanding, for share-price context. Null when unreadable.
+  totalSupply  Float?   @map("total_supply")
+  fetchedAt    DateTime @default(now()) @map("fetched_at") @db.Timestamptz(6)
+
+  @@index([network, vaultAddress, fetchedAt(sort: Desc)], map: "idx_vault_tvl_snapshots_vault_time")
+  @@map("vault_tvl_snapshots")
 }

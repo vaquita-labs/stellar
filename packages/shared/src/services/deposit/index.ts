@@ -5,7 +5,7 @@ import { ably } from '../ably';
 import { evaluateBadgeMilestones } from '../badges/badge-monitor';
 import { notify } from '../notifications';
 import { getBadgesContractAddress } from '../project-config';
-import { getBlendInterest, getStellarDepositContractAddress } from '../stellar';
+import { getBlendInterest, isStellarNetworkName } from '../stellar';
 import {
   type Deposit,
   type DepositResponseDTO,
@@ -515,20 +515,12 @@ export const toDepositResponseDTO = async (deposit: DepositWithState, networkDat
   let blendInterest = 0;
   let vaquitaInterest = 0;
 
-  // Control vaquita contract address
-  let vaquitaContractAddress = tokenNetworkData?.vaquita_contract_address ?? '';
-  if (tokenNetworkData) {
-    if (networkData.name === 'Stellar Testnet') {
-      vaquitaContractAddress = getStellarDepositContractAddress(deposit);
-    }
-  }
-
-  if (deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS) {
-    if (tokenNetworkData) {
-      if (networkData.name === 'Stellar Testnet') {
-        ({ blendInterest, vaquitaInterest } = await getBlendInterest(deposit, tokenNetworkData));
-      }
-    }
+  // Realized interest is read from chain, and `getBlendInterest` resolves the
+  // pool and vault contracts from the deposit itself, so it works the same on
+  // both networks. Gating it on testnet alone made mainnet positions report
+  // $0.00 earnings everywhere they are shown.
+  if (deposit.state === DepositWithdrawalState.DEPOSIT_SUCCESS && tokenNetworkData && isStellarNetworkName(networkData.name)) {
+    ({ blendInterest, vaquitaInterest } = await getBlendInterest(deposit, tokenNetworkData));
   }
 
   const lockPeriod = deposit.lock_period || +(networkData.tokens_networks.find(tokenNetwork => tokenNetwork.tokens.symbol === deposit.tokens?.symbol)?.lock_period?.split(',')?.[0] ?? 0) || 0;
@@ -545,7 +537,7 @@ export const toDepositResponseDTO = async (deposit: DepositWithState, networkDat
     protocolInterest,
     vaquitaInterest,
     blendInterest,
-    ...(networkData.name === 'Stellar Testnet' ? { vaultInterest: blendInterest } : {}),
+    ...(isStellarNetworkName(networkData.name) ? { vaultInterest: blendInterest } : {}),
     lockPeriod,
     createdTimestamp: new Date(deposit.created_at || 0).getTime() || 0,
     updatedTimestamp: new Date(deposit.updated_at || 0).getTime() || 0,

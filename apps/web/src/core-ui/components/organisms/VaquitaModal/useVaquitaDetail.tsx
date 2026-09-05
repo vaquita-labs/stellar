@@ -10,6 +10,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { getInterestData } from '../../../helpers';
+import { estimateRewardShare } from '../../../helpers/rewards';
 import { formatUsd } from '../../../helpers/numbers';
 import { useApyByLockPeriod, useProfileData, useTransactions, useWithdrawalTime } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
@@ -469,16 +470,29 @@ export const useVaquitaDetail = ({
           </>
         ) : (
           <>
-            {/* Real: lo cierto del plazo — premios del pool + depósitos abiertos —
-                en vez de un interés proyectado y engañoso. */}
+            {/* Real: lo cierto del plazo —pozo + depósitos abiertos— más la parte a
+                prorrata de ESTE depósito, en vez de un interés proyectado y engañoso.
+                `deposit.amount` ya está dentro del TVL del plazo. */}
             <div className="flex items-center justify-between text-xs">
               <span className="text-default-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
               <span className="font-semibold text-black tabular-nums">{formatUsd(dataApy?.rewardPool ?? 0)}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
+              <span className="text-default-500">{t('portfolio.detail.yourShareEstimate', 'Your estimated share')}</span>
+              <span className="font-semibold text-success tabular-nums">
+                {formatUsd(estimateRewardShare(dataApy?.rewardPool ?? 0, dataApy?.totalDeposits ?? 0, deposit.amount))}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
               <span className="text-default-500">{t('portfolio.detail.depositors', 'Open deposits')}</span>
               <span className="font-semibold text-black tabular-nums">{dataApy?.openPositions ?? 0}</span>
             </div>
+            <p className="text-[11px] leading-snug text-default-500">
+              {t(
+                'portfolio.detail.estimateNote',
+                'Rewards are shared among everyone in this pool and can change as people join or leave.',
+              )}
+            </p>
           </>
         )}
         {txHashRow && <div className="border-t border-black/10 pt-1.5 mt-0.5">{txHashRow}</div>}

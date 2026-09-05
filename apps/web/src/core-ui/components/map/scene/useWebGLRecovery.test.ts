@@ -6,6 +6,8 @@ import { useWebGLRecovery } from './useWebGLRecovery';
 
 /** Matches HEALTH_CHECK_MS in the hook. */
 const HEALTH_CHECK_MS = 2_000;
+/** Matches CHECKS_BEFORE_REPORTING in the hook. */
+const CHECKS_BEFORE_REPORTING = 2;
 /** Matches MAX_ATTEMPTS in the hook. */
 const MAX_ATTEMPTS = 3;
 
@@ -40,6 +42,13 @@ const matchCanvasToContainer = ({ canvas, container }: FakeRenderer, size: numbe
   container.getBoundingClientRect = () => ({ width: size, height: size }) as DOMRect;
   Object.defineProperty(canvas, 'clientWidth', { value: size, configurable: true });
   Object.defineProperty(canvas, 'clientHeight', { value: size, configurable: true });
+  canvas.getBoundingClientRect = () => ({ width: size, height: size, top: 0, left: 0, right: size, bottom: size }) as DOMRect;
+};
+
+/** Parks the canvas a full viewport below the fold, where an unrun animation leaves it. */
+const parkOffscreen = ({ canvas }: FakeRenderer) => {
+  const top = window.innerHeight + 10;
+  canvas.getBoundingClientRect = () => ({ width: 800, height: 600, top, left: 0, right: 800, bottom: top + 600 }) as DOMRect;
 };
 
 const loseContext = (canvas: HTMLCanvasElement) => {
@@ -178,6 +187,88 @@ describe('useWebGLRecovery', () => {
     // Rebuilding is pointless when the page cannot get a context at all.
     expect(result.current.exhausted).toBe(true);
     expect(onContextLost).toHaveBeenCalledWith(MAX_ATTEMPTS + 1, false);
+  });
+
+  it('reports a map left transparent by an animation that never ran', () => {
+    const onIssue = vi.fn();
+    const { result } = renderHook(() => useWebGLRecovery({ onIssue }));
+    const renderer = makeRenderer();
+    matchCanvasToContainer(renderer, 800);
+    // The exact state the map was found in: rendering at full speed behind an
+    // ancestor still sitting at its `initial` opacity.
+    renderer.container.style.opacity = '0';
+
+    act(() => result.current.registerRenderer(renderer.gl));
+    act(() => vi.advanceTimersByTime(HEALTH_CHECK_MS * CHECKS_BEFORE_REPORTING));
+
+    // The canvas reports its drawing buffer, which is what tells a rendering
+    // problem apart from a layout one when the report is read later.
+    expect(onIssue).toHaveBeenCalledWith('transparent', { canvas: '300x150', container: '800x800' });
+  });
+
+  it('reports a map parked outside the viewport', () => {
+    const onIssue = vi.fn();
+    const { result } = renderHook(() => useWebGLRecovery({ onIssue }));
+    const renderer = makeRenderer();
+    matchCanvasToContainer(renderer, 800);
+    parkOffscreen(renderer);
+
+    act(() => result.current.registerRenderer(renderer.gl));
+    act(() => vi.advanceTimersByTime(HEALTH_CHECK_MS * CHECKS_BEFORE_REPORTING));
+
+    expect(onIssue).toHaveBeenCalledWith('offscreen', expect.anything());
+  });
+
+  it('stays quiet on a single failed check, so mounting is not reported', () => {
+    const onIssue = vi.fn();
+    const { result } = renderHook(() => useWebGLRecovery({ onIssue }));
+    const renderer = makeRenderer();
+    matchCanvasToContainer(renderer, 800);
+    renderer.container.style.opacity = '0';
+
+    act(() => result.current.registerRenderer(renderer.gl));
+    // Far enough for the first check to run, well short of the second.
+    act(() => vi.advanceTimersByTime(HEALTH_CHECK_MS / 4));
+    expect(onIssue).not.toHaveBeenCalled();
+
+    act(() => vi.advanceTimersByTime(HEALTH_CHECK_MS));
+    expect(onIssue).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the episode once, and again only when the map comes back', () => {
+    const onIssue = vi.fn();
+    const onRecovered = vi.fn();
+    const { result } = renderHook(() => useWebGLRecovery({ onIssue, onRecovered }));
+    const renderer = makeRenderer();
+    matchCanvasToContainer(renderer, 800);
+    renderer.container.style.opacity = '0';
+
+    act(() => result.current.registerRenderer(renderer.gl));
+    act(() => vi.advanceTimersByTime(HEALTH_CHECK_MS * 6));
+
+    // One episode is one report, however long it lasts.
+    expect(onIssue).toHaveBeenCalledTimes(1);
+    expect(onRecovered).not.toHaveBeenCalled();
+
+    renderer.container.style.opacity = '1';
+    act(() => vi.advanceTimersByTime(HEALTH_CHECK_MS));
+
+    expect(onRecovered).toHaveBeenCalledTimes(1);
+    expect(onRecovered.mock.calls[0][0]).toBe('transparent');
+  });
+
+  it('says nothing about a map that is on screen', () => {
+    const onIssue = vi.fn();
+    const onRecovered = vi.fn();
+    const { result } = renderHook(() => useWebGLRecovery({ onIssue, onRecovered }));
+    const renderer = makeRenderer();
+    matchCanvasToContainer(renderer, 800);
+
+    act(() => result.current.registerRenderer(renderer.gl));
+    act(() => vi.advanceTimersByTime(HEALTH_CHECK_MS * 10));
+
+    expect(onIssue).not.toHaveBeenCalled();
+    expect(onRecovered).not.toHaveBeenCalled();
   });
 
   it('asks for a fresh measurement when the canvas does not match its container', () => {
