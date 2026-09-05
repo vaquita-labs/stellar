@@ -254,6 +254,44 @@ model SavedBankAccount {
   @@map("saved_bank_accounts")
 }
 
+/// A bug report or a piece of feedback sent from inside the app (Concierge →
+/// "Report a bug" / "Send feedback"). Both kinds share one shape — a short
+/// title and a details body — because they are triaged differently, not filled
+/// in differently.
+///
+/// `locale`, `userAgent` and `appPath` are filled in by the server, never by
+/// the client: they are the cheap stand-in for the screenshot upload that was
+/// deliberately deferred. `walletAddress` is denormalized (like
+/// LegalAcceptance) so a report survives the deletion of the profile that
+/// filed it.
+///
+/// `kind` and `status` are constrained by CHECKs that live in
+/// packages/db/sql/feedback_posts_enums.sql — Prisma cannot express them and
+/// `db push` would drop them.
+model FeedbackPost {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId     Int?      @map("profile_id")
+  walletAddress String    @map("wallet_address") @db.VarChar(64)
+  /// 'bug' | 'feedback'
+  kind          String    @db.VarChar(10)
+  title         String    @db.VarChar(120)
+  details       String    @default("")
+  /// 'open' | 'planned' | 'in_progress' | 'done' | 'closed'
+  status        String    @default("open") @db.VarChar(20)
+  locale        String?   @db.VarChar(8)
+  userAgent     String?   @map("user_agent")
+  appPath       String?   @map("app_path") @db.VarChar(200)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([kind, status, createdAt(sort: Desc)], map: "idx_feedback_posts_triage")
+  @@index([profileId, createdAt(sort: Desc)], map: "idx_feedback_posts_profile_created")
+  @@map("feedback_posts")
+}
+
 /// Global catalog of placeable map elements. `variants`, `prices` and
 /// `free_items` are positionally-aligned CSV lists: index i of each column
 /// describes the same variant (see getMapObjectsAvailableData in
@@ -404,6 +442,9 @@ model Profile {
   // a flag — see LegalAcceptance.
   legalAcceptances LegalAcceptance[]
 
+  // Bug reports and feedback sent from the Concierge. Nullable on the other
+  // side: a report outlives the profile that filed it.
+  feedbackPosts FeedbackPost[]
   @@map("profiles")
 }
 

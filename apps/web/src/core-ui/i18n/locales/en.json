@@ -956,7 +956,9 @@
     "title": "Concierge",
     "buttonAria": "Concierge",
     "chat": "Chat with us",
-    "email": "Email"
+    "email": "Email",
+    "feedback": "Send feedback",
+    "bug": "Report a bug"
   },
   "notificationsCenter": {
     "bellAria": "Notifications",
@@ -1315,10 +1317,6 @@
     },
     "settings": {
       "accountSection": "Account",
-      "feedback": "Feedback",
-      "feedbackDesc": "Tell us what you think.",
-      "help": "Help center",
-      "helpDesc": "FAQ and account support.",
       "notifications": "Notifications",
       "notificationsDesc": "Manage push and email alerts.",
       "preferences": "Preferences",
@@ -1656,6 +1654,27 @@
       "utility": "Utility"
     }
   },
+  "report": {
+    "titleField": "Title",
+    "detailsField": "Details",
+    "detailsPlaceholder": "Any additional details…",
+    "submit": "Submit",
+    "sending": "Sending…",
+    "successTitle": "Report sent",
+    "successBody": "Thanks — the team got it.",
+    "errorTitle": "Could not send your report",
+    "errorBody": "Please try again in a moment.",
+    "bug": {
+      "title": "Report a bug",
+      "intro": "Tell us what went wrong. The more detail, the faster we can fix it.",
+      "titlePlaceholder": "e.g. The withdraw button does nothing"
+    },
+    "feedback": {
+      "title": "Send feedback",
+      "intro": "Tell us what would make Vaquita better. We read every message.",
+      "titlePlaceholder": "e.g. Let me rename my saved wallets"
+    }
+  },
   "social": {
     "contacts": {
       "foundCount_one": "{{count}} found",
@@ -1670,26 +1689,6 @@
       "searchPlaceholder": "Search by name or handle…",
       "subtitle": "Browse vaqueros you already know and invite them to save with you.",
       "title": "Choose from contacts"
-    },
-    "feedback": {
-      "categories": {
-        "bug": "A bug",
-        "idea": "A feature idea",
-        "love": "I love it",
-        "other": "Something else"
-      },
-      "categoryHeading": "What are you sharing?",
-      "messageHeading": "Your message",
-      "messagePlaceholder": "Type your feedback here…",
-      "ratingHeading": "How is your experience?",
-      "send": "Send feedback",
-      "sending": "Sending…",
-      "starLabel_one": "{{count}} star",
-      "starLabel_other": "{{count}} stars",
-      "subtitle": "Tell us what's working, what isn't, and what you wish Vaquita did.",
-      "successBody": "We read every message and we mean it.",
-      "successTitle": "Thanks for the feedback (mock)!",
-      "title": "Feedback"
     },
     "friends": {
       "chooseFromContacts": "Choose from contacts",
@@ -2456,12 +2455,12 @@
       "portfolioShare": "{{pct}}% of your portfolio",
       "withdrawPeriod": "Withdraw period",
       "rewardsPool": "Pool rewards",
+      "yourShareEstimate": "Your estimated share",
       "tvl": "TVL",
       "depositors": "Open deposits",
       "estimateNote": "Rewards are shared among everyone in this pool and can change as people join or leave.",
       "tokenNote": "Balances are shown in {{token}}.",
-      "marketApy": "{{market}} APY",
-      "yourShareEstimate": "Your estimated share"
+      "marketApy": "{{market}} APY"
     },
     "move": {
       "title": "Move funds",

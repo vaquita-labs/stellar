@@ -31,3 +31,4 @@ export * from './PortfolioPanel';
 export * from './PushNudge';
 export * from './PushSubscriptionSync';
 export * from './ReferralsModal';
+export * from './ReportSheet';

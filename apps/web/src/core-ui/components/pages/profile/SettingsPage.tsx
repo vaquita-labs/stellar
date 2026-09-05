@@ -11,9 +11,7 @@ import {
   FiDownload,
   FiEdit3,
   FiEyeOff,
-  FiHelpCircle,
   FiLogOut,
-  FiMessageCircle,
   FiShare,
   FiSliders,
   FiUserPlus,
@@ -157,6 +155,10 @@ function SettingsRow({ row }: { row: Row }) {
 }
 
 function Section({ title, rows }: { title: string; rows: Row[] }) {
+  // Una sección sin filas no es una sección vacía: es una sección que no va.
+  // Soporte queda así cuando la app ya está instalada, que es su única fila.
+  if (rows.length === 0) return null;
+
   return (
     <section className="flex flex-col gap-2">
       <h2 className="text-xs font-extrabold uppercase tracking-wider text-gray-500 px-1">{title}</h2>
@@ -170,9 +172,6 @@ function Section({ title, rows }: { title: string; rows: Row[] }) {
     </section>
   );
 }
-
-/** FAQ pública del sitio: destino de la fila "Centro de ayuda". */
-const HELP_CENTER_URL = 'https://www.vaquita.fi/#faq';
 
 const formatDate = (iso: string) => {
   const d = new Date(iso);
@@ -294,24 +293,6 @@ export function SettingsPage({
           } satisfies LinkRow,
         ]
       : []),
-    {
-      kind: 'link',
-      key: 'help',
-      icon: <FiHelpCircle />,
-      label: t('profilePages.settings.help', 'Help center'),
-      description: t('profilePages.settings.helpDesc', 'FAQ and account support.'),
-      href: HELP_CENTER_URL,
-      external: true,
-    },
-    {
-      kind: 'link',
-      key: 'feedback',
-      icon: <FiMessageCircle />,
-      label: t('profilePages.settings.feedback', 'Feedback'),
-      description: t('profilePages.settings.feedbackDesc', 'Tell us what you think.'),
-      disabled: true,
-      badge: t('common.soon'),
-    },
   ];
 
   return (

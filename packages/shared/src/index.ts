@@ -35,6 +35,7 @@ export * from './services/mapLikes';
 export * from './services/referral';
 export * from './services/notifications';
 export * from './services/savedWallet';
+export * from './services/feedback';
 export * from './services/savedBankAccount';
 export * from './services/legal';
 export * from './services/offramp';

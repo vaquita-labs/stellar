@@ -956,7 +956,9 @@
     "title": "Concierge",
     "buttonAria": "Concierge",
     "chat": "Chatea con nosotros",
-    "email": "Email"
+    "email": "Email",
+    "feedback": "Enviar feedback",
+    "bug": "Reportar un error"
   },
   "notificationsCenter": {
     "bellAria": "Notificaciones",
@@ -1315,10 +1317,6 @@
     },
     "settings": {
       "accountSection": "Cuenta",
-      "feedback": "Comentarios",
-      "feedbackDesc": "Cuéntanos qué piensas.",
-      "help": "Centro de ayuda",
-      "helpDesc": "Preguntas frecuentes y soporte de cuenta.",
       "notifications": "Notificaciones",
       "notificationsDesc": "Gestiona las alertas push y por correo.",
       "preferences": "Preferencias",
@@ -1656,6 +1654,27 @@
       "utility": "Utilidad"
     }
   },
+  "report": {
+    "titleField": "Título",
+    "detailsField": "Detalles",
+    "detailsPlaceholder": "Cualquier detalle adicional…",
+    "submit": "Enviar",
+    "sending": "Enviando…",
+    "successTitle": "Reporte enviado",
+    "successBody": "Gracias — le llegó al equipo.",
+    "errorTitle": "No se pudo enviar tu reporte",
+    "errorBody": "Probá de nuevo en un momento.",
+    "bug": {
+      "title": "Reportar un error",
+      "intro": "Contanos qué salió mal. Cuanto más detalle, más rápido lo arreglamos.",
+      "titlePlaceholder": "ej. El botón de retirar no hace nada"
+    },
+    "feedback": {
+      "title": "Enviar feedback",
+      "intro": "Contanos qué haría mejor a Vaquita. Leemos todos los mensajes.",
+      "titlePlaceholder": "ej. Dejarme renombrar mis wallets guardadas"
+    }
+  },
   "social": {
     "contacts": {
       "foundCount_one": "{{count}} encontrado",
@@ -1670,26 +1689,6 @@
       "searchPlaceholder": "Busca por nombre o usuario…",
       "subtitle": "Explora vaqueros que ya conoces e invítalos a ahorrar contigo.",
       "title": "Elegir de contactos"
-    },
-    "feedback": {
-      "categories": {
-        "bug": "Un error",
-        "idea": "Una idea de función",
-        "love": "Me encanta",
-        "other": "Otra cosa"
-      },
-      "categoryHeading": "¿Qué nos quieres contar?",
-      "messageHeading": "Tu mensaje",
-      "messagePlaceholder": "Escribe aquí tus comentarios…",
-      "ratingHeading": "¿Cómo es tu experiencia?",
-      "send": "Enviar comentarios",
-      "sending": "Enviando…",
-      "starLabel_one": "{{count}} estrella",
-      "starLabel_other": "{{count}} estrellas",
-      "subtitle": "Cuéntanos qué funciona, qué no y qué te gustaría que Vaquita hiciera.",
-      "successBody": "Leemos cada mensaje, y lo decimos en serio.",
-      "successTitle": "¡Gracias por tus comentarios (simulación)!",
-      "title": "Comentarios"
     },
     "friends": {
       "chooseFromContacts": "Elegir de contactos",
@@ -2456,12 +2455,12 @@
       "portfolioShare": "{{pct}}% de tu portafolio",
       "withdrawPeriod": "Periodo de retiro",
       "rewardsPool": "Premios del pool",
+      "yourShareEstimate": "Tu parte estimada",
       "tvl": "TVL",
       "depositors": "Depósitos abiertos",
       "estimateNote": "Los premios se reparten entre todos los del pool y pueden cambiar a medida que entra o sale gente.",
       "tokenNote": "Los saldos se muestran en {{token}}.",
-      "marketApy": "APY de {{market}}",
-      "yourShareEstimate": "Tu parte estimada"
+      "marketApy": "APY de {{market}}"
     },
     "move": {
       "title": "Mover fondos",

@@ -39,6 +39,11 @@ const sections: { href: string; title: string; description: string }[] = [
     description: 'Catalog of placeable map elements: variants, prices and free units.',
   },
   {
+    href: '/feedback',
+    title: 'Feedback',
+    description: 'Triage bug reports and feedback sent from inside the app.',
+  },
+  {
     href: '/notifications',
     title: 'Notifications',
     description: 'Send in-app + push notifications to everyone or specific users.',
