@@ -30,6 +30,15 @@ const start = () => {
     capture_pageview: false,
     // El replay tiene su propio flag y arranca apagado: /privacy todavía no dice
     // que se graban sesiones, y la app no tiene mecanismo de consentimiento.
+    //
+    // Nota sobre el 404 de `/ingest/array/<key>/config`: es ruido, no un fallo.
+    // posthog-js pide la config remota primero por ahí, y si el proyecto no tiene
+    // ese asset generado responde 404 y loguea "Failed to fetch remote config".
+    // Acto seguido cae a `/flags/?v=2&config=true`, que devuelve exactamente la
+    // misma config —`sessionRecording`, `scriptConfig`, autocapture, web vitals—,
+    // así que el replay graba y los eventos salen igual. Cuesta dos requests de
+    // más en el init y nada más. Se arregla del lado de PostHog (que el proyecto
+    // genere el asset), no acá.
     disable_session_recording: !isSessionReplayEnabled(),
     // Se empieza CERRADO y se destapa a mano lo que haga falta, nunca al revés:
     // destapar de más se arregla, taparlo después no —el dato ya salió y ya está

@@ -290,6 +290,8 @@ export type FeedbackBoardEntry = {
   status: string;
   voteCount: number;
   hasVoted: boolean;
+  /** The viewer filed this one. Their own report cannot be upvoted. */
+  isOwn: boolean;
   authorNickname: string | null;
   attachmentIds: string[];
   createdTimestamp: number;
@@ -341,6 +343,7 @@ export const listFeedbackBoard = async ({
       status: true,
       voteCount: true,
       createdAt: true,
+      profileId: true,
       profile: { select: { nickname: true } },
     },
   });
@@ -365,11 +368,25 @@ export const listFeedbackBoard = async ({
     status: post.status,
     voteCount: post.voteCount,
     hasVoted: voted.has(post.id),
+    // A report filed without a profile row has `profileId === null`, and so does
+    // a viewer without one. Comparing them directly would make every anonymous
+    // report look like it belonged to every anonymous viewer.
+    isOwn: viewerProfileId !== null && post.profileId === viewerProfileId,
     authorNickname: post.profile?.nickname ?? null,
     attachmentIds: attachments.get(post.id) ?? [],
     createdTimestamp: post.createdAt.getTime(),
   }));
 };
+
+/**
+ * Outcome of a vote toggle. A union rather than a nullable result because the
+ * two failures need different answers: an unknown post is a 404, voting on your
+ * own report is a 403, and collapsing both into `null` would have the API tell
+ * a user their own report does not exist.
+ */
+export type ToggleFeedbackVoteResult =
+  | { ok: true; voteCount: number; hasVoted: boolean }
+  | { ok: false; reason: 'not-found' | 'own-post' };
 
 /**
  * Adds or removes this profile's vote and returns the resulting state.
@@ -380,6 +397,11 @@ export const listFeedbackBoard = async ({
  * than a second vote: an insert that collides means the vote already existed,
  * which is the same outcome the client was asking for. When that happens the
  * handler re-reads the live state instead of guessing at it.
+ *
+ * Voting on your own report is refused HERE, not only in the UI: the vote count
+ * is what triage sorts by, so a self-vote is the one input that makes the number
+ * mean something other than "other people hit this too". The board hides the
+ * button, but the button is not the rule.
  */
 export const toggleFeedbackVote = async ({
   postId,
@@ -387,12 +409,13 @@ export const toggleFeedbackVote = async ({
 }: {
   postId: string;
   profileId: number;
-}): Promise<{ voteCount: number; hasVoted: boolean } | null> => {
+}): Promise<ToggleFeedbackVoteResult> => {
   const post = await prisma.feedbackPost.findFirst({
     where: { id: postId, deletedAt: null },
-    select: { id: true },
+    select: { id: true, profileId: true },
   });
-  if (!post) return null;
+  if (!post) return { ok: false, reason: 'not-found' };
+  if (post.profileId !== null && post.profileId === profileId) return { ok: false, reason: 'own-post' };
 
   const existing = await prisma.feedbackVote.findUnique({
     where: { postId_profileId: { postId, profileId } },
@@ -427,8 +450,8 @@ export const toggleFeedbackVote = async ({
       prisma.feedbackPost.findUnique({ where: { id: postId }, select: { voteCount: true } }),
       prisma.feedbackVote.findUnique({ where: { postId_profileId: { postId, profileId } }, select: { id: true } }),
     ]);
-    return { voteCount: Math.max(current?.voteCount ?? 0, 0), hasVoted: Boolean(still) };
+    return { ok: true, voteCount: Math.max(current?.voteCount ?? 0, 0), hasVoted: Boolean(still) };
   }
 
-  return { voteCount: Math.max(updated.voteCount, 0), hasVoted: !existing };
+  return { ok: true, voteCount: Math.max(updated.voteCount, 0), hasVoted: !existing };
 };
