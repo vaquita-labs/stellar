@@ -20,6 +20,7 @@ import {
   getTokenBySymbol,
   getVaultApy,
   getTokenNetworkByNetworkIdTokenId,
+  isStellarNetworkName,
   MIN_USDC_AMOUNT,
   sendError,
   sendSuccess,
@@ -261,7 +262,7 @@ router.get('/network/:networkName/token/:tokenSymbol/lockPeriod/:lockPeriod/apy'
   }
 
   let response: Record<string, unknown> = {};
-  if (networkData.name === 'Stellar Testnet' || networkData.name === 'Stellar') {
+  if (isStellarNetworkName(networkData.name)) {
     // Headline protocolApy: DeFindex HTTP API (+ on-chain period for vaquitaApy).
     // Locked funds are forwarded to the DeFindex vault by the pool contract, so the
     // vault's own APY is the rate that describes them; per-deposit yield is the
@@ -309,7 +310,7 @@ router.get('/network/:networkName/token/:tokenSymbol/vault/apy', asyncHandler(as
     return sendError(res, 'Token on network not found', tokenNetworkError, 404);
   }
 
-  if (networkData.name !== 'Stellar Testnet' && networkData.name !== 'Stellar') {
+  if (!isStellarNetworkName(networkData.name)) {
     req.log.warn({ networkName: networkData.name }, 'No vault APY provider for network');
     return sendSuccess(res, { protocolApy: 0, lendingMarketName: '' }, '');
   }
