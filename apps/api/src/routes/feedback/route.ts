@@ -194,8 +194,12 @@ router.post('/:id/vote', requireSessionWallet, async (req, res) => {
     if (!profileData?.id) return sendError(res, 'A profile is required to vote.', null, 403);
 
     const result = await toggleFeedbackVote({ postId: id, profileId: profileData.id });
-    if (!result) return sendError(res, 'Unknown report.', null, 404);
-    return sendSuccess(res, result);
+    if (!result.ok) {
+      return result.reason === 'own-post'
+        ? sendError(res, 'You cannot upvote your own report.', null, 403)
+        : sendError(res, 'Unknown report.', null, 404);
+    }
+    return sendSuccess(res, { voteCount: result.voteCount, hasVoted: result.hasVoted });
   } catch (err) {
     req.log.error({ err }, 'Failed to toggle a feedback vote');
     return sendError(res, 'Failed to register your vote', null, 500);

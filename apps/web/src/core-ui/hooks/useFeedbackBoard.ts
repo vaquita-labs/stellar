@@ -15,6 +15,8 @@ export type FeedbackBoardEntry = {
   status: string;
   voteCount: number;
   hasVoted: boolean;
+  /** Lo mandó quien está mirando. No se puede votar el propio reporte. */
+  isOwn: boolean;
   authorNickname: string | null;
   attachmentIds: string[];
   createdTimestamp: number;

@@ -59,6 +59,10 @@ export function FeedbackBoardSheet({ open, onOpenChange, initialKind = 'bug', on
   const { data: entries, isLoading, isError } = useFeedbackBoard(kind, sort, open);
   const vote = useToggleFeedbackVote(kind);
 
+  // Id del adjunto que se está mirando en grande, o null. Un solo id y no un
+  // índice: las miniaturas se tocan de a una y no hay carrusel que recorrer.
+  const [preview, setPreview] = useState<string | null>(null);
+
   const handleVote = async (entry: FeedbackBoardEntry) => {
     try {
       await vote.mutateAsync(entry.id);
@@ -70,104 +74,144 @@ export function FeedbackBoardSheet({ open, onOpenChange, initialKind = 'bug', on
   };
 
   return (
-    <AppModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t('board.title', 'Board')}
-      size="md"
-      bodyClassName="flex flex-col gap-3 pb-2"
-      footer={
-        <PressableButton variant="primary" size="cta" className="w-full py-2.5!" onClick={() => onCreate(kind)}>
-          <FiPlus className="mr-1 inline h-4 w-4" />
-          {kind === 'bug' ? t('concierge.bug', 'Report a bug') : t('concierge.feedback', 'Send feedback')}
-        </PressableButton>
-      }
-    >
-      <div className="flex gap-2">
-        <button type="button" onClick={() => setKind('bug')} className={TAB_CLASSES(kind === 'bug')}>
-          {t('board.tabBugs', 'Bugs')}
-        </button>
-        <button type="button" onClick={() => setKind('feedback')} className={TAB_CLASSES(kind === 'feedback')}>
-          {t('board.tabIdeas', 'Ideas')}
-        </button>
-      </div>
-
-      <div className="flex gap-2">
-        {(['top', 'new'] as const).map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => setSort(option)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-              sort === option ? 'bg-black/10 text-black' : 'text-black/50'
-            }`}
-          >
-            {option === 'top' ? t('board.sortTop', 'Top') : t('board.sortNew', 'New')}
+    <>
+      <AppModal
+        open={open}
+        onOpenChange={onOpenChange}
+        title={t('board.title', 'Board')}
+        size="md"
+        bodyClassName="flex flex-col gap-3 pb-2"
+        footer={
+          <PressableButton variant="primary" size="cta" className="w-full py-2.5!" onClick={() => onCreate(kind)}>
+            <FiPlus className="mr-1 inline h-4 w-4" />
+            {kind === 'bug' ? t('concierge.bug', 'Report a bug') : t('concierge.feedback', 'Send feedback')}
+          </PressableButton>
+        }
+      >
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setKind('bug')} className={TAB_CLASSES(kind === 'bug')}>
+            {t('board.tabBugs', 'Bugs')}
           </button>
-        ))}
-      </div>
-
-      {isLoading ? <p className="py-6 text-center text-sm text-gray-500">{t('common.loading', 'Loading…')}</p> : null}
-
-      {isError ? (
-        <p className="py-6 text-center text-sm text-gray-500">{t('board.error', 'Could not load the board.')}</p>
-      ) : null}
-
-      {!isLoading && !isError && entries?.length === 0 ? (
-        <p className="py-6 text-center text-sm text-gray-500">{t('board.empty', 'Nothing here yet. Be the first to post.')}</p>
-      ) : null}
-
-      {entries?.map((entry) => (
-        <article key={entry.id} className="flex gap-3 rounded-xl border border-black border-b-2 bg-white p-3">
-          {/* El voto va a la izquierda, alto y ancho fijos: es la única acción de
-              la tarjeta, y así se toca sin apuntar. */}
-          <button
-            type="button"
-            onClick={() => void handleVote(entry)}
-            disabled={vote.isPending}
-            aria-pressed={entry.hasVoted}
-            aria-label={t('board.vote', 'Upvote')}
-            className={`flex h-fit w-11 shrink-0 flex-col items-center rounded-lg border px-1 py-1.5 transition disabled:opacity-60 ${
-              entry.hasVoted ? 'border-black bg-primary text-black' : 'border-black/20 bg-white text-black/70'
-            }`}
-          >
-            <FiChevronUp className="h-4 w-4" />
-            <span className="text-sm font-bold tabular-nums">{entry.voteCount}</span>
+          <button type="button" onClick={() => setKind('feedback')} className={TAB_CLASSES(kind === 'feedback')}>
+            {t('board.tabIdeas', 'Ideas')}
           </button>
+        </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-sm font-bold break-words text-black">{entry.title}</h3>
-              {STATUS_STYLES[entry.status] ? (
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLES[entry.status]}`}>
-                  {t(`board.status.${entry.status}`, entry.status)}
-                </span>
-              ) : null}
-            </div>
+        <div className="flex gap-2">
+          {(['top', 'new'] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setSort(option)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                sort === option ? 'bg-black/10 text-black' : 'text-black/50'
+              }`}
+            >
+              {option === 'top' ? t('board.sortTop', 'Top') : t('board.sortNew', 'New')}
+            </button>
+          ))}
+        </div>
 
-            {entry.details ? (
-              <p className="line-clamp-3 text-xs break-words whitespace-pre-wrap text-gray-600">{entry.details}</p>
-            ) : null}
+        {isLoading ? <p className="py-6 text-center text-sm text-gray-500">{t('common.loading', 'Loading…')}</p> : null}
 
-            {entry.attachmentIds.length > 0 ? (
-              <div className="flex gap-1.5 pt-0.5">
-                {entry.attachmentIds.map((id) => (
-                  // eslint-disable-next-line @next/next/no-img-element -- lo sirve la API, no pasa por el optimizador
-                  <img
-                    key={id}
-                    src={feedbackAttachmentUrl(id)}
-                    alt=""
-                    loading="lazy"
-                    className="h-12 w-12 rounded-md border border-black/10 object-cover"
-                  />
-                ))}
+        {isError ? (
+          <p className="py-6 text-center text-sm text-gray-500">{t('board.error', 'Could not load the board.')}</p>
+        ) : null}
+
+        {!isLoading && !isError && entries?.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-500">
+            {t('board.empty', 'Nothing here yet. Be the first to post.')}
+          </p>
+        ) : null}
+
+        {entries?.map((entry) => (
+          <article key={entry.id} className="flex gap-3 rounded-xl border border-black border-b-2 bg-white p-3">
+            {/* El voto va a la izquierda, alto y ancho fijos: es la única acción de
+              la tarjeta, y así se toca sin apuntar.
+
+              Sobre el propio reporte el botón queda deshabilitado: el contador
+              es lo que ordena la lista, y un voto propio lo convierte en otra
+              cosa distinta de "a otros también les pasa". El backend igual lo
+              rechaza (403) —esto es la explicación visual, no la regla. */}
+            <button
+              type="button"
+              onClick={() => void handleVote(entry)}
+              disabled={vote.isPending || entry.isOwn}
+              aria-pressed={entry.hasVoted}
+              aria-label={entry.isOwn ? t('board.voteOwn', "You can't upvote your own report") : t('board.vote', 'Upvote')}
+              title={entry.isOwn ? t('board.voteOwn', "You can't upvote your own report") : undefined}
+              className={`flex h-fit w-11 shrink-0 flex-col items-center rounded-lg border px-1 py-1.5 transition disabled:opacity-60 ${
+                entry.isOwn ? 'cursor-default' : ''
+              } ${entry.hasVoted ? 'border-black bg-primary text-black' : 'border-black/20 bg-white text-black/70'}`}
+            >
+              <FiChevronUp className="h-4 w-4" />
+              <span className="text-sm font-bold tabular-nums">{entry.voteCount}</span>
+            </button>
+
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-sm font-bold break-words text-black">{entry.title}</h3>
+                {STATUS_STYLES[entry.status] ? (
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLES[entry.status]}`}>
+                    {t(`board.status.${entry.status}`, entry.status)}
+                  </span>
+                ) : null}
               </div>
-            ) : null}
 
-            {entry.authorNickname ? <span className="text-[11px] text-gray-400">@{entry.authorNickname}</span> : null}
-          </div>
-        </article>
-      ))}
-    </AppModal>
+              {entry.details ? (
+                <p className="line-clamp-3 text-xs break-words whitespace-pre-wrap text-gray-600">{entry.details}</p>
+              ) : null}
+
+              {entry.attachmentIds.length > 0 ? (
+                <div className="flex gap-1.5 pt-0.5">
+                  {entry.attachmentIds.map((id) => (
+                    // Botón y no un enlace a la imagen: abrir una pestaña con el
+                    // PNG suelto saca al usuario de la app, y en mobile lo deja
+                    // fuera de la PWA. El visor se abre encima del board.
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setPreview(id)}
+                      aria-label={t('board.openImage', 'Open image')}
+                      className="h-12 w-12 shrink-0 overflow-hidden rounded-md border border-black/10"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- lo sirve la API, no pasa por el optimizador */}
+                      <img src={feedbackAttachmentUrl(id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {entry.authorNickname ? <span className="text-[11px] text-gray-400">@{entry.authorNickname}</span> : null}
+            </div>
+          </article>
+        ))}
+      </AppModal>
+
+      {/* El visor va como hermano del board, no adentro: así se apila encima
+        —igual que el formulario de reporte— y cerrarlo devuelve al board en el
+        mismo lugar. `fullScreen` da la pantalla completa en mobile y una
+        tarjeta centrada en desktop, que es lo que se pidió para las dos.
+        Montado solo mientras hay algo que mirar; desmontarlo ES el reset. */}
+      {preview ? (
+        <AppModal
+          open={Boolean(preview)}
+          onOpenChange={() => setPreview(null)}
+          title={t('board.imageTitle', 'Screenshot')}
+          size="lg"
+          fullScreen
+          bodyClassName="flex items-center justify-center bg-black/90 px-0! sm:px-0!"
+        >
+          {/* object-contain y no cover: la captura es la prueba del bug, recortarla
+            para que llene la caja es justo lo que no se puede hacer. */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- lo sirve la API, no pasa por el optimizador */}
+          <img
+            src={feedbackAttachmentUrl(preview)}
+            alt={t('board.imageTitle', 'Screenshot')}
+            className="max-h-full max-w-full object-contain"
+          />
+        </AppModal>
+      ) : null}
+    </>
   );
 }
