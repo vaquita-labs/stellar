@@ -2441,7 +2441,7 @@
     "sum": "Total",
     "manage": "Manage allocations",
     "empty": "No saving terms available yet.",
-    "poolRewards": "{{amount}} in rewards",
+    "poolRewards": "{{amount}} reward pool",
     "inThePool": "{{value}} in the pool",
     "row": {
       "ready": "Ready",
@@ -2460,7 +2460,8 @@
       "depositors": "Open deposits",
       "estimateNote": "Rewards are shared among everyone in this pool and can change as people join or leave.",
       "tokenNote": "Balances are shown in {{token}}.",
-      "marketApy": "{{market}} APY"
+      "marketApy": "{{market}} APY",
+      "yourShareEstimate": "Your estimated share"
     },
     "move": {
       "title": "Move funds",

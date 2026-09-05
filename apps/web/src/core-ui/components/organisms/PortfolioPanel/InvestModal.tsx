@@ -8,6 +8,7 @@ import {
   formatUsdPrecise,
   MIN_USDC,
 } from '@/core-ui/helpers/numbers';
+import { estimateRewardShare } from '@/core-ui/helpers/rewards';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import {
   useApyByLockPeriods,
@@ -279,9 +280,11 @@ export function InvestModal({
             <span className={`flex-1 min-w-0 text-sm font-bold ${isSelected ? 'text-success' : 'text-black'}`}>
               {formatTimeDeposit(lp)}
             </span>
-            {/* Solo el tamaño del pool de premios, al otro extremo (sin "N deposits"). */}
+            {/* Solo el tamaño del POZO del plazo, al otro extremo (sin "N deposits").
+                Todavía no hay monto elegido, así que acá no se puede estimar la parte
+                de cada uno: la etiqueta dice "pozo", no "premios tuyos". */}
             <span className="text-sm font-bold text-success tabular-nums shrink-0">
-              {t('portfolio.poolRewards', '{{amount}} in rewards', {
+              {t('portfolio.poolRewards', '{{amount}} reward pool', {
                 amount: formatUsd(byLockPeriod[lp]?.rewardPool ?? 0),
               })}
             </span>
@@ -290,6 +293,13 @@ export function InvestModal({
       })}
     </div>
   );
+
+  // Pozo y TVL del plazo elegido, resueltos una sola vez para el paso de review.
+  // `selectedLock` puede ser null antes de elegir: ahí van ceros y la estimación da 0.
+  const selectedPool = {
+    rewardPool: selectedLock != null ? (byLockPeriod[selectedLock]?.rewardPool ?? 0) : 0,
+    totalDeposits: selectedLock != null ? (byLockPeriod[selectedLock]?.totalDeposits ?? 0) : 0,
+  };
 
   // --- Paso: revisar (resumen antes de firmar) -------------------------------
   // Muestra qué se va a invertir (monto, plazo, APY y de dónde sale) para que el
@@ -310,8 +320,17 @@ export function InvestModal({
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
         <span className="text-gray-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
+        <span className="font-bold text-black tabular-nums">{formatUsd(selectedPool.rewardPool)}</span>
+      </div>
+
+      {/* Lo que le tocaría a ESTE depósito, no el pozo entero. Todavía no entró al
+          plazo, así que el denominador lleva `+ numericAmount`. */}
+      <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
+        <span className="text-gray-500">{t('portfolio.detail.yourShareEstimate', 'Your estimated share')}</span>
         <span className="font-bold text-success tabular-nums">
-          {formatUsd(selectedLock != null ? (byLockPeriod[selectedLock]?.rewardPool ?? 0) : 0)}
+          {formatUsd(
+            estimateRewardShare(selectedPool.rewardPool, selectedPool.totalDeposits + numericAmount, numericAmount),
+          )}
         </span>
       </div>
 
@@ -319,6 +338,13 @@ export function InvestModal({
         <span className="text-gray-500">{t('withdraw.fromLabel', 'From')}</span>
         <span className="font-bold text-black">{passiveLabel}</span>
       </div>
+
+      <p className="text-xs text-gray-500">
+        {t(
+          'portfolio.detail.estimateNote',
+          'Rewards are shared among everyone in this pool and can change as people join or leave.',
+        )}
+      </p>
 
       {error ? <ErrorNotice error={error} /> : null}
     </div>

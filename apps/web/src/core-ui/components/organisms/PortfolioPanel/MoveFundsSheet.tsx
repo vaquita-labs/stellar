@@ -1,6 +1,7 @@
 'use client';
 
 import { AMOUNT_DECIMALS, MIN_USDC, formatTokenPrecise, formatUsd, formatUsdPrecise } from '@/core-ui/helpers/numbers';
+import { estimateRewardShare } from '@/core-ui/helpers/rewards';
 import { humanizeTxError } from '@/core-ui/helpers/txError';
 import { Spinner } from '@heroui/react';
 import { motion } from 'framer-motion';
@@ -223,6 +224,22 @@ export function MoveFundsSheet({
         <span className="text-gray-500">{t('portfolio.detail.rewardsPool', 'Pool rewards')}</span>
         <span className="font-bold text-black tabular-nums">{formatUsd(to?.rewardPool ?? 0)}</span>
       </div>
+
+      {/* Lo que le tocaría a este monto en el plazo de DESTINO. La plata todavía no
+          está ahí, así que el denominador suma `numericAmount` al TVL de destino. */}
+      <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
+        <span className="text-gray-500">{t('portfolio.detail.yourShareEstimate', 'Your estimated share')}</span>
+        <span className="font-bold text-success tabular-nums">
+          {formatUsd(estimateRewardShare(to?.rewardPool ?? 0, (to?.totalDeposits ?? 0) + numericAmount, numericAmount))}
+        </span>
+      </div>
+
+      <p className="text-xs text-gray-500">
+        {t(
+          'portfolio.detail.estimateNote',
+          'Rewards are shared among everyone in this pool and can change as people join or leave.',
+        )}
+      </p>
 
       {error ? <p className="text-sm text-error font-semibold">{error}</p> : null}
     </div>

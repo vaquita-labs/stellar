@@ -2441,7 +2441,7 @@
     "sum": "Total",
     "manage": "Gestionar distribución",
     "empty": "Todavía no hay plazos de ahorro disponibles.",
-    "poolRewards": "{{amount}} en premios",
+    "poolRewards": "Pozo de {{amount}}",
     "inThePool": "{{value}} en el pozo",
     "row": {
       "ready": "Listo",
@@ -2460,7 +2460,8 @@
       "depositors": "Depósitos abiertos",
       "estimateNote": "Los premios se reparten entre todos los del pool y pueden cambiar a medida que entra o sale gente.",
       "tokenNote": "Los saldos se muestran en {{token}}.",
-      "marketApy": "APY de {{market}}"
+      "marketApy": "APY de {{market}}",
+      "yourShareEstimate": "Tu parte estimada"
     },
     "move": {
       "title": "Mover fondos",
