@@ -20,8 +20,8 @@ const envClientSchema = z.object({
     .regex(/^pub_(mainnet|testnet)_/, 'must start with pub_mainnet_ or pub_testnet_'),
   // Fee bid (stroops) for direct-to-Blend transactions.
   NEXT_PUBLIC_BLEND_FEE_STROOPS: z.string().regex(/^\d+$/, 'must be an integer (stroops)'),
-  // Share-card cache-buster. Stamped by next.config.ts on every build — never
-  // set by hand.
+  // Share-card cache-buster, carried in the query string of every card URL.
+  // Set by hand, and only when the card artwork changes.
   NEXT_PUBLIC_CARD_VERSION: z.string().min(1),
   // Buster for the react-query cache persisted in localStorage. Any value
   // change discards every persisted entry on the next load, so a release that
