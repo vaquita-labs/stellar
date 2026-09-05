@@ -1,5 +1,6 @@
 import { Prisma, prisma } from '@vaquita/db';
 import { fmtInt, fmtPct, fmtUsd } from '@/lib/format';
+import { vaultTvlCurrent } from '@/lib/queries/vault';
 
 // The weekly report: one markdown document a teammate can paste into Slack,
 // Notion or an investor/SCF update. Everything is "last 7 days vs the 7 days
@@ -32,12 +33,16 @@ export type Totals = {
   badges: number;
 };
 
+/** On-chain vault TVL, when the API has sampled it. Null on environments that have not. */
+export type VaultTotal = { current: number; fetchedAt: Date } | null;
+
 export type WeeklyReport = {
   from: Date;
   to: Date;
   current: PeriodStats;
   previous: PeriodStats;
   totals: Totals;
+  vault: VaultTotal;
   markdown: string;
 };
 
@@ -115,13 +120,14 @@ export async function weeklyReport(to: Date = new Date(), envLabel = ''): Promis
   const prevFrom = new Date(from.getTime() - week);
 
   const onramp = await hasOnrampPurchases();
-  const [current, previous, all] = await Promise.all([
+  const [current, previous, all, vault] = await Promise.all([
     periodStats(from, to, onramp),
     periodStats(prevFrom, from, onramp),
     totals(),
+    vaultTvlCurrent(),
   ]);
-  const markdown = renderMarkdown({ from, to, current, previous, totals: all, envLabel });
-  return { from, to, current, previous, totals: all, markdown };
+  const markdown = renderMarkdown({ from, to, current, previous, totals: all, vault, envLabel });
+  return { from, to, current, previous, totals: all, vault, markdown };
 }
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
@@ -138,9 +144,10 @@ function renderMarkdown(r: {
   current: PeriodStats;
   previous: PeriodStats;
   totals: Totals;
+  vault: VaultTotal;
   envLabel: string;
 }): string {
-  const { current: c, previous: p, totals: t } = r;
+  const { current: c, previous: p, totals: t, vault } = r;
   const line = (label: string, cur: string, curN: number, prevN: number, prevStr: string) =>
     `| ${label} | ${cur} | ${prevStr} | ${delta(curN, prevN)} |`;
   const activation = c.new_users ? fmtPct(c.activated / c.new_users) : '—';
@@ -155,7 +162,9 @@ function renderMarkdown(r: {
     ``,
     `- **${fmtInt(c.new_users)} new users**${p.new_users ? ` ${delta(c.new_users, p.new_users)}` : ''}, ${fmtInt(c.activated)} of them already made a confirmed deposit (${activation}).`,
     `- **${fmtUsd(c.volume)} deposited** across ${fmtInt(c.deposits)} deposits by ${fmtInt(c.depositors)} wallets${c.volume && p.volume ? ` ${delta(c.volume, p.volume)}` : ''}; ${fmtInt(c.new_depositors)} were first-time depositors.`,
-    `- **Locked principal (TVL): ${fmtUsd(c.tvl_end)}** ${delta(c.tvl_end, p.tvl_end)}.`,
+    vault
+      ? `- **TVL: ${fmtUsd(vault.current)}** in the DeFindex vault (${fmtUsd(c.tvl_end)} of that is locked principal ${delta(c.tvl_end, p.tvl_end)}).`
+      : `- **Locked principal (TVL): ${fmtUsd(c.tvl_end)}** ${delta(c.tvl_end, p.tvl_end)}.`,
     `- ${fmtInt(c.withdrawals)} withdrawals (${fmtInt(c.early)} early, ${earlyShare}) returned ${fmtUsd(c.principal_withdrawn)} of principal.`,
     ``,
     `## This week vs previous week`,
@@ -215,10 +224,15 @@ function renderMarkdown(r: {
     `| Wallets that ever deposited | ${fmtInt(t.depositors)} (${t.users ? fmtPct(t.depositors / t.users) : '—'} of users) |`,
     `| Confirmed deposits | ${fmtInt(t.deposits)} |`,
     `| Total deposited | ${fmtUsd(t.volume)} |`,
-    `| Locked principal (TVL) | ${fmtUsd(t.tvl)} across ${fmtInt(t.active_positions)} open positions |`,
+    ...(vault
+      ? [
+          `| Vault TVL | ${fmtUsd(vault.current)} (DeFindex, read ${vault.fetchedAt.toISOString().slice(0, 16).replace('T', ' ')} UTC) |`,
+        ]
+      : []),
+    `| Locked principal | ${fmtUsd(t.tvl)} across ${fmtInt(t.active_positions)} open positions |`,
     `| Badges minted | ${fmtInt(t.badges)} |`,
     ``,
-    `_Definitions: "activated" = a profile with at least one confirmed deposit; "early" = withdrawn before the lock period ended; TVL = confirmed principal minus withdrawn principal (yield excluded). Source: Vaquita Postgres (deposits, withdrawals, profiles, badge_claims, follows, profiles_rewards, onramp_purchases)._`,
+    `_Definitions: "activated" = a profile with at least one confirmed deposit; "early" = withdrawn before the lock period ended; "vault TVL" = total managed funds in the DeFindex vault the pool invests through, sampled on-chain; "locked principal" = confirmed principal minus withdrawn principal (yield and flexible balances excluded). Source: Vaquita Postgres (deposits, withdrawals, profiles, badge_claims, follows, profiles_rewards, onramp_purchases, vault_tvl_snapshots)._`,
     ``,
   ].join('\n');
 }

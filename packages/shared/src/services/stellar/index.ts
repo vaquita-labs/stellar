@@ -3,6 +3,7 @@ export * from './blend';
 export * from './defindexApy';
 export * from './networkName';
 export * from './vaultApySnapshot';
+export * from './vaultTvlSnapshot';
 export * from './defindexVault';
 export * from './stellar-sdk';
 export * from './passphrase';
