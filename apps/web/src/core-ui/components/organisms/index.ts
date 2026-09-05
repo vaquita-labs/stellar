@@ -24,6 +24,7 @@ export * from './MoodMessageModal';
 export * from './SavingsStats';
 export * from './RequireAuth';
 export * from './LegalGate';
+export * from './AttributionCapture';
 export * from './FollowDeepLink';
 export * from './InstallApp';
 export * from './OnboardingIntro';

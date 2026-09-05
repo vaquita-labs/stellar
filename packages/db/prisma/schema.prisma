@@ -292,6 +292,43 @@ model FeedbackPost {
   @@map("feedback_posts")
 }
 
+/// A marketing campaign: one shareable code plus the default UTM parameters the
+/// admin panel builds its links from.
+///
+/// `code` lives in a different namespace from `profiles.referralCode` (6 chars
+/// from an unambiguous alphabet). Attribution resolves campaign first and user
+/// referral second, so a collision would let a campaign swallow someone's
+/// personal code — the admin create path validates against both, which a CHECK
+/// constraint could not do across tables.
+///
+/// Soft-deleted rather than deleted, and the unique index on `code` is partial
+/// so retiring a campaign frees its code for the next one.
+model Campaign {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique(map: "campaigns_code_unique", where: raw("(deleted_at IS NULL)")) @db.VarChar(32)
+  name        String    @db.VarChar(120)
+
+  /// Defaults for the generated link, not a filter: whatever actually arrives
+  /// in the query string is stored on the profile regardless of these.
+  source      String?   @db.VarChar(60)
+  medium      String?   @db.VarChar(60)
+  content     String?   @db.VarChar(120)
+  landingPath String?   @map("landing_path") @db.VarChar(200)
+
+  startsAt    DateTime? @map("starts_at") @db.Timestamptz(6)
+  endsAt      DateTime? @map("ends_at") @db.Timestamptz(6)
+  isActive    Boolean   @default(true) @map("is_active")
+  notes       String?
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  profiles    Profile[]
+
+  @@map("campaigns")
+}
+
 /// Global catalog of placeable map elements. `variants`, `prices` and
 /// `free_items` are positionally-aligned CSV lists: index i of each column
 /// describes the same variant (see getMapObjectsAvailableData in
@@ -407,6 +444,20 @@ model Profile {
   referralCode  String?   @unique(map: "profiles_referral_code_unique") @map("referral_code") @db.VarChar(12)
   referredById  Int?      @map("referred_by_id")
 
+  /// Where this profile came from, captured on the first visit and written
+  /// ONCE — the same never-overwrite rule as `referredById`, for the same
+  /// reason: a later organic visit must not steal the conversion from the
+  /// campaign that actually brought the user in.
+  ///
+  /// `campaignId` is the resolved campaign (what you group and count by);
+  /// `attribution` is the raw first-touch blob — `utm_source/medium/campaign/
+  /// content`, `referrer`, `landedAt`. Keeping the raw form alongside the
+  /// resolved id is what lets us answer questions we haven't thought of yet
+  /// without having thrown the data away. A user referral code does NOT land
+  /// here: it still routes through `referredById`.
+  campaignId    Int?      @map("campaign_id")
+  attribution   Json?     @db.JsonB
+
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
@@ -445,6 +496,10 @@ model Profile {
   // Bug reports and feedback sent from the Concierge. Nullable on the other
   // side: a report outlives the profile that filed it.
   feedbackPosts FeedbackPost[]
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([campaignId, createdAt], map: "idx_profiles_campaign_created")
   @@map("profiles")
 }
 

@@ -1,5 +1,5 @@
 import { Providers } from '@/components';
-import { BootLoader, WithHydrated } from '@/core-ui/components';
+import { AttributionCapture, BootLoader, WithHydrated } from '@/core-ui/components';
 import type { Metadata } from 'next';
 import './globals.css';
 
@@ -26,6 +26,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // sus hijos), que es justo el mismatch esperado del tema aplicado en cliente.
     <html lang="es" suppressHydrationWarning>
       <body className="min-h-dvh flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] bg-background">
+        {/* Antes que cualquier gate y fuera del árbol privado: el `?ref=` de
+            una campaña aterriza en `/` sin sesión, y para cuando el usuario
+            está autenticado la URL ya se reescribió varias veces. */}
+        <AttributionCapture />
         {/* Primera pantalla de todas: se ve mientras rehidrata el estado
             persistido, antes de que monte ningún provider. Usa el mismo
             BootLoader que los gates de más adentro para que el arranque sea UNA

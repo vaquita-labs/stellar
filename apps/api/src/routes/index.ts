@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { isMetricsEnabled, metricsHandler } from '../lib/metrics';
 import ablyRoutes from './ably/route';
+import attributionRoutes from './attribution/route';
 import authRoutes from './auth/route';
 import badgeRoutes from './badge/route';
 import badgeCatalogRoutes from './badges/route';
@@ -49,6 +50,7 @@ router.use('/wallets/saved', savedWalletRoutes);
 router.use('/wallets/:wallet/badges', walletBadgeRoutes);
 router.use('/deposit', depositRoutes);
 router.use('/explore', exploreRoutes);
+router.use('/attribution', attributionRoutes);
 router.use('/feedback', feedbackRoutes);
 router.use('/follows', followRoutes);
 router.use('/leaderboard', leaderboardRoutes);
