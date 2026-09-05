@@ -958,7 +958,24 @@
     "chat": "Chatea con nosotros",
     "email": "Email",
     "feedback": "Enviar feedback",
-    "bug": "Reportar un error"
+    "bug": "Reportar un error",
+    "board": "Mirá lo que pidieron otros"
+  },
+  "board": {
+    "title": "Board",
+    "tabBugs": "Errores",
+    "tabIdeas": "Ideas",
+    "sortTop": "Más votados",
+    "sortNew": "Nuevos",
+    "vote": "Votar",
+    "voteError": "No se pudo registrar tu voto",
+    "error": "No se pudo cargar el board.",
+    "empty": "Todavía no hay nada. Sé el primero en publicar.",
+    "status": {
+      "planned": "Planeado",
+      "in_progress": "En curso",
+      "done": "Listo"
+    }
   },
   "notificationsCenter": {
     "bellAria": "Notificaciones",
@@ -1673,7 +1690,13 @@
       "title": "Enviar feedback",
       "intro": "Contanos qué haría mejor a Vaquita. Leemos todos los mensajes.",
       "titlePlaceholder": "ej. Dejarme renombrar mis wallets guardadas"
-    }
+    },
+    "attach": "Adjuntar",
+    "attaching": "Agregando…",
+    "attachHint": "Hasta {{max}} capturas. Se publican en el board.",
+    "removeImage": "Quitar imagen",
+    "attachmentError": "No se pudieron adjuntar algunas imágenes",
+    "attachmentErrorBody": "Usá un PNG, JPEG o WebP de menos de 2 MB."
   },
   "social": {
     "contacts": {

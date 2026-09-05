@@ -1,10 +1,10 @@
 import {
   FEEDBACK_KINDS,
   FEEDBACK_STATUSES,
+  type FeedbackPostWithAttachments,
   listFeedbackPosts,
   updateFeedbackPostStatus,
 } from '@vaquita/shared';
-import type { FeedbackPost } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminSecretOk } from '@/lib/adminSecret';
@@ -33,7 +33,7 @@ const updateSchema = z.object({
  * and `userAgent`: identifying who hit the bug and on what browser is the whole
  * point of the triage screen, and this route is already behind ADMIN_SECRET.
  */
-const serializePost = (post: FeedbackPost) => ({
+const serializePost = (post: FeedbackPostWithAttachments) => ({
   id: post.id,
   profileId: post.profileId,
   walletAddress: post.walletAddress,
@@ -44,6 +44,10 @@ const serializePost = (post: FeedbackPost) => ({
   locale: post.locale,
   userAgent: post.userAgent,
   appPath: post.appPath,
+  voteCount: post.voteCount,
+  // Ids, not bytes: the screenshots are fetched one by one from the public API
+  // endpoint that serves them, which is also what the in-app board hits.
+  attachmentIds: post.attachments.map((a) => a.id),
   createdAt: post.createdAt.toISOString(),
   updatedAt: post.updatedAt.toISOString(),
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { addDangerToast, addSuccessToast } from '@/core-ui/components';
-import { type FeedbackPostRow, updateFeedbackStatus, useFeedbackPosts } from '@/core-ui/hooks';
+import { type FeedbackPostRow, feedbackAttachmentUrl, updateFeedbackStatus, useFeedbackPosts } from '@/core-ui/hooks';
 import { FEEDBACK_STATUSES, type FeedbackKind, type FeedbackStatus } from '@vaquita/shared';
 import { Spinner } from '@heroui/react';
 import { Card, Select } from '@vaquita/ui';
@@ -127,6 +127,14 @@ export default function Page() {
                       <span className={`rounded px-1.5 text-xs font-semibold ${STATUS_CHIP[post.status]}`}>
                         {STATUS_LABELS[post.status]}
                       </span>
+                      {/* How many other users seconded this one on the public
+                          board — the whole reason the board exists is that this
+                          number is what says "fix this first". */}
+                      {post.voteCount > 0 && (
+                        <span className="rounded bg-default-100 px-1.5 text-xs font-semibold text-black">
+                          ▲ {post.voteCount}
+                        </span>
+                      )}
                     </div>
                     <span className="font-semibold text-black">{post.title}</span>
                   </div>
@@ -152,6 +160,24 @@ export default function Page() {
                   <p className="whitespace-pre-wrap text-sm text-black/80">{post.details}</p>
                 ) : (
                   <p className="text-sm italic text-default-400">No details given.</p>
+                )}
+
+                {post.attachmentIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {post.attachmentIds.map((id) => (
+                      // Opens full size in a tab: a 96px thumbnail is enough to
+                      // see there is a screenshot, never enough to read it.
+                      <a key={id} href={feedbackAttachmentUrl(id)} target="_blank" rel="noopener noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- served by apps/api, not the Next optimizer */}
+                        <img
+                          src={feedbackAttachmentUrl(id)}
+                          alt=""
+                          loading="lazy"
+                          className="h-24 w-24 rounded-medium border border-default-200 object-cover"
+                        />
+                      </a>
+                    ))}
+                  </div>
                 )}
 
                 {/* Auto-captured context — the cheap substitute for a screenshot. */}

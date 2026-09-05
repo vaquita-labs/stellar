@@ -10,6 +10,8 @@ export type SubmitFeedbackInput = {
   kind: FeedbackKind;
   title: string;
   details: string;
+  /** Data URLs ya reescalados por `prepareAttachment`. Máximo 3, 2 MB cada uno. */
+  attachments?: string[];
 };
 
 type FeedbackPostResponse = {
@@ -30,12 +32,16 @@ type FeedbackPostResponse = {
  * parámetro: es el contexto de dónde estaba parado el usuario, y pedírselo al
  * llamador sería una forma de que llegue mal. Se manda solo la ruta; el
  * servidor descarta cualquier cosa con query string o host.
+ *
+ * Los adjuntos viajan como data URLs dentro del mismo JSON: son tres imágenes
+ * chicas y ya reescaladas, así que un segundo request de subida solo agregaría
+ * la posibilidad de que el reporte quede sin su captura si el segundo falla.
  */
 export const useSubmitFeedback = () => {
   const { walletAddress } = useConfigStore();
 
   return useMutation<FeedbackPostResponse, Error, SubmitFeedbackInput>({
-    mutationFn: async ({ kind, title, details }) => {
+    mutationFn: async ({ kind, title, details, attachments }) => {
       if (!walletAddress) throw new Error('No connected wallet');
 
       const appPath = typeof window !== 'undefined' ? window.location.pathname : undefined;
@@ -45,7 +51,7 @@ export const useSubmitFeedback = () => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ kind, title, details, appPath }),
+          body: JSON.stringify({ kind, title, details, appPath, attachments: attachments ?? [] }),
         },
         walletAddress,
       );

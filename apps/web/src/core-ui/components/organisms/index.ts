@@ -25,6 +25,7 @@ export * from './SavingsStats';
 export * from './RequireAuth';
 export * from './LegalGate';
 export * from './AttributionCapture';
+export * from './FeedbackBoard';
 export * from './FollowDeepLink';
 export * from './InstallApp';
 export * from './OnboardingIntro';

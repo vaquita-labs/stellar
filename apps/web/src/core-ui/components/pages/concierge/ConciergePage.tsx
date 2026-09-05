@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertTriangle, FiHeadphones, FiMail, FiMessageSquare } from 'react-icons/fi';
+import { FiAlertTriangle, FiHeadphones, FiMail, FiMessageSquare, FiTrendingUp } from 'react-icons/fi';
 import { IconType } from 'react-icons';
 import { supportEmail } from '../../../config/featureFlags';
 import { PageLayout } from '../../molecules';
+import { FeedbackBoardSheet } from '../../organisms/FeedbackBoard';
 import { ReportSheet } from '../../organisms/ReportSheet';
 import { FeedbackKind } from '../../../hooks/useSubmitFeedback';
 
@@ -31,6 +32,9 @@ export function ConciergePage() {
   // Qué formulario está abierto. Un solo estado en vez de dos booleanos: no
   // pueden estar abiertos los dos a la vez, y así el sheet se monta una sola vez.
   const [reportKind, setReportKind] = useState<FeedbackKind | null>(null);
+  // El board se abre por encima del Concierge y el formulario por encima del
+  // board: mandar algo desde el board tiene que devolver al board, no al menú.
+  const [boardKind, setBoardKind] = useState<FeedbackKind | null>(null);
 
   const items: {
     key: string;
@@ -39,6 +43,8 @@ export function ConciergePage() {
     href?: string;
     external?: boolean;
     onPress?: () => void;
+    /** Ocupa las dos columnas: es una lista, no un canal de contacto. */
+    wide?: boolean;
   }[] = [
     // El chat vive en el grupo oficial de Telegram.
     { key: 'chat', icon: FiHeadphones, label: t('concierge.chat', 'Chat with us'), href: TELEGRAM_URL, external: true },
@@ -56,12 +62,19 @@ export function ConciergePage() {
       label: t('concierge.bug', 'Report a bug'),
       onPress: () => setReportKind('bug'),
     },
+    {
+      key: 'board',
+      icon: FiTrendingUp,
+      label: t('concierge.board', 'See what others asked'),
+      onPress: () => setBoardKind('bug'),
+      wide: true,
+    },
   ];
 
   return (
     <PageLayout title={t('concierge.title', 'Concierge')} backHref="/home" contentGap="gap-4">
       <div className="grid grid-cols-2 gap-3">
-        {items.map(({ key, icon: Icon, label, href, external, onPress }) =>
+        {items.map(({ key, icon: Icon, label, href, external, onPress, wide }) =>
           href ? (
             <a
               key={key}
@@ -73,7 +86,12 @@ export function ConciergePage() {
               <span className="text-sm font-bold text-black">{label}</span>
             </a>
           ) : (
-            <button key={key} type="button" onClick={onPress} className={CARD_CLASSES}>
+            <button
+              key={key}
+              type="button"
+              onClick={onPress}
+              className={wide ? `${CARD_CLASSES} col-span-2 py-4!` : CARD_CLASSES}
+            >
               <Icon className="h-6 w-6 text-black" />
               <span className="text-sm font-bold text-black">{label}</span>
             </button>
@@ -83,9 +101,11 @@ export function ConciergePage() {
 
       {/* `kind` se congela mientras cierra: si se pusiera a null de una, el sheet
           cambiaría de copy durante la animación de salida. */}
-      {reportKind ? (
-        <ReportSheet open onOpenChange={() => setReportKind(null)} kind={reportKind} />
+      {boardKind ? (
+        <FeedbackBoardSheet open onOpenChange={() => setBoardKind(null)} initialKind={boardKind} onCreate={setReportKind} />
       ) : null}
+
+      {reportKind ? <ReportSheet open onOpenChange={() => setReportKind(null)} kind={reportKind} /> : null}
     </PageLayout>
   );
 }

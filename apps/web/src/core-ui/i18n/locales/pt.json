@@ -958,7 +958,24 @@
     "chat": "Fale conosco",
     "email": "Email",
     "feedback": "Enviar feedback",
-    "bug": "Relatar um erro"
+    "bug": "Relatar um erro",
+    "board": "Veja o que outros pediram"
+  },
+  "board": {
+    "title": "Board",
+    "tabBugs": "Erros",
+    "tabIdeas": "Ideias",
+    "sortTop": "Mais votados",
+    "sortNew": "Novos",
+    "vote": "Votar",
+    "voteError": "Não foi possível registrar seu voto",
+    "error": "Não foi possível carregar o board.",
+    "empty": "Ainda não há nada. Seja o primeiro a publicar.",
+    "status": {
+      "planned": "Planejado",
+      "in_progress": "Em andamento",
+      "done": "Pronto"
+    }
   },
   "notificationsCenter": {
     "bellAria": "Notificações",
@@ -1673,7 +1690,13 @@
       "title": "Enviar feedback",
       "intro": "Conte o que deixaria a Vaquita melhor. Lemos todas as mensagens.",
       "titlePlaceholder": "ex. Deixar eu renomear minhas carteiras salvas"
-    }
+    },
+    "attach": "Anexar",
+    "attaching": "Adicionando…",
+    "attachHint": "Até {{max}} capturas. Ficam públicas no board.",
+    "removeImage": "Remover imagem",
+    "attachmentError": "Não foi possível anexar algumas imagens",
+    "attachmentErrorBody": "Use um PNG, JPEG ou WebP de até 2 MB."
   },
   "social": {
     "contacts": {

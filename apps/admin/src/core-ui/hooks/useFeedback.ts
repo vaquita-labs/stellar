@@ -18,6 +18,9 @@ export interface FeedbackPostRow {
   locale: string | null;
   userAgent: string | null;
   appPath: string | null;
+  voteCount: number;
+  /** Screenshot ids; the bytes come from the public API endpoint that serves them. */
+  attachmentIds: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -27,8 +30,18 @@ export interface FeedbackFilters {
   status?: FeedbackStatus;
 }
 
-// Same-origin route handler inside this admin app — no NEXT_PUBLIC_SERVICES_URL.
+// Same-origin route handler inside this admin app; only the screenshots below
+// come from apps/api.
 const FEEDBACK_URL = '/api/admin/feedback';
+
+/**
+ * Screenshots are served by apps/api, not by this admin app: the bytes live in
+ * Postgres and only that service has a route for them. The endpoint is
+ * unauthenticated by design (an `<img src>` cannot carry a header), so this is
+ * the same URL the in-app board uses.
+ */
+export const feedbackAttachmentUrl = (id: string) =>
+  `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/feedback/attachments/${id}`;
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',

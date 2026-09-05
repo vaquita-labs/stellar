@@ -281,15 +281,57 @@ model FeedbackPost {
   locale        String?   @db.VarChar(8)
   userAgent     String?   @map("user_agent")
   appPath       String?   @map("app_path") @db.VarChar(200)
+  /// Denormalized `feedback_votes` count. The board's default order is by votes,
+  /// and an aggregate over the join cannot be indexed; written in the same
+  /// transaction as the vote.
+  voteCount     Int       @default(0) @map("vote_count")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  profile Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  profile     Profile?              @relation(fields: [profileId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  attachments FeedbackAttachment[]
+  votes       FeedbackVote[]
 
   @@index([kind, status, createdAt(sort: Desc)], map: "idx_feedback_posts_triage")
   @@index([profileId, createdAt(sort: Desc)], map: "idx_feedback_posts_profile_created")
+  @@index([kind, voteCount(sort: Desc), createdAt(sort: Desc)], map: "idx_feedback_posts_board")
   @@map("feedback_posts")
+}
+
+/// A screenshot attached to a report. The bytes live in Postgres because the
+/// project has no object store: the client downscales and recompresses before
+/// upload and the API caps each file at 2 MB, which keeps that honest. Moving to
+/// a bucket later only changes where `data` comes from.
+model FeedbackAttachment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId      String   @map("post_id") @db.Uuid
+  /// 'image/png' | 'image/jpeg' | 'image/webp' — enforced by a CHECK constraint.
+  contentType String   @map("content_type") @db.VarChar(40)
+  byteSize    Int      @map("byte_size")
+  data        Bytes
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  post FeedbackPost @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([postId], map: "idx_feedback_attachments_post")
+  @@map("feedback_attachments")
+}
+
+/// One upvote by one profile on one report. The unique pair is what makes the
+/// client's toggle idempotent: a double tap or a retried request cannot count twice.
+model FeedbackVote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  profileId Int      @map("profile_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  post    FeedbackPost @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  profile Profile      @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([postId, profileId], map: "feedback_votes_post_profile_unique")
+  @@index([profileId], map: "idx_feedback_votes_profile")
+  @@map("feedback_votes")
 }
 
 /// A marketing campaign: one shareable code plus the default UTM parameters the
@@ -496,6 +538,7 @@ model Profile {
   // Bug reports and feedback sent from the Concierge. Nullable on the other
   // side: a report outlives the profile that filed it.
   feedbackPosts FeedbackPost[]
+  feedbackVotes FeedbackVote[]
 
   campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
@@ -839,4 +882,26 @@ model VaultApySnapshot {
 
   @@id([network, vaultAddress])
   @@map("vault_apy_snapshots")
+}
+
+/// Append-only samples of the DeFindex vault's total managed funds — the real
+/// TVL behind the product, as opposed to the deposits ledger's locked principal
+/// (which excludes accrued yield and flexible balances).
+///
+/// Written best-effort from the API's vault-APY path, so samples follow traffic
+/// rather than a fixed cadence. Readers must take the LAST sample in a bucket,
+/// not an average, since an uneven sampling rate would otherwise weight busy
+/// hours more heavily. Derived state — safe to truncate, at the cost of history.
+model VaultTvlSnapshot {
+  id           BigInt   @id @default(autoincrement())
+  network      String   @db.VarChar(20)
+  vaultAddress String   @map("vault_address") @db.VarChar(128)
+  /// Idle + invested, in human units (already scaled by the token's decimals).
+  totalManaged Float    @map("total_managed")
+  /// Vault shares outstanding, for share-price context. Null when unreadable.
+  totalSupply  Float?   @map("total_supply")
+  fetchedAt    DateTime @default(now()) @map("fetched_at") @db.Timestamptz(6)
+
+  @@index([network, vaultAddress, fetchedAt(sort: Desc)], map: "idx_vault_tvl_snapshots_vault_time")
+  @@map("vault_tvl_snapshots")
 }

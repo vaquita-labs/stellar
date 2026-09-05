@@ -958,7 +958,24 @@
     "chat": "Chat with us",
     "email": "Email",
     "feedback": "Send feedback",
-    "bug": "Report a bug"
+    "bug": "Report a bug",
+    "board": "See what others asked"
+  },
+  "board": {
+    "title": "Board",
+    "tabBugs": "Bugs",
+    "tabIdeas": "Ideas",
+    "sortTop": "Top",
+    "sortNew": "New",
+    "vote": "Upvote",
+    "voteError": "Could not register your vote",
+    "error": "Could not load the board.",
+    "empty": "Nothing here yet. Be the first to post.",
+    "status": {
+      "planned": "Planned",
+      "in_progress": "In progress",
+      "done": "Done"
+    }
   },
   "notificationsCenter": {
     "bellAria": "Notifications",
@@ -1673,7 +1690,13 @@
       "title": "Send feedback",
       "intro": "Tell us what would make Vaquita better. We read every message.",
       "titlePlaceholder": "e.g. Let me rename my saved wallets"
-    }
+    },
+    "attach": "Attach",
+    "attaching": "Adding…",
+    "attachHint": "Up to {{max}} screenshots. Posted publicly on the board.",
+    "removeImage": "Remove image",
+    "attachmentError": "Some images could not be attached",
+    "attachmentErrorBody": "Use a PNG, JPEG or WebP under 2 MB."
   },
   "social": {
     "contacts": {
