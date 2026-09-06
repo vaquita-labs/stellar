@@ -55,6 +55,13 @@ export function TimeSeriesLine({
   height?: number;
 }) {
   const kind = series[0]?.kind ?? 'count';
+  // A line needs two points to draw a segment, so a series with a single value
+  // renders nothing at all with dots off — the y-axis scales to the number and
+  // the plot stays blank. That is not hypothetical: a metric sampled from now
+  // on (vault TVL) has one filled bucket and a column of nulls behind it for
+  // its first week. Show the dot in that case; keep lines clean once there is
+  // an actual line.
+  const plotted = (key: string) => rows.reduce((n, r) => (r[key] == null ? n : n + 1), 0);
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={rows} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
@@ -88,7 +95,7 @@ export function TimeSeriesLine({
             name={s.label}
             stroke={SERIES[i % SERIES.length]}
             strokeWidth={2}
-            dot={false}
+            dot={plotted(s.key) < 2 ? { r: 3, fill: SERIES[i % SERIES.length], strokeWidth: 0 } : false}
             activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
             isAnimationActive={false}
           />
