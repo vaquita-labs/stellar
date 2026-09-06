@@ -4,7 +4,7 @@ import {
   type FeedbackPostWithAttachments,
   listFeedbackPosts,
   updateFeedbackPostStatus,
-} from '@vaquita/shared';
+} from '@vaquita/shared/services/feedback/index';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminSecretOk } from '@/lib/adminSecret';

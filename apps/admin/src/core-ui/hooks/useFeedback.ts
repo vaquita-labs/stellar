@@ -1,6 +1,22 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
-import type { FeedbackKind, FeedbackStatus } from '@vaquita/shared';
 import { useQuery } from '@tanstack/react-query';
+
+/**
+ * Mirror of the backend's feedback vocabulary
+ * (packages/shared/src/services/feedback/index.ts). Keep in sync.
+ *
+ * Copied rather than imported on purpose: `@vaquita/shared` is listed in
+ * `transpilePackages`, so importing a *value* from its root barrel into a
+ * client component makes Turbopack compile the whole barrel — Prisma, pg and
+ * web-push included — for the browser, and the build dies on `dns`/`net`/`tls`.
+ * Types are erased and would be safe; a local list keeps the rule simple.
+ */
+export const FEEDBACK_KINDS = ['bug', 'feedback'] as const;
+export type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
+
+/** Triage lifecycle. Distinct from the moderation verdict below. */
+export const FEEDBACK_STATUSES = ['open', 'planned', 'in_progress', 'done', 'closed'] as const;
+export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
 /**
  * Shape of a `feedback_posts` row as returned by the admin API route. Richer

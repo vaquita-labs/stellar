@@ -1,8 +1,15 @@
 'use client';
 
 import { addDangerToast, addSuccessToast } from '@/core-ui/components';
-import { type FeedbackPostRow, feedbackAttachmentUrl, updateFeedbackStatus, useFeedbackPosts } from '@/core-ui/hooks';
-import { FEEDBACK_STATUSES, type FeedbackKind, type FeedbackStatus } from '@vaquita/shared';
+import {
+  FEEDBACK_STATUSES,
+  type FeedbackKind,
+  type FeedbackPostRow,
+  type FeedbackStatus,
+  feedbackAttachmentUrl,
+  updateFeedbackStatus,
+  useFeedbackPosts,
+} from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { Card, Select } from '@vaquita/ui';
 import { useState } from 'react';
