@@ -87,9 +87,6 @@
         "title": "Vaquita Ballena"
       }
     },
-    "minted": {
-      "title": "¡Insignia acuñada en la blockchain!"
-    },
     "minting": {
       "waitingForWallet": "Preparando tu premio…"
     },
@@ -112,8 +109,7 @@
       "coinsPending_other": "+{{count}} monedas",
       "goldCoins": "{{count}} monedas de oro",
       "goldCoins_one": "{{count}} moneda de oro",
-      "goldCoins_other": "{{count}} monedas de oro",
-      "shareAchievement": "Compartir logro"
+      "goldCoins_other": "{{count}} monedas de oro"
     },
     "page": {
       "awards": "Premios",
@@ -130,17 +126,12 @@
     },
     "share": {
       "copyLink": "Copiar enlace",
-      "cta": "Gana el tuyo en Vaquita",
       "downloadImage": "Descargar imagen",
       "earnedBy": "logrado por @{{username}}",
       "imageNotReady": "La imagen aún no está lista, intenta de nuevo",
       "button": "Compartir",
       "menuTitle": "Compartir insignia",
       "shareImage": "Compartir imagen…",
-      "fallbackTitle": "Logro · Vaquita",
-      "metaDescription": "Alguien acaba de desbloquear \"{{title}}\" en Vaquita. {{description}}",
-      "metaDescriptionUser": "@{{username}} acaba de desbloquear \"{{title}}\" en Vaquita. {{description}}",
-      "metaTitle": "{{title}} · Vaquita",
       "text": "¡Acabo de desbloquear \"{{title}}\" en Vaquita 🐮",
       "unlocked": "Logro desbloqueado"
     },
@@ -412,9 +403,7 @@
     "close": "Cerrar",
     "confirm": "Confirmar",
     "continue": "Continuar",
-    "delete": "Eliminar",
     "done": "Listo",
-    "edit": "Editar",
     "loading": "Cargando…",
     "next": "Siguiente",
     "off": "Desactivado",
@@ -423,7 +412,6 @@
     "save": "Guardar",
     "saving": "Guardando…",
     "selectOption": "Elegí una opción…",
-    "somethingWentWrong": "Algo salió mal",
     "soon": "Pronto",
     "time": {
       "day_one": "1 día",
@@ -445,11 +433,9 @@
       },
       "cta": "Depositar en tus ahorros",
       "destination": "Blend",
-      "mainnetOnly": "Los depósitos directos solo están disponibles en la mainnet de Stellar.",
       "notTracked": "Tu USDC empieza a generar rendimiento al instante, sin período de bloqueo. Retiralo cuando quieras.",
       "processing": "Procesando depósito...",
       "processingStep": "Depositando en tus ahorros",
-      "unavailable": "Los depósitos directos aún no están disponibles en esta red.",
       "whatIsTitle": "¿Qué es Blend?",
       "whatIs": "Blend es un protocolo de préstamos auditado en Stellar. Tu USDC se aporta a su pool para generar rendimiento, y podés retirarlo cuando quieras.",
       "success": {
@@ -458,19 +444,9 @@
       }
     },
     "bank": {
-      "details": "Detalles",
-      "estimatedEarningsTotal": "Ganancias estimadas totales",
       "estimatesDisclaimer": "Son estimaciones y pueden cambiar con el tiempo. Las recompensas finales se confirman al retirar.",
-      "hide": "Ocultar",
-      "howItWorks1": "Tu depósito genera rendimiento de varias fuentes.",
-      "howItWorks2": "Las recompensas estimadas se calculan con el APY actual.",
-      "howItWorks3": "El APY es dinámico y puede variar según la actividad de los usuarios y el total depositado.",
-      "howItWorks4": "Las recompensas se pueden reclamar solo cuando termina el periodo de ahorro.",
-      "howItWorks5": "Las recompensas finales se confirman al retirar.",
-      "howRewardsWork": "Cómo funcionan las recompensas",
       "marketRewards": "Recompensas de {{market}}",
       "myDeposits": "Mis depósitos",
-      "network": "Red:",
       "protocolRewards": "Recompensas del protocolo",
       "protocolRewardsInfo": "Rendimiento de {{market}} donde están depositados tus fondos.",
       "theLendingProtocol": "el protocolo de préstamos",
@@ -486,7 +462,6 @@
       "sendTransaction": "Confirma para enviar la transacción.",
       "timesUp": "¡Se acabó el tiempo!",
       "title": "Confirmar retiro",
-      "youWillEarn": "Vas a ganar",
       "youWillLose": "Vas a perder",
       "youWillReceive": "Vas a recibir"
     },
@@ -580,7 +555,6 @@
       "onTimeTitle": "Retirado a tiempo"
     },
     "method": {
-      "continue": "Ya tengo USDC, continuar",
       "country": {
         "comingSoon": "Próximamente",
         "noResults": "No se encontraron países",
@@ -644,66 +618,15 @@
   },
   "home": {
     "catalog": {
-      "always": "Siempre",
-      "biome": {
-        "any": "cualquiera",
-        "desert": "desierto",
-        "forest": "bosque",
-        "mountain": "montaña",
-        "plains": "llanura"
-      },
       "buy": "Comprar",
       "clockPreviewHour": "8 pm",
       "goldAlt": "Oro",
       "hudHint": "Comprarlo lo desbloquea en la pantalla de tu mapa. Es una compra única.",
-      "invalidOfferDesc": "Ingresa al menos 1 moneda de oro.",
-      "invalidOfferTitle": "Oferta no válida",
-      "itemFallback": "Artículo",
-      "items": {
-        "fountain": {
-          "description": "Una fuente impresionante para realzar tu mapa",
-          "name": "Fuente decorativa"
-        },
-        "golden-statue": {
-          "description": "Una prestigiosa estatua dorada para tu colección",
-          "name": "Estatua dorada"
-        },
-        "streak-freeze": {
-          "description": "Protege tu racha un día si no puedes mantenerla",
-          "name": "Congelar racha"
-        },
-        "tile-pack": {
-          "description": "Paquete de 5 losetas exclusivas para tu mapa",
-          "name": "Paquete de losetas"
-        },
-        "tree": {
-          "description": "Un hermoso árbol para decorar tu mapa. ¡Siempre disponible!",
-          "name": "Árbol"
-        }
-      },
-      "makeOffer": "Hacer oferta",
-      "notEnoughCoinsDesc": "Tu oferta supera tu saldo.",
       "notEnoughCoinsTitle": "No tienes suficientes monedas",
-      "offerSubmittedDesc": "Ofreciste {{gold}} de oro por {{name}}",
-      "offerSubmittedTitle": "¡Oferta enviada!",
       "price": "Precio",
       "processing": "Procesando...",
       "purchaseSuccessDesc": "Compraste {{name}} con éxito",
       "purchaseSuccessTitle": "¡Compra exitosa!",
-      "rarity": {
-        "common": "común",
-        "epic": "épico",
-        "legendary": "legendario",
-        "rare": "raro"
-      },
-      "sending": "Enviando...",
-      "submitOffer": "Enviar oferta",
-      "type": {
-        "decoration": "decoración",
-        "expansion": "expansión",
-        "utility": "utilidad"
-      },
-      "yourOffer": "Tu oferta",
       "empty": "El catálogo está vacío por ahora.",
       "emptyHint": "¡Vuelve pronto para ver nuevos artículos!",
       "placeableHint": "Después de comprarlo puedes colocarlo donde quieras en tu mapa, moverlo o quitarlo.",
@@ -821,7 +744,6 @@
       "profileAria": "Perfil",
       "streakAlt": "Racha",
       "apyAria": "Portafolio",
-      "boostAria": "Boost de referidos",
       "greeting": "Hola,",
       "balanceRetry": "Reintentar cargar el saldo",
       "balanceSyncError": "No pudimos cargar tu saldo de Blend. Tocá para reintentar."
@@ -845,17 +767,13 @@
   },
   "leaderboard": {
     "card": {
-      "badges": "Insignias",
       "coins": "Monedas",
-      "commentsComingSoon": "Los comentarios en el mundo de {{username}} llegan pronto",
       "dayStreak": "Días de racha",
       "experience": "XP",
       "follow": "Seguir",
       "followAria": "Seguir a {{username}}",
-      "following": "Siguiendo",
       "levelShort": "Nv {{level}}",
       "like": "Me gusta",
-      "openComments": "Abrir comentarios",
       "positionLabel": "Posición {{position}}",
       "unfollow": "Dejar de seguir",
       "unfollowAria": "Dejar de seguir a {{username}}",
@@ -863,66 +781,18 @@
       "viewWorld": "Ver el mundo de {{username}}",
       "you": "Tú"
     },
-    "direction": {
-      "ascending": "Ordenar de menor a mayor, cambiar orden",
-      "descending": "Ordenar de mayor a menor, cambiar orden"
-    },
-    "empty": {
-      "description": "Sé el primero en escalar posiciones: empieza una racha de depósitos y aparecerás aquí.",
-      "title": "Aún no hay vaqueros en la tabla"
-    },
     "error": {
       "title": "No pudimos cargar la tabla de posiciones"
-    },
-    "filter": {
-      "heading": "Filtrar por",
-      "label": "Filtrar por métrica"
-    },
-    "loadingLabel": "Cargando la tabla de posiciones",
-    "loadingMore": "Cargando más vaqueros",
-    "noResults": {
-      "description": "Prueba con otro nombre de usuario o borra la búsqueda.",
-      "title": "Ningún vaquero coincide con “{{query}}”"
     },
     "pinned": {
       "goToPosition": "Ir a tu posición"
     },
-    "search": {
-      "clear": "Borrar búsqueda",
-      "label": "Buscar vaqueros",
-      "placeholder": "Busca vaqueros por nombre de usuario"
-    },
-    "sortOptions": {
-      "badges": {
-        "hint": "Más logros desbloqueados",
-        "label": "Insignias"
-      },
-      "level": {
-        "hint": "Más XP ganada",
-        "label": "Nivel"
-      },
-      "rank": {
-        "hint": "Orden predeterminado de la tabla",
-        "label": "Mejor posición"
-      },
-      "streak": {
-        "hint": "Más días consecutivos",
-        "label": "Racha"
-      }
-    },
     "title": "Tabla de posiciones",
     "user": {
-      "backToLeaderboard": "Volver al leaderboard",
       "joined": "Se unió el {{joinedLabel}}",
       "noAchievements": "Aún no ha desbloqueado logros",
       "notFound": "No encontramos a @{{username}}",
       "notFoundHint": "Puede que la cuenta haya cambiado su nombre de usuario o ya no exista."
-    },
-    "vaquero": "Vaquero",
-    "vaqueroNamed": "Vaquero {{tail}}",
-    "anchored": {
-      "title": "Mostrando tu tramo de la tabla",
-      "backToTop": "Volver al #1"
     },
     "league": {
       "demotionZone": "Zona de descenso",
@@ -981,7 +851,6 @@
     }
   },
   "notificationsCenter": {
-    "bellAria": "Notificaciones",
     "empty": "Aún no hay notificaciones",
     "emptyFiltered": "Prueba cambiando los filtros para ver más.",
     "filters": {
@@ -1296,14 +1165,12 @@
     "profile": {
       "achievements": "Logros",
       "badges": "Medallas",
-      "activeDeposits": "Depósitos activos",
       "addFriends": "Agregar amigos",
       "connectWalletDescription": "Accede a tu perfil, tus métricas y tus próximos logros conectando tu wallet.",
       "connectWalletTitle": "Conecta tu wallet",
       "daysCount_one": "{{count}} día",
       "daysCount_other": "{{count}} días",
       "editAvatarAria": "Editar tu avatar",
-      "editProfileAria": "Editar perfil",
       "experience": "Experiencia",
       "followListError": "No se pudo cargar la lista. Inténtalo de nuevo.",
       "followers": "Seguidores",
@@ -1363,36 +1230,6 @@
       "installIosStep2": "Desliza hacia abajo y toca \"Agregar a pantalla de inicio\".",
       "installIosStep3": "Toca \"Agregar\" para confirmar.",
       "riskDisclosure": "Declaración de riesgos"
-    },
-    "summary": {
-      "depositsChartAria": "Depósitos de las últimas 6 semanas",
-      "depositsOverTime": "Depósitos en el tiempo",
-      "depositsOverTimeSub": "Aportes semanales",
-      "keptOutOfDays": "{{kept}} / {{total}} días",
-      "last4Weeks": "Últimas 4 semanas",
-      "last6Weeks": "Últimas 6 semanas",
-      "levelShort": "Nvl {{level}}",
-      "nextMonth": "Mes siguiente",
-      "prevMonth": "Mes anterior",
-      "streakDaysThisMonth": "Días de racha",
-      "streakHistory": "Historial de racha",
-      "streakHistorySub": "Días que mantuviste la racha",
-      "streakKept": "Racha mantenida",
-      "streakMissed": "Racha perdida",
-      "subtitle": "Cómo va creciendo tu hábito de ahorro.",
-      "title": "Resumen",
-      "todayStreakKept": "Hoy: racha mantenida",
-      "todayStreakMissed": "Hoy: racha perdida",
-      "totalExperience": "Experiencia total",
-      "xpLevel": "XP y nivel",
-      "xpLevelSub": "Avance hacia tu próximo nivel",
-      "goldCoins": "Monedas de oro",
-      "goldCoinsSub": "Las monedas que estás ganando",
-      "usdcCurrentlySaved": "USDC ahorrado actualmente",
-      "weekOf": "Semana del {{date}}",
-      "depositsCount_one": "{{count}} depósito",
-      "depositsCount_other": "{{count}} depósitos",
-      "noDepositsWeek": "Sin depósitos"
     }
   },
   "rewards": {
@@ -1420,8 +1257,6 @@
       "coinAlt": "Moneda"
     },
     "coins": {
-      "balanceLabel_one": "{{count}} moneda",
-      "balanceLabel_other": "{{count}} monedas",
       "coinAlt": "monedas",
       "description": "Las monedas son tu moneda del juego. Gánalas ahorrando y recogiendo tu recompensa diaria, y gástalas en la tienda para decorar tu mapa.",
       "earn": {
@@ -1440,26 +1275,19 @@
       "sec": "Seg"
     },
     "daily": {
-      "activeStreak_one": "Racha activa: {{count}} día",
-      "activeStreak_other": "Racha activa: {{count}} días",
       "chestClosedAlt": "Cofre cerrado",
       "chestOpenAlt": "Cofre abierto",
       "coinsAlt": "monedas",
-      "collectButton": "Reclamar",
       "confirmTitle": "Tu vaquita guardó esto para ti hoy.",
       "doneButton": "Listo",
-      "greatButton": "¡Genial!",
       "holdToOpen": "Mantené presionado para abrir",
       "nextButton": "Siguiente",
       "opening": "Abriendo…",
-      "rewardAlt": "recompensa",
       "rewardTitle": "¡Ganaste monedas!",
       "streakAlt": "racha",
       "streakSubtitle": "Volvé mañana para mantenerla.",
       "streakTitle_one": "¡Ahora llevás {{count}} día de racha!",
       "streakTitle_other": "¡Ahora llevás {{count}} días de racha!",
-      "success_one": "¡Ganaste {{count}} moneda!",
-      "success_other": "¡Ganaste {{count}} monedas!",
       "title": "Recompensa diaria",
       "xpAlt": "experiencia",
       "xpTitle": "¡Ganaste experiencia!"
@@ -1492,23 +1320,7 @@
       "title": "Estado de tu vaquita"
     },
     "streak": {
-      "available": "Disponibles: {{remaining}}/{{total}}",
-      "cost": "Costo:",
-      "current_one": "Racha actual: {{count}} día",
-      "current_other": "Racha actual: {{count}} días",
-      "dayStreakLabel_one": "racha de {{count}} día",
-      "dayStreakLabel_other": "racha de {{count}} días",
       "description": "Tu racha representa los días seguidos de actividad. ¡Mantenla para desbloquear recompensas y losetas especiales para tu mapa!",
-      "freezeAlt": "congelar",
-      "freezeHint": "La Protección de racha te permite proteger tu racha por un día si no puedes mantenerla. ¡Úsala con cabeza para no perder tu progreso!",
-      "freezeTitle": "Protección de racha",
-      "repairButton": "Reparar racha",
-      "repairDays_one": "{{count}} día",
-      "repairDays_other": "{{count}} días",
-      "repairHint": "Esta función te ayuda a recuperarte de una racha rota, pero recuerda: mantener tu racha cada día es la mejor forma de aprovechar tus recompensas al máximo.",
-      "repairIntro": "Si perdiste tu racha, puedes restaurarla hasta",
-      "repairOutro": "usando Reparar racha.",
-      "repairTitle": "Reparar racha",
       "streakAlt": "racha",
       "title": "Racha",
       "weekdays": {
@@ -1520,7 +1332,6 @@
         "Tu": "Ma",
         "We": "Mi"
       },
-      "weeklyHint": "¡Consigue una loseta nueva cada vez que aumentas tu racha! Los íconos a color muestran los días que completaste, y los grises indican los días que te saltaste.",
       "weeklyProgress": "Progreso semanal",
       "unitLabel": "Racha de días"
     }
@@ -1719,17 +1530,14 @@
     },
     "friends": {
       "chooseFromContacts": "Elegir de contactos",
-      "couldNotShare": "No se pudo compartir",
       "dismissSuggestion": "Descartar sugerencia",
       "emptyBody": "Vuelve pronto para descubrir nuevos vaqueros a quién seguir.",
       "emptyTitle": "No hay sugerencias por ahora",
       "follow": "Seguir",
       "followedBy": "Seguido por",
       "following": "Siguiendo",
-      "linkCopied": "Enlace para seguirte copiado al portapapeles",
       "searchByName": "Buscar por usuario",
       "shareFollowLink": "Compartir enlace para seguirte",
-      "shareText": "Sígueme en Vaquita 🐮",
       "suggestedForYou": "Sugerido para ti",
       "suggestionsTitle": "Sugerencias de amigos",
       "title": "Encuentra a tus amigos"
@@ -1827,8 +1635,6 @@
       "couldNotCopy": "No se pudo copiar el enlace",
       "couldNotFollow": "No se pudo seguir a ese vaquero. Intenta de nuevo.",
       "couldNotShare": "No se pudo compartir",
-      "dialogLabelMine": "Comparte el QR de tu perfil",
-      "dialogLabelScan": "Escanea un QR de perfil",
       "followingHandle": "Siguiendo a {{handle}}",
       "invalidQr": "Ese QR no es un perfil de Vaquita.",
       "linkCopied": "Enlace del perfil copiado",
@@ -1866,11 +1672,6 @@
       "welcomeSubtitle": "Descubre cómo hacer crecer tus ahorros de forma inteligente y divertida",
       "welcomeTitle": "¡Bienvenido a Vaquita!"
     },
-    "patience": {
-      "body": "Si retiras antes de tiempo, pierdes el interés. Espera a que termine el temporizador.",
-      "cta": "Entendido",
-      "title": "La paciencia tiene premio"
-    },
     "receipt": {
       "deposit": "Depósito",
       "interestEarned": "Interés ganado",
@@ -1889,11 +1690,6 @@
         "cta": "Ver ahorros",
         "title": "Encuentra tus ahorros"
       },
-      "ready": {
-        "body": "Abre tus ahorros de nuevo y retira con interés.",
-        "cta": "Retirar ahora",
-        "title": "¡Se acabó el tiempo! 🎉"
-      },
       "success": {
         "body": "Recuperaste tu depósito más el interés.",
         "cta": "Entrar a la app",
@@ -1904,19 +1700,11 @@
         "cta": "Esperar {{seconds}}s",
         "title": "Pero si esperas…"
       },
-      "waiting": {
-        "body": "Mira a tu vaquita mientras ahorra.",
-        "title": "Ahorrando…"
-      },
       "welcome": {
         "body": "La haces crecer ahorrando. Demo rápida, sin dinero real.",
         "cta": "¡Vamos!",
         "title": "Conoce a tu vaquita 🐮"
       }
-    },
-    "timer": {
-      "ready": "¡Listo! 🎉",
-      "unlocks": "Se desbloquea"
     },
     "warn": {
       "keepLose": "Conservas {{amount}} y pierdes {{interest}} de interés."
@@ -1983,17 +1771,9 @@
       "history": {
         "connect": "Conecta tu wallet primero.",
         "deposit": "Depósito",
-        "details": "Detalles",
         "empty": "Sin historial cargado. Toca Actualizar.",
         "none": "Todavía no hay transacciones.",
-        "phase": {
-          "completed": "Completado",
-          "processing": "Procesando en el anchor",
-          "started": "Iniciado",
-          "userTransfer": "Transferencia del usuario"
-        },
         "refresh": "Actualizar",
-        "refreshing": "Actualizando…",
         "resumeHint": "Toca una transacción para continuar donde la dejaste.",
         "title": "Historial de transacciones",
         "withdraw": "Retiro"
@@ -2084,7 +1864,7 @@
         "cta": "Retirar",
         "destination": {
           "change": "Cambiar",
-          "needAmount": "Poné el monto primero: qué datos pide tu banco depende de la ruta de pago.",
+          "needAmount": "Para usar una cuenta nueva, poné el monto primero: qué datos pide el banco depende de la ruta de pago.",
           "newAccount": "Cuenta nueva",
           "pickTitle": "¿A dónde querés recibir la plata?",
           "select": "Elegí una cuenta bancaria",
@@ -2143,18 +1923,13 @@
         "youSend": "Sale de tus ahorros"
       },
       "receive": {
-        "authOk": "Autenticado con Anclap (JWT obtenido).",
         "cta": "Continuar",
         "depositHelper": "¿Solo tenés pesos argentinos? Depositá con ARS",
         "depositStarted": "Depósito iniciado. Continúa en Anclap.",
         "description": "Compra ARS con Anclap y recíbelos en tu wallet; luego lo convertimos a USDC automáticamente.",
-        "jwtPreview": "JWT:",
         "openAnclap": "Abrir Anclap",
         "processing": "Procesando…",
         "reconnect": "Reconectar wallet",
-        "stepCredit": "Esperar acreditación de ARS",
-        "stepDeposit": "SEP-24 · Iniciar depósito",
-        "stepSwap": "Convertir ARS → USDC",
         "swapDone": "Convertido a USDC. ¡Listo!",
         "title": "Argentina (ARS)",
         "usdcReceived": "≈ {{amount}} USDC recibidos",
@@ -2165,22 +1940,11 @@
       },
       "send": {
         "arsReceived": "≈ {{amount}} ARS obtenidos en el swap",
-        "authOk": "Autenticado con Anclap (JWT obtenido).",
         "cta": "Enviar",
         "insufficient": "Saldo USDC insuficiente.",
-        "jwtPreview": "JWT:",
         "openAnclap": "Abrir Anclap",
         "processing": "Procesando…",
         "reconnect": "Reconectar wallet",
-        "stepChallenge": "SEP-10 · Pedir challenge",
-        "stepSign": "SEP-10 · Firmar (wallet)",
-        "stepSwap": "Swap USDC → ARS",
-        "stepToken": "SEP-10 · Obtener JWT de Anclap",
-        "stepSettled": "Esperar confirmación de Anclap",
-        "stepTransfer": "Enviar ARS a Anclap",
-        "stepBlend": "Retirar de Blend",
-        "stepTrustline": "Activar trustline de ARS",
-        "stepWithdraw": "SEP-24 · Iniciar retiro",
         "settled": "Retiro completado en Anclap.",
         "title": "Enviar fiat (ARS)",
         "waitingHint": "Completa el retiro en Anclap. Estamos esperando la confirmación…",
@@ -2194,20 +1958,15 @@
       "address": "Dirección",
       "addressCopied": "¡Dirección copiada!",
       "balance": "Saldo",
-      "buyArs": "Comprar ARS",
       "copied": "¡Copiada!",
       "copy": "Copiar",
-      "copyAddress": "Copiar dirección",
       "copyError": "No se pudo copiar",
       "getAssets": "Recibe activos",
       "network": "Red",
       "receive": "Recibir",
-      "receiveFiat": "Recibir fiat",
       "selfCustodyDescription": "Vaquita nunca guarda tus llaves. Las transferencias on-chain estarán disponibles muy pronto.",
       "selfCustodyTitle": "Wallet de autocustodia",
-      "sellArs": "Vender a ARS",
       "send": "Enviar",
-      "sendFiat": "Enviar fiat",
       "title": "Wallet",
       "transferAssets": "Transfiere activos"
     },
@@ -2336,7 +2095,6 @@
       }
     },
     "methodLabel": "Método",
-    "methodWallet": "Wallet",
     "minWithdraw": "Retiro mínimo: {{amount}} USDC.",
     "noUsernames": "Todavía no guardaste usuarios",
     "noWallets": "Todavía no tenés wallets guardadas",
@@ -2462,16 +2220,13 @@
   "portfolio": {
     "title": "Portafolio",
     "total": "Total",
-    "totalBalance": "Tu dinero",
     "earning": "Ganancias estimadas",
     "invest": "Invertir",
     "savings": "Ahorros",
-    "allocation": "Distribución",
     "distributed": "Repartido en {{funded}} de {{total}} opciones",
     "ofTotal": "{{pct}}% de tu total",
     "noFunds": "Sin fondos",
     "sum": "Total",
-    "manage": "Gestionar distribución",
     "empty": "Todavía no hay plazos de ahorro disponibles.",
     "poolRewards": "Pozo de {{amount}}",
     "inThePool": "{{value}} en el pozo",
@@ -2495,28 +2250,9 @@
       "tokenNote": "Los saldos se muestran en {{token}}.",
       "marketApy": "APY de {{market}}"
     },
-    "move": {
-      "title": "Mover fondos",
-      "confirmTitle": "Confirmar movimiento",
-      "from": "Desde",
-      "to": "Hacia",
-      "swapAria": "Invertir dirección",
-      "yourApy": "Tu APY",
-      "amount": "Monto",
-      "movePair": "Mover",
-      "apyChange": "Cambio de APY",
-      "processing": "Moviendo fondos...",
-      "success": {
-        "title": "¡Fondos movidos!",
-        "subtitle": "${{amount}} movidos de {{from}} a {{to}}."
-      }
-    },
-    "moreInfo": "Más información",
     "withdraw": {
       "step1": "Sacando tu dinero",
       "step2": "Devolviéndolo a tus ahorros",
-      "empty": "No hay posiciones para retirar en este plazo.",
-      "note": "Tus fondos (más intereses) vuelven a tus ahorros, donde siguen flexibles y generando rendimiento.",
       "successTitle": "¡De vuelta en tus ahorros!",
       "successSubtitle": "Tus fondos vuelven a estar flexibles y siguen generando rendimiento en tus ahorros.",
       "cta": "Retirar a tus ahorros",
