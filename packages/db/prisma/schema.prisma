@@ -285,6 +285,17 @@ model FeedbackPost {
   /// and an aggregate over the join cannot be indexed; written in the same
   /// transaction as the vote.
   voteCount     Int       @default(0) @map("vote_count")
+  /// 'pending' | 'approved' | 'flagged' | 'rejected' — the content-moderation
+  /// verdict, deliberately separate from `status`. Only 'approved' is public.
+  /// Defaults to 'pending' (fail-closed): a report whose check could not be
+  /// completed — no API key, 429, timeout — waits for a human rather than
+  /// going straight to the board. Constrained by a CHECK in
+  /// packages/db/sql/feedback_posts_enums.sql.
+  moderationStatus String @default("pending") @map("moderation_status") @db.VarChar(20)
+  /// The model's `categories` + `category_scores`, or `{ error }` when there
+  /// was no verdict. What the admin reads before approving or rejecting.
+  moderationResult Json?  @map("moderation_result")
+  moderatedAt   DateTime? @map("moderated_at") @db.Timestamptz(6)
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
@@ -296,6 +307,8 @@ model FeedbackPost {
   @@index([kind, status, createdAt(sort: Desc)], map: "idx_feedback_posts_triage")
   @@index([profileId, createdAt(sort: Desc)], map: "idx_feedback_posts_profile_created")
   @@index([kind, voteCount(sort: Desc), createdAt(sort: Desc)], map: "idx_feedback_posts_board")
+  @@index([kind, moderationStatus, voteCount(sort: Desc), createdAt(sort: Desc)], map: "idx_feedback_posts_public")
+  @@index([moderationStatus, createdAt(sort: Desc)], map: "idx_feedback_posts_moderation")
   @@map("feedback_posts")
 }
 
