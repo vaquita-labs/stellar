@@ -611,6 +611,12 @@ export interface FeedbackPostResponseDTO {
   details: string;
   /** 'open' | 'planned' | 'in_progress' | 'done' | 'closed' */
   status: string;
+  /**
+   * 'pending' | 'approved' | 'flagged' | 'rejected'. The reporter is told when
+   * their report is held: it is not on the board, and silence would read as the
+   * submit having failed.
+   */
+  moderationStatus: string;
   /** UI language at submit time — tells the triager which locale the copy came from. */
   locale: string | null;
   /** In-app route the report was opened from. A path, never a full URL. */

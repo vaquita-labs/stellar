@@ -1682,6 +1682,7 @@
     "sending": "Sending…",
     "successTitle": "Report sent",
     "successBody": "Thanks — the team got it.",
+    "pendingReview": "The team got it. It will appear on the board once reviewed.",
     "errorTitle": "Could not send your report",
     "errorBody": "Please try again in a moment.",
     "bug": {

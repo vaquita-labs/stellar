@@ -22,6 +22,28 @@ export type FeedbackKind = (typeof FEEDBACK_KINDS)[number];
 export const FEEDBACK_STATUSES = ['open', 'planned', 'in_progress', 'done', 'closed'] as const;
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
+/**
+ * The content-moderation verdict, kept apart from `status` above.
+ *
+ * `status` is the triage lifecycle and is already doubling as a visibility flag
+ * (`!= 'closed'` on the board). Folding the verdict into it would make "held
+ * for review" and "won't fix" the same state, and an admin closing a duplicate
+ * would be indistinguishable from an admin taking down abuse.
+ *
+ * Only `approved` is public:
+ * - `pending`  — no verdict yet. The fail-closed default: no API key, a 429, a
+ *                timeout. Waits for a human.
+ * - `approved` — checked and clean, or an admin said so.
+ * - `flagged`  — the model flagged it. Waits for a human, who can approve it.
+ * - `rejected` — an admin pulled it down. Kept, so the decision has a record.
+ */
+export const FEEDBACK_MODERATION_STATUSES = ['pending', 'approved', 'flagged', 'rejected'] as const;
+export type FeedbackModerationStatus = (typeof FEEDBACK_MODERATION_STATUSES)[number];
+
+/** What an admin is allowed to set by hand. They review; they don't author verdicts. */
+export const FEEDBACK_MODERATION_DECISIONS = ['approved', 'rejected'] as const;
+export type FeedbackModerationDecision = (typeof FEEDBACK_MODERATION_DECISIONS)[number];
+
 export const TITLE_MAX = 120;
 export const DETAILS_MAX = 2000;
 
@@ -38,12 +60,19 @@ export const isFeedbackKind = (value: unknown): value is FeedbackKind =>
 export const isFeedbackStatus = (value: unknown): value is FeedbackStatus =>
   typeof value === 'string' && (FEEDBACK_STATUSES as readonly string[]).includes(value);
 
+export const isFeedbackModerationStatus = (value: unknown): value is FeedbackModerationStatus =>
+  typeof value === 'string' && (FEEDBACK_MODERATION_STATUSES as readonly string[]).includes(value);
+
+export const isFeedbackModerationDecision = (value: unknown): value is FeedbackModerationDecision =>
+  typeof value === 'string' && (FEEDBACK_MODERATION_DECISIONS as readonly string[]).includes(value);
+
 export const toFeedbackPostResponseDTO = (row: FeedbackPost): FeedbackPostResponseDTO => ({
   id: row.id,
   kind: row.kind,
   title: row.title,
   details: row.details,
   status: row.status,
+  moderationStatus: row.moderationStatus,
   locale: row.locale,
   appPath: row.appPath,
   createdTimestamp: row.createdAt.getTime(),
@@ -55,6 +84,9 @@ export const countRecentFeedbackPosts = async (profileId: number): Promise<numbe
   prisma.feedbackPost.count({
     where: {
       profileId,
+      // No `deletedAt` filter on purpose. A run of spam that an admin has just
+      // deleted is exactly the history this limit exists to remember; excluding
+      // it would hand the spammer a fresh allowance for every takedown.
       createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
     },
   });
@@ -69,6 +101,8 @@ export const createFeedbackPost = async ({
   userAgent,
   appPath,
   attachments,
+  moderationStatus,
+  moderationResult,
 }: {
   profileId: number | null;
   walletAddress: string;
@@ -80,6 +114,14 @@ export const createFeedbackPost = async ({
   appPath?: string | null;
   /** Screenshots, already decoded and type-checked by `decodeAttachment`. */
   attachments?: FeedbackAttachmentInput[];
+  /**
+   * The verdict for this report. Required, not defaulted: this is the only
+   * place a `feedback_posts` row is ever created, so making the caller say it
+   * out loud is what stops a future code path from quietly bypassing the gate.
+   */
+  moderationStatus: FeedbackModerationStatus;
+  /** The model's answer, or `{ error }` when there wasn't one. Read by the admin. */
+  moderationResult?: unknown;
 }): Promise<FeedbackPost> =>
   // A nested create so a report and its screenshots land in one transaction:
   // a row that claims an attachment nobody can open is worse than no attachment.
@@ -93,6 +135,9 @@ export const createFeedbackPost = async ({
       locale: locale ?? null,
       userAgent: userAgent ?? null,
       appPath: appPath ?? null,
+      moderationStatus,
+      moderationResult: (moderationResult ?? null) as never,
+      moderatedAt: new Date(),
       ...(attachments && attachments.length > 0
         ? {
             attachments: {
@@ -116,10 +161,13 @@ export type FeedbackPostWithAttachments = FeedbackPost & { attachments: { id: st
 export const listFeedbackPosts = async ({
   kind,
   status,
+  moderationStatus,
   limit = 100,
 }: {
   kind?: FeedbackKind;
   status?: FeedbackStatus;
+  /** One verdict, or several — the review queue is `pending` plus `flagged`. */
+  moderationStatus?: FeedbackModerationStatus | FeedbackModerationStatus[];
   limit?: number;
 } = {}): Promise<FeedbackPostWithAttachments[]> =>
   prisma.feedbackPost.findMany({
@@ -127,6 +175,9 @@ export const listFeedbackPosts = async ({
       deletedAt: null,
       ...(kind ? { kind } : {}),
       ...(status ? { status } : {}),
+      ...(moderationStatus
+        ? { moderationStatus: Array.isArray(moderationStatus) ? { in: moderationStatus } : moderationStatus }
+        : {}),
     },
     // Ids only: the bytes are served by the API one image at a time, and pulling
     // 200 reports' worth of screenshots through this list would be several
@@ -153,6 +204,44 @@ export const updateFeedbackPostStatus = async (
     where: { id },
     include: { attachments: { select: { id: true }, orderBy: { createdAt: 'asc' } } },
   });
+};
+
+/**
+ * An admin's review decision: publish the report, or pull it down.
+ *
+ * `rejected` rather than a delete, because the row is the record of the
+ * decision — what was taken down, when, and against which model verdict. The
+ * hard delete below is the separate, deliberate act.
+ */
+export const setFeedbackModerationStatus = async (
+  id: string,
+  moderationStatus: FeedbackModerationDecision,
+): Promise<FeedbackPostWithAttachments | null> => {
+  const { count } = await prisma.feedbackPost.updateMany({
+    where: { id, deletedAt: null },
+    data: { moderationStatus, moderatedAt: new Date() },
+  });
+
+  if (count === 0) return null;
+  return prisma.feedbackPost.findUnique({
+    where: { id },
+    include: { attachments: { select: { id: true }, orderBy: { createdAt: 'asc' } } },
+  });
+};
+
+/**
+ * Removes a report for good — row, screenshots and votes.
+ *
+ * A hard delete and not the soft one everything else in this schema uses: for
+ * content an admin has judged harmful, "still in the table but filtered out of
+ * every query" is not the outcome anybody asked for. The FK cascades on
+ * `feedback_attachments` and `feedback_votes` take the bytes and the votes with
+ * it. Returns false when the id was already gone, so a double click is a 404
+ * rather than an error.
+ */
+export const deleteFeedbackPost = async (id: string): Promise<boolean> => {
+  const { count } = await prisma.feedbackPost.deleteMany({ where: { id } });
+  return count > 0;
 };
 
 // ---------------------------------------------------------------------------
@@ -239,8 +328,33 @@ export function decodeAttachment(
   return { ok: true, value: { contentType, data: bytes } };
 }
 
-/** The bytes of one attachment, for the endpoint that serves it. Null when unknown. */
+/**
+ * The bytes of one attachment, for the public endpoint that serves it. Null
+ * when the id is unknown OR its report is not public.
+ *
+ * The join to the post is the point. That endpoint is unauthenticated — an
+ * `<img src>` cannot carry a session header — so without this it hands the
+ * bytes to anyone holding the id, including the id of a picture the model
+ * flagged or an admin took down. Filtering here is what makes a rejection
+ * actually remove the image rather than only unlist it.
+ *
+ * The admin screen needs the opposite behaviour and has its own route
+ * (apps/admin/src/app/api/admin/feedback/attachments/[id]) that reads the row
+ * directly, behind the passcode.
+ */
 export const getFeedbackAttachment = async (id: string): Promise<{ contentType: string; data: Buffer } | null> => {
+  const row = await prisma.feedbackAttachment.findFirst({
+    where: { id, post: { deletedAt: null, moderationStatus: 'approved' } },
+    select: { contentType: true, data: true },
+  });
+  if (!row) return null;
+  return { contentType: row.contentType, data: Buffer.from(row.data) };
+};
+
+/** The bytes of one attachment with no visibility filter. Admin review only. */
+export const getFeedbackAttachmentForReview = async (
+  id: string,
+): Promise<{ contentType: string; data: Buffer } | null> => {
   const row = await prisma.feedbackAttachment.findUnique({
     where: { id },
     select: { contentType: true, data: true },
@@ -326,6 +440,10 @@ export const listFeedbackBoard = async ({
     where: {
       deletedAt: null,
       status: { not: 'closed' },
+      // The review gate. Everything else — `pending` because the check could
+      // not be completed, `flagged` because the model objected, `rejected`
+      // because an admin pulled it — stays off the board until a human says so.
+      moderationStatus: 'approved',
       ...(kind ? { kind } : {}),
     },
     orderBy:
@@ -411,7 +529,9 @@ export const toggleFeedbackVote = async ({
   profileId: number;
 }): Promise<ToggleFeedbackVoteResult> => {
   const post = await prisma.feedbackPost.findFirst({
-    where: { id: postId, deletedAt: null },
+    // Same predicate as the board: a held post is not listed, so a vote on one
+    // can only have come from an id somebody kept or guessed.
+    where: { id: postId, deletedAt: null, moderationStatus: 'approved' },
     select: { id: true, profileId: true },
   });
   if (!post) return { ok: false, reason: 'not-found' };

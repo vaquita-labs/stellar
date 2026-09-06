@@ -19,6 +19,13 @@ type FeedbackPostResponse = {
   kind: string;
   title: string;
   status: string;
+  /**
+   * Veredicto de moderación: 'pending' | 'approved' | 'flagged' | 'rejected'.
+   * Solo 'approved' sale al board. Se lee acá porque el que manda el reporte
+   * tiene que enterarse de que quedó en revisión: no verlo aparecer y no recibir
+   * ningún aviso se lee como que el envío falló.
+   */
+  moderationStatus: string;
 };
 
 /**

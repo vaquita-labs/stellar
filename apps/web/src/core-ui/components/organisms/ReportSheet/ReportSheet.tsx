@@ -97,10 +97,19 @@ export function ReportSheet({ open, onOpenChange, kind }: ReportSheetProps) {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     try {
-      await submit.mutateAsync({ kind, title: trimmedTitle, details: details.trim(), attachments });
-      toast.success(t('report.successTitle', 'Report sent'), {
-        description: t('report.successBody', 'Thanks — the team got it.'),
-      });
+      const post = await submit.mutateAsync({ kind, title: trimmedTitle, details: details.trim(), attachments });
+      // Un reporte que quedó en revisión no aparece en el board. Decirlo acá es
+      // la diferencia entre "esperá" y "no se mandó": el usuario no tiene
+      // ninguna otra forma de distinguir esos dos casos.
+      if (post.moderationStatus === 'approved') {
+        toast.success(t('report.successTitle', 'Report sent'), {
+          description: t('report.successBody', 'Thanks — the team got it.'),
+        });
+      } else {
+        toast.success(t('report.successTitle', 'Report sent'), {
+          description: t('report.pendingReview', 'The team got it. It will appear on the board once reviewed.'),
+        });
+      }
       onOpenChange();
     } catch (e) {
       toast.danger(t('report.errorTitle', 'Could not send your report'), {

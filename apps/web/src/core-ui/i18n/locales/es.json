@@ -1682,6 +1682,7 @@
     "sending": "Enviando…",
     "successTitle": "Reporte enviado",
     "successBody": "Gracias — le llegó al equipo.",
+    "pendingReview": "Le llegó al equipo. Va a aparecer en el board cuando lo revisen.",
     "errorTitle": "No se pudo enviar tu reporte",
     "errorBody": "Probá de nuevo en un momento.",
     "bug": {
