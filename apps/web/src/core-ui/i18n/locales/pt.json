@@ -467,11 +467,11 @@
     },
     "detail": {
       "days": "Dias",
-      "estAbbrev": "est.",
+      "estAbbrev": "aprox.",
       "hours": "Horas",
       "lockSuffix": "{{period}} de bloqueio",
       "locked": "Bloqueado",
-      "min": "Min",
+      "min": "Mín",
       "protocolInterest": "Juros do protocolo",
       "readyToWithdraw": "Pronto para sacar",
       "sec": "Seg",
@@ -568,7 +568,7 @@
       "title": "Selecione o método",
       "wallet": {
         "subtitle": "Deposite de uma wallet cripto",
-        "title": "Wallet",
+        "title": "Carteira",
         "receiveSubtitle": "Receba USDC no seu endereço"
       }
     }
@@ -832,7 +832,7 @@
     "board": "Veja o que outros pediram"
   },
   "board": {
-    "title": "Board",
+    "title": "Quadro",
     "tabBugs": "Erros",
     "tabIdeas": "Ideias",
     "sortTop": "Mais votados",
@@ -1182,7 +1182,7 @@
       "gold": "Ouro",
       "handle": "<b>{{handle}}</b>",
       "handleJoined": "<b>{{handle}}</b> · entrou em {{joinedLabel}}",
-      "mapLikes": "Likes",
+      "mapLikes": "Curtidas",
       "seeAll": "Ver tudo de {{title}}",
       "seeAllAchievements": "Ver todas as conquistas",
       "settingsAria": "Configurações",
@@ -1220,7 +1220,7 @@
       "supportSection": "Suporte",
       "terms": "Termos",
       "title": "Configurações",
-      "wallet": "Wallet",
+      "wallet": "Carteira",
       "walletDesc": "Ver endereço, enviar e receber fundos.",
       "installApp": "Instalar o app",
       "installAppDesc": "Adicione a Vaquita à sua tela inicial.",
@@ -1271,7 +1271,7 @@
     "countdown": {
       "comeBackIn": "Muu! Volte em",
       "hrs": "Hrs",
-      "min": "Min",
+      "min": "Mín",
       "sec": "Seg"
     },
     "daily": {
@@ -1764,7 +1764,7 @@
       "saveChanges": "Salvar alterações",
       "shownAs": "Exibido como: @{{name}}",
       "title": "Editar perfil",
-      "walletLabel": "Wallet"
+      "walletLabel": "Carteira"
     },
     "page": {
       "address": "Endereço",
@@ -1779,7 +1779,7 @@
       "selfCustodyDescription": "A Vaquita nunca guarda suas chaves. As transferências on-chain serão liberadas em breve.",
       "selfCustodyTitle": "Wallet de autocustódia",
       "send": "Enviar",
-      "title": "Wallet",
+      "title": "Carteira",
       "transferAssets": "Transfira ativos"
     },
     "profile": {
@@ -1792,7 +1792,7 @@
       "nicknameLabel": "Apelido",
       "saveChanges": "Salvar alterações",
       "title": "Perfil",
-      "walletLabel": "Wallet"
+      "walletLabel": "Carteira"
     },
     "fiat": {
       "authenticated": "Conectado à Anclap",

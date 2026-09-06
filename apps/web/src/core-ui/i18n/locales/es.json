@@ -467,11 +467,11 @@
     },
     "detail": {
       "days": "Días",
-      "estAbbrev": "est.",
+      "estAbbrev": "aprox.",
       "hours": "Horas",
       "lockSuffix": "{{period}} de bloqueo",
       "locked": "Bloqueado",
-      "min": "Min",
+      "min": "Mín",
       "protocolInterest": "Interés del protocolo",
       "readyToWithdraw": "Listo para retirar",
       "sec": "Seg",
@@ -568,7 +568,7 @@
       "title": "Selecciona el método",
       "wallet": {
         "subtitle": "Deposita desde una wallet cripto",
-        "title": "Wallet",
+        "title": "Billetera",
         "receiveSubtitle": "Recibí USDC en tu dirección"
       }
     }
@@ -832,7 +832,7 @@
     "board": "Mirá lo que pidieron otros"
   },
   "board": {
-    "title": "Board",
+    "title": "Tablero",
     "tabBugs": "Errores",
     "tabIdeas": "Ideas",
     "sortTop": "Más votados",
@@ -1089,7 +1089,7 @@
         "clothes": {
           "turtleneck": "Cuello alto",
           "tee": "Camiseta",
-          "hoodie": "Hoodie",
+          "hoodie": "Buzo",
           "shirt": "Camisa",
           "sweater": "Chompa"
         }
@@ -1182,7 +1182,7 @@
       "gold": "Oro",
       "handle": "<b>{{handle}}</b>",
       "handleJoined": "<b>{{handle}}</b> · se unió el {{joinedLabel}}",
-      "mapLikes": "Likes",
+      "mapLikes": "Me gusta",
       "seeAll": "Ver todo {{title}}",
       "seeAllAchievements": "Ver todos los logros",
       "settingsAria": "Ajustes",
@@ -1220,7 +1220,7 @@
       "supportSection": "Soporte",
       "terms": "Términos",
       "title": "Ajustes",
-      "wallet": "Wallet",
+      "wallet": "Billetera",
       "walletDesc": "Ver dirección, enviar y recibir fondos.",
       "installApp": "Instalar la app",
       "installAppDesc": "Agrega Vaquita a tu pantalla de inicio.",
@@ -1270,8 +1270,8 @@
     },
     "countdown": {
       "comeBackIn": "¡Mu! Regresa en",
-      "hrs": "Hrs",
-      "min": "Min",
+      "hrs": "Hs",
+      "min": "Mín",
       "sec": "Seg"
     },
     "daily": {
@@ -1764,7 +1764,7 @@
       "saveChanges": "Guardar cambios",
       "shownAs": "Se mostrará como: @{{name}}",
       "title": "Editar perfil",
-      "walletLabel": "Wallet"
+      "walletLabel": "Billetera"
     },
     "fiat": {
       "authenticated": "Conectado con Anclap",
@@ -1967,7 +1967,7 @@
       "selfCustodyDescription": "Vaquita nunca guarda tus llaves. Las transferencias on-chain estarán disponibles muy pronto.",
       "selfCustodyTitle": "Wallet de autocustodia",
       "send": "Enviar",
-      "title": "Wallet",
+      "title": "Billetera",
       "transferAssets": "Transfiere activos"
     },
     "profile": {
@@ -1980,7 +1980,7 @@
       "nicknameLabel": "Apodo",
       "saveChanges": "Guardar cambios",
       "title": "Perfil",
-      "walletLabel": "Wallet"
+      "walletLabel": "Billetera"
     },
     "receive": {
       "title": "Recibir",
@@ -2086,7 +2086,7 @@
         "subtitle": "Retirá a tu cuenta bancaria"
       },
       "wallet": {
-        "title": "Wallet",
+        "title": "Billetera",
         "subtitle": "Retirá a una wallet cripto"
       },
       "username": {
