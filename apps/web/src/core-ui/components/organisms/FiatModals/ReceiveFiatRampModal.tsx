@@ -709,7 +709,6 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           // `maxAmount` llega recién con la cotización, así que un tope acá
           // aparecería a mitad de tipear y las teclas dejarían de responder sin
           // decir por qué. El monto fuera de rango lo explica `limitProblem`.
-          compact
         >
           {routeCard}
         </AmountStep>

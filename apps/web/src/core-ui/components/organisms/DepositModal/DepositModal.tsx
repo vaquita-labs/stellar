@@ -265,7 +265,6 @@ export function DepositModal({
               value={amount}
               onValueChange={setAmount}
               decimals={AMOUNT_DECIMALS}
-              compact
               disabled={simulate || isDepositing}
               available={simulate ? null : balanceFormatted}
               availableLoading={balanceIsLoading}

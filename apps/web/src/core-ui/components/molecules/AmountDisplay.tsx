@@ -15,11 +15,8 @@ interface AmountDisplayProps {
   muted?: boolean;
   /** Controles de framer-motion para el shake cuando el monto no entra. */
   controls?: AmountControls;
-  size?: 'md' | 'lg';
   className?: string;
 }
-
-const SIZES = { md: 'text-3xl', lg: 'text-4xl' } as const;
 
 /**
  * El número grande de las pantallas de monto.
@@ -38,7 +35,6 @@ export function AmountDisplay({
   symbolPosition = 'prefix',
   muted = false,
   controls,
-  size = 'md',
   className = '',
 }: AmountDisplayProps) {
   const shown = value === '' ? '0.00' : value;
@@ -47,10 +43,7 @@ export function AmountDisplay({
   const text = !symbol ? shown : symbolPosition === 'prefix' ? `${symbol}${shown}` : `${shown} ${symbol}`;
 
   return (
-    <motion.p
-      animate={controls}
-      className={`${SIZES[size]} font-bold ${muted ? 'text-gray-400' : 'text-black'} ${className}`}
-    >
+    <motion.p animate={controls} className={`text-3xl font-bold ${muted ? 'text-gray-400' : 'text-black'} ${className}`}>
       {text}
     </motion.p>
   );

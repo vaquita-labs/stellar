@@ -96,6 +96,24 @@ const FUNDING_DUST = 0.0001;
 const fundingAmount = (cost: number): number => floorAmount(cost + FUNDING_DUST, AMOUNT_DECIMALS);
 
 /**
+ * Nominal amount for the SCHEMA PROBE, per corridor. It buys the bank form
+ * before the user has picked an amount: `requiredFields` only travels inside a
+ * quote and `/ramps/quote` demands an `amount`, so there is no other way to know
+ * what the provider asks for.
+ *
+ * ONLY DEFINED WHERE THE CORRIDOR HAS A SINGLE RAIL. Bolivia pays out over ACH
+ * and nothing else, so any amount resolves to the same form. A corridor that can
+ * resolve through more than one rail — Colombia goes out over PSE or Bre-B — is
+ * deliberately absent: the probe could draw the form of a route the real amount
+ * never quotes, and the user would fill in details for the wrong bank. Adding a
+ * country here means having checked that its rail does not depend on the amount.
+ *
+ * Nothing but the field list is read from the probe. The price, the limits and
+ * the `quoteId` used to withdraw always come from the quote for the real amount.
+ */
+const PROBE_AMOUNT: Partial<Record<CorridorCode, number>> = { BO: 100 };
+
+/**
  * Fiat off-ramp over Pollar's ramps endpoints, for any of the corridors the app
  * exposes (Brazil over Pix, Colombia over PSE or Bre-B with Abroad). It shares
  * the skeleton of {@link SendFiatModal} (Argentina/Anclap): a three-lock
@@ -161,6 +179,12 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
 
   const [corridor, setCorridor] = useState<Corridor | null>(null);
   const [phase, setPhase] = useState<Phase>('amount');
+  // Which step `details` was reached from, so the back arrow undoes the step the
+  // user actually took. With the destination already loaded the confirmation is
+  // reached straight from the amount, and sending them to a form they never saw
+  // reads as having lost the withdrawal. Changing the destination from the
+  // confirmation is what the "Change" link is for.
+  const [detailsFrom, setDetailsFrom] = useState<Extract<Phase, 'amount' | 'bank'>>('bank');
   const [amountFiat, setAmountFiat] = useState('');
   const [quote, setQuote] = useState<RampQuote | null>(null);
   // Monto con el que se pidió la cotización que está guardada. Cambiar el monto
@@ -168,6 +192,18 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   // cotización fija el precio de UN monto, y seguir con la de otro cobraría mal.
   const [quotedFor, setQuotedFor] = useState<number | null>(null);
   const [usdcCost, setUsdcCost] = useState<number | null>(null);
+  // The bank form schema when there is no quote yet, from the probe below. It is
+  // kept apart from `quote` because it prices nothing: it only says which fields
+  // to draw, and confusing the two would charge a withdrawal at the probe's
+  // amount. `fields: null` means the probe already ran and came back with
+  // nothing, which is what stops it from being asked again.
+  //
+  // It carries the corridor it describes so switching countries inside the modal
+  // cannot draw Bolivia's form for Brazil: a stale probe simply does not match.
+  const [probe, setProbe] = useState<{ country: CorridorCode; fields: RampField[] | null } | null>(null);
+  // The corridor whose probe is in flight, so a re-render cannot fire a second
+  // one. A ref and not state: nothing on screen depends on it.
+  const probingFor = useRef<CorridorCode | null>(null);
   const [typedValues, setValues] = useState<Record<string, string>>({});
 
   // Cuentas bancarias guardadas: el espejo de las wallets guardadas del retiro a
@@ -244,12 +280,53 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     };
   }, [open, country, resolveCorridor, t]);
 
+  // Schema probe. Reaching the destination step with no amount leaves the form
+  // with no fields, so in the corridors that pay out over a SINGLE RAIL a
+  // nominal quote is asked for just to read `requiredFields` (see
+  // {@link PROBE_AMOUNT} for why it is not done everywhere). It never touches
+  // `quote`: what the withdrawal costs is fixed by the quote for the real
+  // amount, and this one is thrown away as soon as its fields are read.
+  //
+  // It runs on entering the step and not on opening the modal so that whoever
+  // types the amount first — who already gets the fields with their own quote —
+  // does not pay for a second call.
+  useEffect(() => {
+    const probeAmount = PROBE_AMOUNT[country];
+    if (phase !== 'bank' || quote || !corridor || !probeAmount) return;
+    if (probe?.country === country || probingFor.current === country) return;
+    probingFor.current = country;
+    let cancelled = false;
+    void quoteFiat(corridor, probeAmount)
+      .then((quotes) => {
+        if (!cancelled) setProbe({ country, fields: quotes[0]?.requiredFields ?? null });
+      })
+      .catch(() => {
+        // A failed probe is recorded like an empty one and not shown: the step
+        // still lists the saved accounts, and the form arrives with the quote
+        // for the real amount. Saying "we could not load the form" would
+        // announce a call the user never asked for.
+        if (!cancelled) setProbe({ country, fields: null });
+      })
+      .finally(() => {
+        if (probingFor.current === country) probingFor.current = null;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, quote, probe, corridor, country, quoteFiat]);
+
   const mark = (key: StepKey, status: StepStatus) => setSteps((prev) => ({ ...prev, [key]: status }));
 
   const currency = corridor?.currency ?? '';
   const symbol = corridor?.symbol ?? '';
   const countryName = t(`wallet.fiat.ramp.country.${country}`, country);
-  const fields = useMemo<RampField[]>(() => quote?.requiredFields ?? [], [quote]);
+  // The real quote wins over the probe: by then the route is decided, and it is
+  // the one whose fields will be sent.
+  const probeFields = probe?.country === country ? probe.fields : null;
+  const fields = useMemo<RampField[]>(() => quote?.requiredFields ?? probeFields ?? [], [quote, probeFields]);
+  // Derived instead of stored: the probe is running exactly while this corridor
+  // has one to run and its answer has not arrived.
+  const probing = phase === 'bank' && !quote && PROBE_AMOUNT[country] != null && probe?.country !== country;
   /**
    * Lo que el formulario muestra y manda: lo tipeado más el default de cada
    * select obligatorio que todavía está vacío (ver `selectDefaults`).
@@ -267,7 +344,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   );
   const amountNum = Number(amountFiat);
   const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
-  const fieldsValid = fieldsAreValid(fields, values);
+  // `fieldsAreValid` answers true for an empty list — nothing can fail — so the
+  // schema has to exist for the form to count as complete: saving or confirming
+  // with zero fields would send a withdrawal with no destination.
+  const fieldsValid = fields.length > 0 && fieldsAreValid(fields, values);
   const receiveFiat = settledFiatOf(quote, amountNum);
 
   // Sólo las cuentas del corredor que se está usando: los campos que pide el
@@ -288,15 +368,26 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       : null;
 
   /**
-   * Carga una cuenta guardada en el formulario. Se copian sólo las claves que la
-   * cotización de HOY pide: si el proveedor sacó un campo, arrastrarlo lo
-   * mandaría igual; si agregó uno, queda vacío y el usuario lo completa.
+   * Loads a saved account into the form. With a schema in hand only the keys it
+   * asks for TODAY are copied: a field the provider dropped would be sent
+   * anyway, and one it added stays empty for the user to fill.
+   *
+   * With no schema — the destination was picked before the amount, in a corridor
+   * with no probe — what was saved is copied as it stands. Nothing is lost by
+   * it: `createOfframp` only ever sends the keys the final quote asks for, and
+   * `handleContinue` sends the user back to the form if one of them is missing.
    */
   const applyBankAccount = (account: SavedBankAccount) => {
     const next: Record<string, string> = {};
-    for (const field of fields) {
-      const value = account.fields[field.key];
-      if (typeof value === 'string' && value.length > 0) next[field.key] = value;
+    if (fields.length > 0) {
+      for (const field of fields) {
+        const value = account.fields[field.key];
+        if (typeof value === 'string' && value.length > 0) next[field.key] = value;
+      }
+    } else {
+      for (const [key, value] of Object.entries(account.fields)) {
+        if (typeof value === 'string' && value.length > 0) next[key] = value;
+      }
     }
     setValues(next);
     setSelectedBankId(account.id);
@@ -465,23 +556,36 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   };
 
   /**
-   * Abrir el selector de cuenta desde la fila de destino del paso del monto.
+   * Opens the destination step from the amount screen.
    *
-   * Sin monto no se puede: la ruta se cotiza por monto y los campos del banco
-   * vienen con la ruta. En vez de dejar la fila apagada sin explicación, se dice
-   * en la misma línea que ya usa el error del monto —justo arriba de la fila—.
+   * With an amount it quotes first, so the form is the one for the route that
+   * will actually pay out. WITHOUT an amount it opens anyway: saved accounts do
+   * not need a route — they are rows of our own, already filled in — and the
+   * recurring user picks one and never sees a form. What needs a route is a NEW
+   * account, and that step says so instead of blocking the whole screen.
    */
   const openBank = async () => {
     if (!amountValid) {
-      setError(
-        t(
-          'wallet.fiat.ramp.destination.needAmount',
-          'Enter the amount first: which details your bank needs depends on the payout route.',
-        ),
-      );
+      setPhase('bank');
       return;
     }
     if (await ensureQuote()) setPhase('bank');
+  };
+
+  /**
+   * Leaving the destination step. With a fresh quote for the amount on screen
+   * the next thing is confirming; with no quote — the destination was picked
+   * before the amount — the withdrawal has no route yet, so it goes back to the
+   * amount, which is what is missing, instead of a confirmation with nothing to
+   * show.
+   */
+  const leaveBank = () => {
+    if (quote && quotedFor === amountNum) {
+      setDetailsFrom('bank');
+      setPhase('details');
+      return;
+    }
+    setPhase('amount');
   };
 
   /**
@@ -495,7 +599,12 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     // Contra los campos de la cotización RECIÉN traída, no contra `fields`, que
     // todavía es el del render anterior. Si el proveedor agregó un campo desde
     // la última vez, esto es lo que lo detecta.
-    setPhase(fieldsAreValid(fresh.requiredFields ?? [], values) ? 'details' : 'bank');
+    if (!fieldsAreValid(fresh.requiredFields ?? [], values)) {
+      setPhase('bank');
+      return;
+    }
+    setDetailsFrom('amount');
+    setPhase('details');
   };
 
   // --- Paso 2: ejecutar el retiro -------------------------------------------
@@ -763,7 +872,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         )}
       </PressableButton>
     ) : phase === 'bank' ? (
-      <PressableButton variant="success" size="cta" onClick={() => setPhase('details')} disabled={!fieldsValid || busy}>
+      <PressableButton variant="success" size="cta" onClick={leaveBank} disabled={!fieldsValid || busy}>
         {t('wallet.fiat.ramp.continue', 'Continue')}
       </PressableButton>
     ) : phase === 'details' ? (
@@ -799,7 +908,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       size="md"
       onBack={
         phase === 'details'
-          ? () => setPhase('bank')
+          ? () => setPhase(detailsFrom)
           : phase === 'bank'
             ? () => setPhase('amount')
             : onBack
@@ -834,7 +943,6 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           // cotización y aparecería a mitad de tipear, con las teclas dejando
           // de responder sin decir por qué. `ensureQuote` lo explica.
           disabled={busy}
-          compact
         >
           {/* El destino, acá y no en la confirmación: los datos del banco son lo
               único que hay que tipear en todo el retiro, y pedirlos recién en la
@@ -884,6 +992,24 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             onSelect={applyBankAccount}
             onDelete={handleDeleteBank}
           />
+
+          {/* No schema: either the probe is in flight, or this corridor has none
+              and the form arrives with the amount's quote. The saved accounts
+              above stay usable in both cases. */}
+          {fields.length === 0 &&
+            (probing ? (
+              <p className="flex items-center gap-2 text-xs text-gray-500">
+                <Spinner size="sm" color="current" />
+                {t('wallet.fiat.ramp.quoting', 'Finding a route…')}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">
+                {t(
+                  'wallet.fiat.ramp.destination.needAmount',
+                  'To use a new account, enter the amount first: which details the bank needs depends on the payout route.',
+                )}
+              </p>
+            ))}
 
           {/* El formulario queda visible aunque se haya elegido una cuenta
               guardada: lo que el proveedor pide pudo cambiar desde que se

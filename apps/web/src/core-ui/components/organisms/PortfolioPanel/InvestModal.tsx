@@ -202,7 +202,6 @@ export function InvestModal({
           setIsMax(false);
         }}
         decimals={AMOUNT_DECIMALS}
-        compact
         controls={amountControls}
         available={available}
         // "Available" = invertir todo lo pasivo: el retiro previo de Blend usa el

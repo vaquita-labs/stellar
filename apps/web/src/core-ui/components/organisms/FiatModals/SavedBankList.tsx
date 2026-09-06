@@ -21,6 +21,23 @@ interface SavedBankListProps {
 }
 
 /**
+ * The keys that can summarize an account when there is no schema to say which
+ * field was which — the destination was picked before the amount, so no quote
+ * has described the form yet. A value that is mostly digits (an account number,
+ * a document) is what identifies an account; a holder's name or a bank never is,
+ * so those only serve when nothing else is left.
+ */
+function hintKeys(values: Record<string, string>): string[] {
+  const filled = Object.keys(values).filter((key) => (values[key] ?? '').trim().length > 0);
+  const identifiers = filled.filter((key) => {
+    const value = values[key].trim();
+    const digits = (value.match(/\d/g) ?? []).length;
+    return digits >= 4 && digits * 2 >= value.length;
+  });
+  return identifiers.length > 0 ? identifiers : filled;
+}
+
+/**
  * Resumen de una cuenta, para poder distinguir dos del mismo banco sin mostrar
  * el número entero.
  *
@@ -30,15 +47,22 @@ interface SavedBankListProps {
  * sólo los últimos cuatro caracteres. Si no hay ninguno, no se muestra nada: es
  * preferible a inventar un identificador.
  *
+ * Sin cotización no hay tipos que mirar y se cae en {@link hintKeys}, que
+ * distingue por la pinta del valor: elegir una cuenta guardada antes del monto
+ * es un camino válido y la fila tiene que resumirse igual.
+ *
  * Toma el diccionario de valores y no la cuenta entera porque la fila de destino
  * del paso del monto tiene que resumir igual una cuenta guardada que uno tipeado
  * a mano, que todavía no es una fila en ningún lado.
  */
 export function accountHint(values: Record<string, string>, fields: RampField[]): string {
-  const candidates = fields.filter((f) => f.type !== 'select' && (values[f.key] ?? '').trim().length > 0);
-  const last = candidates[candidates.length - 1];
+  const keys =
+    fields.length > 0
+      ? fields.filter((f) => f.type !== 'select' && (values[f.key] ?? '').trim().length > 0).map((f) => f.key)
+      : hintKeys(values);
+  const last = keys[keys.length - 1];
   if (!last) return '';
-  const value = values[last.key].trim();
+  const value = values[last].trim();
   return value.length <= 4 ? value : `••••${value.slice(-4)}`;
 }
 

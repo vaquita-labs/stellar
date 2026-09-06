@@ -37,8 +37,6 @@ interface AmountStepProps {
   /** '$' para dólares, 'Bs' para bolivianos, '' para el número pelado. */
   symbol?: string;
   symbolPosition?: 'prefix' | 'suffix';
-  size?: 'md' | 'lg';
-  compact?: boolean;
   disabled?: boolean;
   /** Tope duro del teclado: las teclas que lo superarían no responden. */
   max?: number;
@@ -95,8 +93,6 @@ export function AmountStep({
   decimals,
   symbol = '$',
   symbolPosition = 'prefix',
-  size = 'md',
-  compact = false,
   disabled = false,
   max,
   error,
@@ -136,7 +132,6 @@ export function AmountStep({
           symbolPosition={symbolPosition}
           muted={value === '' || !!error}
           controls={controls}
-          size={size}
         />
 
         {available != null && (
@@ -186,14 +181,7 @@ export function AmountStep({
 
       {children}
 
-      <AmountKeypad
-        value={value}
-        onValueChange={change}
-        maxDecimals={decimals}
-        max={max}
-        disabled={disabled}
-        compact={compact}
-      />
+      <AmountKeypad value={value} onValueChange={change} maxDecimals={decimals} max={max} disabled={disabled} />
     </div>
   );
 }

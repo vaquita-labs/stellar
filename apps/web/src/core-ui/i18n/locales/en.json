@@ -87,9 +87,6 @@
         "title": "Vaquita Whale"
       }
     },
-    "minted": {
-      "title": "Badge minted on-chain!"
-    },
     "minting": {
       "waitingForWallet": "Preparing your reward…"
     },
@@ -112,8 +109,7 @@
       "coinsPending_other": "+{{count}} coins",
       "goldCoins": "{{count}} gold coins",
       "goldCoins_one": "{{count}} gold coin",
-      "goldCoins_other": "{{count}} gold coins",
-      "shareAchievement": "Share achievement"
+      "goldCoins_other": "{{count}} gold coins"
     },
     "page": {
       "awards": "Awards",
@@ -131,16 +127,11 @@
     "share": {
       "button": "Share",
       "copyLink": "Copy link",
-      "cta": "Earn your own on Vaquita",
       "downloadImage": "Download image",
       "earnedBy": "earned by @{{username}}",
       "imageNotReady": "Image not ready yet, try again",
       "menuTitle": "Share badge",
       "shareImage": "Share image…",
-      "fallbackTitle": "Achievement · Vaquita",
-      "metaDescription": "Someone just unlocked \"{{title}}\" on Vaquita. {{description}}",
-      "metaDescriptionUser": "@{{username}} just unlocked \"{{title}}\" on Vaquita. {{description}}",
-      "metaTitle": "{{title}} · Vaquita",
       "text": "I just unlocked \"{{title}}\" on Vaquita 🐮",
       "unlocked": "Achievement unlocked"
     },
@@ -412,9 +403,7 @@
     "close": "Close",
     "confirm": "Confirm",
     "continue": "Continue",
-    "delete": "Delete",
     "done": "Done",
-    "edit": "Edit",
     "loading": "Loading…",
     "next": "Next",
     "off": "Off",
@@ -423,7 +412,6 @@
     "save": "Save",
     "saving": "Saving…",
     "selectOption": "Select an option…",
-    "somethingWentWrong": "Something went wrong",
     "soon": "Soon",
     "time": {
       "day_one": "1 day",
@@ -445,11 +433,9 @@
       },
       "cta": "Deposit to your savings",
       "destination": "Blend",
-      "mainnetOnly": "Direct deposits are only available on Stellar mainnet.",
       "notTracked": "Your USDC starts earning yield right away, with no lock period withdraw whenever you want.",
       "processing": "Processing deposit...",
       "processingStep": "Depositing to your savings",
-      "unavailable": "Direct deposits are not available on this network yet.",
       "whatIsTitle": "What is Blend?",
       "whatIs": "Blend is an audited lending protocol on Stellar. Your USDC is supplied to its pool to earn yield, and you can withdraw anytime.",
       "success": {
@@ -458,19 +444,9 @@
       }
     },
     "bank": {
-      "details": "Details",
-      "estimatedEarningsTotal": "Estimated earnings total",
       "estimatesDisclaimer": "These values are estimates and can change over time. Your final rewards are confirmed when you withdraw.",
-      "hide": "Hide",
-      "howItWorks1": "Your deposit generates yield from multiple sources.",
-      "howItWorks2": "Estimated rewards are calculated using the current APY.",
-      "howItWorks3": "The APY is dynamic and may fluctuate based on user activity and total deposits.",
-      "howItWorks4": "Rewards become claimable only after the saving period ends.",
-      "howItWorks5": "Final rewards are confirmed upon withdrawal.",
-      "howRewardsWork": "How rewards work",
       "marketRewards": "{{market}} rewards",
       "myDeposits": "My deposits",
-      "network": "Network:",
       "protocolRewards": "Protocol rewards",
       "protocolRewardsInfo": "Yield from {{market}} where your funds are deposited.",
       "theLendingProtocol": "the lending protocol",
@@ -486,7 +462,6 @@
       "sendTransaction": "Confirm to send the transaction.",
       "timesUp": "Time's up!",
       "title": "Confirm withdrawal",
-      "youWillEarn": "You will earn",
       "youWillLose": "You will lose",
       "youWillReceive": "You will receive"
     },
@@ -580,7 +555,6 @@
       "onTimeTitle": "Withdrawn on time"
     },
     "method": {
-      "continue": "I already have USDC, continue",
       "country": {
         "comingSoon": "Coming soon",
         "noResults": "No countries found",
@@ -644,66 +618,15 @@
   },
   "home": {
     "catalog": {
-      "always": "Always",
-      "biome": {
-        "any": "any",
-        "desert": "desert",
-        "forest": "forest",
-        "mountain": "mountain",
-        "plains": "plains"
-      },
       "buy": "Buy",
       "clockPreviewHour": "8 pm",
       "goldAlt": "Gold",
       "hudHint": "Buying it unlocks it on your map screen. It is a one-time purchase.",
-      "invalidOfferDesc": "Enter at least 1 gold coin.",
-      "invalidOfferTitle": "Invalid offer",
-      "itemFallback": "Item",
-      "items": {
-        "fountain": {
-          "description": "A stunning fountain to enhance your map",
-          "name": "Decorative Fountain"
-        },
-        "golden-statue": {
-          "description": "A prestigious golden statue for your collection",
-          "name": "Golden Statue"
-        },
-        "streak-freeze": {
-          "description": "Protect your streak for one day if you cannot maintain it",
-          "name": "Streak Freeze"
-        },
-        "tile-pack": {
-          "description": "Pack of 5 exclusive tiles for your map",
-          "name": "Tile Pack"
-        },
-        "tree": {
-          "description": "A beautiful tree to decorate your map. Always available!",
-          "name": "Tree"
-        }
-      },
-      "makeOffer": "Make offer",
-      "notEnoughCoinsDesc": "Your offer exceeds your balance.",
       "notEnoughCoinsTitle": "Not enough coins",
-      "offerSubmittedDesc": "Offered {{gold}} gold for {{name}}",
-      "offerSubmittedTitle": "Offer submitted!",
       "price": "Price",
       "processing": "Processing...",
       "purchaseSuccessDesc": "You've successfully purchased {{name}}",
       "purchaseSuccessTitle": "Purchase successful!",
-      "rarity": {
-        "common": "common",
-        "epic": "epic",
-        "legendary": "legendary",
-        "rare": "rare"
-      },
-      "sending": "Sending...",
-      "submitOffer": "Submit offer",
-      "type": {
-        "decoration": "decoration",
-        "expansion": "expansion",
-        "utility": "utility"
-      },
-      "yourOffer": "Your offer",
       "empty": "The catalog is empty right now.",
       "emptyHint": "Come back soon for new items!",
       "placeableHint": "After buying you can place it anywhere on your map, move it or remove it.",
@@ -821,7 +744,6 @@
       "profileAria": "Profile",
       "streakAlt": "Streak",
       "apyAria": "Portfolio",
-      "boostAria": "Referral boost",
       "greeting": "Hi,",
       "balanceRetry": "Retry loading balance",
       "balanceSyncError": "Couldn't load your Blend balance. Tap to retry."
@@ -845,17 +767,13 @@
   },
   "leaderboard": {
     "card": {
-      "badges": "Badges",
       "coins": "Coins",
-      "commentsComingSoon": "Comments on {{username}}'s world coming soon",
       "dayStreak": "Day streak",
       "experience": "XP",
       "follow": "Follow",
       "followAria": "Follow {{username}}",
-      "following": "Following",
       "levelShort": "Lv {{level}}",
       "like": "Like",
-      "openComments": "Open comments",
       "positionLabel": "Position {{position}}",
       "unfollow": "Unfollow",
       "unfollowAria": "Unfollow {{username}}",
@@ -863,66 +781,18 @@
       "viewWorld": "View {{username}}'s world",
       "you": "You"
     },
-    "direction": {
-      "ascending": "Sort ascending toggle order",
-      "descending": "Sort descending toggle order"
-    },
-    "empty": {
-      "description": "Be the first to climb the ranks start a deposit streak and you'll show up here.",
-      "title": "No vaqueros on the board yet"
-    },
     "error": {
       "title": "Couldn't load the leaderboard"
-    },
-    "filter": {
-      "heading": "Filter by",
-      "label": "Filter by metric"
-    },
-    "loadingLabel": "Loading leaderboard",
-    "loadingMore": "Loading more vaqueros",
-    "noResults": {
-      "description": "Try a different username or clear the search.",
-      "title": "No vaqueros match “{{query}}”"
     },
     "pinned": {
       "goToPosition": "Go to your position"
     },
-    "search": {
-      "clear": "Clear search",
-      "label": "Search vaqueros",
-      "placeholder": "Search vaqueros by username"
-    },
-    "sortOptions": {
-      "badges": {
-        "hint": "Most achievements unlocked",
-        "label": "Badges"
-      },
-      "level": {
-        "hint": "Most XP earned",
-        "label": "Level"
-      },
-      "rank": {
-        "hint": "Default leaderboard order",
-        "label": "Top ranking"
-      },
-      "streak": {
-        "hint": "Most consecutive days",
-        "label": "Streak"
-      }
-    },
     "title": "Leaderboard",
     "user": {
-      "backToLeaderboard": "Back to leaderboard",
       "joined": "Joined {{joinedLabel}}",
       "noAchievements": "No achievements unlocked yet",
       "notFound": "We couldn't find @{{username}}",
       "notFoundHint": "The account may have changed its username or no longer exists."
-    },
-    "vaquero": "Vaquero",
-    "vaqueroNamed": "Vaquero {{tail}}",
-    "anchored": {
-      "title": "Showing your part of the board",
-      "backToTop": "Back to #1"
     },
     "league": {
       "demotionZone": "Demotion zone",
@@ -981,7 +851,6 @@
     }
   },
   "notificationsCenter": {
-    "bellAria": "Notifications",
     "empty": "No notifications here yet",
     "emptyFiltered": "Try changing the filters to see more.",
     "filters": {
@@ -1296,14 +1165,12 @@
     "profile": {
       "achievements": "Achievements",
       "badges": "Badges",
-      "activeDeposits": "Active deposits",
       "addFriends": "Add friends",
       "connectWalletDescription": "Access your profile, metrics, and future achievements by connecting your wallet.",
       "connectWalletTitle": "Connect your wallet",
       "daysCount_one": "{{count}} day",
       "daysCount_other": "{{count}} days",
       "editAvatarAria": "Edit your avatar",
-      "editProfileAria": "Edit profile",
       "experience": "Experience",
       "followListError": "Couldn't load the list. Try again.",
       "followers": "Followers",
@@ -1363,36 +1230,6 @@
       "installIosStep2": "Scroll down and tap \"Add to Home Screen\".",
       "installIosStep3": "Tap \"Add\" to confirm.",
       "riskDisclosure": "Risk disclosure"
-    },
-    "summary": {
-      "depositsChartAria": "Deposits over the last 6 weeks",
-      "depositsOverTime": "Deposits over time",
-      "depositsOverTimeSub": "Weekly contributions",
-      "keptOutOfDays": "{{kept}} / {{total}} days",
-      "last4Weeks": "Last 4 weeks",
-      "last6Weeks": "Last 6 weeks",
-      "levelShort": "Lvl {{level}}",
-      "nextMonth": "Next month",
-      "prevMonth": "Previous month",
-      "streakDaysThisMonth": "Streak days",
-      "streakHistory": "Streak history",
-      "streakHistorySub": "Days you kept the streak",
-      "streakKept": "Streak kept",
-      "streakMissed": "Streak missed",
-      "subtitle": "How your saving habit is shaping up.",
-      "title": "Summary",
-      "todayStreakKept": "Today streak kept",
-      "todayStreakMissed": "Today streak missed",
-      "totalExperience": "Total experience",
-      "xpLevel": "XP & level",
-      "xpLevelSub": "Progress to your next level",
-      "goldCoins": "Gold coins",
-      "goldCoinsSub": "Coins you're earning",
-      "usdcCurrentlySaved": "USDC currently saved",
-      "weekOf": "Week of {{date}}",
-      "depositsCount_one": "{{count}} deposit",
-      "depositsCount_other": "{{count}} deposits",
-      "noDepositsWeek": "No deposits"
     }
   },
   "rewards": {
@@ -1420,8 +1257,6 @@
       "coinAlt": "Coin"
     },
     "coins": {
-      "balanceLabel_one": "{{count}} coin",
-      "balanceLabel_other": "{{count}} coins",
       "coinAlt": "coins",
       "description": "Coins are your in-game currency. Earn them by saving and collecting your daily reward, then spend them in the shop to decorate your map.",
       "earn": {
@@ -1440,26 +1275,19 @@
       "sec": "Sec"
     },
     "daily": {
-      "activeStreak_one": "Active streak: {{count}} day",
-      "activeStreak_other": "Active streak: {{count}} days",
       "chestClosedAlt": "Closed chest",
       "chestOpenAlt": "Open chest",
       "coinsAlt": "coins",
-      "collectButton": "Claim",
       "confirmTitle": "Your vaquita saved this for you today.",
       "doneButton": "Done",
-      "greatButton": "Awesome!",
       "holdToOpen": "Hold to open",
       "nextButton": "Next",
       "opening": "Opening…",
-      "rewardAlt": "reward",
       "rewardTitle": "You earned coins!",
       "streakAlt": "streak",
       "streakSubtitle": "Come back tomorrow to keep it going.",
       "streakTitle_one": "You now have a {{count}}-day streak!",
       "streakTitle_other": "You now have a {{count}}-day streak!",
-      "success_one": "You earned {{count}} coin!",
-      "success_other": "You earned {{count}} coins!",
       "title": "Daily Reward",
       "xpAlt": "experience",
       "xpTitle": "You earned experience!"
@@ -1492,23 +1320,7 @@
       "title": "Your vaquita's status"
     },
     "streak": {
-      "available": "Available: {{remaining}}/{{total}}",
-      "cost": "Cost:",
-      "current_one": "Current Streak: {{count}} day",
-      "current_other": "Current Streak: {{count}} days",
-      "dayStreakLabel_one": "{{count}} day streak",
-      "dayStreakLabel_other": "{{count}} day streak",
       "description": "Your streak represents consecutive days of activity. Keep it going to unlock rewards and special tiles for your map!",
-      "freezeAlt": "freeze",
-      "freezeHint": "Streak Freeze allows you to protect your streak for one day if you're unable to maintain it. Use it wisely to prevent losing your progress!",
-      "freezeTitle": "Streak Freeze",
-      "repairButton": "Repair streak",
-      "repairDays_one": "{{count}} day",
-      "repairDays_other": "{{count}} days",
-      "repairHint": "This feature helps you recover from a broken streak, but remember: maintaining your streak daily is the best way to maximize your rewards!",
-      "repairIntro": "If you've lost your streak, you can restore it back to",
-      "repairOutro": "using Streak Repair.",
-      "repairTitle": "Streak Repair",
       "streakAlt": "streak",
       "title": "Streak",
       "weekdays": {
@@ -1520,7 +1332,6 @@
         "Tu": "Tu",
         "We": "We"
       },
-      "weeklyHint": "Get a new tile every time you increase your streak! The colored icons show days you've completed, while gray icons indicate missed days.",
       "weeklyProgress": "Weekly Progress",
       "unitLabel": "Day streak"
     }
@@ -1719,17 +1530,14 @@
     },
     "friends": {
       "chooseFromContacts": "Choose from contacts",
-      "couldNotShare": "Could not share",
       "dismissSuggestion": "Dismiss suggestion",
       "emptyBody": "Check back soon for new vaqueros to follow.",
       "emptyTitle": "No suggestions right now",
       "follow": "Follow",
       "followedBy": "Followed by",
       "following": "Following",
-      "linkCopied": "Follow link copied to clipboard",
       "searchByName": "Search by username",
       "shareFollowLink": "Share follow link",
-      "shareText": "Follow me on Vaquita 🐮",
       "suggestedForYou": "Suggested for you",
       "suggestionsTitle": "Friend suggestions",
       "title": "Find your friends"
@@ -1827,8 +1635,6 @@
       "couldNotCopy": "Could not copy link",
       "couldNotFollow": "Could not follow that vaquero. Try again.",
       "couldNotShare": "Could not share",
-      "dialogLabelMine": "Share your profile QR",
-      "dialogLabelScan": "Scan a profile QR",
       "followingHandle": "Following {{handle}}",
       "invalidQr": "That QR isn't a Vaquita profile.",
       "linkCopied": "Profile link copied",
@@ -1866,11 +1672,6 @@
       "welcomeSubtitle": "Discover how to grow your savings in a smart and fun way",
       "welcomeTitle": "Welcome to Vaquita!"
     },
-    "patience": {
-      "body": "Withdraw too early and you lose the interest. Wait for the timer.",
-      "cta": "Got it",
-      "title": "Patience pays off"
-    },
     "receipt": {
       "deposit": "Deposit",
       "interestEarned": "Interest earned",
@@ -1889,11 +1690,6 @@
         "cta": "Open savings",
         "title": "Find your savings"
       },
-      "ready": {
-        "body": "Open your savings again and withdraw with interest.",
-        "cta": "Withdraw now",
-        "title": "Time's up! 🎉"
-      },
       "success": {
         "body": "You got your deposit back plus interest.",
         "cta": "Enter app",
@@ -1904,19 +1700,11 @@
         "cta": "Wait {{seconds}}s",
         "title": "But if you wait…"
       },
-      "waiting": {
-        "body": "Watch your vaquita while it saves.",
-        "title": "Saving…"
-      },
       "welcome": {
         "body": "You grow it by saving. Quick demo, no real money.",
         "cta": "Let's go",
         "title": "Meet your vaquita 🐮"
       }
-    },
-    "timer": {
-      "ready": "Ready! 🎉",
-      "unlocks": "Unlocks"
     },
     "warn": {
       "keepLose": "Keep {{amount}}, lose {{interest}} interest."
@@ -1983,17 +1771,9 @@
       "history": {
         "connect": "Connect your wallet first.",
         "deposit": "Deposit",
-        "details": "Details",
         "empty": "No history loaded yet. Tap Refresh.",
         "none": "No transactions yet.",
-        "phase": {
-          "completed": "Completed",
-          "processing": "Anchor processing",
-          "started": "Started",
-          "userTransfer": "User transfer"
-        },
         "refresh": "Refresh",
-        "refreshing": "Refreshing…",
         "resumeHint": "Tap a transaction to continue where you left off.",
         "title": "Transaction history",
         "withdraw": "Withdraw"
@@ -2084,7 +1864,7 @@
         "cta": "Withdraw",
         "destination": {
           "change": "Change",
-          "needAmount": "Enter the amount first: which details your bank needs depends on the payout route.",
+          "needAmount": "To use a new account, enter the amount first: which details the bank needs depends on the payout route.",
           "newAccount": "New account",
           "pickTitle": "Where do you want to receive the money?",
           "select": "Select bank account",
@@ -2143,18 +1923,13 @@
         "youSend": "Leaves your savings"
       },
       "receive": {
-        "authOk": "Authenticated with Anclap (JWT obtained).",
         "cta": "Continue",
         "depositHelper": "Only have Argentine pesos? Deposit with ARS",
         "depositStarted": "Deposit started. Continue on Anclap.",
         "description": "Buy ARS with Anclap and receive it in your wallet, then we convert it to USDC automatically.",
-        "jwtPreview": "JWT:",
         "openAnclap": "Open Anclap",
         "processing": "Processing…",
         "reconnect": "Reconnect wallet",
-        "stepCredit": "Wait for ARS credit",
-        "stepDeposit": "SEP-24 · Start deposit",
-        "stepSwap": "Convert ARS → USDC",
         "swapDone": "Converted to USDC. Done!",
         "title": "Argentina (ARS)",
         "usdcReceived": "≈ {{amount}} USDC received",
@@ -2165,22 +1940,11 @@
       },
       "send": {
         "arsReceived": "≈ {{amount}} ARS swapped",
-        "authOk": "Authenticated with Anclap (JWT obtained).",
         "cta": "Send",
         "insufficient": "Insufficient USDC balance.",
-        "jwtPreview": "JWT:",
         "openAnclap": "Open Anclap",
         "processing": "Processing…",
         "reconnect": "Reconnect wallet",
-        "stepChallenge": "SEP-10 · Request challenge",
-        "stepSign": "SEP-10 · Sign (wallet)",
-        "stepSwap": "Swap USDC → ARS",
-        "stepToken": "SEP-10 · Get Anclap JWT",
-        "stepSettled": "Wait for Anclap confirmation",
-        "stepTransfer": "Send ARS to Anclap",
-        "stepBlend": "Withdraw from Blend",
-        "stepTrustline": "Activate ARS trustline",
-        "stepWithdraw": "SEP-24 · Start withdrawal",
         "settled": "Withdrawal completed on Anclap.",
         "title": "Send fiat (ARS)",
         "waitingHint": "Complete the withdrawal on Anclap. We are waiting for the confirmation…",
@@ -2194,20 +1958,15 @@
       "address": "Address",
       "addressCopied": "Address copied",
       "balance": "Balance",
-      "buyArs": "Buy ARS",
       "copied": "Copied",
       "copy": "Copy",
-      "copyAddress": "Copy address",
       "copyError": "Could not copy",
       "getAssets": "Get assets",
       "network": "Network",
       "receive": "Receive",
-      "receiveFiat": "Receive fiat",
       "selfCustodyDescription": "Vaquita never holds your keys. On-chain transfers will be enabled in an upcoming release.",
       "selfCustodyTitle": "Self-custody wallet",
-      "sellArs": "Sell to ARS",
       "send": "Send",
-      "sendFiat": "Send fiat",
       "title": "Wallet",
       "transferAssets": "Transfer assets"
     },
@@ -2336,7 +2095,6 @@
       }
     },
     "methodLabel": "Method",
-    "methodWallet": "Wallet",
     "minWithdraw": "Minimum withdrawal: {{amount}} USDC.",
     "noUsernames": "You have no saved users yet",
     "noWallets": "You have no saved wallets yet",
@@ -2462,16 +2220,13 @@
   "portfolio": {
     "title": "Portfolio",
     "total": "Total",
-    "totalBalance": "Your money",
     "earning": "Estimated earnings",
     "invest": "Invest",
     "savings": "Savings",
-    "allocation": "Allocation",
     "distributed": "Spread across {{funded}} of {{total}} options",
     "ofTotal": "{{pct}}% of your total",
     "noFunds": "No funds",
     "sum": "Total",
-    "manage": "Manage allocations",
     "empty": "No saving terms available yet.",
     "poolRewards": "{{amount}} reward pool",
     "inThePool": "{{value}} in the pool",
@@ -2495,28 +2250,9 @@
       "tokenNote": "Balances are shown in {{token}}.",
       "marketApy": "{{market}} APY"
     },
-    "move": {
-      "title": "Move funds",
-      "confirmTitle": "Confirm move",
-      "from": "From",
-      "to": "To",
-      "swapAria": "Swap direction",
-      "yourApy": "Your APY",
-      "amount": "Amount",
-      "movePair": "Move",
-      "apyChange": "APY change",
-      "processing": "Moving funds...",
-      "success": {
-        "title": "Funds moved!",
-        "subtitle": "${{amount}} moved from {{from}} to {{to}}."
-      }
-    },
-    "moreInfo": "More info",
     "withdraw": {
       "step1": "Getting your money out",
       "step2": "Moving it back to your savings",
-      "empty": "No positions to withdraw in this term.",
-      "note": "Your funds (plus interest) go back to your savings, where they stay flexible and keep earning.",
       "successTitle": "Back in your savings!",
       "successSubtitle": "Your funds are flexible again and keep earning in your savings.",
       "cta": "Withdraw to your savings",

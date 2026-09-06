@@ -28,11 +28,12 @@ test.describe('withdraw', () => {
     await page.getByRole('button', { name: 'Withdraw' }).click();
     await expect(page.getByRole('heading', { name: 'Select method' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Withdraw to your bank account/ })).toBeVisible();
-    // Mandarle a un `@usuario` es un método aparte, y sólo existe con login
-    // social: con wallet externa el pool le paga al firmante, así que ofrecer
-    // elegir a otro prometería algo que el retiro no hace. Estas specs corren
-    // con clave local —wallet externa—, así que acá el método NO tiene que estar.
-    await expect(page.getByRole('button', { name: /Send to a Vaquita user/ })).toHaveCount(0);
+    // El pool siempre le paga al firmante, así que lo que decide la forma del
+    // retiro es a dónde va la plata y no con qué wallet entró: mandarle a un
+    // `@usuario` son dos saltos y una wallet externa firma cada uno en su
+    // extensión. Estas specs corren con clave local —wallet externa— y el
+    // método igual tiene que estar.
+    await expect(page.getByRole('button', { name: /Send to a Vaquita user/ })).toBeVisible();
     await page.getByRole('button', { name: /Withdraw to a crypto wallet/ }).click();
 
     await expect(dialog(page).getByRole('heading', { name: 'Withdraw' })).toBeVisible();
@@ -44,7 +45,7 @@ test.describe('withdraw', () => {
       `savings position holds ${inSavings} USDC (< ${WITHDRAW_USDC}); the deposit spec must land first`,
     );
     await expect(page.getByText(`Minimum withdrawal: ${MIN_WITHDRAW_LABEL} USDC.`)).toBeVisible();
-    // An external wallet always withdraws to itself.
+    // Elegido el método "crypto wallet", el destino es la wallet propia.
     await expect(page.getByText('Your wallet')).toBeVisible();
 
     const review = dialog(page).getByRole('button', { name: 'Review' });

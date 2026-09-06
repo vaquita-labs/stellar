@@ -226,14 +226,10 @@ export function DepositMethodModal({
 
   // --- Paso: monto -----------------------------------------------------------
   const amountStep = (
-    // `compact` a propósito: con el teclado + el CTA + el aviso de red, cualquier
-    // aire de más obliga a scrollear el sheet en pantallas chicas y se corta el
-    // monto, que es justo lo que el usuario mira.
     <AmountStep
       value={amount}
       onValueChange={setAmount}
       decimals={AMOUNT_DECIMALS}
-      compact
       controls={amountControls}
       available={available}
       availableLoading={balanceIsLoading}

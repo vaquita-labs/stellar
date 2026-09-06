@@ -11,6 +11,12 @@ import { SavedWallet } from '../../../hooks/useSavedWallets';
 
 interface WalletRowProps {
   wallet: SavedWallet;
+  /**
+   * Nombre a mostrar. Para un destino que es usuario de Vaquita es su nickname
+   * de AHORA, resuelto desde la dirección, que puede no ser el que el usuario
+   * tipeó al guardarlo. Sin esto cae al label guardado.
+   */
+  displayLabel?: string;
   selected: boolean;
   deleting: boolean;
   onSelect: () => void;
@@ -26,8 +32,9 @@ const SWIPE_THRESHOLD = 72;
  * fila, sin abrir otro modal. El color de seleccionado es un celeste marcado
  * para que se distinga a simple vista.
  */
-export function WalletRow({ wallet, selected, deleting, onSelect, onDelete }: WalletRowProps) {
+export function WalletRow({ wallet, displayLabel, selected, deleting, onSelect, onDelete }: WalletRowProps) {
   const { t } = useTranslation();
+  const shownLabel = displayLabel ?? wallet.label;
   const [confirming, setConfirming] = useState(false);
   const controls = useAnimationControls();
 
@@ -40,7 +47,7 @@ export function WalletRow({ wallet, selected, deleting, onSelect, onDelete }: Wa
     return (
       <div className="w-full flex items-center gap-2 rounded-lg border border-error border-b-2 bg-[#FDECEE] px-4 py-3">
         <span className="flex-1 min-w-0 text-sm font-semibold text-black">
-          {t('withdraw.deleteWallet.confirm', 'Delete “{{label}}”?', { label: wallet.label })}
+          {t('withdraw.deleteWallet.confirm', 'Delete “{{label}}”?', { label: shownLabel })}
         </span>
         <button
           type="button"
@@ -88,7 +95,7 @@ export function WalletRow({ wallet, selected, deleting, onSelect, onDelete }: Wa
       >
         <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
-          <span className="block text-sm font-bold text-black truncate">{wallet.label}</span>
+          <span className="block text-sm font-bold text-black truncate">{shownLabel}</span>
           <span className="block text-xs text-gray-500">{truncateMiddle(wallet.address, 6, 5)}</span>
           {wallet.memo ? (
             <span className="block text-xs text-gray-400 truncate">
