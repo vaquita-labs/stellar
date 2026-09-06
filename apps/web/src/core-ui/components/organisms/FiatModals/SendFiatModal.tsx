@@ -24,6 +24,11 @@ import { PressableButton } from '../../molecules/PressableButton';
 interface SendFiatModalProps {
   open: boolean;
   onOpenChange: () => void;
+  /**
+   * Si se define, muestra la flecha "atrás" en el header. Lo usa el flujo de
+   * retiro para volver al selector de país.
+   */
+  onBack?: () => void;
 }
 
 type StepKey = 'blend' | 'trustline' | 'swap' | 'challenge' | 'sign' | 'token' | 'withdraw' | 'transfer' | 'settled';
@@ -55,7 +60,7 @@ const INITIAL_STEPS: Record<StepKey, StepStatus> = {
   settled: 'idle',
 };
 
-export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
+export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps) {
   const { t } = useTranslation();
   const { token } = useConfigStore();
   const { wallet, refreshAssets, refreshWalletBalance, login } = usePollar();
@@ -373,6 +378,7 @@ export function SendFiatModal({ open, onOpenChange }: SendFiatModalProps) {
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
+      onBack={onBack}
       // No se cierra tocando afuera en ningún paso (ver WithdrawModal). Con el
       // retiro en curso además importa el destino: el USDC ya salió de Blend y
       // está en camino al anchor, y perder la pantalla ahí deja al usuario sin

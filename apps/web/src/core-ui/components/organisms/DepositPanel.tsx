@@ -284,7 +284,16 @@ export function DepositPanel() {
           }}
         />
       )}
-      {isSendFiatMounted && <SendFiatModal open={isSendFiatOpen} onOpenChange={() => setIsSendFiatOpen(false)} />}
+      {isSendFiatMounted && (
+        <SendFiatModal
+          open={isSendFiatOpen}
+          onOpenChange={() => setIsSendFiatOpen(false)}
+          onBack={() => {
+            setIsSendFiatOpen(false);
+            setCountryFlow('withdraw');
+          }}
+        />
+      )}
       {isRampMounted && (
         <SendFiatRampModal
           open={isRampOpen}
