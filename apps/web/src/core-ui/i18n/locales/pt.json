@@ -953,8 +953,8 @@
     "primaryAriaLabel": "Principal"
   },
   "concierge": {
-    "title": "Concierge",
-    "buttonAria": "Concierge",
+    "title": "Central de ajuda",
+    "buttonAria": "Central de ajuda",
     "chat": "Fale conosco",
     "email": "Email",
     "feedback": "Enviar feedback",

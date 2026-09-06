@@ -72,7 +72,7 @@ export function ConciergePage() {
   ];
 
   return (
-    <PageLayout title={t('concierge.title', 'Concierge')} backHref="/home" contentGap="gap-4">
+    <PageLayout title={t('concierge.title', 'Help Center')} backHref="/home" contentGap="gap-4">
       <div className="grid grid-cols-2 gap-3">
         {items.map(({ key, icon: Icon, label, href, external, onPress, wide }) =>
           href ? (
