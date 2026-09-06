@@ -179,6 +179,12 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
 
   const [corridor, setCorridor] = useState<Corridor | null>(null);
   const [phase, setPhase] = useState<Phase>('amount');
+  // Which step `details` was reached from, so the back arrow undoes the step the
+  // user actually took. With the destination already loaded the confirmation is
+  // reached straight from the amount, and sending them to a form they never saw
+  // reads as having lost the withdrawal. Changing the destination from the
+  // confirmation is what the "Change" link is for.
+  const [detailsFrom, setDetailsFrom] = useState<Extract<Phase, 'amount' | 'bank'>>('bank');
   const [amountFiat, setAmountFiat] = useState('');
   const [quote, setQuote] = useState<RampQuote | null>(null);
   // Monto con el que se pidió la cotización que está guardada. Cambiar el monto
@@ -573,7 +579,14 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
    * amount, which is what is missing, instead of a confirmation with nothing to
    * show.
    */
-  const leaveBank = () => setPhase(quote && quotedFor === amountNum ? 'details' : 'amount');
+  const leaveBank = () => {
+    if (quote && quotedFor === amountNum) {
+      setDetailsFrom('bank');
+      setPhase('details');
+      return;
+    }
+    setPhase('amount');
+  };
 
   /**
    * El CTA del paso del monto. Si todavía no hay datos del banco lleva a
@@ -586,7 +599,12 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     // Contra los campos de la cotización RECIÉN traída, no contra `fields`, que
     // todavía es el del render anterior. Si el proveedor agregó un campo desde
     // la última vez, esto es lo que lo detecta.
-    setPhase(fieldsAreValid(fresh.requiredFields ?? [], values) ? 'details' : 'bank');
+    if (!fieldsAreValid(fresh.requiredFields ?? [], values)) {
+      setPhase('bank');
+      return;
+    }
+    setDetailsFrom('amount');
+    setPhase('details');
   };
 
   // --- Paso 2: ejecutar el retiro -------------------------------------------
@@ -890,7 +908,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       size="md"
       onBack={
         phase === 'details'
-          ? () => setPhase('bank')
+          ? () => setPhase(detailsFrom)
           : phase === 'bank'
             ? () => setPhase('amount')
             : onBack
