@@ -1682,6 +1682,7 @@
     "sending": "Enviando…",
     "successTitle": "Relato enviado",
     "successBody": "Obrigado — chegou para o time.",
+    "pendingReview": "Chegou para o time. Vai aparecer no board depois da revisão.",
     "errorTitle": "Não foi possível enviar seu relato",
     "errorBody": "Tente novamente em um instante.",
     "bug": {

@@ -1,0 +1,56 @@
+name: Admin CI
+
+# apps/admin had no CI at all: root `pnpm typecheck` skipped it (no typecheck
+# script) and no workflow triggered on its paths, so the first thing that ever
+# compiled it was the Dokploy image build — which is where a client component
+# importing a server-only barrel surfaced, long after merge.
+on:
+  pull_request:
+    paths:
+      - "apps/admin/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - ".github/workflows/admin-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  admin-build:
+    name: Admin Typecheck and Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck admin
+        run: pnpm --filter @vaquita/admin typecheck
+
+      # The real check. `next build` is what resolves the module graph per
+      # environment, so it is the only thing that catches a server-only import
+      # reaching a client component. clientEnv validates at import time, so the
+      # build needs syntactically valid NEXT_PUBLIC_ values — these are
+      # placeholders, never used to reach anything.
+      - name: Build admin
+        env:
+          NEXT_PUBLIC_SERVICES_URL: https://api.example.invalid
+          NEXT_PUBLIC_ADMIN_SECRET: ci-placeholder-secret
+        run: pnpm --filter @vaquita/admin build

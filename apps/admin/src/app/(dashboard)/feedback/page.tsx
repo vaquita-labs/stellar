@@ -1,8 +1,19 @@
 'use client';
 
 import { addDangerToast, addSuccessToast } from '@/core-ui/components';
-import { type FeedbackPostRow, feedbackAttachmentUrl, updateFeedbackStatus, useFeedbackPosts } from '@/core-ui/hooks';
-import { FEEDBACK_STATUSES, type FeedbackKind, type FeedbackStatus } from '@vaquita/shared';
+import {
+  FEEDBACK_MODERATION_STATUSES,
+  FEEDBACK_STATUSES,
+  type FeedbackKind,
+  type FeedbackModerationStatus,
+  type FeedbackPostRow,
+  type FeedbackStatus,
+  deleteFeedbackPost,
+  feedbackAttachmentUrl,
+  updateFeedbackModeration,
+  updateFeedbackStatus,
+  useFeedbackPosts,
+} from '@/core-ui/hooks';
 import { Spinner } from '@heroui/react';
 import { Card, Select } from '@vaquita/ui';
 import { useState } from 'react';
@@ -33,13 +44,72 @@ const STATUS_CHIP: Record<FeedbackStatus, string> = {
   closed: 'bg-default-100 text-default-500',
 };
 
+const MODERATION_LABELS: Record<FeedbackModerationStatus, string> = {
+  pending: 'Needs review',
+  approved: 'Public',
+  flagged: 'Flagged',
+  rejected: 'Rejected',
+};
+
+// The two that need a decision are the two that are loud. 'Public' is the
+// resting state and 'Rejected' is already dealt with.
+const MODERATION_CHIP: Record<FeedbackModerationStatus, string> = {
+  pending: 'bg-warning-100 text-warning-700',
+  approved: 'bg-success-100 text-success-700',
+  flagged: 'bg-danger-100 text-danger-700',
+  rejected: 'bg-default-100 text-default-500',
+};
+
+const MODERATION_FILTERS: { key: string; label: string; value?: FeedbackModerationStatus | 'review' }[] = [
+  { key: 'review', label: 'Needs review', value: 'review' },
+  { key: 'all', label: 'All' },
+  ...FEEDBACK_MODERATION_STATUSES.map((s) => ({ key: s, label: MODERATION_LABELS[s], value: s })),
+];
+
 const formatDate = (iso: string) => new Date(iso).toLocaleString();
+
+/** Category names as the model writes them: 'sexual/minors' → 'sexual minors'. */
+const prettyCategory = (name: string) => name.replace(/[/_-]/g, ' ');
+
+/**
+ * Why a report is held, in one line — the categories the model objected to, or
+ * the reason there was no verdict at all. Without this the reviewer is looking
+ * at a chip and guessing.
+ */
+function ModerationReason({ post }: { post: FeedbackPostRow }) {
+  const result = post.moderationResult;
+  const categories = Object.entries(result?.categories ?? {})
+    .filter(([, on]) => on)
+    .map(([name]) => name);
+
+  if (categories.length > 0) {
+    return (
+      <p className="text-xs text-danger-600">
+        Flagged for {categories.map(prettyCategory).join(', ')}.
+      </p>
+    );
+  }
+
+  if (post.moderationStatus === 'pending') {
+    return (
+      <p className="text-xs text-warning-700">
+        Not checked{result?.error ? `: ${result.error}` : ''} — held until someone reviews it.
+      </p>
+    );
+  }
+
+  return null;
+}
 
 export default function Page() {
   const [kindTab, setKindTab] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | ''>('');
+  // Opens on the queue, not on everything: the reports waiting on a human are
+  // the only ones with a deadline attached.
+  const [moderationTab, setModerationTab] = useState<string>('review');
 
   const kind = KIND_TABS.find((t) => t.key === kindTab)?.kind;
+  const moderationStatus = MODERATION_FILTERS.find((f) => f.key === moderationTab)?.value;
   const {
     data: posts,
     refetch,
@@ -47,6 +117,7 @@ export default function Page() {
   } = useFeedbackPosts({
     ...(kind ? { kind } : {}),
     ...(statusFilter ? { status: statusFilter } : {}),
+    ...(moderationStatus ? { moderationStatus } : {}),
   });
 
   // Which row is mid-write. Per-row rather than a single flag so changing one
@@ -67,6 +138,41 @@ export default function Page() {
     }
   };
 
+  const decide = async (post: FeedbackPostRow, decision: 'approved' | 'rejected') => {
+    setSavingId(post.id);
+    try {
+      await updateFeedbackModeration(post.id, decision);
+      addSuccessToast(
+        decision === 'approved' ? 'Published' : 'Taken down',
+        decision === 'approved' ? 'It is on the board now.' : 'It is off the board. The row is kept.'
+      );
+      await refetch();
+    } catch (err) {
+      addDangerToast('Error', (err as Error)?.message ?? 'Update failed');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const remove = async (post: FeedbackPostRow) => {
+    // A confirm because this one does not come back: the row, its screenshots
+    // and its votes all go. Rejecting is the reversible option and is one
+    // button to the left.
+    if (!window.confirm(`Delete “${post.title}” for good? The report, its images and its votes are removed.`)) {
+      return;
+    }
+    setSavingId(post.id);
+    try {
+      await deleteFeedbackPost(post.id);
+      addSuccessToast('Deleted', 'The report and everything attached to it are gone.');
+      await refetch();
+    } catch (err) {
+      addDangerToast('Error', (err as Error)?.message ?? 'Delete failed');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
       <div>
@@ -74,6 +180,24 @@ export default function Page() {
         <p className="text-sm text-default-500">
           Bug reports and feedback sent from the app’s Concierge screen, newest first.
         </p>
+      </div>
+
+      {/* The moderation queue is its own row above the triage filters: deciding
+          what is public and deciding what gets fixed are different jobs, and
+          mixing their controls invites doing one while meaning the other. */}
+      <div className="flex flex-wrap gap-1.5">
+        {MODERATION_FILTERS.map((filter) => (
+          <button
+            key={filter.key}
+            type="button"
+            onClick={() => setModerationTab(filter.key)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+              moderationTab === filter.key ? 'bg-primary/15 text-primary' : 'bg-default-100 text-default-500'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -127,6 +251,11 @@ export default function Page() {
                       <span className={`rounded px-1.5 text-xs font-semibold ${STATUS_CHIP[post.status]}`}>
                         {STATUS_LABELS[post.status]}
                       </span>
+                      <span
+                        className={`rounded px-1.5 text-xs font-semibold ${MODERATION_CHIP[post.moderationStatus]}`}
+                      >
+                        {MODERATION_LABELS[post.moderationStatus]}
+                      </span>
                       {/* How many other users seconded this one on the public
                           board — the whole reason the board exists is that this
                           number is what says "fix this first". */}
@@ -162,13 +291,15 @@ export default function Page() {
                   <p className="text-sm italic text-default-400">No details given.</p>
                 )}
 
+                <ModerationReason post={post} />
+
                 {post.attachmentIds.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {post.attachmentIds.map((id) => (
                       // Opens full size in a tab: a 96px thumbnail is enough to
                       // see there is a screenshot, never enough to read it.
                       <a key={id} href={feedbackAttachmentUrl(id)} target="_blank" rel="noopener noreferrer">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- served by apps/api, not the Next optimizer */}
+                        {/* eslint-disable-next-line @next/next/no-img-element -- raw bytes from our own route, not the Next optimizer */}
                         <img
                           src={feedbackAttachmentUrl(id)}
                           alt=""
@@ -189,6 +320,36 @@ export default function Page() {
                   </span>
                   <span className="font-mono break-all">{post.walletAddress}</span>
                   {post.userAgent && <span className="break-all">{post.userAgent}</span>}
+                </div>
+
+                {/* Approve and Reject are the two halves of the review, so they
+                    sit together. Delete is pushed to the far end: it is not a
+                    stronger Reject, it is the one action with nothing after it. */}
+                <div className="flex flex-wrap items-center gap-2 border-t border-default-100 pt-3">
+                  <button
+                    type="button"
+                    disabled={savingId === post.id || post.moderationStatus === 'approved'}
+                    onClick={() => decide(post, 'approved')}
+                    className="rounded-medium bg-success-100 px-3 py-1 text-sm font-semibold text-success-700 transition hover:bg-success-200 disabled:opacity-40"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingId === post.id || post.moderationStatus === 'rejected'}
+                    onClick={() => decide(post, 'rejected')}
+                    className="rounded-medium bg-warning-100 px-3 py-1 text-sm font-semibold text-warning-700 transition hover:bg-warning-200 disabled:opacity-40"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingId === post.id}
+                    onClick={() => remove(post)}
+                    className="ml-auto rounded-medium px-3 py-1 text-sm font-semibold text-danger transition hover:bg-danger-50 disabled:opacity-40"
+                  >
+                    Delete
+                  </button>
                 </div>
               </Card>
             </li>

@@ -6,7 +6,7 @@ import {
   isCampaignCodeTaken,
   listCampaigns,
   updateCampaign,
-} from '@vaquita/shared';
+} from '@vaquita/shared/services/campaign/index';
 import type { Campaign } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';

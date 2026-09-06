@@ -22,4 +22,15 @@ BEGIN
       ADD CONSTRAINT "feedback_posts_status_check"
       CHECK (status = ANY (ARRAY['open', 'planned', 'in_progress', 'done', 'closed']));
   END IF;
+
+  -- The moderation verdict, separate from the triage lifecycle above. Only
+  -- 'approved' is public, so a value outside this set would silently hide a
+  -- report from everyone instead of erroring.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'feedback_posts_moderation_status_check'
+  ) THEN
+    ALTER TABLE "feedback_posts"
+      ADD CONSTRAINT "feedback_posts_moderation_status_check"
+      CHECK (moderation_status = ANY (ARRAY['pending', 'approved', 'flagged', 'rejected']));
+  END IF;
 END $$;

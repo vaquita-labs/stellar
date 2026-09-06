@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { apiServicesEnv } from '@vaquita/shared/config/apiServicesEnv';
 import {
   ATTACHMENTS_MAX,
   countRecentFeedbackPosts,
@@ -7,17 +8,20 @@ import {
   DETAILS_MAX,
   FEEDBACK_HOURLY_LIMIT,
   type FeedbackAttachmentInput,
+  type FeedbackModerationStatus,
   getFeedbackAttachment,
   getProfile,
   isFeedbackKind,
   isFeedbackSort,
   listFeedbackBoard,
+  moderateContent,
   sendError,
   sendSuccess,
   TITLE_MAX,
   toFeedbackPostResponseDTO,
   toggleFeedbackVote,
 } from '@vaquita/shared';
+import { sanitizeImage, toModerationDataUrl } from '../../lib/imageSanitize';
 import { getSessionWallet, requireSessionWallet } from '../../lib/walletAuth';
 
 /**
@@ -63,6 +67,12 @@ function cleanAppPath(value: unknown): string | null {
  * `attachments` is an array of base64 (or data-URL) images. The client already
  * downscales them; everything here re-checks anyway, because "the client
  * shrinks it first" is a performance argument, never a validation one.
+ *
+ * Every report is moderated before it is stored, and stored with the verdict.
+ * The check is synchronous inside the request because it is one round trip on a
+ * form the user is already waiting on, the endpoint is free, and a queue would
+ * need a job runner this repo does not have. It fails closed: no verdict means
+ * the report is held for an admin, never published on the assumption it is fine.
  */
 router.post('/', requireSessionWallet, async (req, res) => {
   const body = (req.body ?? {}) as {
@@ -94,13 +104,19 @@ router.post('/', requireSessionWallet, async (req, res) => {
     return sendError(res, `At most ${ATTACHMENTS_MAX} images can be attached.`, null, 400);
   }
 
+  // Decode, then re-encode. `decodeAttachment` bounds the size and sniffs the
+  // magic bytes; `sanitizeImage` is what actually normalises the file — it is
+  // the sanitised WebP that gets stored, never the bytes the client sent.
   const attachments: FeedbackAttachmentInput[] = [];
   for (const [index, raw] of list.entries()) {
     const decoded = decodeAttachment(raw);
     // Say which one failed: with three files in the form, "an attachment is too
     // large" is not something a user can act on.
     if (!decoded.ok) return sendError(res, `Image ${index + 1}: ${decoded.reason}`, null, 400);
-    attachments.push(decoded.value);
+
+    const sanitized = await sanitizeImage(decoded.value.data);
+    if (!sanitized.ok) return sendError(res, `Image ${index + 1}: ${sanitized.reason}`, null, 400);
+    attachments.push(sanitized.value);
   }
 
   const wallet = getSessionWallet(res);
@@ -125,6 +141,30 @@ router.post('/', requireSessionWallet, async (req, res) => {
     const acceptLanguage = (String(req.headers['accept-language'] ?? '').split(',')[0] ?? '').trim();
     const language = (profileData?.language ?? '').trim() || acceptLanguage;
 
+    // A small JPEG copy per image, not the stored WebP: it keeps the request
+    // well inside the endpoint's per-image limit, and an image we could not
+    // re-encode is simply left out — the text is still checked, and the missing
+    // picture is what the admin is looking at anyway.
+    const previews = (await Promise.all(attachments.map((a) => toModerationDataUrl(a.data)))).filter(
+      (url): url is string => url !== null,
+    );
+
+    const verdict = await moderateContent({
+      apiKey: apiServicesEnv.OPENAI_API_KEY ?? '',
+      text: `${title}\n\n${details}`,
+      images: previews,
+    });
+
+    // The fail-closed mapping. `ok: false` covers a missing key, a 429, a
+    // timeout and a malformed body, and all of them mean the same thing here:
+    // nobody has looked at this yet.
+    const moderationStatus: FeedbackModerationStatus = !verdict.ok
+      ? 'pending'
+      : verdict.flagged
+        ? 'flagged'
+        : 'approved';
+    const moderationResult = verdict.ok ? verdict.result : { error: verdict.reason };
+
     const row = await createFeedbackPost({
       profileId,
       walletAddress: wallet,
@@ -135,13 +175,23 @@ router.post('/', requireSessionWallet, async (req, res) => {
       userAgent: String(req.headers['user-agent'] ?? '').slice(0, USER_AGENT_MAX) || null,
       appPath: cleanAppPath(body.appPath),
       attachments,
+      moderationStatus,
+      moderationResult,
     });
 
     // Deliberately not logging `title`/`details`: they are the user's own words,
     // and reports about a payment or an account belong in the table the admin
     // reads, not in logs that travel further.
     req.log.info(
-      { profileId, feedbackPostId: row.id, kind: row.kind, attachments: attachments.length },
+      {
+        profileId,
+        feedbackPostId: row.id,
+        kind: row.kind,
+        attachments: attachments.length,
+        moderationStatus,
+        // Why there was no verdict, when there wasn't one. Not the content.
+        ...(verdict.ok ? {} : { moderationError: verdict.reason }),
+      },
       'Feedback post stored',
     );
     return sendSuccess(res, toFeedbackPostResponseDTO(row));
@@ -215,7 +265,10 @@ router.post('/:id/vote', requireSessionWallet, async (req, res) => {
  * back to a wallet — so an unguessed URL leaks nothing and a guessed one is a
  * screenshot already visible to every logged-in user on the board.
  *
- * Bytes never change once written, so the response is immutable-cacheable.
+ * That last sentence is only true because `getFeedbackAttachment` joins the
+ * post and serves nothing but an approved one. An id whose report is held or
+ * rejected is a 404 here, and the admin screen reads those through its own
+ * passcode-gated route.
  */
 router.get('/attachments/:id', async (req, res) => {
   const id = String(req.params.id ?? '');
@@ -227,7 +280,12 @@ router.get('/attachments/:id', async (req, res) => {
 
     res.setHeader('Content-Type', file.contentType);
     res.setHeader('Content-Length', String(file.data.length));
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Five minutes, not a year. The bytes really are immutable, but visibility
+    // is not: a report can be approved now and rejected an hour from now, and
+    // an `immutable` response would keep serving the picture from caches long
+    // after the takedown. Short enough that a takedown means something, long
+    // enough that scrolling the board is not a fresh fetch per thumbnail.
+    res.setHeader('Cache-Control', 'public, max-age=300');
     // The response is an image and nothing else; refuse to be interpreted as
     // anything a browser might execute.
     res.setHeader('X-Content-Type-Options', 'nosniff');

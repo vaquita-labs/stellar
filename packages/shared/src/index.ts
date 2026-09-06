@@ -37,6 +37,7 @@ export * from './services/notifications';
 export * from './services/savedWallet';
 export * from './services/campaign';
 export * from './services/feedback';
+export * from './services/moderation';
 export * from './services/savedBankAccount';
 export * from './services/legal';
 export * from './services/offramp';
