@@ -8,13 +8,14 @@ import { blendConfigForToken } from '@/networks/stellar/blendDirect';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { motion } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
 import { FiAtSign, FiCheck, FiChevronRight, FiPlus } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
 import { IoWalletOutline } from 'react-icons/io5';
 import { useProfileData } from '../../../hooks';
+import { useNicknamesByAddress } from '../../../hooks/profile/useNicknamesByAddress';
 import { SavedWallet, useDeleteSavedWallet, useSavedWallets } from '../../../hooks/useSavedWallets';
 import { useConfigStore } from '../../../stores';
 import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
@@ -129,13 +130,29 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         }
       : null;
 
-  // Las dos listas salen de la misma tabla: `AddNicknameForm` guarda el destino
-  // con el `@` adelante en el label, y es lo único que distingue "le mando a una
-  // persona" de "le mando a una cuenta". Si alguien le pone `@algo` de nombre a
-  // una dirección, aparece entre los usuarios: sigue siendo un destino suyo,
-  // elegible, sólo que listado del otro lado.
-  const usernameWallets = savedWallets.filter((w) => w.label.startsWith('@'));
-  const addressWallets = savedWallets.filter((w) => !w.label.startsWith('@'));
+  // Las dos listas salen de la misma tabla, y lo que las separa es si la
+  // DIRECCIÓN es de un usuario de Vaquita — dato real, que se resuelve contra
+  // el perfil. Antes se miraba si el label empezaba con `@`, que es lo que el
+  // usuario tipeó una vez: la misma dirección guardada como "My wallet" no
+  // aparecía nunca entre los usuarios, y volver a agregarla chocaba contra el
+  // único de (perfil, dirección, red) con un 409 sin salida.
+  //
+  // Mientras la resolución no llegó, la dirección no entra en ninguna de las
+  // dos listas en lugar de caer en la equivocada; el esqueleto de carga cubre
+  // ese rato.
+  const savedAddresses = useMemo(() => savedWallets.map((w) => w.address), [savedWallets]);
+  const { nicknames, isLoading: nicknamesLoading } = useNicknamesByAddress(savedAddresses);
+
+  const usernameWallets = savedWallets.filter((w) => !!nicknames.get(w.address));
+  const addressWallets = savedWallets.filter((w) => nicknames.get(w.address) === null);
+
+  // El nombre que se muestra: el nickname de ahora si la dirección es de un
+  // usuario, y si no el label que guardó el usuario (único nombre que va a
+  // tener una cuenta de exchange o una wallet propia).
+  const labelFor = (w: SavedWallet) => {
+    const nickname = nicknames.get(w.address);
+    return nickname ? `@${nickname}` : w.label;
+  };
 
   const selectedWallet = savedWallets.find((w) => w.id === selectedWalletId) ?? null;
   // Destino efectivo. Mandarle a un usuario es elegir a OTRO, así que ahí manda
@@ -273,7 +290,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       await onSubmit({
         amount: numericAmount,
         withdrawAll: isMax,
-        wallet: destination,
+        // Con el nombre que se está mostrando, no el que quedó guardado: si el
+        // pago falla, el aviso tiene que nombrar al destino que el usuario
+        // aprobó recién ("@oscargauss"), no un "My wallet" de hace meses.
+        wallet: { ...destination, label: labelFor(destination) },
         onProgress: setActiveStep,
       });
       setStep('success');
@@ -442,7 +462,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           <span className="flex-1 min-w-0">
             {selectedWallet ? (
               <>
-                <span className="block text-sm font-bold text-black truncate">{selectedWallet.label}</span>
+                <span className="block text-sm font-bold text-black truncate">{labelFor(selectedWallet)}</span>
                 <span className="block text-xs text-gray-500">
                   {truncateMiddle(selectedWallet.address, 6, 5)}
                 </span>
@@ -494,6 +514,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         <WalletRow
           key={w.id}
           wallet={w}
+          displayLabel={labelFor(w)}
           selected={w.id === selectedWalletId}
           deleting={deleteWallet.isPending && pendingDeleteId === w.id}
           onSelect={() => {
@@ -504,9 +525,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         />
       ))}
 
-      {walletsLoading && addressWallets.length === 0 ? walletSkeleton : null}
+      {(walletsLoading || nicknamesLoading) && addressWallets.length === 0 ? walletSkeleton : null}
 
-      {addressWallets.length === 0 && !walletsLoading ? (
+      {addressWallets.length === 0 && !walletsLoading && !nicknamesLoading ? (
         <p className="text-sm text-gray-500 text-center py-4">
           {t('withdraw.noWallets', 'You have no saved wallets yet')}
         </p>
@@ -534,6 +555,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         <WalletRow
           key={w.id}
           wallet={w}
+          displayLabel={labelFor(w)}
           selected={w.id === selectedWalletId}
           deleting={deleteWallet.isPending && pendingDeleteId === w.id}
           onSelect={() => {
@@ -544,9 +566,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         />
       ))}
 
-      {walletsLoading && usernameWallets.length === 0 ? walletSkeleton : null}
+      {(walletsLoading || nicknamesLoading) && usernameWallets.length === 0 ? walletSkeleton : null}
 
-      {usernameWallets.length === 0 && !walletsLoading ? (
+      {usernameWallets.length === 0 && !walletsLoading && !nicknamesLoading ? (
         <p className="text-sm text-gray-500 text-center py-4">
           {t('withdraw.noUsernames', 'You have no saved users yet')}
         </p>
@@ -581,7 +603,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         <div className="flex items-center gap-3">
           <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-black truncate">{destination.label}</p>
+            <p className="text-sm font-bold text-black truncate">{labelFor(destination)}</p>
             <p className="text-xs text-gray-500">{truncateMiddle(destination.address, 6, 5)}</p>
             {destination.memo ? (
               <p className="text-xs text-gray-400 truncate">
