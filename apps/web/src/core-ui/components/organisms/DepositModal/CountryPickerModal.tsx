@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight, FiSearch } from 'react-icons/fi';
+import { useAnalytics, useDetectedCountry } from '../../../hooks';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 
@@ -50,6 +51,11 @@ const normalize = (value: string) =>
  * Paso previo al on-ramp y al off-ramp: en qué país está el usuario. Define con
  * qué proveedor y moneda local se opera (Argentina/ARS con Anclap, Brasil/BRL
  * con los ramps de Pollar), así que se elige antes de arrancar el flujo de fiat.
+ *
+ * El país detectado (IP, zona horaria o idioma) sube al principio de la lista y
+ * se marca, pero NO se elige solo: la detección se equivoca con una VPN o con
+ * alguien de viaje, y acá elegir mal es entrar a un corredor de fiat con la
+ * plata adentro. Es una sugerencia, y el toque sigue siendo del usuario.
  */
 export function CountryPickerModal({
   open,
@@ -59,21 +65,64 @@ export function CountryPickerModal({
   available = ['AR'],
 }: CountryPickerModalProps) {
   const { t } = useTranslation();
+  const { trackUserAction } = useAnalytics();
   const [query, setQuery] = useState('');
+
+  const detected = useDetectedCountry();
+  // Sólo es una sugerencia si es uno de los países de la lista: detectar Chile
+  // no cambia nada de lo que se muestra.
+  const suggested =
+    detected && COUNTRIES.some((c) => c.code === detected.country) ? (detected.country as CountryCode) : null;
+  const suggestedIsAvailable = suggested !== null && available.includes(suggested);
 
   useEffect(() => {
     if (open) setQuery('');
   }, [open]);
 
+  // Se manda una vez por apertura, no por render: sin esto el evento se repetiría
+  // con cada tecla del buscador y el ratio contra los 'accepted' no diría nada.
+  const trackedOpen = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      trackedOpen.current = false;
+      return;
+    }
+    if (!suggested || trackedOpen.current) return;
+    trackedOpen.current = true;
+    trackUserAction('country_suggestion_shown', {
+      country: suggested,
+      source: detected?.source ?? null,
+      available: suggestedIsAvailable,
+    });
+    // `trackUserAction` se recrea en cada render (no está memoizado); incluirlo
+    // volvería a correr el efecto sin que haya cambiado nada.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, suggested, suggestedIsAvailable, detected?.source]);
+
   const results = useMemo(() => {
     const q = normalize(query);
     const matches = q ? COUNTRIES.filter((c) => normalize(c.name).includes(q)) : COUNTRIES;
     // Los operativos arriba: cuáles lo son depende del flujo, así que el orden
-    // se arma acá y no en la constante.
-    return [...matches].sort(
-      (a, b) => Number(available.includes(b.code)) - Number(available.includes(a.code)),
-    );
-  }, [query, available]);
+    // se arma acá y no en la constante. Dentro de cada grupo, el país detectado
+    // primero — un país que no opera no sube por encima de uno que sí, ni
+    // siquiera siendo el del usuario, porque no lo dejaría avanzar.
+    const rank = (code: CountryCode) => (available.includes(code) ? 2 : 0) + (code === suggested ? 1 : 0);
+    return [...matches].sort((a, b) => rank(b.code) - rank(a.code));
+  }, [query, available, suggested]);
+
+  const handleSelect = (code: CountryCode) => {
+    if (suggested) {
+      // Los dos eventos son el numerador y el denominador de "¿la sugerencia
+      // ahorra toques?". Sin el 'ignored' no se sabe si acertó o si el usuario
+      // la pasó por alto.
+      trackUserAction(code === suggested ? 'country_suggestion_accepted' : 'country_suggestion_ignored', {
+        country: code,
+        suggested,
+        source: detected?.source ?? null,
+      });
+    }
+    onSelect(code);
+  };
 
   return (
     <AppModal
@@ -99,9 +148,14 @@ export function CountryPickerModal({
       <div className="flex flex-col gap-2">
         {results.map((country) =>
           available.includes(country.code) ? (
-            <PressableButton variant="white" size="row"
+            <PressableButton
+              // La fila del país detectado va en celeste contra el blanco de las
+              // demás: se ve de un vistazo sin animar nada ni ganarle al CTA.
+              variant={country.code === suggested ? 'info' : 'white'}
+              size="row"
               key={country.code}
-              onClick={() => onSelect(country.code)}>
+              onClick={() => handleSelect(country.code)}
+            >
               <span className="text-2xl leading-none shrink-0">{country.flag}</span>
               <span className="flex-1 min-w-0 text-sm font-bold text-black">{country.name}</span>
               <FiChevronRight className="w-5 h-5 text-black shrink-0" />

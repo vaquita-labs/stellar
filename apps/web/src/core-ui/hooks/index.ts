@@ -5,6 +5,7 @@ export * from './useBlendPosition';
 export * from './useBridgeTransfers';
 export * from './useClaimedAchievements';
 export * from './useDeposit';
+export * from './useDetectedCountry';
 export * from './useDeposits';
 export * from './useDepositsComplete';
 export * from './useDefindexVaultPosition';

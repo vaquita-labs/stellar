@@ -1,4 +1,5 @@
 export * from './contract';
+export * from './detectCountry';
 export * from './map';
 export * from './nickname';
 export * from './numbers';
