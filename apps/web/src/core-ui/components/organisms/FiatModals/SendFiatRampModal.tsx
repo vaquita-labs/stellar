@@ -21,7 +21,7 @@ import { BsBank2 } from 'react-icons/bs';
 import { FiExternalLink, FiPlus } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
 import { railLabel, truncateMiddle } from '../../../helpers';
-import { AMOUNT_DECIMALS, FIAT_DECIMALS, floorAmount } from '../../../helpers/numbers';
+import { AMOUNT_DECIMALS, FIAT_DECIMALS, floorAmount, formatTokenPrecise } from '../../../helpers/numbers';
 import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
 import {
   type SavedBankAccount,
@@ -31,7 +31,7 @@ import {
 } from '../../../hooks/useSavedBankAccounts';
 import { useConfigStore, useRampActiveStore } from '../../../stores';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
-import { AmountStep } from '../../molecules/AmountStep';
+import { AmountStep, DESTINATION_ROW } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { FiatStepList, StepStatus } from './FiatStepList';
@@ -853,7 +853,12 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   // dentro de `AmountStep`): cuánto hay en los ahorros para gastar.
   const amountHint = balanceIsLoading
     ? t('wallet.fiat.ramp.balanceLoading', 'Reading your savings…')
-    : t('wallet.fiat.ramp.balance', 'Available in savings: {{balance}} USDC', { balance });
+    : t('wallet.fiat.ramp.balance', 'Available in savings: {{balance}} USDC', {
+        // Dos decimales: los 7 de USDC no se leen y estiran la línea hasta
+        // pisar el renglón de abajo. `balance` entero sigue siendo el que
+        // valida el monto.
+        balance: formatTokenPrecise(balance, 2),
+      });
 
   const footer =
     phase === 'amount' ? (
@@ -952,6 +957,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           <PressableButton
             variant="white"
             size="row"
+            className={DESTINATION_ROW}
             onClick={() => void openBank()}
             disabled={busy || !corridor || !!corridorOff}
           >

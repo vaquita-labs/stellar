@@ -63,6 +63,16 @@ interface AmountStepProps {
 
   /** Saldo disponible: dibuja el chip que teclea el máximo. `null` = sin chip. */
   available?: number | null;
+  /**
+   * Decimales del chip de saldo: los que muestra y los que teclea. Por defecto,
+   * los del teclado.
+   *
+   * El retiro lo baja a 2: el saldo trae los 7 de USDC y nadie los lee, y ahí
+   * recortar no deja plata atrás porque tocar el chip retira TODO sin mirar el
+   * número. Una pantalla que necesite mover el saldo exacto —la migración de
+   * Blend, que no se cierra hasta que la posición queda en cero— no lo toca.
+   */
+  availableDecimals?: number;
   availableLoading?: boolean;
   /** Aviso de que se tecleó el máximo, para los flujos que retiran "todo". */
   onMax?: (prefilled: string) => void;
@@ -100,6 +110,7 @@ export function AmountStep({
   hint,
   presets,
   available,
+  availableDecimals,
   availableLoading = false,
   onMax,
   controls,
@@ -112,12 +123,14 @@ export function AmountStep({
     if (error) onErrorClear?.();
   };
 
+  const chipDecimals = availableDecimals ?? decimals;
+
   const fillMax = () => {
     if (available == null) return;
     // Siempre por `truncatedAmountString`: `String(saldo)` deja colgando el ruido
     // del float (10.4699999) y el usuario lo ve tecleado como si lo hubiera
     // escrito él.
-    const prefilled = truncatedAmountString(available, decimals);
+    const prefilled = truncatedAmountString(available, chipDecimals);
     onValueChange(prefilled);
     if (error) onErrorClear?.();
     onMax?.(prefilled);
@@ -144,7 +157,7 @@ export function AmountStep({
             {availableLoading ? (
               <span className="h-3 w-20 rounded bg-black/10 animate-pulse" />
             ) : (
-              `${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available)}`
+              `${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available, chipDecimals)}`
             )}
           </button>
         )}
@@ -185,5 +198,17 @@ export function AmountStep({
     </div>
   );
 }
+
+/**
+ * Alto fijo de la fila de destino que va entre el número y el teclado (la wallet
+ * del retiro, la cuenta bancaria del corredor, el plazo de la inversión).
+ *
+ * Sin esto la fila mide lo que mida su contenido, y los estados de una misma
+ * pantalla no coinciden entre sí: "Elegí una cuenta bancaria" ocupa un renglón y
+ * la cuenta ya elegida ocupa dos, así que el teclado salta hacia abajo al elegir
+ * —con el pulgar encima— y las pantallas de retiro no arrancan todas a la misma
+ * altura. Es el alto de la fila de dos renglones, que es la que manda.
+ */
+export const DESTINATION_ROW = 'min-h-16';
 
 export type { AmountControls };

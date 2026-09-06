@@ -414,6 +414,7 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
         decimals={AMOUNT_DECIMALS}
         disabled={busy}
         available={balanceFormatted}
+        availableDecimals={2}
         availableLoading={balanceIsLoading}
         error={overBalance ? t('wallet.fiat.send.insufficient', 'Insufficient USDC balance.') : null}
         hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {

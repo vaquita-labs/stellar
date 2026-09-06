@@ -27,7 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { FiCheck } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
 import { v4 } from 'uuid';
-import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
+import { AmountStep, DESTINATION_ROW, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -218,7 +218,7 @@ export function InvestModal({
         <PressableButton
           variant="white"
           size="row"
-          className="touch-pan-x select-none"
+          className={`touch-pan-x select-none ${DESTINATION_ROW}`}
           onClick={() => {
             if (swipedRef.current) {
               swipedRef.current = false;
