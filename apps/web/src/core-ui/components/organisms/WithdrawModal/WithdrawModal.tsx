@@ -356,7 +356,6 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         setIsMax(false);
       }}
       decimals={AMOUNT_DECIMALS}
-      size="lg"
       controls={amountControls}
       available={available}
       // Tocar "Available" es pedir retirar TODO: el sentinel i128 de blendDirect

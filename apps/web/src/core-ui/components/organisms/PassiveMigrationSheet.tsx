@@ -111,7 +111,6 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
             value={amount}
             onValueChange={setAmount}
             decimals={AMOUNT_DECIMALS}
-            compact
             disabled={busy}
             // Techo duro: el teclado no deja tipear más de lo que hay en Blend,
             // así que acá el monto nunca puede pasarse (no hay temblor).

@@ -412,7 +412,6 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
         value={amount}
         onValueChange={setAmount}
         decimals={AMOUNT_DECIMALS}
-        compact
         disabled={busy}
         available={balanceFormatted}
         availableLoading={balanceIsLoading}
