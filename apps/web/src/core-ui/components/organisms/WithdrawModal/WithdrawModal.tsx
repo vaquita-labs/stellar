@@ -18,7 +18,7 @@ import { useProfileData } from '../../../hooks';
 import { useNicknamesByAddress } from '../../../hooks/profile/useNicknamesByAddress';
 import { SavedWallet, useDeleteSavedWallet, useSavedWallets } from '../../../hooks/useSavedWallets';
 import { useConfigStore } from '../../../stores';
-import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
+import { AmountStep, DESTINATION_ROW, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { AddNicknameForm } from './AddNicknameForm';
@@ -378,6 +378,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       decimals={AMOUNT_DECIMALS}
       controls={amountControls}
       available={available}
+      availableDecimals={2}
       // Tocar "Available" es pedir retirar TODO: el sentinel i128 de blendDirect
       // depende de esta bandera, no del monto tecleado.
       onMax={() => setIsMax(true)}
@@ -416,7 +417,12 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       {isExternalWallet && destinationKind !== 'username' ? (
         // Externa cobrando en la suya: destino fijo, sin selector. Eligiendo un
         // usuario sí hay a quién elegir, y ahí va el mismo selector que la social.
-        <div className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-2.5">
+        <div
+          className={
+            'w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 ' +
+            DESTINATION_ROW
+          }
+        >
           <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
           <span className="flex-1 min-w-0">
             <span className="block text-sm font-bold text-black truncate">
@@ -432,7 +438,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         <PressableButton
           variant="white"
           size="row"
-          className="active:bg-[#EAF4FF] touch-pan-x select-none"
+          className={`active:bg-[#EAF4FF] touch-pan-x select-none ${DESTINATION_ROW}`}
           onClick={() => {
             if (swipedRef.current) {
               swipedRef.current = false;
@@ -463,14 +469,13 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
             {selectedWallet ? (
               <>
                 <span className="block text-sm font-bold text-black truncate">{labelFor(selectedWallet)}</span>
-                <span className="block text-xs text-gray-500">
+                {/* El memo va pegado a la dirección y no en su propio renglón:
+                    una wallet con memo mediría un renglón más que el resto y la
+                    fila dejaría de tener el alto de todas las demás. */}
+                <span className="block text-xs text-gray-500 truncate">
                   {truncateMiddle(selectedWallet.address, 6, 5)}
+                  {selectedWallet.memo ? ` · ${t('withdraw.memoLabel', 'Memo')}: ${selectedWallet.memo}` : ''}
                 </span>
-                {selectedWallet.memo ? (
-                  <span className="block text-xs text-gray-400 truncate">
-                    {t('withdraw.memoLabel', 'Memo')}: {selectedWallet.memo}
-                  </span>
-                ) : null}
               </>
             ) : walletsLoading ? (
               <span className="block animate-pulse">
