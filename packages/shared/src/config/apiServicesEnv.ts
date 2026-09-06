@@ -20,6 +20,10 @@ const apiServicesEnvSchema = z.object({
   // DeFindex API (protocol APY in stellar/apy.ts).
   DEFINDEX_API_HOST: z.url(),
   DEFINDEX_API_KEY: z.string().min(1),
+  // OpenAI moderation (services/moderation). Optional on purpose: this schema
+  // exits the process when it fails, and an environment without the key should
+  // degrade to "every report waits for a human", not take the API down.
+  OPENAI_API_KEY: z.string().min(1).optional(),
 });
 
 const parsed = apiServicesEnvSchema.safeParse(process.env);
