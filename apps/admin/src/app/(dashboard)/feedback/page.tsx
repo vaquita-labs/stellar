@@ -178,7 +178,7 @@ export default function Page() {
       <div>
         <h1 className="text-xl font-semibold">Feedback</h1>
         <p className="text-sm text-default-500">
-          Bug reports and feedback sent from the app’s Concierge screen, newest first.
+          Bug reports and feedback sent from the app’s Help Center screen, newest first.
         </p>
       </div>
 

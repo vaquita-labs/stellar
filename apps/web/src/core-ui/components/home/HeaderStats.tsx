@@ -322,7 +322,7 @@ export const HeaderStats = () => {
 
           <Link
             href="/concierge"
-            aria-label={t('concierge.buttonAria', 'Concierge')}
+            aria-label={t('concierge.buttonAria', 'Help Center')}
             className="relative shrink-0 self-start w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
           >
             <FiHeadphones className="w-4 h-4 text-black" />
