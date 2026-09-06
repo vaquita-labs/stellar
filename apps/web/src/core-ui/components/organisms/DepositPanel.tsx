@@ -3,8 +3,10 @@
 import { useRampCountries } from '@/networks/pollar/rampCountries';
 import type { CorridorCode } from '@/networks/pollar/ramps';
 import { isStellarNetwork } from '@/networks/stellar';
-import { resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
+import { awaitUsdcCredit, readUsdcBalance, resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
+import { formatBaseUnits } from '@/networks/stellar/vaultQueries';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
+import { WithdrawPaymentError } from '@/networks/stellar/withdrawError';
 import { PassiveMigrationSheet } from './PassiveMigrationSheet';
 import { usePollar } from '@pollar/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -215,19 +217,46 @@ export function DepositPanel() {
               throw new Error(t('withdraw.error.generic', 'Something went wrong'));
             }
 
-            // --- Wallet EXTERNA (Freighter): retiro directo de Blend, el pool
-            // paga al firmante (vuelve a su propia wallet). `withdrawAll` saca la
-            // posición entera vía el sentinel i128. Un solo salto: 'sending'. ---
-            if (pollarWallet?.custody === 'external') {
-              onProgress('sending');
-              await passiveWithdraw({
-                address: walletAddress,
-                amount: String(amount),
-                decimals: token.decimals,
-                withdrawAll,
-              });
-              void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
-              void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
+            const amountStr = String(amount);
+            // El pool SIEMPRE le paga al firmante, así que lo que decide cuántos
+            // saltos hay es a dónde va la plata, no con qué wallet entró: a la
+            // propia alcanza con sacarla de Blend; a la de otro hay que sacarla
+            // y después pagarle desde la del usuario. Una wallet externa
+            // mandándole a un usuario de Vaquita hace los mismos dos saltos que
+            // la social — la diferencia es que firma cada uno en su extensión.
+            //
+            // Se comparan las DOS direcciones propias: el modal arma su destino
+            // "tu wallet" con la de Pollar y el salto 1 acredita en la del store.
+            // Son la misma cuenta, pero si alguna vez difieren esto tiene que
+            // seguir leyéndose como "a mí" — pagarse a uno mismo sería un salto
+            // de más, con su firma y su fee.
+            const toSelf = wallet.address === walletAddress || wallet.address === pollarWallet?.address;
+
+            // Con un salto 2 por delante hay que medir cuánto llegó de verdad:
+            // `withdrawAll` saca la posición ENTERA (sentinel i128), que con los
+            // intereses del último bloque no es exactamente el monto tecleado.
+            // Pagar el tecleado dejaría polvo, o rebotaría por saldo si llegó de
+            // menos. Se lee antes de mover nada para poder restar después.
+            const balanceBefore = toSelf ? 0 : await readUsdcBalance(walletAddress, token.decimals);
+
+            // Salto 1 (o único): Blend → la wallet del usuario. `withdrawAll`
+            // saca la posición entera vía el sentinel i128.
+            onProgress(toSelf ? 'sending' : 'preparing');
+            const { hash } = await passiveWithdraw({
+              address: walletAddress,
+              amount: amountStr,
+              decimals: token.decimals,
+              withdrawAll,
+            });
+
+            // A partir de acá la plata YA salió de Blend y está en la wallet del
+            // usuario. Nada de lo que siga puede deshacer eso, así que la
+            // posición se refresca ahora: si el salto 2 falla, las pantallas
+            // tienen que mostrar el estado real, no el de antes del retiro.
+            void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
+            void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
+
+            if (toSelf) {
               trackUserAction('withdraw_submitted', {
                 amount,
                 network: network?.networkName || null,
@@ -235,37 +264,37 @@ export function DepositPanel() {
               return;
             }
 
-            // --- Social/CUSTODIAL: dos saltos con NUESTROS contratos. La plata
-            // está en Blend, en la wallet interna; el destino es una wallet
-            // EXTERNA elegida. ---
-            // 1) Retirar de Blend → wallet custodial (nuestro contrato).
-            // 2) Enviar de la custodial → la dirección externa (sendPayment).
-            const amountStr = String(amount);
+            // Salto 2: wallet del usuario → destino. PAGO CLÁSICO vía Pollar
+            // (`sendPayment`): a diferencia del transfer SAC de Soroban es lo que
+            // los EXCHANGES detectan y acreditan, con su MEMO (el que cargó el
+            // usuario al guardar la wallet; tipo id/text auto-detectado). El
+            // destino debe tener trustline al USDC — el modal lo verifica antes
+            // de dejar firmar el salto 1, justamente para no llegar acá y rebotar
+            // con la plata ya afuera.
+            //
+            // Se espera el crédito antes de armar el pago: el salto 1 confirma en
+            // el ledger, pero el RPC puede ir atrás y el pago saldría contra un
+            // saldo que todavía no ve.
+            const creditedBase = await awaitUsdcCredit(walletAddress, token.decimals, balanceBefore, { hash });
+            // Retiro total: se manda lo que EFECTIVAMENTE llegó. Monto puntual:
+            // lo pedido, que es lo que el usuario aprobó en la confirmación.
+            const toSend = withdrawAll ? formatBaseUnits(creditedBase, token.decimals) : amountStr;
 
-            // Salto 1: Blend → custodial (mismo directBlendWithdraw que externa,
-            // pero acá los fondos quedan en la wallet interna del usuario).
-            onProgress('preparing');
-            await passiveWithdraw({
-              address: walletAddress,
-              amount: amountStr,
-              decimals: token.decimals,
-              withdrawAll,
-            });
+            try {
+              onProgress('sending');
+              await sponsoredUsdcPayment({
+                to: wallet.address,
+                amount: toSend,
+                memo: resolveMemo(wallet.memo) ?? undefined,
+              });
+            } catch (e) {
+              // El salto 1 ya movió la plata: decir "el retiro falló" a secas
+              // haría pensar que sigue invertida. `WithdrawPaymentError` dice
+              // dónde quedó y cómo seguir — Wallet → Enviar hace exactamente este
+              // pago, así que se reintenta desde ahí sin volver a tocar Blend.
+              throw new WithdrawPaymentError(wallet.label, e);
+            }
 
-            // Salto 2: custodial → wallet externa elegida. PAGO CLÁSICO patrocinado
-            // por Pollar (`sendPayment`): funciona con 0 XLM Y —a diferencia del
-            // transfer SAC de Soroban— es lo que los EXCHANGES detectan y acreditan,
-            // con su MEMO (el que cargó el usuario al guardar la wallet; tipo id/text
-            // auto-detectado). El destino debe tener trustline al USDC.
-            onProgress('sending');
-            await sponsoredUsdcPayment({
-              to: wallet.address,
-              amount: amountStr,
-              memo: resolveMemo(wallet.memo) ?? undefined,
-            });
-
-            void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
-            void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
             trackUserAction('withdraw_submitted', {
               amount,
               network: network?.networkName || null,

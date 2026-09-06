@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { isVaultContractError } from '@/networks/stellar/vaultError';
+import { isWithdrawPaymentError } from '@/networks/stellar/withdrawError';
 
 export interface HumanTxError {
   /** Mensaje corto y legible para mostrar arriba (una frase). */
@@ -47,8 +48,14 @@ export const humanizeTxError = (
     typeof error === 'string'
       ? error
       : (error as { message?: string })?.message ?? String(error ?? '');
+  // Sin `t` el fallback se interpola a mano: devolverlo crudo dejaría un
+  // `{{destination}}` literal en pantalla en los mensajes que llevan datos.
   const tr = (key: string, fallback: string, opts?: Record<string, unknown>) =>
-    t ? t(key, fallback, opts) : fallback;
+    t
+      ? t(key, fallback, opts)
+      : opts
+        ? fallback.replace(/\{\{(\w+)\}\}/g, (match, name) => String(opts[name] ?? match))
+        : fallback;
   const generic = tr('txError.generic', "We couldn't complete the transaction. Please try again in a moment.");
 
   // Salió a la red pero todavía no confirmó. No es un fallo, y decirle "probá de
@@ -71,6 +78,17 @@ export const humanizeTxError = (
   // el usuario tenga la app en español.
   if (isVaultContractError(error)) {
     return { title: tr(error.i18nKey, error.fallback), raw: error.raw };
+  }
+
+  // El retiro sacó la plata de Blend y falló al pagarla: la escalera de regex de
+  // abajo miraría el error del pago y diría "no pudimos completar la
+  // transacción", que acá es falso — una parte SÍ se completó. Va antes por lo
+  // mismo que el del vault: el `message` ya es nuestra propia traducción.
+  if (isWithdrawPaymentError(error)) {
+    return {
+      title: tr(error.i18nKey, error.fallback, { destination: error.destination }),
+      raw: error.raw,
+    };
   }
 
   if (!raw) return { title: generic, raw };
