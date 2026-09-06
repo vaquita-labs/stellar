@@ -17,9 +17,12 @@ import { clientEnv } from '@/core-ui/config/clientEnv';
 /**
  * Cache-buster for the OG/share card image URLs. The `/og/achievement/[id]`
  * response is cached as immutable (browser + CDN) keyed by the full URL, so
- * visual changes to the card would never reach users on a stable URL. The
- * value is stamped per build in next.config.ts (commit SHA or build
- * timestamp), so every deploy rolls it automatically — no manual bumping.
+ * visual changes to the card would never reach users on a stable URL.
+ *
+ * Bumped by hand through NEXT_PUBLIC_CARD_VERSION when the card artwork
+ * changes. It is not tied to the build: a value that moved every deploy would
+ * invalidate every card and re-run the image render for artwork that changes a
+ * couple of times a year.
  */
 export const ACHIEVEMENT_CARD_VERSION = clientEnv.NEXT_PUBLIC_CARD_VERSION;
 

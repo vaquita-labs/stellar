@@ -1,7 +1,9 @@
+import { COUNTRY_COOKIE } from '@/core-ui/helpers/detectCountry';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Country-level access control.
+ * Country-level access control, and the only place that knows which country the
+ * request came from.
  *
  * This is the *second* layer of jurisdiction control, not the first. The one
  * that actually works everywhere is the eligibility attestation recorded in
@@ -17,6 +19,10 @@ import { NextRequest, NextResponse } from 'next/server';
  * It deliberately FAILS OPEN when the header is absent. Failing closed would
  * take the whole app down the moment a proxy config drifts, and the attestation
  * layer still applies to everyone who gets through.
+ *
+ * The same header is handed down to the client in a cookie, because the browser
+ * has no way of its own to ask which country an IP belongs to. That cookie only
+ * ever SUGGESTS a country (see `detectCountry`); nothing is decided with it.
  */
 
 const COUNTRY_HEADERS = ['cf-ipcountry', 'x-vercel-ip-country', 'x-country-code'] as const;
@@ -47,30 +53,50 @@ const readCountry = (request: NextRequest): string | null => {
   return null;
 };
 
+/**
+ * Publishes the country to the client. Not `httpOnly` on purpose: the whole
+ * point is that the browser reads it. It carries nothing private — a two-letter
+ * code the network already knew — and nothing is authorised with it.
+ */
+const withCountryCookie = (request: NextRequest, response: NextResponse, country: string | null) => {
+  if (!country) return response;
+  response.cookies.set(COUNTRY_COOKIE, country, {
+    path: '/',
+    sameSite: 'lax',
+    // Taken from the request instead of the build mode, so it is on in every
+    // https deployment and off on the plain-http dev server.
+    secure: request.nextUrl.protocol === 'https:',
+    // A day: long enough to outlive a session, short enough that someone who
+    // travelled is not offered last week's country for a month.
+    maxAge: 60 * 60 * 24,
+  });
+  return response;
+};
+
 export default function proxy(request: NextRequest) {
-  if (BLOCKED_COUNTRIES.size === 0) return NextResponse.next();
-
   const { pathname } = request.nextUrl;
-  if (ALWAYS_ALLOWED.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
-    return NextResponse.next();
-  }
-
   const country = readCountry(request);
-  if (!country) {
-    // Logged, not blocked: an absent header almost always means the proxy is
-    // not configured, and silently locking everyone out is the worse failure.
-    console.warn('[proxy] no country header present; allowing request', { pathname });
-    return NextResponse.next();
+
+  // The block is decided first: a country that cannot use the app has no
+  // business getting a cookie that helps it pick a corridor.
+  const enforcing =
+    BLOCKED_COUNTRIES.size > 0 &&
+    !ALWAYS_ALLOWED.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
+  if (enforcing) {
+    if (!country) {
+      // Logged, not blocked: an absent header almost always means the proxy is
+      // not configured, and silently locking everyone out is the worse failure.
+      console.warn('[proxy] no country header present; allowing request', { pathname });
+    } else if (BLOCKED_COUNTRIES.has(country)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/blocked';
+      url.search = '';
+      return NextResponse.rewrite(url);
+    }
   }
 
-  if (BLOCKED_COUNTRIES.has(country)) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/blocked';
-    url.search = '';
-    return NextResponse.rewrite(url);
-  }
-
-  return NextResponse.next();
+  return withCountryCookie(request, NextResponse.next(), country);
 }
 
 export const config = {

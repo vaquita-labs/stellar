@@ -2361,6 +2361,12 @@
       "externalSavvy": "Sacando da Blend para sua carteira",
       "preparing": "Preparando seu dinheiro",
       "sending": "Enviando para sua carteira"
+    },
+    "dest": {
+      "checking": "Verificando se essa conta pode receber USDC…",
+      "unfunded": "Essa conta ainda não está ativa na Stellar, então não pode receber USDC.",
+      "noTrustline": "Esta conta ainda não habilitou USDC. Peça que abra o app uma vez e tente de novo.",
+      "checkFailed": "Não conseguimos verificar essa conta. Você ainda pode tentar o saque."
     }
   },
   "transactions": {
@@ -2563,7 +2569,8 @@
     "contract": {
       "10": "Você não tem USDC suficiente na carteira para cobrir este valor. Adicione fundos e tente de novo.",
       "13": "Sua carteira precisa habilitar o USDC primeiro. Adicione a trustline de USDC e tente de novo."
-    }
+    },
+    "withdrawPaymentLeg": "Seu dinheiro saiu da poupança e está na sua carteira, mas o pagamento para {{destination}} não foi feito. Você pode enviá-lo em Carteira → Enviar."
   },
   "migration": {
     "title": "Mova seus fundos da Blend",

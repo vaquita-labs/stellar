@@ -3,6 +3,8 @@
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { AMOUNT_DECIMALS, floorAmount, formatTokenPrecise, formatUsdPrecise, MIN_USDC } from '@/core-ui/helpers/numbers';
 import { useLivePassiveUsdc, usePassiveLabel, usePassiveMigration } from '@/core-ui/hooks';
+import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
+import { blendConfigForToken } from '@/networks/stellar/blendDirect';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { motion } from 'framer-motion';
@@ -25,19 +27,26 @@ import { WithdrawModalProps, WithdrawProgressStep, WithdrawStep } from './types'
 import { PressableButton } from '../../molecules/PressableButton';
 
 /**
- * Flujo de retiro del home. Retira de BLEND (nivel líquido normal), y el destino
- * depende del tipo de login:
- *   - Wallet EXTERNA (Freighter): el retiro vuelve a la wallet conectada (el pool
- *     paga al firmante), así que el destino es fijo, sin selector.
- *   - Social/CUSTODIAL: la plata queda en la wallet interna, así que el usuario
- *     elige una wallet EXTERNA de destino (picker de wallets guardadas). El envío
- *     real a esa dirección se cablea aparte; por ahora el picker queda restaurado.
- * La rama "Bank" es el off-ramp a fiat, y "Username" es la misma rama social
- * pero nombrando el destino por usuario de Vaquita en vez de por dirección.
+ * Flujo de retiro del home. Retira de BLEND (nivel líquido normal), y lo que
+ * decide la forma del retiro es A DÓNDE va la plata, no con qué wallet entró:
+ *   - A la wallet propia: un salto. El pool le paga al firmante, así que sacarla
+ *     de Blend ya la deja donde tiene que estar. Es lo que hace "Wallet" con
+ *     login externo, y ahí el destino es fijo, sin selector.
+ *   - A la de otro: dos saltos. Primero sale de Blend a la wallet del usuario y
+ *     de ahí se le paga al destino, porque el pool no puede pagarle a un tercero.
+ *
+ * Los dos saltos NO son atómicos: entre uno y otro la plata está en la wallet
+ * del que retira. Por eso se verifica antes de firmar nada que el destino pueda
+ * recibir el USDC, y si aun así el pago falla el error dice dónde quedó
+ * (`WithdrawPaymentError`) en vez de reportar un retiro que no pasó.
+ *
+ * La rama "Bank" es el off-ramp a fiat, y "Username" nombra al destino por
+ * usuario de Vaquita en vez de por dirección. Va para cualquier tipo de login:
+ * mandarle a una persona son dos saltos venga de donde venga.
  */
 export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: WithdrawModalProps) {
   const { t } = useTranslation();
-  const { walletAddress } = useConfigStore();
+  const { walletAddress, token } = useConfigStore();
   const { wallet } = usePollar();
   const { data: profile } = useProfileData();
   const savvy = !!profile?.cryptoSavvy;
@@ -87,28 +96,6 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const [activeStep, setActiveStep] = useState<WithdrawProgressStep | null>(null);
   const { controls: amountControls, shake } = useAmountShake();
 
-  // Pasos visibles del retiro. Externa = 1 salto (a su wallet); social = 2
-  // (preparar de Blend → enviar a la externa). Copy humano por default; con
-  // `cryptoSavvy` mostramos el detalle on-chain (menciona Blend).
-  const progressSteps: { key: WithdrawProgressStep; label: string }[] = isExternalWallet
-    ? [
-        {
-          key: 'sending',
-          label: savvy
-            ? t('withdraw.steps.externalSavvy', 'Withdrawing from Blend to your wallet')
-            : t('withdraw.steps.sending', 'Sending to your wallet'),
-        },
-      ]
-    : [
-        {
-          key: 'preparing',
-          label: savvy
-            ? t('withdraw.steps.blendWithdraw', 'Withdrawing from Blend')
-            : t('withdraw.steps.preparing', 'Getting your money ready'),
-        },
-        { key: 'sending', label: t('withdraw.steps.sending', 'Sending to your wallet') },
-      ];
-
   // Saldo retirable = la posición pasiva (líquida, sin lock: vault de DeFindex o
   // Blend según el flag), proyectada en vivo con `useLivePassiveUsdc` (la MISMA
   // fuente que el header, así el saldo de arriba y el "Available" corren juntos y
@@ -151,8 +138,54 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   const addressWallets = savedWallets.filter((w) => !w.label.startsWith('@'));
 
   const selectedWallet = savedWallets.find((w) => w.id === selectedWalletId) ?? null;
-  // Destino efectivo: la propia para externos, la elegida para social.
-  const destination = ownWallet ?? selectedWallet;
+  // Destino efectivo. Mandarle a un usuario es elegir a OTRO, así que ahí manda
+  // lo elegido incluso con wallet externa; el resto del tiempo la externa cobra
+  // en la suya (el pool le paga al firmante) y la social elige de su lista.
+  const destination = destinationKind === 'username' ? selectedWallet : (ownWallet ?? selectedWallet);
+
+  // ¿El destino es uno mismo? Es lo que decide cuántos saltos hace el retiro:
+  // a la propia wallet alcanza con sacar de Blend, a la de otro hay que sacar y
+  // después pagarle. No es lo mismo que el tipo de login — una wallet externa
+  // mandándole a un usuario también son dos saltos.
+  const destinationIsSelf = !!destination && !!ownAddress && destination.address === ownAddress;
+
+  // ¿La cuenta destino puede RECIBIR el USDC? Un pago clásico a una cuenta sin
+  // trustline rebota con `op_no_trust`, y para entonces la plata ya salió de
+  // Blend: queda en la wallet del que retira, con el retiro marcado como
+  // fallido. Por eso se chequea ANTES de firmar nada. Mismo criterio que el
+  // Send de la wallet (`WalletSendModal`).
+  const destTrustline = useUsdcTrustline(
+    destinationIsSelf ? null : (destination?.address ?? null),
+    blendConfigForToken(token)?.usdcIssuer,
+  );
+  const destCannotReceive = destTrustline.data === 'missing' || destTrustline.data === 'unfunded';
+  // Si Horizon no contesta no se bloquea: su caída no puede dejar el retiro
+  // inservible, y el pago igual rebotaría antes de mover nada del salto 2.
+  const destCheckFailed = !!destination && !destinationIsSelf && destTrustline.isError;
+  const destChecking = !!destination && !destinationIsSelf && destTrustline.isLoading;
+
+  // Pasos visibles del retiro, según a dónde va la plata y no según el login:
+  // a la wallet propia es 1 salto (el pool le paga al firmante), a la de otro
+  // son 2 (sacar de Blend → pagarle). Copy humano por default; con
+  // `cryptoSavvy` mostramos el detalle on-chain (menciona Blend).
+  const progressSteps: { key: WithdrawProgressStep; label: string }[] = destinationIsSelf
+    ? [
+        {
+          key: 'sending',
+          label: savvy
+            ? t('withdraw.steps.externalSavvy', 'Withdrawing from Blend to your wallet')
+            : t('withdraw.steps.sending', 'Sending to your wallet'),
+        },
+      ]
+    : [
+        {
+          key: 'preparing',
+          label: savvy
+            ? t('withdraw.steps.blendWithdraw', 'Withdrawing from Blend')
+            : t('withdraw.steps.preparing', 'Getting your money ready'),
+        },
+        { key: 'sending', label: t('withdraw.steps.sending', 'Sending to your wallet') },
+      ];
 
   // Cada apertura arranca limpia.
   useEffect(() => {
@@ -168,12 +201,17 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     }
   }, [open]);
 
-  // Preselección (social): la primera wallet guardada, salvo que ya haya elegido.
+  // Preselección (social): la primera wallet guardada, salvo que ya haya
+  // elegido. Mandarle a un usuario queda afuera: ahí el destino es una persona
+  // y elegirla por él sería elegir a quién le manda la plata.
   useEffect(() => {
-    if (!isExternalWallet && !selectedWalletId && savedWallets.length > 0) {
-      setSelectedWalletId(savedWallets[0].id);
-    }
-  }, [isExternalWallet, savedWallets, selectedWalletId]);
+    if (destinationKind === 'username') return;
+    if (isExternalWallet || selectedWalletId) return;
+    // Se filtra acá adentro: `addressWallets` es un array nuevo en cada render y
+    // como dependencia volvería a disparar el efecto sin que cambie nada.
+    const first = savedWallets.find((w) => !w.label.startsWith('@'));
+    if (first) setSelectedWalletId(first.id);
+  }, [destinationKind, isExternalWallet, savedWallets, selectedWalletId]);
 
   const numericAmount = Number(amount || '0');
   // Mínimo 1 USDC para retirar (mismo piso que el depósito y que valida el
@@ -283,29 +321,29 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
           está pensando en direcciones ni en redes, y no tiene por qué pasar por
           una pantalla que le pide eso.
 
-          Sólo para login social: con wallet externa el pool le paga al firmante,
-          así que el destino es fijo y elegir a otro no cambiaría nada. */}
-      {!isExternalWallet ? (
-        <PressableButton
-          variant="white"
-          size="row"
-          onClick={() => {
-            setDestinationKind('username');
-            setUsernameOrigin('method');
-            setStep('username');
-          }}
-        >
-          <FiAtSign className="w-6 h-6 text-black shrink-0" />
-          <span className="flex-1 min-w-0">
-            <span className="block text-sm font-bold text-black">
-              {t('withdraw.method.username.title', 'Username')}
-            </span>
-            <span className="block text-xs text-gray-500">
-              {t('withdraw.method.username.subtitle', 'Send to a Vaquita user')}
-            </span>
+          Va para cualquier login. Con wallet externa el pool le paga al
+          firmante, así que la plata pasa primero por la suya y recién de ahí
+          sale el pago al destinatario: dos saltos, los mismos que hace la
+          social. */}
+      <PressableButton
+        variant="white"
+        size="row"
+        onClick={() => {
+          setDestinationKind('username');
+          setUsernameOrigin('method');
+          setStep('username');
+        }}
+      >
+        <FiAtSign className="w-6 h-6 text-black shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-bold text-black">
+            {t('withdraw.method.username.title', 'Username')}
           </span>
-        </PressableButton>
-      ) : null}
+          <span className="block text-xs text-gray-500">
+            {t('withdraw.method.username.subtitle', 'Send to a Vaquita user')}
+          </span>
+        </span>
+      </PressableButton>
     </div>
   );
 
@@ -356,8 +394,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
       )}
       {blendError ? <ErrorNotice error={blendError} /> : null}
 
-      {isExternalWallet ? (
-        // Externa: destino fijo (tu wallet), sin selector.
+      {isExternalWallet && destinationKind !== 'username' ? (
+        // Externa cobrando en la suya: destino fijo, sin selector. Eligiendo un
+        // usuario sí hay a quién elegir, y ahí va el mismo selector que la social.
         <div className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-2.5">
           <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
           <span className="flex-1 min-w-0">
@@ -554,6 +593,31 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         </div>
       ) : null}
 
+      {/* Se avisa ACÁ, antes de firmar. Si el destino no puede recibir el USDC,
+          el pago del salto 2 rebota con `op_no_trust` y para entonces la plata
+          ya salió de Blend: le queda al que retira, con el retiro en error. */}
+      {destChecking ? (
+        <p className="flex items-center gap-1.5 text-xs text-gray-500">
+          <Spinner size="sm" color="current" />
+          {t('withdraw.dest.checking', 'Checking that account can receive USDC…')}
+        </p>
+      ) : destTrustline.data === 'unfunded' ? (
+        <p className="text-xs text-error">
+          {t('withdraw.dest.unfunded', "That account isn't active on Stellar yet, so it can't receive USDC.")}
+        </p>
+      ) : destTrustline.data === 'missing' ? (
+        <p className="text-xs text-error">
+          {t(
+            'withdraw.dest.noTrustline',
+            "This account hasn't enabled USDC yet. Ask them to open the app once, then try again.",
+          )}
+        </p>
+      ) : destCheckFailed ? (
+        <p className="text-xs text-gray-500">
+          {t('withdraw.dest.checkFailed', "We couldn't check that account. You can still try withdrawing.")}
+        </p>
+      ) : null}
+
       {error ? <ErrorNotice error={error} /> : null}
     </div>
   );
@@ -684,7 +748,16 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         {t('withdraw.review', 'Review')}
       </PressableButton>
     ) : step === 'confirm' ? (
-      <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleConfirm}>
+      <PressableButton
+        variant="success"
+        size="cta"
+        className="py-2.5!"
+        onClick={handleConfirm}
+        // Bloqueado mientras no se sepa que el destino puede recibir, y también
+        // cuando ya se sabe que no: firmar ahí saca la plata de Blend para que
+        // el pago rebote después.
+        disabled={destChecking || destCannotReceive}
+      >
         {t('withdraw.confirmCta', 'Confirm')}
       </PressableButton>
     ) : step === 'processing' ? (

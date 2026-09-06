@@ -2361,6 +2361,12 @@
       "externalSavvy": "Withdrawing from Blend to your wallet",
       "preparing": "Getting your money ready",
       "sending": "Sending to your wallet"
+    },
+    "dest": {
+      "checking": "Checking that account can receive USDC…",
+      "unfunded": "That account isn't active on Stellar yet, so it can't receive USDC.",
+      "noTrustline": "This account hasn't enabled USDC yet. Ask them to open the app once, then try again.",
+      "checkFailed": "We couldn't check that account. You can still try withdrawing."
     }
   },
   "transactions": {
@@ -2563,7 +2569,8 @@
     "contract": {
       "10": "You don't have enough USDC in your wallet to cover this amount. Add funds and try again.",
       "13": "Your wallet needs to enable USDC first. Add the USDC trustline and try again."
-    }
+    },
+    "withdrawPaymentLeg": "Your money is out of savings and in your wallet, but the payment to {{destination}} did not go through. You can send it from Wallet → Send."
   },
   "migration": {
     "title": "Move your Blend funds",
