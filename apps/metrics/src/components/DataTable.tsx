@@ -1,5 +1,6 @@
 import { CsvButton } from '@/components/CsvButton';
 import type { CsvRow } from '@/lib/csv';
+import type { ReactNode } from 'react';
 
 // Plain table with its own CSV export — used for leaderboards and breakdowns
 // where the numbers matter more than the shape.
@@ -9,12 +10,15 @@ export function DataTable({
   rows,
   columns,
   filename,
+  footer,
 }: {
   title: string;
   hint?: string;
   rows: CsvRow[];
   columns: { key: string; label: string; align?: 'left' | 'right' }[];
   filename: string;
+  /** Rendered below the table — a pager, when the rows are one page of many. */
+  footer?: ReactNode;
 }) {
   return (
     <section className="flex flex-col gap-3 rounded-xl border border-black border-b-2 bg-white p-4">
@@ -59,6 +63,7 @@ export function DataTable({
           </table>
         </div>
       )}
+      {footer}
     </section>
   );
 }

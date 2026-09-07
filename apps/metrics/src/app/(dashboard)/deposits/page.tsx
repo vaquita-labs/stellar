@@ -5,22 +5,25 @@ import { RangePicker } from '@/components/RangePicker';
 import { CategoryBars, TimeSeriesBars, TimeSeriesLine } from '@/components/charts';
 import { fmtInt, fmtLockPeriod, fmtPct, fmtUsd } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
-import { byLockPeriod, depositKpis, depositSeries, topDepositors } from '@/lib/queries/deposits';
+import { Pager } from '@/components/Pager';
+import { byLockPeriod, depositKpis, depositSeries, depositorsPage } from '@/lib/queries/deposits';
 import { sampleAge, vaultTvl } from '@/lib/queries/vault';
-import { parseRange } from '@/lib/range';
+import { parsePage, parseRange } from '@/lib/range';
 
 export const dynamic = 'force-dynamic';
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function DepositsPage({ searchParams }: Props) {
-  const range = parseRange(await searchParams);
+  const params = await searchParams;
+  const range = parseRange(params);
+  const page = parsePage(params);
   const w = await sqlWindow(range);
-  const [kpis, series, periods, top, vault] = await Promise.all([
+  const [kpis, series, periods, depositors, vault] = await Promise.all([
     depositKpis(w),
     depositSeries(w),
     byLockPeriod(w),
-    topDepositors(w),
+    depositorsPage(w, { limit: page.limit, offset: page.offset }),
     vaultTvl(w),
   ]);
   const prev = w.hasPrev;
@@ -161,22 +164,37 @@ export default async function DepositsPage({ searchParams }: Props) {
           />
         </ChartCard>
         <DataTable
-          title="Top depositors"
-          hint="By confirmed volume in range"
-          rows={top.map((r) => ({
-            ...r,
+          title="Depositors"
+          hint="Vault balance and locked principal per wallet, ranked by total. The vault column is a snapshot — see Last read."
+          rows={depositors.rows.map((r) => ({
             nickname: r.nickname ?? '—',
             wallet: `${r.wallet.slice(0, 6)}…${r.wallet.slice(-4)}`,
-            volume: fmtUsd(r.volume),
+            vault: fmtUsd(r.vault),
+            periods: fmtUsd(r.periods),
+            total: fmtUsd(r.total),
+            deposits: r.deposits,
+            first_deposit: r.first_deposit ?? '—',
+            scraped_at: r.scraped_at ? sampleAge(r.scraped_at) : 'never',
           }))}
           columns={[
             { key: 'nickname', label: 'Nickname' },
             { key: 'wallet', label: 'Wallet' },
+            { key: 'vault', label: 'Vault', align: 'right' },
+            { key: 'periods', label: 'Periods', align: 'right' },
+            { key: 'total', label: 'Total', align: 'right' },
             { key: 'deposits', label: 'Deposits', align: 'right' },
-            { key: 'volume', label: 'Volume', align: 'right' },
             { key: 'first_deposit', label: 'First deposit' },
+            { key: 'scraped_at', label: 'Last read', align: 'right' },
           ]}
-          filename="top-depositors"
+          filename={`depositors-${range.key}-p${page.page}`}
+          footer={
+            <Pager
+              page={page.page}
+              limit={page.limit}
+              total={depositors.total}
+              params={{ range: range.key, bucket: range.bucket, limit: String(page.limit) }}
+            />
+          }
         />
       </div>
     </>

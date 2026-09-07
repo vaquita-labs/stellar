@@ -120,26 +120,111 @@ export async function byLockPeriod(w: SqlWindow): Promise<LockPeriodRow[]> {
   `;
 }
 
-export type TopDepositorRow = {
+export type DepositorRow = {
   wallet: string;
   nickname: string | null;
+  /** Flexible balance supplied to the DeFindex vault, from the `wallet_balances` snapshot. */
+  vault: number;
+  /** Principal still locked in the pool: confirmed deposits with no confirmed withdrawal. */
+  periods: number;
+  total: number;
   deposits: number;
-  volume: number;
-  first_deposit: string;
+  first_deposit: string | null;
+  /** When the vault figure was last read on-chain. Null for a wallet never scraped. */
+  scraped_at: Date | null;
 };
 
-export async function topDepositors(w: SqlWindow): Promise<TopDepositorRow[]> {
-  return prisma.$queryRaw<TopDepositorRow[]>`
-    select d.wallet_address as wallet,
+export type DepositorsPage = {
+  rows: DepositorRow[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+};
+
+/**
+ * One page of depositors, pool and vault side by side.
+ *
+ * A full outer join over the two sources, keyed on wallet address, because
+ * neither one is a superset: a wallet that only supplied the vault has no
+ * `deposits` row at all, and a wallet that only ever locked has no
+ * `wallet_balances` row. Ranking either source alone silently hides half the
+ * depositors — which is what the old `topDepositors` did.
+ *
+ * `LIMIT`/`OFFSET` and `count(*) over ()` are in the SQL, not applied to a
+ * fetched-everything array: the point of paginating is that the database
+ * returns one page, not that the page renders one.
+ *
+ * Two scoping rules, both load-bearing:
+ * - The vault side is filtered to supported tokens. Rows survive a token being
+ *   retired and production carried 45 stale rows on the same DeFindex vault as
+ *   the live token, so an unscoped read double-counts.
+ * - The `periods` side ignores the window and counts what is locked *now*.
+ *   The window belongs to "how much was deposited in range" (the charts above);
+ *   a balance is a balance.
+ */
+export async function depositorsPage(
+  w: SqlWindow,
+  { limit, offset }: { limit: number; offset: number },
+): Promise<DepositorsPage> {
+  const rows = await prisma.$queryRaw<(DepositorRow & { total_count: number })[]>`
+    with supported as (
+      select id from tokens where is_supported = true and deleted_at is null
+    ),
+    v as (
+      select wb.wallet_address as wallet,
+             sum(wb.vault_usdc)::float8 as vault,
+             max(wb.scraped_at) as scraped_at
+      from wallet_balances wb
+      where wb.token_id in (select id from supported)
+      group by wb.wallet_address
+    ),
+    d as (
+      select d.wallet_address as wallet,
+             count(*) filter (where coalesce(d.confirmed_at, d.created_at) >= ${w.since})::int as deposits,
+             coalesce(sum(d.amount) filter (
+               where not exists (
+                 select 1 from withdrawals wd
+                 where wd.deposit_id = d.id and wd.deleted_at is null and wd.status = 'confirmed'
+               )
+             ), 0)::float8 as periods,
+             min(coalesce(d.confirmed_at, d.created_at)) as first_deposit
+      from deposits d
+      where d.deleted_at is null and d.status = 'confirmed'
+      group by d.wallet_address
+    ),
+    j as (
+      select coalesce(v.wallet, d.wallet) as wallet,
+             coalesce(v.vault, 0)::float8 as vault,
+             coalesce(d.periods, 0)::float8 as periods,
+             coalesce(d.deposits, 0)::int as deposits,
+             d.first_deposit,
+             v.scraped_at
+      from v full outer join d on d.wallet = v.wallet
+    )
+    select j.wallet,
            p.nickname,
-           count(*)::int as deposits,
-           sum(d.amount)::float8 as volume,
-           to_char(min(coalesce(d.confirmed_at, d.created_at)), 'YYYY-MM-DD') as first_deposit
-    from deposits d
-    left join profiles p on p.wallet_address = d.wallet_address and p.deleted_at is null
-    where d.deleted_at is null and d.status = 'confirmed' and coalesce(d.confirmed_at, d.created_at) >= ${w.since}
-    group by d.wallet_address, p.nickname
-    order by volume desc
-    limit 15
+           j.vault,
+           j.periods,
+           (j.vault + j.periods)::float8 as total,
+           j.deposits,
+           to_char(j.first_deposit, 'YYYY-MM-DD') as first_deposit,
+           j.scraped_at,
+           count(*) over ()::int as total_count
+    from j
+    left join profiles p on p.wallet_address = j.wallet and p.deleted_at is null
+    -- A wallet with nothing on either side is a leftover row, not a depositor.
+    where j.vault > 0 or j.periods > 0 or j.deposits > 0
+    order by total desc, j.wallet
+    limit ${limit} offset ${offset}
   `;
+
+  const total = rows[0]?.total_count ?? 0;
+  return {
+    rows: rows.map(({ total_count: _ignored, ...row }) => row),
+    total,
+    limit,
+    offset,
+    hasMore: offset + rows.length < total,
+  };
 }
