@@ -239,15 +239,36 @@ export async function refreshWalletBalances(
   };
 }
 
+/**
+ * The tokens the scraper actually refreshes — and therefore the only rows of
+ * `wallet_balances` that mean anything.
+ *
+ * Retiring a token (`is_supported = false`) does not delete its snapshot rows,
+ * and the loop above never visits them again, so they freeze at whatever they
+ * held that day. Production had two USDC tokens pointing at the SAME DeFindex
+ * vault, so an unfiltered read counted that vault balance twice. Every READ of
+ * the table goes through this; the writer keeps its own query because it needs
+ * the whole token row, not just the id.
+ */
+export async function getSupportedTokenIds(): Promise<number[]> {
+  const tokens = await prisma.token.findMany({
+    where: { isSupported: true, deletedAt: null },
+    select: { id: true },
+  });
+  return tokens.map((t) => t.id);
+}
+
 /** When the snapshot was last refreshed, and how much of it is untrustworthy. */
 export async function getWalletBalancesFreshness(): Promise<{
   scrapedAt: string | null;
   rows: number;
   errored: number;
 }> {
+  const tokenIds = await getSupportedTokenIds();
+  const supported = { tokenId: { in: tokenIds } };
   const [aggregate, errored] = await Promise.all([
-    prisma.walletBalance.aggregate({ _max: { scrapedAt: true }, _count: { _all: true } }),
-    prisma.walletBalance.count({ where: { lastError: { not: null } } }),
+    prisma.walletBalance.aggregate({ where: supported, _max: { scrapedAt: true }, _count: { _all: true } }),
+    prisma.walletBalance.count({ where: { ...supported, lastError: { not: null } } }),
   ]);
   return {
     scrapedAt: aggregate._max.scrapedAt?.toISOString() ?? null,
