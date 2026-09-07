@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfigStore, useRampActiveStore, useAwaitingFundsStore, usePendingCreditStore } from '../stores';
+import { requestWalletBalanceRefresh } from './useWalletBalanceRefresh';
 
 // El umbral para no promptear ni gastar gas por polvo es el mismo mínimo que el
 // resto de los flujos de monto: antes esto tenía uno propio (0,1) distinto del
@@ -164,6 +165,9 @@ export const useIdleFunds = () => {
       await refreshWalletBalance();
       void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
       void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
+      // El snapshot on-chain que alimenta la XP del vault: este flujo se firma
+      // entero en el browser, así que no hay handler del server que lo note.
+      void requestWalletBalanceRefresh(walletAddress, { force: true });
     } catch (e) {
       // La firma custodial puede fallar por sesión (nonce) o falta de gas (XLM),
       // y el vault puede rechazar por su propio piso de polvo. Mostramos el

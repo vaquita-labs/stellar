@@ -33,6 +33,18 @@ function readStoredToken(walletAddress: string): string | null {
   }
 }
 
+/**
+ * Whether a usable token is already cached for this wallet.
+ *
+ * For callers that must not provoke a signature prompt: `authFetch` logs in
+ * transparently when there is no token, which pops the wallet. Background work
+ * (a balance refresh on app open, say) has to stay silent, so it checks this
+ * first and skips itself rather than interrupting the user.
+ */
+export function hasWalletSession(walletAddress: string): boolean {
+  return readStoredToken(walletAddress) !== null;
+}
+
 export function clearWalletSession(): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(STORAGE_KEY);

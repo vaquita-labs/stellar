@@ -861,10 +861,20 @@ model WalletBalance {
   tokenId       Int       @map("token_id")
   blendUsdc     Decimal   @default(0) @map("blend_usdc") @db.Decimal
   vaultUsdc     Decimal   @default(0) @map("vault_usdc") @db.Decimal
+  // Running integral of the vault balance over time: at each successful read,
+  // `min(previous, current) * hours elapsed` is added. Vault XP is its square
+  // root, which for a steady balance is exactly `sqrt(amount) * sqrt(hours)` —
+  // the same scale as a locked-pool deposit. Only ever grows, so XP derived
+  // from it can never decrease.
+  vaultUsdcHours Decimal  @default(0) @map("vault_usdc_hours") @db.Decimal
   // Locked Vaquita-pool deposits by lock period: [{ period, amount }] (from the
   // deposits table). Persisted so the snapshot row is a self-contained record.
   vaquitaPositions Json   @default(dbgenerated("'[]'::jsonb")) @map("vaquita_positions")
   scrapedAt     DateTime  @map("scraped_at") @db.Timestamptz(6)
+  // When the balance was last read SUCCESSFULLY — deliberately not `scrapedAt`,
+  // which is bumped on failures too and so cannot bound an integration window.
+  // NULL until the first successful read.
+  observedAt    DateTime? @map("observed_at") @db.Timestamptz(6)
   lastError     String?   @map("last_error")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)

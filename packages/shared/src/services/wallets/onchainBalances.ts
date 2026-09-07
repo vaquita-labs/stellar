@@ -63,6 +63,57 @@ export type WalletBalanceResult = {
   lastError: string | null;
 };
 
+export type VaultAccrualInput = {
+  /** The running total so far. */
+  priorUsdcHours: number;
+  /** Vault balance recorded at `priorObservedAt`. */
+  priorVaultUsdc: number;
+  /** When that balance was last read successfully, or null if never. */
+  priorObservedAt: Date | null;
+  /** Vault balance just read. */
+  vaultUsdc: number;
+  /** When it was just read. */
+  observedAt: Date;
+};
+
+/**
+ * Integrates the vault balance over the interval since the last successful
+ * read, and returns the new running total of USDC-hours.
+ *
+ * Vault XP is `sqrt` of this. For a balance held steady at `A` for `T` hours
+ * the total is `A * T`, and `sqrt(A * T) === sqrt(A) * sqrt(T)` — the same
+ * number `depositExperience` gives a locked deposit, so vault and pool XP share
+ * one scale with no correction factor.
+ *
+ * Three properties fall out of the shape rather than out of remembering to
+ * check for them:
+ *
+ * - **Monotonic.** The result is never below `priorUsdcHours`, so XP derived
+ *   from it can only grow. Withdrawing stops accrual; it never claws XP back.
+ * - **Cadence-independent.** Summing `min * elapsed` over any partition of an
+ *   interval gives the same total while the balance holds, so a user who opens
+ *   the app hourly earns exactly what one who opens it weekly earns for the
+ *   same money. XP is not a reward for opening the app.
+ * - **`min()` is the anti-gaming term.** Money deposited moments before a read
+ *   cannot back-credit hours it was not there for. Where the balance moves,
+ *   `min` under-credits — always against the user's favour, never for it.
+ *
+ * A first observation (`priorObservedAt === null`) credits nothing; it only
+ * establishes the baseline the next one integrates from.
+ */
+export const accrueVaultUsdcHours = (input: VaultAccrualInput): number => {
+  const prior = Math.max(input.priorUsdcHours || 0, 0);
+  if (!input.priorObservedAt) return prior;
+
+  const elapsedHours = (input.observedAt.getTime() - input.priorObservedAt.getTime()) / 3_600_000;
+  // A clock that went backwards, or two reads in the same millisecond. Either
+  // way there is no interval to integrate over.
+  if (!(elapsedHours > 0)) return prior;
+
+  const held = Math.min(Math.max(input.priorVaultUsdc || 0, 0), Math.max(input.vaultUsdc || 0, 0));
+  return prior + held * elapsedHours;
+};
+
 export type RefreshWalletBalancesInput = {
   /** Explicit wallets to read. Skips profile pagination entirely (retry-failed). */
   wallets?: string[];
@@ -157,6 +208,19 @@ export async function refreshWalletBalances(
 
   const positions = await getVaquitaPositionsByWalletToken(wallets);
 
+  // The rows as they stand before this run, keyed by (wallet, token). The
+  // accumulator integrates between the PREVIOUS successful read and this one,
+  // so the write needs the old balance and the old timestamp — an upsert alone
+  // cannot see them. One query for the whole batch; each key is written once
+  // per run, so nothing here goes stale mid-loop.
+  const priorRows = wallets.length
+    ? await prisma.walletBalance.findMany({
+        where: { walletAddress: { in: wallets } },
+        select: { walletAddress: true, tokenId: true, vaultUsdc: true, vaultUsdcHours: true, observedAt: true },
+      })
+    : [];
+  const priorByKey = new Map(priorRows.map((r) => [positionKey(r.walletAddress, r.tokenId), r]));
+
   // De-dupe identical on-chain reads within the batch.
   const readCache = new Map<string, Promise<{ blendUsdc: number; vaultUsdc: number }>>();
 
@@ -200,10 +264,26 @@ export async function refreshWalletBalances(
         const blendUsdc = creditedBlend.has(blendKey) ? 0 : shared.blendUsdc;
         creditedVault.add(vaultKey);
         creditedBlend.add(blendKey);
+
+        // Fold the elapsed interval into the XP accumulator before overwriting
+        // the balance it was measured against. The de-dupe above matters here:
+        // the second token sharing a vault sees `vaultUsdc = 0` on both sides
+        // of the `min`, so it accrues nothing and the same money is never
+        // counted twice.
+        const prior = priorByKey.get(positionKey(wallet, token.id));
+        const observedAt = new Date();
+        const vaultUsdcHours = accrueVaultUsdcHours({
+          priorUsdcHours: Number(prior?.vaultUsdcHours ?? 0),
+          priorVaultUsdc: Number(prior?.vaultUsdc ?? 0),
+          priorObservedAt: prior?.observedAt ?? null,
+          vaultUsdc,
+          observedAt,
+        });
+
         await prisma.walletBalance.upsert({
           where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
-          create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date() },
-          update: { blendUsdc, vaultUsdc, vaquitaPositions, scrapedAt: new Date(), lastError: null },
+          create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, vaultUsdcHours, vaquitaPositions, scrapedAt: observedAt, observedAt },
+          update: { blendUsdc, vaultUsdc, vaultUsdcHours, vaquitaPositions, scrapedAt: observedAt, observedAt, lastError: null },
         });
         results.push({ wallet, tokenId: token.id, blendUsdc, vaultUsdc, lastError: null });
       } catch (e) {
@@ -213,7 +293,11 @@ export async function refreshWalletBalances(
           create: { walletAddress: wallet, tokenId: token.id, blendUsdc: 0, vaultUsdc: 0, vaquitaPositions, scrapedAt: new Date(), lastError: message },
           // The stale balance is left in place: a snapshot from an hour ago is
           // closer to the truth than a zero, and `lastError` is what says the
-          // number cannot be trusted.
+          // number cannot be trusted. `vaultUsdcHours` and `observedAt` are
+          // left alone for the same reason — a failed read is not an
+          // observation, so the next success integrates across the whole gap
+          // instead of losing it. This is why `observedAt` exists separately
+          // from `scrapedAt`, which is bumped right here on a failure.
           update: { vaquitaPositions, scrapedAt: new Date(), lastError: message },
         });
         results.push({ wallet, tokenId: token.id, blendUsdc: 0, vaultUsdc: 0, lastError: message });
@@ -275,4 +359,83 @@ export async function getWalletBalancesFreshness(): Promise<{
     rows: aggregate._count._all,
     errored,
   };
+}
+
+/**
+ * Default staleness a passive trigger accepts before spending an RPC read.
+ *
+ * Matched to the throttle `sampleVaultTvl` already uses for the analogous
+ * read-Soroban-on-the-side-of-a-request pattern: long enough that reloading the
+ * app repeatedly costs one read, short enough that a balance shown beside a
+ * `scrapedAt` is not embarrassing.
+ */
+export const LAZY_REFRESH_MAX_AGE_MS = 10 * 60 * 1000;
+
+/** In-flight lazy refreshes, keyed by wallet. */
+const lazyInFlight = new Map<string, Promise<boolean>>();
+
+export type LazyRefreshInput = {
+  /**
+   * How stale the snapshot may be before it is worth a read. Money-moved
+   * triggers pass `0` to force one; passive triggers leave the default.
+   */
+  maxAgeMs?: number;
+  resolveRpcUrl?: (network: SorobanNetwork) => string | Promise<string>;
+};
+
+/**
+ * Refresh one wallet's snapshot, on the side of whatever the user was doing.
+ *
+ * This is what replaced the scheduled sweep: cost is proportional to activity
+ * instead of to registered users, and the wallet that just moved money is
+ * exactly the one that gets read. Two properties make it safe to call from
+ * anywhere:
+ *
+ * - **TTL gate.** Inside `maxAgeMs` it returns without touching the chain, so a
+ *   handler can call it unconditionally.
+ * - **Single-flight.** Concurrent triggers for the same wallet — a deposit
+ *   confirmation and an app open landing together — share one read. That, not
+ *   the steady-state rate, is what trips the public RPC's 429s.
+ *
+ * Resolves `true` when a read actually happened. Callers should invoke it
+ * detached (`void`) and swallow failures: a balance snapshot must never delay
+ * or fail the request that triggered it.
+ */
+export async function lazyRefreshWalletBalances(
+  wallet: string,
+  input: LazyRefreshInput = {},
+): Promise<boolean> {
+  if (!isScrapableWallet(wallet)) return false;
+
+  const existing = lazyInFlight.get(wallet);
+  if (existing) return existing;
+
+  const maxAgeMs = Math.max(0, Number(input.maxAgeMs ?? LAZY_REFRESH_MAX_AGE_MS));
+
+  const run = (async () => {
+    // Freshness is judged on `scrapedAt`, not `observedAt`: a wallet whose
+    // reads keep failing should still be rate-limited, or a broken RPC turns
+    // every request into a retry storm.
+    if (maxAgeMs > 0) {
+      const tokenIds = await getSupportedTokenIds();
+      const recent = await prisma.walletBalance.findFirst({
+        where: { walletAddress: wallet, tokenId: { in: tokenIds }, scrapedAt: { gt: new Date(Date.now() - maxAgeMs) } },
+        select: { id: true },
+      });
+      if (recent) return false;
+    }
+
+    await refreshWalletBalances({
+      wallets: [wallet],
+      ...(input.resolveRpcUrl ? { resolveRpcUrl: input.resolveRpcUrl } : {}),
+    });
+    return true;
+  })();
+
+  lazyInFlight.set(wallet, run);
+  try {
+    return await run;
+  } finally {
+    lazyInFlight.delete(wallet);
+  }
 }

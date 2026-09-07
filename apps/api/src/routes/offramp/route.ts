@@ -10,6 +10,7 @@ import {
   type OfframpStep,
 } from '@vaquita/shared';
 import { getSessionWallet, requireSessionWallet } from '../../lib/walletAuth';
+import { refreshWalletBalanceAfterEvent } from '../../lib/walletBalanceRefresh';
 
 /**
  * Retiros a moneda local (`/offramp`).
@@ -180,6 +181,12 @@ router.post('/withdrawals/:id/terminal', requireSessionWallet, async (req, res) 
       errorReason: asString(errorReason),
     });
     if (!withdrawal) return sendError(res, 'Withdrawal not found.', null, 404);
+
+    // Sólo un retiro acreditado movió plata on-chain; los otros desenlaces
+    // dejan el saldo igual y no justifican una lectura RPC.
+    if (withdrawal.status === 'settled') {
+      refreshWalletBalanceAfterEvent(walletAddress, req.log, 'offramp-settled');
+    }
 
     return sendSuccess(res, { id: withdrawal.id, status: withdrawal.status });
   } catch (err) {

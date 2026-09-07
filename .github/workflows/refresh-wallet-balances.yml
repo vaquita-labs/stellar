@@ -1,15 +1,20 @@
 name: Refresh Wallet Balances
 
-# Repopulates `wallet_balances`, the snapshot the admin Wallets tab ranks top
-# DeFindex passive-yield depositors from. Until this existed the table was only
-# ever written when an admin clicked Scrape, so the dashboard showed whatever
-# was last read by hand.
+# Manual backfill for `wallet_balances`, the snapshot behind the admin Wallets
+# tab and the vault XP on the leaderboard.
 #
-# One job, not the scheduled/manual pair the reconcile workflow uses: the
-# snapshot only matters where there are real users, so the schedule targets
-# `prod` and a manual dispatch can point at dev or staging. Both paths are gated
-# on WALLET_BALANCE_REFRESH_ENABLED, so the schedule stays inert until an
-# environment opts in.
+# This used to run every 6 hours. It no longer does: reads are sequential
+# against a rate-limited public RPC (~1.7 s per wallet, 75-100% 429s at
+# concurrency >= 5), so a full sweep grew with the user base while spending
+# almost all of it on wallets that had not moved. Balances are now refreshed
+# lazily, when the wallet itself interacts with the app
+# (`lazyRefreshWalletBalances`, and `POST /api/v1/wallets/balances/refresh`).
+#
+# What is left here is the batch case that lazy refresh cannot cover: seeding
+# `observed_at` for wallets that have not opened the app yet, so their
+# `vault_usdc_hours` accumulator starts from a real baseline instead of from
+# their next visit. Run it once per environment after the accumulator migration
+# lands. Still gated on WALLET_BALANCE_REFRESH_ENABLED.
 
 on:
   workflow_dispatch:
@@ -30,8 +35,6 @@ on:
         description: Resume point from a previous run that ran out of budget
         required: false
         type: string
-  schedule:
-    - cron: "0 */6 * * *"
 
 permissions:
   contents: read

@@ -22,6 +22,7 @@ import { AppShell } from './AppShell';
 import { GameClockSync } from './GameClockSync';
 import { PostHogProvider } from './PostHogProvider';
 import { useAuthGate } from './useAuthGate';
+import { useWalletBalanceRefreshOnMount } from '@/core-ui/hooks/useWalletBalanceRefresh';
 import { useConsoleToAbly } from './useConsoleToAbly';
 import { useViewportVh } from './useViewportVh';
 
@@ -40,6 +41,9 @@ export function Providers({ children }: { children: ReactNode }) {
   useVisibility();
   useViewportVh();
   useConsoleToAbly();
+  // Refresca el snapshot on-chain de la wallet al abrir la app. El server tiene
+  // su propio TTL, así que recargar seguido no dispara lecturas RPC de más.
+  useWalletBalanceRefreshOnMount();
   const { isPublicRoute, showLoader } = useAuthGate();
 
   // Single QueryClient per app session — created lazily so it isn't shared
