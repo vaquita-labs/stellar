@@ -4,7 +4,7 @@ import { getWalletPositions, type WalletPositionConfig } from '@vaquita/shared/s
 import { NextResponse, type NextRequest } from 'next/server';
 import { rpcUrlFor } from '@/lib/contractEvents';
 import { adminSecretOk } from '@/lib/adminSecret';
-import { getVaquitaPositionsByWalletToken, positionKey } from '@/lib/vaquitaPositions';
+import { getVaquitaPositionsByWalletToken, positionKey } from '@vaquita/shared/services/wallets/vaquitaPositions';
 
 // One wallet's on-chain USDC positions across every supported token — a snapshot
 // per (wallet, token_id), never mixing token ids. Read-only, admin-gated. Shares

@@ -32,6 +32,16 @@ const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 
 const shortWallet = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-5)}` : a);
 const shortTime = (iso: string) => new Date(iso).toLocaleString();
 
+// Same wording as the metrics dashboard's `sampleAge`, so "as of" reads the
+// same in both places.
+const sampleAge = (iso: string): string => {
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `${hours} h ago`;
+  return `${Math.round(hours / 24)} d ago`;
+};
+
 // Migration status from the passive numbers only (Locked doesn't affect it).
 const statusOf = (r: WalletRow): Status => {
   const hasBlend = r.blendUsdc > 0;
@@ -59,7 +69,9 @@ export default function WalletsPage() {
   const [total, setTotal] = useState<number | null>(null);
   const [allDone, setAllDone] = useState(false);
 
-  const [sortKey, setSortKey] = useState<SortKey>('total');
+  // Vault desc IS the "top passive-yield depositors" ranking this page exists
+  // to answer; Total mixed in locked-pool principal and buried them.
+  const [sortKey, setSortKey] = useState<SortKey>('vaultUsdc');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [nonZeroOnly, setNonZeroOnly] = useState(false);
   const [notMigratedOnly, setNotMigratedOnly] = useState(false);
@@ -78,6 +90,18 @@ export default function WalletsPage() {
     const dir = sortDir === 'desc' ? -1 : 1;
     return [...rows].sort((a, b) => (a[sortKey] - b[sortKey]) * dir);
   }, [rows, sortKey, sortDir]);
+
+  // Derived from the rows already on the page — the table is loaded whole, so
+  // asking the server for a MAX() it just sent us would be a wasted round trip.
+  const freshness = useMemo(() => {
+    let scrapedAt: string | null = null;
+    let errored = 0;
+    for (const r of rows) {
+      if (r.lastError) errored += 1;
+      if (scrapedAt === null || r.scrapedAt > scrapedAt) scrapedAt = r.scrapedAt;
+    }
+    return { scrapedAt, rows: rows.length, errored };
+  }, [rows]);
 
   const tokenIds = useMemo(
     () => Array.from(new Set(rows.map((r) => r.tokenId))).sort((a, b) => a - b),
@@ -209,9 +233,25 @@ export default function WalletsPage() {
   return (
     <div className="p-6 max-w-5xl">
       <h1 className="text-2xl font-bold mb-1">Wallets</h1>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-gray-500 mb-2">
         Per-user balances: Blend + Vault read on-chain, Locked from the pool deposits. Scrape reads users in throttled
         batches; search reads any wallet on demand.
+      </p>
+
+      {/* These numbers are a snapshot, not a live read — without a refresh time
+          a stale table is indistinguishable from an accurate one. */}
+      <p className="text-sm text-gray-500 mb-4">
+        {freshness.scrapedAt ? (
+          <>
+            Snapshot as of <span className="font-medium text-gray-700">{sampleAge(freshness.scrapedAt)}</span> (
+            {shortTime(freshness.scrapedAt)}) · {freshness.rows} rows
+            {freshness.errored > 0 ? (
+              <span className="text-red-600"> · {freshness.errored} with read errors</span>
+            ) : null}
+          </>
+        ) : (
+          'Never scraped.'
+        )}
       </p>
 
       <div className="flex items-start gap-2 mb-4">

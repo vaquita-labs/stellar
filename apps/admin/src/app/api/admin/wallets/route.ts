@@ -1,7 +1,7 @@
 import { prisma } from '@vaquita/db';
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminSecretOk } from '@/lib/adminSecret';
-import { getVaquitaPositionsByWalletToken, positionKey } from '@/lib/vaquitaPositions';
+import { getVaquitaPositionsByWalletToken, positionKey } from '@vaquita/shared/services/wallets/vaquitaPositions';
 
 // The Wallets tab table: the persisted on-chain snapshots (one per wallet+token)
 // joined (by wallet address, app-layer) to profiles. Locked is computed per
