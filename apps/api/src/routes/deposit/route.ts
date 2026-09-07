@@ -28,6 +28,7 @@ import {
   toDepositResponseDTO,
   tryParsePoolError,
 } from '@vaquita/shared';
+import { refreshWalletBalanceAfterEvent } from '../../lib/walletBalanceRefresh';
 
 /**
  * Returns a typed VaquitaPoolError response when `err` is a recognised contract
@@ -132,6 +133,7 @@ router.post('/confirm', asyncHandler(async (req, res) => {
   }
 
   req.log.info({ id, txHash }, 'Deposit confirmed');
+  refreshWalletBalanceAfterEvent(result.data?.walletAddress, req.log, 'deposit-confirm');
   return sendSuccess(res, true, 'success confirmed');
 }));
 
@@ -211,6 +213,7 @@ router.post('/withdraw-confirm', asyncHandler(async (req, res) => {
   }
 
   req.log.info({ depositId, txHash }, 'Withdrawal confirmed');
+  refreshWalletBalanceAfterEvent(result.data?.deposit.walletAddress, req.log, 'withdraw-confirm');
   return sendSuccess(res, true, 'success confirmed');
 }));
 

@@ -172,32 +172,54 @@ model OfframpWithdrawal {
   @@map("offramp_withdrawals")
 }
 
+/// A cross-chain USDC transfer routed through NEAR Intents 1Click.
+///
+/// 1Click settles by deposit address: we ask for a quote, it returns an address
+/// (plus a memo when the origin is Stellar) and the user funds it from whatever
+/// wallet they already use. There is no worker and no lease — status is pulled
+/// from 1Click when the row is read, which is why none of the queue bookkeeping
+/// the old CCTP bridge needed survives here.
+///
+/// Rows created before 2026-09-07 are CCTP history and carry the old lowercase
+/// `status` values; nothing writes those any more.
 model BridgeTransfer {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  direction            String    @db.VarChar(32)
-  sourceNetwork        String    @map("source_network") @db.VarChar(40)
-  destinationNetwork   String    @map("destination_network") @db.VarChar(40)
-  sourceWallet         String    @map("source_wallet") @db.VarChar(128)
-  destinationWallet    String    @map("destination_wallet") @db.VarChar(128)
-  amount               String    @db.VarChar(80)
-  amountRaw            String    @map("amount_raw") @db.VarChar(80)
-  status               String    @default("source_awaiting_signature") @db.VarChar(40)
-  sourceTxHash         String?   @unique(map: "bridge_transfers_source_tx_unique") @map("source_tx_hash") @db.VarChar(128)
-  destinationTxHash    String?   @map("destination_tx_hash") @db.VarChar(128)
-  messageHash          String?   @map("message_hash") @db.VarChar(128)
-  cctpMessage          String?   @map("cctp_message")
-  cctpAttestation      String?   @map("cctp_attestation")
-  errorReason          String?   @map("error_reason")
-  retryCount           Int       @default(0) @map("retry_count")
-  lastPolledAt         DateTime? @map("last_polled_at") @db.Timestamptz(6)
-  processingLeaseUntil DateTime? @map("processing_lease_until") @db.Timestamptz(6)
-  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(6)
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 'evm_to_stellar' | 'stellar_to_evm'
+  direction          String    @db.VarChar(32)
+  sourceNetwork      String    @map("source_network") @db.VarChar(40)
+  destinationNetwork String    @map("destination_network") @db.VarChar(40)
+  sourceWallet       String    @map("source_wallet") @db.VarChar(128)
+  destinationWallet  String    @map("destination_wallet") @db.VarChar(128)
+  amount             String    @db.VarChar(80)
+  amountRaw          String    @map("amount_raw") @db.VarChar(80)
+  /// Expected output, base units, as quoted. Null on legacy CCTP rows.
+  amountOut          String?   @map("amount_out") @db.VarChar(80)
+  /// The 1Click status verbatim — PENDING_DEPOSIT | KNOWN_DEPOSIT_TX |
+  /// INCOMPLETE_DEPOSIT | PROCESSING | SUCCESS | REFUNDED | FAILED — enforced by
+  /// a CHECK constraint that also still admits the legacy CCTP values.
+  status             String    @default("PENDING_DEPOSIT") @db.VarChar(40)
+  /// Where the user sends the funds. Also the key 1Click's status endpoint takes.
+  depositAddress     String?   @map("deposit_address") @db.VarChar(128)
+  /// Only set when the origin is Stellar (depositMode MEMO). Without it the
+  /// deposit arrives unattributed and 1Click cannot match it to this swap.
+  depositMemo        String?   @map("deposit_memo") @db.VarChar(64)
+  correlationId      String?   @map("correlation_id") @db.VarChar(64)
+  /// After this, 1Click stops honouring the quoted rate.
+  deadline           DateTime? @db.Timestamptz(6)
+  /// The whole signed QuoteResponse. Kept for the signature: it is the only
+  /// evidence we hold if a swap does not settle as quoted.
+  quote              Json?
+  sourceTxHash       String?   @unique(map: "bridge_transfers_source_tx_unique") @map("source_tx_hash") @db.VarChar(128)
+  destinationTxHash  String?   @map("destination_tx_hash") @db.VarChar(128)
+  errorReason        String?   @map("error_reason")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   @@index([sourceWallet], map: "idx_bridge_transfers_source_wallet")
   @@index([destinationWallet], map: "idx_bridge_transfers_destination_wallet")
   @@index([status, updatedAt], map: "idx_bridge_transfers_status_updated")
+  @@index([depositAddress], map: "idx_bridge_transfers_deposit_address")
   @@map("bridge_transfers")
 }
 
@@ -512,6 +534,14 @@ model Profile {
   /// here: it still routes through `referredById`.
   campaignId    Int?      @map("campaign_id")
   attribution   Json?     @db.JsonB
+
+  /// Id of the newest release note this profile has acknowledged (the modal was
+  /// closed). One column rather than a join table because the user only ever
+  /// sees the latest note: "is there anything newer than this?" is the only
+  /// question asked, and per-note read history would record notes that were
+  /// never shown. NULL = has seen none, which is what an existing account
+  /// should be — the next published note reaches everyone.
+  releaseNoteSeenId Int? @map("release_note_seen_id")
 
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -831,10 +861,20 @@ model WalletBalance {
   tokenId       Int       @map("token_id")
   blendUsdc     Decimal   @default(0) @map("blend_usdc") @db.Decimal
   vaultUsdc     Decimal   @default(0) @map("vault_usdc") @db.Decimal
+  // Running integral of the vault balance over time: at each successful read,
+  // `min(previous, current) * hours elapsed` is added. Vault XP is its square
+  // root, which for a steady balance is exactly `sqrt(amount) * sqrt(hours)` —
+  // the same scale as a locked-pool deposit. Only ever grows, so XP derived
+  // from it can never decrease.
+  vaultUsdcHours Decimal  @default(0) @map("vault_usdc_hours") @db.Decimal
   // Locked Vaquita-pool deposits by lock period: [{ period, amount }] (from the
   // deposits table). Persisted so the snapshot row is a self-contained record.
   vaquitaPositions Json   @default(dbgenerated("'[]'::jsonb")) @map("vaquita_positions")
   scrapedAt     DateTime  @map("scraped_at") @db.Timestamptz(6)
+  // When the balance was last read SUCCESSFULLY — deliberately not `scrapedAt`,
+  // which is bumped on failures too and so cannot bound an integration window.
+  // NULL until the first successful read.
+  observedAt    DateTime? @map("observed_at") @db.Timestamptz(6)
   lastError     String?   @map("last_error")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -917,4 +957,47 @@ model VaultTvlSnapshot {
 
   @@index([network, vaultAddress, fetchedAt(sort: Desc)], map: "idx_vault_tvl_snapshots_vault_time")
   @@map("vault_tvl_snapshots")
+}
+
+/// A "what's new" note shown to the user once, in a modal, on their next visit.
+///
+/// Every note ever written is kept, but only the newest published one is ever
+/// shown — the history is for the team (what did we announce, and when), not
+/// for the user. `publishedAt` NULL is the draft state and the only other
+/// state there is: a note is either live or invisible.
+model ReleaseNote {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(160)
+  body        String
+  /// NULL = draft. Set when an admin publishes; clearing it retracts the note
+  /// without losing the text.
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  images ReleaseNoteImage[]
+
+  @@index([publishedAt(sort: Desc)], map: "idx_release_notes_published")
+  @@map("release_notes")
+}
+
+/// One image in a release note's carousel. Bytes live in Postgres for the same
+/// reason as feedback attachments: the project has no object store, and these
+/// are a handful of admin-uploaded, client-downscaled files per release.
+model ReleaseNoteImage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  releaseNoteId Int      @map("release_note_id")
+  /// 'image/png' | 'image/jpeg' | 'image/webp' — enforced by a CHECK constraint.
+  contentType   String   @map("content_type") @db.VarChar(40)
+  byteSize      Int      @map("byte_size")
+  data          Bytes
+  /// Carousel order. Ties break on createdAt, which is stable.
+  displayOrder  Int      @default(0) @map("display_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  releaseNote ReleaseNote @relation(fields: [releaseNoteId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([releaseNoteId, displayOrder], map: "idx_release_note_images_note")
+  @@map("release_note_images")
 }

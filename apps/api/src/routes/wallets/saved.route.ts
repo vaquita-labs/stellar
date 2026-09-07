@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { getSessionWallet, requireSessionWallet } from '../../lib/walletAuth';
 import {
-  CCTP_NETWORKS,
   createSavedWallet,
   deleteSavedWallet,
   getProfile,
   getSavedWallets,
   sendError,
   sendSuccess,
+  SUPPORTED_PAYOUT_NETWORKS,
   toSavedWalletResponseDTO,
   updateSavedWallet,
 } from '@vaquita/shared';
@@ -27,7 +27,7 @@ const MEMO_MAX = 64;
 
 // Whitelist derived from the networks the product actually supports, so adding a
 // chain in one place doesn't leave this route silently rejecting it.
-const SUPPORTED_NETWORKS = new Set<string>(Object.keys(CCTP_NETWORKS));
+const SUPPORTED_NETWORKS = new Set<string>(SUPPORTED_PAYOUT_NETWORKS);
 
 // Ids are UUIDs. Prisma throws an opaque P2023 on a malformed one, which would
 // surface as a 500 for what is really just "no such wallet" — check it up front.

@@ -1,0 +1,161 @@
+name: Refresh Wallet Balances
+
+# Manual backfill for `wallet_balances`, the snapshot behind the admin Wallets
+# tab and the vault XP on the leaderboard.
+#
+# This used to run every 6 hours. It no longer does: reads are sequential
+# against a rate-limited public RPC (~1.7 s per wallet, 75-100% 429s at
+# concurrency >= 5), so a full sweep grew with the user base while spending
+# almost all of it on wallets that had not moved. Balances are now refreshed
+# lazily, when the wallet itself interacts with the app
+# (`lazyRefreshWalletBalances`, and `POST /api/v1/wallets/balances/refresh`).
+#
+# What is left here is the batch case that lazy refresh cannot cover: seeding
+# `observed_at` for wallets that have not opened the app yet, so their
+# `vault_usdc_hours` accumulator starts from a real baseline instead of from
+# their next visit. Run it once per environment after the accumulator migration
+# lands. Still gated on WALLET_BALANCE_REFRESH_ENABLED.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: GitHub Environment to use for secrets and vars
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      limit:
+        description: Max wallets to read this run (blank or 0 = sweep everything)
+        required: false
+        type: string
+      after_profile_id:
+        description: Resume point from a previous run that ran out of budget
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "11.5.2"
+
+jobs:
+  refresh:
+    name: Refresh wallet balances (${{ inputs.target_environment || 'prod' }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_environment || 'prod' }}
+    concurrency:
+      # Never overlap: two sweeps against the same rate-limited public RPC just
+      # produce 429s, and both would be writing the same rows.
+      group: wallet-balance-refresh-${{ inputs.target_environment || 'prod' }}
+      cancel-in-progress: false
+    env:
+      TARGET_ENVIRONMENT: ${{ inputs.target_environment || 'prod' }}
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      STELLAR_TESTNET_SOROBAN_RPC_URL: https://soroban-testnet.stellar.org
+      STELLAR_MAINNET_SOROBAN_RPC_URL: https://soroban-rpc.mainnet.stellar.gateway.fm
+      WALLET_BALANCE_REFRESH_ENABLED: ${{ vars.WALLET_BALANCE_REFRESH_ENABLED }}
+      # Measured against the free public mainnet RPC: 404 ms and 1.1 requests
+      # per wallet, zero 429s at ~2.7 req/s. Do not lower this.
+      SCRAPE_DELAY_MS: "300"
+    steps:
+      - name: Check environment gate
+        id: gate
+        run: |
+          set -euo pipefail
+          if [ "${WALLET_BALANCE_REFRESH_ENABLED:-false}" != "true" ]; then
+            echo "should_run=false" >> "${GITHUB_OUTPUT}"
+            echo "Wallet balance refresh disabled for ${TARGET_ENVIRONMENT}."
+            exit 0
+          fi
+          echo "should_run=true" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout
+        if: steps.gate.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        if: steps.gate.outputs.should_run == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        if: steps.gate.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.gate.outputs.should_run == 'true'
+        run: CI=true pnpm install --frozen-lockfile
+
+      - name: Refresh wallet balances
+        if: steps.gate.outputs.should_run == 'true'
+        env:
+          LIMIT: ${{ inputs.limit }}
+          AFTER_PROFILE_ID: ${{ inputs.after_profile_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+
+          args=(
+            "--artifact=artifacts/wallet-balances-${TARGET_ENVIRONMENT}.json"
+            # 50 minutes, comfortably inside the 6h job limit — the runner stops
+            # on a whole wallet and reports a resume point rather than being
+            # killed mid-upsert.
+            "--max-seconds=3000"
+          )
+          if [ -n "${LIMIT:-}" ]; then
+            args+=("--limit=${LIMIT}")
+          fi
+          if [ -n "${AFTER_PROFILE_ID:-}" ]; then
+            args+=("--after-profile-id=${AFTER_PROFILE_ID}")
+          fi
+
+          pnpm --filter @vaquita/reconciler refresh:wallets -- "${args[@]}"
+
+      - name: Write Step Summary
+        if: always() && steps.gate.outputs.should_run == 'true'
+        run: |
+          set -euo pipefail
+          artifact="artifacts/wallet-balances-${TARGET_ENVIRONMENT}.json"
+          {
+            echo "## Wallet balance refresh"
+            echo
+            echo "- Environment: ${TARGET_ENVIRONMENT}"
+            echo "- Trigger: ${GITHUB_EVENT_NAME}"
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          if [ -f "${artifact}" ]; then
+            node -e '
+              const fs = require("node:fs");
+              const artifact = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              console.log(`- Wallets read: ${artifact.wallets_scraped} of ${artifact.profiles_total} profiles`);
+              console.log(`- Rows written: ${artifact.rows_written} (${artifact.rows_failed} failed)`);
+              console.log(`- Duration: ${artifact.duration_seconds}s`);
+              console.log(`- Snapshot as of: ${artifact.snapshot_scraped_at ?? "never"} (${artifact.snapshot_rows} rows, ${artifact.snapshot_errored} errored)`);
+              if (artifact.stopped_early) {
+                console.log(`- Stopped early on the time budget. Re-run with after_profile_id=${artifact.next_profile_id} to continue.`);
+              }
+            ' "${artifact}" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "- Artifact: not created; inspect logs for failure before the refresh completed." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload refresh artifact
+        if: always() && steps.gate.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wallet-balances-${{ inputs.target_environment || 'prod' }}-${{ github.run_id }}
+          path: artifacts/wallet-balances-${{ inputs.target_environment || 'prod' }}.json
+          if-no-files-found: warn
+          retention-days: 30

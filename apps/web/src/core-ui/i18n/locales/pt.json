@@ -1232,6 +1232,10 @@
       "riskDisclosure": "Declaração de riscos"
     }
   },
+  "releaseNotes": {
+    "gotIt": "Entendi",
+    "openImage": "Ver imagem"
+  },
   "rewards": {
     "carousel": {
       "scrollLeft": "Rolar para a esquerda",
@@ -2014,14 +2018,50 @@
       "memoInvalid": "O memo é muito longo (máx. 28 caracteres)."
     },
     "bridge": {
-      "actionFailed": "A ação da ponte falhou",
-      "approvalReady": "Aprovação de USDC confirmada. Agora você pode enviar.",
-      "depositHelper": "Precisa de USDC na Stellar? Faça a ponte a partir da Base ou Ethereum",
-      "noInjectedWallet": "Nenhuma carteira EVM encontrada",
-      "stellarApprovalReady": "Aprovação de USDC na Stellar confirmada. Pressione Enviar da Stellar novamente para continuar.",
-      "subtitle": "Mova USDC entre EVM e Stellar",
-      "switchFailed": "Não foi possível trocar de rede",
-      "title": "Enviar USDC"
+      "activateTrustline": "Ativar USDC",
+      "activating": "Ativando…",
+      "amount": "Valor",
+      "amountRange": "Informe um valor entre {{min}} e {{max}} USDC.",
+      "available": "Disponível: {{amount}} USDC",
+      "baseOnlyWarning": "Somente rede Base e somente USDC. Qualquer outra coisa enviada para este endereço é perdida.",
+      "close": "Fechar",
+      "continue": "Continuar",
+      "copied": "Copiado",
+      "copy": "Copiar",
+      "creating": "Preparando…",
+      "depositHelper": "Precisa de USDC na Stellar? Traga da Base",
+      "depositInstructions": "Envie exatamente {{amount}} USDC pela rede Base para este endereço, de qualquer carteira ou corretora.",
+      "destinationAddress": "Endereço de destino na Base",
+      "directionIn": "Base → Stellar",
+      "directionOut": "Stellar → Base",
+      "eta": "Tempo estimado",
+      "etaSeconds": "~{{seconds}} s",
+      "failedBody": "A ponte não conseguiu concluir a troca.",
+      "failedTitle": "A transferência falhou",
+      "fee": "Taxa de rede",
+      "insufficient": "USDC insuficiente.",
+      "invalidEvmAddress": "Informe um endereço da Base válido (0x…).",
+      "missingMemo": "A ponte não retornou um memo válido. Tente de novo.",
+      "newQuote": "Obter uma nova cotação",
+      "outboundInstructions": "Confirme o pagamento para enviar {{amount}} USDC para a Base.",
+      "pendingConfirm": "Seu pagamento foi enviado e ainda está confirmando. Estamos acompanhando — não envie de novo.",
+      "processing": "Movendo seu USDC…",
+      "quoteExpired": "Esta cotação expirou antes de ser paga. Peça uma nova: enviar para o endereço antigo perderia os fundos.",
+      "quoting": "Cotando…",
+      "refundAddress": "Seu endereço na Base (para estornos)",
+      "refundedBody": "A ponte devolveu os fundos ao seu endereço de estorno.",
+      "refundedTitle": "Transferência estornada",
+      "send": "Enviar {{amount}} USDC",
+      "sending": "Enviando…",
+      "subtitle": "Mova USDC entre Base e Stellar",
+      "successBody": "Chegaram {{amount}} USDC.",
+      "successTitle": "Transferência concluída",
+      "title": "Ponte de USDC",
+      "toAddress": "Para",
+      "trustlineError": "Não foi possível ativar o USDC. Tente de novo.",
+      "trustlineNeeded": "Sua carteira precisa ativar o USDC antes de poder recebê-lo.",
+      "waitingDeposit": "Aguardando seu depósito…",
+      "youReceive": "Você recebe"
     }
   },
   "referrals": {

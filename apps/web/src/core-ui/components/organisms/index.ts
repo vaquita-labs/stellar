@@ -11,6 +11,8 @@ export * from './LockPeriodModal';
 export * from './SavingsStats';
 export * from './VaquitasListModal';
 export * from './BankAPYModal';
+export * from './BridgeModal';
+export * from './ReleaseNotes';
 export * from './TutorialModal';
 export * from './Tutorial';
 export * from './ClaimReward';

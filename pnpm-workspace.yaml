@@ -1,7 +1,6 @@
 packages:
   - 'apps/api'
   - 'apps/reconciler'
-  - 'apps/bridge-worker'
   - 'apps/deployer'
   - 'apps/web'
   - 'apps/admin'

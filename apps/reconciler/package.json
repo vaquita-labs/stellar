@@ -7,6 +7,7 @@
     "reconcile:devnet": "tsx src/reconcile.ts",
     "reconcile:testnet": "tsx src/reconcile.ts",
     "reconcile:mainnet": "tsx src/reconcile.ts",
+    "refresh:wallets": "tsx src/refreshWalletBalances.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

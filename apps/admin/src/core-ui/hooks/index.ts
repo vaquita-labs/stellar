@@ -1,6 +1,7 @@
 export * from './useAdminAchievements';
 export * from './useAdminDeposits';
 export * from './useCampaigns';
+export * from './useReleaseNotes';
 export * from './useFeedback';
 export * from './useHasHydrated';
 export * from './useMapObjects';

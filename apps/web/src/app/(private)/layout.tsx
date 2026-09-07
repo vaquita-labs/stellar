@@ -7,6 +7,7 @@ import {
   PullToRefresh,
   PushNudge,
   PushSubscriptionSync,
+  ReleaseNotesGate,
   RequireAuth,
   TutorialGate,
   UsernameGate,
@@ -44,6 +45,10 @@ export default function PrivateLayout({
                 <AttributionFlush />
                 <PushSubscriptionSync />
                 <PushNudge />
+                {/* Después de PushNudge y, sobre todo, después de que el prompt de
+                    plata ociosa se resuelva (lo coordina `useModalQueueStore`):
+                    un anuncio no puede taparle a nadie la decisión de depositar. */}
+                <ReleaseNotesGate />
                 {/* The app's scroll region, and the only place a pull-to-refresh
                     can live: `html`/`body` are pinned to the viewport, so the
                     document never overscrolls and the browser gesture never

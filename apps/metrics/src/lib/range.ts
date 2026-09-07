@@ -46,3 +46,33 @@ export const EPOCH = new Date('2024-01-01T00:00:00Z');
 
 /** Wall clock for server components (rendered once per request, so reading it during render is fine). */
 export const nowMs = () => Date.now();
+
+// ---------------------------------------------------------------------------
+// Pagination
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_PAGE_SIZE = 20;
+export const MAX_PAGE_SIZE = 100;
+
+export type Page = { page: number; limit: number; offset: number };
+
+/**
+ * `?page` / `?limit`, clamped. Mirrors `parseLeaderboardPageQuery` in the shared
+ * leaderboard service so the two pagination contracts in the repo agree.
+ *
+ * Everything unparseable collapses to page 1: a bad param should show the first
+ * page, not an error, and the cap is what stops `?limit=100000` from turning a
+ * paginated query back into a full scan.
+ */
+export function parsePage(params: SearchParams): Page {
+  const rawPage = Number(first(params.page));
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1;
+
+  const rawLimit = Number(first(params.limit));
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit >= 1
+      ? Math.min(Math.floor(rawLimit), MAX_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE;
+
+  return { page, limit, offset: (page - 1) * limit };
+}

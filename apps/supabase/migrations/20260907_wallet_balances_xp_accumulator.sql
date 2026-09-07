@@ -1,0 +1,41 @@
+-- Acumulador de USDC-horas del vault: lo que convierte un snapshot puntual en
+-- experiencia.
+--
+-- El problema: `wallet_balances` guarda UN saldo por (wallet, token) y lo
+-- pisa en cada lectura. No hay evento de depósito y por lo tanto no hay
+-- "desde cuándo", así que la fórmula del pool bloqueado —
+-- sqrt(monto) * sqrt(horas) — no tiene de dónde agarrarse.
+--
+-- La solución: integrar en el momento de observar, no al leer. En cada lectura
+-- exitosa se acredita
+--
+--     min(saldo_anterior, saldo_nuevo) * horas_desde_la_última_observación
+--
+-- y se acumula. La XP del vault es sqrt(vault_usdc_hours), que para un saldo A
+-- sostenido T horas da sqrt(A*T) === sqrt(A)*sqrt(T): la MISMA escala que la
+-- del pool bloqueado, sin factor de corrección.
+--
+-- Tres propiedades que salen de la forma del cálculo, no de acordarse de
+-- chequearlas:
+--   * Monótono. El acumulador sólo crece, así que la XP sólo crece. Retirar
+--     corta la acumulación, nunca resta XP ya ganada.
+--   * Independiente de la cadencia. min * elapsed sobre cualquier partición de
+--     un intervalo da lo mismo con saldo estable, así que abrir la app seguido
+--     no da más XP por la misma plata.
+--   * El min() es el término anti-abuso: un depósito hecho justo antes de una
+--     observación no puede acreditarse las horas en las que no estuvo.
+--
+-- `observed_at` NO es `scraped_at`. `scraped_at` se pisa incluso cuando la
+-- lectura falla (ver el camino de error de onchainBalances.ts), así que no
+-- sirve para marcar "acá tenemos un saldo confiable". `observed_at` avanza sólo
+-- con una lectura exitosa, que es justo entre qué instantes hay que integrar.
+--
+-- Aditiva: no borra ni reescribe nada. Las filas existentes arrancan en 0 con
+-- observed_at NULL, y la primera observación sólo fija la línea de base
+-- (acredita 0 horas). No se rellena historia: hoy nadie tiene XP de vault, así
+-- que todos arrancan del mismo cero.
+
+ALTER TABLE "wallet_balances"
+  ADD COLUMN IF NOT EXISTS "vault_usdc_hours" numeric NOT NULL DEFAULT 0,
+  -- NULL = todavía no hubo ninguna lectura exitosa de esta fila.
+  ADD COLUMN IF NOT EXISTS "observed_at" timestamptz NULL;

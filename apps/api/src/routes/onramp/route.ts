@@ -8,6 +8,7 @@ import {
   sendSuccess,
 } from '@vaquita/shared';
 import { getSessionWallet, requireSessionWallet } from '../../lib/walletAuth';
+import { refreshWalletBalanceAfterEvent } from '../../lib/walletBalanceRefresh';
 
 /**
  * Compras de USDC con moneda local (`/onramp`).
@@ -135,6 +136,12 @@ router.post('/purchases/:id/terminal', requireSessionWallet, async (req, res) =>
     // Una compra que no existe o es de otra wallet es lo mismo para quien llama:
     // no hay nada que pueda cerrar.
     if (!purchase) return sendError(res, 'Purchase not found.', null, 404);
+
+    // Sólo una compra acreditada movió plata on-chain; los otros desenlaces
+    // dejan el saldo igual y no justifican una lectura RPC.
+    if (purchase.status === 'settled') {
+      refreshWalletBalanceAfterEvent(walletAddress, req.log, 'onramp-settled');
+    }
 
     return sendSuccess(res, { id: purchase.id, status: purchase.status });
   } catch (err) {

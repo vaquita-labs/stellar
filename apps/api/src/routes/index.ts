@@ -20,8 +20,10 @@ import offrampRoutes from './offramp/route';
 import onrampRoutes from './onramp/route';
 import profileRoutes from './profile/route';
 import referralRoutes from './referral/route';
+import releaseNoteRoutes from './release-notes/route';
 import timeRoutes from './time/route';
 import userRoutes from './user/route';
+import walletBalanceRoutes from './wallets/balances.route';
 import savedBankRoutes from './wallets/savedBanks.route';
 import savedWalletRoutes from './wallets/saved.route';
 import walletBadgeRoutes from './wallets/badges.route';
@@ -45,6 +47,7 @@ router.use('/config', configRoutes);
 router.use('/profile', profileRoutes);
 // Antes que `/wallets/saved`: los dos comparten prefijo y montar el más
 // específico primero deja el ruteo sin depender de cómo corta segmentos Express.
+router.use('/wallets/balances', walletBalanceRoutes);
 router.use('/wallets/saved-banks', savedBankRoutes);
 router.use('/wallets/saved', savedWalletRoutes);
 router.use('/wallets/:wallet/badges', walletBadgeRoutes);
@@ -56,6 +59,7 @@ router.use('/follows', followRoutes);
 router.use('/leaderboard', leaderboardRoutes);
 router.use('/legal', legalRoutes);
 router.use('/map-likes', mapLikeRoutes);
+router.use('/release-notes', releaseNoteRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/offramp', offrampRoutes);
 router.use('/onramp', onrampRoutes);

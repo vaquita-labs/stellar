@@ -1232,6 +1232,10 @@
       "riskDisclosure": "Declaración de riesgos"
     }
   },
+  "releaseNotes": {
+    "gotIt": "Entendido",
+    "openImage": "Ver imagen"
+  },
   "rewards": {
     "carousel": {
       "scrollLeft": "Desplazar a la izquierda",
@@ -2014,14 +2018,50 @@
       "memoInvalid": "El memo es demasiado largo (máx. 28 caracteres)."
     },
     "bridge": {
-      "actionFailed": "Falló la acción del bridge",
-      "approvalReady": "Aprobación de USDC confirmada. Ya podés enviar.",
-      "depositHelper": "¿Necesitás USDC en Stellar? Pasalo desde Base o Ethereum",
-      "noInjectedWallet": "No se encontró ninguna wallet EVM",
-      "stellarApprovalReady": "Aprobación de USDC en Stellar confirmada. Presioná Enviar desde Stellar de nuevo para continuar.",
-      "subtitle": "Mové USDC entre EVM y Stellar",
-      "switchFailed": "No se pudo cambiar de red",
-      "title": "Enviar USDC"
+      "activateTrustline": "Activar USDC",
+      "activating": "Activando…",
+      "amount": "Monto",
+      "amountRange": "Ingresá un monto entre {{min}} y {{max}} USDC.",
+      "available": "Disponible: {{amount}} USDC",
+      "baseOnlyWarning": "Sólo red Base y sólo USDC. Cualquier otra cosa enviada a esta dirección se pierde.",
+      "close": "Cerrar",
+      "continue": "Continuar",
+      "copied": "Copiado",
+      "copy": "Copiar",
+      "creating": "Preparando…",
+      "depositHelper": "¿Necesitás USDC en Stellar? Traelo desde Base",
+      "depositInstructions": "Enviá exactamente {{amount}} USDC por la red Base a esta dirección, desde cualquier wallet o exchange.",
+      "destinationAddress": "Dirección de destino en Base",
+      "directionIn": "Base → Stellar",
+      "directionOut": "Stellar → Base",
+      "eta": "Tiempo estimado",
+      "etaSeconds": "~{{seconds}} s",
+      "failedBody": "El puente no pudo completar el envío.",
+      "failedTitle": "La transferencia falló",
+      "fee": "Costo de red",
+      "insufficient": "No te alcanza el USDC.",
+      "invalidEvmAddress": "Ingresá una dirección de Base válida (0x…).",
+      "missingMemo": "El puente no devolvió un memo válido. Probá de nuevo.",
+      "newQuote": "Pedir una nueva cotización",
+      "outboundInstructions": "Confirmá el pago para enviar {{amount}} USDC a Base.",
+      "pendingConfirm": "Tu pago se envió y todavía está confirmando. Lo estamos siguiendo: no lo envíes de nuevo.",
+      "processing": "Moviendo tu USDC…",
+      "quoteExpired": "Esta cotización venció antes de pagarse. Pedí una nueva: enviar a la dirección anterior perdería los fondos.",
+      "quoting": "Cotizando…",
+      "refundAddress": "Tu dirección de Base (para devoluciones)",
+      "refundedBody": "El puente devolvió los fondos a tu dirección de devolución.",
+      "refundedTitle": "Transferencia devuelta",
+      "send": "Enviar {{amount}} USDC",
+      "sending": "Enviando…",
+      "subtitle": "Mové USDC entre Base y Stellar",
+      "successBody": "Llegaron {{amount}} USDC.",
+      "successTitle": "Transferencia completa",
+      "title": "Puente de USDC",
+      "toAddress": "Para",
+      "trustlineError": "No se pudo activar el USDC. Probá de nuevo.",
+      "trustlineNeeded": "Tu wallet necesita activar el USDC antes de poder recibirlo.",
+      "waitingDeposit": "Esperando tu depósito…",
+      "youReceive": "Recibís"
     }
   },
   "referrals": {

@@ -1,7 +1,8 @@
 import { prisma } from '@vaquita/db';
 import { NextResponse, type NextRequest } from 'next/server';
 import { adminSecretOk } from '@/lib/adminSecret';
-import { getVaquitaPositionsByWalletToken, positionKey } from '@/lib/vaquitaPositions';
+import { getVaquitaPositionsByWalletToken, positionKey } from '@vaquita/shared/services/wallets/vaquitaPositions';
+import { getSupportedTokenIds } from '@vaquita/shared/services/wallets/onchainBalances';
 
 // The Wallets tab table: the persisted on-chain snapshots (one per wallet+token)
 // joined (by wallet address, app-layer) to profiles. Locked is computed per
@@ -14,7 +15,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
   }
 
-  const snapshots = await prisma.walletBalance.findMany({ orderBy: { scrapedAt: 'desc' } });
+  // Only supported tokens. Rows for a retired token are never refreshed again,
+  // so they linger at a stale balance — and when two tokens share a DeFindex
+  // vault (production did) the "All tokens" totals count that vault twice.
+  const snapshots = await prisma.walletBalance.findMany({
+    where: { tokenId: { in: await getSupportedTokenIds() } },
+    orderBy: { scrapedAt: 'desc' },
+  });
 
   const wallets = Array.from(new Set(snapshots.map((s) => s.walletAddress)));
   const profiles = wallets.length
