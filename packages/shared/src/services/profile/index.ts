@@ -6,6 +6,7 @@ import { ably } from '../ably';
 import { getActiveBadgeClaimsForWallet, getMintedBadges } from '../badges/claims';
 import { getLastClosedCycleId, getLeaderboardRankForWallet } from '../leaderboard';
 import { notify } from '../notifications';
+import { getSupportedTokenIds } from '../wallets/onchainBalances';
 import {
   Achievement,
   type AchievementDocument,
@@ -104,6 +105,62 @@ export const depositExperience = (
 ): number => {
   const timeElapsed = Math.max(endTimestamp - createdTimestamp, 0);
   return Math.sqrt(amount || 0) * Math.sqrt(timeElapsed / (1000 * 60 * 60));
+};
+
+/**
+ * XP a wallet's DeFindex vault balance has generated, from the USDC-hours
+ * accumulated in `wallet_balances`.
+ *
+ * The vault has no deposit event to measure from — the snapshot is a single
+ * mutable balance — so the integration happens at observation time
+ * (`accrueVaultUsdcHours`) and this is only its square root. For a balance held
+ * steady at `A` for `T` hours that is `sqrt(A * T)`, which is exactly what
+ * {@link depositExperience} returns for the equivalent locked deposit. One
+ * scale, no correction factor.
+ *
+ * Monotonic for the same reason the accumulator is: it only ever grows, so
+ * moving money out of the vault stops XP accruing rather than taking it away.
+ */
+export const vaultExperience = (usdcHours: number): number => Math.sqrt(Math.max(usdcHours || 0, 0));
+
+/**
+ * Accumulated vault USDC-hours per wallet, summed across supported tokens.
+ *
+ * Summed BEFORE the square root, in {@link vaultExperience} — it is one pool of
+ * money split across token rows, and `sqrt(a) + sqrt(b)` would pay more for the
+ * same balance held under two token ids than under one.
+ *
+ * Scoped to supported tokens because retiring a token leaves its snapshot rows
+ * frozen and never refreshed again, and production had two tokens pointing at
+ * the SAME DeFindex vault — an unscoped sum counts that money twice.
+ */
+export const getVaultUsdcHoursByWallet = async (wallets?: string[]): Promise<Map<string, number>> => {
+  const byWallet = new Map<string, number>();
+  if (wallets && wallets.length === 0) return byWallet;
+  try {
+    const tokenIds = await getSupportedTokenIds();
+    if (!tokenIds.length) return byWallet;
+    const rows = await prisma.walletBalance.findMany({
+      where: {
+        tokenId: { in: tokenIds },
+        ...(wallets ? { walletAddress: { in: wallets } } : {}),
+      },
+      select: { walletAddress: true, vaultUsdcHours: true },
+    });
+    for (const row of rows) {
+      byWallet.set(row.walletAddress, (byWallet.get(row.walletAddress) ?? 0) + Number(row.vaultUsdcHours ?? 0));
+    }
+  } catch (error) {
+    console.warn('error on getVaultUsdcHoursByWallet', error);
+  }
+  return byWallet;
+};
+
+/** Vault XP for a single wallet. Convenience over {@link getVaultUsdcHoursByWallet}. */
+export const getVaultExperienceByWallet = async (wallet: string | null | undefined): Promise<number> => {
+  if (!wallet) return 0;
+  const byWallet = await getVaultUsdcHoursByWallet([wallet]);
+  return vaultExperience(byWallet.get(wallet) ?? 0);
 };
 
 /** When a deposit stopped accruing XP: its first withdrawal, or `null` if still active. */
@@ -607,10 +664,22 @@ export const getExperienceByProfile = async (
       depositXpByWallet.set(d.walletAddress, (depositXpByWallet.get(d.walletAddress) ?? 0) + xp);
     }
 
+    // Vault-derived XP: one read of the accumulator column, no per-wallet work.
+    // Users who only supply the DeFindex vault earn nothing from the deposits
+    // table above — this is the whole reason the accumulator exists.
+    const vaultUsdcHoursByWallet = await getVaultUsdcHoursByWallet(
+      profiles.map((p) => p.wallet_address ?? '').filter(Boolean),
+    );
+
     for (const profile of profiles) {
-      const depositXp = depositXpByWallet.get(profile.wallet_address ?? '');
+      const wallet = profile.wallet_address ?? '';
+      const depositXp = depositXpByWallet.get(wallet);
       if (depositXp) {
         experience.set(profile.id, (experience.get(profile.id) ?? 0) + depositXp);
+      }
+      const vaultXp = vaultExperience(vaultUsdcHoursByWallet.get(wallet) ?? 0);
+      if (vaultXp) {
+        experience.set(profile.id, (experience.get(profile.id) ?? 0) + vaultXp);
       }
     }
 
@@ -635,6 +704,9 @@ export const toProfileExperienceResponseDTO = async (networkName: string, profil
   // Add the experience persisted from daily check-ins (the deposit formula above
   // is unchanged — this is an additional, ledgered source of XP).
   experience += await getCheckinExperience(profile.id);
+
+  // ...and the DeFindex vault balance, which has no row in `deposits` at all.
+  experience += await getVaultExperienceByWallet(profile.wallet_address);
 
   return {
     walletAddress: profile?.wallet_address || '',
@@ -1228,6 +1300,15 @@ export const computeEligibilitySignals = async (
     experience += await getCheckinExperience(profile.id);
   } catch (error) {
     console.warn('[eligibility] failed to load check-in experience', error);
+  }
+
+  // Vault XP is shown to the user for the same reason, so it has to be in the
+  // same total. A wallet whose money is entirely in the DeFindex vault would
+  // otherwise read 0 XP here while the profile page shows hundreds.
+  try {
+    experience += await getVaultExperienceByWallet(profile.wallet_address);
+  } catch (error) {
+    console.warn('[eligibility] failed to load vault experience', error);
   }
 
   let streakCount = 0;
