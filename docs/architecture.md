@@ -35,7 +35,6 @@ graph TB
     subgraph services["Backend services"]
         API["apps/api — Express 5<br/>/api/v1"]
         REC["apps/reconciler<br/>on-chain ↔ DB reconciliation"]
-        BW["apps/bridge-worker<br/>CCTP transfers"]
         DEP["apps/deployer<br/>vault provisioning"]
     end
 
@@ -67,7 +66,6 @@ graph TB
     API -->|reads, signs badge claims| POOL
     REC --> PG
     REC -->|RPC| POOL
-    BW --> PG
     DEP --> VAULT
     POOL --> VAULT
     VAULT --> BLEND
@@ -90,7 +88,6 @@ pnpm workspace monorepo. Workspace members are declared in `pnpm-workspace.yaml`
 | `apps/api` | Express 5 HTTP API, all routes under `/api/v1`. Structured logging via `pino`. | ✅ |
 | `apps/admin` | Internal operations console. | ✅ |
 | `apps/reconciler` | Scheduled job reconciling on-chain events against the database. | ✅ |
-| `apps/bridge-worker` | Polls and advances CCTP bridge transfers. | ✅ |
 | `apps/deployer` | One-shot script to deploy and configure DeFindex vaults. | ✅ |
 | `apps/supabase` | SQL migrations, seeds, local Docker Compose. | — |
 | `packages/db` | Prisma schema (23 models) + generated client. **Canonical data access.** | ✅ |
@@ -261,7 +258,7 @@ Default timelock 48 h, floor 1 h. `execute_upgrade` bumps `Version` and clears p
 
 Express 5, routes under `/api/v1`: `ably`, `auth`, `badge`, `badges`, `bridge`, `config`, `deposit`, `explore`, `follows`, `health`, `leaderboard`, `map-likes`, `notifications`, `profile`, `referral`, `time`, `user`, `wallets`.
 
-Responsibilities: profile and social graph, badge claim signing, deposit/withdraw orchestration metadata (including **nonce allocation**), leaderboard computation, notifications, bridge status, and network/token config.
+Responsibilities: profile and social graph, badge claim signing, deposit/withdraw orchestration metadata (including **nonce allocation**), leaderboard computation, notifications, bridge quotes and status, and network/token config.
 
 `.env` files are per-environment (`.env`, `.env.dev`, `.env.staging`, `.env.production`) and are treated as secret — never read directly, only loaded by the process.
 
@@ -271,11 +268,7 @@ Reconciles on-chain events against the database on a schedule (GitHub Actions). 
 
 **Fault tolerance:** stellar-rpc rejects `getHealth` with JSON-RPC `-32603` when its last ingested ledger is older than the node's max-healthy latency (30 s). Because the node is lagging rather than broken, the reconciler retries the health probe 3× at 15 s intervals and then **soft-skips** the run, leaving the cursor untouched so the next run re-scans the gap. A non-latency error still hard-fails. The RPC probe runs *before* any database access so a skipped run costs zero queries.
 
-### 5.3 `apps/bridge-worker`
-
-Advances CCTP bridge transfers between Stellar and EVM chains, driven by the `bridge_transfers` table. Uses a `processing_lease_until` column for at-most-once processing across workers, with `retry_count` and `last_polled_at` for backoff.
-
-### 5.4 `apps/web`
+### 5.3 `apps/web`
 
 Next.js 16 (App Router + Turbopack). The 3D world uses Three.js / React Three Fiber. Wallet connectivity via `@creit.tech/stellar-wallets-kit`; **Pollar** fee-bumps badge mints so users never need to hold XLM. State is Zustand (client) + TanStack Query (server), with realtime pushed over Ably.
 
@@ -353,5 +346,4 @@ Carried forward from `docs/security-review.md` §4 so it is visible in one place
 | `docs/vaquita-pool-upgrade-runbook.md` | Timelocked upgrade procedure |
 | `docs/admin-key-rotation-runbook.md` | Admin key rotation |
 | `docs/mainnet-readiness-runbook.md` | Mainnet launch checklist |
-| `docs/cctp-bidirectional-bridge-prd.md` | Bridge design |
 | `contracts/README.md` | Contract build/deploy, external addresses |

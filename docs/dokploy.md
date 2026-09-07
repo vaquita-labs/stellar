@@ -140,47 +140,6 @@ CMD ["sh", "-c", "./notify.sh RUNTIME-PING true && exec node apps/web/server.js"
 4. **Environment Settings**: `WEBHOOK_URL`, `WEBHOOK_TOKEN` (solo si quieres `RUNTIME-PING` al arrancar).
 5. Redeploy. El `next build` debe completar sin el error de Zod.
 
-## Bridge confirmation worker
-
-The bidirectional CCTP bridge uses a bounded confirmation worker. This is not a
-global blockchain listener: it only polls known `bridge_transfers` rows created
-or imported through the Vaquita API.
-
-It lives in its own workspace, `apps/bridge-worker`, with its own Dockerfile
-(`apps/bridge-worker/Dockerfile`). Deploy it as a separate Dokploy service
-pointing at that Dockerfile, or run it directly:
-
-```bash
-pnpm --filter @vaquita/bridge-worker start
-```
-
-For one-shot validation:
-
-```bash
-pnpm --filter @vaquita/bridge-worker start:once
-```
-
-Runtime environment settings: see `apps/bridge-worker/.env.example` for the
-full list (DB, per-network Soroban RPC and Circle Iris endpoints, relayer key
-and the `BRIDGE_CONFIRMATION_*` tuning set).
-
-- Set `BRIDGE_CONFIRMATION_BATCH_SIZE` conservatively. This is one shared
-  batch worker, not one poller per user.
-- The worker uses database leases on pending rows so multiple instances do not
-  intentionally process the same transfer. Tune `BRIDGE_CONFIRMATION_LEASE_MS`
-  to be longer than the expected per-batch processing time.
-- `BRIDGE_CONFIRMATION_STALE_AFTER_MS` moves old pending transfers to
-  `needs_review` with a stale-threshold reason instead of polling forever.
-- `BRIDGE_STELLAR_RELAYER_SECRET` is the server-only Stellar secret key that
-  pays for permissionless CCTP `mint_and_forward` destination transactions.
-  Fund this account with enough XLM on the target Stellar network. Never expose
-  it to browser clients or build-time arguments.
-- `BRIDGE_STELLAR_RELAYER_FEE_STROOPS` and
-  `BRIDGE_STELLAR_RELAYER_TIMEOUT_SECONDS` tune relayed destination transaction
-  submission.
-- The app still supports lazy/manual refresh from the Wallet page, so the
-  worker can be paused without making transfers unrecoverable.
-
 ## Referencias
 
 - Build args en Docker: https://docs.docker.com/build/building/variables/#build-arguments

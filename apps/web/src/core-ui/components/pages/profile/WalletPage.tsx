@@ -9,8 +9,8 @@ import { FiCheck, FiCopy, FiDownload, FiEye, FiSend, FiShield, FiRepeat} from 'r
 import { truncateMiddle } from '../../../helpers';
 import { useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import { BridgeModal } from '../../organisms/BridgeModal';
 import { PageLayout } from '../../molecules';
-import { BridgeUsdcModal } from './BridgeUsdcModal';
 import { WalletBalanceModal } from './WalletBalanceModal';
 import { WalletReceiveModal } from './WalletReceiveModal';
 import { WalletSendModal } from './WalletSendModal';
@@ -121,7 +121,7 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
               <FiRepeat className="w-6 h-6" />
             </span>
             <span className="text-sm font-semibold">{t('wallet.bridge.title', 'Bridge USDC')}</span>
-            <span className="text-xs text-gray-500">{t('wallet.bridge.subtitle', 'Move USDC between EVM and Stellar')}</span>
+            <span className="text-xs text-gray-500">{t('wallet.bridge.subtitle', 'Move USDC between Base and Stellar')}</span>
           </button>
         </section>
         )}
@@ -137,7 +137,7 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
             </p>
           </div>
         </section>
-        <BridgeUsdcModal
+        <BridgeModal
           open={bridgeOpen}
           onOpenChange={() => setBridgeOpen(false)}
           stellarWallet={walletAddress}

@@ -100,3 +100,5 @@ export const deleteSavedWallet = async (id: string, profileId: number): Promise<
 
   return count > 0;
 };
+
+export * from './networks';

@@ -2,8 +2,8 @@ import { z } from 'zod';
 import './env';
 
 // Env of the shared services only the API service loads (Ably realtime, badge
-// signing/claims, APY). Validated at import of the modules that read it, so
-// the bridge-worker deploy never requires these values.
+// signing/claims, APY, bridge). Validated at import of the modules that read
+// it, so a deploy only requires the values it actually uses.
 const apiServicesEnvSchema = z.object({
   // Realtime (Ably) FULL key (appId.keyId:secret). Server-only: the web/admin
   // clients request short-lived tokens instead.
@@ -24,6 +24,12 @@ const apiServicesEnvSchema = z.object({
   // exits the process when it fails, and an environment without the key should
   // degrade to "every report waits for a human", not take the API down.
   OPENAI_API_KEY: z.string().min(1).optional(),
+  // NEAR Intents 1Click — the cross-chain bridge (services/oneclick).
+  NEAR_1CLICK_BASE_URL: z.url().default('https://1click.chaindefuser.com'),
+  // Optional on purpose: 1Click answers quotes, status and deposit submission
+  // without a token. The JWT only raises rate limits and attributes referrals,
+  // so a missing one must not exit the process and take the API down with it.
+  NEAR_1CLICK_JWT: z.string().min(1).optional(),
 });
 
 const parsed = apiServicesEnvSchema.safeParse(process.env);
