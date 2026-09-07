@@ -155,6 +155,14 @@ router.post('/transfers', requireSessionWallet, async (req, res) => {
       return sendError(res, 'The bridge did not return a deposit address.', null, 502);
     }
 
+    // Same reasoning for the memo on the outbound leg. Stellar deposits are
+    // matched by memo, so a memo-less quote produces a row the client will
+    // refuse to pay from — and there is no way back to the form from there.
+    // Failing here keeps the user on a screen they can retry.
+    if (validation.value.direction === 'stellar_to_evm' && !result.data.quote.depositMemo) {
+      return sendError(res, 'The bridge did not return a deposit memo.', null, 502);
+    }
+
     const row = await createBridgeTransfer({
       direction: validation.value.direction,
       stellarWallet: validation.value.stellarWallet,

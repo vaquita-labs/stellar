@@ -107,6 +107,16 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
   const [activating, setActivating] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [payNotice, setPayNotice] = useState<string | null>(null);
+  /**
+   * Hash del pago de salida apenas la wallet lo suelta, ANTES de que el server
+   * lo sepa. Es lo que hace que el botón "Enviar" no vuelva si el POST de
+   * `deposit-tx` falla: sin esto, un pago que ya salió quedaría con la fila sin
+   * `sourceTxHash` y la UI ofrecería mandarlo de nuevo.
+   */
+  const [sentHash, setSentHash] = useState<string | null>(null);
+  /** Vencimiento ya cumplido, puesto por el timer de abajo (ver `quoteExpired`). */
+  const [expiredDeadline, setExpiredDeadline] = useState<number | null>(null);
 
   const quoteMutation = useBridgeQuote();
   const createTransfer = useCreateBridgeTransfer();
@@ -127,6 +137,9 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
     setQuoteState(null);
     setTransferId(null);
     setPayError(null);
+    setPayNotice(null);
+    setSentHash(null);
+    setExpiredDeadline(null);
     setDirection('evm_to_stellar');
   }
 
@@ -232,18 +245,63 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
       setPayError(t('wallet.bridge.missingMemo', 'The bridge did not return a valid memo. Try again.'));
       return;
     }
+    // Segunda reja, por si el footer alcanzó a renderizarse con el botón viejo:
+    // la dirección de depósito de una cotización vencida ya no vale nada.
+    if (quoteExpired) {
+      setPayError(
+        t(
+          'wallet.bridge.quoteExpired',
+          'This quote expired before it was paid. Get a new one — sending to the old address would lose the funds.',
+        ),
+      );
+      return;
+    }
     setPaying(true);
     setPayError(null);
+    setPayNotice(null);
     try {
       const { hash } = await sponsoredUsdcPayment({ to: row.depositAddress, amount: row.amount, memo });
+      // Antes de avisarle al server: a partir de acá la plata ya salió, pase lo
+      // que pase con el POST de abajo.
+      setSentHash(hash);
       await attachDepositTx.mutateAsync({ id: row.id, txHash: hash });
       await refreshWalletBalance();
     } catch (e) {
-      const { title } = humanizeTxError(e, t);
-      setPayError(title);
+      const { title, pending, hash } = humanizeTxError(e, t);
+      // La tx salió a la red y todavía puede confirmar. No es un fallo: volver a
+      // ofrecer "Enviar" mandaría la misma plata dos veces a la misma dirección
+      // de depósito. Guardamos el hash igual — la fila queda con `sourceTxHash`
+      // y el poll se hace cargo — y si ni eso se puede, `sentHash` ya alcanza
+      // para que el botón no vuelva.
+      if (pending && hash) {
+        setSentHash(hash);
+        setPayNotice(
+          t(
+            'wallet.bridge.pendingConfirm',
+            'Your payment was sent and is still confirming. We are tracking it — do not send it again.',
+          ),
+        );
+        try {
+          await attachDepositTx.mutateAsync({ id: row.id, txHash: hash });
+        } catch {
+          // 1Click detecta el depósito por su cuenta; avisarle sólo lo acelera.
+        }
+      } else {
+        setPayError(title);
+      }
     } finally {
       setPaying(false);
     }
+  };
+
+  /** Descarta una cotización vencida y vuelve al formulario. */
+  const handleStartOver = () => {
+    setTransferId(null);
+    setQuoteState(null);
+    setPayError(null);
+    setPayNotice(null);
+    setSentHash(null);
+    setExpiredDeadline(null);
   };
 
   const handleCopy = async (value: string) => {
@@ -263,6 +321,31 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
   const receivedAmount = transfer
     ? formatBaseUnits(transfer.amountOut, DESTINATION_DECIMALS[transfer.direction])
     : null;
+
+  /** El pago de salida ya salió, lo sepa el server o no. */
+  const alreadySent = !!transfer?.sourceTxHash || !!sentHash;
+
+  /**
+   * Cotización vencida y sin pagar. Pasado el `deadline` 1Click ya no honra esa
+   * dirección de depósito, así que mandarle plata es perderla de vista.
+   *
+   * No se lee el reloj en el render (además de impuro, no dispararía nada
+   * cuando el plazo se cumple con el modal quieto): un único timer avisa JUSTO
+   * en el vencimiento, así que el botón desaparece en ese instante y no hay
+   * ventana para pagar una cotización ya vencida.
+   */
+  const watchDeadline =
+    !!transfer && transfer.direction === 'stellar_to_evm' && !alreadySent && !!transfer.deadline;
+  const deadlineAt = watchDeadline ? transfer.deadline : null;
+  const quoteExpired = deadlineAt !== null && expiredDeadline === deadlineAt;
+
+  useEffect(() => {
+    if (deadlineAt === null) return;
+    // Si ya venció, el timeout de 0 ms igual corre después del render, así que
+    // nunca se llama a setState en el cuerpo del efecto.
+    const timer = setTimeout(() => setExpiredDeadline(deadlineAt), Math.max(0, deadlineAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [deadlineAt]);
 
   const body = () => {
     if (!transfer) return formStep();
@@ -490,6 +573,16 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
         )}
       </div>
 
+      {quoteExpired && (
+        <p className="flex items-start gap-1.5 text-xs text-danger">
+          <FiAlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          {t(
+            'wallet.bridge.quoteExpired',
+            'This quote expired before it was paid. Get a new one — sending to the old address would lose the funds.',
+          )}
+        </p>
+      )}
+
       {payError && (
         <p className="flex items-start gap-1.5 text-xs text-danger">
           <FiAlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -497,7 +590,14 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
         </p>
       )}
 
-      {row.sourceTxHash ? progressRow(row) : null}
+      {payNotice && (
+        <p className="flex items-start gap-1.5 text-xs text-gray-500">
+          <FiAlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          {payNotice}
+        </p>
+      )}
+
+      {alreadySent ? progressRow(row) : null}
     </>
   );
 
@@ -564,10 +664,22 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
       );
     }
 
+    // Cotización vencida y sin pagar: la única salida segura es pedir otra.
+    // Reusar la dirección vieja manda plata a un depósito que 1Click ya no
+    // asocia a nada.
+    if (quoteExpired) {
+      return (
+        <PressableButton variant="success" size="cta" onClick={handleStartOver}>
+          {t('wallet.bridge.newQuote', 'Get a new quote')}
+        </PressableButton>
+      );
+    }
+
     // Pata de salida sin pagar todavía: el botón que firma. Una vez que hay
     // hash, no se vuelve a ofrecer — pagar dos veces la misma dirección manda
-    // el doble de plata al puente.
-    if (transfer.direction === 'stellar_to_evm' && !transfer.sourceTxHash && !isBridgeTerminal(transfer.status)) {
+    // el doble de plata al puente. `alreadySent` cubre también el pago que salió
+    // pero todavía no confirmó, que es donde reintentar duele más.
+    if (transfer.direction === 'stellar_to_evm' && !alreadySent && !isBridgeTerminal(transfer.status)) {
       return (
         <PressableButton
           variant="success"
