@@ -1232,6 +1232,10 @@
       "riskDisclosure": "Declaración de riesgos"
     }
   },
+  "releaseNotes": {
+    "gotIt": "Entendido",
+    "openImage": "Ver imagen"
+  },
   "rewards": {
     "carousel": {
       "scrollLeft": "Desplazar a la izquierda",

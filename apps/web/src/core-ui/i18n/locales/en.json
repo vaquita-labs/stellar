@@ -1232,6 +1232,10 @@
       "riskDisclosure": "Risk disclosure"
     }
   },
+  "releaseNotes": {
+    "gotIt": "Got it",
+    "openImage": "Open image"
+  },
   "rewards": {
     "carousel": {
       "scrollLeft": "Scroll left",

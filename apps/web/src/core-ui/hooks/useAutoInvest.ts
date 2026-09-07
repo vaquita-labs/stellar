@@ -194,5 +194,12 @@ export const useIdleFunds = () => {
   // marca se apaga y el prompt se ofrece como después de cualquier depósito.
   const shouldPrompt = ready && isCustodial && idle >= MIN_USDC && !rampActive;
 
-  return { idle, shouldPrompt, invest, isInvesting, error, clearError: () => setError(null) };
+  // ¿Ya se SABE si hay plata ociosa? Mientras la sesión de Pollar se restaura o
+  // el balance no cargó, `shouldPrompt` en false no es "no hay nada": es "no
+  // preguntamos todavía". La diferencia importa para quien espera este turno
+  // (las notas de versión, vía `useModalQueueStore`), que si no se adelantaría
+  // al prompt en cada carga.
+  const decided = ready && (!isCustodial || walletBalance.step === 'loaded');
+
+  return { idle, shouldPrompt, decided, invest, isInvesting, error, clearError: () => setError(null) };
 };

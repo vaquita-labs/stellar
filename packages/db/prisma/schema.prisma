@@ -535,6 +535,14 @@ model Profile {
   campaignId    Int?      @map("campaign_id")
   attribution   Json?     @db.JsonB
 
+  /// Id of the newest release note this profile has acknowledged (the modal was
+  /// closed). One column rather than a join table because the user only ever
+  /// sees the latest note: "is there anything newer than this?" is the only
+  /// question asked, and per-note read history would record notes that were
+  /// never shown. NULL = has seen none, which is what an existing account
+  /// should be — the next published note reaches everyone.
+  releaseNoteSeenId Int? @map("release_note_seen_id")
+
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz(6)
@@ -941,3 +949,45 @@ model VaultTvlSnapshot {
   @@map("vault_tvl_snapshots")
 }
 
+/// A "what's new" note shown to the user once, in a modal, on their next visit.
+///
+/// Every note ever written is kept, but only the newest published one is ever
+/// shown — the history is for the team (what did we announce, and when), not
+/// for the user. `publishedAt` NULL is the draft state and the only other
+/// state there is: a note is either live or invisible.
+model ReleaseNote {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(160)
+  body        String
+  /// NULL = draft. Set when an admin publishes; clearing it retracts the note
+  /// without losing the text.
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  images ReleaseNoteImage[]
+
+  @@index([publishedAt(sort: Desc)], map: "idx_release_notes_published")
+  @@map("release_notes")
+}
+
+/// One image in a release note's carousel. Bytes live in Postgres for the same
+/// reason as feedback attachments: the project has no object store, and these
+/// are a handful of admin-uploaded, client-downscaled files per release.
+model ReleaseNoteImage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  releaseNoteId Int      @map("release_note_id")
+  /// 'image/png' | 'image/jpeg' | 'image/webp' — enforced by a CHECK constraint.
+  contentType   String   @map("content_type") @db.VarChar(40)
+  byteSize      Int      @map("byte_size")
+  data          Bytes
+  /// Carousel order. Ties break on createdAt, which is stable.
+  displayOrder  Int      @default(0) @map("display_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  releaseNote ReleaseNote @relation(fields: [releaseNoteId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([releaseNoteId, displayOrder], map: "idx_release_note_images_note")
+  @@map("release_note_images")
+}

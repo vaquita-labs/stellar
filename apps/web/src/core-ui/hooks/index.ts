@@ -3,6 +3,7 @@ export * from './useAnalytics';
 export * from './useApyByLockPeriod';
 export * from './useBlendPosition';
 export * from './useBridge';
+export * from './useReleaseNotes';
 export * from './useClaimedAchievements';
 export * from './useDeposit';
 export * from './useDetectedCountry';

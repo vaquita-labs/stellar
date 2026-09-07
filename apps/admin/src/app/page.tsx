@@ -44,6 +44,11 @@ const sections: { href: string; title: string; description: string }[] = [
     description: 'Marketing campaign codes and the shareable attribution links they generate.',
   },
   {
+    href: '/release-notes',
+    title: 'Release notes',
+    description: 'Write and publish the “what’s new” popup users see once per note.',
+  },
+  {
     href: '/feedback',
     title: 'Feedback',
     description: 'Triage bug reports and feedback sent from inside the app.',

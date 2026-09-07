@@ -40,6 +40,7 @@ export * from './services/moderation';
 export * from './services/savedBankAccount';
 export * from './services/oneclick';
 export * from './services/bridge';
+export * from './services/releaseNotes';
 export * from './services/legal';
 export * from './services/offramp';
 export * from './services/onramp';

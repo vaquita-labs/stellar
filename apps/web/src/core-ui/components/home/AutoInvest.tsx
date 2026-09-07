@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useIdleFunds } from '../../hooks/useAutoInvest';
-import { usePendingCreditStore } from '../../stores';
+import { useModalQueueStore, usePendingCreditStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { IdleFundsModal } from './IdleFundsModal';
 
@@ -13,7 +13,7 @@ import { IdleFundsModal } from './IdleFundsModal';
  * ocioso cae a 0 y la pantalla se cierra sola.
  */
 export function AutoInvest() {
-  const { idle, shouldPrompt, invest, isInvesting, error, clearError } = useIdleFunds();
+  const { idle, shouldPrompt, decided, invest, isInvesting, error, clearError } = useIdleFunds();
   const [open, setOpen] = useState(false);
   // Si el usuario cerró (o la inversión falló y cerró), no volvemos a abrir hasta
   // que entre plata NUEVA (idle sube) — así no lo atrapamos en loop ni lo forzamos.
@@ -26,6 +26,23 @@ export function AutoInvest() {
   // acredita igual y nunca abre nada, y el saldo quedaba parpadeando hasta el
   // vencimiento de 15 minutos aunque la plata ya estuviera a la vista.
   const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
+
+  // Mientras esta pantalla todavía PUEDA aparecer, las notas de versión esperan
+  // su turno: son dos modales de pantalla completa y decidir sobre la plata va
+  // primero. Al desmontarse (salir del home) se libera, así nada queda trabado
+  // si el saldo nunca resuelve.
+  const setVaultPromptSettled = useModalQueueStore((s) => s.setVaultPromptSettled);
+  useEffect(() => {
+    setVaultPromptSettled(false);
+    return () => setVaultPromptSettled(true);
+  }, [setVaultPromptSettled]);
+
+  // El turno se libera cuando el usuario cerró la pantalla (`dismissed`, que
+  // también cubre el caso de invertir y cerrarla) o cuando ya se sabe que no
+  // hay nada que ofrecer.
+  useEffect(() => {
+    if (!open && (dismissed || (decided && !shouldPrompt))) setVaultPromptSettled(true);
+  }, [open, dismissed, decided, shouldPrompt, setVaultPromptSettled]);
 
   useEffect(() => {
     if (idle > prevIdle.current + 0.01) {
