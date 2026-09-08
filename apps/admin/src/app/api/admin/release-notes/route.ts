@@ -46,8 +46,14 @@ const translationSchema = z.object({
 const noteFields = {
   title: z.string().trim().min(1).max(RELEASE_NOTE_TITLE_MAX),
   body: z.string().trim().min(1).max(RELEASE_NOTE_BODY_MAX),
-  /** Per-language overrides; `title`/`body` above stay the fallback. */
-  translations: z.record(z.enum(RELEASE_NOTE_TRANSLATED_LANGUAGES), translationSchema).optional(),
+  /**
+   * Per-language overrides; `title`/`body` above stay the fallback, so a note
+   * may ship with only some languages written. `partialRecord`, not `record`:
+   * a Zod 4 `record` keyed by an enum is exhaustive, and it rejected every
+   * note that left one of `es`/`pt` blank with a message naming the whole
+   * `translations` field rather than the missing language.
+   */
+  translations: z.partialRecord(z.enum(RELEASE_NOTE_TRANSLATED_LANGUAGES), translationSchema).optional(),
   published: z.boolean().optional(),
   images: z.array(imageSchema).max(8).optional(),
 };
