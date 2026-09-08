@@ -1857,8 +1857,6 @@
         "ach": "Bank Transfer"
       },
       "ramp": {
-        "balance": "Available in savings: {{balance}} USDC",
-        "balanceLoading": "Reading your savings…",
         "continue": "Continue",
         "corridorOff": "This corridor is not enabled yet.",
         "costUsdc": "{{amount}} USDC",
@@ -1883,7 +1881,7 @@
           "generic": "The withdrawal could not be completed.",
           "insufficientQuote": "This withdrawal needs {{needed}} USDC in your savings and you have {{balance}}. Try a smaller amount.",
           "kycRequired": "The provider needs to verify your identity before continuing.",
-          "noRoutes": "No route available for {{amount}} {{currency}}. Try a different amount.",
+          "noRoutes": "No route available for {{amount}} USDC. Try a different amount.",
           "paymentFailed": "The payment could not be completed. Your USDC is still in your wallet.",
           "paymentNotOnChain": "The provider reported a payment ({{hash}}) that never reached the network. Your USDC is still in your wallet.",
           "paymentNotSubmitted": "The provider accepted the withdrawal but never sent the payment. Your USDC is in your wallet — try again.",
@@ -1891,7 +1889,8 @@
           "quoteExpired": "The quote expired. Request a new one and try again.",
           "unknownCost": "The quote did not report how much USDC this withdrawal costs.",
           "vaultNotConfirmed": "The withdrawal from your savings has not confirmed on the network yet. Your USDC is safe — try again in a minute.",
-          "walletUnsupported": "This wallet type cannot be used for this withdrawal."
+          "walletUnsupported": "This wallet type cannot be used for this withdrawal.",
+          "noRate": "The rate for this corridor is unavailable right now."
         },
         "etaLabel": "Estimated time",
         "groupCreate": "Start the withdrawal",
@@ -1926,7 +1925,12 @@
         "waitingHint": "We are waiting for the provider to confirm…",
         "waitingReady": "Waiting for the payment to settle… (usually {{eta}})",
         "youReceive": "You receive",
-        "youSend": "Leaves your savings"
+        "youSend": "Leaves your savings",
+        "rateLoading": "Reading the exchange rate…",
+        "rateLine": "1 USDC ≈ {{amount}} {{currency}}",
+        "receiveEstimate": "You get ≈ {{amount}} {{currency}}",
+        "limitMinUsdc": "The minimum for this route is about {{amount}} USDC.",
+        "limitMaxUsdc": "The maximum for this route is about {{amount}} USDC."
       },
       "receive": {
         "cta": "Continue",

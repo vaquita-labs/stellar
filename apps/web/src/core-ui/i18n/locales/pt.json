@@ -1885,8 +1885,6 @@
         "ach": "Transferência bancária"
       },
       "ramp": {
-        "balance": "Disponível nas suas reservas: {{balance}} USDC",
-        "balanceLoading": "Lendo suas reservas…",
         "continue": "Continuar",
         "corridorOff": "Este corredor ainda não está disponível.",
         "costUsdc": "{{amount}} USDC",
@@ -1911,7 +1909,7 @@
           "generic": "Não foi possível concluir o saque.",
           "insufficientQuote": "Este saque precisa de {{needed}} USDC nas suas reservas e você tem {{balance}}. Tente um valor menor.",
           "kycRequired": "O provedor precisa verificar sua identidade para continuar.",
-          "noRoutes": "Nenhuma rota disponível para {{amount}} {{currency}}. Tente outro valor.",
+          "noRoutes": "Não há rota disponível para {{amount}} USDC. Tente outro valor.",
           "paymentFailed": "O pagamento não pôde ser concluído. Seu USDC continua na sua carteira.",
           "paymentNotOnChain": "O provedor informou um pagamento ({{hash}}) que nunca chegou à rede. Seu USDC continua na sua carteira.",
           "paymentNotSubmitted": "O provedor aceitou o saque mas nunca enviou o pagamento. Seu USDC está na sua carteira — tente de novo.",
@@ -1919,7 +1917,8 @@
           "quoteExpired": "A cotação expirou. Peça uma nova e tente de novo.",
           "unknownCost": "A cotação não informou quanto USDC custa este saque.",
           "vaultNotConfirmed": "O saque das suas economias ainda não foi confirmado na rede. Seu USDC está seguro — tente de novo em um minuto.",
-          "walletUnsupported": "Este tipo de carteira não pode ser usado neste saque."
+          "walletUnsupported": "Este tipo de carteira não pode ser usado neste saque.",
+          "noRate": "A taxa de câmbio deste corredor não está disponível no momento."
         },
         "etaLabel": "Tempo estimado",
         "groupCreate": "Iniciar o saque",
@@ -1954,7 +1953,12 @@
         "waitingHint": "Estamos aguardando a confirmação do provedor…",
         "waitingReady": "Aguardando a liquidação do pagamento… (costuma levar {{eta}})",
         "youReceive": "Você recebe",
-        "youSend": "Sai das suas reservas"
+        "youSend": "Sai das suas reservas",
+        "rateLoading": "Lendo a taxa de câmbio…",
+        "rateLine": "1 USDC ≈ {{amount}} {{currency}}",
+        "receiveEstimate": "Você recebe ≈ {{amount}} {{currency}}",
+        "limitMinUsdc": "O mínimo desta rota é de cerca de {{amount}} USDC.",
+        "limitMaxUsdc": "O máximo desta rota é de cerca de {{amount}} USDC."
       },
       "receive": {
         "groupConnect": "Conectar com a Anclap",
