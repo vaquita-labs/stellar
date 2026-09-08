@@ -21,6 +21,7 @@ import { type OnrampCorridor, type OnrampCorridorCode, useRampOnramp, usdcOutOf 
 import type { RampQuote, RampTxStatus } from '@pollar/core';
 import { usePollar } from '@pollar/react';
 import { Spinner } from '@heroui/react';
+import { FiChevronDown } from 'react-icons/fi';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { railLabel } from '../../../helpers/rampRail';
@@ -117,6 +118,10 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const [requote, setRequote] = useState(0);
   const [failure, setFailure] = useState<string | null>(null);
   const [amountFiat, setAmountFiat] = useState('');
+  // Whether the fee breakdown is open. It stays open across keystrokes on
+  // purpose: someone who opened it did so to watch the fee move with the amount,
+  // and collapsing it on every key would take that away.
+  const [feeOpen, setFeeOpen] = useState(false);
   const [typedValues, setValues] = useState<Record<string, string>>({});
   const [corridor, setCorridor] = useState<OnrampCorridor | null>(null);
   const [corridorOff, setCorridorOff] = useState<string | null>(null);
@@ -641,23 +646,36 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const routeCard = (
     <>
       {showForm && resuming && (
-        <p className="flex items-center gap-2 text-xs text-gray-500">
+        <p className="flex items-center justify-center gap-2 text-xs text-gray-500">
           <Spinner size="sm" color="current" /> {t('wallet.fiat.onramp.resuming', 'Checking for a purchase in progress…')}
         </p>
       )}
 
-      {/* --- The fee, on the amount step and behind nothing to expand: on a
-          small purchase it is half the money, and a "see details" toggle hides
-          the one number that changes the decision. "Includes" is deliberate —
-          the fee is already inside what is paid, neither added nor subtracted. --- */}
+      {/* --- The fee, folded away on the amount step. The figure itself is on the
+          breakdown of the step right before paying, so this is the same number
+          brought forward for whoever wants it while still choosing how much.
+          "Includes" is deliberate: the fee is already inside what is paid,
+          neither added to it nor taken off it. --- */}
       {phase === 'amount' && feeShare != null && !quoting && (
-        <p className={`text-xs ${feeHeavy ? 'text-amber-600' : 'text-gray-500'}`}>
-          {t('wallet.fiat.onramp.feeIncluded', 'Includes {{amount}} in fees: {{percent}}% of your purchase.', {
-            amount: feeAmount,
-            percent: feePercent,
-          })}
-          {feeHeavy ? ` ${t('wallet.fiat.onramp.feeHeavy', 'It weighs far less on larger amounts.')}` : ''}
-        </p>
+        <div className="flex flex-col items-center gap-1 text-center">
+          <button
+            type="button"
+            onClick={() => setFeeOpen((open) => !open)}
+            className="flex items-center gap-1 text-xs font-semibold text-gray-500"
+          >
+            {feeOpen ? t('wallet.fiat.onramp.feeHide', 'Hide detail') : t('wallet.fiat.onramp.feeShow', 'See detail')}
+            <FiChevronDown className={`h-3.5 w-3.5 transition-transform ${feeOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {feeOpen && (
+            <p className={`text-xs ${feeHeavy ? 'text-amber-600' : 'text-gray-500'}`}>
+              {t('wallet.fiat.onramp.feeIncluded', 'Includes {{amount}} in fees: {{percent}}% of your purchase.', {
+                amount: feeAmount,
+                percent: feePercent,
+              })}
+              {feeHeavy ? ` ${t('wallet.fiat.onramp.feeHeavy', 'It weighs far less on larger amounts.')}` : ''}
+            </p>
+          )}
+        </div>
       )}
 
       {/* --- The chosen route, on the step right before paying: what you pay,
