@@ -50,6 +50,29 @@ jobs:
       NEXT_PUBLIC_QUERY_CACHE_VERSION: e2e
       NEXT_PUBLIC_PASSIVE_VAULT_ENABLED: "true"
     steps:
+      # The suite drives the real testnet API, and the app blocks on
+      # `/api/v1/config` before it can leave the login screen. With that endpoint
+      # down every spec fails inside the login fixture, fourteen minutes in, and
+      # reads like the app broke. Asking first turns that into a few seconds and
+      # an error naming the real cause. Three tries so a single blip or a cold
+      # start does not fail the run.
+      - name: Check the testnet API answers
+        run: |
+          for attempt in 1 2 3; do
+            status=$(curl -sS -o /tmp/config-body -w '%{http_code}' --max-time 20 \
+              "$E2E_SERVICES_URL/api/v1/config") || status=000
+            if [ "$status" = "200" ]; then
+              echo "Testnet API up: /api/v1/config -> 200"
+              exit 0
+            fi
+            echo "Attempt $attempt: /api/v1/config -> $status"
+            [ "$attempt" = "3" ] || sleep 10
+          done
+          echo "::error::The testnet API is not serving /api/v1/config (HTTP $status). Signing in is impossible without it, so the suite was not run. This is an environment failure, not a code one."
+          echo "Response body:"
+          head -c 500 /tmp/config-body || true
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v4
 

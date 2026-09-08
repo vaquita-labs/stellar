@@ -115,14 +115,25 @@ interface PollOpts {
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
+ * Código propio para un fallo de red: la petición no llegó a tener respuesta.
+ * No sale de la API —de ahí el prefijo distinto— pero viaja por el mismo canal
+ * que los de Pollar para que la UI lo traduzca igual que a cualquier otro.
+ */
+export const RAMP_NETWORK = 'RAMP_NETWORK';
+
+/**
  * Envuelve cualquier fallo como `RampError` conservando el código de Pollar, que
  * es lo que la UI traduce a un mensaje entendible (cotización vencida, KYC
  * pendiente, monto fuera de límites…).
+ *
+ * De un error que no viene de Pollar se descarta el mensaje: `TypeError: Failed
+ * to fetch` es del navegador, está en inglés y no dice qué hacer, así que gana
+ * el texto que puso quien llama.
  */
 export function asRampError(e: unknown, fallback: string): RampError {
   if (e instanceof RampError) return e;
   if (isPollarApiError(e)) return new RampError(e.details ?? e.message ?? fallback, e.code);
-  return new RampError((e as Error)?.message || fallback);
+  return new RampError(fallback);
 }
 
 /**

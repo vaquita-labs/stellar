@@ -188,7 +188,13 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
         )}
       </div>
 
-      {/* --- Los datos que publica el proveedor, tal como los manda. --- */}
+      {/* --- What the provider publishes, exactly as it sends it.
+
+          With the code on screen these are a RECEIPT, not something to type: the
+          QR already carries the amount, and the bank app reads it on the scan.
+          So the copy button appears only when there is no code to scan — the
+          canvas failed and the provider published no image — which is when
+          pasting the values by hand is the only way left to pay. --- */}
       {fields.length > 0 && (
         <div className="flex flex-col gap-2 rounded-lg border border-black border-b-2 bg-white p-3">
           {fields.map((field) => (
@@ -196,7 +202,7 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
               <span className="shrink-0 text-gray-500">{field.label}</span>
               <span className="flex items-center gap-2 text-right">
                 <span className={`font-semibold text-black ${field.type === 'code' ? 'font-mono' : ''}`}>{field.value}</span>
-                {field.copyable && (
+                {field.copyable && !shownSrc && (
                   <button
                     type="button"
                     onClick={() => void handleCopy(field)}

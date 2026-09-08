@@ -5,7 +5,7 @@ import { usePollar } from '@pollar/react';
 import { useCallback } from 'react';
 import { getBlendConfig } from '@/networks/stellar/blendDirect';
 import { getHorizonUrl } from '@/networks/stellar/kit';
-import { asRampError, type RampQuote, RampError } from './ramps';
+import { asRampError, RAMP_NETWORK, type RampQuote, RampError } from './ramps';
 
 /**
  * Corredores de ON-ramp que la app expone hoy. Son otro conjunto que los de
@@ -14,6 +14,13 @@ import { asRampError, type RampQuote, RampError } from './ramps';
  * pasarle "BR" a este módulo no debería compilar.
  */
 export type OnrampCorridorCode = 'BO';
+
+/** Cuántas veces se lee una cuenta en Horizon antes de darla por inalcanzable. */
+const HORIZON_ATTEMPTS = 3;
+/** Espera entre intentos, multiplicada por el número de intento. */
+const HORIZON_BACKOFF_MS = 300;
+/** Techo de cada intento: sin esto una red a medio morir nunca resuelve. */
+const HORIZON_TIMEOUT_MS = 10_000;
 
 export interface OnrampCorridor {
   country: OnrampCorridorCode;
@@ -25,6 +32,15 @@ export interface OnrampCorridor {
   currency: string;
   /** Símbolo para el input de monto. */
   symbol: string;
+  /**
+   * Floor for a purchase, in local currency. Nothing below it is quoted.
+   *
+   * It is OUR floor, not the route's: a quote's `minAmount` only exists once
+   * there IS a quote, and under this amount the provider returns none — an
+   * empty list carries no number to show, so the screen can only say no route
+   * fits and leave the user guessing which amount does.
+   */
+  minFiat: number;
 }
 
 /**
@@ -37,7 +53,7 @@ export interface OnrampCorridor {
  * lista y las cotizaciones vuelven vacías.
  */
 export const ONRAMP_CORRIDORS: Record<OnrampCorridorCode, OnrampCorridor> = {
-  BO: { country: 'BO', currency: 'BOB', symbol: 'Bs' },
+  BO: { country: 'BO', currency: 'BOB', symbol: 'Bs', minFiat: 2 },
 };
 
 /**
@@ -223,9 +239,37 @@ export function useRampOnramp() {
 
 /** ¿La cuenta ya tiene la trustline del asset? Cuenta inexistente = no. */
 async function accountHasTrustline(account: string, code: string, issuer: string): Promise<boolean> {
-  const res = await fetch(`${getHorizonUrl()}/accounts/${encodeURIComponent(account)}`, { cache: 'no-store' });
+  const res = await readAccount(account);
   if (res.status === 404) return false;
   if (!res.ok) throw new RampError(`No se pudo leer la cuenta en Horizon (HTTP ${res.status}).`);
   const data = (await res.json()) as { balances?: Array<{ asset_code?: string; asset_issuer?: string }> };
   return (data.balances ?? []).some((b) => b.asset_code?.toUpperCase() === code.toUpperCase() && b.asset_issuer === issuer);
+}
+
+/**
+ * La cuenta en Horizon, reintentando mientras el fallo sea de red.
+ *
+ * Es un GET idempotente, así que insistir no cuesta nada y evita cortar una
+ * compra sana: un parpadeo de red de un segundo acá tira abajo todo el flujo
+ * antes de que el proveedor llegue a emitir el código de pago.
+ *
+ * El timeout es la otra mitad. Sin él una red a medio morir deja la promesa
+ * colgada para siempre y el botón girando, que para el usuario es peor que un
+ * error: no tiene nada que reintentar.
+ *
+ * Sólo se reintentan los fallos de red. Un HTTP que llegó —incluido el 404 de
+ * cuenta inexistente— es una respuesta y la decide quien llama.
+ */
+async function readAccount(account: string): Promise<Response> {
+  const url = `${getHorizonUrl()}/accounts/${encodeURIComponent(account)}`;
+  for (let attempt = 0; attempt < HORIZON_ATTEMPTS; attempt++) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, HORIZON_BACKOFF_MS * attempt));
+    try {
+      return await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(HORIZON_TIMEOUT_MS) });
+    } catch {
+      // El error del navegador (`TypeError: Failed to fetch`) no le dice nada a
+      // nadie, así que se descarta y el último intento tira el nuestro.
+    }
+  }
+  throw new RampError('No se pudo llegar a Horizon.', RAMP_NETWORK);
 }

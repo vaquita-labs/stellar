@@ -756,6 +756,37 @@
       "chestAria": "Recompensa diaria"
     }
   },
+  "homeTour": {
+    "done": "Entendido",
+    "next": "Siguiente",
+    "skip": "Saltar",
+    "steps": {
+      "actions": {
+        "body": "Agrega dinero aquí para empezar a ganar intereses, y retíralo desde el mismo lugar.",
+        "title": "Depositar y retirar"
+      },
+      "balance": {
+        "body": "Todo lo que tienes ahorrado, actualizado al instante. Tócalo para abrir tu portafolio.",
+        "title": "Tu saldo"
+      },
+      "chest": {
+        "body": "Abre el cofre una vez al día y gana monedas y experiencia. Mientras está cerrado, el contador te dice cuánto falta para el próximo.",
+        "title": "Tu recompensa diaria"
+      },
+      "help": {
+        "body": "Abre el centro de ayuda para preguntar lo que quieras o reportar un problema.",
+        "title": "¿Necesitas ayuda?"
+      },
+      "profile": {
+        "body": "Aquí viven tu avatar, tu nombre de usuario y tus ajustes.",
+        "title": "Tu perfil"
+      },
+      "quickActions": {
+        "body": "Visita las islas de otras personas, mira cómo vas en el ranking y gasta tus monedas en piezas nuevas para tu mapa.",
+        "title": "Explorar, ranking y tienda"
+      }
+    }
+  },
   "idleFunds": {
     "label": "Tienes fondos sin usar",
     "title": "Pon tu dinero a trabajar",
@@ -1785,6 +1816,7 @@
         "withdraw": "Retiro"
       },
       "onramp": {
+        "calculating": "Calculando…",
         "close": "Cerrar",
         "continue": "Continuar",
         "copied": "Copiado",
@@ -1797,14 +1829,22 @@
         "err": {
           "anchorError": "El proveedor rechazó el pedido. Probá de nuevo en un momento.",
           "assetNotEnabled": "Esta moneda no está disponible para esa ruta por ahora.",
+          "buyFailed": "No pudimos iniciar tu compra. Probá de nuevo.",
           "generic": "No se pudo cotizar la compra.",
           "kycRequired": "El proveedor necesita verificar tu identidad para continuar.",
+          "network": "No pudimos conectarnos. Revisá tu conexión y probá de nuevo.",
           "noRoutes": "No hay ruta disponible para {{amount}} {{currency}}. Probá con otro monto.",
           "providerNotConfigured": "Este proveedor todavía no está configurado para la app.",
           "quoteExpired": "La cotización venció. Pedí una nueva y probá otra vez.",
           "walletUnsupported": "Este tipo de wallet no se puede usar para esta compra."
         },
         "etaLabel": "Tiempo estimado",
+        "feeHeavy": "Con montos más altos pesa mucho menos.",
+        "feeHide": "Ocultar detalle",
+        "feeIncluded": "Incluye {{amount}} de comisión: el {{percent}}% de tu compra.",
+        "feeLabel": "Incluye comisión",
+        "feeShow": "Ver detalle",
+        "feeValue": "{{amount}} · {{percent}}%",
         "expiredBody": "No se cobró nada. Empezá de nuevo para obtener un código nuevo con una cotización fresca.",
         "expiredTitle": "Este código venció",
         "expiresIn": "Vence en {{time}}",
@@ -1820,8 +1860,8 @@
         "kycWaiting": "Esperando la aprobación…",
         "limitMax": "El máximo para esta ruta es {{amount}} {{currency}}.",
         "limitMin": "El mínimo para esta ruta es {{amount}} {{currency}}.",
-        "limits": "Entre {{min}} y {{max}} {{currency}}.",
         "longPress": "Mantené apretado el código para guardarlo en tus fotos.",
+        "minAmount": "La compra mínima es de {{amount}} {{currency}}.",
         "outUsdc": "≈ {{amount}} USDC",
         "payHint": "Pagá este QR desde la app de tu banco. El USDC llega solo.",
         "processingBody": "Tus USDC suelen llegar en unos minutos, y pueden tardar hasta 15. Podés cerrar: caen solos en tu wallet.",
@@ -1829,8 +1869,8 @@
         "processingTitle": "Pago recibido",
         "qrAlt": "Código QR de pago",
         "qrUnavailable": "No pudimos cargar el código de pago. Empezá de nuevo para obtener uno nuevo.",
-        "quoting": "Buscando una ruta…",
         "rateLabel": "Cotización",
+        "receiveEstimate": "Recibís ≈ {{amount}} USDC",
         "restart": "Empezar una compra nueva",
         "cancel": "Cancelar y empezar de nuevo",
         "cancelTitle": "¿Cancelar este código de pago?",
@@ -1845,8 +1885,6 @@
         "settledNoAmount": "Los USDC se acreditaron en tu wallet.",
         "settledPaid": "Pagaste {{amount}} {{currency}}.",
         "settledTitle": "Tus USDC ya están en tu wallet",
-        "stepCreating": "Pidiéndole el código de pago al proveedor…",
-        "stepTrustline": "Preparando tu billetera para recibir USDC…",
         "title": "Comprar USDC en {{country}} ({{currency}})",
         "unrecorded": "No cierres esta pantalla: no pudimos guardar tu compra y puede que no puedas volver a ella.",
         "working": "Preparando tu compra…",
@@ -1857,8 +1895,6 @@
         "ach": "Transferencia bancaria"
       },
       "ramp": {
-        "balance": "Disponible en tus ahorros: {{balance}} USDC",
-        "balanceLoading": "Leyendo tus ahorros…",
         "continue": "Continuar",
         "corridorOff": "Este corredor todavía no está habilitado.",
         "costUsdc": "{{amount}} USDC",
@@ -1883,7 +1919,7 @@
           "generic": "No se pudo completar el retiro.",
           "insufficientQuote": "Este retiro necesita {{needed}} USDC en tus ahorros y tenés {{balance}}. Probá con un monto menor.",
           "kycRequired": "El proveedor necesita verificar tu identidad para continuar.",
-          "noRoutes": "No hay ruta disponible para {{amount}} {{currency}}. Probá con otro monto.",
+          "noRoutes": "No hay ruta disponible para {{amount}} USDC. Probá con otro monto.",
           "paymentFailed": "El pago no se pudo completar. Tu USDC sigue en tu wallet.",
           "paymentNotOnChain": "El proveedor informó un pago ({{hash}}) que nunca llegó a la red. Tu USDC sigue en tu wallet.",
           "paymentNotSubmitted": "El proveedor aceptó el retiro pero nunca envió el pago. Tu USDC está en tu wallet — probá de nuevo.",
@@ -1891,7 +1927,8 @@
           "quoteExpired": "La cotización venció. Pedí una nueva y probá otra vez.",
           "unknownCost": "La cotización no informó cuánto USDC cuesta este retiro.",
           "vaultNotConfirmed": "El retiro de tus ahorros todavía no se confirmó en la red. Tu USDC está a salvo — probá de nuevo en un minuto.",
-          "walletUnsupported": "Este tipo de wallet no se puede usar para este retiro."
+          "walletUnsupported": "Este tipo de wallet no se puede usar para este retiro.",
+          "noRate": "El tipo de cambio de este corredor no está disponible en este momento."
         },
         "etaLabel": "Tiempo estimado",
         "groupCreate": "Iniciar el retiro",
@@ -1926,7 +1963,12 @@
         "waitingHint": "Estamos esperando la confirmación del proveedor…",
         "waitingReady": "Esperando a que se liquide el pago… (suele tardar {{eta}})",
         "youReceive": "Recibís",
-        "youSend": "Sale de tus ahorros"
+        "youSend": "Sale de tus ahorros",
+        "rateLoading": "Leyendo el tipo de cambio…",
+        "rateLine": "1 USDC ≈ {{amount}} {{currency}}",
+        "receiveEstimate": "Recibís ≈ {{amount}} {{currency}}",
+        "limitMinUsdc": "El mínimo de esta ruta es de unos {{amount}} USDC.",
+        "limitMaxUsdc": "El máximo de esta ruta es de unos {{amount}} USDC."
       },
       "receive": {
         "cta": "Continuar",

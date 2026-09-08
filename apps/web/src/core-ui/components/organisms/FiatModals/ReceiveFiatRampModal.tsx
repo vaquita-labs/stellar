@@ -21,6 +21,7 @@ import { type OnrampCorridor, type OnrampCorridorCode, useRampOnramp, usdcOutOf 
 import type { RampQuote, RampTxStatus } from '@pollar/core';
 import { usePollar } from '@pollar/react';
 import { Spinner } from '@heroui/react';
+import { FiChevronDown } from 'react-icons/fi';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { railLabel } from '../../../helpers/rampRail';
@@ -63,6 +64,13 @@ type Phase = 'amount' | 'details' | 'verifying' | 'paying';
 const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2);
 
 /**
+ * The share of the purchase at which the fee stops being a detail and becomes the
+ * headline. Above it the line turns amber and adds that larger amounts carry it
+ * far better, which is the only thing the buyer can act on.
+ */
+const FEE_HEAVY_SHARE = 0.15;
+
+/**
  * Compra de USDC con moneda local (hoy sólo Bolivia/BOB). Va en dos pasos: el
  * monto —con la cotización actualizándose en vivo mientras se escribe— y después
  * los datos que pida el proveedor. El pago del QR y la acreditación llegan
@@ -84,7 +92,6 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
 
   const [phase, setPhase] = useState<Phase>('amount');
   const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState<'trustline' | 'creating' | null>(null);
   const [instructions, setInstructions] = useState<PaymentInstructions | null>(null);
   const [unrecorded, setUnrecorded] = useState(false);
   const [resuming, setResuming] = useState(false);
@@ -110,6 +117,10 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const [requote, setRequote] = useState(0);
   const [failure, setFailure] = useState<string | null>(null);
   const [amountFiat, setAmountFiat] = useState('');
+  // Whether the fee breakdown is open. It stays open across keystrokes on
+  // purpose: someone who opened it did so to watch the fee move with the amount,
+  // and collapsing it on every key would take that away.
+  const [feeOpen, setFeeOpen] = useState(false);
   const [typedValues, setValues] = useState<Record<string, string>>({});
   const [corridor, setCorridor] = useState<OnrampCorridor | null>(null);
   const [corridorOff, setCorridorOff] = useState<string | null>(null);
@@ -124,14 +135,22 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const symbol = corridor?.symbol ?? '';
   const countryName = t(`wallet.fiat.onramp.country.${country}`, country);
   const amountNum = Number(amountFiat);
-  const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
+  // The corridor's floor. Below it nothing is quoted: the provider returns no
+  // route, and an empty list carries no amount to show, so the message naming
+  // the amount that does work comes from here.
+  const minFiat = corridor?.minFiat ?? 0;
+  const typedAmount = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
+  const belowMin = typedAmount && amountNum < minFiat;
+  const amountValid = typedAmount && !belowMin;
 
-  const messageOf = (e: unknown): string =>
-    rampErrorMessage(
-      e,
-      (leaf) => t(`wallet.fiat.onramp.err.${leaf}`),
-      t('wallet.fiat.onramp.err.generic', 'The purchase could not be quoted.'),
-    );
+  // El fallback lo pone quien llama porque el mismo fallo dice cosas distintas
+  // según dónde ocurra: cotizando todavía no hay compra, y creándola la
+  // cotización ya salió bien.
+  const messageOf = (e: unknown, fallback: string): string =>
+    rampErrorMessage(e, (leaf) => t(`wallet.fiat.onramp.err.${leaf}`), fallback);
+
+  const quoteFailed = () => t('wallet.fiat.onramp.err.generic', 'The purchase could not be quoted.');
+  const buyFailed = () => t('wallet.fiat.onramp.err.buyFailed', 'We could not start your purchase. Try again.');
 
   /** Límites de la ruta, en moneda local. Devuelve el mensaje o null si entra. */
   const limitProblem = (best: RampQuote, amount: number): string | null => {
@@ -202,7 +221,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           setResult({ amount, quote: best, error: limitProblem(best, value) });
         } catch (e) {
           if (cancelled) return;
-          setResult({ amount, quote: null, error: messageOf(e) });
+          setResult({ amount, quote: null, error: messageOf(e, quoteFailed()) });
         }
       })();
     }, QUOTE_DEBOUNCE_MS);
@@ -396,7 +415,14 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // otro es de una tecla anterior y todavía se está recotizando.
   const fresh = result?.amount === amountFiat ? result : null;
   const quote = fresh?.quote ?? null;
-  const error = fresh?.error ?? null;
+  // Our own floor outranks whatever the quote said: for an amount that was
+  // never quoted, it is the only thing known about it.
+  const error = belowMin
+    ? t('wallet.fiat.onramp.minAmount', 'The minimum purchase is {{amount}} {{currency}}.', {
+        amount: minFiat,
+        currency,
+      })
+    : (fresh?.error ?? null);
   const quoting = amountValid && !!corridor && !fresh;
 
   const usdcOut = quote ? usdcOutOf(amountNum, quote) : null;
@@ -404,16 +430,44 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // que decide si se puede seguir, no la existencia de la cotización.
   const usable = !!quote && !error && !quoting;
 
-  // Lo que dice la línea bajo el monto cuando NO hay problema (el error lo pisa
-  // dentro de `AmountStep`): el rango que la ruta acepta, y recién si todavía no
-  // hay cotización, cómo se va a pagar.
-  const amountHint =
-    quote && (quote.minAmount != null || quote.maxAmount != null)
-      ? t('wallet.fiat.onramp.limits', 'Between {{min}} and {{max}} {{currency}}.', {
-          min: quote.minAmount ?? '—',
-          max: quote.maxAmount ?? '—',
-          currency,
-        })
+  /**
+   * What the fee weighs against the purchase, as a fraction.
+   *
+   * The fee is ALREADY INSIDE `rate` — `amountFiat / rate` is what the provider
+   * credited, checked against a real purchase — so this is disclosure, never a
+   * subtraction. Taking it off `usdcOut` would charge it twice.
+   *
+   * It is worth saying out loud because the fee carries a fixed part: it is
+   * cents on a large purchase and half the money on a tiny one, and the buyer
+   * has no other way to see that.
+   */
+  const feeShare = quote && quote.fee > 0 && amountNum > 0 ? quote.fee / amountNum : null;
+  const feeHeavy = feeShare != null && feeShare >= FEE_HEAVY_SHARE;
+  const feeAmount = quote ? `${symbol} ${formatTokenPrecise(quote.fee, FIAT_DECIMALS)}` : '';
+  // One decimal below 10%, whole numbers above: "0.9%" and "1.8%" lose their
+  // point rounded to "1%" and "2%", and "51.0%" says nothing "51%" does not.
+  const feePercent =
+    feeShare == null
+      ? ''
+      : (feeShare * 100 >= 10 ? Math.round(feeShare * 100) : Math.round(feeShare * 1000) / 10).toLocaleString();
+
+  /**
+   * The single line under the figure, always occupied (the error overrides it
+   * inside `AmountStep`). In order: that a quote is being fetched, how much USDC
+   * lands, and with nothing typed, how the purchase is paid.
+   *
+   * What lands goes HERE and not in a row of its own: it is what the buyer is
+   * waiting to see while typing, and a row that appears and disappears with
+   * every key pushes the keypad out from under their thumb.
+   *
+   * Unlike the withdrawal, this line never shows "1 USDC ≈ X". The on-ramp rate
+   * moves with the amount — the fixed part of the fee weighs differently on 2
+   * than on 1000 — so away from a concrete amount it means nothing.
+   */
+  const amountHint = quoting
+    ? t('wallet.fiat.onramp.calculating', 'Calculating…')
+    : usdcOut != null
+      ? t('wallet.fiat.onramp.receiveEstimate', 'You get ≈ {{amount}} USDC', { amount: usdcLabel(usdcOut) })
       : t('wallet.fiat.onramp.hint', 'You pay a QR code with your bank app.');
 
   // Qué datos pide el proveedor lo define la cotización elegida: no hay ningún
@@ -431,10 +485,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
    * —el `onChange` de la lista significa "lo editó él", y en el retiro eso
    * despega el formulario de la cuenta guardada.
    */
-  const values = useMemo(
-    () => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }),
-    [fields, typedValues],
-  );
+  const values = useMemo(() => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }), [fields, typedValues]);
   const fieldsValid = fieldsAreValid(fields, values);
 
   /**
@@ -466,11 +517,9 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     setFailure(null);
     setUnrecorded(false);
     try {
-      setStep('trustline');
       await ensureUsdcTrustline(walletAddress);
       await refreshAssets();
 
-      setStep('creating');
       const created = await createOnramp({ corridor, quote, amountFiat: amountNum, walletAddress, values });
 
       const need = kycNeededBy(created);
@@ -513,9 +562,8 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       // Pollar contesta lo mismo de dos formas: un 200 con `kycRequired` o este
       // error. Las dos van a la pantalla de verificación, no a un error.
       if (isKycRequiredError(e)) startVerification(null);
-      else setFailure(messageOf(e));
+      else setFailure(messageOf(e, buyFailed()));
     } finally {
-      setStep(null);
       setBusy(false);
     }
   };
@@ -581,28 +629,49 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     );
 
   /**
-   * El estado de la cotización mientras se arma la compra, y —recién en el paso
-   * de los datos— la ruta ya cotizada. Se dibuja en distinto lugar según el
-   * paso (entre monto y teclado mientras se teclea, sola en los datos), así que
-   * vive en una variable en vez de repetirse.
+   * What goes between the figure and the keypad while typing — a purchase being
+   * recovered, and the fee of the quote in hand — plus, only on the details step,
+   * the route already quoted. It is drawn in a different place per step, so it
+   * lives in a variable instead of being repeated.
    *
-   * En el paso del monto el desglose NO se muestra: es exactamente el mismo que
-   * el del paso siguiente, y ahí el usuario ya lo tiene delante justo antes de
-   * pagar. Repetirlo mientras teclea sólo empujaba el teclado hacia abajo con
-   * un número que además cambia con cada tecla.
+   * The full breakdown is NOT shown on the amount step: it is exactly the one on
+   * the next step, where the buyer has it in front of them right before paying.
+   * Repeating it while they type only pushes the keypad down with a number that
+   * changes on every key.
    */
   const routeCard = (
     <>
       {showForm && resuming && (
-        <p className="flex items-center gap-2 text-xs text-gray-500">
+        <p className="flex items-center justify-center gap-2 text-xs text-gray-500">
           <Spinner size="sm" color="current" /> {t('wallet.fiat.onramp.resuming', 'Checking for a purchase in progress…')}
         </p>
       )}
 
-      {showForm && quoting && (
-        <p className="flex items-center gap-2 text-xs text-gray-500">
-          <Spinner size="sm" color="current" /> {t('wallet.fiat.onramp.quoting', 'Finding a route…')}
-        </p>
+      {/* --- The fee, folded away on the amount step. The figure itself is on the
+          breakdown of the step right before paying, so this is the same number
+          brought forward for whoever wants it while still choosing how much.
+          "Includes" is deliberate: the fee is already inside what is paid,
+          neither added to it nor taken off it. --- */}
+      {phase === 'amount' && feeShare != null && !quoting && (
+        <div className="flex flex-col items-center gap-1 text-center">
+          <button
+            type="button"
+            onClick={() => setFeeOpen((open) => !open)}
+            className="flex items-center gap-1 text-xs font-semibold text-gray-500"
+          >
+            {feeOpen ? t('wallet.fiat.onramp.feeHide', 'Hide detail') : t('wallet.fiat.onramp.feeShow', 'See detail')}
+            <FiChevronDown className={`h-3.5 w-3.5 transition-transform ${feeOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {feeOpen && (
+            <p className={`text-xs ${feeHeavy ? 'text-amber-600' : 'text-gray-500'}`}>
+              {t('wallet.fiat.onramp.feeIncluded', 'Includes {{amount}} in fees: {{percent}}% of your purchase.', {
+                amount: feeAmount,
+                percent: feePercent,
+              })}
+              {feeHeavy ? ` ${t('wallet.fiat.onramp.feeHeavy', 'It weighs far less on larger amounts.')}` : ''}
+            </p>
+          )}
+        </div>
       )}
 
       {/* --- The chosen route, on the step right before paying: what you pay,
@@ -623,6 +692,17 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
               {symbol} {amountNum} {currency}
             </span>
           </div>
+          {feeShare != null && (
+            <div className="flex items-center justify-between text-xs text-gray-500">
+              <span>{t('wallet.fiat.onramp.feeLabel', 'Includes fee')}</span>
+              <span className={`font-semibold ${feeHeavy ? 'text-amber-600' : 'text-black'}`}>
+                {t('wallet.fiat.onramp.feeValue', '{{amount}} · {{percent}}%', {
+                  amount: feeAmount,
+                  percent: feePercent,
+                })}
+              </span>
+            </div>
+          )}
           {usdcOut != null && (
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{t('wallet.fiat.onramp.youReceive', 'You receive')}</span>
@@ -768,15 +848,6 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
             'wallet.fiat.onramp.unrecorded',
             'Keep this screen open: we could not save your purchase, so you may not be able to return to it.',
           )}
-        </p>
-      )}
-
-      {step && (
-        <p className="flex items-center gap-2 text-xs text-gray-500">
-          <Spinner size="sm" color="current" />{' '}
-          {step === 'trustline'
-            ? t('wallet.fiat.onramp.stepTrustline', 'Preparing your wallet to receive USDC…')
-            : t('wallet.fiat.onramp.stepCreating', 'Asking the provider for your payment code…')}
         </p>
       )}
 

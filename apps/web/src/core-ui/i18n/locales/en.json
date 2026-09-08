@@ -756,6 +756,37 @@
       "chestAria": "Daily reward"
     }
   },
+  "homeTour": {
+    "done": "Got it",
+    "next": "Next",
+    "skip": "Skip",
+    "steps": {
+      "actions": {
+        "body": "Add money here to start earning interest, and take it out from the same place.",
+        "title": "Deposit and withdraw"
+      },
+      "balance": {
+        "body": "Everything you have saved, updating live. Tap it to open your portfolio.",
+        "title": "Your balance"
+      },
+      "chest": {
+        "body": "Open the chest once a day for coins and experience. While it is closed, the timer shows how long until the next one.",
+        "title": "Your daily reward"
+      },
+      "help": {
+        "body": "Open the help center to ask anything or report a problem.",
+        "title": "Need a hand?"
+      },
+      "profile": {
+        "body": "Your avatar, your username and your settings live here.",
+        "title": "Your profile"
+      },
+      "quickActions": {
+        "body": "Visit other people's islands, see how you rank, and spend your coins on new pieces for your map.",
+        "title": "Explore, ranking and shop"
+      }
+    }
+  },
   "idleFunds": {
     "label": "You have idle funds",
     "title": "Put your money to work",
@@ -1785,6 +1816,7 @@
         "withdraw": "Withdraw"
       },
       "onramp": {
+        "calculating": "Calculating…",
         "close": "Close",
         "continue": "Continue",
         "copied": "Copied",
@@ -1797,14 +1829,22 @@
         "err": {
           "anchorError": "The provider rejected the request. Try again in a moment.",
           "assetNotEnabled": "This currency is not available for that route right now.",
+          "buyFailed": "We could not start your purchase. Try again.",
           "generic": "The purchase could not be quoted.",
           "kycRequired": "The provider needs to verify your identity before continuing.",
+          "network": "We couldn't reach the network. Check your connection and try again.",
           "noRoutes": "No route available for {{amount}} {{currency}}. Try a different amount.",
           "providerNotConfigured": "This provider is not configured for the app yet.",
           "quoteExpired": "The quote expired. Request a new one and try again.",
           "walletUnsupported": "This wallet type cannot be used for this purchase."
         },
         "etaLabel": "Estimated time",
+        "feeHeavy": "It weighs far less on larger amounts.",
+        "feeHide": "Hide detail",
+        "feeIncluded": "Includes {{amount}} in fees: {{percent}}% of your purchase.",
+        "feeLabel": "Includes fee",
+        "feeShow": "See detail",
+        "feeValue": "{{amount}} · {{percent}}%",
         "expiredBody": "Nothing was charged. Start again to get a new code with a fresh rate.",
         "expiredTitle": "This code expired",
         "expiresIn": "Expires in {{time}}",
@@ -1820,8 +1860,8 @@
         "kycWaiting": "Waiting for approval…",
         "limitMax": "The maximum for this route is {{amount}} {{currency}}.",
         "limitMin": "The minimum for this route is {{amount}} {{currency}}.",
-        "limits": "Between {{min}} and {{max}} {{currency}}.",
         "longPress": "Press and hold the code to save it to your photos.",
+        "minAmount": "The minimum purchase is {{amount}} {{currency}}.",
         "outUsdc": "≈ {{amount}} USDC",
         "payHint": "Pay this QR from your bank app. The USDC arrives on its own.",
         "processingBody": "Your USDC usually arrives in a few minutes, and can take up to 15. You can close this — it lands in your wallet on its own.",
@@ -1829,8 +1869,8 @@
         "processingTitle": "Payment received",
         "qrAlt": "Payment QR code",
         "qrUnavailable": "We could not load the payment code. Start again to get a new one.",
-        "quoting": "Finding a route…",
         "rateLabel": "Rate",
+        "receiveEstimate": "You get ≈ {{amount}} USDC",
         "restart": "Start a new purchase",
         "cancel": "Cancel and start over",
         "cancelTitle": "Cancel this payment code?",
@@ -1845,8 +1885,6 @@
         "settledNoAmount": "The USDC was credited to your wallet.",
         "settledPaid": "You paid {{amount}} {{currency}}.",
         "settledTitle": "Your USDC is in your wallet",
-        "stepCreating": "Asking the provider for your payment code…",
-        "stepTrustline": "Preparing your wallet to receive USDC…",
         "title": "Buy USDC in {{country}} ({{currency}})",
         "unrecorded": "Keep this screen open: we could not save your purchase, so you may not be able to return to it.",
         "working": "Preparing your purchase…",
@@ -1857,8 +1895,6 @@
         "ach": "Bank Transfer"
       },
       "ramp": {
-        "balance": "Available in savings: {{balance}} USDC",
-        "balanceLoading": "Reading your savings…",
         "continue": "Continue",
         "corridorOff": "This corridor is not enabled yet.",
         "costUsdc": "{{amount}} USDC",
@@ -1883,7 +1919,7 @@
           "generic": "The withdrawal could not be completed.",
           "insufficientQuote": "This withdrawal needs {{needed}} USDC in your savings and you have {{balance}}. Try a smaller amount.",
           "kycRequired": "The provider needs to verify your identity before continuing.",
-          "noRoutes": "No route available for {{amount}} {{currency}}. Try a different amount.",
+          "noRoutes": "No route available for {{amount}} USDC. Try a different amount.",
           "paymentFailed": "The payment could not be completed. Your USDC is still in your wallet.",
           "paymentNotOnChain": "The provider reported a payment ({{hash}}) that never reached the network. Your USDC is still in your wallet.",
           "paymentNotSubmitted": "The provider accepted the withdrawal but never sent the payment. Your USDC is in your wallet — try again.",
@@ -1891,7 +1927,8 @@
           "quoteExpired": "The quote expired. Request a new one and try again.",
           "unknownCost": "The quote did not report how much USDC this withdrawal costs.",
           "vaultNotConfirmed": "The withdrawal from your savings has not confirmed on the network yet. Your USDC is safe — try again in a minute.",
-          "walletUnsupported": "This wallet type cannot be used for this withdrawal."
+          "walletUnsupported": "This wallet type cannot be used for this withdrawal.",
+          "noRate": "The rate for this corridor is unavailable right now."
         },
         "etaLabel": "Estimated time",
         "groupCreate": "Start the withdrawal",
@@ -1926,7 +1963,12 @@
         "waitingHint": "We are waiting for the provider to confirm…",
         "waitingReady": "Waiting for the payment to settle… (usually {{eta}})",
         "youReceive": "You receive",
-        "youSend": "Leaves your savings"
+        "youSend": "Leaves your savings",
+        "rateLoading": "Reading the exchange rate…",
+        "rateLine": "1 USDC ≈ {{amount}} {{currency}}",
+        "receiveEstimate": "You get ≈ {{amount}} {{currency}}",
+        "limitMinUsdc": "The minimum for this route is about {{amount}} USDC.",
+        "limitMaxUsdc": "The maximum for this route is about {{amount}} USDC."
       },
       "receive": {
         "cta": "Continue",

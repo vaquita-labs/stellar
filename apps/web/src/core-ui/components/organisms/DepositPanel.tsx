@@ -23,6 +23,7 @@ import { SendFiatModal } from './FiatModals/SendFiatModal';
 import { SendFiatRampModal } from './FiatModals/SendFiatRampModal';
 import { WithdrawModal } from './WithdrawModal';
 import { PressableButton } from '../molecules/PressableButton';
+import { HOME_TOUR_ANCHOR_ACTIONS } from './Tutorial/homeTourConfig';
 
 export function DepositPanel() {
   const { t } = useTranslation();
@@ -86,7 +87,7 @@ export function DepositPanel() {
       {isStellar && isPaused && (
         <p className="text-sm text-warning font-semibold">{t('deposit.panel.paused', 'Deposits are temporarily paused')}</p>
       )}
-      <div className="w-full max-w-xl px-1 flex gap-1">
+      <div data-tutorial={HOME_TOUR_ANCHOR_ACTIONS} className="w-full max-w-xl px-1 flex gap-1">
         <PressableButton
           variant="white"
           size="cta"

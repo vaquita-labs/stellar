@@ -25,6 +25,7 @@ import { AMOUNT_DECIMALS, FIAT_DECIMALS, floorAmount, formatTokenPrecise } from 
 import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
 import {
   type SavedBankAccount,
+  SavedBankApiError,
   useCreateSavedBankAccount,
   useDeleteSavedBankAccount,
   useSavedBankAccounts,
@@ -108,10 +109,35 @@ const fundingAmount = (cost: number): number => floorAmount(cost + FUNDING_DUST,
  * never quotes, and the user would fill in details for the wrong bank. Adding a
  * country here means having checked that its rail does not depend on the amount.
  *
- * Nothing but the field list is read from the probe. The price, the limits and
- * the `quoteId` used to withdraw always come from the quote for the real amount.
+ * Two things are read from it, and NEITHER prices the withdrawal: the field
+ * list, and the exchange rate that turns the USDC on the keypad into the local
+ * currency the quote has to be asked in. The price, the limits and the
+ * `quoteId` used to withdraw always come from the quote for the real amount.
  */
 const PROBE_AMOUNT: Partial<Record<CorridorCode, number>> = { BO: 100 };
+
+/**
+ * Multiplier for the second probe attempt. A corridor whose minimum sits above
+ * the nominal answers it with no routes at all, and without a rate the screen
+ * has nothing to convert with — so the nominal is raised once before giving up.
+ */
+const PROBE_RETRY_FACTOR = 10;
+
+/**
+ * The corridor's exchange rate as MEASURED on a quote: local currency per USDC,
+ * fees already inside it.
+ *
+ * Deliberately not the `rate` the quote publishes. That one is quoted against
+ * the fiat that settles and ignores the rounding of the charge, so multiplying
+ * by it lands on a different figure than the one the provider ends up asking
+ * for — the same trap documented where the withdrawal is funded.
+ */
+const measuredRate = (quote: RampQuote | undefined): number | null => {
+  const fiat = Number(quote?.fiatAmount);
+  const crypto = Number(quote?.cryptoAmount);
+  if (!Number.isFinite(fiat) || !Number.isFinite(crypto) || fiat <= 0 || crypto <= 0) return null;
+  return fiat / crypto;
+};
 
 /**
  * Fiat off-ramp over Pollar's ramps endpoints, for any of the corridors the app
@@ -120,13 +146,17 @@ const PROBE_AMOUNT: Partial<Record<CorridorCode, number>> = { BO: 100 };
  * stepper, the money leaves the vault for the wallet BEFORE it is handed to the
  * ramp, and the polling aborts if the user closes the modal.
  *
- * The big difference is the unit of the amount. With Anclap we run the
- * USDC → ARS swap ourselves, so that modal asks for USDC; here the amount is
- * chosen in LOCAL CURRENCY because `/ramps/quote` filters providers by the
- * corridor's fiat currency and quoting in USDC returns an empty list. The quote
- * publishes what it costs in USDC (`cryptoAmount`) and the confirmation shows
- * it, along with the fiat that actually settles (`fiatAmount`), which may not be
- * what the user typed.
+ * The amount is typed in USDC, like every other withdrawal, but the provider
+ * cannot be asked in it: `/ramps/quote` filters providers by the corridor's
+ * fiat currency, so quoting in USDC returns an empty list. The bridge is the
+ * rate the schema probe measures, and it only converts what to ASK for — what
+ * the withdrawal costs is `cryptoAmount`, fixed by the quote and checked
+ * against the balance before anything moves.
+ *
+ * So the local currency is an estimate on the way in and exact on the way out:
+ * the confirmation shows the `fiatAmount` the quote settles, which was never
+ * going to be the round number anyway — the provider prices on the crypto side,
+ * and asking for 12 BOB already lands at 12.13.
  *
  * Nothing about the corridor is hardcoded beyond the symbol: the currency comes
  * from `getRampCountries`, and the rail, the provider and the form fields are
@@ -185,12 +215,22 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   // reads as having lost the withdrawal. Changing the destination from the
   // confirmation is what the "Change" link is for.
   const [detailsFrom, setDetailsFrom] = useState<Extract<Phase, 'amount' | 'bank'>>('bank');
-  const [amountFiat, setAmountFiat] = useState('');
+  const [amountUsdc, setAmountUsdc] = useState('');
   const [quote, setQuote] = useState<RampQuote | null>(null);
   // Monto con el que se pidió la cotización que está guardada. Cambiar el monto
   // no la borra —el destino elegido sigue valiendo— pero la marca vieja: la
   // cotización fija el precio de UN monto, y seguir con la de otro cobraría mal.
   const [quotedFor, setQuotedFor] = useState<number | null>(null);
+  /**
+   * The local-currency figure the stored quote was actually asked for.
+   *
+   * It is not always the conversion of what is on screen: the first quote
+   * measures the rate, and when its charge overshoots the balance the amount is
+   * converted again with that better rate and asked for a second time. What
+   * creates the withdrawal has to be the figure the WINNING quote was asked
+   * for — Pollar re-quotes with it — so it is kept instead of recomputed.
+   */
+  const [requestedFiat, setRequestedFiat] = useState<number | null>(null);
   const [usdcCost, setUsdcCost] = useState<number | null>(null);
   // The bank form schema when there is no quote yet, from the probe below. It is
   // kept apart from `quote` because it prices nothing: it only says which fields
@@ -200,7 +240,11 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   //
   // It carries the corridor it describes so switching countries inside the modal
   // cannot draw Bolivia's form for Brazil: a stale probe simply does not match.
-  const [probe, setProbe] = useState<{ country: CorridorCode; fields: RampField[] | null } | null>(null);
+  const [probe, setProbe] = useState<{
+    country: CorridorCode;
+    fields: RampField[] | null;
+    rate: number | null;
+  } | null>(null);
   // The corridor whose probe is in flight, so a re-render cannot fire a second
   // one. A ref and not state: nothing on screen depends on it.
   const probingFor = useRef<CorridorCode | null>(null);
@@ -287,25 +331,40 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   // `quote`: what the withdrawal costs is fixed by the quote for the real
   // amount, and this one is thrown away as soon as its fields are read.
   //
-  // It runs on entering the step and not on opening the modal so that whoever
-  // types the amount first — who already gets the fields with their own quote —
-  // does not pay for a second call.
+  // It runs on entering either step and not on opening the modal, so that a
+  // corridor the user leaves without touching costs nothing.
+  //
+  // On the AMOUNT step it is what makes the keypad work at all: the amount is
+  // typed in USDC and `/ramps/quote` only quotes in local currency, so without
+  // the rate there is nothing to convert and nothing to ask for.
   useEffect(() => {
     const probeAmount = PROBE_AMOUNT[country];
-    if (phase !== 'bank' || quote || !corridor || !probeAmount) return;
+    if ((phase !== 'amount' && phase !== 'bank') || quote || !corridor || !probeAmount) return;
     if (probe?.country === country || probingFor.current === country) return;
     probingFor.current = country;
     let cancelled = false;
-    void quoteFiat(corridor, probeAmount)
+    // A nominal under the route's minimum comes back with no routes, which is
+    // indistinguishable from a corridor that cannot pay out. Raising it once
+    // tells them apart, and only costs a call in the corridors that need it.
+    const askProbe = async () => {
+      const first = await quoteFiat(corridor, probeAmount);
+      if (first[0]) return first;
+      return quoteFiat(corridor, probeAmount * PROBE_RETRY_FACTOR);
+    };
+    void askProbe()
       .then((quotes) => {
-        if (!cancelled) setProbe({ country, fields: quotes[0]?.requiredFields ?? null });
+        if (!cancelled) {
+          setProbe({ country, fields: quotes[0]?.requiredFields ?? null, rate: measuredRate(quotes[0]) });
+        }
       })
       .catch(() => {
-        // A failed probe is recorded like an empty one and not shown: the step
-        // still lists the saved accounts, and the form arrives with the quote
-        // for the real amount. Saying "we could not load the form" would
-        // announce a call the user never asked for.
-        if (!cancelled) setProbe({ country, fields: null });
+        // On the destination step a failed probe is recorded like an empty one
+        // and not shown: the step still lists the saved accounts, and the form
+        // arrives with the quote for the real amount.
+        //
+        // On the amount step it DOES surface, as `rateProblem` below — there the
+        // rate is not a shortcut, it is the only way to read what was typed.
+        if (!cancelled) setProbe({ country, fields: null, rate: null });
       })
       .finally(() => {
         if (probingFor.current === country) probingFor.current = null;
@@ -326,7 +385,8 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   const fields = useMemo<RampField[]>(() => quote?.requiredFields ?? probeFields ?? [], [quote, probeFields]);
   // Derived instead of stored: the probe is running exactly while this corridor
   // has one to run and its answer has not arrived.
-  const probing = phase === 'bank' && !quote && PROBE_AMOUNT[country] != null && probe?.country !== country;
+  const probing =
+    (phase === 'bank' || phase === 'amount') && !quote && PROBE_AMOUNT[country] != null && probe?.country !== country;
   /**
    * Lo que el formulario muestra y manda: lo tipeado más el default de cada
    * select obligatorio que todavía está vacío (ver `selectDefaults`).
@@ -338,17 +398,56 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
    * —el `onChange` de la lista significa "lo editó él", y en el retiro eso
    * despega el formulario de la cuenta guardada.
    */
-  const values = useMemo(
-    () => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }),
-    [fields, typedValues],
-  );
-  const amountNum = Number(amountFiat);
-  const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
+  const values = useMemo(() => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }), [fields, typedValues]);
+  /**
+   * The corridor's rate, once the probe has measured it. It is the whole reason
+   * the keypad can be in USDC: `/ramps/quote` only quotes in local currency, so
+   * without it there is nothing to ask the provider for.
+   */
+  const rate = probe?.country === country ? probe.rate : null;
+  const usdcNum = Number(amountUsdc);
+  const usdcValid = !!amountUsdc && Number.isFinite(usdcNum) && usdcNum > 0;
+
+  /**
+   * What is REQUESTED from the provider, in local currency. Still the figure
+   * everything downstream runs on — it quotes, it validates against the route's
+   * limits and it creates the withdrawal — only now it is derived from the USDC
+   * on screen instead of typed.
+   *
+   * It is an estimate, and the quote is what settles it: the provider prices on
+   * the crypto side, so asking for 12 BOB already lands at 12.13 today. What the
+   * user typed is honoured as the CHARGE, which is the side their savings are
+   * on, and `cryptoAmount` is checked against it before anything moves.
+   */
+  const amountNum = rate != null && usdcValid ? floorAmount(usdcNum * rate, FIAT_DECIMALS) : NaN;
+  const amountValid = usdcValid && Number.isFinite(amountNum) && amountNum > 0;
+
+  /**
+   * Hard ceiling of the keypad: the balance minus the dust the funding adds on
+   * top of the charge. Typing more than this cannot produce a withdrawal that
+   * fits, so the keys stop instead of letting it fail at the quote.
+   */
+  const maxUsdc = Math.max(0, floorAmount(balance - FUNDING_DUST, 2));
+
+  /**
+   * Replaces the probe's rate with one measured on a real quote.
+   *
+   * Only ever refines what the probe already left: the nominal is measured on a
+   * ticket nobody asked for, and a quote for the actual amount prices the same
+   * corridor at the size that matters. It never CREATES the entry — writing one
+   * here would mark the schema probe as already run, and the destination step
+   * would draw its form with no fields.
+   */
+  const keepRate = (candidate: RampQuote | undefined) => {
+    const measured = measuredRate(candidate);
+    if (measured == null) return;
+    setProbe((prev) => (prev?.country === country ? { ...prev, rate: measured } : prev));
+  };
   // `fieldsAreValid` answers true for an empty list — nothing can fail — so the
   // schema has to exist for the form to count as complete: saving or confirming
   // with zero fields would send a withdrawal with no destination.
   const fieldsValid = fields.length > 0 && fieldsAreValid(fields, values);
-  const receiveFiat = settledFiatOf(quote, amountNum);
+  const receiveFiat = settledFiatOf(quote, requestedFiat ?? amountNum);
 
   // Sólo las cuentas del corredor que se está usando: los campos que pide el
   // proveedor cambian por país, así que ofrecer una cuenta de Brasil para un
@@ -395,13 +494,21 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     setSaveBankError(null);
   };
 
+  /**
+   * Sólo la API explica un fallo de cuenta guardada en palabras que el usuario
+   * pueda leer. Lo demás —red caída, un fallo nuestro— llega en inglés y sin
+   * nada accionable, así que gana el texto traducido.
+   */
+  const bankErrorMessage = (e: unknown, fallback: string): string =>
+    e instanceof SavedBankApiError && e.message ? e.message : fallback;
+
   const handleDeleteBank = async (id: string) => {
     setPendingDeleteBankId(id);
     try {
       await deleteBank.mutateAsync(id);
       if (selectedBankId === id) setSelectedBankId(null);
     } catch (e) {
-      toast.danger((e as Error)?.message ?? t('wallet.fiat.ramp.savedBanks.deleteError', 'Could not delete the account'));
+      toast.danger(bankErrorMessage(e, t('wallet.fiat.ramp.savedBanks.deleteError', 'Could not delete the account')));
     } finally {
       setPendingDeleteBankId(null);
     }
@@ -424,7 +531,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       setSaveBankLabel('');
       toast.success(t('wallet.fiat.ramp.savedBanks.saved', 'Account saved'));
     } catch (e) {
-      setSaveBankError((e as Error)?.message ?? t('wallet.fiat.ramp.savedBanks.saveError', 'Could not save the account'));
+      setSaveBankError(bankErrorMessage(e, t('wallet.fiat.ramp.savedBanks.saveError', 'Could not save the account')));
     }
   };
 
@@ -485,39 +592,85 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
    */
   const ensureQuote = async (): Promise<RampQuote | null> => {
     if (!amountValid || busy || !corridor) return null;
-    if (quote && quotedFor === amountNum) return quote;
+    if (quote && quotedFor === usdcNum) return quote;
     setBusy(true);
     setError(null);
     try {
-      const quotes = await quoteFiat(corridor, amountNum);
+      let requested = amountNum;
+      let quotes = await quoteFiat(corridor, requested);
+
+      /**
+       * One correction, and only when the charge does not fit.
+       *
+       * The rate that converted the keypad came from the probe, measured on a
+       * nominal ticket. It is close, but at the MAXIMUM — the one tap where
+       * there is no room — being a fraction of a percent high is enough for the
+       * charge to land above the balance. This quote is measured on the real
+       * amount, so converting again with it lands where it should.
+       *
+       * A cent of local currency is shaved off so the retry is strictly under
+       * the balance instead of exactly on it: the provider rounds its charge,
+       * and a withdrawal that fits by nothing fits by nothing.
+       */
+      const firstCost = Number(quotes[0]?.cryptoAmount);
+      if (Number.isFinite(firstCost) && fundingAmount(firstCost) > balance) {
+        const measured = measuredRate(quotes[0]);
+        if (measured != null) {
+          // Se vuelve a pisar después de restar el centavo: sin eso el número
+          // sale con la basura del float (2665.6299999999997) y eso es lo que
+          // viajaría como `amount` en la query.
+          const retry = floorAmount(floorAmount(usdcNum * measured, FIAT_DECIMALS) - 0.01, FIAT_DECIMALS);
+          if (retry > 0 && retry < requested) {
+            const second = await quoteFiat(corridor, retry);
+            if (second[0]) {
+              requested = retry;
+              quotes = second;
+            }
+          }
+        }
+      }
+
       const best = quotes[0];
       if (!best) {
         // Sin cotizaciones no hay `minAmount`/`maxAmount` que mostrar, así que el
         // mensaje apunta al monto en vez de afirmar que no existe proveedor.
         setError(
-          t('wallet.fiat.ramp.err.noRoutes', 'No route available for {{amount}} {{currency}}. Try a different amount.', {
-            amount: amountNum,
-            currency,
+          t('wallet.fiat.ramp.err.noRoutes', 'No route available for {{amount}} USDC. Try a different amount.', {
+            amount: formatTokenPrecise(usdcNum, 2),
           }),
         );
         return null;
       }
-      // Los límites vienen en la moneda con la que se cotizó, o sea la local.
-      if (best.minAmount != null && amountNum < best.minAmount) {
+      // Los límites vienen en la moneda con la que se cotizó, o sea la local, y
+      // se dicen en la que el usuario teclea. La vuelta pasa por el rate, así
+      // que la cifra es aproximada: es una guía para corregir el monto, no algo
+      // contra lo que se valide —eso lo hace el proveedor, en su moneda.
+      const inUsdc = (localAmount: number) => (rate != null && rate > 0 ? formatTokenPrecise(localAmount / rate, 2) : null);
+      if (best.minAmount != null && requested < best.minAmount) {
+        const asUsdc = inUsdc(best.minAmount);
         setError(
-          t('wallet.fiat.ramp.limitMin', 'The minimum for this route is {{amount}} {{currency}}.', {
-            amount: best.minAmount,
-            currency,
-          }),
+          asUsdc
+            ? t('wallet.fiat.ramp.limitMinUsdc', 'The minimum for this route is about {{amount}} USDC.', {
+                amount: asUsdc,
+              })
+            : t('wallet.fiat.ramp.limitMin', 'The minimum for this route is {{amount}} {{currency}}.', {
+                amount: best.minAmount,
+                currency,
+              }),
         );
         return null;
       }
-      if (best.maxAmount != null && amountNum > best.maxAmount) {
+      if (best.maxAmount != null && requested > best.maxAmount) {
+        const asUsdc = inUsdc(best.maxAmount);
         setError(
-          t('wallet.fiat.ramp.limitMax', 'The maximum for this route is {{amount}} {{currency}}.', {
-            amount: best.maxAmount,
-            currency,
-          }),
+          asUsdc
+            ? t('wallet.fiat.ramp.limitMaxUsdc', 'The maximum for this route is about {{amount}} USDC.', {
+                amount: asUsdc,
+              })
+            : t('wallet.fiat.ramp.limitMax', 'The maximum for this route is {{amount}} {{currency}}.', {
+                amount: best.maxAmount,
+                currency,
+              }),
         );
         return null;
       }
@@ -544,8 +697,13 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         }
       }
       setQuote(best);
-      setQuotedFor(amountNum);
+      setQuotedFor(usdcNum);
+      setRequestedFiat(requested);
       setUsdcCost(cost ?? null);
+      // El rate del sondeo se midió sobre un ticket nominal; éste está medido
+      // sobre el monto real, así que manda. Importa para lo que venga después:
+      // cambiar el monto vuelve a convertir, y ahora convierte con el bueno.
+      keepRate(best);
       return best;
     } catch (e) {
       setError(messageOf(e));
@@ -580,7 +738,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
    * show.
    */
   const leaveBank = () => {
-    if (quote && quotedFor === amountNum) {
+    if (quote && quotedFor === usdcNum) {
       setDetailsFrom('bank');
       setPhase('details');
       return;
@@ -699,7 +857,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       // queda esperar.
       mark('create', 'running');
       let active = quote;
-      let result = await createOfframp({ corridor, quote: active, amountFiat: amountNum, walletAddress, values });
+      // El monto que se le pide es el de la cotización que ganó, no la
+      // conversión de lo que está en pantalla: Pollar re-cotiza con él al crear.
+      const orderFiat = requestedFiat ?? amountNum;
+      let result = await createOfframp({ corridor, quote: active, amountFiat: orderFiat, walletAddress, values });
 
       if (result.kycRequired) {
         setKycUrl(result.kycUrl ?? null);
@@ -710,12 +871,11 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         await waitForKycApproval({ shouldStop: () => !openRef.current });
         setWaiting(false);
 
-        const fresh = (await quoteFiat(corridor, amountNum))[0];
+        const fresh = (await quoteFiat(corridor, orderFiat))[0];
         if (!fresh) {
           throw new RampError(
-            t('wallet.fiat.ramp.err.noRoutes', 'No route available for {{amount}} {{currency}}. Try a different amount.', {
-              amount: amountNum,
-              currency,
+            t('wallet.fiat.ramp.err.noRoutes', 'No route available for {{amount}} USDC. Try a different amount.', {
+              amount: formatTokenPrecise(usdcNum, 2),
             }),
           );
         }
@@ -726,9 +886,9 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         if (problem) throw new RampError(problem);
         active = fresh;
         setQuote(fresh);
-        setQuotedFor(amountNum);
+        setQuotedFor(usdcNum);
         setUsdcCost(freshCost ?? null);
-        result = await createOfframp({ corridor, quote: fresh, amountFiat: amountNum, walletAddress, values });
+        result = await createOfframp({ corridor, quote: fresh, amountFiat: orderFiat, walletAddress, values });
       }
       setTxStatus(result.status);
       mark('create', 'done');
@@ -793,10 +953,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
                 'The provider reported a payment ({{hash}}) that never reached the network. Your USDC is still in your wallet.',
                 { hash: truncateMiddle(hash, 6, 6) },
               )
-            : t(
-                'wallet.fiat.ramp.err.paymentFailed',
-                'The payment could not be completed. Your USDC is still in your wallet.',
-              ),
+            : t('wallet.fiat.ramp.err.paymentFailed', 'The payment could not be completed. Your USDC is still in your wallet.'),
         );
       }
 
@@ -814,9 +971,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         mark('payout', 'done');
         void markWithdrawalTerminal(walletAddress, trackedId.current, 'settled');
         trackedId.current = null;
-        toast.success(
-          t('wallet.fiat.ramp.settled', 'Withdrawal paid out via {{rail}}.', { rail: railLabel(active.rail, t) }),
-        );
+        toast.success(t('wallet.fiat.ramp.settled', 'Withdrawal paid out via {{rail}}.', { rail: railLabel(active.rail, t) }));
       } else {
         // Sigue acreditando: no se cierra la fila, porque el retiro todavía no
         // terminó. Si el usuario no vuelve, la ventana de gracia la cierra sola.
@@ -850,15 +1005,25 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   };
 
   // Lo que dice la línea bajo el número cuando NO hay problema (el error lo pisa
-  // dentro de `AmountStep`): cuánto hay en los ahorros para gastar.
-  const amountHint = balanceIsLoading
-    ? t('wallet.fiat.ramp.balanceLoading', 'Reading your savings…')
-    : t('wallet.fiat.ramp.balance', 'Available in savings: {{balance}} USDC', {
-        // Dos decimales: los 7 de USDC no se leen y estiran la línea hasta
-        // pisar el renglón de abajo. `balance` entero sigue siendo el que
-        // valida el monto.
-        balance: formatTokenPrecise(balance, 2),
-      });
+  // dentro de `AmountStep`): cuánto va a llegar al banco. El saldo se fue al
+  // chip, que además lo teclea.
+  //
+  // Sin monto tipeado muestra el tipo de cambio en vez de un "recibís 0": es lo
+  // que el usuario necesita para decidir cuánto poner, y mantiene la línea
+  // siempre ocupada para que la pantalla no salte cuando aparece el error.
+  const amountHint = probing
+    ? t('wallet.fiat.ramp.rateLoading', 'Reading the exchange rate…')
+    : rate == null
+      ? t('wallet.fiat.ramp.err.noRate', 'The rate for this corridor is unavailable right now.')
+      : usdcValid
+        ? t('wallet.fiat.ramp.receiveEstimate', 'You get ≈ {{amount}} {{currency}}', {
+            amount: formatTokenPrecise(amountNum, FIAT_DECIMALS),
+            currency,
+          })
+        : t('wallet.fiat.ramp.rateLine', '1 USDC ≈ {{amount}} {{currency}}', {
+            amount: formatTokenPrecise(rate, FIAT_DECIMALS),
+            currency,
+          });
 
   const footer =
     phase === 'amount' ? (
@@ -911,13 +1076,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         currency: currency || country,
       })}
       size="md"
-      onBack={
-        phase === 'details'
-          ? () => setPhase(detailsFrom)
-          : phase === 'bank'
-            ? () => setPhase('amount')
-            : onBack
-      }
+      onBack={phase === 'details' ? () => setPhase(detailsFrom) : phase === 'bank' ? () => setPhase('amount') : onBack}
       // Con el teclado en el cuerpo, el aire de las otras fases hace scrollear
       // el sheet en pantallas chicas y lo primero que se corta es el monto.
       bodyClassName={`flex flex-col pb-2 ${phase === 'amount' ? 'gap-2.5' : 'gap-4'}`}
@@ -929,24 +1088,32 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         </p>
       )}
 
-      {/* --- Monto en MONEDA LOCAL: es la unidad con la que cotizan los endpoints
-          de ramps. Cuánto USDC cuesta se resuelve con la cotización y se muestra
-          en la confirmación. --- */}
+      {/* --- Monto en USDC, igual que el resto de los retiros: es la moneda en
+          la que el usuario tiene la plata, así que es la única en la que "todo
+          lo disponible" se puede decir exacto. Los bolivianos que llegan al
+          banco salen del rate y se muestran abajo del número; la cotización los
+          fija de verdad en la confirmación. --- */}
       {phase === 'amount' && (
         <AmountStep
-          value={amountFiat}
-          onValueChange={setAmountFiat}
-          decimals={FIAT_DECIMALS}
-          symbol={symbol || currency}
-          symbolPosition="suffix"
+          value={amountUsdc}
+          onValueChange={setAmountUsdc}
+          // Dos decimales y no los 7 de USDC: la moneda local se cotiza al
+          // centavo, así que todo lo que se teclee más fino se pierde igual al
+          // convertir.
+          decimals={2}
           error={error}
           onErrorClear={() => setError(null)}
           hint={amountHint}
-          // Sin chip de saldo: el saldo está en USDC y acá se teclea moneda
-          // local, así que no hay un "máximo" que tipear sin la cotización.
-          // Por lo mismo va sin `max`: el tope de la ruta llega recién con la
-          // cotización y aparecería a mitad de tipear, con las teclas dejando
-          // de responder sin decir por qué. `ensureQuote` lo explica.
+          // El chip teclea el techo, no el saldo pelado: lo que sale del vault
+          // es el cargo MÁS `FUNDING_DUST`, así que un retiro por el saldo
+          // exacto no entra. Tope duro del teclado por lo mismo.
+          available={maxUsdc}
+          availableDecimals={2}
+          availableLoading={balanceIsLoading}
+          // Sin saldo leído todavía el techo sería 0 y no respondería ninguna
+          // tecla, que se siente como una pantalla rota. El tope entra recién
+          // cuando hay contra qué comparar.
+          max={balanceIsLoading ? undefined : maxUsdc}
           disabled={busy}
         >
           {/* El destino, acá y no en la confirmación: los datos del banco son lo
@@ -1142,9 +1309,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
               <span className="block text-sm font-bold text-black truncate">
                 {destinationLabel ?? t('wallet.fiat.ramp.destination.select', 'Select bank account')}
               </span>
-              {destinationHint ? (
-                <span className="block font-mono text-[11px] text-gray-500">{destinationHint}</span>
-              ) : null}
+              {destinationHint ? <span className="block font-mono text-[11px] text-gray-500">{destinationHint}</span> : null}
             </span>
             <button
               type="button"

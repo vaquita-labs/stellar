@@ -30,11 +30,23 @@ const BASE = () => `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/wallets/saved-b
 
 const savedBankAccountsKey = (walletAddress?: string | null) => ['saved-bank-accounts', walletAddress] as const;
 
+/**
+ * Un fallo que la API explicó con un mensaje pensado para el usuario ("ya
+ * tenés una cuenta con ese nombre").
+ *
+ * Lleva tipo propio para poder distinguirlo de todo lo demás que puede caer en
+ * el mismo `catch`: un corte de red da `TypeError: Failed to fetch` y un fallo
+ * nuestro da `Request failed`, dos textos en inglés que no le dicen nada a
+ * nadie. Sin la marca, la pantalla no tiene forma de saber cuál mostrar.
+ */
+export class SavedBankApiError extends Error {}
+
 /** Desenvuelve la respuesta `{ status, data }` de la API y tira con el mensaje del server. */
 async function unwrap<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => ({}));
   if (!response.ok || body?.status !== 'success') {
-    throw new Error(body?.message || 'Request failed');
+    const explained = typeof body?.message === 'string' ? body.message.trim() : '';
+    throw explained ? new SavedBankApiError(explained) : new Error('Request failed');
   }
   return body.data as T;
 }
@@ -74,7 +86,7 @@ export const useCreateSavedBankAccount = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(input),
         },
-        walletAddress
+        walletAddress,
       );
       // POST devuelve el DTO plano, no envuelto en una key.
       return await unwrap<SavedBankAccount>(response);

@@ -547,18 +547,32 @@ router.put('/wallet/:walletAddress/avatar', requireWalletSession, async (req, re
 
 router.patch('/wallet/:walletAddress/flags', requireWalletSession, async (req, res) => {
   const { walletAddress } = req.params;
-  const { onboardingCompleted, tutorialCompleted, cryptoSavvy } = req.body ?? {};
-  req.log.info({ walletAddress, onboardingCompleted, tutorialCompleted, cryptoSavvy }, 'PATCH /profile/.../flags');
+  const { onboardingCompleted, tutorialCompleted, homeTourCompleted, cryptoSavvy } = req.body ?? {};
+  req.log.info(
+    { walletAddress, onboardingCompleted, tutorialCompleted, homeTourCompleted, cryptoSavvy },
+    'PATCH /profile/.../flags'
+  );
 
   // Build a partial update from only the flags actually present in the body, so
   // a toggle can be flipped without touching the others.
-  const data: { onboardingCompleted?: boolean; tutorialCompleted?: boolean; cryptoSavvy?: boolean } = {};
+  const data: {
+    onboardingCompleted?: boolean;
+    tutorialCompleted?: boolean;
+    homeTourCompleted?: boolean;
+    cryptoSavvy?: boolean;
+  } = {};
   if (typeof onboardingCompleted === 'boolean') data.onboardingCompleted = onboardingCompleted;
   if (typeof tutorialCompleted === 'boolean') data.tutorialCompleted = tutorialCompleted;
+  if (typeof homeTourCompleted === 'boolean') data.homeTourCompleted = homeTourCompleted;
   if (typeof cryptoSavvy === 'boolean') data.cryptoSavvy = cryptoSavvy;
 
   if (Object.keys(data).length === 0) {
-    return sendError(res, 'Provide a boolean onboardingCompleted, tutorialCompleted and/or cryptoSavvy.', null, 400);
+    return sendError(
+      res,
+      'Provide a boolean onboardingCompleted, tutorialCompleted, homeTourCompleted and/or cryptoSavvy.',
+      null,
+      400
+    );
   }
 
   const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);

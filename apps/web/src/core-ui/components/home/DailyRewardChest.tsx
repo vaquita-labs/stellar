@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
 import { useModalPresence } from '../molecules/AppModal';
 import { DailyRewardModal } from '../organisms';
+import { HOME_TOUR_ANCHOR_CHEST } from '../organisms/Tutorial/homeTourConfig';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -170,7 +171,7 @@ export const DailyRewardChest = ({ variant = 'floating' }: { variant?: 'floating
 
   return (
     <>
-      <div className="flex flex-col items-center gap-0.5">
+      <div data-tutorial={HOME_TOUR_ANCHOR_CHEST} className="flex flex-col items-center gap-0.5">
         <button
           type="button"
           aria-label={t('home.dailyReward.chestAria', 'Daily reward')}

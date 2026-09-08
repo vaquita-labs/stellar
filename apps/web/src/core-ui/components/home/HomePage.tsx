@@ -6,7 +6,7 @@ import { useAnalytics, useDeposits } from '../../hooks';
 import { EditionMode, useGameClockSynced, useLoading, useMapStore, useModalQueueStore, useConfigStore } from '../../stores';
 import { WorldType } from '../../types';
 import { useModalPresence } from '../molecules/AppModal';
-import { BankAPYModal, CoinAnimation, DepositPanel, TutorialModal } from '../organisms';
+import { BankAPYModal, CoinAnimation, DepositPanel, HomeTour, TutorialModal } from '../organisms';
 import { WorldMap } from '../templates';
 import { AutoInvest } from './AutoInvest';
 import { BackgroundMusic } from './BackgroundMusic';
@@ -60,6 +60,17 @@ export function HomePage() {
     return () => setVaultPromptSettled(true);
   }, [setVaultPromptSettled]);
 
+  // El turno del tour se toma acá por la misma razón: `HomeTour` monta debajo
+  // del gate de `clockReady`, o sea detrás de un GET /time, y hasta entonces el
+  // nudge de notificaciones y las notas de versión ya alcanzarían a abrirse
+  // encima de los coach marks. Quien lo LIBERA es `HomeTour`, que es el único
+  // que sabe si el usuario todavía necesita el tour.
+  const setHomeTourSettled = useModalQueueStore((s) => s.setHomeTourSettled);
+  useEffect(() => {
+    setHomeTourSettled(false);
+    return () => setHomeTourSettled(true);
+  }, [setHomeTourSettled]);
+
   const handleCoinAnimationComplete = () => {
     setCoinAnimationTarget(null);
   };
@@ -108,6 +119,11 @@ export function HomePage() {
           <EditPanels open={isEditingMap} onOpenChange={handleEditPanelsClose} />
         </div>
       )}
+
+      {/* Mounted below the `clockReady` gate on purpose: the tour measures the
+          real buttons, and above the gate the map and the action row do not
+          exist yet, so every anchor would resolve to nothing. */}
+      <HomeTour />
 
       {isTutorialModalOpen && <TutorialModal isOpen={isTutorialModalOpen} onClose={() => setIsTutorialModalOpen(false)} />}
 

@@ -169,6 +169,8 @@ export interface ProfileResponseDTO {
   avatarConfig: AvatarConfig;
   onboardingCompleted: boolean;
   tutorialCompleted: boolean;
+  /** The user has seen the guided tour of the home screen. */
+  homeTourCompleted: boolean;
   cryptoSavvy: boolean;
   /** Legal bundle version this profile last accepted, '' if never. Compared to
    *  `NetworkResponseDTO.legalPolicyVersion` by string equality — any mismatch

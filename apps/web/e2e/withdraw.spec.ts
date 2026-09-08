@@ -63,9 +63,7 @@ test.describe('withdraw', () => {
     await expect(page.getByRole('heading', { name: 'Select method' })).toHaveCount(0);
 
     // The ledger agrees: the wallet's USDC trustline grew by what was withdrawn.
-    await expect
-      .poll(() => usdcBalance(signer.publicKey), { timeout: 90_000, intervals: [3_000] })
-      .toBeGreaterThan(before);
+    await expect.poll(() => usdcBalance(signer.publicKey), { timeout: 90_000, intervals: [3_000] }).toBeGreaterThan(before);
   });
 
   test('cannot withdraw more than the savings hold', async ({ homePage: page }) => {

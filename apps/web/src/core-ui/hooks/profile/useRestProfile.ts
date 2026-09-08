@@ -62,7 +62,12 @@ export const useRestProfile = () => {
   );
 
   const saveProfileFlags = useCallback(
-    async (payload: { onboardingCompleted?: boolean; tutorialCompleted?: boolean; cryptoSavvy?: boolean }) => {
+    async (payload: {
+      onboardingCompleted?: boolean;
+      tutorialCompleted?: boolean;
+      homeTourCompleted?: boolean;
+      cryptoSavvy?: boolean;
+    }) => {
       const response = await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${walletAddress}/flags`,
         {
