@@ -28,18 +28,15 @@ export function AutoInvest() {
   const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
 
   // Mientras esta pantalla todavía PUEDA aparecer, las notas de versión esperan
-  // su turno: son dos modales de pantalla completa y decidir sobre la plata va
-  // primero. Al desmontarse (salir del home) se libera, así nada queda trabado
-  // si el saldo nunca resuelve.
+  // su turno: decidir sobre la plata va primero. El turno lo TOMA `HomePage` al
+  // entrar (y lo suelta al salir), porque este componente monta recién después
+  // de que sincroniza el reloj y para entonces la nota ya se habría mostrado.
+  // Acá sólo se libera.
   const setVaultPromptSettled = useModalQueueStore((s) => s.setVaultPromptSettled);
-  useEffect(() => {
-    setVaultPromptSettled(false);
-    return () => setVaultPromptSettled(true);
-  }, [setVaultPromptSettled]);
 
-  // El turno se libera cuando el usuario cerró la pantalla (`dismissed`, que
-  // también cubre el caso de invertir y cerrarla) o cuando ya se sabe que no
-  // hay nada que ofrecer.
+  // Se libera cuando el usuario cerró la pantalla (`dismissed`, que también
+  // cubre el caso de invertir y cerrarla) o cuando ya se sabe que no hay nada
+  // que ofrecer.
   useEffect(() => {
     if (!open && (dismissed || (decided && !shouldPrompt))) setVaultPromptSettled(true);
   }, [open, dismissed, decided, shouldPrompt, setVaultPromptSettled]);

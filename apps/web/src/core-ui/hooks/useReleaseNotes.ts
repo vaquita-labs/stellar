@@ -67,9 +67,22 @@ async function unwrap<T>(response: Response): Promise<T> {
 /**
  * La nota pendiente, o null.
  *
- * `staleTime: Infinity` porque publicar una nota es un evento de días, no de
- * minutos: re-preguntar en cada foco de pestaña sólo gastaría requests. Lo que
- * sí la invalida es el ack, que la deja en null localmente.
+ * Se revalida en cada montaje, pisando el default global (`staleTime: Infinity`
+ * + `refetchOnMount: false` + persistencia en localStorage). Quien publica una
+ * nota es un admin: en este cliente no pasa NADA que invalide la respuesta, así
+ * que con el default el `null` que se cacheó cuando todavía no había ninguna
+ * quedaba fijo para siempre. Sobrevivía al reload (se rehidrata desde
+ * `vaquita-rq-cache`) y también al logout —nadie limpia esa clave y el
+ * `queryKey` depende de la wallet, que vuelve a ser la misma—, y ni siquiera
+ * vencía: el `maxAge` del persister se mide desde el último guardado del
+ * snapshot, que se refresca con cada escritura del cache. Resultado: la nota se
+ * publicaba y el browser no volvía a preguntar nunca.
+ *
+ * El costo es un request por carga de página: `ReleaseNotesGate` vive en el
+ * layout privado, que App Router conserva al navegar entre rutas.
+ *
+ * El ack no se ve afectado: deja la nota en null localmente, pero antes marca
+ * `done`, que apaga el `enabled` — y una query apagada no revalida.
  */
 export const useReleaseNote = (enabled = true) => {
   const { walletAddress } = useConfigStore();
@@ -82,7 +95,8 @@ export const useReleaseNote = (enabled = true) => {
       return data.note ?? null;
     },
     enabled: enabled && !!walletAddress,
-    staleTime: Infinity,
+    staleTime: 0,
+    refetchOnMount: 'always',
     retry: 1,
   });
 };

@@ -203,7 +203,13 @@ export const useIdleFunds = () => {
   // preguntamos todavía". La diferencia importa para quien espera este turno
   // (las notas de versión, vía `useModalQueueStore`), que si no se adelantaría
   // al prompt en cada carga.
-  const decided = ready && (!isCustodial || walletBalance.step === 'loaded');
+  //
+  // `error` cuenta como decidido: es un estado TERMINAL del balance, así que ya
+  // no vamos a enterarnos nunca de si hay plata ociosa. Sin esta rama, una
+  // lectura fallida (RPC caído, 5xx de Pollar) dejaba el turno tomado para
+  // siempre —`decided` en false y `shouldPrompt` también, así que nadie lo
+  // liberaba— y las notas de versión no aparecían en el home en toda la sesión.
+  const decided = ready && (!isCustodial || walletBalance.step === 'loaded' || walletBalance.step === 'error');
 
   return { idle, shouldPrompt, decided, invest, isInvesting, error, clearError: () => setError(null) };
 };
