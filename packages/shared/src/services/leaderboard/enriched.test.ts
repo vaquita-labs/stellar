@@ -16,6 +16,13 @@ vi.mock('../profile', () => ({
   getCoinsByProfile: async () => ({ counts: new Map(), error: null }),
 }));
 
+// Left unmocked while the fixture had no profiles: with an empty id list it
+// never reached the database. Now that a profile has to exist for the row to
+// survive, the heart counts would be a real query.
+vi.mock('../mapLikes/counts', () => ({
+  getMapLikeCountsByProfile: async () => new Map(),
+}));
+
 import { clearEnrichedLeaderboardCache, getEnrichedLeaderboard } from './enriched';
 
 const scoreRow = (walletAddress: string) => ({
@@ -27,11 +34,21 @@ const scoreRow = (walletAddress: string) => ({
   cycleEnd: 2,
 });
 
+/** These tests are about the cache, so the wallet needs a profile with a
+ *  nickname for its row to reach the board at all (see `enrichLeaderboardRows`);
+ *  only the fields the enrichment reads are filled in. */
+const profileRow = (walletAddress: string, nickname: string) => ({
+  id: 1,
+  wallet_address: walletAddress,
+  nickname,
+  avatar_config: null,
+});
+
 beforeEach(() => {
   vi.useFakeTimers();
   clearEnrichedLeaderboardCache();
   getLeaderboard.mockReset().mockResolvedValue([scoreRow('GA')]);
-  getProfiles.mockReset().mockResolvedValue({ data: [], error: null });
+  getProfiles.mockReset().mockResolvedValue({ data: [profileRow('GA', 'ana')], error: null });
 });
 
 afterEach(() => {

@@ -18,7 +18,7 @@ is presented as a person: no leaderboard, no explore, no follow suggestions.
 | Explore feed | No | `buildExplorePool` keeps only profiles with a nickname (`isDiscoverableProfile`), and `getProfiles()` already drops soft-deleted rows |
 | Friends search | No | the SQL requires an `ILIKE` match on `nickname` or `full_name`, and NULL never matches (`packages/shared/src/services/follows/index.ts:80`) |
 | Public profile page | No | the route is keyed by nickname (`/explore/[username]`); with no name there is no URL |
-| Leaderboard | As a row, yes; as a person, no | rows are built from deposits, not from profiles (`packages/shared/src/services/leaderboard/index.ts:358`), so a nameless depositor keeps its position — see step 1 |
+| Leaderboard | No | rows are built from deposits, not from profiles (`packages/shared/src/services/leaderboard/index.ts:358`), so `enrichLeaderboardRows` drops the ones whose wallet has no profile with a nickname — see step 1 |
 
 A row created by a destination lookup has no deposits, so today it reaches
 nothing. The leaderboard gap is real for a different population: someone who
@@ -29,17 +29,22 @@ characters of their address (`LeaderboardCard.tsx:392`).
 
 ### Step 1 — Leaderboard — done
 
-- [x] The rule: a depositor with no nickname **keeps its position and its
-      stats** and stops being a person. No link to a profile, no follow button,
-      no hover lift. The place was earned by depositing, not by picking a name.
-- [x] Hiding the row was rejected. Positions are consecutive, so dropping #3
-      promotes everyone under it and takes a real depositor off the board to
-      punish a missing name.
-- [x] `hasPublicProfile()` (`LeaderboardCard.tsx`) is the predicate, used by the
-      card and by the weekly-league row (`LeagueBoard.tsx`). Being presentation
-      and not a filter, it can live in the component: no row leaves the page, so
-      page sizes and offsets are untouched — the reason a *filter* would have
-      had to go in the query instead.
+- [x] **The board ranks users of the app.** A wallet with confirmed deposits
+      that never signed up is not a competitor with a place to protect: it is
+      not in the game. `enrichLeaderboardRows` drops any row whose wallet has no
+      profile with a nickname.
+- [x] Dropped BEFORE the position is assigned, so the surviving rows are
+      numbered 1…N with no holes. This is what makes hiding safe — the earlier
+      objection (removing #3 promotes everyone under it over money that is
+      really deposited) only holds while the board claims to rank deposits
+      rather than players.
+- [x] The weekly league needs no change of its own: `useWeeklyLeague` derives
+      its cohort from `GET /api/v1/leaderboard`, so it inherits the filter.
+- [x] `hasPublicProfile()` (`LeaderboardCard.tsx`, `LeagueBoard.tsx`) stays as a
+      last-resort guard on the client — same role as the one in friend
+      suggestions. It is no longer the mechanism: a nameless row should never
+      reach the client now, and if one does, it renders without a link or a
+      follow button instead of pointing at a page with nobody on it.
 
 ### Step 2 — The `full_name` gap in explore — done
 
