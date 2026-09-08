@@ -325,9 +325,9 @@ export function LeaderboardCard({
 
   return (
     <Link
-      // Public URLs are keyed by username; the wallet is only a fallback for
-      // profiles that never set one (the page accepts both).
-      href={`/explore/${encodeURIComponent(user.nickname || user.walletAddress)}`}
+      // Public URLs are keyed by username. The guard above already turned back
+      // every row without one, so there is always a nickname to key on here.
+      href={`/explore/${encodeURIComponent(user.nickname)}`}
       aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", {
         username: user.username,
       })}

@@ -102,7 +102,7 @@ function LeagueRow({
     <li ref={rowRef}>
       {hasPublicProfile(member.nickname) ? (
         <Link
-          href={`/explore/${encodeURIComponent(member.nickname || member.walletAddress)}`}
+          href={`/explore/${encodeURIComponent(member.nickname)}`}
           aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", { username })}
           className={`${shell} transition hover:-translate-y-0.5`}
         >
