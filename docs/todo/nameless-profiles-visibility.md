@@ -15,7 +15,7 @@ is presented as a person: no leaderboard, no explore, no follow suggestions.
 
 | Surface | Shows it? | Why |
 |---|---|---|
-| Explore feed | No | `buildExplorePool` keeps only profiles with a nickname or a `full_name` (`packages/shared/src/services/explore/index.ts:121`) |
+| Explore feed | No | `buildExplorePool` keeps only profiles with a nickname (`isDiscoverableProfile`), and `getProfiles()` already drops soft-deleted rows |
 | Friends search | No | the SQL requires an `ILIKE` match on `nickname` or `full_name`, and NULL never matches (`packages/shared/src/services/follows/index.ts:80`) |
 | Public profile page | No | the route is keyed by nickname (`/explore/[username]`); with no name there is no URL |
 | Leaderboard | As a row, yes; as a person, no | rows are built from deposits, not from profiles (`packages/shared/src/services/leaderboard/index.ts:358`), so a nameless depositor keeps its position — see step 1 |
@@ -41,18 +41,28 @@ characters of their address (`LeaderboardCard.tsx:392`).
       page sizes and offsets are untouched — the reason a *filter* would have
       had to go in the query instead.
 
-### Step 2 — Close the `full_name` gap in explore
+### Step 2 — The `full_name` gap in explore — done
 
-- [ ] `buildExplorePool` accepts a profile whose `full_name` is set but whose
-      `nickname` is NULL. That card renders with an empty nickname and the
-      fallback handle — the exact thing the filter exists to prevent. The
-      condition should be the nickname alone.
+- [x] `buildExplorePool` used to accept a profile whose `full_name` was set and
+      whose `nickname` was NULL. `ExploreProfileRow` does not carry the full
+      name, so that card rendered with the `@vaqueroXXXX` fallback — the exact
+      thing the filter exists to prevent. The rule is now the nickname alone,
+      in `isDiscoverableProfile`.
+- [x] Friend suggestions keep the wider rule (`hasDisplayName`, in `follows`),
+      and that is not an inconsistency to unify away: their DTO carries a
+      display name, so a profile with only a full name renders there as a
+      person. The two rules differ because the two cards render different
+      fields.
 
 ### Step 3 — Keep it that way
 
-- [ ] One place that answers "is this profile presentable?" (a nickname that is
-      set and not soft-deleted), used by explore, search, suggestions and the
-      leaderboard, instead of each surface re-deriving it.
+- [ ] One place that answers "is this profile presentable?", used by every
+      surface instead of each one re-deriving it. Three predicates exist today
+      —`isDiscoverableProfile` (explore), `hasDisplayName` (suggestions) and
+      `hasPublicProfile` (the leaderboard card, client-side)— and step 2 shows
+      they are not all the same rule: what a surface needs depends on which
+      fields its card renders. The shared piece is "has a nickname"; each
+      surface adds what it draws.
 - [ ] A test per surface asserting that a nickname-less profile does not come
       back. The explore filter already has the intent written in a comment;
       nothing enforces it.

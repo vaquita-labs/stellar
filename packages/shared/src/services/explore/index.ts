@@ -68,6 +68,28 @@ interface ExplorePoolCacheEntry {
 
 let explorePoolCache: ExplorePoolCacheEntry | null = null;
 
+/**
+ * Whether a profile can appear in the discovery feed.
+ *
+ * The card renders the nickname and nothing else — {@link ExploreProfileRow}
+ * does not carry `full_name` — so a profile without one is drawn with the raw
+ * `@vaqueroXXXX` fallback and reads as a broken account instead of someone
+ * worth following. Having a full name does not rescue it: that name would never
+ * reach the card.
+ *
+ * Onboarding makes a nickname mandatory, so what this leaves out are stubs:
+ * rows upserted the first time a wallet hits the API, which belong to nobody in
+ * particular.
+ *
+ * Friend suggestions use a WIDER rule on purpose (`hasDisplayName`, in
+ * `follows`): that DTO carries a display name of its own, so a profile with
+ * only a full name still renders there as a person.
+ */
+export const isDiscoverableProfile = (profile: {
+  nickname?: string | null;
+  wallet_address?: string | null;
+}): boolean => !!(profile.nickname ?? '').trim() && !!profile.wallet_address;
+
 async function buildExplorePool(): Promise<ExploreCandidate[]> {
   const { data: profiles, error } = await getProfiles();
   if (error) {
@@ -89,13 +111,7 @@ async function buildExplorePool(): Promise<ExploreCandidate[]> {
   ]);
 
   return profiles
-    .filter((profile) => {
-      // A card with no name renders as a raw `@vaqueroXXXX` handle, which reads
-      // as a broken account rather than someone worth following. Onboarding
-      // makes a username mandatory, so this only filters stubs.
-      const hasName = !!(profile.nickname ?? '').trim() || !!(profile.full_name ?? '').trim();
-      return hasName && !!profile.wallet_address;
-    })
+    .filter((profile) => isDiscoverableProfile(profile))
     .map((profile) => ({
       id: profile.id,
       walletAddress: profile.wallet_address ?? '',
