@@ -54,18 +54,33 @@ characters of their address (`LeaderboardCard.tsx:392`).
       person. The two rules differ because the two cards render different
       fields.
 
-### Step 3 — Keep it that way
+### Step 3 — Keep it that way — done
 
-- [ ] One place that answers "is this profile presentable?", used by every
-      surface instead of each one re-deriving it. Three predicates exist today
-      —`isDiscoverableProfile` (explore), `hasDisplayName` (suggestions) and
-      `hasPublicProfile` (the leaderboard card, client-side)— and step 2 shows
-      they are not all the same rule: what a surface needs depends on which
-      fields its card renders. The shared piece is "has a nickname"; each
-      surface adds what it draws.
-- [ ] A test per surface asserting that a nickname-less profile does not come
-      back. The explore filter already has the intent written in a comment;
-      nothing enforces it.
+- [x] `services/profile/naming.ts` holds the fact every surface is really
+      asking about: `hasNickname`. `hasDisplayName` (nickname or full name)
+      sits next to it, because a surface whose card draws a real name is
+      answering a different, wider question — the rules differ because the
+      cards do, and that is now written down where both live.
+- [x] The server surfaces are built on it: `isDiscoverableProfile` (explore) is
+      `hasNickname` plus an address, and `follows` imports `hasDisplayName`
+      instead of redefining it. `ProfileNaming` takes `fullName` and
+      `full_name` alike, so rows coming straight from Prisma and rows through
+      `toProfileShape` both ask without translating.
+- [x] Tests: `naming.test.ts` (6), `explore/index.test.ts` (4) and
+      `LeaderboardCard.test.ts` (3) on the client. What the intent used to be —
+      a comment inside a filter — now fails a run when it breaks.
+
+**The client keeps its own copy on purpose.** `apps/web` imports nothing from
+`@vaquita/shared` (zero occurrences), and that package pulls in Prisma at module
+load, so importing the predicate would drag a server dependency into the browser
+bundle to save one line. `hasPublicProfile` in `LeaderboardCard.tsx` is that
+line.
+
+**The one surface with no test is friends search.** Its rule lives inside raw
+SQL (`nickname ILIKE … OR full_name ILIKE …`), which cannot be exercised without
+a database — it is correct by construction (NULL never matches a LIKE) rather
+than by assertion. If that query ever grows a fallback for nameless rows, this
+is where it would slip through unnoticed.
 
 ## 3. What this does not change
 

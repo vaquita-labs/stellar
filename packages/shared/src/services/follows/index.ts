@@ -3,6 +3,7 @@ import { Prisma, prisma } from '@vaquita/db';
 import type { Profile as PrismaProfile } from '@vaquita/db';
 import type { FriendDTO, FriendSuggestionDTO } from '../../types';
 import { notify } from '../notifications';
+import { hasDisplayName } from '../profile/naming';
 
 // Upper bound on a single search page. Streak is computed per result (deposits +
 // rewards lookups), so this also caps the per-request DB fan-out.
@@ -27,14 +28,6 @@ const toName = (p: Pick<PrismaProfile, 'nickname' | 'fullName' | 'walletAddress'
   p.fullName?.trim() ||
   p.nickname?.trim() ||
   `${p.walletAddress.slice(0, 4)}…${p.walletAddress.slice(-4)}`;
-
-/**
- * A profile is suggestable only if it has a real display name (nickname or full
- * name). Wallet-only rows — auto-upserted every time a wallet hits the API —
- * would otherwise show up in "Friend suggestions" as raw addresses.
- */
-const hasDisplayName = (p: Pick<PrismaProfile, 'nickname' | 'fullName'>): boolean =>
-  Boolean(p.fullName?.trim() || p.nickname?.trim());
 
 const toFriendDTO = (
   p: ProfileCard,
@@ -460,6 +453,8 @@ export const getFriendSuggestions = async ({
       const p = profileById.get(id);
       // Last-resort guard: never emit a card that would render as a raw wallet
       // (e.g. a whitespace-only nickname slips past the SQL/Prisma filters).
+      // The full name counts here — unlike in the explore feed — because this
+      // DTO carries `name` and `handle`, so it has something to draw.
       if (!p || !hasDisplayName(p)) return null;
       const connectorId = connectorById.get(id);
       const followedBy = connectorId ? connectorNameById.get(connectorId) ?? '' : '';
