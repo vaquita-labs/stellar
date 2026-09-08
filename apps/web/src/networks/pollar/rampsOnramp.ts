@@ -22,6 +22,17 @@ const HORIZON_BACKOFF_MS = 300;
 /** Techo de cada intento: sin esto una red a medio morir nunca resuelve. */
 const HORIZON_TIMEOUT_MS = 10_000;
 
+/**
+ * Cuánto se espera a que Horizon muestre la transacción de la compra. El
+ * proveedor la da por liquidada apenas la firma, y el ledger que la contiene
+ * puede tardar todavía un par de cierres en aparecer indexado.
+ */
+const CREDITED_WAIT_MS = 60_000;
+/** Los ledgers cierran cada ~5s; preguntar más seguido sólo gasta requests. */
+const CREDITED_POLL_MS = 5000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export interface OnrampCorridor {
   country: OnrampCorridorCode;
   /**
@@ -252,11 +263,18 @@ export function useRampOnramp() {
    * How much USDC the purchase actually credited, per the ledger. Lives on the
    * hook so callers do not have to know which issuer counts as USDC here.
    */
-  const readCreditedUsdc = useCallback(async (hash: string, walletAddress: string): Promise<number | null> => {
-    const issuer = getBlendConfig()?.usdcIssuer;
-    if (!issuer) return null;
-    return creditedUsdcFor(hash, walletAddress, issuer);
-  }, []);
+  const readCreditedUsdc = useCallback(
+    async (
+      hash: string,
+      walletAddress: string,
+      opts: { shouldStop?: () => boolean; timeoutMs?: number } = {},
+    ): Promise<number | null> => {
+      const issuer = getBlendConfig()?.usdcIssuer;
+      if (!issuer) return null;
+      return creditedUsdcFor(hash, walletAddress, issuer, opts);
+    },
+    [],
+  );
 
   return {
     resolveCorridor,
@@ -280,23 +298,48 @@ export function useRampOnramp() {
  * Every matching payment is summed: one transaction can carry more than one, and
  * taking only the first would under-report what arrived.
  *
- * `null` means the figure cannot be affirmed — Horizon unreachable, or no USDC
- * payment to this wallet in that transaction. It is a result, not a failure: the
- * screen then says the money landed without naming an amount, which is the whole
- * point of reading this instead of showing the quote's estimate.
+ * The transaction is waited for, not merely asked about once. The provider
+ * publishes `stellarTxHash` as soon as it signs, so the usual answer on the
+ * first try is Horizon's 404 for a ledger it has not ingested yet — and this is
+ * the only read of the figure there will be, because a settled purchase never
+ * changes again and nothing would trigger a second attempt.
+ *
+ * `null` means the figure cannot be affirmed — the window ran out, or the
+ * transaction is there and carries no USDC payment to this wallet. It is a
+ * result, not a failure: the screen then says the money landed without naming an
+ * amount, which is the whole point of reading this instead of showing the
+ * quote's estimate.
  */
-export async function creditedUsdcFor(hash: string, account: string, issuer: string): Promise<number | null> {
-  const res = await horizonGet(`${getHorizonUrl()}/transactions/${encodeURIComponent(hash)}/payments?limit=200`).catch(
-    () => null,
-  );
-  if (!res?.ok) return null;
-  const body = (await res.json().catch(() => null)) as {
-    _embedded?: { records?: Array<{ to?: string; asset_code?: string; asset_issuer?: string; amount?: string }> };
-  } | null;
-  const credited = (body?._embedded?.records ?? [])
-    .filter((r) => r.to === account && r.asset_code?.toUpperCase() === 'USDC' && r.asset_issuer === issuer)
-    .reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
-  return Number.isFinite(credited) && credited > 0 ? credited : null;
+export async function creditedUsdcFor(
+  hash: string,
+  account: string,
+  issuer: string,
+  opts: { shouldStop?: () => boolean; timeoutMs?: number } = {},
+): Promise<number | null> {
+  const { shouldStop, timeoutMs = CREDITED_WAIT_MS } = opts;
+  const start = Date.now();
+  for (;;) {
+    if (shouldStop?.()) return null;
+    const res = await horizonGet(`${getHorizonUrl()}/transactions/${encodeURIComponent(hash)}/payments?limit=200`).catch(
+      () => null,
+    );
+    // A 200 is the whole answer and ends it: the payments of a transaction are
+    // fixed once it is in a ledger, so an empty list stays empty. Everything
+    // else is "not yet" — the 404 of a ledger still being ingested, a rate
+    // limit, a bad gateway, Horizon unreachable — and the purchase is already
+    // settled, so what is missing is on its way.
+    if (res?.ok) {
+      const body = (await res.json().catch(() => null)) as {
+        _embedded?: { records?: Array<{ to?: string; asset_code?: string; asset_issuer?: string; amount?: string }> };
+      } | null;
+      const credited = (body?._embedded?.records ?? [])
+        .filter((r) => r.to === account && r.asset_code?.toUpperCase() === 'USDC' && r.asset_issuer === issuer)
+        .reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+      return Number.isFinite(credited) && credited > 0 ? credited : null;
+    }
+    if (Date.now() - start > timeoutMs) return null;
+    await sleep(CREDITED_POLL_MS);
+  }
 }
 
 /** ¿La cuenta ya tiene la trustline del asset? Cuenta inexistente = no. */

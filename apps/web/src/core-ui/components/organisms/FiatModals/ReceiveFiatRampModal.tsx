@@ -50,6 +50,12 @@ const QUOTE_DEBOUNCE_MS = 450;
 /** Cada cuánto se le pregunta al proveedor si el pago entró. */
 const POLL_MS = 8000;
 
+/**
+ * Cuánto se le insiste al proveedor por el `stellarTxHash` de una compra que ya
+ * dio por liquidada. Misma ventana que espera el retiro en `waitForPaymentHash`.
+ */
+const SETTLE_HASH_WAIT_MS = 90_000;
+
 /** El reloj del modal: un tick por segundo alcanza para la cuenta regresiva. */
 const TICK_MS = 1000;
 
@@ -384,9 +390,18 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // de red no rompe nada: la vuelta siguiente reintenta, y el usuario sigue
   // viendo su QR.
   useEffect(() => {
-    if (phase !== 'paying' || !txId || !shouldPoll(screen)) return;
+    // Liquidada pero sin hash: se sigue preguntando sólo por el hash, y con
+    // plazo. Hay compras que nunca lo publican, y sin techo el modal abierto
+    // le pega al proveedor cada 8 segundos hasta que el usuario lo cierra.
+    const waitingForHash = screen === 'settled' && !settleHash;
+    if (phase !== 'paying' || !txId || !shouldPoll(screen, !!settleHash)) return;
+    const deadline = waitingForHash ? Date.now() + SETTLE_HASH_WAIT_MS : Infinity;
     let cancelled = false;
     const timer = setInterval(() => {
+      if (Date.now() > deadline) {
+        clearInterval(timer);
+        return;
+      }
       void (async () => {
         try {
           const tx = await readOnrampTransaction(txId);
@@ -403,7 +418,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       cancelled = true;
       clearInterval(timer);
     };
-  }, [phase, txId, screen, readOnrampTransaction]);
+  }, [phase, txId, screen, settleHash, readOnrampTransaction]);
 
   // What the purchase actually credited, read off the ledger as soon as it
   // settles. It runs once per hash: the payment is in a closed ledger and the
@@ -417,7 +432,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   useEffect(() => {
     if (screen !== 'settled' || !settleHash || !walletAddress || creditedUsdc != null) return;
     let cancelled = false;
-    void readCreditedUsdc(settleHash, walletAddress).then((amount) => {
+    void readCreditedUsdc(settleHash, walletAddress, { shouldStop: () => cancelled }).then((amount) => {
       if (!cancelled && amount != null) setCreditedUsdc(amount);
     });
     return () => {

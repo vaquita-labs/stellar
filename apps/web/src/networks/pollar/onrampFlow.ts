@@ -31,9 +31,19 @@ export function terminalStatusFor(screen: OnrampScreen): TerminalOnrampStatus | 
   return screen === 'settled' || screen === 'failed' || screen === 'expired' ? screen : null;
 }
 
-/** ¿Vale la pena seguir preguntándole al proveedor? */
-export function shouldPoll(screen: OnrampScreen): boolean {
-  return screen === 'paying' || screen === 'processing';
+/**
+ * ¿Vale la pena seguir preguntándole al proveedor?
+ *
+ * Mientras la compra puede cambiar sola, sí. Y una vez liquidada también, si
+ * todavía no dio el `stellarTxHash`: el proveedor marca `completed` en cuanto
+ * firma, a veces un latido antes de publicar el hash, y ese hash es lo único
+ * que permite leer del ledger cuánto USDC entró. Dejar de preguntar en el
+ * instante en que la pantalla pasa a liquidada es cómo una compra se queda sin
+ * cifra para siempre: nada más vuelve a pedirlo.
+ */
+export function shouldPoll(screen: OnrampScreen, hasSettleHash = false): boolean {
+  if (screen === 'paying' || screen === 'processing') return true;
+  return screen === 'settled' && !hasSettleHash;
 }
 
 /**
