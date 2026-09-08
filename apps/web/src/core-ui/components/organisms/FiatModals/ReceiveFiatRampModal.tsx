@@ -25,7 +25,7 @@ import { FiChevronDown } from 'react-icons/fi';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { railLabel } from '../../../helpers/rampRail';
-import { FIAT_DECIMALS, formatTokenPrecise } from '../../../helpers/numbers';
+import { FIAT_DECIMALS, formatTokenFine, formatTokenPrecise } from '../../../helpers/numbers';
 import { useAwaitingFundsStore, usePendingCreditStore, useRampActiveStore } from '../../../stores';
 import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
@@ -60,9 +60,6 @@ const TICK_MS = 1000;
  */
 type Phase = 'amount' | 'details' | 'verifying' | 'paying';
 
-/** Decimales con los que se muestra el USDC estimado. */
-const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2);
-
 /**
  * The share of the purchase at which the fee stops being a detail and becomes the
  * headline. Above it the line turns amber and adds that larger amounts carry it
@@ -85,8 +82,15 @@ const FEE_HEAVY_SHARE = 0.15;
  */
 export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: ReceiveFiatRampModalProps) {
   const { t } = useTranslation();
-  const { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp, readOnrampTransaction, readKycStatus } =
-    useRampOnramp();
+  const {
+    resolveCorridor,
+    quoteFiat,
+    ensureUsdcTrustline,
+    createOnramp,
+    readOnrampTransaction,
+    readKycStatus,
+    readCreditedUsdc,
+  } = useRampOnramp();
   const { wallet, refreshAssets } = usePollar();
   const walletAddress = wallet?.address ?? null;
 
@@ -105,10 +109,14 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const [kycUrl, setKycUrl] = useState<string | null>(null);
   const [kycTimedOut, setKycTimedOut] = useState(false);
   const [providerAmount, setProviderAmount] = useState<{ amount: number; currency: string } | null>(null);
-  // Lo pagado y lo estimado se guardan aparte del formulario porque al retomar
-  // una compra vienen del registro, no de lo que el usuario tenga escrito.
+  // What was paid is kept apart from the form because on a resumed purchase it
+  // comes from the record, not from whatever the user has typed.
   const [paid, setPaid] = useState<{ amount: string; currency: string } | null>(null);
-  const [estimate, setEstimate] = useState<number | null>(null);
+  // The purchase's on-chain receipt, and what that payment actually credited.
+  // The provider publishes the hash; the figure comes from reading it on
+  // Horizon, which is the only place it exists.
+  const [settleHash, setSettleHash] = useState<string | null>(null);
+  const [creditedUsdc, setCreditedUsdc] = useState<number | null>(null);
   const [now, setNow] = useState(() => new Date());
   const closed = useRef<string | null>(null);
   // Se incrementa para forzar una cotización nueva sobre el MISMO monto, que es
@@ -277,6 +285,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         } else {
           setProviderStatus(tx.status);
           setProviderAmount({ amount: tx.amount, currency: tx.currency });
+          setSettleHash(tx.stellarTxHash ?? null);
           setInstructions(readPaymentInstructions(tx));
         }
         setNow(new Date());
@@ -363,7 +372,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     if (screen !== 'processing' && screen !== 'settled') return;
     startPendingCredit();
   }, [open, phase, screen, startPendingCredit]);
-  const receivedUsdc = providerAmount ? receivedUsdcFrom(providerAmount, estimate) : estimate;
+  const receivedUsdc = providerAmount ? receivedUsdcFrom(providerAmount, creditedUsdc) : creditedUsdc;
 
   // Mientras la compra pueda cambiar sola se le pregunta al proveedor. Un error
   // de red no rompe nada: la vuelta siguiente reintenta, y el usuario sigue
@@ -378,6 +387,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           if (cancelled) return;
           setProviderStatus(tx.status);
           setProviderAmount({ amount: tx.amount, currency: tx.currency });
+          setSettleHash(tx.stellarTxHash ?? null);
         } catch {
           // Reintenta en la próxima vuelta.
         }
@@ -388,6 +398,26 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       clearInterval(timer);
     };
   }, [phase, txId, screen, readOnrampTransaction]);
+
+  // What the purchase actually credited, read off the ledger as soon as it
+  // settles. It runs once per hash: the payment is in a closed ledger and the
+  // figure will not change.
+  //
+  // This is the only place the number exists. The provider's transaction reports
+  // the fiat that was paid, so the alternative was the quote's estimate — and an
+  // estimate under a heading that says the money is in your wallet is a claim,
+  // not an estimate. When the read comes back empty the screen says the USDC
+  // arrived and names no figure.
+  useEffect(() => {
+    if (screen !== 'settled' || !settleHash || !walletAddress || creditedUsdc != null) return;
+    let cancelled = false;
+    void readCreditedUsdc(settleHash, walletAddress).then((amount) => {
+      if (!cancelled && amount != null) setCreditedUsdc(amount);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [screen, settleHash, walletAddress, creditedUsdc, readCreditedUsdc]);
 
   // Cerrar la compra del lado del servidor cuando llegó a su desenlace, una sola
   // vez.
@@ -467,7 +497,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const amountHint = quoting
     ? t('wallet.fiat.onramp.calculating', 'Calculating…')
     : usdcOut != null
-      ? t('wallet.fiat.onramp.receiveEstimate', 'You get ≈ {{amount}} USDC', { amount: usdcLabel(usdcOut) })
+      ? t('wallet.fiat.onramp.receiveEstimate', 'You get ≈ {{amount}} USDC', { amount: formatTokenFine(usdcOut) })
       : t('wallet.fiat.onramp.hint', 'You pay a QR code with your bank app.');
 
   // Qué datos pide el proveedor lo define la cotización elegida: no hay ningún
@@ -533,7 +563,6 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       setProviderStatus('pending');
       setProviderAmount(null);
       setPaid({ amount: amountFiat, currency: corridor.currency });
-      setEstimate(usdcOut);
       closed.current = null;
 
       // El registro va ANTES de mostrar el QR: sin el id de transacción guardado
@@ -589,7 +618,8 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     setProviderStatus(null);
     setProviderAmount(null);
     setPaid(null);
-    setEstimate(null);
+    setSettleHash(null);
+    setCreditedUsdc(null);
     closed.current = null;
     setInstructions(null);
     setUnrecorded(false);
@@ -707,7 +737,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{t('wallet.fiat.onramp.youReceive', 'You receive')}</span>
               <span className="font-semibold text-black">
-                {t('wallet.fiat.onramp.outUsdc', '≈ {{amount}} USDC', { amount: usdcLabel(usdcOut) })}
+                {t('wallet.fiat.onramp.outUsdc', '≈ {{amount}} USDC', { amount: formatTokenFine(usdcOut) })}
               </span>
             </div>
           )}

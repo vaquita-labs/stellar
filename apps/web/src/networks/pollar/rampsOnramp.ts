@@ -234,7 +234,55 @@ export function useRampOnramp() {
     return await getClient().getRampKycStatus();
   }, [getClient]);
 
-  return { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp, readOnrampTransaction, readKycStatus };
+  /**
+   * How much USDC the purchase actually credited, per the ledger. Lives on the
+   * hook so callers do not have to know which issuer counts as USDC here.
+   */
+  const readCreditedUsdc = useCallback(async (hash: string, walletAddress: string): Promise<number | null> => {
+    const issuer = getBlendConfig()?.usdcIssuer;
+    if (!issuer) return null;
+    return creditedUsdcFor(hash, walletAddress, issuer);
+  }, []);
+
+  return {
+    resolveCorridor,
+    quoteFiat,
+    ensureUsdcTrustline,
+    createOnramp,
+    readOnrampTransaction,
+    readKycStatus,
+    readCreditedUsdc,
+  };
+}
+
+/**
+ * The USDC that actually landed, read off the ledger.
+ *
+ * The provider never reports it. Its transaction carries `amount` and
+ * `currency`, and on a purchase those are the BOLIVIANOS that were paid — there
+ * is no field for the credited crypto anywhere in the response. What it does
+ * carry is `stellarTxHash`, and the payment is right there in that transaction.
+ *
+ * Every matching payment is summed: one transaction can carry more than one, and
+ * taking only the first would under-report what arrived.
+ *
+ * `null` means the figure cannot be affirmed — Horizon unreachable, or no USDC
+ * payment to this wallet in that transaction. It is a result, not a failure: the
+ * screen then says the money landed without naming an amount, which is the whole
+ * point of reading this instead of showing the quote's estimate.
+ */
+export async function creditedUsdcFor(hash: string, account: string, issuer: string): Promise<number | null> {
+  const res = await horizonGet(`${getHorizonUrl()}/transactions/${encodeURIComponent(hash)}/payments?limit=200`).catch(
+    () => null,
+  );
+  if (!res?.ok) return null;
+  const body = (await res.json().catch(() => null)) as {
+    _embedded?: { records?: Array<{ to?: string; asset_code?: string; asset_issuer?: string; amount?: string }> };
+  } | null;
+  const credited = (body?._embedded?.records ?? [])
+    .filter((r) => r.to === account && r.asset_code?.toUpperCase() === 'USDC' && r.asset_issuer === issuer)
+    .reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+  return Number.isFinite(credited) && credited > 0 ? credited : null;
 }
 
 /** ¿La cuenta ya tiene la trustline del asset? Cuenta inexistente = no. */
@@ -261,7 +309,11 @@ async function accountHasTrustline(account: string, code: string, issuer: string
  * cuenta inexistente— es una respuesta y la decide quien llama.
  */
 async function readAccount(account: string): Promise<Response> {
-  const url = `${getHorizonUrl()}/accounts/${encodeURIComponent(account)}`;
+  return horizonGet(`${getHorizonUrl()}/accounts/${encodeURIComponent(account)}`);
+}
+
+/** The retrying GET itself, shared by every Horizon read in this module. */
+async function horizonGet(url: string): Promise<Response> {
   for (let attempt = 0; attempt < HORIZON_ATTEMPTS; attempt++) {
     if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, HORIZON_BACKOFF_MS * attempt));
     try {

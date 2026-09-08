@@ -3,7 +3,7 @@
 import { Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiTrendingUp } from 'react-icons/fi';
-import { formatTokenPrecise, formatUsdPrecise, MIN_IDLE_USDC, MIN_IDLE_USDC_DECIMALS } from '@/core-ui/helpers/numbers';
+import { formatTokenFine, formatUsdPrecise, MIN_IDLE_USDC, MIN_IDLE_USDC_DECIMALS } from '@/core-ui/helpers/numbers';
 import { AppModal } from '../molecules/AppModal';
 import { PressableButton } from '../molecules/PressableButton';
 
@@ -30,10 +30,12 @@ interface IdleFundsModalProps {
  */
 export function IdleFundsModal({ open, onOpenChange, idle, onInvest, investing, error, dismissable }: IdleFundsModalProps) {
   const { t } = useTranslation();
-  // Truncado, no redondeado: con 0,7299999 en la cuenta, `toFixed(2)` mostraba
-  // "$0,73" —más plata de la que el usuario tiene— y el botón prometía invertir
-  // un monto que no existe. Es lo que hace el resto de las pantallas de plata.
-  const amount = formatTokenPrecise(idle, 2);
+  // Truncated, never rounded: with 0.7299999 in the account, `toFixed(2)` read
+  // "$0.73" — more money than the user has — and the button promised to invest
+  // an amount that does not exist. Below 1 it keeps four decimals, so a balance
+  // of a few cents is not floored into a different number than the one the
+  // purchase screen just showed.
+  const amount = formatTokenFine(idle);
   // El nudge sólo aparece por encima del mínimo, pero el saldo puede bajar entre
   // que aparece y que el usuario aprieta —le sale un pago, cierra y vuelve—. Sin
   // esto el botón se apretaba y no pasaba nada: `invest()` cortaba en silencio.
