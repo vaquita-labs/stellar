@@ -6,7 +6,7 @@ import { Fragment } from 'react';
 import { FiArrowDown, FiArrowUp } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { LeagueMemberDTO } from '../../../hooks/useWeeklyLeague';
-import { Avatar, getLeaderboardUsername } from './LeaderboardCard';
+import { Avatar, getLeaderboardUsername, hasPublicProfile } from './LeaderboardCard';
 import {
   DEMOTION_SLOTS,
   Division,
@@ -71,50 +71,62 @@ function LeagueRow({
         ? 'text-error'
         : 'text-black/50';
 
+  const shell = `flex items-center gap-3 rounded-2xl px-3 py-2.5 ${
+    member.isCurrentUser ? 'border-2 border-primary bg-primary/20' : 'border border-black/10 bg-white'
+  }`;
+
+  const content = (
+    <>
+      <span
+        className={`w-6 shrink-0 text-center text-sm font-extrabold tabular-nums ${rankTone}`}
+        aria-label={t('leaderboard.card.positionLabel', 'Position {{position}}', {
+          position: member.rank,
+        })}
+      >
+        {member.rank}
+      </span>
+
+      <Avatar username={username} avatarConfig={member.avatarConfig} seed={member.walletAddress} />
+
+      <span className="flex-1 min-w-0 flex items-center gap-2">
+        <span className="truncate text-sm font-extrabold text-black">{username}</span>
+        {member.isCurrentUser && (
+          <span className="shrink-0 rounded-sm bg-black px-1.5 py-0.5 text-[7px] font-bold uppercase leading-tight tracking-wider text-white">
+            {t('leaderboard.card.you', 'You')}
+          </span>
+        )}
+      </span>
+
+      <span className="shrink-0 inline-flex items-center gap-1 text-sm font-extrabold tabular-nums text-black">
+        <Image
+          src="/icons/global/star.png"
+          alt=""
+          width={16}
+          height={16}
+          className="object-contain"
+        />
+        {t('leaderboard.league.xpValue', '{{xp}} XP', {
+          xp: member.weeklyXp.toLocaleString(),
+        })}
+      </span>
+    </>
+  );
+
+  // Same rule as the card: with no nickname there is no page to open, so the
+  // row keeps its rank and its XP and stops being a link.
   return (
     <li ref={rowRef}>
-      <Link
-        href={`/explore/${encodeURIComponent(member.nickname || member.walletAddress)}`}
-        aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", { username })}
-        className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 transition hover:-translate-y-0.5 ${
-          member.isCurrentUser
-            ? 'border-2 border-primary bg-primary/20'
-            : 'border border-black/10 bg-white'
-        }`}
-      >
-        <span
-          className={`w-6 shrink-0 text-center text-sm font-extrabold tabular-nums ${rankTone}`}
-          aria-label={t('leaderboard.card.positionLabel', 'Position {{position}}', {
-            position: member.rank,
-          })}
+      {hasPublicProfile(member.nickname) ? (
+        <Link
+          href={`/explore/${encodeURIComponent(member.nickname || member.walletAddress)}`}
+          aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", { username })}
+          className={`${shell} transition hover:-translate-y-0.5`}
         >
-          {member.rank}
-        </span>
-
-        <Avatar username={username} avatarConfig={member.avatarConfig} seed={member.walletAddress} />
-
-        <span className="flex-1 min-w-0 flex items-center gap-2">
-          <span className="truncate text-sm font-extrabold text-black">{username}</span>
-          {member.isCurrentUser && (
-            <span className="shrink-0 rounded-sm bg-black px-1.5 py-0.5 text-[7px] font-bold uppercase leading-tight tracking-wider text-white">
-              {t('leaderboard.card.you', 'You')}
-            </span>
-          )}
-        </span>
-
-        <span className="shrink-0 inline-flex items-center gap-1 text-sm font-extrabold tabular-nums text-black">
-          <Image
-            src="/icons/global/star.png"
-            alt=""
-            width={16}
-            height={16}
-            className="object-contain"
-          />
-          {t('leaderboard.league.xpValue', '{{xp}} XP', {
-            xp: member.weeklyXp.toLocaleString(),
-          })}
-        </span>
-      </Link>
+          {content}
+        </Link>
+      ) : (
+        <div className={shell}>{content}</div>
+      )}
     </li>
   );
 }

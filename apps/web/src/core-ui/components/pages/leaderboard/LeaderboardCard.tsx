@@ -43,6 +43,18 @@ export type LeaderboardCardData = {
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Whether the profile behind a row can be presented as a person.
+ *
+ * The nickname is what a public page is keyed by, so without one there is
+ * nothing to visit and nobody to follow. Such a row keeps its position and its
+ * stats — the place was earned by depositing, not by picking a name — and stops
+ * being a link. The wallet is not a fallback identity here: `@vaquero1a2b` is a
+ * placeholder that reads as a broken account, and pointing a "view their world"
+ * link at it promises a person who does not exist yet.
+ */
+export const hasPublicProfile = (nickname: string | null | undefined): boolean => !!(nickname ?? '').trim();
+
 /** Top-3 medals as art, not emoji: the emoji rendered differently on every
  *  platform and clashed with the rest of the game's icon set. */
 const MEDALS: Record<number, string> = {
@@ -280,7 +292,7 @@ function CardHeader({ user }: { user: LeaderboardCardData }) {
         )}
       </div>
 
-      {!user.isCurrentUser && (
+      {!user.isCurrentUser && hasPublicProfile(user.nickname) && (
         <FollowButton username={user.username} targetWallet={user.walletAddress} />
       )}
     </div>
@@ -312,17 +324,10 @@ export function LeaderboardCard({
   const containerClasses = user.isCurrentUser
     ? 'border-2 border-primary bg-primary/20'
     : 'border border-black/10 bg-white';
+  const shell = `flex flex-col gap-2.5 rounded-xl p-3 shadow-sm ${containerClasses}`;
 
-  return (
-    <Link
-      // Public URLs are keyed by username; the wallet is only a fallback for
-      // profiles that never set one (the page accepts both).
-      href={`/explore/${encodeURIComponent(user.nickname || user.walletAddress)}`}
-      aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", {
-        username: user.username,
-      })}
-      className={`group flex flex-col gap-2.5 rounded-xl p-3 shadow-sm transition hover:-translate-y-0.5 ${containerClasses}`}
-    >
+  const content = (
+    <>
       <CardHeader user={user} />
 
       <MapMiniPreview
@@ -334,6 +339,27 @@ export function LeaderboardCard({
       <StatsRow streak={user.streak} coins={user.coins} experience={user.experience} />
 
       <SocialRow walletAddress={user.walletAddress} likes={user.mapLikes} />
+    </>
+  );
+
+  // A row with no public profile stays in the list, in its place, and is not a
+  // link: it is not clickable and it does not lift on hover, so nothing invites
+  // a tap that would land on a page with no one on it.
+  if (!hasPublicProfile(user.nickname)) {
+    return <div className={shell}>{content}</div>;
+  }
+
+  return (
+    <Link
+      // Public URLs are keyed by username; the wallet is only a fallback for
+      // profiles that never set one (the page accepts both).
+      href={`/explore/${encodeURIComponent(user.nickname || user.walletAddress)}`}
+      aria-label={t('leaderboard.card.viewWorld', "View {{username}}'s world", {
+        username: user.username,
+      })}
+      className={`group ${shell} transition hover:-translate-y-0.5`}
+    >
+      {content}
     </Link>
   );
 }

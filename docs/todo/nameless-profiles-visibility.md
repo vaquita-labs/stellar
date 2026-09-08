@@ -18,7 +18,7 @@ is presented as a person: no leaderboard, no explore, no follow suggestions.
 | Explore feed | No | `buildExplorePool` keeps only profiles with a nickname or a `full_name` (`packages/shared/src/services/explore/index.ts:121`) |
 | Friends search | No | the SQL requires an `ILIKE` match on `nickname` or `full_name`, and NULL never matches (`packages/shared/src/services/follows/index.ts:80`) |
 | Public profile page | No | the route is keyed by nickname (`/explore/[username]`); with no name there is no URL |
-| **Leaderboard** | **Yes**, when the wallet has confirmed deposits | rows are built from deposits, not from profiles (`packages/shared/src/services/leaderboard/index.ts:358`), and `enrichLeaderboardRows` fills `nickname: ''` (`:176`) |
+| Leaderboard | As a row, yes; as a person, no | rows are built from deposits, not from profiles (`packages/shared/src/services/leaderboard/index.ts:358`), so a nameless depositor keeps its position — see step 1 |
 
 A row created by a destination lookup has no deposits, so today it reaches
 nothing. The leaderboard gap is real for a different population: someone who
@@ -27,14 +27,19 @@ characters of their address (`LeaderboardCard.tsx:392`).
 
 ## 2. Plan
 
-### Step 1 — Leaderboard
+### Step 1 — Leaderboard — done
 
-- [ ] Decide the rule for a depositor with no nickname: hide the row, or keep
-      the position and show the fallback handle. Hiding shifts every position
-      below it, which is why it needs a decision and not a patch.
-- [ ] Whatever the rule, it belongs in the query that builds the rows, not in
-      the card: filtering client-side returns short pages, the same mistake the
-      explore feed avoids on purpose.
+- [x] The rule: a depositor with no nickname **keeps its position and its
+      stats** and stops being a person. No link to a profile, no follow button,
+      no hover lift. The place was earned by depositing, not by picking a name.
+- [x] Hiding the row was rejected. Positions are consecutive, so dropping #3
+      promotes everyone under it and takes a real depositor off the board to
+      punish a missing name.
+- [x] `hasPublicProfile()` (`LeaderboardCard.tsx`) is the predicate, used by the
+      card and by the weekly-league row (`LeagueBoard.tsx`). Being presentation
+      and not a filter, it can live in the component: no row leaves the page, so
+      page sizes and offsets are untouched — the reason a *filter* would have
+      had to go in the query instead.
 
 ### Step 2 — Close the `full_name` gap in explore
 
