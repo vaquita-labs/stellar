@@ -32,6 +32,15 @@ export interface OnrampCorridor {
   currency: string;
   /** Símbolo para el input de monto. */
   symbol: string;
+  /**
+   * Floor for a purchase, in local currency. Nothing below it is quoted.
+   *
+   * It is OUR floor, not the route's: a quote's `minAmount` only exists once
+   * there IS a quote, and under this amount the provider returns none — an
+   * empty list carries no number to show, so the screen can only say no route
+   * fits and leave the user guessing which amount does.
+   */
+  minFiat: number;
 }
 
 /**
@@ -44,7 +53,7 @@ export interface OnrampCorridor {
  * lista y las cotizaciones vuelven vacías.
  */
 export const ONRAMP_CORRIDORS: Record<OnrampCorridorCode, OnrampCorridor> = {
-  BO: { country: 'BO', currency: 'BOB', symbol: 'Bs' },
+  BO: { country: 'BO', currency: 'BOB', symbol: 'Bs', minFiat: 2 },
 };
 
 /**

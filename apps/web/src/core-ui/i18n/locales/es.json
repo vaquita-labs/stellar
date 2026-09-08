@@ -1824,6 +1824,7 @@
         "limitMin": "El mínimo para esta ruta es {{amount}} {{currency}}.",
         "limits": "Entre {{min}} y {{max}} {{currency}}.",
         "longPress": "Mantené apretado el código para guardarlo en tus fotos.",
+        "minAmount": "La compra mínima es de {{amount}} {{currency}}.",
         "outUsdc": "≈ {{amount}} USDC",
         "payHint": "Pagá este QR desde la app de tu banco. El USDC llega solo.",
         "processingBody": "Tus USDC suelen llegar en unos minutos, y pueden tardar hasta 15. Podés cerrar: caen solos en tu wallet.",

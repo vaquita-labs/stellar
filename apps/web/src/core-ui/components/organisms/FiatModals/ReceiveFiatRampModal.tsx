@@ -124,7 +124,13 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const symbol = corridor?.symbol ?? '';
   const countryName = t(`wallet.fiat.onramp.country.${country}`, country);
   const amountNum = Number(amountFiat);
-  const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
+  // The corridor's floor. Below it nothing is quoted: the provider returns no
+  // route, and an empty list carries no amount to show, so the message naming
+  // the amount that does work comes from here.
+  const minFiat = corridor?.minFiat ?? 0;
+  const typedAmount = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
+  const belowMin = typedAmount && amountNum < minFiat;
+  const amountValid = typedAmount && !belowMin;
 
   // El fallback lo pone quien llama porque el mismo fallo dice cosas distintas
   // según dónde ocurra: cotizando todavía no hay compra, y creándola la
@@ -398,7 +404,14 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // otro es de una tecla anterior y todavía se está recotizando.
   const fresh = result?.amount === amountFiat ? result : null;
   const quote = fresh?.quote ?? null;
-  const error = fresh?.error ?? null;
+  // Our own floor outranks whatever the quote said: for an amount that was
+  // never quoted, it is the only thing known about it.
+  const error = belowMin
+    ? t('wallet.fiat.onramp.minAmount', 'The minimum purchase is {{amount}} {{currency}}.', {
+        amount: minFiat,
+        currency,
+      })
+    : (fresh?.error ?? null);
   const quoting = amountValid && !!corridor && !fresh;
 
   const usdcOut = quote ? usdcOutOf(amountNum, quote) : null;
