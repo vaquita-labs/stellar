@@ -13,6 +13,7 @@ deliverable names:
 | `leaderboard.spec.ts` | weekly league board, own "You" row, open a saver's world           | no        |
 | `badges.spec.ts`      | follow → "Crew Mate" unlocks → Claim award → `mint_badge` → reward | yes       |
 | `home-tour.spec.ts`   | first-time coach marks on the home: walk, skip, and stay gone      | no        |
+| `deep-link.spec.ts`   | the auth gate hands `/login` the whole URL, query string included  | no        |
 
 The suite runs on one worker, serially, in file order: `deposit` leaves the
 savings position `withdraw` drains, and every spec moves the same funded wallet.
