@@ -63,22 +63,14 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
 
       {/* QR de la dirección, en caja blanca redondeada (estilo app). */}
       <div className="mx-auto w-fit rounded-xl border border-black border-b-2 bg-white p-4">
-        <QRCode
-          value={address || ' '}
-          size={168}
-          bgColor="#ffffff"
-          fgColor="#1a1a1a"
-          className="h-[168px] w-[168px]"
-        />
+        <QRCode value={address || ' '} size={168} bgColor="#ffffff" fgColor="#1a1a1a" className="h-[168px] w-[168px]" />
       </div>
 
       {/* Dirección TRUNCADA (no ocupa 4 renglones) + copiar inline. */}
       <div className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-2.5">
         <span className="flex-1 min-w-0">
           <span className="block text-xs text-gray-500">{t('deposit.receive.addressLabel', 'Your address')}</span>
-          <span className="block text-sm font-mono text-black truncate">
-            {address ? truncateMiddle(address, 8, 8) : '—'}
-          </span>
+          <span className="block text-sm font-mono text-black truncate">{address ? truncateMiddle(address, 8, 8) : '—'}</span>
         </span>
         <button
           type="button"
@@ -95,10 +87,7 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
       <div className="flex items-start justify-center gap-1.5 text-xs text-gray-400">
         <FiAlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <p>
-          {t(
-            'deposit.receive.warning',
-            'Only send Stellar assets to this address. Funds sent from another network are lost.',
-          )}
+          {t('deposit.receive.warning', 'Only send Stellar assets to this address. Funds sent from another network are lost.')}
         </p>
       </div>
     </AppModal>

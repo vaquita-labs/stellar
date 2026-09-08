@@ -28,15 +28,7 @@ interface IdleFundsModalProps {
  * sin invertir — no la movemos ni la forzamos. No reaparece hasta que entre plata
  * nueva (lo maneja `AutoInvest`).
  */
-export function IdleFundsModal({
-  open,
-  onOpenChange,
-  idle,
-  onInvest,
-  investing,
-  error,
-  dismissable,
-}: IdleFundsModalProps) {
+export function IdleFundsModal({ open, onOpenChange, idle, onInvest, investing, error, dismissable }: IdleFundsModalProps) {
   const { t } = useTranslation();
   // Truncado, no redondeado: con 0,7299999 en la cuenta, `toFixed(2)` mostraba
   // "$0,73" —más plata de la que el usuario tiene— y el botón prometía invertir
@@ -59,13 +51,7 @@ export function IdleFundsModal({
       hideClose={!dismissable}
       bodyClassName="flex flex-col items-center justify-center gap-6 text-center px-6 flex-1"
       footer={
-        <PressableButton
-          variant="success"
-          size="cta"
-          className="py-2.5!"
-          onClick={onInvest}
-          disabled={investing || belowMin}
-        >
+        <PressableButton variant="success" size="cta" className="py-2.5!" onClick={onInvest} disabled={investing || belowMin}>
           {investing ? (
             <>
               <Spinner size="sm" color="current" /> {t('idleFunds.processing', 'Investing...')}
@@ -84,16 +70,11 @@ export function IdleFundsModal({
         <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">
           {t('idleFunds.label', 'You have idle funds')}
         </p>
-        <p className="mt-2 text-5xl font-bold text-black tabular-nums leading-none">
-          ${amount}
-        </p>
+        <p className="mt-2 text-5xl font-bold text-black tabular-nums leading-none">${amount}</p>
       </div>
 
       <p className="text-sm text-gray-500 max-w-xs">
-        {t(
-          'idleFunds.subtitle',
-          'This USDC is just sitting there. Put it to work and start earning right away.',
-        )}
+        {t('idleFunds.subtitle', 'This USDC is just sitting there. Put it to work and start earning right away.')}
       </p>
 
       {/* El mínimo se dice sólo cuando frena: en una pantalla sin campo donde
