@@ -108,7 +108,7 @@ jobs:
         with:
           name: playwright-report
           path: apps/web/playwright-report/
-          retention-days: 30
+          retention-days: 7
 
       - name: Upload raw results
         if: always()
@@ -118,4 +118,4 @@ jobs:
           path: |
             apps/web/e2e-results/
             apps/web/test-results/
-          retention-days: 30
+          retention-days: 7
