@@ -756,6 +756,37 @@
       "chestAria": "Daily reward"
     }
   },
+  "homeTour": {
+    "done": "Got it",
+    "next": "Next",
+    "skip": "Skip",
+    "steps": {
+      "actions": {
+        "body": "Add money here to start earning interest, and take it out from the same place.",
+        "title": "Deposit and withdraw"
+      },
+      "balance": {
+        "body": "Everything you have saved, updating live. Tap it to open your portfolio.",
+        "title": "Your balance"
+      },
+      "chest": {
+        "body": "Open the chest once a day for coins and experience. While it is closed, the timer shows how long until the next one.",
+        "title": "Your daily reward"
+      },
+      "help": {
+        "body": "Open the help center to ask anything or report a problem.",
+        "title": "Need a hand?"
+      },
+      "profile": {
+        "body": "Your avatar, your username and your settings live here.",
+        "title": "Your profile"
+      },
+      "quickActions": {
+        "body": "Visit other people's islands, see how you rank, and spend your coins on new pieces for your map.",
+        "title": "Explore, ranking and shop"
+      }
+    }
+  },
   "idleFunds": {
     "label": "You have idle funds",
     "title": "Put your money to work",

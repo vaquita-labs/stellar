@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiBell } from 'react-icons/fi';
 import { useInstallApp, usePushNotifications } from '../../hooks';
+import { useModalQueueStore } from '../../stores';
 import { Button } from '../atoms';
 import { AppModal } from '../molecules';
 
@@ -26,6 +27,8 @@ export function PushNudge() {
   const { t } = useTranslation();
   const { isStandalone } = useInstallApp();
   const { supported, permission, enablePush } = usePushNotifications();
+  // The home tour owns the whole screen while it runs; this would open on top.
+  const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
 
   const [seen, setSeen] = useState(
     () => typeof window !== 'undefined' && window.localStorage.getItem(NUDGE_SEEN_KEY) === 'true'
@@ -48,7 +51,7 @@ export function PushNudge() {
     }
   };
 
-  const open = isStandalone && supported && permission === 'default' && !seen;
+  const open = isStandalone && supported && permission === 'default' && !seen && homeTourSettled;
   if (!open) return null;
 
   return (

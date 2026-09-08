@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TutorialCard } from './TutorialCard';
 
@@ -27,6 +27,15 @@ interface TutorialFocusLockProps {
    * botón Deposit) y la tarjeta taparía el contenido que se debe poder ver.
    */
   pinTop?: boolean;
+  /**
+   * Covers the cutout too, so the highlighted element is shown but NOT
+   * clickable. For explanatory steps ("this is what this button does"), where a
+   * tap would navigate away and abandon the tour. Off by default: the steps
+   * that ask the user to tap the real element need the hole to stay open.
+   */
+  blockTarget?: boolean;
+  /** Actions rendered inside the guide card (e.g. next / skip). */
+  footer?: ReactNode;
 }
 
 const REMEASURE_MS = 200;
@@ -46,7 +55,17 @@ const CARD_TOP_OFFSET = 16;
  * vivo, así reacciona a la animación de apertura, resize y scroll. Es agnóstico
  * del modal: sirve para depósito, retiro o cualquier otro paso del tutorial.
  */
-export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex, dotCount, pinTop }: TutorialFocusLockProps) {
+export function TutorialFocusLock({
+  selector,
+  pad = 6,
+  title,
+  message,
+  dotIndex,
+  dotCount,
+  pinTop,
+  blockTarget,
+  footer,
+}: TutorialFocusLockProps) {
   const [rect, setRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
@@ -105,7 +124,14 @@ export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex,
     // El wrapper NO captura clicks (pointer-events-none): así el hueco del
     // elemento enfocado deja pasar el click al elemento real. Solo los cuatro
     // paneles (pointer-events-auto) bloquean todo lo demás.
-    <div aria-hidden data-react-aria-top-layer="true" className="pointer-events-none fixed inset-0 z-[9998]">
+    // `aria-hidden` only while the layer is pure decoration: with actions in
+    // the card it holds focusable buttons, and hiding those from assistive
+    // tech would leave the tour with no way out.
+    <div
+      aria-hidden={footer ? undefined : true}
+      data-react-aria-top-layer="true"
+      className="pointer-events-none fixed inset-0 z-[9998]"
+    >
       {/* Arriba */}
       <div className={panel} style={{ left: 0, right: 0, top: 0, height: top }} />
       {/* Abajo */}
@@ -114,6 +140,12 @@ export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex,
       <div className={panel} style={{ left: 0, top, width: left, height: bottom - top }} />
       {/* Derecha (a la altura del hueco) */}
       <div className={panel} style={{ left: right, right: 0, top, height: bottom - top }} />
+      {/* Explanatory steps also cover the cutout: the element stays visible
+          through the transparent pane but the tap never reaches it, so the tour
+          cannot be lost to an accidental navigation. */}
+      {blockTarget && (
+        <div className="pointer-events-auto fixed" style={{ left, top, width: right - left, height: bottom - top }} />
+      )}
 
       {/* Borde parpadeante sobre el elemento enfocado (no bloquea el click) */}
       <motion.div
@@ -128,13 +160,13 @@ export function TutorialFocusLock({ selector, pad = 6, title, message, dotIndex,
           componente. Esta variante flota y no captura el click. */}
       {message && (
         <motion.div
-          className="pointer-events-none fixed z-[10000] -translate-x-1/2"
+          className={`fixed z-[10000] -translate-x-1/2 ${footer ? 'pointer-events-auto' : 'pointer-events-none'}`}
           style={cardStyle}
           initial={{ opacity: 0, y: placeAbove ? 6 : -6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
         >
-          <TutorialCard dotIndex={dotIndex} dotCount={dotCount} title={title} body={message} />
+          <TutorialCard dotIndex={dotIndex} dotCount={dotCount} title={title} body={message} footer={footer} />
         </motion.div>
       )}
     </div>,

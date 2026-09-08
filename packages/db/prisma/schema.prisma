@@ -495,6 +495,10 @@ model Profile {
 
   onboardingCompleted Boolean @default(false) @map("onboarding_completed")
   tutorialCompleted   Boolean @default(false) @map("tutorial_completed")
+  // The user has seen the guided tour of the home screen (the coach marks that
+  // point at each button). Separate from `tutorialCompleted`, which belongs to
+  // the simulated deposit walkthrough on /tutorial.
+  homeTourCompleted   Boolean @default(false) @map("home_tour_completed")
   // The user self-identifies as crypto-savvy, so the UI can drop the
   // beginner-friendly framing and surface raw on-chain details (wallet
   // addresses, tx hashes, gas/network terms) instead of simplified copy.

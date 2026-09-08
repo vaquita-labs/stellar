@@ -756,6 +756,37 @@
       "chestAria": "Recompensa diaria"
     }
   },
+  "homeTour": {
+    "done": "Entendido",
+    "next": "Siguiente",
+    "skip": "Saltar",
+    "steps": {
+      "actions": {
+        "body": "Agrega dinero aquí para empezar a ganar intereses, y retíralo desde el mismo lugar.",
+        "title": "Depositar y retirar"
+      },
+      "balance": {
+        "body": "Todo lo que tienes ahorrado, actualizado al instante. Tócalo para abrir tu portafolio.",
+        "title": "Tu saldo"
+      },
+      "chest": {
+        "body": "Abre el cofre una vez al día y gana monedas y experiencia. Mientras está cerrado, el contador te dice cuánto falta para el próximo.",
+        "title": "Tu recompensa diaria"
+      },
+      "help": {
+        "body": "Abre el centro de ayuda para preguntar lo que quieras o reportar un problema.",
+        "title": "¿Necesitas ayuda?"
+      },
+      "profile": {
+        "body": "Aquí viven tu avatar, tu nombre de usuario y tus ajustes.",
+        "title": "Tu perfil"
+      },
+      "quickActions": {
+        "body": "Visita las islas de otras personas, mira cómo vas en el ranking y gasta tus monedas en piezas nuevas para tu mapa.",
+        "title": "Explorar, ranking y tienda"
+      }
+    }
+  },
   "idleFunds": {
     "label": "Tienes fondos sin usar",
     "title": "Pon tu dinero a trabajar",

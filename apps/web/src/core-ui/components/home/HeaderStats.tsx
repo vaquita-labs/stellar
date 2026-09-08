@@ -33,6 +33,11 @@ import { MapQuickActions } from './MapQuickActions';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
 import { AccrualTerm, LiveBalance } from './LiveBalance';
 import { PressableButton } from '../molecules/PressableButton';
+import {
+  HOME_TOUR_ANCHOR_BALANCE,
+  HOME_TOUR_ANCHOR_HELP,
+  HOME_TOUR_ANCHOR_PROFILE,
+} from '../organisms/Tutorial/homeTourConfig';
 
 export const HeaderStats = () => {
   const { t } = useTranslation();
@@ -235,6 +240,7 @@ export const HeaderStats = () => {
               botones (perfil / notificaciones), no adornos del header. */}
           <Link
             href="/profile"
+            data-tutorial={HOME_TOUR_ANCHOR_PROFILE}
             aria-label={t('home.stats.profileAria', 'Profile')}
             className="group relative shrink-0 transition active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black rounded-full"
           >
@@ -267,6 +273,7 @@ export const HeaderStats = () => {
                 variant="cream"
                 onClick={openPortfolioPanel}
                 ariaLabel={t('home.stats.apyAria', 'Portfolio')}
+                dataTutorial={HOME_TOUR_ANCHOR_BALANCE}
                 // w-fit: la pastilla ABRAZA el número (no llena todo el ancho, que
                 // dejaba un vacío enorme adentro con saldos cortos). Como ahora
                 // SIEMPRE mostramos los 7 decimales, el número es más largo y de
@@ -345,6 +352,7 @@ export const HeaderStats = () => {
 
             <Link
               href="/concierge"
+              data-tutorial={HOME_TOUR_ANCHOR_HELP}
               aria-label={t('concierge.buttonAria', 'Help Center')}
               className="relative shrink-0 w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
             >

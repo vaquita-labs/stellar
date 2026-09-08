@@ -25,12 +25,13 @@ import { ReleaseNotesModal } from './ReleaseNotesModal';
 export function ReleaseNotesGate() {
   const isAuthenticated = useIsAuthenticated();
   const vaultPromptSettled = useModalQueueStore((s) => s.vaultPromptSettled);
+  const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
   const [done, setDone] = useState(false);
 
-  const { data: note } = useReleaseNote(isAuthenticated && vaultPromptSettled && !done);
+  const { data: note } = useReleaseNote(isAuthenticated && vaultPromptSettled && homeTourSettled && !done);
   const ack = useAckReleaseNote();
 
-  if (!note || done || !vaultPromptSettled) return null;
+  if (!note || done || !vaultPromptSettled || !homeTourSettled) return null;
 
   const close = () => {
     setDone(true);

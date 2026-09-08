@@ -77,6 +77,7 @@ export interface Profile {
   avatar_config?: unknown,
   onboarding_completed: boolean,
   tutorial_completed: boolean,
+  home_tour_completed: boolean,
   crypto_savvy: boolean,
   language?: string | null,
   currency?: string | null,

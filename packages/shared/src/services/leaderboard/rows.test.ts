@@ -13,6 +13,7 @@ const profile = (overrides: Partial<Profile>): Profile => ({
   avatar_config: null,
   onboarding_completed: true,
   tutorial_completed: true,
+  home_tour_completed: true,
   crypto_savvy: true,
   language: null,
   currency: null,

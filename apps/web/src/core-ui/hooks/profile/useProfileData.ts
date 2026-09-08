@@ -29,6 +29,7 @@ export const useProfileData = (walletAddressOverride?: string) => {
         avatarConfig: resolveAvatarConfig(data?.data?.avatarConfig, data?.data?.walletAddress || walletAddress || ''),
         onboardingCompleted: data?.data?.onboardingCompleted ?? false,
         tutorialCompleted: data?.data?.tutorialCompleted ?? false,
+        homeTourCompleted: data?.data?.homeTourCompleted ?? false,
         cryptoSavvy: data?.data?.cryptoSavvy ?? false,
         language: data?.data?.language ?? '',
         currency: data?.data?.currency ?? '',

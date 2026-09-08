@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { MapIconButton } from '../molecules/MapIconButton';
+import { HOME_TOUR_ANCHOR_QUICK_ACTIONS } from '../organisms/Tutorial/homeTourConfig';
 
 /**
  * Accesos rápidos que flotan sobre el mapa, apilados debajo del cofre. Sustituyen
@@ -38,7 +39,7 @@ export const MapQuickActions = () => {
   };
 
   return (
-    <div ref={hintRef} className="flex flex-col items-center gap-2">
+    <div ref={hintRef} data-tutorial={HOME_TOUR_ANCHOR_QUICK_ACTIONS} className="flex flex-col items-center gap-2">
       <MapIconButton
         href="/explore"
         label={t('shell.nav.explore', 'Explore')}

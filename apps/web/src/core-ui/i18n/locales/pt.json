@@ -756,6 +756,37 @@
       "chestAria": "Recompensa diária"
     }
   },
+  "homeTour": {
+    "done": "Entendi",
+    "next": "Próximo",
+    "skip": "Pular",
+    "steps": {
+      "actions": {
+        "body": "Adicione dinheiro aqui para começar a render juros, e retire pelo mesmo lugar.",
+        "title": "Depositar e sacar"
+      },
+      "balance": {
+        "body": "Tudo o que você tem guardado, atualizado ao vivo. Toque para abrir seu portfólio.",
+        "title": "Seu saldo"
+      },
+      "chest": {
+        "body": "Abra o baú uma vez por dia e ganhe moedas e experiência. Enquanto está fechado, o contador mostra quanto falta para o próximo.",
+        "title": "Sua recompensa diária"
+      },
+      "help": {
+        "body": "Abra a central de ajuda para perguntar o que quiser ou relatar um problema.",
+        "title": "Precisa de ajuda?"
+      },
+      "profile": {
+        "body": "Aqui ficam seu avatar, seu nome de usuário e suas configurações.",
+        "title": "Seu perfil"
+      },
+      "quickActions": {
+        "body": "Visite as ilhas de outras pessoas, veja sua posição no ranking e gaste suas moedas em novas peças para o seu mapa.",
+        "title": "Explorar, ranking e loja"
+      }
+    }
+  },
   "idleFunds": {
     "label": "Você tem fundos parados",
     "title": "Coloque seu dinheiro para trabalhar",

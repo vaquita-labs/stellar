@@ -83,6 +83,7 @@ async function resolveVoucherCycleId(
         avatar_config: profile.avatarConfig ?? null,
         onboarding_completed: profile.onboardingCompleted ?? false,
         tutorial_completed: profile.tutorialCompleted ?? false,
+        home_tour_completed: profile.homeTourCompleted ?? false,
         crypto_savvy: profile.cryptoSavvy ?? false,
         language: profile.language ?? null,
         currency: profile.currency ?? null,

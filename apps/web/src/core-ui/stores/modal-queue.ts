@@ -27,9 +27,23 @@ type ModalQueueState = {
   /** ¿Ya se decidió si el prompt de plata ociosa aparece? */
   vaultPromptSettled: boolean;
   setVaultPromptSettled: (settled: boolean) => void;
+  /**
+   * Has the home tour finished (or decided it is not showing)? The coach marks
+   * cover the whole screen, so nothing else that opens by itself may stack on
+   * top of them. Taken and released by `HomeTour`, which is the only component
+   * that knows whether the user still needs it.
+   *
+   * Same default and reasoning as `vaultPromptSettled`: `true` means "nothing to
+   * wait for", so on the routes where `HomeTour` never mounts — profile,
+   * settings — the modals that queue behind it are not stuck forever.
+   */
+  homeTourSettled: boolean;
+  setHomeTourSettled: (settled: boolean) => void;
 };
 
 export const useModalQueueStore = create<ModalQueueState>((set) => ({
   vaultPromptSettled: true,
   setVaultPromptSettled: (vaultPromptSettled: boolean) => set({ vaultPromptSettled }),
+  homeTourSettled: true,
+  setHomeTourSettled: (homeTourSettled: boolean) => set({ homeTourSettled }),
 }));
