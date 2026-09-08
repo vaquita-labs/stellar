@@ -1,13 +1,22 @@
 // Prisma schema for the Vaquita Postgres database (hosted on Supabase).
 //
-// SOURCE OF TRUTH: the SQL migrations in apps/supabase/migrations.
+// A schema change lands in more than one place:
 //
-// ⚠️ DESIGN DRAFT: this schema is intentionally AHEAD of the live DB. It encodes the
-// target design (single-network refactor, config table, soft-delete columns,
-// camelCase↔snake_case mapping). The matching SQL migrations are to be written in a
-// later step. Until then:
-//   - DO NOT run `prisma db pull` — it would revert this design to the current DB.
-//   - The generated client is ahead of the database; do not rely on it at runtime yet.
+//   - The model here. This is what generates the client, and the API reads and
+//     writes through that client at runtime.
+//   - A dated, idempotent file in apps/supabase/migrations/: the reviewed
+//     record of the DDL that ran, and what brings an environment up to date.
+//     Write one for every change, `IF NOT EXISTS` so re-running is harmless.
+//   - packages/db/sql/ for what the Prisma schema language cannot express —
+//     CHECK constraints, and partial indexes it does not model. `prisma db
+//     push` DROPS those while it reconciles, so scripts/apply-sql.mjs replays
+//     every file in that directory after each push. That is why each one has
+//     to be idempotent: they all run again, every time, whether or not
+//     anything about them changed.
+//
+// DO NOT run `prisma db pull`. It rewrites this file from whatever the live
+// database looks like, which flattens the @map naming below and drops every
+// comment in it.
 //
 // Naming convention: models and fields are camelCase in code, mapped to the real
 // snake_case DB names with @map / @@map. Model names are PascalCase singular (their
