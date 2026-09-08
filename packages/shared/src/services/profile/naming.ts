@@ -28,6 +28,17 @@ export interface ProfileNaming {
  * renders from, and the one name a stub never has — a profile row is upserted
  * the first time any wallet hits the API, so "a profile exists" says nothing
  * about whether there is a person behind it.
+ *
+ * THIS ANSWERS "can it be shown", NOT "is it legitimate". A nickname means
+ * somebody claimed a name, not that somebody is behind it: the automated
+ * wallets described in `docs/todo/signup-bot-hardening.md` claim nicknames —
+ * that is the whole point of them — and they pass this check.
+ *
+ * Answering "this account belongs to a real person" needs something that costs
+ * the claimer something: a confirmed deposit, account age, a verified session.
+ * No such predicate exists yet; do not let this one stand in for it — counting
+ * users, handing out a reward or gating a campaign on it would count the bots
+ * in.
  */
 export const hasNickname = (profile: ProfileNaming): boolean => !!(profile.nickname ?? '').trim();
 

@@ -93,5 +93,10 @@ is where it would slip through unnoticed.
   in the API routes reach `getProfile()`.
 - The rows created by a bot are a separate problem: those DO have nicknames,
   which is what makes them squat the namespace. See `signup-bot-hardening.md`.
+  So `hasNickname` answers "can this be shown as a person", never "is this
+  account legitimate" — a bot row passes it. Deciding that someone is real needs
+  a signal that costs the claimer something (a confirmed deposit, account age, a
+  verified session), and no predicate does that today. The caveat is written
+  into the docstring so nobody borrows this one for it.
 - The withdraw screen keeps classifying a destination by whether its address has
   a nickname; that is what `withdraw-nickname-lookup.md` covers.
