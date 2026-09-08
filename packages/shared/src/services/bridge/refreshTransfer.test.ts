@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BridgeTransfer } from '@vaquita/db';
 import { prisma } from '@vaquita/db';
-import { getStatus } from '../oneclick';
-import { refreshTransfer, refreshTransfers, type OneClickConfig } from './index';
+import { getStatus, type OneClickConfig } from '../oneclick';
+import { refreshTransfer, refreshTransfers } from './index';
 
 vi.mock('@vaquita/db', () => ({
   Prisma: {},

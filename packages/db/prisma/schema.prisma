@@ -969,6 +969,10 @@ model ReleaseNote {
   id          Int       @id @default(autoincrement())
   title       String    @db.VarChar(160)
   body        String
+  /// Per-language overrides, `{"es": {"title", "body"}, "pt": {...}}`. `title`
+  /// and `body` above are the fallback for any language missing here, so a note
+  /// can ship with one language written and still show for everyone.
+  translations Json     @default("{}")
   /// NULL = draft. Set when an admin publishes; clearing it retracts the note
   /// without losing the text.
   publishedAt DateTime? @map("published_at") @db.Timestamptz(6)

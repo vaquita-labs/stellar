@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type ReleaseNote, releaseNoteImageUrl } from '../../../hooks';
+import { type ReleaseNote, releaseNoteImageUrl, resolveReleaseNoteText } from '../../../hooks';
 import { CarouselScroller } from '../../home/edit/CarouselScroller';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -21,17 +21,22 @@ interface ReleaseNotesModalProps {
  * `whitespace-pre-line`, no como HTML: lo escribe una persona en un textarea y
  * renderizarlo como markup abriría una inyección por una vía que no necesita
  * existir para un par de párrafos.
+ *
+ * El texto NO pasa por i18next: no es una cadena de la app sino contenido que
+ * escribe un admin, así que viaja con la nota y se elige acá según el idioma
+ * activo. Las imágenes son las mismas para todos los idiomas.
  */
 export function ReleaseNotesModal({ note, onClose }: ReleaseNotesModalProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [preview, setPreview] = useState<string | null>(null);
+  const { title, body } = resolveReleaseNoteText(note, i18n.language);
 
   return (
     <>
       <AppModal
         open
         onOpenChange={onClose}
-        title={note.title}
+        title={title}
         size="md"
         footer={
           <PressableButton variant="primary" size="cta" onClick={onClose}>
@@ -40,7 +45,7 @@ export function ReleaseNotesModal({ note, onClose }: ReleaseNotesModalProps) {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">{note.body}</p>
+          <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">{body}</p>
 
           {note.imageIds.length > 0 && (
             <CarouselScroller>
@@ -72,13 +77,13 @@ export function ReleaseNotesModal({ note, onClose }: ReleaseNotesModalProps) {
         <AppModal
           open
           onOpenChange={() => setPreview(null)}
-          title={note.title}
+          title={title}
           size="lg"
           fullScreen
           bodyClassName="flex items-center justify-center bg-black/90 px-0! sm:px-0!"
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- lo sirve la API, no pasa por el optimizador */}
-          <img src={releaseNoteImageUrl(preview)} alt={note.title} className="max-h-full max-w-full object-contain" />
+          <img src={releaseNoteImageUrl(preview)} alt={title} className="max-h-full max-w-full object-contain" />
         </AppModal>
       ) : null}
     </>

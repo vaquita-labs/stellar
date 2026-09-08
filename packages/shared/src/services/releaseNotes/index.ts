@@ -20,6 +20,68 @@ import { prisma } from '@vaquita/db';
 export const RELEASE_NOTE_TITLE_MAX = 160;
 export const RELEASE_NOTE_BODY_MAX = 4000;
 
+/**
+ * The languages the app ships (`apps/web/src/core-ui/i18n`).
+ *
+ * `en` is not in the overrides list on purpose: the `title` / `body` columns
+ * ARE the English note, and they are also the fallback for every other
+ * language. That is what lets a note be published with one language written —
+ * a Spanish speaker sees English rather than an empty popup, which is the
+ * behaviour we want while a translation is still pending.
+ */
+export const RELEASE_NOTE_DEFAULT_LANGUAGE = 'en';
+export const RELEASE_NOTE_TRANSLATED_LANGUAGES = ['es', 'pt'] as const;
+export type ReleaseNoteLanguage = (typeof RELEASE_NOTE_TRANSLATED_LANGUAGES)[number];
+
+export type ReleaseNoteTranslation = { title: string; body: string };
+export type ReleaseNoteTranslations = Partial<Record<ReleaseNoteLanguage, ReleaseNoteTranslation>>;
+
+const isTranslatedLanguage = (value: string): value is ReleaseNoteLanguage =>
+  (RELEASE_NOTE_TRANSLATED_LANGUAGES as readonly string[]).includes(value);
+
+/**
+ * Reads the `translations` jsonb into a shape the app can trust.
+ *
+ * Postgres only guarantees this is an object; everything else is checked here.
+ * A language we no longer ship, a half-written pair, a title that is not a
+ * string — all dropped rather than repaired, because the fallback to the base
+ * columns is always a correct answer and a partly-translated note is not.
+ */
+export const parseReleaseNoteTranslations = (value: unknown): ReleaseNoteTranslations => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+  const out: ReleaseNoteTranslations = {};
+  for (const [language, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (!isTranslatedLanguage(language)) continue;
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+
+    const { title, body } = entry as { title?: unknown; body?: unknown };
+    if (typeof title !== 'string' || typeof body !== 'string') continue;
+    // Both halves or neither. A translated title over an English body reads as
+    // a rendering bug; falling back to a consistent English note does not.
+    if (!title.trim() || !body.trim()) continue;
+
+    out[language] = { title: title.trim(), body: body.trim() };
+  }
+  return out;
+};
+
+/**
+ * The note's text in the reader's language, falling back to the base columns.
+ *
+ * `language` is whatever the client has — `'es-419'`, `'pt-BR'`, `undefined` —
+ * so only the primary subtag is matched. A regional variant we do not carry
+ * still gets its language rather than English.
+ */
+export const resolveReleaseNoteText = (
+  note: { title: string; body: string; translations?: ReleaseNoteTranslations },
+  language: string | null | undefined,
+): ReleaseNoteTranslation => {
+  const primary = (language ?? '').toLowerCase().split('-')[0];
+  const translated = primary && isTranslatedLanguage(primary) ? note.translations?.[primary] : undefined;
+  return translated ?? { title: note.title, body: note.body };
+};
+
 /** Mirrors the CHECK on `release_note_images.content_type`. */
 export const RELEASE_NOTE_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 export type ReleaseNoteImageType = (typeof RELEASE_NOTE_IMAGE_TYPES)[number];
@@ -33,8 +95,15 @@ export const isReleaseNoteImageType = (value: unknown): value is ReleaseNoteImag
 /** What the app shows a user. Ids only for the images — the bytes are a separate GET. */
 export type ReleaseNoteDTO = {
   id: number;
+  /** The base/English text, and the fallback for any untranslated language. */
   title: string;
   body: string;
+  /**
+   * Sent in full rather than resolved server-side: the client already knows the
+   * reader's language, the whole payload is a few kilobytes of text, and a
+   * language switch then needs no refetch.
+   */
+  translations: ReleaseNoteTranslations;
   publishedAt: string | null;
   imageIds: string[];
 };
@@ -49,6 +118,7 @@ type NoteRow = {
   id: number;
   title: string;
   body: string;
+  translations: unknown;
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -59,6 +129,7 @@ const toDTO = (row: NoteRow): ReleaseNoteDTO => ({
   id: row.id,
   title: row.title,
   body: row.body,
+  translations: parseReleaseNoteTranslations(row.translations),
   publishedAt: row.publishedAt?.toISOString() ?? null,
   imageIds: (row.images ?? []).map((image) => image.id),
 });
@@ -87,7 +158,7 @@ export const getLatestReleaseNote = async (): Promise<ReleaseNoteDTO | null> => 
   const row = await prisma.releaseNote.findFirst({
     where: { deletedAt: null, publishedAt: { not: null } },
     orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
-    select: { id: true, title: true, body: true, publishedAt: true, createdAt: true, updatedAt: true, ...withImages },
+    select: { id: true, title: true, body: true, translations: true, publishedAt: true, createdAt: true, updatedAt: true, ...withImages },
   });
   return row ? toDTO(row) : null;
 };
@@ -161,7 +232,7 @@ export const listReleaseNotes = async (limit = 50): Promise<AdminReleaseNoteDTO[
     where: { deletedAt: null },
     orderBy: { id: 'desc' },
     take: limit,
-    select: { id: true, title: true, body: true, publishedAt: true, createdAt: true, updatedAt: true, ...withImages },
+    select: { id: true, title: true, body: true, translations: true, publishedAt: true, createdAt: true, updatedAt: true, ...withImages },
   });
   return rows.map(toAdminDTO);
 };
@@ -175,6 +246,7 @@ export type ReleaseNoteImageInput = {
 export const createReleaseNote = async (input: {
   title: string;
   body: string;
+  translations?: ReleaseNoteTranslations;
   published: boolean;
   images: ReleaseNoteImageInput[];
 }): Promise<AdminReleaseNoteDTO> => {
@@ -182,6 +254,10 @@ export const createReleaseNote = async (input: {
     data: {
       title: input.title,
       body: input.body,
+      // Sanitised on the way IN as well as out, so a half-written pair never
+      // reaches the column and the admin list shows the same languages the app
+      // will actually use.
+      translations: parseReleaseNoteTranslations(input.translations ?? {}),
       publishedAt: input.published ? new Date() : null,
       images: {
         create: input.images.map((image, index) => ({
@@ -192,7 +268,7 @@ export const createReleaseNote = async (input: {
         })),
       },
     },
-    select: { id: true, title: true, body: true, publishedAt: true, createdAt: true, updatedAt: true, ...withImages },
+    select: { id: true, title: true, body: true, translations: true, publishedAt: true, createdAt: true, updatedAt: true, ...withImages },
   });
   return toAdminDTO(row);
 };
@@ -214,6 +290,8 @@ export const updateReleaseNote = async (
   input: {
     title?: string;
     body?: string;
+    /** All-or-nothing, like `images`: sending it replaces the whole set. */
+    translations?: ReleaseNoteTranslations;
     published?: boolean;
     images?: ReleaseNoteImageInput[];
   },
@@ -249,9 +327,12 @@ export const updateReleaseNote = async (
       data: {
         ...(input.title === undefined ? {} : { title: input.title }),
         ...(input.body === undefined ? {} : { body: input.body }),
+        ...(input.translations === undefined
+          ? {}
+          : { translations: parseReleaseNoteTranslations(input.translations) }),
         ...(publishedAt === undefined ? {} : { publishedAt }),
       },
-      select: { id: true, title: true, body: true, publishedAt: true, createdAt: true, updatedAt: true, ...withImages },
+      select: { id: true, title: true, body: true, translations: true, publishedAt: true, createdAt: true, updatedAt: true, ...withImages },
     });
   });
 
