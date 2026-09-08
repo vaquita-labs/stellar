@@ -25,6 +25,7 @@ import { AMOUNT_DECIMALS, FIAT_DECIMALS, floorAmount, formatTokenPrecise } from 
 import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
 import {
   type SavedBankAccount,
+  SavedBankApiError,
   useCreateSavedBankAccount,
   useDeleteSavedBankAccount,
   useSavedBankAccounts,
@@ -496,13 +497,21 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     setSaveBankError(null);
   };
 
+  /**
+   * Sólo la API explica un fallo de cuenta guardada en palabras que el usuario
+   * pueda leer. Lo demás —red caída, un fallo nuestro— llega en inglés y sin
+   * nada accionable, así que gana el texto traducido.
+   */
+  const bankErrorMessage = (e: unknown, fallback: string): string =>
+    e instanceof SavedBankApiError && e.message ? e.message : fallback;
+
   const handleDeleteBank = async (id: string) => {
     setPendingDeleteBankId(id);
     try {
       await deleteBank.mutateAsync(id);
       if (selectedBankId === id) setSelectedBankId(null);
     } catch (e) {
-      toast.danger((e as Error)?.message ?? t('wallet.fiat.ramp.savedBanks.deleteError', 'Could not delete the account'));
+      toast.danger(bankErrorMessage(e, t('wallet.fiat.ramp.savedBanks.deleteError', 'Could not delete the account')));
     } finally {
       setPendingDeleteBankId(null);
     }
@@ -525,7 +534,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       setSaveBankLabel('');
       toast.success(t('wallet.fiat.ramp.savedBanks.saved', 'Account saved'));
     } catch (e) {
-      setSaveBankError((e as Error)?.message ?? t('wallet.fiat.ramp.savedBanks.saveError', 'Could not save the account'));
+      setSaveBankError(bankErrorMessage(e, t('wallet.fiat.ramp.savedBanks.saveError', 'Could not save the account')));
     }
   };
 
