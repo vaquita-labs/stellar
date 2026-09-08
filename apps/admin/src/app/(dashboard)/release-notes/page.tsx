@@ -2,6 +2,7 @@
 
 import { addDangerToast, addSuccessToast } from '@/core-ui/components';
 import {
+  NOTE_BASE_LANGUAGE,
   NOTE_LANGUAGES,
   type NoteLanguage,
   type ReleaseNote,
@@ -31,21 +32,21 @@ const IMAGES_MAX = 8;
 type EditorImage = { key: string; src: string; id?: string; base64?: string };
 
 /**
- * The editor tabs. `'en'` writes the `title`/`body` columns; the others write
- * `translations`.
+ * The editor tabs. `NOTE_BASE_LANGUAGE` writes the `title`/`body` columns; the
+ * others write `translations`.
  *
- * English is not one language among three — it is the fallback, so it is the
- * only one that has to be filled. Leaving `es` blank publishes the note with
- * Spanish readers seeing the English text, which is the right outcome while a
+ * Spanish is not one language among three — it is the fallback, so it is the
+ * only one that has to be filled. Leaving `en` blank publishes the note with
+ * English readers seeing the Spanish text, which is the right outcome while a
  * translation is pending and the reason there is no "all languages required"
  * check anywhere in this flow.
  */
-const TABS = ['en', ...NOTE_LANGUAGES] as const;
+const TABS = [NOTE_BASE_LANGUAGE, ...NOTE_LANGUAGES] as const;
 type Tab = (typeof TABS)[number];
 
 const TAB_LABEL: Record<Tab, string> = {
-  en: 'English (required)',
-  es: 'Español',
+  es: 'Español (required)',
+  en: 'English',
   pt: 'Português',
 };
 
@@ -80,8 +81,8 @@ const formFromNote = (note: ReleaseNote): FormState => ({
 
 /**
  * Only complete pairs are sent. A title with no body is a half-finished draft,
- * not a translation, and shipping it would show a Spanish headline over an
- * English paragraph — worse than falling back cleanly to English.
+ * not a translation, and shipping it would show an English headline over a
+ * Spanish paragraph — worse than falling back cleanly to Spanish.
  */
 const buildTranslations = (form: FormState): ReleaseNoteTranslations => {
   const out: ReleaseNoteTranslations = {};
@@ -105,39 +106,39 @@ export default function Page() {
   // null = no form open; 'new' = create; number = editing that note id.
   const [editing, setEditing] = useState<number | 'new' | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
-  const [tab, setTab] = useState<Tab>('en');
+  const [tab, setTab] = useState<Tab>(NOTE_BASE_LANGUAGE);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  /** Writes the field for whichever tab is open — base columns for `en`. */
+  /** Writes the field for whichever tab is open — base columns for Spanish. */
   const setText = (field: 'title' | 'body', value: string) =>
     setForm((f) =>
-      tab === 'en'
+      tab === NOTE_BASE_LANGUAGE
         ? { ...f, [field]: value }
         : { ...f, translations: { ...f.translations, [tab]: { ...f.translations[tab], [field]: value } } },
     );
 
-  const text = tab === 'en' ? { title: form.title, body: form.body } : form.translations[tab];
+  const text = tab === NOTE_BASE_LANGUAGE ? { title: form.title, body: form.body } : form.translations[tab];
 
   const openCreate = () => {
     setForm(emptyForm());
-    setTab('en');
+    setTab(NOTE_BASE_LANGUAGE);
     setEditing('new');
   };
 
   const openEdit = (note: ReleaseNote) => {
     setForm(formFromNote(note));
-    setTab('en');
+    setTab(NOTE_BASE_LANGUAGE);
     setEditing(note.id);
   };
 
   const closeForm = () => {
     setEditing(null);
     setForm(emptyForm());
-    setTab('en');
+    setTab(NOTE_BASE_LANGUAGE);
   };
 
   const pickImages = async (files: FileList | null) => {
@@ -198,10 +199,10 @@ export default function Page() {
     const title = form.title.trim();
     const body = form.body.trim();
     if (!title || !body) {
-      // Only English is checked. It is the fallback, so a note without it has
+      // Only Spanish is checked. It is the fallback, so a note without it has
       // no text at all for a reader whose language is not translated.
-      addDangerToast('Missing fields', 'A release note needs an English title and body — they are the fallback.');
-      setTab('en');
+      addDangerToast('Missing fields', 'A release note needs a Spanish title and body — they are the fallback.');
+      setTab(NOTE_BASE_LANGUAGE);
       return;
     }
     const translations = buildTranslations(form);
@@ -312,7 +313,7 @@ export default function Page() {
               <div className="flex flex-wrap gap-1" role="tablist" aria-label="Language">
                 {TABS.map((language) => {
                   const filled =
-                    language === 'en'
+                    language === NOTE_BASE_LANGUAGE
                       ? form.title.trim() !== '' && form.body.trim() !== ''
                       : form.translations[language].title.trim() !== '' &&
                         form.translations[language].body.trim() !== '';
@@ -329,7 +330,7 @@ export default function Page() {
                     >
                       {TAB_LABEL[language]}
                       {/* A dot, not a warning: an empty tab is a normal state,
-                          it just falls back to English. */}
+                          it just falls back to Spanish. */}
                       {filled ? ' ●' : ' ○'}
                     </button>
                   );
@@ -354,9 +355,9 @@ export default function Page() {
               />
 
               <p className="text-xs text-default-400">
-                {tab === 'en'
-                  ? 'Shown to English readers, and to anyone whose language has no translation below.'
-                  : 'Optional. Leave both fields empty and these readers see the English note instead. Half a translation is not saved.'}
+                {tab === NOTE_BASE_LANGUAGE
+                  ? 'Shown to Spanish readers, and to anyone whose language has no translation below.'
+                  : 'Optional. Leave both fields empty and these readers see the Spanish note instead. Half a translation is not saved.'}
               </p>
 
               {/* The images are shared by every language: they are screenshots

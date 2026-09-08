@@ -1,9 +1,12 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useQuery } from '@tanstack/react-query';
 
-/** The languages a note can be translated into. `en` lives in `title`/`body`. */
-export const NOTE_LANGUAGES = ['es', 'pt'] as const;
+/** The languages a note can be translated into. `es` lives in `title`/`body`. */
+export const NOTE_LANGUAGES = ['en', 'pt'] as const;
 export type NoteLanguage = (typeof NOTE_LANGUAGES)[number];
+
+/** The language the base columns hold — the one a note cannot be saved without. */
+export const NOTE_BASE_LANGUAGE = 'es' as const;
 
 export type ReleaseNoteTranslation = { title: string; body: string };
 export type ReleaseNoteTranslations = Partial<Record<NoteLanguage, ReleaseNoteTranslation>>;
@@ -14,7 +17,7 @@ export type ReleaseNoteTranslations = Partial<Record<NoteLanguage, ReleaseNoteTr
  */
 export interface ReleaseNote {
   id: number;
-  /** English, and the fallback shown to any language without a translation. */
+  /** Spanish, and the fallback shown to any language without a translation. */
   title: string;
   body: string;
   translations: ReleaseNoteTranslations;

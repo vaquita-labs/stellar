@@ -23,14 +23,17 @@ export const RELEASE_NOTE_BODY_MAX = 4000;
 /**
  * The languages the app ships (`apps/web/src/core-ui/i18n`).
  *
- * `en` is not in the overrides list on purpose: the `title` / `body` columns
- * ARE the English note, and they are also the fallback for every other
+ * `es` is not in the overrides list on purpose: the `title` / `body` columns
+ * ARE the Spanish note, and they are also the fallback for every other
  * language. That is what lets a note be published with one language written —
- * a Spanish speaker sees English rather than an empty popup, which is the
+ * an English speaker sees Spanish rather than an empty popup, which is the
  * behaviour we want while a translation is still pending.
+ *
+ * Spanish is the base because that is the language these notes get written in;
+ * the app's own `DEFAULT_LANGUAGE` is a separate decision and is still `en`.
  */
-export const RELEASE_NOTE_DEFAULT_LANGUAGE = 'en';
-export const RELEASE_NOTE_TRANSLATED_LANGUAGES = ['es', 'pt'] as const;
+export const RELEASE_NOTE_DEFAULT_LANGUAGE = 'es';
+export const RELEASE_NOTE_TRANSLATED_LANGUAGES = ['en', 'pt'] as const;
 export type ReleaseNoteLanguage = (typeof RELEASE_NOTE_TRANSLATED_LANGUAGES)[number];
 
 export type ReleaseNoteTranslation = { title: string; body: string };
@@ -57,8 +60,8 @@ export const parseReleaseNoteTranslations = (value: unknown): ReleaseNoteTransla
 
     const { title, body } = entry as { title?: unknown; body?: unknown };
     if (typeof title !== 'string' || typeof body !== 'string') continue;
-    // Both halves or neither. A translated title over an English body reads as
-    // a rendering bug; falling back to a consistent English note does not.
+    // Both halves or neither. A translated title over a Spanish body reads as
+    // a rendering bug; falling back to a consistent Spanish note does not.
     if (!title.trim() || !body.trim()) continue;
 
     out[language] = { title: title.trim(), body: body.trim() };
@@ -69,9 +72,9 @@ export const parseReleaseNoteTranslations = (value: unknown): ReleaseNoteTransla
 /**
  * The note's text in the reader's language, falling back to the base columns.
  *
- * `language` is whatever the client has — `'es-419'`, `'pt-BR'`, `undefined` —
+ * `language` is whatever the client has — `'en-GB'`, `'pt-BR'`, `undefined` —
  * so only the primary subtag is matched. A regional variant we do not carry
- * still gets its language rather than English.
+ * still gets its language rather than the Spanish base.
  */
 export const resolveReleaseNoteText = (
   note: { title: string; body: string; translations?: ReleaseNoteTranslations },
@@ -95,7 +98,7 @@ export const isReleaseNoteImageType = (value: unknown): value is ReleaseNoteImag
 /** What the app shows a user. Ids only for the images — the bytes are a separate GET. */
 export type ReleaseNoteDTO = {
   id: number;
-  /** The base/English text, and the fallback for any untranslated language. */
+  /** The base/Spanish text, and the fallback for any untranslated language. */
   title: string;
   body: string;
   /**
