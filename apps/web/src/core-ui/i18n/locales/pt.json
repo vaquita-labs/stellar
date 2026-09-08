@@ -1913,8 +1913,6 @@
         "settledNoAmount": "Os USDC foram creditados na sua carteira.",
         "settledPaid": "Você pagou {{amount}} {{currency}}.",
         "settledTitle": "Seus USDC já estão na sua carteira",
-        "stepCreating": "Pedindo o código de pagamento ao provedor…",
-        "stepTrustline": "Preparando sua carteira para receber USDC…",
         "title": "Comprar USDC na {{country}} ({{currency}})",
         "unrecorded": "Mantenha esta tela aberta: não conseguimos salvar sua compra e talvez você não consiga voltar a ela.",
         "working": "Preparando sua compra…",

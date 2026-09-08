@@ -1885,8 +1885,6 @@
         "settledNoAmount": "Los USDC se acreditaron en tu wallet.",
         "settledPaid": "Pagaste {{amount}} {{currency}}.",
         "settledTitle": "Tus USDC ya están en tu wallet",
-        "stepCreating": "Pidiéndole el código de pago al proveedor…",
-        "stepTrustline": "Preparando tu billetera para recibir USDC…",
         "title": "Comprar USDC en {{country}} ({{currency}})",
         "unrecorded": "No cierres esta pantalla: no pudimos guardar tu compra y puede que no puedas volver a ella.",
         "working": "Preparando tu compra…",

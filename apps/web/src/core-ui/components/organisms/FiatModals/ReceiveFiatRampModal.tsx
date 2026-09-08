@@ -92,7 +92,6 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
 
   const [phase, setPhase] = useState<Phase>('amount');
   const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState<'trustline' | 'creating' | null>(null);
   const [instructions, setInstructions] = useState<PaymentInstructions | null>(null);
   const [unrecorded, setUnrecorded] = useState(false);
   const [resuming, setResuming] = useState(false);
@@ -518,11 +517,9 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     setFailure(null);
     setUnrecorded(false);
     try {
-      setStep('trustline');
       await ensureUsdcTrustline(walletAddress);
       await refreshAssets();
 
-      setStep('creating');
       const created = await createOnramp({ corridor, quote, amountFiat: amountNum, walletAddress, values });
 
       const need = kycNeededBy(created);
@@ -567,7 +564,6 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       if (isKycRequiredError(e)) startVerification(null);
       else setFailure(messageOf(e, buyFailed()));
     } finally {
-      setStep(null);
       setBusy(false);
     }
   };
@@ -852,15 +848,6 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
             'wallet.fiat.onramp.unrecorded',
             'Keep this screen open: we could not save your purchase, so you may not be able to return to it.',
           )}
-        </p>
-      )}
-
-      {step && (
-        <p className="flex items-center gap-2 text-xs text-gray-500">
-          <Spinner size="sm" color="current" />{' '}
-          {step === 'trustline'
-            ? t('wallet.fiat.onramp.stepTrustline', 'Preparing your wallet to receive USDC…')
-            : t('wallet.fiat.onramp.stepCreating', 'Asking the provider for your payment code…')}
         </p>
       )}
 
