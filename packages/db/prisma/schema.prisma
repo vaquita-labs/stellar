@@ -890,7 +890,7 @@ model WalletBalance {
   observedAt    DateTime? @map("observed_at") @db.Timestamptz(6)
   lastError     String?   @map("last_error")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@unique([walletAddress, tokenId], map: "wallet_balances_wallet_token_unique")
   @@index([tokenId], map: "idx_wallet_balances_token_id")
