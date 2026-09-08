@@ -76,19 +76,29 @@ export async function primePage(page: Page, signer: Signer, { homeTour = false }
  *
  * Rewriting the response beats dismissing the tour by hand: the tour starts
  * once its anchors are up, which is a race no fixture can wait on.
+ *
+ * The whole handler is guarded because the app keeps polling the profile: a spec
+ * that ends while one of those reads is in flight leaves `route.fetch()` with no
+ * page to answer to, and Playwright reports that as a failure of the spec that
+ * had already passed. There is nothing to salvage at that point — the route is
+ * abandoned and the run moves on.
  */
 async function skipHomeTour(page: Page): Promise<void> {
   await page.route('**/api/v1/profile/wallet/*/data', async (route) => {
-    const response = await route.fetch();
-    let body: unknown;
     try {
-      body = await response.json();
+      const response = await route.fetch();
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        return await route.fulfill({ response }); // Not JSON (an error page): pass it through untouched.
+      }
+      const data = (body as { data?: Record<string, unknown> } | null)?.data;
+      if (data) data.homeTourCompleted = true;
+      return await route.fulfill({ response, json: body });
     } catch {
-      return route.fulfill({ response }); // Not JSON (an error page): pass it through untouched.
+      return; // The page is gone (the spec ended): nobody is waiting for this.
     }
-    const data = (body as { data?: Record<string, unknown> } | null)?.data;
-    if (data) data.homeTourCompleted = true;
-    return route.fulfill({ response, json: body });
   });
 }
 

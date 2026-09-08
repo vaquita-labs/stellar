@@ -103,7 +103,12 @@ test.describe('deposit', () => {
 
     // Cerrar el selector vuelve al home, no al paso del método: el método se
     // cerró al abrirlo (`onOnramp` en `DepositPanel`).
-    await dialog(page).getByRole('button', { name: 'Close' }).click();
+    //
+    // Se apunta al selector POR NOMBRE y no con `dialog(page)`: los dos cambios
+    // de estado de `onOnramp` van en el mismo tick, así que el selector ya está
+    // arriba mientras el método todavía anima su salida, y durante esa ventana
+    // hay dos `role="dialog"` con un botón "Close" cada uno.
+    await page.getByRole('dialog', { name: 'Select your country' }).getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('heading', { name: 'Select your country' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Deposit' })).toBeVisible();
   });
