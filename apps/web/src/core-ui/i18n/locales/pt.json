@@ -1844,6 +1844,7 @@
         "withdraw": "Saque"
       },
       "onramp": {
+        "calculating": "Calculando…",
         "close": "Fechar",
         "continue": "Continuar",
         "copied": "Copiado",
@@ -1866,6 +1867,10 @@
           "walletUnsupported": "Este tipo de carteira não pode ser usado nesta compra."
         },
         "etaLabel": "Tempo estimado",
+        "feeHeavy": "Em valores maiores pesa muito menos.",
+        "feeIncluded": "Inclui {{amount}} de taxa: {{percent}}% da sua compra.",
+        "feeLabel": "Inclui taxa",
+        "feeValue": "{{amount}} · {{percent}}%",
         "expiredBody": "Nada foi cobrado. Comece de novo para obter um código novo com uma cotação atualizada.",
         "expiredTitle": "Este código expirou",
         "expiresIn": "Expira em {{time}}",
@@ -1881,7 +1886,6 @@
         "kycWaiting": "Aguardando a aprovação…",
         "limitMax": "O máximo para esta rota é {{amount}} {{currency}}.",
         "limitMin": "O mínimo para esta rota é {{amount}} {{currency}}.",
-        "limits": "Entre {{min}} e {{max}} {{currency}}.",
         "longPress": "Pressione e segure o código para salvá-lo nas suas fotos.",
         "minAmount": "A compra mínima é de {{amount}} {{currency}}.",
         "outUsdc": "≈ {{amount}} USDC",
@@ -1891,8 +1895,8 @@
         "processingTitle": "Pagamento recebido",
         "qrAlt": "Código QR de pagamento",
         "qrUnavailable": "Não conseguimos carregar o código de pagamento. Comece de novo para obter um novo.",
-        "quoting": "Procurando uma rota…",
         "rateLabel": "Cotação",
+        "receiveEstimate": "Você recebe ≈ {{amount}} USDC",
         "restart": "Começar uma nova compra",
         "cancel": "Cancelar e começar de novo",
         "cancelTitle": "Cancelar este código de pagamento?",

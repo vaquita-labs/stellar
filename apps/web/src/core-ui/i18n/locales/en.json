@@ -1816,6 +1816,7 @@
         "withdraw": "Withdraw"
       },
       "onramp": {
+        "calculating": "Calculating…",
         "close": "Close",
         "continue": "Continue",
         "copied": "Copied",
@@ -1838,6 +1839,10 @@
           "walletUnsupported": "This wallet type cannot be used for this purchase."
         },
         "etaLabel": "Estimated time",
+        "feeHeavy": "It weighs far less on larger amounts.",
+        "feeIncluded": "Includes {{amount}} in fees: {{percent}}% of your purchase.",
+        "feeLabel": "Includes fee",
+        "feeValue": "{{amount}} · {{percent}}%",
         "expiredBody": "Nothing was charged. Start again to get a new code with a fresh rate.",
         "expiredTitle": "This code expired",
         "expiresIn": "Expires in {{time}}",
@@ -1853,7 +1858,6 @@
         "kycWaiting": "Waiting for approval…",
         "limitMax": "The maximum for this route is {{amount}} {{currency}}.",
         "limitMin": "The minimum for this route is {{amount}} {{currency}}.",
-        "limits": "Between {{min}} and {{max}} {{currency}}.",
         "longPress": "Press and hold the code to save it to your photos.",
         "minAmount": "The minimum purchase is {{amount}} {{currency}}.",
         "outUsdc": "≈ {{amount}} USDC",
@@ -1863,8 +1867,8 @@
         "processingTitle": "Payment received",
         "qrAlt": "Payment QR code",
         "qrUnavailable": "We could not load the payment code. Start again to get a new one.",
-        "quoting": "Finding a route…",
         "rateLabel": "Rate",
+        "receiveEstimate": "You get ≈ {{amount}} USDC",
         "restart": "Start a new purchase",
         "cancel": "Cancel and start over",
         "cancelTitle": "Cancel this payment code?",
