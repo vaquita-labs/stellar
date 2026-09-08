@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertCircle, FiChevronRight, FiHeadphones } from 'react-icons/fi';
+import { FiAlertCircle, FiBell, FiChevronRight, FiHeadphones } from 'react-icons/fi';
 import {
   usePassiveUsdc,
   useDepositsComplete,
@@ -16,6 +16,7 @@ import {
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
+  useUnreadNotificationsCount,
 } from '../../hooks';
 import { GOLD_COIN, useElementPositionsStore, useHideBalance, usePendingCreditStore } from '../../stores';
 import { PageHeader } from '../molecules';
@@ -61,6 +62,10 @@ export const HeaderStats = () => {
   const coinsModalMounted = useModalPresence(showCoinsModal);
   const experienceModalMounted = useModalPresence(showExperienceModal);
   const { walletAddress, token } = useConfigStore();
+  // El contador del badge de la campana. La query ya la refresca
+  // <ListenNotificationsChanges> con el evento de Ably, así que el número se
+  // actualiza solo.
+  const unreadNotifications = useUnreadNotificationsCount();
   const hideBalance = useHideBalance();
   // Después de comprar con moneda local la plata tarda en acreditarse, y hasta
   // que entra, el saldo de acá muestra un número que ya sabemos viejo. Mientras
@@ -320,13 +325,32 @@ export const HeaderStats = () => {
                 archivos. */}
           </div>
 
-          <Link
-            href="/concierge"
-            aria-label={t('concierge.buttonAria', 'Help Center')}
-            className="relative shrink-0 self-start w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
-          >
-            <FiHeadphones className="w-4 h-4 text-black" />
-          </Link>
+          {/* Campana + soporte: los dos únicos accesos del encabezado, mismo
+              botón redondo. La campana es el ÚNICO punto de entrada a
+              /notifications — sin ella el feed existe pero no se puede
+              alcanzar desde la app. */}
+          <div className="flex shrink-0 self-start items-center gap-2">
+            <Link
+              href="/notifications"
+              aria-label={t('notificationsCenter.bellAria', 'Notifications')}
+              className="relative shrink-0 w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+            >
+              <FiBell className="w-4 h-4 text-black" />
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 border border-white text-[10px] font-bold text-white flex items-center justify-center tabular-nums">
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </span>
+              )}
+            </Link>
+
+            <Link
+              href="/concierge"
+              aria-label={t('concierge.buttonAria', 'Help Center')}
+              className="relative shrink-0 w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+            >
+              <FiHeadphones className="w-4 h-4 text-black" />
+            </Link>
+          </div>
         </div>
       </div>
 

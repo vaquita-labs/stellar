@@ -1,7 +1,7 @@
 'use client';
 
 import { toast } from '@heroui/react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiBell, FiLoader, FiMail, FiTrendingUp, FiUsers, FiZap } from 'react-icons/fi';
 import { useProfileData, usePushNotifications, useRestProfile } from '../../../hooks';
@@ -32,6 +32,11 @@ const SECTIONS: {
     ],
   },
 ];
+
+// Bandera "ya estamos en el cliente" sin setState en un efecto: el snapshot del
+// servidor es false y el del cliente true, que es exactamente lo que hace falta
+// para no pintar estado del navegador durante la hidratación.
+const subscribeNoop = () => () => {};
 
 function Toggle({
   checked,
@@ -70,7 +75,13 @@ export function NotificationsPage({ onBack }: { onBack?: () => void } = {}) {
 
   const [values, setValues] = useState(DEFAULT_NOTIFICATION_PREFERENCES);
   const [saving, setSaving] = useState<NotificationPreferenceKey | null>(null);
-  const { supported: pushSupported, enablePush, disablePush } = usePushNotifications();
+  const { supported: pushSupported, permission, subscribed, enablePush, disablePush } = usePushNotifications();
+
+  // `pushSupported` / `permission` / `subscribed` sólo existen en el navegador:
+  // en el servidor dan siempre "no soportado". Pintarlos directo haría que el
+  // primer render del cliente no coincida con el HTML, así que hasta montar se
+  // muestra la fila como estaba.
+  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
   // Hydrate from the saved profile preferences once (and after each refetch).
   useEffect(() => {
@@ -85,11 +96,46 @@ export function NotificationsPage({ onBack }: { onBack?: () => void } = {}) {
     'Add your email in Edit profile to enable this.'
   );
 
+  const pushDeniedMessage = t(
+    'profilePages.notifications.pushDenied',
+    'Notifications are blocked for this app in your browser settings.'
+  );
+  const pushUnsupportedMessage = t(
+    'profilePages.notifications.pushUnsupported',
+    'Install the app on your home screen to receive notifications.'
+  );
+
+  // Por qué la fila está trabada, o null si se puede tocar. El push depende del
+  // dispositivo, no de la preferencia guardada: en una pestaña de Safari en iOS
+  // el web push directamente no existe, y con el permiso denegado el prompt ya
+  // no vuelve a aparecer. En los dos casos el toggle no puede hacer nada, así
+  // que se traba y se explica por qué en vez de quedar prendido mintiendo.
+  const lockMessageFor = (key: NotificationPreferenceKey): string | null => {
+    if (key === 'email' && emailLocked) return emailLockedMessage;
+    if (key === 'push' && mounted) {
+      if (!pushSupported) return pushUnsupportedMessage;
+      if (permission === 'denied') return pushDeniedMessage;
+    }
+    return null;
+  };
+
+  // El push está encendido sólo si ESTE dispositivo tiene una suscripción viva
+  // y además la preferencia del perfil lo permite. `subscribed === null` es
+  // "todavía no lo leímos": mientras tanto se muestra la preferencia guardada.
+  const checkedFor = (key: NotificationPreferenceKey, locked: boolean): boolean => {
+    if (key !== 'push') return values[key];
+    if (locked) return false;
+    if (!mounted || subscribed === null) return values.push;
+    return subscribed && values.push;
+  };
+
   const handleToggle = async (key: NotificationPreferenceKey, value: boolean) => {
     if (!walletAddress || isLoading || saving) return;
-    if (key === 'email' && emailLocked) {
-      // The toggle is locked; surface the hover hint as a toast for touch devices.
-      toast.warning(emailLockedMessage, { timeout: 3000 });
+    const lockMessage = lockMessageFor(key);
+    if (lockMessage) {
+      // The toggle is locked; the reason is already on the row, but the tap
+      // still deserves an answer instead of nothing happening.
+      toast.warning(lockMessage, { timeout: 3000 });
       return;
     }
     const prev = values;
@@ -103,13 +149,7 @@ export function NotificationsPage({ onBack }: { onBack?: () => void } = {}) {
         const result = await enablePush();
         if (result === 'denied') {
           setValues(prev);
-          toast.warning(
-            t(
-              'profilePages.notifications.pushDenied',
-              'Notifications are blocked for this app in your browser settings.'
-            ),
-            { timeout: 4000 }
-          );
+          toast.warning(pushDeniedMessage, { timeout: 4000 });
           return;
         }
       }
@@ -148,7 +188,8 @@ export function NotificationsPage({ onBack }: { onBack?: () => void } = {}) {
             </h2>
             <ul className="rounded-lg border border-black border-b-2 bg-white overflow-hidden divide-y divide-gray-200">
               {section.items.map(({ key, icon, title, description }) => {
-                const locked = key === 'email' && emailLocked;
+                const lockMessage = lockMessageFor(key);
+                const locked = lockMessage !== null;
                 return (
                   <li key={key} className="flex items-center justify-between gap-3 px-4 py-3.5">
                     <div className="flex items-center gap-3 min-w-0">
@@ -159,26 +200,20 @@ export function NotificationsPage({ onBack }: { onBack?: () => void } = {}) {
                         <p className="text-sm font-semibold text-black truncate">
                           {t(`profilePages.notifications.items.${key}.title`, title)}
                         </p>
-                        <p className="text-xs text-gray-600 truncate">
-                          {t(`profilePages.notifications.items.${key}.description`, description)}
+                        {/* Trabada: el motivo reemplaza a la descripción, a la
+                            vista y sin depender del hover (en móvil no existe). */}
+                        <p className={`text-xs ${locked ? 'text-amber-700' : 'text-gray-600 truncate'}`}>
+                          {lockMessage ?? t(`profilePages.notifications.items.${key}.description`, description)}
                         </p>
                       </div>
                     </div>
-                    <div className="relative group flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
                       {saving === key && <FiLoader className="animate-spin text-gray-400" />}
                       <Toggle
-                        checked={values[key]}
+                        checked={checkedFor(key, locked)}
                         disabled={locked || !walletAddress || isLoading || saving !== null}
                         onChange={(v) => handleToggle(key, v)}
                       />
-                      {locked && (
-                        <span
-                          role="tooltip"
-                          className="pointer-events-none absolute right-0 bottom-full mb-2 w-max max-w-[220px] rounded-md border border-black border-b-2 bg-white px-3 py-2 text-xs font-semibold text-black shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        >
-                          {emailLockedMessage}
-                        </span>
-                      )}
                     </div>
                   </li>
                 );

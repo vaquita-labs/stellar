@@ -3,7 +3,7 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useConfigStore } from '@/core-ui/stores';
 import { authFetch } from '@/networks/stellar/walletSession';
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 // Suscripción web-push del dispositivo. El toggle "Push notifications" de
 // /profile/notifications es el dueño del flujo: al encenderlo se pide permiso
@@ -37,6 +37,41 @@ const subscribePerm = (cb: () => void) => {
 const getPermSnapshot = () => permissionState;
 const getPermServerSnapshot = (): NotificationPermission | 'unsupported' => 'unsupported';
 
+// Si ESTE dispositivo tiene una suscripción viva. El permiso no alcanza para
+// saberlo: se puede tener `granted` y ninguna suscripción registrada (es
+// exactamente el caso que dejaba el toggle de ajustes prendido sin que
+// llegara nada). `null` = todavía no lo miramos — la lectura es asíncrona y
+// en el servidor no existe.
+let subscribedState: boolean | null = null;
+const subSubscribers = new Set<() => void>();
+const setSubscribed = (next: boolean | null) => {
+  if (next !== subscribedState) {
+    subscribedState = next;
+    subSubscribers.forEach((cb) => cb());
+  }
+};
+const subscribeSub = (cb: () => void) => {
+  subSubscribers.add(cb);
+  return () => subSubscribers.delete(cb);
+};
+const getSubSnapshot = () => subscribedState;
+const getSubServerSnapshot = (): boolean | null => null;
+
+/** Relee la suscripción del navegador. Silenciosa: nunca pide permiso. */
+const refreshSubscription = async (): Promise<void> => {
+  if (!isSupported()) {
+    setSubscribed(false);
+    return;
+  }
+  try {
+    const registration = await navigator.serviceWorker.getRegistration(SW_PATH);
+    const subscription = await registration?.pushManager.getSubscription();
+    setSubscribed(!!subscription);
+  } catch {
+    setSubscribed(false);
+  }
+};
+
 const isSupported = () =>
   typeof window !== 'undefined' &&
   'serviceWorker' in navigator &&
@@ -57,6 +92,13 @@ export type EnablePushResult = 'subscribed' | 'denied' | 'unsupported' | 'error'
 export function usePushNotifications() {
   const walletAddress = useConfigStore((s) => s.walletAddress);
   const permission = useSyncExternalStore(subscribePerm, getPermSnapshot, getPermServerSnapshot);
+  const subscribed = useSyncExternalStore(subscribeSub, getSubSnapshot, getSubServerSnapshot);
+
+  // Primera lectura en el cliente. Queda `null` hasta que resuelve, que es lo
+  // que la UI usa para no pintar un estado equivocado antes de saberlo.
+  useEffect(() => {
+    if (subscribedState === null) void refreshSubscription();
+  }, []);
 
   /**
    * Pide permiso (si hace falta) y registra la suscripción en el navegador y
@@ -68,7 +110,10 @@ export function usePushNotifications() {
     try {
       const result = await Notification.requestPermission();
       refreshPermission();
-      if (result !== 'granted') return 'denied';
+      if (result !== 'granted') {
+        setSubscribed(false);
+        return 'denied';
+      }
 
       const registration = await navigator.serviceWorker.register(SW_PATH);
       await navigator.serviceWorker.ready;
@@ -91,7 +136,9 @@ export function usePushNotifications() {
         walletAddress
       );
       const data = await response.json();
-      return data?.status === 'success' ? 'subscribed' : 'error';
+      const ok = data?.status === 'success';
+      setSubscribed(ok);
+      return ok ? 'subscribed' : 'error';
     } catch (error) {
       console.warn('[push] enable failed', error);
       return 'error';
@@ -104,9 +151,13 @@ export function usePushNotifications() {
     try {
       const registration = await navigator.serviceWorker.getRegistration(SW_PATH);
       const subscription = await registration?.pushManager.getSubscription();
-      if (!subscription) return;
+      if (!subscription) {
+        setSubscribed(false);
+        return;
+      }
       const endpoint = subscription.endpoint;
       await subscription.unsubscribe();
+      setSubscribed(false);
       await authFetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/notifications/wallet/${walletAddress}/push-unsubscribe`,
         {
@@ -126,6 +177,12 @@ export function usePushNotifications() {
     supported: isSupported(),
     /** Estado actual del permiso de notificaciones ('unsupported' si no aplica). */
     permission,
+    /**
+     * Si este dispositivo tiene una suscripción viva. `null` mientras se lee
+     * (y siempre en el servidor): quien pinte a partir de esto debe tratar
+     * `null` como "todavía no sé".
+     */
+    subscribed,
     enablePush,
     disablePush,
   };
