@@ -12,9 +12,17 @@ deliverable names:
 | `withdraw.spec.ts`    | home → Withdraw → Wallet → amount → confirm → "Withdrawal sent!"   | yes       |
 | `leaderboard.spec.ts` | weekly league board, own "You" row, open a saver's world           | no        |
 | `badges.spec.ts`      | follow → "Crew Mate" unlocks → Claim award → `mint_badge` → reward | yes       |
+| `home-tour.spec.ts`   | first-time coach marks on the home: walk, skip, and stay gone      | no        |
 
 The suite runs on one worker, serially, in file order: `deposit` leaves the
 savings position `withdraw` drains, and every spec moves the same funded wallet.
+
+`primePage` answers the profile read with `homeTourCompleted: true`, so the
+home tour never starts. Its coach marks cover the button they explain with a
+pane that swallows clicks, which would time out every spec that taps Deposit,
+Withdraw or the side rail. `home-tour.spec.ts` passes `{ homeTour: true }` to
+get the tour back, on a fresh wallet — the flag is per-user in the profile row,
+so a wallet only ever meets the tour once.
 
 Every spec runs on an **external** wallet — `local-key-adapter.ts` declares
 `custody = 'external'` — so anything that exists only under social login (the

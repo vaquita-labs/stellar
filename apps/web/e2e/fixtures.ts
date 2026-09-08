@@ -47,8 +47,12 @@ export function primaryStellarSigner(): Signer {
   return { publicKey: Keypair.fromSecret(secret).publicKey(), secret };
 }
 
-/** Prime a page so the app boots signed in as `signer` and in English. */
-export async function primePage(page: Page, signer: Signer): Promise<void> {
+/**
+ * Prime a page so the app boots signed in as `signer`, in English and without
+ * the home tour. Pass `homeTour: true` to let the tour run; `home-tour.spec.ts`
+ * is the only caller that wants it.
+ */
+export async function primePage(page: Page, signer: Signer, { homeTour = false }: { homeTour?: boolean } = {}): Promise<void> {
   await page.addInitScript((secret: string) => {
     window.__E2E_STELLAR_SECRET__ = secret;
     try {
@@ -58,6 +62,34 @@ export async function primePage(page: Page, signer: Signer): Promise<void> {
       // A blocked storage only costs us the locale default; the signer still works.
     }
   }, signer.secret);
+  if (!homeTour) await skipHomeTour(page);
+}
+
+/**
+ * Answer the profile read with `homeTourCompleted: true`, so the home tour
+ * never starts.
+ *
+ * `HomeTour` covers the element it explains with a `pointer-events-auto` pane,
+ * so while it runs a click on Deposit, Withdraw or the side rail lands on the
+ * overlay and times out. The flag lives in the profile row, not in storage, and
+ * no spec finishes the tour, so every wallet would meet it on every run.
+ *
+ * Rewriting the response beats dismissing the tour by hand: the tour starts
+ * once its anchors are up, which is a race no fixture can wait on.
+ */
+async function skipHomeTour(page: Page): Promise<void> {
+  await page.route('**/api/v1/profile/wallet/*/data', async (route) => {
+    const response = await route.fetch();
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      return route.fulfill({ response }); // Not JSON (an error page): pass it through untouched.
+    }
+    const data = (body as { data?: Record<string, unknown> } | null)?.data;
+    if (data) data.homeTourCompleted = true;
+    return route.fulfill({ response, json: body });
+  });
 }
 
 /**
