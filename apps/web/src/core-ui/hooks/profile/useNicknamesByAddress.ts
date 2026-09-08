@@ -46,16 +46,24 @@ export const useNicknamesByAddress = (addresses: string[]) => {
   });
 
   return useMemo(() => {
-    // Only resolved addresses get an entry. A key that is absent means "we do
-    // not know yet" (loading or failed), which the caller must not read as
-    // "not a user" — that would hide a destination behind a flaky request.
+    // Only settled addresses get an entry. A key that is absent means the
+    // lookup has not answered yet, which the caller must not read as "not a
+    // user" — that would move a destination between lists while it loads.
+    //
+    // A lookup that FAILED settles as `null`, the same as an address with no
+    // profile. The name stays unknown either way, but an address in no list at
+    // all disappears from the screen: the withdrawal screen would tell someone
+    // with saved destinations that they have none, and re-adding one hits the
+    // unique on (profile, address, network) with a 409. The stored label is a
+    // good enough name to fall back on until the lookup answers.
     const byAddress = new Map<string, string | null>();
     unique.forEach((address, i) => {
       const result = results[i];
       if (result?.isSuccess) byAddress.set(address, result.data ?? null);
+      else if (result?.isError) byAddress.set(address, null);
     });
     return {
-      /** address → nickname, `null` when it is not a user, absent while unknown. */
+      /** address → nickname; `null` when it is not a user or the lookup failed, absent while it loads. */
       nicknames: byAddress,
       isLoading: results.some((r) => r.isLoading),
     };
