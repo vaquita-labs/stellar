@@ -37,7 +37,7 @@ const imageSchema = z.object({
 
 // A translation is both halves or it is not sent. The service drops a
 // half-written pair anyway; rejecting it here is what tells the admin, instead
-// of silently publishing the English text to a Spanish reader.
+// of silently publishing the Spanish text to an English reader.
 const translationSchema = z.object({
   title: z.string().trim().min(1).max(RELEASE_NOTE_TITLE_MAX),
   body: z.string().trim().min(1).max(RELEASE_NOTE_BODY_MAX),
@@ -50,7 +50,7 @@ const noteFields = {
    * Per-language overrides; `title`/`body` above stay the fallback, so a note
    * may ship with only some languages written. `partialRecord`, not `record`:
    * a Zod 4 `record` keyed by an enum is exhaustive, and it rejected every
-   * note that left one of `es`/`pt` blank with a message naming the whole
+   * note that left one of `en`/`pt` blank with a message naming the whole
    * `translations` field rather than the missing language.
    */
   translations: z.partialRecord(z.enum(RELEASE_NOTE_TRANSLATED_LANGUAGES), translationSchema).optional(),

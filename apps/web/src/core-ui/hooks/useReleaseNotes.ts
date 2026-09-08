@@ -13,15 +13,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
  * "cuál toca" — `note === null` ya significa que no hay nada que mostrar.
  */
 
-/** Idiomas que una nota puede traer traducidos. El inglés vive en `title`/`body`. */
-const TRANSLATED_LANGUAGES = ['es', 'pt'] as const;
+/** Idiomas que una nota puede traer traducidos. El español vive en `title`/`body`. */
+const TRANSLATED_LANGUAGES = ['en', 'pt'] as const;
 type TranslatedLanguage = (typeof TRANSLATED_LANGUAGES)[number];
 
 export type ReleaseNoteTranslations = Partial<Record<TranslatedLanguage, { title: string; body: string }>>;
 
 export interface ReleaseNote {
   id: number;
-  /** Inglés: es también el texto de respaldo de cualquier idioma sin traducir. */
+  /** Español: es también el texto de respaldo de cualquier idioma sin traducir. */
   title: string;
   body: string;
   /** Puede venir vacío o faltar entero (notas anteriores a la columna). */
@@ -31,11 +31,11 @@ export interface ReleaseNote {
 }
 
 /**
- * El texto en el idioma del lector, con respaldo al inglés.
+ * El texto en el idioma del lector, con respaldo al español.
  *
  * El servidor manda TODAS las traducciones y la elección se hace acá: cambiar
- * de idioma no dispara un refetch, y una nota sin traducir muestra el inglés en
- * vez de un popup vacío. `i18n.language` puede venir como `es-419` o `pt-BR`,
+ * de idioma no dispara un refetch, y una nota sin traducir muestra el español
+ * en vez de un popup vacío. `i18n.language` puede venir como `en-GB` o `pt-BR`,
  * así que se compara sólo la primera parte.
  */
 export const resolveReleaseNoteText = (
