@@ -41,6 +41,20 @@ export interface OnrampCorridor {
    * fits and leave the user guessing which amount does.
    */
   minFiat: number;
+  /**
+   * Ceiling for a purchase, in local currency.
+   *
+   * VAQUITA'S, NOT THE PROVIDER'S. Pollar publishes its own `maxAmount` inside
+   * every quote and it is far above this one; the route would happily take more.
+   * This is a self-imposed cap while the corridor is new: it bounds how much a
+   * single purchase can put at stake before anyone has watched enough of them
+   * settle, and it is meant to be raised or dropped, not defended.
+   *
+   * Because it is ours it lives here and not in the quote. The screen states it
+   * as flatly as it states the floor: a ceiling is a ceiling, and whose it is
+   * changes nothing about what the user has to do.
+   */
+  maxFiat: number;
 }
 
 /**
@@ -53,7 +67,7 @@ export interface OnrampCorridor {
  * lista y las cotizaciones vuelven vacías.
  */
 export const ONRAMP_CORRIDORS: Record<OnrampCorridorCode, OnrampCorridor> = {
-  BO: { country: 'BO', currency: 'BOB', symbol: 'Bs', minFiat: 2 },
+  BO: { country: 'BO', currency: 'BOB', symbol: 'Bs', minFiat: 2, maxFiat: 1000 },
 };
 
 /**

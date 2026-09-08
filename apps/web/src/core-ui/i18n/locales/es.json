@@ -1889,7 +1889,8 @@
         "unrecorded": "No cierres esta pantalla: no pudimos guardar tu compra y puede que no puedas volver a ella.",
         "working": "Preparando tu compra…",
         "youPay": "Pagás",
-        "youReceive": "Recibís"
+        "youReceive": "Recibís",
+        "maxAmount": "La compra máxima es de {{amount}} {{currency}}."
       },
       "rail": {
         "ach": "Transferencia bancaria"

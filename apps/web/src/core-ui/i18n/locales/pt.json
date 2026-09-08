@@ -1917,7 +1917,8 @@
         "unrecorded": "Mantenha esta tela aberta: não conseguimos salvar sua compra e talvez você não consiga voltar a ela.",
         "working": "Preparando sua compra…",
         "youPay": "Você paga",
-        "youReceive": "Você recebe"
+        "youReceive": "Você recebe",
+        "maxAmount": "A compra máxima é de {{amount}} {{currency}}."
       },
       "rail": {
         "ach": "Transferência bancária"

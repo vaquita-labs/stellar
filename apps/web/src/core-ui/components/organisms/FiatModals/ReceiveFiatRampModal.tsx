@@ -147,9 +147,15 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // route, and an empty list carries no amount to show, so the message naming
   // the amount that does work comes from here.
   const minFiat = corridor?.minFiat ?? 0;
+  // Our own ceiling, well under the route's. Checked here and not against the
+  // quote for the same reason as the floor —there is no quote yet— and because
+  // stopping before the call spares the provider a purchase we were never going
+  // to let through.
+  const maxFiat = corridor?.maxFiat ?? Infinity;
   const typedAmount = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
   const belowMin = typedAmount && amountNum < minFiat;
-  const amountValid = typedAmount && !belowMin;
+  const aboveMax = typedAmount && amountNum > maxFiat;
+  const amountValid = typedAmount && !belowMin && !aboveMax;
 
   // El fallback lo pone quien llama porque el mismo fallo dice cosas distintas
   // según dónde ocurra: cotizando todavía no hay compra, y creándola la
@@ -452,7 +458,12 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         amount: minFiat,
         currency,
       })
-    : (fresh?.error ?? null);
+    : aboveMax
+      ? t('wallet.fiat.onramp.maxAmount', 'The maximum purchase is {{amount}} {{currency}}.', {
+          amount: maxFiat,
+          currency,
+        })
+      : (fresh?.error ?? null);
   const quoting = amountValid && !!corridor && !fresh;
 
   const usdcOut = quote ? usdcOutOf(amountNum, quote) : null;
