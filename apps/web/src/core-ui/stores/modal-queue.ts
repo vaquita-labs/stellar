@@ -5,12 +5,19 @@ import { create } from 'zustand';
  *
  * Hoy hay dos, y el pedido es explícito: primero el prompt de plata ociosa
  * (`AutoInvest` → `IdleFundsModal`), y recién cuando el usuario decidió qué
- * hacer con su plata, las notas de versión. Los dos son de pantalla completa;
- * apilados se tapan, y el de la plata es el que tiene consecuencias.
+ * hacer con su plata, las notas de versión. Apilados se tapan —el de la plata
+ * es de pantalla completa— y es el que tiene consecuencias.
  *
  * No se puede resolver anidando componentes: `AutoInvest` vive en el home
  * (`HomePage`) y el gate de notas en el layout privado, que es su ancestro. Este
  * store es el único hilo entre los dos subárboles.
+ *
+ * Tomar y liberar el turno están en componentes distintos a propósito:
+ *
+ * - Lo TOMA `HomePage`, en un efecto que corre ANTES de su gate de `clockReady`.
+ *   `AutoInvest` monta debajo de ese gate, o sea detrás de un GET /time, y para
+ *   entonces el gate de notas ya llegó a mostrar la nota y a sacarla de pantalla.
+ * - Lo LIBERA `AutoInvest`, que es el único que sabe si hay plata que ofrecer.
  *
  * Arranca en `true` (nada que esperar) a propósito: en las rutas donde
  * `AutoInvest` ni siquiera se monta —perfil, ajustes— nadie lo va a apagar, y

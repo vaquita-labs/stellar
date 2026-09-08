@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import { useAnalytics, useDeposits } from '../../hooks';
-import { EditionMode, useGameClockSynced, useLoading, useMapStore, useConfigStore } from '../../stores';
+import { EditionMode, useGameClockSynced, useLoading, useMapStore, useModalQueueStore, useConfigStore } from '../../stores';
 import { WorldType } from '../../types';
 import { useModalPresence } from '../molecules/AppModal';
 import { BankAPYModal, CoinAnimation, DepositPanel, TutorialModal } from '../organisms';
@@ -46,6 +46,19 @@ export function HomePage() {
   // ni el reloj: se muestra el loader en vez de una hora provisional que después
   // cambie. useGameClockSync (en Providers) hace el fetch a /api/v1/time.
   const clockReady = useGameClockSynced();
+
+  // El turno de la cola de modales se TOMA acá, al entrar al home, y no cuando
+  // monta `AutoInvest`: ese vive debajo del gate de `clockReady` de más abajo,
+  // o sea detrás de un GET /time. Hasta que el reloj sincroniza, el gate de las
+  // notas de versión (en el layout, o sea un ancestro) ve el default `true` del
+  // store y ya alcanzó a mostrar la nota — que después desaparecía sola cuando
+  // `AutoInvest` finalmente tomaba el turno. Quien lo LIBERA sigue siendo
+  // `AutoInvest`, que es el único que sabe si hay plata ociosa que ofrecer.
+  const setVaultPromptSettled = useModalQueueStore((s) => s.setVaultPromptSettled);
+  useEffect(() => {
+    setVaultPromptSettled(false);
+    return () => setVaultPromptSettled(true);
+  }, [setVaultPromptSettled]);
 
   const handleCoinAnimationComplete = () => {
     setCoinAnimationTarget(null);
