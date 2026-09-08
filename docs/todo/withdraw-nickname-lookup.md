@@ -29,7 +29,7 @@ The caller passes every saved wallet (`WithdrawModal.tsx:143`), and
 the user has saved. There is no rate limiting anywhere in the API
 (`apps/api/src/app-api.ts:25`, see `signup-bot-hardening.md`).
 
-## 2. The part that is not just cost
+## 2. The lookup writes
 
 `GET /api/v1/profile/wallet/:walletAddress` (`apps/api/src/routes/profile/route.ts:52`)
 resolves through `getProfile()`, which is an **upsert**
@@ -46,9 +46,12 @@ const profile = await prisma.profile.upsert({
 So opening the withdraw screen **inserts a `profiles` row for every saved
 destination that is not a user** — the Binance address, the hardware wallet, a
 friend's exchange deposit address. Rows with `nickname` NULL and
-`onboarding_completed = false`, indistinguishable from the ones
-`signup-bot-hardening.md` is about, inflating the profile count that is supposed
-to measure people.
+`onboarding_completed = false`.
+
+Those rows are accepted: a wallet the app had to look up is a wallet that
+interacted with the app. What is gated instead is their visibility — a profile
+with no nickname must not surface as a person, which is
+`nameless-profiles-visibility.md`.
 
 Two consequences worth knowing before touching this code:
 
@@ -61,16 +64,7 @@ Two consequences worth knowing before touching this code:
 
 ## 3. Plan
 
-### Step 1 — Stop the write
-
-- [ ] A read-only lookup for this path: `findUnique` on `wallet_address`,
-      404 when absent, no `create`. Either a dedicated
-      `GET /profile/wallet/:address/nickname` or a read-only branch of the
-      current route — the upsert belongs to the login flow, not to a public GET.
-- [ ] Check the other public GETs that call `getProfile()` for the same
-      side effect; this hook is the newest caller, not the only one.
-
-### Step 2 — One request instead of N
+### Step 1 — One request instead of N
 
 - [ ] Batch endpoint taking a list of addresses and answering
       `{ [address]: nickname | null }`, read-only, capped at a sane list length.
@@ -78,7 +72,7 @@ Two consequences worth knowing before touching this code:
       address list. The map it returns and the absent-means-unknown contract
       stay as they are — `WithdrawModal` does not change.
 
-### Step 3 — Until the batch exists
+### Step 2 — Until the batch exists
 
 - [ ] Drop `refetchOnMount: 'always'` and let `staleTime: 60_000` do its job.
       Partial relief only: it saves the repeat opens, not the first one, and a
