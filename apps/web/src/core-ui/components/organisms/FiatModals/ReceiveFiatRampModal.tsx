@@ -433,10 +433,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
    * —el `onChange` de la lista significa "lo editó él", y en el retiro eso
    * despega el formulario de la cuenta guardada.
    */
-  const values = useMemo(
-    () => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }),
-    [fields, typedValues],
-  );
+  const values = useMemo(() => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }), [fields, typedValues]);
   const fieldsValid = fieldsAreValid(fields, values);
 
   /**
