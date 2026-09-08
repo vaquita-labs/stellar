@@ -7,12 +7,7 @@ import { FiArrowDown, FiArrowUp } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { LeagueMemberDTO } from '../../../hooks/useWeeklyLeague';
 import { Avatar, getLeaderboardUsername, hasPublicProfile } from './LeaderboardCard';
-import {
-  DEMOTION_SLOTS,
-  Division,
-  PROMOTION_SLOTS,
-  zoneForRank,
-} from './leagues';
+import { DEMOTION_SLOTS, Division, PROMOTION_SLOTS, zoneForRank } from './leagues';
 
 /* ------------------------------------------------------------------ */
 /* Zone separator                                                      */
@@ -64,12 +59,7 @@ function LeagueRow({
   const username = getLeaderboardUsername(member.nickname, member.walletAddress);
   const zone = zoneForRank(member.rank, cohortSize, division);
 
-  const rankTone =
-    zone === 'promotion'
-      ? 'text-[#3f9a00]'
-      : zone === 'demotion'
-        ? 'text-error'
-        : 'text-black/50';
+  const rankTone = zone === 'promotion' ? 'text-[#3f9a00]' : zone === 'demotion' ? 'text-error' : 'text-black/50';
 
   const shell = `flex items-center gap-3 rounded-2xl px-3 py-2.5 ${
     member.isCurrentUser ? 'border-2 border-primary bg-primary/20' : 'border border-black/10 bg-white'
@@ -98,13 +88,7 @@ function LeagueRow({
       </span>
 
       <span className="shrink-0 inline-flex items-center gap-1 text-sm font-extrabold tabular-nums text-black">
-        <Image
-          src="/icons/global/star.png"
-          alt=""
-          width={16}
-          height={16}
-          className="object-contain"
-        />
+        <Image src="/icons/global/star.png" alt="" width={16} height={16} className="object-contain" />
         {t('leaderboard.league.xpValue', '{{xp}} XP', {
           xp: member.weeklyXp.toLocaleString(),
         })}
@@ -164,9 +148,7 @@ export function LeagueBoard({
           zoneForRank(member.rank, cohortSize, division) === 'promotion' &&
           nextRank <= cohortSize;
         const opensDemotion =
-          nextRank === demotionStart &&
-          zoneForRank(demotionStart, cohortSize, division) === 'demotion' &&
-          zone !== 'demotion';
+          nextRank === demotionStart && zoneForRank(demotionStart, cohortSize, division) === 'demotion' && zone !== 'demotion';
 
         return (
           <Fragment key={member.walletAddress || member.rank}>
@@ -193,10 +175,7 @@ export function LeagueBoardSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <ul aria-hidden className="flex flex-col gap-1.5">
       {Array.from({ length: rows }).map((_, i) => (
-        <li
-          key={i}
-          className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-3 py-2.5 animate-pulse"
-        >
+        <li key={i} className="flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-3 py-2.5 animate-pulse">
           <span className="h-3 w-4 rounded bg-black/10" />
           <span className="h-10 w-10 rounded-full bg-black/10" />
           <span className="h-3 flex-1 rounded bg-black/10" />

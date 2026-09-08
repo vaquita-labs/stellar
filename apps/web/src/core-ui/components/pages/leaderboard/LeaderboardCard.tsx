@@ -98,15 +98,7 @@ export function PositionPill({
   // The medal art is detailed, so it needs more room than the 16px of the other
   // inline icons or it collapses into a grey blob.
   if (medal && medalOnly) {
-    return (
-      <Image
-        src={medal}
-        alt={label}
-        width={26}
-        height={26}
-        className="object-contain shrink-0"
-      />
-    );
+    return <Image src={medal} alt={label} width={26} height={26} className="object-contain shrink-0" />;
   }
 
   return (
@@ -117,9 +109,7 @@ export function PositionPill({
       className="inline-flex items-center gap-1 rounded-full border border-black border-b-2 bg-white px-2.5 py-0.5 text-xs font-extrabold tabular-nums text-black shrink-0"
       aria-label={label}
     >
-      {medal && (
-        <Image src={medal} alt="" width={20} height={20} className="object-contain shrink-0" />
-      )}
+      {medal && <Image src={medal} alt="" width={20} height={20} className="object-contain shrink-0" />}
       <span>#{position}</span>
     </span>
   );
@@ -145,11 +135,7 @@ function StatsRow({ streak, coins, experience }: { streak: number; coins: number
   const { t } = useTranslation();
   return (
     <div className="flex items-stretch gap-2">
-      <Stat
-        icon="/icons/global/streak_face.png"
-        value={`${streak}`}
-        label={t('leaderboard.card.dayStreak', 'Day streak')}
-      />
+      <Stat icon="/icons/global/streak_face.png" value={`${streak}`} label={t('leaderboard.card.dayStreak', 'Day streak')} />
       <Stat
         icon="/icons/global/coin.png"
         value={`${Math.floor(coins).toLocaleString()}`}
@@ -209,9 +195,7 @@ function SocialRow({ walletAddress, likes }: SocialRowProps) {
         aria-label={liked ? t('leaderboard.card.unlike', 'Unlike') : t('leaderboard.card.like', 'Like')}
         className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 hover:bg-black/5 transition bg-transparent disabled:hover:bg-transparent"
       >
-        <FiHeart
-          className={`h-4 w-4 transition ${liked ? 'fill-red-500 text-red-500' : 'text-black'}`}
-        />
+        <FiHeart className={`h-4 w-4 transition ${liked ? 'fill-red-500 text-red-500' : 'text-black'}`} />
         <span className="text-xs font-bold text-black tabular-nums">{likes}</span>
       </button>
     </div>
@@ -255,20 +239,12 @@ export function FollowButton({ username, targetWallet }: { username: string; tar
       }
       className={`inline-flex items-center gap-1 rounded-full border border-black border-b-2 px-2.5 py-1 text-[10px] font-bold shrink-0 transition ${
         pending ? 'opacity-70 cursor-wait' : 'hover:-translate-y-0.5'
-      } ${
-        following
-          ? 'bg-white text-black hover:bg-white/80'
-          : 'bg-primary text-black hover:bg-primary/80'
-      }`}
+      } ${following ? 'bg-white text-black hover:bg-white/80' : 'bg-primary text-black hover:bg-primary/80'}`}
     >
       {/* Sin ícono: el texto ya dice qué hace el botón, y el check/persona sólo
           competían con él en un botón de 10px. El spinner sí queda: es estado. */}
       {pending && <FiLoader className="h-3 w-3 animate-spin" aria-hidden />}
-      <span>
-        {following
-          ? t('leaderboard.card.unfollow', 'Unfollow')
-          : t('leaderboard.card.follow', 'Follow')}
-      </span>
+      <span>{following ? t('leaderboard.card.unfollow', 'Unfollow') : t('leaderboard.card.follow', 'Follow')}</span>
     </button>
   );
 }
@@ -321,9 +297,7 @@ export function LeaderboardCard({
   const { t } = useTranslation();
   // Current-user card is filled with a soft primary tint (not just an outline)
   // so "this is you" reads at a glance while scrolling the feed.
-  const containerClasses = user.isCurrentUser
-    ? 'border-2 border-primary bg-primary/20'
-    : 'border border-black/10 bg-white';
+  const containerClasses = user.isCurrentUser ? 'border-2 border-primary bg-primary/20' : 'border border-black/10 bg-white';
   const shell = `flex flex-col gap-2.5 rounded-xl p-3 shadow-sm ${containerClasses}`;
 
   const content = (
@@ -371,10 +345,7 @@ export function LeaderboardCard({
 /** Loading placeholder mirroring the card's four-section shape. */
 export function LeaderboardCardSkeleton() {
   return (
-    <div
-      aria-hidden
-      className="flex flex-col gap-2.5 rounded-xl border border-black/10 bg-white p-3 animate-pulse"
-    >
+    <div aria-hidden className="flex flex-col gap-2.5 rounded-xl border border-black/10 bg-white p-3 animate-pulse">
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-full bg-black/10" />
         <div className="flex-1 h-3 w-32 rounded bg-black/10" />
@@ -406,10 +377,7 @@ export function LeaderboardCardSkeleton() {
  * wallet itself — falls back to `@vaqueroXXXX` (last-4 of address) when
  * the user hasn't picked a nickname yet.
  */
-export const getLeaderboardUsername = (
-  nickname: string | null | undefined,
-  walletAddress: string
-): string => {
+export const getLeaderboardUsername = (nickname: string | null | undefined, walletAddress: string): string => {
   const trimmed = (nickname ?? '').trim();
   if (trimmed) {
     return trimmed.startsWith('@') ? trimmed : `@${trimmed.replace(/\s+/g, '')}`;
