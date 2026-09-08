@@ -86,7 +86,7 @@ export const useCreateSavedBankAccount = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(input),
         },
-        walletAddress
+        walletAddress,
       );
       // POST devuelve el DTO plano, no envuelto en una key.
       return await unwrap<SavedBankAccount>(response);

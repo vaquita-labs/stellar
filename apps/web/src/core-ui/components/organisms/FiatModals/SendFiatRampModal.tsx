@@ -398,10 +398,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
    * —el `onChange` de la lista significa "lo editó él", y en el retiro eso
    * despega el formulario de la cuenta guardada.
    */
-  const values = useMemo(
-    () => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }),
-    [fields, typedValues],
-  );
+  const values = useMemo(() => ({ ...typedValues, ...(selectDefaults(fields, typedValues) ?? {}) }), [fields, typedValues]);
   /**
    * The corridor's rate, once the probe has measured it. It is the whole reason
    * the keypad can be in USDC: `/ramps/quote` only quotes in local currency, so
@@ -648,8 +645,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       // se dicen en la que el usuario teclea. La vuelta pasa por el rate, así
       // que la cifra es aproximada: es una guía para corregir el monto, no algo
       // contra lo que se valide —eso lo hace el proveedor, en su moneda.
-      const inUsdc = (localAmount: number) =>
-        rate != null && rate > 0 ? formatTokenPrecise(localAmount / rate, 2) : null;
+      const inUsdc = (localAmount: number) => (rate != null && rate > 0 ? formatTokenPrecise(localAmount / rate, 2) : null);
       if (best.minAmount != null && requested < best.minAmount) {
         const asUsdc = inUsdc(best.minAmount);
         setError(
@@ -957,10 +953,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
                 'The provider reported a payment ({{hash}}) that never reached the network. Your USDC is still in your wallet.',
                 { hash: truncateMiddle(hash, 6, 6) },
               )
-            : t(
-                'wallet.fiat.ramp.err.paymentFailed',
-                'The payment could not be completed. Your USDC is still in your wallet.',
-              ),
+            : t('wallet.fiat.ramp.err.paymentFailed', 'The payment could not be completed. Your USDC is still in your wallet.'),
         );
       }
 
@@ -978,9 +971,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         mark('payout', 'done');
         void markWithdrawalTerminal(walletAddress, trackedId.current, 'settled');
         trackedId.current = null;
-        toast.success(
-          t('wallet.fiat.ramp.settled', 'Withdrawal paid out via {{rail}}.', { rail: railLabel(active.rail, t) }),
-        );
+        toast.success(t('wallet.fiat.ramp.settled', 'Withdrawal paid out via {{rail}}.', { rail: railLabel(active.rail, t) }));
       } else {
         // Sigue acreditando: no se cierra la fila, porque el retiro todavía no
         // terminó. Si el usuario no vuelve, la ventana de gracia la cierra sola.
@@ -1085,13 +1076,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         currency: currency || country,
       })}
       size="md"
-      onBack={
-        phase === 'details'
-          ? () => setPhase(detailsFrom)
-          : phase === 'bank'
-            ? () => setPhase('amount')
-            : onBack
-      }
+      onBack={phase === 'details' ? () => setPhase(detailsFrom) : phase === 'bank' ? () => setPhase('amount') : onBack}
       // Con el teclado en el cuerpo, el aire de las otras fases hace scrollear
       // el sheet en pantallas chicas y lo primero que se corta es el monto.
       bodyClassName={`flex flex-col pb-2 ${phase === 'amount' ? 'gap-2.5' : 'gap-4'}`}
@@ -1324,9 +1309,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
               <span className="block text-sm font-bold text-black truncate">
                 {destinationLabel ?? t('wallet.fiat.ramp.destination.select', 'Select bank account')}
               </span>
-              {destinationHint ? (
-                <span className="block font-mono text-[11px] text-gray-500">{destinationHint}</span>
-              ) : null}
+              {destinationHint ? <span className="block font-mono text-[11px] text-gray-500">{destinationHint}</span> : null}
             </span>
             <button
               type="button"
