@@ -1825,8 +1825,10 @@
         "err": {
           "anchorError": "O provedor recusou a solicitação. Tente de novo em instantes.",
           "assetNotEnabled": "Esta moeda não está disponível para essa rota no momento.",
+          "buyFailed": "Não foi possível iniciar sua compra. Tente de novo.",
           "generic": "Não foi possível cotar a compra.",
           "kycRequired": "O provedor precisa verificar sua identidade para continuar.",
+          "network": "Não conseguimos conectar. Verifique sua conexão e tente de novo.",
           "noRoutes": "Nenhuma rota disponível para {{amount}} {{currency}}. Tente outro valor.",
           "providerNotConfigured": "Este provedor ainda não está configurado para o app.",
           "quoteExpired": "A cotação expirou. Peça uma nova e tente de novo.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RampError } from './ramps';
+import { RAMP_NETWORK, RampError } from './ramps';
 import { fieldsAreValid, placeholderFor, rampErrorMessage, selectDefaults, type RampField } from './rampFields';
 
 const field = (over: Partial<RampField> = {}): RampField => ({ key: 'taxId', label: 'CI', type: 'text', ...over }) as RampField;
@@ -62,6 +62,15 @@ describe('rampErrorMessage', () => {
   it('falls back to our generic wording when the failure says nothing at all', () => {
     expect(rampErrorMessage({}, translate, 'fallback')).toBe('fallback');
     expect(rampErrorMessage(new Error(''), translate, 'fallback')).toBe('fallback');
+  });
+
+  it('keeps the browser wording off the screen', () => {
+    expect(rampErrorMessage(new TypeError('Failed to fetch'), translate, 'fallback')).toBe('fallback');
+  });
+
+  it('has its own wording for a request that never got a response', () => {
+    const offline = new RampError('No se pudo llegar a Horizon.', RAMP_NETWORK);
+    expect(rampErrorMessage(offline, translate, 'fallback')).toBe('translated:network');
   });
 });
 

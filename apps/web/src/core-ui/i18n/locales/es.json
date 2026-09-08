@@ -1797,8 +1797,10 @@
         "err": {
           "anchorError": "El proveedor rechazó el pedido. Probá de nuevo en un momento.",
           "assetNotEnabled": "Esta moneda no está disponible para esa ruta por ahora.",
+          "buyFailed": "No pudimos iniciar tu compra. Probá de nuevo.",
           "generic": "No se pudo cotizar la compra.",
           "kycRequired": "El proveedor necesita verificar tu identidad para continuar.",
+          "network": "No pudimos conectarnos. Revisá tu conexión y probá de nuevo.",
           "noRoutes": "No hay ruta disponible para {{amount}} {{currency}}. Probá con otro monto.",
           "providerNotConfigured": "Este proveedor todavía no está configurado para la app.",
           "quoteExpired": "La cotización venció. Pedí una nueva y probá otra vez.",

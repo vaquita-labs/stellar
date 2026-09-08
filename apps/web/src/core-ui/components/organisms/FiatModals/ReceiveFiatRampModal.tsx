@@ -126,12 +126,14 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const amountNum = Number(amountFiat);
   const amountValid = !!amountFiat && Number.isFinite(amountNum) && amountNum > 0;
 
-  const messageOf = (e: unknown): string =>
-    rampErrorMessage(
-      e,
-      (leaf) => t(`wallet.fiat.onramp.err.${leaf}`),
-      t('wallet.fiat.onramp.err.generic', 'The purchase could not be quoted.'),
-    );
+  // El fallback lo pone quien llama porque el mismo fallo dice cosas distintas
+  // según dónde ocurra: cotizando todavía no hay compra, y creándola la
+  // cotización ya salió bien.
+  const messageOf = (e: unknown, fallback: string): string =>
+    rampErrorMessage(e, (leaf) => t(`wallet.fiat.onramp.err.${leaf}`), fallback);
+
+  const quoteFailed = () => t('wallet.fiat.onramp.err.generic', 'The purchase could not be quoted.');
+  const buyFailed = () => t('wallet.fiat.onramp.err.buyFailed', 'We could not start your purchase. Try again.');
 
   /** Límites de la ruta, en moneda local. Devuelve el mensaje o null si entra. */
   const limitProblem = (best: RampQuote, amount: number): string | null => {
@@ -202,7 +204,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           setResult({ amount, quote: best, error: limitProblem(best, value) });
         } catch (e) {
           if (cancelled) return;
-          setResult({ amount, quote: null, error: messageOf(e) });
+          setResult({ amount, quote: null, error: messageOf(e, quoteFailed()) });
         }
       })();
     }, QUOTE_DEBOUNCE_MS);
@@ -513,7 +515,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       // Pollar contesta lo mismo de dos formas: un 200 con `kycRequired` o este
       // error. Las dos van a la pantalla de verificación, no a un error.
       if (isKycRequiredError(e)) startVerification(null);
-      else setFailure(messageOf(e));
+      else setFailure(messageOf(e, buyFailed()));
     } finally {
       setStep(null);
       setBusy(false);

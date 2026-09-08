@@ -1797,8 +1797,10 @@
         "err": {
           "anchorError": "The provider rejected the request. Try again in a moment.",
           "assetNotEnabled": "This currency is not available for that route right now.",
+          "buyFailed": "We could not start your purchase. Try again.",
           "generic": "The purchase could not be quoted.",
           "kycRequired": "The provider needs to verify your identity before continuing.",
+          "network": "We couldn't reach the network. Check your connection and try again.",
           "noRoutes": "No route available for {{amount}} {{currency}}. Try a different amount.",
           "providerNotConfigured": "This provider is not configured for the app yet.",
           "quoteExpired": "The quote expired. Request a new one and try again.",

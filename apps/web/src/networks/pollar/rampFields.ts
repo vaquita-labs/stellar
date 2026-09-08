@@ -1,5 +1,5 @@
 import type { RampQuote } from '@pollar/core';
-import { RampError } from './ramps';
+import { RAMP_NETWORK, RampError } from './ramps';
 
 /**
  * Un campo del formulario que pide el proveedor. Lo define la cotización, no
@@ -37,8 +37,10 @@ export function fieldsAreValid(fields: RampField[], values: Record<string, strin
 
 // Códigos de error de los endpoints de ramps que tienen un mensaje propio; el
 // resto cae al texto que mande Pollar. Es la misma tabla para comprar y para
-// vender: los códigos salen de la API, no del sentido del flujo.
+// vender: los códigos salen de la API, no del sentido del flujo. La excepción es
+// `RAMP_NETWORK`, que ponemos nosotros cuando la petición no llegó a responder.
 const ERROR_KEYS: Record<string, string> = {
+  [RAMP_NETWORK]: 'network',
   SDK_RAMPS_QUOTE_EXPIRED: 'quoteExpired',
   SDK_RAMPS_ASSET_NOT_ENABLED: 'assetNotEnabled',
   SDK_RAMPS_KYC_REQUIRED: 'kycRequired',
@@ -60,7 +62,10 @@ export function rampErrorMessage(error: unknown, translate: (leafKey: string) =>
   const code = error instanceof RampError ? error.code : undefined;
   const key = code ? ERROR_KEYS[code] : undefined;
   if (key) return translate(key);
-  if (error instanceof Error && error.message) return error.message;
+  // Sólo un `RampError` trae un mensaje pensado para el usuario. El de cualquier
+  // otro error es del navegador o de una librería —`TypeError: Failed to fetch`,
+  // en inglés y sin nada accionable— y no tiene por qué llegar a la pantalla.
+  if (error instanceof RampError && error.message) return error.message;
   return fallback;
 }
 
