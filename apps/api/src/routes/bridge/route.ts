@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { apiServicesEnv } from '@vaquita/shared/config/apiServicesEnv';
 import { getSessionWallet, requireSessionWallet } from '../../lib/walletAuth';
 import {
@@ -20,6 +20,7 @@ import {
   toBridgeTransferDTO,
   type BridgeDirection,
   type OneClickConfig,
+  type StatusReadFailure,
 } from '@vaquita/shared';
 
 /**
@@ -30,9 +31,10 @@ import {
  * people's deposit addresses and amounts.
  *
  * There is no worker and no webhook: 1Click's status is pulled here, when a
- * transfer is read. A swap settles in roughly 30-50 seconds, so the client's
- * poll covers the live case and refreshing on list covers anything that landed
- * while the app was closed.
+ * transfer is read. The client's poll covers the live case and refreshing on
+ * list covers anything that landed while the app was closed — measured at
+ * ~7m52s for the first real prod transfer, against a quoted 50s, so the poll
+ * has to survive minutes rather than seconds.
  */
 const router = Router();
 
@@ -47,6 +49,19 @@ const oneClickConfig = (): OneClickConfig => ({
   baseUrl: apiServicesEnv.NEAR_1CLICK_BASE_URL,
   ...(apiServicesEnv.NEAR_1CLICK_JWT ? { jwt: apiServicesEnv.NEAR_1CLICK_JWT } : {}),
 });
+
+/**
+ * A status read that failed leaves the row untouched on purpose — writing
+ * FAILED would strand funds that are still moving — so this line is the ONLY
+ * trace it happened. Without it, a 1Click outage, a 20s timeout or a rate-limit
+ * is indistinguishable from a slow swap: the row does not move and the client
+ * polls on forever. `warn`, not `error`: the transfer is still fine.
+ *
+ * `depositAddress` is logged because it is the key the status endpoint takes —
+ * it is what turns this line into a diagnosis instead of a lookup.
+ */
+const logStatusReadError = (req: Request) => (failure: StatusReadFailure) =>
+  req.log.warn(failure, '1Click status read failed');
 
 type QuoteInput = {
   direction: BridgeDirection;
@@ -192,7 +207,7 @@ router.get('/transfers', requireSessionWallet, async (req, res) => {
 
   try {
     const rows = await listBridgeTransfers(wallet);
-    const refreshed = await refreshTransfers(oneClickConfig(), rows);
+    const refreshed = await refreshTransfers(oneClickConfig(), rows, logStatusReadError(req));
     return sendSuccess(res, { transfers: refreshed.map(toBridgeTransferDTO) });
   } catch (err) {
     req.log.error({ err }, 'Failed to list bridge transfers');
@@ -214,7 +229,7 @@ router.get('/transfers/:id', requireSessionWallet, async (req, res) => {
     const row = await getBridgeTransfer(id, wallet);
     if (!row) return sendError(res, 'Transfer not found.', null, 404);
 
-    const refreshed = await refreshTransfer(oneClickConfig(), row);
+    const refreshed = await refreshTransfer(oneClickConfig(), row, logStatusReadError(req));
     return sendSuccess(res, toBridgeTransferDTO(refreshed));
   } catch (err) {
     req.log.error({ err, bridgeTransferId: id }, 'Failed to read bridge transfer');
@@ -256,7 +271,7 @@ router.post('/transfers/:id/deposit-tx', requireSessionWallet, async (req, res) 
     }
 
     const updated = await attachSourceTxHash(id, txHash.trim());
-    const refreshed = await refreshTransfer(oneClickConfig(), updated);
+    const refreshed = await refreshTransfer(oneClickConfig(), updated, logStatusReadError(req));
     return sendSuccess(res, toBridgeTransferDTO(refreshed));
   } catch (err) {
     req.log.error({ err, bridgeTransferId: id }, 'Failed to attach deposit tx');

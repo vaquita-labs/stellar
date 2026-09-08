@@ -65,8 +65,40 @@ const formatBaseUnits = (raw: string | null, decimals: number): string | null =>
   return frac ? `${whole}.${frac}` : whole;
 };
 
-/** Estados de 1Click en los que el depósito todavía no se vio en la cadena. */
-const AWAITING = ['PENDING_DEPOSIT', 'INCOMPLETE_DEPOSIT'];
+/**
+ * Qué se está esperando, por estado de 1Click.
+ *
+ * Son fases distintas y hay que decirlo: en `PENDING_DEPOSIT` la pelota la
+ * tiene el usuario, en las otras dos no hay nada que hacer más que esperar.
+ * Antes las tres caían en dos mensajes repartidos por una lista `AWAITING` que
+ * además metía `INCOMPLETE_DEPOSIT` —que NO es una espera, es un error que
+ * pide acción— en la misma bolsa que la espera normal.
+ */
+export const WAITING_PHASE: Record<string, { key: string; fallback: string }> = {
+  PENDING_DEPOSIT: { key: 'wallet.bridge.waitingDeposit', fallback: 'Waiting for your deposit…' },
+  KNOWN_DEPOSIT_TX: {
+    key: 'wallet.bridge.confirmingDeposit',
+    fallback: 'Deposit received — confirming on the network…',
+  },
+  PROCESSING: { key: 'wallet.bridge.processing', fallback: 'Bridging your USDC…' },
+};
+
+/**
+ * `m:ss`, y `h:mm:ss` si de verdad se fue de las manos.
+ *
+ * El transcurrido es lo único que separa "está trabajando" de "se colgó". La
+ * primera transferencia real en prod tardó ~7m52s contra los 50 s que cotiza
+ * 1Click, así que un spinner pelado se lee como pantalla rota mucho antes de
+ * que la operación tenga algo malo.
+ */
+export const formatElapsed = (ms: number): string => {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const seconds = String(total % 60).padStart(2, '0');
+  const minutes = Math.floor(total / 60) % 60;
+  const hours = Math.floor(total / 3600);
+  if (hours === 0) return `${minutes}:${seconds}`;
+  return `${hours}:${String(minutes).padStart(2, '0')}:${seconds}`;
+};
 
 /**
  * Puente de USDC entre Base y Stellar, liquidado por NEAR Intents 1Click.
@@ -200,6 +232,27 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
     // `quoteMutation` es estable por instancia de hook pero no por identidad.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quoteKey, inputsReady, needsTrustline]);
+
+  /**
+   * Lo que cuesta la operación, en plata y en porcentaje: entra menos sale.
+   *
+   * Reemplaza a `quote.withdrawFee`, que se mostraba crudo y era el número
+   * equivocado dos veces. Viene en unidades base del activo de destino (1Click
+   * devuelve `189711`, no `0.0190`, así que la pantalla decía "Network fee:
+   * 189711") y además deja afuera los 10 bps de referral que 1Click inyecta
+   * mientras no mandemos JWT. La resta no se equivoca en ninguna de las dos.
+   *
+   * El porcentaje importa porque el costo es casi todo fijo: a 1 USDC —el
+   * mínimo que acepta el endpoint— se va el 2%, contra 0.13% a 100.
+   */
+  const quoteCost = useMemo(() => {
+    if (!quote) return null;
+    const sent = Number(quote.amountIn);
+    const received = Number(quote.amountOut);
+    if (!Number.isFinite(sent) || !Number.isFinite(received) || sent <= 0 || received > sent) return null;
+    const cost = sent - received;
+    return { amount: cost.toFixed(4), percent: ((cost / sent) * 100).toFixed(2) };
+  }, [quote]);
 
   const handleMax = () => {
     if (available > 0) setAmount(truncatedAmountString(available, decimals));
@@ -347,6 +400,31 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
     return () => clearTimeout(timer);
   }, [deadlineAt]);
 
+  /**
+   * Reloj de 1 s para el transcurrido, y SÓLO mientras hay algo en curso: en
+   * cuanto la transferencia llega a un estado terminal el intervalo se corta
+   * solo, igual que el poll de `useBridgeTransfer`.
+   *
+   * Como el resto del archivo, el reloj no se lee en el render — de ahí el
+   * estado en vez de un `Date.now()` suelto.
+   */
+  const tracking = !!transfer && !isBridgeTerminal(transfer.status);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!tracking) return;
+    // El primer tick va por `setTimeout` de 0 ms y no en el cuerpo del efecto,
+    // igual que el timer del vencimiento de acá arriba: corre después del
+    // render, así que no encadena uno nuevo. Hace falta porque `now` puede
+    // venir de cuando se montó el modal, que es antes de que la transferencia
+    // existiera.
+    const first = setTimeout(() => setNow(Date.now()), 0);
+    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, [tracking]);
+
   const body = () => {
     if (!transfer) return formStep();
     if (transfer.status === 'SUCCESS') {
@@ -372,6 +450,9 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
         transfer.errorReason ?? t('wallet.bridge.failedBody', 'The bridge could not complete the swap.'),
       );
     }
+    // Va antes del reparto por dirección: no es una pantalla de espera, es una
+    // que pide acción, y sirve para las dos patas.
+    if (transfer.status === 'INCOMPLETE_DEPOSIT') return incompleteDepositStep(transfer);
     return transfer.direction === 'evm_to_stellar' ? inboundStep(transfer) : outboundStep(transfer);
   };
 
@@ -495,20 +576,28 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
             <dt className="text-gray-600">{t('wallet.bridge.youReceive', 'You receive')}</dt>
             <dd className="font-semibold text-black">{quote.amountOut} USDC</dd>
           </div>
-          {quote.withdrawFee !== null && (
+          {quoteCost && (
             <div className="flex items-center justify-between">
               <dt className="text-gray-600">{t('wallet.bridge.fee', 'Network fee')}</dt>
-              <dd className="text-black">{quote.withdrawFee}</dd>
-            </div>
-          )}
-          {quote.timeEstimate !== null && (
-            <div className="flex items-center justify-between">
-              <dt className="text-gray-600">{t('wallet.bridge.eta', 'Estimated time')}</dt>
               <dd className="text-black">
-                {t('wallet.bridge.etaSeconds', '~{{seconds}}s', { seconds: quote.timeEstimate })}
+                {t('wallet.bridge.feeValue', '{{amount}} USDC ({{percent}}%)', {
+                  amount: quoteCost.amount,
+                  percent: quoteCost.percent,
+                })}
               </dd>
             </div>
           )}
+          {/* La estimación de 1Click (`quote.timeEstimate`) NO se muestra. Es
+              una constante de la ruta, no un pronóstico: medida el 2026-09-08
+              devolvió 50 s a 1, 5, 20 y 100 USDC, y la única transferencia real
+              en prod tardó ~7m52s. Prometer 50 s y tardar 8 minutos es peor que
+              no prometer nada. Cuando haya muestra propia —p90 de
+              `updated_at - created_at` sobre las filas SUCCESS de
+              `bridge_transfers`— acá va ese número, no el de ellos. */}
+          <div className="flex items-center justify-between">
+            <dt className="text-gray-600">{t('wallet.bridge.eta', 'Estimated time')}</dt>
+            <dd className="text-black">{t('wallet.bridge.etaRange', 'Usually a few minutes')}</dd>
+          </div>
         </dl>
       )}
     </>
@@ -617,13 +706,84 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
     </div>
   );
 
-  const progressRow = (row: BridgeTransfer) => (
-    <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-      <Spinner size="sm" color="current" />
-      {AWAITING.includes(row.status)
-        ? t('wallet.bridge.waitingDeposit', 'Waiting for your deposit…')
-        : t('wallet.bridge.processing', 'Bridging your USDC…')}
-    </div>
+  const progressRow = (row: BridgeTransfer) => {
+    // Un estado que no conocemos igual es una espera: 1Click puede sumar
+    // estados, y quedarse sin mensaje es peor que caer en el genérico.
+    const phase = WAITING_PHASE[row.status] ?? WAITING_PHASE.PROCESSING;
+    return (
+      <div className="flex flex-col items-center gap-1.5 text-xs text-gray-500">
+        <div className="flex items-center justify-center gap-2">
+          <Spinner size="sm" color="current" />
+          <span>{t(phase.key, phase.fallback)}</span>
+          <span className="font-mono tabular-nums text-gray-400">
+            {formatElapsed(now - row.createdTimestamp)}
+          </span>
+        </div>
+        <p className="text-center text-gray-400">
+          {t(
+            'wallet.bridge.keepsGoing',
+            'This keeps going if you close this window. Reopen it any time to check.',
+          )}
+        </p>
+      </div>
+    );
+  };
+
+  /**
+   * `INCOMPLETE_DEPOSIT`: llegó MENOS de lo cotizado, así que el swap no
+   * arrancó y no va a arrancar solo.
+   *
+   * No lleva spinner a propósito. Antes este estado estaba dentro de `AWAITING`
+   * y se mostraba como "esperando tu depósito" — que le decía al usuario
+   * exactamente lo contrario de lo que tenía que hacer: no hay nada que
+   * esperar, hay que completar el monto o esperar el reembolso.
+   *
+   * El monto recibido no se muestra porque no lo tenemos: 1Click lo devuelve en
+   * `swapDetails.amountIn`, pero la fila no lo persiste y agregarle una columna
+   * a `bridge_transfers` para esto sería mucho para un caso de borde. Lo que sí
+   * sabemos —cuánto esperaba— alcanza para que el usuario sepa qué mandar.
+   */
+  const incompleteDepositStep = (row: BridgeTransfer) => (
+    <>
+      <div className="flex flex-col items-center gap-3 py-2 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[#F0B429] bg-[#FFF7E6] text-[#B7791F]">
+          <FiAlertCircle className="h-7 w-7" />
+        </span>
+        <p className="text-base font-semibold text-black">
+          {t('wallet.bridge.incompleteTitle', 'The amount received is short')}
+        </p>
+        <p className="text-sm text-gray-600">
+          {t(
+            'wallet.bridge.incompleteBody',
+            'The bridge expected {{amount}} USDC and received less, so the swap has not started.',
+            { amount: row.amount },
+          )}
+        </p>
+      </div>
+
+      {/* Sólo la pata de entrada tiene arreglo del lado del usuario: es la
+          única en la que él fondea la dirección a mano. En la de salida el pago
+          lo mandó la app, así que pedirle que "complete la diferencia" sería
+          mandarlo a pagar de nuevo una dirección con memo. */}
+      {row.direction === 'evm_to_stellar' && row.depositAddress ? (
+        <>
+          <p className="text-sm text-gray-600">
+            {t(
+              'wallet.bridge.incompleteTopUp',
+              'Send the difference to the same address before the quote expires. If it expires first, the bridge refunds what it received to your Base address.',
+            )}
+          </p>
+          {addressRow(row.depositAddress)}
+        </>
+      ) : (
+        <p className="text-sm text-gray-600">
+          {t(
+            'wallet.bridge.incompleteRefund',
+            'The bridge will refund what it received once the quote expires. Contact support if it does not arrive.',
+          )}
+        </p>
+      )}
+    </>
   );
 
   const outcomeStep = (kind: 'success' | 'error', title: string, description: string) => (
