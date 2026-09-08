@@ -18,6 +18,22 @@
 // database looks like, which flattens the @map naming below and drops every
 // comment in it.
 //
+// `prisma migrate diff` never comes back empty against a healthy database, and
+// neither leftover means anything is out of sync:
+//
+//   - Every index from packages/db/sql/ shows up as a DROP INDEX. They are not
+//     in this file, so the diff reads them as surplus. `pnpm db:push` drops and
+//     re-creates them within the one command, which is the arrangement above.
+//   - `wallet_balances.vaquita_positions` shows up as a SET DEFAULT that is
+//     already set. Prisma does not compare a `dbgenerated()` default against
+//     what it introspects, so it proposes it every time; applying it is a
+//     no-op.
+//
+// Anything else in that diff is real. `db push` needs to OWN every table it
+// touches — a table owned by another role fails with `must be owner of table
+// …` and stops the whole push, so check `pg_tables.tableowner` before assuming
+// the schema is at fault.
+//
 // Naming convention: models and fields are camelCase in code, mapped to the real
 // snake_case DB names with @map / @@map. Model names are PascalCase singular (their
 // Prisma Client accessors are auto-camelCased, e.g. `prisma.profileAchievement`).
