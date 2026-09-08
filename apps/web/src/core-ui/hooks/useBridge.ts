@@ -118,8 +118,10 @@ export const useCreateBridgeTransfer = () => {
  * Sigue una transferencia hasta que termina.
  *
  * El servidor consulta 1Click en cada lectura, así que el intervalo de acá es
- * el que define cada cuánto se refresca de verdad. 5 s contra los 27-50 s que
- * tarda un swap: se ve moverse sin castigar la API. Al llegar a un estado
+ * el que define cada cuánto se refresca de verdad. 5 s: la detección nunca se
+ * atrasa más que eso, y lo que tarda de verdad es el puente. `timeEstimate`
+ * dice 50 s, pero la primera transferencia real en prod (2026-09-08) tardó
+ * ~7m52s, así que el poll tiene que aguantar minutos. Al llegar a un estado
  * terminal deja de pedir solo.
  */
 export const useBridgeTransfer = (id: string | null) => {

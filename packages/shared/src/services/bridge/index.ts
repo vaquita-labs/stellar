@@ -16,9 +16,14 @@ import {
  *
  * The row is a receipt, not a state machine: 1Click owns the truth about where
  * a swap is, and `refreshTransfer` pulls it in when someone reads. That is what
- * replaced the old worker — with 1Click settling in 30-50 seconds, polling on
- * read covers the live case and refreshing the list covers anything that
- * finished while the app was closed.
+ * replaced the old worker: the client's poll covers the live case and
+ * refreshing the list covers anything that finished while the app was closed.
+ *
+ * Do not trust the quote's `timeEstimate` when reasoning about this. It is a
+ * constant 50s for the Base<->Stellar route at every amount; the first real
+ * prod transfer (2026-09-08) took ~7m52s end to end, of which 6m35s was the
+ * swap leg alone. Polling on read is right either way, but the wait is minutes,
+ * not seconds.
  *
  * SECURITY: a transfer is only ever addressed by (id, wallet). The wallet comes
  * from the session, never from the URL — otherwise any id would expose someone
@@ -129,6 +134,22 @@ export const createBridgeTransfer = async (params: CreateParams): Promise<Bridge
 };
 
 /**
+ * A status read that did not come back — a 1Click outage, a timeout, a
+ * rate-limit. Reported to the caller rather than logged here: this package has
+ * no logger, and the callers (the `/bridge` routes) already have `req.log`.
+ */
+export type StatusReadFailure = {
+  transferId: string;
+  /** The handle for asking 1Click directly what it thinks of this transfer. */
+  depositAddress: string;
+  /** The status we still believe, which is now of unknown freshness. */
+  status: string;
+  reason: string;
+};
+
+export type OnStatusReadError = (failure: StatusReadFailure) => void;
+
+/**
  * Re-reads one transfer's status from 1Click and persists any change.
  *
  * Terminal rows and rows without a deposit address are returned untouched —
@@ -138,13 +159,26 @@ export const createBridgeTransfer = async (params: CreateParams): Promise<Bridge
 export const refreshTransfer = async (
   config: OneClickConfig,
   row: BridgeTransfer,
+  onStatusReadError?: OnStatusReadError,
 ): Promise<BridgeTransfer> => {
   if (!row.depositAddress || isTerminalStatus(row.status)) return row;
 
   const result = await getStatus(config, row.depositAddress, row.depositMemo);
   // A failed status read is not a failed transfer. Leaving the row alone keeps
   // it pollable; writing FAILED here would strand funds that are still moving.
-  if (!result.ok) return row;
+  //
+  // But it must not be SILENT. Without this callback a 1Click outage and a slow
+  // swap are the same thing to everyone looking: the row does not move, the
+  // client keeps polling every 5s, and nothing anywhere says why.
+  if (!result.ok) {
+    onStatusReadError?.({
+      transferId: row.id,
+      depositAddress: row.depositAddress,
+      status: row.status,
+      reason: result.reason,
+    });
+    return row;
+  }
 
   const { status, swapDetails } = result.data;
   const originHash = swapDetails?.originChainTxHashes?.[0]?.hash ?? null;
@@ -175,9 +209,10 @@ export const refreshTransfer = async (
 export const refreshTransfers = async (
   config: OneClickConfig,
   rows: BridgeTransfer[],
+  onStatusReadError?: OnStatusReadError,
 ): Promise<BridgeTransfer[]> => {
   const out: BridgeTransfer[] = [];
-  for (const row of rows) out.push(await refreshTransfer(config, row));
+  for (const row of rows) out.push(await refreshTransfer(config, row, onStatusReadError));
   return out;
 };
 

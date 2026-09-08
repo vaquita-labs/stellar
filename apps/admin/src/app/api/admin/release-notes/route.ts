@@ -3,6 +3,7 @@ import {
   RELEASE_NOTE_IMAGE_MAX_BYTES,
   RELEASE_NOTE_IMAGE_TYPES,
   RELEASE_NOTE_TITLE_MAX,
+  RELEASE_NOTE_TRANSLATED_LANGUAGES,
   createReleaseNote,
   deleteReleaseNote,
   listReleaseNotes,
@@ -34,9 +35,19 @@ const imageSchema = z.object({
   data: z.string().min(1),
 });
 
+// A translation is both halves or it is not sent. The service drops a
+// half-written pair anyway; rejecting it here is what tells the admin, instead
+// of silently publishing the English text to a Spanish reader.
+const translationSchema = z.object({
+  title: z.string().trim().min(1).max(RELEASE_NOTE_TITLE_MAX),
+  body: z.string().trim().min(1).max(RELEASE_NOTE_BODY_MAX),
+});
+
 const noteFields = {
   title: z.string().trim().min(1).max(RELEASE_NOTE_TITLE_MAX),
   body: z.string().trim().min(1).max(RELEASE_NOTE_BODY_MAX),
+  /** Per-language overrides; `title`/`body` above stay the fallback. */
+  translations: z.record(z.enum(RELEASE_NOTE_TRANSLATED_LANGUAGES), translationSchema).optional(),
   published: z.boolean().optional(),
   images: z.array(imageSchema).max(8).optional(),
 };
@@ -90,6 +101,7 @@ export async function POST(req: NextRequest) {
   const note = await createReleaseNote({
     title: parsed.data.title,
     body: parsed.data.body,
+    translations: parsed.data.translations ?? {},
     published: parsed.data.published ?? false,
     images: decoded.images,
   });

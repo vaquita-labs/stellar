@@ -1,14 +1,23 @@
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useQuery } from '@tanstack/react-query';
 
+/** The languages a note can be translated into. `en` lives in `title`/`body`. */
+export const NOTE_LANGUAGES = ['es', 'pt'] as const;
+export type NoteLanguage = (typeof NOTE_LANGUAGES)[number];
+
+export type ReleaseNoteTranslation = { title: string; body: string };
+export type ReleaseNoteTranslations = Partial<Record<NoteLanguage, ReleaseNoteTranslation>>;
+
 /**
  * A `release_notes` row as the admin API route returns it. Dates are ISO
  * strings; the images are ids only — the bytes come from the preview route.
  */
 export interface ReleaseNote {
   id: number;
+  /** English, and the fallback shown to any language without a translation. */
   title: string;
   body: string;
+  translations: ReleaseNoteTranslations;
   /** null = draft. Only a published note is ever shown in the app. */
   publishedAt: string | null;
   imageIds: string[];
@@ -25,6 +34,8 @@ export interface ReleaseNoteImagePayload {
 export interface ReleaseNoteCreatePayload {
   title: string;
   body: string;
+  /** All-or-nothing, like `images`: sending it replaces the whole set. */
+  translations?: ReleaseNoteTranslations;
   published?: boolean;
   /**
    * Omitting this on an update leaves the carousel alone; sending it replaces

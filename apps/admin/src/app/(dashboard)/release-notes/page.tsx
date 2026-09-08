@@ -2,8 +2,11 @@
 
 import { addDangerToast, addSuccessToast } from '@/core-ui/components';
 import {
+  NOTE_LANGUAGES,
+  type NoteLanguage,
   type ReleaseNote,
   type ReleaseNoteImagePayload,
+  type ReleaseNoteTranslations,
   createReleaseNote,
   deleteReleaseNote,
   releaseNoteImageUrl,
@@ -27,21 +30,72 @@ const IMAGES_MAX = 8;
  */
 type EditorImage = { key: string; src: string; id?: string; base64?: string };
 
+/**
+ * The editor tabs. `'en'` writes the `title`/`body` columns; the others write
+ * `translations`.
+ *
+ * English is not one language among three — it is the fallback, so it is the
+ * only one that has to be filled. Leaving `es` blank publishes the note with
+ * Spanish readers seeing the English text, which is the right outcome while a
+ * translation is pending and the reason there is no "all languages required"
+ * check anywhere in this flow.
+ */
+const TABS = ['en', ...NOTE_LANGUAGES] as const;
+type Tab = (typeof TABS)[number];
+
+const TAB_LABEL: Record<Tab, string> = {
+  en: 'English (required)',
+  es: 'Español',
+  pt: 'Português',
+};
+
 type FormState = {
   title: string;
   body: string;
+  translations: Record<NoteLanguage, { title: string; body: string }>;
   published: boolean;
   images: EditorImage[];
 };
 
-const emptyForm = (): FormState => ({ title: '', body: '', published: false, images: [] });
+const emptyTranslations = (): FormState['translations'] =>
+  Object.fromEntries(NOTE_LANGUAGES.map((l) => [l, { title: '', body: '' }])) as FormState['translations'];
+
+const emptyForm = (): FormState => ({
+  title: '',
+  body: '',
+  translations: emptyTranslations(),
+  published: false,
+  images: [],
+});
 
 const formFromNote = (note: ReleaseNote): FormState => ({
   title: note.title,
   body: note.body,
+  translations: Object.fromEntries(
+    NOTE_LANGUAGES.map((l) => [l, { title: note.translations[l]?.title ?? '', body: note.translations[l]?.body ?? '' }]),
+  ) as FormState['translations'],
   published: note.publishedAt !== null,
   images: note.imageIds.map((id) => ({ key: id, id, src: releaseNoteImageUrl(id) })),
 });
+
+/**
+ * Only complete pairs are sent. A title with no body is a half-finished draft,
+ * not a translation, and shipping it would show a Spanish headline over an
+ * English paragraph — worse than falling back cleanly to English.
+ */
+const buildTranslations = (form: FormState): ReleaseNoteTranslations => {
+  const out: ReleaseNoteTranslations = {};
+  for (const language of NOTE_LANGUAGES) {
+    const title = form.translations[language].title.trim();
+    const body = form.translations[language].body.trim();
+    if (title && body) out[language] = { title, body };
+  }
+  return out;
+};
+
+/** Which languages a saved note actually carries, for the list badges. */
+const filledLanguages = (note: ReleaseNote): NoteLanguage[] =>
+  NOTE_LANGUAGES.filter((language) => note.translations[language] !== undefined);
 
 const formatDate = (iso: string) => new Date(iso).toLocaleString();
 
@@ -51,25 +105,39 @@ export default function Page() {
   // null = no form open; 'new' = create; number = editing that note id.
   const [editing, setEditing] = useState<number | 'new' | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [tab, setTab] = useState<Tab>('en');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
+  /** Writes the field for whichever tab is open — base columns for `en`. */
+  const setText = (field: 'title' | 'body', value: string) =>
+    setForm((f) =>
+      tab === 'en'
+        ? { ...f, [field]: value }
+        : { ...f, translations: { ...f.translations, [tab]: { ...f.translations[tab], [field]: value } } },
+    );
+
+  const text = tab === 'en' ? { title: form.title, body: form.body } : form.translations[tab];
+
   const openCreate = () => {
     setForm(emptyForm());
+    setTab('en');
     setEditing('new');
   };
 
   const openEdit = (note: ReleaseNote) => {
     setForm(formFromNote(note));
+    setTab('en');
     setEditing(note.id);
   };
 
   const closeForm = () => {
     setEditing(null);
     setForm(emptyForm());
+    setTab('en');
   };
 
   const pickImages = async (files: FileList | null) => {
@@ -130,9 +198,13 @@ export default function Page() {
     const title = form.title.trim();
     const body = form.body.trim();
     if (!title || !body) {
-      addDangerToast('Missing fields', 'A release note needs a title and a body.');
+      // Only English is checked. It is the fallback, so a note without it has
+      // no text at all for a reader whose language is not translated.
+      addDangerToast('Missing fields', 'A release note needs an English title and body — they are the fallback.');
+      setTab('en');
       return;
     }
+    const translations = buildTranslations(form);
 
     setSaving(true);
     try {
@@ -140,6 +212,7 @@ export default function Page() {
         await createReleaseNote({
           title,
           body,
+          translations,
           published: form.published,
           images: form.images.map((image) => ({ contentType: 'image/jpeg' as const, data: image.base64! })),
         });
@@ -151,6 +224,7 @@ export default function Page() {
           id: editing,
           title,
           body,
+          translations,
           published: form.published,
           ...(images === null ? {} : { images }),
         });
@@ -175,7 +249,16 @@ export default function Page() {
     }
     setSaving(true);
     try {
-      await updateReleaseNote({ id: note.id, title: note.title, body: note.body, published: publishing });
+      // `translations` is resent as-is: omitting it leaves the column alone,
+      // but sending the note back verbatim keeps this call a pure publish flip
+      // even if the field ever stops being optional.
+      await updateReleaseNote({
+        id: note.id,
+        title: note.title,
+        body: note.body,
+        translations: note.translations,
+        published: publishing,
+      });
       addSuccessToast('Saved', publishing ? 'Release note published.' : 'Release note unpublished.');
       await refetch();
     } catch (err) {
@@ -226,12 +309,39 @@ export default function Page() {
                 {editing === 'new' ? 'New release note' : `Edit release note #${editing}`}
               </h2>
 
+              <div className="flex flex-wrap gap-1" role="tablist" aria-label="Language">
+                {TABS.map((language) => {
+                  const filled =
+                    language === 'en'
+                      ? form.title.trim() !== '' && form.body.trim() !== ''
+                      : form.translations[language].title.trim() !== '' &&
+                        form.translations[language].body.trim() !== '';
+                  return (
+                    <button
+                      key={language}
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === language}
+                      onClick={() => setTab(language)}
+                      className={`rounded-lg px-3 py-1.5 text-sm ${
+                        tab === language ? 'bg-black text-white' : 'bg-default-100 text-default-600'
+                      }`}
+                    >
+                      {TAB_LABEL[language]}
+                      {/* A dot, not a warning: an empty tab is a normal state,
+                          it just falls back to English. */}
+                      {filled ? ' ●' : ' ○'}
+                    </button>
+                  );
+                })}
+              </div>
+
               <Input
                 label="Title"
                 maxLength={TITLE_MAX}
                 placeholder="e.g. Bridge from Base, and a faster map"
-                value={form.title}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('title', e.target.value)}
+                value={text.title}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setText('title', e.target.value)}
               />
 
               <Textarea
@@ -239,9 +349,18 @@ export default function Page() {
                 rows={6}
                 maxLength={BODY_MAX}
                 placeholder={'Plain text. Line breaks are kept.\n\nWhat changed, and why it matters.'}
-                value={form.body}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set('body', e.target.value)}
+                value={text.body}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setText('body', e.target.value)}
               />
+
+              <p className="text-xs text-default-400">
+                {tab === 'en'
+                  ? 'Shown to English readers, and to anyone whose language has no translation below.'
+                  : 'Optional. Leave both fields empty and these readers see the English note instead. Half a translation is not saved.'}
+              </p>
+
+              {/* The images are shared by every language: they are screenshots
+                  of an app that is already localised, not captions. */}
 
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
@@ -338,6 +457,9 @@ export default function Page() {
                             {note.imageIds.length} image{note.imageIds.length === 1 ? '' : 's'}
                           </span>
                         )}
+                        <span className="rounded bg-default-100 px-1.5 text-xs uppercase text-default-500">
+                          en{filledLanguages(note).map((l) => ` · ${l}`)}
+                        </span>
                       </div>
                       <span className="line-clamp-2 text-xs text-default-400">{note.body}</span>
                     </div>
