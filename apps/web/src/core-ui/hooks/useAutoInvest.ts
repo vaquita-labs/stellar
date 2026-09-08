@@ -1,5 +1,11 @@
 import { blendConfigForToken, readUsdcBalanceRaw } from '@/networks/stellar/blendDirect';
-import { formatTokenPrecise, formatUsdPrecise, MIN_USDC, MIN_USDC_STR } from '@/core-ui/helpers/numbers';
+import {
+  formatTokenPrecise,
+  formatUsdPrecise,
+  MIN_IDLE_USDC,
+  MIN_IDLE_USDC_DECIMALS,
+  MIN_IDLE_USDC_STR,
+} from '@/core-ui/helpers/numbers';
 import { humanizeTxError } from '@/core-ui/helpers/txError';
 import { toBaseUnits } from '@/networks/stellar/sorobanTx';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
@@ -13,14 +19,14 @@ import { useTranslation } from 'react-i18next';
 import { useConfigStore, useRampActiveStore, useAwaitingFundsStore, usePendingCreditStore } from '../stores';
 import { requestWalletBalanceRefresh } from './useWalletBalanceRefresh';
 
-// El umbral para no promptear ni gastar gas por polvo es el mismo mínimo que el
-// resto de los flujos de monto: antes esto tenía uno propio (0,1) distinto del
-// del depósito (1), así que la app pedía dos mínimos según por dónde entraras.
+// The floor for prompting and for spending a fee is `MIN_IDLE_USDC`, not the
+// typed-amount minimum: nobody types a number here, so the only thing worth
+// protecting is the fee of a transaction that moves dust.
 //
-// OJO: esto es NUESTRO umbral, no el del vault. El vault tiene su propio piso
-// (#451 AmountBelowMinDust), medido en ~0,000001 USDC sobre mainnet, así que
-// 0,1 pasa cómodo. Si algún día el piso de la cadena subiera por encima, el
-// depósito falla igual pero la pantalla ahora dice por qué en vez del genérico.
+// It is OURS, not the vault's. The vault has its own floor (#451
+// AmountBelowMinDust), measured at ~0.000001 USDC on mainnet, so this one clears
+// it by three orders of magnitude. If the chain's floor ever rose above it the
+// deposit would fail anyway, but the screen says why instead of the generic.
 
 // Cada cuánto re-consultamos el balance custodial mientras el usuario está en el
 // home. La plata puede entrar on-chain por fuera de la app (le mandan USDC a su
@@ -113,7 +119,7 @@ export const useIdleFunds = () => {
 
   const invest = useCallback(async () => {
     if (inFlight.current || !walletAddress || !token) return;
-    if (idle < MIN_USDC) return;
+    if (idle < MIN_IDLE_USDC) return;
     inFlight.current = true;
     setIsInvesting(true);
     setError(null);
@@ -139,10 +145,10 @@ export const useIdleFunds = () => {
       // El saldo de la cadena puede haber bajado del mínimo desde que se abrió la
       // pantalla. Antes se cortaba en silencio y el botón quedaba muerto sin
       // decir nada; ahora dice cuál es el piso.
-      if (raw < toBaseUnits(MIN_USDC_STR, token.decimals)) {
+      if (raw < toBaseUnits(MIN_IDLE_USDC_STR, token.decimals)) {
         setError(
           t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
-            amount: formatUsdPrecise(MIN_USDC, 2),
+            amount: formatUsdPrecise(MIN_IDLE_USDC, MIN_IDLE_USDC_DECIMALS),
           }),
         );
         return;
@@ -196,7 +202,7 @@ export const useIdleFunds = () => {
   // acreditarse con la pantalla de pago todavía abierta, y taparla con el prompt
   // interrumpe algo que el usuario está haciendo. Al cerrarse la pantalla la
   // marca se apaga y el prompt se ofrece como después de cualquier depósito.
-  const shouldPrompt = ready && isCustodial && idle >= MIN_USDC && !rampActive;
+  const shouldPrompt = ready && isCustodial && idle >= MIN_IDLE_USDC && !rampActive;
 
   // ¿Ya se SABE si hay plata ociosa? Mientras la sesión de Pollar se restaura o
   // el balance no cargó, `shouldPrompt` en false no es "no hay nada": es "no

@@ -1,6 +1,6 @@
 'use client';
 
-import { formatTokenPrecise, MIN_USDC } from '@/core-ui/helpers/numbers';
+import { formatTokenPrecise, MIN_IDLE_USDC, MIN_IDLE_USDC_DECIMALS } from '@/core-ui/helpers/numbers';
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,10 +51,14 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
         )}
       </p>
 
-      {/* Disclaimer de monto mínimo: el piso lo pone MIN_USDC, así que el número
-          sale del mismo lugar que lo valida y no de la traducción. */}
+      {/* Minimum disclaimer. The floor is `MIN_IDLE_USDC` — what lands here is
+          received, not typed, and from that balance up the app can already put
+          it to work — so the number comes from the same place that gates it and
+          not from the translation. */}
       <p className="text-center text-xs font-semibold text-black">
-        {t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', { amount: formatTokenPrecise(MIN_USDC, 2) })}
+        {t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
+          amount: formatTokenPrecise(MIN_IDLE_USDC, MIN_IDLE_USDC_DECIMALS),
+        })}
       </p>
 
       {/* QR de la dirección, en caja blanca redondeada (estilo app). */}

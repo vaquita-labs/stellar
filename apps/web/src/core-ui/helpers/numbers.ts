@@ -51,6 +51,33 @@ export const MIN_USDC_STR = '0.1';
 export const MIN_USDC = Number(MIN_USDC_STR);
 
 /**
+ * DUST floor for money that lands on its own: the balance from which we offer to
+ * put it to work, and the one promised to whoever receives USDC at their address.
+ *
+ * Much lower than `MIN_USDC` because it answers a different question. `MIN_USDC`
+ * is the amount rule the backend validates when the user TYPES how much to move;
+ * here nothing is typed — the whole balance goes in — and the supply is signed
+ * entirely in the browser, so all this number protects is the fee of a
+ * transaction that moves dust. The app sponsors that fee.
+ *
+ * The chain's own floors sit far below: ~0.0001 USDC on Blend and ~0.000001 on
+ * the DeFindex vault, measured on mainnet (see `MIN_USDC_AMOUNT` in
+ * @vaquita/shared).
+ *
+ * A 2 BOB purchase — the Bolivian corridor's minimum — delivers ~0.08 USDC, and
+ * that is the case this floor has to let through.
+ */
+export const MIN_IDLE_USDC_STR = '0.005';
+export const MIN_IDLE_USDC = Number(MIN_IDLE_USDC_STR);
+
+/**
+ * Decimals needed to write `MIN_IDLE_USDC` out in full. Derived from the string
+ * because the format helpers FLOOR: at the 2 decimals the rest of the screens
+ * use, "0.005" renders as "0.00" and the message claims the minimum is zero.
+ */
+export const MIN_IDLE_USDC_DECIMALS = (MIN_IDLE_USDC_STR.split('.')[1] ?? '').length;
+
+/**
  * Piso a `digits` decimales, robusto ante el ruido binario del float. `num*10^d`
  * arrastra error —`0.29 * 1e7 = 2899999.999…`— y un truncado directo bajaría el
  * último decimal (0.29 → 0.2899999). Sumamos un epsilon MAYOR a ese ruido
