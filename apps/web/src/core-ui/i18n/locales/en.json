@@ -851,6 +851,7 @@
     }
   },
   "notificationsCenter": {
+    "bellAria": "Notifications",
     "empty": "No notifications here yet",
     "emptyFiltered": "Try changing the filters to see more.",
     "filters": {
@@ -1143,6 +1144,7 @@
       },
       "emailRequired": "Add your email in Edit profile to enable this.",
       "pushDenied": "Notifications are blocked for this app in your browser settings.",
+      "pushUnsupported": "Install the app on your home screen to receive notifications.",
       "sections": {
         "activity": {
           "title": "Activity"

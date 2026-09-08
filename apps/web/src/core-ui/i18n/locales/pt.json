@@ -851,6 +851,7 @@
     }
   },
   "notificationsCenter": {
+    "bellAria": "Notificações",
     "empty": "Ainda não há notificações",
     "emptyFiltered": "Tente mudar os filtros para ver mais.",
     "filters": {
@@ -1143,6 +1144,7 @@
       },
       "emailRequired": "Adicione seu e-mail em Editar perfil para ativar.",
       "pushDenied": "As notificações estão bloqueadas para este app nas configurações do seu navegador.",
+      "pushUnsupported": "Instale o app na sua tela de início para receber notificações.",
       "sections": {
         "activity": {
           "title": "Atividade"

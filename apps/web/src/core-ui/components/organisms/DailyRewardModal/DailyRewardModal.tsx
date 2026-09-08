@@ -19,7 +19,11 @@ type Step = 'confirm' | 'reward' | 'xp' | 'streak';
 
 // Cuánto hay que mantener presionado el cofre para abrirlo (ms). El anillo de
 // progreso se llena en este tiempo; soltar antes lo reinicia.
-const HOLD_DURATION_MS = 1600;
+//
+// Era 1600 ms y se sentía lento: es la parte más larga de toda la apertura.
+// A 800 ms sigue leyéndose como un gesto deliberado — bajar de ~500-600 ms
+// haría que un toque accidental largo alcanzara para reclamar el premio.
+const HOLD_DURATION_MS = 800;
 
 export function DailyRewardModal({
   open,
