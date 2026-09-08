@@ -7,9 +7,8 @@ import { completeUsernamePromptIfShown, createFreshSigner, expect, openSignedIn,
  * Every run starts from a fresh, friendbot-funded wallet, because the tour is
  * gated on `homeTourCompleted` in the profile row: a wallet that walked it once
  * never sees it again, so a reused account would show the tour on the first run
- * and pass vacuously ever after. The replay param (`/home?tour=1`) is not a way
- * around that — a hard load bounces through the auth gate, which rebuilds the
- * URL from `usePathname()` and drops the query.
+ * and pass vacuously ever after. Clearing the flag from the admin's onboarding
+ * screen is how a person gets it back; there is nothing a spec can do with that.
  *
  * `primePage` suppresses the tour for every other spec (see `skipHomeTour`);
  * these are the ones that opt back in.
