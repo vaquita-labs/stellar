@@ -4,6 +4,7 @@ import StellarAuthButtons from '@/components/profile/StellarAuthButtons';
 import { InstallPrompt, OnboardingIntro } from '@/core-ui/components';
 import { isInstallPromptEnabled } from '@/core-ui/config/featureFlags';
 import { useInstallApp, useInstallDismissed, useIntroSeen, useIsAuthenticated } from '@/core-ui/hooks';
+import { internalRedirect } from '@/core-ui/helpers';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -31,10 +32,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Volver a la ruta de origen (?redirect=) si la hay; solo rutas internas
-      // para evitar open-redirect. Si no, al /home por defecto.
-      const redirect = searchParams.get('redirect');
-      router.replace(redirect && redirect.startsWith('/') ? redirect : '/home');
+      // Volver a la ruta de origen (?redirect=) si la hay, y sólo si de verdad
+      // es de esta app: `internalRedirect` resuelve el valor contra el origen en
+      // vez de mirarle la primera barra, que es lo que deja pasar
+      // `//otro-dominio`. Si no hay destino válido, al /home.
+      router.replace(internalRedirect(searchParams.get('redirect'), window.location.origin) ?? '/home');
     }
   }, [isAuthenticated, router, searchParams]);
 
