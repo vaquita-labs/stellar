@@ -12,9 +12,18 @@ deliverable names:
 | `withdraw.spec.ts`    | home → Withdraw → Wallet → amount → confirm → "Withdrawal sent!"   | yes       |
 | `leaderboard.spec.ts` | weekly league board, own "You" row, open a saver's world           | no        |
 | `badges.spec.ts`      | follow → "Crew Mate" unlocks → Claim award → `mint_badge` → reward | yes       |
+| `home-tour.spec.ts`   | first-time coach marks on the home: walk, skip, and stay gone      | no        |
+| `deep-link.spec.ts`   | the auth gate hands `/login` the whole URL, query string included  | no        |
 
 The suite runs on one worker, serially, in file order: `deposit` leaves the
 savings position `withdraw` drains, and every spec moves the same funded wallet.
+
+`primePage` answers the profile read with `homeTourCompleted: true`, so the
+home tour never starts. Its coach marks cover the button they explain with a
+pane that swallows clicks, which would time out every spec that taps Deposit,
+Withdraw or the side rail. `home-tour.spec.ts` passes `{ homeTour: true }` to
+get the tour back, on a fresh wallet — the flag is per-user in the profile row,
+so a wallet only ever meets the tour once.
 
 Every spec runs on an **external** wallet — `local-key-adapter.ts` declares
 `custody = 'external'` — so anything that exists only under social login (the
@@ -26,6 +35,14 @@ The local-currency on-ramp is covered up to the country picker and no further.
 Picking a country asks the provider for a real quote and opens a QR somebody
 has to actually pay, so the rest of that flow lives in the manual matrix
 (`docs/qa/wallet-regression-matrix.md`).
+
+The local-currency **off-ramp** — Withdraw → Bank → Bolivia, Brazil or Colombia —
+is not covered at all, and cannot be. It quotes against the live provider on
+every keystroke and pays out to a real bank account somebody has to own and then
+check; there is no sandbox that settles, and a mocked quote would only assert our
+own fixture. Nothing about that flow is a gap in this suite: it is a manual pass
+by design, and it belongs to whoever has an account in the corridor. Do not add
+a spec for it — add a case to the manual matrix instead.
 
 ## Running locally
 

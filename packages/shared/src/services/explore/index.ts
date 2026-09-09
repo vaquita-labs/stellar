@@ -8,6 +8,7 @@ import {
   getStreakCountsByProfile,
 } from '../profile';
 import { getMapLikeCountsByProfile } from '../mapLikes/counts';
+import { hasNickname } from '../profile/naming';
 
 /**
  * Explore feed: a shuffled stream of other vaqueros to discover and follow.
@@ -68,6 +69,25 @@ interface ExplorePoolCacheEntry {
 
 let explorePoolCache: ExplorePoolCacheEntry | null = null;
 
+/**
+ * Whether a profile can appear in the discovery feed: a nickname to render and
+ * an address to key its page on.
+ *
+ * The nickname and not any name — {@link ExploreProfileRow} does not carry
+ * `full_name`, so a profile named only that way would be drawn with the raw
+ * `@vaqueroXXXX` fallback and read as a broken account instead of someone worth
+ * following. Friend suggestions take the wider `hasDisplayName` because their
+ * DTO has a name to draw; the rules differ because the cards do.
+ *
+ * Onboarding makes a nickname mandatory, so what this leaves out are stubs:
+ * rows upserted the first time a wallet hits the API, which belong to nobody in
+ * particular.
+ */
+export const isDiscoverableProfile = (profile: {
+  nickname?: string | null;
+  wallet_address?: string | null;
+}): boolean => hasNickname(profile) && !!profile.wallet_address;
+
 async function buildExplorePool(): Promise<ExploreCandidate[]> {
   const { data: profiles, error } = await getProfiles();
   if (error) {
@@ -89,13 +109,7 @@ async function buildExplorePool(): Promise<ExploreCandidate[]> {
   ]);
 
   return profiles
-    .filter((profile) => {
-      // A card with no name renders as a raw `@vaqueroXXXX` handle, which reads
-      // as a broken account rather than someone worth following. Onboarding
-      // makes a username mandatory, so this only filters stubs.
-      const hasName = !!(profile.nickname ?? '').trim() || !!(profile.full_name ?? '').trim();
-      return hasName && !!profile.wallet_address;
-    })
+    .filter((profile) => isDiscoverableProfile(profile))
     .map((profile) => ({
       id: profile.id,
       walletAddress: profile.wallet_address ?? '',

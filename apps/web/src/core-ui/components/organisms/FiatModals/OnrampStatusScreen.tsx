@@ -1,6 +1,7 @@
 'use client';
 
 import { supportEmail } from '@/core-ui/config/featureFlags';
+import { formatTokenFine } from '@/core-ui/helpers/numbers';
 import { Spinner } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
 import { PressableButton } from '../../molecules/PressableButton';
@@ -8,7 +9,7 @@ import { PressableButton } from '../../molecules/PressableButton';
 interface OnrampStatusScreenProps {
   /** En qué terminó (o en qué sigue) la compra. */
   screen: 'processing' | 'settled' | 'failed';
-  /** USDC acreditado, o null cuando nadie puede afirmarlo. */
+  /** USDC acreditado según el ledger, o null cuando nadie puede afirmarlo. */
   receivedUsdc: number | null;
   /** Lo que el usuario pagó, en moneda local. */
   amountFiat: string;
@@ -20,9 +21,6 @@ interface OnrampStatusScreenProps {
   /** Volver a empezar después de un rechazo. */
   onRestart: () => void;
 }
-
-/** Decimales con los que se muestra el USDC. */
-const usdcLabel = (amount: number) => (Math.floor(amount * 100) / 100).toFixed(2);
 
 /**
  * Lo que pasa después de pagar: esperando la acreditación, acreditada, o
@@ -102,11 +100,13 @@ export function OnrampStatusScreen({
       <p className="text-sm font-bold text-black">{t('wallet.fiat.onramp.settledTitle', 'Your USDC is in your wallet')}</p>
       {receivedUsdc != null ? (
         <p className="text-2xl font-bold text-black">
-          {t('wallet.fiat.onramp.settledAmount', '{{amount}} USDC', { amount: usdcLabel(receivedUsdc) })}
+          {t('wallet.fiat.onramp.settledAmount', '{{amount}} USDC', { amount: formatTokenFine(receivedUsdc) })}
         </p>
       ) : (
-        // Retomada desde otro dispositivo no hay estimación local ni monto del
-        // proveedor: decir un número inventado sería peor que no decir ninguno.
+        // The provider reports the fiat that was paid, so the credited figure
+        // only exists on the ledger. When that read comes back empty there is
+        // nothing to say but that the money arrived — a number nobody can stand
+        // behind would be worse than none.
         <p className="text-xs text-gray-500">
           {t('wallet.fiat.onramp.settledNoAmount', 'The USDC was credited to your wallet.')}
         </p>

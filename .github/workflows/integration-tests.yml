@@ -57,6 +57,9 @@ jobs:
         run: pnpm --filter @vaquita/web test:integration
 
       - name: Upload JUnit report
+        # A report that could not be uploaded is not a broken test: without this,
+        # an Actions storage failure reddens a job whose tests all passed.
+        continue-on-error: true
         if: always()
         uses: actions/upload-artifact@v4
         with:

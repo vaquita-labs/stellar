@@ -102,13 +102,17 @@ jobs:
         working-directory: apps/web
         run: node scripts/e2e-pass-rate.mjs e2e-results/results.json
 
+      # Only on red. A passing run's report is ~250 KB nobody opens, and they
+      # pile up; a failing one carries tens of MB of video, and that is the one
+      # somebody actually reads. The raw results below stay unconditional: their
+      # JUnit and JSON are small on green and the pass-rate step needs them.
       - name: Upload Playwright report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: apps/web/playwright-report/
-          retention-days: 30
+          retention-days: 7
 
       - name: Upload raw results
         if: always()
@@ -118,4 +122,4 @@ jobs:
           path: |
             apps/web/e2e-results/
             apps/web/test-results/
-          retention-days: 30
+          retention-days: 7

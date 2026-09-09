@@ -127,6 +127,23 @@ export const formatTokenAdaptive = (amount: number) =>
 /** Igual que `formatTokenAdaptive` pero con el `$` delante. */
 export const formatUsdAdaptive = (amount: number) => `$${formatTokenAdaptive(amount)}`;
 
+/** Decimales para un monto por debajo de 1: ver `formatTokenFine`. */
+const FINE_DECIMALS = 4;
+
+/**
+ * A figure of money the reader has to be able to reconcile with their balance:
+ * the usual two decimals from 1 up, four below it.
+ *
+ * The floor is what forces this. Two decimals on 0.079976 print "0.07" and throw
+ * away an eighth of the money, which on a purchase of a few cents is the
+ * difference between the number on the screen and the number in the wallet. Four
+ * decimals keep it readable and keep it true.
+ *
+ * Above 1 nothing changes: there the cent is already the smallest unit anyone
+ * reads, and trailing digits only make the figure harder to take in.
+ */
+export const formatTokenFine = (amount: number) => formatTokenPrecise(amount, Math.abs(amount) < 1 ? FINE_DECIMALS : 2);
+
 /**
  * Pisa a `digits` decimales y devuelve un string limpio para prellenar el
  * teclado (sin ceros de cola ni ruido de float): 4 → "4", 3.001234 → "3.001234".

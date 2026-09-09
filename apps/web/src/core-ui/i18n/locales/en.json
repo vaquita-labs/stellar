@@ -1889,7 +1889,8 @@
         "unrecorded": "Keep this screen open: we could not save your purchase, so you may not be able to return to it.",
         "working": "Preparing your purchase…",
         "youPay": "You pay",
-        "youReceive": "You receive"
+        "youReceive": "You receive",
+        "maxAmount": "The maximum purchase is {{amount}} {{currency}}."
       },
       "rail": {
         "ach": "Bank Transfer"

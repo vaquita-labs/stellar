@@ -10,15 +10,6 @@ import { PressableButton } from '../../molecules/PressableButton';
 import { HOME_TOUR_STEPS, HomeTourStep } from './homeTourConfig';
 import { TutorialFocusLock } from './TutorialFocusLock';
 
-/**
- * Query param that replays the tour for someone who already saw it. The flag is
- * per-user in the backend and the testing panel that used to flip it by hand is
- * commented out, so without this there is no way to look at the tour twice.
- * Read once on mount from `window.location.search` rather than with
- * `useSearchParams`, which would force a Suspense boundary around the home.
- */
-const REPLAY_PARAM = 'tour';
-
 /** How often to look for the anchors and for a modal that outranks the tour. */
 const POLL_MS = 200;
 
@@ -57,15 +48,9 @@ export function HomeTour() {
 
   const setHomeTourSettled = useModalQueueStore((s) => s.setHomeTourSettled);
 
-  const [replay, setReplay] = useState(false);
   const [steps, setSteps] = useState<HomeTourStep[] | null>(null);
   const [index, setIndex] = useState(0);
   const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setReplay(new URLSearchParams(window.location.search).get(REPLAY_PARAM) === '1');
-  }, []);
 
   // The profile answered and the user has not seen the tour.
   //
@@ -74,7 +59,7 @@ export function HomeTour() {
   // stays false forever — which would mean no tour at all, silently. What we
   // actually need is narrower and is checked below: do not draw coach marks
   // while a modal is on screen.
-  const wanted = !isLoading && !isError && !!data && !done && (replay || !data.homeTourCompleted);
+  const wanted = !isLoading && !isError && !!data && !done && !data.homeTourCompleted;
 
   // Steps that resolved to nothing are already gone; under this many, what is
   // left is not a tour and the user is better off with no overlay at all.

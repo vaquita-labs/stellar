@@ -45,8 +45,19 @@ export function useAuthGate() {
 
   useEffect(() => {
     if (showAuthGate) {
+      // The query string travels with the path. Private routes carry state
+      // there — `?tx=` opens a transaction's detail, `?period=` picks the
+      // portfolio's window — and `redirect` is the only record of where the
+      // visitor was going, so a path without its query sends them to the plain
+      // screen after signing in, silently dropping what the link was for.
+      //
+      // Read off `window.location` and not `useSearchParams()`: that hook opts
+      // the whole tree into client-side bailout and every consumer of this gate
+      // would need a Suspense boundary around it. This runs in an effect, so
+      // there is always a window, and the value is the one the browser has.
+      const search = typeof window !== 'undefined' ? window.location.search : '';
       const target =
-        pathname && pathname !== '/login' ? `/login?redirect=${encodeURIComponent(pathname)}` : '/login';
+        pathname && pathname !== '/login' ? `/login?redirect=${encodeURIComponent(`${pathname}${search}`)}` : '/login';
       router.replace(target);
     }
   }, [showAuthGate, router, pathname]);

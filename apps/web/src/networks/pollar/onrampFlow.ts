@@ -31,24 +31,36 @@ export function terminalStatusFor(screen: OnrampScreen): TerminalOnrampStatus | 
   return screen === 'settled' || screen === 'failed' || screen === 'expired' ? screen : null;
 }
 
-/** ¿Vale la pena seguir preguntándole al proveedor? */
-export function shouldPoll(screen: OnrampScreen): boolean {
-  return screen === 'paying' || screen === 'processing';
+/**
+ * ¿Vale la pena seguir preguntándole al proveedor?
+ *
+ * Mientras la compra puede cambiar sola, sí. Y una vez liquidada también, si
+ * todavía no dio el `stellarTxHash`: el proveedor marca `completed` en cuanto
+ * firma, a veces un latido antes de publicar el hash, y ese hash es lo único
+ * que permite leer del ledger cuánto USDC entró. Dejar de preguntar en el
+ * instante en que la pantalla pasa a liquidada es cómo una compra se queda sin
+ * cifra para siempre: nada más vuelve a pedirlo.
+ */
+export function shouldPoll(screen: OnrampScreen, hasSettleHash = false): boolean {
+  if (screen === 'paying' || screen === 'processing') return true;
+  return screen === 'settled' && !hasSettleHash;
 }
 
 /**
- * Cuánto USDC recibió el usuario, o null si nadie lo sabe.
+ * How much USDC the user received, or null when nobody can say.
  *
- * El proveedor devuelve la transacción con `amount`/`currency`, pero en la
- * compra esos son los BOLIVIANOS que se pagaron, no el USDC que llegó: sólo
- * cuando informa el monto en USDC se lo puede tomar como lo acreditado. Si no,
- * queda la estimación de la cotización, que existe sólo en el dispositivo donde
- * se hizo la compra — por eso null es un resultado posible y no un error: al
- * retomar desde otro teléfono no hay número honesto que mostrar.
+ * The provider returns the transaction with `amount`/`currency`, but on a
+ * purchase those are the BOLIVIANOS that were paid, not the USDC that landed:
+ * only when it reports the figure in USDC can it be taken as what was credited.
+ * Otherwise the answer is `credited`, read off the ledger by the caller.
+ *
+ * null is a result and not an error: with the provider reporting fiat and the
+ * ledger unreadable, there is no honest number to show, and the screen says the
+ * money arrived without naming one.
  */
-export function receivedUsdcFrom(tx: { amount: number; currency: string }, estimate: number | null): number | null {
+export function receivedUsdcFrom(tx: { amount: number; currency: string }, credited: number | null): number | null {
   if (tx.currency?.toUpperCase() === 'USDC' && Number.isFinite(tx.amount)) return tx.amount;
-  return estimate != null && Number.isFinite(estimate) ? estimate : null;
+  return credited != null && Number.isFinite(credited) ? credited : null;
 }
 
 /** Qué hacer al reabrir el modal sobre una compra que quedó registrada. */

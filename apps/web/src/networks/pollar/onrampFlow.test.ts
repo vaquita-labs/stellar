@@ -50,12 +50,22 @@ describe('shouldPoll', () => {
   it('sigue preguntando mientras la compra pueda cambiar sola', () => {
     expect(shouldPoll('paying')).toBe(true);
     expect(shouldPoll('processing')).toBe(true);
+    expect(shouldPoll('paying', true)).toBe(true);
+  });
+
+  it('sigue preguntando en liquidada mientras falte el hash', () => {
+    expect(shouldPoll('settled', false)).toBe(true);
   });
 
   it('deja de preguntar cuando ya no hay nada que esperar', () => {
-    expect(shouldPoll('settled')).toBe(false);
+    expect(shouldPoll('settled', true)).toBe(false);
     expect(shouldPoll('failed')).toBe(false);
     expect(shouldPoll('expired')).toBe(false);
+  });
+
+  it('no espera un hash en las pantallas que no liquidan', () => {
+    expect(shouldPoll('failed', false)).toBe(false);
+    expect(shouldPoll('expired', false)).toBe(false);
   });
 });
 
@@ -64,11 +74,11 @@ describe('receivedUsdcFrom', () => {
     expect(receivedUsdcFrom({ amount: 14.31, currency: 'USDC' }, 14.2)).toBe(14.31);
   });
 
-  it('cae a la estimación cuando el proveedor sigue informando lo pagado en moneda local', () => {
+  it('cae a lo que el ledger acreditó cuando el proveedor informa lo pagado en moneda local', () => {
     expect(receivedUsdcFrom({ amount: 100, currency: 'BOB' }, 14.2)).toBe(14.2);
   });
 
-  it('no inventa un monto cuando no hay ni informe ni estimación', () => {
+  it('no inventa un monto cuando no hay ni informe ni lectura del ledger', () => {
     expect(receivedUsdcFrom({ amount: 100, currency: 'BOB' }, null)).toBeNull();
   });
 });

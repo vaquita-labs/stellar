@@ -22,6 +22,17 @@ const HORIZON_BACKOFF_MS = 300;
 /** Techo de cada intento: sin esto una red a medio morir nunca resuelve. */
 const HORIZON_TIMEOUT_MS = 10_000;
 
+/**
+ * Cuánto se espera a que Horizon muestre la transacción de la compra. El
+ * proveedor la da por liquidada apenas la firma, y el ledger que la contiene
+ * puede tardar todavía un par de cierres en aparecer indexado.
+ */
+const CREDITED_WAIT_MS = 60_000;
+/** Los ledgers cierran cada ~5s; preguntar más seguido sólo gasta requests. */
+const CREDITED_POLL_MS = 5000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export interface OnrampCorridor {
   country: OnrampCorridorCode;
   /**
@@ -41,6 +52,20 @@ export interface OnrampCorridor {
    * fits and leave the user guessing which amount does.
    */
   minFiat: number;
+  /**
+   * Ceiling for a purchase, in local currency.
+   *
+   * VAQUITA'S, NOT THE PROVIDER'S. Pollar publishes its own `maxAmount` inside
+   * every quote and it is far above this one; the route would happily take more.
+   * This is a self-imposed cap while the corridor is new: it bounds how much a
+   * single purchase can put at stake before anyone has watched enough of them
+   * settle, and it is meant to be raised or dropped, not defended.
+   *
+   * Because it is ours it lives here and not in the quote. The screen states it
+   * as flatly as it states the floor: a ceiling is a ceiling, and whose it is
+   * changes nothing about what the user has to do.
+   */
+  maxFiat: number;
 }
 
 /**
@@ -53,7 +78,7 @@ export interface OnrampCorridor {
  * lista y las cotizaciones vuelven vacías.
  */
 export const ONRAMP_CORRIDORS: Record<OnrampCorridorCode, OnrampCorridor> = {
-  BO: { country: 'BO', currency: 'BOB', symbol: 'Bs', minFiat: 2 },
+  BO: { country: 'BO', currency: 'BOB', symbol: 'Bs', minFiat: 2, maxFiat: 1000 },
 };
 
 /**
@@ -234,7 +259,87 @@ export function useRampOnramp() {
     return await getClient().getRampKycStatus();
   }, [getClient]);
 
-  return { resolveCorridor, quoteFiat, ensureUsdcTrustline, createOnramp, readOnrampTransaction, readKycStatus };
+  /**
+   * How much USDC the purchase actually credited, per the ledger. Lives on the
+   * hook so callers do not have to know which issuer counts as USDC here.
+   */
+  const readCreditedUsdc = useCallback(
+    async (
+      hash: string,
+      walletAddress: string,
+      opts: { shouldStop?: () => boolean; timeoutMs?: number } = {},
+    ): Promise<number | null> => {
+      const issuer = getBlendConfig()?.usdcIssuer;
+      if (!issuer) return null;
+      return creditedUsdcFor(hash, walletAddress, issuer, opts);
+    },
+    [],
+  );
+
+  return {
+    resolveCorridor,
+    quoteFiat,
+    ensureUsdcTrustline,
+    createOnramp,
+    readOnrampTransaction,
+    readKycStatus,
+    readCreditedUsdc,
+  };
+}
+
+/**
+ * The USDC that actually landed, read off the ledger.
+ *
+ * The provider never reports it. Its transaction carries `amount` and
+ * `currency`, and on a purchase those are the BOLIVIANOS that were paid — there
+ * is no field for the credited crypto anywhere in the response. What it does
+ * carry is `stellarTxHash`, and the payment is right there in that transaction.
+ *
+ * Every matching payment is summed: one transaction can carry more than one, and
+ * taking only the first would under-report what arrived.
+ *
+ * The transaction is waited for, not merely asked about once. The provider
+ * publishes `stellarTxHash` as soon as it signs, so the usual answer on the
+ * first try is Horizon's 404 for a ledger it has not ingested yet — and this is
+ * the only read of the figure there will be, because a settled purchase never
+ * changes again and nothing would trigger a second attempt.
+ *
+ * `null` means the figure cannot be affirmed — the window ran out, or the
+ * transaction is there and carries no USDC payment to this wallet. It is a
+ * result, not a failure: the screen then says the money landed without naming an
+ * amount, which is the whole point of reading this instead of showing the
+ * quote's estimate.
+ */
+export async function creditedUsdcFor(
+  hash: string,
+  account: string,
+  issuer: string,
+  opts: { shouldStop?: () => boolean; timeoutMs?: number } = {},
+): Promise<number | null> {
+  const { shouldStop, timeoutMs = CREDITED_WAIT_MS } = opts;
+  const start = Date.now();
+  for (;;) {
+    if (shouldStop?.()) return null;
+    const res = await horizonGet(`${getHorizonUrl()}/transactions/${encodeURIComponent(hash)}/payments?limit=200`).catch(
+      () => null,
+    );
+    // A 200 is the whole answer and ends it: the payments of a transaction are
+    // fixed once it is in a ledger, so an empty list stays empty. Everything
+    // else is "not yet" — the 404 of a ledger still being ingested, a rate
+    // limit, a bad gateway, Horizon unreachable — and the purchase is already
+    // settled, so what is missing is on its way.
+    if (res?.ok) {
+      const body = (await res.json().catch(() => null)) as {
+        _embedded?: { records?: Array<{ to?: string; asset_code?: string; asset_issuer?: string; amount?: string }> };
+      } | null;
+      const credited = (body?._embedded?.records ?? [])
+        .filter((r) => r.to === account && r.asset_code?.toUpperCase() === 'USDC' && r.asset_issuer === issuer)
+        .reduce((sum, r) => sum + Number(r.amount ?? 0), 0);
+      return Number.isFinite(credited) && credited > 0 ? credited : null;
+    }
+    if (Date.now() - start > timeoutMs) return null;
+    await sleep(CREDITED_POLL_MS);
+  }
 }
 
 /** ¿La cuenta ya tiene la trustline del asset? Cuenta inexistente = no. */
@@ -261,7 +366,11 @@ async function accountHasTrustline(account: string, code: string, issuer: string
  * cuenta inexistente— es una respuesta y la decide quien llama.
  */
 async function readAccount(account: string): Promise<Response> {
-  const url = `${getHorizonUrl()}/accounts/${encodeURIComponent(account)}`;
+  return horizonGet(`${getHorizonUrl()}/accounts/${encodeURIComponent(account)}`);
+}
+
+/** The retrying GET itself, shared by every Horizon read in this module. */
+async function horizonGet(url: string): Promise<Response> {
   for (let attempt = 0; attempt < HORIZON_ATTEMPTS; attempt++) {
     if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, HORIZON_BACKOFF_MS * attempt));
     try {

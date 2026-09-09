@@ -1,6 +1,7 @@
 import { resolveAvatarConfig, type AvatarConfig } from '@vaquita/avatar';
 import { prisma } from '@vaquita/db';
 import type { Profile } from '../../types';
+import { hasNickname } from '../profile/naming';
 
 // ---------------------------------------------------------------------------
 // Cycle duration config
@@ -167,22 +168,33 @@ export function enrichLeaderboardRows(
 ): EnrichedLeaderboardRow[] {
   const profilesByWallet = new Map(profiles.map((profile) => [profile.wallet_address?.toLowerCase() ?? '', profile]));
 
-  return rows.map((row, index) => {
-    const profile = profilesByWallet.get(row.walletAddress.toLowerCase());
-
-    return {
-      position: index + 1,
-      ...row,
-      nickname: profile?.nickname ?? '',
-      avatarConfig: resolveAvatarConfig(profile?.avatar_config, profile?.wallet_address ?? row.walletAddress),
-      badges: profile ? (rollups.badgesByProfileId.get(profile.id) ?? 0) : 0,
-      streak: profile ? (rollups.streaksByProfileId.get(profile.id) ?? 0) : 0,
-      experience: profile ? (rollups.experienceByProfileId.get(profile.id) ?? 0) : 0,
-      coins: profile ? (rollups.coinsByProfileId?.get(profile.id) ?? 0) : 0,
-      mapLikes: profile ? (rollups.mapLikesByProfileId?.get(profile.id) ?? 0) : 0,
-      cycleStatus,
-    };
-  });
+  return (
+    rows
+      .map((row) => ({ row, profile: profilesByWallet.get(row.walletAddress.toLowerCase()) }))
+      // The board ranks USERS OF THE APP, and the score is the only thing that
+      // comes from deposits. A wallet can hold confirmed deposits without ever
+      // having opened the app — the reconciler writes rows straight from
+      // on-chain events, and `POST /deposit` carries no session — and one that
+      // never signed up has no profile, or a stub with no nickname. That
+      // deposit is not a competitor, so it does not take a place.
+      //
+      // Dropped BEFORE the position is assigned, so the numbers stay
+      // consecutive. Filtering afterwards would leave a hole where a row nobody
+      // can be shown used to be, and the board would read as broken.
+      .filter((entry): entry is { row: LeaderboardRow; profile: Profile } => hasNickname(entry.profile ?? {}))
+      .map(({ row, profile }, index) => ({
+        position: index + 1,
+        ...row,
+        nickname: profile.nickname,
+        avatarConfig: resolveAvatarConfig(profile.avatar_config, profile.wallet_address ?? row.walletAddress),
+        badges: rollups.badgesByProfileId.get(profile.id) ?? 0,
+        streak: rollups.streaksByProfileId.get(profile.id) ?? 0,
+        experience: rollups.experienceByProfileId.get(profile.id) ?? 0,
+        coins: rollups.coinsByProfileId?.get(profile.id) ?? 0,
+        mapLikes: rollups.mapLikesByProfileId?.get(profile.id) ?? 0,
+        cycleStatus,
+      }))
+  );
 }
 
 // ---------------------------------------------------------------------------
