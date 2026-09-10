@@ -7,6 +7,7 @@ export * from './EditProfilePage';
 export * from './FriendsPage';
 export * from './FriendsModal';
 export * from './HelpCenterPage';
+export * from './InviteFriendsPage';
 export * from './MockedSubPageLayout';
 export * from './NotificationsPage';
 export * from './PersonalRecords';

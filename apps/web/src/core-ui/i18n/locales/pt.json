@@ -2119,21 +2119,23 @@
     }
   },
   "referrals": {
-    "activeReferrals": "Indicações ativas",
-    "apyBonus": "Bônus de APY",
-    "description": "Ganhe recompensas recorrentes enquanto seus amigos poupam. Cada indicação ativa pode melhorar sua taxa: as recompensas são variáveis e não garantidas.",
-    "earningsLabel": "Ganhos por indicações",
     "invite": "Convidar amigos",
-    "nextTier": "Convide mais {{count}} para chegar a",
-    "pendingEarnings": "Ganhos pendentes por indicações",
+    "inviteDesc": "Compartilhe seu link e veja quem entrou.",
+    "description": "Compartilhe seu link. A gente conta todo mundo que entra por ele.",
     "shareText": "Poupe comigo na Vaquita e ganhe recompensas. Use o meu código {{code}}",
-    "tiersTitle": "Níveis de boost",
-    "title": "Indicações",
-    "totalEarnings": "Ganhos totais por indicações",
-    "yourCode": "Seu código de indicação",
-    "tierLabel_one": "{{count}} indicação ativa",
-    "tierLabel_other": "{{count}} indicações ativas",
-    "learnMore": "Saiba como funciona"
+    "friendsJoined": "Amigos que entraram",
+    "friendsSaving": "Amigos poupando",
+    "yourLink": "Seu link",
+    "copyLink": "Copiar link",
+    "copied": "Link copiado",
+    "pasteHint": "Cole na sua bio, numa legenda ou numa mensagem.",
+    "rewardsComing": "As recompensas por convidar estão chegando. As suas já estão sendo contadas.",
+    "channels": {
+      "whatsapp": "WhatsApp",
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "telegram": "Telegram"
+    }
   },
   "withdraw": {
     "addMethod": "Adicionar método",
