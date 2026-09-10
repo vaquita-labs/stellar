@@ -6,6 +6,7 @@ import { ably } from '../ably';
 import { getActiveBadgeClaimsForWallet, getMintedBadges } from '../badges/claims';
 import { getLastClosedCycleId, getLeaderboardRankForWallet } from '../leaderboard';
 import { notify } from '../notifications';
+import { ensureReferralCode } from '../referral';
 import { countExternalVaultDeposits, prismaVaultFlowRepository } from '../vaultFlows';
 import { getSupportedTokenIds } from '../wallets/onchainBalances';
 import {
@@ -333,6 +334,20 @@ export const getProfile = async (walletAddress: string) => {
       update: {},
       create: { walletAddress },
     });
+
+    // Every profile owns a referral link from the moment it exists. Minted here
+    // rather than inside the referral service because this is the one call every
+    // authenticated session already makes, so a user who never opens the invite
+    // screen still has a working code the day a friend asks for one. One write,
+    // once per profile ever — and a failure must not cost the caller a profile,
+    // so it is swallowed and retried on the next read.
+    if (!profile.referralCode) {
+      try {
+        profile.referralCode = await ensureReferralCode(profile);
+      } catch (error) {
+        console.error('Error minting referral code', error);
+      }
+    }
 
     return {
       success: true,

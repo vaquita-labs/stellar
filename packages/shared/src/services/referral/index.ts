@@ -1,5 +1,6 @@
 import { prisma } from '@vaquita/db';
 import { DepositStatus, WithdrawalStatus } from '../../types';
+import { getSupportedTokenIds } from '../wallets/onchainBalances';
 import type { ReferralSummaryResponseDTO, ReferralTierDTO } from '../../types';
 
 /**
@@ -50,7 +51,7 @@ const randomCode = (): string => {
  * (tiny) chance of a unique-index collision. Concurrent first-reads can race; if
  * the update loses to another writer we re-read the now-present code.
  */
-const ensureReferralCode = async (profile: { id: number; referralCode: string | null }): Promise<string> => {
+export const ensureReferralCode = async (profile: { id: number; referralCode: string | null }): Promise<string> => {
   if (profile.referralCode) return profile.referralCode;
 
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -77,29 +78,55 @@ const ensureReferralCode = async (profile: { id: number; referralCode: string | 
   throw new Error('Could not allocate a referral code');
 };
 
-/** How many of these referred profiles currently hold a live (active) deposit. */
+/** How many of these referred profiles are currently saving, in either product. */
 const countActiveReferrals = async (referredWallets: string[]): Promise<number> => {
   if (referredWallets.length === 0) return 0;
 
-  // A wallet is "active" if it has at least one deposit that is confirmed
-  // on-chain and has no confirmed withdrawal — the same shape the deposit
-  // service maps to DEPOSIT_SUCCESS. Grouping keeps this a single query.
-  const grouped = await prisma.deposit.groupBy({
-    by: ['walletAddress'],
-    where: {
-      walletAddress: { in: referredWallets },
-      deletedAt: null,
-      status: DepositStatus.CONFIRMED,
-      transactionHash: { not: null },
-      depositIdHex: { not: null },
-      withdrawals: {
-        none: { status: WithdrawalStatus.CONFIRMED },
-      },
-    },
-    _count: { _all: true },
-  });
+  // Two products, one question. A wallet counts once if it holds money in
+  // either: a locked deposit confirmed on-chain with no confirmed withdrawal
+  // (the shape the deposit service maps to DEPOSIT_SUCCESS), or a positive
+  // flexible-vault balance. Counting locked alone would read a vault-only saver
+  // as not saving, and the vault is the path the deposit sheet offers first to
+  // non-web3 users — exactly who an invite brings in.
+  //
+  // `wallet_balances` is a snapshot, refreshed lazily when a wallet interacts
+  // with the app, so this trails reality by up to the refresh age. Acceptable
+  // for a headline count on the invite screen; do not build a payout on it.
+  const tokenIds = await getSupportedTokenIds();
 
-  return grouped.length;
+  const [locked, vault] = await Promise.all([
+    prisma.deposit.groupBy({
+      by: ['walletAddress'],
+      where: {
+        walletAddress: { in: referredWallets },
+        deletedAt: null,
+        status: DepositStatus.CONFIRMED,
+        transactionHash: { not: null },
+        depositIdHex: { not: null },
+        withdrawals: {
+          none: { status: WithdrawalStatus.CONFIRMED },
+        },
+      },
+      _count: { _all: true },
+    }),
+    // Scoped to the supported tokens on purpose: production still carries rows
+    // for a retired token on the same vault, so an unscoped read double-counts.
+    tokenIds.length === 0
+      ? Promise.resolve([] as { walletAddress: string }[])
+      : prisma.walletBalance.findMany({
+          where: {
+            walletAddress: { in: referredWallets },
+            tokenId: { in: tokenIds },
+            vaultUsdc: { gt: 0 },
+          },
+          select: { walletAddress: true },
+          distinct: ['walletAddress'],
+        }),
+  ]);
+
+  const saving = new Set(locked.map((row) => row.walletAddress));
+  for (const row of vault) saving.add(row.walletAddress);
+  return saving.size;
 };
 
 /**
