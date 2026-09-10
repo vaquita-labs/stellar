@@ -22,7 +22,10 @@ export default async function RetentionPage({ searchParams }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-black">Retention</h1>
-          <p className="text-sm text-black/60">Do users come back, and do they hold to maturity?</p>
+          <p className="text-sm text-black/60">
+            Do users come back, and do they hold to maturity? Deposit figures count both products; withdrawal and
+            maturity figures are locked positions only, since the flexible vault has neither a lock nor a maturity.
+          </p>
         </div>
         <RangePicker range={range.key} bucket={range.bucket} />
       </div>
@@ -34,14 +37,14 @@ export default async function RetentionPage({ searchParams }: Props) {
           hint={`${fmtInt(kpis.returning_depositors)} of ${fmtInt(kpis.depositors)} wallets deposited ≥2× in range`}
         />
         <KpiTile
-          label="Early withdrawals"
+          label="Early locked withdrawals"
           value={kpis.withdrawals ? fmtPct(kpis.early / kpis.withdrawals) : '—'}
           hint={`${fmtInt(kpis.early)} of ${fmtInt(kpis.withdrawals)} withdrawals before lock end`}
         />
         <KpiTile
-          label="Principal withdrawn"
+          label="Locked principal withdrawn"
           value={fmtUsd(kpis.principal_withdrawn)}
-          hint="confirmed withdrawals in range"
+          hint="confirmed pool withdrawals in range"
         />
         <KpiTile
           label="Yield paid out"
@@ -49,7 +52,7 @@ export default async function RetentionPage({ searchParams }: Props) {
           hint={`interest ${fmtUsd(kpis.interest_paid)} + rewards ${fmtUsd(kpis.reward_paid)}`}
         />
         <KpiTile
-          label="Open positions"
+          label="Open locked positions"
           value={fmtInt(kpis.active_positions)}
           hint={`${fmtInt(kpis.matured_unclaimed)} matured but not withdrawn`}
         />
@@ -64,8 +67,8 @@ export default async function RetentionPage({ searchParams }: Props) {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Withdrawals: early vs on time"
-          hint={`Confirmed withdrawals per ${range.bucket}`}
+          title="Locked withdrawals: early vs on time"
+          hint={`Confirmed pool withdrawals per ${range.bucket}`}
           rows={withdrawals}
           filename={`withdrawals-${range.key}-${range.bucket}`}
         >
@@ -79,8 +82,8 @@ export default async function RetentionPage({ searchParams }: Props) {
           />
         </ChartCard>
         <ChartCard
-          title="Principal withdrawn"
-          hint={`USDC returned per ${range.bucket}, early vs on time`}
+          title="Locked principal withdrawn"
+          hint={`Pool USDC returned per ${range.bucket}, early vs on time`}
           rows={withdrawals}
           filename={`withdrawn-principal-${range.key}-${range.bucket}`}
         >

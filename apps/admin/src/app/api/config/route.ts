@@ -38,6 +38,7 @@ const emptyConfig = {
   cycleDurationMs: null as number | null,
   dailyGoldCoins: 0,
   dailyCheckinExperience: 0,
+  depositCoinsDailyCap: 100,
   gameDayLengthMs: 1_200_000,
   currencies: [] as Currency[],
   languages: [] as Language[],
@@ -85,6 +86,9 @@ const updateSchema = z.object({
   // Daily check-in reward amounts. Non-negative integers; only written when sent.
   dailyGoldCoins: z.number().int().min(0).optional(),
   dailyCheckinExperience: z.number().int().min(0).optional(),
+  // Ceiling on the coins a wallet can earn from deposits in one UTC day, summed
+  // across both savings products. 0 turns the deposit grant off entirely.
+  depositCoinsDailyCap: z.number().int().min(0).optional(),
   // Duración de un día del reloj de juego, en milisegundos reales. Sólo se
   // escribe cuando viene en el payload. 600000 = 10 min, 1200000 = 20 min. El
   // tope es el máximo de un int4: pasarse haría fallar el INSERT en Postgres.
@@ -140,6 +144,7 @@ export async function PATCH(req: NextRequest) {
         cycleDurationMs: data.cycleDurationMs == null ? null : BigInt(data.cycleDurationMs),
         dailyGoldCoins: data.dailyGoldCoins ?? 1,
         dailyCheckinExperience: data.dailyCheckinExperience ?? 0,
+        depositCoinsDailyCap: data.depositCoinsDailyCap ?? 100,
         gameDayLengthMs: data.gameDayLengthMs ?? 1_200_000,
         currencies: data.currencies ?? [],
         languages: data.languages ?? [],
@@ -160,6 +165,7 @@ export async function PATCH(req: NextRequest) {
       ...(data.languages !== undefined ? { languages: data.languages } : {}),
       ...(data.dailyGoldCoins !== undefined ? { dailyGoldCoins: data.dailyGoldCoins } : {}),
       ...(data.dailyCheckinExperience !== undefined ? { dailyCheckinExperience: data.dailyCheckinExperience } : {}),
+      ...(data.depositCoinsDailyCap !== undefined ? { depositCoinsDailyCap: data.depositCoinsDailyCap } : {}),
       ...(data.gameDayLengthMs !== undefined ? { gameDayLengthMs: data.gameDayLengthMs } : {}),
       networkPassphrase: data.networkPassphrase,
       badgesContractAddress: data.badgesContractAddress,

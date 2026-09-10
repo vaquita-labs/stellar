@@ -16,6 +16,7 @@ import {
   getNextDepositNonce,
   getNetworkById,
   getNetworkByName,
+  grantDepositCoinsForWallet,
   getStellarApyData,
   getTokenBySymbol,
   getVaultApy,
@@ -134,6 +135,22 @@ router.post('/confirm', asyncHandler(async (req, res) => {
 
   req.log.info({ id, txHash }, 'Deposit confirmed');
   refreshWalletBalanceAfterEvent(result.data?.walletAddress, req.log, 'deposit-confirm');
+
+  // Only the call that actually moved the row from initiated to confirmed pays.
+  // `deposits` has no unique transaction hash, so a client retry and the
+  // reconciler repairing a row both reach this handler on a deposit that is
+  // already confirmed — gating on getting here instead would pay for it again
+  // each time. Detached: a coin the ledger refused must not fail a deposit the
+  // chain accepted.
+  if (result.transitioned && result.data) {
+    const { walletAddress, amount } = result.data;
+    void grantDepositCoinsForWallet(walletAddress, Number(amount))
+      .then((coins) => {
+        if (coins > 0) req.log.info({ id, walletAddress, coins }, 'Deposit coins granted');
+      })
+      .catch((err) => req.log.warn({ err, id, walletAddress }, 'Failed to grant deposit coins'));
+  }
+
   return sendSuccess(res, true, 'success confirmed');
 }));
 

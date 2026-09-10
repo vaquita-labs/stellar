@@ -23,6 +23,7 @@ import referralRoutes from './referral/route';
 import releaseNoteRoutes from './release-notes/route';
 import timeRoutes from './time/route';
 import userRoutes from './user/route';
+import vaultFlowRoutes from './vault-flows/route';
 import walletBalanceRoutes from './wallets/balances.route';
 import savedBankRoutes from './wallets/savedBanks.route';
 import savedWalletRoutes from './wallets/saved.route';
@@ -66,5 +67,6 @@ router.use('/onramp', onrampRoutes);
 router.use('/referrals', referralRoutes);
 router.use('/time', timeRoutes);
 router.use('/user', userRoutes);
+router.use('/vault-flows', vaultFlowRoutes);
 
 export default router;

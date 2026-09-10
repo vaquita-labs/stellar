@@ -245,8 +245,25 @@ export const createDepositByNames = async (depositIdHex: string, amount: number,
   });
 };
 
+/**
+ * Mark a deposit confirmed, and report whether this call is the one that did it.
+ *
+ * `transitioned` exists because coins are granted here and `deposits` has no
+ * unique constraint on `transaction_hash`: a client retry and the reconciler
+ * repairing a row both land in this function on an already-confirmed deposit,
+ * and paying on every arrival would pay the same deposit repeatedly. The
+ * status change is claimed with a conditional `updateMany` rather than by
+ * reading the row first, so two concurrent confirmations cannot both believe
+ * they were first. The write itself stays unconditional — re-confirming is
+ * still idempotent and still refreshes the hash the reconciler came to fix.
+ */
 export const confirmDepositWithTx = async (depositId: number, depositIdHex: string, txHash: string, transactionRaw: string) => {
   try {
+    const claimed = await prisma.deposit.updateMany({
+      where: { id: depositId, status: { not: DepositStatus.CONFIRMED } },
+      data: { status: DepositStatus.CONFIRMED },
+    });
+
     const data = await prisma.deposit.update({
       where: { id: depositId },
       data: {
@@ -268,9 +285,9 @@ export const confirmDepositWithTx = async (depositId: number, depositIdHex: stri
 
     await broadcastDepositsChange('confirmDepositWithTx');
 
-    return { data, error: null };
+    return { data, error: null, transitioned: claimed.count > 0 };
   } catch (error) {
-    return { data: null, error: error as Error };
+    return { data: null, error: error as Error, transitioned: false };
   }
 };
 

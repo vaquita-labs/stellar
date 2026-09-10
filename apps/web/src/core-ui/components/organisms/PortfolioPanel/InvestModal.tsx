@@ -146,6 +146,10 @@ export function InvestModal({
         amount,
         decimals: token.decimals,
         withdrawAll: isMax,
+        // Flexible → locked: the money stays with Vaquita, so this leg must not
+        // count as volume leaving, and the locked leg below is the one the user
+        // gets credit for.
+        flowKind: 'internal_out',
       });
 
       // 2) Depósito al Vaquita pool (crea la posición con lock).

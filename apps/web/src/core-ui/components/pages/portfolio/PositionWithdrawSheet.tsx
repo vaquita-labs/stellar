@@ -159,6 +159,10 @@ export function PositionWithdrawSheet({
         address: walletAddress,
         amount: formatBaseUnits(receivedBase, token.decimals),
         decimals: token.decimals,
+        // Locked → flexible: the same money, moved between Vaquita's own two
+        // products. Counting it as new would double the volume it represents
+        // and pay coins for a move that added nothing.
+        flowKind: 'internal_in',
       });
 
       void queryClient.invalidateQueries({ queryKey: ['deposit'] });

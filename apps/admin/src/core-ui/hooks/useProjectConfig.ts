@@ -30,6 +30,7 @@ export interface ProjectConfig {
   cycleDurationMs: number | null;
   dailyGoldCoins: number;
   dailyCheckinExperience: number;
+  depositCoinsDailyCap: number;
   gameDayLengthMs: number;
   currencies: Currency[];
   languages: Language[];
@@ -46,6 +47,7 @@ export interface ProjectConfigPayload {
   cycleDurationMs?: number | null;
   dailyGoldCoins?: number;
   dailyCheckinExperience?: number;
+  depositCoinsDailyCap?: number;
   gameDayLengthMs?: number;
   currencies?: Currency[];
   languages?: Language[];

@@ -27,7 +27,11 @@ export default async function DepositsPage({ searchParams }: Props) {
     vaultTvl(w),
   ]);
   const prev = w.hasPrev;
-  const periodRows = periods.map((p) => ({ period: fmtLockPeriod(p.lock_period_ms), ...p }));
+  // A null period is the flexible vault: there is no lock to name.
+  const periodRows = periods.map((p) => ({
+    period: p.lock_period_ms == null ? 'Flexible' : fmtLockPeriod(p.lock_period_ms),
+    ...p,
+  }));
   // Both series come from the same `generate_series`, so the buckets line up by
   // index; joining by label anyway keeps that an assumption we do not depend on.
   const vaultByBucket = new Map(vault?.series.map((r) => [r.bucket, r.vault_tvl]) ?? []);
@@ -38,28 +42,31 @@ export default async function DepositsPage({ searchParams }: Props) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-black">Deposits</h1>
-          <p className="text-sm text-black/60">Confirmed deposits only, amounts in USDC.</p>
+          <p className="text-sm text-black/60">
+            Confirmed deposits only, amounts in USDC. Tiles marked &ldquo;locked&rdquo; count pool positions alone; the
+            flexible vault has no lock period and no maturity.
+          </p>
         </div>
         <RangePicker range={range.key} bucket={range.bucket} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <KpiTile
-          label="Deposit volume"
+          label="Locked deposit volume"
           value={fmtUsd(kpis.volume)}
           current={kpis.volume}
           previous={prev ? kpis.volume_prev : undefined}
           hint="confirmed in range"
         />
         <KpiTile
-          label="Deposits"
+          label="Locked deposits"
           value={fmtInt(kpis.count)}
           current={kpis.count}
           previous={prev ? kpis.count_prev : undefined}
           hint={`avg ticket ${fmtUsd(kpis.avg_ticket)}`}
         />
         <KpiTile
-          label="Depositors"
+          label="Locked depositors"
           value={fmtInt(kpis.depositors)}
           current={kpis.depositors}
           previous={prev ? kpis.depositors_prev : undefined}
@@ -81,37 +88,37 @@ export default async function DepositsPage({ searchParams }: Props) {
           />
         )}
         <KpiTile
-          label="Repeat depositors"
+          label="Repeat locked depositors"
           value={kpis.wallets_all ? fmtPct(kpis.repeat_wallets / kpis.wallets_all) : '—'}
-          hint={`${fmtInt(kpis.repeat_wallets)} of ${fmtInt(kpis.wallets_all)} wallets deposited ≥2 times (all time)`}
+          hint={`${fmtInt(kpis.repeat_wallets)} of ${fmtInt(kpis.wallets_all)} wallets locked ≥2 times (all time)`}
         />
         <KpiTile
-          label="All-time volume"
+          label="All-time locked volume"
           value={fmtUsd(kpis.volume_all)}
-          hint={`${fmtInt(kpis.count_all)} deposits · ${fmtInt(kpis.failed)} failed / ${fmtInt(kpis.initiated)} stuck in range`}
+          hint={`${fmtInt(kpis.count_all)} locked deposits · ${fmtInt(kpis.failed)} failed / ${fmtInt(kpis.initiated)} stuck in range`}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard
-          title="Deposit volume"
-          hint={`Confirmed USDC per ${range.bucket}`}
+          title="Locked deposit volume"
+          hint={`Confirmed USDC into pool periods per ${range.bucket}`}
           rows={series}
           filename={`deposit-volume-${range.key}-${range.bucket}`}
         >
           <TimeSeriesBars rows={series} series={[{ key: 'volume', label: 'Deposited', kind: 'usd' }]} />
         </ChartCard>
         <ChartCard
-          title="Deposits & depositors"
-          hint={`Count of confirmed deposits and unique wallets per ${range.bucket}`}
+          title="Locked deposits & depositors"
+          hint={`Count of confirmed pool deposits and unique wallets per ${range.bucket}`}
           rows={series}
           filename={`deposit-count-${range.key}-${range.bucket}`}
         >
           <TimeSeriesLine
             rows={series}
             series={[
-              { key: 'deposits', label: 'Deposits' },
-              { key: 'depositors', label: 'Depositors' },
+              { key: 'deposits', label: 'Locked deposits' },
+              { key: 'depositors', label: 'Locked depositors' },
             ]}
           />
         </ChartCard>
@@ -138,8 +145,8 @@ export default async function DepositsPage({ searchParams }: Props) {
           />
         </ChartCard>
         <ChartCard
-          title="Inflow vs outflow"
-          hint={`Deposited vs withdrawn principal per ${range.bucket}`}
+          title="Locked inflow vs outflow"
+          hint={`Pool principal deposited vs withdrawn per ${range.bucket}`}
           rows={series}
           filename={`flows-${range.key}-${range.bucket}`}
         >
@@ -152,10 +159,10 @@ export default async function DepositsPage({ searchParams }: Props) {
           />
         </ChartCard>
         <ChartCard
-          title="Volume by lock period"
-          hint="Confirmed USDC in range, by chosen lock period"
+          title="Volume by product"
+          hint="Confirmed USDC in range, by chosen lock period. Flexible is the vault, which has no lock."
           rows={periodRows}
-          filename={`lock-periods-${range.key}`}
+          filename={`volume-by-product-${range.key}`}
         >
           <CategoryBars
             rows={periodRows}
@@ -182,7 +189,7 @@ export default async function DepositsPage({ searchParams }: Props) {
             { key: 'vault', label: 'Vault', align: 'right' },
             { key: 'periods', label: 'Periods', align: 'right' },
             { key: 'total', label: 'Total', align: 'right' },
-            { key: 'deposits', label: 'Deposits', align: 'right' },
+            { key: 'deposits', label: 'Locked deposits', align: 'right' },
             { key: 'first_deposit', label: 'First deposit' },
             { key: 'scraped_at', label: 'Last read', align: 'right' },
           ]}

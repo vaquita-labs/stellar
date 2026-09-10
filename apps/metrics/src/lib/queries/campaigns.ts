@@ -1,5 +1,6 @@
 import { prisma } from '@vaquita/db';
 import type { SqlWindow } from './common';
+import { hasVaultFlows, vaultDepositEvents } from './vault';
 
 /**
  * Campaign attribution metrics: which campaign brought users who actually
@@ -34,7 +35,14 @@ export type CampaignKpis = {
 };
 
 export async function campaignKpis(w: SqlWindow): Promise<CampaignKpis> {
+  const flows = vaultDepositEvents(await hasVaultFlows());
   const [row] = await prisma.$queryRaw<CampaignKpis[]>`
+    with saved as (
+      select wallet_address, amount::float8 as amount from deposits
+      where deleted_at is null and status = 'confirmed'
+      union all
+      select wallet_address, amount from ${flows}
+    )
     select
       (select count(*) from campaigns where deleted_at is null and is_active)::int as campaigns_active,
       (select count(*) from profiles where deleted_at is null and campaign_id is not null
@@ -43,17 +51,16 @@ export async function campaignKpis(w: SqlWindow): Promise<CampaignKpis> {
          and created_at >= ${w.prevSince} and created_at < ${w.since})::int as attributed_prev,
       (select count(*) from profiles where deleted_at is null and campaign_id is not null)::int as attributed_total,
       (select count(*) from profiles where deleted_at is null and created_at >= ${w.since})::int as new_users,
-      -- Activated = signed up in range through a campaign AND has a confirmed
-      -- deposit. Not time-boxed to the range: the deposit is the conversion,
-      -- and it counts whenever it lands.
+      -- Activated = signed up in range through a campaign AND saved, in either
+      -- product. Not time-boxed to the range: the deposit is the conversion, and
+      -- it counts whenever it lands. Counting only locked deposits punished the
+      -- campaigns that acquire the users least likely to lock money up.
       (select count(*) from profiles p where p.deleted_at is null and p.campaign_id is not null
          and p.created_at >= ${w.since}
-         and exists (select 1 from deposits d where d.wallet_address = p.wallet_address
-                       and d.deleted_at is null and d.status = 'confirmed'))::int as activated,
-      (select coalesce(sum(d.amount), 0) from deposits d
-         join profiles p on p.wallet_address = d.wallet_address
-        where d.deleted_at is null and d.status = 'confirmed'
-          and p.deleted_at is null and p.campaign_id is not null
+         and exists (select 1 from saved s where s.wallet_address = p.wallet_address))::int as activated,
+      (select coalesce(sum(s.amount), 0) from saved s
+         join profiles p on p.wallet_address = s.wallet_address
+        where p.deleted_at is null and p.campaign_id is not null
           and p.created_at >= ${w.since})::float8 as volume
   `;
   return row!;
@@ -100,17 +107,22 @@ export type CampaignTableRow = {
  * you still want to see what it did lately.
  */
 export async function campaignTable(w: SqlWindow): Promise<CampaignTableRow[]> {
+  const flows = vaultDepositEvents(await hasVaultFlows());
   return prisma.$queryRaw<CampaignTableRow[]>`
+    with saved as (
+      select wallet_address, amount::float8 as amount from deposits
+      where deleted_at is null and status = 'confirmed'
+      union all
+      select wallet_address, amount from ${flows}
+    )
     select c.code,
            c.name,
            count(p.id)::int as signups,
            count(p.id) filter (where p.created_at >= ${w.since})::int as in_range,
            count(p.id) filter (where p.onboarding_completed)::int as onboarded,
-           count(p.id) filter (where exists (select 1 from deposits d where d.wallet_address = p.wallet_address
-                                               and d.deleted_at is null and d.status = 'confirmed'))::int as depositors,
-           coalesce((select sum(d.amount) from deposits d
-                      where d.deleted_at is null and d.status = 'confirmed'
-                        and d.wallet_address in (select p2.wallet_address from profiles p2
+           count(p.id) filter (where exists (select 1 from saved s where s.wallet_address = p.wallet_address))::int as depositors,
+           coalesce((select sum(s.amount) from saved s
+                      where s.wallet_address in (select p2.wallet_address from profiles p2
                                                   where p2.campaign_id = c.id and p2.deleted_at is null)), 0)::float8 as volume
     from campaigns c
     left join profiles p on p.campaign_id = c.id and p.deleted_at is null

@@ -248,6 +248,8 @@ export function DepositPanel() {
               amount: amountStr,
               decimals: token.decimals,
               withdrawAll,
+              // Leaves Vaquita: to the user's own wallet, or on to someone else's.
+              flowKind: 'external_out',
             });
 
             // A partir de acá la plata YA salió de Blend y está en la wallet del

@@ -819,6 +819,8 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
         amount: String(toWithdraw),
         decimals: token.decimals,
         withdrawAll: toWithdraw >= balance,
+        // On its way out to a bank account.
+        flowKind: 'external_out',
       });
       // El hash se anota apenas existe y sin avanzar de paso: si la confirmación
       // de acá abajo se agota, esta fila es lo único que le dice a soporte dónde

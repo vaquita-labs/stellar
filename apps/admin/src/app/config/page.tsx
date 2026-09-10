@@ -64,6 +64,9 @@ type FormState = {
   // non-negative integers on submit.
   dailyGoldCoins: string;
   dailyCheckinExperience: string;
+  // Ceiling on the coins one wallet can earn from deposits in a single UTC day,
+  // across both savings products. 0 turns the deposit grant off.
+  depositCoinsDailyCap: string;
   // Duración de un día del reloj de juego, en milisegundos reales. String
   // mientras se edita; se parsea a entero al guardar.
   gameDayLengthMs: string;
@@ -80,6 +83,7 @@ const emptyForm = (): FormState => ({
   cycleDurationMs: '',
   dailyGoldCoins: '0',
   dailyCheckinExperience: '0',
+  depositCoinsDailyCap: '100',
   gameDayLengthMs: String(DEFAULT_GAME_DAY_LENGTH_MS),
   currencies: [],
   languages: [],
@@ -97,6 +101,7 @@ const formFromConfig = (c: ProjectConfig): FormState => ({
   cycleDurationMs: c.cycleDurationMs != null ? String(c.cycleDurationMs) : '',
   dailyGoldCoins: String(c.dailyGoldCoins ?? 0),
   dailyCheckinExperience: String(c.dailyCheckinExperience ?? 0),
+  depositCoinsDailyCap: String(c.depositCoinsDailyCap ?? 100),
   gameDayLengthMs: String(c.gameDayLengthMs ?? DEFAULT_GAME_DAY_LENGTH_MS),
   currencies: toRows(c.currencies),
   languages: toRows(c.languages),
@@ -244,6 +249,7 @@ export default function Page() {
     cycleDurationMs: form.cycleDurationMs.trim() ? Number(form.cycleDurationMs.trim()) : null,
     dailyGoldCoins: form.dailyGoldCoins.trim() ? Number(form.dailyGoldCoins.trim()) : 0,
     dailyCheckinExperience: form.dailyCheckinExperience.trim() ? Number(form.dailyCheckinExperience.trim()) : 0,
+    depositCoinsDailyCap: form.depositCoinsDailyCap.trim() ? Number(form.depositCoinsDailyCap.trim()) : 0,
     gameDayLengthMs: form.gameDayLengthMs.trim() ? Number(form.gameDayLengthMs.trim()) : DEFAULT_GAME_DAY_LENGTH_MS,
     currencies: buildOptions(form.currencies),
     languages: buildOptions(form.languages),
@@ -285,6 +291,13 @@ export default function Page() {
       const xp = Number(form.dailyCheckinExperience.trim());
       if (!Number.isInteger(xp) || xp < 0) {
         addDangerToast('Invalid daily experience', 'Daily check-in experience must be a non-negative whole number.');
+        return;
+      }
+    }
+    if (form.depositCoinsDailyCap.trim()) {
+      const cap = Number(form.depositCoinsDailyCap.trim());
+      if (!Number.isInteger(cap) || cap < 0) {
+        addDangerToast('Invalid deposit coin cap', 'The deposit coin daily cap must be a non-negative whole number.');
         return;
       }
     }
@@ -391,6 +404,14 @@ export default function Page() {
             placeholder="Experience granted per daily check-in (0 disables it)"
             value={form.dailyCheckinExperience}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('dailyCheckinExperience', e.target.value)}
+          />
+
+          <Input
+            label="Deposit coins daily cap"
+            type="number"
+            placeholder="Most coins one saver can earn from deposits in a UTC day (e.g. 100)"
+            value={form.depositCoinsDailyCap}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => set('depositCoinsDailyCap', e.target.value)}
           />
 
           <div className="flex flex-col gap-2">
