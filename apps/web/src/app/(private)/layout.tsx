@@ -7,6 +7,7 @@ import {
   PullToRefresh,
   PushNudge,
   PushSubscriptionSync,
+  PwaInstallReporter,
   ReleaseNotesGate,
   RequireAuth,
   TutorialGate,
@@ -44,6 +45,11 @@ export default function PrivateLayout({
                     atribuir el aterrizaje guardado en la primera visita. */}
                 <AttributionFlush />
                 <PushSubscriptionSync />
+                {/* Beside the push pair on purpose: an installed app is what
+                    makes push reachable on iOS, and this is the only place we
+                    ever learn a wallet has one. Reports state on every launch;
+                    nothing tells us about an uninstall. */}
+                <PwaInstallReporter />
                 <PushNudge />
                 {/* Después de PushNudge y, sobre todo, después de que el prompt de
                     plata ociosa se resuelva (lo coordina `useModalQueueStore`):

@@ -644,6 +644,7 @@ model Profile {
   savedWallets        SavedWallet[]
   savedBankAccounts   SavedBankAccount[]
   pushSubscriptions   PushSubscription[]
+  pwaInstalls         PwaInstall[]
 
   // Unidirectional follow graph. `following` are edges where this profile is the
   // follower; `followers` are edges where it is the followee.
@@ -765,6 +766,42 @@ model PushSubscription {
 
   @@index([profileId], map: "idx_push_subscriptions_profile")
   @@map("push_subscriptions")
+}
+
+/// Who is running Vaquita as an installed app, and on what.
+///
+/// There is no install API to ask. The browser tells us once, in two different
+/// ways, and neither is a query: Chromium fires `appinstalled` in the tab that
+/// prompted, and every launch of an installed app reports `display-mode:
+/// standalone`. iOS fires nothing at all, so standalone IS the iOS signal —
+/// which is why the client reports on both and this row is an observation, not
+/// an event we were handed.
+///
+/// One row per profile per platform, because that is the question being asked:
+/// how many users have the app, and can therefore be reached by push. A second
+/// Android phone does not make a second user; an iPhone plus an Android does
+/// make two platforms worth knowing about. `installedAt` is the first time we
+/// saw it and never moves; `lastSeenAt` moves on every launch, so an install
+/// that was deleted stops being recent without the row ever claiming it was
+/// uninstalled — nothing reports that, and inventing it would be a guess.
+model PwaInstall {
+  id          Int      @id @default(autoincrement())
+  profileId   Int      @map("profile_id")
+  /// 'android' | 'ios' | 'desktop' | 'other' — enforced by a CHECK in
+  /// packages/db/sql/pwa_installs_enums.sql, which `db push` would drop.
+  platform    String   @db.VarChar(16)
+  userAgent   String?  @map("user_agent") @db.VarChar(300)
+  /// First observation. Never updated: it is the install date.
+  installedAt DateTime @default(now()) @map("installed_at") @db.Timestamptz(6)
+  /// Most recent launch seen from the installed app.
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, platform], map: "pwa_installs_profile_platform_unique")
+  @@index([installedAt], map: "idx_pwa_installs_installed_at")
+  @@map("pwa_installs")
 }
 
 /// Historial de envíos de notificaciones desde el admin. Cada fila es una

@@ -12,16 +12,16 @@ import {
   FiEdit3,
   FiEyeOff,
   FiLogOut,
-  FiShare,
   FiSliders,
   FiUserPlus,
 } from 'react-icons/fi';
 import { useInstallApp, useLogout, useProfileData } from '../../../hooks';
 import { usePrivacyStore, useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
-import { AppModal, ConfirmDialog } from '../../molecules';
+import { ConfirmDialog } from '../../molecules';
 import { PageHeader } from '../../molecules/PageHeader';
 import { useSlidePage } from '../../molecules/useSlidePage';
+import { IosInstallModal } from '../../organisms/InstallApp';
 import { PRIVACY_LAST_UPDATED, TERMS_LAST_UPDATED } from '../legal';
 
 type LinkRow = {
@@ -66,11 +66,7 @@ function RowShell({
   disabled?: boolean;
 }) {
   return (
-    <div
-      className={`flex items-center justify-between gap-3 px-4 py-3 transition ${
-        disabled ? 'opacity-50' : ''
-      }`}
-    >
+    <div className={`flex items-center justify-between gap-3 px-4 py-3 transition ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex items-center gap-3 min-w-0">
         {/* Plain glyph, no tinted chip: with a dozen rows stacked, the blue
             squares read as the loudest thing on the screen instead of the
@@ -87,9 +83,7 @@ function RowShell({
               </span>
             )}
           </div>
-          {description && (
-            <p className="text-xs text-gray-600 truncate mt-0.5">{description}</p>
-          )}
+          {description && <p className="text-xs text-gray-600 truncate mt-0.5">{description}</p>}
         </div>
       </div>
       <div className="shrink-0">{trailing}</div>
@@ -105,13 +99,7 @@ function SettingsRow({ row }: { row: Row }) {
           icon={row.icon}
           label={row.label}
           description={row.description}
-          trailing={
-            <Switch
-              isSelected={row.value}
-              onChange={(checked) => row.onChange(checked)}
-              aria-label={row.label}
-            />
-          }
+          trailing={<Switch isSelected={row.value} onChange={(checked) => row.onChange(checked)} aria-label={row.label} />}
         />
       </label>
     );
@@ -192,10 +180,7 @@ export type SettingsSubKey = 'preferences' | 'profile' | 'notifications' | 'wall
  * todo—. Sin él, los ítems son <Link> normales a sus rutas (deep-link / ruta
  * suelta).
  */
-export function SettingsPage({
-  onBack,
-  onOpenSub,
-}: { onBack?: () => void; onOpenSub?: (key: SettingsSubKey) => void } = {}) {
+export function SettingsPage({ onBack, onOpenSub }: { onBack?: () => void; onOpenSub?: (key: SettingsSubKey) => void } = {}) {
   const { t } = useTranslation();
   const logout = useLogout();
   const { reset } = useConfigStore();
@@ -350,39 +335,7 @@ export function SettingsPage({
         </div>
       </div>
 
-      <AppModal
-        open={showIosInstall}
-        onOpenChange={() => setShowIosInstall(false)}
-        title={t('profilePages.settings.installIosTitle', 'Install Vaquita')}
-        size="sm"
-      >
-        <div className="flex flex-col gap-4 text-sm text-black">
-          <p>{t('profilePages.settings.installIosIntro', 'Add Vaquita to your home screen to open it like an app:')}</p>
-          <ol className="flex flex-col gap-3">
-            {[
-              {
-                icon: <FiShare />,
-                text: t('profilePages.settings.installIosStep1', 'Tap the Share button in your browser.'),
-              },
-              {
-                icon: <FiDownload />,
-                text: t('profilePages.settings.installIosStep2', 'Scroll down and tap "Add to Home Screen".'),
-              },
-              {
-                icon: <FiChevronRight />,
-                text: t('profilePages.settings.installIosStep3', 'Tap "Add" to confirm.'),
-              },
-            ].map((step, i) => (
-              <li key={i} className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#DDF4FF] border border-[#84D8FF] text-black shrink-0">
-                  {step.icon}
-                </span>
-                <span>{step.text}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </AppModal>
+      <IosInstallModal open={showIosInstall} onOpenChange={() => setShowIosInstall(false)} />
 
       <ConfirmDialog
         isOpen={confirmLogout}
