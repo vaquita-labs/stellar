@@ -1,4 +1,4 @@
-import { prisma } from '@vaquita/db';
+import { Prisma, prisma } from '@vaquita/db';
 import type { SqlWindow } from './common';
 
 // TVL, read from the DeFindex vault the Vaquita pool forwards funds into.
@@ -96,4 +96,59 @@ export function sampleAge(fetchedAt: Date): string {
   const hours = Math.round(mins / 60);
   if (hours < 48) return `${hours} h ago`;
   return `${Math.round(hours / 24)} d ago`;
+}
+
+/**
+ * `vault_flows` does not exist on environments where the migration has not been
+ * applied by hand, and a missing relation fails the whole statement at parse
+ * time — the same trap `hasVaultTvlSnapshots` exists for. Probe first.
+ */
+export async function hasVaultFlows(): Promise<boolean> {
+  const [row] = await prisma.$queryRaw<{ present: boolean }[]>`
+    select to_regclass('public.vault_flows') is not null as present
+  `;
+  return row?.present ?? false;
+}
+
+/**
+ * The one definition of "a flexible deposit", as a relation the panels can join
+ * against: `(wallet_address, amount, ts)`.
+ *
+ * Only `external_in` counts. The other three kinds move money between Vaquita's
+ * own two products — flexible into a locked period, a locked period back into
+ * flexible, the legacy Blend balance into the vault — and counting those as
+ * deposits inflates volume by an amount the user never added, then congratulates
+ * the cohort grid on the same money twice.
+ *
+ * When the table is missing the fragment is an empty relation of the right
+ * shape, so a caller's `union all` and its casts still parse and the panel
+ * degrades to locked-only rather than 500ing.
+ */
+export function vaultDepositEvents(present: boolean): Prisma.Sql {
+  if (!present) {
+    return Prisma.sql`(
+      select null::varchar as wallet_address, null::float8 as amount, null::timestamptz as ts
+      where false
+    )`;
+  }
+  return Prisma.sql`(
+    select wallet_address, amount::float8 as amount, confirmed_at as ts
+    from vault_flows
+    where deleted_at is null and flow_kind = 'external_in'
+  )`;
+}
+
+/** The mirror of `vaultDepositEvents` for money leaving the flexible product. */
+export function vaultWithdrawEvents(present: boolean): Prisma.Sql {
+  if (!present) {
+    return Prisma.sql`(
+      select null::varchar as wallet_address, null::float8 as amount, null::timestamptz as ts
+      where false
+    )`;
+  }
+  return Prisma.sql`(
+    select wallet_address, amount::float8 as amount, confirmed_at as ts
+    from vault_flows
+    where deleted_at is null and flow_kind = 'external_out'
+  )`;
 }

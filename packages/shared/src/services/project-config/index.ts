@@ -30,20 +30,27 @@ export interface RewardsConfig {
   dailyGoldCoins: number;
   /** Experience granted per daily check-in (0 disables the bonus). */
   dailyCheckinExperience: number;
+  /**
+   * Ceiling on the coins one profile can earn from depositing in a single UTC
+   * day, across both savings products. The grant itself is one coin per whole
+   * USDC, minimum one USDC.
+   */
+  depositCoinsDailyCap: number;
 }
 
 /**
- * Reads the admin-configurable daily check-in reward amounts. Falls back to the
- * historical defaults (1 coin, 0 XP) when the config row doesn't exist yet, so
- * callers never need to special-case a missing singleton.
+ * Reads the admin-configurable reward dials. Falls back to the historical
+ * defaults (1 coin, 0 XP, 100 deposit coins a day) when the config row doesn't
+ * exist yet, so callers never need to special-case a missing singleton.
  */
 export const getRewardsConfig = async (): Promise<RewardsConfig> => {
   const config = await prisma.config.findFirst({
-    select: { dailyGoldCoins: true, dailyCheckinExperience: true },
+    select: { dailyGoldCoins: true, dailyCheckinExperience: true, depositCoinsDailyCap: true },
   });
   return {
     dailyGoldCoins: config?.dailyGoldCoins ?? 1,
     dailyCheckinExperience: config?.dailyCheckinExperience ?? 0,
+    depositCoinsDailyCap: config?.depositCoinsDailyCap ?? 100,
   };
 };
 

@@ -19,3 +19,13 @@ export const REWARD_REASON_SHOP_PURCHASE = 'shop-purchase';
  * folds into the row's `criteria` JSON.
  */
 export const BETA_TESTER_CUTOFF = new Date('2026-05-17T23:59:59Z');
+
+/**
+ * `profiles_rewards.reason` value stamped on the coins a deposit earns, in
+ * either savings product.
+ *
+ * Its own reason rather than a shared one because the daily cap is summed by
+ * reason: mixing these rows in with the check-in's would let one source eat the
+ * other's allowance.
+ */
+export const REWARD_REASON_DEPOSIT = 'deposit';

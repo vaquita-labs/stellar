@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
 import { useConfigStore } from '@/core-ui/stores';
+import { recordVaultFlowInBackground } from '@/networks/pollar/vaultFlowsApi';
 import { awaitUsdcCredit, directBlendWithdraw, readUsdcBalance } from '@/networks/stellar/blendDirect';
 import { vaultDeposit } from '@/networks/stellar/vaultDirect';
 import { defindexVaultConfigForToken, formatBaseUnits } from '@/networks/stellar/vaultQueries';
@@ -70,15 +71,32 @@ export const usePassiveMigration = (walletAddress?: string) => {
         decimals,
         withdrawAll: partial == null,
       });
+      // Both legs are internal: the money never leaves Vaquita, it moves from
+      // the legacy Blend position into the vault. Recorded as a pair so the two
+      // net to zero — a migration is not new savings and must not read as any.
+      // The withdraw-all case has no amount in its arguments, so the live
+      // position is the best figure available before the credit is measured.
+      recordVaultFlowInBackground(walletAddress, {
+        flowKind: 'internal_out',
+        amount: (partial ?? blendBalance).toFixed(decimals),
+        transactionHash: hash,
+      });
 
       // The withdraw is on chain from here on, so the Blend position has to be
       // refreshed even if the deposit leg fails: the prompt reads off it.
       try {
         const receivedBase = await awaitUsdcCredit(walletAddress, decimals, walletBefore, { hash });
-        await vaultDeposit({
-          address: walletAddress,
-          amount: formatBaseUnits(receivedBase, decimals),
-          decimals,
+        const depositAmount = formatBaseUnits(receivedBase, decimals);
+        // Bypasses `passiveDeposit` on purpose — the migration always targets
+        // the vault, never the Blend path it is migrating away from — so this
+        // one call site records its own flow.
+        const deposit = await vaultDeposit({ address: walletAddress, amount: depositAmount, decimals });
+        recordVaultFlowInBackground(walletAddress, {
+          flowKind: 'internal_in',
+          // A measured wallet delta, not a figure anyone typed: the most
+          // trustworthy amount in the whole set.
+          amount: depositAmount,
+          transactionHash: deposit.hash,
         });
       } finally {
         refresh();
@@ -90,9 +108,21 @@ export const usePassiveMigration = (walletAddress?: string) => {
   /** Withdraw the whole Blend position to the wallet and stop (no reinvest). */
   const withdrawToWallet = useCallback(async () => {
     if (!walletAddress || !token) throw new Error('Wallet or token not ready');
-    await directBlendWithdraw({ address: walletAddress, amount: '0', decimals, withdrawAll: true });
+    const { hash } = await directBlendWithdraw({
+      address: walletAddress,
+      amount: '0',
+      decimals,
+      withdrawAll: true,
+    });
+    // Unlike the migration, this one really does leave: the user asked for the
+    // money back in their wallet and nothing reinvests it.
+    recordVaultFlowInBackground(walletAddress, {
+      flowKind: 'external_out',
+      amount: blendBalance.toFixed(decimals),
+      transactionHash: hash,
+    });
     refresh();
-  }, [walletAddress, token, decimals, refresh]);
+  }, [walletAddress, token, decimals, blendBalance, refresh]);
 
   return { needsMigration, isExternal, hasBorrow, blendBalance, decimals, migrateToVault, withdrawToWallet };
 };

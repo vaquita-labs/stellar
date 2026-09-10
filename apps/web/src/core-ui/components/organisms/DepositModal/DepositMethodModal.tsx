@@ -158,6 +158,8 @@ export function DepositMethodModal({
         address: walletAddress,
         amount,
         decimals: token.decimals,
+        // Money the user is adding from their own wallet.
+        flowKind: 'external_in',
       });
       trackConversion('direct_blend_deposit_successful', numericAmount, token.symbol);
       void refreshWalletBalance();

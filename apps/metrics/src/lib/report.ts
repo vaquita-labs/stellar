@@ -1,5 +1,6 @@
 import { Prisma, prisma } from '@vaquita/db';
 import { fmtInt, fmtPct, fmtUsd } from '@/lib/format';
+import { hasVaultFlows, vaultDepositEvents } from '@/lib/queries/vault';
 import { vaultTvlCurrent } from '@/lib/queries/vault';
 
 // The weekly report: one markdown document a teammate can paste into Slack,
@@ -59,7 +60,7 @@ async function hasOnrampPurchases(): Promise<boolean> {
   return row?.present ?? false;
 }
 
-async function periodStats(from: Date, to: Date, onramp: boolean): Promise<PeriodStats> {
+async function periodStats(from: Date, to: Date, onramp: boolean, flows: Prisma.Sql): Promise<PeriodStats> {
   const onrampSettled = onramp
     ? Prisma.sql`(select count(*) from onramp_purchases where deleted_at is null and status = 'settled' and updated_at >= ${from} and updated_at < ${to})::int`
     : Prisma.sql`0::int`;
@@ -69,7 +70,15 @@ async function periodStats(from: Date, to: Date, onramp: boolean): Promise<Perio
       select wallet_address, amount, coalesce(confirmed_at, created_at) as ts, id
       from deposits where deleted_at is null and status = 'confirmed'
     ),
-    firsts as (select wallet_address, min(ts) as first_ts from c group by 1),
+    -- Both products, for everything that counts user activity. The locked-only
+    -- relation above stays as it is: the principal curve below nets it against
+    -- pool withdrawals, which have no flexible counterpart.
+    saved as (
+      select wallet_address, amount::float8 as amount, ts from c
+      union all
+      select wallet_address, amount, ts from ${flows}
+    ),
+    firsts as (select wallet_address, min(ts) as first_ts from saved group by 1),
     wd as (
       select w.*, d.amount as principal,
              (coalesce(w.confirmed_at, w.created_at) < coalesce(d.confirmed_at, d.created_at) + (coalesce(d.lock_period, 0)::float8 / 1000) * interval '1 second') as early,
@@ -80,10 +89,10 @@ async function periodStats(from: Date, to: Date, onramp: boolean): Promise<Perio
     select
       (select count(*) from profiles where deleted_at is null and created_at >= ${from} and created_at < ${to})::int as new_users,
       (select count(*) from profiles p where p.deleted_at is null and p.created_at >= ${from} and p.created_at < ${to}
-         and exists (select 1 from c where c.wallet_address = p.wallet_address))::int as activated,
-      (select count(*) from c where ts >= ${from} and ts < ${to})::int as deposits,
-      (select coalesce(sum(amount), 0) from c where ts >= ${from} and ts < ${to})::float8 as volume,
-      (select count(distinct wallet_address) from c where ts >= ${from} and ts < ${to})::int as depositors,
+         and exists (select 1 from saved s where s.wallet_address = p.wallet_address))::int as activated,
+      (select count(*) from saved where ts >= ${from} and ts < ${to})::int as deposits,
+      (select coalesce(sum(amount), 0) from saved where ts >= ${from} and ts < ${to})::float8 as volume,
+      (select count(distinct wallet_address) from saved where ts >= ${from} and ts < ${to})::int as depositors,
       (select count(*) from firsts where first_ts >= ${from} and first_ts < ${to})::int as new_depositors,
       (select count(*) from wd where ts >= ${from} and ts < ${to})::int as withdrawals,
       (select count(*) from wd where ts >= ${from} and ts < ${to} and early)::int as early,
@@ -97,15 +106,20 @@ async function periodStats(from: Date, to: Date, onramp: boolean): Promise<Perio
   return row!;
 }
 
-async function totals(): Promise<Totals> {
+async function totals(flows: Prisma.Sql): Promise<Totals> {
   const [row] = await prisma.$queryRaw<Totals[]>`
     with c as (select * from deposits where deleted_at is null and status = 'confirmed'),
+    saved as (
+      select wallet_address, amount::float8 as amount from c
+      union all
+      select wallet_address, amount from ${flows}
+    ),
     withdrawn as (select d.id from withdrawals w join deposits d on d.id = w.deposit_id where w.deleted_at is null and w.status = 'confirmed')
     select
       (select count(*) from profiles where deleted_at is null)::int as users,
-      (select count(distinct wallet_address) from c)::int as depositors,
-      (select count(*) from c)::int as deposits,
-      (select coalesce(sum(amount), 0) from c)::float8 as volume,
+      (select count(distinct wallet_address) from saved)::int as depositors,
+      (select count(*) from saved)::int as deposits,
+      (select coalesce(sum(amount), 0) from saved)::float8 as volume,
       (select coalesce(sum(amount), 0) from c where id not in (select id from withdrawn))::float8 as tvl,
       (select count(*) from c where id not in (select id from withdrawn))::int as active_positions,
       (select count(*) from badge_claims where deleted_at is null and confirmed_at is not null)::int as badges
@@ -119,11 +133,12 @@ export async function weeklyReport(to: Date = new Date(), envLabel = ''): Promis
   const from = new Date(to.getTime() - week);
   const prevFrom = new Date(from.getTime() - week);
 
-  const onramp = await hasOnrampPurchases();
+  const [onramp, flowsPresent] = await Promise.all([hasOnrampPurchases(), hasVaultFlows()]);
+  const flows = vaultDepositEvents(flowsPresent);
   const [current, previous, all, vault] = await Promise.all([
-    periodStats(from, to, onramp),
-    periodStats(prevFrom, from, onramp),
-    totals(),
+    periodStats(from, to, onramp, flows),
+    periodStats(prevFrom, from, onramp, flows),
+    totals(flows),
     vaultTvlCurrent(),
   ]);
   const markdown = renderMarkdown({ from, to, current, previous, totals: all, vault, envLabel });
@@ -173,13 +188,13 @@ function renderMarkdown(r: {
     `|---|---:|---:|---|`,
     line('New users', fmtInt(c.new_users), c.new_users, p.new_users, fmtInt(p.new_users)),
     line(
-      'Activated new users (≥1 confirmed deposit)',
+      'Activated new users (≥1 deposit, either product)',
       fmtInt(c.activated),
       c.activated,
       p.activated,
       fmtInt(p.activated)
     ),
-    line('Deposits (confirmed)', fmtInt(c.deposits), c.deposits, p.deposits, fmtInt(p.deposits)),
+    line('Deposits (both products)', fmtInt(c.deposits), c.deposits, p.deposits, fmtInt(p.deposits)),
     line('Deposit volume', fmtUsd(c.volume), c.volume, p.volume, fmtUsd(p.volume)),
     line('Unique depositors', fmtInt(c.depositors), c.depositors, p.depositors, fmtInt(p.depositors)),
     line(
@@ -232,7 +247,7 @@ function renderMarkdown(r: {
     `| Locked principal | ${fmtUsd(t.tvl)} across ${fmtInt(t.active_positions)} open positions |`,
     `| Badges minted | ${fmtInt(t.badges)} |`,
     ``,
-    `_Definitions: "activated" = a profile with at least one confirmed deposit; "early" = withdrawn before the lock period ended; "vault TVL" = total managed funds in the DeFindex vault the pool invests through, sampled on-chain; "locked principal" = confirmed principal minus withdrawn principal (yield and flexible balances excluded). Source: Vaquita Postgres (deposits, withdrawals, profiles, badge_claims, follows, profiles_rewards, onramp_purchases, vault_tvl_snapshots)._`,
+    `_Definitions: "activated" = a profile with at least one deposit into either savings product (a locked pool period or the flexible vault); "early" = withdrawn before the lock period ended; "vault TVL" = total managed funds in the DeFindex vault the pool invests through, sampled on-chain; "locked principal" = confirmed principal minus withdrawn principal (yield and flexible balances excluded). Source: Vaquita Postgres (deposits, withdrawals, profiles, badge_claims, follows, profiles_rewards, onramp_purchases, vault_tvl_snapshots, vault_flows)._`,
     ``,
   ].join('\n');
 }

@@ -3,7 +3,7 @@ import { DataTable } from '@/components/DataTable';
 import { KpiTile } from '@/components/KpiTile';
 import { RangePicker } from '@/components/RangePicker';
 import { TimeSeriesBars, TimeSeriesLine } from '@/components/charts';
-import { fmtInt, fmtUsd } from '@/lib/format';
+import { fmtInt, fmtPct, fmtUsd } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
 import {
   badgesByType,
@@ -12,22 +12,33 @@ import {
   engagementSeries,
   onrampByStatus,
 } from '@/lib/queries/engagement';
-import { parseRange } from '@/lib/range';
+import { Pager } from '@/components/Pager';
+import { hasPwaInstalls, pwaKpis, pwaSeries, pwaUsersPage } from '@/lib/queries/pwa';
+import { sampleAge } from '@/lib/queries/vault';
+import { parsePage, parseRange } from '@/lib/range';
 
 export const dynamic = 'force-dynamic';
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function EngagementPage({ searchParams }: Props) {
-  const range = parseRange(await searchParams);
+  const params = await searchParams;
+  const range = parseRange(params);
+  const page = parsePage(params);
   const w = await sqlWindow(range);
-  const [kpis, series, badges, onramp, bridge] = await Promise.all([
+  const [kpis, series, badges, onramp, bridge, pwaPresent] = await Promise.all([
     engagementKpis(w),
     engagementSeries(w),
     badgesByType(w),
     onrampByStatus(w),
     bridgeByStatus(w),
+    hasPwaInstalls(),
   ]);
+  // Gated behind the probe: an environment without the migration must still
+  // render this page, not 500 on a relation Postgres cannot parse.
+  const [pwa, pwaCurve, pwaUsers] = pwaPresent
+    ? await Promise.all([pwaKpis(w), pwaSeries(w), pwaUsersPage({ limit: page.limit, offset: page.offset })])
+    : [null, [], null];
   const prev = w.hasPrev;
   const statusCols = [
     { key: 'label', label: 'Status' },
@@ -169,6 +180,97 @@ export default async function EngagementPage({ searchParams }: Props) {
           />
         </div>
       </div>
+
+      {/* Installed app. Its own section rather than two more tiles in the grid
+          above, because the question it answers is a different one: how many
+          people can we reach with a push notification at all. On iOS nothing
+          gets through until the app is on the home screen, so this number is
+          the ceiling on every push campaign. */}
+      <div>
+        <h2 className="text-lg font-semibold text-black">Installed app (PWA)</h2>
+        <p className="text-sm text-black/60">
+          {pwa
+            ? 'Reported by the app itself on each launch: there is no install API to ask. Nothing reports an uninstall, so a stale "Last launch" is the only evidence one happened.'
+            : 'pwa_installs table not present on this environment.'}
+        </p>
+      </div>
+
+      {pwa && pwaUsers ? (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+            <KpiTile
+              label="Installed users"
+              value={fmtInt(pwa.users)}
+              hint={`${fmtPct(pwa.profiles ? pwa.users / pwa.profiles : 0)} of ${fmtInt(pwa.profiles)} profiles`}
+            />
+            <KpiTile
+              label="New installs"
+              value={fmtInt(pwa.new_installs)}
+              current={pwa.new_installs}
+              previous={prev ? pwa.new_installs_prev : undefined}
+              hint="first seen in range"
+            />
+            <KpiTile label="iOS" value={fmtInt(pwa.ios)} hint="where push needs the install" />
+            <KpiTile label="Android" value={fmtInt(pwa.android)} hint={`${fmtInt(pwa.desktop)} desktop`} />
+            <KpiTile
+              label="Launched in 7d"
+              value={fmtInt(pwa.active_7d)}
+              hint={`of ${fmtInt(pwa.users)} installed users`}
+            />
+            <KpiTile
+              label="Installed & push-ready"
+              value={fmtInt(pwa.with_push)}
+              hint="installed users with a push device registered"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ChartCard
+              title="New installs"
+              hint={`First launch of the installed app per ${range.bucket}`}
+              rows={pwaCurve}
+              filename={`pwa-installs-${range.key}-${range.bucket}`}
+            >
+              <TimeSeriesBars
+                rows={pwaCurve}
+                series={[
+                  { key: 'installs', label: 'Installs' },
+                  { key: 'users', label: 'Users' },
+                ]}
+              />
+            </ChartCard>
+            <DataTable
+              title="Installed users"
+              hint="One line per user, newest install first. A user on two platforms shows both."
+              rows={pwaUsers.rows.map((r) => ({
+                nickname: r.nickname ?? '—',
+                wallet: `${r.wallet.slice(0, 6)}…${r.wallet.slice(-4)}`,
+                platforms: r.platforms,
+                push: r.push ? 'yes' : 'no',
+                installed_at: r.installed_at.toISOString().slice(0, 10),
+                last_seen_at: sampleAge(r.last_seen_at),
+              }))}
+              columns={[
+                { key: 'nickname', label: 'Nickname' },
+                { key: 'wallet', label: 'Wallet' },
+                { key: 'platforms', label: 'Platforms' },
+                { key: 'push', label: 'Push' },
+                { key: 'installed_at', label: 'Installed' },
+                { key: 'last_seen_at', label: 'Last launch', align: 'right' },
+              ]}
+              filename={`pwa-users-p${page.page}`}
+              footer={
+                <Pager
+                  page={page.page}
+                  limit={page.limit}
+                  total={pwaUsers.total}
+                  params={{ range: range.key, bucket: range.bucket, limit: String(page.limit) }}
+                />
+              }
+            />
+          </div>
+        </>
+      ) : null}
     </>
   );
 }

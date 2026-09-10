@@ -21,11 +21,7 @@ import {
 import { GOLD_COIN, useElementPositionsStore, useHideBalance, usePendingCreditStore } from '../../stores';
 import { PageHeader } from '../molecules';
 import { useModalPresence } from '../molecules/AppModal';
-import {
-  CoinsModal,
-  ExperienceModal,
-  StreakModal,
-} from '../organisms';
+import { CoinsModal, ExperienceModal, InstallButton, StreakModal } from '../organisms';
 import { VaquitaAvatarCircle } from '../avatar/VaquitaAvatar';
 import { DailyRewardChest } from './DailyRewardChest';
 import { MapClock } from './MapClock';
@@ -284,15 +280,8 @@ export const HeaderStats = () => {
                 {balanceLoading ? (
                   <Spinner size="sm" color="current" />
                 ) : (
-                  <span
-                    data-tutorial="tutorial-balance"
-                    className="font-bold text-black tabular-nums leading-none truncate"
-                  >
-                    {hideBalance ? (
-                      <span className="text-xl">••••</span>
-                    ) : (
-                      <LiveBalance base={balanceBase} terms={liveTerms} />
-                    )}
+                  <span data-tutorial="tutorial-balance" className="font-bold text-black tabular-nums leading-none truncate">
+                    {hideBalance ? <span className="text-xl">••••</span> : <LiveBalance base={balanceBase} terms={liveTerms} />}
                   </span>
                 )}
                 {/* La pastilla es crema clara con un número adentro: sin esto se
@@ -309,10 +298,7 @@ export const HeaderStats = () => {
                   type="button"
                   onClick={() => void refetchBlend()}
                   aria-label={t('home.stats.balanceRetry', 'Retry loading balance')}
-                  title={t(
-                    'home.stats.balanceSyncError',
-                    "Couldn't load your Blend balance. Tap to retry.",
-                  )}
+                  title={t('home.stats.balanceSyncError', "Couldn't load your Blend balance. Tap to retry.")}
                   className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-white/80 border border-black/20 text-amber-600 transition active:translate-y-[1px]"
                 >
                   <FiAlertCircle className="w-4 h-4" />
@@ -332,32 +318,38 @@ export const HeaderStats = () => {
                 archivos. */}
           </div>
 
-          {/* Campana + soporte: los dos únicos accesos del encabezado, mismo
-              botón redondo. La campana es el ÚNICO punto de entrada a
-              /notifications — sin ella el feed existe pero no se puede
-              alcanzar desde la app. */}
-          <div className="flex shrink-0 self-start items-center gap-2">
-            <Link
-              href="/notifications"
-              aria-label={t('notificationsCenter.bellAria', 'Notifications')}
-              className="relative shrink-0 w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
-            >
-              <FiBell className="w-4 h-4 text-black" />
-              {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 border border-white text-[10px] font-bold text-white flex items-center justify-center tabular-nums">
-                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                </span>
-              )}
-            </Link>
+          {/* Instalar + campana + soporte, en columna. El botón de instalar va
+              ARRIBA de los dos redondos a propósito: instalar la app es lo que
+              habilita las notificaciones push (en iOS no llega ninguna hasta
+              que está en la pantalla de inicio), así que es la acción que más
+              queremos que se vea. Se borra solo cuando ya está instalada —
+              adentro de la app instalada un botón de instalar se lee roto. */}
+          <div className="flex shrink-0 self-start flex-col items-end gap-2">
+            <InstallButton />
 
-            <Link
-              href="/concierge"
-              data-tutorial={HOME_TOUR_ANCHOR_HELP}
-              aria-label={t('concierge.buttonAria', 'Help Center')}
-              className="relative shrink-0 w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
-            >
-              <FiHeadphones className="w-4 h-4 text-black" />
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/notifications"
+                aria-label={t('notificationsCenter.bellAria', 'Notifications')}
+                className="relative shrink-0 w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+              >
+                <FiBell className="w-4 h-4 text-black" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 border border-white text-[10px] font-bold text-white flex items-center justify-center tabular-nums">
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </span>
+                )}
+              </Link>
+
+              <Link
+                href="/concierge"
+                data-tutorial={HOME_TOUR_ANCHOR_HELP}
+                aria-label={t('concierge.buttonAria', 'Help Center')}
+                className="relative shrink-0 w-8 h-8 rounded-full bg-white border border-black border-b-3 flex items-center justify-center transition active:border-b-[1px] active:translate-y-[2px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+              >
+                <FiHeadphones className="w-4 h-4 text-black" />
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -458,9 +450,15 @@ export const HeaderStats = () => {
       </div>
 
       {streakModalMounted && <StreakModal open={showStreakModal} onOpenChange={() => setShowStreakModal(false)} />}
-      {coinsModalMounted && <CoinsModal open={showCoinsModal} onOpenChange={() => setShowCoinsModal(false)} coins={goldCoins} />}
+      {coinsModalMounted && (
+        <CoinsModal open={showCoinsModal} onOpenChange={() => setShowCoinsModal(false)} coins={goldCoins} />
+      )}
       {experienceModalMounted && (
-        <ExperienceModal open={showExperienceModal} onOpenChange={() => setShowExperienceModal(false)} experience={experience} />
+        <ExperienceModal
+          open={showExperienceModal}
+          onOpenChange={() => setShowExperienceModal(false)}
+          experience={experience}
+        />
       )}
       {/* Aquí se montaba <ReferralsModal> (pantalla de referidos: ganancias,
           tiers de boost e invitar amigos). Oculta a propósito junto con su chip

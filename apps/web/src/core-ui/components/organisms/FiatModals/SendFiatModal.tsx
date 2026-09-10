@@ -214,6 +214,8 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
         amount,
         decimals: token.decimals,
         withdrawAll: amountNum >= balanceFormatted,
+        // On its way out to local currency.
+        flowKind: 'external_out',
       });
       await refreshAssets();
       mark('blend', 'done');

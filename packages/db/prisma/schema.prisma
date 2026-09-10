@@ -125,6 +125,56 @@ model Deposit {
   @@map("deposits")
 }
 
+/// Event ledger for the flexible DeFindex vault, the counterpart to `deposits`.
+///
+/// A locked-pool deposit is a contract call we broker, so the server sees it and
+/// writes a row. A vault deposit is the user calling the vault directly, so the
+/// server sees nothing at all — which is why every metric that asks "who did
+/// what, when?" was locked-only, and why a vault-only saver could never unlock a
+/// deposit badge. This table is that missing history.
+///
+/// There is no `initiated` -> `confirmed` handshake. A locked deposit needs one
+/// because it carries a caller-chosen `deposit_id` to match against chain state;
+/// the vault has no such id, only a share balance. Rows land already confirmed,
+/// on the hash the wallet returned.
+///
+/// **The client is the writer**, so a dropped write (browser closed after
+/// signing, failed POST) is silent and permanent: RPC keeps ~7 days of events,
+/// the vault exposes a balance rather than a position list, and nothing can
+/// reconstruct a missing row's amount or direction. That is the accepted cost of
+/// not running an indexer. `transaction_hash` is unique so a client retry — the
+/// whole mitigation — is free, and so a replayed POST cannot pay coins twice.
+///
+/// `direction`: deposit | withdraw.
+/// `flow_kind`: external_in | external_out | internal_in | internal_out.
+///
+/// `flow_kind` is load-bearing, not decoration. Four of the call sites move
+/// money between Vaquita's own products (flexible -> locked, locked -> flexible,
+/// legacy Blend -> vault). Counted as external, moving 100 USDC sideways would
+/// add 200 to total volume, pay coins the user did not earn, and inflate the
+/// badge deposit count.
+model VaultFlow {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  walletAddress   String    @map("wallet_address") @db.VarChar(100)
+  /// Plain scalar, no FK — relations are app-layer in this schema.
+  tokenId         Int       @map("token_id")
+  direction       String    @db.VarChar(10)
+  flowKind        String    @map("flow_kind") @db.VarChar(16)
+  /// Human units (USDC), like `deposits.amount`. Summed by the dashboard, so
+  /// Decimal rather than the VarChar the client-reported ramp rows use.
+  amount          Decimal   @db.Decimal
+  transactionHash String    @map("transaction_hash") @db.VarChar(100)
+  confirmedAt     DateTime  @map("confirmed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([transactionHash], map: "vault_flows_transaction_hash_unique")
+  @@index([walletAddress], map: "idx_vault_flows_wallet_address")
+  @@index([confirmedAt], map: "idx_vault_flows_confirmed_at")
+  @@map("vault_flows")
+}
+
 /// Compra de USDC con moneda local (on-ramp). Existe por una sola razón: la API
 /// de ramps no tiene endpoint de listado, así que el `providerTxId` que devuelve
 /// la creación es el ÚNICO handle sobre una compra en curso. Perderlo deja al
@@ -470,6 +520,12 @@ model Config {
   // (type 'earned', the `experience` reward) on collect and summed into the
   // profile's total experience. `0` disables the check-in XP bonus.
   dailyCheckinExperience Int     @default(0) @map("daily_checkin_experience")
+  // Ceiling on the coins a wallet can earn from depositing in one UTC calendar
+  // day, across both savings products. The grant itself is 1 coin per whole USDC
+  // deposited (minimum 1 USDC), so without a cap a single large deposit would
+  // out-pay a Diamond badge. Lives here rather than in a constant for the same
+  // reason `dailyGoldCoins` does: it is an economy dial, and it will be tuned.
+  depositCoinsDailyCap  Int      @default(100) @map("deposit_coins_daily_cap")
   // Duración (en milisegundos reales) de un día COMPLETO del reloj de juego, que
   // corre acelerado tipo Minecraft. Global para todos (se sirve vía GET
   // /api/v1/time). 1200000 = 20 min. Tope int4 (~24.8 días) de sobra.
@@ -588,6 +644,7 @@ model Profile {
   savedWallets        SavedWallet[]
   savedBankAccounts   SavedBankAccount[]
   pushSubscriptions   PushSubscription[]
+  pwaInstalls         PwaInstall[]
 
   // Unidirectional follow graph. `following` are edges where this profile is the
   // follower; `followers` are edges where it is the followee.
@@ -709,6 +766,42 @@ model PushSubscription {
 
   @@index([profileId], map: "idx_push_subscriptions_profile")
   @@map("push_subscriptions")
+}
+
+/// Who is running Vaquita as an installed app, and on what.
+///
+/// There is no install API to ask. The browser tells us once, in two different
+/// ways, and neither is a query: Chromium fires `appinstalled` in the tab that
+/// prompted, and every launch of an installed app reports `display-mode:
+/// standalone`. iOS fires nothing at all, so standalone IS the iOS signal —
+/// which is why the client reports on both and this row is an observation, not
+/// an event we were handed.
+///
+/// One row per profile per platform, because that is the question being asked:
+/// how many users have the app, and can therefore be reached by push. A second
+/// Android phone does not make a second user; an iPhone plus an Android does
+/// make two platforms worth knowing about. `installedAt` is the first time we
+/// saw it and never moves; `lastSeenAt` moves on every launch, so an install
+/// that was deleted stops being recent without the row ever claiming it was
+/// uninstalled — nothing reports that, and inventing it would be a guess.
+model PwaInstall {
+  id          Int      @id @default(autoincrement())
+  profileId   Int      @map("profile_id")
+  /// 'android' | 'ios' | 'desktop' | 'other' — enforced by a CHECK in
+  /// packages/db/sql/pwa_installs_enums.sql, which `db push` would drop.
+  platform    String   @db.VarChar(16)
+  userAgent   String?  @map("user_agent") @db.VarChar(300)
+  /// First observation. Never updated: it is the install date.
+  installedAt DateTime @default(now()) @map("installed_at") @db.Timestamptz(6)
+  /// Most recent launch seen from the installed app.
+  lastSeenAt  DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, platform], map: "pwa_installs_profile_platform_unique")
+  @@index([installedAt], map: "idx_pwa_installs_installed_at")
+  @@map("pwa_installs")
 }
 
 /// Historial de envíos de notificaciones desde el admin. Cada fila es una
@@ -986,6 +1079,41 @@ model VaultTvlSnapshot {
 
   @@index([network, vaultAddress, fetchedAt(sort: Desc)], map: "idx_vault_tvl_snapshots_vault_time")
   @@map("vault_tvl_snapshots")
+}
+
+/// Append-only history of what `wallet_balances` held, one row per successful
+/// on-chain read.
+///
+/// `wallet_balances` keeps a single current row per (wallet, token), so the
+/// moment it is overwritten the previous reading is gone. That leaves nothing
+/// to check the flexible ledger against and no way to answer "what did this
+/// wallet hold last month". This table is that record.
+///
+/// It is a SAMPLE, not a series. Balances refresh lazily, when a wallet
+/// interacts with the app, so the row density follows traffic: a wallet that
+/// never opens Vaquita produces no rows at all, and a gap between two rows is
+/// not evidence the balance sat still. Read it the way `vault_tvl_snapshots`
+/// is read — last value at or before a point in time, never an average.
+///
+/// Written only on the success path. A failed read leaves the stale balance in
+/// place precisely because it is not an observation; a row here would record a
+/// fake zero and, worse, read as a withdrawal to anything taking deltas.
+model WalletBalanceHistory {
+  id            BigInt   @id @default(autoincrement())
+  walletAddress String   @map("wallet_address") @db.VarChar(100)
+  /// Plain scalar, no FK — relations are app-layer in this schema.
+  tokenId       Int      @map("token_id")
+  blendUsdc     Decimal  @map("blend_usdc") @db.Decimal
+  vaultUsdc     Decimal  @map("vault_usdc") @db.Decimal
+  /// The XP accumulator as of this reading, so a row is self-contained.
+  vaultUsdcHours Decimal @map("vault_usdc_hours") @db.Decimal
+  /// The instant the balance was measured — the same timestamp written to
+  /// `wallet_balances.observed_at` in the same transaction.
+  observedAt    DateTime @map("observed_at") @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([walletAddress, tokenId, observedAt(sort: Desc)], map: "idx_wallet_balance_history_wallet_token_time")
+  @@map("wallet_balance_history")
 }
 
 /// A "what's new" note shown to the user once, in a modal, on their next visit.

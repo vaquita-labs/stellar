@@ -53,8 +53,27 @@ const isIOS = () =>
     (window.navigator.userAgent.includes('Mac') && 'ontouchend' in document));
 
 const isMobile = () =>
-  typeof window !== 'undefined' &&
-  (isIOS() || /android|mobile|iphone|ipad|ipod/i.test(window.navigator.userAgent));
+  typeof window !== 'undefined' && (isIOS() || /android|mobile|iphone|ipad|ipod/i.test(window.navigator.userAgent));
+
+/**
+ * Which kind of device this is, coarsely, for the install report.
+ *
+ * Coarse because the question it answers is "which platform's install flow is
+ * working", and a browser version does not make that clearer. iOS is tested
+ * first: iPadOS reports itself as a Mac, so anything else would file an iPad as
+ * a desktop.
+ */
+export type InstallPlatform = 'android' | 'ios' | 'desktop' | 'other';
+
+export const installPlatform = (): InstallPlatform => {
+  if (typeof window === 'undefined') return 'other';
+  if (isIOS()) return 'ios';
+  const ua = window.navigator.userAgent;
+  if (/android/i.test(ua)) return 'android';
+  // A phone that is neither: rare, and not worth a bucket of its own.
+  if (/mobile/i.test(ua)) return 'other';
+  return 'desktop';
+};
 
 export function useInstallApp() {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
@@ -82,6 +101,8 @@ export function useInstallApp() {
     isIOS: isIOS(),
     /** Phone/tablet — where a home-screen shortcut actually makes sense. */
     isMobile: isMobile(),
+    /** Coarse device kind, reported with the install so the dashboard can split it. */
+    platform: installPlatform(),
     promptInstall,
   };
 }

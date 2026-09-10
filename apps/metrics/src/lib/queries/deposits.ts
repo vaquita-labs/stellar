@@ -1,5 +1,6 @@
 import { prisma } from '@vaquita/db';
 import type { SqlWindow } from './common';
+import { hasVaultFlows, vaultDepositEvents } from './vault';
 
 export type DepositSeriesRow = {
   bucket: string;
@@ -105,18 +106,57 @@ export async function depositKpis(w: SqlWindow): Promise<DepositKpis> {
   return row!;
 }
 
-export type LockPeriodRow = { lock_period_ms: number; deposits: number; volume: number; active: number };
+/** `lock_period_ms: null` is the flexible vault — no lock, so no period to name. */
+export type LockPeriodRow = { lock_period_ms: number | null; deposits: number; volume: number; active: number };
 
+/**
+ * Volume by lock period, with the flexible vault as its own bucket.
+ *
+ * Without that bucket the chart reads as a breakdown of everything the product
+ * took in, while showing only the half that gets locked — and the flexible side
+ * is the one a user without a wallet reaches first.
+ *
+ * The two `active` columns are not the same measure and cannot be. A locked
+ * position is open until it is withdrawn, so it counts rows; flexible shares are
+ * fungible and no withdrawal maps back to a deposit, so the only honest figure
+ * is how many wallets hold a balance right now. Hence "active" here means
+ * "still in", counted the way each product allows.
+ */
 export async function byLockPeriod(w: SqlWindow): Promise<LockPeriodRow[]> {
+  const flows = vaultDepositEvents(await hasVaultFlows());
   return prisma.$queryRaw<LockPeriodRow[]>`
-    select coalesce(d.lock_period, 0)::float8 as lock_period_ms,
-           count(*)::int as deposits,
-           sum(d.amount)::float8 as volume,
-           count(*) filter (where not exists (select 1 from withdrawals w where w.deposit_id = d.id and w.deleted_at is null and w.status = 'confirmed'))::int as active
-    from deposits d
-    where d.deleted_at is null and d.status = 'confirmed' and coalesce(d.confirmed_at, d.created_at) >= ${w.since}
-    group by 1
-    order by 1
+    with supported as (
+      select id from tokens where is_supported = true and deleted_at is null
+    ),
+    locked as (
+      select coalesce(d.lock_period, 0)::float8 as lock_period_ms,
+             count(*)::int as deposits,
+             sum(d.amount)::float8 as volume,
+             count(*) filter (where not exists (
+               select 1 from withdrawals w
+               where w.deposit_id = d.id and w.deleted_at is null and w.status = 'confirmed'
+             ))::int as active
+      from deposits d
+      where d.deleted_at is null and d.status = 'confirmed' and coalesce(d.confirmed_at, d.created_at) >= ${w.since}
+      group by 1
+    ),
+    flexible as (
+      select null::float8 as lock_period_ms,
+             count(*)::int as deposits,
+             coalesce(sum(f.amount), 0)::float8 as volume,
+             (select count(*)::int from wallet_balances wb
+               where wb.token_id in (select id from supported) and wb.vault_usdc > 0) as active
+      from ${flows} f
+      where f.ts >= ${w.since}
+    )
+    select * from locked
+    union all
+    -- Only when the ledger has something to say. An empty flexible bar on an
+    -- environment without the table would read as "nobody saves flexibly".
+    select * from flexible where deposits > 0
+    -- Nulls last: the lock-period axis stays in ascending order and the
+    -- no-lock bucket sits at the end of it.
+    order by lock_period_ms nulls last
   `;
 }
 

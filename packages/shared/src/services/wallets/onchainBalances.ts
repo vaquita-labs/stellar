@@ -280,11 +280,25 @@ export async function refreshWalletBalances(
           observedAt,
         });
 
-        await prisma.walletBalance.upsert({
-          where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
-          create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, vaultUsdcHours, vaquitaPositions, scrapedAt: observedAt, observedAt },
-          update: { blendUsdc, vaultUsdc, vaultUsdcHours, vaquitaPositions, scrapedAt: observedAt, observedAt, lastError: null },
-        });
+        // The current row and the history row are written together so the two
+        // cannot diverge: every reading that reaches `wallet_balances` is also
+        // kept, and nothing is kept that was not applied. `observedAt` is the
+        // same instant on both, which is what makes a history row usable on its
+        // own — the balance, the accumulator and the time it was measured.
+        //
+        // Only the success path writes history. The failure branch below leaves
+        // the balance alone on purpose, and a row there would be a fake zero
+        // that anything reading deltas would take for a withdrawal.
+        await prisma.$transaction([
+          prisma.walletBalance.upsert({
+            where: { walletAddress_tokenId: { walletAddress: wallet, tokenId: token.id } },
+            create: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, vaultUsdcHours, vaquitaPositions, scrapedAt: observedAt, observedAt },
+            update: { blendUsdc, vaultUsdc, vaultUsdcHours, vaquitaPositions, scrapedAt: observedAt, observedAt, lastError: null },
+          }),
+          prisma.walletBalanceHistory.create({
+            data: { walletAddress: wallet, tokenId: token.id, blendUsdc, vaultUsdc, vaultUsdcHours, observedAt },
+          }),
+        ]);
         results.push({ wallet, tokenId: token.id, blendUsdc, vaultUsdc, lastError: null });
       } catch (e) {
         const message = e instanceof Error ? e.message : 'read failed';

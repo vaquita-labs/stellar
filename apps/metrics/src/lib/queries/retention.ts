@@ -1,18 +1,29 @@
 import { prisma } from '@vaquita/db';
 import type { SqlWindow } from './common';
+import { hasVaultFlows, vaultDepositEvents } from './vault';
 
 export type CohortCell = { cohort: string; size: number; offset_weeks: number; active: number };
 
 /**
- * Weekly deposit cohorts: cohort = ISO week of a wallet's FIRST confirmed
- * deposit; a cell counts wallets of that cohort with a confirmed deposit
- * `offset_weeks` later (week 0 is always 100%).
+ * Weekly deposit cohorts across both savings products: cohort = ISO week of a
+ * wallet's FIRST deposit of either kind; a cell counts wallets of that cohort
+ * that deposited again `offset_weeks` later.
+ *
+ * Week 0 is not 100%. The first deposit defines the cohort and is not "coming
+ * back", so only later deposits land in a cell — a wallet that deposited twice
+ * in its first week shows in week 0, one that deposited once does not.
+ *
+ * Locked-only, this grid had no row at all for a wallet that saves flexibly,
+ * which is the majority path for a user arriving without a wallet.
  */
 export async function depositCohorts(w: SqlWindow): Promise<CohortCell[]> {
+  const flows = vaultDepositEvents(await hasVaultFlows());
   return prisma.$queryRaw<CohortCell[]>`
     with c as (
       select wallet_address, coalesce(confirmed_at, created_at) as ts
       from deposits where deleted_at is null and status = 'confirmed'
+      union all
+      select wallet_address, ts from ${flows}
     ),
     first as (
       select wallet_address, date_trunc('week', min(ts)) as cohort from c group by 1
@@ -89,8 +100,15 @@ export type RetentionKpis = {
 };
 
 export async function retentionKpis(w: SqlWindow): Promise<RetentionKpis> {
+  const flows = vaultDepositEvents(await hasVaultFlows());
   const [row] = await prisma.$queryRaw<RetentionKpis[]>`
-    with wd as (
+    with saved as (
+      select wallet_address, coalesce(confirmed_at, created_at) as ts
+      from deposits where deleted_at is null and status = 'confirmed'
+      union all
+      select wallet_address, ts from ${flows}
+    ),
+    wd as (
       select w.*, d.amount as principal,
              (coalesce(w.confirmed_at, w.created_at) < coalesce(d.confirmed_at, d.created_at) + (coalesce(d.lock_period, 0)::float8 / 1000) * interval '1 second') as early
       from withdrawals w join deposits d on d.id = w.deposit_id
@@ -101,15 +119,18 @@ export async function retentionKpis(w: SqlWindow): Promise<RetentionKpis> {
       where d.deleted_at is null and d.status = 'confirmed'
         and not exists (select 1 from withdrawals w where w.deposit_id = d.id and w.deleted_at is null and w.status = 'confirmed')
     ),
+    -- Time to first deposit, counted from whichever product the user reached
+    -- first. Measuring only the locked one reports a saver's second decision as
+    -- their first, and drops anyone who never made it.
     firsts as (
-      select p.id, extract(epoch from (min(coalesce(d.confirmed_at, d.created_at)) - p.created_at)) / 86400 as days
-      from profiles p join deposits d on d.wallet_address = p.wallet_address and d.deleted_at is null and d.status = 'confirmed'
+      select p.id, extract(epoch from (min(s.ts) - p.created_at)) / 86400 as days
+      from profiles p join saved s on s.wallet_address = p.wallet_address
       where p.deleted_at is null and p.created_at >= ${w.since}
       group by p.id, p.created_at
     ),
     per_wallet as (
-      select wallet_address, count(*) as n from deposits
-      where deleted_at is null and status = 'confirmed' and coalesce(confirmed_at, created_at) >= ${w.since}
+      select wallet_address, count(*) as n from saved
+      where ts >= ${w.since}
       group by 1
     )
     select

@@ -12,6 +12,10 @@ vi.mock('@vaquita/db', () => ({
     profile: { count: vi.fn(), findMany: vi.fn() },
     deposit: { findMany: vi.fn() },
     walletBalance: { findMany: vi.fn(), findFirst: vi.fn(), upsert: vi.fn() },
+    walletBalanceHistory: { create: vi.fn() },
+    // The balance and its history row are written together. The fake just runs
+    // the array, which is enough to prove both calls were built.
+    $transaction: vi.fn((ops: unknown[]) => Promise.all(ops)),
   },
 }));
 
@@ -36,6 +40,7 @@ beforeEach(() => {
   db.walletBalance.findMany.mockResolvedValue([] as never);
   db.walletBalance.findFirst.mockResolvedValue(null as never);
   db.walletBalance.upsert.mockResolvedValue({} as never);
+  db.walletBalanceHistory.create.mockResolvedValue({} as never);
   readChain.mockResolvedValue({ blendUsdc: 0, vaultUsdc: 250 } as never);
 });
 
@@ -45,6 +50,36 @@ describe('lazyRefreshWalletBalances', () => {
 
     expect(readChain).toHaveBeenCalledTimes(1);
     expect(db.walletBalance.upsert).toHaveBeenCalledTimes(1);
+    expect(db.walletBalanceHistory.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the reading, with the accumulator and the instant it was measured', async () => {
+    await lazyRefreshWalletBalances(WALLET, { resolveRpcUrl: rpc });
+
+    const kept = db.walletBalanceHistory.create.mock.calls[0]?.[0]?.data as Record<string, unknown>;
+    expect(kept).toMatchObject({ walletAddress: WALLET, tokenId: 2, vaultUsdc: 250 });
+    expect(kept.vaultUsdcHours).toBeDefined();
+    // Same instant as the balance row, which is what makes a history row usable alone.
+    const upserted = db.walletBalance.upsert.mock.calls[0]?.[0]?.update as Record<string, unknown>;
+    expect(kept.observedAt).toBe(upserted.observedAt);
+  });
+
+  it('keeps nothing when the chain read failed, because that is not an observation', async () => {
+    readChain.mockRejectedValue(new Error('rpc 429'));
+    vi.useFakeTimers();
+    try {
+      const done = lazyRefreshWalletBalances(WALLET, { resolveRpcUrl: rpc });
+      // Burn the retry backoff (2 s, 4 s, 8 s) instead of waiting it out.
+      await vi.advanceTimersByTimeAsync(30_000);
+      await expect(done).resolves.toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    // The stale balance is still bumped with `lastError`; a history row here
+    // would be a fake zero that reads as a withdrawal to anything taking deltas.
+    expect(db.walletBalance.upsert).toHaveBeenCalledTimes(1);
+    expect(db.walletBalanceHistory.create).not.toHaveBeenCalled();
   });
 
   it('no-ops inside the TTL without touching the chain', async () => {

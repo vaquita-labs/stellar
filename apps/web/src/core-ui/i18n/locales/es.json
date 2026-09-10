@@ -746,7 +746,9 @@
       "apyAria": "Portafolio",
       "greeting": "Hola,",
       "balanceRetry": "Reintentar cargar el saldo",
-      "balanceSyncError": "No pudimos cargar tu saldo de Blend. Tocá para reintentar."
+      "balanceSyncError": "No pudimos cargar tu saldo de Blend. Tocá para reintentar.",
+      "install": "Instalar",
+      "installAria": "Instalar la app de Vaquita"
     },
     "totalDeposits": {
       "bagAlt": "Depósitos totales"

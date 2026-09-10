@@ -6,6 +6,7 @@ import { ably } from '../ably';
 import { getActiveBadgeClaimsForWallet, getMintedBadges } from '../badges/claims';
 import { getLastClosedCycleId, getLeaderboardRankForWallet } from '../leaderboard';
 import { notify } from '../notifications';
+import { countExternalVaultDeposits, prismaVaultFlowRepository } from '../vaultFlows';
 import { getSupportedTokenIds } from '../wallets/onchainBalances';
 import {
   Achievement,
@@ -155,6 +156,35 @@ export const getVaultUsdcHoursByWallet = async (wallets?: string[]): Promise<Map
     console.warn('error on getVaultUsdcHoursByWallet', error);
   }
   return byWallet;
+};
+
+/**
+ * The USDC a wallet is holding in the flexible vault right now, as of the last
+ * balance snapshot.
+ *
+ * Scoped to supported tokens for the same reason the XP read above is: a retired
+ * token's rows freeze at whatever they held that day, and production carries 45
+ * of them pointing at the same vault as the live token, so an unscoped sum
+ * counts that money twice.
+ *
+ * A snapshot, not a live read — balances refresh lazily when a wallet interacts
+ * with the app. A saver who has not opened it in a while reads slightly stale,
+ * which for a badge threshold means the badge arrives on their next visit.
+ */
+export const getVaultUsdcByWallet = async (wallet: string | null | undefined): Promise<number> => {
+  if (!wallet) return 0;
+  try {
+    const tokenIds = await getSupportedTokenIds();
+    if (!tokenIds.length) return 0;
+    const rows = await prisma.walletBalance.findMany({
+      where: { walletAddress: wallet, tokenId: { in: tokenIds } },
+      select: { vaultUsdc: true },
+    });
+    return rows.reduce((total, row) => total + Number(row.vaultUsdc ?? 0), 0);
+  } catch (error) {
+    console.warn('error on getVaultUsdcByWallet', error);
+    return 0;
+  }
 };
 
 /** Vault XP for a single wallet. Convenience over {@link getVaultUsdcHoursByWallet}. */
@@ -1311,6 +1341,32 @@ export const computeEligibilitySignals = async (
     experience += await getVaultExperienceByWallet(profile.wallet_address);
   } catch (error) {
     console.warn('[eligibility] failed to load vault experience', error);
+  }
+
+  // Both deposit signals were locked-only, which is why a saver who only ever
+  // used the flexible vault could never unlock a deposit badge no matter how
+  // much they held. The two halves come from different places on purpose: the
+  // count is an event ledger, the amount is a balance snapshot, and neither has
+  // the other's shape.
+  try {
+    const { data: vaultDeposits } = await countExternalVaultDeposits(
+      prismaVaultFlowRepository,
+      profile.wallet_address,
+    );
+    // Lifetime, and not gated on the money still being there. Vault shares are
+    // fungible, so no withdrawal can be traced back to a particular deposit and
+    // any "still active" rule would have to invent an attribution that does not
+    // exist. Badge unlocks are latched anyway, so gating on the balance would
+    // not have taken a badge back — only made the number harder to explain.
+    activeDeposits += vaultDeposits;
+  } catch (error) {
+    console.warn('[eligibility] failed to load vault deposit count', error);
+  }
+
+  try {
+    activeAmount += await getVaultUsdcByWallet(profile.wallet_address);
+  } catch (error) {
+    console.warn('[eligibility] failed to load vault balance', error);
   }
 
   let streakCount = 0;

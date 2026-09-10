@@ -24,13 +24,39 @@ yield with no lock.
 - Keep the legacy Blend read + withdraw path indefinitely.
 
 **Out (explicitly deferred):**
-- **No DB persistence** for passive deposits — balance, TVL, and migration state are
-  all read on-chain. No `deposits` rows, no new columns, no reconciliation.
-- **No gamification** — passive deposits earn no rewards/badges/XP and feed no
-  product metrics (pure-yield product, outside the game). No event indexing.
 - **No DefiLlama** adapter/listing work.
 - **No DeFindex-APY display** — show the underlying **Blend APY** for now.
 - The Vaquita **pool** (locked positions) is untouched by this work.
+
+> **Superseded, 2026-09-10.** Two "Out" items above no longer hold, and the doc
+> would otherwise contradict the code:
+>
+> - **DB persistence exists.** `vault_flows` is a client-written event ledger of
+>   passive deposits and withdrawals — one already-confirmed row per transaction,
+>   keyed by the hash the wallet returned, with a `flow_kind` separating money
+>   entering Vaquita from money moving between its own two products. There is
+>   still no reconciliation and none is possible: the vault exposes a fungible
+>   share balance rather than a position list, so a missing row can be detected
+>   but never reconstructed. `wallet_balance_history` keeps the balance samples
+>   the ledger is checked against. See `docs/metrics-vault-coverage-research.md`.
+> - **Passive deposits are gamified, at parity with locked ones.** XP was never
+>   actually excluded — `vaultExperience` is `√(vault_usdc_hours)` against the
+>   locked `√(amount) × √(hours)`, and `√(A·T) === √A·√T`, so the two pay
+>   identically per USDC-hour. On top of that, `computeEligibilitySignals` now
+>   counts external vault deposits toward `activeDeposits` and the vault balance
+>   toward `activeAmount`, which is what opens the deposit and savings badges to
+>   a saver who never locks; and every deposit of either kind grants one coin per
+>   whole USDC, floored, above a 1 USDC minimum and under a per-UTC-day cap held
+>   in `config.deposit_coins_daily_cap`.
+> - **Passive deposits feed product metrics.** Activation, the signup funnel, the
+>   repeat-deposit cohorts, returning depositors, campaign conversion and the
+>   weekly report all read `deposits ∪ vault_flows`. Panels that net against pool
+>   withdrawals — TVL, open positions, maturity — stay locked-only and say so on
+>   screen, because the flexible product has no maturity and no per-position
+>   withdrawal to net against.
+>
+> Leaderboard rank is still locked-only: it scores `amount × duration` over
+> `deposits` alone. Vault money reaches a user's level but not their rank.
 
 ## Background
 

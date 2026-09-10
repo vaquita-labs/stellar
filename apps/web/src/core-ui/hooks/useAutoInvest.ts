@@ -159,6 +159,8 @@ export const useIdleFunds = () => {
         address: walletAddress,
         amount,
         decimals: token.decimals,
+        // Idle USDC already sitting in the user's wallet: new money to savings.
+        flowKind: 'external_in',
       });
       console.info('[idle-funds] invested', { hash, amount });
       // Destino-agnóstico a propósito: el router elige vault o Blend según el

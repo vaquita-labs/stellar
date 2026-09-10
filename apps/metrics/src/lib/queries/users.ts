@@ -1,5 +1,23 @@
 import { prisma } from '@vaquita/db';
 import type { SqlWindow } from './common';
+import { hasVaultFlows, vaultDepositEvents } from './vault';
+
+// Anything that asks "has this wallet started saving?" has to accept both
+// products. The flexible vault is the option the deposit sheet offers FIRST to
+// a user without a wallet, which is exactly the cohort a campaign acquires — so
+// a locked-only definition reports the acquisition channel that works best as
+// the one that converts worst.
+//
+// Two sources, and they cover different holes:
+// - `vault_flows` is the event, with a timestamp, so it can answer "within 7
+//   days of signing up". It only goes back to the day the ledger shipped.
+// - `wallet_balances.vault_usdc` is a balance with no history, so it can only
+//   answer "ever". It is what still counts the savers who funded the vault
+//   before the ledger existed, and what covers a write the browser dropped.
+//
+// Filtered to supported tokens throughout: production carries stale rows for a
+// retired token pointed at the same DeFindex vault, so an unscoped read counts
+// those wallets twice.
 
 export type SignupRow = { bucket: string; signups: number; total: number; referred: number };
 
@@ -45,27 +63,46 @@ export type UserKpis = {
 };
 
 export async function userKpis(w: SqlWindow): Promise<UserKpis> {
+  const flows = vaultDepositEvents(await hasVaultFlows());
   const [row] = await prisma.$queryRaw<UserKpis[]>`
+    with supported as (
+      select id from tokens where is_supported = true and deleted_at is null
+    ),
+    -- Holds flexible USDC now. No timestamp exists for it, so it can only ever
+    -- answer "did this wallet save at all".
+    vault_holders as (
+      select distinct wallet_address from wallet_balances
+      where token_id in (select id from supported) and vault_usdc > 0
+    ),
+    -- Every dated "the user put money in", both products in one relation.
+    saved as (
+      select wallet_address, coalesce(confirmed_at, created_at) as ts
+      from deposits where deleted_at is null and status = 'confirmed'
+      union all
+      select wallet_address, ts from ${flows}
+    )
     select
       (select count(*) from profiles where deleted_at is null)::int as total_users,
       (select count(*) from profiles where deleted_at is null and created_at >= ${w.since})::int as new_users,
       (select count(*) from profiles where deleted_at is null and created_at >= ${w.prevSince} and created_at < ${w.since})::int as new_users_prev,
       (select count(*) from profiles where deleted_at is null and onboarding_completed)::int as onboarded,
       (select count(*) from profiles where deleted_at is null and tutorial_completed)::int as tutorial_done,
-      (select count(distinct wallet_address) from deposits where deleted_at is null and status = 'confirmed')::int as depositors_ever,
+      (select count(*) from (
+         select wallet_address from saved union select wallet_address from vault_holders
+       ) x)::int as depositors_ever,
       (select count(*) from profiles where deleted_at is null and referred_by_id is not null)::int as referred,
-      (select count(distinct wallet_address) from deposits
-         where deleted_at is null and status = 'confirmed' and coalesce(confirmed_at, created_at) >= ${w.since})::int as active_depositors,
-      (select count(distinct wallet_address) from deposits
-         where deleted_at is null and status = 'confirmed'
-           and coalesce(confirmed_at, created_at) >= ${w.prevSince} and coalesce(confirmed_at, created_at) < ${w.since})::int as active_depositors_prev,
+      (select count(distinct wallet_address) from saved where ts >= ${w.since})::int as active_depositors,
+      (select count(distinct wallet_address) from saved
+         where ts >= ${w.prevSince} and ts < ${w.since})::int as active_depositors_prev,
       (select count(*) from profiles p where p.deleted_at is null and p.created_at >= ${w.since})::int as activation_cohort,
+      -- Dated sources only. A balance cannot say whether it arrived inside the
+      -- seven days, and guessing "yes" would quietly inflate the headline.
       (select count(*) from profiles p where p.deleted_at is null and p.created_at >= ${w.since}
-         and exists (select 1 from deposits d where d.wallet_address = p.wallet_address and d.deleted_at is null
-                       and d.status = 'confirmed' and coalesce(d.confirmed_at, d.created_at) <= p.created_at + interval '7 days'))::int as activated_7d,
+         and exists (select 1 from saved s where s.wallet_address = p.wallet_address
+                       and s.ts <= p.created_at + interval '7 days'))::int as activated_7d,
       (select count(*) from profiles p where p.deleted_at is null and p.created_at >= ${w.since}
-         and exists (select 1 from deposits d where d.wallet_address = p.wallet_address and d.deleted_at is null
-                       and d.status = 'confirmed'))::int as activated_ever
+         and (exists (select 1 from saved s where s.wallet_address = p.wallet_address)
+              or exists (select 1 from vault_holders v where v.wallet_address = p.wallet_address)))::int as activated_ever
   `;
   return row!;
 }
@@ -79,13 +116,28 @@ export type ReferrerRow = {
 };
 
 export async function topReferrers(w: SqlWindow): Promise<ReferrerRow[]> {
+  const flows = vaultDepositEvents(await hasVaultFlows());
   return prisma.$queryRaw<ReferrerRow[]>`
+    with supported as (
+      select id from tokens where is_supported = true and deleted_at is null
+    ),
+    vault_holders as (
+      select distinct wallet_address from wallet_balances
+      where token_id in (select id from supported) and vault_usdc > 0
+    ),
+    saved as (
+      select wallet_address from deposits where deleted_at is null and status = 'confirmed'
+      union all
+      select wallet_address from ${flows}
+    )
     select r.nickname,
            r.wallet_address as wallet,
            count(*)::int as referrals,
            count(*) filter (where p.created_at >= ${w.since})::int as in_range,
-           count(*) filter (where exists (select 1 from deposits d where d.wallet_address = p.wallet_address
-                                            and d.deleted_at is null and d.status = 'confirmed'))::int as activated
+           -- Same definition of "activated" as the KPI tiles: a referral who
+           -- funded the flexible vault converted just as much as one who locked.
+           count(*) filter (where exists (select 1 from saved s where s.wallet_address = p.wallet_address)
+                              or exists (select 1 from vault_holders v where v.wallet_address = p.wallet_address))::int as activated
     from profiles p
     join profiles r on r.id = p.referred_by_id
     where p.deleted_at is null
@@ -99,11 +151,33 @@ export type FunnelRow = { step: string; users: number };
 
 /** Signup → onboarding → first deposit attempt → first confirmed deposit, for profiles created in the window. */
 export async function signupFunnel(w: SqlWindow): Promise<FunnelRow[]> {
+  const flows = vaultDepositEvents(await hasVaultFlows());
   const [r] = await prisma.$queryRaw<{ signed_up: number; onboarded: number; attempted: number; confirmed: number }[]>`
+    with supported as (
+      select id from tokens where is_supported = true and deleted_at is null
+    ),
+    vault_holders as (
+      select distinct wallet_address from wallet_balances
+      where token_id in (select id from supported) and vault_usdc > 0
+    ),
+    saved as (
+      select wallet_address from deposits where deleted_at is null and status = 'confirmed'
+      union all
+      select wallet_address from ${flows}
+    ),
+    -- "Tried" means a row exists at all, confirmed or not. The flexible product
+    -- writes only on a transaction the chain already accepted, so it has no
+    -- failed attempts to contribute here: its rows land in both steps.
+    tried as (
+      select wallet_address from deposits where deleted_at is null
+      union all
+      select wallet_address from saved
+    )
     select count(*)::int as signed_up,
            count(*) filter (where onboarding_completed)::int as onboarded,
-           count(*) filter (where exists (select 1 from deposits d where d.wallet_address = p.wallet_address and d.deleted_at is null))::int as attempted,
-           count(*) filter (where exists (select 1 from deposits d where d.wallet_address = p.wallet_address and d.deleted_at is null and d.status = 'confirmed'))::int as confirmed
+           count(*) filter (where exists (select 1 from tried t where t.wallet_address = p.wallet_address))::int as attempted,
+           count(*) filter (where exists (select 1 from saved s where s.wallet_address = p.wallet_address)
+                               or exists (select 1 from vault_holders v where v.wallet_address = p.wallet_address))::int as confirmed
     from profiles p
     where p.deleted_at is null and p.created_at >= ${w.since}
   `;
