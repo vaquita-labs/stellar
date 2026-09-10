@@ -123,6 +123,10 @@ export async function hasVaultFlows(): Promise<boolean> {
  * When the table is missing the fragment is an empty relation of the right
  * shape, so a caller's `union all` and its casts still parse and the panel
  * degrades to locked-only rather than 500ing.
+ *
+ * It is a parenthesised subquery, so every call site must alias it —
+ * `from ${vaultDepositEvents(present)} f`. Postgres rejects an unaliased
+ * subquery in `from` at parse time, which takes the whole page down.
  */
 export function vaultDepositEvents(present: boolean): Prisma.Sql {
   if (!present) {

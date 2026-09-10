@@ -9,6 +9,7 @@ const links = [
   { href: '/', label: 'Overview' },
   { href: '/users', label: 'Users' },
   { href: '/campaigns', label: 'Campaigns' },
+  { href: '/referrals', label: 'Referrals' },
   { href: '/deposits', label: 'Deposits' },
   { href: '/ramps', label: 'Ramps' },
   { href: '/retention', label: 'Retention' },
