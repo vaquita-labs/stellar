@@ -8,7 +8,8 @@ import { sqlWindow } from '@/lib/queries/common';
 import { Pager } from '@/components/Pager';
 import { byLockPeriod, depositKpis, depositSeries, depositorsPage } from '@/lib/queries/deposits';
 import { sampleAge, vaultTvl } from '@/lib/queries/vault';
-import { parsePage, parseRange } from '@/lib/range';
+import { parsePage } from '@/lib/range';
+import { resolveRange } from '@/lib/rangePrefs';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 
 export default async function DepositsPage({ searchParams }: Props) {
   const params = await searchParams;
-  const range = parseRange(params);
+  const range = await resolveRange(params);
   const page = parsePage(params);
   const w = await sqlWindow(range);
   const [kpis, series, periods, depositors, vault] = await Promise.all([

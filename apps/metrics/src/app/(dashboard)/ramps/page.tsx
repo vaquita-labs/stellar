@@ -14,7 +14,7 @@ import {
   rampSeries,
   rampTables,
 } from '@/lib/queries/ramps';
-import { parseRange } from '@/lib/range';
+import { resolveRange } from '@/lib/rangePrefs';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +34,7 @@ const settleRate = (settled: number, unsettled: number) => {
 };
 
 export default async function RampsPage({ searchParams }: Props) {
-  const range = parseRange(await searchParams);
+  const range = await resolveRange(await searchParams);
 
   // Ramp migrations are applied by hand per environment, and a missing relation
   // fails the statement at parse time — so probe before querying either table.

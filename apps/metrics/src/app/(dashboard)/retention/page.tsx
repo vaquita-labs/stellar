@@ -6,14 +6,14 @@ import { TimeSeriesBars } from '@/components/charts';
 import { fmtInt, fmtPct, fmtUsd } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
 import { depositCohorts, retentionKpis, withdrawalSeries } from '@/lib/queries/retention';
-import { parseRange } from '@/lib/range';
+import { resolveRange } from '@/lib/rangePrefs';
 
 export const dynamic = 'force-dynamic';
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function RetentionPage({ searchParams }: Props) {
-  const range = parseRange(await searchParams);
+  const range = await resolveRange(await searchParams);
   const w = await sqlWindow(range);
   const [kpis, cohorts, withdrawals] = await Promise.all([retentionKpis(w), depositCohorts(w), withdrawalSeries(w)]);
 

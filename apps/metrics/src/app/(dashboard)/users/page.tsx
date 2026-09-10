@@ -6,14 +6,14 @@ import { CategoryBars, TimeSeriesBars, TimeSeriesLine } from '@/components/chart
 import { fmtInt, fmtPct } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
 import { signupFunnel, signupSeries, topReferrers, userKpis } from '@/lib/queries/users';
-import { parseRange } from '@/lib/range';
+import { resolveRange } from '@/lib/rangePrefs';
 
 export const dynamic = 'force-dynamic';
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function UsersPage({ searchParams }: Props) {
-  const range = parseRange(await searchParams);
+  const range = await resolveRange(await searchParams);
   const w = await sqlWindow(range);
   const [kpis, series, funnel, referrers] = await Promise.all([
     userKpis(w),

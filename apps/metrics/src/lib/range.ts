@@ -7,6 +7,18 @@ export type RangeKey = (typeof RANGES)[number];
 export const BUCKETS = ['day', 'week', 'month'] as const;
 export type Bucket = (typeof BUCKETS)[number];
 
+/** What a page shows when nothing has been chosen: the last 30 days, by day. */
+export const DEFAULT_RANGE: RangeKey = '30d';
+
+/**
+ * Cookie holding the last pick, as `range:bucket`. It exists so the choice
+ * survives moving between pages and reloading, without a row anywhere: this is
+ * a view preference of one browser, not a fact about the business, and the
+ * dashboard has no user table to hang it on. A URL param always wins over it,
+ * so a shared link still shows what its sender saw.
+ */
+export const RANGE_COOKIE = 'vq-metrics-range';
+
 export type Range = {
   key: RangeKey;
   bucket: Bucket;
@@ -18,10 +30,16 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
-export function parseRange(params: SearchParams): Range {
-  const rawKey = first(params.range);
-  const key: RangeKey = (RANGES as readonly string[]).includes(rawKey ?? '') ? (rawKey as RangeKey) : '90d';
-  const rawBucket = first(params.bucket);
+/** The remembered pick, when there is one. Both halves are validated here. */
+export type RangePrefs = { range?: string | undefined; bucket?: string | undefined };
+
+export function parseRange(params: SearchParams, prefs: RangePrefs = {}): Range {
+  // Order matters: the URL wins, then the remembered pick, then the default.
+  const rawKey = first(params.range) ?? prefs.range;
+  const key: RangeKey = (RANGES as readonly string[]).includes(rawKey ?? '') ? (rawKey as RangeKey) : DEFAULT_RANGE;
+  // The remembered bucket only applies when the range came from the same place;
+  // otherwise following a `?range=365d` link would draw a year by day.
+  const rawBucket = first(params.bucket) ?? (first(params.range) ? undefined : prefs.bucket);
   const bucket: Bucket = (BUCKETS as readonly string[]).includes(rawBucket ?? '')
     ? (rawBucket as Bucket)
     : key === '30d'
@@ -70,9 +88,7 @@ export function parsePage(params: SearchParams): Page {
 
   const rawLimit = Number(first(params.limit));
   const limit =
-    Number.isFinite(rawLimit) && rawLimit >= 1
-      ? Math.min(Math.floor(rawLimit), MAX_PAGE_SIZE)
-      : DEFAULT_PAGE_SIZE;
+    Number.isFinite(rawLimit) && rawLimit >= 1 ? Math.min(Math.floor(rawLimit), MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
 
   return { page, limit, offset: (page - 1) * limit };
 }
