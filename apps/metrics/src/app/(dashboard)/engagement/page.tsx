@@ -15,7 +15,8 @@ import {
 import { Pager } from '@/components/Pager';
 import { hasPwaInstalls, pwaKpis, pwaSeries, pwaUsersPage } from '@/lib/queries/pwa';
 import { sampleAge } from '@/lib/queries/vault';
-import { parsePage, parseRange } from '@/lib/range';
+import { parsePage } from '@/lib/range';
+import { resolveRange } from '@/lib/rangePrefs';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,7 @@ type Props = { searchParams: Promise<Record<string, string | string[] | undefine
 
 export default async function EngagementPage({ searchParams }: Props) {
   const params = await searchParams;
-  const range = parseRange(params);
+  const range = await resolveRange(params);
   const page = parsePage(params);
   const w = await sqlWindow(range);
   const [kpis, series, badges, onramp, bridge, pwaPresent] = await Promise.all([

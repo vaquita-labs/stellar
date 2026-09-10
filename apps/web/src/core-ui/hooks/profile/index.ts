@@ -16,6 +16,7 @@ export * from './useProfileMapObjectsAvailable';
 export * from './useProfileMapObjectsByWallet';
 export * from './useProfileRewards';
 export * from './useProfileStreak';
+export * from './useReferralSummary';
 export * from './usePurchaseMapItem';
 export * from './useRedeemAchievementCode';
 export * from './useRestProfile';

@@ -2119,21 +2119,23 @@
     }
   },
   "referrals": {
-    "activeReferrals": "Active referrals",
-    "apyBonus": "APY Bonus",
-    "description": "Earn recurring rewards as your friends save. Each active referral can boost your rate — rewards are variable and not guaranteed.",
-    "earningsLabel": "Referral earnings",
     "invite": "Invite friends",
-    "nextTier": "Invite {{count}} more to reach",
-    "pendingEarnings": "Pending referral earnings",
+    "inviteDesc": "Share your link and see who joined.",
+    "description": "Share your link. We keep track of everyone who joins through it.",
     "shareText": "Save with me on Vaquita and earn rewards. Use my code {{code}}",
-    "tiersTitle": "Boost tiers",
-    "title": "Referrals",
-    "totalEarnings": "Total referral earnings",
-    "yourCode": "Your referral code",
-    "tierLabel_one": "{{count}} active referral",
-    "tierLabel_other": "{{count}} active referrals",
-    "learnMore": "Learn how it works"
+    "friendsJoined": "Friends joined",
+    "friendsSaving": "Friends saving",
+    "yourLink": "Your link",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "pasteHint": "Paste it in your bio, a caption or a DM.",
+    "rewardsComing": "Rewards for inviting are coming. We're already counting yours.",
+    "channels": {
+      "whatsapp": "WhatsApp",
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "telegram": "Telegram"
+    }
   },
   "withdraw": {
     "addMethod": "Add method",

@@ -7,7 +7,7 @@ import { sqlWindow } from '@/lib/queries/common';
 import { depositKpis, depositSeries } from '@/lib/queries/deposits';
 import { signupSeries, userKpis } from '@/lib/queries/users';
 import { sampleAge, vaultTvl } from '@/lib/queries/vault';
-import { parseRange } from '@/lib/range';
+import { resolveRange } from '@/lib/rangePrefs';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function OverviewPage({ searchParams }: Props) {
-  const range = parseRange(await searchParams);
+  const range = await resolveRange(await searchParams);
   const w = await sqlWindow(range);
   const [users, deposits, signups, series, vault] = await Promise.all([
     userKpis(w),

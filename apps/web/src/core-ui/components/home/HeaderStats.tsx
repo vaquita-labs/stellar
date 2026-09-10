@@ -309,13 +309,14 @@ export const HeaderStats = () => {
             {/* OCULTOS A PROPÓSITO (2026-07-21): acá vivían dos chips bajo el
                 saldo. El verde mostraba el APY base y abría <PortfolioPanel>;
                 ese punto de entrada se mudó al propio saldo (arriba), así que
-                el chip desapareció. El lila mostraba el boost de referidos
-                (`apyBonus`, icono FiZap) y abría <ReferralsModal>: se decidió
-                no exponer todavía esa pantalla. Ambos features siguen completos
-                (`useApyByLockPeriod`, `useReferralBoost`, `ReferralsModal` en
-                organisms/); para reactivarlos, volver a montar el chip acá con
-                su estado y el render del modal al final. NO borrar esos
-                archivos. */}
+                el chip desapareció. `useApyByLockPeriod` sigue completo: para
+                reactivarlo, volver a montar el chip acá con su estado.
+
+                El lila mostraba el boost de referidos (`apyBonus`, icono FiZap).
+                Ese chip NO vuelve: el bonus se calcula pero ningún APY real lo
+                aplica, así que anunciarlo sería prometer algo que el producto no
+                cumple. La pantalla de referidos sí existe otra vez, sin promesas,
+                en Perfil → Ajustes → Invitar amigos (<InviteFriendsPage>). */}
           </div>
 
           {/* Instalar + campana + soporte, en columna. El botón de instalar va
@@ -460,9 +461,6 @@ export const HeaderStats = () => {
           experience={experience}
         />
       )}
-      {/* Aquí se montaba <ReferralsModal> (pantalla de referidos: ganancias,
-          tiers de boost e invitar amigos). Oculta a propósito junto con su chip
-          en la fila de stats — ver el comentario largo ahí para reactivarla. */}
     </div>
   );
 };

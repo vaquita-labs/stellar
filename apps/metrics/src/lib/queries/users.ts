@@ -79,7 +79,7 @@ export async function userKpis(w: SqlWindow): Promise<UserKpis> {
       select wallet_address, coalesce(confirmed_at, created_at) as ts
       from deposits where deleted_at is null and status = 'confirmed'
       union all
-      select wallet_address, ts from ${flows}
+      select wallet_address, ts from ${flows} f
     )
     select
       (select count(*) from profiles where deleted_at is null)::int as total_users,
@@ -128,7 +128,7 @@ export async function topReferrers(w: SqlWindow): Promise<ReferrerRow[]> {
     saved as (
       select wallet_address from deposits where deleted_at is null and status = 'confirmed'
       union all
-      select wallet_address from ${flows}
+      select wallet_address from ${flows} f
     )
     select r.nickname,
            r.wallet_address as wallet,
@@ -163,7 +163,7 @@ export async function signupFunnel(w: SqlWindow): Promise<FunnelRow[]> {
     saved as (
       select wallet_address from deposits where deleted_at is null and status = 'confirmed'
       union all
-      select wallet_address from ${flows}
+      select wallet_address from ${flows} f
     ),
     -- "Tried" means a row exists at all, confirmed or not. The flexible product
     -- writes only on a transaction the chain already accepted, so it has no

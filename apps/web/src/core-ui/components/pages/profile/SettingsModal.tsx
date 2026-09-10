@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EditProfilePage } from './EditProfilePage';
+import { InviteFriendsPage } from './InviteFriendsPage';
 import { NotificationsPage } from './NotificationsPage';
 import { PreferencesPage } from './PreferencesPage';
 import { SettingsPage, type SettingsSubKey } from './SettingsPage';
@@ -23,6 +24,7 @@ const SUB_URL: Record<SettingsSubKey, string> = {
   profile: '/profile/edit',
   notifications: '/profile/notifications',
   wallet: '/profile/wallet',
+  invite: '/profile/invite',
 };
 
 export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -72,6 +74,15 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
         title={t('profilePages.notifications.title', 'Notifications')}
       >
         <NotificationsPage onBack={closeSub} />
+      </StackedPanelModal>
+
+      <StackedPanelModal
+        open={sub === 'invite'}
+        onClose={closeSub}
+        url={SUB_URL.invite}
+        title={t('referrals.invite', 'Invite friends')}
+      >
+        <InviteFriendsPage onBack={closeSub} />
       </StackedPanelModal>
 
       <StackedPanelModal

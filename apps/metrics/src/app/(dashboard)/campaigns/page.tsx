@@ -6,14 +6,14 @@ import { TimeSeriesBars } from '@/components/charts';
 import { fmtInt, fmtPct, fmtUsd } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
 import { campaignKpis, campaignSeries, campaignTable, hasCampaigns } from '@/lib/queries/campaigns';
-import { parseRange } from '@/lib/range';
+import { resolveRange } from '@/lib/rangePrefs';
 
 export const dynamic = 'force-dynamic';
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function CampaignsPage({ searchParams }: Props) {
-  const range = parseRange(await searchParams);
+  const range = await resolveRange(await searchParams);
 
   // The campaigns migration is applied by hand per environment, and a missing
   // relation fails the statement at parse time — so probe before querying.
@@ -50,7 +50,11 @@ export default async function CampaignsPage({ searchParams }: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-        <KpiTile label="Active campaigns" value={fmtInt(kpis.campaigns_active)} hint="not retired, accepting new visitors" />
+        <KpiTile
+          label="Active campaigns"
+          value={fmtInt(kpis.campaigns_active)}
+          hint="not retired, accepting new visitors"
+        />
         <KpiTile
           label="Attributed signups"
           value={fmtInt(kpis.attributed)}

@@ -23,7 +23,7 @@ export async function depositCohorts(w: SqlWindow): Promise<CohortCell[]> {
       select wallet_address, coalesce(confirmed_at, created_at) as ts
       from deposits where deleted_at is null and status = 'confirmed'
       union all
-      select wallet_address, ts from ${flows}
+      select wallet_address, ts from ${flows} f
     ),
     first as (
       select wallet_address, date_trunc('week', min(ts)) as cohort from c group by 1
@@ -106,7 +106,7 @@ export async function retentionKpis(w: SqlWindow): Promise<RetentionKpis> {
       select wallet_address, coalesce(confirmed_at, created_at) as ts
       from deposits where deleted_at is null and status = 'confirmed'
       union all
-      select wallet_address, ts from ${flows}
+      select wallet_address, ts from ${flows} f
     ),
     wd as (
       select w.*, d.amount as principal,

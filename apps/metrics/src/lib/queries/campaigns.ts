@@ -41,7 +41,7 @@ export async function campaignKpis(w: SqlWindow): Promise<CampaignKpis> {
       select wallet_address, amount::float8 as amount from deposits
       where deleted_at is null and status = 'confirmed'
       union all
-      select wallet_address, amount from ${flows}
+      select wallet_address, amount from ${flows} f
     )
     select
       (select count(*) from campaigns where deleted_at is null and is_active)::int as campaigns_active,
@@ -113,7 +113,7 @@ export async function campaignTable(w: SqlWindow): Promise<CampaignTableRow[]> {
       select wallet_address, amount::float8 as amount from deposits
       where deleted_at is null and status = 'confirmed'
       union all
-      select wallet_address, amount from ${flows}
+      select wallet_address, amount from ${flows} f
     )
     select c.code,
            c.name,
