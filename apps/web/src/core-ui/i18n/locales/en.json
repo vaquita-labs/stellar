@@ -2123,6 +2123,7 @@
   "referrals": {
     "invite": "Invite friends",
     "inviteDesc": "Share your link and see who joined.",
+    "referAndEarn": "Refer and earn",
     "description": "Share your link. We keep track of everyone who joins through it.",
     "shareText": "Save with me on Vaquita and earn rewards. Use my vaquitag {{code}}",
     "friendsJoined": "Friends joined",

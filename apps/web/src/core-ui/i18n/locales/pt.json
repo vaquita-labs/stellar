@@ -2123,6 +2123,7 @@
   "referrals": {
     "invite": "Convidar amigos",
     "inviteDesc": "Compartilhe seu link e veja quem entrou.",
+    "referAndEarn": "Indique e ganhe",
     "description": "Compartilhe seu link. A gente conta todo mundo que entra por ele.",
     "shareText": "Poupe comigo na Vaquita e ganhe recompensas. Use o meu vaquitag {{code}}",
     "friendsJoined": "Amigos que entraram",

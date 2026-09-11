@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { FiChevronLeft, FiChevronRight, FiHeart, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiGift, FiHeart, FiSettings, FiShare2, FiUserPlus } from 'react-icons/fi';
 import {
   useClaimedAchievements,
   useDepositsComplete,
@@ -29,8 +29,10 @@ import { VaquitaAvatar } from '../avatar/VaquitaAvatar';
 import { BadgeTile } from './profile/BadgeTile';
 import { FollowListModal } from './profile/FollowListModal';
 import { FriendsModal } from './profile/FriendsModal';
+import { InviteFriendsPage } from './profile/InviteFriendsPage';
 import { SettingsModal } from './profile/SettingsModal';
 import { ShareProfileQrButton } from './profile/ShareProfileQrButton';
+import { StackedPanelModal } from './profile/StackedPanelModal';
 
 /* ------------------------------------------------------------------ */
 /* Sub-components                                                      */
@@ -151,6 +153,7 @@ export function ProfilePage() {
     tab: 'following',
   });
   const [friendsOpen, setFriendsOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Mirrors the trophy room: the preview badges should show the same
   // "ready to claim" pulse so the cue is consistent across both screens.
@@ -406,6 +409,22 @@ export function ProfilePage() {
           </div>
         </section>
 
+        {/* Refer and earn ---------------------------------------------- */}
+        {/* Sacado de Ajustes y traído acá arriba: invitar es una acción, no una
+            preferencia, y enterrada tres pantallas adentro nadie la encontraba.
+            Va sobre "Agregar amigos" porque es la misma intención —sumar gente—
+            y esta trae premio. */}
+        <section className="px-4 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setInviteOpen(true)}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-black border-b-3 bg-primary text-sm font-bold uppercase tracking-wide text-black transition hover:-translate-y-0.5 hover:bg-primary/80"
+          >
+            <FiGift className="h-4 w-4" />
+            {t('referrals.referAndEarn', 'Refer and earn')}
+          </button>
+        </section>
+
         {/* Friends CTA + share ---------------------------------------- */}
         {/* The QR sits beside the CTA, not in the banner: both are "grow your
             circle" actions, and pairing them frees the header for navigation. */}
@@ -514,6 +533,17 @@ export function ProfilePage() {
       />
 
       <FriendsModal open={friendsOpen} onClose={() => setFriendsOpen(false)} />
+
+      {/* Mismo trato que Amigos y Ajustes: panel apilado sobre el perfil. La
+          ruta /profile/invite sigue existiendo para enlaces directos. */}
+      <StackedPanelModal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        url="/profile/invite"
+        title={t('referrals.invite', 'Invite friends')}
+      >
+        <InviteFriendsPage onBack={() => setInviteOpen(false)} />
+      </StackedPanelModal>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
