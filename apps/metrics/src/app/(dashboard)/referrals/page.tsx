@@ -4,8 +4,9 @@ import { KpiTile } from '@/components/KpiTile';
 import { Pager } from '@/components/Pager';
 import { RangePicker } from '@/components/RangePicker';
 import { ATTRIBUTED_COLOR, BASELINE_COLOR, CategoryBars, TimeSeriesBars } from '@/components/charts';
-import { fmtInt, fmtPct } from '@/lib/format';
+import { fmtInt, fmtPct, fmtUsd } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
+import { sampleAge } from '@/lib/queries/vault';
 import {
   hasReferralAttribution,
   recentReferredSignups,
@@ -155,9 +156,12 @@ export default async function ReferralsPage({ searchParams }: Props) {
         filename={`referral-channels-table-${range.key}`}
       />
 
+      {/* "Held" and "Volume" are what a headcount cannot say: thirty referrals
+          who deposited nothing and three who funded the vault score the same
+          without them. Both lifetime, matching this table's framing. */}
       <DataTable
         title="Referrers"
-        hint="Lifetime totals with the current range beside them. Sorted by who brought the most."
+        hint={`Lifetime totals with the current range beside them. Held is vault plus locked principal across a referrer's people, read ${referrers.heldAt ? sampleAge(referrers.heldAt) : 'never'}; volume is what those people have moved, all time.`}
         rows={referrers.rows.map((r) => ({
           nickname: r.nickname ?? '—',
           wallet: shortWallet(r.wallet),
@@ -165,6 +169,8 @@ export default async function ReferralsPage({ searchParams }: Props) {
           referrals: r.referrals,
           in_range: r.in_range,
           saving: r.saving,
+          held: fmtUsd(r.held),
+          volume: fmtUsd(r.volume),
           top_channel: r.top_channel,
           last_referral: r.last_referral.toISOString().slice(0, 10),
         }))}
@@ -175,6 +181,8 @@ export default async function ReferralsPage({ searchParams }: Props) {
           { key: 'referrals', label: 'Referred', align: 'right' },
           { key: 'in_range', label: 'In range', align: 'right' },
           { key: 'saving', label: 'Saving', align: 'right' },
+          { key: 'held', label: 'Held', align: 'right' },
+          { key: 'volume', label: 'Volume', align: 'right' },
           { key: 'top_channel', label: 'Top channel' },
           { key: 'last_referral', label: 'Last', align: 'right' },
         ]}

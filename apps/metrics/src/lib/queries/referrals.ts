@@ -1,6 +1,7 @@
 import { prisma } from '@vaquita/db';
 import type { SqlWindow } from './common';
 import { hasVaultFlows, vaultDepositEvents } from './vault';
+import { heldBalances, volumeEvents, volumeTables } from './volume';
 
 /**
  * Invite-a-friend metrics: who is bringing users in, how many of them save, and
@@ -143,6 +144,10 @@ export type ReferrerRow = {
   referrals: number;
   in_range: number;
   saving: number;
+  /** Vault plus locked principal held by this referrer's referees, right now. */
+  held: number;
+  /** Gross volume those referees have moved, lifetime. */
+  volume: number;
   top_channel: string;
   last_referral: Date;
 };
@@ -151,21 +156,42 @@ export type ReferrerRow = {
  * One row per referrer, newest activity in the "in range" column beside the
  * lifetime total — the same shape `topReferrers` uses on the Users page, which
  * stays there as a 15-row summary. This is the paginated full list.
+ *
+ * `held` and `volume` answer the question a headcount cannot: a referrer who
+ * brought thirty people who deposited nothing looks identical to one who brought
+ * three who funded the vault. Both are lifetime, matching this table's existing
+ * framing — a balance is a balance, and "moved so far" is the ask.
+ *
+ * Both money CTEs aggregate **once across every wallet** and are then joined per
+ * referee. Doing it per referrer inside a correlated subquery would rescan the
+ * whole event union for each row on the page. Each CTE is one row per wallet, so
+ * the joins cannot multiply rows and the counts beside them stay exact.
  */
 export async function referrersPage(args: {
   w: SqlWindow;
   limit: number;
   offset: number;
-}): Promise<{ rows: ReferrerRow[]; total: number }> {
+}): Promise<{ rows: ReferrerRow[]; total: number; heldAt: Date | null }> {
   const { w, limit, offset } = args;
   const flows = vaultDepositEvents(await hasVaultFlows());
+  const volumeSources = await volumeTables();
 
-  const rows = await prisma.$queryRaw<(ReferrerRow & { total: bigint })[]>`
+  const rows = await prisma.$queryRaw<(ReferrerRow & { total: bigint; held_at: Date | null })[]>`
     with saved as (
       select wallet_address from deposits
       where deleted_at is null and status = 'confirmed'
       union
       select wallet_address from ${flows} f
+    ),
+    held as (
+      select h.wallet_address, (h.vault + h.locked)::float8 as held, h.scraped_at
+      from ${heldBalances()} h
+    ),
+    moved as (
+      select ev.wallet_address, sum(ev.amount)::float8 as volume
+      from ${volumeEvents(volumeSources)} ev
+      where ev.wallet_address is not null
+      group by 1
     ),
     agg as (
       select r.id,
@@ -175,6 +201,9 @@ export async function referrersPage(args: {
              count(*)::int as referrals,
              count(*) filter (where p.created_at >= ${w.since})::int as in_range,
              count(*) filter (where exists (select 1 from saved s where s.wallet_address = p.wallet_address))::int as saving,
+             coalesce(sum(h.held), 0)::float8 as held,
+             coalesce(sum(m.volume), 0)::float8 as volume,
+             max(h.scraped_at) as held_at,
              -- mode() picks the channel this referrer's signups came through
              -- most often. Ties break arbitrarily, which is fine for a column
              -- that only says "mostly WhatsApp".
@@ -182,6 +211,8 @@ export async function referrersPage(args: {
              max(p.created_at) as last_referral
       from profiles p
       join profiles r on r.id = p.referred_by_id
+      left join held h on h.wallet_address = p.wallet_address
+      left join moved m on m.wallet_address = p.wallet_address
       where p.deleted_at is null
       group by r.id, r.nickname, r.wallet_address, r.referral_code
     )
@@ -191,7 +222,13 @@ export async function referrersPage(args: {
     limit ${limit} offset ${offset}
   `;
 
-  return { rows, total: Number(rows[0]?.total ?? 0) };
+  // The balance snapshot's age, for the column hint: these are scraped numbers,
+  // not live reads, and every other balance readout in this dashboard says so.
+  const heldAt = rows.reduce<Date | null>(
+    (newest, r) => (r.held_at && (!newest || r.held_at > newest) ? r.held_at : newest),
+    null
+  );
+  return { rows, total: Number(rows[0]?.total ?? 0), heldAt };
 }
 
 export type ReferredSignupRow = {

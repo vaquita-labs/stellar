@@ -20,6 +20,7 @@ No `NEXT_PUBLIC_*` variables. Deployment: `docs/metrics-dokploy-setup.md`.
 | `/` | Overview KPIs (users, new users, depositors, volume, TVL, activation) + 4 charts |
 | `/users` | Signups (organic vs referred), total users, signup→deposit funnel, top referrers |
 | `/deposits` | Volume, count & depositors, TVL, inflow vs outflow, lock-period split, top depositors |
+| `/volume` | Money moved, split into edge / savings / peer-to-peer crossings; by type, by user |
 | `/retention` | Weekly repeat-deposit cohorts, early vs on-time withdrawals, yield paid out |
 | `/engagement` | Daily check-ins, follows/map likes, badges (by type), map items, push, on-ramp & bridge |
 | `/report` | Weekly report (7 days vs the 7 before + all-time), copy or download as `.md` |
@@ -31,6 +32,12 @@ has a **CSV** button that downloads exactly the rows it renders.
 ## Definitions
 
 - Amounts are USDC as stored in `deposits.amount`; only `status = 'confirmed'` rows count.
+- **Gross volume** = the sum of three boundaries, each counting a movement exactly once: **edge**
+  (money entering or leaving Vaquita), **savings** (wallet ↔ vault or lock period) and
+  **peer to peer** (one user to another). It is processed value, not money held — a dollar that
+  arrives, is saved, is unsaved and leaves is four crossings. Flexible-vault `internal_*` flows are
+  excluded as a true double count, Bolivian on-ramp value is excluded as unconvertible, and
+  Argentine fiat has no table at all.
 - **TVL / locked principal** = confirmed principal − withdrawn principal (yield excluded).
 - **Early withdrawal** = withdrawn before `deposit time + lock_period` (`lock_period` is in ms).
 - **Activated** = profile with ≥ 1 confirmed deposit; **cohort** = week of the first one.
