@@ -170,9 +170,15 @@ export type NotificationPreferences = Record<NotificationPreferenceKey, boolean>
 
 // Served whenever the profile row's JSON is NULL (user never changed anything)
 // and used to fill keys missing from a partially-saved object.
+//
+// Both delivery channels are on by default: notifications are how the product
+// reaches someone who is not currently looking at it, and a channel nobody
+// opted into is a channel that does not exist. A key the user actually toggled
+// is stored and spread over this, so an explicit `false` always wins — turning
+// a default on never overrides a decision someone made.
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   push: true,
-  email: false,
+  email: true,
   deposits: true,
   streaks: true,
   friends: false,

@@ -144,10 +144,11 @@ export type NotificationPreferenceKey = 'push' | 'email' | 'deposits' | 'streaks
 
 export type NotificationPreferences = Record<NotificationPreferenceKey, boolean>;
 
-// Mirrors the API defaults — used while the profile query is loading.
+// Mirrors the API defaults — used while the profile query is loading. Both
+// delivery channels default on; only an explicitly saved `false` turns one off.
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   push: true,
-  email: false,
+  email: true,
   deposits: true,
   streaks: true,
   friends: false,
