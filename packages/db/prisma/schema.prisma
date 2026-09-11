@@ -492,11 +492,14 @@ model FeedbackVote {
 /// A marketing campaign: one shareable code plus the default UTM parameters the
 /// admin panel builds its links from.
 ///
-/// `code` lives in a different namespace from `profiles.referralCode` (6 chars
-/// from an unambiguous alphabet). Attribution resolves campaign first and user
-/// referral second, so a collision would let a campaign swallow someone's
-/// personal code — the admin create path validates against both, which a CHECK
-/// constraint could not do across tables.
+/// `code` shares ONE namespace with `profiles.referralCode`, which since
+/// 20260911_vaquitatag is the user's vaquitatag. Attribution resolves campaign
+/// first and user referral second, so a collision would let a campaign swallow
+/// someone's personal code — the admin create path validates against both, and
+/// so does every nickname write, which a CHECK constraint could not do across
+/// tables. The comparison is case-insensitive on both sides: campaign codes are
+/// uppercased on create and tags are lowercase, so an exact match would leave
+/// the two namespaces only LOOKING disjoint.
 ///
 /// Soft-deleted rather than deleted, and the unique index on `code` is partial
 /// so retiring a campaign frees its code for the next one.
@@ -599,14 +602,18 @@ model Config {
 model Profile {
   id            Int       @id @default(autoincrement())
   walletAddress String    @unique(map: "profiles_wallet_unique") @map("wallet_address") @db.VarChar(100)
-  // Public URL segment (/leaderboard/<nickname>, /explore/<nickname>) and the
-  // key the share card resolves a claim by, so it is unique among live
-  // profiles. The index is partial: a soft-deleted profile must not keep
-  // reserving a nickname a live one could take. The charset is URL-safe
+  // The vaquitatag. Public URL segment (/leaderboard/<nickname>,
+  // /explore/<nickname>), the key the share card resolves a claim by, and —
+  // mirrored into `referralCode` below — the invite code. Unique among live
+  // profiles; the index is partial, because a soft-deleted profile must not
+  // keep reserving a tag a live one could take. The charset is URL-safe
   // lowercase only, enforced in the DB by a check constraint Prisma can't
   // express (kept here so `db pull` doesn't make it look absent):
   //   profiles_nickname_format:
-  //     CHECK (nickname IS NULL OR nickname ~ '^[a-z0-9_]{3,32}$')
+  //     CHECK (nickname IS NULL OR nickname ~ '^[a-z0-9]{3,32}$')
+  // That 32 is what may be STORED. What may be WRITTEN today is 15, enforced in
+  // the API only: names predating the cap are grandfathered, and a CHECK cannot
+  // tell an old row from a new write.
   nickname      String?   @unique(map: "profiles_nickname_unique", where: raw("(nickname IS NOT NULL AND deleted_at IS NULL)")) @db.VarChar(50)
   fullName      String?   @map("full_name") @db.VarChar(100)
   email         String?   @db.VarChar(100)
@@ -643,12 +650,16 @@ model Profile {
   // defaults: push/deposits/streaks on, email/friends off).
   notificationPreferences Json? @map("notification_preferences") @db.JsonB
 
-  // Invite-a-friend graph. `referralCode` is the short string this profile
-  // shares (minted lazily on first read, unique among non-NULL codes).
+  // Invite-a-friend graph. `referralCode` is the string this profile shares —
+  // since 20260911_vaquitatag it is a mirror of `nickname` (the "vaquitatag"),
+  // not a random 6-char string, so that the code is something the user can say
+  // out loud. It stays its own column because its unique index is what keeps
+  // invite codes and campaign codes from colliding across the two tables.
+  // varchar(50) holds a grandfathered 32-char nickname; new ones cap at 15.
   // `referredById` points at the profile whose code this user signed up with —
   // set once at signup, never changed. `referrals` are the profiles this user
   // brought in; `referredBy` is the one who brought this user in.
-  referralCode  String?   @unique(map: "profiles_referral_code_unique") @map("referral_code") @db.VarChar(12)
+  referralCode  String?   @unique(map: "profiles_referral_code_unique") @map("referral_code") @db.VarChar(50)
   referredById  Int?      @map("referred_by_id")
 
   /// Where this profile came from, captured on the first visit and written

@@ -1,6 +1,6 @@
 import { normalizeAvatarConfig, resolveAvatarConfig } from '@vaquita/avatar';
 import { Router } from 'express';
-import { isNicknameAllowed, isNicknameFormatValid } from '../../lib/nicknamePolicy';
+import { isNewNicknameFormatValid, isNicknameAllowed } from '../../lib/nicknamePolicy';
 import { requireWalletSession } from '../../lib/walletAuth';
 import {
   broadcastProfileChange,
@@ -17,6 +17,7 @@ import {
   getRewardByKey,
   getRewardsData,
   getStreakCountsByProfile,
+  isCampaignCodeTaken,
   MapObjectType,
   prisma,
   purchaseMapItem,
@@ -28,6 +29,7 @@ import {
   Reward,
   sendError,
   sendSuccess,
+  setNickname,
   toProfileExperienceResponseDTO,
   toProfileMapObjectsAvailableResponseDTO,
   toProfileMapObjectsResponseDTO,
@@ -344,14 +346,24 @@ router.post('/wallet/:walletAddress/nickname', requireWalletSession, async (req,
   const nickname = String(req.body?.nickname ?? '').trim().toLowerCase();
   req.log.info({ walletAddress, nickname }, 'POST /profile/.../nickname');
 
-  if (!isNicknameFormatValid(nickname)) {
+  // The tighter of the two bounds: what may be WRITTEN is 3-15 alphanumerics.
+  // Longer names already in the database still resolve — see `nicknamePolicy`.
+  if (!isNewNicknameFormatValid(nickname)) {
     req.log.warn({ walletAddress, nickname }, 'Nickname rejected by format policy');
-    return sendError(res, 'Nicknames must be 3-32 lowercase letters, numbers or underscores.', null, 422);
+    return sendError(res, 'Vaquitatags must be 3-15 lowercase letters or numbers.', null, 422);
   }
 
   if (!isNicknameAllowed(nickname)) {
     req.log.warn({ walletAddress, nickname }, 'Nickname rejected by name policy (reserved or moderated)');
     return sendError(res, 'That nickname is not allowed.', null, 422);
+  }
+
+  // The tag IS the invite code, and invite codes share one namespace and one
+  // resolution path with campaign codes. Taking a name a live campaign already
+  // uses would silently redirect that campaign's traffic to a person.
+  if (await isCampaignCodeTaken(nickname)) {
+    req.log.warn({ walletAddress, nickname }, 'Nickname rejected: already a campaign or invite code');
+    return sendError(res, 'The nickname is already in use.', null, 409);
   }
 
   const { success, errors, errorMessage, profileData } = await getProfile(walletAddress);
@@ -373,10 +385,8 @@ router.post('/wallet/:walletAddress/nickname', requireWalletSession, async (req,
       return sendError(res, 'The nickname is already in use.', null, 409);
     }
 
-    const result = await prisma.profile.update({
-      where: { id: profileData.id },
-      data: { nickname },
-    });
+    // One write for the tag and the invite code — they are the same string.
+    const result = await setNickname(profileData.id, nickname);
 
     try {
       await broadcastProfileChange('set-nickname', [ 'profile-data' ]);
@@ -429,8 +439,8 @@ router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req,
     const nickname = String(body.nickname).trim().toLowerCase();
     if (!nickname) {
       result.nickname.error = 'Please enter a nickname.';
-    } else if (!isNicknameFormatValid(nickname)) {
-      result.nickname.error = 'Nicknames must be 3-32 lowercase letters, numbers or underscores.';
+    } else if (!isNewNicknameFormatValid(nickname)) {
+      result.nickname.error = 'Vaquitatags must be 3-15 lowercase letters or numbers.';
     } else if (!isNicknameAllowed(nickname)) {
       req.log.warn({ walletAddress, nickname }, 'Nickname rejected by name policy (reserved or moderated)');
       result.nickname.error = 'That nickname is not allowed.';
@@ -440,7 +450,9 @@ router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req,
         where: { nickname: { equals: nickname, mode: 'insensitive' }, id: { not: profileData.id }, deletedAt: null },
         select: { id: true },
       });
-      if (taken) {
+      // Same cross-namespace guard as the POST: the tag is the invite code, and
+      // a campaign already answering to it would swallow this user's invites.
+      if (taken || (await isCampaignCodeTaken(nickname))) {
         result.nickname.error = 'That nickname is already taken. Please choose another one.';
       } else {
         data.nickname = nickname;
@@ -478,7 +490,11 @@ router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req,
   // Persist only the fields that passed validation.
   if (Object.keys(data).length > 0) {
     try {
-      await prisma.profile.update({ where: { id: profileData.id }, data });
+      // The tag goes through `setNickname` so the invite code moves with it; the
+      // email rides along in the same UPDATE.
+      const { nickname: tag, ...rest } = data;
+      if (tag !== undefined) await setNickname(profileData.id, tag, rest);
+      else await prisma.profile.update({ where: { id: profileData.id }, data });
       if (data.nickname !== undefined) result.nickname.saved = true;
       if (data.email !== undefined) result.email.saved = true;
 
@@ -736,12 +752,18 @@ router.get('/nickname-available', async (req, res) => {
 
   // Distinct reasons so the UI can explain WHY instead of the misleading
   // "already taken": bad charset/length vs moderated name.
-  if (!isNicknameFormatValid(nickname)) {
+  if (!isNewNicknameFormatValid(nickname)) {
     return sendSuccess(res, { available: false, reason: 'invalid-format' });
   }
 
   if (!isNicknameAllowed(nickname)) {
     return sendSuccess(res, { available: false, reason: 'not-allowed' });
+  }
+
+  // A campaign code counts as taken here too, so the form says so before the
+  // user submits rather than after.
+  if (await isCampaignCodeTaken(nickname)) {
+    return sendSuccess(res, { available: false });
   }
 
   try {

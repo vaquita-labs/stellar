@@ -14,8 +14,14 @@
  * open a share sheet.
  */
 
-/** Where a link was shared. Becomes `utm_source` verbatim. */
-export type ShareChannel = 'whatsapp' | 'instagram' | 'tiktok' | 'telegram' | 'copy' | 'native';
+/**
+ * Where a link was shared. Becomes `utm_source` verbatim.
+ *
+ * `qr` is the printed one: the code is scanned off a phone screen at an event,
+ * so the only thing that can carry the stamp is the payload itself. Without it
+ * every in-person signup would land in the same bucket as a plain copy.
+ */
+export type ShareChannel = 'whatsapp' | 'instagram' | 'tiktok' | 'telegram' | 'copy' | 'native' | 'qr';
 
 /**
  * How a channel is reached from a browser.

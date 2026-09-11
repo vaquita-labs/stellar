@@ -7,7 +7,7 @@ import { useModalPresence } from '../molecules/AppModal';
 import { IdleFundsModal } from './IdleFundsModal';
 
 /**
- * Orquestador (sin UI propia) del gate de plata ociosa. Corre `useIdleFunds` en
+ * Orquestador (sin UI propia) del gate de dinero ocioso. Corre `useIdleFunds` en
  * el home: cuando detecta USDC ocioso en una wallet custodial, abre la pantalla
  * completa `IdleFundsModal` para que el usuario lo invierta. Al invertir, el
  * ocioso cae a 0 y la pantalla se cierra sola.
@@ -16,23 +16,28 @@ export function AutoInvest() {
   const { idle, shouldPrompt, decided, invest, isInvesting, error, clearError } = useIdleFunds();
   const [open, setOpen] = useState(false);
   // Si el usuario cerró (o la inversión falló y cerró), no volvemos a abrir hasta
-  // que entre plata NUEVA (idle sube) — así no lo atrapamos en loop ni lo forzamos.
+  // que entre dinero NUEVO (idle sube) — así no lo atrapamos en loop ni lo forzamos.
   const [dismissed, setDismissed] = useState(false);
   const prevIdle = useRef(0);
 
-  // Que el saldo ocioso suba es LA señal de que la plata en vuelo aterrizó, así
+  // Que el saldo ocioso suba es LA señal de que el dinero en vuelo aterrizó, así
   // que acá también se apaga el parpadeo del header. No alcanza con apagarlo al
   // abrir esta pantalla: una compra chica (por debajo del mínimo para invertir)
   // acredita igual y nunca abre nada, y el saldo quedaba parpadeando hasta el
-  // vencimiento de 15 minutos aunque la plata ya estuviera a la vista.
+  // vencimiento de 15 minutos aunque el dinero ya estuviera a la vista.
   const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
 
   // Mientras esta pantalla todavía PUEDA aparecer, las notas de versión esperan
-  // su turno: decidir sobre la plata va primero. El turno lo TOMA `HomePage` al
+  // su turno: decidir sobre el dinero va primero. El turno lo TOMA `HomePage` al
   // entrar (y lo suelta al salir), porque este componente monta recién después
   // de que sincroniza el reloj y para entonces la nota ya se habría mostrado.
   // Acá sólo se libera.
   const setVaultPromptSettled = useModalQueueStore((s) => s.setVaultPromptSettled);
+
+  // Y esta pantalla, a su vez, espera al pedido de permiso de notificaciones:
+  // es el único de la cola que vence (el sistema operativo ofrece el prompt
+  // nativo una sola vez), así que taparlo pierde el canal en vez de postergarlo.
+  const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
 
   // Se libera cuando el usuario cerró la pantalla (`dismissed`, que también
   // cubre el caso de invertir y cerrarla) o cuando ya se sabe que no hay nada
@@ -50,9 +55,9 @@ export function AutoInvest() {
   }, [idle, clearPendingCredit]);
 
   useEffect(() => {
-    if (shouldPrompt && !dismissed) setOpen(true);
+    if (shouldPrompt && !dismissed && pushNudgeSettled) setOpen(true);
     else if (!shouldPrompt) setOpen(false);
-  }, [shouldPrompt, dismissed]);
+  }, [shouldPrompt, dismissed, pushNudgeSettled]);
 
   // Y también al abrir la pantalla, que es el desenlace esperado: para entonces
   // la rampa hace rato que se cerró y no puede apagarlo ella.

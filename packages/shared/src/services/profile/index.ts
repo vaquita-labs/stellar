@@ -335,17 +335,18 @@ export const getProfile = async (walletAddress: string) => {
       create: { walletAddress },
     });
 
-    // Every profile owns a referral link from the moment it exists. Minted here
-    // rather than inside the referral service because this is the one call every
-    // authenticated session already makes, so a user who never opens the invite
-    // screen still has a working code the day a friend asks for one. One write,
-    // once per profile ever — and a failure must not cost the caller a profile,
-    // so it is swallowed and retried on the next read.
-    if (!profile.referralCode) {
+    // The invite code is the vaquitatag, and [[setNickname]] writes both at
+    // once — so this is only the repair path, for a row the migration skipped or
+    // a tag set before the mirror existed. Done here rather than in the referral
+    // service because this is the one call every authenticated session already
+    // makes, so a user who never opens the invite screen still has a working
+    // link the day a friend asks for it. A failure must not cost the caller a
+    // profile, so it is swallowed and retried on the next read.
+    if (profile.nickname && profile.referralCode !== profile.nickname) {
       try {
         profile.referralCode = await ensureReferralCode(profile);
       } catch (error) {
-        console.error('Error minting referral code', error);
+        console.error('Error mirroring the referral code onto the tag', error);
       }
     }
 
@@ -365,6 +366,25 @@ export const getProfile = async (walletAddress: string) => {
     };
   }
 };
+
+/**
+ * Write a profile's vaquitatag.
+ *
+ * The tag and the invite code are one string, and this is the only place that
+ * writes either: `profiles.referral_code` is a mirror of `nickname`, set in the
+ * same UPDATE so the two cannot drift. The column stays because its unique
+ * index is what keeps a tag from landing on top of a live campaign code — the
+ * two share one namespace and one resolution path.
+ *
+ * `alsoUpdate` is there for the one caller that saves the tag and the email in
+ * the same request. A second UPDATE would be a second round trip and a second
+ * way for the pair to come apart.
+ */
+export const setNickname = async (profileId: number, nickname: string, alsoUpdate: Prisma.ProfileUpdateInput = {}) =>
+  prisma.profile.update({
+    where: { id: profileId },
+    data: { ...alsoUpdate, nickname, referralCode: nickname },
+  });
 
 /**
  * Resolve a profile by its public username (nickname). Read-only — never

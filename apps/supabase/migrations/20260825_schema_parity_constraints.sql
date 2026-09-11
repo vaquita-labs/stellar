@@ -39,7 +39,11 @@ BEGIN
   ) THEN
     ALTER TABLE "profiles"
       ADD CONSTRAINT "profiles_nickname_format"
-      CHECK (nickname IS NULL OR nickname ~ '^[a-z0-9_]{3,32}$');
+      -- Sin guion bajo desde 20260911_vaquitatag: el nickname ES el código de
+      -- invitación y se dicta en voz alta. Si esa migración ya corrió acá, este
+      -- bloque no hace nada (el constraint existe); si esta corre primero, deja
+      -- puesta la regla nueva y la otra la vuelve a poner igual.
+      CHECK (nickname IS NULL OR nickname ~ '^[a-z0-9]{3,32}$');
   END IF;
 END $$;
 

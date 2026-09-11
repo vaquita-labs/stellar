@@ -23,14 +23,42 @@
 
 import blockedTerms from './blockedNicknameTerms.json';
 
-// Nicknames double as the public profile URL segment (/leaderboard/<nickname>),
-// so the charset is restricted to URL-safe lowercase: letters, digits and
-// underscore, 3-32 chars. No spaces, no accents, no symbols.
-export const NICKNAME_FORMAT_REGEX = /^[a-z0-9_]{3,32}$/;
+// The nickname is the vaquitatag: the public profile URL segment
+// (/leaderboard/<nickname>), the @handle a send resolves, AND the invite code.
+// So the charset is URL-safe lowercase letters and digits, and nothing else —
+// no underscore, because the tag gets read out loud across a table at an event
+// and typed from memory. No spaces, no accents, no symbols.
+//
+// TWO bounds, not one, and they are not interchangeable:
+//
+// - STORABLE, 3-32. What the database CHECK allows and what every read path
+//   must keep resolving. Names longer than 15 predate the cap; breaking
+//   someone's identity to enforce a rule invented after they chose it is not
+//   worth it, so they are grandfathered.
+// - WRITABLE, 3-15. What every write endpoint and every input enforces. A tag
+//   is dictated and typed, and 15 is where that stops being reasonable.
+//
+// The database cannot tell an old row from a new write, which is exactly why
+// the tighter bound lives here and not in the CHECK.
+export const NICKNAME_FORMAT_REGEX = /^[a-z0-9]{3,32}$/;
+export const NICKNAME_NEW_FORMAT_REGEX = /^[a-z0-9]{3,15}$/;
+export const NICKNAME_MIN_LENGTH = 3;
+export const NICKNAME_MAX_LENGTH = 32;
+export const NICKNAME_NEW_MAX_LENGTH = 15;
 
-/** True when the (already lowercased/trimmed) nickname is URL-safe. */
+/** True when the (already lowercased/trimmed) nickname is URL-safe and storable. */
 export function isNicknameFormatValid(nickname: string): boolean {
   return NICKNAME_FORMAT_REGEX.test(nickname);
+}
+
+/**
+ * True when the nickname is one we still accept as a NEW value.
+ *
+ * Use this on every write and availability check; `isNicknameFormatValid` is
+ * for read paths, which must keep resolving the longer names already stored.
+ */
+export function isNewNicknameFormatValid(nickname: string): boolean {
+  return NICKNAME_NEW_FORMAT_REGEX.test(nickname);
 }
 
 // Names that would collide with a route if they became a URL segment. Today only

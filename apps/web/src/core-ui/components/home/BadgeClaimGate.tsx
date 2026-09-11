@@ -56,6 +56,7 @@ export function BadgeClaimGate() {
   // The full-screen prompts of the home go first; the version notes wait behind
   // this one. `HomePage` takes the turn on entry — this component mounts after
   // the game clock syncs, and by then a note would already have been shown.
+  const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
   const vaultPromptSettled = useModalQueueStore((s) => s.vaultPromptSettled);
   const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
   const setBadgeClaimSettled = useModalQueueStore((s) => s.setBadgeClaimSettled);
@@ -78,7 +79,7 @@ export function BadgeClaimGate() {
   // Without a badges contract on the active network the sheet renders no claim
   // button (`canClaim` in AchievementModal), so there is nothing to offer.
   const hasContract = !!network?.badgesContractAddress;
-  const ourTurn = vaultPromptSettled && homeTourSettled;
+  const ourTurn = pushNudgeSettled && vaultPromptSettled && homeTourSettled;
 
   // Nothing may be decided off the react-query cache restored from disk: a
   // badge claimed in an earlier session (or on another device) still reads

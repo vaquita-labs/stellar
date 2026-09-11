@@ -56,8 +56,12 @@ export function AttributionCapture() {
     const params = new URLSearchParams(window.location.search);
     const blob: AttributionBlob = {};
 
+    // En minúsculas: el código es un vaquitatag y los tags se guardan así. La
+    // resolución en el servidor no distingue mayúsculas —los códigos viejos,
+    // aleatorios, eran en mayúsculas y esos links siguen andando—, así que esto
+    // sólo decide cómo queda guardado el blob.
     const code = take(params.get('ref'), 32);
-    if (code) blob.code = code.toUpperCase();
+    if (code) blob.code = code.toLowerCase();
     const utmSource = take(params.get('utm_source'));
     if (utmSource) blob.utmSource = utmSource;
     const utmMedium = take(params.get('utm_medium'));

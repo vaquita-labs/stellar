@@ -2,10 +2,23 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAward, FiCheck, FiChevronRight, FiCopy, FiInstagram, FiMessageCircle, FiMusic, FiSend, FiUsers } from 'react-icons/fi';
+import {
+  FiAward,
+  FiCheck,
+  FiChevronRight,
+  FiCopy,
+  FiGrid,
+  FiInstagram,
+  FiMessageCircle,
+  FiMusic,
+  FiSend,
+  FiShare2,
+  FiUsers,
+} from 'react-icons/fi';
 import { useReferralSummary } from '../../../hooks';
 import { addSuccessToast } from '../../molecules/toast';
-import { PressableButton } from '../../molecules/PressableButton';
+import { FOCUS_RING_CLASSES, PressableButton } from '../../molecules/PressableButton';
+import { InviteQrModal } from './InviteQrModal';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
 import { ReferrerLeaderboardPage } from './ReferrerLeaderboardPage';
 import { StackedPanelModal } from './StackedPanelModal';
@@ -28,10 +41,15 @@ const CHANNELS: ChannelButton[] = [
 /**
  * Invite a friend.
  *
- * Counts and a link, and nothing that is not yet true. The service still returns
- * an APY bonus and an earnings pair, but no rate anywhere applies the bonus and
- * no payout ledger exists, so neither is rendered — the closing line says
- * rewards are coming instead of showing a `$0.00` that would read as a promise.
+ * Counts and a tag, and nothing that is not yet true. There are no earnings
+ * here, no commission rate and no points: a figure that is always the referral
+ * count times a constant says nothing the count does not already say, and money
+ * we do not pay out yet would read as a promise. The closing line says rewards
+ * are coming, which is the honest version.
+ *
+ * The invite code IS the vaquitatag, so the card leads with the tag rather than
+ * with the URL: it is what someone reads out at an event, and it is what they
+ * still have when the link is gone.
  *
  * Every button stamps its own `utm_source` before the link is copied or shared,
  * which is what makes the channel breakdown in the metrics dashboard possible.
@@ -44,6 +62,7 @@ export function InviteFriendsPage({ onBack }: { onBack?: () => void } = {}) {
   // stacked panel from settings and takes none, so the board stacks on top of
   // it the same way and the back button unwinds one panel at a time.
   const [boardOpen, setBoardOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   const code = data?.code ?? '';
   const hasCode = code.length > 0;
@@ -75,6 +94,27 @@ export function InviteFriendsPage({ onBack }: { onBack?: () => void } = {}) {
     } catch {
       // No clipboard permission. The link is on screen, so nothing is lost.
     }
+  };
+
+  /**
+   * The generic share button. The system sheet is the right answer where it
+   * exists — it reaches every app on the phone, not just the four below — and
+   * the clipboard is the fallback for desktop, where there is no sheet. Either
+   * way the link is stamped before it leaves, so the source is never lost.
+   */
+  const shareLink = async () => {
+    if (!hasCode) return;
+    const url = buildInviteUrl(origin, code, 'native');
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ text: shareText, url });
+        return;
+      } catch {
+        // Sheet dismissed, or refused. Fall through to the clipboard rather
+        // than leaving the button looking dead.
+      }
+    }
+    await copyLink('copy');
   };
 
   const share = async (entry: ChannelButton) => {
@@ -116,32 +156,40 @@ export function InviteFriendsPage({ onBack }: { onBack?: () => void } = {}) {
         ))}
       </section>
 
-      <PressableButton size="md" variant="white" fullWidth onClick={() => setBoardOpen(true)}>
-        <span className="flex w-full items-center justify-between gap-2">
-          <span className="flex items-center gap-2">
-            <FiAward className="h-4 w-4" />
-            {t('referrals.board.open', 'See the top inviters')}
-          </span>
-          <FiChevronRight className="h-4 w-4" />
-        </span>
-      </PressableButton>
+      {/* --- The invite card. The tag is the headline and the link is the small
+          print under it, because at an event the tag is what gets said out loud
+          and the URL is only how a phone gets there. Tapping the tag copies the
+          link, same as the button — the whole block is one target. --- */}
+      <section className="flex flex-col gap-3 rounded-md border border-black border-b-2 bg-[#6E56CF] px-4 py-4 text-white">
+        <h2 className="text-sm font-bold">{t('referrals.inviteWithTag', 'Invite your friends with your vaquitatag')}</h2>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="px-1 text-xs font-extrabold uppercase tracking-wider text-gray-500">
-          {t('referrals.yourLink', 'Your link')}
-        </h2>
-        <div className="flex items-center gap-2 rounded-md border border-black border-b-2 bg-white px-4 py-3">
-          <span className="min-w-0 flex-1 truncate font-mono text-sm text-black">{isLoading ? '…' : displayUrl || '—'}</span>
-          <PressableButton
-            size="chip"
-            variant="primary"
-            disabled={!hasCode}
-            onClick={() => void copyLink('copy')}
-            ariaLabel={t('referrals.copyLink', 'Copy link')}
-          >
-            <span className="flex items-center gap-1.5">
-              {copied === 'copy' ? <FiCheck className="h-4 w-4" /> : <FiCopy className="h-4 w-4" />}
-              {copied === 'copy' ? t('referrals.copied', 'Link copied') : t('referrals.copyLink', 'Copy link')}
+        <button
+          type="button"
+          disabled={!hasCode}
+          onClick={() => void copyLink('copy')}
+          aria-label={t('referrals.copyLink', 'Copy link')}
+          className={`${FOCUS_RING_CLASSES} flex items-center gap-3 rounded-md border border-black border-b-2 bg-white/15 px-3 py-2.5 text-left disabled:opacity-60`}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-mono text-lg font-bold leading-tight">
+              {isLoading ? '…' : hasCode ? `@${code}` : '—'}
+            </span>
+            <span className="block truncate text-[11px] text-white/70">{displayUrl || ' '}</span>
+          </span>
+          {copied === 'copy' ? <FiCheck className="h-5 w-5 shrink-0" /> : <FiCopy className="h-5 w-5 shrink-0" />}
+        </button>
+
+        <div className="flex gap-2">
+          <PressableButton size="md" variant="white" fullWidth disabled={!hasCode} onClick={() => void shareLink()}>
+            <span className="flex items-center justify-center gap-2">
+              <FiShare2 className="h-4 w-4" />
+              {t('referrals.shareLink', 'Share link')}
+            </span>
+          </PressableButton>
+          <PressableButton size="md" variant="white" fullWidth disabled={!hasCode} onClick={() => setQrOpen(true)}>
+            <span className="flex items-center justify-center gap-2">
+              <FiGrid className="h-4 w-4" />
+              {t('referrals.shareQr', 'Share QR')}
             </span>
           </PressableButton>
         </div>
@@ -165,9 +213,21 @@ export function InviteFriendsPage({ onBack }: { onBack?: () => void } = {}) {
         ))}
       </section>
 
+      <PressableButton size="md" variant="white" fullWidth onClick={() => setBoardOpen(true)}>
+        <span className="flex w-full items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <FiAward className="h-4 w-4" />
+            {t('referrals.board.open', 'See the top inviters')}
+          </span>
+          <FiChevronRight className="h-4 w-4" />
+        </span>
+      </PressableButton>
+
       <p className="px-1 text-sm text-gray-600">
         {t('referrals.rewardsComing', "Rewards for inviting are coming. We're already counting yours.")}
       </p>
+
+      <InviteQrModal open={qrOpen} onClose={() => setQrOpen(false)} tag={code} url={buildInviteUrl(origin, code, 'qr')} />
 
       <StackedPanelModal
         open={boardOpen}

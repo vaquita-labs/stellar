@@ -6,7 +6,7 @@ import { useAnalytics, useDeposits } from '../../hooks';
 import { EditionMode, useGameClockSynced, useLoading, useMapStore, useModalQueueStore, useConfigStore } from '../../stores';
 import { WorldType } from '../../types';
 import { useModalPresence } from '../molecules/AppModal';
-import { BankAPYModal, CoinAnimation, DepositPanel, HomeTour, TutorialModal } from '../organisms';
+import { BankAPYModal, CoinAnimation, DepositPanel, HomeTour, PushNudge, TutorialModal } from '../organisms';
 import { WorldMap } from '../templates';
 import { AutoInvest } from './AutoInvest';
 import { BackgroundMusic } from './BackgroundMusic';
@@ -48,13 +48,24 @@ export function HomePage() {
   // cambie. useGameClockSync (en Providers) hace el fetch a /api/v1/time.
   const clockReady = useGameClockSynced();
 
+  // El pedido de permiso de notificaciones es el primero de la cola y su turno
+  // se toma antes que los otros tres. Va adelante aunque no sea la decisión más
+  // grande porque es el único pedido que VENCE: el prompt nativo necesita un
+  // gesto del usuario y el sistema operativo lo ofrece una sola vez, así que
+  // taparlo no lo posterga, lo pierde. Quien lo LIBERA es `PushNudge`.
+  const setPushNudgeSettled = useModalQueueStore((s) => s.setPushNudgeSettled);
+  useEffect(() => {
+    setPushNudgeSettled(false);
+    return () => setPushNudgeSettled(true);
+  }, [setPushNudgeSettled]);
+
   // El turno de la cola de modales se TOMA acá, al entrar al home, y no cuando
   // monta `AutoInvest`: ese vive debajo del gate de `clockReady` de más abajo,
   // o sea detrás de un GET /time. Hasta que el reloj sincroniza, el gate de las
   // notas de versión (en el layout, o sea un ancestro) ve el default `true` del
   // store y ya alcanzó a mostrar la nota — que después desaparecía sola cuando
   // `AutoInvest` finalmente tomaba el turno. Quien lo LIBERA sigue siendo
-  // `AutoInvest`, que es el único que sabe si hay plata ociosa que ofrecer.
+  // `AutoInvest`, que es el único que sabe si hay dinero ocioso que ofrecer.
   const setVaultPromptSettled = useModalQueueStore((s) => s.setVaultPromptSettled);
   useEffect(() => {
     setVaultPromptSettled(false);
@@ -62,10 +73,10 @@ export function HomePage() {
   }, [setVaultPromptSettled]);
 
   // El turno del tour se toma acá por la misma razón: `HomeTour` monta debajo
-  // del gate de `clockReady`, o sea detrás de un GET /time, y hasta entonces el
-  // nudge de notificaciones y las notas de versión ya alcanzarían a abrirse
-  // encima de los coach marks. Quien lo LIBERA es `HomeTour`, que es el único
-  // que sabe si el usuario todavía necesita el tour.
+  // del gate de `clockReady`, o sea detrás de un GET /time, y hasta entonces las
+  // notas de versión ya alcanzarían a abrirse encima de los coach marks. Quien
+  // lo LIBERA es `HomeTour`, que es el único que sabe si el usuario todavía
+  // necesita el tour.
   const setHomeTourSettled = useModalQueueStore((s) => s.setHomeTourSettled);
   useEffect(() => {
     setHomeTourSettled(false);
@@ -102,6 +113,10 @@ export function HomePage() {
 
   return (
     <div className="h-full w-full flex flex-col relative overflow-hidden min-h-0">
+      {/* Primero de la cola, y montado acá y no en el layout privado: ese layout
+          no se desmonta al navegar, así que la hoja terminaba apareciendo sobre
+          /profile. */}
+      <PushNudge />
       <AutoInvest />
       <BadgeClaimGate />
       <HeaderStats />

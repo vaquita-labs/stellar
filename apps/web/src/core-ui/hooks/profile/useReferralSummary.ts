@@ -9,16 +9,15 @@ import { useQuery } from '@tanstack/react-query';
  * Invite-a-friend summary for the signed-in wallet.
  *
  * `authFetch`, not the plain `getJson` helper: the endpoint reads the wallet
- * from the session token now, because the answer includes who a user brought in
- * and reading it is also what mints their code.
+ * from the session token now, because the answer includes who a user brought in.
  *
- * The payout fields the API still returns (`apyBonus`, `totalEarnings`,
- * `pendingEarnings`) are deliberately not surfaced here. Nothing applies the APY
- * bonus to a real rate and no payout ledger exists, so a screen that showed them
- * would be promising something the product does not honour.
+ * Three fields and no fourth. The payout figures this once carried — an APY
+ * bonus, a total and a pending amount — are gone from the API too: nothing
+ * applied the bonus to a real rate and no payout ledger exists, so showing them
+ * promised something the product does not honour.
  */
 export interface ReferralSummary {
-  /** The short code this wallet shares. Always present once the profile exists. */
+  /** The vaquitatag this wallet shares. It is the invite code. */
   code: string;
   /** Friends who signed up through this code. */
   referrals: number;

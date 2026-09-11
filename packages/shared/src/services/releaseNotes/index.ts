@@ -167,6 +167,28 @@ export const getLatestReleaseNote = async (): Promise<ReleaseNoteDTO | null> => 
 };
 
 /**
+ * The newest published notes, newest first.
+ *
+ * Same filter and same ordering as `getLatestReleaseNote` — this is that query
+ * without the `take: 1`. Deliberately not `listReleaseNotes`, which is the admin
+ * listing and includes drafts.
+ *
+ * What the app does with these is show the last few stacked behind the one that
+ * triggered the popup, so someone who skipped a launch still finds out what
+ * shipped. They are returned regardless of what the profile has acknowledged:
+ * the marker decides whether the popup OPENS, not what it contains.
+ */
+export const getRecentReleaseNotes = async (limit = 3): Promise<ReleaseNoteDTO[]> => {
+  const rows = await prisma.releaseNote.findMany({
+    where: { deletedAt: null, publishedAt: { not: null } },
+    orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+    take: limit,
+    select: { id: true, title: true, body: true, translations: true, publishedAt: true, createdAt: true, updatedAt: true, ...withImages },
+  });
+  return rows.map(toDTO);
+};
+
+/**
  * The note this profile still has to see, if any.
  *
  * A profile that has never acknowledged anything (`seenId` null) IS shown the

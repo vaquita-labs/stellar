@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { Dispatch, ReactNode, SetStateAction, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheck, FiCopy, FiEdit3, FiLogOut, FiSave, FiUserPlus } from 'react-icons/fi';
-import { truncateMiddle } from '../../../helpers';
+import { NICKNAME_NEW_MAX_LENGTH, sanitizeNewNickname, truncateMiddle } from '../../../helpers';
 import { useConfigStore } from '../../../stores';
 import { Button } from '../../atoms';
 import { Badge } from '../../Badge';
@@ -143,8 +143,11 @@ export const ProfileModal = ({ handleLogout, isOpen, onOpenChange, walletAddress
                   type="text"
                   placeholder="@nickname"
                   value={nickname}
-                  onChange={(event) => setNickname(event.target.value)}
-                  maxLength={32}
+                  // Mismo saneo que el resto de los campos de tag: sólo a-z y
+                  // 0-9, cortado en 15. Sin esto el campo dejaba escribir algo
+                  // que la API rechaza recién al guardar.
+                  onChange={(event) => setNickname(sanitizeNewNickname(event.target.value))}
+                  maxLength={NICKNAME_NEW_MAX_LENGTH}
                   disabled={saving}
                   className="w-full bg-white border border-black border-b-2 h-14 px-3 text-black font-medium rounded-sm outline-none disabled:opacity-50"
                 />

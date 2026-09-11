@@ -47,6 +47,10 @@ export function HomeTour() {
   const queryClient = useQueryClient();
 
   const setHomeTourSettled = useModalQueueStore((s) => s.setHomeTourSettled);
+  // The notification permission is the one ask that expires, so it goes first.
+  // The `[role="dialog"]` poll below would already defer to the open sheet; this
+  // flag is what stops the tour starting in the gap before the sheet opens.
+  const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
 
   const [steps, setSteps] = useState<HomeTourStep[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -67,7 +71,7 @@ export function HomeTour() {
 
   // `HomePage` takes the queue turn before the map even mounts (see the comment
   // there). Here we give it back — the moment we know the tour is not coming,
-  // or as soon as it ends — so the push nudge and the release notes can open.
+  // or as soon as it ends — so the badge sheet and the release notes can open.
   useEffect(() => {
     if (!wanted || (!!steps && steps.length < MIN_STEPS)) setHomeTourSettled(true);
   }, [wanted, steps, setHomeTourSettled]);
@@ -81,7 +85,7 @@ export function HomeTour() {
   // (no chest, no side rail over the map) show a shorter tour instead of none.
   const waitStartedAt = useRef(0);
   useEffect(() => {
-    if (!wanted || steps) return;
+    if (!wanted || steps || !pushNudgeSettled) return;
     waitStartedAt.current = Date.now();
     const id = window.setInterval(() => {
       if (document.querySelector('[role="dialog"]')) return;
@@ -91,7 +95,7 @@ export function HomeTour() {
       }
     }, POLL_MS);
     return () => window.clearInterval(id);
-  }, [wanted, steps]);
+  }, [wanted, steps, pushNudgeSettled]);
 
   const finish = useCallback(() => {
     // Marked locally first: the tour disappears on the tap, it does not wait for

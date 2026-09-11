@@ -633,32 +633,23 @@ export interface FeedbackPostResponseDTO {
   updatedTimestamp: number;
 }
 
-/** One boost tier: reaching `referrals` active referrals adds `bonus` APY points. */
-export interface ReferralTierDTO {
-  referrals: number;
-  bonus: number;
-}
-
 /**
- * Referral summary for a wallet. `apyBonus` is derived from `activeReferrals`
- * (referred users that currently hold a live deposit) via the tier table.
- * `total`/`pending` earnings are honest zeros until the payout ledger exists.
+ * Referral summary for a wallet. Counts only.
+ *
+ * There was an APY-boost tier table here, plus a total/pending earnings pair.
+ * Nothing ever applied the bonus to a rate and no payout ledger was ever built,
+ * so every one of those fields was a hard-coded zero being rendered as if it
+ * meant something. They are gone rather than left to rot: the invite screen
+ * shows what is true, which is how many friends joined and how many are saving.
  */
 export interface ReferralSummaryResponseDTO {
   walletAddress: string;
-  /** The short code this user shares to invite others. */
+  /** The vaquitatag this user shares to invite others. It IS their tag. */
   code: string;
   /** Everyone this user referred (attributed), regardless of activity. */
   referrals: number;
-  /** Referred users that currently hold a live deposit. Drives the bonus. */
+  /** Referred users that currently hold a live deposit. */
   activeReferrals: number;
-  /** APY points added on top of the base rate, from the reached tier. */
-  apyBonus: number;
-  totalEarnings: number;
-  pendingEarnings: number;
-  /** Next tier still to reach, or null when already at the top. */
-  nextTier: ReferralTierDTO | null;
-  tiers: ReferralTierDTO[];
 }
 
 /** One referrer on the in-app board. Counts only — never what anyone holds. */
