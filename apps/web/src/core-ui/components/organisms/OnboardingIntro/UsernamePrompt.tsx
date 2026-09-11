@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheck, FiX } from 'react-icons/fi';
-import { NICKNAME_MAX_LENGTH, NICKNAME_MIN_LENGTH, sanitizeNickname } from '../../../helpers';
+import { NICKNAME_MIN_LENGTH, NICKNAME_NEW_MAX_LENGTH, sanitizeNewNickname } from '../../../helpers';
 import { useRestProfile } from '../../../hooks';
 import { Button } from '../../atoms';
 
@@ -166,13 +166,13 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
               type="text"
               placeholder={t('onboarding.username.inputPlaceholder', '@username')}
               value={nickname}
-              // Only URL-safe lowercase survives typing: a-z, 0-9 and _. Pasting
+              // Only URL-safe lowercase survives typing: a-z and 0-9. Pasting
               // "@juan" leaves "juan"; the API re-validates on save anyway.
-              onChange={(e) => setNickname(sanitizeNickname(e.target.value))}
+              onChange={(e) => setNickname(sanitizeNewNickname(e.target.value))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSubmit();
               }}
-              maxLength={NICKNAME_MAX_LENGTH}
+              maxLength={NICKNAME_NEW_MAX_LENGTH}
               autoFocus
               className={`w-full bg-white border ${borderColor} border-b-2 h-14 pl-3 pr-12 text-black font-medium rounded-sm outline-none transition-colors`}
             />

@@ -3,6 +3,7 @@ import { getSessionWallet, requireSessionWallet } from '../../lib/walletAuth';
 import {
   acknowledgeReleaseNote,
   getProfile,
+  getRecentReleaseNotes,
   getReleaseNoteImage,
   getUnseenReleaseNote,
   sendError,
@@ -23,15 +24,26 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 /**
  * GET /api/v1/release-notes/latest
  *
- * The note this user has not closed yet, or `null`. Returning null rather than
- * a 404 is deliberate: "nothing to show" is the ordinary answer on almost every
- * load, and the client should not have to tell it apart from a failure.
+ * Two fields with two different jobs:
+ *
+ * - `note` is the note this user has not closed yet, or `null`. It is the
+ *   trigger: null means the popup does not open. Returning null rather than a
+ *   404 is deliberate — "nothing to show" is the ordinary answer on almost
+ *   every load, and the client should not have to tell it apart from a failure.
+ * - `notes` is the last three published, whatever the user has seen. They are
+ *   what the popup shows once it is open, stacked behind the newest, so that
+ *   someone who skipped a launch still finds out what shipped.
+ *
+ * Both come from one round trip because the client needs them together.
  */
 router.get('/latest', requireSessionWallet, async (req, res) => {
   try {
     const { profileData } = await getProfile(getSessionWallet(res));
-    const note = await getUnseenReleaseNote(profileData?.id ?? null);
-    return sendSuccess(res, { note });
+    const [note, notes] = await Promise.all([
+      getUnseenReleaseNote(profileData?.id ?? null),
+      getRecentReleaseNotes(),
+    ]);
+    return sendSuccess(res, { note, notes });
   } catch (err) {
     req.log.error({ err }, 'Failed to read the latest release note');
     return sendError(res, 'Failed to load release notes', null, 500);

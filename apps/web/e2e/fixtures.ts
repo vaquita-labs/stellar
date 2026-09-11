@@ -242,9 +242,13 @@ export async function completeUsernamePromptIfShown(page: Page, handle = uniqueH
   return true;
 }
 
-/** `[a-z0-9_]`, unique per run, within the 3–20 character window the API accepts. */
+/**
+ * `[a-z0-9]`, unique per run, within the 3-15 character window the API accepts
+ * for a new vaquitatag. The underscore that used to prefix these is no longer a
+ * legal character, and the cap dropped from 32 to 15.
+ */
 export function uniqueHandle(): string {
-  return `e2e_${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`.slice(0, 20);
+  return `e2e${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`.slice(0, 15);
 }
 
 /** Parse `Available: $12.3456789` → 12.3456789. */

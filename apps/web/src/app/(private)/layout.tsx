@@ -5,7 +5,6 @@ import {
   LegalGate,
   PendingFollowConsumer,
   PullToRefresh,
-  PushNudge,
   PushSubscriptionSync,
   PwaInstallReporter,
   ReleaseNotesGate,
@@ -50,10 +49,15 @@ export default function PrivateLayout({
                     ever learn a wallet has one. Reports state on every launch;
                     nothing tells us about an uninstall. */}
                 <PwaInstallReporter />
-                <PushNudge />
-                {/* Después de PushNudge y, sobre todo, después de que el prompt de
-                    plata ociosa se resuelva (lo coordina `useModalQueueStore`):
-                    un anuncio no puede taparle a nadie la decisión de depositar. */}
+                {/* El pedido de permiso de notificaciones NO va acá: este layout
+                    no se desmonta al navegar, así que la hoja aparecía sobre la
+                    pantalla en la que estuviera el usuario (se reportó sobre
+                    /profile). Lo monta `HomePage`, que es donde también viven
+                    los modales a los que tiene que adelantarse. */}
+                {/* Después del pedido de notificaciones y, sobre todo, después de
+                    que el prompt de dinero ocioso se resuelva (lo coordina
+                    `useModalQueueStore`): un anuncio no puede taparle a nadie la
+                    decisión de depositar. */}
                 <ReleaseNotesGate />
                 {/* The app's scroll region, and the only place a pull-to-refresh
                     can live: `html`/`body` are pinned to the viewport, so the

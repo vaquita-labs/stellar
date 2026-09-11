@@ -152,29 +152,29 @@
       "viewIntroAgain": "Ver la intro de nuevo",
       "welcomeSubtitle": "Regístrate para empezar a ahorrar de forma segura",
       "welcomeTitle": "Bienvenido",
-      "legalNotice": "Al continuar aceptás nuestros <terms>Términos del Servicio</terms> y nuestra <privacy>Política de Privacidad</privacy>, y confirmás que leíste la <risk>Declaración de Riesgos</risk>."
+      "legalNotice": "Al continuar aceptas nuestros <terms>Términos del Servicio</terms> y nuestra <privacy>Política de Privacidad</privacy>, y confirmas que leíste la <risk>Declaración de Riesgos</risk>."
     },
     "privacy": {
       "title": "Política de Privacidad",
-      "intro": "Esta Política de Privacidad explica qué información personal recopila Vaquita cuando usás la app, por qué la recopilamos, con quién la compartimos y qué derechos tenés sobre ella.",
+      "intro": "Esta Política de Privacidad explica qué información personal recopila Vaquita cuando usted usa la app, por qué la recopilamos, con quién la compartimos y qué derechos tiene sobre ella.",
       "scope": {
         "heading": "1. A qué se aplica esta política",
-        "body": "Vaquita es una app de ahorro y gamificación construida sobre la red Stellar. Algunas partes de la experiencia las operamos nosotros; otras — la infraestructura de billeteras, las rampas de entrada y salida de dinero fiat, y la propia blockchain pública — las operan terceros que tratan tus datos bajo sus propias políticas. Esta política describe lo que hacemos nosotros y nombra a esos terceros para que puedas encontrar las suyas."
+        "body": "Vaquita es una app de ahorro y gamificación construida sobre la red Stellar. Algunas partes de la experiencia las operamos nosotros; otras — la infraestructura de billeteras, las rampas de entrada y salida de dinero fiat, y la propia blockchain pública — las operan terceros que tratan sus datos bajo políticas propias. Esta política describe lo que hacemos nosotros y nombra a esos terceros para que usted pueda encontrar las suyas."
       },
       "collect": {
         "heading": "2. Información que recopilamos",
         "intro": "Recopilamos las siguientes categorías de información:",
-        "account": "<b>Cuenta y perfil.</b> Tu dirección de billetera, y el apodo, correo electrónico, avatar, idioma y moneda de visualización, y preferencias de notificación que elijas configurar. Tu apodo y tu avatar son públicos: aparecen en tu perfil, en la tabla de posiciones y en los enlaces de logros que compartas.",
+        "account": "<b>Cuenta y perfil.</b> Su dirección de billetera, y el vaquitatag, correo electrónico, avatar, idioma y moneda de visualización, y preferencias de notificación que elija configurar. Su vaquitatag y su avatar son públicos: aparecen en su perfil, en la tabla de posiciones y en los enlaces de logros que comparta.",
         "financial": "<b>Registros de transacciones.</b> Depósitos, retiros, montos, plazos de bloqueo, hashes de transacción, las billeteras de cobro que guardes y las transferencias entre redes, incluida la dirección de la contraparte.",
-        "social": "<b>Datos sociales y de juego.</b> A quién seguís y quién te sigue, los «me gusta» dados y recibidos en tu mundo 3D, las relaciones de referidos, insignias, rachas, experiencia, recompensas dentro de la app, la disposición e inventario de tu mundo, y tus notificaciones.",
-        "device": "<b>Datos técnicos y del dispositivo.</b> Cuando te conectás, registramos un identificador de sesión junto con el user agent, la plataforma y el idioma de tu navegador. Si activás las notificaciones push, guardamos el endpoint push que emite el servicio de tu navegador y sus claves de cifrado.",
-        "diagnostics": "<b>Diagnósticos.</b> Recopilamos eventos de error y diagnóstico de la aplicación para detectar y corregir fallas. Pueden incluir tu dirección de billetera y detalles de transacciones cuando forman parte de la falla que se reporta.",
-        "kyc": "<b>Verificación de identidad.</b> Si usás una rampa de entrada o salida de dinero fiat, nuestro socio recopila la información de identidad que le exige su regulador — que puede incluir tu nombre completo, correo electrónico, identificación fiscal, documentos de identidad y datos bancarios, de Pix o de PSE. Eso lo recopila el socio, en sus sistemas, bajo su política de privacidad. Nosotros recibimos el estado resultante, no tus documentos."
+        "social": "<b>Datos sociales y de juego.</b> A quién sigue y quién lo sigue, los «me gusta» dados y recibidos en su mundo 3D, las relaciones de referidos, insignias, rachas, experiencia, recompensas dentro de la app, la disposición e inventario de su mundo, y sus notificaciones.",
+        "device": "<b>Datos técnicos y del dispositivo.</b> Cuando usted se conecta, registramos un identificador de sesión junto con el user agent, la plataforma y el idioma de su navegador. Si activa las notificaciones push, guardamos el endpoint push que emite el servicio de su navegador y sus claves de cifrado.",
+        "diagnostics": "<b>Diagnósticos.</b> Recopilamos eventos de error y diagnóstico de la aplicación para detectar y corregir fallas. Pueden incluir su dirección de billetera y detalles de transacciones cuando forman parte de la falla que se reporta.",
+        "kyc": "<b>Verificación de identidad.</b> Si usted usa una rampa de entrada o salida de dinero fiat, nuestro socio recopila la información de identidad que le exige su regulador — que puede incluir su nombre completo, correo electrónico, identificación fiscal, documentos de identidad y datos bancarios, de Pix o de PSE. Eso lo recopila el socio, en sus sistemas, bajo su política de privacidad. Nosotros recibimos el estado resultante, no sus documentos."
       },
       "use": {
         "heading": "3. Cómo usamos esta información",
-        "operate": "Para operar la app: mostrar tus saldos, posiciones, progreso de ahorro, mundo y recompensas.",
-        "transactions": "Para preparar, enviar y hacer seguimiento de tus transacciones on-chain, y conciliarlas contra la blockchain.",
+        "operate": "Para operar la app: mostrar sus saldos, posiciones, progreso de ahorro, mundo y recompensas.",
+        "transactions": "Para preparar, enviar y hacer seguimiento de sus transacciones on-chain, y conciliarlas contra la blockchain.",
         "rewards": "Para calcular tablas de posiciones, rachas, insignias y recompensas por referidos, y para autorizar la emisión de insignias.",
         "comms": "Para enviarte las notificaciones dentro de la app y push que hayas activado.",
         "abuse": "Para detectar, investigar y prevenir fraudes, abusos e incidentes de seguridad.",
@@ -182,75 +182,75 @@
       },
       "share": {
         "heading": "4. Con quién la compartimos",
-        "intro": "No vendemos tu información personal. La compartimos con los siguientes proveedores, cada uno únicamente para la finalidad indicada:",
-        "pollar": "<b>Pollar</b> — infraestructura de inicio de sesión y billeteras. Si iniciás sesión con correo electrónico o con una red social, Pollar crea y opera una billetera en tu nombre y custodia sus claves. Pollar también opera nuestra rampa de salida a dinero fiat y recopila los datos de identidad y bancarios descritos arriba.",
+        "intro": "No vendemos su información personal. La compartimos con los siguientes proveedores, cada uno únicamente para la finalidad indicada:",
+        "pollar": "<b>Pollar</b> — infraestructura de inicio de sesión y billeteras. Si usted inicia sesión con correo electrónico o con una red social, Pollar crea y opera una billetera en su nombre y custodia sus claves. Pollar también opera nuestra rampa de salida a dinero fiat y recopila los datos de identidad y bancarios descritos arriba.",
         "anclap": "<b>Anclap</b> — rampas de entrada y salida a monedas locales, mediante los estándares SEP-24 y SEP-12 de Stellar. Anclap realiza su propia verificación de identidad en una ventana alojada por ellos.",
         "ably": "<b>Ably</b> — entrega de mensajes en tiempo real para actualizaciones en vivo y eventos de diagnóstico.",
         "infra": "<b>Nuestra propia infraestructura.</b> La base de datos y la analítica de producto corren en servidores que controlamos.",
         "observability": "<b>Grafana Cloud</b> — almacenamiento de logs y métricas del servidor, usado para monitoreo de disponibilidad y diagnóstico de fallas.",
-        "push": "<b>Servicios push</b> — el proveedor push de tu navegador, como Google o Apple, entrega las notificaciones push a tu dispositivo.",
-        "qr": "<b>Generación de códigos QR</b> — cuando abrís el panel de compartir, el enlace que se codifica se envía a un servicio de imágenes QR de terceros.",
+        "push": "<b>Servicios push</b> — el proveedor push de su navegador, como Google o Apple, entrega las notificaciones push a su dispositivo.",
+        "qr": "<b>Generación de códigos QR</b> — cuando usted abre el panel de compartir, el enlace que se codifica se envía a un servicio de imágenes QR de terceros.",
         "embeds": "<b>Tutoriales integrados</b> — partes del onboarding y del tutorial incrustan contenido de un proveedor de demos externo, que puede establecer sus propias cookies.",
-        "rpc": "<b>Infraestructura blockchain</b> — tu navegador consulta directamente servidores públicos de RPC y Horizon de Stellar. Esos operadores pueden ver tu dirección IP junto con la dirección de billetera consultada.",
+        "rpc": "<b>Infraestructura blockchain</b> — su navegador consulta directamente servidores públicos de RPC y Horizon de Stellar. Esos operadores pueden ver su dirección IP junto con la dirección de billetera consultada.",
         "dune": "<b>Dune</b> — publicamos la actividad de los contratos, que contiene direcciones de billetera ya públicas on-chain, con fines de analítica.",
         "legal": "También podemos divulgar información cuando la ley nos lo exija, o cuando sea necesario para establecer, ejercer o defender una acción legal."
       },
       "onchain": {
         "heading": "5. Los datos en blockchain son públicos y permanentes",
-        "body": "Los depósitos, retiros e insignias quedan registrados en la red Stellar. Esos datos son públicos, permanentes y están fuera de nuestro control. No podemos editarlos ni borrarlos, y una solicitud de eliminación no puede quitarlos. Cualquiera puede vincular una dirección de billetera con todo su historial de transacciones, y con cualquier apodo o perfil que hayas hecho público."
+        "body": "Los depósitos, retiros e insignias quedan registrados en la red Stellar. Esos datos son públicos, permanentes y están fuera de nuestro control. No podemos editarlos ni borrarlos, y una solicitud de eliminación no puede quitarlos. Cualquiera puede vincular una dirección de billetera con todo su historial de transacciones, y con cualquier vaquitatag o perfil que haya hecho público."
       },
       "transfers": {
         "heading": "6. Transferencias internacionales",
-        "body": "Atendemos usuarios en varios países, y algunos de nuestros proveedores almacenan datos fuera de tu país de residencia — en particular, nuestro almacenamiento de logs y métricas está ubicado en los Estados Unidos. Cuando la ley lo exige, aplicamos las garantías adecuadas para esas transferencias."
+        "body": "Atendemos usuarios en varios países, y algunos de nuestros proveedores almacenan datos fuera de su país de residencia — en particular, nuestro almacenamiento de logs y métricas está ubicado en los Estados Unidos. Cuando la ley lo exige, aplicamos las garantías adecuadas para esas transferencias."
       },
       "storage": {
         "heading": "7. Cookies y almacenamiento local",
-        "intro": "La app de Vaquita no instala cookies propias de publicidad ni de rastreo. Sí guarda lo siguiente en tu navegador:",
-        "session": "El token de sesión de tu billetera, que mantiene tu sesión iniciada.",
+        "intro": "La app de Vaquita no instala cookies propias de publicidad ni de rastreo. Sí guarda lo siguiente en su navegador:",
+        "session": "El token de sesión de su billetera, que mantiene su sesión iniciada.",
         "cache": "Una caché de los datos de la app cargados recientemente, para que las pantallas abran al instante.",
-        "prefs": "Tus preferencias y el estado de la interfaz: idioma, si los saldos están ocultos y qué avisos descartaste.",
+        "prefs": "Sus preferencias y el estado de la interfaz: idioma, si los saldos están ocultos y qué avisos descartó.",
         "thirdParty": "El contenido de terceros incrustado, como los tutoriales guiados, puede instalar sus propias cookies, que no controlamos."
       },
       "retention": {
         "heading": "8. Cuánto tiempo la conservamos",
-        "body": "Conservamos los registros de perfil y de transacciones mientras exista tu cuenta y, después, durante el tiempo que los necesitemos para cumplir obligaciones legales, contables y de prevención del fraude. Los datos de diagnóstico y de logs se conservan por un período limitado y luego se descartan. Los datos escritos en la blockchain no se pueden borrar en absoluto."
+        "body": "Conservamos los registros de perfil y de transacciones mientras exista su cuenta y, después, durante el tiempo que los necesitemos para cumplir obligaciones legales, contables y de prevención del fraude. Los datos de diagnóstico y de logs se conservan por un período limitado y luego se descartan. Los datos escritos en la blockchain no se pueden borrar en absoluto."
       },
       "rights": {
-        "heading": "9. Tus derechos",
-        "intro": "Según dónde vivas, podés tener derecho a:",
-        "access": "Solicitar una copia de la información personal que tenemos sobre vos.",
+        "heading": "9. Sus derechos",
+        "intro": "Según dónde viva, usted puede tener derecho a:",
+        "access": "Solicitar una copia de la información personal que tenemos sobre usted.",
         "correct": "Que se corrija la información inexacta.",
-        "delete": "Pedirnos que eliminemos los datos de tu perfil.",
-        "portability": "Recibir tus datos en un formato portable.",
+        "delete": "Pedirnos que eliminemos los datos de su perfil.",
+        "portability": "Recibir sus datos en un formato portable.",
         "object": "Oponerte a determinados tratamientos, o pedirnos que los limitemos.",
-        "complain": "Presentar un reclamo ante tu autoridad local de protección de datos.",
-        "exercise": "Para ejercer cualquiera de estos derechos, escribí a <a>privacy@vaquita.fi</a> desde el correo de tu perfil, o contactanos indicando la dirección de billetera correspondiente. Responderemos dentro del plazo que exija tu legislación local.",
-        "limits": "Hay dos límites que se aplican siempre. No podemos borrar nada registrado en la blockchain. Y cuando un socio recopiló tus documentos de identidad directamente para cumplir sus propias obligaciones regulatorias, tendrás que ejercer tus derechos ante ese socio.",
-        "regional": "Si estás en el Espacio Económico Europeo o en el Reino Unido, tratamos tus datos para ejecutar nuestro contrato con vos, por nuestro interés legítimo en mantener el Servicio seguro, con tu consentimiento cuando lo diste, y para cumplir nuestras obligaciones legales. Si estás en California, no vendemos ni compartimos información personal en el sentido que la CCPA da a esos términos. Los usuarios de Brasil, Argentina, Colombia y Perú tienen derechos equivalentes bajo sus leyes nacionales de protección de datos."
+        "complain": "Presentar un reclamo ante su autoridad local de protección de datos.",
+        "exercise": "Para ejercer cualquiera de estos derechos, escriba a <a>privacy@vaquita.fi</a> desde el correo de su perfil, o contáctenos indicando la dirección de billetera correspondiente. Responderemos dentro del plazo que exija su legislación local.",
+        "limits": "Hay dos límites que se aplican siempre. No podemos borrar nada registrado en la blockchain. Y cuando un socio recopiló sus documentos de identidad directamente para cumplir sus propias obligaciones regulatorias, usted tendrá que ejercer sus derechos ante ese socio.",
+        "regional": "Si usted está en el Espacio Económico Europeo o en el Reino Unido, tratamos sus datos para ejecutar nuestro contrato con usted, por nuestro interés legítimo en mantener el Servicio seguro, con su consentimiento cuando lo dio, y para cumplir nuestras obligaciones legales. Si está en California, no vendemos ni compartimos información personal en el sentido que la CCPA da a esos términos. Los usuarios de Brasil, Argentina, Colombia y Perú tienen derechos equivalentes bajo sus leyes nacionales de protección de datos."
       },
       "security": {
         "heading": "10. Seguridad",
-        "body": "Restringimos el acceso a nuestros sistemas y limitamos quién puede llegar a los datos de producción. Ningún sistema es perfectamente seguro, y seguís siendo responsable de la seguridad de tu propia billetera, tu método de recuperación y tu dispositivo."
+        "body": "Restringimos el acceso a nuestros sistemas y limitamos quién puede llegar a los datos de producción. Ningún sistema es perfectamente seguro, y usted sigue siendo responsable de la seguridad de su propia billetera, su método de recuperación y su dispositivo."
       },
       "children": {
         "heading": "11. Menores de edad",
-        "body": "Vaquita no está destinada a menores de 18 años y no recopilamos información de menores de forma consciente. Si creés que un menor nos dio información, contactanos y la eliminaremos."
+        "body": "Vaquita no está destinada a menores de 18 años y no recopilamos información de menores de forma consciente. Si usted cree que un menor nos dio información, contáctenos y la eliminaremos."
       },
       "changes": {
         "heading": "12. Cambios en esta política",
-        "body": "Actualizaremos la fecha al inicio de esta página cada vez que esta política cambie. Si un cambio es sustancial, te pediremos que revises y aceptes la política actualizada antes de seguir usando la app."
+        "body": "Actualizaremos la fecha al inicio de esta página cada vez que esta política cambie. Si un cambio es sustancial, le pediremos que revise y acepte la política actualizada antes de seguir usando la app."
       },
       "contact": {
         "heading": "13. Contacto",
-        "body": "Para cualquier consulta o solicitud sobre privacidad, escribí a <a>privacy@vaquita.fi</a>."
+        "body": "Para cualquier consulta o solicitud sobre privacidad, escriba a <a>privacy@vaquita.fi</a>."
       }
     },
     "terms": {
       "title": "Términos del Servicio",
-      "intro": "Estos Términos del Servicio rigen tu uso de Vaquita. Al usar la app, los aceptás. Si no estás de acuerdo, no uses el Servicio.",
+      "intro": "Estos Términos del Servicio rigen su uso de Vaquita. Al usar la app, usted los acepta. Si no está de acuerdo, no use el Servicio.",
       "service": {
         "heading": "1. El Servicio",
-        "body": "Vaquita es una app de ahorro y gamificación sobre la red Stellar. Depositás una stablecoin admitida en un fondo con bloqueo temporal, y esos fondos se enrutan a una bóveda de rendimiento de un tercero. El interés que se pierde por retiros anticipados se redistribuye entre los usuarios que mantienen hasta el vencimiento. Vaquita también incluye insignias, tablas de posiciones y un mundo 3D, que son funciones de entretenimiento sin valor monetario."
+        "body": "Vaquita es una app de ahorro y gamificación sobre la red Stellar. Usted deposita una stablecoin admitida en un fondo con bloqueo temporal, y esos fondos se enrutan a una bóveda de rendimiento de un tercero. El interés que se pierde por retiros anticipados se redistribuye entre los usuarios que mantienen hasta el vencimiento. Vaquita también incluye insignias, tablas de posiciones y un mundo 3D, que son funciones de entretenimiento sin valor monetario."
       },
       "beta": {
         "heading": "2. Software en beta",
@@ -258,32 +258,32 @@
       },
       "eligibility": {
         "heading": "3. Elegibilidad y jurisdicción",
-        "age": "Debés tener al menos 18 años y capacidad legal para celebrar un contrato vinculante.",
-        "jurisdiction": "Declarás que no sos residente ni te encontrás en ningún país o territorio sujeto a sanciones económicas integrales, y que no figurás en ninguna lista de sanciones o de partes restringidas de los Estados Unidos, la Unión Europea, el Reino Unido o las Naciones Unidas.",
-        "local": "Sos responsable de determinar si tu uso del Servicio es lícito donde vivís. Podemos restringir el acceso desde cualquier jurisdicción en cualquier momento, con o sin aviso.",
-        "breach": "Si alguna de estas declaraciones deja de ser cierta, debés dejar de usar el Servicio."
+        "age": "Usted debe tener al menos 18 años y capacidad legal para celebrar un contrato vinculante.",
+        "jurisdiction": "Usted declara que no es residente ni se encuentra en ningún país o territorio sujeto a sanciones económicas integrales, y que no figura en ninguna lista de sanciones o de partes restringidas de los Estados Unidos, la Unión Europea, el Reino Unido o las Naciones Unidas.",
+        "local": "Usted es responsable de determinar si su uso del Servicio es lícito donde vive. Podemos restringir el acceso desde cualquier jurisdicción en cualquier momento, con o sin aviso.",
+        "breach": "Si alguna de estas declaraciones deja de ser cierta, usted debe dejar de usar el Servicio."
       },
       "custody": {
-        "heading": "4. Tu billetera y la custodia",
-        "intro": "Cómo se custodian tus fondos depende de cómo iniciaste sesión:",
-        "self": "<b>Billetera de autocustodia.</b> Si conectás tu propia billetera, vos tenés tus claves. Nosotros nunca accedemos a ellas y no podemos mover, congelar ni recuperar tus fondos.",
-        "managed": "<b>Billetera administrada.</b> Si iniciás sesión con correo electrónico o con una red social, nuestro socio de infraestructura crea y opera una billetera para vos, custodia las claves y firma transacciones siguiendo tus instrucciones. Nosotros tampoco tenemos esas claves, pero estás confiando en ese socio en lugar de en tu propia custodia de claves.",
-        "responsibility": "Sos responsable de mantener seguros tus credenciales de acceso, tu método de recuperación y tu dispositivo. Las transacciones on-chain son irreversibles: no podemos revertirlas, cancelarlas ni reembolsarlas, y los fondos enviados a una dirección equivocada no se pueden recuperar."
+        "heading": "4. Su billetera y la custodia",
+        "intro": "Cómo se custodian sus fondos depende de cómo inició sesión:",
+        "self": "<b>Billetera de autocustodia.</b> Si usted conecta su propia billetera, las claves son suyas. Nosotros nunca accedemos a ellas y no podemos mover, congelar ni recuperar sus fondos.",
+        "managed": "<b>Billetera administrada.</b> Si usted inicia sesión con correo electrónico o con una red social, nuestro socio de infraestructura crea y opera una billetera para usted, custodia las claves y firma transacciones siguiendo sus instrucciones. Nosotros tampoco tenemos esas claves, pero usted está confiando en ese socio en lugar de en su propia custodia de claves.",
+        "responsibility": "Usted es responsable de mantener seguros sus credenciales de acceso, su método de recuperación y su dispositivo. Las transacciones on-chain son irreversibles: no podemos revertirlas, cancelarlas ni reembolsarlas, y los fondos enviados a una dirección equivocada no se pueden recuperar."
       },
       "deposits": {
         "heading": "5. Depósitos, plazos de bloqueo y recompensas",
-        "lock": "Al depositar, elegís un plazo de bloqueo. Tu capital se devuelve cuando retirás.",
-        "early": "Si retirás antes de que termine tu plazo de bloqueo, perdés el interés generado por ese depósito. El interés perdido va al fondo de recompensas, menos una comisión del protocolo.",
-        "onTime": "Si mantenés hasta el vencimiento, recibís tu capital, el rendimiento generado y una parte proporcional del fondo de recompensas.",
+        "lock": "Al depositar, usted elige un plazo de bloqueo. Su capital se devuelve cuando retira.",
+        "early": "Si retira antes de que termine su plazo de bloqueo, pierde el interés generado por ese depósito. El interés perdido va al fondo de recompensas, menos una comisión del protocolo.",
+        "onTime": "Si mantiene hasta el vencimiento, recibe su capital, el rendimiento generado y una parte proporcional del fondo de recompensas.",
         "variable": "Los rendimientos son variables, los generan protocolos de terceros y nunca están garantizados. Cualquier tasa que se muestre en la app es una estimación; el monto final se determina al momento del retiro.",
-        "noInsurance": "Los depósitos en Vaquita no son depósitos bancarios. No están asegurados ni garantizados por la FDIC, por ningún sistema de garantía de depósitos, ni por ninguna aseguradora pública o privada. Podés perder parte o la totalidad de tus fondos.",
+        "noInsurance": "Los depósitos en Vaquita no son depósitos bancarios. No están asegurados ni garantizados por la FDIC, por ningún sistema de garantía de depósitos, ni por ninguna aseguradora pública o privada. Usted puede perder parte o la totalidad de sus fondos.",
         "rewards": "Las monedas, insignias, experiencia y demás objetos dentro de la app no tienen valor monetario, no se pueden canjear por dinero y pueden ajustarse o eliminarse."
       },
       "noAdvice": {
         "heading": "6. No es asesoramiento ni un servicio financiero",
-        "body": "Nada en el Servicio constituye asesoramiento financiero, de inversión, legal, fiscal o contable, ni una recomendación para realizar ninguna operación. No somos tu corredor, asesor ni fiduciario. Vos decidís por tu cuenta, y deberías buscar asesoramiento profesional si lo necesitás.",
-        "notLicensed": "Vaquita no es un banco. No contamos con autorización bancaria, de dinero electrónico, de entidad de pago, de valores, de inversión ni equivalente en ninguna jurisdicción, y no prestamos servicios bancarios, de transmisión de dinero, de intermediación ni de inversión. Tu depósito no es una cuenta de depósito y no genera ningún derecho de cobro contra nosotros.",
-        "software": "Lo que ofrecemos es software que te permite interactuar con contratos inteligentes públicos y con protocolos y socios de terceros. No somos parte de esos protocolos, no los controlamos y no garantizamos su funcionamiento."
+        "body": "Nada en el Servicio constituye asesoramiento financiero, de inversión, legal, fiscal o contable, ni una recomendación para realizar ninguna operación. No somos su corredor, asesor ni fiduciario. Usted decide por su cuenta, y debería buscar asesoramiento profesional si lo necesita.",
+        "notLicensed": "Vaquita no es un banco. No contamos con autorización bancaria, de dinero electrónico, de entidad de pago, de valores, de inversión ni equivalente en ninguna jurisdicción, y no prestamos servicios bancarios, de transmisión de dinero, de intermediación ni de inversión. Su depósito no es una cuenta de depósito y no genera ningún derecho de cobro contra nosotros.",
+        "software": "Lo que ofrecemos es software que le permite interactuar con contratos inteligentes públicos y con protocolos y socios de terceros. No somos parte de esos protocolos, no los controlamos y no garantizamos su funcionamiento."
       },
       "risks": {
         "heading": "7. Riesgos",
@@ -291,14 +291,14 @@
       },
       "acceptableUse": {
         "heading": "8. Uso aceptable",
-        "intro": "Te comprometés a no:",
+        "intro": "Usted se compromete a no:",
         "unlawful": "Usar el Servicio para nada ilícito, incluidos el lavado de dinero, la financiación del terrorismo o la elusión de sanciones.",
         "disrupt": "Atacar, interrumpir, sobrecargar o intentar obtener acceso no autorizado al Servicio o a su infraestructura.",
         "impersonate": "Hacerte pasar por otra persona, ni manipular tablas de posiciones, referidos o recompensas mediante cuentas falsas o automatizadas."
       },
       "ip": {
         "heading": "9. Propiedad intelectual",
-        "body": "El nombre Vaquita, el logo, las ilustraciones, los recursos 3D y la interfaz son nuestros o de nuestros licenciantes. No podés copiarlos ni reutilizarlos sin permiso. Esto no restringe tu uso de los contratos inteligentes de código abierto subyacentes bajo sus propias licencias."
+        "body": "El nombre Vaquita, el logo, las ilustraciones, los recursos 3D y la interfaz son nuestros o de nuestros licenciantes. Usted no puede copiarlos ni reutilizarlos sin permiso. Esto no restringe su uso de los contratos inteligentes de código abierto subyacentes bajo sus propias licencias."
       },
       "disclaimers": {
         "heading": "10. Exclusión de garantías",
@@ -307,24 +307,24 @@
       "liability": {
         "heading": "11. Limitación de responsabilidad",
         "body": "En la máxima medida permitida por la ley, no seremos responsables por daños indirectos, incidentales, especiales, consecuentes, ejemplares o punitivos, ni por lucro cesante o pérdida de ingresos, datos o activos digitales, derivados del Servicio o relacionados con él, ya sea por contrato, responsabilidad extracontractual o cualquier otra teoría, y con independencia de que se nos hubiera advertido de esa posibilidad.",
-        "cap": "Nuestra responsabilidad total frente a vos por todas las reclamaciones relacionadas con el Servicio se limita al mayor de estos dos montos: las comisiones que efectivamente recibimos de vos en los doce meses anteriores al hecho que originó la reclamación, o cien dólares estadounidenses.",
-        "exclusions": "Nada en estos Términos excluye ni limita la responsabilidad que no pueda excluirse legalmente, incluidas la derivada de fraude, la de muerte o lesiones personales causadas por negligencia, ni ningún derecho que te corresponda como consumidor y sea irrenunciable."
+        "cap": "Nuestra responsabilidad total frente a usted por todas las reclamaciones relacionadas con el Servicio se limita al mayor de estos dos montos: las comisiones que efectivamente recibimos de usted en los doce meses anteriores al hecho que originó la reclamación, o cien dólares estadounidenses.",
+        "exclusions": "Nada en estos Términos excluye ni limita la responsabilidad que no pueda excluirse legalmente, incluidas la derivada de fraude, la de muerte o lesiones personales causadas por negligencia, ni ningún derecho que le corresponda como consumidor y sea irrenunciable."
       },
       "indemnity": {
         "heading": "12. Indemnidad",
-        "body": "Aceptás indemnizarnos y mantenernos indemnes frente a cualquier reclamación, pérdida, responsabilidad o gasto derivado de tu uso del Servicio, de tu incumplimiento de estos Términos, o de tu violación de cualquier ley o de los derechos de un tercero."
+        "body": "Usted acepta indemnizarnos y mantenernos indemnes frente a cualquier reclamación, pérdida, responsabilidad o gasto derivado de su uso del Servicio, de su incumplimiento de estos Términos, o de su violación de cualquier ley o de los derechos de un tercero."
       },
       "termination": {
         "heading": "13. Suspensión y terminación",
-        "body": "Podemos suspender o dar por terminado tu acceso al Servicio en cualquier momento, incluso cuando creamos que incumpliste estos Términos o cuando mantener el acceso nos exponga a un riesgo legal o regulatorio. Tu capacidad de interactuar directamente con los contratos inteligentes usando tu propia billetera no depende de nuestra app."
+        "body": "Podemos suspender o dar por terminado su acceso al Servicio en cualquier momento, incluso cuando creamos que usted incumplió estos Términos o cuando mantener el acceso nos exponga a un riesgo legal o regulatorio. Su capacidad de interactuar directamente con los contratos inteligentes usando su propia billetera no depende de nuestra app."
       },
       "changes": {
         "heading": "14. Cambios",
-        "body": "Podemos actualizar estos Términos. La fecha al inicio de esta página siempre muestra la versión vigente. Si un cambio es sustancial, te pediremos que revises y aceptes los Términos actualizados antes de seguir usando la app."
+        "body": "Podemos actualizar estos Términos. La fecha al inicio de esta página siempre muestra la versión vigente. Si un cambio es sustancial, le pediremos que revise y acepte los Términos actualizados antes de seguir usando la app."
       },
       "contact": {
         "heading": "15. Contacto",
-        "body": "¿Consultas sobre estos Términos? Escribí a <a>hello@vaquita.fi</a>."
+        "body": "¿Consultas sobre estos Términos? Escriba a <a>hello@vaquita.fi</a>."
       }
     },
     "risk": {
@@ -332,27 +332,27 @@
       "intro": "Esta declaración describe los principales riesgos de usar Vaquita. Forma parte de los Términos del Servicio. Leela antes de depositar.",
       "beta": {
         "heading": "1. Software en beta",
-        "body": "Vaquita está en beta. La app y los contratos que la respaldan son nuevos, siguen en desarrollo y pueden contener defectos. Las funciones pueden cambiar o dejar de funcionar sin aviso. Empezá con montos que puedas permitirte perder."
+        "body": "Vaquita está en beta. La app y los contratos que la respaldan son nuevos, siguen en desarrollo y pueden contener defectos. Las funciones pueden cambiar o dejar de funcionar sin aviso. Empiece con montos que pueda permitirse perder."
       },
       "smartContract": {
         "heading": "2. Riesgo de contratos inteligentes",
-        "body": "Tus fondos quedan en poder de contratos inteligentes. Un error de programación, un exploit económico o una interacción imprevista entre contratos puede provocar la pérdida parcial o total. La revisión de seguridad reduce este riesgo pero no lo elimina, y no todos los componentes de la ruta han sido auditados de forma independiente."
+        "body": "Sus fondos quedan en poder de contratos inteligentes. Un error de programación, un exploit económico o una interacción imprevista entre contratos puede provocar la pérdida parcial o total. La revisión de seguridad reduce este riesgo pero no lo elimina, y no todos los componentes de la ruta han sido auditados de forma independiente."
       },
       "thirdParty": {
         "heading": "3. Riesgo de protocolos de terceros",
-        "body": "Los depósitos se enrutan a una bóveda de rendimiento de un tercero, que a su vez presta a través de un protocolo de préstamos de un tercero. No controlamos esos protocolos. Una falla, un exploit, una configuración incorrecta, una decisión de gobernanza o un cierre en cualquiera de ellos puede afectar tus fondos e impedir el retiro."
+        "body": "Los depósitos se enrutan a una bóveda de rendimiento de un tercero, que a su vez presta a través de un protocolo de préstamos de un tercero. No controlamos esos protocolos. Una falla, un exploit, una configuración incorrecta, una decisión de gobernanza o un cierre en cualquiera de ellos puede afectar sus fondos e impedir el retiro."
       },
       "noInsurance": {
         "heading": "4. Sin seguro ni garantía",
-        "body": "Tu depósito no es un depósito bancario. No está asegurado ni garantizado por la FDIC, por ningún sistema nacional de garantía de depósitos, ni por ninguna aseguradora pública o privada. Si se pierden fondos, no hay ningún esquema de compensación del cual recuperarlos."
+        "body": "Su depósito no es un depósito bancario. No está asegurado ni garantizado por la FDIC, por ningún sistema nacional de garantía de depósitos, ni por ninguna aseguradora pública o privada. Si se pierden fondos, no hay ningún esquema de compensación del cual recuperarlos."
       },
       "yield": {
         "heading": "5. El rendimiento es variable y no está garantizado",
-        "body": "El rendimiento proviene de mercados de préstamos de terceros y cambia continuamente según la oferta y la demanda. Cualquier tasa que se muestre en la app es una estimación basada en las condiciones actuales, no una promesa. El monto efectivo se determina cuando retirás y puede ser menor al mostrado, incluso cero."
+        "body": "El rendimiento proviene de mercados de préstamos de terceros y cambia continuamente según la oferta y la demanda. Cualquier tasa que se muestre en la app es una estimación basada en las condiciones actuales, no una promesa. El monto efectivo se determina cuando usted retira y puede ser menor al mostrado, incluso cero."
       },
       "lock": {
         "heading": "6. Plazos de bloqueo y retiro anticipado",
-        "body": "Al depositar te comprometés a un plazo de bloqueo. Si retirás antes de que termine, perdés el interés generado por ese depósito; se redistribuye entre los usuarios que mantuvieron hasta el vencimiento, menos una comisión del protocolo. Tu capital se devuelve, pero mientras tanto tus fondos son ilíquidos y no existe un mercado secundario para una posición bloqueada."
+        "body": "Al depositar, usted se compromete a un plazo de bloqueo. Si retira antes de que termine, pierde el interés generado por ese depósito; se redistribuye entre los usuarios que mantuvieron hasta el vencimiento, menos una comisión del protocolo. Su capital se devuelve, pero mientras tanto sus fondos son ilíquidos y no existe un mercado secundario para una posición bloqueada."
       },
       "stablecoin": {
         "heading": "7. Riesgo de la stablecoin",
@@ -364,24 +364,24 @@
       },
       "custody": {
         "heading": "9. Riesgo de billetera y claves",
-        "body": "Si usás una billetera de autocustodia, perder tus claves o tu frase de recuperación significa perder tus fondos de forma permanente: nadie puede restaurarlos. Si usás una billetera administrada, dependés de que nuestro socio de infraestructura siga disponible y seguro. Las transacciones on-chain no se pueden revertir, y los fondos enviados a una dirección equivocada no se pueden recuperar."
+        "body": "Si usa una billetera de autocustodia, perder sus claves o su frase de recuperación significa perder sus fondos de forma permanente: nadie puede restaurarlos. Si usa una billetera administrada, depende de que nuestro socio de infraestructura siga disponible y seguro. Las transacciones on-chain no se pueden revertir, y los fondos enviados a una dirección equivocada no se pueden recuperar."
       },
       "regulatory": {
         "heading": "10. Riesgo regulatorio y fiscal",
-        "body": "Las reglas aplicables a los activos digitales y a los productos que generan rendimiento no están consolidadas y varían según el país. Un cambio normativo o una acción regulatoria podría restringir tu acceso al Servicio, obligarnos a modificar o discontinuar funciones, o afectar el valor de tu posición. Sos responsable de determinar y pagar los impuestos que te correspondan."
+        "body": "Las reglas aplicables a los activos digitales y a los productos que generan rendimiento no están consolidadas y varían según el país. Un cambio normativo o una acción regulatoria podría restringir su acceso al Servicio, obligarnos a modificar o discontinuar funciones, o afectar el valor de su posición. Usted es responsable de determinar y pagar los impuestos que le correspondan."
       },
       "availability": {
         "heading": "11. Disponibilidad",
-        "body": "La app, sus proveedores de infraestructura y la red subyacente pueden sufrir caídas. Durante una caída podrías no poder depositar ni retirar a través de la app, aunque una billetera de autocustodia siempre puede interactuar directamente con los contratos."
+        "body": "La app, sus proveedores de infraestructura y la red subyacente pueden sufrir caídas. Durante una caída usted podría no poder depositar ni retirar a través de la app, aunque una billetera de autocustodia siempre puede interactuar directamente con los contratos."
       },
       "ack": {
         "heading": "12. Reconocimiento",
-        "body": "Al usar Vaquita confirmás que leíste esta declaración, que entendés que podés perder los fondos que deposites, y que estás depositando únicamente lo que podés permitirte perder."
+        "body": "Al usar Vaquita usted confirma que leyó esta declaración, que entiende que puede perder los fondos que deposite, y que está depositando únicamente lo que puede permitirse perder."
       }
     },
     "legalGate": {
       "title": "Antes de continuar",
-      "intro": "Revisá y aceptá los documentos que rigen tu uso de Vaquita.",
+      "intro": "Revisa y acepta los documentos que rigen tu uso de Vaquita.",
       "summaryHeading": "En resumen",
       "summaryData": "Guardamos tu dirección de billetera, tu perfil y tu actividad, y compartimos datos con los socios que operan billeteras, rampas e infraestructura.",
       "summaryOnchain": "Los depósitos, retiros e insignias quedan registrados públicamente en la blockchain y no se pueden borrar.",
@@ -393,7 +393,7 @@
       "acceptEligibility": "Tengo al menos 18 años, no soy residente ni me encuentro en una jurisdicción sancionada o restringida, y no figuro en ninguna lista de sanciones.",
       "confirm": "Aceptar y continuar",
       "saving": "Guardando…",
-      "error": "No pudimos registrar tu aceptación. Intentá de nuevo.",
+      "error": "No pudimos registrar tu aceptación. Intenta de nuevo.",
       "versionLabel": "Versión {{version}}"
     }
   },
@@ -412,7 +412,7 @@
     "retry": "Reintentar",
     "save": "Guardar",
     "saving": "Guardando…",
-    "selectOption": "Elegí una opción…",
+    "selectOption": "Elige una opción…",
     "soon": "Pronto",
     "time": {
       "day_one": "1 día",
@@ -438,7 +438,7 @@
       "processing": "Procesando depósito...",
       "processingStep": "Depositando en tus ahorros",
       "whatIsTitle": "¿Qué es Blend?",
-      "whatIs": "Blend es un protocolo de préstamos auditado en Stellar. Tu USDC se aporta a su pool para generar rendimiento, y podés retirarlo cuando quieras.",
+      "whatIs": "Blend es un protocolo de préstamos auditado en Stellar. Tu USDC se aporta a su pool para generar rendimiento, y puedes retirarlo cuando quieras.",
       "success": {
         "subtitle": "Tu USDC ya está generando rendimiento en tus ahorros.",
         "title": "¡Depósito enviado!"
@@ -563,7 +563,7 @@
         "title": "Selecciona tu país"
       },
       "onramp": {
-        "subtitle": "Depositá con tu moneda local",
+        "subtitle": "Deposita con tu moneda local",
         "title": "Banco"
       },
       "title": "Selecciona el método",
@@ -614,7 +614,7 @@
       "underlyingAmountBelowMin": "El precio se movió más allá de tu límite, intenta de nuevo"
     },
     "transfer": {
-      "creditNotVisible": "Todavía no vemos los fondos en tu wallet. Están seguros: revisá tu saldo en un minuto y completá el depósito."
+      "creditNotVisible": "Todavía no vemos los fondos en tu wallet. Están seguros: revisa tu saldo en un minuto y completa el depósito."
     }
   },
   "home": {
@@ -747,7 +747,7 @@
       "apyAria": "Portafolio",
       "greeting": "Hola,",
       "balanceRetry": "Reintentar cargar el saldo",
-      "balanceSyncError": "No pudimos cargar tu saldo de Blend. Tocá para reintentar.",
+      "balanceSyncError": "No pudimos cargar tu saldo de Blend. Toca para reintentar.",
       "install": "Instalar",
       "installAria": "Instalar la app de Vaquita"
     },
@@ -781,7 +781,7 @@
         "title": "¿Necesitas ayuda?"
       },
       "profile": {
-        "body": "Aquí viven tu avatar, tu nombre de usuario y tus ajustes.",
+        "body": "Aquí viven tu avatar, tu vaquitatag y tus ajustes.",
         "title": "Tu perfil"
       },
       "quickActions": {
@@ -826,19 +826,19 @@
       "joined": "Se unió el {{joinedLabel}}",
       "noAchievements": "Aún no ha desbloqueado logros",
       "notFound": "No encontramos a @{{username}}",
-      "notFoundHint": "Puede que la cuenta haya cambiado su nombre de usuario o ya no exista."
+      "notFoundHint": "Puede que la cuenta haya cambiado su vaquitatag o ya no exista."
     },
     "league": {
       "demotionZone": "Zona de descenso",
       "divisionLocked": "División {{division}} — bloqueada",
       "divisionTitle": "División {{division}}",
       "empty": {
-        "description": "Ahorrá esta semana para ganar XP; tu primer depósito ya te pone en la tabla.",
+        "description": "Ahorra esta semana para ganar XP; tu primer depósito ya te pone en la tabla.",
         "title": "Todavía no hay nadie en esta división"
       },
       "preview": {
         "back": "Volver a mi división",
-        "description": "Solo competís con ahorradores de tu propia división.",
+        "description": "Solo compites con ahorradores de tu propia división.",
         "lockedTitle": "Alcanzá {{xp}} XP para desbloquear {{division}}",
         "pastTitle": "Ya superaste {{division}}"
       },
@@ -849,7 +849,7 @@
         "minutes": "{{n}} minutos"
       },
       "rules": "La tabla se reinicia cada lunes. Los primeros {{promote}} suben de división y los últimos {{demote}} bajan una.",
-      "rulesFirstDivision": "En la primera división nadie baja: solo podés subir.",
+      "rulesFirstDivision": "En la primera división nadie baja: solo puedes subir.",
       "xpValue": "{{xp}} XP"
     }
   },
@@ -863,7 +863,7 @@
     "email": "Email",
     "feedback": "Enviar feedback",
     "bug": "Reportar un error",
-    "board": "Mirá lo que pidieron otros"
+    "board": "Mira lo que pidieron otros"
   },
   "board": {
     "title": "Tablero",
@@ -872,7 +872,7 @@
     "sortTop": "Más votados",
     "sortNew": "Nuevos",
     "vote": "Votar",
-    "voteOwn": "No podés votar tu propio reporte",
+    "voteOwn": "No puedes votar tu propio reporte",
     "openImage": "Ver imagen",
     "imageTitle": "Captura",
     "voteError": "No se pudo registrar tu voto",
@@ -956,25 +956,25 @@
   "onboarding": {
     "demo": {
       "title": "Aprende a ahorrar con Vaquita",
-      "titleMobile": "Aprende a ahorrar con Vaquita en el móvil"
+      "titleMobile": "Aprende a ahorrar con Vaquita en el celular"
     },
     "install": {
-      "title": "Aprovechá la experiencia completa",
-      "body": "Agregá Vaquita a tu pantalla de inicio para desbloquear tu billetera y empezar a usarla.",
+      "title": "Aprovecha la experiencia completa",
+      "body": "Agrega Vaquita a tu pantalla de inicio para desbloquear tu billetera y empezar a usarla.",
       "continueBrowser": "Continuar en el navegador",
       "installButton": "Agregar a inicio",
-      "iosStep1Prefix": "Tocá el",
+      "iosStep1Prefix": "Toca el",
       "iosShare": "ícono de Compartir",
       "iosStep1Suffix": "en tu navegador",
-      "iosStep2Prefix": "Y después tocá",
+      "iosStep2Prefix": "Y después toca",
       "iosStep2Action": "“Agregar a inicio”",
-      "installedBody": "¡Vaquita está instalada! Abrila desde tu pantalla de inicio para desbloquear tu billetera.",
-      "installedHint": "Ya podés cerrar esta pestaña. De ahora en más abrí Vaquita desde el ícono de la app.",
+      "installedBody": "¡Vaquita está instalada! Ábrela desde tu pantalla de inicio para desbloquear tu billetera.",
+      "installedHint": "Ya puedes cerrar esta pestaña. De ahora en adelante abre Vaquita desde el ícono de la app.",
       "pullHint": "¿Ya la instalaste? Tirá hacia abajo para recargar"
     },
     "pushNudge": {
       "title": "Activa las notificaciones",
-      "body": "Enterate cuando tus ahorros generen recompensas o tu racha esté por cortarse.",
+      "body": "Entérate cuando tus ahorros generen recompensas o tu racha esté por cortarse.",
       "enable": "Activar",
       "later": "Quizás después"
     },
@@ -1002,19 +1002,19 @@
     },
     "username": {
       "helperAvailable": "@{{name}} está disponible",
-      "helperBlocked": "Ese nombre de usuario no está permitido",
+      "helperBlocked": "Ese vaquitatag no está permitido",
       "helperChecking": "Verificando disponibilidad…",
       "helperDefault": "Se mostrará como @{{name}}",
       "helperError": "No pudimos verificar la disponibilidad, inténtalo de nuevo",
       "helperShort": "Al menos {{count}} caracteres",
       "helperTaken": "@{{name}} ya está en uso",
-      "inputPlaceholder": "usuario",
-      "label": "Nombre de usuario",
-      "placeholderName": "usuario",
-      "saveErrorToast": "No pudimos guardar el nombre de usuario",
-      "savedToast": "Nombre de usuario guardado",
-      "subtitle": "Este es el nombre que verán otros ahorradores. Puedes cambiarlo más tarde en tu perfil.",
-      "title": "Elige tu nombre de usuario"
+      "inputPlaceholder": "vaquitatag",
+      "label": "Vaquitatag",
+      "placeholderName": "vaquitatag",
+      "saveErrorToast": "No pudimos guardar el vaquitatag",
+      "savedToast": "Vaquitatag guardado",
+      "subtitle": "Este es tu vaquitatag: el nombre que ven los demás ahorradores y el código que compartes para invitar. Puedes cambiarlo más tarde en tu perfil.",
+      "title": "Elige tu vaquitatag"
     }
   },
   "profile": {
@@ -1138,9 +1138,9 @@
       "editAvatarHint": "Elige tu cabello, ropa, lentes y más.",
       "email": "Correo",
       "emailPlaceholder": "tu@ejemplo.com",
-      "nickname": "Apodo",
-      "nicknameFormatError": "El apodo debe tener entre {{min}} y {{max}} caracteres: solo minúsculas, números o guiones bajos.",
-      "nicknamePlaceholder": "apodo",
+      "nickname": "Vaquitatag",
+      "nicknameFormatError": "El vaquitatag debe tener entre {{min}} y {{max}} caracteres: solo minúsculas y números.",
+      "nicknamePlaceholder": "vaquitatag",
       "onboardingCompleted": "Onboarding completado",
       "onboardingCompletedDesc": "Marca el flujo de onboarding inicial como completado.",
       "preferencesUpdated": "Preferencias actualizadas",
@@ -1249,7 +1249,7 @@
       "privacyDescHidden": "Saldo oculto en este dispositivo.",
       "privacyPolicy": "Política de privacidad",
       "profile": "Perfil",
-      "profileDesc": "Edita tu apodo y tu avatar.",
+      "profileDesc": "Edita tu vaquitatag y tu avatar.",
       "signOut": "Cerrar sesión",
       "signOutConfirmDesc": "¿Seguro que quieres cerrar sesión?",
       "signOutConfirmTitle": "¿Cerrar sesión?",
@@ -1269,6 +1269,7 @@
     }
   },
   "releaseNotes": {
+    "title": "Novedades",
     "gotIt": "Entendido",
     "openImage": "Ver imagen"
   },
@@ -1325,9 +1326,9 @@
       "opening": "Abriendo…",
       "rewardTitle": "¡Ganaste monedas!",
       "streakAlt": "racha",
-      "streakSubtitle": "Volvé mañana para mantenerla.",
-      "streakTitle_one": "¡Ahora llevás {{count}} día de racha!",
-      "streakTitle_other": "¡Ahora llevás {{count}} días de racha!",
+      "streakSubtitle": "Vuelve mañana para mantenerla.",
+      "streakTitle_one": "¡Ahora llevas {{count}} día de racha!",
+      "streakTitle_other": "¡Ahora llevas {{count}} días de racha!",
       "title": "Recompensa diaria",
       "xpAlt": "experiencia",
       "xpTitle": "¡Ganaste experiencia!"
@@ -1535,7 +1536,7 @@
     "successBody": "Gracias — le llegó al equipo.",
     "pendingReview": "Le llegó al equipo. Va a aparecer en el board cuando lo revisen.",
     "errorTitle": "No se pudo enviar tu reporte",
-    "errorBody": "Probá de nuevo en un momento.",
+    "errorBody": "Intenta de nuevo en un momento.",
     "bug": {
       "title": "Reportar un error",
       "intro": "Contanos qué salió mal. Cuanto más detalle, más rápido lo arreglamos.",
@@ -1564,7 +1565,7 @@
       "noMatchesBody": "Prueba con otro nombre.",
       "noMatchesTitle": "Sin resultados",
       "removedToast": "Se quitó a {{name}} (simulación)",
-      "searchPlaceholder": "Busca por nombre o usuario…",
+      "searchPlaceholder": "Busca por nombre o vaquitatag…",
       "subtitle": "Explora vaqueros que ya conoces e invítalos a ahorrar contigo.",
       "title": "Elegir de contactos"
     },
@@ -1576,7 +1577,7 @@
       "follow": "Seguir",
       "followedBy": "Seguido por",
       "following": "Siguiendo",
-      "searchByName": "Buscar por usuario",
+      "searchByName": "Buscar por vaquitatag",
       "shareFollowLink": "Compartir enlace para seguirte",
       "suggestedForYou": "Sugerido para ti",
       "suggestionsTitle": "Sugerencias de amigos",
@@ -1659,13 +1660,13 @@
       "followers_one": "{{count}} seguidor",
       "followers_other": "{{count}} seguidores",
       "following": "Siguiendo",
-      "idleBody": "Escribe un usuario para buscar.",
+      "idleBody": "Escribe un vaquitatag para buscar.",
       "idleTitle": "Encuentra a tus vaqueros",
-      "noMatchBody": "Verifica el usuario e inténtalo de nuevo.",
+      "noMatchBody": "Verifica el vaquitatag e inténtalo de nuevo.",
       "noMatchTitle": "No se encontraron vaqueros",
-      "placeholder": "Escribe un usuario",
+      "placeholder": "Escribe un vaquitatag",
       "searching": "Buscando",
-      "title": "Buscar por usuario"
+      "title": "Buscar por vaquitatag"
     },
     "share": {
       "addingFriend": "Agregando amigo…",
@@ -1798,9 +1799,9 @@
     },
     "editProfile": {
       "guest": "Invitado",
-      "nicknameError": "Hubo un error al guardar el apodo",
-      "nicknameLabel": "Apodo",
-      "nicknameSaved": "¡Apodo guardado!",
+      "nicknameError": "Hubo un error al guardar el vaquitatag",
+      "nicknameLabel": "Vaquitatag",
+      "nicknameSaved": "¡Vaquitatag guardado!",
       "saveChanges": "Guardar cambios",
       "shownAs": "Se mostrará como: @{{name}}",
       "title": "Editar perfil",
@@ -1830,15 +1831,15 @@
         },
         "cta": "Comprar USDC",
         "err": {
-          "anchorError": "El proveedor rechazó el pedido. Probá de nuevo en un momento.",
+          "anchorError": "El proveedor rechazó el pedido. Intenta de nuevo en un momento.",
           "assetNotEnabled": "Esta moneda no está disponible para esa ruta por ahora.",
-          "buyFailed": "No pudimos iniciar tu compra. Probá de nuevo.",
+          "buyFailed": "No pudimos iniciar tu compra. Intenta de nuevo.",
           "generic": "No se pudo cotizar la compra.",
           "kycRequired": "El proveedor necesita verificar tu identidad para continuar.",
-          "network": "No pudimos conectarnos. Revisá tu conexión y probá de nuevo.",
-          "noRoutes": "No hay ruta disponible para {{amount}} {{currency}}. Probá con otro monto.",
+          "network": "No pudimos conectarnos. Revisa tu conexión e intenta de nuevo.",
+          "noRoutes": "No hay ruta disponible para {{amount}} {{currency}}. Intenta con otro monto.",
           "providerNotConfigured": "Este proveedor todavía no está configurado para la app.",
-          "quoteExpired": "La cotización venció. Pedí una nueva y probá otra vez.",
+          "quoteExpired": "La cotización venció. Pide una nueva e intenta otra vez.",
           "walletUnsupported": "Este tipo de wallet no se puede usar para esta compra."
         },
         "etaLabel": "Tiempo estimado",
@@ -1848,16 +1849,16 @@
         "feeLabel": "Incluye comisión",
         "feeShow": "Ver detalle",
         "feeValue": "{{amount}} · {{percent}}%",
-        "expiredBody": "No se cobró nada. Empezá de nuevo para obtener un código nuevo con una cotización fresca.",
+        "expiredBody": "No se cobró nada. Empieza de nuevo para obtener un código nuevo con una cotización fresca.",
         "expiredTitle": "Este código venció",
         "expiresIn": "Vence en {{time}}",
-        "failedBody": "El proveedor la rechazó. Si tu banco ya te cobró, te lo van a devolver: guardá el comprobante.",
+        "failedBody": "El proveedor la rechazó. Si tu banco ya te cobró, te lo van a devolver: guarda el comprobante.",
         "failedTitle": "La compra no se completó",
-        "hint": "Pagás un código QR desde la app de tu banco.",
-        "kycLinkBody": "Abrimos la verificación en otra pestaña. Terminala ahí y volvé — la compra sigue sola.",
-        "kycNoLinkBody": "La están revisando. Puede tardar un rato: dejá esta pantalla abierta y seguimos apenas te aprueben.",
+        "hint": "Pagas un código QR desde la app de tu banco.",
+        "kycLinkBody": "Abrimos la verificación en otra pestaña. Termínala ahí y vuelve — la compra sigue sola.",
+        "kycNoLinkBody": "La están revisando. Puede tardar un rato: deja esta pantalla abierta y seguimos apenas te aprueben.",
         "kycOpen": "Abrir verificación",
-        "kycSlowBody": "No se cobró nada. Volvé más tarde: cuando el proveedor te apruebe, la compra sale normal.",
+        "kycSlowBody": "No se cobró nada. Vuelve más tarde: cuando el proveedor te apruebe, la compra sale normal.",
         "kycSlowTitle": "La verificación está tardando",
         "kycTitle": "El proveedor necesita verificar tu identidad",
         "kycWaiting": "Esperando la aprobación…",
@@ -1867,17 +1868,17 @@
         "minAmount": "La compra mínima es de {{amount}} {{currency}}.",
         "outUsdc": "≈ {{amount}} USDC",
         "payHint": "Pagá este QR desde la app de tu banco. El USDC llega solo.",
-        "processingBody": "Tus USDC suelen llegar en unos minutos, y pueden tardar hasta 15. Podés cerrar: caen solos en tu wallet.",
-        "processingHelp": "Si a los 15 minutos no llegaron, guardá el comprobante del banco y escribinos:",
+        "processingBody": "Tus USDC suelen llegar en unos minutos, y pueden tardar hasta 15. Puedes cerrar: caen solos en tu wallet.",
+        "processingHelp": "Si a los 15 minutos no llegaron, guarda el comprobante del banco y escríbenos:",
         "processingTitle": "Pago recibido",
         "qrAlt": "Código QR de pago",
-        "qrUnavailable": "No pudimos cargar el código de pago. Empezá de nuevo para obtener uno nuevo.",
+        "qrUnavailable": "No pudimos cargar el código de pago. Empieza de nuevo para obtener uno nuevo.",
         "rateLabel": "Cotización",
-        "receiveEstimate": "Recibís ≈ {{amount}} USDC",
+        "receiveEstimate": "Recibes ≈ {{amount}} USDC",
         "restart": "Empezar una compra nueva",
         "cancel": "Cancelar y empezar de nuevo",
         "cancelTitle": "¿Cancelar este código de pago?",
-        "cancelBody": "Sólo si todavía no lo pagaste. Si ya pagaste desde el banco, tu USDC está en camino — cancelar ahora y comprar de nuevo te cobraría dos veces.",
+        "cancelBody": "Solo si todavía no lo pagaste. Si ya pagaste desde el banco, tu USDC está en camino — cancelar ahora y comprar de nuevo te cobraría dos veces.",
         "cancelConfirm": "No lo pagué — cancelarlo",
         "cancelKeep": "Conservar este código",
         "resuming": "Buscando una compra en curso…",
@@ -1891,8 +1892,8 @@
         "title": "Comprar USDC en {{country}} ({{currency}})",
         "unrecorded": "No cierres esta pantalla: no pudimos guardar tu compra y puede que no puedas volver a ella.",
         "working": "Preparando tu compra…",
-        "youPay": "Pagás",
-        "youReceive": "Recibís",
+        "youPay": "Pagas",
+        "youReceive": "Recibes",
         "maxAmount": "La compra máxima es de {{amount}} {{currency}}."
       },
       "rail": {
@@ -1910,27 +1911,27 @@
         "cta": "Retirar",
         "destination": {
           "change": "Cambiar",
-          "needAmount": "Para usar una cuenta nueva, poné el monto primero: qué datos pide el banco depende de la ruta de pago.",
+          "needAmount": "Para usar una cuenta nueva, pon el monto primero: qué datos pide el banco depende de la ruta de pago.",
           "newAccount": "Cuenta nueva",
-          "pickTitle": "¿A dónde querés recibir la plata?",
-          "select": "Elegí una cuenta bancaria",
+          "pickTitle": "¿A dónde quieres recibir tu dinero?",
+          "select": "Elige una cuenta bancaria",
           "title": "Destino"
         },
-        "doneHint": "Ya podés cerrar esta ventana.",
+        "doneHint": "Ya puedes cerrar esta ventana.",
         "err": {
-          "anchorError": "El proveedor rechazó el pedido. Probá de nuevo en un momento.",
+          "anchorError": "El proveedor rechazó el pedido. Intenta de nuevo en un momento.",
           "assetNotEnabled": "Esta moneda no está disponible para esa ruta por ahora.",
           "generic": "No se pudo completar el retiro.",
-          "insufficientQuote": "Este retiro necesita {{needed}} USDC en tus ahorros y tenés {{balance}}. Probá con un monto menor.",
+          "insufficientQuote": "Este retiro necesita {{needed}} USDC en tus ahorros y tienes {{balance}}. Intenta con un monto menor.",
           "kycRequired": "El proveedor necesita verificar tu identidad para continuar.",
-          "noRoutes": "No hay ruta disponible para {{amount}} USDC. Probá con otro monto.",
+          "noRoutes": "No hay ruta disponible para {{amount}} USDC. Intenta con otro monto.",
           "paymentFailed": "El pago no se pudo completar. Tu USDC sigue en tu wallet.",
           "paymentNotOnChain": "El proveedor informó un pago ({{hash}}) que nunca llegó a la red. Tu USDC sigue en tu wallet.",
-          "paymentNotSubmitted": "El proveedor aceptó el retiro pero nunca envió el pago. Tu USDC está en tu wallet — probá de nuevo.",
+          "paymentNotSubmitted": "El proveedor aceptó el retiro pero nunca envió el pago. Tu USDC está en tu wallet — intenta de nuevo.",
           "providerNotConfigured": "Este proveedor todavía no está configurado para la app.",
-          "quoteExpired": "La cotización venció. Pedí una nueva y probá otra vez.",
+          "quoteExpired": "La cotización venció. Pide una nueva e intenta otra vez.",
           "unknownCost": "La cotización no informó cuánto USDC cuesta este retiro.",
-          "vaultNotConfirmed": "El retiro de tus ahorros todavía no se confirmó en la red. Tu USDC está a salvo — probá de nuevo en un minuto.",
+          "vaultNotConfirmed": "El retiro de tus ahorros todavía no se confirmó en la red. Tu USDC está a salvo — intenta de nuevo en un minuto.",
           "walletUnsupported": "Este tipo de wallet no se puede usar para este retiro.",
           "noRate": "El tipo de cambio de este corredor no está disponible en este momento."
         },
@@ -1961,22 +1962,22 @@
           "saved": "Cuenta guardada",
           "title": "Tus cuentas guardadas"
         },
-        "settling": "Tu USDC ya fue recibido y el pago por {{rail}} está en camino. Puede demorar — ya podés cerrar esta ventana.",
+        "settling": "Tu USDC ya fue recibido y el pago por {{rail}} está en camino. Puede demorar — ya puedes cerrar esta ventana.",
         "title": "Retirar a {{country}} ({{currency}})",
         "usdcSpent": "{{amount}} USDC salieron de tus ahorros",
         "waitingHint": "Estamos esperando la confirmación del proveedor…",
         "waitingReady": "Esperando a que se liquide el pago… (suele tardar {{eta}})",
-        "youReceive": "Recibís",
+        "youReceive": "Recibes",
         "youSend": "Sale de tus ahorros",
         "rateLoading": "Leyendo el tipo de cambio…",
         "rateLine": "1 USDC ≈ {{amount}} {{currency}}",
-        "receiveEstimate": "Recibís ≈ {{amount}} {{currency}}",
+        "receiveEstimate": "Recibes ≈ {{amount}} {{currency}}",
         "limitMinUsdc": "El mínimo de esta ruta es de unos {{amount}} USDC.",
         "limitMaxUsdc": "El máximo de esta ruta es de unos {{amount}} USDC."
       },
       "receive": {
         "cta": "Continuar",
-        "depositHelper": "¿Solo tenés pesos argentinos? Depositá con ARS",
+        "depositHelper": "¿Solo tienes pesos argentinos? Deposita con ARS",
         "depositStarted": "Depósito iniciado. Continúa en Anclap.",
         "description": "Compra ARS con Anclap y recíbelos en tu wallet; luego lo convertimos a USDC automáticamente.",
         "openAnclap": "Abrir Anclap",
@@ -2029,14 +2030,14 @@
       "copyAddressAria": "Copiar dirección de la wallet",
       "disconnectWallet": "Desconectar wallet",
       "editProfile": "Editar perfil",
-      "nicknameLabel": "Apodo",
+      "nicknameLabel": "Vaquitatag",
       "saveChanges": "Guardar cambios",
       "title": "Perfil",
       "walletLabel": "Billetera"
     },
     "receive": {
       "title": "Recibir",
-      "subtitle": "Compartí tu dirección de Stellar para recibir cualquier activo.",
+      "subtitle": "Comparte tu dirección de Stellar para recibir cualquier activo.",
       "copy": "Copiar",
       "copied": "Copiado",
       "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
@@ -2047,16 +2048,16 @@
       "available": "Disponible: {{amount}} {{symbol}}",
       "amount": "Monto",
       "max": "MÁX",
-      "insufficient": "No tenés suficiente {{symbol}} en tu wallet.",
+      "insufficient": "No tienes suficiente {{symbol}} en tu wallet.",
       "destination": "Wallet de destino",
-      "destinationPlaceholder": "G… o @usuario",
+      "destinationPlaceholder": "G… o @vaquitatag",
       "invalidAddress": "Eso no parece una dirección de Stellar válida.",
-      "sameAddress": "No podés enviar a tu propia dirección.",
+      "sameAddress": "No puedes enviar a tu propia dirección.",
       "handleNotFound": "No encontramos a ese usuario.",
       "resolving": "Buscando…",
       "destUnfunded": "Esa cuenta todavía no está activa en Stellar, así que no puede recibir USDC.",
-      "destNoTrustline": "Esta cuenta todavía no habilitó USDC. Pedile que abra la app una vez y probá de nuevo.",
-      "destCheckFailed": "No pudimos verificar esa cuenta. Igual podés intentar el envío.",
+      "destNoTrustline": "Esta cuenta todavía no habilitó USDC. Pídele que abra la app una vez e intenta de nuevo.",
+      "destCheckFailed": "No pudimos verificar esa cuenta. Igual puedes intentar el envío.",
       "cta": "Enviar",
       "sending": "Enviando…",
       "success": "Enviaste {{amount}} {{symbol}}",
@@ -2071,14 +2072,14 @@
       "amount": "Monto",
       "amountRange": "Ingresá un monto entre {{min}} y {{max}} USDC.",
       "available": "Disponible: {{amount}} USDC",
-      "baseOnlyWarning": "Sólo red Base y sólo USDC. Cualquier otra cosa enviada a esta dirección se pierde.",
+      "baseOnlyWarning": "Solo red Base y solo USDC. Cualquier otra cosa enviada a esta dirección se pierde.",
       "close": "Cerrar",
       "confirmingDeposit": "Depósito recibido — confirmando en la red…",
       "continue": "Continuar",
       "copied": "Copiado",
       "copy": "Copiar",
       "creating": "Preparando…",
-      "depositHelper": "¿Necesitás USDC en Stellar? Traelo desde Base",
+      "depositHelper": "¿Necesitas USDC en Stellar? Tráelo desde Base",
       "depositInstructions": "Enviá exactamente {{amount}} USDC por la red Base a esta dirección, desde cualquier wallet o exchange.",
       "destinationAddress": "Dirección de destino en Base",
       "directionIn": "Base → Stellar",
@@ -2090,18 +2091,18 @@
       "fee": "Costo de red",
       "feeValue": "{{amount}} USDC ({{percent}}%)",
       "incompleteBody": "El puente esperaba {{amount}} USDC y recibió menos, así que el canje no arrancó.",
-      "incompleteRefund": "El puente va a devolver lo que recibió cuando venza la cotización. Escribinos a soporte si no llega.",
+      "incompleteRefund": "El puente va a devolver lo que recibió cuando venza la cotización. Escríbenos a soporte si no llega.",
       "incompleteTitle": "Llegó menos de lo esperado",
       "incompleteTopUp": "Enviá la diferencia a la misma dirección antes de que venza la cotización. Si vence primero, el puente devuelve lo que recibió a tu dirección de Base.",
       "insufficient": "No te alcanza el USDC.",
       "invalidEvmAddress": "Ingresá una dirección de Base válida (0x…).",
-      "keepsGoing": "Esto sigue aunque cierres esta ventana. Volvé a abrirla cuando quieras para ver cómo va.",
-      "missingMemo": "El puente no devolvió un memo válido. Probá de nuevo.",
+      "keepsGoing": "Esto sigue aunque cierres esta ventana. Vuelve a abrirla cuando quieras para ver cómo va.",
+      "missingMemo": "El puente no devolvió un memo válido. Intenta de nuevo.",
       "newQuote": "Pedir una nueva cotización",
-      "outboundInstructions": "Confirmá el pago para enviar {{amount}} USDC a Base.",
+      "outboundInstructions": "Confirma el pago para enviar {{amount}} USDC a Base.",
       "pendingConfirm": "Tu pago se envió y todavía está confirmando. Lo estamos siguiendo: no lo envíes de nuevo.",
       "processing": "Moviendo tu USDC…",
-      "quoteExpired": "Esta cotización venció antes de pagarse. Pedí una nueva: enviar a la dirección anterior perdería los fondos.",
+      "quoteExpired": "Esta cotización venció antes de pagarse. Pide una nueva: enviar a la dirección anterior perdería los fondos.",
       "quoting": "Cotizando…",
       "refundAddress": "Tu dirección de Base (para devoluciones)",
       "refundedBody": "El puente devolvió los fondos a tu dirección de devolución.",
@@ -2113,35 +2114,46 @@
       "successTitle": "Transferencia completa",
       "title": "Puente de USDC",
       "toAddress": "Para",
-      "trustlineError": "No se pudo activar el USDC. Probá de nuevo.",
+      "trustlineError": "No se pudo activar el USDC. Intenta de nuevo.",
       "trustlineNeeded": "Tu wallet necesita activar el USDC antes de poder recibirlo.",
       "waitingDeposit": "Esperando tu depósito…",
-      "youReceive": "Recibís"
+      "youReceive": "Recibes"
     }
   },
   "referrals": {
     "invite": "Invitar amigos",
-    "inviteDesc": "Compartí tu link y mirá quién se sumó.",
-    "description": "Compartí tu link. Llevamos la cuenta de todos los que entran por ahí.",
-    "shareText": "Ahorra conmigo en Vaquita y gana recompensas. Usa mi código {{code}}",
+    "inviteDesc": "Comparte tu link y mira quién se sumó.",
+    "description": "Comparte tu link. Llevamos la cuenta de todos los que entran por ahí.",
+    "shareText": "Ahorra conmigo en Vaquita y gana recompensas. Usa mi vaquitatag {{code}}",
     "friendsJoined": "Amigos que se sumaron",
     "friendsSaving": "Amigos ahorrando",
-    "yourLink": "Tu link",
+    "inviteWithTag": "Invita a tus amigos con tu vaquitatag",
+    "shareLink": "Compartir link",
+    "shareQr": "Compartir QR",
     "copyLink": "Copiar link",
     "copied": "Link copiado",
-    "pasteHint": "Pegalo en tu bio, en una descripción o en un mensaje.",
+    "pasteHint": "Pégalo en tu bio, en una descripción o en un mensaje.",
     "rewardsComing": "Las recompensas por invitar están en camino. Las tuyas ya se están contando.",
+    "qr": {
+      "title": "Tu QR de invitación",
+      "hint": "Que lo escaneen con la cámara del celular. Abre Vaquita con tu vaquitatag ya puesto.",
+      "alt": "Código QR con tu link de invitación",
+      "unavailable": "No pudimos dibujar el código aquí. Comparte tu link en su lugar.",
+      "save": "Guardar el QR en mi celular",
+      "saved": "Guardado",
+      "longPress": "Mantén apretado el código para guardarlo en tus fotos."
+    },
     "board": {
       "open": "Ver a los que más invitan",
       "title": "Los que más invitan",
-      "subtitle": "Ordenado por amigos que se sumaron. Ahorrando es cuántos de ellos ya pusieron plata a trabajar.",
+      "subtitle": "Ordenado por amigos que se sumaron. Ahorrando es cuántos de ellos ya pusieron dinero a trabajar.",
       "savingCount": "{{n}} ahorrando",
       "yourPosition": "Tu posición",
-      "notRanked": "Invitá a un amigo para entrar en la tabla.",
+      "notRanked": "Invita a un amigo para entrar en la tabla.",
       "emptyTitle": "Todavía nadie invitó a nadie",
-      "emptyBody": "Compartí tu link y sé el primero en la tabla.",
+      "emptyBody": "Comparte tu link y sé el primero en la tabla.",
       "errorTitle": "No pudimos cargar la tabla",
-      "errorBody": "Revisá tu conexión y volvé a intentar."
+      "errorBody": "Revisa tu conexión e intenta de nuevo."
     },
     "channels": {
       "whatsapp": "WhatsApp",
@@ -2153,9 +2165,9 @@
   "withdraw": {
     "addMethod": "Agregar método",
     "addNickname": {
-      "cta": "Agregar usuario",
-      "field": "Usuario",
-      "placeholder": "usuario"
+      "cta": "Agregar vaquitatag",
+      "field": "Vaquitatag",
+      "placeholder": "vaquitatag"
     },
     "addWallet": {
       "addressField": "Dirección",
@@ -2176,7 +2188,7 @@
     },
     "amountLabel": "Monto",
     "available": "Disponible",
-    "exceedsBalance": "Es más de lo que tenés disponible.",
+    "exceedsBalance": "Es más de lo que tienes disponible.",
     "confirm": {
       "title": "Confirmar retiro"
     },
@@ -2199,14 +2211,14 @@
         "subtitle": "Retirá a una wallet cripto"
       },
       "username": {
-        "title": "Usuario",
-        "subtitle": "Mandale a un usuario de Vaquita"
+        "title": "Vaquitatag",
+        "subtitle": "Envía a un usuario de Vaquita"
       }
     },
     "methodLabel": "Método",
     "minWithdraw": "Retiro mínimo: {{amount}} USDC.",
     "noUsernames": "Todavía no guardaste usuarios",
-    "noWallets": "Todavía no tenés wallets guardadas",
+    "noWallets": "Todavía no tienes wallets guardadas",
     "processing": "Procesando retiro...",
     "processingHint": "Esto puede tardar unos segundos.",
     "review": "Revisar",
@@ -2232,8 +2244,8 @@
     "dest": {
       "checking": "Verificando que esa cuenta pueda recibir USDC…",
       "unfunded": "Esa cuenta todavía no está activa en Stellar, así que no puede recibir USDC.",
-      "noTrustline": "Esta cuenta todavía no habilitó USDC. Pedile que abra la app una vez y volvé a intentar.",
-      "checkFailed": "No pudimos verificar esa cuenta. Podés intentar el retiro igual."
+      "noTrustline": "Esta cuenta todavía no habilitó USDC. Pídele que abra la app una vez e intenta de nuevo.",
+      "checkFailed": "No pudimos verificar esa cuenta. Puedes intentar el retiro igual."
     }
   },
   "transactions": {
@@ -2241,8 +2253,8 @@
     "recent": "Transacciones recientes",
     "seeMore": "Ver más",
     "empty": "Todavía no hay transacciones",
-    "emptyFiltered": "Probá cambiando los filtros para ver más.",
-    "emptyHint": "Tus depósitos y retiros van a aparecer acá.",
+    "emptyFiltered": "Intenta cambiando los filtros para ver más.",
+    "emptyHint": "Tus depósitos y retiros van a aparecer aquí.",
     "kind": {
       "deposit": "Depósito",
       "withdraw": "Retiro",
@@ -2317,7 +2329,7 @@
     "loadingMore": "Cargando más vaqueros",
     "caughtUp": {
       "title": "Ya conociste a todos",
-      "description": "Ya seguís a todos los vaqueros por acá. Volvé más tarde. Siempre aparecen mundos nuevos."
+      "description": "Ya sigues a todos los vaqueros por aquí. Vuelve más tarde. Siempre aparecen mundos nuevos."
     },
     "error": {
       "title": "No pudimos cargar los vaqueros"
@@ -2365,7 +2377,7 @@
       "successTitle": "¡De vuelta en tus ahorros!",
       "successSubtitle": "Tus fondos vuelven a estar flexibles y siguen generando rendimiento en tus ahorros.",
       "cta": "Retirar a tus ahorros",
-      "incompleteTitle": "Tu plata está en tu wallet",
+      "incompleteTitle": "Tu dinero está en tu wallet",
       "incompleteSubtitle": "La sacamos de la vaquita, pero no pudimos volver a ponerla en tus ahorros. No se perdió nada: depositala de nuevo cuando quieras."
     },
     "vault": {
@@ -2373,7 +2385,7 @@
     },
     "blend": {
       "anytime": "Cuando quieras",
-      "detailText": "Tu USDC genera rendimiento en Blend, un protocolo de préstamos en Stellar. No hay período de bloqueo, así que podés retirar tu dinero cuando quieras.",
+      "detailText": "Tu USDC genera rendimiento en Blend, un protocolo de préstamos en Stellar. No hay período de bloqueo, así que puedes retirar tu dinero cuando quieras.",
       "label": "Blend · Flexible",
       "yieldSource": "Fuente de rendimiento"
     },
@@ -2389,33 +2401,33 @@
     },
     "info": {
       "earned": "Ganado",
-      "failedNote": "Esta operación no se completó. No hay fondos bloqueados acá.",
+      "failedNote": "Esta operación no se completó. No hay fondos bloqueados aquí.",
       "opened": "Abierto",
       "term": "Plazo",
       "withdrawnOn": "Retirado el"
     },
     "list": {
       "empty": "No hay posiciones para mostrar.",
-      "emptyHint": "Tus ahorros bloqueados aparecerán acá.",
+      "emptyHint": "Tus ahorros bloqueados aparecerán aquí.",
       "showMore_one": "Ver más ({{count}})",
       "showMore_other": "Ver más ({{count}})"
     },
     "positionsTitle": "Tus posiciones"
   },
   "txError": {
-    "generic": "No pudimos completar la transacción. Probá de nuevo en un momento.",
+    "generic": "No pudimos completar la transacción. Intenta de nuevo en un momento.",
     "rejected": "Cancelaste la firma. No se hizo ningún cambio.",
-    "trustline": "Tu wallet necesita habilitar USDC primero. Agregá la trustline de USDC y volvé a intentar.",
-    "balance": "No tenés saldo suficiente para cubrir esta transacción y su comisión de red.",
-    "network": "No pudimos conectar con la red. Revisá tu conexión y volvé a intentar.",
-    "timeout": "La red está tardando más de lo normal. Revisá tu saldo antes de volver a intentar.",
-    "pending": "Tu transacción se envió y todavía está confirmándose. Revisá tu saldo en un minuto antes de volver a intentar.",
-    "contractGeneric": "La red rechazó la transacción. Probá de nuevo.",
+    "trustline": "Tu wallet necesita habilitar USDC primero. Agrega la trustline de USDC e intenta de nuevo.",
+    "balance": "No tienes saldo suficiente para cubrir esta transacción y su comisión de red.",
+    "network": "No pudimos conectar con la red. Revisa tu conexión e intenta de nuevo.",
+    "timeout": "La red está tardando más de lo normal. Revisa tu saldo antes de volver a intentar.",
+    "pending": "Tu transacción se envió y todavía está confirmándose. Revisa tu saldo en un minuto antes de volver a intentar.",
+    "contractGeneric": "La red rechazó la transacción. Intenta de nuevo.",
     "contract": {
-      "10": "No tenés suficiente USDC en tu wallet para cubrir este monto. Agregá fondos y volvé a intentar.",
-      "13": "Tu wallet necesita habilitar USDC primero. Agregá la trustline de USDC y volvé a intentar."
+      "10": "No tienes suficiente USDC en tu wallet para cubrir este monto. Agrega fondos e intenta de nuevo.",
+      "13": "Tu wallet necesita habilitar USDC primero. Agrega la trustline de USDC e intenta de nuevo."
     },
-    "withdrawPaymentLeg": "Tu plata salió del ahorro y está en tu wallet, pero el pago a {{destination}} no se hizo. Podés enviarlo desde Wallet → Enviar."
+    "withdrawPaymentLeg": "Tu dinero salió del ahorro y está en tu wallet, pero el pago a {{destination}} no se hizo. Puedes enviarlo desde Wallet → Enviar."
   },
   "migration": {
     "title": "Mueve tus fondos de Blend",
@@ -2431,7 +2443,7 @@
       "termLabel": "Plazo",
       "title": "Revisar"
     },
-    "selectTerm": "Elegí un plazo",
+    "selectTerm": "Elige un plazo",
     "steps": {
       "locking": "Bloqueando por {{term}}",
       "preparing": "Preparando tu dinero"

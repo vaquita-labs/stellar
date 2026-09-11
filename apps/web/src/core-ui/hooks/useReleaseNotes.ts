@@ -8,9 +8,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 /**
  * Notas de versión: el popup de "qué hay de nuevo".
  *
- * El servidor guarda TODAS las notas pero devuelve como mucho una: la última
- * publicada, y sólo si este usuario todavía no la cerró. Acá no hay lógica de
- * "cuál toca" — `note === null` ya significa que no hay nada que mostrar.
+ * El servidor decide las dos cosas y acá no hay lógica de "cuál toca":
+ *
+ * - `note` es el disparador: la última publicada, y sólo si este usuario
+ *   todavía no la cerró. `note === null` ya significa que no se abre nada.
+ * - `notes` son las tres últimas publicadas, haya visto lo que haya visto. Son
+ *   las que se apilan adentro del popup una vez abierto, para que quien se
+ *   salteó un lanzamiento igual se entere de lo que salió.
  */
 
 /** Idiomas que una nota puede traer traducidos. El español vive en `title`/`body`. */
@@ -56,6 +60,14 @@ export const releaseNoteImageUrl = (id: string) => `${BASE()}/images/${id}`;
 
 const latestKey = (walletAddress?: string | null) => ['release-note-latest', walletAddress] as const;
 
+/** Lo que devuelve `GET /release-notes/latest`: el disparador y la pila. */
+export interface ReleaseNoteFeed {
+  /** La nota pendiente de cerrar, o null si no hay nada que abrir. */
+  note: ReleaseNote | null;
+  /** Las últimas tres publicadas, de la más nueva a la más vieja. */
+  notes: ReleaseNote[];
+}
+
 async function unwrap<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => ({}));
   if (!response.ok || body?.status !== 'success') {
@@ -65,7 +77,7 @@ async function unwrap<T>(response: Response): Promise<T> {
 }
 
 /**
- * La nota pendiente, o null.
+ * El disparador y la pila, en un solo request.
  *
  * Se revalida en cada montaje, pisando el default global (`staleTime: Infinity`
  * + `refetchOnMount: false` + persistencia en localStorage). Quien publica una
@@ -87,12 +99,12 @@ async function unwrap<T>(response: Response): Promise<T> {
 export const useReleaseNote = (enabled = true) => {
   const { walletAddress } = useConfigStore();
 
-  return useQuery<ReleaseNote | null>({
+  return useQuery<ReleaseNoteFeed>({
     queryKey: latestKey(walletAddress),
     queryFn: async () => {
       const response = await authFetch(`${BASE()}/latest`, { method: 'GET' }, walletAddress!);
-      const data = await unwrap<{ note: ReleaseNote | null }>(response);
-      return data.note ?? null;
+      const data = await unwrap<{ note: ReleaseNote | null; notes?: ReleaseNote[] }>(response);
+      return { note: data.note ?? null, notes: data.notes ?? [] };
     },
     enabled: enabled && !!walletAddress,
     staleTime: 0,
@@ -121,7 +133,12 @@ export const useAckReleaseNote = () => {
       await unwrap<{ acknowledged: boolean }>(response);
     },
     onMutate: () => {
-      queryClient.setQueryData(latestKey(walletAddress), null);
+      // Sólo se apaga el disparador. `notes` queda igual: es la pila que el
+      // usuario está mirando en este momento y borrarla le vaciaría el popup
+      // por debajo de las manos.
+      queryClient.setQueryData<ReleaseNoteFeed>(latestKey(walletAddress), (old) =>
+        old ? { ...old, note: null } : { note: null, notes: [] },
+      );
     },
   });
 };

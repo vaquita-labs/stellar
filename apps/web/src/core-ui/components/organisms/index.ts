@@ -4,7 +4,6 @@ export * from './VaquitaModal';
 export * from './DepositPanel';
 export * from './HorizontalCarousel';
 export * from './WalletButton';
-export * from './EditProfileModal';
 export * from './LoaderLayout';
 export * from './PullToRefresh';
 export * from './LockPeriodModal';

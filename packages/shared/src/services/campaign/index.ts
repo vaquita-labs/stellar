@@ -144,8 +144,11 @@ export const resolveAttribution = async (
   let campaignId: number | null = null;
 
   if (blob.code) {
+    // Case-insensitive: the link carries whatever the sharer typed, and the two
+    // namespaces this falls through are stored in different cases — campaign
+    // codes uppercased on create, vaquitatags always lowercase.
     const campaign = await prisma.campaign.findFirst({
-      where: { code: blob.code, deletedAt: null, isActive: true },
+      where: { code: { equals: blob.code, mode: 'insensitive' }, deletedAt: null, isActive: true },
       select: { id: true, code: true },
     });
 
@@ -180,17 +183,29 @@ export const listCampaigns = async (): Promise<Campaign[]> =>
 
 /**
  * True when `code` is already taken — by a live campaign or by a user's
- * referral code. The second half is the one that matters: the two namespaces
- * share a resolution path, so a collision would silently redirect someone's
- * personal invites into a campaign bucket.
+ * vaquitatag. The second half is the one that matters: the two namespaces share
+ * a resolution path, so a collision would silently redirect someone's personal
+ * invites into a campaign bucket.
+ *
+ * Both halves are case-insensitive because the two namespaces write different
+ * cases: campaign codes are uppercased on create, tags are always lowercase. A
+ * byte comparison would report `VERANO` and `verano` as disjoint right up until
+ * `resolveAttribution` — also case-insensitive — sent one to the other.
  */
 export const isCampaignCodeTaken = async (code: string, excludeId?: number): Promise<boolean> => {
   const [campaign, profile] = await Promise.all([
     prisma.campaign.findFirst({
-      where: { code, deletedAt: null, ...(excludeId ? { id: { not: excludeId } } : {}) },
+      where: {
+        code: { equals: code, mode: 'insensitive' },
+        deletedAt: null,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
       select: { id: true },
     }),
-    prisma.profile.findUnique({ where: { referralCode: code }, select: { id: true } }),
+    prisma.profile.findFirst({
+      where: { referralCode: { equals: code, mode: 'insensitive' } },
+      select: { id: true },
+    }),
   ]);
   return Boolean(campaign || profile);
 };

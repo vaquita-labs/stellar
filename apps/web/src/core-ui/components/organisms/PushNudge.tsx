@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiBell } from 'react-icons/fi';
 import { useProfileData, usePushNotifications } from '../../hooks';
@@ -18,16 +18,19 @@ import { canAskNow, markAsked } from './pushNudgeSchedule';
 // Starts `false` so the server snapshot and the first client render agree on
 // "do not open" — the real value lands on subscribe.
 let canAsk = false;
-let loaded = false;
 const subscribers = new Set<() => void>();
 
 const subscribe = (cb: () => void) => {
-  if (!loaded) {
-    loaded = true;
-    canAsk = canAskNow();
-  }
+  // Re-read on every transition from zero subscribers to one, not once per tab.
+  // This component used to live in the private layout, which mounts once and
+  // never unmounts; it now mounts with `/home`, so it unmounts on every
+  // navigation away and remounts on the way back. A value cached for the life
+  // of the tab would freeze at whatever the first mount saw and never re-arm.
+  if (subscribers.size === 0) canAsk = canAskNow();
   subscribers.add(cb);
-  return () => subscribers.delete(cb);
+  return () => {
+    subscribers.delete(cb);
+  };
 };
 
 const askedNow = () => {
@@ -54,6 +57,12 @@ const getServerSnapshot = () => false;
  * It re-arms on every app launch, at most once a day: one dismissal on the day
  * someone installed the app should not cost the channel forever.
  *
+ * Mounted by `HomePage`, not by the private layout. That layout never unmounts
+ * on a client navigation, so a sheet opened from it appeared over whatever page
+ * the user had walked to — the reported case was `/profile`. Living on `/home`
+ * is also what makes the queue turn meaningful: the components it must precede
+ * are all mounted there.
+ *
  * Three things keep it from nagging the wrong person:
  * - permission `granted` is already handled silently by <PushSubscriptionSync>,
  *   which also re-creates a subscription the browser has evicted;
@@ -65,14 +74,39 @@ export function PushNudge() {
   const { t } = useTranslation();
   const { supported, permission, enablePush } = usePushNotifications();
   const { data } = useProfileData();
-  // The home tour owns the whole screen while it runs; this would open on top.
-  const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
+  // Nothing to wait for: this is the head of the modal queue. See the store's
+  // header for why the permission ask goes before decisions worth more money.
+  const setPushNudgeSettled = useModalQueueStore((s) => s.setPushNudgeSettled);
   const allowed = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const [enabling, setEnabling] = useState(false);
 
   // Same read as <PushSubscriptionSync>: only an explicit `false` opts out.
   const pushPreferred = data?.notificationPreferences?.push !== false;
+
+  /**
+   * Releases the queue turn `HomePage` took on this component's behalf.
+   *
+   * Deliberately NOT derived from `open`. `allowed` arrives through
+   * `useSyncExternalStore`, and on the first mount its value is still the server
+   * snapshot (`false`) while effects flush — so an `if (!open)` here would hand
+   * the turn to the release notes one tick before this sheet opens on top of
+   * them. `canAskNow()` answers the same question with no subscription lag, and
+   * an effect is a legal place to read storage.
+   */
+  useEffect(() => {
+    if (!supported || permission !== 'default' || !pushPreferred || !canAskNow()) {
+      setPushNudgeSettled(true);
+    }
+  }, [supported, permission, pushPreferred, setPushNudgeSettled]);
+
+  // The three exits the user can take — turned on, "maybe later", dismissed —
+  // all end here: the browser prompt has had its chance, and whatever queued
+  // behind the sheet may now open.
+  const settle = () => {
+    askedNow();
+    setPushNudgeSettled(true);
+  };
 
   const handleEnable = async () => {
     if (enabling) return;
@@ -83,15 +117,15 @@ export function PushNudge() {
       setEnabling(false);
       // Marked either way. On success `permission` is no longer `default`, so
       // this only matters when the request failed and is worth retrying later.
-      askedNow();
+      settle();
     }
   };
 
-  const open = supported && permission === 'default' && pushPreferred && allowed && homeTourSettled;
+  const open = supported && permission === 'default' && pushPreferred && allowed;
   if (!open) return null;
 
   return (
-    <AppModal open onOpenChange={askedNow} title={t('onboarding.pushNudge.title', 'Turn on notifications')} size="sm">
+    <AppModal open onOpenChange={settle} title={t('onboarding.pushNudge.title', 'Turn on notifications')} size="sm">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/30 border border-black text-black">
@@ -105,7 +139,7 @@ export function PushNudge() {
           {t('onboarding.pushNudge.enable', 'Turn on')}
         </Button>
         <button
-          onClick={askedNow}
+          onClick={settle}
           className="text-sm font-semibold text-black/50 hover:text-black underline underline-offset-2 transition"
         >
           {t('onboarding.pushNudge.later', 'Maybe later')}

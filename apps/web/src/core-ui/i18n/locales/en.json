@@ -164,7 +164,7 @@
       "collect": {
         "heading": "2. Information we collect",
         "intro": "We collect the following categories of information:",
-        "account": "<b>Account and profile.</b> Your wallet address, and the nickname, email address, avatar, display language and currency, and notification preferences you choose to set. Your nickname and avatar are public — they appear on your profile, on the leaderboard, and on achievement links you share.",
+        "account": "<b>Account and profile.</b> Your wallet address, and the vaquitatag, email address, avatar, display language and currency, and notification preferences you choose to set. Your vaquitatag and avatar are public — they appear on your profile, on the leaderboard, and on achievement links you share.",
         "financial": "<b>Transaction records.</b> Deposits, withdrawals, amounts, lock periods, transaction hashes, the payout wallets you save, and cross-chain transfers including the counterparty address.",
         "social": "<b>Social and gameplay data.</b> Who you follow and who follows you, likes given and received on your 3D world, referral relationships, badges, streaks, experience, in-app rewards, your world layout and inventory, and your notifications.",
         "device": "<b>Device and technical data.</b> When you connect, we record a session identifier along with your browser user agent, platform and language. If you enable push notifications, we store the push endpoint your browser's push service issues and its encryption keys.",
@@ -197,7 +197,7 @@
       },
       "onchain": {
         "heading": "5. Blockchain data is public and permanent",
-        "body": "Deposits, withdrawals and badges are recorded on the Stellar network. That data is public, permanent and outside our control. We cannot edit or delete it, and a deletion request cannot remove it. Anyone can link a wallet address to its full transaction history, and to any nickname or profile you have made public."
+        "body": "Deposits, withdrawals and badges are recorded on the Stellar network. That data is public, permanent and outside our control. We cannot edit or delete it, and a deletion request cannot remove it. Anyone can link a wallet address to its full transaction history, and to any vaquitatag or profile you have made public."
       },
       "transfers": {
         "heading": "6. International transfers",
@@ -781,7 +781,7 @@
         "title": "Need a hand?"
       },
       "profile": {
-        "body": "Your avatar, your username and your settings live here.",
+        "body": "Your avatar, your vaquitatag and your settings live here.",
         "title": "Your profile"
       },
       "quickActions": {
@@ -826,7 +826,7 @@
       "joined": "Joined {{joinedLabel}}",
       "noAchievements": "No achievements unlocked yet",
       "notFound": "We couldn't find @{{username}}",
-      "notFoundHint": "The account may have changed its username or no longer exists."
+      "notFoundHint": "The account may have changed its vaquitatag or no longer exists."
     },
     "league": {
       "demotionZone": "Demotion zone",
@@ -1002,19 +1002,19 @@
     },
     "username": {
       "helperAvailable": "@{{name}} is available",
-      "helperBlocked": "That username is not allowed",
+      "helperBlocked": "That vaquitatag is not allowed",
       "helperChecking": "Checking availability…",
       "helperDefault": "Shown as @{{name}}",
       "helperError": "Could not check availability, try again",
       "helperShort": "At least {{count}} characters",
       "helperTaken": "@{{name}} is already taken",
-      "inputPlaceholder": "username",
-      "label": "Username",
-      "placeholderName": "username",
-      "saveErrorToast": "Could not save username",
-      "savedToast": "Username saved",
-      "subtitle": "This is the name other savers will see. You can change it later in your profile.",
-      "title": "Choose your username"
+      "inputPlaceholder": "vaquitatag",
+      "label": "Vaquitatag",
+      "placeholderName": "vaquitatag",
+      "saveErrorToast": "Could not save vaquitatag",
+      "savedToast": "Vaquitatag saved",
+      "subtitle": "This is your vaquitatag: the name other savers see, and the invite code you share. You can change it later in your profile.",
+      "title": "Choose your vaquitatag"
     }
   },
   "profile": {
@@ -1138,9 +1138,9 @@
       "editAvatarHint": "Choose your hair, clothes, glasses and more.",
       "email": "Email",
       "emailPlaceholder": "you@example.com",
-      "nickname": "Nickname",
-      "nicknameFormatError": "Nicknames must be {{min}}-{{max}} characters: lowercase letters, numbers or underscores.",
-      "nicknamePlaceholder": "nickname",
+      "nickname": "Vaquitatag",
+      "nicknameFormatError": "Your vaquitatag must be {{min}}-{{max}} characters: lowercase letters and numbers.",
+      "nicknamePlaceholder": "vaquitatag",
       "onboardingCompleted": "Onboarding completed",
       "onboardingCompletedDesc": "Mark the initial onboarding flow as done.",
       "preferencesUpdated": "Preferences updated",
@@ -1249,7 +1249,7 @@
       "privacyDescHidden": "Balance hidden on this device.",
       "privacyPolicy": "Privacy policy",
       "profile": "Profile",
-      "profileDesc": "Edit your nickname and avatar.",
+      "profileDesc": "Edit your vaquitatag and avatar.",
       "signOut": "Sign out",
       "signOutConfirmDesc": "Are you sure you want to sign out?",
       "signOutConfirmTitle": "Sign out?",
@@ -1269,6 +1269,7 @@
     }
   },
   "releaseNotes": {
+    "title": "What's new",
     "gotIt": "Got it",
     "openImage": "Open image"
   },
@@ -1576,7 +1577,7 @@
       "follow": "Follow",
       "followedBy": "Followed by",
       "following": "Following",
-      "searchByName": "Search by username",
+      "searchByName": "Search by vaquitatag",
       "shareFollowLink": "Share follow link",
       "suggestedForYou": "Suggested for you",
       "suggestionsTitle": "Friend suggestions",
@@ -1659,13 +1660,13 @@
       "followers_one": "{{count}} follower",
       "followers_other": "{{count}} followers",
       "following": "Following",
-      "idleBody": "Type a username to search.",
+      "idleBody": "Type a vaquitatag to search.",
       "idleTitle": "Find your vaqueros",
-      "noMatchBody": "Double-check the username and try again.",
+      "noMatchBody": "Double-check the vaquitatag and try again.",
       "noMatchTitle": "No vaqueros found",
-      "placeholder": "Type a username",
+      "placeholder": "Type a vaquitatag",
       "searching": "Searching",
-      "title": "Search by username"
+      "title": "Search by vaquitatag"
     },
     "share": {
       "addingFriend": "Adding friend…",
@@ -1798,9 +1799,9 @@
     },
     "editProfile": {
       "guest": "Guest",
-      "nicknameError": "Error on saving nickname",
-      "nicknameLabel": "Nickname",
-      "nicknameSaved": "Nickname saved",
+      "nicknameError": "Error on saving vaquitatag",
+      "nicknameLabel": "Vaquitatag",
+      "nicknameSaved": "Vaquitatag saved",
       "saveChanges": "Save changes",
       "shownAs": "Shown as: @{{name}}",
       "title": "Edit Profile",
@@ -2029,7 +2030,7 @@
       "copyAddressAria": "Copy wallet address",
       "disconnectWallet": "Disconnect wallet",
       "editProfile": "Edit profile",
-      "nicknameLabel": "Nickname",
+      "nicknameLabel": "Vaquitatag",
       "saveChanges": "Save changes",
       "title": "Profile",
       "walletLabel": "Wallet"
@@ -2049,7 +2050,7 @@
       "max": "MAX",
       "insufficient": "Not enough {{symbol}} in your wallet.",
       "destination": "Destination wallet",
-      "destinationPlaceholder": "G… or @username",
+      "destinationPlaceholder": "G… or @vaquitatag",
       "invalidAddress": "That doesn't look like a valid Stellar address.",
       "sameAddress": "You can't send to your own address.",
       "handleNotFound": "We couldn't find that user.",
@@ -2123,14 +2124,25 @@
     "invite": "Invite friends",
     "inviteDesc": "Share your link and see who joined.",
     "description": "Share your link. We keep track of everyone who joins through it.",
-    "shareText": "Save with me on Vaquita and earn rewards. Use my code {{code}}",
+    "shareText": "Save with me on Vaquita and earn rewards. Use my vaquitatag {{code}}",
     "friendsJoined": "Friends joined",
     "friendsSaving": "Friends saving",
-    "yourLink": "Your link",
+    "inviteWithTag": "Invite your friends with your vaquitatag",
+    "shareLink": "Share link",
+    "shareQr": "Share QR",
     "copyLink": "Copy link",
     "copied": "Link copied",
     "pasteHint": "Paste it in your bio, a caption or a DM.",
     "rewardsComing": "Rewards for inviting are coming. We're already counting yours.",
+    "qr": {
+      "title": "Your invite QR",
+      "hint": "Have them scan this with the phone camera. It opens Vaquita with your tag already applied.",
+      "alt": "QR code with your invite link",
+      "unavailable": "We could not draw the code here. Share your link instead.",
+      "save": "Save the QR to my phone",
+      "saved": "Saved",
+      "longPress": "Press and hold the code to save it to your photos."
+    },
     "board": {
       "open": "See the top inviters",
       "title": "Top inviters",
@@ -2153,9 +2165,9 @@
   "withdraw": {
     "addMethod": "Add method",
     "addNickname": {
-      "cta": "Add username",
-      "field": "Username",
-      "placeholder": "username"
+      "cta": "Add vaquitatag",
+      "field": "Vaquitatag",
+      "placeholder": "vaquitatag"
     },
     "addWallet": {
       "addressField": "Address",
@@ -2199,7 +2211,7 @@
         "subtitle": "Withdraw to a crypto wallet"
       },
       "username": {
-        "title": "Username",
+        "title": "Vaquitatag",
         "subtitle": "Send to a Vaquita user"
       }
     },

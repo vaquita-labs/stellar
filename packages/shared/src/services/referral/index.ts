@@ -4,7 +4,6 @@ import { DepositStatus, WithdrawalStatus } from '../../types';
 import { getSupportedTokenIds } from '../wallets/onchainBalances';
 import type {
   ReferralSummaryResponseDTO,
-  ReferralTierDTO,
   ReferrerLeaderboardResponseDTO,
   ReferrerLeaderboardRowDTO,
 } from '../../types';
@@ -12,76 +11,53 @@ import type {
 /**
  * Referral (invite-a-friend) service.
  *
- * The APY boost is not stored — it is derived at read time from how many of a
- * user's referred profiles are currently "active". A referral is active when the
- * referred user has at least one live deposit (confirmed on-chain, not yet
- * withdrawn), mirroring the DEPOSIT_SUCCESS state the deposit service computes.
- * The more active referrals, the higher the tier, and the tier's bonus is added
- * on top of the base APY in the client.
+ * Counts, and nothing else. There used to be an APY-boost tier table and a
+ * total/pending earnings pair here: no rate ever applied the bonus and no
+ * payout ledger was ever built, so all of it resolved to zero on every read.
+ * The invite screen now says rewards are coming instead of rendering a figure
+ * that was never true.
  *
- * Earnings (`total`/`pending`) are honest zeros for now: there is no referral
- * payout ledger yet. They are surfaced as real fields so the payout engine can
- * fill them in without a DTO change.
+ * A referral is ACTIVE when the referred user has at least one live deposit —
+ * confirmed on-chain, not yet withdrawn — or a positive flexible-vault balance.
  */
-
-/** Boost tiers: reach `referrals` active referrals → add `bonus` APY points. */
-export const REFERRAL_TIERS: ReferralTierDTO[] = [
-  { referrals: 1, bonus: 0.25 },
-  { referrals: 3, bonus: 0.5 },
-  { referrals: 5, bonus: 1 },
-  { referrals: 10, bonus: 2 },
-];
-
-/** Highest tier bonus reached for a given active-referral count. */
-export const getReferralBonus = (activeReferrals: number): number =>
-  REFERRAL_TIERS.reduce((bonus, tier) => (activeReferrals >= tier.referrals ? tier.bonus : bonus), 0);
-
-/** Next tier still to reach, or null when already at the top. */
-export const getNextReferralTier = (activeReferrals: number): ReferralTierDTO | null =>
-  REFERRAL_TIERS.find((tier) => activeReferrals < tier.referrals) ?? null;
-
-// Unambiguous alphabet (no 0/O, 1/I) so a spoken/typed code is hard to mistype.
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const CODE_LENGTH = 6;
-
-const randomCode = (): string => {
-  let code = '';
-  for (let i = 0; i < CODE_LENGTH; i++) {
-    code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  }
-  return code;
-};
 
 /**
- * Returns the profile's referral code, minting one on first use. Retries on the
- * (tiny) chance of a unique-index collision. Concurrent first-reads can race; if
- * the update loses to another writer we re-read the now-present code.
+ * The profile's invite code, which since the vaquitatag release IS its tag.
+ *
+ * Nothing is minted here any more. A code used to be six random characters
+ * (`FW6A86`) nobody could say across a table at an event; now it is the handle
+ * the user already has, written by [[setNickname]] alongside the nickname. This
+ * function only repairs drift — a row the migration skipped, or a profile whose
+ * tag was set before the mirror existed — and returns the tag either way.
+ *
+ * A profile with no tag has nothing to hand out: it keeps whatever old random
+ * code it had, and returns the empty string if it never had one. Those profiles
+ * predate the username gate and cannot open the invite screen at all.
  */
-export const ensureReferralCode = async (profile: { id: number; referralCode: string | null }): Promise<string> => {
-  if (profile.referralCode) return profile.referralCode;
+export const ensureReferralCode = async (profile: {
+  id: number;
+  nickname?: string | null;
+  referralCode: string | null;
+}): Promise<string> => {
+  const tag = profile.nickname ?? null;
+  if (!tag) return profile.referralCode ?? '';
+  if (profile.referralCode === tag) return tag;
 
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const code = randomCode();
-    try {
-      const updated = await prisma.profile.update({
-        where: { id: profile.id },
-        data: { referralCode: code },
-        select: { referralCode: true },
-      });
-      return updated.referralCode!;
-    } catch (err) {
-      // P2002 = unique violation. Either the code collided (retry with a new one)
-      // or a concurrent request already assigned this profile a code (re-read).
-      const existing = await prisma.profile.findUnique({
-        where: { id: profile.id },
-        select: { referralCode: true },
-      });
-      if (existing?.referralCode) return existing.referralCode;
-      if (attempt === 4) throw err;
-    }
+  try {
+    const updated = await prisma.profile.update({
+      where: { id: profile.id },
+      data: { referralCode: tag },
+      select: { referralCode: true },
+    });
+    return updated.referralCode ?? tag;
+  } catch (error) {
+    // P2002 = another profile (possibly soft-deleted — that index does not
+    // exclude them) already owns this code. The tag is still the user's, so the
+    // link is broken rather than wrong: report the old code and leave the
+    // collision for a human, instead of failing the read that asked.
+    console.error('Error mirroring referral code onto the tag', error);
+    return profile.referralCode ?? '';
   }
-  // Unreachable: the loop either returns or throws on the last attempt.
-  throw new Error('Could not allocate a referral code');
 };
 
 /**
@@ -146,16 +122,16 @@ const countActiveReferrals = async (referredWallets: string[]): Promise<number> 
   (await findSavingWallets(referredWallets)).size;
 
 /**
- * Full referral summary for a wallet. Upserts the viewer (so a first-time caller
- * still resolves to a row), mints a code if needed, then counts active referrals
- * and derives the APY bonus / next tier from them.
+ * Referral summary for a wallet. Upserts the viewer (so a first-time caller
+ * still resolves to a row), resolves the invite code — which is the viewer's
+ * vaquitatag — and counts referrals, joined and saving.
  */
 export const getReferralSummary = async (walletAddress: string): Promise<ReferralSummaryResponseDTO> => {
   const viewer = await prisma.profile.upsert({
     where: { walletAddress },
     update: {},
     create: { walletAddress },
-    select: { id: true, referralCode: true },
+    select: { id: true, nickname: true, referralCode: true },
   });
 
   const code = await ensureReferralCode(viewer);
@@ -167,20 +143,11 @@ export const getReferralSummary = async (walletAddress: string): Promise<Referra
   });
   const activeReferrals = await countActiveReferrals(referred.map((r) => r.walletAddress));
 
-  const apyBonus = getReferralBonus(activeReferrals);
-  const nextTier = getNextReferralTier(activeReferrals);
-
   return {
     walletAddress,
     code,
     referrals: referred.length,
     activeReferrals,
-    apyBonus,
-    // No payout ledger yet — surfaced as real fields, filled by the payout engine.
-    totalEarnings: 0,
-    pendingEarnings: 0,
-    nextTier,
-    tiers: REFERRAL_TIERS,
   };
 };
 
@@ -197,7 +164,10 @@ export const redeemReferralCode = async (
   walletAddress: string,
   rawCode: string,
 ): Promise<RedeemReferralResult> => {
-  const code = rawCode.trim().toUpperCase();
+  // Lowercased, because the code is a vaquitatag and tags are stored lowercase.
+  // The lookup is insensitive anyway — old random codes were uppercase and
+  // those links still work — so this only decides what gets logged.
+  const code = rawCode.trim().toLowerCase();
   if (!code) return { success: false, errorMessage: 'A referral code is required.' };
 
   const viewer = await prisma.profile.upsert({
@@ -211,8 +181,11 @@ export const redeemReferralCode = async (
     return { success: false, errorMessage: 'This account already used a referral code.' };
   }
 
-  const referrer = await prisma.profile.findUnique({
-    where: { referralCode: code },
+  // `findFirst`, not `findUnique`: the column is unique but Prisma cannot ask
+  // for an insensitive match on a unique lookup, and the two eras of codes are
+  // stored in different cases.
+  const referrer = await prisma.profile.findFirst({
+    where: { referralCode: { equals: code, mode: 'insensitive' } },
     select: { id: true, walletAddress: true, deletedAt: true },
   });
 

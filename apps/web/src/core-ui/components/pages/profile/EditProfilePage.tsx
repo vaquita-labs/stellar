@@ -7,10 +7,10 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight, FiSave } from 'react-icons/fi';
 import {
-  NICKNAME_MAX_LENGTH,
   NICKNAME_MIN_LENGTH,
-  isNicknameFormatValid,
-  sanitizeNickname,
+  NICKNAME_NEW_MAX_LENGTH,
+  isNewNicknameFormatValid,
+  sanitizeNewNickname,
 } from '../../../helpers';
 import { useProfileData, useRestProfile } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
@@ -97,13 +97,12 @@ export function EditProfilePage({ onBack }: { onBack?: () => void } = {}) {
 
     // The input sanitizer guarantees the charset, but not the length — catch a
     // too-short nickname here instead of spending a round-trip on it.
-    if (payload.nickname !== undefined && !isNicknameFormatValid(payload.nickname)) {
+    if (payload.nickname !== undefined && !isNewNicknameFormatValid(payload.nickname)) {
       setNicknameError(
         t('profilePages.edit.nicknameFormatError', {
-          defaultValue:
-            'Nicknames must be {{min}}-{{max}} characters: lowercase letters, numbers or underscores.',
+          defaultValue: 'Your vaquitatag must be {{min}}-{{max}} characters: lowercase letters and numbers.',
           min: NICKNAME_MIN_LENGTH,
-          max: NICKNAME_MAX_LENGTH,
+          max: NICKNAME_NEW_MAX_LENGTH,
         }),
       );
       return;
@@ -191,12 +190,13 @@ export function EditProfilePage({ onBack }: { onBack?: () => void } = {}) {
               placeholder={t('profilePages.edit.nicknamePlaceholder', '@nickname')}
               value={nickname}
               onChange={(e) => {
-                // Only URL-safe lowercase survives typing: a-z, 0-9 and _. Pasting
+                // Only URL-safe lowercase survives typing: a-z and 0-9. Pasting
                 // "@juan" leaves "juan"; the API re-validates on save anyway.
-                setNickname(sanitizeNickname(e.target.value));
+                // The NEW bound, 15, because this is a write.
+                setNickname(sanitizeNewNickname(e.target.value));
                 if (nicknameError) setNicknameError('');
               }}
-              maxLength={NICKNAME_MAX_LENGTH}
+              maxLength={NICKNAME_NEW_MAX_LENGTH}
               disabled={!walletAddress || isLoading}
               aria-invalid={!!nicknameError}
               className={`w-full bg-white border border-b-2 h-12 px-3 text-black font-medium rounded-md outline-none disabled:opacity-50 ${
