@@ -13,7 +13,7 @@ export default function UsernamePage() {
   const { t } = useTranslation();
   const params = useParams();
   // useParams keeps the raw (percent-encoded) segment; decode so legacy
-  // nicknames with non-URL-safe chars still resolve. Valid vaquitatags
+  // nicknames with non-URL-safe chars still resolve. Valid vaquitags
   // ([a-z0-9]) decode to themselves.
   const rawParam = params.username as string;
   const username = React.useMemo(() => {

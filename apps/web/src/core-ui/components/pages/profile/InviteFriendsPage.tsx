@@ -47,7 +47,7 @@ const CHANNELS: ChannelButton[] = [
  * we do not pay out yet would read as a promise. The closing line says rewards
  * are coming, which is the honest version.
  *
- * The invite code IS the vaquitatag, so the card leads with the tag rather than
+ * The invite code IS the vaquitag, so the card leads with the tag rather than
  * with the URL: it is what someone reads out at an event, and it is what they
  * still have when the link is gone.
  *
@@ -161,7 +161,7 @@ export function InviteFriendsPage({ onBack }: { onBack?: () => void } = {}) {
           and the URL is only how a phone gets there. Tapping the tag copies the
           link, same as the button — the whole block is one target. --- */}
       <section className="flex flex-col gap-3 rounded-md border border-black border-b-2 bg-[#6E56CF] px-4 py-4 text-white">
-        <h2 className="text-sm font-bold">{t('referrals.inviteWithTag', 'Invite your friends with your vaquitatag')}</h2>
+        <h2 className="text-sm font-bold">{t('referrals.inviteWithTag', 'Invite your friends with your vaquitag')}</h2>
 
         <button
           type="button"

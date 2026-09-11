@@ -146,7 +146,7 @@ export const resolveAttribution = async (
   if (blob.code) {
     // Case-insensitive: the link carries whatever the sharer typed, and the two
     // namespaces this falls through are stored in different cases — campaign
-    // codes uppercased on create, vaquitatags always lowercase.
+    // codes uppercased on create, vaquitags always lowercase.
     const campaign = await prisma.campaign.findFirst({
       where: { code: { equals: blob.code, mode: 'insensitive' }, deletedAt: null, isActive: true },
       select: { id: true, code: true },
@@ -183,7 +183,7 @@ export const listCampaigns = async (): Promise<Campaign[]> =>
 
 /**
  * True when `code` is already taken — by a live campaign or by a user's
- * vaquitatag. The second half is the one that matters: the two namespaces share
+ * vaquitag. The second half is the one that matters: the two namespaces share
  * a resolution path, so a collision would silently redirect someone's personal
  * invites into a campaign bucket.
  *

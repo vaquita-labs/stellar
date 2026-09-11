@@ -1,4 +1,4 @@
-// Vaquitatag rules, mirrored from the API (apps/api/src/lib/nicknamePolicy.ts).
+// Vaquitag rules, mirrored from the API (apps/api/src/lib/nicknamePolicy.ts).
 // The tag doubles as the public profile URL segment (/leaderboard/<tag> and
 // /explore/<tag>) and as the invite code, so the charset is restricted to
 // URL-safe lowercase letters and digits. No '@', no underscore, no spaces, no
@@ -64,7 +64,7 @@ export function isNewNicknameFormatValid(nickname: string): boolean {
 /**
  * Lleva lo que el usuario escribió al segmento que la API espera en
  * `/profile/nickname/:nickname`. El `@` es una convención nuestra de la UI: en
- * un vaquitatag no es un carácter legal (`NICKNAME_FORMAT_REGEX`), así que
+ * un vaquitag no es un carácter legal (`NICKNAME_FORMAT_REGEX`), así que
  * mandarlo tal cual da 404.
  */
 export function nicknameSegment(input: string): string {

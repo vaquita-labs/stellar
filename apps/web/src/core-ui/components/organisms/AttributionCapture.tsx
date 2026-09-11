@@ -56,7 +56,7 @@ export function AttributionCapture() {
     const params = new URLSearchParams(window.location.search);
     const blob: AttributionBlob = {};
 
-    // En minúsculas: el código es un vaquitatag y los tags se guardan así. La
+    // En minúsculas: el código es un vaquitag y los tags se guardan así. La
     // resolución en el servidor no distingue mayúsculas —los códigos viejos,
     // aleatorios, eran en mayúsculas y esos links siguen andando—, así que esto
     // sólo decide cómo queda guardado el blob.

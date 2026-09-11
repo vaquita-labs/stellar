@@ -244,7 +244,7 @@ export async function completeUsernamePromptIfShown(page: Page, handle = uniqueH
 
 /**
  * `[a-z0-9]`, unique per run, within the 3-15 character window the API accepts
- * for a new vaquitatag. The underscore that used to prefix these is no longer a
+ * for a new vaquitag. The underscore that used to prefix these is no longer a
  * legal character, and the cap dropped from 32 to 15.
  */
 export function uniqueHandle(): string {

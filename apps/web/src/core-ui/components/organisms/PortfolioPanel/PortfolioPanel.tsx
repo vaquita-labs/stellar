@@ -37,11 +37,11 @@ interface PortfolioRow {
   lockPeriod?: number;
   label: string;
   amount: number;
-  /** Solo filas 'blend': el APY real del vault (líquido). Los locks no muestran %. */
+  /** Filas 'blend': el APY real del vault (líquido). En los locks, tasa + premios. */
   apy: number;
-  /** Solo filas 'lock': premios del pool + capital depositado (en vez del %). */
+  /** Solo filas 'lock': el pozo de premios del plazo y la tasa del vault. */
   rewardPool?: number;
-  totalDeposits?: number;
+  protocolApy?: number;
   style: AllocationStyle;
 }
 
@@ -195,7 +195,7 @@ export function PortfolioPanel({
       amount: a.amount,
       apy: a.apy,
       rewardPool: a.rewardPool,
-      totalDeposits: a.totalDeposits,
+      protocolApy: a.protocolApy,
       style: getAllocationStyle(i),
     }));
     return [blendRow, ...lockRows];
@@ -329,7 +329,7 @@ export function PortfolioPanel({
                       {row.kind === 'lock' ? (
                         <PoolMeta
                           rewardPool={row.rewardPool ?? 0}
-                          totalDeposits={row.totalDeposits ?? 0}
+                          apy={row.protocolApy ?? 0}
                           className="text-xs text-gray-500"
                         />
                       ) : (

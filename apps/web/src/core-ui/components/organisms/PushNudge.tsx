@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiBell } from 'react-icons/fi';
 import { useProfileData, usePushNotifications } from '../../hooks';
+import { installPlatform } from '../../hooks/useInstallApp';
 import { useModalQueueStore } from '../../stores';
 import { Button } from '../atoms';
 import { AppModal } from '../molecules';
@@ -49,10 +50,27 @@ const getServerSnapshot = () => false;
  * service worker, `PushManager`, `Notification` and a VAPID key, so an iOS
  * Safari tab (where web push simply does not exist) drops out on its own, while
  * an Android or desktop tab — which can receive push without installing
- * anything — is now asked instead of being skipped. On iOS the ask still lands
- * on the first launch from the home screen, which there is the only place web
- * push exists at all. The "Turn on" button is the user gesture
- * `Notification.requestPermission()` requires.
+ * anything — is asked too. On iOS the ask still lands on the first launch from
+ * the home screen, which there is the only place web push exists at all.
+ *
+ * Two ways of asking, and the platform decides which:
+ *
+ * - **Not iOS.** No sheet at all. An effect calls `enablePush()` on mount and
+ *   the browser draws its own permission dialog. A sheet asking permission to
+ *   ask permission is one dialog too many where the OS dialog opens by itself.
+ * - **iOS.** The sheet stays. Safari opens its dialog only from a real tap, so
+ *   with no button there is no tap and the channel is lost outright.
+ * - **The browsers that refuse quietly.** Firefox and desktop Safari also
+ *   demand a gesture and reject the call; `enablePush` catches that and returns
+ *   `'error'`. So the direct path renders the sheet after all when the result
+ *   is `'error'` AND the permission is still `default`. A dismissed Chrome
+ *   dialog also leaves `default`, which is why the test is the returned
+ *   `'error'` and not the permission alone.
+ *
+ * The trade is deliberate: the sheet was a warm-up that kept a "no" from being
+ * spent cheaply (the OS dialog is answered once, and on iOS a refusal is
+ * permanent). Asking cold converts more of the people who would have said yes
+ * now, and burns more of the ones who would have said yes later.
  *
  * It re-arms on every app launch, at most once a day: one dismissal on the day
  * someone installed the app should not cost the channel forever.
@@ -80,31 +98,59 @@ export function PushNudge() {
   const allowed = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const [enabling, setEnabling] = useState(false);
+  // The direct ask never reached the OS dialog (a browser that wants a gesture).
+  // Independent of `allowed`, which the direct attempt has already spent.
+  const [gestureNeeded, setGestureNeeded] = useState(false);
+  // One attempt per mount, and one in React's development double-effect.
+  const asked = useRef(false);
+
+  // Read during render on purpose: it is pure, and it is `'other'` on the
+  // server, where nothing opens anyway (`allowed` is the server snapshot).
+  const isIos = installPlatform() === 'ios';
 
   // Same read as <PushSubscriptionSync>: only an explicit `false` opts out.
   const pushPreferred = data?.notificationPreferences?.push !== false;
 
   /**
-   * Releases the queue turn `HomePage` took on this component's behalf.
+   * The queue turn `HomePage` took on this component's behalf, plus the direct
+   * ask on the platforms that take one.
    *
-   * Deliberately NOT derived from `open`. `allowed` arrives through
+   * The turn is deliberately NOT released from `open`. `allowed` arrives through
    * `useSyncExternalStore`, and on the first mount its value is still the server
    * snapshot (`false`) while effects flush — so an `if (!open)` here would hand
-   * the turn to the release notes one tick before this sheet opens on top of
+   * the turn to the release notes one tick before the sheet opens on top of
    * them. `canAskNow()` answers the same question with no subscription lag, and
    * an effect is a legal place to read storage.
+   *
+   * Off iOS the turn is released immediately even though the ask is in flight:
+   * the OS dialog is drawn by the browser, above the page, so nothing in-app can
+   * cover it and nothing is gained by holding the others back. On iOS the sheet
+   * is an ordinary in-app modal and keeps the turn until it is answered.
    */
   useEffect(() => {
     if (!supported || permission !== 'default' || !pushPreferred || !canAskNow()) {
       setPushNudgeSettled(true);
+      return;
     }
-  }, [supported, permission, pushPreferred, setPushNudgeSettled]);
+    if (isIos) return;
+
+    setPushNudgeSettled(true);
+    if (asked.current) return;
+    asked.current = true;
+    // Marked before the dialog resolves, not after: a navigation away while it
+    // is open must not spend a second ask on the way back.
+    askedNow();
+    void enablePush().then((result) => {
+      if (result === 'error' && Notification.permission === 'default') setGestureNeeded(true);
+    });
+  }, [supported, permission, pushPreferred, isIos, enablePush, setPushNudgeSettled]);
 
   // The three exits the user can take — turned on, "maybe later", dismissed —
   // all end here: the browser prompt has had its chance, and whatever queued
   // behind the sheet may now open.
   const settle = () => {
     askedNow();
+    setGestureNeeded(false);
     setPushNudgeSettled(true);
   };
 
@@ -121,7 +167,11 @@ export function PushNudge() {
     }
   };
 
-  const open = supported && permission === 'default' && pushPreferred && allowed;
+  const eligible = supported && permission === 'default' && pushPreferred;
+  // `allowed` gates the iOS sheet, which has not asked yet. The fallback sheet
+  // is gated on `gestureNeeded` alone, because the attempt that raised it has
+  // already consumed the day's ask.
+  const open = eligible && (gestureNeeded || (isIos && allowed));
   if (!open) return null;
 
   return (

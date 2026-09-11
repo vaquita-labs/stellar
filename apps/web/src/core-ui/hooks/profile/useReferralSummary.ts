@@ -17,7 +17,7 @@ import { useQuery } from '@tanstack/react-query';
  * promised something the product does not honour.
  */
 export interface ReferralSummary {
-  /** The vaquitatag this wallet shares. It is the invite code. */
+  /** The vaquitag this wallet shares. It is the invite code. */
   code: string;
   /** Friends who signed up through this code. */
   referrals: number;

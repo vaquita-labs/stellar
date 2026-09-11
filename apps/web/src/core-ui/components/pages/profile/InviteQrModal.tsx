@@ -11,7 +11,7 @@ import { PressableButton } from '../../molecules/PressableButton';
 interface InviteQrModalProps {
   open: boolean;
   onClose: () => void;
-  /** The vaquitatag, printed under the code so it can be typed instead of scanned. */
+  /** The vaquitag, printed under the code so it can be typed instead of scanned. */
   tag: string;
   /** What the code encodes. Already stamped with `utm_source=qr`. */
   url: string;

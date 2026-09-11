@@ -50,9 +50,10 @@ export function HomePage() {
 
   // El pedido de permiso de notificaciones es el primero de la cola y su turno
   // se toma antes que los otros tres. Va adelante aunque no sea la decisión más
-  // grande porque es el único pedido que VENCE: el prompt nativo necesita un
-  // gesto del usuario y el sistema operativo lo ofrece una sola vez, así que
-  // taparlo no lo posterga, lo pierde. Quien lo LIBERA es `PushNudge`.
+  // grande porque es el único pedido que VENCE: el sistema operativo lo ofrece
+  // una sola vez, así que taparlo no lo posterga, lo pierde. Quien lo LIBERA es
+  // `PushNudge`, y fuera de iOS lo libera enseguida: ahí el diálogo lo dibuja el
+  // navegador por encima de la página y no hay nada que la app pueda tapar.
   const setPushNudgeSettled = useModalQueueStore((s) => s.setPushNudgeSettled);
   useEffect(() => {
     setPushNudgeSettled(false);
