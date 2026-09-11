@@ -1,7 +1,13 @@
+import { resolveAvatarConfig } from '@vaquita/avatar';
 import { prisma } from '@vaquita/db';
 import { DepositStatus, WithdrawalStatus } from '../../types';
 import { getSupportedTokenIds } from '../wallets/onchainBalances';
-import type { ReferralSummaryResponseDTO, ReferralTierDTO } from '../../types';
+import type {
+  ReferralSummaryResponseDTO,
+  ReferralTierDTO,
+  ReferrerLeaderboardResponseDTO,
+  ReferrerLeaderboardRowDTO,
+} from '../../types';
 
 /**
  * Referral (invite-a-friend) service.
@@ -78,9 +84,15 @@ export const ensureReferralCode = async (profile: { id: number; referralCode: st
   throw new Error('Could not allocate a referral code');
 };
 
-/** How many of these referred profiles are currently saving, in either product. */
-const countActiveReferrals = async (referredWallets: string[]): Promise<number> => {
-  if (referredWallets.length === 0) return 0;
+/**
+ * Which of these wallets are currently saving, in either product.
+ *
+ * Returns the set rather than a count because the leaderboard needs the answer
+ * for every referrer at once: two queries over every referred wallet, then an
+ * intersection per referrer, instead of two queries per row.
+ */
+const findSavingWallets = async (referredWallets: string[]): Promise<Set<string>> => {
+  if (referredWallets.length === 0) return new Set();
 
   // Two products, one question. A wallet counts once if it holds money in
   // either: a locked deposit confirmed on-chain with no confirmed withdrawal
@@ -126,8 +138,12 @@ const countActiveReferrals = async (referredWallets: string[]): Promise<number> 
 
   const saving = new Set(locked.map((row) => row.walletAddress));
   for (const row of vault) saving.add(row.walletAddress);
-  return saving.size;
+  return saving;
 };
+
+/** How many of these referred profiles are currently saving, in either product. */
+const countActiveReferrals = async (referredWallets: string[]): Promise<number> =>
+  (await findSavingWallets(referredWallets)).size;
 
 /**
  * Full referral summary for a wallet. Upserts the viewer (so a first-time caller
@@ -213,4 +229,133 @@ export const redeemReferralCode = async (
   });
 
   return { success: true, referrerWallet: referrer.walletAddress };
+};
+
+// ---------------------------------------------------------------------------
+// Referrer leaderboard
+// ---------------------------------------------------------------------------
+
+/** How many rows the board shows. The viewer's own row is pinned beneath it. */
+export const REFERRER_BOARD_SIZE = 30;
+
+/**
+ * How long a computed board stays fresh. It is identical for every viewer — the
+ * only per-viewer part is which row is theirs — so one computation serves every
+ * request in the window. Mirrors the enriched leaderboard's cache, for the same
+ * reason: the build is several table scans and the numbers move in days.
+ */
+const REFERRER_BOARD_TTL_MS = 30_000;
+
+/** The whole ranking, viewer-independent. `isCurrentUser` is filled in per request. */
+type RankedReferrer = Omit<ReferrerLeaderboardRowDTO, 'isCurrentUser'>;
+
+/**
+ * Rank every referrer by friends joined, with friends saving beside it.
+ *
+ * Joined is the ranking key on purpose: "saving" partly reads the lazily
+ * refreshed `wallet_balances` snapshot, so ranking on it would move people up
+ * and down for reasons they did not cause.
+ *
+ * Three shapes worth noting:
+ *
+ * - **One query for the edges, one for the referrers.** The attribution rows
+ *   carry both the count and the wallets each referrer brought, so grouping them
+ *   in memory costs nothing and saves a `groupBy` plus a second read.
+ * - **Nickname-less profiles are dropped before positions are assigned**, the
+ *   same rule as `enrichLeaderboardRows`. Filtering afterwards leaves holes in
+ *   the ranks and the board reads as broken. It also means a referrer who never
+ *   picked a nickname has no public row — there is no name to show.
+ * - **Saving is resolved once for every referred wallet on the board**, then
+ *   intersected per referrer. `findSavingWallets` is the single definition of
+ *   saving that the invite screen already uses; calling it per referrer would be
+ *   two queries per row.
+ */
+const buildReferrerBoard = async (): Promise<RankedReferrer[]> => {
+  const edges = await prisma.profile.findMany({
+    where: { referredById: { not: null }, deletedAt: null },
+    select: { walletAddress: true, referredById: true },
+  });
+  if (edges.length === 0) return [];
+
+  const referredByReferrer = new Map<number, string[]>();
+  for (const edge of edges) {
+    const referrerId = edge.referredById!;
+    const wallets = referredByReferrer.get(referrerId);
+    if (wallets) wallets.push(edge.walletAddress);
+    else referredByReferrer.set(referrerId, [edge.walletAddress]);
+  }
+
+  const referrers = await prisma.profile.findMany({
+    where: { id: { in: [...referredByReferrer.keys()] }, deletedAt: null },
+    select: { id: true, walletAddress: true, nickname: true, avatarConfig: true },
+  });
+
+  const ranked = referrers.filter((referrer) => !!referrer.nickname?.trim());
+  const savingWallets = await findSavingWallets(ranked.flatMap((r) => referredByReferrer.get(r.id) ?? []));
+
+  return ranked
+    .map((referrer) => {
+      const referred = referredByReferrer.get(referrer.id) ?? [];
+      return {
+        walletAddress: referrer.walletAddress,
+        nickname: referrer.nickname!.trim(),
+        avatarConfig: resolveAvatarConfig(referrer.avatarConfig, referrer.walletAddress),
+        referrals: referred.length,
+        activeReferrals: referred.filter((wallet) => savingWallets.has(wallet)).length,
+      };
+    })
+    // Saving breaks a tie on joined, and the nickname breaks a tie on both, so
+    // two referrers with identical counts keep a stable order between requests.
+    .sort(
+      (a, b) =>
+        b.referrals - a.referrals ||
+        b.activeReferrals - a.activeReferrals ||
+        a.nickname.localeCompare(b.nickname),
+    )
+    .map((row, index) => ({ position: index + 1, ...row }));
+};
+
+let boardCache: { at: number; promise: Promise<RankedReferrer[]> } | null = null;
+
+/**
+ * Cached accessor for the ranking. Caches the promise, not the value, so
+ * concurrent requests during a rebuild share one in-flight computation instead
+ * of stampeding the database; a failed build evicts itself so the next request
+ * retries.
+ */
+const getRankedReferrers = async (ttlMs: number = REFERRER_BOARD_TTL_MS): Promise<RankedReferrer[]> => {
+  const now = Date.now();
+  if (boardCache && now - boardCache.at < ttlMs) return boardCache.promise;
+
+  const promise = buildReferrerBoard();
+  promise.catch(() => {
+    if (boardCache?.promise === promise) boardCache = null;
+  });
+  boardCache = { at: now, promise };
+  return promise;
+};
+
+/** Test hook: drop the cached ranking. */
+export const clearReferrerBoardCache = (): void => {
+  boardCache = null;
+};
+
+/**
+ * The referrer board as one viewer sees it: the top slice, plus their own row
+ * whether or not it is in that slice. A viewer who referred nobody, or who has
+ * no nickname, gets `me: null` — the screen says so rather than inventing a row.
+ */
+export const getReferrerLeaderboard = async (
+  viewerWallet: string,
+): Promise<ReferrerLeaderboardResponseDTO> => {
+  const ranked = await getRankedReferrers();
+  const isViewer = (row: RankedReferrer) => row.walletAddress.toLowerCase() === viewerWallet.toLowerCase();
+  const withViewer = (row: RankedReferrer): ReferrerLeaderboardRowDTO => ({ ...row, isCurrentUser: isViewer(row) });
+
+  const own = ranked.find(isViewer);
+  return {
+    rows: ranked.slice(0, REFERRER_BOARD_SIZE).map(withViewer),
+    me: own ? withViewer(own) : null,
+    total: ranked.length,
+  };
 };

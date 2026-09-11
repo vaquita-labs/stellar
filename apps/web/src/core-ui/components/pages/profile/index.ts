@@ -13,6 +13,7 @@ export * from './NotificationsPage';
 export * from './PersonalRecords';
 export * from './PreferencesPage';
 export * from './PrivacySettingsPage';
+export * from './ReferrerLeaderboardPage';
 export * from './SearchFriendsPage';
 export * from './SettingsPage';
 export * from './SettingsModal';
