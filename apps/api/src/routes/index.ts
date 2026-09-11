@@ -25,6 +25,7 @@ import releaseNoteRoutes from './release-notes/route';
 import timeRoutes from './time/route';
 import userRoutes from './user/route';
 import vaultFlowRoutes from './vault-flows/route';
+import walletTransferRoutes from './wallet-transfers/route';
 import walletBalanceRoutes from './wallets/balances.route';
 import savedBankRoutes from './wallets/savedBanks.route';
 import savedWalletRoutes from './wallets/saved.route';
@@ -70,5 +71,6 @@ router.use('/referrals', referralRoutes);
 router.use('/time', timeRoutes);
 router.use('/user', userRoutes);
 router.use('/vault-flows', vaultFlowRoutes);
+router.use('/wallet-transfers', walletTransferRoutes);
 
 export default router;

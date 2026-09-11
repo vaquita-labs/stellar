@@ -3,6 +3,7 @@
 import { useRampCountries } from '@/networks/pollar/rampCountries';
 import type { CorridorCode } from '@/networks/pollar/ramps';
 import { isStellarNetwork } from '@/networks/stellar';
+import { recordWalletTransferInBackground } from '@/networks/pollar/walletTransfersApi';
 import { awaitUsdcCredit, readUsdcBalance, resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
 import { formatBaseUnits } from '@/networks/stellar/vaultQueries';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
@@ -285,10 +286,20 @@ export function DepositPanel() {
 
             try {
               onProgress('sending');
-              await sponsoredUsdcPayment({
+              const payment = await sponsoredUsdcPayment({
                 to: wallet.address,
                 amount: toSend,
                 memo: resolveMemo(wallet.memo) ?? undefined,
+              });
+              // El salto 1 ya dejo su registro de ahorro (`external_out`); este
+              // es el del salto 2, que hasta ahora no anotaba nada. Son dos
+              // cruces distintos de la misma plata y las metricas los cuentan
+              // por separado a proposito. Nunca se espera.
+              recordWalletTransferInBackground(walletAddress, {
+                amount: toSend,
+                destinationAddress: wallet.address,
+                transactionHash: payment.hash,
+                tokenSymbol: token.symbol,
               });
             } catch (e) {
               // El salto 1 ya movió la plata: decir "el retiro falló" a secas
