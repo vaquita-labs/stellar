@@ -23,6 +23,7 @@ interface PortfolioFlowProps {
  *
  *   /portafolio            → <PortfolioPanel>  (panel: balance + allocation)
  *   /portafolio?period=X   → <PortfolioPage>   (posiciones del plazo, apiladas)
+ *   /portafolio?period=all → <PortfolioPage>   (todas las posiciones)
  *
  * Ambas hojas viven en la MISMA ruta interceptada (`@modal/(.)portafolio`), así
  * que pasar de una a otra solo cambia el query `?period` y el componente NO se

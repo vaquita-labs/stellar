@@ -2284,12 +2284,10 @@
       "clearAll": "Limpiar todo",
       "apply": "Aplicar",
       "kinds": {
-        "all": "Todas las transacciones",
         "deposit": "Depósitos",
         "withdraw": "Retiros"
       },
       "statuses": {
-        "all": "Todos los estados",
         "completed": "Completadas",
         "pending": "Pendientes",
         "failed": "Fallidas"

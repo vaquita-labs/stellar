@@ -1,44 +1,23 @@
 'use client';
 
 import { Button } from '@/core-ui/components/atoms';
-import { AppModal, DateField, DatePickerSheet, startOfDay } from '@/core-ui/components/molecules';
+import { AppModal, DateField, DatePickerSheet, FilterCheckRow, startOfDay, toggleValue } from '@/core-ui/components/molecules';
 import {
-  EMPTY_TRANSACTION_FILTERS,
+  DEFAULT_TRANSACTION_FILTERS,
+  TRANSACTION_KINDS,
+  TRANSACTION_STATUSES,
   TransactionFilters,
-  TransactionKindFilter,
-  TransactionStatusFilter,
 } from '@/core-ui/helpers/transactions';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-function OptionRow({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onPress}
-      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#FFF7E6]"
-    >
-      <span className="text-sm font-semibold text-black">{label}</span>
-      <span
-        className={
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-black ' +
-          (selected ? 'bg-primary' : 'bg-white')
-        }
-      >
-        {selected && <span className="h-2 w-2 rounded-full bg-black" />}
-      </span>
-    </button>
-  );
-}
-
-const KINDS: TransactionKindFilter[] = ['all', 'deposit', 'withdraw'];
-const STATUSES: TransactionStatusFilter[] = ['all', 'completed', 'pending', 'failed'];
-
 /**
  * Filtros del historial: rango de fechas + tipo + estado, a pantalla completa.
- * El selector de fecha es una hoja DENTRO del mismo diálogo (prop `overlay` de
- * AppModal, ver DatePickerSheet): así los filtros siguen visibles detrás en vez
- * de desaparecer, y no se apilan dos overlays de React Aria.
+ * Tipo y estado son checkboxes: arrancan todos marcados y "Limpiar todo" vuelve
+ * a ese default, o sea a ver todo. El selector de fecha es una hoja DENTRO del
+ * mismo diálogo (prop `overlay` de AppModal, ver DatePickerSheet): así los
+ * filtros siguen visibles detrás en vez de desaparecer, y no se apilan dos
+ * overlays de React Aria.
  */
 export function TransactionFiltersModal({
   open,
@@ -95,7 +74,7 @@ export function TransactionFiltersModal({
       fullScreen
       footer={
         <div className="flex gap-2 w-full">
-          <Button variant="white" className="flex-1" onPress={() => setDraft(EMPTY_TRANSACTION_FILTERS)}>
+          <Button variant="white" className="flex-1" onPress={() => setDraft(DEFAULT_TRANSACTION_FILTERS)}>
             {t('transactions.filters.clearAll', 'Clear all')}
           </Button>
           <Button
@@ -142,12 +121,12 @@ export function TransactionFiltersModal({
             {t('transactions.filters.type', 'Transaction type')}
           </h3>
           <div className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-black border-b-2 bg-white">
-            {KINDS.map((kind) => (
-              <OptionRow
+            {TRANSACTION_KINDS.map((kind) => (
+              <FilterCheckRow
                 key={kind}
                 label={t(`transactions.filters.kinds.${kind}`)}
-                selected={draft.kind === kind}
-                onPress={() => setDraft((prev) => ({ ...prev, kind }))}
+                checked={draft.kinds.includes(kind)}
+                onToggle={() => setDraft((prev) => ({ ...prev, kinds: toggleValue(prev.kinds, kind) }))}
               />
             ))}
           </div>
@@ -158,12 +137,12 @@ export function TransactionFiltersModal({
             {t('transactions.filters.status', 'Status')}
           </h3>
           <div className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-black border-b-2 bg-white">
-            {STATUSES.map((status) => (
-              <OptionRow
+            {TRANSACTION_STATUSES.map((status) => (
+              <FilterCheckRow
                 key={status}
                 label={t(`transactions.filters.statuses.${status}`)}
-                selected={draft.status === status}
-                onPress={() => setDraft((prev) => ({ ...prev, status }))}
+                checked={draft.statuses.includes(status)}
+                onToggle={() => setDraft((prev) => ({ ...prev, statuses: toggleValue(prev.statuses, status) }))}
               />
             ))}
           </div>

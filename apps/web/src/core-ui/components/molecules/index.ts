@@ -21,3 +21,4 @@ export * from './PageLayout';
 export * from './useSlidePage';
 export * from './TransactionRow';
 export * from './LoadMoreSentinel';
+export * from './FilterControls';
