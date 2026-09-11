@@ -175,6 +175,51 @@ model VaultFlow {
   @@map("vault_flows")
 }
 
+/// Ledger of USDC leaving a wallet by payment: peer-to-peer sends and sends to
+/// an outside address. The same send sheet does both, and neither wrote a row
+/// before this table, so the two movements the product talks about most were the
+/// two the dashboard could not see. It is also why a withdrawal to an external
+/// address looked like it stopped in the wallet: hop 1 writes a vault
+/// `external_out`, hop 2 paid it onward and recorded nothing.
+///
+/// **The client is the writer**, with the same accepted cost as [VaultFlow]: a
+/// dropped write is silent and permanent, and `transaction_hash` is unique so a
+/// retry is free. Not backfillable.
+///
+/// `destination_kind`: vaquita_user | external.
+///
+/// Stored at insert, never derived at read time. "Was this a payment to a
+/// Vaquita user" has to mean *at the time it happened* — profiles are deleted,
+/// wallets rotate, and an address nobody owns today may belong to a profile next
+/// week. The column also decides which total the row counts against, money
+/// changing hands inside the app or money leaving it, so a value that drifts
+/// moves historical volume between two figures.
+model WalletTransfer {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// The sender. Always the session's wallet, never a body field.
+  walletAddress        String    @map("wallet_address") @db.VarChar(100)
+  /// Plain scalar, no FK — relations are app-layer in this schema.
+  tokenId              Int       @map("token_id")
+  /// Human units (USDC), like `vault_flows.amount`. Summed by the dashboard.
+  amount               Decimal   @db.Decimal
+  /// The resolved G… address. An @username is resolved before sending, so a
+  /// handle is never stored: handles are renameable, addresses are not.
+  destinationAddress   String    @map("destination_address") @db.VarChar(100)
+  destinationKind      String    @map("destination_kind") @db.VarChar(16)
+  /// Set only when the address resolved to a profile.
+  destinationProfileId Int?      @map("destination_profile_id")
+  transactionHash      String    @map("transaction_hash") @db.VarChar(100)
+  confirmedAt          DateTime  @map("confirmed_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([transactionHash], map: "wallet_transfers_transaction_hash_unique")
+  @@index([walletAddress], map: "idx_wallet_transfers_wallet_address")
+  @@index([confirmedAt], map: "idx_wallet_transfers_confirmed_at")
+  @@map("wallet_transfers")
+}
+
 /// Compra de USDC con moneda local (on-ramp). Existe por una sola razón: la API
 /// de ramps no tiene endpoint de listado, así que el `providerTxId` que devuelve
 /// la creación es el ÚNICO handle sobre una compra en curso. Perderlo deja al

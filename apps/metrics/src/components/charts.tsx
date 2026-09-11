@@ -19,7 +19,30 @@ import {
 
 export const SERIES = ['#d9712b', '#2f6fed', '#1f9d6b', '#8b5cf6'] as const;
 
-export type SeriesDef = { key: string; label: string; kind?: 'count' | 'usd' | 'pct' };
+/**
+ * Growth that someone brought in draws blue; growth that arrived on its own
+ * draws orange. A campaign signup and a referred signup are the same idea
+ * wearing two hats, so they must not be two colors — which is what index-based
+ * coloring gave us, since the two pages list their series in opposite orders.
+ *
+ * Named rather than inlined so the two pages cannot drift apart again, and so a
+ * later reorder of either series array is harmless.
+ */
+export const ATTRIBUTED_COLOR = SERIES[1];
+export const BASELINE_COLOR = SERIES[0];
+
+/**
+ * `color` overrides the palette lookup for this one series.
+ *
+ * Without it a series' color is its position in the array, which means the same
+ * concept draws differently on two pages that happen to list it in a different
+ * order — referred signups were orange here and blue on Campaigns for exactly
+ * that reason. Pass it wherever a color carries meaning across charts; omit it
+ * and the palette cycles as before.
+ */
+export type SeriesDef = { key: string; label: string; kind?: 'count' | 'usd' | 'pct'; color?: string };
+
+const colorOf = (s: SeriesDef, i: number) => s.color ?? SERIES[i % SERIES.length];
 
 type Row = Record<string, string | number | null | undefined>;
 
@@ -93,9 +116,9 @@ export function TimeSeriesLine({
             type="linear"
             dataKey={s.key}
             name={s.label}
-            stroke={SERIES[i % SERIES.length]}
+            stroke={colorOf(s, i)}
             strokeWidth={2}
-            dot={plotted(s.key) < 2 ? { r: 3, fill: SERIES[i % SERIES.length], strokeWidth: 0 } : false}
+            dot={plotted(s.key) < 2 ? { r: 3, fill: colorOf(s, i), strokeWidth: 0 } : false}
             activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
             isAnimationActive={false}
           />
@@ -149,7 +172,7 @@ export function TimeSeriesBars({
             key={s.key}
             dataKey={s.key}
             name={s.label}
-            fill={SERIES[i % SERIES.length]}
+            fill={colorOf(s, i)}
             stackId={stacked ? 'a' : undefined}
             radius={stacked && i < series.length - 1 ? 0 : [4, 4, 0, 0]}
             stroke="#fff"
@@ -202,7 +225,7 @@ export function CategoryBars({
         <Bar
           dataKey={series.key}
           name={series.label}
-          fill={SERIES[0]}
+          fill={colorOf(series, 0)}
           radius={[0, 4, 4, 0]}
           isAnimationActive={false}
         />

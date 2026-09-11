@@ -47,4 +47,5 @@ export * from './services/legal';
 export * from './services/offramp';
 export * from './services/onramp';
 export * from './services/vaultFlows';
+export * from './services/walletTransfers';
 export * from './services/pwaInstalls';

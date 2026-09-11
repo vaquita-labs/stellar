@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiCheck, FiCopy, FiInstagram, FiMessageCircle, FiMusic, FiSend, FiUsers } from 'react-icons/fi';
+import { FiAward, FiCheck, FiChevronRight, FiCopy, FiInstagram, FiMessageCircle, FiMusic, FiSend, FiUsers } from 'react-icons/fi';
 import { useReferralSummary } from '../../../hooks';
 import { addSuccessToast } from '../../molecules/toast';
 import { PressableButton } from '../../molecules/PressableButton';
 import { MockedSubPageLayout } from './MockedSubPageLayout';
+import { ReferrerLeaderboardPage } from './ReferrerLeaderboardPage';
+import { StackedPanelModal } from './StackedPanelModal';
 import { buildInviteUrl, buildShareIntentUrl, type ShareChannel, type ShareMode } from './inviteLink';
 
 // Discriminated on `mode`, so the two channels that can open a real share sheet
@@ -38,6 +40,10 @@ export function InviteFriendsPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const { data, isLoading } = useReferralSummary();
   const [copied, setCopied] = useState<ShareChannel | null>(null);
+  // Local state, not a navigation prop: this screen is itself opened as a
+  // stacked panel from settings and takes none, so the board stacks on top of
+  // it the same way and the back button unwinds one panel at a time.
+  const [boardOpen, setBoardOpen] = useState(false);
 
   const code = data?.code ?? '';
   const hasCode = code.length > 0;
@@ -110,6 +116,16 @@ export function InviteFriendsPage({ onBack }: { onBack?: () => void } = {}) {
         ))}
       </section>
 
+      <PressableButton size="md" variant="white" fullWidth onClick={() => setBoardOpen(true)}>
+        <span className="flex w-full items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <FiAward className="h-4 w-4" />
+            {t('referrals.board.open', 'See the top inviters')}
+          </span>
+          <FiChevronRight className="h-4 w-4" />
+        </span>
+      </PressableButton>
+
       <section className="flex flex-col gap-2">
         <h2 className="px-1 text-xs font-extrabold uppercase tracking-wider text-gray-500">
           {t('referrals.yourLink', 'Your link')}
@@ -152,6 +168,15 @@ export function InviteFriendsPage({ onBack }: { onBack?: () => void } = {}) {
       <p className="px-1 text-sm text-gray-600">
         {t('referrals.rewardsComing', "Rewards for inviting are coming. We're already counting yours.")}
       </p>
+
+      <StackedPanelModal
+        open={boardOpen}
+        onClose={() => setBoardOpen(false)}
+        url="/profile/invite/leaderboard"
+        title={t('referrals.board.title', 'Top inviters')}
+      >
+        <ReferrerLeaderboardPage onBack={() => setBoardOpen(false)} />
+      </StackedPanelModal>
     </MockedSubPageLayout>
   );
 }

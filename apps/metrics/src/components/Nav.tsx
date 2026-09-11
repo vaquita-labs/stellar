@@ -11,6 +11,7 @@ const links = [
   { href: '/campaigns', label: 'Campaigns' },
   { href: '/referrals', label: 'Referrals' },
   { href: '/deposits', label: 'Deposits' },
+  { href: '/volume', label: 'Volume' },
   { href: '/ramps', label: 'Ramps' },
   { href: '/retention', label: 'Retention' },
   { href: '/engagement', label: 'Engagement' },

@@ -170,9 +170,15 @@ export type NotificationPreferences = Record<NotificationPreferenceKey, boolean>
 
 // Served whenever the profile row's JSON is NULL (user never changed anything)
 // and used to fill keys missing from a partially-saved object.
+//
+// Both delivery channels are on by default: notifications are how the product
+// reaches someone who is not currently looking at it, and a channel nobody
+// opted into is a channel that does not exist. A key the user actually toggled
+// is stored and spread over this, so an explicit `false` always wins — turning
+// a default on never overrides a decision someone made.
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   push: true,
-  email: false,
+  email: true,
   deposits: true,
   streaks: true,
   friends: false,
@@ -653,4 +659,35 @@ export interface ReferralSummaryResponseDTO {
   /** Next tier still to reach, or null when already at the top. */
   nextTier: ReferralTierDTO | null;
   tiers: ReferralTierDTO[];
+}
+
+/** One referrer on the in-app board. Counts only — never what anyone holds. */
+export interface ReferrerLeaderboardRowDTO {
+  /** 1-based rank over every referrer, so a pinned row states a true position. */
+  position: number;
+  walletAddress: string;
+  /** Always set: a profile with no nickname is dropped before ranking. */
+  nickname: string;
+  /** Resolved avatar choices, ready to render. Never null. */
+  avatarConfig: AvatarConfig;
+  /** Friends who joined through this referrer's link. The ranking key. */
+  referrals: number;
+  /** How many of them are currently saving, in either product. */
+  activeReferrals: number;
+  isCurrentUser: boolean;
+}
+
+/**
+ * The referrer board: the top slice plus the viewer's own row.
+ *
+ * `me` is sent whether or not the viewer is inside `rows`, so the client can
+ * pin it below the board without a second request. It is null when the viewer
+ * has referred nobody, or has no nickname and therefore no place on a public
+ * board.
+ */
+export interface ReferrerLeaderboardResponseDTO {
+  rows: ReferrerLeaderboardRowDTO[];
+  me: ReferrerLeaderboardRowDTO | null;
+  /** Every referrer with a nickname and at least one friend joined. */
+  total: number;
 }

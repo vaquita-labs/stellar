@@ -5,6 +5,7 @@ import { usePollar } from '@pollar/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MdClose, MdOutlineStickyNote2 } from 'react-icons/md';
+import { recordWalletTransferInBackground } from '@/networks/pollar/walletTransfersApi';
 import { blendConfigForToken, resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
 import { useWalletByUsername } from '@/core-ui/hooks/profile/useWalletByUsername';
 import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
@@ -144,10 +145,21 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
     if (!canSend || !destAddress) return;
     setSending(true);
     try {
-      await sponsoredUsdcPayment({
+      const { hash } = await sponsoredUsdcPayment({
         to: destAddress,
         amount,
         memo: resolvedMemo ?? undefined,
+      });
+      // El unico registro que va a existir de este pago. El servidor decide si
+      // el destino es otro usuario de Vaquita o una direccion de afuera: los dos
+      // casos salen de este mismo boton, y esa distincion es la que separa
+      // "cambio de manos dentro de la app" de "se fue de la app" en las metricas.
+      // Nunca se espera: la plata ya se movio en la cadena.
+      recordWalletTransferInBackground(address, {
+        amount,
+        destinationAddress: destAddress,
+        transactionHash: hash,
+        tokenSymbol: symbol,
       });
       toast.success(
         t('wallet.send.success', 'Sent {{amount}} {{symbol}}', {

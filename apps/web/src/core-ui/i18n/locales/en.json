@@ -2130,6 +2130,18 @@
     "copied": "Link copied",
     "pasteHint": "Paste it in your bio, a caption or a DM.",
     "rewardsComing": "Rewards for inviting are coming. We're already counting yours.",
+    "board": {
+      "open": "See the top inviters",
+      "title": "Top inviters",
+      "subtitle": "Ranked by friends who joined. Saving is how many of them are putting money to work.",
+      "savingCount": "{{n}} saving",
+      "yourPosition": "Your position",
+      "notRanked": "Invite a friend to take your place on the board.",
+      "emptyTitle": "Nobody has invited anyone yet",
+      "emptyBody": "Share your link and be the first on the board.",
+      "errorTitle": "We couldn't load the board",
+      "errorBody": "Check your connection and try again."
+    },
     "channels": {
       "whatsapp": "WhatsApp",
       "instagram": "Instagram",

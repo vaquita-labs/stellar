@@ -2130,6 +2130,18 @@
     "copied": "Link copiado",
     "pasteHint": "Pegalo en tu bio, en una descripción o en un mensaje.",
     "rewardsComing": "Las recompensas por invitar están en camino. Las tuyas ya se están contando.",
+    "board": {
+      "open": "Ver a los que más invitan",
+      "title": "Los que más invitan",
+      "subtitle": "Ordenado por amigos que se sumaron. Ahorrando es cuántos de ellos ya pusieron plata a trabajar.",
+      "savingCount": "{{n}} ahorrando",
+      "yourPosition": "Tu posición",
+      "notRanked": "Invitá a un amigo para entrar en la tabla.",
+      "emptyTitle": "Todavía nadie invitó a nadie",
+      "emptyBody": "Compartí tu link y sé el primero en la tabla.",
+      "errorTitle": "No pudimos cargar la tabla",
+      "errorBody": "Revisá tu conexión y volvé a intentar."
+    },
     "channels": {
       "whatsapp": "WhatsApp",
       "instagram": "Instagram",

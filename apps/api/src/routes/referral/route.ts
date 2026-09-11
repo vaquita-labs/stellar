@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { type ReferralSummaryResponseDTO, getReferralSummary, sendError, sendSuccess } from '@vaquita/shared';
+import {
+  type ReferralSummaryResponseDTO,
+  type ReferrerLeaderboardResponseDTO,
+  getReferralSummary,
+  getReferrerLeaderboard,
+  sendError,
+  sendSuccess,
+} from '@vaquita/shared';
 import { getSessionWallet, requireSessionWallet } from '../../lib/walletAuth';
 
 /**
@@ -32,6 +39,27 @@ router.get('/wallet/:walletAddress', requireSessionWallet, async (req, res) => {
   } catch (err) {
     req.log.error({ err, walletAddress }, 'Failed to load referral summary');
     return sendError(res, 'Failed to load referral summary', err, 500);
+  }
+});
+
+// GET /api/v1/referrals/leaderboard
+// The in-app referrer board: the top referrers by friends joined, with friends
+// saving beside each, plus the caller's own row so it can be pinned when they
+// fall outside the slice.
+//
+// Session-guarded like its sibling, and for the same reason: this enumerates who
+// brought whom. It carries counts only — never what anyone's referrals hold or
+// have moved, which is what the metrics dashboard is for.
+router.get('/leaderboard', requireSessionWallet, async (req, res) => {
+  const walletAddress = getSessionWallet(res);
+  req.log.info({ walletAddress }, 'GET /referrals/leaderboard');
+
+  try {
+    const board: ReferrerLeaderboardResponseDTO = await getReferrerLeaderboard(walletAddress);
+    return sendSuccess(res, board);
+  } catch (err) {
+    req.log.error({ err, walletAddress }, 'Failed to load referrer leaderboard');
+    return sendError(res, 'Failed to load referrer leaderboard', err, 500);
   }
 });
 

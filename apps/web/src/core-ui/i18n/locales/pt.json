@@ -2130,6 +2130,18 @@
     "copied": "Link copiado",
     "pasteHint": "Cole na sua bio, numa legenda ou numa mensagem.",
     "rewardsComing": "As recompensas por convidar estão chegando. As suas já estão sendo contadas.",
+    "board": {
+      "open": "Ver quem mais convida",
+      "title": "Quem mais convida",
+      "subtitle": "Ordenado por amigos que entraram. Poupando é quantos deles já colocaram dinheiro para render.",
+      "savingCount": "{{n}} poupando",
+      "yourPosition": "Sua posição",
+      "notRanked": "Convide um amigo para entrar na tabela.",
+      "emptyTitle": "Ninguém convidou ninguém ainda",
+      "emptyBody": "Compartilhe seu link e seja o primeiro na tabela.",
+      "errorTitle": "Não conseguimos carregar a tabela",
+      "errorBody": "Confira sua conexão e tente de novo."
+    },
     "channels": {
       "whatsapp": "WhatsApp",
       "instagram": "Instagram",
