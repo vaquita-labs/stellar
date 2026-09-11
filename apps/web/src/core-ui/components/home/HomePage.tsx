@@ -10,6 +10,7 @@ import { BankAPYModal, CoinAnimation, DepositPanel, HomeTour, TutorialModal } fr
 import { WorldMap } from '../templates';
 import { AutoInvest } from './AutoInvest';
 import { BackgroundMusic } from './BackgroundMusic';
+import { BadgeClaimGate } from './BadgeClaimGate';
 import { EditPanels } from './edit';
 import { HeaderStats } from './HeaderStats';
 import { HomeSkeleton } from './HomeSkeleton';
@@ -71,6 +72,16 @@ export function HomePage() {
     return () => setHomeTourSettled(true);
   }, [setHomeTourSettled]);
 
+  // Y el del badge pendiente, por lo mismo: `BadgeClaimGate` monta debajo del
+  // gate de `clockReady`, y hasta entonces las notas de versión ya alcanzarían
+  // a abrirse antes que la hoja de reclamo. Quien lo LIBERA es el gate, que es
+  // el único que sabe si hay un badge esperando.
+  const setBadgeClaimSettled = useModalQueueStore((s) => s.setBadgeClaimSettled);
+  useEffect(() => {
+    setBadgeClaimSettled(false);
+    return () => setBadgeClaimSettled(true);
+  }, [setBadgeClaimSettled]);
+
   const handleCoinAnimationComplete = () => {
     setCoinAnimationTarget(null);
   };
@@ -92,6 +103,7 @@ export function HomePage() {
   return (
     <div className="h-full w-full flex flex-col relative overflow-hidden min-h-0">
       <AutoInvest />
+      <BadgeClaimGate />
       <HeaderStats />
       <PlaceModeHint />
       {/* <BackgroundMusic /> */}

@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import { getBlurProps } from '@/core-ui/data/blur-placeholders.generated';
 import { useEffect, useRef, useState } from 'react';
-import { FiCopy, FiDownload, FiShare2, FiX } from 'react-icons/fi';
+import { FiAward, FiCopy, FiDownload, FiShare2, FiX } from 'react-icons/fi';
 import { FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
 import { useTranslation } from 'react-i18next';
 import {
@@ -47,6 +47,14 @@ interface AchievementModalProps {
   unlocked?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Secondary action under the share button, for callers that open this sheet
+   * somewhere other than the trophy room — the home prompt, where closing it
+   * leaves the user on the map with no way back to the rest of their badges.
+   * Omitted on the achievements page itself, where that room is what is already
+   * behind the sheet.
+   */
+  onViewAchievements?: () => void;
 }
 
 const formatDate = (iso?: string) => {
@@ -84,7 +92,13 @@ function VaquitaDots() {
 /* Modal                                                               */
 /* ------------------------------------------------------------------ */
 
-export function AchievementModal({ achievement: achievementProp, unlocked = false, open, onOpenChange }: AchievementModalProps) {
+export function AchievementModal({
+  achievement: achievementProp,
+  unlocked = false,
+  open,
+  onOpenChange,
+  onViewAchievements,
+}: AchievementModalProps) {
   const { t } = useTranslation();
   // El caller pone `achievement` en null al cerrar (mismo render que open=false).
   // Sin retenerlo, el `if (!achievement) return null` de abajo desmonta el
@@ -483,10 +497,29 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
   );
 
   // Full-width Share button footer — opens the explicit share-targets sheet.
+  /**
+   * Way out to the rest of the badges, offered by callers that open this sheet
+   * away from the trophy room. It sits in BOTH footers on purpose: from the
+   * home prompt the claim screen is the first thing the user sees, and with
+   * only the Claim CTA there the way to the badges this sheet is not offering
+   * would be the close button and a trip through the profile.
+   */
+  const renderViewAchievements = () =>
+    onViewAchievements ? (
+      <button
+        type="button"
+        onClick={onViewAchievements}
+        className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+      >
+        <FiAward className="h-4 w-4" />
+        {t('achievements.modal.viewAll', 'View my achievements')}
+      </button>
+    ) : null;
+
   // Replaces the top-right share icon so the primary action reads like the
   // Done/Continue CTAs elsewhere in the flow.
   const renderShareFooter = () => (
-    <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
+    <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10 flex flex-col gap-2">
       <button
         type="button"
         onClick={() => setShareMenuOpen(true)}
@@ -496,6 +529,7 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
         <FiShare2 className="h-4 w-4" />
         {t('achievements.share.button', 'Share')}
       </button>
+      {renderViewAchievements()}
     </div>
   );
 
@@ -723,15 +757,18 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
           )}
         </div>
 
-        {canClaim && (
-          <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
-            <button
-              type="button"
-              onClick={handleClaim}
-              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-            >
-              {t('achievements.detail.claimAward', 'Claim award')}
-            </button>
+        {(canClaim || onViewAchievements) && (
+          <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10 flex flex-col gap-2">
+            {canClaim && (
+              <button
+                type="button"
+                onClick={handleClaim}
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+              >
+                {t('achievements.detail.claimAward', 'Claim award')}
+              </button>
+            )}
+            {renderViewAchievements()}
           </div>
         )}
       </motion.div>
@@ -760,7 +797,10 @@ export function AchievementModal({ achievement: achievementProp, unlocked = fals
         <Modal.Dialog
           className={
             isMobile
-              ? 'bg-background m-0! p-0! rounded-t-3xl border-0 max-h-dvh overflow-hidden'
+              ? // Square on mobile: the sheet is `size=full`, so it covers the
+                // screen edge to edge and a rounded top would just cut two
+                // corners out of the page and show the backdrop through them.
+                'bg-background m-0! p-0! rounded-none border-0 max-h-dvh overflow-hidden'
               : // 620px is a floor, not a fixed height: the share-card phases run a
                 // little taller than that, and pinning the height there left them
                 // scrolling a handful of pixels behind a full-length scrollbar. As a
