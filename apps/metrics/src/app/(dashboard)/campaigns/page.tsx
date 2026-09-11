@@ -2,7 +2,7 @@ import { ChartCard } from '@/components/ChartCard';
 import { DataTable } from '@/components/DataTable';
 import { KpiTile } from '@/components/KpiTile';
 import { RangePicker } from '@/components/RangePicker';
-import { TimeSeriesBars } from '@/components/charts';
+import { ATTRIBUTED_COLOR, BASELINE_COLOR, TimeSeriesBars } from '@/components/charts';
 import { fmtInt, fmtPct, fmtUsd } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
 import { campaignKpis, campaignSeries, campaignTable, hasCampaigns } from '@/lib/queries/campaigns';
@@ -85,8 +85,8 @@ export default async function CampaignsPage({ searchParams }: Props) {
           <TimeSeriesBars
             rows={series}
             series={[
-              { key: 'organic', label: 'Organic' },
-              { key: 'attributed', label: 'Campaign' },
+              { key: 'organic', label: 'Organic', color: BASELINE_COLOR },
+              { key: 'attributed', label: 'Campaign', color: ATTRIBUTED_COLOR },
             ]}
             stacked
           />

@@ -3,7 +3,7 @@ import { DataTable } from '@/components/DataTable';
 import { KpiTile } from '@/components/KpiTile';
 import { Pager } from '@/components/Pager';
 import { RangePicker } from '@/components/RangePicker';
-import { CategoryBars, TimeSeriesBars } from '@/components/charts';
+import { ATTRIBUTED_COLOR, BASELINE_COLOR, CategoryBars, TimeSeriesBars } from '@/components/charts';
 import { fmtInt, fmtPct } from '@/lib/format';
 import { sqlWindow } from '@/lib/queries/common';
 import {
@@ -116,8 +116,8 @@ export default async function ReferralsPage({ searchParams }: Props) {
           <TimeSeriesBars
             rows={series}
             series={[
-              { key: 'referred', label: 'Referred' },
-              { key: 'other', label: 'Everyone else' },
+              { key: 'referred', label: 'Referred', color: ATTRIBUTED_COLOR },
+              { key: 'other', label: 'Everyone else', color: BASELINE_COLOR },
             ]}
           />
         </ChartCard>
@@ -127,7 +127,11 @@ export default async function ReferralsPage({ searchParams }: Props) {
           rows={channels}
           filename={`referral-channels-${range.key}`}
         >
-          <CategoryBars rows={channels} category="channel" series={{ key: 'signups', label: 'Signups' }} />
+          <CategoryBars
+            rows={channels}
+            category="channel"
+            series={{ key: 'signups', label: 'Signups', color: ATTRIBUTED_COLOR }}
+          />
         </ChartCard>
       </div>
 
