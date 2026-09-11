@@ -19,7 +19,10 @@ export interface HomeTourStep {
   bodyKey: string;
   /**
    * CSS selector of the real home element to spotlight. Anchored by
-   * `data-tutorial="…"` on the production components.
+   * `data-tutorial="…"` on the production components. An anchor may sit on
+   * more than one element, one per layout (the chest is over the map on a
+   * phone and in the sidebar on a desktop); the tour takes the one that is
+   * laid out on the current breakpoint.
    */
   spotlight: string;
   /**

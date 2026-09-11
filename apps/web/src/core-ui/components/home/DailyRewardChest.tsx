@@ -151,6 +151,7 @@ export const DailyRewardChest = ({ variant = 'floating' }: { variant?: 'floating
       <>
         <button
           type="button"
+          data-tutorial={HOME_TOUR_ANCHOR_CHEST}
           aria-label={t('home.dailyReward.chestAria', 'Daily reward')}
           onClick={handleOpen}
           disabled={!canCollect}
