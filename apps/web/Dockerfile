@@ -2,6 +2,10 @@
 
 FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat curl
+# pnpm resolves its store to $PNPM_HOME/store, so pinning PNPM_HOME gives the
+# install step a fixed path for the BuildKit cache mount to attach to.
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
 FROM base AS deps
@@ -17,6 +21,7 @@ ENV DEPLOY_ID=$DEPLOY_ID
 
 RUN --mount=type=secret,id=notification_webhook_url \
     --mount=type=secret,id=notification_webhook_token \
+    --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     sh -c '\
       echo "[DEBUG][deps] notification_webhook_url file exists: $( [ -f /run/secrets/notification_webhook_url ] && echo YES || echo NO )"; \
       echo "[DEBUG][deps] notification_webhook_token file exists: $( [ -f /run/secrets/notification_webhook_token ] && echo YES || echo NO )"; \
@@ -26,7 +31,7 @@ RUN --mount=type=secret,id=notification_webhook_url \
       echo "[DEBUG][deps] NOTIFICATION_WEBHOOK_TOKEN length: ${#NOTIFICATION_WEBHOOK_TOKEN}"; \
       echo "[DEBUG][deps] WEBHOOK_SOURCE: $WEBHOOK_SOURCE"; \
       echo "[DEBUG][deps] DEPLOY_ID: $DEPLOY_ID"; \
-      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/web... --network-concurrency 4 \
+      ./notify.sh INSTALL pnpm install --frozen-lockfile --filter @vaquita/web... --network-concurrency 16 \
     '
 
 FROM base AS builder

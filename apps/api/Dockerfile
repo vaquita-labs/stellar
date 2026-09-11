@@ -2,6 +2,10 @@
 
 FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat curl
+# pnpm resolves its store to $PNPM_HOME/store, so pinning PNPM_HOME gives the
+# install step a fixed path for the BuildKit cache mount to attach to.
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
 FROM base AS deps
@@ -18,6 +22,7 @@ ENV DEPLOY_ID=$DEPLOY_ID
 
 RUN --mount=type=secret,id=notification_webhook_url \
     --mount=type=secret,id=notification_webhook_token \
+    --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     sh -c '\
       export NOTIFICATION_WEBHOOK_URL="$( [ -f /run/secrets/notification_webhook_url ] && cat /run/secrets/notification_webhook_url )"; \
       export NOTIFICATION_WEBHOOK_TOKEN="$( [ -f /run/secrets/notification_webhook_token ] && cat /run/secrets/notification_webhook_token )"; \
