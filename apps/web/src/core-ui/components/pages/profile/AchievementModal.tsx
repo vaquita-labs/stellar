@@ -497,6 +497,25 @@ export function AchievementModal({
   );
 
   // Full-width Share button footer — opens the explicit share-targets sheet.
+  /**
+   * Way out to the rest of the badges, offered by callers that open this sheet
+   * away from the trophy room. It sits in BOTH footers on purpose: from the
+   * home prompt the claim screen is the first thing the user sees, and with
+   * only the Claim CTA there the way to the badges this sheet is not offering
+   * would be the close button and a trip through the profile.
+   */
+  const renderViewAchievements = () =>
+    onViewAchievements ? (
+      <button
+        type="button"
+        onClick={onViewAchievements}
+        className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+      >
+        <FiAward className="h-4 w-4" />
+        {t('achievements.modal.viewAll', 'View my achievements')}
+      </button>
+    ) : null;
+
   // Replaces the top-right share icon so the primary action reads like the
   // Done/Continue CTAs elsewhere in the flow.
   const renderShareFooter = () => (
@@ -510,16 +529,7 @@ export function AchievementModal({
         <FiShare2 className="h-4 w-4" />
         {t('achievements.share.button', 'Share')}
       </button>
-      {onViewAchievements && (
-        <button
-          type="button"
-          onClick={onViewAchievements}
-          className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-white hover:bg-white/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-        >
-          <FiAward className="h-4 w-4" />
-          {t('achievements.modal.viewAll', 'View my achievements')}
-        </button>
-      )}
+      {renderViewAchievements()}
     </div>
   );
 
@@ -747,15 +757,18 @@ export function AchievementModal({
           )}
         </div>
 
-        {canClaim && (
-          <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10">
-            <button
-              type="button"
-              onClick={handleClaim}
-              className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
-            >
-              {t('achievements.detail.claimAward', 'Claim award')}
-            </button>
+        {(canClaim || onViewAchievements) && (
+          <div className="px-5 sm:px-10 pt-3 pb-6 bg-background border-t border-black/10 flex flex-col gap-2">
+            {canClaim && (
+              <button
+                type="button"
+                onClick={handleClaim}
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-md bg-primary hover:bg-primary/80 text-black border border-black border-b-3 text-sm font-bold uppercase tracking-wide transition shadow-sm hover:-translate-y-0.5"
+              >
+                {t('achievements.detail.claimAward', 'Claim award')}
+              </button>
+            )}
+            {renderViewAchievements()}
           </div>
         )}
       </motion.div>

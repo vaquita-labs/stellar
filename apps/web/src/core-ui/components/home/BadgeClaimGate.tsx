@@ -50,8 +50,8 @@ const persistPrompted = (ids: Set<string>) => {
  */
 export function BadgeClaimGate() {
   const router = useRouter();
-  const { network } = useConfigStore();
-  const { data, isLoading } = useProfileAchievements();
+  const { network, walletAddress } = useConfigStore();
+  const { data, isFetching, isFetchedAfterMount } = useProfileAchievements();
 
   // The full-screen prompts of the home go first; the version notes wait behind
   // this one. `HomePage` takes the turn on entry — this component mounts after
@@ -80,15 +80,24 @@ export function BadgeClaimGate() {
   const hasContract = !!network?.badgesContractAddress;
   const ourTurn = vaultPromptSettled && homeTourSettled;
 
+  // Nothing may be decided off the react-query cache restored from disk: a
+  // badge claimed in an earlier session (or on another device) still reads
+  // `claimable` there, and acting on it burns the one offer of this visit on a
+  // sheet that opens straight into "share your badge". So we wait for the
+  // refetch this mount always fires. Mirrors the query's own `enabled` — a
+  // query that never runs would otherwise park the turn forever, and the
+  // version notes queued behind it would never open.
+  const listRunning = !!network?.networkName && !!walletAddress;
+  const listFresh = !listRunning || (isFetchedAfterMount && !isFetching);
+
   // Deciding and releasing live in the same effect on purpose: split in two,
   // whichever ran second in a commit would read the other's work as already
   // committed and release the turn on the same tick the sheet opens.
   useEffect(() => {
     if (offeredRef.current === null) offeredRef.current = readPrompted();
-    // A sheet on screen, one already served this visit, or a list still in
-    // flight: hold the turn. An errored or disabled query is not loading, so it
-    // falls through and releases instead of parking the queue forever.
-    if (promptedId || served || isLoading || !ourTurn) return;
+    // A sheet on screen, one already served this visit, or a list that is not
+    // trustworthy yet: hold the turn.
+    if (promptedId || served || !listFresh || !ourTurn) return;
 
     const offer = hasContract && candidate && !offeredRef.current.has(candidate.id) ? candidate : null;
     if (!offer) {
@@ -99,7 +108,7 @@ export function BadgeClaimGate() {
     offeredRef.current.add(offer.id);
     persistPrompted(offeredRef.current);
     setPromptedId(offer.id);
-  }, [promptedId, served, isLoading, ourTurn, hasContract, candidate, setBadgeClaimSettled]);
+  }, [promptedId, served, listFresh, ourTurn, hasContract, candidate, setBadgeClaimSettled]);
 
   // Resolved on every render so the open sheet reflects the badge as it is now:
   // the row survives the claim (its `claimState` becomes `minted`), which is
