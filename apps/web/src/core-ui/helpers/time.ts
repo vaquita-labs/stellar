@@ -77,15 +77,27 @@ const ETA_COUNT_KEY: Record<EtaUnit, string> = {
   month: 'common.time.month',
 };
 
+// Counted but hedged: the provider marked the number as approximate.
 const ETA_APPROX_KEY: Record<EtaUnit, string> = {
-  minute: 'common.time.approxMinutes',
-  hour: 'common.time.approxHours',
-  day: 'common.time.approxDays',
-  month: 'common.time.approxMonths',
+  minute: 'common.time.approxMinute',
+  hour: 'common.time.approxHour',
+  day: 'common.time.approxDay',
+  month: 'common.time.approxMonth',
 };
 
-/** A unit standing on its own, give or take an approximation marker: `~minutes`. */
-const BARE_UNIT = /^[~≈]?\s*(?:about|around|approx\.?|approximately)?\s*[a-zá-ú]+$/i;
+// No number survived, so only the unit can be named.
+const ETA_FEW_KEY: Record<EtaUnit, string> = {
+  minute: 'common.time.fewMinutes',
+  hour: 'common.time.fewHours',
+  day: 'common.time.fewDays',
+  month: 'common.time.fewMonths',
+};
+
+/** However the provider hedges a figure: `~5 minutes`, `about 5 minutes`. */
+const HEDGED = /[~≈]|\b(?:about|around|approx\.?|approximately|roughly)\b/i;
+
+/** A unit standing on its own, give or take a hedge: `~minutes`. */
+const BARE_UNIT = /^[~≈]?\s*(?:about|around|approx\.?|approximately|roughly)?\s*[a-zá-ú]+$/i;
 
 /**
  * Turns the ramp provider's free-form estimate into one localized phrase.
@@ -93,7 +105,9 @@ const BARE_UNIT = /^[~≈]?\s*(?:about|around|approx\.?|approximately)?\s*[a-zá
  * The value arrives as prose written by the provider, in English, in shapes
  * like `~5 minutes`, `5-10 minutes` and `~minutes` — that last one, with the
  * number missing, is what reaches the screen as a bare `~minutes`. A range
- * collapses to its upper bound so the result stays one short phrase.
+ * collapses to its upper bound so the result stays one short phrase, and a
+ * hedged figure keeps its hedge: `~5 minutes` is "unos 5 minutos", never the
+ * flat "5 minutos" the provider declined to promise.
  *
  * Anything that cannot be read confidently is returned untouched, because
  * showing the provider's own words beats inventing a duration they never
@@ -108,10 +122,13 @@ export const formatRampEta = (raw: string): string => {
   if (!unit) return text;
 
   const counts = text.match(/\d+/g)?.map(Number) ?? [];
-  if (counts.length === 0) return BARE_UNIT.test(text) ? i18n.t(ETA_APPROX_KEY[unit]) : text;
+  if (counts.length === 0) return BARE_UNIT.test(text) ? i18n.t(ETA_FEW_KEY[unit]) : text;
 
-  const time = i18n.t(ETA_COUNT_KEY[unit], { count: Math.max(...counts) });
-  return counts.length > 1 ? i18n.t('common.time.upTo', { time }) : time;
+  const count = Math.max(...counts);
+  // A range is already a hedge, and its bound is the honest half of it.
+  if (counts.length > 1) return i18n.t('common.time.upTo', { time: i18n.t(ETA_COUNT_KEY[unit], { count }) });
+
+  return i18n.t(HEDGED.test(text) ? ETA_APPROX_KEY[unit] : ETA_COUNT_KEY[unit], { count });
 };
 
 export const getCurrentDay = (date: Date) => {
