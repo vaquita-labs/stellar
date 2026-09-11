@@ -109,7 +109,8 @@
       "coinsPending_other": "+{{count}} coins",
       "goldCoins": "{{count}} gold coins",
       "goldCoins_one": "{{count}} gold coin",
-      "goldCoins_other": "{{count}} gold coins"
+      "goldCoins_other": "{{count}} gold coins",
+      "viewAll": "View my achievements"
     },
     "page": {
       "awards": "Awards",

@@ -109,7 +109,8 @@
       "coinsPending_other": "+{{count}} moedas",
       "goldCoins": "{{count}} moedas de ouro",
       "goldCoins_one": "{{count}} moeda de ouro",
-      "goldCoins_other": "{{count}} moedas de ouro"
+      "goldCoins_other": "{{count}} moedas de ouro",
+      "viewAll": "Ver minhas conquistas"
     },
     "page": {
       "awards": "Prêmios",

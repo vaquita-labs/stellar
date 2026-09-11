@@ -3,14 +3,15 @@ import { create } from 'zustand';
 /**
  * Orden entre los modales que se abren solos al entrar a la app.
  *
- * Hoy hay dos, y el pedido es explícito: primero el prompt de plata ociosa
- * (`AutoInvest` → `IdleFundsModal`), y recién cuando el usuario decidió qué
- * hacer con su plata, las notas de versión. Apilados se tapan —el de la plata
- * es de pantalla completa— y es el que tiene consecuencias.
+ * El orden es explícito, de más a menos consecuencias: el tour del home, el
+ * prompt de plata ociosa (`AutoInvest` → `IdleFundsModal`), el badge pendiente
+ * de reclamar (`BadgeClaimGate`) y, último, las notas de versión. Apilados se
+ * tapan —los tres primeros son de pantalla completa— y un anuncio no puede
+ * quedar encima de una decisión ni de un premio.
  *
- * No se puede resolver anidando componentes: `AutoInvest` vive en el home
- * (`HomePage`) y el gate de notas en el layout privado, que es su ancestro. Este
- * store es el único hilo entre los dos subárboles.
+ * No se puede resolver anidando componentes: `AutoInvest` y `BadgeClaimGate`
+ * viven en el home (`HomePage`) y el gate de notas en el layout privado, que es
+ * su ancestro. Este store es el único hilo entre los dos subárboles.
  *
  * Tomar y liberar el turno están en componentes distintos a propósito:
  *
@@ -39,6 +40,19 @@ type ModalQueueState = {
    */
   homeTourSettled: boolean;
   setHomeTourSettled: (settled: boolean) => void;
+  /**
+   * Has the pending-badge prompt finished (or decided it is not showing)? The
+   * claim sheet is full-screen on a phone, and it pays out coins — an
+   * announcement may not cover it. Taken by `HomePage` and released by
+   * `BadgeClaimGate`, the only component that knows whether the wallet has a
+   * badge waiting.
+   *
+   * Same default and reasoning as the two above: `true` means "nothing to wait
+   * for", so on the routes where `BadgeClaimGate` never mounts the modals
+   * queued behind it are not stuck forever.
+   */
+  badgeClaimSettled: boolean;
+  setBadgeClaimSettled: (settled: boolean) => void;
 };
 
 export const useModalQueueStore = create<ModalQueueState>((set) => ({
@@ -46,4 +60,6 @@ export const useModalQueueStore = create<ModalQueueState>((set) => ({
   setVaultPromptSettled: (vaultPromptSettled: boolean) => set({ vaultPromptSettled }),
   homeTourSettled: true,
   setHomeTourSettled: (homeTourSettled: boolean) => set({ homeTourSettled }),
+  badgeClaimSettled: true,
+  setBadgeClaimSettled: (badgeClaimSettled: boolean) => set({ badgeClaimSettled }),
 }));
