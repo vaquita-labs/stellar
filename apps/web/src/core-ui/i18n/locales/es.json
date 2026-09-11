@@ -287,7 +287,7 @@
       },
       "risks": {
         "heading": "7. Riesgos",
-        "body": "Los activos digitales y los protocolos de contratos inteligentes conllevan riesgos significativos, incluida la pérdida total de los fondos. Antes de depositar, leé la <a>Declaración de Riesgos</a>, que forma parte de estos Términos."
+        "body": "Los activos digitales y los protocolos de contratos inteligentes conllevan riesgos significativos, incluida la pérdida total de los fondos. Antes de depositar, lee la <a>Declaración de Riesgos</a>, que forma parte de estos Términos."
       },
       "acceptableUse": {
         "heading": "8. Uso aceptable",
@@ -385,7 +385,7 @@
       "summaryHeading": "En resumen",
       "summaryData": "Guardamos tu dirección de billetera, tu perfil y tu actividad, y compartimos datos con los socios que operan billeteras, rampas e infraestructura.",
       "summaryOnchain": "Los depósitos, retiros e insignias quedan registrados públicamente en la blockchain y no se pueden borrar.",
-      "readFull": "Leé los documentos completos:",
+      "readFull": "Lee los documentos completos:",
       "privacyLink": "Política de Privacidad",
       "termsLink": "Términos del Servicio",
       "riskLink": "Declaración de Riesgos",
@@ -415,6 +415,10 @@
     "selectOption": "Elige una opción…",
     "soon": "Pronto",
     "time": {
+      "approxDays": "unos días",
+      "approxHours": "unas horas",
+      "approxMinutes": "unos minutos",
+      "approxMonths": "unos meses",
       "day_one": "1 día",
       "day_other": "{{count}} días",
       "hour_one": "1 hora",
@@ -422,7 +426,8 @@
       "minute_one": "1 minuto",
       "minute_other": "{{count}} minutos",
       "month_one": "1 mes",
-      "month_other": "{{count}} meses"
+      "month_other": "{{count}} meses",
+      "upTo": "hasta {{time}}"
     }
   },
   "deposit": {
@@ -435,7 +440,6 @@
       "cta": "Depositar en tus ahorros",
       "destination": "Blend",
       "notTracked": "Tu USDC empieza a generar rendimiento al instante, sin período de bloqueo. Retiralo cuando quieras.",
-      "processing": "Procesando depósito...",
       "processingStep": "Depositando en tus ahorros",
       "whatIsTitle": "¿Qué es Blend?",
       "whatIs": "Blend es un protocolo de préstamos auditado en Stellar. Tu USDC se aporta a su pool para generar rendimiento, y puedes retirarlo cuando quieras.",
@@ -448,7 +452,6 @@
       "estimatesDisclaimer": "Son estimaciones y pueden cambiar con el tiempo. Las recompensas finales se confirman al retirar.",
       "marketRewards": "Recompensas de {{market}}",
       "myDeposits": "Mis depósitos",
-      "protocolRewards": "Recompensas del protocolo",
       "protocolRewardsInfo": "Rendimiento de {{market}} donde están depositados tus fondos.",
       "theLendingProtocol": "el protocolo de préstamos",
       "title": "Recompensas del Banco",
@@ -488,11 +491,8 @@
       "filterAll": "Todos",
       "filterEarly": "Anticipados",
       "filterOnTime": "A tiempo",
-      "makeFirstDeposit": "Haz tu primer depósito para comenzar",
       "noActiveDeposits": "No hay depósitos activos",
       "noData": "Sin datos",
-      "noDepositsYet": "Todavía no tienes depósitos",
-      "noReadyDeposits": "No tienes depósitos listos para retirar",
       "noWithdrawnDeposits": "No hay depósitos retirados",
       "rewardsForfeited": "Recompensas perdidas",
       "sortAmount": "Mayor monto",
@@ -501,7 +501,6 @@
       "sortUnlock": "Próximos a desbloquear",
       "tabActive": "Activos",
       "tabWithdrawn": "Retirados",
-      "title": "Tus depósitos",
       "withdrawnBadge": "Retirado",
       "withdrawnEarlyBadge": "Retirado antes"
     },
@@ -523,13 +522,13 @@
     "processingShort": "Procesando",
     "receive": {
       "title": "Depósito",
-      "subtitle": "Enviá USDC en Stellar a esta dirección. Aparecerá en tu balance, listo para invertir.",
+      "subtitle": "Envía USDC en Stellar a esta dirección. Aparecerá en tu balance, listo para invertir.",
       "addressLabel": "Tu dirección",
       "copy": "Copiar",
       "copyAria": "Copiar dirección",
       "copied": "Copiado",
       "minDeposit": "Depósito mínimo: {{amount}} USDC.",
-      "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
+      "warning": "Envía solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
     },
     "savingsStats": {
       "infoAlt": "info"
@@ -570,7 +569,7 @@
       "wallet": {
         "subtitle": "Deposita desde una wallet cripto",
         "title": "Billetera",
-        "receiveSubtitle": "Recibí USDC en tu dirección"
+        "receiveSubtitle": "Recibe USDC en tu dirección"
       }
     }
   },
@@ -839,7 +838,7 @@
       "preview": {
         "back": "Volver a mi división",
         "description": "Solo compites con ahorradores de tu propia división.",
-        "lockedTitle": "Alcanzá {{xp}} XP para desbloquear {{division}}",
+        "lockedTitle": "Alcanza {{xp}} XP para desbloquear {{division}}",
         "pastTitle": "Ya superaste {{division}}"
       },
       "promotionZone": "Zona de ascenso",
@@ -852,9 +851,6 @@
       "rulesFirstDivision": "En la primera división nadie baja: solo puedes subir.",
       "xpValue": "{{xp}} XP"
     }
-  },
-  "nav": {
-    "primaryAriaLabel": "Principal"
   },
   "concierge": {
     "title": "Centro de ayuda",
@@ -970,7 +966,7 @@
       "iosStep2Action": "“Agregar a inicio”",
       "installedBody": "¡Vaquita está instalada! Ábrela desde tu pantalla de inicio para desbloquear tu billetera.",
       "installedHint": "Ya puedes cerrar esta pestaña. De ahora en adelante abre Vaquita desde el ícono de la app.",
-      "pullHint": "¿Ya la instalaste? Tirá hacia abajo para recargar"
+      "pullHint": "¿Ya la instalaste? Desliza hacia abajo para recargar"
     },
     "pushNudge": {
       "title": "Activa las notificaciones",
@@ -1178,7 +1174,7 @@
       },
       "emailRequired": "Agrega tu email en Editar perfil para activarlo.",
       "pushDenied": "Las notificaciones están bloqueadas para esta app en la configuración de tu navegador.",
-      "pushUnsupported": "Instalá la app en tu pantalla de inicio para recibir notificaciones.",
+      "pushUnsupported": "Instala la app en tu pantalla de inicio para recibir notificaciones.",
       "sections": {
         "activity": {
           "title": "Actividad"
@@ -1321,7 +1317,7 @@
       "coinsAlt": "monedas",
       "confirmTitle": "Tu vaquita guardó esto para ti hoy.",
       "doneButton": "Listo",
-      "holdToOpen": "Mantené presionado para abrir",
+      "holdToOpen": "Mantén presionado para abrir",
       "nextButton": "Siguiente",
       "opening": "Abriendo…",
       "rewardTitle": "¡Ganaste monedas!",
@@ -1539,12 +1535,12 @@
     "errorBody": "Intenta de nuevo en un momento.",
     "bug": {
       "title": "Reportar un error",
-      "intro": "Contanos qué salió mal. Cuanto más detalle, más rápido lo arreglamos.",
+      "intro": "Cuéntanos qué salió mal. Cuanto más detalle, más rápido lo arreglamos.",
       "titlePlaceholder": "ej. El botón de retirar no hace nada"
     },
     "feedback": {
       "title": "Enviar feedback",
-      "intro": "Contanos qué haría mejor a Vaquita. Leemos todos los mensajes.",
+      "intro": "Cuéntanos qué haría mejor a Vaquita. Leemos todos los mensajes.",
       "titlePlaceholder": "ej. Dejarme renombrar mis wallets guardadas"
     },
     "attach": "Adjuntar",
@@ -1552,7 +1548,7 @@
     "attachHint": "Hasta {{max}} capturas. Se publican en el board.",
     "removeImage": "Quitar imagen",
     "attachmentError": "No se pudieron adjuntar algunas imágenes",
-    "attachmentErrorBody": "Usá un PNG, JPEG o WebP de menos de 2 MB."
+    "attachmentErrorBody": "Usa un PNG, JPEG o WebP de menos de 2 MB."
   },
   "social": {
     "contacts": {
@@ -1797,16 +1793,6 @@
       "refresh": "Actualizar",
       "title": "Saldo"
     },
-    "editProfile": {
-      "guest": "Invitado",
-      "nicknameError": "Hubo un error al guardar el vaquitag",
-      "nicknameLabel": "Vaquitag",
-      "nicknameSaved": "¡Vaquitag guardado!",
-      "saveChanges": "Guardar cambios",
-      "shownAs": "Se mostrará como: @{{name}}",
-      "title": "Editar perfil",
-      "walletLabel": "Billetera"
-    },
     "fiat": {
       "authenticated": "Conectado con Anclap",
       "history": {
@@ -1864,10 +1850,10 @@
         "kycWaiting": "Esperando la aprobación…",
         "limitMax": "El máximo para esta ruta es {{amount}} {{currency}}.",
         "limitMin": "El mínimo para esta ruta es {{amount}} {{currency}}.",
-        "longPress": "Mantené apretado el código para guardarlo en tus fotos.",
+        "longPress": "Mantén presionado el código para guardarlo en tus fotos.",
         "minAmount": "La compra mínima es de {{amount}} {{currency}}.",
         "outUsdc": "≈ {{amount}} USDC",
-        "payHint": "Pagá este QR desde la app de tu banco. El USDC llega solo.",
+        "payHint": "Paga este QR desde la app de tu banco. El USDC llega solo.",
         "processingBody": "Tus USDC suelen llegar en unos minutos, y pueden tardar hasta 15. Puedes cerrar: caen solos en tu wallet.",
         "processingHelp": "Si a los 15 minutos no llegaron, guarda el comprobante del banco y escríbenos:",
         "processingTitle": "Pago recibido",
@@ -2040,7 +2026,7 @@
       "subtitle": "Comparte tu dirección de Stellar para recibir cualquier activo.",
       "copy": "Copiar",
       "copied": "Copiado",
-      "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
+      "warning": "Envía solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
     },
     "send": {
       "title": "Enviar",
@@ -2070,7 +2056,7 @@
       "activateTrustline": "Activar USDC",
       "activating": "Activando…",
       "amount": "Monto",
-      "amountRange": "Ingresá un monto entre {{min}} y {{max}} USDC.",
+      "amountRange": "Ingresa un monto entre {{min}} y {{max}} USDC.",
       "available": "Disponible: {{amount}} USDC",
       "baseOnlyWarning": "Solo red Base y solo USDC. Cualquier otra cosa enviada a esta dirección se pierde.",
       "close": "Cerrar",
@@ -2080,7 +2066,7 @@
       "copy": "Copiar",
       "creating": "Preparando…",
       "depositHelper": "¿Necesitas USDC en Stellar? Tráelo desde Base",
-      "depositInstructions": "Enviá exactamente {{amount}} USDC por la red Base a esta dirección, desde cualquier wallet o exchange.",
+      "depositInstructions": "Envía exactamente {{amount}} USDC por la red Base a esta dirección, desde cualquier wallet o exchange.",
       "destinationAddress": "Dirección de destino en Base",
       "directionIn": "Base → Stellar",
       "directionOut": "Stellar → Base",
@@ -2093,9 +2079,9 @@
       "incompleteBody": "El puente esperaba {{amount}} USDC y recibió menos, así que el canje no arrancó.",
       "incompleteRefund": "El puente va a devolver lo que recibió cuando venza la cotización. Escríbenos a soporte si no llega.",
       "incompleteTitle": "Llegó menos de lo esperado",
-      "incompleteTopUp": "Enviá la diferencia a la misma dirección antes de que venza la cotización. Si vence primero, el puente devuelve lo que recibió a tu dirección de Base.",
+      "incompleteTopUp": "Envía la diferencia a la misma dirección antes de que venza la cotización. Si vence primero, el puente devuelve lo que recibió a tu dirección de Base.",
       "insufficient": "No te alcanza el USDC.",
-      "invalidEvmAddress": "Ingresá una dirección de Base válida (0x…).",
+      "invalidEvmAddress": "Ingresa una dirección de Base válida (0x…).",
       "keepsGoing": "Esto sigue aunque cierres esta ventana. Vuelve a abrirla cuando quieras para ver cómo va.",
       "missingMemo": "El puente no devolvió un memo válido. Intenta de nuevo.",
       "newQuote": "Pedir una nueva cotización",
@@ -2109,7 +2095,7 @@
       "refundedTitle": "Transferencia devuelta",
       "send": "Enviar {{amount}} USDC",
       "sending": "Enviando…",
-      "subtitle": "Mové USDC entre Base y Stellar",
+      "subtitle": "Mueve USDC entre Base y Stellar",
       "successBody": "Llegaron {{amount}} USDC.",
       "successTitle": "Transferencia completa",
       "title": "Puente de USDC",
@@ -2122,7 +2108,6 @@
   },
   "referrals": {
     "invite": "Invitar amigos",
-    "inviteDesc": "Comparte tu link y mira quién se sumó.",
     "referAndEarn": "Refiere y gana",
     "description": "Comparte tu link. Llevamos la cuenta de todos los que entran por ahí.",
     "shareText": "Ahorra conmigo en Vaquita y gana recompensas. Usa mi vaquitag {{code}}",
@@ -2205,11 +2190,11 @@
       "title": "Elegir método",
       "bank": {
         "title": "Banco",
-        "subtitle": "Retirá a tu cuenta bancaria"
+        "subtitle": "Retira a tu cuenta bancaria"
       },
       "wallet": {
         "title": "Billetera",
-        "subtitle": "Retirá a una wallet cripto"
+        "subtitle": "Retira a una wallet cripto"
       },
       "username": {
         "title": "Vaquitag",
@@ -2220,7 +2205,6 @@
     "minWithdraw": "Retiro mínimo: {{amount}} USDC.",
     "noUsernames": "Todavía no guardaste usuarios",
     "noWallets": "Todavía no tienes wallets guardadas",
-    "processing": "Procesando retiro...",
     "processingHint": "Esto puede tardar unos segundos.",
     "review": "Revisar",
     "selectAccount": "Elegir cuenta",
@@ -2340,7 +2324,6 @@
   "portfolio": {
     "title": "Portafolio",
     "total": "Total",
-    "earning": "Ganancias estimadas",
     "invest": "Invertir",
     "savings": "Ahorros",
     "distributed": "Repartido en {{funded}} de {{total}} opciones",

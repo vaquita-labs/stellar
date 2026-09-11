@@ -26,6 +26,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { railLabel } from '../../../helpers/rampRail';
 import { FIAT_DECIMALS, formatTokenFine, formatTokenPrecise } from '../../../helpers/numbers';
+import { formatRampEta } from '../../../helpers/time';
 import { useAwaitingFundsStore, usePendingCreditStore, useRampActiveStore } from '../../../stores';
 import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
@@ -775,7 +776,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           </div>
           <div className="flex items-center justify-between text-xs text-gray-500">
             <span>{t('wallet.fiat.onramp.etaLabel', 'Estimated time')}</span>
-            <span className="font-semibold text-black">{quote.estimatedTime}</span>
+            <span className="font-semibold text-black">{formatRampEta(quote.estimatedTime)}</span>
           </div>
           {/* Los límites de la ruta no van acá sino en la línea bajo el monto:
               son lo que le dice al usuario cómo arreglar un monto que no entra,

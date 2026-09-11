@@ -415,6 +415,10 @@
     "selectOption": "Select an option…",
     "soon": "Soon",
     "time": {
+      "approxDays": "a few days",
+      "approxHours": "a few hours",
+      "approxMinutes": "a few minutes",
+      "approxMonths": "a few months",
       "day_one": "1 day",
       "day_other": "{{count}} days",
       "hour_one": "1 hour",
@@ -422,7 +426,8 @@
       "minute_one": "1 minute",
       "minute_other": "{{count}} minutes",
       "month_one": "1 month",
-      "month_other": "{{count}} months"
+      "month_other": "{{count}} months",
+      "upTo": "up to {{time}}"
     }
   },
   "deposit": {
@@ -435,7 +440,6 @@
       "cta": "Deposit to your savings",
       "destination": "Blend",
       "notTracked": "Your USDC starts earning yield right away, with no lock period withdraw whenever you want.",
-      "processing": "Processing deposit...",
       "processingStep": "Depositing to your savings",
       "whatIsTitle": "What is Blend?",
       "whatIs": "Blend is an audited lending protocol on Stellar. Your USDC is supplied to its pool to earn yield, and you can withdraw anytime.",
@@ -448,7 +452,6 @@
       "estimatesDisclaimer": "These values are estimates and can change over time. Your final rewards are confirmed when you withdraw.",
       "marketRewards": "{{market}} rewards",
       "myDeposits": "My deposits",
-      "protocolRewards": "Protocol rewards",
       "protocolRewardsInfo": "Yield from {{market}} where your funds are deposited.",
       "theLendingProtocol": "the lending protocol",
       "title": "Bank Rewards",
@@ -488,11 +491,8 @@
       "filterAll": "All",
       "filterEarly": "Early",
       "filterOnTime": "On time",
-      "makeFirstDeposit": "Make your first deposit to get started",
       "noActiveDeposits": "No active deposits",
       "noData": "No data",
-      "noDepositsYet": "No deposits yet",
-      "noReadyDeposits": "No deposits ready to withdraw",
       "noWithdrawnDeposits": "No withdrawn deposits",
       "rewardsForfeited": "Rewards forfeited",
       "sortAmount": "Highest amount",
@@ -501,7 +501,6 @@
       "sortUnlock": "Unlocks soonest",
       "tabActive": "Active",
       "tabWithdrawn": "Withdrawn",
-      "title": "Your deposits",
       "withdrawnBadge": "Withdrawn",
       "withdrawnEarlyBadge": "Withdrawn early"
     },
@@ -852,9 +851,6 @@
       "rulesFirstDivision": "In the first division nobody drops — you can only climb.",
       "xpValue": "{{xp}} XP"
     }
-  },
-  "nav": {
-    "primaryAriaLabel": "Primary"
   },
   "concierge": {
     "title": "Help Center",
@@ -1797,16 +1793,6 @@
       "refresh": "Refresh",
       "title": "Balance"
     },
-    "editProfile": {
-      "guest": "Guest",
-      "nicknameError": "Error on saving vaquitag",
-      "nicknameLabel": "Vaquitag",
-      "nicknameSaved": "Vaquitag saved",
-      "saveChanges": "Save changes",
-      "shownAs": "Shown as: @{{name}}",
-      "title": "Edit Profile",
-      "walletLabel": "Wallet"
-    },
     "fiat": {
       "authenticated": "Connected to Anclap",
       "history": {
@@ -2122,7 +2108,6 @@
   },
   "referrals": {
     "invite": "Invite friends",
-    "inviteDesc": "Share your link and see who joined.",
     "referAndEarn": "Refer and earn",
     "description": "Share your link. We keep track of everyone who joins through it.",
     "shareText": "Save with me on Vaquita and earn rewards. Use my vaquitag {{code}}",
@@ -2220,7 +2205,6 @@
     "minWithdraw": "Minimum withdrawal: {{amount}} USDC.",
     "noUsernames": "You have no saved users yet",
     "noWallets": "You have no saved wallets yet",
-    "processing": "Processing withdrawal...",
     "processingHint": "This may take a few seconds.",
     "review": "Review",
     "selectAccount": "Select account",
@@ -2340,7 +2324,6 @@
   "portfolio": {
     "title": "Portfolio",
     "total": "Total",
-    "earning": "Estimated earnings",
     "invest": "Invest",
     "savings": "Savings",
     "distributed": "Spread across {{funded}} of {{total}} options",

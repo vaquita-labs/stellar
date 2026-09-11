@@ -415,6 +415,10 @@
     "selectOption": "Escolha uma opção…",
     "soon": "Em breve",
     "time": {
+      "approxDays": "alguns dias",
+      "approxHours": "algumas horas",
+      "approxMinutes": "alguns minutos",
+      "approxMonths": "alguns meses",
       "day_one": "1 dia",
       "day_other": "{{count}} dias",
       "hour_one": "1 hora",
@@ -422,7 +426,8 @@
       "minute_one": "1 minuto",
       "minute_other": "{{count}} minutos",
       "month_one": "1 mês",
-      "month_other": "{{count}} meses"
+      "month_other": "{{count}} meses",
+      "upTo": "até {{time}}"
     }
   },
   "deposit": {
@@ -435,7 +440,6 @@
       "cta": "Depositar nas suas economias",
       "destination": "Blend",
       "notTracked": "Seu USDC começa a render na hora, sem período de bloqueio. Retire quando quiser.",
-      "processing": "Processando depósito...",
       "processingStep": "Depositando nas suas economias",
       "whatIsTitle": "O que é Blend?",
       "whatIs": "Blend é um protocolo de empréstimos auditado na Stellar. Seu USDC é fornecido ao pool dele para render, e você pode sacar quando quiser.",
@@ -448,7 +452,6 @@
       "estimatesDisclaimer": "São estimativas e podem mudar com o tempo. As recompensas finais são confirmadas no saque.",
       "marketRewards": "Recompensas de {{market}}",
       "myDeposits": "Meus depósitos",
-      "protocolRewards": "Recompensas do protocolo",
       "protocolRewardsInfo": "Rendimento de {{market}} onde seus fundos estão depositados.",
       "theLendingProtocol": "o protocolo de empréstimos",
       "title": "Recompensas do Banco",
@@ -488,11 +491,8 @@
       "filterAll": "Todos",
       "filterEarly": "Antecipados",
       "filterOnTime": "No prazo",
-      "makeFirstDeposit": "Faça seu primeiro depósito para começar",
       "noActiveDeposits": "Nenhum depósito ativo",
       "noData": "Sem dados",
-      "noDepositsYet": "Você ainda não tem depósitos",
-      "noReadyDeposits": "Nenhum depósito pronto para sacar",
       "noWithdrawnDeposits": "Nenhum depósito sacado",
       "rewardsForfeited": "Recompensas perdidas",
       "sortAmount": "Maior valor",
@@ -501,7 +501,6 @@
       "sortUnlock": "Desbloqueio mais próximo",
       "tabActive": "Ativos",
       "tabWithdrawn": "Sacados",
-      "title": "Seus depósitos",
       "withdrawnBadge": "Sacado",
       "withdrawnEarlyBadge": "Sacado antes"
     },
@@ -852,9 +851,6 @@
       "rulesFirstDivision": "Na primeira divisão ninguém desce — você só pode subir.",
       "xpValue": "{{xp}} XP"
     }
-  },
-  "nav": {
-    "primaryAriaLabel": "Principal"
   },
   "concierge": {
     "title": "Central de ajuda",
@@ -1797,16 +1793,6 @@
       "refresh": "Atualizar",
       "title": "Saldo"
     },
-    "editProfile": {
-      "guest": "Convidado",
-      "nicknameError": "Erro ao salvar o vaquitag",
-      "nicknameLabel": "Vaquitag",
-      "nicknameSaved": "Vaquitag salvo!",
-      "saveChanges": "Salvar alterações",
-      "shownAs": "Exibido como: @{{name}}",
-      "title": "Editar perfil",
-      "walletLabel": "Carteira"
-    },
     "page": {
       "address": "Endereço",
       "addressCopied": "Endereço copiado!",
@@ -2122,7 +2108,6 @@
   },
   "referrals": {
     "invite": "Convidar amigos",
-    "inviteDesc": "Compartilhe seu link e veja quem entrou.",
     "referAndEarn": "Indique e ganhe",
     "description": "Compartilhe seu link. A gente conta todo mundo que entra por ele.",
     "shareText": "Poupe comigo na Vaquita e ganhe recompensas. Use o meu vaquitag {{code}}",
@@ -2220,7 +2205,6 @@
     "minWithdraw": "Saque mínimo: {{amount}} USDC.",
     "noUsernames": "Você ainda não salvou usuários",
     "noWallets": "Você ainda não tem carteiras salvas",
-    "processing": "Processando saque...",
     "processingHint": "Isso pode levar alguns segundos.",
     "review": "Revisar",
     "selectAccount": "Selecionar conta",
@@ -2340,7 +2324,6 @@
   "portfolio": {
     "title": "Portfólio",
     "total": "Total",
-    "earning": "Ganhos estimados",
     "invest": "Investir",
     "savings": "Poupança",
     "distributed": "Distribuído em {{funded}} de {{total}} opções",

@@ -22,6 +22,7 @@ import { FiExternalLink, FiPlus } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
 import { railLabel, truncateMiddle } from '../../../helpers';
 import { AMOUNT_DECIMALS, FIAT_DECIMALS, floorAmount, formatTokenPrecise } from '../../../helpers/numbers';
+import { formatRampEta } from '../../../helpers/time';
 import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
 import {
   type SavedBankAccount,
@@ -1294,7 +1295,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
             )}
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>{t('wallet.fiat.ramp.etaLabel', 'Estimated time')}</span>
-              <span className="font-semibold text-black">{quote.estimatedTime}</span>
+              <span className="font-semibold text-black">{formatRampEta(quote.estimatedTime)}</span>
             </div>
           </div>
 
@@ -1342,7 +1343,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           {waiting && steps.payout === 'running' && !settling && (
             <p className="text-xs text-gray-500">
               {t('wallet.fiat.ramp.waitingReady', 'Waiting for the payment to settle…', {
-                eta: quote?.estimatedTime ?? '',
+                eta: formatRampEta(quote?.estimatedTime ?? ''),
               })}
             </p>
           )}
