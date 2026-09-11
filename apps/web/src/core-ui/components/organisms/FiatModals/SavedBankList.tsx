@@ -88,18 +88,14 @@ export function SavedBankList({
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   if (loading && accounts.length === 0) {
-    return (
-      <div className="h-14 rounded-lg border border-black/10 bg-white animate-pulse" />
-    );
+    return <div className="h-14 rounded-lg border border-black/10 bg-white animate-pulse" />;
   }
 
   if (accounts.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold text-gray-500">
-        {t('wallet.fiat.ramp.savedBanks.title', 'Your saved accounts')}
-      </p>
+      <p className="text-xs font-semibold text-gray-500">{t('wallet.fiat.ramp.savedBanks.title', 'Your saved accounts')}</p>
 
       {accounts.map((account) => {
         const selected = account.id === selectedId;

@@ -193,7 +193,7 @@ export function ReceiveFiatModal({ open, onOpenChange, onBack }: ReceiveFiatModa
     const failed = tx.status ? FAILED.has(tx.status) : false;
     const credited = tx.status === 'completed';
 
-    setError(failed ? tx.message ?? tx.status ?? null : null);
+    setError(failed ? (tx.message ?? tx.status ?? null) : null);
     setShowReconnect(false);
     setUsdcReceived(null);
     setInteractiveUrl(tx.more_info_url ?? null);
