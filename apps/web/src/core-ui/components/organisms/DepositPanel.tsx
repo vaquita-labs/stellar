@@ -380,6 +380,19 @@ export function DepositPanel() {
               });
             }
 
+            // Leg 1 already refreshed the wallet balance, and it did so with the
+            // money in transit: the cached figure counts what this payment has
+            // since sent out. Nothing looks again — `useIdleFunds` only polls
+            // while money is expected IN — so that figure outlives the withdrawal
+            // and the idle-funds prompt opens offering to invest what already
+            // left, at an amount the chain no longer agrees with.
+            //
+            // Awaited on purpose: the success screen costs one balance read, and
+            // in exchange whatever follows it reads a true number. A refresh that
+            // fails cannot turn a withdrawal that worked into an error, so its
+            // failure is swallowed.
+            await invalidateAfterMoneyMove().catch(() => {});
+
             trackUserAction('withdraw_submitted', {
               amount,
               network: network?.networkName || null,
