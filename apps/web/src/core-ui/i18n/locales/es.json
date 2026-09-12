@@ -2186,6 +2186,11 @@
     "confirm": {
       "title": "Confirmar retiro"
     },
+    "partial": {
+      "title": "Te falta un paso",
+      "legDone": "Salió del ahorro y está en tu wallet",
+      "legPending": "Pago a {{destination}}"
+    },
     "confirmCta": "Confirmar",
     "resumeSendCta": "Completar el envío",
     "pendingHint": "Revisa tu saldo en un minuto antes de volver a intentarlo.",

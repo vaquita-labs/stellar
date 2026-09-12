@@ -7,7 +7,7 @@ import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { recordWalletTransferInBackground } from '@/networks/pollar/walletTransfersApi';
 import { awaitUsdcCredit, readUsdcBalance, resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
 import { formatBaseUnits } from '@/networks/stellar/vaultQueries';
-import { toBaseUnits } from '@/networks/stellar/sorobanTx';
+import { payableAmount, withdrawRequestAmount } from '@/networks/stellar/withdrawAmounts';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import type { PendingWithdrawPayment } from '@/networks/stellar/withdrawError';
 import { WithdrawPaymentError } from '@/networks/stellar/withdrawError';
@@ -29,22 +29,6 @@ import { SendFiatRampModal } from './FiatModals/SendFiatRampModal';
 import { WithdrawModal } from './WithdrawModal';
 import { PressableButton } from '../molecules/PressableButton';
 import { HOME_TOUR_ANCHOR_ACTIONS } from './Tutorial/homeTourConfig';
-
-/**
- * Extra USDC pulled out of savings by a withdrawal that still has a payment leg
- * ahead of it, so that leg can send the round figure the user approved.
- *
- * How much a withdrawal credits is decided by the vault's rounding as it
- * unwinds, once per strategy, not by the shares it is asked to burn: requesting
- * exactly 1 USDC can land at 0.9999999. Asking for this much more absorbs that
- * gap, and the destination receives the amount that was on the confirmation
- * screen rather than a figure ending in stray digits.
- *
- * The leftover is idle USDC like any other: it stays in the wallet, accumulates
- * with whatever else lands there, and goes back to work once it clears
- * `MIN_IDLE_USDC`.
- */
-const WITHDRAW_DUST_STR = '0.0001';
 
 export function DepositPanel() {
   const { t } = useTranslation();
@@ -271,19 +255,9 @@ export function DepositPanel() {
             // menos. Se lee antes de mover nada para poder restar después.
             const balanceBefore = toSelf ? 0 : await readUsdcBalance(walletAddress, token.decimals);
 
-            // The margin is only worth paying for when a payment leg follows: a
-            // one-leg withdrawal lands in the wallet the user already owns, where
-            // no exact figure has to be met, and `withdrawAll` takes the whole
-            // position through the i128 sentinel and has nothing left to cover.
-            // Both backends clamp an over-request at the position, so asking for
-            // more than there is cannot fail — it just withdraws all of it.
-            const withdrawStr =
-              toSelf || withdrawAll
-                ? amountStr
-                : formatBaseUnits(
-                    toBaseUnits(amountStr, token.decimals) + toBaseUnits(WITHDRAW_DUST_STR, token.decimals),
-                    token.decimals,
-                  );
+            const withdrawStr = withdrawRequestAmount(amountStr, token.decimals, {
+              hasPaymentLeg: !toSelf && !withdrawAll,
+            });
 
             // Salto 1 (o único): Blend → la wallet del usuario. `withdrawAll`
             // saca la posición entera vía el sentinel i128.
@@ -357,20 +331,8 @@ export function DepositPanel() {
             let toSend: string;
             try {
               const creditedBase = await awaitUsdcCredit(walletAddress, token.decimals, balanceBefore, { hash });
-              // What goes out is the figure the user approved — `WITHDRAW_DUST_STR`
-              // is what makes the credit cover it. It stays a floor rather than a
-              // plain `requestedBase` because the margin cannot be guaranteed: a
-              // withdrawal that empties the position gets clamped at the share
-              // balance and credits less than it asked for, and paying the full
-              // figure there bounces with `op_underfunded`, stranding the money in
-              // the wallet with leg 1 already done. `withdrawAll` sends the whole
-              // credit, which carries interest the typed amount does not.
-              const requestedBase = toBaseUnits(amountStr, token.decimals);
               credited = formatBaseUnits(creditedBase, token.decimals);
-              toSend = formatBaseUnits(
-                withdrawAll || creditedBase < requestedBase ? creditedBase : requestedBase,
-                token.decimals,
-              );
+              toSend = payableAmount(creditedBase, amountStr, token.decimals, { withdrawAll });
             } catch (e) {
               reportUnpaidLeg(e, null, null);
               throw new WithdrawPaymentError(wallet.label, e, {

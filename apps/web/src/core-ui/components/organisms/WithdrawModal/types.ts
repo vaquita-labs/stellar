@@ -2,7 +2,21 @@ import type { PendingWithdrawPayment } from '@/networks/stellar/withdrawError';
 import { SavedWallet } from '../../../hooks/useSavedWallets';
 
 export type WithdrawStep =
-  'method' | 'amount' | 'account' | 'username' | 'addWallet' | 'addNickname' | 'confirm' | 'processing' | 'success';
+  | 'method'
+  | 'amount'
+  | 'account'
+  | 'username'
+  | 'addWallet'
+  | 'addNickname'
+  | 'confirm'
+  | 'processing'
+  | 'success'
+  /**
+   * El retiro movió la plata y el pago no salió: quedó en la wallet del usuario,
+   * fuera del ahorro. No es una confirmación con un error encima —no hay nada
+   * que volver a firmar— sino el estado en el que quedó y lo que falta hacer.
+   */
+  | 'partial';
 
 /**
  * Sub-pasos del retiro, para el progreso visible:

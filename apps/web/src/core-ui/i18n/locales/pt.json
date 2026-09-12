@@ -2186,6 +2186,11 @@
     "confirm": {
       "title": "Confirmar saque"
     },
+    "partial": {
+      "title": "Falta um passo",
+      "legDone": "Saiu da poupança e está na sua carteira",
+      "legPending": "Pagamento para {{destination}}"
+    },
     "confirmCta": "Confirmar",
     "resumeSendCta": "Concluir o envio",
     "pendingHint": "Confira seu saldo em um minuto antes de tentar de novo.",

@@ -13,7 +13,7 @@ import { motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
-import { FiAtSign, FiCheck, FiChevronRight, FiPlus } from 'react-icons/fi';
+import { FiAtSign, FiCheck, FiChevronRight, FiPlus, FiX } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
 import { IoWalletOutline } from 'react-icons/io5';
 import { useProfileData } from '../../../hooks';
@@ -96,9 +96,8 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
   //    Confirmar de nuevo correría los DOS saltos y sacaría de más.
   //  - pendiente: la transacción salió a la red y todavía puede confirmar, así
   //    que reintentar manda la misma plata dos veces.
-  const unpaidPayment = isWithdrawPaymentError(error) ? error.payment : null;
+  const halfDone = isWithdrawPaymentError(error) ? error : null;
   const txPending = isTxPendingError(error);
-  const retryUnsafe = !!unpaidPayment || txPending;
   // Se enciende cuando el usuario intenta revisar un monto mayor al disponible:
   // apaga el número, lo hace temblar, escribe el motivo donde estaba el mínimo y
   // bloquea Review. Se apaga al seguir tecleando (o al tocar Available / cambiar
@@ -312,7 +311,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       setStep('success');
     } catch (e) {
       setError(e ?? new Error(t('withdraw.error.generic', 'Something went wrong')));
-      setStep('confirm');
+      // Un retiro a medias no vuelve a la confirmación: no hay nada que
+      // confirmar de nuevo, la plata ya se movió. Todo lo demás sí, porque no
+      // movió nada y reintentar es exactamente lo que corresponde.
+      setStep(isWithdrawPaymentError(e) ? 'partial' : 'confirm');
     }
   };
 
@@ -661,6 +663,38 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
     </div>
   );
 
+  // --- Paso: retiro a medias -------------------------------------------------
+  // Los dos saltos con su resultado real: uno salió, el otro no. Es lo que
+  // separa esta pantalla de la confirmación —que muestra lo que VA a pasar— y lo
+  // que le dice al usuario dónde está su plata sin que tenga que deducirlo.
+  const partialStep = halfDone ? (
+    <div className="flex flex-col gap-4">
+      <div className="text-center pt-1">
+        <p className="text-sm text-gray-500">{t('withdraw.amountLabel', 'Amount')}</p>
+        <p className="text-4xl font-bold text-black">{formatUsdPrecise(Number(halfDone.payment.amount))}</p>
+      </div>
+
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center gap-3">
+          <span className="w-7 h-7 rounded-full bg-success border border-black flex items-center justify-center shrink-0">
+            <FiCheck className="w-4 h-4 text-black" strokeWidth={3} />
+          </span>
+          <span className="text-sm text-black">{t('withdraw.partial.legDone', 'Out of savings and in your wallet')}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="w-7 h-7 rounded-full bg-error/10 border border-error flex items-center justify-center shrink-0">
+            <FiX className="w-4 h-4 text-error" strokeWidth={3} />
+          </span>
+          <span className="text-sm text-black">
+            {t('withdraw.partial.legPending', 'Payment to {{destination}}', { destination: halfDone.destination })}
+          </span>
+        </div>
+      </div>
+
+      {error ? <ErrorNotice error={error} /> : null}
+    </div>
+  ) : null;
+
   // --- Pasos: procesando / éxito --------------------------------------------
   const activeIdx = progressSteps.findIndex((s) => s.key === activeStep);
   const processingStep = (
@@ -752,6 +786,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       />
     ),
     confirm: confirmStep,
+    partial: partialStep,
     processing: processingStep,
     success: successStep,
   };
@@ -764,6 +799,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
     addWallet: t('withdraw.addMethod', 'Add method'),
     addNickname: t('withdraw.addNickname.cta', 'Add username'),
     confirm: t('withdraw.confirm.title', 'Confirm withdrawal'),
+    partial: t('withdraw.partial.title', 'One step left'),
     processing: t('deposit.withdraw.button', 'Withdraw'),
     success: t('deposit.withdraw.button', 'Withdraw'),
   };
@@ -776,9 +812,11 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
     // El alta por usuario ahora se abre desde su propia lista, no desde la de
     // wallets: el back tiene que devolver ahí.
     addNickname: 'username',
-    // Sin el corte, volver al monto y pasar de nuevo por Review llega al mismo
-    // Confirmar que el footer acaba de sacar de la pantalla.
-    confirm: retryUnsafe ? undefined : 'amount',
+    // Con la transacción en vuelo, volver al monto y pasar de nuevo por Review
+    // llega al mismo Confirmar que el footer acaba de sacar de la pantalla.
+    // `partial` no figura acá y por eso no tiene back: detrás no hay nada que
+    // rehacer, el retiro ya pasó.
+    confirm: txPending ? undefined : 'amount',
   };
   const backTarget: WithdrawStep | undefined =
     step === 'username' ? usernameOrigin : BACK_TARGET[step];
@@ -788,19 +826,15 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleReview} disabled={!canReview}>
         {t('withdraw.review', 'Review')}
       </PressableButton>
+    ) : step === 'partial' && halfDone ? (
+      // Lo único que falta es el pago, y se completa desde Enviar sin volver a
+      // tocar el ahorro. Acá NO puede haber un Confirmar: correría los dos
+      // saltos y sacaría del ahorro una segunda vez.
+      <PressableButton variant="success" size="cta" className="py-2.5!" onClick={() => onResumePayment(halfDone.payment)}>
+        {t('withdraw.resumeSendCta', 'Finish the payment')}
+      </PressableButton>
     ) : step === 'confirm' ? (
-      unpaidPayment ? (
-        // El salto 1 ya movió la plata: lo único que falta es el pago, y se
-        // completa desde Enviar sin volver a tocar el ahorro.
-        <PressableButton
-          variant="success"
-          size="cta"
-          className="py-2.5!"
-          onClick={() => onResumePayment(unpaidPayment)}
-        >
-          {t('withdraw.resumeSendCta', 'Finish the payment')}
-        </PressableButton>
-      ) : txPending ? (
+      txPending ? (
         // Salió a la red y todavía puede confirmar: sin botón, porque el único
         // que cabría acá mandaría la misma plata una segunda vez.
         <p className="w-full text-center text-xs text-gray-500">

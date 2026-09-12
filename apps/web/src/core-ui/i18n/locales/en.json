@@ -2186,6 +2186,11 @@
     "confirm": {
       "title": "Confirm withdrawal"
     },
+    "partial": {
+      "title": "One step left",
+      "legDone": "Out of savings and in your wallet",
+      "legPending": "Payment to {{destination}}"
+    },
     "confirmCta": "Confirm",
     "resumeSendCta": "Finish the payment",
     "pendingHint": "Check your balance in a minute before trying again.",
