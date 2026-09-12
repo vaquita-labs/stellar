@@ -1,7 +1,14 @@
 'use client';
 
 import { truncateMiddle } from '@/core-ui/helpers/strings';
-import { AMOUNT_DECIMALS, floorAmount, formatTokenPrecise, formatUsdPrecise, MIN_USDC } from '@/core-ui/helpers/numbers';
+import {
+  AMOUNT_DECIMALS,
+  floorAmount,
+  formatTokenPrecise,
+  formatUsdPrecise,
+  MIN_USDC,
+  MONEY_INPUT_DECIMALS,
+} from '@/core-ui/helpers/numbers';
 import { useLivePassiveUsdc, usePassiveLabel, usePassiveMigration } from '@/core-ui/hooks';
 import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
 import { blendConfigForToken } from '@/networks/stellar/blendDirect';
@@ -243,6 +250,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
   }, [destinationKind, isExternalWallet, savedWallets, selectedWalletId]);
 
   const numericAmount = Number(amount || '0');
+  // Por debajo del mínimo el aviso se pinta como error en vez de quedar en el
+  // gris del hint: es la misma frase, pero gris se lee como una nota al pie y el
+  // usuario teclea un monto, ve Review apagado y no sabe por qué.
+  const belowMinimum = numericAmount > 0 && numericAmount < MIN_USDC;
   // Mínimo 1 USDC para retirar (mismo piso que el depósito y que valida el
   // backend). Por debajo el botón queda gris y el aviso de mínimo lo explica.
   // Exceder el saldo se detecta al presionar Review: tiembla + número en rojo
@@ -383,6 +394,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
   );
 
   // --- Paso: monto -----------------------------------------------------------
+  const minimumHint = t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
+    amount: formatTokenPrecise(MIN_USDC, 2),
+  });
   const amountStep = (
     <AmountStep
       value={amount}
@@ -390,18 +404,22 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
         setAmount(next);
         setIsMax(false);
       }}
-      decimals={AMOUNT_DECIMALS}
+      decimals={MONEY_INPUT_DECIMALS}
       controls={amountControls}
       available={available}
       availableDecimals={2}
       // Tocar "Available" es pedir retirar TODO: el sentinel i128 de blendDirect
       // depende de esta bandera, no del monto tecleado.
       onMax={() => setIsMax(true)}
-      error={overBalance ? t('withdraw.exceedsBalance', "That's more than you have available.") : null}
+      error={
+        overBalance
+          ? t('withdraw.exceedsBalance', "That's more than you have available.")
+          : belowMinimum
+            ? minimumHint
+            : null
+      }
       onErrorClear={() => setOverBalance(false)}
-      hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
-        amount: formatTokenPrecise(MIN_USDC, 2),
-      })}
+      hint={minimumHint}
     >
       {showBlendLeftover && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-black/15 bg-black/5 px-3 py-2">

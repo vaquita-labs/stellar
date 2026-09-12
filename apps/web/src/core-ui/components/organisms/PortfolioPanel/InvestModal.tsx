@@ -2,6 +2,7 @@
 
 import {
   AMOUNT_DECIMALS,
+  MONEY_INPUT_DECIMALS,
   floorAmount,
   formatTokenPrecise,
   formatUsd,
@@ -204,7 +205,7 @@ export function InvestModal({
           setAmount(next);
           setIsMax(false);
         }}
-        decimals={AMOUNT_DECIMALS}
+        decimals={MONEY_INPUT_DECIMALS}
         controls={amountControls}
         available={available}
         // "Available" = invertir todo lo pasivo: el retiro previo de Blend usa el

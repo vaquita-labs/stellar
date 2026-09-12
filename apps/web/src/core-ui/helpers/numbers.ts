@@ -31,6 +31,21 @@ export const formatUsd = (amount: number) =>
 export const AMOUNT_DECIMALS = 7;
 
 /**
+ * Decimals the amount keypads accept. Two, because that is how people write
+ * money: nobody means to send 0.1234567 USDC, and a figure with seven decimals
+ * on the confirmation screen reads as a bug rather than as the amount approved.
+ *
+ * It is NOT `AMOUNT_DECIMALS`, which stays at the chain's precision — balances,
+ * the credit a withdrawal measures and everything the app computes for itself
+ * keep all seven digits. This one only limits what a person can TYPE.
+ *
+ * Moving a whole balance does not go through the keypad either: the "Available"
+ * chip fills the figure in, and the screens that empty a position flip their own
+ * withdraw-all flag instead of trusting the typed number.
+ */
+export const MONEY_INPUT_DECIMALS = 2;
+
+/**
  * Decimales del monto en MONEDA LOCAL (los ramps). No es `AMOUNT_DECIMALS`: acá
  * el usuario teclea pesos/bolivianos, y ningún proveedor de fiat cotiza más allá
  * del centavo. Es el mismo 2 para tipear el monto y para mostrar la cotización.

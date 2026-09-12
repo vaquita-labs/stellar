@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 } from 'uuid';
 import {
-  AMOUNT_DECIMALS,
+  MONEY_INPUT_DECIMALS,
   formatTimeDeposit,
   formatTokenPrecise,
   getQuickAmounts,
@@ -264,7 +264,7 @@ export function DepositModal({
             <AmountStep
               value={amount}
               onValueChange={setAmount}
-              decimals={AMOUNT_DECIMALS}
+              decimals={MONEY_INPUT_DECIMALS}
               disabled={simulate || isDepositing}
               available={simulate ? null : balanceFormatted}
               availableLoading={balanceIsLoading}

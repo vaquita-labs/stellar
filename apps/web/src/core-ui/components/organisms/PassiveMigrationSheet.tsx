@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AMOUNT_DECIMALS,
+  MONEY_INPUT_DECIMALS,
   floorAmount,
   formatTokenPrecise,
   formatUsdAdaptive,
@@ -110,7 +111,7 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
           <AmountStep
             value={amount}
             onValueChange={setAmount}
-            decimals={AMOUNT_DECIMALS}
+            decimals={MONEY_INPUT_DECIMALS}
             disabled={busy}
             // Techo duro: el teclado no deja tipear más de lo que hay en Blend,
             // así que acá el monto nunca puede pasarse (no hay temblor).
