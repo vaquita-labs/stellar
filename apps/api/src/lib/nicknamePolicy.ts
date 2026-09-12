@@ -23,7 +23,7 @@
 
 import blockedTerms from './blockedNicknameTerms.json';
 
-// The nickname is the vaquitatag: the public profile URL segment
+// The nickname is the vaquitag: the public profile URL segment
 // (/leaderboard/<nickname>), the @handle a send resolves, AND the invite code.
 // So the charset is URL-safe lowercase letters and digits, and nothing else —
 // no underscore, because the tag gets read out loud across a table at an event

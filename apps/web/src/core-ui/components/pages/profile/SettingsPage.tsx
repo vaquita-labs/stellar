@@ -13,7 +13,6 @@ import {
   FiEyeOff,
   FiLogOut,
   FiSliders,
-  FiUserPlus,
 } from 'react-icons/fi';
 import { useInstallApp, useLogout, useProfileData } from '../../../hooks';
 import { usePrivacyStore, useConfigStore } from '../../../stores';
@@ -168,7 +167,7 @@ const formatDate = (iso: string) => {
 };
 
 /** Sub-pantallas de Ajustes que <SettingsModal> puede apilar como panel. */
-export type SettingsSubKey = 'preferences' | 'profile' | 'notifications' | 'wallet' | 'invite';
+export type SettingsSubKey = 'preferences' | 'profile' | 'notifications' | 'wallet';
 
 /**
  * `onBack` lo pasa <SettingsModal> cuando la pantalla se abre como panel sobre
@@ -237,14 +236,6 @@ export function SettingsPage({ onBack, onOpenSub }: { onBack?: () => void; onOpe
       label: t('profilePages.settings.notifications', 'Notifications'),
       description: t('profilePages.settings.notificationsDesc', 'Manage push and email alerts.'),
       ...nav('notifications', '/profile/notifications'),
-    },
-    {
-      kind: 'link',
-      key: 'invite',
-      icon: <FiUserPlus />,
-      label: t('referrals.invite', 'Invite friends'),
-      description: t('referrals.inviteDesc', 'Share your link and see who joined.'),
-      ...nav('invite', '/profile/invite'),
     },
     {
       kind: 'link',

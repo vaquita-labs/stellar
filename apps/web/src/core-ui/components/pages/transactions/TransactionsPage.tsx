@@ -2,6 +2,8 @@
 
 import { CircleIconButton } from '@/core-ui/components/molecules/CircleIconButton';
 import {
+  FilterChip,
+  multiSelectChips,
   PageLayout,
   TransactionList,
   TransactionMonthCard,
@@ -11,10 +13,12 @@ import {
 } from '@/core-ui/components/molecules';
 import {
   buildTransactions,
-  EMPTY_TRANSACTION_FILTERS,
+  DEFAULT_TRANSACTION_FILTERS,
   filterTransactions,
   groupTransactionsByMonth,
   hasActiveFilters,
+  TRANSACTION_KINDS,
+  TRANSACTION_STATUSES,
   TransactionFilters,
 } from '@/core-ui/helpers/transactions';
 import { useDepositsComplete } from '@/core-ui/hooks';
@@ -22,21 +26,9 @@ import { useConfigStore } from '@/core-ui/stores';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiFilter, FiX } from 'react-icons/fi';
+import { FiFilter } from 'react-icons/fi';
 import { TransactionDetailsOverlay } from './TransactionDetailsOverlay';
 import { TransactionFiltersModal } from './TransactionFiltersModal';
-
-/** Chip de un filtro aplicado, con × para quitarlo (como en el mock). */
-function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-black border-b-2 bg-primary px-3 py-1 text-xs font-bold text-black">
-      {label}
-      <button type="button" onClick={onRemove} aria-label={label} className="text-black/60 hover:text-black">
-        <FiX className="h-3.5 w-3.5" />
-      </button>
-    </span>
-  );
-}
 
 /** Placeholder de la lista: se usa tanto en la primera carga de datos como
  *  mientras hidrata, para no cortar la navegación con el loader de la vaquita. */
@@ -61,7 +53,7 @@ export function TransactionsPage() {
   const { walletAddress } = useConfigStore();
   const { data, isLoading } = useDepositsComplete(walletAddress);
 
-  const [filters, setFilters] = useState<TransactionFilters>(EMPTY_TRANSACTION_FILTERS);
+  const [filters, setFilters] = useState<TransactionFilters>(DEFAULT_TRANSACTION_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   // ¿Se entró directo al detalle (link compartido o refresh con `?tx=`)? Ahí el
   // panel se pinta ya puesto, sin deslizarse sobre una lista que nunca se vio.
@@ -88,20 +80,21 @@ export function TransactionsPage() {
       onRemove: () => setFilters((prev) => ({ ...prev, endDate: null })),
     });
   }
-  if (filters.kind !== 'all') {
-    chips.push({
-      key: 'kind',
-      label: t(`transactions.filters.kinds.${filters.kind}`),
-      onRemove: () => setFilters((prev) => ({ ...prev, kind: 'all' })),
-    });
-  }
-  if (filters.status !== 'all') {
-    chips.push({
-      key: 'status',
-      label: t(`transactions.filters.statuses.${filters.status}`),
-      onRemove: () => setFilters((prev) => ({ ...prev, status: 'all' })),
-    });
-  }
+  // Tipo y estado son multi-selección: sin chips mientras está todo marcado.
+  chips.push(
+    ...multiSelectChips(
+      filters.kinds,
+      TRANSACTION_KINDS,
+      (kind) => t(`transactions.filters.kinds.${kind}`),
+      (kinds) => setFilters((prev) => ({ ...prev, kinds })),
+    ),
+    ...multiSelectChips(
+      filters.statuses,
+      TRANSACTION_STATUSES,
+      (status) => t(`transactions.filters.statuses.${status}`),
+      (statuses) => setFilters((prev) => ({ ...prev, statuses })),
+    ),
+  );
 
   // Solo la primera carga muestra placeholders; con la lista ya cacheada
   // (staleTime Infinity + localStorage) la pantalla entra pintada.

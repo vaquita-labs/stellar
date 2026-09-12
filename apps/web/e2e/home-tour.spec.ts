@@ -14,8 +14,8 @@ import { completeUsernamePromptIfShown, createFreshSigner, expect, openSignedIn,
  * these are the ones that opt back in.
  */
 
-/** The chest and the side rail are `md:hidden`, so only a narrow viewport shows
- *  the whole tour. The app is a mobile PWA: this is also the layout that matters. */
+/** The app is a mobile PWA: the narrow layout is the one that matters, so the
+ *  tour is walked there, with the chest and the side rail floating over the map. */
 test.use({ viewport: { width: 390, height: 844 } });
 
 /**

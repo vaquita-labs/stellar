@@ -164,7 +164,7 @@
       "collect": {
         "heading": "2. Informações que coletamos",
         "intro": "Coletamos as seguintes categorias de informação:",
-        "account": "<b>Conta e perfil.</b> Seu endereço de carteira e o vaquitatag, e-mail, avatar, idioma e moeda de exibição e preferências de notificação que você escolher configurar. Seu vaquitatag e seu avatar são públicos: aparecem no seu perfil, no ranking e nos links de conquistas que você compartilhar.",
+        "account": "<b>Conta e perfil.</b> Seu endereço de carteira e o vaquitag, e-mail, avatar, idioma e moeda de exibição e preferências de notificação que você escolher configurar. Seu vaquitag e seu avatar são públicos: aparecem no seu perfil, no ranking e nos links de conquistas que você compartilhar.",
         "financial": "<b>Registros de transações.</b> Depósitos, saques, valores, prazos de bloqueio, hashes de transação, as carteiras de recebimento que você salvar e as transferências entre redes, incluindo o endereço da contraparte.",
         "social": "<b>Dados sociais e de jogo.</b> Quem você segue e quem segue você, curtidas dadas e recebidas no seu mundo 3D, relações de indicação, medalhas, sequências, experiência, recompensas dentro do app, o layout e o inventário do seu mundo e suas notificações.",
         "device": "<b>Dados técnicos e do dispositivo.</b> Quando você se conecta, registramos um identificador de sessão junto com o user agent, a plataforma e o idioma do seu navegador. Se você ativar as notificações push, armazenamos o endpoint push emitido pelo serviço do seu navegador e suas chaves de criptografia.",
@@ -197,7 +197,7 @@
       },
       "onchain": {
         "heading": "5. Os dados em blockchain são públicos e permanentes",
-        "body": "Depósitos, saques e medalhas ficam registrados na rede Stellar. Esses dados são públicos, permanentes e estão fora do nosso controle. Não podemos editá-los nem apagá-los, e um pedido de exclusão não consegue removê-los. Qualquer pessoa pode ligar um endereço de carteira a todo o seu histórico de transações e a qualquer vaquitatag ou perfil que você tenha tornado público."
+        "body": "Depósitos, saques e medalhas ficam registrados na rede Stellar. Esses dados são públicos, permanentes e estão fora do nosso controle. Não podemos editá-los nem apagá-los, e um pedido de exclusão não consegue removê-los. Qualquer pessoa pode ligar um endereço de carteira a todo o seu histórico de transações e a qualquer vaquitag ou perfil que você tenha tornado público."
       },
       "transfers": {
         "heading": "6. Transferências internacionais",
@@ -415,14 +415,27 @@
     "selectOption": "Escolha uma opção…",
     "soon": "Em breve",
     "time": {
+      "approxDay_one": "cerca de 1 dia",
+      "approxDay_other": "cerca de {{count}} dias",
+      "approxHour_one": "cerca de 1 hora",
+      "approxHour_other": "cerca de {{count}} horas",
+      "approxMinute_one": "cerca de 1 minuto",
+      "approxMinute_other": "cerca de {{count}} minutos",
+      "approxMonth_one": "cerca de 1 mês",
+      "approxMonth_other": "cerca de {{count}} meses",
       "day_one": "1 dia",
       "day_other": "{{count}} dias",
+      "fewDays": "alguns dias",
+      "fewHours": "algumas horas",
+      "fewMinutes": "alguns minutos",
+      "fewMonths": "alguns meses",
       "hour_one": "1 hora",
       "hour_other": "{{count}} horas",
       "minute_one": "1 minuto",
       "minute_other": "{{count}} minutos",
       "month_one": "1 mês",
-      "month_other": "{{count}} meses"
+      "month_other": "{{count}} meses",
+      "upTo": "até {{time}}"
     }
   },
   "deposit": {
@@ -435,7 +448,6 @@
       "cta": "Depositar nas suas economias",
       "destination": "Blend",
       "notTracked": "Seu USDC começa a render na hora, sem período de bloqueio. Retire quando quiser.",
-      "processing": "Processando depósito...",
       "processingStep": "Depositando nas suas economias",
       "whatIsTitle": "O que é Blend?",
       "whatIs": "Blend é um protocolo de empréstimos auditado na Stellar. Seu USDC é fornecido ao pool dele para render, e você pode sacar quando quiser.",
@@ -448,7 +460,6 @@
       "estimatesDisclaimer": "São estimativas e podem mudar com o tempo. As recompensas finais são confirmadas no saque.",
       "marketRewards": "Recompensas de {{market}}",
       "myDeposits": "Meus depósitos",
-      "protocolRewards": "Recompensas do protocolo",
       "protocolRewardsInfo": "Rendimento de {{market}} onde seus fundos estão depositados.",
       "theLendingProtocol": "o protocolo de empréstimos",
       "title": "Recompensas do Banco",
@@ -488,11 +499,8 @@
       "filterAll": "Todos",
       "filterEarly": "Antecipados",
       "filterOnTime": "No prazo",
-      "makeFirstDeposit": "Faça seu primeiro depósito para começar",
       "noActiveDeposits": "Nenhum depósito ativo",
       "noData": "Sem dados",
-      "noDepositsYet": "Você ainda não tem depósitos",
-      "noReadyDeposits": "Nenhum depósito pronto para sacar",
       "noWithdrawnDeposits": "Nenhum depósito sacado",
       "rewardsForfeited": "Recompensas perdidas",
       "sortAmount": "Maior valor",
@@ -501,7 +509,6 @@
       "sortUnlock": "Desbloqueio mais próximo",
       "tabActive": "Ativos",
       "tabWithdrawn": "Sacados",
-      "title": "Seus depósitos",
       "withdrawnBadge": "Sacado",
       "withdrawnEarlyBadge": "Sacado antes"
     },
@@ -781,7 +788,7 @@
         "title": "Precisa de ajuda?"
       },
       "profile": {
-        "body": "Aqui ficam seu avatar, seu vaquitatag e suas configurações.",
+        "body": "Aqui ficam seu avatar, seu vaquitag e suas configurações.",
         "title": "Seu perfil"
       },
       "quickActions": {
@@ -826,7 +833,7 @@
       "joined": "Entrou em {{joinedLabel}}",
       "noAchievements": "Ainda não desbloqueou conquistas",
       "notFound": "Não encontramos @{{username}}",
-      "notFoundHint": "A conta pode ter mudado o vaquitatag ou não existe mais."
+      "notFoundHint": "A conta pode ter mudado o vaquitag ou não existe mais."
     },
     "league": {
       "demotionZone": "Zona de rebaixamento",
@@ -852,9 +859,6 @@
       "rulesFirstDivision": "Na primeira divisão ninguém desce — você só pode subir.",
       "xpValue": "{{xp}} XP"
     }
-  },
-  "nav": {
-    "primaryAriaLabel": "Principal"
   },
   "concierge": {
     "title": "Central de ajuda",
@@ -1002,19 +1006,19 @@
     },
     "username": {
       "helperAvailable": "@{{name}} está disponível",
-      "helperBlocked": "Esse vaquitatag não é permitido",
+      "helperBlocked": "Esse vaquitag não é permitido",
       "helperChecking": "Verificando disponibilidade…",
       "helperDefault": "Exibido como @{{name}}",
       "helperError": "Não foi possível verificar a disponibilidade, tente novamente",
       "helperShort": "Pelo menos {{count}} caracteres",
       "helperTaken": "@{{name}} já está em uso",
-      "inputPlaceholder": "vaquitatag",
-      "label": "Vaquitatag",
-      "placeholderName": "vaquitatag",
-      "saveErrorToast": "Não foi possível salvar o vaquitatag",
-      "savedToast": "Vaquitatag salvo",
-      "subtitle": "Este é o seu vaquitatag: o nome que os outros poupadores veem e o código que você compartilha para convidar. Você pode alterá-lo depois no seu perfil.",
-      "title": "Escolha seu vaquitatag"
+      "inputPlaceholder": "vaquitag",
+      "label": "Vaquitag",
+      "placeholderName": "vaquitag",
+      "saveErrorToast": "Não foi possível salvar o vaquitag",
+      "savedToast": "Vaquitag salvo",
+      "subtitle": "Este é o seu vaquitag: o nome que os outros poupadores veem e o código que você compartilha para convidar. Você pode alterá-lo depois no seu perfil.",
+      "title": "Escolha seu vaquitag"
     }
   },
   "profile": {
@@ -1138,9 +1142,9 @@
       "editAvatarHint": "Escolha seu cabelo, roupa, óculos e mais.",
       "email": "E-mail",
       "emailPlaceholder": "voce@exemplo.com",
-      "nickname": "Vaquitatag",
-      "nicknameFormatError": "O vaquitatag deve ter entre {{min}} e {{max}} caracteres: apenas minúsculas e números.",
-      "nicknamePlaceholder": "vaquitatag",
+      "nickname": "Vaquitag",
+      "nicknameFormatError": "O vaquitag deve ter entre {{min}} e {{max}} caracteres: apenas minúsculas e números.",
+      "nicknamePlaceholder": "vaquitag",
       "onboardingCompleted": "Onboarding concluído",
       "onboardingCompletedDesc": "Marque o fluxo de onboarding inicial como concluído.",
       "preferencesUpdated": "Preferências atualizadas",
@@ -1249,7 +1253,7 @@
       "privacyDescHidden": "Saldo oculto neste dispositivo.",
       "privacyPolicy": "Política de privacidade",
       "profile": "Perfil",
-      "profileDesc": "Edite seu vaquitatag e seu avatar.",
+      "profileDesc": "Edite seu vaquitag e seu avatar.",
       "signOut": "Sair",
       "signOutConfirmDesc": "Tem certeza de que quer sair?",
       "signOutConfirmTitle": "Sair?",
@@ -1565,7 +1569,7 @@
       "noMatchesBody": "Tente outro nome.",
       "noMatchesTitle": "Nenhum resultado",
       "removedToast": "{{name}} removido (simulação)",
-      "searchPlaceholder": "Busque por nome ou vaquitatag…",
+      "searchPlaceholder": "Busque por nome ou vaquitag…",
       "subtitle": "Veja vaqueros que você já conhece e convide-os para economizar com você.",
       "title": "Escolher dos contatos"
     },
@@ -1577,7 +1581,7 @@
       "follow": "Seguir",
       "followedBy": "Seguido por",
       "following": "Seguindo",
-      "searchByName": "Buscar por vaquitatag",
+      "searchByName": "Buscar por vaquitag",
       "shareFollowLink": "Compartilhar link para te seguir",
       "suggestedForYou": "Sugerido para você",
       "suggestionsTitle": "Sugestões de amigos",
@@ -1660,13 +1664,13 @@
       "followers_one": "{{count}} seguidor",
       "followers_other": "{{count}} seguidores",
       "following": "Seguindo",
-      "idleBody": "Digite um vaquitatag para buscar.",
+      "idleBody": "Digite um vaquitag para buscar.",
       "idleTitle": "Encontre seus vaqueros",
-      "noMatchBody": "Confira o vaquitatag e tente novamente.",
+      "noMatchBody": "Confira o vaquitag e tente novamente.",
       "noMatchTitle": "Nenhum vaquero encontrado",
-      "placeholder": "Digite um vaquitatag",
+      "placeholder": "Digite um vaquitag",
       "searching": "Buscando",
-      "title": "Buscar por vaquitatag"
+      "title": "Buscar por vaquitag"
     },
     "share": {
       "addingFriend": "Adicionando amigo…",
@@ -1797,16 +1801,6 @@
       "refresh": "Atualizar",
       "title": "Saldo"
     },
-    "editProfile": {
-      "guest": "Convidado",
-      "nicknameError": "Erro ao salvar o vaquitatag",
-      "nicknameLabel": "Vaquitatag",
-      "nicknameSaved": "Vaquitatag salvo!",
-      "saveChanges": "Salvar alterações",
-      "shownAs": "Exibido como: @{{name}}",
-      "title": "Editar perfil",
-      "walletLabel": "Carteira"
-    },
     "page": {
       "address": "Endereço",
       "addressCopied": "Endereço copiado!",
@@ -1830,7 +1824,7 @@
       "copyAddressAria": "Copiar endereço da wallet",
       "disconnectWallet": "Desconectar wallet",
       "editProfile": "Editar perfil",
-      "nicknameLabel": "Vaquitatag",
+      "nicknameLabel": "Vaquitag",
       "saveChanges": "Salvar alterações",
       "title": "Perfil",
       "walletLabel": "Carteira"
@@ -2050,7 +2044,7 @@
       "max": "MÁX",
       "insufficient": "Você não tem {{symbol}} suficiente na sua carteira.",
       "destination": "Carteira de destino",
-      "destinationPlaceholder": "G… ou @vaquitatag",
+      "destinationPlaceholder": "G… ou @vaquitag",
       "invalidAddress": "Isso não parece um endereço Stellar válido.",
       "sameAddress": "Você não pode enviar para o seu próprio endereço.",
       "handleNotFound": "Não encontramos esse usuário.",
@@ -2122,12 +2116,12 @@
   },
   "referrals": {
     "invite": "Convidar amigos",
-    "inviteDesc": "Compartilhe seu link e veja quem entrou.",
+    "referAndEarn": "Indique e ganhe",
     "description": "Compartilhe seu link. A gente conta todo mundo que entra por ele.",
-    "shareText": "Poupe comigo na Vaquita e ganhe recompensas. Use a minha vaquitatag {{code}}",
+    "shareText": "Poupe comigo na Vaquita e ganhe recompensas. Use o meu vaquitag {{code}}",
     "friendsJoined": "Amigos que entraram",
     "friendsSaving": "Amigos poupando",
-    "inviteWithTag": "Convide seus amigos com a sua vaquitatag",
+    "inviteWithTag": "Convide seus amigos com o seu vaquitag",
     "shareLink": "Compartilhar link",
     "shareQr": "Compartilhar QR",
     "copyLink": "Copiar link",
@@ -2136,7 +2130,7 @@
     "rewardsComing": "As recompensas por convidar estão chegando. As suas já estão sendo contadas.",
     "qr": {
       "title": "Seu QR de convite",
-      "hint": "Peça para escanear com a câmera do celular. Abre a Vaquita com a sua vaquitatag já aplicada.",
+      "hint": "Peça para escanear com a câmera do celular. Abre a Vaquita com o seu vaquitag já aplicado.",
       "alt": "Código QR com o seu link de convite",
       "unavailable": "Não conseguimos desenhar o código aqui. Compartilhe seu link.",
       "save": "Salvar o QR no meu celular",
@@ -2165,9 +2159,9 @@
   "withdraw": {
     "addMethod": "Adicionar método",
     "addNickname": {
-      "cta": "Adicionar vaquitatag",
-      "field": "Vaquitatag",
-      "placeholder": "vaquitatag"
+      "cta": "Adicionar vaquitag",
+      "field": "Vaquitag",
+      "placeholder": "vaquitag"
     },
     "addWallet": {
       "addressField": "Endereço",
@@ -2211,7 +2205,7 @@
         "subtitle": "Saque para uma carteira cripto"
       },
       "username": {
-        "title": "Vaquitatag",
+        "title": "Vaquitag",
         "subtitle": "Envie para um usuário da Vaquita"
       }
     },
@@ -2219,7 +2213,6 @@
     "minWithdraw": "Saque mínimo: {{amount}} USDC.",
     "noUsernames": "Você ainda não salvou usuários",
     "noWallets": "Você ainda não tem carteiras salvas",
-    "processing": "Processando saque...",
     "processingHint": "Isso pode levar alguns segundos.",
     "review": "Revisar",
     "selectAccount": "Selecionar conta",
@@ -2283,12 +2276,10 @@
       "clearAll": "Limpar tudo",
       "apply": "Aplicar",
       "kinds": {
-        "all": "Todas as transações",
         "deposit": "Depósitos",
         "withdraw": "Saques"
       },
       "statuses": {
-        "all": "Todos os status",
         "completed": "Concluídas",
         "pending": "Pendentes",
         "failed": "Falhas"
@@ -2341,7 +2332,6 @@
   "portfolio": {
     "title": "Portfólio",
     "total": "Total",
-    "earning": "Ganhos estimados",
     "invest": "Investir",
     "savings": "Poupança",
     "distributed": "Distribuído em {{funded}} de {{total}} opções",
@@ -2349,8 +2339,8 @@
     "noFunds": "Sem fundos",
     "sum": "Total",
     "empty": "Ainda não há prazos de poupança disponíveis.",
-    "poolRewards": "Pote de {{amount}}",
-    "inThePool": "{{value}} no pote",
+    "poolRewards": "{{amount}} em prêmios",
+    "poolRewardsApy": "{{apy}}% APY + {{amount}} em prêmios",
     "row": {
       "ready": "Pronto",
       "timeLeft": "restante",

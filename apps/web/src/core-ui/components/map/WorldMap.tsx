@@ -12,7 +12,7 @@ import { useMapStore, useConfigStore, useSyncMapObjects, isWalkableType, useIsTa
 import { Button } from '../atoms';
 import { DepositSummaryResponseDTO, DepositWithdrawalState, WorldType } from '../../types';
 import { useModalPresence } from '../molecules/AppModal';
-import { DailyRewardModal, MoodMessageModal, VaquitasListModal } from '../organisms';
+import { DailyRewardModal, MoodMessageModal } from '../organisms';
 import { MapObjects } from './buildings/MapObjects';
 import { AdaptiveResolution } from './scene/AdaptiveResolution';
 import { SceneCamera } from './scene/SceneCamera';
@@ -58,13 +58,11 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
   // Con walletAddress (vista de leaderboard) se carga el mapa de ESE perfil;
   // sin él, el del usuario logueado.
   const { isLoaded: mapLoaded } = useSyncMapObjects(walletAddress);
-  const [showVaquitasListModal, setShowVaquitasListModal] = useState(false);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
   const [dailyRewardExperience, setDailyRewardExperience] = useState(0);
   const [showMoodModal, setShowMoodModal] = useState(false);
   // Mantienen el modal montado mientras corre la animación de salida.
-  const vaquitasListModalMounted = useModalPresence(showVaquitasListModal);
   const dailyRewardModalMounted = useModalPresence(showDailyRewardModal);
   const moodModalMounted = useModalPresence(showMoodModal);
   const userWalletAddress = useConfigStore((store) => store.walletAddress);
@@ -117,17 +115,13 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
 
   const currentStreakDays = (streak?.yesterdayStreak ?? 0) + (streak?.todayStreak ? 1 : 0);
 
-  const handleBarnClick = () => {
+  // Granero y banco abren la lista de posiciones (todos los plazos y estados)
+  // navegando a /portafolio: la ruta la intercepta @modal y se pinta como
+  // overlay sobre el mundo 3D, que queda montado detrás.
+  const openPositions = () => {
     if (interactionsDisabled) return;
     if (userWalletAddress) {
-      setShowVaquitasListModal(true);
-    }
-  };
-
-  const handleBankClick = () => {
-    if (interactionsDisabled) return;
-    if (userWalletAddress) {
-      setShowVaquitasListModal(true);
+      router.push('/portafolio?period=all');
     }
   };
 
@@ -209,8 +203,8 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
         {!isEditMode && (
           <MapObjects
             objects={currentTiles}
-            onBarnClick={handleBarnClick}
-            onBankClick={handleBankClick}
+            onBarnClick={openPositions}
+            onBankClick={openPositions}
             onLeaderBoardClick={handleLeaderBoardClick}
             hasWallet={!!userWalletAddress}
           />
@@ -243,9 +237,6 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
             {t('home.map.reload', 'Reload map')}
           </Button>
         </div>
-      )}
-      {vaquitasListModalMounted && (
-        <VaquitasListModal open={showVaquitasListModal} onOpenChange={() => setShowVaquitasListModal(false)} />
       )}
       {dailyRewardModalMounted && (
         <DailyRewardModal

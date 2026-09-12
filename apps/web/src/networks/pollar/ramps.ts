@@ -323,7 +323,7 @@ export function useRampOfframp() {
       const outcome = await waitForApproval({ ...opts, readStatus: () => getClient().getRampKycStatus() });
       if (outcome === 'cancelled') throw new RampCancelled('Seguimiento cancelado.');
       if (outcome === 'timeout') {
-        throw new RampError('Se agotó el tiempo esperando la verificación. Volvé a intentar más tarde.');
+        throw new RampError('Se agotó el tiempo esperando la verificación. Vuelve a intentar más tarde.');
       }
     },
     [getClient],

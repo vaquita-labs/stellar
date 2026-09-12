@@ -2,6 +2,8 @@
 
 import { CircleIconButton } from '@/core-ui/components/molecules/CircleIconButton';
 import {
+  FilterChip,
+  multiSelectChips,
   PageLayout,
   TransactionList,
   TransactionMonthCard,
@@ -10,75 +12,37 @@ import {
 import { formatTimeDeposit } from '@/core-ui/helpers';
 import { useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
-import { DepositResponseDTO, DepositWithdrawalState } from '@/core-ui/types';
+import { DepositResponseDTO } from '@/core-ui/types';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiFilter, FiX } from 'react-icons/fi';
+import { FiFilter } from 'react-icons/fi';
 import { PositionInfoSheet } from './PositionInfoSheet';
 import { PositionRow } from './PositionRow';
 import { PositionWithdrawSheet } from './PositionWithdrawSheet';
 import {
-  EMPTY_PORTFOLIO_FILTERS,
+  defaultPortfolioFilters,
   hasActivePortfolioFilters,
+  POSITION_STATUSES,
   PortfolioFilters,
   PortfolioFiltersModal,
-  PositionStatusFilter,
+  positionEndsAt,
+  positionStatusOf,
+  useStatusLabel,
 } from './PortfolioFiltersModal';
 
 /** Cuántas posiciones se muestran por tanda (para no renderizarlas todas). */
 const PAGE_SIZE = 6;
 
-/** Chip de un filtro aplicado, con × para quitarlo (igual que en /transactions). */
-function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-black border-b-2 bg-primary px-3 py-1 text-xs font-bold text-black">
-      {label}
-      <button type="button" onClick={onRemove} aria-label={label} className="text-black/60 hover:text-black">
-        <FiX className="h-3.5 w-3.5" />
-      </button>
-    </span>
-  );
-}
-
-/** "Ahora" real de un depósito, corrigiendo el reloj congelado del cache. */
-const depositNow = (d: DepositResponseDTO) =>
-  d.serverTimestamp && d.fetchedAtTimestamp
-    ? d.serverTimestamp + (Date.now() - d.fetchedAtTimestamp)
-    : Date.now();
-
-const isReady = (d: DepositResponseDTO) => d.createdTimestamp + d.lockPeriod - depositNow(d) <= 0;
-
-const S = DepositWithdrawalState;
-const isActive = (d: DepositResponseDTO) => d.state === S.DEPOSIT_SUCCESS;
-const isWithdrawn = (d: DepositResponseDTO) =>
-  d.state === S.WITHDRAW_SUCCESS || d.state === S.WITHDRAW_SUCCESS_EARLY;
-const isFailed = (d: DepositResponseDTO) =>
-  d.state === S.DEPOSIT_FAILED || d.state === S.WITHDRAW_FAILED;
-
-/** Traducción de la etiqueta de cada estado (mismo texto que el filtro/chip). */
-const useStatusLabel = () => {
-  const { t } = useTranslation();
-  return (status: PositionStatusFilter | null): string =>
-    status === null
-      ? t('portfolio.positionsTitle', 'Your positions')
-      : status === 'ready'
-        ? t('portfolio.filters.statuses.ready', 'Ready to withdraw')
-        : status === 'locked'
-          ? t('portfolio.filters.statuses.locked', 'Still locked')
-          : status === 'withdrawn'
-            ? t('portfolio.filters.statuses.withdrawn', 'Withdrawn')
-            : t('portfolio.filters.statuses.failed', 'With error');
-};
-
 /**
- * Ruta `/portafolio`: lista las posiciones activas (depósitos con lock) para
- * elegir cuál retirar. Los filtros (plazo, estado, orden) viven en el modal del
- * embudo y se muestran como chips removibles arriba —igual que /transactions—:
- * si no hay nada seleccionado, no aparece ningún chip. Se puede aterrizar con
- * `?period=<segundos>` para llegar con ese plazo ya aplicado (así lo hace el
- * PortfolioPanel al tocar un plazo). El retiro devuelve la plata a las savings
- * (Blend) vía PositionWithdrawSheet.
+ * Ruta `/portafolio?period=…`: lista todas las posiciones del usuario (activas,
+ * retiradas y con error) ordenadas por fecha de fin del lock, la que termina
+ * antes arriba. Los filtros (plazo, estado, fechas) viven en el modal del
+ * embudo, arrancan con todo marcado y se muestran como chips removibles arriba
+ * —igual que /transactions— solo cuando dejan algo afuera. `?period=<ms>` llega
+ * con ese único plazo marcado (así lo hace el PortfolioPanel al tocar un
+ * plazo); `?period=all` abre la lista sin acotar. Las activas se retiran vía
+ * PositionWithdrawSheet; las demás abren un detalle de solo lectura.
  */
 export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
   const { t, i18n } = useTranslation();
@@ -99,58 +63,48 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
   // Detalle de solo lectura para posiciones retiradas o con error (no se retiran).
   const [infoOpen, setInfoOpen] = useState(false);
 
-  // Filtros (plazos + estado + fechas) del embudo, y paginación de la lista. Los
-  // plazos arrancan con el `?period=` de la URL si matchea un plazo válido.
+  // Filtros (plazos + estado + fechas) del embudo, y paginación de la lista. Todo
+  // arranca marcado; el `?period=` de la URL, si matchea un plazo válido, deja
+  // marcado solo ese plazo.
   const periodParam = Number(useSearchParams().get('period'));
   const [filters, setFilters] = useState<PortfolioFilters>(() => ({
-    ...EMPTY_PORTFOLIO_FILTERS,
-    periods: lockPeriods.includes(periodParam) ? [periodParam] : [],
+    ...defaultPortfolioFilters(lockPeriods),
+    periods: lockPeriods.includes(periodParam) ? [periodParam] : lockPeriods,
   }));
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const positions = useMemo(() => {
     const all = data?.deposits ?? [];
-    // El estado elegido define el conjunto base. `null` (default) = activas.
-    // Retiradas y con error son visores aparte (uno u otro, no hay "todas").
-    const base =
-      filters.status === 'withdrawn'
-        ? all.filter(isWithdrawn)
-        : filters.status === 'failed'
-          ? all.filter(isFailed)
-          : filters.status === 'ready'
-            ? all.filter((d) => isActive(d) && isReady(d))
-            : filters.status === 'locked'
-              ? all.filter((d) => isActive(d) && !isReady(d))
-              : all.filter(isActive);
     // Fin del día del "hasta" para incluir todo ese día.
     const endInclusive = filters.endDate !== null ? filters.endDate + 86_400_000 - 1 : null;
-    return base
-      .filter((d) => filters.periods.length === 0 || filters.periods.includes(d.lockPeriod))
-      .filter((d) => filters.startDate === null || d.createdTimestamp >= filters.startDate)
-      .filter((d) => endInclusive === null || d.createdTimestamp <= endInclusive)
-      .sort((a, b) => b.createdTimestamp - a.createdTimestamp);
+    return (
+      all
+        .filter((d) => {
+          const status = positionStatusOf(d);
+          return status !== null && filters.statuses.includes(status);
+        })
+        .filter((d) => filters.periods.includes(d.lockPeriod))
+        .filter((d) => filters.startDate === null || d.createdTimestamp >= filters.startDate)
+        .filter((d) => endInclusive === null || d.createdTimestamp <= endInclusive)
+        // La que termina antes va arriba, sin distinguir estado: una retirada
+        // queda donde su fecha de fin la ponga.
+        .sort((a, b) => positionEndsAt(a) - positionEndsAt(b))
+    );
   }, [data, filters]);
 
-  // Chips de los filtros aplicados (con × para quitarlos). Si no hay filtros, no
-  // se muestra ningún chip.
+  // Chips de los filtros aplicados (con × para quitarlos). Plazo y estado solo
+  // muestran chips cuando dejan algo afuera.
   const fmtDate = (ts: number) =>
     new Date(ts).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' });
-  const chips: { key: string; label: string; onRemove: () => void }[] = [];
-  filters.periods.forEach((lp) =>
-    chips.push({
-      key: `period-${lp}`,
-      label: formatTimeDeposit(lp),
-      onRemove: () => setFilters((prev) => ({ ...prev, periods: prev.periods.filter((p) => p !== lp) })),
-    }),
-  );
-  if (filters.status !== null) {
-    chips.push({
-      key: 'status',
-      label: statusLabelOf(filters.status),
-      onRemove: () => setFilters((prev) => ({ ...prev, status: null })),
-    });
-  }
+  const chips: { key: string; label: string; onRemove: () => void }[] = [
+    ...multiSelectChips(filters.periods, lockPeriods, formatTimeDeposit, (periods) =>
+      setFilters((prev) => ({ ...prev, periods })),
+    ),
+    ...multiSelectChips(filters.statuses, POSITION_STATUSES, statusLabelOf, (statuses) =>
+      setFilters((prev) => ({ ...prev, statuses })),
+    ),
+  ];
   if (filters.startDate !== null) {
     chips.push({
       key: 'start',
@@ -185,7 +139,7 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
       headerGap="gap-3"
       rightSlot={
         <CircleIconButton
-          variant={hasActivePortfolioFilters(filters) ? 'primary' : 'white'}
+          variant={hasActivePortfolioFilters(filters, lockPeriods) ? 'primary' : 'white'}
           ariaLabel={t('transactions.filters.title', 'Filter')}
           onClick={() => setFiltersOpen(true)}
           icon={<FiFilter className="h-4 w-4" />}
@@ -193,7 +147,6 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
       }
     >
       <WithHydrated fallback={<div className="h-24" />}>
-        {/* Chips de los filtros aplicados (con ×). Si no hay filtros, no aparece. */}
         {chips.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {chips.map((chip) => (
@@ -218,16 +171,12 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
           </TransactionMonthCard>
         ) : positions.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-2xl bg-white px-4 py-10 text-center">
-            <p className="text-sm font-semibold text-black">
-              {t('portfolio.list.empty', 'No positions to show.')}
-            </p>
-            <p className="text-xs text-gray-600">
-              {t('portfolio.list.emptyHint', 'Your locked savings will show up here.')}
-            </p>
+            <p className="text-sm font-semibold text-black">{t('portfolio.list.empty', 'No positions to show.')}</p>
+            <p className="text-xs text-gray-600">{t('portfolio.list.emptyHint', 'Your locked savings will show up here.')}</p>
           </div>
         ) : (
           <>
-            <TransactionMonthCard label={statusLabelOf(filters.status)}>
+            <TransactionMonthCard label={t('portfolio.positionsTitle', 'Your positions')}>
               <TransactionList align="grouped">
                 {visiblePositions.map((deposit) => (
                   <PositionRow
@@ -237,7 +186,8 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
                       setSelected(deposit);
                       // Activas → hoja de retiro; retiradas/con error → detalle
                       // de solo lectura (no se pueden retirar).
-                      if (isActive(deposit)) setSheetOpen(true);
+                      const status = positionStatusOf(deposit);
+                      if (status === 'ready' || status === 'locked') setSheetOpen(true);
                       else setInfoOpen(true);
                     }}
                   />
@@ -260,17 +210,9 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
         )}
       </WithHydrated>
 
-      <PositionWithdrawSheet
-        deposit={selected}
-        open={sheetOpen}
-        onOpenChange={() => setSheetOpen(false)}
-      />
+      <PositionWithdrawSheet deposit={selected} open={sheetOpen} onOpenChange={() => setSheetOpen(false)} />
 
-      <PositionInfoSheet
-        deposit={selected}
-        open={infoOpen}
-        onOpenChange={() => setInfoOpen(false)}
-      />
+      <PositionInfoSheet deposit={selected} open={infoOpen} onOpenChange={() => setInfoOpen(false)} />
 
       <PortfolioFiltersModal
         open={filtersOpen}

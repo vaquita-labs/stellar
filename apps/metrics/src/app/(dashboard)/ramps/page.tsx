@@ -11,6 +11,7 @@ import {
   offrampStuckByStep,
   onrampCorridors,
   onrampKpis,
+  onrampOpenByAge,
   rampSeries,
   rampTables,
 } from '@/lib/queries/ramps';
@@ -53,13 +54,14 @@ export default async function RampsPage({ searchParams }: Props) {
   }
 
   const w = await sqlWindow(range);
-  const [on, off, series, onCorridors, offCorridorRows, stuck] = await Promise.all([
+  const [on, off, series, onCorridors, offCorridorRows, stuck, openByAge] = await Promise.all([
     tables.onramp ? onrampKpis(w) : null,
     tables.offramp ? offrampKpis(w) : null,
     rampSeries(w, tables),
     tables.onramp ? onrampCorridors(w) : [],
     tables.offramp ? offrampCorridors(w) : [],
     tables.offramp ? offrampStuckByStep() : [],
+    tables.onramp ? onrampOpenByAge() : [],
   ]);
   const prev = w.hasPrev;
 
@@ -85,7 +87,11 @@ export default async function RampsPage({ searchParams }: Props) {
               value={settleRate(on.settled, on.unsettled)}
               hint={`${fmtInt(on.started)} started · ${fmtInt(on.unsettled)} failed, expired or abandoned`}
             />
-            <KpiTile label="On-ramp pending" value={fmtInt(on.pending)} hint="open purchases right now, any age" />
+            <KpiTile
+              label="On-ramp pending"
+              value={fmtInt(on.pending)}
+              hint={`open purchases right now, any age · oldest ${fmtInt(Math.floor(on.pending_oldest_days))}d`}
+            />
           </>
         ) : null}
         {off ? (
@@ -131,7 +137,7 @@ export default async function RampsPage({ searchParams }: Props) {
         </ChartCard>
         <ChartCard
           title="Started vs settled"
-          hint={`Attempts opened vs. attempts that completed, per ${range.bucket}`}
+          hint={`Attempts opened vs. attempts that completed, per ${range.bucket}. "Still open" is what that bucket left behind as of today, so it falls as old purchases close.`}
           rows={series}
           filename={`ramps-funnel-${range.key}-${range.bucket}`}
         >
@@ -142,6 +148,10 @@ export default async function RampsPage({ searchParams }: Props) {
               { key: 'onramp_settled', label: 'On-ramp settled' },
               { key: 'offramp_started', label: 'Off-ramp started' },
               { key: 'offramp_settled', label: 'Off-ramp settled' },
+              // The palette holds four colors and the four above use them all, so
+              // this one names its own or it draws as a second On-ramp started.
+              // Grey because it is not a result — it is the absence of one.
+              { key: 'onramp_pending', label: 'On-ramp still open', color: '#9ca3af' },
             ]}
           />
         </ChartCard>
@@ -166,9 +176,19 @@ export default async function RampsPage({ searchParams }: Props) {
           </ChartCard>
         ) : null}
         {tables.onramp ? (
+          <ChartCard
+            title="Open on-ramps by age"
+            hint="Purchases never closed, at any age — this one ignores the range. Nothing expires these rows on its own, so an old one was most likely settled off the platform and never written back."
+            rows={openByAge}
+            filename="onramp-open-by-age"
+          >
+            <CategoryBars rows={openByAge} category="bucket" series={{ key: 'count', label: 'Purchases' }} />
+          </ChartCard>
+        ) : null}
+        {tables.onramp ? (
           <DataTable
             title="On-ramp corridors"
-            hint="Started in range, by country and currency. Fiat totals are per corridor — do not add them up."
+            hint="Started in range, by country and currency. Pending is the money from that same cohort still out — older open purchases are counted by the pending KPI, not here. Fiat totals are per corridor — do not add them up."
             rows={onCorridors.map((r) => ({
               ...r,
               // Started-in-range is the denominator here, so a corridor with open
@@ -176,12 +196,14 @@ export default async function RampsPage({ searchParams }: Props) {
               // it shows how much of the cohort has actually landed.
               rate: r.started ? fmtPct(r.settled / r.started) : '—',
               fiat: `${fmtInt(r.fiat)} ${r.currency}`,
+              fiat_pending: `${fmtInt(r.fiat_pending)} ${r.currency}`,
             }))}
             columns={[
               { key: 'corridor', label: 'Corridor' },
               { key: 'started', label: 'Started', align: 'right' },
               { key: 'settled', label: 'Settled', align: 'right' },
               { key: 'rate', label: 'Settled so far', align: 'right' },
+              { key: 'fiat_pending', label: 'Fiat pending', align: 'right' },
               { key: 'fiat', label: 'Fiat settled', align: 'right' },
             ]}
             filename="onramp-corridors"
@@ -190,17 +212,19 @@ export default async function RampsPage({ searchParams }: Props) {
         {tables.offramp ? (
           <DataTable
             title="Off-ramp corridors"
-            hint="Started in range, by country, currency and rail"
+            hint="Started in range, by country, currency and rail. Pending is USDC on withdrawals that never settled — the row is opened before the funds leave the vault, so some of it may already be gone."
             rows={offCorridorRows.map((r) => ({
               ...r,
               fiat: `${fmtInt(r.fiat)} ${r.currency}`,
               usdc: fmtUsd(r.usdc),
+              usdc_pending: fmtUsd(r.usdc_pending),
             }))}
             columns={[
               { key: 'corridor', label: 'Corridor' },
               { key: 'rail', label: 'Rail' },
               { key: 'started', label: 'Started', align: 'right' },
               { key: 'settled', label: 'Settled', align: 'right' },
+              { key: 'usdc_pending', label: 'USDC pending', align: 'right' },
               { key: 'usdc', label: 'USDC out', align: 'right' },
               { key: 'fiat', label: 'Fiat settled', align: 'right' },
             ]}

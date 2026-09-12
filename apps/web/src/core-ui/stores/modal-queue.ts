@@ -11,9 +11,16 @@ import { create } from 'zustand';
  * decisión ni de un premio.
  *
  * El permiso de notificaciones va adelante de todo aunque no sea la decisión
- * más grande: es el único pedido que VENCE. El prompt nativo necesita un gesto
- * del usuario y el sistema operativo lo ofrece una sola vez, así que taparlo no
- * lo posterga, lo pierde. Los demás siguen estando ahí en la próxima carga.
+ * más grande: es el único pedido que VENCE. El sistema operativo lo ofrece una
+ * sola vez, así que taparlo no lo posterga, lo pierde. Los demás siguen estando
+ * ahí en la próxima carga.
+ *
+ * Fuera de iOS ese pedido ya no es un modal nuestro: `PushNudge` llama derecho
+ * a `Notification.requestPermission()` y el diálogo lo dibuja el navegador, por
+ * encima de la página. Nada de la app puede taparlo, así que ahí el turno se
+ * libera al toque y los otros modales no esperan una respuesta que no es
+ * nuestra. En iOS el sheet sigue existiendo —Safari necesita el tap— y como es
+ * un modal común mantiene el turno hasta que lo respondan.
  *
  * No se puede resolver anidando componentes: `AutoInvest` y `BadgeClaimGate`
  * viven en el home (`HomePage`) y el gate de notas en el layout privado, que es
@@ -34,8 +41,9 @@ type ModalQueueState = {
   /**
    * ¿Ya se decidió si el pedido de permiso de notificaciones aparece? Es el
    * primero de la cola, así que no espera a nadie: lo TOMA `HomePage` y lo
-   * LIBERA `PushNudge`, tanto cuando decide no abrirse como cuando el usuario
-   * responde (lo acepte o lo postergue).
+   * LIBERA `PushNudge` —cuando decide no pedir nada, cuando dispara el diálogo
+   * del sistema (fuera de iOS, sin esperar la respuesta) y cuando el usuario
+   * responde el sheet de iOS, lo acepte o lo postergue.
    *
    * Mismo default y mismo motivo que los otros tres: `true` es "nada que
    * esperar", para que en las rutas donde `PushNudge` no monta —perfil,

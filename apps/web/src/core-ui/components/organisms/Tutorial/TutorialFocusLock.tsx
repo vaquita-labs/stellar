@@ -1,8 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { findSpotlightTarget } from './spotlightTarget';
 import { TutorialCard } from './TutorialCard';
 
 interface TutorialFocusLockProps {
@@ -41,7 +42,8 @@ interface TutorialFocusLockProps {
 const REMEASURE_MS = 200;
 const CARD_GAP = 12;
 const CARD_MAX_PX = 360;
-// Offset desde el borde superior cuando la tarjeta se ancla arriba (pinTop).
+// Offset from the top edge when the card is pinned there (pinTop), and the
+// margin the card keeps from the top and bottom edges wherever else it goes.
 const CARD_TOP_OFFSET = 16;
 
 /**
@@ -67,10 +69,12 @@ export function TutorialFocusLock({
   footer,
 }: TutorialFocusLockProps) {
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardH, setCardH] = useState(0);
 
   useEffect(() => {
     const measure = () => {
-      const el = document.querySelector(selector);
+      const el = findSpotlightTarget(selector);
       setRect(el ? el.getBoundingClientRect() : null);
     };
     measure();
@@ -84,6 +88,20 @@ export function TutorialFocusLock({
     };
   }, [selector]);
 
+  // The card's own height decides where it goes, and it is only known once the
+  // card is in the DOM. Read in a layout effect so the first paint already uses
+  // it: with a guessed height the card would flash in one spot and then jump.
+  const hasRect = rect !== null;
+  useLayoutEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const read = () => setCardH(el.offsetHeight);
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasRect, message, footer]);
+
   if (!rect || typeof document === 'undefined') return null;
 
   const top = Math.max(0, rect.top - pad);
@@ -94,20 +112,25 @@ export function TutorialFocusLock({
   // menos el hueco del elemento enfocado. Sin blur: solo un scrim oscuro.
   const panel = 'fixed bg-black/60 pointer-events-auto';
 
-  // Posición de la tarjeta guía: centrada sobre el elemento, arriba si hay
-  // espacio (si no, abajo), y clampeada a los bordes del viewport.
+  // Card placement: horizontally centred on the element and clamped to the
+  // viewport. Vertically it goes above the cutout when the WHOLE card fits
+  // there, below when it fits there instead, and otherwise on the side with
+  // more room. The final clamp keeps it on screen whatever happens: an element
+  // near the top of a tall screen (the sidebar entries on a desktop) has no
+  // room above, and an unclamped card there would run off the top edge.
+  // pinTop: the card goes to the very top (it must not cover what sits above
+  // the button).
   const vw = typeof window !== 'undefined' ? window.innerWidth : 0;
   const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
   const cardW = Math.min(CARD_MAX_PX, vw - 24);
   const centerX = (rect.left + rect.right) / 2;
   const cardLeft = Math.min(Math.max(centerX, 12 + cardW / 2), vw - 12 - cardW / 2);
-  // pinTop: la tarjeta va arriba del todo (no tapa el contenido sobre el botón).
-  const placeAbove = !pinTop && rect.top > 150;
-  const cardStyle = pinTop
-    ? { left: cardLeft, top: CARD_TOP_OFFSET, width: cardW }
-    : placeAbove
-      ? { left: cardLeft, bottom: vh - top + CARD_GAP, width: cardW }
-      : { left: cardLeft, top: bottom + CARD_GAP, width: cardW };
+  const fitsAbove = top - CARD_GAP - cardH >= CARD_TOP_OFFSET;
+  const fitsBelow = bottom + CARD_GAP + cardH <= vh - CARD_TOP_OFFSET;
+  const placeAbove = !pinTop && (fitsAbove || (!fitsBelow && top > vh - bottom));
+  const wantedTop = pinTop ? CARD_TOP_OFFSET : placeAbove ? top - CARD_GAP - cardH : bottom + CARD_GAP;
+  const maxTop = Math.max(CARD_TOP_OFFSET, vh - CARD_TOP_OFFSET - cardH);
+  const cardStyle = { left: cardLeft, top: Math.min(Math.max(wantedTop, CARD_TOP_OFFSET), maxTop), width: cardW };
 
   // Se portalea a <body> para quedar por encima del portal del modal de HeroUI
   // (`.modal__backdrop` es `fixed inset-0 z-50`) y, sobre todo, para escapar del
@@ -160,6 +183,7 @@ export function TutorialFocusLock({
           componente. Esta variante flota y no captura el click. */}
       {message && (
         <motion.div
+          ref={cardRef}
           className={`fixed z-[10000] -translate-x-1/2 ${footer ? 'pointer-events-auto' : 'pointer-events-none'}`}
           style={cardStyle}
           initial={{ opacity: 0, y: placeAbove ? 6 : -6 }}

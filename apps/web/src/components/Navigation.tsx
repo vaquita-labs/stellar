@@ -1,6 +1,7 @@
 'use client';
 
 import { DailyRewardChest } from '@/core-ui/components/home/DailyRewardChest';
+import { HOME_TOUR_ANCHOR_QUICK_ACTIONS } from '@/core-ui/components/organisms/Tutorial/homeTourConfig';
 import { EditionMode, useMapStore } from '@/core-ui/stores';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -109,6 +110,24 @@ export function DesktopSidebar() {
   const handleShopClick = useShopNavHandler();
   const isEditingMap = useMapStore((s) => s.isEditingMap);
 
+  const renderItem = ({ id, href, icon, label }: (typeof navItems)[number]) => {
+    const isShop = href === '/shop';
+    // La tienda no navega: abre el modo edición del mapa en /home,
+    // así que se marca activa mientras se está editando.
+    const isActive = isShop ? isEditingMap : pathname.startsWith(href);
+    return (
+      <li key={href}>
+        <NavLink
+          href={href}
+          icon={icon}
+          label={t(`shell.nav.${id}`, label)}
+          isActive={isActive}
+          onClick={isShop ? handleShopClick : undefined}
+        />
+      </li>
+    );
+  };
+
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 border-r-2 border-[#B97204] z-10">
       <div className="flex flex-col w-full h-full">
@@ -116,29 +135,18 @@ export function DesktopSidebar() {
           <Logo />
         </div>
 
-        <nav aria-label={t('shell.nav.primaryAriaLabel', 'Primary')} className="flex-1 overflow-y-auto px-4 py-2">
-          <ul className="flex flex-col gap-2">
-            {navItems.map(({ id, href, icon, label }) => {
-              const isShop = href === '/shop';
-              // La tienda no navega: abre el modo edición del mapa en /home,
-              // así que se marca activa mientras se está editando.
-              const isActive = isShop ? isEditingMap : pathname.startsWith(href);
-              return (
-                <li key={href}>
-                  <NavLink
-                    href={href}
-                    icon={icon}
-                    label={t(`shell.nav.${id}`, label)}
-                    isActive={isActive}
-                    onClick={isShop ? handleShopClick : undefined}
-                  />
-                </li>
-              );
-            })}
-            <li>
-              <DailyRewardChest variant="sidebar" />
-            </li>
+        <nav
+          aria-label={t('shell.nav.primaryAriaLabel', 'Primary')}
+          className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-2"
+        >
+          <ul className="flex flex-col gap-2">{navItems.filter((item) => item.id === 'home').map(renderItem)}</ul>
+          {/* The places that are not the map, in one element: the home tour rings
+              them together here, the way it rings the quick actions over the map
+              on a phone. */}
+          <ul data-tutorial={HOME_TOUR_ANCHOR_QUICK_ACTIONS} className="flex flex-col gap-2">
+            {navItems.filter((item) => item.id !== 'home').map(renderItem)}
           </ul>
+          <DailyRewardChest variant="sidebar" />
         </nav>
       </div>
     </aside>

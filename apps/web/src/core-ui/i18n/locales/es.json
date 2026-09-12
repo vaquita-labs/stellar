@@ -164,7 +164,7 @@
       "collect": {
         "heading": "2. Información que recopilamos",
         "intro": "Recopilamos las siguientes categorías de información:",
-        "account": "<b>Cuenta y perfil.</b> Su dirección de billetera, y el vaquitatag, correo electrónico, avatar, idioma y moneda de visualización, y preferencias de notificación que elija configurar. Su vaquitatag y su avatar son públicos: aparecen en su perfil, en la tabla de posiciones y en los enlaces de logros que comparta.",
+        "account": "<b>Cuenta y perfil.</b> Su dirección de billetera, y el vaquitag, correo electrónico, avatar, idioma y moneda de visualización, y preferencias de notificación que elija configurar. Su vaquitag y su avatar son públicos: aparecen en su perfil, en la tabla de posiciones y en los enlaces de logros que comparta.",
         "financial": "<b>Registros de transacciones.</b> Depósitos, retiros, montos, plazos de bloqueo, hashes de transacción, las billeteras de cobro que guardes y las transferencias entre redes, incluida la dirección de la contraparte.",
         "social": "<b>Datos sociales y de juego.</b> A quién sigue y quién lo sigue, los «me gusta» dados y recibidos en su mundo 3D, las relaciones de referidos, insignias, rachas, experiencia, recompensas dentro de la app, la disposición e inventario de su mundo, y sus notificaciones.",
         "device": "<b>Datos técnicos y del dispositivo.</b> Cuando usted se conecta, registramos un identificador de sesión junto con el user agent, la plataforma y el idioma de su navegador. Si activa las notificaciones push, guardamos el endpoint push que emite el servicio de su navegador y sus claves de cifrado.",
@@ -197,7 +197,7 @@
       },
       "onchain": {
         "heading": "5. Los datos en blockchain son públicos y permanentes",
-        "body": "Los depósitos, retiros e insignias quedan registrados en la red Stellar. Esos datos son públicos, permanentes y están fuera de nuestro control. No podemos editarlos ni borrarlos, y una solicitud de eliminación no puede quitarlos. Cualquiera puede vincular una dirección de billetera con todo su historial de transacciones, y con cualquier vaquitatag o perfil que haya hecho público."
+        "body": "Los depósitos, retiros e insignias quedan registrados en la red Stellar. Esos datos son públicos, permanentes y están fuera de nuestro control. No podemos editarlos ni borrarlos, y una solicitud de eliminación no puede quitarlos. Cualquiera puede vincular una dirección de billetera con todo su historial de transacciones, y con cualquier vaquitag o perfil que haya hecho público."
       },
       "transfers": {
         "heading": "6. Transferencias internacionales",
@@ -287,7 +287,7 @@
       },
       "risks": {
         "heading": "7. Riesgos",
-        "body": "Los activos digitales y los protocolos de contratos inteligentes conllevan riesgos significativos, incluida la pérdida total de los fondos. Antes de depositar, leé la <a>Declaración de Riesgos</a>, que forma parte de estos Términos."
+        "body": "Los activos digitales y los protocolos de contratos inteligentes conllevan riesgos significativos, incluida la pérdida total de los fondos. Antes de depositar, lee la <a>Declaración de Riesgos</a>, que forma parte de estos Términos."
       },
       "acceptableUse": {
         "heading": "8. Uso aceptable",
@@ -385,7 +385,7 @@
       "summaryHeading": "En resumen",
       "summaryData": "Guardamos tu dirección de billetera, tu perfil y tu actividad, y compartimos datos con los socios que operan billeteras, rampas e infraestructura.",
       "summaryOnchain": "Los depósitos, retiros e insignias quedan registrados públicamente en la blockchain y no se pueden borrar.",
-      "readFull": "Leé los documentos completos:",
+      "readFull": "Lee los documentos completos:",
       "privacyLink": "Política de Privacidad",
       "termsLink": "Términos del Servicio",
       "riskLink": "Declaración de Riesgos",
@@ -415,14 +415,27 @@
     "selectOption": "Elige una opción…",
     "soon": "Pronto",
     "time": {
+      "approxDay_one": "cerca de 1 día",
+      "approxDay_other": "unos {{count}} días",
+      "approxHour_one": "cerca de 1 hora",
+      "approxHour_other": "unas {{count}} horas",
+      "approxMinute_one": "cerca de 1 minuto",
+      "approxMinute_other": "unos {{count}} minutos",
+      "approxMonth_one": "cerca de 1 mes",
+      "approxMonth_other": "unos {{count}} meses",
       "day_one": "1 día",
       "day_other": "{{count}} días",
+      "fewDays": "unos días",
+      "fewHours": "unas horas",
+      "fewMinutes": "unos minutos",
+      "fewMonths": "unos meses",
       "hour_one": "1 hora",
       "hour_other": "{{count}} horas",
       "minute_one": "1 minuto",
       "minute_other": "{{count}} minutos",
       "month_one": "1 mes",
-      "month_other": "{{count}} meses"
+      "month_other": "{{count}} meses",
+      "upTo": "hasta {{time}}"
     }
   },
   "deposit": {
@@ -435,7 +448,6 @@
       "cta": "Depositar en tus ahorros",
       "destination": "Blend",
       "notTracked": "Tu USDC empieza a generar rendimiento al instante, sin período de bloqueo. Retiralo cuando quieras.",
-      "processing": "Procesando depósito...",
       "processingStep": "Depositando en tus ahorros",
       "whatIsTitle": "¿Qué es Blend?",
       "whatIs": "Blend es un protocolo de préstamos auditado en Stellar. Tu USDC se aporta a su pool para generar rendimiento, y puedes retirarlo cuando quieras.",
@@ -448,7 +460,6 @@
       "estimatesDisclaimer": "Son estimaciones y pueden cambiar con el tiempo. Las recompensas finales se confirman al retirar.",
       "marketRewards": "Recompensas de {{market}}",
       "myDeposits": "Mis depósitos",
-      "protocolRewards": "Recompensas del protocolo",
       "protocolRewardsInfo": "Rendimiento de {{market}} donde están depositados tus fondos.",
       "theLendingProtocol": "el protocolo de préstamos",
       "title": "Recompensas del Banco",
@@ -488,11 +499,8 @@
       "filterAll": "Todos",
       "filterEarly": "Anticipados",
       "filterOnTime": "A tiempo",
-      "makeFirstDeposit": "Haz tu primer depósito para comenzar",
       "noActiveDeposits": "No hay depósitos activos",
       "noData": "Sin datos",
-      "noDepositsYet": "Todavía no tienes depósitos",
-      "noReadyDeposits": "No tienes depósitos listos para retirar",
       "noWithdrawnDeposits": "No hay depósitos retirados",
       "rewardsForfeited": "Recompensas perdidas",
       "sortAmount": "Mayor monto",
@@ -501,7 +509,6 @@
       "sortUnlock": "Próximos a desbloquear",
       "tabActive": "Activos",
       "tabWithdrawn": "Retirados",
-      "title": "Tus depósitos",
       "withdrawnBadge": "Retirado",
       "withdrawnEarlyBadge": "Retirado antes"
     },
@@ -523,13 +530,13 @@
     "processingShort": "Procesando",
     "receive": {
       "title": "Depósito",
-      "subtitle": "Enviá USDC en Stellar a esta dirección. Aparecerá en tu balance, listo para invertir.",
+      "subtitle": "Envía USDC en Stellar a esta dirección. Aparecerá en tu balance, listo para invertir.",
       "addressLabel": "Tu dirección",
       "copy": "Copiar",
       "copyAria": "Copiar dirección",
       "copied": "Copiado",
       "minDeposit": "Depósito mínimo: {{amount}} USDC.",
-      "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
+      "warning": "Envía solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
     },
     "savingsStats": {
       "infoAlt": "info"
@@ -570,7 +577,7 @@
       "wallet": {
         "subtitle": "Deposita desde una wallet cripto",
         "title": "Billetera",
-        "receiveSubtitle": "Recibí USDC en tu dirección"
+        "receiveSubtitle": "Recibe USDC en tu dirección"
       }
     }
   },
@@ -781,7 +788,7 @@
         "title": "¿Necesitas ayuda?"
       },
       "profile": {
-        "body": "Aquí viven tu avatar, tu vaquitatag y tus ajustes.",
+        "body": "Aquí viven tu avatar, tu vaquitag y tus ajustes.",
         "title": "Tu perfil"
       },
       "quickActions": {
@@ -826,7 +833,7 @@
       "joined": "Se unió el {{joinedLabel}}",
       "noAchievements": "Aún no ha desbloqueado logros",
       "notFound": "No encontramos a @{{username}}",
-      "notFoundHint": "Puede que la cuenta haya cambiado su vaquitatag o ya no exista."
+      "notFoundHint": "Puede que la cuenta haya cambiado su vaquitag o ya no exista."
     },
     "league": {
       "demotionZone": "Zona de descenso",
@@ -839,7 +846,7 @@
       "preview": {
         "back": "Volver a mi división",
         "description": "Solo compites con ahorradores de tu propia división.",
-        "lockedTitle": "Alcanzá {{xp}} XP para desbloquear {{division}}",
+        "lockedTitle": "Alcanza {{xp}} XP para desbloquear {{division}}",
         "pastTitle": "Ya superaste {{division}}"
       },
       "promotionZone": "Zona de ascenso",
@@ -852,9 +859,6 @@
       "rulesFirstDivision": "En la primera división nadie baja: solo puedes subir.",
       "xpValue": "{{xp}} XP"
     }
-  },
-  "nav": {
-    "primaryAriaLabel": "Principal"
   },
   "concierge": {
     "title": "Centro de ayuda",
@@ -970,7 +974,7 @@
       "iosStep2Action": "“Agregar a inicio”",
       "installedBody": "¡Vaquita está instalada! Ábrela desde tu pantalla de inicio para desbloquear tu billetera.",
       "installedHint": "Ya puedes cerrar esta pestaña. De ahora en adelante abre Vaquita desde el ícono de la app.",
-      "pullHint": "¿Ya la instalaste? Tirá hacia abajo para recargar"
+      "pullHint": "¿Ya la instalaste? Desliza hacia abajo para recargar"
     },
     "pushNudge": {
       "title": "Activa las notificaciones",
@@ -1002,19 +1006,19 @@
     },
     "username": {
       "helperAvailable": "@{{name}} está disponible",
-      "helperBlocked": "Ese vaquitatag no está permitido",
+      "helperBlocked": "Ese vaquitag no está permitido",
       "helperChecking": "Verificando disponibilidad…",
       "helperDefault": "Se mostrará como @{{name}}",
       "helperError": "No pudimos verificar la disponibilidad, inténtalo de nuevo",
       "helperShort": "Al menos {{count}} caracteres",
       "helperTaken": "@{{name}} ya está en uso",
-      "inputPlaceholder": "vaquitatag",
-      "label": "Vaquitatag",
-      "placeholderName": "vaquitatag",
-      "saveErrorToast": "No pudimos guardar el vaquitatag",
-      "savedToast": "Vaquitatag guardado",
-      "subtitle": "Este es tu vaquitatag: el nombre que ven los demás ahorradores y el código que compartes para invitar. Puedes cambiarlo más tarde en tu perfil.",
-      "title": "Elige tu vaquitatag"
+      "inputPlaceholder": "vaquitag",
+      "label": "Vaquitag",
+      "placeholderName": "vaquitag",
+      "saveErrorToast": "No pudimos guardar el vaquitag",
+      "savedToast": "Vaquitag guardado",
+      "subtitle": "Este es tu vaquitag: el nombre que ven los demás ahorradores y el código que compartes para invitar. Puedes cambiarlo más tarde en tu perfil.",
+      "title": "Elige tu vaquitag"
     }
   },
   "profile": {
@@ -1138,9 +1142,9 @@
       "editAvatarHint": "Elige tu cabello, ropa, lentes y más.",
       "email": "Correo",
       "emailPlaceholder": "tu@ejemplo.com",
-      "nickname": "Vaquitatag",
-      "nicknameFormatError": "El vaquitatag debe tener entre {{min}} y {{max}} caracteres: solo minúsculas y números.",
-      "nicknamePlaceholder": "vaquitatag",
+      "nickname": "Vaquitag",
+      "nicknameFormatError": "El vaquitag debe tener entre {{min}} y {{max}} caracteres: solo minúsculas y números.",
+      "nicknamePlaceholder": "vaquitag",
       "onboardingCompleted": "Onboarding completado",
       "onboardingCompletedDesc": "Marca el flujo de onboarding inicial como completado.",
       "preferencesUpdated": "Preferencias actualizadas",
@@ -1178,7 +1182,7 @@
       },
       "emailRequired": "Agrega tu email en Editar perfil para activarlo.",
       "pushDenied": "Las notificaciones están bloqueadas para esta app en la configuración de tu navegador.",
-      "pushUnsupported": "Instalá la app en tu pantalla de inicio para recibir notificaciones.",
+      "pushUnsupported": "Instala la app en tu pantalla de inicio para recibir notificaciones.",
       "sections": {
         "activity": {
           "title": "Actividad"
@@ -1249,7 +1253,7 @@
       "privacyDescHidden": "Saldo oculto en este dispositivo.",
       "privacyPolicy": "Política de privacidad",
       "profile": "Perfil",
-      "profileDesc": "Edita tu vaquitatag y tu avatar.",
+      "profileDesc": "Edita tu vaquitag y tu avatar.",
       "signOut": "Cerrar sesión",
       "signOutConfirmDesc": "¿Seguro que quieres cerrar sesión?",
       "signOutConfirmTitle": "¿Cerrar sesión?",
@@ -1321,7 +1325,7 @@
       "coinsAlt": "monedas",
       "confirmTitle": "Tu vaquita guardó esto para ti hoy.",
       "doneButton": "Listo",
-      "holdToOpen": "Mantené presionado para abrir",
+      "holdToOpen": "Mantén presionado para abrir",
       "nextButton": "Siguiente",
       "opening": "Abriendo…",
       "rewardTitle": "¡Ganaste monedas!",
@@ -1539,12 +1543,12 @@
     "errorBody": "Intenta de nuevo en un momento.",
     "bug": {
       "title": "Reportar un error",
-      "intro": "Contanos qué salió mal. Cuanto más detalle, más rápido lo arreglamos.",
+      "intro": "Cuéntanos qué salió mal. Cuanto más detalle, más rápido lo arreglamos.",
       "titlePlaceholder": "ej. El botón de retirar no hace nada"
     },
     "feedback": {
       "title": "Enviar feedback",
-      "intro": "Contanos qué haría mejor a Vaquita. Leemos todos los mensajes.",
+      "intro": "Cuéntanos qué haría mejor a Vaquita. Leemos todos los mensajes.",
       "titlePlaceholder": "ej. Dejarme renombrar mis wallets guardadas"
     },
     "attach": "Adjuntar",
@@ -1552,7 +1556,7 @@
     "attachHint": "Hasta {{max}} capturas. Se publican en el board.",
     "removeImage": "Quitar imagen",
     "attachmentError": "No se pudieron adjuntar algunas imágenes",
-    "attachmentErrorBody": "Usá un PNG, JPEG o WebP de menos de 2 MB."
+    "attachmentErrorBody": "Usa un PNG, JPEG o WebP de menos de 2 MB."
   },
   "social": {
     "contacts": {
@@ -1565,7 +1569,7 @@
       "noMatchesBody": "Prueba con otro nombre.",
       "noMatchesTitle": "Sin resultados",
       "removedToast": "Se quitó a {{name}} (simulación)",
-      "searchPlaceholder": "Busca por nombre o vaquitatag…",
+      "searchPlaceholder": "Busca por nombre o vaquitag…",
       "subtitle": "Explora vaqueros que ya conoces e invítalos a ahorrar contigo.",
       "title": "Elegir de contactos"
     },
@@ -1577,7 +1581,7 @@
       "follow": "Seguir",
       "followedBy": "Seguido por",
       "following": "Siguiendo",
-      "searchByName": "Buscar por vaquitatag",
+      "searchByName": "Buscar por vaquitag",
       "shareFollowLink": "Compartir enlace para seguirte",
       "suggestedForYou": "Sugerido para ti",
       "suggestionsTitle": "Sugerencias de amigos",
@@ -1660,13 +1664,13 @@
       "followers_one": "{{count}} seguidor",
       "followers_other": "{{count}} seguidores",
       "following": "Siguiendo",
-      "idleBody": "Escribe un vaquitatag para buscar.",
+      "idleBody": "Escribe un vaquitag para buscar.",
       "idleTitle": "Encuentra a tus vaqueros",
-      "noMatchBody": "Verifica el vaquitatag e inténtalo de nuevo.",
+      "noMatchBody": "Verifica el vaquitag e inténtalo de nuevo.",
       "noMatchTitle": "No se encontraron vaqueros",
-      "placeholder": "Escribe un vaquitatag",
+      "placeholder": "Escribe un vaquitag",
       "searching": "Buscando",
-      "title": "Buscar por vaquitatag"
+      "title": "Buscar por vaquitag"
     },
     "share": {
       "addingFriend": "Agregando amigo…",
@@ -1797,16 +1801,6 @@
       "refresh": "Actualizar",
       "title": "Saldo"
     },
-    "editProfile": {
-      "guest": "Invitado",
-      "nicknameError": "Hubo un error al guardar el vaquitatag",
-      "nicknameLabel": "Vaquitatag",
-      "nicknameSaved": "¡Vaquitatag guardado!",
-      "saveChanges": "Guardar cambios",
-      "shownAs": "Se mostrará como: @{{name}}",
-      "title": "Editar perfil",
-      "walletLabel": "Billetera"
-    },
     "fiat": {
       "authenticated": "Conectado con Anclap",
       "history": {
@@ -1864,10 +1858,10 @@
         "kycWaiting": "Esperando la aprobación…",
         "limitMax": "El máximo para esta ruta es {{amount}} {{currency}}.",
         "limitMin": "El mínimo para esta ruta es {{amount}} {{currency}}.",
-        "longPress": "Mantené apretado el código para guardarlo en tus fotos.",
+        "longPress": "Mantén presionado el código para guardarlo en tus fotos.",
         "minAmount": "La compra mínima es de {{amount}} {{currency}}.",
         "outUsdc": "≈ {{amount}} USDC",
-        "payHint": "Pagá este QR desde la app de tu banco. El USDC llega solo.",
+        "payHint": "Paga este QR desde la app de tu banco. El USDC llega solo.",
         "processingBody": "Tus USDC suelen llegar en unos minutos, y pueden tardar hasta 15. Puedes cerrar: caen solos en tu wallet.",
         "processingHelp": "Si a los 15 minutos no llegaron, guarda el comprobante del banco y escríbenos:",
         "processingTitle": "Pago recibido",
@@ -2030,7 +2024,7 @@
       "copyAddressAria": "Copiar dirección de la wallet",
       "disconnectWallet": "Desconectar wallet",
       "editProfile": "Editar perfil",
-      "nicknameLabel": "Vaquitatag",
+      "nicknameLabel": "Vaquitag",
       "saveChanges": "Guardar cambios",
       "title": "Perfil",
       "walletLabel": "Billetera"
@@ -2040,7 +2034,7 @@
       "subtitle": "Comparte tu dirección de Stellar para recibir cualquier activo.",
       "copy": "Copiar",
       "copied": "Copiado",
-      "warning": "Enviá solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
+      "warning": "Envía solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
     },
     "send": {
       "title": "Enviar",
@@ -2050,7 +2044,7 @@
       "max": "MÁX",
       "insufficient": "No tienes suficiente {{symbol}} en tu wallet.",
       "destination": "Wallet de destino",
-      "destinationPlaceholder": "G… o @vaquitatag",
+      "destinationPlaceholder": "G… o @vaquitag",
       "invalidAddress": "Eso no parece una dirección de Stellar válida.",
       "sameAddress": "No puedes enviar a tu propia dirección.",
       "handleNotFound": "No encontramos a ese usuario.",
@@ -2070,7 +2064,7 @@
       "activateTrustline": "Activar USDC",
       "activating": "Activando…",
       "amount": "Monto",
-      "amountRange": "Ingresá un monto entre {{min}} y {{max}} USDC.",
+      "amountRange": "Ingresa un monto entre {{min}} y {{max}} USDC.",
       "available": "Disponible: {{amount}} USDC",
       "baseOnlyWarning": "Solo red Base y solo USDC. Cualquier otra cosa enviada a esta dirección se pierde.",
       "close": "Cerrar",
@@ -2080,7 +2074,7 @@
       "copy": "Copiar",
       "creating": "Preparando…",
       "depositHelper": "¿Necesitas USDC en Stellar? Tráelo desde Base",
-      "depositInstructions": "Enviá exactamente {{amount}} USDC por la red Base a esta dirección, desde cualquier wallet o exchange.",
+      "depositInstructions": "Envía exactamente {{amount}} USDC por la red Base a esta dirección, desde cualquier wallet o exchange.",
       "destinationAddress": "Dirección de destino en Base",
       "directionIn": "Base → Stellar",
       "directionOut": "Stellar → Base",
@@ -2093,9 +2087,9 @@
       "incompleteBody": "El puente esperaba {{amount}} USDC y recibió menos, así que el canje no arrancó.",
       "incompleteRefund": "El puente va a devolver lo que recibió cuando venza la cotización. Escríbenos a soporte si no llega.",
       "incompleteTitle": "Llegó menos de lo esperado",
-      "incompleteTopUp": "Enviá la diferencia a la misma dirección antes de que venza la cotización. Si vence primero, el puente devuelve lo que recibió a tu dirección de Base.",
+      "incompleteTopUp": "Envía la diferencia a la misma dirección antes de que venza la cotización. Si vence primero, el puente devuelve lo que recibió a tu dirección de Base.",
       "insufficient": "No te alcanza el USDC.",
-      "invalidEvmAddress": "Ingresá una dirección de Base válida (0x…).",
+      "invalidEvmAddress": "Ingresa una dirección de Base válida (0x…).",
       "keepsGoing": "Esto sigue aunque cierres esta ventana. Vuelve a abrirla cuando quieras para ver cómo va.",
       "missingMemo": "El puente no devolvió un memo válido. Intenta de nuevo.",
       "newQuote": "Pedir una nueva cotización",
@@ -2109,7 +2103,7 @@
       "refundedTitle": "Transferencia devuelta",
       "send": "Enviar {{amount}} USDC",
       "sending": "Enviando…",
-      "subtitle": "Mové USDC entre Base y Stellar",
+      "subtitle": "Mueve USDC entre Base y Stellar",
       "successBody": "Llegaron {{amount}} USDC.",
       "successTitle": "Transferencia completa",
       "title": "Puente de USDC",
@@ -2122,12 +2116,12 @@
   },
   "referrals": {
     "invite": "Invitar amigos",
-    "inviteDesc": "Comparte tu link y mira quién se sumó.",
+    "referAndEarn": "Refiere y gana",
     "description": "Comparte tu link. Llevamos la cuenta de todos los que entran por ahí.",
-    "shareText": "Ahorra conmigo en Vaquita y gana recompensas. Usa mi vaquitatag {{code}}",
+    "shareText": "Ahorra conmigo en Vaquita y gana recompensas. Usa mi vaquitag {{code}}",
     "friendsJoined": "Amigos que se sumaron",
     "friendsSaving": "Amigos ahorrando",
-    "inviteWithTag": "Invita a tus amigos con tu vaquitatag",
+    "inviteWithTag": "Invita a tus amigos con tu vaquitag",
     "shareLink": "Compartir link",
     "shareQr": "Compartir QR",
     "copyLink": "Copiar link",
@@ -2136,7 +2130,7 @@
     "rewardsComing": "Las recompensas por invitar están en camino. Las tuyas ya se están contando.",
     "qr": {
       "title": "Tu QR de invitación",
-      "hint": "Que lo escaneen con la cámara del celular. Abre Vaquita con tu vaquitatag ya puesto.",
+      "hint": "Que lo escaneen con la cámara del celular. Abre Vaquita con tu vaquitag ya puesto.",
       "alt": "Código QR con tu link de invitación",
       "unavailable": "No pudimos dibujar el código aquí. Comparte tu link en su lugar.",
       "save": "Guardar el QR en mi celular",
@@ -2165,9 +2159,9 @@
   "withdraw": {
     "addMethod": "Agregar método",
     "addNickname": {
-      "cta": "Agregar vaquitatag",
-      "field": "Vaquitatag",
-      "placeholder": "vaquitatag"
+      "cta": "Agregar vaquitag",
+      "field": "Vaquitag",
+      "placeholder": "vaquitag"
     },
     "addWallet": {
       "addressField": "Dirección",
@@ -2204,14 +2198,14 @@
       "title": "Elegir método",
       "bank": {
         "title": "Banco",
-        "subtitle": "Retirá a tu cuenta bancaria"
+        "subtitle": "Retira a tu cuenta bancaria"
       },
       "wallet": {
         "title": "Billetera",
-        "subtitle": "Retirá a una wallet cripto"
+        "subtitle": "Retira a una wallet cripto"
       },
       "username": {
-        "title": "Vaquitatag",
+        "title": "Vaquitag",
         "subtitle": "Envía a un usuario de Vaquita"
       }
     },
@@ -2219,7 +2213,6 @@
     "minWithdraw": "Retiro mínimo: {{amount}} USDC.",
     "noUsernames": "Todavía no guardaste usuarios",
     "noWallets": "Todavía no tienes wallets guardadas",
-    "processing": "Procesando retiro...",
     "processingHint": "Esto puede tardar unos segundos.",
     "review": "Revisar",
     "selectAccount": "Elegir cuenta",
@@ -2283,12 +2276,10 @@
       "clearAll": "Limpiar todo",
       "apply": "Aplicar",
       "kinds": {
-        "all": "Todas las transacciones",
         "deposit": "Depósitos",
         "withdraw": "Retiros"
       },
       "statuses": {
-        "all": "Todos los estados",
         "completed": "Completadas",
         "pending": "Pendientes",
         "failed": "Fallidas"
@@ -2341,7 +2332,6 @@
   "portfolio": {
     "title": "Portafolio",
     "total": "Total",
-    "earning": "Ganancias estimadas",
     "invest": "Invertir",
     "savings": "Ahorros",
     "distributed": "Repartido en {{funded}} de {{total}} opciones",
@@ -2349,8 +2339,8 @@
     "noFunds": "Sin fondos",
     "sum": "Total",
     "empty": "Todavía no hay plazos de ahorro disponibles.",
-    "poolRewards": "Pozo de {{amount}}",
-    "inThePool": "{{value}} en el pozo",
+    "poolRewards": "{{amount}} en premios",
+    "poolRewardsApy": "{{apy}}% APY + {{amount}} en premios",
     "row": {
       "ready": "Listo",
       "timeLeft": "restante",

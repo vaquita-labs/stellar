@@ -335,7 +335,7 @@ export const getProfile = async (walletAddress: string) => {
       create: { walletAddress },
     });
 
-    // The invite code is the vaquitatag, and [[setNickname]] writes both at
+    // The invite code is the vaquitag, and [[setNickname]] writes both at
     // once — so this is only the repair path, for a row the migration skipped or
     // a tag set before the mirror existed. Done here rather than in the referral
     // service because this is the one call every authenticated session already
@@ -368,7 +368,7 @@ export const getProfile = async (walletAddress: string) => {
 };
 
 /**
- * Write a profile's vaquitatag.
+ * Write a profile's vaquitag.
  *
  * The tag and the invite code are one string, and this is the only place that
  * writes either: `profiles.referral_code` is a mirror of `nickname`, set in the

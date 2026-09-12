@@ -8,6 +8,7 @@ import { useModalQueueStore } from '../../../stores';
 import { ProfileResponseDTO } from '../../../types';
 import { PressableButton } from '../../molecules/PressableButton';
 import { HOME_TOUR_STEPS, HomeTourStep } from './homeTourConfig';
+import { findSpotlightTarget } from './spotlightTarget';
 import { TutorialFocusLock } from './TutorialFocusLock';
 
 /** How often to look for the anchors and for a modal that outranks the tour. */
@@ -36,9 +37,12 @@ const MIN_STEPS = 2;
  *
  * Steps whose anchor is not on screen are dropped before the tour starts, so the
  * progress dots always match what the user is actually going to see. That covers
- * the desktop layout, where the chest and the side rail live in the sidebar
- * instead of over the map, and the map's edit mode, where the action row is
- * unmounted entirely.
+ * the map's edit mode, where the action row is unmounted entirely.
+ *
+ * The chest and the side rail carry the same anchor in both layouts: over the
+ * map on a phone, inside the sidebar on a desktop. Only the copy the current
+ * breakpoint lays out counts (see `findSpotlightTarget`), so the desktop walks
+ * the full tour too, with the coach marks on the sidebar.
  */
 export function HomeTour() {
   const { t } = useTranslation();
@@ -89,7 +93,7 @@ export function HomeTour() {
     waitStartedAt.current = Date.now();
     const id = window.setInterval(() => {
       if (document.querySelector('[role="dialog"]')) return;
-      const found = HOME_TOUR_STEPS.filter((s) => document.querySelector(s.spotlight));
+      const found = HOME_TOUR_STEPS.filter((s) => findSpotlightTarget(s.spotlight));
       if (found.length === HOME_TOUR_STEPS.length || Date.now() - waitStartedAt.current >= ANCHOR_WAIT_MS) {
         setSteps(found);
       }

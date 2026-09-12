@@ -164,7 +164,7 @@
       "collect": {
         "heading": "2. Information we collect",
         "intro": "We collect the following categories of information:",
-        "account": "<b>Account and profile.</b> Your wallet address, and the vaquitatag, email address, avatar, display language and currency, and notification preferences you choose to set. Your vaquitatag and avatar are public — they appear on your profile, on the leaderboard, and on achievement links you share.",
+        "account": "<b>Account and profile.</b> Your wallet address, and the vaquitag, email address, avatar, display language and currency, and notification preferences you choose to set. Your vaquitag and avatar are public — they appear on your profile, on the leaderboard, and on achievement links you share.",
         "financial": "<b>Transaction records.</b> Deposits, withdrawals, amounts, lock periods, transaction hashes, the payout wallets you save, and cross-chain transfers including the counterparty address.",
         "social": "<b>Social and gameplay data.</b> Who you follow and who follows you, likes given and received on your 3D world, referral relationships, badges, streaks, experience, in-app rewards, your world layout and inventory, and your notifications.",
         "device": "<b>Device and technical data.</b> When you connect, we record a session identifier along with your browser user agent, platform and language. If you enable push notifications, we store the push endpoint your browser's push service issues and its encryption keys.",
@@ -197,7 +197,7 @@
       },
       "onchain": {
         "heading": "5. Blockchain data is public and permanent",
-        "body": "Deposits, withdrawals and badges are recorded on the Stellar network. That data is public, permanent and outside our control. We cannot edit or delete it, and a deletion request cannot remove it. Anyone can link a wallet address to its full transaction history, and to any vaquitatag or profile you have made public."
+        "body": "Deposits, withdrawals and badges are recorded on the Stellar network. That data is public, permanent and outside our control. We cannot edit or delete it, and a deletion request cannot remove it. Anyone can link a wallet address to its full transaction history, and to any vaquitag or profile you have made public."
       },
       "transfers": {
         "heading": "6. International transfers",
@@ -415,14 +415,27 @@
     "selectOption": "Select an option…",
     "soon": "Soon",
     "time": {
+      "approxDay_one": "about 1 day",
+      "approxDay_other": "about {{count}} days",
+      "approxHour_one": "about 1 hour",
+      "approxHour_other": "about {{count}} hours",
+      "approxMinute_one": "about 1 minute",
+      "approxMinute_other": "about {{count}} minutes",
+      "approxMonth_one": "about 1 month",
+      "approxMonth_other": "about {{count}} months",
       "day_one": "1 day",
       "day_other": "{{count}} days",
+      "fewDays": "a few days",
+      "fewHours": "a few hours",
+      "fewMinutes": "a few minutes",
+      "fewMonths": "a few months",
       "hour_one": "1 hour",
       "hour_other": "{{count}} hours",
       "minute_one": "1 minute",
       "minute_other": "{{count}} minutes",
       "month_one": "1 month",
-      "month_other": "{{count}} months"
+      "month_other": "{{count}} months",
+      "upTo": "up to {{time}}"
     }
   },
   "deposit": {
@@ -435,7 +448,6 @@
       "cta": "Deposit to your savings",
       "destination": "Blend",
       "notTracked": "Your USDC starts earning yield right away, with no lock period withdraw whenever you want.",
-      "processing": "Processing deposit...",
       "processingStep": "Depositing to your savings",
       "whatIsTitle": "What is Blend?",
       "whatIs": "Blend is an audited lending protocol on Stellar. Your USDC is supplied to its pool to earn yield, and you can withdraw anytime.",
@@ -448,7 +460,6 @@
       "estimatesDisclaimer": "These values are estimates and can change over time. Your final rewards are confirmed when you withdraw.",
       "marketRewards": "{{market}} rewards",
       "myDeposits": "My deposits",
-      "protocolRewards": "Protocol rewards",
       "protocolRewardsInfo": "Yield from {{market}} where your funds are deposited.",
       "theLendingProtocol": "the lending protocol",
       "title": "Bank Rewards",
@@ -488,11 +499,8 @@
       "filterAll": "All",
       "filterEarly": "Early",
       "filterOnTime": "On time",
-      "makeFirstDeposit": "Make your first deposit to get started",
       "noActiveDeposits": "No active deposits",
       "noData": "No data",
-      "noDepositsYet": "No deposits yet",
-      "noReadyDeposits": "No deposits ready to withdraw",
       "noWithdrawnDeposits": "No withdrawn deposits",
       "rewardsForfeited": "Rewards forfeited",
       "sortAmount": "Highest amount",
@@ -501,7 +509,6 @@
       "sortUnlock": "Unlocks soonest",
       "tabActive": "Active",
       "tabWithdrawn": "Withdrawn",
-      "title": "Your deposits",
       "withdrawnBadge": "Withdrawn",
       "withdrawnEarlyBadge": "Withdrawn early"
     },
@@ -781,7 +788,7 @@
         "title": "Need a hand?"
       },
       "profile": {
-        "body": "Your avatar, your vaquitatag and your settings live here.",
+        "body": "Your avatar, your vaquitag and your settings live here.",
         "title": "Your profile"
       },
       "quickActions": {
@@ -826,7 +833,7 @@
       "joined": "Joined {{joinedLabel}}",
       "noAchievements": "No achievements unlocked yet",
       "notFound": "We couldn't find @{{username}}",
-      "notFoundHint": "The account may have changed its vaquitatag or no longer exists."
+      "notFoundHint": "The account may have changed its vaquitag or no longer exists."
     },
     "league": {
       "demotionZone": "Demotion zone",
@@ -852,9 +859,6 @@
       "rulesFirstDivision": "In the first division nobody drops — you can only climb.",
       "xpValue": "{{xp}} XP"
     }
-  },
-  "nav": {
-    "primaryAriaLabel": "Primary"
   },
   "concierge": {
     "title": "Help Center",
@@ -1002,19 +1006,19 @@
     },
     "username": {
       "helperAvailable": "@{{name}} is available",
-      "helperBlocked": "That vaquitatag is not allowed",
+      "helperBlocked": "That vaquitag is not allowed",
       "helperChecking": "Checking availability…",
       "helperDefault": "Shown as @{{name}}",
       "helperError": "Could not check availability, try again",
       "helperShort": "At least {{count}} characters",
       "helperTaken": "@{{name}} is already taken",
-      "inputPlaceholder": "vaquitatag",
-      "label": "Vaquitatag",
-      "placeholderName": "vaquitatag",
-      "saveErrorToast": "Could not save vaquitatag",
-      "savedToast": "Vaquitatag saved",
-      "subtitle": "This is your vaquitatag: the name other savers see, and the invite code you share. You can change it later in your profile.",
-      "title": "Choose your vaquitatag"
+      "inputPlaceholder": "vaquitag",
+      "label": "Vaquitag",
+      "placeholderName": "vaquitag",
+      "saveErrorToast": "Could not save vaquitag",
+      "savedToast": "Vaquitag saved",
+      "subtitle": "This is your vaquitag: the name other savers see, and the invite code you share. You can change it later in your profile.",
+      "title": "Choose your vaquitag"
     }
   },
   "profile": {
@@ -1138,9 +1142,9 @@
       "editAvatarHint": "Choose your hair, clothes, glasses and more.",
       "email": "Email",
       "emailPlaceholder": "you@example.com",
-      "nickname": "Vaquitatag",
-      "nicknameFormatError": "Your vaquitatag must be {{min}}-{{max}} characters: lowercase letters and numbers.",
-      "nicknamePlaceholder": "vaquitatag",
+      "nickname": "Vaquitag",
+      "nicknameFormatError": "Your vaquitag must be {{min}}-{{max}} characters: lowercase letters and numbers.",
+      "nicknamePlaceholder": "vaquitag",
       "onboardingCompleted": "Onboarding completed",
       "onboardingCompletedDesc": "Mark the initial onboarding flow as done.",
       "preferencesUpdated": "Preferences updated",
@@ -1249,7 +1253,7 @@
       "privacyDescHidden": "Balance hidden on this device.",
       "privacyPolicy": "Privacy policy",
       "profile": "Profile",
-      "profileDesc": "Edit your vaquitatag and avatar.",
+      "profileDesc": "Edit your vaquitag and avatar.",
       "signOut": "Sign out",
       "signOutConfirmDesc": "Are you sure you want to sign out?",
       "signOutConfirmTitle": "Sign out?",
@@ -1577,7 +1581,7 @@
       "follow": "Follow",
       "followedBy": "Followed by",
       "following": "Following",
-      "searchByName": "Search by vaquitatag",
+      "searchByName": "Search by vaquitag",
       "shareFollowLink": "Share follow link",
       "suggestedForYou": "Suggested for you",
       "suggestionsTitle": "Friend suggestions",
@@ -1660,13 +1664,13 @@
       "followers_one": "{{count}} follower",
       "followers_other": "{{count}} followers",
       "following": "Following",
-      "idleBody": "Type a vaquitatag to search.",
+      "idleBody": "Type a vaquitag to search.",
       "idleTitle": "Find your vaqueros",
-      "noMatchBody": "Double-check the vaquitatag and try again.",
+      "noMatchBody": "Double-check the vaquitag and try again.",
       "noMatchTitle": "No vaqueros found",
-      "placeholder": "Type a vaquitatag",
+      "placeholder": "Type a vaquitag",
       "searching": "Searching",
-      "title": "Search by vaquitatag"
+      "title": "Search by vaquitag"
     },
     "share": {
       "addingFriend": "Adding friend…",
@@ -1796,16 +1800,6 @@
       "onStellar": "on Stellar",
       "refresh": "Refresh",
       "title": "Balance"
-    },
-    "editProfile": {
-      "guest": "Guest",
-      "nicknameError": "Error on saving vaquitatag",
-      "nicknameLabel": "Vaquitatag",
-      "nicknameSaved": "Vaquitatag saved",
-      "saveChanges": "Save changes",
-      "shownAs": "Shown as: @{{name}}",
-      "title": "Edit Profile",
-      "walletLabel": "Wallet"
     },
     "fiat": {
       "authenticated": "Connected to Anclap",
@@ -2030,7 +2024,7 @@
       "copyAddressAria": "Copy wallet address",
       "disconnectWallet": "Disconnect wallet",
       "editProfile": "Edit profile",
-      "nicknameLabel": "Vaquitatag",
+      "nicknameLabel": "Vaquitag",
       "saveChanges": "Save changes",
       "title": "Profile",
       "walletLabel": "Wallet"
@@ -2050,7 +2044,7 @@
       "max": "MAX",
       "insufficient": "Not enough {{symbol}} in your wallet.",
       "destination": "Destination wallet",
-      "destinationPlaceholder": "G… or @vaquitatag",
+      "destinationPlaceholder": "G… or @vaquitag",
       "invalidAddress": "That doesn't look like a valid Stellar address.",
       "sameAddress": "You can't send to your own address.",
       "handleNotFound": "We couldn't find that user.",
@@ -2122,12 +2116,12 @@
   },
   "referrals": {
     "invite": "Invite friends",
-    "inviteDesc": "Share your link and see who joined.",
+    "referAndEarn": "Refer and earn",
     "description": "Share your link. We keep track of everyone who joins through it.",
-    "shareText": "Save with me on Vaquita and earn rewards. Use my vaquitatag {{code}}",
+    "shareText": "Save with me on Vaquita and earn rewards. Use my vaquitag {{code}}",
     "friendsJoined": "Friends joined",
     "friendsSaving": "Friends saving",
-    "inviteWithTag": "Invite your friends with your vaquitatag",
+    "inviteWithTag": "Invite your friends with your vaquitag",
     "shareLink": "Share link",
     "shareQr": "Share QR",
     "copyLink": "Copy link",
@@ -2165,9 +2159,9 @@
   "withdraw": {
     "addMethod": "Add method",
     "addNickname": {
-      "cta": "Add vaquitatag",
-      "field": "Vaquitatag",
-      "placeholder": "vaquitatag"
+      "cta": "Add vaquitag",
+      "field": "Vaquitag",
+      "placeholder": "vaquitag"
     },
     "addWallet": {
       "addressField": "Address",
@@ -2211,7 +2205,7 @@
         "subtitle": "Withdraw to a crypto wallet"
       },
       "username": {
-        "title": "Vaquitatag",
+        "title": "Vaquitag",
         "subtitle": "Send to a Vaquita user"
       }
     },
@@ -2219,7 +2213,6 @@
     "minWithdraw": "Minimum withdrawal: {{amount}} USDC.",
     "noUsernames": "You have no saved users yet",
     "noWallets": "You have no saved wallets yet",
-    "processing": "Processing withdrawal...",
     "processingHint": "This may take a few seconds.",
     "review": "Review",
     "selectAccount": "Select account",
@@ -2283,12 +2276,10 @@
       "clearAll": "Clear all",
       "apply": "Apply",
       "kinds": {
-        "all": "All transactions",
         "deposit": "Deposits",
         "withdraw": "Withdrawals"
       },
       "statuses": {
-        "all": "All statuses",
         "completed": "Completed",
         "pending": "Pending",
         "failed": "Failed"
@@ -2341,7 +2332,6 @@
   "portfolio": {
     "title": "Portfolio",
     "total": "Total",
-    "earning": "Estimated earnings",
     "invest": "Invest",
     "savings": "Savings",
     "distributed": "Spread across {{funded}} of {{total}} options",
@@ -2349,8 +2339,8 @@
     "noFunds": "No funds",
     "sum": "Total",
     "empty": "No saving terms available yet.",
-    "poolRewards": "{{amount}} reward pool",
-    "inThePool": "{{value}} in the pool",
+    "poolRewards": "{{amount}} in rewards",
+    "poolRewardsApy": "{{apy}}% APY + {{amount}} in rewards",
     "row": {
       "ready": "Ready",
       "timeLeft": "left",

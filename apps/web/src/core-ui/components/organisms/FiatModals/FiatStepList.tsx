@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import { FiCheck, FiLoader, FiLock, FiX } from 'react-icons/fi';
 
 export type StepStatus = 'idle' | 'running' | 'done' | 'error' | 'pending';
@@ -8,7 +9,7 @@ export interface FiatStep {
   key: string;
   label: string;
   status: StepStatus;
-  /** false → paso aún no cableado (se muestra gris con "soon"). */
+  /** false → the step is not wired up yet: it renders greyed out and badged. */
   implemented: boolean;
 }
 
@@ -23,6 +24,7 @@ export function FiatStepList({ steps }: { steps: FiatStep[] }) {
 }
 
 function StepRow({ label, status, implemented }: { label: string; status: StepStatus; implemented: boolean }) {
+  const { t } = useTranslation();
   const icon =
     status === 'done' ? (
       <FiCheck className="h-4 w-4 text-success" />
@@ -37,7 +39,7 @@ function StepRow({ label, status, implemented }: { label: string; status: StepSt
     <li className={`flex items-center gap-2 text-sm ${implemented ? 'text-black' : 'text-gray-400'}`}>
       {icon}
       <span>{label}</span>
-      {!implemented && <span className="ml-auto text-[10px] uppercase text-gray-400">soon</span>}
+      {!implemented && <span className="ml-auto text-[10px] uppercase text-gray-400">{t('common.soon', 'Soon')}</span>}
     </li>
   );
 }

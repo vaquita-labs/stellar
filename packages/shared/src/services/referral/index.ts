@@ -22,7 +22,7 @@ import type {
  */
 
 /**
- * The profile's invite code, which since the vaquitatag release IS its tag.
+ * The profile's invite code, which since the vaquitag release IS its tag.
  *
  * Nothing is minted here any more. A code used to be six random characters
  * (`FW6A86`) nobody could say across a table at an event; now it is the handle
@@ -124,7 +124,7 @@ const countActiveReferrals = async (referredWallets: string[]): Promise<number> 
 /**
  * Referral summary for a wallet. Upserts the viewer (so a first-time caller
  * still resolves to a row), resolves the invite code — which is the viewer's
- * vaquitatag — and counts referrals, joined and saving.
+ * vaquitag — and counts referrals, joined and saving.
  */
 export const getReferralSummary = async (walletAddress: string): Promise<ReferralSummaryResponseDTO> => {
   const viewer = await prisma.profile.upsert({
@@ -164,7 +164,7 @@ export const redeemReferralCode = async (
   walletAddress: string,
   rawCode: string,
 ): Promise<RedeemReferralResult> => {
-  // Lowercased, because the code is a vaquitatag and tags are stored lowercase.
+  // Lowercased, because the code is a vaquitag and tags are stored lowercase.
   // The lookup is insensitive anyway — old random codes were uppercase and
   // those links still work — so this only decides what gets logged.
   const code = rawCode.trim().toLowerCase();

@@ -644,7 +644,7 @@ export interface FeedbackPostResponseDTO {
  */
 export interface ReferralSummaryResponseDTO {
   walletAddress: string;
-  /** The vaquitatag this user shares to invite others. It IS their tag. */
+  /** The vaquitag this user shares to invite others. It IS their tag. */
   code: string;
   /** Everyone this user referred (attributed), regardless of activity. */
   referrals: number;

@@ -84,9 +84,7 @@ export const buildTransactions = (deposits: DepositResponseDTO[]): AppTransactio
     for (const withdrawal of deposit.withdrawals ?? []) {
       const wStatus = withdrawalStatus(withdrawal.status);
       const interest = early || wStatus !== 'completed' ? 0 : depositEarnings(deposit);
-      const wHistory: TransactionHistoryEntry[] = [
-        { key: 'withdrawRequested', timestamp: withdrawal.createdTimestamp },
-      ];
+      const wHistory: TransactionHistoryEntry[] = [{ key: 'withdrawRequested', timestamp: withdrawal.createdTimestamp }];
       if (wStatus === 'completed') {
         wHistory.push({
           key: 'withdrawConfirmed',
@@ -119,27 +117,33 @@ export const buildTransactions = (deposits: DepositResponseDTO[]): AppTransactio
   return transactions.sort((a, b) => b.timestamp - a.timestamp);
 };
 
-export type TransactionKindFilter = 'all' | TransactionKind;
-export type TransactionStatusFilter = 'all' | TransactionStatus;
+export const TRANSACTION_KINDS: TransactionKind[] = ['deposit', 'withdraw'];
+export const TRANSACTION_STATUSES: TransactionStatus[] = ['completed', 'pending', 'failed'];
 
 export interface TransactionFilters {
   /** Inicio del rango, inclusive (ms). */
   startDate: number | null;
   /** Fin del rango, inclusive (ms; se compara contra el final del día). */
   endDate: number | null;
-  kind: TransactionKindFilter;
-  status: TransactionStatusFilter;
+  /** Kinds to show (checkboxes). Every kind checked is the default; none checked shows nothing. */
+  kinds: TransactionKind[];
+  /** Statuses to show (checkboxes). Same rule as `kinds`. */
+  statuses: TransactionStatus[];
 }
 
-export const EMPTY_TRANSACTION_FILTERS: TransactionFilters = {
+/** Every kind and status checked, no date range: the list shows everything. */
+export const DEFAULT_TRANSACTION_FILTERS: TransactionFilters = {
   startDate: null,
   endDate: null,
-  kind: 'all',
-  status: 'all',
+  kinds: TRANSACTION_KINDS,
+  statuses: TRANSACTION_STATUSES,
 };
 
 export const hasActiveFilters = (filters: TransactionFilters) =>
-  filters.startDate !== null || filters.endDate !== null || filters.kind !== 'all' || filters.status !== 'all';
+  filters.startDate !== null ||
+  filters.endDate !== null ||
+  filters.kinds.length < TRANSACTION_KINDS.length ||
+  filters.statuses.length < TRANSACTION_STATUSES.length;
 
 const endOfDay = (timestamp: number) => {
   const date = new Date(timestamp);
@@ -151,8 +155,8 @@ export const filterTransactions = (transactions: AppTransaction[], filters: Tran
   transactions.filter((transaction) => {
     if (filters.startDate !== null && transaction.timestamp < filters.startDate) return false;
     if (filters.endDate !== null && transaction.timestamp > endOfDay(filters.endDate)) return false;
-    if (filters.kind !== 'all' && transaction.kind !== filters.kind) return false;
-    if (filters.status !== 'all' && transaction.status !== filters.status) return false;
+    if (!filters.kinds.includes(transaction.kind)) return false;
+    if (!filters.statuses.includes(transaction.status)) return false;
     return true;
   });
 

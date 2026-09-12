@@ -8,7 +8,6 @@ export * from './LoaderLayout';
 export * from './PullToRefresh';
 export * from './LockPeriodModal';
 export * from './SavingsStats';
-export * from './VaquitasListModal';
 export * from './BankAPYModal';
 export * from './BridgeModal';
 export * from './ReleaseNotes';

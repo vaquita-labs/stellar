@@ -292,7 +292,7 @@ export function useAnclap() {
         }
         if (isDone(tx)) return tx as SepTransaction;
         if (Date.now() - start > timeoutMs) {
-          throw new AnclapError('Se agotó el tiempo esperando a Anclap. Volvé a intentar más tarde.');
+          throw new AnclapError('Se agotó el tiempo esperando a Anclap. Vuelve a intentar más tarde.');
         }
         await sleep(intervalMs);
       }

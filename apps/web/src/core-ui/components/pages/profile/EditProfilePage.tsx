@@ -100,7 +100,7 @@ export function EditProfilePage({ onBack }: { onBack?: () => void } = {}) {
     if (payload.nickname !== undefined && !isNewNicknameFormatValid(payload.nickname)) {
       setNicknameError(
         t('profilePages.edit.nicknameFormatError', {
-          defaultValue: 'Your vaquitatag must be {{min}}-{{max}} characters: lowercase letters and numbers.',
+          defaultValue: 'Your vaquitag must be {{min}}-{{max}} characters: lowercase letters and numbers.',
           min: NICKNAME_MIN_LENGTH,
           max: NICKNAME_NEW_MAX_LENGTH,
         }),

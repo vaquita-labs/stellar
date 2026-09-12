@@ -350,7 +350,7 @@ router.post('/wallet/:walletAddress/nickname', requireWalletSession, async (req,
   // Longer names already in the database still resolve — see `nicknamePolicy`.
   if (!isNewNicknameFormatValid(nickname)) {
     req.log.warn({ walletAddress, nickname }, 'Nickname rejected by format policy');
-    return sendError(res, 'Vaquitatags must be 3-15 lowercase letters or numbers.', null, 422);
+    return sendError(res, 'Vaquitags must be 3-15 lowercase letters or numbers.', null, 422);
   }
 
   if (!isNicknameAllowed(nickname)) {
@@ -440,7 +440,7 @@ router.patch('/wallet/:walletAddress/profile', requireWalletSession, async (req,
     if (!nickname) {
       result.nickname.error = 'Please enter a nickname.';
     } else if (!isNewNicknameFormatValid(nickname)) {
-      result.nickname.error = 'Vaquitatags must be 3-15 lowercase letters or numbers.';
+      result.nickname.error = 'Vaquitags must be 3-15 lowercase letters or numbers.';
     } else if (!isNicknameAllowed(nickname)) {
       req.log.warn({ walletAddress, nickname }, 'Nickname rejected by name policy (reserved or moderated)');
       result.nickname.error = 'That nickname is not allowed.';

@@ -13,9 +13,9 @@ import { Toast } from '@heroui/react';
 import { PollarProvider } from '@pollar/react';
 import '@pollar/react/styles.css';
 import { stellarWalletsKitAdapters } from '@pollar/stellar-wallets-kit-adapter';
-import { QueryClient } from '@tanstack/react-query';
+import { defaultShouldDehydrateQuery, QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { PersistQueryClientProvider, removeOldestQuery } from '@tanstack/react-query-persist-client';
 import { ChannelProvider } from 'ably/react';
 import { ReactNode, useState } from 'react';
 import { AppShell } from './AppShell';
@@ -81,6 +81,19 @@ export function Providers({ children }: { children: ReactNode }) {
         typeof window !== 'undefined'
           ? window.localStorage
           : { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+      // Without a `retry` the persister is silently all-or-nothing: its
+      // `setItem` is wrapped in a bare try/catch that returns the error, and
+      // with nothing to retry the write is simply abandoned — nothing stored,
+      // nothing logged. One over-quota snapshot (the 5 MB localStorage ceiling)
+      // then freezes the persisted cache forever, and every reload restores the
+      // state from before the overflow. Shedding the oldest entries keeps the
+      // rest of the snapshot writable, and the warning says it is happening.
+      retry: (props) => {
+        if (props.errorCount === 1) {
+          console.warn('[query-cache] could not persist, dropping the oldest entries', props.error);
+        }
+        return removeOldestQuery(props);
+      },
     })
   );
 
@@ -96,6 +109,16 @@ export function Providers({ children }: { children: ReactNode }) {
         persister,
         maxAge: 1000 * 60 * 60 * 24,
         buster: clientEnv.NEXT_PUBLIC_QUERY_CACHE_VERSION,
+        dehydrateOptions: {
+          // The on-chain vault position keeps its share balance as a `bigint`,
+          // which `JSON.stringify` refuses to serialize. Persisting it threw on
+          // every write, and the persister swallows that error the same way it
+          // swallows a full disk, so the whole snapshot stopped being updated.
+          // It is a live money read that revalidates on mount anyway, so it has
+          // nothing to gain from a day-old copy — leave it out of the snapshot.
+          shouldDehydrateQuery: (query) =>
+            defaultShouldDehydrateQuery(query) && query.queryKey[0] !== 'defindex-vault-position',
+        },
       }}
     >
       <I18nProvider>

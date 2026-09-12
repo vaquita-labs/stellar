@@ -493,7 +493,7 @@ model FeedbackVote {
 /// admin panel builds its links from.
 ///
 /// `code` shares ONE namespace with `profiles.referralCode`, which since
-/// 20260911_vaquitatag is the user's vaquitatag. Attribution resolves campaign
+/// 20260911_vaquitatag is the user's vaquitag. Attribution resolves campaign
 /// first and user referral second, so a collision would let a campaign swallow
 /// someone's personal code — the admin create path validates against both, and
 /// so does every nickname write, which a CHECK constraint could not do across
@@ -602,7 +602,7 @@ model Config {
 model Profile {
   id            Int       @id @default(autoincrement())
   walletAddress String    @unique(map: "profiles_wallet_unique") @map("wallet_address") @db.VarChar(100)
-  // The vaquitatag. Public URL segment (/leaderboard/<nickname>,
+  // The vaquitag. Public URL segment (/leaderboard/<nickname>,
   // /explore/<nickname>), the key the share card resolves a claim by, and —
   // mirrored into `referralCode` below — the invite code. Unique among live
   // profiles; the index is partial, because a soft-deleted profile must not
@@ -651,7 +651,7 @@ model Profile {
   notificationPreferences Json? @map("notification_preferences") @db.JsonB
 
   // Invite-a-friend graph. `referralCode` is the string this profile shares —
-  // since 20260911_vaquitatag it is a mirror of `nickname` (the "vaquitatag"),
+  // since 20260911_vaquitatag it is a mirror of `nickname` (the "vaquitag"),
   // not a random 6-char string, so that the code is something the user can say
   // out loud. It stays its own column because its unique index is what keeps
   // invite codes and campaign codes from colliding across the two tables.

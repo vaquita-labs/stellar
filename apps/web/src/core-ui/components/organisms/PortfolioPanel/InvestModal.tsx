@@ -31,6 +31,7 @@ import { AmountStep, DESTINATION_ROW, useAmountShake } from '../../molecules/Amo
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { PressableButton } from '../../molecules/PressableButton';
+import { PoolMeta } from './PoolMeta';
 
 type Step = 'amount' | 'term' | 'review' | 'processing' | 'success';
 
@@ -101,8 +102,8 @@ export function InvestModal({
   }, [open, lockPeriods, initialLockPeriod]);
 
   const numericAmount = Number(amount || '0');
-  // En vez del % (que era premios/depósitos anualizado y engañoso), cada plazo
-  // muestra lo cierto: su pool de premios + cuánto capital hay en el pool (ver PoolMeta).
+  // Cada plazo muestra la tasa del vault de DeFindex + el pozo de premios de ese
+  // plazo (ver PoolMeta), que es la misma línea que pinta Portafolio.
   // Mismo piso que depósito y retiro: el backend lo rechaza igual, así que
   // conviene decirlo antes de firmar.
   const canReview = numericAmount >= MIN_USDC && selectedLock != null;
@@ -283,14 +284,14 @@ export function InvestModal({
             <span className={`flex-1 min-w-0 text-sm font-bold ${isSelected ? 'text-success' : 'text-black'}`}>
               {formatTimeDeposit(lp)}
             </span>
-            {/* Solo el tamaño del POZO del plazo, al otro extremo (sin "N deposits").
-                Todavía no hay monto elegido, así que acá no se puede estimar la parte
-                de cada uno: la etiqueta dice "pozo", no "premios tuyos". */}
-            <span className="text-sm font-bold text-success tabular-nums shrink-0">
-              {t('portfolio.poolRewards', '{{amount}} reward pool', {
-                amount: formatUsd(byLockPeriod[lp]?.rewardPool ?? 0),
-              })}
-            </span>
+            {/* La misma línea que en Portafolio, mismo componente: tasa del vault +
+                pozo del plazo. Todavía no hay monto elegido, así que el pozo va
+                entero y sin estimar: dice "premios", no "premios tuyos". */}
+            <PoolMeta
+              rewardPool={byLockPeriod[lp]?.rewardPool ?? 0}
+              apy={byLockPeriod[lp]?.protocolApy ?? 0}
+              className="text-sm font-bold text-success shrink-0"
+            />
           </button>
         );
       })}

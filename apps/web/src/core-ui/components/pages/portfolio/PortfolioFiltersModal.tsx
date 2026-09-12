@@ -1,39 +1,58 @@
 'use client';
 
 import { Button } from '@/core-ui/components/atoms';
-import { AppModal, DateField, DatePickerSheet, startOfDay } from '@/core-ui/components/molecules';
+import { AppModal, DateField, DatePickerSheet, FilterCheckRow, startOfDay, toggleValue } from '@/core-ui/components/molecules';
 import { formatTimeDeposit } from '@/core-ui/helpers';
+import { DepositResponseDTO, DepositWithdrawalState } from '@/core-ui/types';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiCheck } from 'react-icons/fi';
 
 export type PositionStatusFilter = 'ready' | 'locked' | 'withdrawn' | 'failed';
 
+export const POSITION_STATUSES: PositionStatusFilter[] = ['ready', 'locked', 'withdrawn', 'failed'];
+
 export interface PortfolioFilters {
-  /** Plazos elegidos (multi-selección). Vacío = todos. */
+  /** Lock periods to show (checkboxes). Every period checked is the default; none checked shows nothing. */
   periods: number[];
-  /**
-   * Estado a mostrar. No hay opción "todas": es uno u otro estado. `null` es el
-   * default (sin filtro) y muestra las posiciones activas (ready + locked), que
-   * es lo que la pantalla necesita para retirar. Elegir un estado la convierte en
-   * un visor de ese estado (incluyendo retiradas y con error).
-   */
-  status: PositionStatusFilter | null;
+  /** Statuses to show (checkboxes). Same rule as `periods`. */
+  statuses: PositionStatusFilter[];
   startDate: number | null;
   endDate: number | null;
 }
 
-export const EMPTY_PORTFOLIO_FILTERS: PortfolioFilters = {
-  periods: [],
-  status: null,
+/** Every period and status checked, no date range: the list shows every position. */
+export const defaultPortfolioFilters = (lockPeriods: number[]): PortfolioFilters => ({
+  periods: lockPeriods,
+  statuses: POSITION_STATUSES,
   startDate: null,
   endDate: null,
+});
+
+export const hasActivePortfolioFilters = (f: PortfolioFilters, lockPeriods: number[]): boolean =>
+  f.periods.length < lockPeriods.length ||
+  f.statuses.length < POSITION_STATUSES.length ||
+  f.startDate !== null ||
+  f.endDate !== null;
+
+/** "Ahora" real de un depósito, corrigiendo el reloj congelado del cache. */
+const depositNow = (d: DepositResponseDTO) =>
+  d.serverTimestamp && d.fetchedAtTimestamp ? d.serverTimestamp + (Date.now() - d.fetchedAtTimestamp) : Date.now();
+
+/** When the lock ends (ms). Past for anything already withdrawable. */
+export const positionEndsAt = (d: DepositResponseDTO) => d.createdTimestamp + d.lockPeriod;
+
+/**
+ * Bucket a deposit falls into for the status filter. Deposits still being
+ * processed have no bucket: they are not positions yet, so the list skips them.
+ */
+export const positionStatusOf = (d: DepositResponseDTO): PositionStatusFilter | null => {
+  const S = DepositWithdrawalState;
+  if (d.state === S.DEPOSIT_SUCCESS) return positionEndsAt(d) <= depositNow(d) ? 'ready' : 'locked';
+  if (d.state === S.WITHDRAW_SUCCESS || d.state === S.WITHDRAW_SUCCESS_EARLY) return 'withdrawn';
+  if (d.state === S.DEPOSIT_FAILED || d.state === S.WITHDRAW_FAILED) return 'failed';
+  return null;
 };
 
-export const hasActivePortfolioFilters = (f: PortfolioFilters): boolean =>
-  f.periods.length > 0 || f.status !== null || f.startDate !== null || f.endDate !== null;
-
-const STATUSES: PositionStatusFilter[] = ['ready', 'locked', 'withdrawn', 'failed'];
 const STATUS_LABEL: Record<PositionStatusFilter, string> = {
   ready: 'Ready to withdraw',
   locked: 'Still locked',
@@ -41,52 +60,17 @@ const STATUS_LABEL: Record<PositionStatusFilter, string> = {
   failed: 'With error',
 };
 
-/** Fila con radio (selección única), estilo del filtro de transactions. */
-function RadioRow({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onPress}
-      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#FFF7E6]"
-    >
-      <span className="text-sm font-semibold text-black">{label}</span>
-      <span
-        className={
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-black ' +
-          (selected ? 'bg-primary' : 'bg-white')
-        }
-      >
-        {selected && <span className="h-2 w-2 rounded-full bg-black" />}
-      </span>
-    </button>
-  );
-}
-
-/** Fila con checkbox (multi-selección) para los plazos. */
-function CheckRow({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#FFF7E6]"
-    >
-      <span className="text-sm font-semibold text-black">{label}</span>
-      <span
-        className={
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-black ' +
-          (checked ? 'bg-primary' : 'bg-white')
-        }
-      >
-        {checked && <FiCheck className="h-3.5 w-3.5 text-black" strokeWidth={3} />}
-      </span>
-    </button>
-  );
-}
+/** Translated label of a status (same text in the filter and in the chip). */
+export const useStatusLabel = () => {
+  const { t } = useTranslation();
+  return (status: PositionStatusFilter): string => t(`portfolio.filters.statuses.${status}`, STATUS_LABEL[status]);
+};
 
 /**
- * Filtros de las posiciones del portafolio: rango de fechas + plazo
- * (multi-selección) + estado. Mismo estilo que TransactionFiltersModal (reusa su
- * DatePickerSheet). El plazo se puede elegir de a varios: vacío = todos.
+ * Filtros de las posiciones del portafolio: rango de fechas + plazo + estado.
+ * Plazo y estado son checkboxes: arrancan todos marcados y "Limpiar todo"
+ * vuelve a ese default, o sea a ver todas las posiciones. Mismo estilo que
+ * TransactionFiltersModal (reusa su DatePickerSheet).
  */
 export function PortfolioFiltersModal({
   open,
@@ -102,6 +86,7 @@ export function PortfolioFiltersModal({
   lockPeriods: number[];
 }) {
   const { t } = useTranslation();
+  const statusLabelOf = useStatusLabel();
   const [draft, setDraft] = useState(filters);
   const [picking, setPicking] = useState<'startDate' | 'endDate' | null>(null);
   const [pickerDate, setPickerDate] = useState(() => new Date());
@@ -132,12 +117,6 @@ export function PortfolioFiltersModal({
     setPicking(null);
   };
 
-  const togglePeriod = (lp: number) =>
-    setDraft((prev) => ({
-      ...prev,
-      periods: prev.periods.includes(lp) ? prev.periods.filter((p) => p !== lp) : [...prev.periods, lp],
-    }));
-
   return (
     <AppModal
       open={open}
@@ -147,7 +126,7 @@ export function PortfolioFiltersModal({
       fullScreen
       footer={
         <div className="flex gap-2 w-full">
-          <Button variant="white" className="flex-1" onPress={() => setDraft(EMPTY_PORTFOLIO_FILTERS)}>
+          <Button variant="white" className="flex-1" onPress={() => setDraft(defaultPortfolioFilters(lockPeriods))}>
             {t('transactions.filters.clearAll', 'Clear all')}
           </Button>
           <Button
@@ -195,11 +174,11 @@ export function PortfolioFiltersModal({
           </h3>
           <div className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-black border-b-2 bg-white">
             {lockPeriods.map((lp) => (
-              <CheckRow
+              <FilterCheckRow
                 key={lp}
                 label={formatTimeDeposit(lp)}
                 checked={draft.periods.includes(lp)}
-                onToggle={() => togglePeriod(lp)}
+                onToggle={() => setDraft((prev) => ({ ...prev, periods: toggleValue(prev.periods, lp) }))}
               />
             ))}
           </div>
@@ -210,14 +189,12 @@ export function PortfolioFiltersModal({
             {t('portfolio.filters.status', 'Status')}
           </h3>
           <div className="divide-y divide-gray-200 overflow-hidden rounded-lg border border-black border-b-2 bg-white">
-            {STATUSES.map((status) => (
-              <RadioRow
+            {POSITION_STATUSES.map((status) => (
+              <FilterCheckRow
                 key={status}
-                label={t(`portfolio.filters.statuses.${status}`, STATUS_LABEL[status])}
-                selected={draft.status === status}
-                // Tocar el estado ya elegido lo deselecciona (vuelve al default:
-                // activas). No hay fila "todas"; así se sale de un estado puntual.
-                onPress={() => setDraft((prev) => ({ ...prev, status: prev.status === status ? null : status }))}
+                label={statusLabelOf(status)}
+                checked={draft.statuses.includes(status)}
+                onToggle={() => setDraft((prev) => ({ ...prev, statuses: toggleValue(prev.statuses, status) }))}
               />
             ))}
           </div>

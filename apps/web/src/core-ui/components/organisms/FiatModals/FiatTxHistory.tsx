@@ -148,53 +148,51 @@ export function FiatTxHistory({ assetCode, kind, jwt: jwtProp, onResume }: FiatT
       </div>
 
       {open && (
-      <div className="flex flex-col gap-2 border-t border-gray-200 p-3">
-        {!walletAddress && <p className="text-xs text-gray-500">{t('wallet.fiat.history.connect', 'Connect your wallet first.')}</p>}
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        {visibleItems === null && !loading && walletAddress && (
-          <p className="text-xs text-gray-500">{t('wallet.fiat.history.empty', 'No history loaded yet — tap Refresh.')}</p>
-        )}
-        {visibleItems !== null && visibleItems.length === 0 && (
-          <p className="text-xs text-gray-500">{t('wallet.fiat.history.none', 'No transactions yet.')}</p>
-        )}
-        {visibleItems !== null && visibleItems.length > 0 && (
-          <p className="text-[11px] text-gray-500">
-            {t('wallet.fiat.history.resumeHint', 'Tap a transaction to continue where you left off.')}
-          </p>
-        )}
-        {visibleItems?.map((tx) => {
-          const busyRow = selectingId === tx.id;
-          return (
-            <button
-              key={tx.id}
-              type="button"
-              onClick={() => void selectRow(tx)}
-              disabled={!onResume || !effectiveJwt || selectingId !== null}
-              className="flex w-full items-start justify-between gap-3 rounded-md border border-gray-200 px-2.5 py-2 text-left transition hover:bg-[#F5FBFF] disabled:cursor-default disabled:opacity-60"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-black">
-                  {tx.kind === 'deposit'
-                    ? t('wallet.fiat.history.deposit', 'Deposit')
-                    : t('wallet.fiat.history.withdraw', 'Withdraw')}{' '}
-                  <span className="text-gray-500">
-                    {tx.amount_in ?? tx.amount_out ?? '—'} {assetCode}
-                  </span>
-                </p>
-                <p className="text-[11px] text-gray-400">{fmtDate(tx.started_at)}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className={`text-[11px] font-semibold ${statusColor(tx.status)}`}>{tx.status ?? '—'}</span>
-                {busyRow ? (
-                  <Spinner size="sm" color="current" />
-                ) : (
-                  <FiChevronRight className="h-3.5 w-3.5 text-gray-400" />
-                )}
-              </div>
-            </button>
-          );
-        })}
-      </div>
+        <div className="flex flex-col gap-2 border-t border-gray-200 p-3">
+          {!walletAddress && (
+            <p className="text-xs text-gray-500">{t('wallet.fiat.history.connect', 'Connect your wallet first.')}</p>
+          )}
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          {visibleItems === null && !loading && walletAddress && (
+            <p className="text-xs text-gray-500">{t('wallet.fiat.history.empty', 'No history loaded yet — tap Refresh.')}</p>
+          )}
+          {visibleItems !== null && visibleItems.length === 0 && (
+            <p className="text-xs text-gray-500">{t('wallet.fiat.history.none', 'No transactions yet.')}</p>
+          )}
+          {visibleItems !== null && visibleItems.length > 0 && (
+            <p className="text-[11px] text-gray-500">
+              {t('wallet.fiat.history.resumeHint', 'Tap a transaction to continue where you left off.')}
+            </p>
+          )}
+          {visibleItems?.map((tx) => {
+            const busyRow = selectingId === tx.id;
+            return (
+              <button
+                key={tx.id}
+                type="button"
+                onClick={() => void selectRow(tx)}
+                disabled={!onResume || !effectiveJwt || selectingId !== null}
+                className="flex w-full items-start justify-between gap-3 rounded-md border border-gray-200 px-2.5 py-2 text-left transition hover:bg-[#F5FBFF] disabled:cursor-default disabled:opacity-60"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-black">
+                    {tx.kind === 'deposit'
+                      ? t('wallet.fiat.history.deposit', 'Deposit')
+                      : t('wallet.fiat.history.withdraw', 'Withdraw')}{' '}
+                    <span className="text-gray-500">
+                      {tx.amount_in ?? tx.amount_out ?? '—'} {assetCode}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-gray-400">{fmtDate(tx.started_at)}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={`text-[11px] font-semibold ${statusColor(tx.status)}`}>{tx.status ?? '—'}</span>
+                  {busyRow ? <Spinner size="sm" color="current" /> : <FiChevronRight className="h-3.5 w-3.5 text-gray-400" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );

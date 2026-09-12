@@ -207,7 +207,18 @@ export const useRestProfile = () => {
       },
       walletAddress
     );
-    const data = await response.json();
+    // Un 401 puede venir sin cuerpo; parsear a la defensiva para que el error
+    // que se reporte sea el status y no un "Unexpected end of JSON input".
+    const data = await response.json().catch(() => null);
+    // El modal celebra en cuanto esta promesa resuelve. Sin mirar el status,
+    // un 400 ("there are no gold coins to collect"), un 401 o un 500 también
+    // resolvían: la pantalla de éxito decía "+N monedas" por una entrega que
+    // nunca ocurrió, y al recargar el número volvía al de antes. Tirando el
+    // error se alcanza el `catch` que ya tiene el modal, que vuelve al cofre
+    // cerrado.
+    if (!response.ok) {
+      throw new Error(data?.message || `gold-daily-collect → HTTP ${response.status}`);
+    }
 
     return data;
   }, [networkName, walletAddress]);
