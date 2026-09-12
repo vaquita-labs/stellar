@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildServerAchievements } from '../../data/profile-badges';
 import { useProfileAchievements } from '../../hooks';
-import { useConfigStore, useModalQueueStore } from '../../stores';
+import { useAutoModalTurn, useConfigStore } from '../../stores';
 import { AchievementModal } from '../pages/profile/AchievementModal';
 
 /**
@@ -53,13 +53,11 @@ export function BadgeClaimGate() {
   const { network, walletAddress } = useConfigStore();
   const { data, isFetching, isFetchedAfterMount } = useProfileAchievements();
 
-  // The full-screen prompts of the home go first; the version notes wait behind
-  // this one. `HomePage` takes the turn on entry — this component mounts after
-  // the game clock syncs, and by then a note would already have been shown.
-  const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
-  const vaultPromptSettled = useModalQueueStore((s) => s.vaultPromptSettled);
-  const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
-  const setBadgeClaimSettled = useModalQueueStore((s) => s.setBadgeClaimSettled);
+  // Second to last in the queue — only the version notes wait behind this one.
+  // `HomePage` reserves the slot on entry, because this component mounts after
+  // the game clock syncs and by then a note would already have been shown. The
+  // full order lives in [[auto-modals]].
+  const { isMyTurn: ourTurn, settle } = useAutoModalTurn('badge-claim');
 
   // Latched on open and held until the user closes. Claiming flips the badge to
   // `minted`, so it stops being the candidate below: driving the sheet off
@@ -85,8 +83,6 @@ export function BadgeClaimGate() {
   // Without a badges contract on the active network the sheet renders no claim
   // button (`canClaim` in AchievementModal), so there is nothing to offer.
   const hasContract = !!network?.badgesContractAddress;
-  const ourTurn = pushNudgeSettled && vaultPromptSettled && homeTourSettled;
-
   // Nothing may be decided off the react-query cache restored from disk: a
   // badge claimed in an earlier session (or on another device) still reads
   // `claimable` there, and acting on it burns the one offer of this visit on a
@@ -108,13 +104,13 @@ export function BadgeClaimGate() {
 
     const offer = hasContract && candidate && !offeredRef.current.has(candidate.id) ? candidate : null;
     if (!offer) {
-      setBadgeClaimSettled(true);
+      settle();
       return;
     }
 
     latchedRef.current = offer.id;
     setPromptedId(offer.id);
-  }, [served, listFresh, ourTurn, hasContract, candidate, setBadgeClaimSettled]);
+  }, [served, listFresh, ourTurn, hasContract, candidate, settle]);
 
   // Resolved on every render so the open sheet reflects the badge as it is now:
   // the row survives the claim (its `claimState` becomes `minted`), which is
@@ -140,7 +136,7 @@ export function BadgeClaimGate() {
     }
     setServed(true);
     setPromptedId(null);
-    setBadgeClaimSettled(true);
+    settle();
   };
 
   return (

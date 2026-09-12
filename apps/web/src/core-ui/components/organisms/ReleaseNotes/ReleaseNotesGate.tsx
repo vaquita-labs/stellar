@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAckReleaseNote, useIsAuthenticated, useReleaseNote } from '../../../hooks';
-import { useModalQueueStore } from '../../../stores';
+import { useAutoModalSlot } from '../../../stores';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
 
 /**
@@ -29,14 +29,11 @@ import { ReleaseNotesModal } from './ReleaseNotesModal';
  */
 export function ReleaseNotesGate() {
   const isAuthenticated = useIsAuthenticated();
-  const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
-  const vaultPromptSettled = useModalQueueStore((s) => s.vaultPromptSettled);
-  const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
-  const welcomeClaimSettled = useModalQueueStore((s) => s.welcomeClaimSettled);
-  const badgeClaimSettled = useModalQueueStore((s) => s.badgeClaimSettled);
   const [done, setDone] = useState(false);
 
-  const queueClear = pushNudgeSettled && vaultPromptSettled && homeTourSettled && welcomeClaimSettled && badgeClaimSettled;
+  // Last in the queue, so this waits for every other self-opening modal and
+  // none of them waits for it. The order is in [[auto-modals]].
+  const queueClear = useAutoModalSlot('release-notes', done);
 
   const { data } = useReleaseNote(isAuthenticated && queueClear && !done);
   const ack = useAckReleaseNote();

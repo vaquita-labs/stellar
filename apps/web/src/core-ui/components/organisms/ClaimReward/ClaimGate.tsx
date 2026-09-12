@@ -1,9 +1,9 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { useIsAuthenticated, useProfileData, useRestProfile } from '../../../hooks';
-import { useModalQueueStore } from '../../../stores';
+import { useAutoModalSlot } from '../../../stores';
 import { ProfileResponseDTO } from '../../../types';
 import { ClaimRewardModal } from './ClaimRewardModal';
 
@@ -13,7 +13,7 @@ import { ClaimRewardModal } from './ClaimRewardModal';
  * con el flag `onboardingCompleted` del backend; al reclamar/saltar se marca
  * para que no vuelva a aparecer.
  *
- * Su lugar en la cola de modales que se abren solos está en [[modal-queue]]:
+ * Su lugar en la cola de modales que se abren solos está en [[auto-modals]]:
  * espera al permiso de notificaciones y al tour, y el prompt de dinero ocioso y
  * el badge pendiente esperan a este.
  */
@@ -22,12 +22,6 @@ export function ClaimGate({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { saveProfileFlags } = useRestProfile();
   const { data, isFetchedAfterMount, isError } = useProfileData();
-
-  // Detrás del permiso de notificaciones y del tour: el pedido de push vence si
-  // se tapa, y los coach marks ocupan la pantalla entera.
-  const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
-  const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
-  const setWelcomeClaimSettled = useModalQueueStore((s) => s.setWelcomeClaimSettled);
 
   const [done, setDone] = useState(false);
 
@@ -41,17 +35,13 @@ export function ClaimGate({ children }: { children: ReactNode }) {
   const needsClaim =
     isAuthenticated && answered && !isError && !!data && data.tutorialCompleted && !data.onboardingCompleted && !done;
 
-  // El turno se toma y se suelta acá mismo: este gate monta en el layout
-  // privado, o sea antes que el home, así que no necesita que nadie se lo
-  // reserve. Mientras el perfil no contesta lo retiene, y al desmontar lo
-  // devuelve para no dejar la cola trabada fuera del árbol privado.
-  useEffect(() => {
-    setWelcomeClaimSettled(answered && !needsClaim);
-  }, [answered, needsClaim, setWelcomeClaimSettled]);
+  // Nadie le reserva el lugar: este gate monta en el layout privado, o sea
+  // antes que el home. Lo retiene mientras el perfil no contesta, y `ourTurn`
+  // es el permiso de notificaciones y el tour ya fuera del camino — el orden
+  // completo vive en [[auto-modals]].
+  const ourTurn = useAutoModalSlot('welcome-claim', answered && !needsClaim);
 
-  useEffect(() => () => setWelcomeClaimSettled(true), [setWelcomeClaimSettled]);
-
-  const showClaim = needsClaim && pushNudgeSettled && homeTourSettled;
+  const showClaim = needsClaim && ourTurn;
 
   const finish = async () => {
     setDone(true);

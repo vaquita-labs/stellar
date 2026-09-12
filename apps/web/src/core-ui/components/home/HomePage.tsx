@@ -3,7 +3,14 @@
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
 import { useAnalytics, useDeposits } from '../../hooks';
-import { EditionMode, useGameClockSynced, useLoading, useMapStore, useModalQueueStore, useConfigStore } from '../../stores';
+import {
+  EditionMode,
+  useGameClockSynced,
+  useLoading,
+  useMapStore,
+  useReserveAutoModalSlot,
+  useConfigStore,
+} from '../../stores';
 import { WorldType } from '../../types';
 import { useModalPresence } from '../molecules/AppModal';
 import { BankAPYModal, CoinAnimation, DepositPanel, HomeTour, PushNudge, TutorialModal } from '../organisms';
@@ -48,51 +55,17 @@ export function HomePage() {
   // cambie. useGameClockSync (en Providers) hace el fetch a /api/v1/time.
   const clockReady = useGameClockSynced();
 
-  // El pedido de permiso de notificaciones es el primero de la cola y su turno
-  // se toma antes que los otros tres. Va adelante aunque no sea la decisión más
-  // grande porque es el único pedido que VENCE: el sistema operativo lo ofrece
-  // una sola vez, así que taparlo no lo posterga, lo pierde. Quien lo LIBERA es
-  // `PushNudge`, y fuera de iOS lo libera enseguida: ahí el diálogo lo dibuja el
-  // navegador por encima de la página y no hay nada que la app pueda tapar.
-  const setPushNudgeSettled = useModalQueueStore((s) => s.setPushNudgeSettled);
-  useEffect(() => {
-    setPushNudgeSettled(false);
-    return () => setPushNudgeSettled(true);
-  }, [setPushNudgeSettled]);
-
-  // El turno de la cola de modales se TOMA acá, al entrar al home, y no cuando
-  // monta `AutoInvest`: ese vive debajo del gate de `clockReady` de más abajo,
-  // o sea detrás de un GET /time. Hasta que el reloj sincroniza, el gate de las
-  // notas de versión (en el layout, o sea un ancestro) ve el default `true` del
-  // store y ya alcanzó a mostrar la nota — que después desaparecía sola cuando
-  // `AutoInvest` finalmente tomaba el turno. Quien lo LIBERA sigue siendo
-  // `AutoInvest`, que es el único que sabe si hay dinero ocioso que ofrecer.
-  const setVaultPromptSettled = useModalQueueStore((s) => s.setVaultPromptSettled);
-  useEffect(() => {
-    setVaultPromptSettled(false);
-    return () => setVaultPromptSettled(true);
-  }, [setVaultPromptSettled]);
-
-  // El turno del tour se toma acá por la misma razón: `HomeTour` monta debajo
-  // del gate de `clockReady`, o sea detrás de un GET /time, y hasta entonces las
-  // notas de versión ya alcanzarían a abrirse encima de los coach marks. Quien
-  // lo LIBERA es `HomeTour`, que es el único que sabe si el usuario todavía
-  // necesita el tour.
-  const setHomeTourSettled = useModalQueueStore((s) => s.setHomeTourSettled);
-  useEffect(() => {
-    setHomeTourSettled(false);
-    return () => setHomeTourSettled(true);
-  }, [setHomeTourSettled]);
-
-  // Y el del badge pendiente, por lo mismo: `BadgeClaimGate` monta debajo del
-  // gate de `clockReady`, y hasta entonces las notas de versión ya alcanzarían
-  // a abrirse antes que la hoja de reclamo. Quien lo LIBERA es el gate, que es
-  // el único que sabe si hay un badge esperando.
-  const setBadgeClaimSettled = useModalQueueStore((s) => s.setBadgeClaimSettled);
-  useEffect(() => {
-    setBadgeClaimSettled(false);
-    return () => setBadgeClaimSettled(true);
-  }, [setBadgeClaimSettled]);
+  // Los cuatro modales que este home es dueño de montar reservan su lugar en la
+  // cola ACÁ, antes del gate de `clockReady` de más abajo. Los componentes que
+  // los dibujan viven debajo de ese gate, o sea detrás de un GET /time, y hasta
+  // que el reloj sincroniza las notas de versión —que están en el layout, un
+  // ancestro— ven la cola vacía y alcanzan a mostrar y sacar una nota. Cada uno
+  // libera su lugar cuando sabe si le toca aparecer; el orden entre todos vive
+  // en [[auto-modals]].
+  useReserveAutoModalSlot('push-nudge');
+  useReserveAutoModalSlot('home-tour');
+  useReserveAutoModalSlot('vault-prompt');
+  useReserveAutoModalSlot('badge-claim');
 
   const handleCoinAnimationComplete = () => {
     setCoinAnimationTarget(null);

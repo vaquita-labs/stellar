@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { FiBell } from 'react-icons/fi';
 import { useProfileData, usePushNotifications } from '../../hooks';
 import { installPlatform } from '../../hooks/useInstallApp';
-import { useModalQueueStore } from '../../stores';
+import { useAutoModalTurn } from '../../stores';
 import { Button } from '../atoms';
 import { AppModal } from '../molecules';
 import { canAskNow, markAsked } from './pushNudgeSchedule';
@@ -92,9 +92,10 @@ export function PushNudge() {
   const { t } = useTranslation();
   const { supported, permission, enablePush } = usePushNotifications();
   const { data } = useProfileData();
-  // Nothing to wait for: this is the head of the modal queue. See the store's
-  // header for why the permission ask goes before decisions worth more money.
-  const setPushNudgeSettled = useModalQueueStore((s) => s.setPushNudgeSettled);
+  // Nothing to wait for: this is the head of the queue. See [[auto-modals]]
+  // for why the permission ask goes before decisions worth more money. The
+  // turn is settled from events rather than from rendered state — see below.
+  const { settle: settleTurn } = useAutoModalTurn('push-nudge');
   const allowed = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const [enabling, setEnabling] = useState(false);
@@ -129,12 +130,12 @@ export function PushNudge() {
    */
   useEffect(() => {
     if (!supported || permission !== 'default' || !pushPreferred || !canAskNow()) {
-      setPushNudgeSettled(true);
+      settleTurn();
       return;
     }
     if (isIos) return;
 
-    setPushNudgeSettled(true);
+    settleTurn();
     if (asked.current) return;
     asked.current = true;
     // Marked before the dialog resolves, not after: a navigation away while it
@@ -143,7 +144,7 @@ export function PushNudge() {
     void enablePush().then((result) => {
       if (result === 'error' && Notification.permission === 'default') setGestureNeeded(true);
     });
-  }, [supported, permission, pushPreferred, isIos, enablePush, setPushNudgeSettled]);
+  }, [supported, permission, pushPreferred, isIos, enablePush, settleTurn]);
 
   // The three exits the user can take — turned on, "maybe later", dismissed —
   // all end here: the browser prompt has had its chance, and whatever queued
@@ -151,7 +152,7 @@ export function PushNudge() {
   const settle = () => {
     askedNow();
     setGestureNeeded(false);
-    setPushNudgeSettled(true);
+    settleTurn();
   };
 
   const handleEnable = async () => {

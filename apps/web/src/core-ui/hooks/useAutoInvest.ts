@@ -207,7 +207,7 @@ export const useIdleFunds = () => {
   // ¿Ya se SABE si hay plata ociosa? Mientras la sesión de Pollar se restaura o
   // el balance no cargó, `shouldPrompt` en false no es "no hay nada": es "no
   // preguntamos todavía". La diferencia importa para quien espera este turno
-  // (las notas de versión, vía `useModalQueueStore`), que si no se adelantaría
+  // (las notas de versión, vía [[auto-modals]]), que si no se adelantaría
   // al prompt en cada carga.
   //
   // `error` cuenta como decidido: es un estado TERMINAL del balance, así que ya
