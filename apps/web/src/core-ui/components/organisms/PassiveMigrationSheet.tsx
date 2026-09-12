@@ -40,6 +40,12 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
   const [error, setError] = useState<unknown>(null);
   const [dismissed, setDismissed] = useState(false);
   const [amount, setAmount] = useState('');
+  // Tocó "Available": mueve TODO. `migrateToVault()` sin monto usa el sentinel
+  // de retiro total, que saca la posición entera sin dejar polvo. Mandar el
+  // número en su lugar cae en la rama parcial, y `maxAmount` es un piso de la
+  // posición viva: alcanza con que quede un pelo por debajo para dejar un resto
+  // en Blend. Se apaga al volver a teclear.
+  const [isMax, setIsMax] = useState(false);
 
   // Only an offer (external) or a blocked-by-borrow prompt can be closed: a
   // custodial migration has no alternative path, so it stays put.
@@ -110,19 +116,33 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
         <>
           <AmountStep
             value={amount}
-            onValueChange={setAmount}
+            onValueChange={(next) => {
+              setAmount(next);
+              setIsMax(false);
+            }}
             decimals={MONEY_INPUT_DECIMALS}
+            onMax={() => setIsMax(true)}
             disabled={busy}
             // Techo duro: el teclado no deja tipear más de lo que hay en Blend,
             // así que acá el monto nunca puede pasarse (no hay temblor).
             max={maxAmount}
             available={maxAmount}
+            // El chip muestra y prellena la posición EXACTA, no redondeada a los
+            // dos decimales que se pueden teclear. Acá el monto no es una cifra
+            // que el usuario elige de la nada sino una posición que ya existe, y
+            // un resto en Blend por debajo del centavo —que `minAmount` deja
+            // salir a propósito— redondearía a 0 y quedaría encerrado.
+            availableDecimals={AMOUNT_DECIMALS}
             hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
               amount: formatTokenPrecise(minAmount, 2),
             })}
           />
 
-          <PressableButton variant="success" disabled={busy || !amountIsValid} onClick={() => void run(numericAmount)}>
+          <PressableButton
+            variant="success"
+            disabled={busy || !amountIsValid}
+            onClick={() => void run(isMax ? undefined : numericAmount)}
+          >
             {busy ? t('migration.moving', 'Moving…') : t('migration.migrate', 'Move to Vault')}
           </PressableButton>
           <PressableButton variant="white" disabled={busy} onClick={() => setDismissed(true)}>

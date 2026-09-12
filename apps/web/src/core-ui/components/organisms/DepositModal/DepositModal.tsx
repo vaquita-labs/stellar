@@ -37,6 +37,12 @@ export function DepositModal({
   const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [amount, setAmount] = useState<string>('');
+  // Tocó "Available": deposita TODO. El chip prellena el monto redondeado a los
+  // decimales que muestra, y depositar ese número dejaría el resto ocioso en la
+  // wallet — que es justo lo que el usuario pidió mover. La bandera hace que el
+  // submit use el saldo entero en vez del tecleado, igual que el retiro con su
+  // sentinel. Se apaga en cuanto vuelve a teclear.
+  const [isMax, setIsMax] = useState(false);
   const { token, lockPeriod, setLockPeriod, walletAddress, network } = useConfigStore();
   const { getNextNonce, createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactions();
@@ -226,7 +232,7 @@ export function DepositModal({
         <PressableButton
           variant="success"
           size="cta"
-          onClick={() => handleDeposit(Number(amount))}
+          onClick={() => handleDeposit(isMax ? balanceFormatted : Number(amount))}
           disabled={isDisabled || isDepositing}
         >
           {isDepositing ? <><Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}</> : t('deposit.modal.title', 'Deposit')}
@@ -263,8 +269,12 @@ export function DepositModal({
                 mínimo, que ahí no hay nada que decidir ni que corregir. */}
             <AmountStep
               value={amount}
-              onValueChange={setAmount}
+              onValueChange={(next) => {
+                setAmount(next);
+                setIsMax(false);
+              }}
               decimals={MONEY_INPUT_DECIMALS}
+              onMax={() => setIsMax(true)}
               disabled={simulate || isDepositing}
               available={simulate ? null : balanceFormatted}
               availableLoading={balanceIsLoading}
