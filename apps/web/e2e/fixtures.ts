@@ -208,6 +208,45 @@ export function dialog(page: Page) {
   return page.getByRole('dialog');
 }
 
+/**
+ * Close whatever the home's modal queue opened on its own, if anything did.
+ *
+ * Six modals can take the screen by themselves on `/home` — the notification
+ * ask, the tour, the welcome gift, the idle-money prompt, a badge waiting to be
+ * claimed, the version notes — and each one hands over to the next as it
+ * settles (`AUTO_MODAL_ORDER`). A spec that needs the home itself says so here
+ * rather than racing them.
+ *
+ * Returns whether it closed one, so a caller can assert on the sequence if that
+ * is what it is testing.
+ */
+export async function dismissQueuedModal(page: Page): Promise<boolean> {
+  const sheet = dialog(page).first();
+  if (!(await sheet.isVisible().catch(() => false))) return false;
+  await sheet.getByRole('button', { name: 'Close' }).click();
+  await expect(sheet).toBeHidden({ timeout: 15_000 });
+  return true;
+}
+
+/**
+ * Wait until the home actually takes a click, clearing whatever the queue put in
+ * the way.
+ *
+ * Visible is not clickable. The badge the testnet catalog leaves claimable opens
+ * its sheet over the map a beat after the map renders — its list is refetched on
+ * mount — and the sheet holds off until nothing else is on screen, which it
+ * checks on a 200ms poll. Looking once lands inside that gap as often as not, so
+ * this clears, waits out a poll tick, and only then checks.
+ */
+export async function clearHome(page: Page): Promise<void> {
+  const deposit = page.getByRole('button', { name: 'Deposit' });
+  await expect(async () => {
+    await dismissQueuedModal(page);
+    await page.waitForTimeout(400);
+    await deposit.click({ trial: true, timeout: 2_000 });
+  }).toPass({ timeout: 45_000 });
+}
+
 /** Type an amount on the modal keypad, digit by digit. */
 export async function typeAmount(page: Page, amount: string): Promise<void> {
   const pad = dialog(page);
@@ -277,7 +316,10 @@ export function parseAvailable(text: string): number {
 type Fixtures = {
   /** The funded account from `E2E_STELLAR_SECRET`. */
   signer: Signer;
-  /** A page already signed in as `signer`, on `/home`, past the username prompt. */
+  /**
+   * A page signed in as `signer`, on `/home`, past the name prompt and past
+   * anything the modal queue opened on its own — a home that takes clicks.
+   */
   homePage: Page;
 };
 
@@ -287,9 +329,20 @@ export const test = base.extend<Fixtures>({
   },
   homePage: async ({ page, signer }, use) => {
     await primePage(page, signer);
+
+    // The badge gate cannot decide anything until the wallet's badge list
+    // answers, so that response is the moment "nothing more is going to open"
+    // becomes a fact instead of a hope. Armed before the navigation that fires
+    // it, and allowed to fail: a spec whose wallet never asks must not hang.
+    const badgesAnswered = page
+      .waitForResponse((r) => /\/wallets\/[^/]+\/badges/.test(r.url()), { timeout: 60_000 })
+      .catch(() => null);
+
     await openSignedIn(page, '/home');
     await completeUsernamePromptIfShown(page);
     await expect(page.getByRole('button', { name: 'Deposit' })).toBeVisible({ timeout: 60_000 });
+    await badgesAnswered;
+    await clearHome(page);
     await use(page);
   },
 });
