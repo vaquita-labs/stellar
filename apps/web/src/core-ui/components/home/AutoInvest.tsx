@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useIdleFunds } from '../../hooks/useAutoInvest';
+import { useModalOnScreen } from '../../hooks/useModalOnScreen';
 import { useAutoModalSlot, usePendingCreditStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { IdleFundsModal } from './IdleFundsModal';
@@ -47,10 +48,28 @@ export function AutoInvest() {
     prevIdle.current = idle;
   }, [idle, clearPendingCredit]);
 
+  // Esta pantalla es una interrupción a pantalla completa, así que no puede
+  // caer encima de algo que el usuario ya está haciendo. Y de paso resuelve el
+  // problema serio: todo flujo que estaciona plata en la wallet a mitad de
+  // camino —el retiro de dos saltos, el de una posición al vault, la migración—
+  // corre detrás de un sheet que NO se puede cerrar mientras la transacción
+  // está en vuelo (`isDismissable={false}` + `hideClose`, la regla de todos los
+  // sheets de plata). O sea que "no hay nada en pantalla" también significa "no
+  // hay ninguna transacción en vuelo", y preguntárselo a la pantalla cubre
+  // también los flujos que se escriban después de esta línea.
+  //
+  // Sin esta guarda, el prompt abría sobre el salto 2 de un retiro ofreciendo
+  // invertir la plata que estaba justo ahí de paso; aceptarlo la devolvía al
+  // vault y el pago rebotaba por saldo, dejando el retiro a medias.
+  const waitingToOpen = shouldPrompt && !dismissed && ourTurn && !open;
+  // Sólo se consulta para ABRIR. Consultada mientras está abierta vería su
+  // propio diálogo y la cerraría en el tick siguiente.
+  const modalOnScreen = useModalOnScreen(waitingToOpen);
+
   useEffect(() => {
-    if (shouldPrompt && !dismissed && ourTurn) setOpen(true);
+    if (shouldPrompt && !dismissed && ourTurn && !modalOnScreen) setOpen(true);
     else if (!shouldPrompt) setOpen(false);
-  }, [shouldPrompt, dismissed, ourTurn]);
+  }, [shouldPrompt, dismissed, ourTurn, modalOnScreen]);
 
   // Y también al abrir la pantalla, que es el desenlace esperado: para entonces
   // la rampa hace rato que se cerró y no puede apagarlo ella.
