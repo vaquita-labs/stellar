@@ -105,149 +105,157 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
     addSuccessToast(t('transactions.details.linkCopied', 'Link copied'));
   };
 
-  const isDeposit = transaction?.kind === 'deposit';
+  const kind = transaction?.kind;
+  const term = transaction ? formatTimeDeposit(transaction.lockPeriod) : '';
   const title = !transaction
     ? t('transactions.details.title', 'Transaction details')
-    : isDeposit
+    : kind === 'deposit'
       ? t('transactions.kind.deposit', 'Deposit')
-      : transaction.early
-        ? t('transactions.kind.withdrawEarly', 'Early withdrawal')
-        : t('transactions.kind.withdraw', 'Withdrawal');
+      : kind === 'move'
+        ? t('transactions.kind.move', 'Transfer to position')
+        : transaction.early
+          ? t('transactions.kind.withdrawEarly', 'Early withdrawal')
+          : t('transactions.kind.withdraw', 'Withdrawal');
+  // A transfer keeps the money inside Vaquita: no sign, neutral color.
+  const sign = kind === 'withdraw' ? '+' : kind === 'deposit' ? '−' : '';
+  const walletLabel = t('transactions.details.wallet', 'Your wallet');
+  const savingsLabel = t('transactions.details.savings', 'Savings');
+  const positionLabel = t('transactions.details.position', '{{term}} position', { term });
+  const from = kind === 'deposit' ? walletLabel : kind === 'move' ? savingsLabel : positionLabel;
+  const to = kind === 'move' ? positionLabel : savingsLabel;
 
   const content = (
     <WithHydrated fallback={<DetailsSkeleton />}>
-        {isLoading && !data ? (
-          <DetailsSkeleton />
-        ) : !transaction ? (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-10 text-center">
-            <p className="text-sm font-semibold text-black">{t('transactions.details.notFound', 'Transaction not found')}</p>
-          </div>
-        ) : (
-          <>
-            {/* El monto es el dato principal de la pantalla: va suelto, con aire
+      {isLoading && !data ? (
+        <DetailsSkeleton />
+      ) : !transaction ? (
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-10 text-center">
+          <p className="text-sm font-semibold text-black">{t('transactions.details.notFound', 'Transaction not found')}</p>
+        </div>
+      ) : (
+        <>
+          {/* El monto es el dato principal de la pantalla: va suelto, con aire
                 arriba y abajo, para que se lea antes que los bloques de datos. */}
-            <div className="flex flex-col items-center gap-1.5 py-7 text-center">
-              <p
+          <div className="flex flex-col items-center gap-1.5 py-7 text-center">
+            <p
+              className={
+                'text-4xl font-bold tabular-nums leading-tight ' +
+                (transaction.status === 'failed'
+                  ? 'text-gray-400 line-through'
+                  : kind === 'withdraw'
+                    ? 'text-success'
+                    : 'text-black')
+              }
+            >
+              {transaction.status === 'failed' ? '' : sign}
+              {transaction.amount.toFixed(2)}
+              <span className="ml-1 text-lg font-semibold">{transaction.tokenSymbol}</span>
+            </p>
+            <p className="text-sm text-gray-600">{title}</p>
+          </div>
+
+          <DataBlock>
+            <DataRow label={t('transactions.details.from', 'From')}>{from}</DataRow>
+            <DataRow label={t('transactions.details.to', 'To')}>{to}</DataRow>
+            <DataRow label={t('transactions.details.lockPeriod', 'Lock period')}>
+              {formatTimeDeposit(transaction.lockPeriod)}
+            </DataRow>
+          </DataBlock>
+
+          <DataBlock>
+            <DataRow label={t('transactions.details.amount', 'Transaction amount')}>
+              {transaction.amount.toFixed(2)} {transaction.tokenSymbol}
+            </DataRow>
+            {kind === 'withdraw' && (
+              <DataRow label={t('transactions.details.rewards', 'Rewards')}>
+                <span className={transaction.early ? 'text-gray-400' : 'text-success'}>
+                  {transaction.early
+                    ? t('transactions.details.forfeited', 'Forfeited')
+                    : `+${transaction.interest.toFixed(2)} ${transaction.tokenSymbol}`}
+                </span>
+              </DataRow>
+            )}
+            {showHash && transaction.transactionHash && (
+              <DataRow label={t('transactions.details.transactionId', 'Transaction ID')}>
+                <span className="inline-flex items-center gap-2">
+                  <span className="font-mono text-xs">{shortHash(transaction.transactionHash)}</span>
+                  <button
+                    type="button"
+                    onClick={copyHash}
+                    aria-label={t('transactions.details.transactionId', 'Transaction ID')}
+                  >
+                    <FiCopy className="h-4 w-4 text-gray-500 hover:text-black" />
+                  </button>
+                </span>
+              </DataRow>
+            )}
+            <DataRow label={t('transactions.details.time', 'Transaction time')}>
+              {formatTransactionTime(transaction.timestamp, i18n.language)}
+            </DataRow>
+          </DataBlock>
+
+          <DataBlock>
+            <DataRow label={t('transactions.details.status', 'Status')}>
+              <span
                 className={
-                  'text-4xl font-bold tabular-nums leading-tight ' +
-                  (transaction.status === 'failed' ? 'text-gray-400 line-through' : isDeposit ? 'text-black' : 'text-success')
+                  'inline-block rounded-full border border-b-2 px-2.5 py-0.5 text-xs font-bold ' +
+                  STATUS_CLASSES[transaction.status]
                 }
               >
-                {transaction.status === 'failed' ? '' : isDeposit ? '−' : '+'}
-                {transaction.amount.toFixed(2)}
-                <span className="ml-1 text-lg font-semibold">{transaction.tokenSymbol}</span>
-              </p>
-              <p className="text-sm text-gray-600">{title}</p>
-            </div>
+                {t(`transactions.status.${transaction.status}`)}
+              </span>
+            </DataRow>
+          </DataBlock>
 
-            <DataBlock>
-              <DataRow label={t('transactions.details.from', 'From')}>
-                {isDeposit ? t('transactions.details.wallet', 'Your wallet') : t('transactions.details.savings', 'Savings')}
-              </DataRow>
-              <DataRow label={t('transactions.details.to', 'To')}>
-                {isDeposit ? t('transactions.details.savings', 'Savings') : t('transactions.details.wallet', 'Your wallet')}
-              </DataRow>
-              <DataRow label={t('transactions.details.lockPeriod', 'Lock period')}>
-                {formatTimeDeposit(transaction.lockPeriod)}
-              </DataRow>
-            </DataBlock>
+          <div className="overflow-hidden rounded-lg border border-black border-b-2 bg-white">
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              className="flex w-full items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-[#FFF7E6]"
+            >
+              <span className="text-sm font-bold text-black">{t('transactions.details.statusHistory', 'Status history')}</span>
+              <FiChevronDown className={'h-4 w-4 text-black transition-transform ' + (showHistory ? 'rotate-180' : '')} />
+            </button>
+            {showHistory && (
+              <ul className="divide-y divide-gray-200 border-t border-gray-200">
+                {transaction.history.map((entry) => (
+                  <li key={entry.key} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-black">{t(`transactions.history.${entry.key}`)}</p>
+                      <p className="text-xs text-gray-500">{formatTransactionTime(entry.timestamp, i18n.language)}</p>
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums text-gray-600">
+                      {transaction.amount.toFixed(2)} {transaction.tokenSymbol}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-            <DataBlock>
-              <DataRow label={t('transactions.details.amount', 'Transaction amount')}>
-                {transaction.amount.toFixed(2)} {transaction.tokenSymbol}
-              </DataRow>
-              {!isDeposit && (
-                <DataRow label={t('transactions.details.rewards', 'Rewards')}>
-                  <span className={transaction.early ? 'text-gray-400' : 'text-success'}>
-                    {transaction.early
-                      ? t('transactions.details.forfeited', 'Forfeited')
-                      : `+${transaction.interest.toFixed(2)} ${transaction.tokenSymbol}`}
-                  </span>
-                </DataRow>
-              )}
-              {showHash && transaction.transactionHash && (
-                <DataRow label={t('transactions.details.transactionId', 'Transaction ID')}>
-                  <span className="inline-flex items-center gap-2">
-                    <span className="font-mono text-xs">{shortHash(transaction.transactionHash)}</span>
-                    <button
-                      type="button"
-                      onClick={copyHash}
-                      aria-label={t('transactions.details.transactionId', 'Transaction ID')}
-                    >
-                      <FiCopy className="h-4 w-4 text-gray-500 hover:text-black" />
-                    </button>
-                  </span>
-                </DataRow>
-              )}
-              <DataRow label={t('transactions.details.time', 'Transaction time')}>
-                {formatTransactionTime(transaction.timestamp, i18n.language)}
-              </DataRow>
-            </DataBlock>
-
-            <DataBlock>
-              <DataRow label={t('transactions.details.status', 'Status')}>
-                <span
-                  className={
-                    'inline-block rounded-full border border-b-2 px-2.5 py-0.5 text-xs font-bold ' +
-                    STATUS_CLASSES[transaction.status]
-                  }
-                >
-                  {t(`transactions.status.${transaction.status}`)}
-                </span>
-              </DataRow>
-            </DataBlock>
-
-            <div className="overflow-hidden rounded-lg border border-black border-b-2 bg-white">
+          {/* mt-auto: explorador y compartir son el pie de la pantalla, no un
+                bloque más de la lista; con poco contenido quedan abajo igual. */}
+          {explorerUrl && (
+            <div className="mt-auto flex gap-2 pt-2">
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-black border-b-3 bg-white px-3 py-2 text-xs font-semibold text-black transition hover:-translate-y-0.5"
+              >
+                <FiExternalLink className="h-3.5 w-3.5 shrink-0" />
+                {t('transactions.details.viewOnExplorer', 'View on explorer')}
+              </a>
               <button
                 type="button"
-                onClick={() => setShowHistory((v) => !v)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-[#FFF7E6]"
+                onClick={share}
+                className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-black border-b-3 bg-primary px-3 py-2 text-xs font-semibold text-black transition hover:-translate-y-0.5 hover:bg-primary/80"
               >
-                <span className="text-sm font-bold text-black">
-                  {t('transactions.details.statusHistory', 'Status history')}
-                </span>
-                <FiChevronDown className={'h-4 w-4 text-black transition-transform ' + (showHistory ? 'rotate-180' : '')} />
+                <FiShare2 className="h-3.5 w-3.5 shrink-0" />
+                {t('transactions.details.share', 'Share')}
               </button>
-              {showHistory && (
-                <ul className="divide-y divide-gray-200 border-t border-gray-200">
-                  {transaction.history.map((entry) => (
-                    <li key={entry.key} className="flex items-start justify-between gap-3 px-4 py-2.5">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-black">{t(`transactions.history.${entry.key}`)}</p>
-                        <p className="text-xs text-gray-500">{formatTransactionTime(entry.timestamp, i18n.language)}</p>
-                      </div>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums text-gray-600">
-                        {transaction.amount.toFixed(2)} {transaction.tokenSymbol}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
-
-            {/* mt-auto: explorador y compartir son el pie de la pantalla, no un
-                bloque más de la lista; con poco contenido quedan abajo igual. */}
-            {explorerUrl && (
-              <div className="mt-auto flex gap-2 pt-2">
-                <a
-                  href={explorerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-black border-b-3 bg-white px-3 py-2 text-xs font-semibold text-black transition hover:-translate-y-0.5"
-                >
-                  <FiExternalLink className="h-3.5 w-3.5 shrink-0" />
-                  {t('transactions.details.viewOnExplorer', 'View on explorer')}
-                </a>
-                <button
-                  type="button"
-                  onClick={share}
-                  className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-black border-b-3 bg-primary px-3 py-2 text-xs font-semibold text-black transition hover:-translate-y-0.5 hover:bg-primary/80"
-                >
-                  <FiShare2 className="h-3.5 w-3.5 shrink-0" />
-                  {t('transactions.details.share', 'Share')}
-                </button>
-              </div>
-            )}
+          )}
         </>
       )}
     </WithHydrated>

@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiExternalLink } from 'react-icons/fi';
 import { truncateDecimals } from '../../../helpers';
-import { AMOUNT_DECIMALS, floorAmount, formatTokenPrecise, MIN_USDC } from '../../../helpers/numbers';
+import { AMOUNT_DECIMALS, floorAmount, formatTokenPrecise, MIN_USDC, MONEY_INPUT_DECIMALS } from '../../../helpers/numbers';
 import { humanizeTxError } from '../../../helpers/txError';
 import { useLivePassiveUsdc } from '../../../hooks';
 import { useConfigStore, useRampActiveStore } from '../../../stores';
@@ -413,7 +413,7 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
       <AmountStep
         value={amount}
         onValueChange={setAmount}
-        decimals={AMOUNT_DECIMALS}
+        decimals={MONEY_INPUT_DECIMALS}
         disabled={busy}
         available={balanceFormatted}
         availableDecimals={2}

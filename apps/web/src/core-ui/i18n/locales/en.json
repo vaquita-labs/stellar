@@ -536,7 +536,9 @@
       "copyAria": "Copy address",
       "copied": "Copied",
       "minDeposit": "Minimum deposit: {{amount}} USDC.",
-      "warning": "Only send Stellar assets to this address. Funds sent from another network are lost."
+      "warning": "Only send Stellar assets to this address. Funds sent from another network are lost.",
+      "arrived": "Your money arrived",
+      "arrivedSubtitle": "It is in your wallet, ready to put to work."
     },
     "savingsStats": {
       "infoAlt": "info"
@@ -2258,11 +2260,13 @@
     "kind": {
       "deposit": "Deposit",
       "withdraw": "Withdrawal",
-      "withdrawEarly": "Early withdrawal"
+      "withdrawEarly": "Early withdrawal",
+      "move": "Transfer to position"
     },
     "row": {
       "toSavings": "To savings",
-      "toWallet": "To your wallet"
+      "toPosition": "To your {{term}} position",
+      "fromPosition": "From your {{term}} position"
     },
     "status": {
       "completed": "Completed",
@@ -2284,7 +2288,8 @@
       "apply": "Apply",
       "kinds": {
         "deposit": "Deposits",
-        "withdraw": "Withdrawals"
+        "withdraw": "Withdrawals",
+        "move": "Transfers to a position"
       },
       "statuses": {
         "completed": "Completed",
@@ -2293,9 +2298,9 @@
       }
     },
     "history": {
-      "created": "Deposit requested",
-      "confirmed": "Deposit confirmed",
-      "failed": "Deposit failed",
+      "moveRequested": "Transfer requested",
+      "moveConfirmed": "Transfer confirmed",
+      "moveFailed": "Transfer failed",
       "withdrawRequested": "Withdrawal requested",
       "withdrawConfirmed": "Withdrawal confirmed",
       "withdrawFailed": "Withdrawal failed"
@@ -2318,7 +2323,8 @@
       "viewOnExplorer": "View on explorer",
       "share": "Share",
       "hashCopied": "Transaction ID copied",
-      "linkCopied": "Link copied"
+      "linkCopied": "Link copied",
+      "position": "{{term}} position"
     }
   },
   "explore": {
@@ -2409,7 +2415,8 @@
       "showMore_one": "Show more ({{count}})",
       "showMore_other": "Show more ({{count}})"
     },
-    "positionsTitle": "Your positions"
+    "positionsTitle": "Your positions",
+    "positions": "Positions"
   },
   "txError": {
     "generic": "We couldn't complete the transaction. Please try again in a moment.",

@@ -1,4 +1,4 @@
-import { blendConfigForToken, readUsdcBalanceRaw } from '@/networks/stellar/blendDirect';
+import { readUsdcBalanceRaw } from '@/networks/stellar/blendDirect';
 import {
   formatTokenPrecise,
   formatUsdPrecise,
@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfigStore, useRampActiveStore, useAwaitingFundsStore, usePendingCreditStore } from '../stores';
 import { useInvalidateAfterMoneyMove } from './useInvalidateAfterMoneyMove';
+import { useWalletUsdc } from './useWalletUsdc';
 import { requestWalletBalanceRefresh } from './useWalletBalanceRefresh';
 
 // The floor for prompting and for spending a fee is `MIN_IDLE_USDC`, not the
@@ -28,10 +29,19 @@ import { requestWalletBalanceRefresh } from './useWalletBalanceRefresh';
 // it by three orders of magnitude. If the chain's floor ever rose above it the
 // deposit would fail anyway, but the screen says why instead of the generic.
 
-// Cada cuánto re-consultamos el balance custodial mientras el usuario está en el
-// home. La plata puede entrar on-chain por fuera de la app (le mandan USDC a su
-// dirección de "Recibir"), y sin poll no nos enteraríamos hasta un reload.
-const IDLE_POLL_MS = 12_000;
+// How often the custodial balance is re-read while the user is waiting for money
+// to land. It can arrive on chain from outside the app — someone sends USDC to
+// the address on the "Receive" screen — and without the poll nothing would
+// notice until a reload.
+//
+// Five seconds because that is roughly how often Stellar closes a ledger: asking
+// faster re-reads a state that cannot have changed, so it buys nothing and
+// multiplies the calls. This only runs inside the two windows where money is
+// actually expected (see the effect below), never as a background loop.
+const IDLE_POLL_MS = 5_000;
+
+/** Ceiling of one refresh a minute for the ones the user's own activity fires. */
+const ACTIVITY_REFRESH_MS = 60_000;
 
 /**
  * Detecta USDC ocioso en la wallet CUSTODIAL (social login) y expone la acción
@@ -64,17 +74,10 @@ export const useIdleFunds = () => {
 
   // Solo custodial (social login). `external` = Freighter/xBull: no se toca.
   const isCustodial = !!wallet && wallet.custody !== 'external';
-  const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
-  // Idle = ONLY the USDC Blend accepts (same issuer). Testnet has several
-  // "USDC" assets from different issuers; without this filter the wrong one is
-  // detected and the supply fails with "trustline missing". The Blend config
-  // comes from the active token (project config); null until it loads or when
-  // the token has no Blend pool — then nothing counts as idle.
-  const blendUsdcIssuer = blendConfigForToken(token)?.usdcIssuer;
-  const usdc = blendUsdcIssuer
-    ? balances.find((b) => b.code?.toUpperCase() === 'USDC' && b.issuer === blendUsdcIssuer)
-    : undefined;
-  const idle = usdc ? Number(usdc.available) : 0;
+  // "Not known yet" collapses to 0 here because `decided` below is what tells
+  // the two apart, and a caller that sees a 0 while `decided` is false knows
+  // not to act on it.
+  const idle = useWalletUsdc() ?? 0;
 
   // (1) Fetch ÚNICO al montar/recargar el home: el home no pide el balance solo,
   // así que lo traemos una vez para detectar plata ociosa apenas entra el usuario
@@ -116,6 +119,38 @@ export const useIdleFunds = () => {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [awaitingFunds, pendingCredit, ready, isCustodial, walletAddress, refreshWalletBalance]);
+
+  // (3) Refresh on the user's own rhythm, outside the two windows above: coming
+  // back to the tab, and the first tap or key of each minute. It covers the
+  // arrival no event in the app announces — someone sends USDC while the user
+  // is on the map — which until now only showed up on the next home load.
+  //
+  // Throttled because every refresh is an RPC call: without it, dragging the
+  // map would be dozens a minute to catch something that happens once a day.
+  // The same throttle covers the tab: away for five seconds asks for nothing,
+  // away for an hour asks immediately.
+  const lastActivityRefresh = useRef(0);
+  useEffect(() => {
+    if (!ready || !isCustodial || !walletAddress) return;
+
+    const maybeRefresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastActivityRefresh.current < ACTIVITY_REFRESH_MS) return;
+      lastActivityRefresh.current = now;
+      void refreshWalletBalance();
+    };
+
+    document.addEventListener('visibilitychange', maybeRefresh);
+    document.addEventListener('pointerdown', maybeRefresh, { passive: true });
+    document.addEventListener('keydown', maybeRefresh);
+
+    return () => {
+      document.removeEventListener('visibilitychange', maybeRefresh);
+      document.removeEventListener('pointerdown', maybeRefresh);
+      document.removeEventListener('keydown', maybeRefresh);
+    };
+  }, [ready, isCustodial, walletAddress, refreshWalletBalance]);
 
   const invest = useCallback(async () => {
     if (inFlight.current || !walletAddress || !token) return;
@@ -207,7 +242,7 @@ export const useIdleFunds = () => {
   // ¿Ya se SABE si hay plata ociosa? Mientras la sesión de Pollar se restaura o
   // el balance no cargó, `shouldPrompt` en false no es "no hay nada": es "no
   // preguntamos todavía". La diferencia importa para quien espera este turno
-  // (las notas de versión, vía `useModalQueueStore`), que si no se adelantaría
+  // (las notas de versión, vía [[auto-modals]]), que si no se adelantaría
   // al prompt en cada carga.
   //
   // `error` cuenta como decidido: es un estado TERMINAL del balance, así que ya

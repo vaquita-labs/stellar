@@ -2,17 +2,24 @@ import { DepositResponseDTO, DepositWithdrawalState, WithdrawalStatus } from '..
 
 /**
  * Historial de movimientos del usuario. No hay un endpoint de "transacciones":
- * cada depósito genera un movimiento de entrada y cada retiro asociado a ese
- * depósito genera uno de salida, así que la lista se deriva de la misma query
- * de depósitos que ya usa el home (sin fetch extra ni cache nueva).
+ * la lista se deriva de la misma query de depósitos que ya usa el home (sin
+ * fetch extra ni cache nueva). Cada depósito con lock es un traspaso de los
+ * ahorros (Blend) a una posición, y cada retiro asociado devuelve la plata a
+ * los ahorros.
  */
 
-export type TransactionKind = 'deposit' | 'withdraw';
+/**
+ * `move`: savings → locked position (one entry, even though on-chain it is a
+ * Blend withdrawal plus a pool deposit). `withdraw`: position → savings.
+ * `deposit`: wallet → savings; nothing produces it yet, it waits on the vault
+ * flows being readable from the API.
+ */
+export type TransactionKind = 'deposit' | 'withdraw' | 'move';
 export type TransactionStatus = 'completed' | 'pending' | 'failed';
 
 /** Un paso del estado de la transacción; `key` se traduce en la pantalla de detalle. */
 export interface TransactionHistoryEntry {
-  key: 'created' | 'confirmed' | 'failed' | 'withdrawRequested' | 'withdrawConfirmed' | 'withdrawFailed';
+  key: 'moveRequested' | 'moveConfirmed' | 'moveFailed' | 'withdrawRequested' | 'withdrawConfirmed' | 'withdrawFailed';
   timestamp: number;
 }
 
@@ -50,7 +57,7 @@ const withdrawalStatus = (status: WithdrawalStatus): TransactionStatus => {
 const depositEarnings = (deposit: DepositResponseDTO) =>
   (deposit.vaquitaInterest ?? 0) + (deposit.protocolInterest ?? 0) + (deposit.blendInterest ?? 0);
 
-/** Movimientos (depósitos + retiros) ordenados del más nuevo al más viejo. */
+/** Movimientos (traspasos a posición + retiros) ordenados del más nuevo al más viejo. */
 export const buildTransactions = (deposits: DepositResponseDTO[]): AppTransaction[] => {
   const transactions: AppTransaction[] = [];
 
@@ -58,17 +65,17 @@ export const buildTransactions = (deposits: DepositResponseDTO[]): AppTransactio
     if (deposit.state === DepositWithdrawalState.NONE) continue;
 
     const status = depositStatus(deposit.state);
-    const history: TransactionHistoryEntry[] = [{ key: 'created', timestamp: deposit.createdTimestamp }];
+    const history: TransactionHistoryEntry[] = [{ key: 'moveRequested', timestamp: deposit.createdTimestamp }];
     if (status === 'completed') {
-      history.push({ key: 'confirmed', timestamp: deposit.confirmedTimestamp || deposit.createdTimestamp });
+      history.push({ key: 'moveConfirmed', timestamp: deposit.confirmedTimestamp || deposit.createdTimestamp });
     } else if (status === 'failed') {
-      history.push({ key: 'failed', timestamp: deposit.updatedTimestamp || deposit.createdTimestamp });
+      history.push({ key: 'moveFailed', timestamp: deposit.updatedTimestamp || deposit.createdTimestamp });
     }
 
     transactions.push({
       id: `d-${deposit.id}`,
       depositId: deposit.id,
-      kind: 'deposit',
+      kind: 'move',
       status,
       early: false,
       amount: deposit.amount,
@@ -117,7 +124,7 @@ export const buildTransactions = (deposits: DepositResponseDTO[]): AppTransactio
   return transactions.sort((a, b) => b.timestamp - a.timestamp);
 };
 
-export const TRANSACTION_KINDS: TransactionKind[] = ['deposit', 'withdraw'];
+export const TRANSACTION_KINDS: TransactionKind[] = ['deposit', 'withdraw', 'move'];
 export const TRANSACTION_STATUSES: TransactionStatus[] = ['completed', 'pending', 'failed'];
 
 export interface TransactionFilters {

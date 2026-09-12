@@ -536,7 +536,9 @@
       "copyAria": "Copiar dirección",
       "copied": "Copiado",
       "minDeposit": "Depósito mínimo: {{amount}} USDC.",
-      "warning": "Envía solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden."
+      "warning": "Envía solo activos de Stellar a esta dirección. Los fondos enviados desde otra red se pierden.",
+      "arrived": "Tu dinero llegó",
+      "arrivedSubtitle": "Está en tu billetera, listo para ponerlo a trabajar."
     },
     "savingsStats": {
       "infoAlt": "info"
@@ -2258,11 +2260,13 @@
     "kind": {
       "deposit": "Depósito",
       "withdraw": "Retiro",
-      "withdrawEarly": "Retiro anticipado"
+      "withdrawEarly": "Retiro anticipado",
+      "move": "Traspaso a posición"
     },
     "row": {
       "toSavings": "A tus ahorros",
-      "toWallet": "A tu billetera"
+      "toPosition": "A tu posición de {{term}}",
+      "fromPosition": "De tu posición de {{term}}"
     },
     "status": {
       "completed": "Completada",
@@ -2284,7 +2288,8 @@
       "apply": "Aplicar",
       "kinds": {
         "deposit": "Depósitos",
-        "withdraw": "Retiros"
+        "withdraw": "Retiros",
+        "move": "Traspasos a posición"
       },
       "statuses": {
         "completed": "Completadas",
@@ -2293,9 +2298,9 @@
       }
     },
     "history": {
-      "created": "Depósito solicitado",
-      "confirmed": "Depósito confirmado",
-      "failed": "Depósito fallido",
+      "moveRequested": "Traspaso solicitado",
+      "moveConfirmed": "Traspaso confirmado",
+      "moveFailed": "Traspaso fallido",
       "withdrawRequested": "Retiro solicitado",
       "withdrawConfirmed": "Retiro confirmado",
       "withdrawFailed": "Retiro fallido"
@@ -2318,7 +2323,8 @@
       "viewOnExplorer": "Ver en el explorador",
       "share": "Compartir",
       "hashCopied": "ID de transacción copiado",
-      "linkCopied": "Enlace copiado"
+      "linkCopied": "Enlace copiado",
+      "position": "Posición de {{term}}"
     }
   },
   "explore": {
@@ -2409,7 +2415,8 @@
       "showMore_one": "Ver más ({{count}})",
       "showMore_other": "Ver más ({{count}})"
     },
-    "positionsTitle": "Tus posiciones"
+    "positionsTitle": "Tus posiciones",
+    "positions": "Posiciones"
   },
   "txError": {
     "generic": "No pudimos completar la transacción. Intenta de nuevo en un momento.",

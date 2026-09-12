@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useIdleFunds } from '../../hooks/useAutoInvest';
-import { useModalQueueStore, usePendingCreditStore } from '../../stores';
+import { useModalOnScreen } from '../../hooks/useModalOnScreen';
+import { useAutoModalSlot, usePendingCreditStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { IdleFundsModal } from './IdleFundsModal';
 
@@ -27,29 +28,17 @@ export function AutoInvest() {
   // vencimiento de 15 minutos aunque el dinero ya estuviera a la vista.
   const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
 
-  // Mientras esta pantalla todavía PUEDA aparecer, las notas de versión esperan
-  // su turno: decidir sobre el dinero va primero. El turno lo TOMA `HomePage` al
-  // entrar (y lo suelta al salir), porque este componente monta recién después
-  // de que sincroniza el reloj y para entonces la nota ya se habría mostrado.
-  // Acá sólo se libera.
-  const setVaultPromptSettled = useModalQueueStore((s) => s.setVaultPromptSettled);
-
-  // This screen, in turn, waits for the two ahead of it in the queue. The
-  // notification permission is the one ask that expires (the OS offers the
-  // native prompt once), so covering it loses the channel instead of
-  // postponing it. The home tour covers the whole screen with coach marks, and
-  // a decision about the user's money must not be drawn underneath them; the
-  // tour releases its turn when it ends or decides it is not showing.
-  const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
-  const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
-  const ourTurn = pushNudgeSettled && homeTourSettled;
-
-  // Se libera cuando el usuario cerró la pantalla (`dismissed`, que también
-  // cubre el caso de invertir y cerrarla) o cuando ya se sabe que no hay nada
-  // que ofrecer.
-  useEffect(() => {
-    if (!open && (dismissed || (decided && !shouldPrompt))) setVaultPromptSettled(true);
-  }, [open, dismissed, decided, shouldPrompt, setVaultPromptSettled]);
+  // El lugar en la cola se suelta cuando el usuario cerró la pantalla
+  // (`dismissed`, que también cubre el caso de invertir y cerrarla) o cuando ya
+  // se sabe que no hay nada que ofrecer. `HomePage` lo reserva al entrar,
+  // porque este componente monta recién después de que sincroniza el reloj y
+  // para entonces la nota de versión ya se habría mostrado.
+  //
+  // `ourTurn` es todo lo que va antes ya fuera del camino: el permiso de
+  // notificaciones, el tour y el regalo de bienvenida. El orden vive en
+  // [[auto-modals]].
+  const settled = !open && (dismissed || (decided && !shouldPrompt));
+  const ourTurn = useAutoModalSlot('vault-prompt', settled);
 
   useEffect(() => {
     if (idle > prevIdle.current + 0.01) {
@@ -59,10 +48,28 @@ export function AutoInvest() {
     prevIdle.current = idle;
   }, [idle, clearPendingCredit]);
 
+  // Esta pantalla es una interrupción a pantalla completa, así que no puede
+  // caer encima de algo que el usuario ya está haciendo. Y de paso resuelve el
+  // problema serio: todo flujo que estaciona plata en la wallet a mitad de
+  // camino —el retiro de dos saltos, el de una posición al vault, la migración—
+  // corre detrás de un sheet que NO se puede cerrar mientras la transacción
+  // está en vuelo (`isDismissable={false}` + `hideClose`, la regla de todos los
+  // sheets de plata). O sea que "no hay nada en pantalla" también significa "no
+  // hay ninguna transacción en vuelo", y preguntárselo a la pantalla cubre
+  // también los flujos que se escriban después de esta línea.
+  //
+  // Sin esta guarda, el prompt abría sobre el salto 2 de un retiro ofreciendo
+  // invertir la plata que estaba justo ahí de paso; aceptarlo la devolvía al
+  // vault y el pago rebotaba por saldo, dejando el retiro a medias.
+  const waitingToOpen = shouldPrompt && !dismissed && ourTurn && !open;
+  // Sólo se consulta para ABRIR. Consultada mientras está abierta vería su
+  // propio diálogo y la cerraría en el tick siguiente.
+  const modalOnScreen = useModalOnScreen(waitingToOpen);
+
   useEffect(() => {
-    if (shouldPrompt && !dismissed && ourTurn) setOpen(true);
+    if (shouldPrompt && !dismissed && ourTurn && !modalOnScreen) setOpen(true);
     else if (!shouldPrompt) setOpen(false);
-  }, [shouldPrompt, dismissed, ourTurn]);
+  }, [shouldPrompt, dismissed, ourTurn, modalOnScreen]);
 
   // Y también al abrir la pantalla, que es el desenlace esperado: para entonces
   // la rampa hace rato que se cerró y no puede apagarlo ella.

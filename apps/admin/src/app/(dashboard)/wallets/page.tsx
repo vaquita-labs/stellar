@@ -1,5 +1,6 @@
 'use client';
 
+import { addDangerToast } from '@/core-ui/components';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { Button, Card, Checkbox, Input } from '@vaquita/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -58,11 +59,47 @@ const STATUS: Record<Status, { label: string; cls: string }> = {
   empty: { label: 'Empty', cls: 'bg-gray-100 text-gray-500' },
 };
 
+// A cell whose text is either truncated (wallet) or worth pasting elsewhere
+// (nickname, email), plus the button that puts the FULL value on the clipboard:
+// selecting a shortened address by hand copies the ellipsis, not the address.
+function Copyable({
+  value,
+  label,
+  isCopied,
+  onCopy,
+  mono = false,
+}: {
+  value: string;
+  label: string;
+  isCopied: boolean;
+  onCopy: () => void;
+  mono?: boolean;
+}) {
+  return (
+    <span className="flex items-center gap-1">
+      <span className={mono ? 'font-mono' : undefined} title={value}>
+        {label}
+      </span>
+      <button
+        type="button"
+        onClick={onCopy}
+        aria-label={`Copy ${value}`}
+        title={`Copy ${value}`}
+        className={`rounded px-1 text-xs transition ${isCopied ? 'text-green-600' : 'text-gray-300 hover:text-black'}`}
+      >
+        {isCopied ? '✓' : '⧉'}
+      </button>
+    </span>
+  );
+}
+
 export default function WalletsPage() {
   const queryClient = useQueryClient();
   const [wallet, setWallet] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Which cell was just copied, so its own button can confirm for a moment.
+  const [copied, setCopied] = useState<string | null>(null);
 
   const [scraping, setScraping] = useState(false);
   const [cursor, setCursor] = useState(0);
@@ -170,6 +207,18 @@ export default function WalletsPage() {
     }
   };
   const sortArrow = (k: SortKey) => (sortKey === k ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '');
+
+  const copy = async (key: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(key);
+      window.setTimeout(() => setCopied((k) => (k === key ? null : k)), 2000);
+    } catch {
+      // Clipboard is permission-gated and blocked outright over plain HTTP.
+      // Showing the value is the fallback that always works.
+      addDangerToast('Copy failed', value);
+    }
+  };
 
   const search = async () => {
     const addr = wallet.trim();
@@ -354,13 +403,32 @@ export default function WalletsPage() {
             ) : (
               filtered.map((r) => {
                 const st = STATUS[statusOf(r)];
+                const rowKey = `${r.wallet}-${r.tokenId}`;
+                const user = r.nickname ?? r.email;
                 return (
-                  <tr key={`${r.wallet}-${r.tokenId}`} className="border-t border-black/[0.06]">
-                    <td className="px-3 py-2 font-mono" title={r.wallet}>
-                      {shortWallet(r.wallet)}
+                  <tr key={rowKey} className="border-t border-black/[0.06]">
+                    <td className="px-3 py-2">
+                      <Copyable
+                        value={r.wallet}
+                        label={shortWallet(r.wallet)}
+                        mono
+                        isCopied={copied === `${rowKey}:wallet`}
+                        onCopy={() => void copy(`${rowKey}:wallet`, r.wallet)}
+                      />
                     </td>
                     <td className="px-3 py-2 tabular-nums">#{r.tokenId}</td>
-                    <td className="px-3 py-2">{r.nickname ?? r.email ?? '—'}</td>
+                    <td className="px-3 py-2">
+                      {user ? (
+                        <Copyable
+                          value={user}
+                          label={user}
+                          isCopied={copied === `${rowKey}:user`}
+                          onCopy={() => void copy(`${rowKey}:user`, user)}
+                        />
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right tabular-nums">{fmt(r.blendUsdc)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{fmt(r.vaultUsdc)}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{fmt(r.locked)}</td>

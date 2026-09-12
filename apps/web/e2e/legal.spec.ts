@@ -1,4 +1,14 @@
-import { completeUsernamePromptIfShown, createFreshSigner, dialog, expect, openSignedIn, primePage, test, type Signer } from './fixtures';
+import {
+  completeUsernamePromptIfShown,
+  createFreshSigner,
+  dialog,
+  expect,
+  namePrompt,
+  openSignedIn,
+  primePage,
+  test,
+  type Signer,
+} from './fixtures';
 
 /**
  * Legal gate: a wallet cannot reach anything private until it has accepted the
@@ -31,7 +41,7 @@ test.describe('legal gate', () => {
 
     // Nothing of the private tree is reachable behind it.
     await expect(page.getByRole('button', { name: 'Deposit' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'Choose your username' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: namePrompt.title })).toHaveCount(0);
 
     // The three documents are linked for review.
     for (const name of ['Privacy Policy', 'Terms of Service', 'Risk Disclosure']) {
@@ -53,16 +63,15 @@ test.describe('legal gate', () => {
     await expect(confirm).toBeEnabled();
 
     // Accepting is recorded server-side, then the app opens up.
-    const recorded = page.waitForResponse(
-      (r) => r.url().includes('/legal/accept') && r.request().method() === 'POST',
-      { timeout: 60_000 },
-    );
+    const recorded = page.waitForResponse((r) => r.url().includes('/legal/accept') && r.request().method() === 'POST', {
+      timeout: 60_000,
+    });
     await confirm.click();
     expect((await recorded).status()).toBeLessThan(400);
     await expect(page.getByRole('heading', { name: GATE_TITLE })).toBeHidden({ timeout: 30_000 });
 
     // A fresh wallet lands on the username prompt, which the gate was hiding.
-    await expect(page.getByRole('heading', { name: 'Choose your username' })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole('heading', { name: namePrompt.title })).toBeVisible({ timeout: 60_000 });
     await completeUsernamePromptIfShown(page);
     await expect(page.getByRole('button', { name: 'Deposit' })).toBeVisible({ timeout: 60_000 });
   });

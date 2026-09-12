@@ -19,6 +19,8 @@ export * from './useHudHint';
 export * from './useInstallApp';
 export * from './useInstallDismissed';
 export * from './useInvalidateAfterMoneyMove';
+export * from './useModalOnScreen';
+export * from './useWalletUsdc';
 export * from './useIntroSeen';
 export * from './useExploreData';
 export * from './useLeaderboardData';

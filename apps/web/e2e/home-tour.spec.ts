@@ -1,5 +1,13 @@
 import type { Locator } from '@playwright/test';
-import { completeUsernamePromptIfShown, createFreshSigner, expect, openSignedIn, primePage, test } from './fixtures';
+import {
+  completeUsernamePromptIfShown,
+  createFreshSigner,
+  dismissQueuedModal,
+  expect,
+  openSignedIn,
+  primePage,
+  test,
+} from './fixtures';
 
 /**
  * Home tour: the coach marks a first-time wallet meets on `/home`.
@@ -82,6 +90,13 @@ test.describe('home tour', () => {
     }
 
     await expect(overlay).toHaveCount(0);
+
+    // Ending the tour hands the screen to whatever is next in the queue — on a
+    // fresh wallet, the badge the testnet catalog leaves claimable. What is
+    // asserted below is that the TOUR stopped sealing the button off, not that
+    // nothing ever covers it again.
+    await dismissQueuedModal(page);
+
     // The home is live again: the button the tour was covering takes a click.
     expect(await isClickable(deposit)).toBe(true);
   });

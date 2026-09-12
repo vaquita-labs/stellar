@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileData, useRestProfile } from '../../../hooks';
-import { useModalQueueStore } from '../../../stores';
+import { useAutoModalSlot } from '../../../stores';
 import { ProfileResponseDTO } from '../../../types';
 import { PressableButton } from '../../molecules/PressableButton';
 import { HOME_TOUR_STEPS, HomeTourStep } from './homeTourConfig';
@@ -50,12 +50,6 @@ export function HomeTour() {
   const { saveProfileFlags } = useRestProfile();
   const queryClient = useQueryClient();
 
-  const setHomeTourSettled = useModalQueueStore((s) => s.setHomeTourSettled);
-  // The notification permission is the one ask that expires, so it goes first.
-  // The `[role="dialog"]` poll below would already defer to the open sheet; this
-  // flag is what stops the tour starting in the gap before the sheet opens.
-  const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
-
   const [steps, setSteps] = useState<HomeTourStep[] | null>(null);
   const [index, setIndex] = useState(0);
   const [done, setDone] = useState(false);
@@ -81,16 +75,18 @@ export function HomeTour() {
   // left is not a tour and the user is better off with no overlay at all.
   const showing = wanted && !!steps && steps.length >= MIN_STEPS;
 
-  // `HomePage` takes the queue turn before the map even mounts (see the comment
-  // there). Here we give it back — once the profile has answered and the tour
-  // is not coming, or as soon as it ends — so the idle-funds prompt, the badge
-  // sheet and the release notes can open. Never before the profile has
-  // answered: `wanted` is false then too, and releasing on that hands the turn
-  // away on the first render, before anyone knows whether the tour is needed.
+  // The slot is given back once the profile has answered and the tour is not
+  // coming, or as soon as it ends. Never before the profile has answered:
+  // `wanted` is false then too, and settling on that hands the turn away on the
+  // first render, before anyone knows whether the tour is needed. `HomePage`
+  // reserves the slot before the map mounts (see the comment there).
   const settled = answered && (!wanted || (!!steps && steps.length < MIN_STEPS));
-  useEffect(() => {
-    if (settled) setHomeTourSettled(true);
-  }, [settled, setHomeTourSettled]);
+
+  // `ourTurn` is the notification permission being out of the way — it is the
+  // one ask that expires, so it goes first. The `[role="dialog"]` poll below
+  // would already defer to an open sheet; this is what stops the tour starting
+  // in the gap before that sheet opens. The full order is in [[auto-modals]].
+  const ourTurn = useAutoModalSlot('home-tour', settled);
 
   // Decide once which steps this screen can actually show, then start.
   //
@@ -101,7 +97,7 @@ export function HomeTour() {
   // show a shorter tour instead of none.
   const waitStartedAt = useRef(0);
   useEffect(() => {
-    if (!wanted || steps || !pushNudgeSettled) return;
+    if (!wanted || steps || !ourTurn) return;
     waitStartedAt.current = Date.now();
     const id = window.setInterval(() => {
       if (document.querySelector('[role="dialog"]')) return;
@@ -111,7 +107,7 @@ export function HomeTour() {
       }
     }, POLL_MS);
     return () => window.clearInterval(id);
-  }, [wanted, steps, pushNudgeSettled]);
+  }, [wanted, steps, ourTurn]);
 
   const finish = useCallback(() => {
     // Marked locally first: the tour disappears on the tap, it does not wait for

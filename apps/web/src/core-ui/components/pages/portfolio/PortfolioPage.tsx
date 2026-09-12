@@ -133,7 +133,7 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
 
   return (
     <PageLayout
-      title={t('portfolio.title', 'Portfolio')}
+      title={t('portfolio.positions', 'Positions')}
       // En el flujo de overlays, PortfolioFlow pasa un onBack que cierra la hoja
       // de posiciones y deja el panel de portafolio visible detrás. Como
       // fallback (uso directo de la página) se vuelve al entry anterior.
