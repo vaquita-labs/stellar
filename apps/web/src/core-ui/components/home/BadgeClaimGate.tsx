@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildServerAchievements } from '../../data/profile-badges';
-import { useProfileAchievements } from '../../hooks';
+import { useModalOnScreen, useProfileAchievements } from '../../hooks';
 import { useAutoModalTurn, useConfigStore } from '../../stores';
 import { AchievementModal } from '../pages/profile/AchievementModal';
 
@@ -93,6 +93,13 @@ export function BadgeClaimGate() {
   const listRunning = !!network?.networkName && !!walletAddress;
   const listFresh = !listRunning || (isFetchedAfterMount && !isFetching);
 
+  // The sheet is a full-screen interruption, so it may not land on top of what
+  // the user already has open — same rule as the idle-money prompt. It is not
+  // hypothetical here: the badge list resolves a beat after the home renders,
+  // late enough to arrive over a withdraw the user has already started.
+  const waitingToOpen = !promptedId && !served && listFresh && ourTurn && hasContract;
+  const modalOnScreen = useModalOnScreen(waitingToOpen);
+
   // Deciding and releasing live in the same effect on purpose: split in two,
   // whichever ran second in a commit would read the other's work as already
   // committed and release the turn on the same tick the sheet opens.
@@ -107,10 +114,12 @@ export function BadgeClaimGate() {
       settle();
       return;
     }
+    // Something is on screen: hold the slot and try again once it clears.
+    if (modalOnScreen) return;
 
     latchedRef.current = offer.id;
     setPromptedId(offer.id);
-  }, [served, listFresh, ourTurn, hasContract, candidate, settle]);
+  }, [served, listFresh, ourTurn, hasContract, candidate, modalOnScreen, settle]);
 
   // Resolved on every render so the open sheet reflects the badge as it is now:
   // the row survives the claim (its `claimState` becomes `minted`), which is

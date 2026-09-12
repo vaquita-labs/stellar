@@ -36,6 +36,15 @@ type AutoModalState = {
   /** Per modal: has it decided whether it shows, and finished if it did? */
   settled: Record<AutoModalId, boolean>;
   setSettled: (id: AutoModalId, settled: boolean) => void;
+  /**
+   * How many mounted components speak for each slot. A reservation may only
+   * hold a slot nobody owns — see {@link useReserveAutoModalSlot}. Counted
+   * rather than flagged because React's development double-mount runs the
+   * claim twice before the release.
+   */
+  owners: Record<AutoModalId, number>;
+  addOwner: (id: AutoModalId) => void;
+  removeOwner: (id: AutoModalId) => void;
 };
 
 /**
@@ -46,8 +55,13 @@ type AutoModalState = {
  */
 const nothingPending = () => Object.fromEntries(AUTO_MODAL_ORDER.map((id) => [id, true])) as Record<AutoModalId, boolean>;
 
+const noOwners = () => Object.fromEntries(AUTO_MODAL_ORDER.map((id) => [id, 0])) as Record<AutoModalId, number>;
+
 const useAutoModalStore = create<AutoModalState>((set) => ({
   settled: nothingPending(),
+  owners: noOwners(),
+  addOwner: (id) => set((state) => ({ owners: { ...state.owners, [id]: state.owners[id] + 1 } })),
+  removeOwner: (id) => set((state) => ({ owners: { ...state.owners, [id]: Math.max(0, state.owners[id] - 1) } })),
   // Writing the value it already holds returns the same state object, so the
   // effects below can fire on every render without waking every subscriber.
   setSettled: (id, settled) =>
@@ -63,6 +77,17 @@ const turnIsClear = (settled: Record<AutoModalId, boolean>, id: AutoModalId) => 
   return true;
 };
 
+/** Speak for a slot while mounted, so a reservation cannot overwrite it. */
+const useOwnership = (id: AutoModalId) => {
+  const addOwner = useAutoModalStore((state) => state.addOwner);
+  const removeOwner = useAutoModalStore((state) => state.removeOwner);
+
+  useEffect(() => {
+    addOwner(id);
+    return () => removeOwner(id);
+  }, [id, addOwner, removeOwner]);
+};
+
 /**
  * Declare this modal in the queue and find out whether it may open.
  *
@@ -74,6 +99,8 @@ const turnIsClear = (settled: Record<AutoModalId, boolean>, id: AutoModalId) => 
 export const useAutoModalSlot = (id: AutoModalId, settled: boolean): boolean => {
   const setSettled = useAutoModalStore((state) => state.setSettled);
   const isMyTurn = useAutoModalStore((state) => turnIsClear(state.settled, id));
+
+  useOwnership(id);
 
   useEffect(() => {
     setSettled(id, settled);
@@ -92,6 +119,8 @@ export const useAutoModalSlot = (id: AutoModalId, settled: boolean): boolean => 
 export const useAutoModalTurn = (id: AutoModalId) => {
   const setSettled = useAutoModalStore((state) => state.setSettled);
   const isMyTurn = useAutoModalStore((state) => turnIsClear(state.settled, id));
+
+  useOwnership(id);
 
   useEffect(() => {
     setSettled(id, false);
@@ -116,7 +145,12 @@ export const useReserveAutoModalSlot = (id: AutoModalId) => {
   const setSettled = useAutoModalStore((state) => state.setSettled);
 
   useEffect(() => {
-    setSettled(id, false);
+    // Only a slot nobody owns. React runs a child's effects before its parent's,
+    // so by the time this reservation runs the modal it speaks for may already
+    // have mounted and answered — and overwriting that answer parks the whole
+    // queue behind a modal that will never speak again, because its own effect
+    // has no reason to re-run.
+    if (!useAutoModalStore.getState().owners[id]) setSettled(id, false);
     return () => setSettled(id, true);
   }, [id, setSettled]);
 };
