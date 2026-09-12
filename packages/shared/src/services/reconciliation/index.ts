@@ -9,6 +9,7 @@ import type {
   RawReconciliationEvent,
   ReconciliationCounts,
   ReconciliationDepositRecord,
+  ReconciliationEventPage,
   ReconciliationRunInput,
   ReconciliationRunOutput,
   ReconciliationState,
@@ -22,7 +23,7 @@ export * from './state';
 export * from './types';
 
 export interface ReconciliationDependencies {
-  fetchEvents: (input: ReconciliationRunInput) => Promise<RawReconciliationEvent[]>;
+  fetchEvents: (input: ReconciliationRunInput) => Promise<RawReconciliationEvent[] | ReconciliationEventPage>;
   loadDeposits: (events: NormalizedReconciliationEvent[], contractIds: string[]) => Promise<ReconciliationDepositRecord[]>;
   loadTokens: (events: NormalizedReconciliationEvent[], contractIds: string[]) => Promise<ReconciliationTokenRecord[]>;
   loadState: () => Promise<ReconciliationState>;
@@ -59,7 +60,14 @@ export const runReconciliation = async (
   deps: ReconciliationDependencies,
 ): Promise<ReconciliationRunOutput> => {
   const cursorBefore = await deps.loadState();
-  const rawEvents = await deps.fetchEvents(input);
+  const fetched = await deps.fetchEvents(input);
+  const rawEvents = Array.isArray(fetched) ? fetched : fetched.events;
+  // How far the fetch actually got. A fetcher that hands back a bare array is
+  // claiming the whole window; one that reports a page is telling us where it
+  // stopped, and the cursor must not move past that. See ReconciliationEventPage.
+  const scannedThroughLedger = Array.isArray(fetched)
+    ? input.endLedger
+    : Math.max(input.startLedger, Math.min(fetched.scannedThroughLedger, input.endLedger));
   const { parsedEvents, parseIssues } = (() => {
     const { parsed, issues } = parseVaquitaPoolEvents(rawEvents);
     return { parsedEvents: parsed, parseIssues: issues };
@@ -99,7 +107,7 @@ export const runReconciliation = async (
   const shouldRecordBlocked = !input.dryRun && input.advanceCursor && hasAmbiguousEvents;
   const cursorAfter = shouldAdvance
     ? updateReconciliationState(cursorBefore, input.job, input.contractIds, {
-        lastProcessedLedger: input.endLedger,
+        lastProcessedLedger: scannedThroughLedger,
         lastProcessedEventId: newest?.eventId ?? null,
         runAt,
         success: true,
@@ -132,6 +140,7 @@ export const runReconciliation = async (
     cursorBehavior,
     cursorBefore,
     cursorAfter,
+    scannedThroughLedger,
     counts,
     parsedEvents,
     parseIssues,

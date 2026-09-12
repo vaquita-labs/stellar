@@ -22,7 +22,9 @@ import {
   getVaultApy,
   getTokenNetworkByNetworkIdTokenId,
   isStellarNetworkName,
+  listPoolContractIds,
   MIN_USDC_AMOUNT,
+  reconcileFromTransaction,
   sendError,
   sendSuccess,
   verifyTxSucceeded,
@@ -232,6 +234,45 @@ router.post('/withdraw-confirm', asyncHandler(async (req, res) => {
   req.log.info({ depositId, txHash }, 'Withdrawal confirmed');
   refreshWalletBalanceAfterEvent(result.data?.deposit.walletAddress, req.log, 'withdraw-confirm');
   return sendSuccess(res, true, 'success confirmed');
+}));
+
+router.post('/reconcile-transaction', asyncHandler(async (req, res) => {
+  const { txHash } = req.body ?? {};
+  req.log.info({ txHash }, 'POST /deposit/reconcile-transaction');
+
+  if (typeof txHash !== 'string' || !/^[0-9a-f]{64}$/i.test(txHash)) {
+    req.log.warn({ txHash }, 'Missing or malformed txHash');
+    return sendError(res, 'Missing or malformed txHash', null, 400);
+  }
+
+  // The whole withdraw runs in the browser tab: build, sign, submit, poll, then
+  // report back. A reload between the broadcast and that last call closes the
+  // position on chain and leaves the row open, and retrying the withdraw then
+  // fails with PositionNotFound because the on-chain key is already gone. The
+  // client detects that mismatch itself and posts the hash it found here.
+  //
+  // Only the hash is taken from the request. Everything written comes from
+  // re-reading the transaction on chain, so this cannot record a movement that
+  // did not happen, and it is why the endpoint needs no more authority than its
+  // siblings on this router.
+  const contractIds = await listPoolContractIds();
+  const outcome = await reconcileFromTransaction(txHash, { contractIds });
+
+  if (outcome.verdict !== 'SUCCESS') {
+    req.log.warn({ txHash, verdict: outcome.verdict }, 'Transaction not confirmed on chain');
+    return sendError(res, 'Transaction is not confirmed on chain', { verdict: outcome.verdict }, 409);
+  }
+
+  req.log.info(
+    {
+      txHash,
+      poolEvents: outcome.poolEvents,
+      withdrawals: outcome.appliedWithdrawalRepairs,
+      ambiguous: outcome.ambiguousEvents,
+    },
+    'Transaction reconciled',
+  );
+  return sendSuccess(res, outcome, 'success reconciled');
 }));
 
 router.get('/network/:networkName/wallet/:walletAddress', asyncHandler(async (req, res) => {

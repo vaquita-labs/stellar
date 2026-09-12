@@ -53,9 +53,9 @@ async function unwrap<T>(response: Response): Promise<T> {
 
 /**
  * Cuentas bancarias que el usuario guardó para retirar a moneda local. Mismo
- * criterio que `useSavedWallets`: son datos de cuenta, no del mundo, así que se
- * pisa el `staleTime: Infinity` global para que una cuenta cargada en otro
- * dispositivo aparezca al reabrir el flujo y no recién al recargar la app.
+ * criterio que `useSavedWallets`, incluido el `refetchOnMount`: sin él el
+ * `staleTime` corto no revalida nada, porque el cliente global apaga todos los
+ * disparadores, y la cuenta cargada en el otro dispositivo no aparecía nunca.
  */
 export const useSavedBankAccounts = () => {
   const { walletAddress } = useConfigStore();
@@ -69,6 +69,7 @@ export const useSavedBankAccounts = () => {
     },
     enabled: !!walletAddress,
     staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 };
 

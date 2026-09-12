@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { humanizeTxError } from '@/core-ui/helpers/txError';
 import { isWithdrawPaymentError, WithdrawPaymentError } from './withdrawError';
 
+const PAYMENT = { address: 'GVECINA', amount: '1.0000000', memo: null };
+const failedPayment = (cause: unknown) => new WithdrawPaymentError('@vecina', cause, PAYMENT);
+
 describe('WithdrawPaymentError', () => {
   it('names the destination that was not paid', () => {
-    const error = new WithdrawPaymentError('@vecina', new Error('op_no_trust'));
+    const error = failedPayment(new Error('op_no_trust'));
 
     expect(error.destination).toBe('@vecina');
     expect(error.message).toContain('@vecina');
@@ -13,7 +16,7 @@ describe('WithdrawPaymentError', () => {
 
   it('keeps the original failure for logs without showing it', () => {
     const cause = new Error('tx failed: op_underfunded');
-    const error = new WithdrawPaymentError('@vecina', cause);
+    const error = failedPayment(cause);
 
     expect(error.raw).toBe('tx failed: op_underfunded');
     expect(error.cause).toBe(cause);
@@ -31,21 +34,27 @@ describe('humanizeTxError on a half-done withdraw', () => {
   // pudimos completar la transacción" haría pensar que sigue invertida, y el
   // usuario esperaría un saldo que ya no está donde cree.
   it('says the money moved instead of reporting a failed transaction', () => {
-    const result = humanizeTxError(new WithdrawPaymentError('@vecina', new Error('op_no_trust')));
+    const result = humanizeTxError(failedPayment(new Error('op_no_trust')));
 
     expect(result.title).toContain('in your wallet');
     expect(result.title).toContain('@vecina');
     expect(result.title).not.toContain("couldn't complete the transaction");
   });
 
-  it('points at the screen that retries the payment', () => {
-    const result = humanizeTxError(new WithdrawPaymentError('@vecina', new Error('boom')));
+  it('offers to finish the payment instead of leaving the user to find the way', () => {
+    const result = humanizeTxError(failedPayment(new Error('boom')));
 
-    expect(result.title).toContain('Send');
+    expect(result.title).toContain('finish it from here');
+  });
+
+  it('carries what it takes to send the payment again', () => {
+    const error = failedPayment(new Error('boom'));
+
+    expect(error.payment).toEqual(PAYMENT);
   });
 
   it('is not treated as pending: the withdraw leg is settled, not in flight', () => {
-    const result = humanizeTxError(new WithdrawPaymentError('@vecina', new Error('boom')));
+    const result = humanizeTxError(failedPayment(new Error('boom')));
 
     expect(result.pending).toBeFalsy();
   });
@@ -54,7 +63,7 @@ describe('humanizeTxError on a half-done withdraw', () => {
   // escalera de regex leería como "tu wallet tiene que habilitar USDC": cierto
   // para el destino, y exactamente al revés para quien está mirando la pantalla.
   it('wins over the contract-code ladder that would blame the sender', () => {
-    const result = humanizeTxError(new WithdrawPaymentError('@vecina', new Error('Error(Contract, #13)')));
+    const result = humanizeTxError(failedPayment(new Error('Error(Contract, #13)')));
 
     expect(result.title).toContain('in your wallet');
     expect(result.title).not.toContain('Add the USDC trustline');

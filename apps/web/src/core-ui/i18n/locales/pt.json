@@ -2186,7 +2186,14 @@
     "confirm": {
       "title": "Confirmar saque"
     },
+    "partial": {
+      "title": "Falta um passo",
+      "legDone": "Saiu da poupança e está na sua carteira",
+      "legPending": "Pagamento para {{destination}}"
+    },
     "confirmCta": "Confirmar",
+    "resumeSendCta": "Concluir o envio",
+    "pendingHint": "Confira seu saldo em um minuto antes de tentar de novo.",
     "deleteWallet": {
       "confirm": "Excluir “{{label}}”?",
       "action": "Excluir"
@@ -2417,7 +2424,7 @@
       "10": "Você não tem USDC suficiente na carteira para cobrir este valor. Adicione fundos e tente de novo.",
       "13": "Sua carteira precisa habilitar o USDC primeiro. Adicione a trustline de USDC e tente de novo."
     },
-    "withdrawPaymentLeg": "Seu dinheiro saiu da poupança e está na sua carteira, mas o pagamento para {{destination}} não foi feito. Você pode enviá-lo em Carteira → Enviar."
+    "withdrawPaymentLeg": "Seu dinheiro saiu da poupança e está na sua carteira, mas o pagamento para {{destination}} não foi feito. Você pode concluí-lo aqui."
   },
   "migration": {
     "title": "Mova seus fundos da Blend",

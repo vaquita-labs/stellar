@@ -4,7 +4,6 @@ import { getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
 import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
 import { Popover, PopoverContent, PopoverTrigger, Spinner } from '@heroui/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { usePollar } from '@pollar/react';
@@ -21,7 +20,7 @@ import {
   MIN_USDC,
   truncateMiddle,
 } from '../../../helpers';
-import { useAnalytics, useBlendPosition, useProfileData } from '../../../hooks';
+import { useAnalytics, useBlendPosition, useInvalidateAfterMoneyMove, useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
@@ -72,7 +71,7 @@ export function DepositMethodModal({
   const [overBalance, setOverBalance] = useState(false);
   const { controls: amountControls, shake } = useAmountShake();
 
-  const queryClient = useQueryClient();
+  const invalidateAfterMoneyMove = useInvalidateAfterMoneyMove();
   const { refreshWalletBalance, wallet } = usePollar();
   // Login externo (Freighter/xBull) vs custodial/social (Pollar). El social no
   // "mueve" USDC que ya tiene: fondea RECIBIENDO a su dirección custodia, así que
@@ -162,12 +161,9 @@ export function DepositMethodModal({
         flowKind: 'external_in',
       });
       trackConversion('direct_blend_deposit_successful', numericAmount, token.symbol);
-      void refreshWalletBalance();
-      // La posición on-chain en Blend cambió: invalidar su query para que el
-      // header y el PortfolioPanel reflejen el nuevo total sin esperar los 60s
-      // de staleTime.
-      void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
-      void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
+      // Sin esperar los 60s de staleTime: el header y el PortfolioPanel tienen
+      // que mostrar el nuevo total ya.
+      void invalidateAfterMoneyMove();
       setStep('success');
     } catch (e) {
       trackError('direct_blend_deposit_failed', {

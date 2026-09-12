@@ -34,10 +34,15 @@ export function AutoInvest() {
   // Acá sólo se libera.
   const setVaultPromptSettled = useModalQueueStore((s) => s.setVaultPromptSettled);
 
-  // Y esta pantalla, a su vez, espera al pedido de permiso de notificaciones:
-  // es el único de la cola que vence (el sistema operativo ofrece el prompt
-  // nativo una sola vez), así que taparlo pierde el canal en vez de postergarlo.
+  // This screen, in turn, waits for the two ahead of it in the queue. The
+  // notification permission is the one ask that expires (the OS offers the
+  // native prompt once), so covering it loses the channel instead of
+  // postponing it. The home tour covers the whole screen with coach marks, and
+  // a decision about the user's money must not be drawn underneath them; the
+  // tour releases its turn when it ends or decides it is not showing.
   const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
+  const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
+  const ourTurn = pushNudgeSettled && homeTourSettled;
 
   // Se libera cuando el usuario cerró la pantalla (`dismissed`, que también
   // cubre el caso de invertir y cerrarla) o cuando ya se sabe que no hay nada
@@ -55,9 +60,9 @@ export function AutoInvest() {
   }, [idle, clearPendingCredit]);
 
   useEffect(() => {
-    if (shouldPrompt && !dismissed && pushNudgeSettled) setOpen(true);
+    if (shouldPrompt && !dismissed && ourTurn) setOpen(true);
     else if (!shouldPrompt) setOpen(false);
-  }, [shouldPrompt, dismissed, pushNudgeSettled]);
+  }, [shouldPrompt, dismissed, ourTurn]);
 
   // Y también al abrir la pantalla, que es el desenlace esperado: para entonces
   // la rampa hace rato que se cerró y no puede apagarlo ella.

@@ -2186,7 +2186,14 @@
     "confirm": {
       "title": "Confirmar retiro"
     },
+    "partial": {
+      "title": "Te falta un paso",
+      "legDone": "Salió del ahorro y está en tu wallet",
+      "legPending": "Pago a {{destination}}"
+    },
     "confirmCta": "Confirmar",
+    "resumeSendCta": "Completar el envío",
+    "pendingHint": "Revisa tu saldo en un minuto antes de volver a intentarlo.",
     "deleteWallet": {
       "confirm": "¿Eliminar “{{label}}”?",
       "action": "Eliminar"
@@ -2417,7 +2424,7 @@
       "10": "No tienes suficiente USDC en tu wallet para cubrir este monto. Agrega fondos e intenta de nuevo.",
       "13": "Tu wallet necesita habilitar USDC primero. Agrega la trustline de USDC e intenta de nuevo."
     },
-    "withdrawPaymentLeg": "Tu dinero salió del ahorro y está en tu wallet, pero el pago a {{destination}} no se hizo. Puedes enviarlo desde Wallet → Enviar."
+    "withdrawPaymentLeg": "Tu dinero salió del ahorro y está en tu wallet, pero el pago a {{destination}} no se hizo. Puedes completarlo desde aquí."
   },
   "migration": {
     "title": "Mueve tus fondos de Blend",

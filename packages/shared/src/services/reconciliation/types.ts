@@ -14,6 +14,24 @@ export interface RawReconciliationEvent {
   value?: unknown;
 }
 
+/**
+ * What one `fetchEvents` call actually covered.
+ *
+ * The Soroban RPC caps how many ledgers it scans per `getEvents` call (about
+ * 10_000), so a fetcher walking a wide window pages through it and can still
+ * stop short — a page cap, an undecodable cursor. `scannedThroughLedger` is the
+ * highest ledger the fetch genuinely read, and it is what the cursor may
+ * advance to. The requested end is a request, not a receipt: advancing to it
+ * after a short read marks ledgers as processed that nobody looked at, and once
+ * they age out of RPC retention the events in them are gone for good.
+ *
+ * A fetcher that returns a bare array is taken at its word for the whole window.
+ */
+export interface ReconciliationEventPage {
+  events: RawReconciliationEvent[];
+  scannedThroughLedger: number;
+}
+
 export interface NormalizedDepositEvent {
   kind: 'deposit';
   contractId: string;
@@ -180,6 +198,8 @@ export interface ReconciliationRunOutput {
   cursorBehavior: 'not_read' | 'read_only' | 'advanced' | 'blocked_ambiguous';
   cursorBefore: ReconciliationState;
   cursorAfter: ReconciliationState;
+  /** Highest ledger the fetch actually read; the ceiling for a cursor advance. */
+  scannedThroughLedger: number;
   counts: ReconciliationCounts;
   parsedEvents: NormalizedReconciliationEvent[];
   parseIssues: ReconciliationParseIssue[];

@@ -121,6 +121,63 @@ describe('runReconciliation', () => {
     expect(savedStates[0]?.['devnet-pool-events']?.CCONTRACT?.lastProcessedLedger).toBe(110);
   });
 
+  it('advances the cursor only as far as a short fetch actually read', async () => {
+    const savedStates: ReconciliationState[] = [];
+
+    // The RPC scans a bounded number of ledgers per call, so a fetcher walking a
+    // wide window can stop short. Advancing to the requested end here would mark
+    // ledgers 96-110 processed without anyone reading them, and the events in
+    // them become unrecoverable once they age out of RPC retention.
+    const result = await runReconciliation(
+      {
+        job: 'devnet-pool-events',
+        contractIds: ['CCONTRACT'],
+        startLedger: 90,
+        endLedger: 110,
+        dryRun: false,
+        advanceCursor: true,
+      },
+      deps({
+        fetchEvents: async () => ({ events: [depositEvent()], scannedThroughLedger: 95 }),
+        loadState: async () => cursor(89),
+        saveState: async (state) => {
+          savedStates.push(state);
+        },
+      }),
+    );
+
+    expect(result.cursorBehavior).toBe('advanced');
+    expect(result.scannedThroughLedger).toBe(95);
+    expect(savedStates[0]?.['devnet-pool-events']?.CCONTRACT?.lastProcessedLedger).toBe(95);
+  });
+
+  it('never lets a fetch push the cursor past the range it was asked for', async () => {
+    const savedStates: ReconciliationState[] = [];
+
+    // The RPC's cursor sits at its scan boundary, which can overshoot the end of
+    // a bounded manual run.
+    const result = await runReconciliation(
+      {
+        job: 'devnet-pool-events',
+        contractIds: ['CCONTRACT'],
+        startLedger: 90,
+        endLedger: 110,
+        dryRun: false,
+        advanceCursor: true,
+      },
+      deps({
+        fetchEvents: async () => ({ events: [depositEvent()], scannedThroughLedger: 9_999 }),
+        loadState: async () => cursor(89),
+        saveState: async (state) => {
+          savedStates.push(state);
+        },
+      }),
+    );
+
+    expect(result.scannedThroughLedger).toBe(110);
+    expect(savedStates[0]?.['devnet-pool-events']?.CCONTRACT?.lastProcessedLedger).toBe(110);
+  });
+
   it('blocks cursor advancement when unresolved ambiguous events remain', async () => {
     const savedStates: ReconciliationState[] = [];
 

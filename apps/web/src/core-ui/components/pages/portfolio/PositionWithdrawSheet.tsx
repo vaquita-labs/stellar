@@ -3,7 +3,7 @@
 import { formatUsd } from '@/core-ui/helpers/numbers';
 import { estimateRewardShare } from '@/core-ui/helpers/rewards';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
-import { useApyByLockPeriod, useRestWithdrawal, useTransactions } from '@/core-ui/hooks';
+import { useApyByLockPeriod, useInvalidateAfterMoneyMove, useRestWithdrawal, useTransactions } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
 import { awaitUsdcCredit, readUsdcBalance } from '@/networks/stellar/blendDirect';
@@ -11,7 +11,6 @@ import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
 import { formatBaseUnits } from '@/networks/stellar/vaultQueries';
 import { Spinner } from '@heroui/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,7 +61,7 @@ export function PositionWithdrawSheet({
 }) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
-  const queryClient = useQueryClient();
+  const invalidateAfterMoneyMove = useInvalidateAfterMoneyMove();
   const { transactionWithdraw } = useTransactions();
   const { confirmWithdrawal } = useRestWithdrawal();
   const { data: dataApy } = useApyByLockPeriod(deposit?.lockPeriod ?? 0, token?.symbol ?? '');
@@ -165,9 +164,7 @@ export function PositionWithdrawSheet({
         flowKind: 'internal_in',
       });
 
-      void queryClient.invalidateQueries({ queryKey: ['deposit'] });
-      void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
-      void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
+      void invalidateAfterMoneyMove();
       onWithdrawn?.();
       setStep('success');
     } catch (e) {
@@ -176,9 +173,7 @@ export function PositionWithdrawSheet({
         // La plata salió del pool y está en la wallet. Refrescamos para que la
         // posición desaparezca de la lista y cerramos en un paso terminal: el
         // usuario completa el depósito desde la pantalla normal.
-        void queryClient.invalidateQueries({ queryKey: ['deposit'] });
-        void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
-        void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
+        void invalidateAfterMoneyMove();
         onWithdrawn?.();
         setStep('incomplete');
         return;

@@ -38,9 +38,15 @@ async function unwrap<T>(response: Response): Promise<T> {
 
 /**
  * Direcciones de destino que el usuario guardó para retirar. Son datos de
- * cuenta, no del mundo/juego, así que se sobrescribe el `staleTime: Infinity`
- * global: si el usuario agrega una wallet desde otro dispositivo queremos verla
- * al reabrir el flujo, no al recargar la app.
+ * cuenta, no del mundo/juego, así que se sobrescribe la frescura global: si el
+ * usuario agrega una wallet desde otro dispositivo queremos verla al reabrir el
+ * flujo, no al recargar la app.
+ *
+ * El `refetchOnMount` es la mitad que hace eso, y faltaba. El `staleTime` corto
+ * solo marca el dato como viejo; el cliente global apaga TODOS los disparadores
+ * de refetch, así que nadie iba a preguntar. La mutación invalida esta key, o
+ * sea que una wallet guardada en ESTE dispositivo aparecía — la de otro no, que
+ * es exactamente el caso que el comentario decía cubrir.
  */
 export const useSavedWallets = () => {
   const { walletAddress } = useConfigStore();
@@ -54,6 +60,7 @@ export const useSavedWallets = () => {
     },
     enabled: !!walletAddress,
     staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 };
 

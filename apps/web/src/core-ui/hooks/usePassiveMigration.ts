@@ -1,5 +1,4 @@
 import { usePollar } from '@pollar/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
 import { useConfigStore } from '@/core-ui/stores';
@@ -8,6 +7,7 @@ import { awaitUsdcCredit, directBlendWithdraw, readUsdcBalance } from '@/network
 import { vaultDeposit } from '@/networks/stellar/vaultDirect';
 import { defindexVaultConfigForToken, formatBaseUnits } from '@/networks/stellar/vaultQueries';
 import { useBlendPosition } from './useBlendPosition';
+import { useInvalidateAfterMoneyMove } from './useInvalidateAfterMoneyMove';
 
 /**
  * Migration of a legacy direct-to-Blend position into the DeFindex vault.
@@ -28,7 +28,7 @@ import { useBlendPosition } from './useBlendPosition';
  */
 export const usePassiveMigration = (walletAddress?: string) => {
   const token = useConfigStore((s) => s.token);
-  const queryClient = useQueryClient();
+  const invalidateAfterMoneyMove = useInvalidateAfterMoneyMove();
   const blend = useBlendPosition(walletAddress);
   const { wallet } = usePollar();
 
@@ -41,9 +41,8 @@ export const usePassiveMigration = (walletAddress?: string) => {
   const needsMigration = isPassiveVaultEnabled() && vaultConfigured && !!walletAddress && blendBalance > 0;
 
   const refresh = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
-    void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
-  }, [queryClient]);
+    void invalidateAfterMoneyMove();
+  }, [invalidateAfterMoneyMove]);
 
   /**
    * Withdraw from Blend and deposit what landed into the vault. `amount` moves

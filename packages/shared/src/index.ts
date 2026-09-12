@@ -31,6 +31,8 @@ export * from './services/leaderboard';
 export * from './services/leaderboard/enriched';
 export * from './services/explore';
 export * from './services/reconciliation';
+// Not re-exported by the reconciliation barrel: it imports runReconciliation from it.
+export * from './services/reconciliation/transaction';
 export * from './services/follows';
 export * from './services/mapLikes';
 export * from './services/referral';
