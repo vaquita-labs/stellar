@@ -2187,6 +2187,8 @@
       "title": "Confirm withdrawal"
     },
     "confirmCta": "Confirm",
+    "resumeSendCta": "Finish the payment",
+    "pendingHint": "Check your balance in a minute before trying again.",
     "deleteWallet": {
       "confirm": "Delete “{{label}}”?",
       "action": "Delete"
@@ -2417,7 +2419,7 @@
       "10": "You don't have enough USDC in your wallet to cover this amount. Add funds and try again.",
       "13": "Your wallet needs to enable USDC first. Add the USDC trustline and try again."
     },
-    "withdrawPaymentLeg": "Your money is out of savings and in your wallet, but the payment to {{destination}} did not go through. You can send it from Wallet → Send."
+    "withdrawPaymentLeg": "Your money is out of savings and in your wallet, but the payment to {{destination}} did not go through. You can finish it from here."
   },
   "migration": {
     "title": "Move your Blend funds",

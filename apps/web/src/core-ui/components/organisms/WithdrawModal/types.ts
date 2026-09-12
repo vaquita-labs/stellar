@@ -1,15 +1,8 @@
+import type { PendingWithdrawPayment } from '@/networks/stellar/withdrawError';
 import { SavedWallet } from '../../../hooks/useSavedWallets';
 
 export type WithdrawStep =
-  | 'method'
-  | 'amount'
-  | 'account'
-  | 'username'
-  | 'addWallet'
-  | 'addNickname'
-  | 'confirm'
-  | 'processing'
-  | 'success';
+  'method' | 'amount' | 'account' | 'username' | 'addWallet' | 'addNickname' | 'confirm' | 'processing' | 'success';
 
 /**
  * Sub-pasos del retiro, para el progreso visible:
@@ -33,6 +26,12 @@ export interface WithdrawModalProps {
   onOpenChange: () => void;
   /** Retiro a cuenta bancaria: cierra este modal y abre el flujo de off-ramp fiat. */
   onOfframp: () => void;
+  /**
+   * The payment leg failed with the money already out of savings and sitting in
+   * the wallet. Closes this modal and opens Send with the transfer seeded, which
+   * is the only way out that does not withdraw a second time.
+   */
+  onResumePayment: (payment: PendingWithdrawPayment) => void;
   /**
    * Ejecuta el retiro. Debe resolver cuando la operación terminó (el modal pasa
    * a "success") o tirar con un error legible (vuelve a la confirmación).

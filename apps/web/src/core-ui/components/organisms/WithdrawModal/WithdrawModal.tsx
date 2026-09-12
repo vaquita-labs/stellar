@@ -5,6 +5,8 @@ import { AMOUNT_DECIMALS, floorAmount, formatTokenPrecise, formatUsdPrecise, MIN
 import { useLivePassiveUsdc, usePassiveLabel, usePassiveMigration } from '@/core-ui/hooks';
 import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
 import { blendConfigForToken } from '@/networks/stellar/blendDirect';
+import { isTxPendingError } from '@/networks/stellar/pollarError';
+import { isWithdrawPaymentError } from '@/networks/stellar/withdrawError';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { motion } from 'framer-motion';
@@ -45,7 +47,7 @@ import { PressableButton } from '../../molecules/PressableButton';
  * usuario de Vaquita en vez de por dirección. Va para cualquier tipo de login:
  * mandarle a una persona son dos saltos venga de donde venga.
  */
-export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: WithdrawModalProps) {
+export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResumePayment }: WithdrawModalProps) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
   const { wallet } = usePollar();
@@ -86,6 +88,17 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
   // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
   // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
   const [error, setError] = useState<unknown>(null);
+  // Qué se puede ofrecer después de un error lo decide si la plata se movió, no
+  // que haya habido error. La mayoría no mueve nada —rechazó la firma, falló el
+  // salto 1, el pool está pausado— y ahí reintentar es lo que corresponde. Estos
+  // dos no:
+  //  - `WithdrawPaymentError`: el salto 1 YA sacó la plata y está en la wallet.
+  //    Confirmar de nuevo correría los DOS saltos y sacaría de más.
+  //  - pendiente: la transacción salió a la red y todavía puede confirmar, así
+  //    que reintentar manda la misma plata dos veces.
+  const unpaidPayment = isWithdrawPaymentError(error) ? error.payment : null;
+  const txPending = isTxPendingError(error);
+  const retryUnsafe = !!unpaidPayment || txPending;
   // Se enciende cuando el usuario intenta revisar un monto mayor al disponible:
   // apaga el número, lo hace temblar, escribe el motivo donde estaba el mínimo y
   // bloquea Review. Se apaga al seguir tecleando (o al tocar Available / cambiar
@@ -763,7 +776,9 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
     // El alta por usuario ahora se abre desde su propia lista, no desde la de
     // wallets: el back tiene que devolver ahí.
     addNickname: 'username',
-    confirm: 'amount',
+    // Sin el corte, volver al monto y pasar de nuevo por Review llega al mismo
+    // Confirmar que el footer acaba de sacar de la pantalla.
+    confirm: retryUnsafe ? undefined : 'amount',
   };
   const backTarget: WithdrawStep | undefined =
     step === 'username' ? usernameOrigin : BACK_TARGET[step];
@@ -774,18 +789,37 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp }: Withd
         {t('withdraw.review', 'Review')}
       </PressableButton>
     ) : step === 'confirm' ? (
-      <PressableButton
-        variant="success"
-        size="cta"
-        className="py-2.5!"
-        onClick={handleConfirm}
-        // Bloqueado mientras no se sepa que el destino puede recibir, y también
-        // cuando ya se sabe que no: firmar ahí saca la plata de Blend para que
-        // el pago rebote después.
-        disabled={destChecking || destCannotReceive}
-      >
-        {t('withdraw.confirmCta', 'Confirm')}
-      </PressableButton>
+      unpaidPayment ? (
+        // El salto 1 ya movió la plata: lo único que falta es el pago, y se
+        // completa desde Enviar sin volver a tocar el ahorro.
+        <PressableButton
+          variant="success"
+          size="cta"
+          className="py-2.5!"
+          onClick={() => onResumePayment(unpaidPayment)}
+        >
+          {t('withdraw.resumeSendCta', 'Finish the payment')}
+        </PressableButton>
+      ) : txPending ? (
+        // Salió a la red y todavía puede confirmar: sin botón, porque el único
+        // que cabría acá mandaría la misma plata una segunda vez.
+        <p className="w-full text-center text-xs text-gray-500">
+          {t('withdraw.pendingHint', 'Check your balance in a minute before trying again.')}
+        </p>
+      ) : (
+        <PressableButton
+          variant="success"
+          size="cta"
+          className="py-2.5!"
+          onClick={handleConfirm}
+          // Bloqueado mientras no se sepa que el destino puede recibir, y también
+          // cuando ya se sabe que no: firmar ahí saca la plata de Blend para que
+          // el pago rebote después.
+          disabled={destChecking || destCannotReceive}
+        >
+          {t('withdraw.confirmCta', 'Confirm')}
+        </PressableButton>
+      )
     ) : step === 'processing' ? (
       <p className="w-full text-center text-xs text-gray-500">
         {t('withdraw.processingHint', 'This may take a few seconds.')}

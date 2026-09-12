@@ -26,6 +26,15 @@ interface WalletSendModalProps {
   address: string;
   /** Token activo (de la config): da símbolo, decimales e issuer del USDC. */
   token: Token | null;
+  /**
+   * Form seeded on open, for a caller that already knows the payment: the
+   * withdraw flow hands over the transfer its own payment leg left unpaid, so
+   * the user confirms it instead of retyping an address they just approved.
+   * Every field stays editable — this is a starting point, not a locked form.
+   */
+  initialDestination?: string;
+  initialAmount?: string;
+  initialMemo?: string | null;
 }
 
 /** Recorta el input a un número con como mucho `decimals` decimales. */
@@ -52,16 +61,25 @@ const sanitizeAmount = (raw: string, decimals: number): string => {
  * Un solo campo (como el modal de retiro): el tipo se auto-detecta —número →
  * MEMO_ID, texto → MEMO_TEXT— así el usuario no tiene que elegirlo.
  */
-export function WalletSendModal({ open, onOpenChange, address, token }: WalletSendModalProps) {
+export function WalletSendModal({
+  open,
+  onOpenChange,
+  address,
+  token,
+  initialDestination,
+  initialAmount,
+  initialMemo,
+}: WalletSendModalProps) {
   const { t } = useTranslation();
   const { walletBalance, refreshWalletBalance } = usePollar();
 
-  const [amount, setAmount] = useState('');
-  const [destination, setDestination] = useState('');
-  const [memo, setMemo] = useState('');
+  const [amount, setAmount] = useState(initialAmount ?? '');
+  const [destination, setDestination] = useState(initialDestination ?? '');
+  const [memo, setMemo] = useState(initialMemo ?? '');
   // El memo arranca colapsado (chip), igual que el modal de retiro: es opcional y
-  // no queremos cargar el formulario para quien no lo necesita.
-  const [memoOpen, setMemoOpen] = useState(false);
+  // no queremos cargar el formulario para quien no lo necesita. Con un memo
+  // sembrado arranca abierto: va a viajar con el pago, así que tiene que verse.
+  const [memoOpen, setMemoOpen] = useState(!!initialMemo);
   const [sending, setSending] = useState(false);
 
   const symbol = token?.symbol ?? 'USDC';
@@ -71,6 +89,7 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
   // hay varios "USDC" de distintos issuers; sin este filtro se mostraría el que
   // no es. Misma fuente que `useIdleFunds`.
   const blendUsdcIssuer = blendConfigForToken(token)?.usdcIssuer;
+  const balanceLoaded = walletBalance.step === 'loaded';
   const available = useMemo(() => {
     const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
     const usdc = blendUsdcIssuer
@@ -79,16 +98,18 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
     return usdc ? Number(usdc.available) : 0;
   }, [walletBalance, blendUsdcIssuer]);
 
-  // Limpiamos el formulario cada vez que cambia la visibilidad (patrón "ajustar
+  // Reseteamos el formulario cada vez que cambia la visibilidad (patrón "ajustar
   // estado en render", no un efecto: evita el render en cascada que marca el
-  // linter). Así ni al abrir ni al cerrar arrastra un envío anterior.
+  // linter). Al abrir queda en lo que sembró quien llama —vacío cuando no sembró
+  // nada—, y al cerrar se vacía: ni una apertura ni un cierre arrastran el envío
+  // anterior.
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) {
     setWasOpen(open);
-    setAmount('');
-    setDestination('');
-    setMemo('');
-    setMemoOpen(false);
+    setAmount(open ? (initialAmount ?? '') : '');
+    setDestination(open ? (initialDestination ?? '') : '');
+    setMemo(open ? (initialMemo ?? '') : '');
+    setMemoOpen(open ? !!initialMemo : false);
   }
 
   // Refrescar el balance al abrir SÍ es trabajo de efecto: sincroniza con un
@@ -126,7 +147,11 @@ export function WalletSendModal({ open, onOpenChange, address, token }: WalletSe
 
   const amountNum = Number(amount);
   const amountValid = amount !== '' && amountNum > 0 && amountNum <= available;
-  const amountError = amount !== '' && amountNum > 0 && amountNum > available;
+  // El "no te alcanza" espera a que el saldo esté leído. Mientras carga,
+  // `available` es 0, y con un monto ya puesto —el que siembra quien abre este
+  // modal— eso pinta en rojo una plata que sí está. Enviar igual queda
+  // bloqueado por `amountValid`: no se firma contra un saldo que no se leyó.
+  const amountError = balanceLoaded && amount !== '' && amountNum > 0 && amountNum > available;
 
   const trimmedMemo = memo.trim();
   const resolvedMemo = resolveMemo(memo);
