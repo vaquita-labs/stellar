@@ -10,7 +10,7 @@ import {
   WithHydrated,
 } from '@/core-ui/components/molecules';
 import { formatTimeDeposit } from '@/core-ui/helpers';
-import { useDepositsComplete } from '@/core-ui/hooks';
+import { useDepositsComplete, usePositionReconcile } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -49,6 +49,8 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
   const router = useRouter();
   const { walletAddress, token } = useConfigStore();
   const { data, isLoading } = useDepositsComplete(walletAddress);
+  // Closes a position the chain already released but a lost tab never reported.
+  usePositionReconcile(walletAddress);
 
   // Plazos ofrecidos por el token, de menor a mayor (para la sección "Term").
   const lockPeriods = useMemo(

@@ -9,6 +9,7 @@ export * from './useDeposit';
 export * from './useDetectedCountry';
 export * from './useDeposits';
 export * from './useDepositsComplete';
+export * from './usePositionReconcile';
 export * from './useDefindexVaultPosition';
 export * from './useVaultApy';
 export * from './usePassiveMigration';

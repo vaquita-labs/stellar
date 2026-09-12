@@ -13,6 +13,7 @@ import { FiChevronLeft, FiChevronRight, FiGift, FiHeart, FiSettings, FiShare2, F
 import {
   useClaimedAchievements,
   useDepositsComplete,
+  usePositionReconcile,
   useFollowCounts,
   useMapLikeCount,
   useProfileAchievements,
@@ -145,6 +146,8 @@ export function ProfilePage() {
   const { data: experienceData } = useProfileExperience();
   const { data: rewardsData } = useProfileRewards();
   const { data: depositsData } = useDepositsComplete(walletAddress);
+  // Closes a position the chain already released but a lost tab never reported.
+  usePositionReconcile(walletAddress);
   const { data: achievementsData } = useProfileAchievements();
   const { data: followCounts } = useFollowCounts();
   const { data: mapLikes } = useMapLikeCount();
