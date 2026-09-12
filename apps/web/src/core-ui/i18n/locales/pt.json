@@ -536,7 +536,9 @@
       "copyAria": "Copiar endereço",
       "copied": "Copiado",
       "minDeposit": "Depósito mínimo: {{amount}} USDC.",
-      "warning": "Envie apenas ativos da Stellar para este endereço. Fundos enviados de outra rede são perdidos."
+      "warning": "Envie apenas ativos da Stellar para este endereço. Fundos enviados de outra rede são perdidos.",
+      "arrived": "Seu dinheiro chegou",
+      "arrivedSubtitle": "Está na sua carteira, pronto para render."
     },
     "savingsStats": {
       "infoAlt": "info"

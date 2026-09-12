@@ -536,7 +536,9 @@
       "copyAria": "Copy address",
       "copied": "Copied",
       "minDeposit": "Minimum deposit: {{amount}} USDC.",
-      "warning": "Only send Stellar assets to this address. Funds sent from another network are lost."
+      "warning": "Only send Stellar assets to this address. Funds sent from another network are lost.",
+      "arrived": "Your money arrived",
+      "arrivedSubtitle": "It is in your wallet, ready to put to work."
     },
     "savingsStats": {
       "infoAlt": "info"
