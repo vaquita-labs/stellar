@@ -1,5 +1,6 @@
 import { expect, test as base, type ConsoleMessage, type Page } from '@playwright/test';
 import { Keypair } from '@stellar/stellar-sdk';
+import en from '../src/core-ui/i18n/locales/en.json';
 
 /**
  * Shared fixtures for the critical-flow suite.
@@ -145,7 +146,7 @@ export async function openSignedIn(
  */
 export async function acceptLegalGateIfShown(page: Page): Promise<boolean> {
   const heading = page.getByRole('heading', { name: 'Before you continue' });
-  const username = page.getByRole('heading', { name: 'Choose your username' });
+  const username = page.getByRole('heading', { name: namePrompt.title });
   const homeDeposit = page.getByRole('button', { name: 'Deposit' });
   await expect(heading.or(username).or(homeDeposit).first()).toBeVisible({ timeout: 60_000 });
   if (!(await heading.isVisible())) return false;
@@ -222,22 +223,38 @@ export async function clearAmount(page: Page, presses: number): Promise<void> {
 }
 
 /**
- * A wallet without a nickname is held on the "Choose your username" screen
- * before it can reach any private route. When that screen is up, pick a
- * unique handle so the flow under test can proceed; return whether it ran.
+ * The copy of the screen that asks a new wallet for its name, read from the
+ * bundle the app renders rather than retyped here.
+ *
+ * Retyped is how the suite broke: the screen was renamed from "username" to
+ * "vaquitag" and these literals stayed behind, so every spec that signs in sat
+ * waiting a minute for a heading that no longer existed, three attempts deep,
+ * for twelve runs. Read from the source, a rename cannot do that again.
+ */
+export const namePrompt = {
+  title: en.onboarding.username.title,
+  subtitle: en.onboarding.username.subtitle,
+  placeholder: en.onboarding.username.inputPlaceholder,
+  savedToast: en.onboarding.username.savedToast,
+};
+
+/**
+ * A wallet without a name of its own is held on that screen before it can reach
+ * any private route. When it is up, pick a unique handle so the flow under test
+ * can proceed; return whether it ran.
  */
 export async function completeUsernamePromptIfShown(page: Page, handle = uniqueHandle()): Promise<boolean> {
-  const heading = page.getByRole('heading', { name: 'Choose your username' });
+  const heading = page.getByRole('heading', { name: namePrompt.title });
   const homeDeposit = page.getByRole('button', { name: 'Deposit' });
   await expect(heading.or(homeDeposit).first()).toBeVisible({ timeout: 60_000 });
   if (!(await heading.isVisible())) return false;
 
-  // The prompt's visible "Username" label is not tied to the input, so the placeholder is the stable handle.
-  const input = page.getByPlaceholder('username', { exact: true });
+  // The prompt's visible label is not tied to the input, so the placeholder is the stable handle.
+  const input = page.getByPlaceholder(namePrompt.placeholder, { exact: true });
   await input.fill(handle);
   await expect(page.getByText(`@${handle} is available`)).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await expect(page.getByText('Username saved')).toBeVisible();
+  await expect(page.getByText(namePrompt.savedToast)).toBeVisible();
   await expect(heading).toBeHidden({ timeout: 30_000 });
   return true;
 }

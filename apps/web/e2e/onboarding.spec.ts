@@ -1,4 +1,13 @@
-import { completeUsernamePromptIfShown, createFreshSigner, expect, openSignedIn, primePage, test, uniqueHandle } from './fixtures';
+import {
+  completeUsernamePromptIfShown,
+  createFreshSigner,
+  expect,
+  namePrompt,
+  openSignedIn,
+  primePage,
+  test,
+  uniqueHandle,
+} from './fixtures';
 
 /**
  * Onboarding: a wallet that has never used Vaquita signs in and is walked
@@ -17,10 +26,10 @@ test.describe('onboarding', () => {
     await openSignedIn(page, '/home');
 
     // The username gate holds the private routes until a nickname exists.
-    await expect(page.getByRole('heading', { name: 'Choose your username' })).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByText('This is the name other savers will see', { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: namePrompt.title })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText(namePrompt.subtitle)).toBeVisible();
 
-    const input = page.getByPlaceholder('username', { exact: true });
+    const input = page.getByPlaceholder(namePrompt.placeholder, { exact: true });
     const continueButton = page.getByRole('button', { name: 'Continue' });
     await expect(continueButton).toBeDisabled();
 
@@ -36,8 +45,8 @@ test.describe('onboarding', () => {
     await continueButton.click();
 
     // Saving the nickname needs a Vaquita API session, which the wallet signs (SEP-10) on the fly.
-    await expect(page.getByText('Username saved')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole('heading', { name: 'Choose your username' })).toBeHidden({ timeout: 30_000 });
+    await expect(page.getByText(namePrompt.savedToast)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: namePrompt.title })).toBeHidden({ timeout: 30_000 });
 
     await expect(page).toHaveURL(/\/home$/);
     await expect(page.getByRole('button', { name: 'Deposit' })).toBeVisible({ timeout: 60_000 });
@@ -54,7 +63,7 @@ test.describe('onboarding', () => {
     // Pollar restores the session from storage; the gate must not bounce to /login nor re-ask for a name.
     await page.reload();
     await expect(page.getByRole('button', { name: 'Deposit' })).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByRole('heading', { name: 'Choose your username' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: namePrompt.title })).toHaveCount(0);
     await expect(page).not.toHaveURL(/\/login/);
   });
 
