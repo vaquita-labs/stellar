@@ -32,10 +32,11 @@ export function ReleaseNotesGate() {
   const pushNudgeSettled = useModalQueueStore((s) => s.pushNudgeSettled);
   const vaultPromptSettled = useModalQueueStore((s) => s.vaultPromptSettled);
   const homeTourSettled = useModalQueueStore((s) => s.homeTourSettled);
+  const welcomeClaimSettled = useModalQueueStore((s) => s.welcomeClaimSettled);
   const badgeClaimSettled = useModalQueueStore((s) => s.badgeClaimSettled);
   const [done, setDone] = useState(false);
 
-  const queueClear = pushNudgeSettled && vaultPromptSettled && homeTourSettled && badgeClaimSettled;
+  const queueClear = pushNudgeSettled && vaultPromptSettled && homeTourSettled && welcomeClaimSettled && badgeClaimSettled;
 
   const { data } = useReleaseNote(isAuthenticated && queueClear && !done);
   const ack = useAckReleaseNote();
