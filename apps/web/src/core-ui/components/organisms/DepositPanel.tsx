@@ -274,7 +274,7 @@ export function DepositPanel() {
             // usuario. Nada de lo que siga puede deshacer eso, así que la
             // posición se refresca ahora: si el salto 2 falla, las pantallas
             // tienen que mostrar el estado real, no el de antes del retiro.
-            void invalidateAfterMoneyMove();
+            void invalidateAfterMoneyMove().catch(() => {});
 
             if (toSelf) {
               trackUserAction('withdraw_submitted', {
@@ -378,6 +378,25 @@ export function DepositPanel() {
                 amount: toSend,
                 memo: wallet.memo ?? null,
               });
+            }
+
+            // Leg 1 already refreshed the wallet balance, and it did so with the
+            // money in transit: the cached figure counts what this payment has
+            // since sent out. Nothing looks again — `useIdleFunds` only polls
+            // while money is expected IN — so that figure outlives the withdrawal
+            // and the idle-funds prompt opens offering to invest what already
+            // left, at an amount the chain no longer agrees with.
+            //
+            // Awaited so the figure is settled before anything can read it. The
+            // success screen costs one balance read in exchange.
+            try {
+              await invalidateAfterMoneyMove();
+            } catch {
+              // The withdrawal is done and the payment landed. This sits outside
+              // the payment's own catch, so letting a balance read fail the flow
+              // would send a withdrawal that WORKED back to the confirmation
+              // screen — with its Confirm button live over money that already
+              // left, which is the second withdrawal this flow cannot make.
             }
 
             trackUserAction('withdraw_submitted', {
