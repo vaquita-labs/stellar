@@ -1,8 +1,9 @@
 'use client';
 
+import { formatTimeDeposit } from '@/core-ui/helpers';
 import { AppTransaction, TransactionStatus } from '@/core-ui/helpers/transactions';
 import { useTranslation } from 'react-i18next';
-import { FiArrowDownLeft, FiArrowUpRight } from 'react-icons/fi';
+import { FiArrowDownLeft, FiArrowUpRight, FiRepeat } from 'react-icons/fi';
 
 /**
  * Fila de un movimiento: ícono + concepto/subtítulo a la izquierda y monto +
@@ -25,29 +26,31 @@ export const formatTransactionTime = (timestamp: number, locale: string) =>
     minute: '2-digit',
   });
 
-export function TransactionRow({
-  transaction,
-  onPress,
-}: {
-  transaction: AppTransaction;
-  onPress?: () => void;
-}) {
+export function TransactionRow({ transaction, onPress }: { transaction: AppTransaction; onPress?: () => void }) {
   const { t, i18n } = useTranslation();
-  const isDeposit = transaction.kind === 'deposit';
+  const { kind } = transaction;
   const failed = transaction.status === 'failed';
+  const term = formatTimeDeposit(transaction.lockPeriod);
 
-  const title = isDeposit
-    ? t('transactions.kind.deposit', 'Deposit')
-    : transaction.early
-      ? t('transactions.kind.withdrawEarly', 'Early withdrawal')
-      : t('transactions.kind.withdraw', 'Withdrawal');
+  const title =
+    kind === 'deposit'
+      ? t('transactions.kind.deposit', 'Deposit')
+      : kind === 'move'
+        ? t('transactions.kind.move', 'Transfer to position')
+        : transaction.early
+          ? t('transactions.kind.withdrawEarly', 'Early withdrawal')
+          : t('transactions.kind.withdraw', 'Withdrawal');
 
-  const subtitle = isDeposit
-    ? t('transactions.row.toSavings', 'To savings')
-    : t('transactions.row.toWallet', 'To your wallet');
+  const subtitle =
+    kind === 'deposit'
+      ? t('transactions.row.toSavings', 'To savings')
+      : kind === 'move'
+        ? t('transactions.row.toPosition', 'To your {{term}} position', { term })
+        : t('transactions.row.fromPosition', 'From your {{term}} position', { term });
 
-  const sign = failed ? '' : isDeposit ? '−' : '+';
-  const amountColor = failed ? 'text-gray-400 line-through' : isDeposit ? 'text-black' : 'text-success';
+  // A transfer keeps the money inside Vaquita: no sign, neutral color.
+  const sign = failed || kind === 'move' ? '' : kind === 'deposit' ? '−' : '+';
+  const amountColor = failed ? 'text-gray-400 line-through' : kind === 'withdraw' ? 'text-success' : 'text-black';
 
   return (
     <li>
@@ -62,10 +65,16 @@ export function TransactionRow({
         <span
           className={
             'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-black text-black ' +
-            (isDeposit ? 'bg-primary/30' : 'bg-success/25')
+            (kind === 'withdraw' ? 'bg-success/25' : 'bg-primary/30')
           }
         >
-          {isDeposit ? <FiArrowDownLeft className="h-3.5 w-3.5" /> : <FiArrowUpRight className="h-3.5 w-3.5" />}
+          {kind === 'deposit' ? (
+            <FiArrowDownLeft className="h-3.5 w-3.5" />
+          ) : kind === 'move' ? (
+            <FiRepeat className="h-3.5 w-3.5" />
+          ) : (
+            <FiArrowUpRight className="h-3.5 w-3.5" />
+          )}
         </span>
 
         <div className="min-w-0 flex-1">
@@ -74,8 +83,7 @@ export function TransactionRow({
             {transaction.status !== 'completed' && (
               <span
                 className={
-                  'shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-bold ' +
-                  STATUS_BADGE[transaction.status]
+                  'shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-bold ' + STATUS_BADGE[transaction.status]
                 }
               >
                 {t(`transactions.status.${transaction.status}`)}
