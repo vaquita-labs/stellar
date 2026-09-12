@@ -29,10 +29,16 @@ import { requestWalletBalanceRefresh } from './useWalletBalanceRefresh';
 // it by three orders of magnitude. If the chain's floor ever rose above it the
 // deposit would fail anyway, but the screen says why instead of the generic.
 
-// Cada cuánto re-consultamos el balance custodial mientras el usuario está en el
-// home. La plata puede entrar on-chain por fuera de la app (le mandan USDC a su
-// dirección de "Recibir"), y sin poll no nos enteraríamos hasta un reload.
-const IDLE_POLL_MS = 12_000;
+// How often the custodial balance is re-read while the user is waiting for money
+// to land. It can arrive on chain from outside the app — someone sends USDC to
+// the address on the "Receive" screen — and without the poll nothing would
+// notice until a reload.
+//
+// Five seconds because that is roughly how often Stellar closes a ledger: asking
+// faster re-reads a state that cannot have changed, so it buys nothing and
+// multiplies the calls. This only runs inside the two windows where money is
+// actually expected (see the effect below), never as a background loop.
+const IDLE_POLL_MS = 5_000;
 
 /** Ceiling of one refresh a minute for the ones the user's own activity fires. */
 const ACTIVITY_REFRESH_MS = 60_000;
