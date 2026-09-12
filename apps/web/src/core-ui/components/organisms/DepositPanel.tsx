@@ -95,7 +95,7 @@ export function DepositPanel() {
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { wallet: pollarWallet } = usePollar();
   const queryClient = useQueryClient();
-  const { trackUserAction } = useAnalytics();
+  const { trackUserAction, trackError } = useAnalytics();
   const editMode = useMapStore((store) => store.editMode);
   const isStellar = network?.networkName ? isStellarNetwork(network.networkName) : false;
   const { isPaused } = useIsPoolPaused();
@@ -356,6 +356,26 @@ export function DepositPanel() {
                 tokenSymbol: token.symbol,
               });
             } catch (e) {
+              // El ÚNICO registro que va a quedar de un retiro que sacó la plata
+              // del ahorro y no llegó a pagarla. Sin esto el motivo se pierde:
+              // `humanizeTxError` conserva el texto crudo pero `ErrorNotice` no
+              // lo muestra a propósito, así que reconstruir qué pasó obliga a
+              // buscar la transacción en la cadena sabiendo a quién se le pagaba.
+              //
+              // Van los dos montos además del motivo: "pidió 1, le acreditaron
+              // 0.9999999" es el diagnóstico entero de un pago que rebota por
+              // saldo, y del error crudo eso no se deduce.
+              trackError(e instanceof Error ? e.message : String(e), {
+                context: 'withdraw_payment_leg',
+                withdrawHash: hash,
+                paymentHash: isTxPendingError(e) ? e.hash : null,
+                pending: isTxPendingError(e),
+                requested: amountStr,
+                credited: formatBaseUnits(creditedBase, token.decimals),
+                sent: toSend,
+                destination: wallet.address,
+                network: network?.networkName || null,
+              });
               // Un pago que sigue en vuelo NO es un pago que falló: todavía
               // puede confirmar, y ofrecer mandarlo de nuevo es ofrecer pagar
               // dos veces. Viaja tal cual para que la pantalla muestre el estado
