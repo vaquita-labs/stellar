@@ -4,9 +4,10 @@ import { create } from 'zustand';
  * Orden entre los modales que se abren solos al entrar a la app.
  *
  * El orden es explícito, de más a menos consecuencias: primero el permiso de
- * notificaciones, después el tour del home, el prompt de dinero ocioso
- * (`AutoInvest` → `IdleFundsModal`), el badge pendiente de reclamar
- * (`BadgeClaimGate`) y, último, las notas de versión. Apilados se tapan —los
+ * notificaciones, después el tour del home, el regalo de bienvenida
+ * (`ClaimGate` → `ClaimRewardModal`), el prompt de dinero ocioso (`AutoInvest`
+ * → `IdleFundsModal`), el badge pendiente de reclamar (`BadgeClaimGate`) y,
+ * último, las notas de versión. Apilados se tapan —los
  * primeros son de pantalla completa— y un anuncio no puede quedar encima de una
  * decisión ni de un premio.
  *
@@ -51,6 +52,17 @@ type ModalQueueState = {
    */
   pushNudgeSettled: boolean;
   setPushNudgeSettled: (settled: boolean) => void;
+  /**
+   * ¿Ya se decidió si el regalo de bienvenida aparece? Va justo detrás del tour
+   * porque es el último paso del onboarding: el usuario acaba de terminar el
+   * tutorial y todavía no depositó nada, así que ofrecerle su primer dólar va
+   * antes que cualquier cosa que se pueda hacer con dinero que ya tiene.
+   *
+   * Lo TOMA y lo LIBERA `ClaimGate`: vive en el layout privado, o sea monta
+   * antes que el home, y es el único que sabe si el regalo sigue sin reclamar.
+   */
+  welcomeClaimSettled: boolean;
+  setWelcomeClaimSettled: (settled: boolean) => void;
   /** ¿Ya se decidió si el prompt de dinero ocioso aparece? */
   vaultPromptSettled: boolean;
   setVaultPromptSettled: (settled: boolean) => void;
@@ -84,6 +96,8 @@ type ModalQueueState = {
 export const useModalQueueStore = create<ModalQueueState>((set) => ({
   pushNudgeSettled: true,
   setPushNudgeSettled: (pushNudgeSettled: boolean) => set({ pushNudgeSettled }),
+  welcomeClaimSettled: true,
+  setWelcomeClaimSettled: (welcomeClaimSettled: boolean) => set({ welcomeClaimSettled }),
   vaultPromptSettled: true,
   setVaultPromptSettled: (vaultPromptSettled: boolean) => set({ vaultPromptSettled }),
   homeTourSettled: true,

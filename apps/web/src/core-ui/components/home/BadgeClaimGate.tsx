@@ -69,6 +69,12 @@ export function BadgeClaimGate() {
   // badge coming due right after a claim doesn't chain another sheet.
   const [served, setServed] = useState(false);
   const offeredRef = useRef<Set<string> | null>(null);
+  // The id this mount put on screen. Read instead of `promptedId` in the effect
+  // below: StrictMode runs an effect twice with the SAME state snapshot, and on
+  // the second pass `promptedId` is still null while the work of the first pass
+  // is already visible — so the branch that hands the queue back would fire on
+  // the very tick the sheet opens.
+  const latchedRef = useRef<string | null>(null);
 
   const badges = useMemo(() => buildServerAchievements(data?.achievements), [data?.achievements]);
   const candidate = useMemo(
@@ -98,7 +104,7 @@ export function BadgeClaimGate() {
     if (offeredRef.current === null) offeredRef.current = readPrompted();
     // A sheet on screen, one already served this visit, or a list that is not
     // trustworthy yet: hold the turn.
-    if (promptedId || served || !listFresh || !ourTurn) return;
+    if (latchedRef.current || served || !listFresh || !ourTurn) return;
 
     const offer = hasContract && candidate && !offeredRef.current.has(candidate.id) ? candidate : null;
     if (!offer) {
@@ -106,10 +112,9 @@ export function BadgeClaimGate() {
       return;
     }
 
-    offeredRef.current.add(offer.id);
-    persistPrompted(offeredRef.current);
+    latchedRef.current = offer.id;
     setPromptedId(offer.id);
-  }, [promptedId, served, listFresh, ourTurn, hasContract, candidate, setBadgeClaimSettled]);
+  }, [served, listFresh, ourTurn, hasContract, candidate, setBadgeClaimSettled]);
 
   // Resolved on every render so the open sheet reflects the badge as it is now:
   // the row survives the claim (its `claimState` becomes `minted`), which is
@@ -123,8 +128,16 @@ export function BadgeClaimGate() {
   // queries (rewards, minted badges) for nothing.
   if (!promptedId && !served) return null;
 
-  // Closing hands the queue back so the version notes can take their turn.
+  // Closing hands the queue back so the version notes can take their turn, and
+  // is also the moment the badge counts as offered. Marking it when the sheet
+  // OPENED spent the offer on anything that tore the page down first: a reload
+  // with the sheet still on screen is not an answer, and the badge went quiet
+  // for the rest of the session.
   const dismiss = () => {
+    if (promptedId && offeredRef.current) {
+      offeredRef.current.add(promptedId);
+      persistPrompted(offeredRef.current);
+    }
     setServed(true);
     setPromptedId(null);
     setBadgeClaimSettled(true);
