@@ -46,7 +46,7 @@ const MIN_STEPS = 2;
  */
 export function HomeTour() {
   const { t } = useTranslation();
-  const { data, isLoading, isError } = useProfileData();
+  const { data, isFetchedAfterMount, isError } = useProfileData();
   const { saveProfileFlags } = useRestProfile();
   const queryClient = useQueryClient();
 
@@ -60,33 +60,45 @@ export function HomeTour() {
   const [index, setIndex] = useState(0);
   const [done, setDone] = useState(false);
 
-  // The profile answered and the user has not seen the tour.
+  // The profile answered IN THIS MOUNT and the user has not seen the tour.
+  //
+  // `isFetchedAfterMount`, not the row already in the cache: the profile is
+  // persisted across loads and revalidated on mount, and the persisted copy can
+  // say the tour is done when the server says it is not (the flag was cleared
+  // from the admin). Deciding on the stale copy would hand the queue turn away
+  // before the fresh answer lands, and the idle-funds prompt would open on top
+  // of the tour that then starts anyway.
   //
   // Deliberately NOT gated on `vaultPromptSettled`: that flag is only released
   // once the custodial balance loads or errors, and when neither happens it
   // stays false forever — which would mean no tour at all, silently. What we
   // actually need is narrower and is checked below: do not draw coach marks
   // while a modal is on screen.
-  const wanted = !isLoading && !isError && !!data && !done && !data.homeTourCompleted;
+  const answered = isFetchedAfterMount;
+  const wanted = answered && !isError && !!data && !done && !data.homeTourCompleted;
 
   // Steps that resolved to nothing are already gone; under this many, what is
   // left is not a tour and the user is better off with no overlay at all.
   const showing = wanted && !!steps && steps.length >= MIN_STEPS;
 
   // `HomePage` takes the queue turn before the map even mounts (see the comment
-  // there). Here we give it back — the moment we know the tour is not coming,
-  // or as soon as it ends — so the badge sheet and the release notes can open.
+  // there). Here we give it back — once the profile has answered and the tour
+  // is not coming, or as soon as it ends — so the idle-funds prompt, the badge
+  // sheet and the release notes can open. Never before the profile has
+  // answered: `wanted` is false then too, and releasing on that hands the turn
+  // away on the first render, before anyone knows whether the tour is needed.
+  const settled = answered && (!wanted || (!!steps && steps.length < MIN_STEPS));
   useEffect(() => {
-    if (!wanted || (!!steps && steps.length < MIN_STEPS)) setHomeTourSettled(true);
-  }, [wanted, steps, setHomeTourSettled]);
+    if (settled) setHomeTourSettled(true);
+  }, [settled, setHomeTourSettled]);
 
   // Decide once which steps this screen can actually show, then start.
   //
-  // Waits for a modal to close first: the idle-funds prompt is a decision about
-  // the user's money and the coach marks must not cover it. Starts as soon as
-  // every anchor is up — no fixed delay to guess at — and settles for whichever
-  // ones exist after `ANCHOR_WAIT_MS`, which is what makes the desktop layout
-  // (no chest, no side rail over the map) show a shorter tour instead of none.
+  // Waits for any open modal to close first (the username prompt, say): the
+  // coach marks must not cover one. Starts as soon as every anchor is up — no
+  // fixed delay to guess at — and settles for whichever ones exist after
+  // `ANCHOR_WAIT_MS`, which is what makes the map's edit mode (no action row)
+  // show a shorter tour instead of none.
   const waitStartedAt = useRef(0);
   useEffect(() => {
     if (!wanted || steps || !pushNudgeSettled) return;
