@@ -20,6 +20,12 @@ export const mapLikeCountKey = (
  * Lowercased wallets whose map the viewer has hearted, as a `Set` for O(1)
  * lookups. One request seeds every heart button in a feed, so their state is
  * right on first paint and survives a reload.
+ *
+ * Revalidates on mount because surviving a reload is the point and the global
+ * client would take it too far: with every refetch trigger off, the persisted
+ * snapshot is served for as long as it lives. The viewer can heart a map from
+ * another device, and the toggle here only patches the caches of the device it
+ * ran on.
  */
 export const useLikedMapWallets = () => {
   const { network, walletAddress } = useConfigStore();
@@ -32,10 +38,20 @@ export const useLikedMapWallets = () => {
     },
     enabled: !!network?.networkName && !!walletAddress,
     select: (wallets) => new Set(wallets),
+    staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 };
 
-/** How many hearts a profile's map has. Defaults to the connected wallet. */
+/**
+ * How many hearts a profile's map has. Defaults to the connected wallet.
+ *
+ * The one number on this screen that OTHER people move: no mutation of the
+ * owner's touches it, no realtime channel carries it, and nothing invalidates
+ * this key outside the toggle. Without revalidating on mount it was frozen at
+ * whatever it read the first time the profile was opened, which is the same
+ * failure the invite screen had with friends joined.
+ */
 export const useMapLikeCount = (walletAddressOverride?: string) => {
   const { network, walletAddress: connected } = useConfigStore();
   const walletAddress = walletAddressOverride ?? connected;
@@ -45,6 +61,8 @@ export const useMapLikeCount = (walletAddressOverride?: string) => {
     queryFn: () => getJson<MapLikeCountResponseDTO>(`/map-likes/wallet/${walletAddress}/count`),
     enabled: !!network?.networkName && !!walletAddress,
     select: (data) => data?.likes ?? 0,
+    staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 };
 
