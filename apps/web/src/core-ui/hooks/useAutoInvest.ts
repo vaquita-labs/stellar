@@ -13,10 +13,10 @@ import { formatBaseUnits } from '@/networks/stellar/vaultQueries';
 import { usePollarReadyStore } from '@/networks/stellar/wallet/pollarReady';
 import { toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConfigStore, useRampActiveStore, useAwaitingFundsStore, usePendingCreditStore } from '../stores';
+import { useInvalidateAfterMoneyMove } from './useInvalidateAfterMoneyMove';
 import { requestWalletBalanceRefresh } from './useWalletBalanceRefresh';
 
 // The floor for prompting and for spending a fee is `MIN_IDLE_USDC`, not the
@@ -49,7 +49,7 @@ export const useIdleFunds = () => {
   const { t } = useTranslation();
   const { wallet, walletBalance, refreshWalletBalance } = usePollar();
   const { walletAddress, token } = useConfigStore();
-  const queryClient = useQueryClient();
+  const invalidateAfterMoneyMove = useInvalidateAfterMoneyMove();
   const ready = usePollarReadyStore((s) => s.ready);
   const awaitingFunds = useAwaitingFundsStore((s) => s.isAwaitingFunds);
   const rampActive = useRampActiveStore((s) => s.isRampActive);
@@ -170,9 +170,7 @@ export const useIdleFunds = () => {
           amount: formatTokenPrecise(Number(amount), 2),
         }),
       );
-      await refreshWalletBalance();
-      void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
-      void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
+      await invalidateAfterMoneyMove();
       // El snapshot on-chain que alimenta la XP del vault: este flujo se firma
       // entero en el browser, así que no hay handler del server que lo note.
       void requestWalletBalanceRefresh(walletAddress, { force: true });
@@ -193,7 +191,7 @@ export const useIdleFunds = () => {
       inFlight.current = false;
       setIsInvesting(false);
     }
-  }, [walletAddress, token, idle, refreshWalletBalance, queryClient, t]);
+  }, [walletAddress, token, idle, invalidateAfterMoneyMove, t]);
 
   // ¿Mostrar la pantalla de plata ociosa? Custodial + sesión lista + hay USDC
   // ocioso sobre el umbral. Es un nudge cerrable, así que no hace falta opt-out.

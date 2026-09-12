@@ -13,6 +13,7 @@ import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import {
   useApyByLockPeriods,
   usePassiveLabel,
+  useInvalidateAfterMoneyMove,
   usePassiveUsdc,
   useRestDeposit,
   useTransactions,
@@ -20,7 +21,6 @@ import {
 import { useConfigStore } from '@/core-ui/stores';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
 import { Spinner } from '@heroui/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -55,7 +55,7 @@ export function InvestModal({
 }) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
-  const queryClient = useQueryClient();
+  const invalidateAfterMoneyMove = useInvalidateAfterMoneyMove();
   // Fondos disponibles para invertir = la posición pasiva (vault DeFindex con el
   // flag on, si no Blend). Es de donde sale la plata para lockear en el pool.
   const { usdc: passiveUsdc, refetch: refetchBlend } = usePassiveUsdc(walletAddress);
@@ -187,9 +187,7 @@ export function InvestModal({
       }
 
       void refetchBlend();
-      void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
-      void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
-      void queryClient.invalidateQueries({ queryKey: ['deposit'] });
+      void invalidateAfterMoneyMove();
       setStep('success');
     } catch (e) {
       setError(e ?? new Error(t('withdraw.error.generic', 'Something went wrong')));

@@ -18,6 +18,7 @@ export * from './useHasHydrated';
 export * from './useHudHint';
 export * from './useInstallApp';
 export * from './useInstallDismissed';
+export * from './useInvalidateAfterMoneyMove';
 export * from './useIntroSeen';
 export * from './useExploreData';
 export * from './useLeaderboardData';

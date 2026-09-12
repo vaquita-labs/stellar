@@ -13,10 +13,9 @@ import type { PendingWithdrawPayment } from '@/networks/stellar/withdrawError';
 import { WithdrawPaymentError } from '@/networks/stellar/withdrawError';
 import { PassiveMigrationSheet } from './PassiveMigrationSheet';
 import { usePollar } from '@pollar/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAnalytics, useIsPoolPaused } from '../../hooks';
+import { useAnalytics, useInvalidateAfterMoneyMove, useIsPoolPaused } from '../../hooks';
 import { useMapStore, useConfigStore, useAwaitingFundsStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
@@ -78,7 +77,7 @@ export function DepositPanel() {
   const [isDepositing, setIsDepositing] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { wallet: pollarWallet } = usePollar();
-  const queryClient = useQueryClient();
+  const invalidateAfterMoneyMove = useInvalidateAfterMoneyMove();
   const { trackUserAction, trackError } = useAnalytics();
   const editMode = useMapStore((store) => store.editMode);
   const isStellar = network?.networkName ? isStellarNetwork(network.networkName) : false;
@@ -275,8 +274,7 @@ export function DepositPanel() {
             // usuario. Nada de lo que siga puede deshacer eso, así que la
             // posición se refresca ahora: si el salto 2 falla, las pantallas
             // tienen que mostrar el estado real, no el de antes del retiro.
-            void queryClient.invalidateQueries({ queryKey: ['blend-position'] });
-            void queryClient.invalidateQueries({ queryKey: ['defindex-vault-position'] });
+            void invalidateAfterMoneyMove();
 
             if (toSelf) {
               trackUserAction('withdraw_submitted', {
