@@ -11,6 +11,7 @@ import {
   resolveReconciliationLedgerRange,
   runReconciliation,
   type RawReconciliationEvent,
+  type ReconciliationEventPage,
   type ReconciliationRunInput,
 } from '@vaquita/shared/services/reconciliation/index';
 
@@ -206,32 +207,134 @@ const fetchLedgerBounds = async (rpcUrl: string): Promise<{ oldestLedger: number
   }
 };
 
-const fetchEvents = (rpcUrl: string) => async (input: ReconciliationRunInput): Promise<RawReconciliationEvent[]> => {
+/** Events per page. The RPC's own ledger scan budget usually ends a page first. */
+const EVENT_PAGE_LIMIT = 200;
+
+/**
+ * Safety stop for the pagination loop. The RPC scans roughly 10_000 ledgers per
+ * call, so this covers about 2M ledgers — far past the ~121k of RPC retention.
+ * Hitting it means something is wrong, and the run reports a short read rather
+ * than pretending it covered the window.
+ */
+const MAX_EVENT_PAGES = 200;
+
+/**
+ * The ledger a Soroban event cursor sits at: the high 32 bits of the TOID in
+ * `<toid>-<eventIndex>`. The RPC returns a cursor even for a page that matched
+ * nothing, and it marks where the scan stopped rather than where the last event
+ * was — which is exactly the "how far did we actually get" the cursor needs.
+ */
+const cursorLedger = (cursor: string): number | null => {
+  const [toid] = cursor.split('-');
+  if (!toid) return null;
+  try {
+    return Number(BigInt(toid) >> 32n);
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Every event the pool emitted in the range, paging until the window is
+ * exhausted.
+ *
+ * One `getEvents` call does NOT cover an arbitrary range: the RPC scans a
+ * bounded number of ledgers (~10_000, about twelve hours of mainnet) and hands
+ * back a cursor for the rest. Reading only the first page while reporting the
+ * full range is what let a withdraw from this morning sit unseen behind a cursor
+ * that had been advanced past it.
+ *
+ * `startLedger`/`endLedger` and `cursor` are mutually exclusive on the RPC, so
+ * only the first call carries the range and every later page is bounded here.
+ */
+const fetchEvents = (rpcUrl: string) => async (input: ReconciliationRunInput): Promise<ReconciliationEventPage> => {
   const server = new rpc.Server(rpcUrl);
   const collected: RawReconciliationEvent[] = [];
-  const response = await server.getEvents({
-    startLedger: input.startLedger,
-    endLedger: input.endLedger,
-    filters: [{ type: 'contract', contractIds: input.contractIds }],
-    limit: 10000,
-  });
+  const filters = [{ type: 'contract' as const, contractIds: input.contractIds }];
 
-  for (const event of response.events ?? []) {
-    const ledger = Number(event.ledger);
-    if (ledger > input.endLedger) continue;
-    const raw: RawReconciliationEvent = {
-      id: event.id,
-      ledger,
-      txHash: event.txHash,
-      topic: event.topic,
-      value: event.value,
-    };
-    if (event.ledgerClosedAt) raw.ledgerClosedAt = event.ledgerClosedAt;
-    if (event.contractId) raw.contractId = String(event.contractId);
-    collected.push(raw);
+  let cursor: string | null = null;
+  let scannedThroughLedger = input.startLedger;
+  let pages = 0;
+
+  while (pages < MAX_EVENT_PAGES) {
+    const response = await server.getEvents(
+      cursor
+        ? { filters, limit: EVENT_PAGE_LIMIT, cursor }
+        : { filters, limit: EVENT_PAGE_LIMIT, startLedger: input.startLedger, endLedger: input.endLedger },
+    );
+    pages += 1;
+
+    for (const event of response.events ?? []) {
+      const ledger = Number(event.ledger);
+      if (ledger > input.endLedger) continue;
+      const raw: RawReconciliationEvent = {
+        id: event.id,
+        ledger,
+        txHash: event.txHash,
+        topic: event.topic,
+        value: event.value,
+      };
+      if (event.ledgerClosedAt) raw.ledgerClosedAt = event.ledgerClosedAt;
+      if (event.contractId) raw.contractId = String(event.contractId);
+      collected.push(raw);
+    }
+
+    const next = response.cursor ?? null;
+    // No cursor at all: the RPC has nothing further to offer in this window.
+    if (!next) {
+      scannedThroughLedger = input.endLedger;
+      break;
+    }
+
+    const reached = cursorLedger(next);
+    if (reached === null) {
+      // Cursor we cannot read. Claim only what the events themselves prove.
+      const lastLedger = collected.at(-1)?.ledger;
+      if (typeof lastLedger === 'number') scannedThroughLedger = Math.max(scannedThroughLedger, lastLedger);
+      logger.warn(
+        { event: 'reconciliation_events_cursor_unreadable', job: input.job, cursor: next, pages },
+        'could not read the ledger out of the event cursor — stopping the page walk short',
+      );
+      break;
+    }
+
+    if (reached >= input.endLedger) {
+      scannedThroughLedger = input.endLedger;
+      break;
+    }
+
+    scannedThroughLedger = Math.max(scannedThroughLedger, reached);
+    cursor = next;
   }
 
-  return collected;
+  if (pages >= MAX_EVENT_PAGES && scannedThroughLedger < input.endLedger) {
+    logger.warn(
+      {
+        event: 'reconciliation_events_page_cap',
+        job: input.job,
+        pages,
+        start_ledger: input.startLedger,
+        end_ledger: input.endLedger,
+        scanned_through_ledger: scannedThroughLedger,
+      },
+      'event pagination stopped at the page cap — the cursor will only claim the ledgers actually read',
+    );
+  }
+
+  logger.info(
+    {
+      event: 'reconciliation_events_fetched',
+      job: input.job,
+      pages,
+      events: collected.length,
+      start_ledger: input.startLedger,
+      end_ledger: input.endLedger,
+      scanned_through_ledger: scannedThroughLedger,
+    },
+    'fetched pool events',
+  );
+
+  return { events: collected, scannedThroughLedger };
 };
 
 const baseArtifact = (options: CliOptions): Record<string, unknown> => ({
@@ -335,6 +438,22 @@ const main = async () => {
       fetchEvents: fetchEvents(options.rpcUrl),
     },
   );
+
+  if (result.scannedThroughLedger < range.endLedger) {
+    logger.warn(
+      {
+        event: 'reconciliation_range_short_read',
+        job: options.job,
+        network: options.network,
+        start_ledger: range.startLedger,
+        end_ledger: range.endLedger,
+        scanned_through_ledger: result.scannedThroughLedger,
+        unread_ledgers: range.endLedger - result.scannedThroughLedger,
+        cursor_behavior: result.cursorBehavior,
+      },
+      'event fetch stopped before the end of the range — the cursor only advances to what was read, so the rest is retried next run',
+    );
+  }
 
   const artifact = {
     ...baseArtifact(options),
