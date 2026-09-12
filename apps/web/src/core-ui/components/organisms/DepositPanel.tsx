@@ -319,24 +319,69 @@ export function DepositPanel() {
             // destino debe tener trustline al USDC — el modal lo verifica antes
             // de dejar firmar el salto 1, justamente para no llegar acá y rebotar
             // con la plata ya afuera.
+
+            // Un solo lugar donde se anota que el retiro sacó la plata del ahorro
+            // y no llegó a pagarla, sea porque no se pudo leer el crédito o porque
+            // el pago rebotó. Es el ÚNICO registro que va a quedar: `ErrorNotice`
+            // no muestra el texto crudo a propósito, así que sin esto reconstruir
+            // qué pasó obliga a buscar la transacción en la cadena sabiendo a
+            // quién se le pagaba.
             //
+            // `credited` en null NO es ruido: dice que el crédito ni siquiera se
+            // pudo leer, que es un fallo distinto de uno que sí midió y no
+            // alcanzó. Con los dos montos, "pidió 1, le acreditaron 0.9999999" es
+            // el diagnóstico entero de un pago que rebota por saldo.
+            const reportUnpaidLeg = (e: unknown, credited: string | null, sent: string | null) =>
+              trackError(e instanceof Error ? e.message : String(e), {
+                context: 'withdraw_payment_leg',
+                withdrawHash: hash,
+                paymentHash: isTxPendingError(e) ? e.hash : null,
+                pending: isTxPendingError(e),
+                requested: amountStr,
+                credited,
+                sent,
+                destination: wallet.address,
+                network: network?.networkName || null,
+              });
+
             // Se espera el crédito antes de armar el pago: el salto 1 confirma en
             // el ledger, pero el RPC puede ir atrás y el pago saldría contra un
             // saldo que todavía no ve.
-            const creditedBase = await awaitUsdcCredit(walletAddress, token.decimals, balanceBefore, { hash });
-            // What goes out is the figure the user approved — `WITHDRAW_DUST_STR`
-            // is what makes the credit cover it. It stays a floor rather than a
-            // plain `requestedBase` because the margin cannot be guaranteed: a
-            // withdrawal that empties the position gets clamped at the share
-            // balance and credits less than it asked for, and paying the full
-            // figure there bounces with `op_underfunded`, stranding the money in
-            // the wallet with leg 1 already done. `withdrawAll` sends the whole
-            // credit, which carries interest the typed amount does not.
-            const requestedBase = toBaseUnits(amountStr, token.decimals);
-            const toSend = formatBaseUnits(
-              withdrawAll || creditedBase < requestedBase ? creditedBase : requestedBase,
-              token.decimals,
-            );
+            //
+            // Esa espera va DENTRO de la misma red que cubre el pago. Para cuando
+            // corre, el salto 1 ya movió la plata: un error acá deja al usuario
+            // exactamente igual que uno del pago —con la plata fuera del ahorro—
+            // y soltarlo crudo lo devolvía a una confirmación con el botón vivo,
+            // que es el segundo retiro que este flujo no puede hacer.
+            let credited: string;
+            let toSend: string;
+            try {
+              const creditedBase = await awaitUsdcCredit(walletAddress, token.decimals, balanceBefore, { hash });
+              // What goes out is the figure the user approved — `WITHDRAW_DUST_STR`
+              // is what makes the credit cover it. It stays a floor rather than a
+              // plain `requestedBase` because the margin cannot be guaranteed: a
+              // withdrawal that empties the position gets clamped at the share
+              // balance and credits less than it asked for, and paying the full
+              // figure there bounces with `op_underfunded`, stranding the money in
+              // the wallet with leg 1 already done. `withdrawAll` sends the whole
+              // credit, which carries interest the typed amount does not.
+              const requestedBase = toBaseUnits(amountStr, token.decimals);
+              credited = formatBaseUnits(creditedBase, token.decimals);
+              toSend = formatBaseUnits(
+                withdrawAll || creditedBase < requestedBase ? creditedBase : requestedBase,
+                token.decimals,
+              );
+            } catch (e) {
+              reportUnpaidLeg(e, null, null);
+              throw new WithdrawPaymentError(wallet.label, e, {
+                address: wallet.address,
+                // Cuánto llegó es justamente lo que no se pudo leer, así que se
+                // siembra lo aprobado. El Send relee el saldo al abrir y su MAX
+                // corrige la diferencia si la hay.
+                amount: amountStr,
+                memo: wallet.memo ?? null,
+              });
+            }
 
             try {
               onProgress('sending');
@@ -356,26 +401,7 @@ export function DepositPanel() {
                 tokenSymbol: token.symbol,
               });
             } catch (e) {
-              // El ÚNICO registro que va a quedar de un retiro que sacó la plata
-              // del ahorro y no llegó a pagarla. Sin esto el motivo se pierde:
-              // `humanizeTxError` conserva el texto crudo pero `ErrorNotice` no
-              // lo muestra a propósito, así que reconstruir qué pasó obliga a
-              // buscar la transacción en la cadena sabiendo a quién se le pagaba.
-              //
-              // Van los dos montos además del motivo: "pidió 1, le acreditaron
-              // 0.9999999" es el diagnóstico entero de un pago que rebota por
-              // saldo, y del error crudo eso no se deduce.
-              trackError(e instanceof Error ? e.message : String(e), {
-                context: 'withdraw_payment_leg',
-                withdrawHash: hash,
-                paymentHash: isTxPendingError(e) ? e.hash : null,
-                pending: isTxPendingError(e),
-                requested: amountStr,
-                credited: formatBaseUnits(creditedBase, token.decimals),
-                sent: toSend,
-                destination: wallet.address,
-                network: network?.networkName || null,
-              });
+              reportUnpaidLeg(e, credited, toSend);
               // Un pago que sigue en vuelo NO es un pago que falló: todavía
               // puede confirmar, y ofrecer mandarlo de nuevo es ofrecer pagar
               // dos veces. Viaja tal cual para que la pantalla muestre el estado
