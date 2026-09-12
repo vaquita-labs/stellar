@@ -30,9 +30,16 @@ const referralKey = (walletAddress?: string | null) => ['referral', 'summary', w
 const BASE = () => `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/referrals`;
 
 /**
- * Account data, not world/game data, so the global `staleTime: Infinity` is
- * overridden: a friend can join from another device and the count should be
- * right on reopen, not on reload.
+ * Account data, not world/game data, so the global freshness is overridden: a
+ * friend can join from another device and the count should be right on reopen,
+ * not on reload.
+ *
+ * `refetchOnMount` is the half that actually does that, and it was missing. A
+ * short `staleTime` only marks the data old; the global client turns off every
+ * refetch trigger, so nothing ever went and asked, and nothing invalidates this
+ * key either. The screen painted the persisted snapshot from the first visit
+ * for as long as it lived: a user with two friends joined read 0 here while the
+ * referrer board, which does refetch on mount, ranked them with 2.
  */
 export const useReferralSummary = () => {
   const walletAddress = useConfigStore((s) => s.walletAddress);
@@ -54,5 +61,6 @@ export const useReferralSummary = () => {
     },
     enabled: !!walletAddress,
     staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 };
