@@ -239,17 +239,17 @@ export const useIdleFunds = () => {
   // marca se apaga y el prompt se ofrece como después de cualquier depósito.
   const shouldPrompt = ready && isCustodial && idle >= MIN_IDLE_USDC && !rampActive;
 
-  // ¿Ya se SABE si hay plata ociosa? Mientras la sesión de Pollar se restaura o
-  // el balance no cargó, `shouldPrompt` en false no es "no hay nada": es "no
-  // preguntamos todavía". La diferencia importa para quien espera este turno
-  // (las notas de versión, vía [[auto-modals]]), que si no se adelantaría
-  // al prompt en cada carga.
+  // Is it KNOWN yet whether there is idle money? While the Pollar session is
+  // restoring, or the balance has not loaded, a false `shouldPrompt` is not
+  // "there is nothing": it is "we have not asked yet". The difference matters to
+  // whoever waits on this slot — the version notes, through [[auto-modals]] —
+  // which would otherwise get ahead of the prompt on every load.
   //
-  // `error` cuenta como decidido: es un estado TERMINAL del balance, así que ya
-  // no vamos a enterarnos nunca de si hay plata ociosa. Sin esta rama, una
-  // lectura fallida (RPC caído, 5xx de Pollar) dejaba el turno tomado para
-  // siempre —`decided` en false y `shouldPrompt` también, así que nadie lo
-  // liberaba— y las notas de versión no aparecían en el home en toda la sesión.
+  // `error` counts as decided: it is a TERMINAL state of the balance, so we are
+  // never going to find out whether there is idle money. Without that branch a
+  // failed read (RPC down, a 5xx from Pollar) held the slot forever — `decided`
+  // false and `shouldPrompt` false too, so nobody released it — and the version
+  // notes never appeared on the home for the whole session.
   const decided = ready && (!isCustodial || walletBalance.step === 'loaded' || walletBalance.step === 'error');
 
   return { idle, shouldPrompt, decided, invest, isInvesting, error, clearError: () => setError(null) };

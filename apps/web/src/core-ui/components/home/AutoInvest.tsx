@@ -28,15 +28,14 @@ export function AutoInvest() {
   // vencimiento de 15 minutos aunque el dinero ya estuviera a la vista.
   const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
 
-  // El lugar en la cola se suelta cuando el usuario cerró la pantalla
-  // (`dismissed`, que también cubre el caso de invertir y cerrarla) o cuando ya
-  // se sabe que no hay nada que ofrecer. `HomePage` lo reserva al entrar,
-  // porque este componente monta recién después de que sincroniza el reloj y
-  // para entonces la nota de versión ya se habría mostrado.
+  // The place in the queue is given back once the user has closed the screen
+  // (`dismissed`, which also covers investing and closing it) or once we know
+  // there is nothing to offer. `HomePage` reserves it on entry, because this
+  // component only mounts after the clock syncs and by then the version note
+  // would already have been shown.
   //
-  // `ourTurn` es todo lo que va antes ya fuera del camino: el permiso de
-  // notificaciones, el tour y el regalo de bienvenida. El orden vive en
-  // [[auto-modals]].
+  // `ourTurn` is everything ahead of it being out of the way: the notification
+  // ask, the tour and the welcome gift. The order is in [[auto-modals]].
   const settled = !open && (dismissed || (decided && !shouldPrompt));
   const ourTurn = useAutoModalSlot('vault-prompt', settled);
 
@@ -48,22 +47,22 @@ export function AutoInvest() {
     prevIdle.current = idle;
   }, [idle, clearPendingCredit]);
 
-  // Esta pantalla es una interrupción a pantalla completa, así que no puede
-  // caer encima de algo que el usuario ya está haciendo. Y de paso resuelve el
-  // problema serio: todo flujo que estaciona plata en la wallet a mitad de
-  // camino —el retiro de dos saltos, el de una posición al vault, la migración—
-  // corre detrás de un sheet que NO se puede cerrar mientras la transacción
-  // está en vuelo (`isDismissable={false}` + `hideClose`, la regla de todos los
-  // sheets de plata). O sea que "no hay nada en pantalla" también significa "no
-  // hay ninguna transacción en vuelo", y preguntárselo a la pantalla cubre
-  // también los flujos que se escriban después de esta línea.
+  // This screen is a full-screen interruption, so it may not land on top of what
+  // the user is already doing. That rule also settles the serious case: every
+  // flow that parks money in the wallet mid-way — the two-hop withdrawal, a
+  // locked position moving to the vault, the migration — runs behind a sheet
+  // that CANNOT be closed while its transaction is in flight
+  // (`isDismissable={false}` plus `hideClose`, the rule in every money sheet).
+  // So "nothing on screen" also means "no transaction in flight", and asking the
+  // screen covers the flows written after this line too.
   //
-  // Sin esta guarda, el prompt abría sobre el salto 2 de un retiro ofreciendo
-  // invertir la plata que estaba justo ahí de paso; aceptarlo la devolvía al
-  // vault y el pago rebotaba por saldo, dejando el retiro a medias.
+  // Without the guard the prompt opened over the second leg of a withdrawal,
+  // offering to invest the money that was only passing through; accepting it
+  // sent that money back to the vault and the payment bounced underfunded,
+  // leaving the withdrawal half done.
   const waitingToOpen = shouldPrompt && !dismissed && ourTurn && !open;
-  // Sólo se consulta para ABRIR. Consultada mientras está abierta vería su
-  // propio diálogo y la cerraría en el tick siguiente.
+  // Asked only in order to OPEN. Asked while it is open it would see its own
+  // dialog and close itself on the next tick.
   const modalOnScreen = useModalOnScreen(waitingToOpen);
 
   useEffect(() => {

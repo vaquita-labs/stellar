@@ -161,8 +161,8 @@ export function DepositMethodModal({
         flowKind: 'external_in',
       });
       trackConversion('direct_blend_deposit_successful', numericAmount, token.symbol);
-      // Sin esperar los 60s de staleTime: el header y el PortfolioPanel tienen
-      // que mostrar el nuevo total ya.
+      // Without waiting out the 60s staleTime: the header and the PortfolioPanel
+      // have to show the new total now.
       void invalidateAfterMoneyMove();
       setStep('success');
     } catch (e) {

@@ -55,13 +55,12 @@ export function HomePage() {
   // cambie. useGameClockSync (en Providers) hace el fetch a /api/v1/time.
   const clockReady = useGameClockSynced();
 
-  // Los cuatro modales que este home es dueño de montar reservan su lugar en la
-  // cola ACÁ, antes del gate de `clockReady` de más abajo. Los componentes que
-  // los dibujan viven debajo de ese gate, o sea detrás de un GET /time, y hasta
-  // que el reloj sincroniza las notas de versión —que están en el layout, un
-  // ancestro— ven la cola vacía y alcanzan a mostrar y sacar una nota. Cada uno
-  // libera su lugar cuando sabe si le toca aparecer; el orden entre todos vive
-  // en [[auto-modals]].
+  // The four modals this home owns reserve their place in the queue HERE, above
+  // the `clockReady` gate below. The components that draw them mount under that
+  // gate, one GET /time away, and until the clock syncs the version notes — which
+  // live in the layout, an ancestor — see an empty queue and get as far as
+  // showing a note and taking it away again. Each one gives its place back once
+  // it knows whether it is showing; the order between them is in [[auto-modals]].
   useReserveAutoModalSlot('push-nudge');
   useReserveAutoModalSlot('home-tour');
   useReserveAutoModalSlot('vault-prompt');

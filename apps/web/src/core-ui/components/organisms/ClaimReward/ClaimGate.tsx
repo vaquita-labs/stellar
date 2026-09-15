@@ -13,9 +13,9 @@ import { ClaimRewardModal } from './ClaimRewardModal';
  * con el flag `onboardingCompleted` del backend; al reclamar/saltar se marca
  * para que no vuelva a aparecer.
  *
- * Su lugar en la cola de modales que se abren solos está en [[auto-modals]]:
- * espera al permiso de notificaciones y al tour, y el prompt de dinero ocioso y
- * el badge pendiente esperan a este.
+ * Its place among the modals that open on their own is in [[auto-modals]]: it
+ * waits for the notification ask and the tour, and the idle-money prompt and the
+ * pending badge wait for it.
  */
 export function ClaimGate({ children }: { children: ReactNode }) {
   const isAuthenticated = useIsAuthenticated();
@@ -25,20 +25,20 @@ export function ClaimGate({ children }: { children: ReactNode }) {
 
   const [done, setDone] = useState(false);
 
-  // `isFetchedAfterMount` y no el perfil que ya estaba en cache: se persiste
-  // entre cargas y se revalida al montar, así que la copia vieja puede decir
-  // que el onboarding está cerrado cuando el servidor dice que no. Decidir
-  // sobre ella soltaría el turno antes de que llegue la respuesta fresca, y el
-  // badge se abriría encima del regalo que aparece un instante después.
+  // `isFetchedAfterMount`, not the profile already in the cache: it is persisted
+  // across loads and revalidated on mount, so the stale copy can say onboarding
+  // is closed when the server says it is not. Deciding on that would hand the
+  // turn away before the fresh answer lands, and the badge sheet would open on
+  // top of the gift that appears an instant later.
   const answered = isFetchedAfterMount;
 
   const needsClaim =
     isAuthenticated && answered && !isError && !!data && data.tutorialCompleted && !data.onboardingCompleted && !done;
 
-  // Nadie le reserva el lugar: este gate monta en el layout privado, o sea
-  // antes que el home. Lo retiene mientras el perfil no contesta, y `ourTurn`
-  // es el permiso de notificaciones y el tour ya fuera del camino — el orden
-  // completo vive en [[auto-modals]].
+  // Nobody reserves this one: the gate mounts in the private layout, before the
+  // home does. It holds the slot while the profile has not answered, and
+  // `ourTurn` is the notification ask and the tour being out of the way — the
+  // full order is in [[auto-modals]].
   const ourTurn = useAutoModalSlot('welcome-claim', answered && !needsClaim);
 
   const showClaim = needsClaim && ourTurn;
