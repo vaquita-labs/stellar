@@ -1,5 +1,5 @@
 -- `nickname` is a public URL segment (/leaderboard/<nickname>, /explore/<nickname>),
--- the key a shareable card resolves a claim by, and — since 20260911_vaquitatag —
+-- the key a shareable card resolves a claim by, and — since 20260911_vaquitag —
 -- the invite code itself, so its character set is a correctness concern, not a
 -- style one. NULL stays legal for profiles that have not chosen one yet.
 --
