@@ -1,13 +1,5 @@
 import type { Locator } from '@playwright/test';
-import {
-  completeUsernamePromptIfShown,
-  createFreshSigner,
-  dismissQueuedModal,
-  expect,
-  openSignedIn,
-  primePage,
-  test,
-} from './fixtures';
+import { clearHome, completeUsernamePromptIfShown, createFreshSigner, expect, openSignedIn, primePage, test } from './fixtures';
 
 /**
  * Home tour: the coach marks a first-time wallet meets on `/home`.
@@ -91,14 +83,13 @@ test.describe('home tour', () => {
 
     await expect(overlay).toHaveCount(0);
 
-    // Ending the tour hands the screen to whatever is next in the queue — on a
-    // fresh wallet, the badge the testnet catalog leaves claimable. What is
-    // asserted below is that the TOUR stopped sealing the button off, not that
-    // nothing ever covers it again.
-    await dismissQueuedModal(page);
-
-    // The home is live again: the button the tour was covering takes a click.
-    expect(await isClickable(deposit)).toBe(true);
+    // The button the tour sealed off takes a click again. Getting there means
+    // clearing the queue, not just the tour: ending it hands the screen to
+    // whatever is next, and on a fresh wallet that is the badge the testnet
+    // catalog leaves claimable. Those gates look at the screen on a 200ms poll,
+    // so dismissing once and checking lands inside the gap as often as not —
+    // `clearHome` keeps clearing until the button answers.
+    await clearHome(page);
   });
 
   test('Skip ends the tour on the first step', async ({ page }) => {
