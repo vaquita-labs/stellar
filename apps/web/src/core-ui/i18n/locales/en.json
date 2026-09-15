@@ -880,6 +880,8 @@
     "vote": "Upvote",
     "voteOwn": "You can't upvote your own report",
     "openImage": "Open image",
+    "readMore": "Read more",
+    "detailTitle": "Report",
     "imageTitle": "Screenshot",
     "voteError": "Could not register your vote",
     "error": "Could not load the board.",

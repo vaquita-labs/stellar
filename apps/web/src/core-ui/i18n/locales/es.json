@@ -880,6 +880,8 @@
     "vote": "Votar",
     "voteOwn": "No puedes votar tu propio reporte",
     "openImage": "Ver imagen",
+    "readMore": "Ver más",
+    "detailTitle": "Reporte",
     "imageTitle": "Captura",
     "voteError": "No se pudo registrar tu voto",
     "error": "No se pudo cargar el board.",
