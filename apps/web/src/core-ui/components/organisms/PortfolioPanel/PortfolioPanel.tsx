@@ -105,6 +105,10 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
     router.push('/portafolio?period=all');
   };
 
+  // The donut opens the movement history. /transactions is a plain route, not
+  // an overlay: the home unmounts and its back goes to /home.
+  const goToTransactions = () => router.push('/transactions');
+
   // Plazos ofrecidos por el token, de menor a mayor: define el orden de la lista
   // y, con él, el color/ícono de cada fila (ver allocationStyles).
   const lockPeriods = useMemo(
@@ -260,8 +264,14 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
             grande y la barra horizontal. Cada opción con fondos es un arco de su
             color (mismos colores que los íconos de la lista). Debajo, la ganancia
             y cuántas opciones se están usando (las vacías son la oportunidad de
-            rendir más). El desglose e interacción viven en la lista de abajo. */}
-        <div className="flex flex-col items-center gap-1.5">
+            rendir más). El desglose vive en la lista de abajo; tocar el donut
+            abre el historial de transacciones. */}
+        <button
+          type="button"
+          onClick={goToTransactions}
+          aria-label={t('transactions.title', 'Transactions')}
+          className="flex flex-col items-center gap-1.5 self-center rounded-2xl px-4 py-1 transition active:scale-[0.98] hover:bg-black/[0.03]"
+        >
           <PortfolioDonut
             segments={rows.map((row) => ({ key: row.key, color: row.style.hex, value: row.amount }))}
             total={totalAmount}
@@ -282,7 +292,7 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
               })}
             </p>
           ) : null}
-        </div>
+        </button>
 
         {/* Distribución: una fila por opción (Ahorros + cada plazo), plana sobre el
             fondo, sin card. Con fondos → toca para ver el detalle; vacía → "Sin
