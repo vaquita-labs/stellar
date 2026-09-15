@@ -950,6 +950,10 @@
       "withdrawalCompleted": {
         "body": "${{amount}} USDC sent to your wallet.",
         "title": "Withdrawal completed"
+      },
+      "transferReceived": {
+        "body": "{{name}} sent you {{amount}} USDC.",
+        "title": "You received money"
       }
     },
     "time": {
@@ -2459,6 +2463,17 @@
     "success": {
       "subtitle": "Your USDC is now locked and earning.",
       "title": "Invested!"
+    }
+  },
+  "transferReceived": {
+    "modal": {
+      "title": "You received money",
+      "single": "{{name}} sent you",
+      "several": "You received {{count}} payments while you were away.",
+      "total": "Total",
+      "inBalance": "It is already in your balance.",
+      "viewWallet": "View wallet",
+      "gotIt": "Got it"
     }
   }
 }

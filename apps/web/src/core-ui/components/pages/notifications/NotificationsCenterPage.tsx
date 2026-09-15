@@ -47,6 +47,7 @@ const MESSAGE_ICONS: Record<string, React.ReactNode> = {
   depositConfirmed: <FiArrowDownLeft className="h-5 w-5" />,
   withdrawalCompleted: <FiArrowUpRight className="h-5 w-5" />,
   depositUnlocked: <FiUnlock className="h-5 w-5" />,
+  transferReceived: <FiArrowDownLeft className="h-5 w-5" />,
 };
 
 const notificationIcon = (n: AppNotification): React.ReactNode =>

@@ -950,6 +950,10 @@
       "withdrawalCompleted": {
         "body": "Se enviaron ${{amount}} USDC a tu billetera.",
         "title": "Retiro completado"
+      },
+      "transferReceived": {
+        "body": "{{name}} te envió {{amount}} USDC.",
+        "title": "Recibiste dinero"
       }
     },
     "time": {
@@ -2459,6 +2463,17 @@
     "success": {
       "subtitle": "Tu USDC ya está bloqueado y generando.",
       "title": "¡Invertido!"
+    }
+  },
+  "transferReceived": {
+    "modal": {
+      "title": "Recibiste dinero",
+      "single": "{{name}} te envió",
+      "several": "Recibiste {{count}} pagos mientras no estabas.",
+      "total": "Total",
+      "inBalance": "Ya está en tu saldo.",
+      "viewWallet": "Ver billetera",
+      "gotIt": "Entendido"
     }
   }
 }

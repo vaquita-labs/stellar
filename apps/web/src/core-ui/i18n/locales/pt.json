@@ -950,6 +950,10 @@
       "withdrawalCompleted": {
         "body": "${{amount}} USDC enviados para sua carteira.",
         "title": "Saque concluído"
+      },
+      "transferReceived": {
+        "body": "{{name}} te enviou {{amount}} USDC.",
+        "title": "Você recebeu dinheiro"
       }
     },
     "time": {
@@ -2459,6 +2463,17 @@
     "success": {
       "subtitle": "Seu USDC já está bloqueado e rendendo.",
       "title": "Investido!"
+    }
+  },
+  "transferReceived": {
+    "modal": {
+      "title": "Você recebeu dinheiro",
+      "single": "{{name}} te enviou",
+      "several": "Você recebeu {{count}} pagamentos enquanto estava fora.",
+      "total": "Total",
+      "inBalance": "Já está no seu saldo.",
+      "viewWallet": "Ver carteira",
+      "gotIt": "Entendi"
     }
   }
 }

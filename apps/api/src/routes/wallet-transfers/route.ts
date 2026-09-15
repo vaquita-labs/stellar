@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getTokenBySymbol,
   isSelfTransfer,
+  notifyTransferReceived,
   prismaWalletTransferRepository,
   recordWalletTransfer,
   sendError,
@@ -82,6 +83,11 @@ router.post('/', requireSessionWallet, async (req, res) => {
     // Detached, like the vault-flow handler. The payment moved USDC out of the
     // sender's wallet, so the snapshot every balance read serves is now stale.
     refreshWalletBalanceAfterEvent(walletAddress, req.log, 'wallet-transfer');
+
+    // Detached too: tell a Vaquita receiver the money arrived (notification,
+    // which also opens the "you received money" modal on their next visit, and a
+    // push). A no-op for an outside address or a retried hash; never throws.
+    void notifyTransferReceived(data.transfer, data.inserted);
 
     return sendSuccess(res, { id: data.transfer.id, inserted: data.inserted }, 'wallet transfer recorded');
   } catch (err) {

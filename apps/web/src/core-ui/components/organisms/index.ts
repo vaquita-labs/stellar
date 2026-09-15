@@ -11,6 +11,7 @@ export * from './SavingsStats';
 export * from './BankAPYModal';
 export * from './BridgeModal';
 export * from './ReleaseNotes';
+export * from './TransferReceived';
 export * from './TutorialModal';
 export * from './Tutorial';
 export * from './ClaimReward';
