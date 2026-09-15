@@ -197,6 +197,12 @@ export function InvestModal({
   };
 
   // --- Paso: monto -----------------------------------------------------------
+  // Invertir es un depósito: el piso se dice como mínimo de depósito, no de
+  // retiro, y se pinta en rojo por debajo, igual que en el retiro.
+  const belowMinimum = numericAmount > 0 && numericAmount < MIN_USDC;
+  const minimumHint = t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
+    amount: formatTokenPrecise(MIN_USDC, 2),
+  });
   const amountStep = (
     <div className="flex flex-col gap-2.5">
       <AmountStep
@@ -211,11 +217,15 @@ export function InvestModal({
         // "Available" = invertir todo lo pasivo: el retiro previo de Blend usa el
         // sentinel, no el monto tecleado.
         onMax={() => setIsMax(true)}
-        error={overBalance ? t('withdraw.exceedsBalance', "That's more than you have available.") : null}
+        error={
+          overBalance
+            ? t('withdraw.exceedsBalance', "That's more than you have available.")
+            : belowMinimum
+              ? minimumHint
+              : null
+        }
         onErrorClear={() => setOverBalance(false)}
-        hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
-          amount: formatTokenPrecise(MIN_USDC, 2),
-        })}
+        hint={minimumHint}
       >
         {/* Selector de PLAZO/APY: cambiás con swipe vertical (o rueda), o tap para
             la lista completa. El ⇅ lo sugiere. Texto corto: plazo + APY. */}
