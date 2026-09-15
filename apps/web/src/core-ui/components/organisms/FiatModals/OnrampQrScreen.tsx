@@ -21,8 +21,8 @@ interface OnrampQrScreenProps {
   onRestart: () => void;
   /** Abandonar un código que TODAVÍA sirve, a pedido del usuario. */
   onCancel: () => void;
-  /** The user says they already paid from their bank. */
-  onPaid: () => void;
+  /** A provider check is running right now because the user came back to the app. */
+  checking: boolean;
 }
 
 /**
@@ -43,7 +43,7 @@ export function OnrampQrScreen({
   now,
   onRestart,
   onCancel,
-  onPaid,
+  checking,
 }: OnrampQrScreenProps) {
   const { t } = useTranslation();
   const [qrFile, setQrFile] = useState<File | null>(null);
@@ -185,7 +185,9 @@ export function OnrampQrScreen({
             user does not mistake for frozen after paying from the bank. */}
         <p className="flex items-center gap-2 text-xs font-semibold text-black" aria-live="polite">
           <Spinner size="sm" color="current" />
-          {t('wallet.fiat.onramp.waitingPayment', 'Waiting for your payment…')}
+          {checking
+            ? t('wallet.fiat.onramp.checkingPayment', 'Checking your payment…')
+            : t('wallet.fiat.onramp.waitingPayment', 'Waiting for your payment…')}
         </p>
 
         {label && (
@@ -244,12 +246,6 @@ export function OnrampQrScreen({
           pagó. El que ya pagó desde el banco y cancela acá vuelve a comprar y
           paga dos veces, con bolivianos de verdad. Por eso lo que se confirma
           es la afirmación —"no lo pagué"— y no la acción. --- */}
-      {!confirmingCancel && (
-        <PressableButton variant="white" size="cta" onClick={onPaid}>
-          {t('wallet.fiat.onramp.paid', 'I already paid')}
-        </PressableButton>
-      )}
-
       {confirmingCancel ? (
         <div className="flex flex-col gap-3 rounded-lg border border-black border-b-2 bg-[#FFF4DD] p-3">
           <p className="text-sm font-bold text-black">{t('wallet.fiat.onramp.cancelTitle', 'Cancel this payment code?')}</p>

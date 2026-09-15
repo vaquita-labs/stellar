@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   advanceOfframpWithdrawal,
+  closeOfframpWithdrawal,
+  listOpenOfframpWithdrawals,
   findOpenOfframpWithdrawal,
   markOfframpWithdrawalTerminal,
   OFFRAMP_ABANDON_GRACE_MS,
@@ -39,6 +41,13 @@ class MemoryOfframpWithdrawalRepository implements OfframpWithdrawalRepository {
         .filter((row) => row.walletAddress === walletAddress && row.status === 'pending')
         .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0] ?? null
     );
+  }
+
+  async listOpenWithProviderForWallet(walletAddress: string, limit: number) {
+    return [...this.rows.values()]
+      .filter((row) => row.walletAddress === walletAddress && row.status === 'pending' && !!row.providerTxId)
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .slice(0, limit);
   }
 
   async update(id: string, patch: Partial<OfframpWithdrawalRecord>) {
@@ -199,5 +208,39 @@ describe('markOfframpWithdrawalTerminal', () => {
 
     expect(failed?.status).toBe('failed');
     expect(failed?.errorReason).toBe('provider never sent the payment');
+  });
+});
+
+describe('open withdrawals checked when the app opens', () => {
+  it('lists only the open ones the provider knows about', async () => {
+    const repo = new MemoryOfframpWithdrawalRepository();
+    const known = await startOfframpWithdrawal(repo, WITHDRAWAL);
+    await advanceOfframpWithdrawal(repo, { walletAddress: 'GABC', id: known.id, providerTxId: 'tx-1', step: 'payout' });
+    // Nunca llegó a la rampa: no hay a quién preguntarle.
+    await startOfframpWithdrawal(repo, WITHDRAWAL);
+
+    const open = await listOpenOfframpWithdrawals(repo, 'GABC', 5, START);
+    expect(open.map((w) => w.id)).toEqual([known.id]);
+  });
+
+  it('closes, instead of offering, one nobody touched in a day', async () => {
+    const repo = new MemoryOfframpWithdrawalRepository();
+    const started = await startOfframpWithdrawal(repo, WITHDRAWAL);
+    await advanceOfframpWithdrawal(repo, { walletAddress: 'GABC', id: started.id, providerTxId: 'tx-1' });
+
+    const later = new Date(START.getTime() + OFFRAMP_ABANDON_GRACE_MS + 1);
+    expect(await listOpenOfframpWithdrawals(repo, 'GABC', 5, later)).toEqual([]);
+    expect((await repo.getById(started.id))?.status).toBe('abandoned');
+  });
+});
+
+describe('closeOfframpWithdrawal', () => {
+  it('says only the first close changed the withdrawal, so the user is told once', async () => {
+    const repo = new MemoryOfframpWithdrawalRepository();
+    const started = await startOfframpWithdrawal(repo, WITHDRAWAL);
+    const args = { walletAddress: 'GABC', id: started.id, status: 'settled' } as const;
+
+    expect((await closeOfframpWithdrawal(repo, args))?.changed).toBe(true);
+    expect((await closeOfframpWithdrawal(repo, args))?.changed).toBe(false);
   });
 });

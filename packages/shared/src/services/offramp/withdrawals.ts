@@ -49,6 +49,8 @@ export interface OfframpWithdrawalRepository {
   getById(id: string): Promise<OfframpWithdrawalRecord | null>;
   /** El retiro sin terminar de esa wallet, si hay alguno. */
   findOpenForWallet(walletAddress: string): Promise<OfframpWithdrawalRecord | null>;
+  /** Los retiros sin terminar que ya tienen id del proveedor, el más reciente primero. */
+  listOpenWithProviderForWallet(walletAddress: string, limit: number): Promise<OfframpWithdrawalRecord[]>;
   update(id: string, patch: Partial<OfframpWithdrawalRecord>): Promise<OfframpWithdrawalRecord>;
 }
 
@@ -154,14 +156,26 @@ export async function markOfframpWithdrawalTerminal(
   repository: OfframpWithdrawalRepository,
   input: MarkOfframpWithdrawalTerminalInput,
 ): Promise<OfframpWithdrawalRecord | null> {
+  return (await closeOfframpWithdrawal(repository, input))?.withdrawal ?? null;
+}
+
+/**
+ * {@link markOfframpWithdrawalTerminal}, diciendo además si este llamado fue el
+ * que lo cerró, para avisarle al usuario una sola vez.
+ */
+export async function closeOfframpWithdrawal(
+  repository: OfframpWithdrawalRepository,
+  input: MarkOfframpWithdrawalTerminalInput,
+): Promise<{ withdrawal: OfframpWithdrawalRecord; changed: boolean } | null> {
   const current = await repository.getById(input.id);
   if (!current || current.walletAddress !== input.walletAddress) return null;
-  if (TERMINAL_OFFRAMP_STATUSES.includes(current.status)) return current;
+  if (TERMINAL_OFFRAMP_STATUSES.includes(current.status)) return { withdrawal: current, changed: false };
 
-  return repository.update(input.id, {
+  const withdrawal = await repository.update(input.id, {
     status: input.status,
     errorReason: input.errorReason ?? null,
   });
+  return { withdrawal, changed: true };
 }
 
 /**
@@ -200,4 +214,34 @@ export async function findOpenOfframpWithdrawal(
     // devuelve como lo que es y se reintenta en la próxima.
     return withdrawal;
   }
+}
+
+/**
+ * Los retiros recientes que siguen abiertos y que el proveedor conoce, para
+ * preguntarle al abrir la app si alguno ya se pagó.
+ *
+ * Uno sin `providerTxId` no tiene a quién preguntarle, así que no se devuelve.
+ * Los que llevan más de {@link OFFRAMP_ABANDON_GRACE_MS} sin moverse se cierran
+ * como abandonados, igual que en {@link findOpenOfframpWithdrawal}.
+ */
+export async function listOpenOfframpWithdrawals(
+  repository: OfframpWithdrawalRepository,
+  walletAddress: string,
+  limit = 5,
+  now: Date = new Date(),
+): Promise<OfframpWithdrawalRecord[]> {
+  const rows = await repository.listOpenWithProviderForWallet(walletAddress, limit);
+  const open: OfframpWithdrawalRecord[] = [];
+  for (const withdrawal of rows) {
+    if (now.getTime() - withdrawal.updatedAt.getTime() <= OFFRAMP_ABANDON_GRACE_MS) {
+      open.push(withdrawal);
+      continue;
+    }
+    try {
+      await markOfframpWithdrawalTerminal(repository, { walletAddress, id: withdrawal.id, status: 'abandoned' });
+    } catch {
+      // Se reintenta en la próxima lectura; mientras tanto no se ofrece.
+    }
+  }
+  return open;
 }

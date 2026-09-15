@@ -81,6 +81,30 @@ export async function advanceWithdrawal(
   }
 }
 
+export interface OpenWithdrawal {
+  id: string;
+  providerTxId: string;
+  amountFiat: string;
+  currency: string;
+  usdcAmount: string;
+  status: string;
+  createdAt: string;
+}
+
+/**
+ * Los retiros recientes todavía abiertos que el proveedor conoce, para
+ * preguntarle al abrir la app si alguno ya se pagó. Vacía también si falla.
+ */
+export async function listOpenWithdrawals(walletAddress: string): Promise<OpenWithdrawal[]> {
+  try {
+    const response = await authFetch(`${base()}/withdrawals/open-list`, { method: 'GET' }, walletAddress);
+    const data = (await response.json().catch(() => null)) as { data?: { withdrawals?: OpenWithdrawal[] } } | null;
+    return data?.data?.withdrawals ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /** Cierra el retiro para que deje de aparecer como en curso. */
 export async function markWithdrawalTerminal(
   walletAddress: string,

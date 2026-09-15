@@ -960,6 +960,14 @@
       "transferReceived": {
         "body": "{{name}} te envió {{amount}} USDC.",
         "title": "Recibiste dinero"
+      },
+      "onrampSettled": {
+        "title": "Depósito completado",
+        "body": "{{amount}} {{currency}} llegaron a tu billetera."
+      },
+      "offrampSettled": {
+        "title": "Retiro completado",
+        "body": "{{amount}} {{currency}} fueron enviados a tu banco."
       }
     },
     "time": {
@@ -1904,10 +1912,9 @@
         "youReceive": "Recibes",
         "maxAmount": "La compra máxima es de {{amount}} {{currency}}.",
         "waitingPayment": "Esperando tu pago…",
-        "paid": "Ya pagué",
-        "confirmingTitle": "Confirmando tu pago",
-        "confirmingBody": "Estamos esperando que tu banco lo confirme. Suele tardar unos minutos. Puedes cerrar: tus USDC caen solos en tu wallet.",
-        "showCode": "Todavía no pagué: mostrar el código"
+        "checkingPayment": "Verificando tu pago…",
+        "checkingTitle": "Verificando si llegó tu pago",
+        "checkingBody": "Tu código venció. Si ya pagaste, lo estamos buscando; esto toma un momento."
       },
       "rail": {
         "ach": "Transferencia bancaria"
@@ -2484,6 +2491,20 @@
       "several": "Recibiste {{count}} pagos mientras no estabas.",
       "total": "Total",
       "inBalance": "Ya está en tu saldo.",
+      "viewWallet": "Ver billetera",
+      "gotIt": "Entendido"
+    }
+  },
+  "rampSettled": {
+    "modal": {
+      "titleDeposit": "Tu depósito se completó",
+      "titleWithdrawal": "Tu retiro se completó",
+      "titleSeveral": "Tus operaciones con el banco se completaron",
+      "paid": "Pagaste {{amount}}",
+      "inBalance": "Ya está en tu saldo.",
+      "sentToBank": "Enviado a tu cuenta bancaria.",
+      "deposit": "Depósito",
+      "withdrawal": "Retiro",
       "viewWallet": "Ver billetera",
       "gotIt": "Entendido"
     }

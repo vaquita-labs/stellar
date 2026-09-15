@@ -65,6 +65,15 @@ export const prismaOfframpWithdrawalRepository: OfframpWithdrawalRepository = {
     return row ? toRecord(row) : null;
   },
 
+  async listOpenWithProviderForWallet(walletAddress, limit) {
+    const rows = await prisma.offrampWithdrawal.findMany({
+      where: { walletAddress, deletedAt: null, status: 'pending', providerTxId: { not: null } },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+    });
+    return rows.map(toRecord);
+  },
+
   async update(id, patch) {
     const row = await prisma.offrampWithdrawal.update({ where: { id }, data: patch });
     return toRecord(row);

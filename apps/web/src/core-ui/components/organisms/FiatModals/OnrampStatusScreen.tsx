@@ -8,7 +8,7 @@ import { PressableButton } from '../../molecules/PressableButton';
 
 interface OnrampStatusScreenProps {
   /** En qué terminó (o en qué sigue) la compra. */
-  screen: 'confirming' | 'processing' | 'settled' | 'failed';
+  screen: 'checking' | 'processing' | 'settled' | 'failed';
   /** USDC acreditado según el ledger, o null cuando nadie puede afirmarlo. */
   receivedUsdc: number | null;
   /** Lo que el usuario pagó, en moneda local. */
@@ -20,8 +20,6 @@ interface OnrampStatusScreenProps {
   onDone: () => void;
   /** Volver a empezar después de un rechazo. */
   onRestart: () => void;
-  /** Back to the QR from "confirming", only while the code still works. */
-  onShowCode?: () => void;
 }
 
 /**
@@ -40,7 +38,6 @@ export function OnrampStatusScreen({
   reason,
   onDone,
   onRestart,
-  onShowCode,
 }: OnrampStatusScreenProps) {
   const { t } = useTranslation();
 
@@ -56,33 +53,26 @@ export function OnrampStatusScreen({
     </p>
   );
 
-  // The user says they paid and the provider has not seen it yet. Bank QR
-  // payments can take a moment to reach the provider, so this waits visibly
-  // instead of leaving the QR up as if nothing had happened.
-  if (screen === 'confirming') {
+  // The code ran out but the provider has not answered yet. A bank QR payment
+  // made in the last seconds can reach the provider after the code expires, so
+  // for a short grace window this keeps looking instead of saying "expired".
+  if (screen === 'checking') {
     return (
       <div className="flex flex-col items-center gap-3 py-6 text-center">
         <Spinner size="lg" color="current" />
-        <p className="text-sm font-bold text-black">{t('wallet.fiat.onramp.confirmingTitle', 'Confirming your payment')}</p>
+        <p className="text-sm font-bold text-black">
+          {t('wallet.fiat.onramp.checkingTitle', 'Checking whether your payment arrived')}
+        </p>
         <p className="text-xs text-gray-500">
           {t(
-            'wallet.fiat.onramp.confirmingBody',
-            'We are waiting for your bank to confirm it. This usually takes a few minutes. You can close this — your USDC lands in your wallet on its own.',
+            'wallet.fiat.onramp.checkingBody',
+            'Your code expired. If you already paid, we are looking for it — this takes a moment.',
           )}
         </p>
         {help}
         <PressableButton variant="success" size="cta" onClick={onDone}>
           {t('wallet.fiat.onramp.close', 'Close')}
         </PressableButton>
-        {onShowCode && (
-          <button
-            type="button"
-            onClick={onShowCode}
-            className="text-xs font-semibold text-gray-500 underline underline-offset-2 hover:text-black"
-          >
-            {t('wallet.fiat.onramp.showCode', 'I have not paid yet — show the code')}
-          </button>
-        )}
       </div>
     );
   }

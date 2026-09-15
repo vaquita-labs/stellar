@@ -1,7 +1,15 @@
 import type { RampTxStatus } from '@pollar/core';
 
 /** En qué pantalla está la compra. */
-export type OnrampScreen = 'paying' | 'confirming' | 'processing' | 'settled' | 'failed' | 'expired';
+export type OnrampScreen = 'paying' | 'checking' | 'processing' | 'settled' | 'failed' | 'expired';
+
+/**
+ * How long after the code runs out the purchase is still looked for before
+ * saying "expired, nothing was charged". A bank QR paid in the last seconds
+ * reaches the provider after the clock hits zero, and telling that user nothing
+ * was charged is how they end up paying twice.
+ */
+export const EXPIRY_GRACE_MS = 3 * 60_000;
 
 export interface FlowInput {
   /** Lo último que dijo el proveedor, o null si todavía no se le preguntó. */
@@ -9,25 +17,18 @@ export interface FlowInput {
   expiresAt: Date | null;
   now: Date;
   /**
-   * The user tapped "I already paid". Until the provider sees the payment the
-   * screen says it is being confirmed instead of showing the QR again — or,
-   * worse, "expired, nothing was charged" to someone who paid near the end.
-   */
-  userSaysPaid?: boolean;
-  /**
    * A `completed` that arrived straight from the QR is held on the processing
    * screen for a moment, so the intermediate state is never skipped.
    */
   holdProcessing?: boolean;
 }
 
-export function screenFor({ providerStatus, expiresAt, now, userSaysPaid, holdProcessing }: FlowInput): OnrampScreen {
+export function screenFor({ providerStatus, expiresAt, now, holdProcessing }: FlowInput): OnrampScreen {
   if (providerStatus === 'completed') return holdProcessing ? 'processing' : 'settled';
   if (providerStatus === 'failed') return 'failed';
   if (providerStatus === 'processing') return 'processing';
-  if (userSaysPaid) return 'confirming';
-  const ranOut = !!expiresAt && expiresAt.getTime() <= now.getTime();
-  return ranOut ? 'expired' : 'paying';
+  if (!expiresAt || expiresAt.getTime() > now.getTime()) return 'paying';
+  return now.getTime() - expiresAt.getTime() < EXPIRY_GRACE_MS ? 'checking' : 'expired';
 }
 
 /** Estados en los que la compra ya terminó, tal como los guarda el servidor. */
@@ -54,7 +55,7 @@ export function terminalStatusFor(screen: OnrampScreen): TerminalOnrampStatus | 
  * cifra para siempre: nada más vuelve a pedirlo.
  */
 export function shouldPoll(screen: OnrampScreen, hasSettleHash = false): boolean {
-  if (screen === 'paying' || screen === 'confirming' || screen === 'processing') return true;
+  if (screen === 'paying' || screen === 'checking' || screen === 'processing') return true;
   return screen === 'settled' && !hasSettleHash;
 }
 

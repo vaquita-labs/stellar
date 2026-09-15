@@ -960,6 +960,14 @@
       "transferReceived": {
         "body": "{{name}} sent you {{amount}} USDC.",
         "title": "You received money"
+      },
+      "onrampSettled": {
+        "title": "Deposit complete",
+        "body": "{{amount}} {{currency}} landed in your wallet."
+      },
+      "offrampSettled": {
+        "title": "Withdrawal complete",
+        "body": "{{amount}} {{currency}} were sent to your bank."
       }
     },
     "time": {
@@ -1904,10 +1912,9 @@
         "youReceive": "You receive",
         "maxAmount": "The maximum purchase is {{amount}} {{currency}}.",
         "waitingPayment": "Waiting for your payment…",
-        "paid": "I already paid",
-        "confirmingTitle": "Confirming your payment",
-        "confirmingBody": "We are waiting for your bank to confirm it. This usually takes a few minutes. You can close this — your USDC lands in your wallet on its own.",
-        "showCode": "I have not paid yet — show the code"
+        "checkingPayment": "Checking your payment…",
+        "checkingTitle": "Checking whether your payment arrived",
+        "checkingBody": "Your code expired. If you already paid, we are looking for it — this takes a moment."
       },
       "rail": {
         "ach": "Bank Transfer"
@@ -2484,6 +2491,20 @@
       "several": "You received {{count}} payments while you were away.",
       "total": "Total",
       "inBalance": "It is already in your balance.",
+      "viewWallet": "View wallet",
+      "gotIt": "Got it"
+    }
+  },
+  "rampSettled": {
+    "modal": {
+      "titleDeposit": "Your deposit is complete",
+      "titleWithdrawal": "Your withdrawal is complete",
+      "titleSeveral": "Your bank transactions are complete",
+      "paid": "You paid {{amount}}",
+      "inBalance": "It is already in your balance.",
+      "sentToBank": "Sent to your bank account.",
+      "deposit": "Deposit",
+      "withdrawal": "Withdrawal",
       "viewWallet": "View wallet",
       "gotIt": "Got it"
     }

@@ -28,6 +28,8 @@ export const AUTO_MODAL_ORDER = [
   'badge-claim',
   /** `TransferReceivedGate` — another user sent money; news, not a decision. */
   'transfer-received',
+  /** `RampSettledGate` — a bank purchase or withdrawal finished while away; news. */
+  'ramp-settled',
   /** `ReleaseNotesGate` — an announcement, so it goes last. */
   'release-notes',
 ] as const;

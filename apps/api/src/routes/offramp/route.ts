@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import {
   advanceOfframpWithdrawal,
+  closeOfframpWithdrawal,
   findOpenOfframpWithdrawal,
-  markOfframpWithdrawalTerminal,
+  listOpenOfframpWithdrawals,
+  notifyRampSettled,
   prismaOfframpWithdrawalRepository,
   sendError,
   sendSuccess,
@@ -65,6 +67,33 @@ router.get('/withdrawals/open', requireSessionWallet, async (req, res) => {
   } catch (err) {
     req.log.error({ err, walletAddress }, 'Failed to read open off-ramp withdrawal');
     return sendError(res, 'Failed to read open off-ramp withdrawal', err, 500);
+  }
+});
+
+/**
+ * Los retiros recientes todavía abiertos que el proveedor conoce, para que la
+ * app le pregunte al abrirse si alguno ya se pagó mientras el usuario no estaba.
+ */
+router.get('/withdrawals/open-list', requireSessionWallet, async (req, res) => {
+  const walletAddress = getSessionWallet(res);
+  req.log.info({ walletAddress }, 'GET /offramp/withdrawals/open-list');
+
+  try {
+    const withdrawals = await listOpenOfframpWithdrawals(prismaOfframpWithdrawalRepository, walletAddress);
+    return sendSuccess(res, {
+      withdrawals: withdrawals.map((withdrawal) => ({
+        id: withdrawal.id,
+        providerTxId: withdrawal.providerTxId ?? '',
+        amountFiat: withdrawal.amountFiat,
+        currency: withdrawal.currency,
+        usdcAmount: withdrawal.usdcAmount ?? '',
+        status: withdrawal.status,
+        createdAt: withdrawal.createdAt.toISOString(),
+      })),
+    });
+  } catch (err) {
+    req.log.error({ err, walletAddress }, 'Failed to list open off-ramp withdrawals');
+    return sendError(res, 'Failed to list open off-ramp withdrawals', err, 500);
   }
 });
 
@@ -174,13 +203,16 @@ router.post('/withdrawals/:id/terminal', requireSessionWallet, async (req, res) 
   }
 
   try {
-    const withdrawal = await markOfframpWithdrawalTerminal(prismaOfframpWithdrawalRepository, {
+    const closed = await closeOfframpWithdrawal(prismaOfframpWithdrawalRepository, {
       walletAddress,
       id,
       status,
       errorReason: asString(errorReason),
     });
-    if (!withdrawal) return sendError(res, 'Withdrawal not found.', null, 404);
+    if (!closed) return sendError(res, 'Withdrawal not found.', null, 404);
+    const { withdrawal, changed } = closed;
+
+    void notifyRampSettled({ kind: 'offramp', row: withdrawal, status: withdrawal.status, changed });
 
     // Sólo un retiro acreditado movió plata on-chain; los otros desenlaces
     // dejan el saldo igual y no justifican una lectura RPC.
