@@ -2417,7 +2417,8 @@
     },
     "positionsTitle": "Tus posiciones",
     "positions": "Posiciones",
-    "seePositions": "Mis posiciones"
+    "seePositions": "Mis posiciones",
+    "seeAllPositions": "Ver todas mis posiciones"
   },
   "txError": {
     "generic": "No pudimos completar la transacción. Intenta de nuevo en un momento.",

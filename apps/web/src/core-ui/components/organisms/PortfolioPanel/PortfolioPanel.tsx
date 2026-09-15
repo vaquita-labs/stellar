@@ -1,6 +1,7 @@
 'use client';
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
+import { sortPositionsByEnd } from '@/core-ui/helpers/positions';
 import { formatTokenPrecise, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useDepositsComplete, useLivePassiveUsdc } from '@/core-ui/hooks';
@@ -229,6 +230,10 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
   const lastDetailRef = useRef<{ allocation: Allocation; index: number } | null>(null);
   if (detailAllocation) lastDetailRef.current = { allocation: detailAllocation, index: detailIndex };
   const detailView = detailAllocation ? { allocation: detailAllocation, index: detailIndex } : lastDetailRef.current;
+  const detailPositions = useMemo(
+    () => sortPositionsByEnd(depositsData?.deposits ?? []).filter((d) => d.lockPeriod === detailView?.allocation.lockPeriod),
+    [depositsData, detailView?.allocation.lockPeriod],
+  );
 
   return (
     <>
@@ -384,7 +389,9 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
           style={getAllocationStyle(detailView.index)}
           tokenSymbol={tokenSymbol}
           portfolioPct={pctOf(detailView.allocation.amount)}
-          onWithdraw={() => goToTerm(detailView.allocation.lockPeriod)}
+          positions={detailPositions}
+          onOpenTerm={() => goToTerm(detailView.allocation.lockPeriod)}
+          onOpenPositions={goToPositions}
         />
       ) : null}
 
