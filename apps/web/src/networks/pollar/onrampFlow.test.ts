@@ -34,9 +34,32 @@ describe('screenFor', () => {
   it('sin vencimiento publicado el código no se da por muerto', () => {
     expect(screenFor({ providerStatus: 'pending', expiresAt: null, now })).toBe('paying');
   });
+
+  it('confirma el pago cuando el usuario dice que pagó y el proveedor todavía no lo vio', () => {
+    expect(screenFor({ providerStatus: 'pending', expiresAt: soon, now, userSaysPaid: true })).toBe('confirming');
+    expect(screenFor({ providerStatus: null, expiresAt: soon, now, userSaysPaid: true })).toBe('confirming');
+  });
+
+  it('nunca dice "vencido" a quien dijo que pagó', () => {
+    expect(screenFor({ providerStatus: 'pending', expiresAt: past, now, userSaysPaid: true })).toBe('confirming');
+  });
+
+  it('lo que diga el proveedor manda sobre lo que dijo el usuario', () => {
+    expect(screenFor({ providerStatus: 'processing', expiresAt: soon, now, userSaysPaid: true })).toBe('processing');
+    expect(screenFor({ providerStatus: 'completed', expiresAt: soon, now, userSaysPaid: true })).toBe('settled');
+    expect(screenFor({ providerStatus: 'failed', expiresAt: soon, now, userSaysPaid: true })).toBe('failed');
+  });
+
+  it('retiene la compra acreditada en "procesando" mientras dura la pausa', () => {
+    expect(screenFor({ providerStatus: 'completed', expiresAt: soon, now, holdProcessing: true })).toBe('processing');
+  });
 });
 
 describe('terminalStatusFor', () => {
+  it('no cierra una compra que el usuario dice haber pagado', () => {
+    expect(terminalStatusFor('confirming')).toBeNull();
+  });
+
   it('traduce a estado guardable sólo las pantallas de las que no se vuelve', () => {
     expect(terminalStatusFor('settled')).toBe('settled');
     expect(terminalStatusFor('failed')).toBe('failed');
@@ -50,6 +73,7 @@ describe('shouldPoll', () => {
   it('sigue preguntando mientras la compra pueda cambiar sola', () => {
     expect(shouldPoll('paying')).toBe(true);
     expect(shouldPoll('processing')).toBe(true);
+    expect(shouldPoll('confirming')).toBe(true);
     expect(shouldPoll('paying', true)).toBe(true);
   });
 

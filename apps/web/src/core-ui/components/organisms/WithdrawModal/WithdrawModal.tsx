@@ -35,6 +35,7 @@ import { AddWalletForm } from './AddWalletForm';
 import { WalletRow } from './WalletRow';
 import { WithdrawModalProps, WithdrawProgressStep, WithdrawStep } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
+import { ProcessingSteps } from '../../molecules/ProcessingSteps';
 
 /**
  * Flujo de retiro del home. Retira de BLEND (nivel líquido normal), y lo que
@@ -714,54 +715,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
   ) : null;
 
   // --- Pasos: procesando / éxito --------------------------------------------
-  const activeIdx = progressSteps.findIndex((s) => s.key === activeStep);
-  const processingStep = (
-    <div className="flex flex-col gap-4 py-3">
-      {/* Stepper vertical conectado: círculos unidos por una línea, así se lee
-          como un proceso (paso 1 → paso 2). Hecho = check verde; en curso =
-          spinner; pendiente = número gris. */}
-      <div className="flex flex-col px-1">
-        {progressSteps.map((s, i) => {
-          const isActive = s.key === activeStep;
-          const isDone = activeIdx > i;
-          const isLast = i === progressSteps.length - 1;
-          return (
-            <div key={s.key} className="flex gap-3">
-              <div className="flex flex-col items-center">
-                <span
-                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-black transition-colors ${
-                    isDone ? 'bg-success' : isActive ? 'bg-white' : 'bg-black/5'
-                  }`}
-                >
-                  {isDone ? (
-                    <FiCheck className="w-4 h-4 text-black" strokeWidth={3} />
-                  ) : isActive ? (
-                    <Spinner size="sm" color="current" />
-                  ) : (
-                    <span className="text-xs font-bold text-gray-400">{i + 1}</span>
-                  )}
-                </span>
-                {!isLast ? (
-                  <span
-                    className={`w-0.5 flex-1 min-h-5 my-1 rounded-full transition-colors ${
-                      isDone ? 'bg-success' : 'bg-black/15'
-                    }`}
-                  />
-                ) : null}
-              </div>
-              <span
-                className={`pt-1.5 text-sm ${
-                  isActive ? 'font-bold text-black' : isDone ? 'text-gray-500' : 'text-gray-400'
-                }`}
-              >
-                {s.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  const processingStep = <ProcessingSteps steps={progressSteps} activeKey={activeStep} />;
 
   const successStep = (
     <div className="flex flex-col items-center justify-center gap-4 py-10">

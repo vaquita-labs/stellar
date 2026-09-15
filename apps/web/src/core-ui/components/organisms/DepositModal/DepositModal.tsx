@@ -1,13 +1,15 @@
 'use client';
 
 import { isNewDepositHandled } from '@/networks/helpers';
+import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { parsePoolErrorMessage } from '@/networks/stellar/poolQueries';
-import { Description, Label, ListBox, Select, Spinner, toast } from '@heroui/react';
+import { Description, Label, ListBox, Select, Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
-import Image from 'next/image';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FiCheck } from 'react-icons/fi';
 import { v4 } from 'uuid';
 import {
   MONEY_INPUT_DECIMALS,
@@ -17,10 +19,12 @@ import {
   MIN_USDC,
   truncateDecimals,
 } from '../../../helpers';
-import { useAnalytics, useRestDeposit, useTransactions } from '../../../hooks';
+import { useAnalytics, useInvalidateAfterMoneyMove, useRestDeposit, useTransactions } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
+import { ErrorNotice } from '../../molecules/ErrorNotice';
+import { ProcessingSteps } from '../../molecules/ProcessingSteps';
 import { DepositModalProps } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
 
@@ -47,6 +51,14 @@ export function DepositModal({
   const { getNextNonce, createDeposit, confirmDeposit, failDeposit } = useRestDeposit();
   const { transactionDeposit } = useTransactions();
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
+  const invalidateAfterMoneyMove = useInvalidateAfterMoneyMove();
+  // form → processing → success. Failing goes back to the form with the error
+  // under it, so the user can retry without re-typing the amount.
+  const [phase, setPhase] = useState<'form' | 'processing' | 'success'>('form');
+  const [activeStep, setActiveStep] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const txPending = isTxPendingError(error);
+  const genericError = t('withdraw.error.generic', 'Something went wrong');
   // En modo tutorial el lock es local (no toca el config global) y se ofrece una
   // sola opción de pocos segundos; en modo normal salen los lock periods reales.
   const lockTimeOptions = simulate
@@ -91,6 +103,17 @@ export function DepositModal({
   useEffect(() => {
     if (open && walletAddress) void refreshWalletBalance();
   }, [open, walletAddress, refreshWalletBalance]);
+  // Every open starts clean: the last deposit's success or error is not news.
+  // Adjusted while rendering rather than in an effect, so the stale screen is
+  // never painted for a frame.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setPhase('form');
+      setError(null);
+    }
+  }
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
@@ -108,28 +131,29 @@ export function DepositModal({
       return;
     }
 
-    {
-      setIsDepositing(true);
-      let lastError: unknown = null;
+    setIsDepositing(true);
+    setError(null);
+    setPhase('processing');
+    setActiveStep('preparing');
 
-      // Track deposit attempt
-      trackUserAction('deposit_attempted', {
-        amount,
-        token: token?.symbol,
-        lockPeriod,
-        network: network?.networkName,
-      });
+    trackUserAction('deposit_attempted', {
+      amount,
+      token: token?.symbol,
+      lockPeriod,
+      network: network?.networkName,
+    });
 
-      let isSuccess = false;
+    // Everything that can fail lives inside the try: a throw outside it used to
+    // leave the sheet spinning forever with no way to retry.
+    try {
       if (isNewDepositHandled(network?.networkName)) {
-        onOpenChange();
+        setActiveStep('sending');
         const { success, error } = await transactionDeposit('0', amount, lockPeriod);
-        isSuccess = !!success;
-        lastError = error ?? null;
+        if (!success) throw error ?? new Error(genericError);
       } else {
         // Per-wallet nonce → the pool derives the position id as sha256(caller || nonce).
         const nonce = await getNextNonce();
-        if (!nonce) throw new Error('Could not allocate a deposit nonce');
+        if (!nonce) throw new Error(genericError);
         const newDeposit = await createDeposit({
           amount,
           tokenSymbol: token.symbol,
@@ -137,84 +161,127 @@ export function DepositModal({
           vaquitaContract: token?.vaquitaContractAddress,
           nonce,
         });
-        if (newDeposit.success) {
-          const { success, txHash, transaction, depositIdHex, error } = await transactionDeposit(
-            nonce,
-            amount,
-            lockPeriod
-          );
-          lastError = error ?? null;
-          if (success) {
-            await confirmDeposit({
-              id: newDeposit.id,
-              txHash,
-              depositIdHex,
-              transactionRaw: JSON.stringify(transaction, (key, value) =>
-                typeof value === 'bigint' ? value.toString() : value
-              ),
-            });
-            isSuccess = !!success;
-          } else {
+        if (!newDeposit.success) throw new Error(genericError);
+
+        setActiveStep('sending');
+        const { success, txHash, transaction, depositIdHex, error } = await transactionDeposit(
+          nonce,
+          amount,
+          lockPeriod,
+        );
+        if (!success) {
+          // A transaction still confirming is not a failure: it may land, so the
+          // row stays processing instead of being marked failed under it.
+          if (!isTxPendingError(error)) {
             await failDeposit({
               id: newDeposit.id,
               txHash: txHash || 'fail_' + v4(),
               depositIdHex,
               transactionRaw: JSON.stringify({ transaction, error }, (key, value) =>
-                typeof value === 'bigint' ? value.toString() : value
+                typeof value === 'bigint' ? value.toString() : value,
               ),
-            });
+            }).catch(() => undefined);
           }
+          throw error ?? new Error(genericError);
         }
+
+        setActiveStep('confirming');
+        // The money is already locked on chain here; a refused confirm only
+        // delays the row, so it does not turn the deposit into an error.
+        await confirmDeposit({
+          id: newDeposit.id,
+          txHash,
+          depositIdHex,
+          transactionRaw: JSON.stringify(transaction, (key, value) =>
+            typeof value === 'bigint' ? value.toString() : value,
+          ),
+        }).catch(() => undefined);
       }
 
-      if (isSuccess) {
-        // Track successful conversion
-        trackConversion('deposit_successful', amount, token?.symbol);
-        trackUserAction('deposit_completed', {
-          amount,
-          token: token?.symbol,
-          lockPeriod,
-          network: network?.networkName,
-        });
-        toast.success(t('deposit.toast.successTitle', 'Deposit successful!'), {
-          indicator: (
-            <Image
-              src="/icons/global/coin.png"
-              alt=""
-              width={30}
-              height={30}
-              className="drop-shadow-sm"
-            />
-          ),
-          description: t(
-            'deposit.toast.successDescription',
-            'Your savings are on their way! This may take a few seconds. Everything will be ready in a moment.',
-          ),
-          timeout: 6000,
-        });
-        onOpenChange();
-      } else {
-        // Track failed conversion
-        trackError('deposit_failed', {
-          amount,
-          token: token?.symbol,
-          lockPeriod,
-          network: network?.networkName,
-        });
-        const poolMsg = parsePoolErrorMessage(lastError);
-        toast.danger(t('deposit.toast.errorTitle', "Deposit didn't go through"), {
-          indicator: <Image src="/vaquita/error.svg" alt="" width={32} height={32} />,
-          description: poolMsg
-            ? poolMsg
-            : lastError instanceof Error
-              ? lastError.message
-              : undefined,
-          timeout: 3000,
-        });
-      }
+      trackConversion('deposit_successful', amount, token?.symbol);
+      trackUserAction('deposit_completed', {
+        amount,
+        token: token?.symbol,
+        lockPeriod,
+        network: network?.networkName,
+      });
+      void invalidateAfterMoneyMove();
+      setPhase('success');
+    } catch (e) {
+      trackError('deposit_failed', {
+        amount,
+        token: token?.symbol,
+        lockPeriod,
+        network: network?.networkName,
+      });
+      const poolMsg = parsePoolErrorMessage(e);
+      setError(poolMsg && !isTxPendingError(e) ? new Error(poolMsg) : (e ?? new Error(genericError)));
+      setPhase('form');
+    } finally {
       setIsDepositing(false);
+      setActiveStep(null);
     }
   };
+
+  const depositSteps = [
+    { key: 'preparing', label: t('deposit.modal.steps.preparing', 'Preparing your deposit') },
+    { key: 'sending', label: t('deposit.modal.steps.sending', 'Sending it to the network') },
+    { key: 'confirming', label: t('deposit.modal.steps.confirming', 'Confirming your deposit') },
+  ];
+
+  const successStep = (
+    <div className="flex flex-col items-center justify-center gap-4 py-10">
+      <motion.div
+        initial={{ scale: 0, rotate: -30 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+        className="flex items-center justify-center w-20 h-20 rounded-full bg-success border border-black border-b-4"
+      >
+        <FiCheck className="w-10 h-10 text-black" strokeWidth={3} />
+      </motion.div>
+      <p className="text-lg font-bold text-black">{t('deposit.toast.successTitle', 'Deposit successful!')}</p>
+      <p className="text-sm text-gray-500 text-center">
+        {t(
+          'deposit.toast.successDescription',
+          'Your savings are on their way! This may take a few seconds. Everything will be ready in a moment.',
+        )}
+      </p>
+    </div>
+  );
+
+  const footer =
+    phase === 'processing' ? (
+      <p className="w-full text-center text-xs text-gray-500">
+        {t('deposit.modal.processingHint', "This may take up to a minute. Please don't close the app.")}
+      </p>
+    ) : phase === 'success' ? (
+      <PressableButton variant="success" size="cta" onClick={onOpenChange}>
+        {t('common.done', 'Done')}
+      </PressableButton>
+    ) : txPending ? (
+      // Con la transacción en vuelo el único botón honesto es cerrar: reintentar
+      // mandaría un segundo depósito mientras el primero todavía puede entrar.
+      <PressableButton variant="white" size="cta" onClick={onOpenChange}>
+        {t('common.close', 'Close')}
+      </PressableButton>
+    ) : (
+      <PressableButton
+        variant="success"
+        size="cta"
+        onClick={() => handleDeposit(isMax ? balanceFormatted : Number(amount))}
+        disabled={isDisabled || isDepositing}
+      >
+        {isDepositing ? (
+          <>
+            <Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}
+          </>
+        ) : error ? (
+          t('common.retry', 'Retry')
+        ) : (
+          t('deposit.modal.title', 'Deposit')
+        )}
+      </PressableButton>
+    );
 
   return (
     <AppModal
@@ -228,17 +295,17 @@ export function DepositModal({
       titleIconAlt="deposit"
       size="md"
       bodyClassName="flex flex-col gap-4 pb-6"
-      footer={
-        <PressableButton
-          variant="success"
-          size="cta"
-          onClick={() => handleDeposit(isMax ? balanceFormatted : Number(amount))}
-          disabled={isDisabled || isDepositing}
-        >
-          {isDepositing ? <><Spinner size="sm" color="current" /> {t('deposit.processing', 'Processing...')}</> : t('deposit.modal.title', 'Deposit')}
-        </PressableButton>
-      }
+      // Mientras la plata está en vuelo no hay X: cerrar a mitad de camino es lo
+      // que hace creer que el depósito falló o no se registró.
+      hideClose={phase === 'processing'}
+      footer={footer}
     >
+      {phase === 'processing' ? (
+        <ProcessingSteps steps={depositSteps} activeKey={activeStep} />
+      ) : phase === 'success' ? (
+        successStep
+      ) : (
+        <>
           <Select
             isRequired
             value={effectiveLockPeriod.toString()}
@@ -308,6 +375,9 @@ export function DepositModal({
               </Link>
             )}
           </div>
+          {error ? <ErrorNotice error={error} /> : null}
+        </>
+      )}
     </AppModal>
   );
 }

@@ -520,7 +520,13 @@
       "lockDescription": "The funds will be lock in the vault during the selected period.",
       "lockSeconds": "{{count}} seconds",
       "lockTime": "Lock time",
-      "title": "Deposit"
+      "title": "Deposit",
+      "steps": {
+        "preparing": "Preparing your deposit",
+        "sending": "Sending it to the network",
+        "confirming": "Confirming your deposit"
+      },
+      "processingHint": "This may take up to a minute. Please don't close the app."
     },
     "panel": {
       "paused": "Deposits are temporarily paused",
@@ -1896,7 +1902,12 @@
         "working": "Preparing your purchase…",
         "youPay": "You pay",
         "youReceive": "You receive",
-        "maxAmount": "The maximum purchase is {{amount}} {{currency}}."
+        "maxAmount": "The maximum purchase is {{amount}} {{currency}}.",
+        "waitingPayment": "Waiting for your payment…",
+        "paid": "I already paid",
+        "confirmingTitle": "Confirming your payment",
+        "confirmingBody": "We are waiting for your bank to confirm it. This usually takes a few minutes. You can close this — your USDC lands in your wallet on its own.",
+        "showCode": "I have not paid yet — show the code"
       },
       "rail": {
         "ach": "Bank Transfer"
@@ -2463,7 +2474,8 @@
     "success": {
       "subtitle": "Your USDC is now locked and earning.",
       "title": "Invested!"
-    }
+    },
+    "fundsInWallet": "Your money is safe: it left your savings and is in your wallet balance. You can lock it from there."
   },
   "transferReceived": {
     "modal": {

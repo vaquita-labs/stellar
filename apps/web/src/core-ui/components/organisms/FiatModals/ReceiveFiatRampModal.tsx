@@ -61,6 +61,13 @@ const SETTLE_HASH_WAIT_MS = 90_000;
 const TICK_MS = 1000;
 
 /**
+ * How long a purchase that settled straight from the QR stays on the processing
+ * screen. Without it a fast provider jumps from the code to "done" and the user
+ * never sees that their payment was received and was being worked on.
+ */
+const PROCESSING_HOLD_MS = 1500;
+
+/**
  * Elegir cuánto gastar, los datos que pida el proveedor, y pagar el QR.
  * `verifying` se cuela entre los datos y el QR cuando el proveedor no vende
  * hasta haber verificado al usuario.
@@ -124,6 +131,11 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // Horizon, which is the only place it exists.
   const [settleHash, setSettleHash] = useState<string | null>(null);
   const [creditedUsdc, setCreditedUsdc] = useState<number | null>(null);
+  // The user tapped "I already paid": the QR gives way to "confirming your
+  // payment" until the provider sees it.
+  const [userSaysPaid, setUserSaysPaid] = useState(false);
+  // Until when a purchase that settled straight from the QR stays on processing.
+  const [holdUntil, setHoldUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => new Date());
   const closed = useRef<string | null>(null);
   // Se incrementa para forzar una cotización nueva sobre el MISMO monto, que es
@@ -371,7 +383,8 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // Qué pantalla corresponde sale de una sola función pura sobre lo que dijo el
   // proveedor y el reloj: acá no se decide nada.
   const expiresAt = instructions?.expiresAt ?? null;
-  const screen: OnrampScreen = screenFor({ providerStatus, expiresAt, now });
+  const holdProcessing = holdUntil != null && now.getTime() < holdUntil;
+  const screen: OnrampScreen = screenFor({ providerStatus, expiresAt, now, userSaysPaid, holdProcessing });
 
   // El pago ya está confirmado y la pantalla lo dice, pero el USDC entra
   // después: hasta que llegue, el saldo del header muestra un número que
@@ -382,7 +395,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   const startPendingCredit = usePendingCreditStore((s) => s.startPendingCredit);
   useEffect(() => {
     if (!open || phase !== 'paying') return;
-    if (screen !== 'processing' && screen !== 'settled') return;
+    if (screen !== 'confirming' && screen !== 'processing' && screen !== 'settled') return;
     startPendingCredit();
   }, [open, phase, screen, startPendingCredit]);
   const receivedUsdc = providerAmount ? receivedUsdcFrom(providerAmount, creditedUsdc) : creditedUsdc;
@@ -407,6 +420,9 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         try {
           const tx = await readOnrampTransaction(txId);
           if (cancelled) return;
+          if (tx.status === 'completed' && (screen === 'paying' || screen === 'confirming')) {
+            setHoldUntil(Date.now() + PROCESSING_HOLD_MS);
+          }
           setProviderStatus(tx.status);
           setProviderAmount({ amount: tx.amount, currency: tx.currency });
           setSettleHash(tx.stellarTxHash ?? null);
@@ -647,6 +663,8 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     setPaid(null);
     setSettleHash(null);
     setCreditedUsdc(null);
+    setUserSaysPaid(false);
+    setHoldUntil(null);
     closed.current = null;
     setInstructions(null);
     setUnrecorded(false);
@@ -681,7 +699,13 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         onClick={() => void handleBuy()}
         disabled={!fieldsValid || !usable || busy || !walletAddress}
       >
-        {busy ? t('wallet.fiat.onramp.working', 'Preparing your purchase…') : t('wallet.fiat.onramp.cta', 'Buy USDC')}
+        {busy ? (
+          <span className="flex items-center justify-center gap-2">
+            <Spinner size="sm" color="current" /> {t('wallet.fiat.onramp.working', 'Preparing your purchase…')}
+          </span>
+        ) : (
+          t('wallet.fiat.onramp.cta', 'Buy USDC')
+        )}
       </PressableButton>
     );
 
@@ -884,20 +908,23 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           now={now}
           onRestart={restart}
           onCancel={cancel}
+          onPaid={() => setUserSaysPaid(true)}
         />
       )}
 
       {/* --- Después de pagar: acreditando, acreditada o rechazada. --- */}
-      {phase === 'paying' && (screen === 'processing' || screen === 'settled' || screen === 'failed') && (
-        <OnrampStatusScreen
-          screen={screen}
-          receivedUsdc={receivedUsdc}
-          amountFiat={paid?.amount ?? amountFiat}
-          currency={paid?.currency ?? currency}
-          onDone={onOpenChange}
-          onRestart={restart}
-        />
-      )}
+      {phase === 'paying' &&
+        (screen === 'confirming' || screen === 'processing' || screen === 'settled' || screen === 'failed') && (
+          <OnrampStatusScreen
+            screen={screen}
+            receivedUsdc={receivedUsdc}
+            amountFiat={paid?.amount ?? amountFiat}
+            currency={paid?.currency ?? currency}
+            onDone={onOpenChange}
+            onRestart={restart}
+            {...(expiresAt && now.getTime() < expiresAt.getTime() ? { onShowCode: () => setUserSaysPaid(false) } : {})}
+          />
+        )}
 
       {unrecorded && (
         <p className="rounded-md border border-black border-b-2 bg-[#FFF4DD] px-3 py-2 text-xs font-semibold text-black">

@@ -8,7 +8,7 @@ import { PressableButton } from '../../molecules/PressableButton';
 
 interface OnrampStatusScreenProps {
   /** En qué terminó (o en qué sigue) la compra. */
-  screen: 'processing' | 'settled' | 'failed';
+  screen: 'confirming' | 'processing' | 'settled' | 'failed';
   /** USDC acreditado según el ledger, o null cuando nadie puede afirmarlo. */
   receivedUsdc: number | null;
   /** Lo que el usuario pagó, en moneda local. */
@@ -20,6 +20,8 @@ interface OnrampStatusScreenProps {
   onDone: () => void;
   /** Volver a empezar después de un rechazo. */
   onRestart: () => void;
+  /** Back to the QR from "confirming", only while the code still works. */
+  onShowCode?: () => void;
 }
 
 /**
@@ -38,8 +40,52 @@ export function OnrampStatusScreen({
   reason,
   onDone,
   onRestart,
+  onShowCode,
 }: OnrampStatusScreenProps) {
   const { t } = useTranslation();
+
+  const help = (
+    <p className="text-[11px] text-gray-400">
+      {t('wallet.fiat.onramp.processingHelp', "If it hasn't arrived after 15 minutes, keep your bank receipt and write to us:")}{' '}
+      {/* La casilla sale de `supportEmail()`, no escrita a mano: es la misma
+          que usa el Concierge y se cambia por entorno con
+          NEXT_PUBLIC_SUPPORT_EMAIL, sin tocar esta pantalla. */}
+      <a href={`mailto:${supportEmail()}`} className="font-semibold text-primary">
+        {supportEmail()}
+      </a>
+    </p>
+  );
+
+  // The user says they paid and the provider has not seen it yet. Bank QR
+  // payments can take a moment to reach the provider, so this waits visibly
+  // instead of leaving the QR up as if nothing had happened.
+  if (screen === 'confirming') {
+    return (
+      <div className="flex flex-col items-center gap-3 py-6 text-center">
+        <Spinner size="lg" color="current" />
+        <p className="text-sm font-bold text-black">{t('wallet.fiat.onramp.confirmingTitle', 'Confirming your payment')}</p>
+        <p className="text-xs text-gray-500">
+          {t(
+            'wallet.fiat.onramp.confirmingBody',
+            'We are waiting for your bank to confirm it. This usually takes a few minutes. You can close this — your USDC lands in your wallet on its own.',
+          )}
+        </p>
+        {help}
+        <PressableButton variant="success" size="cta" onClick={onDone}>
+          {t('wallet.fiat.onramp.close', 'Close')}
+        </PressableButton>
+        {onShowCode && (
+          <button
+            type="button"
+            onClick={onShowCode}
+            className="text-xs font-semibold text-gray-500 underline underline-offset-2 hover:text-black"
+          >
+            {t('wallet.fiat.onramp.showCode', 'I have not paid yet — show the code')}
+          </button>
+        )}
+      </div>
+    );
+  }
 
   if (screen === 'processing') {
     return (
@@ -56,18 +102,7 @@ export function OnrampStatusScreen({
             modal, así que tiene que alcanzarle con leerla una vez: qué esperar,
             hasta cuándo, y qué hacer si no pasa. El comprobante del banco es lo
             único que permite rastrear un pago que no acreditó. */}
-        <p className="text-[11px] text-gray-400">
-          {t(
-            'wallet.fiat.onramp.processingHelp',
-            "If it hasn't arrived after 15 minutes, keep your bank receipt and write to us:",
-          )}{' '}
-          {/* La casilla sale de `supportEmail()`, no escrita a mano: es la misma
-              que usa el Concierge y se cambia por entorno con
-              NEXT_PUBLIC_SUPPORT_EMAIL, sin tocar esta pantalla. */}
-          <a href={`mailto:${supportEmail()}`} className="font-semibold text-primary">
-            {supportEmail()}
-          </a>
-        </p>
+        {help}
         <PressableButton variant="success" size="cta" onClick={onDone}>
           {t('wallet.fiat.onramp.close', 'Close')}
         </PressableButton>

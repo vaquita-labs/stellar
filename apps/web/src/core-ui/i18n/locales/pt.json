@@ -520,7 +520,13 @@
       "lockDescription": "Os fundos ficarão bloqueados no cofre durante o período selecionado.",
       "lockSeconds": "{{count}} segundos",
       "lockTime": "Tempo de bloqueio",
-      "title": "Depositar"
+      "title": "Depositar",
+      "steps": {
+        "preparing": "Preparando seu depósito",
+        "sending": "Enviando para a rede",
+        "confirming": "Confirmando seu depósito"
+      },
+      "processingHint": "Pode levar até um minuto. Não feche o app."
     },
     "panel": {
       "paused": "Os depósitos estão pausados temporariamente",
@@ -1924,7 +1930,12 @@
         "working": "Preparando sua compra…",
         "youPay": "Você paga",
         "youReceive": "Você recebe",
-        "maxAmount": "A compra máxima é de {{amount}} {{currency}}."
+        "maxAmount": "A compra máxima é de {{amount}} {{currency}}.",
+        "waitingPayment": "Aguardando seu pagamento…",
+        "paid": "Já paguei",
+        "confirmingTitle": "Confirmando seu pagamento",
+        "confirmingBody": "Estamos aguardando a confirmação do seu banco. Costuma levar alguns minutos. Você pode fechar — seus USDC caem sozinhos na sua carteira.",
+        "showCode": "Ainda não paguei — mostrar o código"
       },
       "rail": {
         "ach": "Transferência bancária"
@@ -2463,7 +2474,8 @@
     "success": {
       "subtitle": "Seu USDC já está bloqueado e rendendo.",
       "title": "Investido!"
-    }
+    },
+    "fundsInWallet": "Seu dinheiro está seguro: saiu das suas economias e está no saldo da sua carteira. Você pode bloqueá-lo a partir dali."
   },
   "transferReceived": {
     "modal": {

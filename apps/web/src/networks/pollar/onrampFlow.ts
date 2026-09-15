@@ -1,19 +1,31 @@
 import type { RampTxStatus } from '@pollar/core';
 
 /** En qué pantalla está la compra. */
-export type OnrampScreen = 'paying' | 'processing' | 'settled' | 'failed' | 'expired';
+export type OnrampScreen = 'paying' | 'confirming' | 'processing' | 'settled' | 'failed' | 'expired';
 
 export interface FlowInput {
   /** Lo último que dijo el proveedor, o null si todavía no se le preguntó. */
   providerStatus: RampTxStatus | null;
   expiresAt: Date | null;
   now: Date;
+  /**
+   * The user tapped "I already paid". Until the provider sees the payment the
+   * screen says it is being confirmed instead of showing the QR again — or,
+   * worse, "expired, nothing was charged" to someone who paid near the end.
+   */
+  userSaysPaid?: boolean;
+  /**
+   * A `completed` that arrived straight from the QR is held on the processing
+   * screen for a moment, so the intermediate state is never skipped.
+   */
+  holdProcessing?: boolean;
 }
 
-export function screenFor({ providerStatus, expiresAt, now }: FlowInput): OnrampScreen {
-  if (providerStatus === 'completed') return 'settled';
+export function screenFor({ providerStatus, expiresAt, now, userSaysPaid, holdProcessing }: FlowInput): OnrampScreen {
+  if (providerStatus === 'completed') return holdProcessing ? 'processing' : 'settled';
   if (providerStatus === 'failed') return 'failed';
   if (providerStatus === 'processing') return 'processing';
+  if (userSaysPaid) return 'confirming';
   const ranOut = !!expiresAt && expiresAt.getTime() <= now.getTime();
   return ranOut ? 'expired' : 'paying';
 }
@@ -42,7 +54,7 @@ export function terminalStatusFor(screen: OnrampScreen): TerminalOnrampStatus | 
  * cifra para siempre: nada más vuelve a pedirlo.
  */
 export function shouldPoll(screen: OnrampScreen, hasSettleHash = false): boolean {
-  if (screen === 'paying' || screen === 'processing') return true;
+  if (screen === 'paying' || screen === 'confirming' || screen === 'processing') return true;
   return screen === 'settled' && !hasSettleHash;
 }
 

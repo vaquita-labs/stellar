@@ -15,6 +15,7 @@ export * from './AppModal';
 export * from './DateWheelPicker';
 export * from './EarningsBreakdown';
 export * from './PressableButton';
+export * from './ProcessingSteps';
 export * from './PageHeader';
 export * from './SegmentedTabs';
 export * from './PageLayout';

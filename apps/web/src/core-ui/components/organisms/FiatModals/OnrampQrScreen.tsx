@@ -21,6 +21,8 @@ interface OnrampQrScreenProps {
   onRestart: () => void;
   /** Abandonar un código que TODAVÍA sirve, a pedido del usuario. */
   onCancel: () => void;
+  /** The user says they already paid from their bank. */
+  onPaid: () => void;
 }
 
 /**
@@ -33,7 +35,16 @@ interface OnrampQrScreenProps {
  * cuando ya está frente a la app del banco. La imagen del proveedor queda sólo
  * como último recurso, para cuando no publica el payload.
  */
-export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRestart, onCancel }: OnrampQrScreenProps) {
+export function OnrampQrScreen({
+  payload,
+  imageSrc,
+  fields,
+  expiresAt,
+  now,
+  onRestart,
+  onCancel,
+  onPaid,
+}: OnrampQrScreenProps) {
   const { t } = useTranslation();
   const [qrFile, setQrFile] = useState<File | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
@@ -170,6 +181,13 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
           </div>
         )}
 
+        {/* Driven by the modal's poll: a screen that visibly waits is one the
+            user does not mistake for frozen after paying from the bank. */}
+        <p className="flex items-center gap-2 text-xs font-semibold text-black" aria-live="polite">
+          <Spinner size="sm" color="current" />
+          {t('wallet.fiat.onramp.waitingPayment', 'Waiting for your payment…')}
+        </p>
+
         {label && (
           <p className="text-xs font-semibold text-gray-500">
             {t('wallet.fiat.onramp.expiresIn', 'Expires in {{time}}', { time: label })}
@@ -226,6 +244,12 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
           pagó. El que ya pagó desde el banco y cancela acá vuelve a comprar y
           paga dos veces, con bolivianos de verdad. Por eso lo que se confirma
           es la afirmación —"no lo pagué"— y no la acción. --- */}
+      {!confirmingCancel && (
+        <PressableButton variant="white" size="cta" onClick={onPaid}>
+          {t('wallet.fiat.onramp.paid', 'I already paid')}
+        </PressableButton>
+      )}
+
       {confirmingCancel ? (
         <div className="flex flex-col gap-3 rounded-lg border border-black border-b-2 bg-[#FFF4DD] p-3">
           <p className="text-sm font-bold text-black">{t('wallet.fiat.onramp.cancelTitle', 'Cancel this payment code?')}</p>
