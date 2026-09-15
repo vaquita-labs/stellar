@@ -156,9 +156,26 @@ export type RedeemReferralResult =
   | { success: false; errorMessage: string };
 
 /**
+ * How old a profile may be and still redeem a referral code.
+ *
+ * A referral is credit for bringing in a NEW account. Without this, anyone who
+ * already had an account and no referrer could open a friend's `?ref=` link
+ * (another device, a cleared browser) and be counted as that friend's signup —
+ * which is how production ended up with 8 of its first 25 referrals landing on
+ * profiles days or weeks old, five of them for the same referrer.
+ *
+ * The profile row is created on the first authenticated touch, and the client
+ * redeems only after the legal, username, tutorial and claim gates. In
+ * production a real signup redeems within a minute of its row existing; an
+ * hour leaves room for a slow onboarding and still refuses the hours-old ones.
+ */
+export const REFERRAL_NEW_ACCOUNT_WINDOW_MS = 60 * 60 * 1000;
+
+/**
  * Attributes `walletAddress` to the owner of `code` (one-time, at signup).
  * Idempotent-ish: a profile can only ever be attributed once. Guards against
- * redeeming an unknown code, one's own code, or creating a referral cycle.
+ * redeeming an unknown code, one's own code, from an account that is not new,
+ * or creating a referral cycle.
  */
 export const redeemReferralCode = async (
   walletAddress: string,
@@ -174,11 +191,14 @@ export const redeemReferralCode = async (
     where: { walletAddress },
     update: {},
     create: { walletAddress },
-    select: { id: true, referredById: true },
+    select: { id: true, referredById: true, createdAt: true },
   });
 
   if (viewer.referredById) {
     return { success: false, errorMessage: 'This account already used a referral code.' };
+  }
+  if (Date.now() - viewer.createdAt.getTime() > REFERRAL_NEW_ACCOUNT_WINDOW_MS) {
+    return { success: false, errorMessage: 'Referral codes can only be used by new accounts.' };
   }
 
   // `findFirst`, not `findUnique`: the column is unique but Prisma cannot ask
