@@ -2416,7 +2416,8 @@
       "showMore_other": "Show more ({{count}})"
     },
     "positionsTitle": "Your positions",
-    "positions": "Positions"
+    "positions": "Positions",
+    "seePositions": "My positions"
   },
   "txError": {
     "generic": "We couldn't complete the transaction. Please try again in a moment.",

@@ -45,18 +45,10 @@ interface PortfolioRow {
   style: AllocationStyle;
 }
 
-export function PortfolioPanel({
-  open,
-  onOpenChange,
-  tokenSymbol = 'USDC',
-}: PortfolioPanelProps) {
+export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: PortfolioPanelProps) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
-  const {
-    data: depositsData,
-    isFetching: depositsFetching,
-    refetch: refetchDeposits,
-  } = useDepositsComplete(walletAddress);
+  const { data: depositsData, isFetching: depositsFetching, refetch: refetchDeposits } = useDepositsComplete(walletAddress);
 
   // Abrir el panel revalida los depósitos. El caché persistido pinta al toque
   // los últimos valores conocidos y este refetch los corrige si otra sesión
@@ -73,8 +65,7 @@ export function PortfolioPanel({
   // `live`: saldo proyectado en vivo, la MISMA fuente que el header y el
   // "Available" del retiro, así el total del portfolio corre igual y coincide
   // con ellos.
-  const { apy: passiveApy, isFetching: passiveFetching, live: passiveBalance } =
-    useLivePassiveUsdc(walletAddress);
+  const { apy: passiveApy, isFetching: passiveFetching, live: passiveBalance } = useLivePassiveUsdc(walletAddress);
 
   const router = useRouter();
   // Detalle de Blend (qué es + números).
@@ -107,6 +98,12 @@ export function PortfolioPanel({
     router.push(`/portafolio?period=${lockPeriod}`);
   };
 
+  // "Ver mis posiciones": la misma hoja, con todos los plazos y estados.
+  const goToPositions = () => {
+    setDetailLockPeriod(null);
+    router.push('/portafolio?period=all');
+  };
+
   // Plazos ofrecidos por el token, de menor a mayor: define el orden de la lista
   // y, con él, el color/ícono de cada fila (ver allocationStyles).
   const lockPeriods = useMemo(
@@ -117,10 +114,7 @@ export function PortfolioPanel({
 
   // Depósitos activos (con lock): la fuente tanto de las allocations por plazo
   // como de la ganancia estimada del header.
-  const activeDeposits = useMemo(
-    () => getDepositsData(depositsData?.deposits ?? []).activeDeposits,
-    [depositsData],
-  );
+  const activeDeposits = useMemo(() => getDepositsData(depositsData?.deposits ?? []).activeDeposits, [depositsData]);
 
   // Capital por plazo: los depósitos activos agrupados por su propio lockPeriod.
   const allocations: Allocation[] = useMemo(() => {
@@ -222,8 +216,7 @@ export function PortfolioPanel({
   // Número del centro del donut, partido en enteros + centavos (los centavos van
   // en superíndice, estilo "$722·⁰¹"). Con ≥1 lo mostramos a 2 decimales para que
   // quepa limpio; los micro-saldos (<1) conservan la precisión fina.
-  const donutStr =
-    displayTotal >= 1 ? `$${formatTokenPrecise(displayTotal, 2)}` : formatUsdAdaptive(displayTotal);
+  const donutStr = displayTotal >= 1 ? `$${formatTokenPrecise(displayTotal, 2)}` : formatUsdAdaptive(displayTotal);
   const donutDot = donutStr.lastIndexOf('.');
   const donutInt = donutDot >= 0 ? donutStr.slice(0, donutDot) : donutStr;
   const donutCents = donutDot >= 0 ? donutStr.slice(donutDot + 1) : '';
@@ -248,9 +241,14 @@ export function PortfolioPanel({
         slideFrom="right"
         bodyClassName="flex flex-col gap-4 pb-10 overflow-x-hidden"
         footer={
-          <PressableButton variant="success" size="cta" className="py-2.5!" onClick={() => openInvest(null)}>
-            {t('portfolio.invest', 'Invest')}
-          </PressableButton>
+          <div className="flex w-full gap-2">
+            <PressableButton variant="white" size="cta" className="flex-1 py-2.5!" onClick={goToPositions}>
+              {t('portfolio.seePositions', 'My positions')}
+            </PressableButton>
+            <PressableButton variant="success" size="cta" className="flex-1 py-2.5!" onClick={() => openInvest(null)}>
+              {t('portfolio.invest', 'Invest')}
+            </PressableButton>
+          </div>
         }
       >
         {/* Donut de distribución con el total al centro: reemplaza el número
@@ -267,9 +265,7 @@ export function PortfolioPanel({
             amount={
               <>
                 {donutInt}
-                {donutCents ? (
-                  <span className="align-super text-[0.5em] font-bold ml-0.5">{donutCents}</span>
-                ) : null}
+                {donutCents ? <span className="align-super text-[0.5em] font-bold ml-0.5">{donutCents}</span> : null}
               </>
             }
           />
@@ -288,9 +284,7 @@ export function PortfolioPanel({
             fondos" atenuado con "Invertir" al lado, que abre el teclado en ese
             plazo. */}
         {rows.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-500">
-            {t('portfolio.empty', 'No saving terms available yet.')}
-          </p>
+          <p className="py-4 text-center text-sm text-gray-500">{t('portfolio.empty', 'No saving terms available yet.')}</p>
         ) : (
           <div className="flex flex-col">
             {displayRows.map((row) => {
@@ -298,10 +292,7 @@ export function PortfolioPanel({
               const investable = row.kind === 'lock' && row.lockPeriod != null;
               const showInvest = empty && investable;
               return (
-                <div
-                  key={row.key}
-                  className="flex items-center gap-3 border-t border-black/[0.07] first:border-t-0 py-3"
-                >
+                <div key={row.key} className="flex items-center gap-3 border-t border-black/[0.07] first:border-t-0 py-3">
                   {/* Zona izquierda: ícono + nombre + APY. Es el área tocable
                       cuando la fila tiene fondos (abre su detalle). */}
                   <button
@@ -317,13 +308,9 @@ export function PortfolioPanel({
                   >
                     {/* Disco sólido del color de la opción: amarra la fila con su
                         arco en el donut. Vacío → gris tenue (se lee "bloqueado"). */}
-                    <span
-                      className={`w-9 h-9 rounded-full shrink-0 ${empty ? 'bg-black/10' : row.style.solid}`}
-                    />
+                    <span className={`w-9 h-9 rounded-full shrink-0 ${empty ? 'bg-black/10' : row.style.solid}`} />
                     <span className="flex-1 min-w-0">
-                      <span
-                        className={`block text-sm font-bold truncate ${empty ? 'text-gray-400' : 'text-black'}`}
-                      >
+                      <span className={`block text-sm font-bold truncate ${empty ? 'text-gray-400' : 'text-black'}`}>
                         {row.label}
                       </span>
                       {row.kind === 'lock' ? (
@@ -359,9 +346,7 @@ export function PortfolioPanel({
                         if (row.kind === 'blend') setShowBlendDetail(true);
                         else if (row.lockPeriod != null) setDetailLockPeriod(row.lockPeriod);
                       }}
-                      className={`shrink-0 flex items-center gap-1.5 text-right ${
-                        empty ? 'cursor-default' : ''
-                      }`}
+                      className={`shrink-0 flex items-center gap-1.5 text-right ${empty ? 'cursor-default' : ''}`}
                     >
                       <span className="flex flex-col items-end">
                         <span className="text-sm font-bold text-black tabular-nums leading-tight">
@@ -383,12 +368,8 @@ export function PortfolioPanel({
             {/* Suma: reafirma que las filas cierran con el número de arriba. */}
             {fundedCount > 0 ? (
               <div className="flex items-center justify-between border-t border-black/15 mt-1 pt-3">
-                <span className="text-sm font-semibold text-gray-500">
-                  {t('portfolio.sum', 'Total')}
-                </span>
-                <span className="text-sm font-bold text-black tabular-nums">
-                  {formatUsdAdaptive(displayTotal)}
-                </span>
+                <span className="text-sm font-semibold text-gray-500">{t('portfolio.sum', 'Total')}</span>
+                <span className="text-sm font-bold text-black tabular-nums">{formatUsdAdaptive(displayTotal)}</span>
               </div>
             ) : null}
           </div>

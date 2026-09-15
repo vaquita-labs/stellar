@@ -2416,7 +2416,8 @@
       "showMore_other": "Ver mais ({{count}})"
     },
     "positionsTitle": "Suas posições",
-    "positions": "Posições"
+    "positions": "Posições",
+    "seePositions": "Minhas posições"
   },
   "txError": {
     "generic": "Não conseguimos concluir a transação. Tente novamente em instantes.",
