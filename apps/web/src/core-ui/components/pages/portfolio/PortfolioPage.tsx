@@ -10,6 +10,7 @@ import {
   WithHydrated,
 } from '@/core-ui/components/molecules';
 import { formatTimeDeposit } from '@/core-ui/helpers';
+import { POSITION_STATUSES, positionStatusOf, sortPositionsByEnd } from '@/core-ui/helpers/positions';
 import { useDepositsComplete, usePositionReconcile } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
@@ -23,11 +24,8 @@ import { PositionWithdrawSheet } from './PositionWithdrawSheet';
 import {
   defaultPortfolioFilters,
   hasActivePortfolioFilters,
-  POSITION_STATUSES,
   PortfolioFilters,
   PortfolioFiltersModal,
-  positionEndsAt,
-  positionStatusOf,
   useStatusLabel,
 } from './PortfolioFiltersModal';
 
@@ -80,19 +78,13 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
     const all = data?.deposits ?? [];
     // Fin del día del "hasta" para incluir todo ese día.
     const endInclusive = filters.endDate !== null ? filters.endDate + 86_400_000 - 1 : null;
-    return (
-      all
-        .filter((d) => {
-          const status = positionStatusOf(d);
-          return status !== null && filters.statuses.includes(status);
-        })
-        .filter((d) => filters.periods.includes(d.lockPeriod))
-        .filter((d) => filters.startDate === null || d.createdTimestamp >= filters.startDate)
-        .filter((d) => endInclusive === null || d.createdTimestamp <= endInclusive)
-        // La que termina antes va arriba, sin distinguir estado: una retirada
-        // queda donde su fecha de fin la ponga.
-        .sort((a, b) => positionEndsAt(a) - positionEndsAt(b))
-    );
+    // La que termina antes va arriba, sin distinguir estado: una retirada
+    // queda donde su fecha de fin la ponga.
+    return sortPositionsByEnd(all)
+      .filter((d) => filters.statuses.includes(positionStatusOf(d)!))
+      .filter((d) => filters.periods.includes(d.lockPeriod))
+      .filter((d) => filters.startDate === null || d.createdTimestamp >= filters.startDate)
+      .filter((d) => endInclusive === null || d.createdTimestamp <= endInclusive);
   }, [data, filters]);
 
   // Chips de los filtros aplicados (con × para quitarlos). Plazo y estado solo

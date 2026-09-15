@@ -1,7 +1,7 @@
 'use client';
 
 import { useConfigStore } from '@/core-ui/stores';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppModal, MODAL_EXIT_MS, useModalPresence } from '../../molecules/AppModal';
 import { PortfolioPanel } from '../../organisms';
@@ -34,6 +34,7 @@ export function PortfolioFlow({ mode }: PortfolioFlowProps) {
   const router = useRouter();
   const { token } = useConfigStore();
   const hasPeriod = useSearchParams().get('period') !== null;
+  const pathname = usePathname();
 
   // Qué está abierto es ESTADO LOCAL, sembrado desde la URL. En overlay la URL
   // sigue mandando (goToTerm pushea `?period`, el back lo popea) y sincronizamos
@@ -108,6 +109,12 @@ export function PortfolioFlow({ mode }: PortfolioFlowProps) {
       window.history.replaceState(null, '', '/portafolio');
     }
   }, [mode, router, positionsOpen]);
+
+  // The `@modal` slot keeps whatever it last rendered across a soft navigation
+  // (`@modal/default.tsx` only applies on a hard load), so leaving the overlay
+  // for another route (the donut → /transactions) would keep the panel painted
+  // on top of it. Off /portafolio the overlay renders nothing.
+  if (mode === 'overlay' && pathname !== '/portafolio') return null;
 
   return (
     <>

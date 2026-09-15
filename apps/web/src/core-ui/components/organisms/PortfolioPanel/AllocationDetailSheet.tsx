@@ -3,9 +3,12 @@
 import { formatUsd, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { estimateRewardShare } from '@/core-ui/helpers/rewards';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
+import { DepositResponseDTO } from '@/core-ui/types';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
+import { TransactionList, TransactionMonthCard } from '../../molecules/TransactionRow';
+import { PositionRow } from '../../pages/portfolio/PositionRow';
 import { AllocationStyle } from './allocationStyles';
 import { Allocation } from './types';
 
@@ -17,13 +20,17 @@ interface AllocationDetailSheetProps {
   tokenSymbol?: string;
   /** Qué porción de TODO tu portafolio está en este plazo (para el subtítulo). */
   portfolioPct: number;
-  /** Abre la lista de posiciones de este plazo para retirar. */
-  onWithdraw: () => void;
+  /** Positions of this term, any status, the one ending soonest first. */
+  positions: DepositResponseDTO[];
+  /** Opens the positions list narrowed to this term (a row was tapped). */
+  onOpenTerm: () => void;
+  /** Opens the positions list with every term and status (footer CTA). */
+  onOpenPositions: () => void;
 }
 
 /**
- * Detalle de un plazo: cuánto tenés ahí, cuánto rinde y por qué. El CTA lleva a
- * retirar (abre la lista de posiciones de este plazo).
+ * Detalle de un plazo: cuánto tienes ahí, cuánto rinde y por qué, y las
+ * posiciones de ese plazo. El CTA abre la lista completa de posiciones.
  */
 export function AllocationDetailSheet({
   open,
@@ -32,7 +39,9 @@ export function AllocationDetailSheet({
   style,
   tokenSymbol = 'USDC',
   portfolioPct,
-  onWithdraw,
+  positions,
+  onOpenTerm,
+  onOpenPositions,
 }: AllocationDetailSheetProps) {
   const { t } = useTranslation();
 
@@ -49,14 +58,8 @@ export function AllocationDetailSheet({
       hideClose
       bodyClassName="flex flex-col gap-4 pb-2 overflow-x-hidden"
       footer={
-        <PressableButton
-          variant="white"
-          size="cta"
-          className="py-2.5!"
-          onClick={onWithdraw}
-          disabled={allocation.amount <= 0}
-        >
-          {t('deposit.withdraw.button', 'Withdraw')}
+        <PressableButton variant="white" size="cta" className="py-2.5!" onClick={onOpenPositions}>
+          {t('portfolio.seeAllPositions', 'See all my positions')}
         </PressableButton>
       }
     >
@@ -101,9 +104,7 @@ export function AllocationDetailSheet({
             depositados cobran $0.70). `allocation.amount` ya está dentro del TVL, así
             que el denominador va tal cual. */}
         <div className="flex items-center justify-between gap-3 py-2.5 text-sm">
-          <span className="text-gray-500 truncate">
-            {t('portfolio.detail.yourShareEstimate', 'Your estimated share')}
-          </span>
+          <span className="text-gray-500 truncate">{t('portfolio.detail.yourShareEstimate', 'Your estimated share')}</span>
           <span className="font-bold text-success tabular-nums shrink-0">
             {formatUsd(estimateRewardShare(allocation.rewardPool, allocation.totalDeposits, allocation.amount))}
           </span>
@@ -116,6 +117,16 @@ export function AllocationDetailSheet({
           'Rewards are shared among everyone in this pool and can change as people join or leave.',
         )}
       </p>
+
+      {positions.length > 0 ? (
+        <TransactionMonthCard label={t('portfolio.positionsTitle', 'Your positions')}>
+          <TransactionList align="grouped">
+            {positions.map((deposit) => (
+              <PositionRow key={deposit.id} deposit={deposit} onPress={onOpenTerm} />
+            ))}
+          </TransactionList>
+        </TransactionMonthCard>
+      ) : null}
     </AppModal>
   );
 }

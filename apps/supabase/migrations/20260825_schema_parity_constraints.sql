@@ -39,7 +39,7 @@ BEGIN
   ) THEN
     ALTER TABLE "profiles"
       ADD CONSTRAINT "profiles_nickname_format"
-      -- Sin guion bajo desde 20260911_vaquitatag: el nickname ES el código de
+      -- Sin guion bajo desde 20260911_vaquitag: el nickname ES el código de
       -- invitación y se dicta en voz alta. Si esa migración ya corrió acá, este
       -- bloque no hace nada (el constraint existe); si esta corre primero, deja
       -- puesta la regla nueva y la otra la vuelve a poner igual.

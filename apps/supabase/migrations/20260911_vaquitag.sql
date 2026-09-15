@@ -1,4 +1,4 @@
--- El nickname pasa a ser el código de invitación (el "vaquitatag").
+-- El nickname pasa a ser el código de invitación (el "vaquitag").
 --
 -- Hasta ahora cada perfil tenía dos identidades sin relación: el nickname, que
 -- el usuario eligió, y un `referral_code` aleatorio de 6 caracteres tipo

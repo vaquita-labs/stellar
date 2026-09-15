@@ -3,13 +3,9 @@
 import { Button } from '@/core-ui/components/atoms';
 import { AppModal, DateField, DatePickerSheet, FilterCheckRow, startOfDay, toggleValue } from '@/core-ui/components/molecules';
 import { formatTimeDeposit } from '@/core-ui/helpers';
-import { DepositResponseDTO, DepositWithdrawalState } from '@/core-ui/types';
+import { POSITION_STATUSES, PositionStatusFilter } from '@/core-ui/helpers/positions';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
-export type PositionStatusFilter = 'ready' | 'locked' | 'withdrawn' | 'failed';
-
-export const POSITION_STATUSES: PositionStatusFilter[] = ['ready', 'locked', 'withdrawn', 'failed'];
 
 export interface PortfolioFilters {
   /** Lock periods to show (checkboxes). Every period checked is the default; none checked shows nothing. */
@@ -33,25 +29,6 @@ export const hasActivePortfolioFilters = (f: PortfolioFilters, lockPeriods: numb
   f.statuses.length < POSITION_STATUSES.length ||
   f.startDate !== null ||
   f.endDate !== null;
-
-/** "Ahora" real de un depósito, corrigiendo el reloj congelado del cache. */
-const depositNow = (d: DepositResponseDTO) =>
-  d.serverTimestamp && d.fetchedAtTimestamp ? d.serverTimestamp + (Date.now() - d.fetchedAtTimestamp) : Date.now();
-
-/** When the lock ends (ms). Past for anything already withdrawable. */
-export const positionEndsAt = (d: DepositResponseDTO) => d.createdTimestamp + d.lockPeriod;
-
-/**
- * Bucket a deposit falls into for the status filter. Deposits still being
- * processed have no bucket: they are not positions yet, so the list skips them.
- */
-export const positionStatusOf = (d: DepositResponseDTO): PositionStatusFilter | null => {
-  const S = DepositWithdrawalState;
-  if (d.state === S.DEPOSIT_SUCCESS) return positionEndsAt(d) <= depositNow(d) ? 'ready' : 'locked';
-  if (d.state === S.WITHDRAW_SUCCESS || d.state === S.WITHDRAW_SUCCESS_EARLY) return 'withdrawn';
-  if (d.state === S.DEPOSIT_FAILED || d.state === S.WITHDRAW_FAILED) return 'failed';
-  return null;
-};
 
 const STATUS_LABEL: Record<PositionStatusFilter, string> = {
   ready: 'Ready to withdraw',

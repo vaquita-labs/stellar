@@ -114,8 +114,8 @@ export type ResolveAttributionResult = {
  * a campaign code that collides with a live referral code.
  *
  * The referral branch delegates to `redeemReferralCode` rather than writing
- * `referredById` here: that function owns the self-referral, already-attributed
- * and unknown-code guards, and duplicating them is how they drift apart.
+ * `referredById` here: that function owns the self-referral, already-attributed,
+ * new-account and unknown-code guards, and duplicating them is how they drift apart.
  *
  * Idempotent. Calling it twice for the same profile does nothing the second
  * time, which is what makes it safe to fire from a client that may retry.
