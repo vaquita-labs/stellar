@@ -52,6 +52,15 @@ export const prismaOnrampPurchaseRepository: OnrampPurchaseRepository = {
     return row ? toRecord(row) : null;
   },
 
+  async listOpenForWallet(walletAddress, limit) {
+    const rows = await prisma.onrampPurchase.findMany({
+      where: { walletAddress, deletedAt: null, status: { in: ['pending', 'paid'] } },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+    });
+    return rows.map(toRecord);
+  },
+
   async update(id, patch) {
     const row = await prisma.onrampPurchase.update({ where: { id }, data: patch });
     return toRecord(row);

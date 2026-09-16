@@ -21,6 +21,8 @@ interface OnrampQrScreenProps {
   onRestart: () => void;
   /** Abandonar un código que TODAVÍA sirve, a pedido del usuario. */
   onCancel: () => void;
+  /** A provider check is running right now because the user came back to the app. */
+  checking: boolean;
 }
 
 /**
@@ -33,7 +35,16 @@ interface OnrampQrScreenProps {
  * cuando ya está frente a la app del banco. La imagen del proveedor queda sólo
  * como último recurso, para cuando no publica el payload.
  */
-export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRestart, onCancel }: OnrampQrScreenProps) {
+export function OnrampQrScreen({
+  payload,
+  imageSrc,
+  fields,
+  expiresAt,
+  now,
+  onRestart,
+  onCancel,
+  checking,
+}: OnrampQrScreenProps) {
   const { t } = useTranslation();
   const [qrFile, setQrFile] = useState<File | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
@@ -169,6 +180,15 @@ export function OnrampQrScreen({ payload, imageSrc, fields, expiresAt, now, onRe
             </p>
           </div>
         )}
+
+        {/* Driven by the modal's poll: a screen that visibly waits is one the
+            user does not mistake for frozen after paying from the bank. */}
+        <p className="flex items-center gap-2 text-xs font-semibold text-black" aria-live="polite">
+          <Spinner size="sm" color="current" />
+          {checking
+            ? t('wallet.fiat.onramp.checkingPayment', 'Checking your payment…')
+            : t('wallet.fiat.onramp.waitingPayment', 'Waiting for your payment…')}
+        </p>
 
         {label && (
           <p className="text-xs font-semibold text-gray-500">

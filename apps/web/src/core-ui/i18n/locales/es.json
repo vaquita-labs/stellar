@@ -520,7 +520,13 @@
       "lockDescription": "Los fondos quedarán bloqueados en la bóveda durante el periodo seleccionado.",
       "lockSeconds": "{{count}} segundos",
       "lockTime": "Tiempo de bloqueo",
-      "title": "Depositar"
+      "title": "Depositar",
+      "steps": {
+        "preparing": "Preparando tu depósito",
+        "sending": "Enviándolo a la red",
+        "confirming": "Confirmando tu depósito"
+      },
+      "processingHint": "Puede tardar hasta un minuto. No cierres la app."
     },
     "panel": {
       "paused": "Los depósitos están pausados temporalmente",
@@ -880,6 +886,8 @@
     "vote": "Votar",
     "voteOwn": "No puedes votar tu propio reporte",
     "openImage": "Ver imagen",
+    "readMore": "Ver más",
+    "detailTitle": "Reporte",
     "imageTitle": "Captura",
     "voteError": "No se pudo registrar tu voto",
     "error": "No se pudo cargar el board.",
@@ -948,6 +956,18 @@
       "withdrawalCompleted": {
         "body": "Se enviaron ${{amount}} USDC a tu billetera.",
         "title": "Retiro completado"
+      },
+      "transferReceived": {
+        "body": "{{name}} te envió {{amount}} USDC.",
+        "title": "Recibiste dinero"
+      },
+      "onrampSettled": {
+        "title": "Depósito completado",
+        "body": "{{amount}} {{currency}} llegaron a tu billetera."
+      },
+      "offrampSettled": {
+        "title": "Retiro completado",
+        "body": "{{amount}} {{currency}} fueron enviados a tu banco."
       }
     },
     "time": {
@@ -1890,7 +1910,11 @@
         "working": "Preparando tu compra…",
         "youPay": "Pagas",
         "youReceive": "Recibes",
-        "maxAmount": "La compra máxima es de {{amount}} {{currency}}."
+        "maxAmount": "La compra máxima es de {{amount}} {{currency}}.",
+        "waitingPayment": "Esperando tu pago…",
+        "checkingPayment": "Verificando tu pago…",
+        "checkingTitle": "Verificando si llegó tu pago",
+        "checkingBody": "Tu código venció. Si ya pagaste, lo estamos buscando; esto toma un momento."
       },
       "rail": {
         "ach": "Transferencia bancaria"
@@ -2457,6 +2481,32 @@
     "success": {
       "subtitle": "Tu USDC ya está bloqueado y generando.",
       "title": "¡Invertido!"
+    },
+    "fundsInWallet": "Tu dinero está seguro: salió de tus ahorros y está en el saldo de tu wallet. Puedes bloquearlo desde ahí."
+  },
+  "transferReceived": {
+    "modal": {
+      "title": "Recibiste dinero",
+      "single": "{{name}} te envió",
+      "several": "Recibiste {{count}} pagos mientras no estabas.",
+      "total": "Total",
+      "inBalance": "Ya está en tu saldo.",
+      "viewWallet": "Ver billetera",
+      "gotIt": "Entendido"
+    }
+  },
+  "rampSettled": {
+    "modal": {
+      "titleDeposit": "Tu depósito se completó",
+      "titleWithdrawal": "Tu retiro se completó",
+      "titleSeveral": "Tus operaciones con el banco se completaron",
+      "paid": "Pagaste {{amount}}",
+      "inBalance": "Ya está en tu saldo.",
+      "sentToBank": "Enviado a tu cuenta bancaria.",
+      "deposit": "Depósito",
+      "withdrawal": "Retiro",
+      "viewWallet": "Ver billetera",
+      "gotIt": "Entendido"
     }
   }
 }

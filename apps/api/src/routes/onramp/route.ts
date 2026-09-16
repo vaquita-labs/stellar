@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import {
+  closeOnrampPurchase,
   findPendingOnrampPurchase,
-  markOnrampPurchaseTerminal,
+  listOpenOnrampPurchases,
+  notifyRampSettled,
   prismaOnrampPurchaseRepository,
   recordOnrampPurchase,
   sendError,
@@ -56,6 +58,32 @@ router.get('/purchases/pending', requireSessionWallet, async (req, res) => {
   } catch (err) {
     req.log.error({ err, walletAddress }, 'Failed to read pending on-ramp purchase');
     return sendError(res, 'Failed to read pending on-ramp purchase', err, 500);
+  }
+});
+
+/**
+ * Las compras recientes todavía abiertas, para que la app le pregunte al
+ * proveedor al abrirse si alguna se acreditó mientras el usuario no estaba.
+ */
+router.get('/purchases/open', requireSessionWallet, async (req, res) => {
+  const walletAddress = getSessionWallet(res);
+  req.log.info({ walletAddress }, 'GET /onramp/purchases/open');
+
+  try {
+    const purchases = await listOpenOnrampPurchases(prismaOnrampPurchaseRepository, walletAddress);
+    return sendSuccess(res, {
+      purchases: purchases.map((purchase) => ({
+        id: purchase.id,
+        providerTxId: purchase.providerTxId,
+        amountFiat: purchase.amountFiat,
+        currency: purchase.currency,
+        status: purchase.status,
+        createdAt: purchase.createdAt.toISOString(),
+      })),
+    });
+  } catch (err) {
+    req.log.error({ err, walletAddress }, 'Failed to list open on-ramp purchases');
+    return sendError(res, 'Failed to list open on-ramp purchases', err, 500);
   }
 });
 
@@ -118,7 +146,7 @@ router.post('/purchases', requireSessionWallet, async (req, res) => {
 router.post('/purchases/:id/terminal', requireSessionWallet, async (req, res) => {
   const walletAddress = getSessionWallet(res);
   const id = asString(req.params.id);
-  const { status, errorReason } = req.body ?? {};
+  const { status, errorReason, usdcAmount } = req.body ?? {};
   req.log.info({ walletAddress, purchaseId: id, status }, 'POST /onramp/purchases/:id/terminal');
 
   if (!id) return sendError(res, 'Missing purchase id.', null, 400);
@@ -127,7 +155,7 @@ router.post('/purchases/:id/terminal', requireSessionWallet, async (req, res) =>
   }
 
   try {
-    const purchase = await markOnrampPurchaseTerminal(prismaOnrampPurchaseRepository, {
+    const closed = await closeOnrampPurchase(prismaOnrampPurchaseRepository, {
       walletAddress,
       id,
       status,
@@ -135,7 +163,19 @@ router.post('/purchases/:id/terminal', requireSessionWallet, async (req, res) =>
     });
     // Una compra que no existe o es de otra wallet es lo mismo para quien llama:
     // no hay nada que pueda cerrar.
-    if (!purchase) return sendError(res, 'Purchase not found.', null, 404);
+    if (!closed) return sendError(res, 'Purchase not found.', null, 404);
+    const { purchase, changed } = closed;
+
+    // El USDC acreditado lo lee el cliente del ledger y sólo se usa para el
+    // texto del aviso; uno ilegible cae al monto en moneda local.
+    const credited = Number(usdcAmount);
+    void notifyRampSettled({
+      kind: 'onramp',
+      row: purchase,
+      status: purchase.status,
+      changed,
+      usdcAmount: Number.isFinite(credited) && credited > 0 ? credited : null,
+    });
 
     // Sólo una compra acreditada movió plata on-chain; los otros desenlaces
     // dejan el saldo igual y no justifican una lectura RPC.

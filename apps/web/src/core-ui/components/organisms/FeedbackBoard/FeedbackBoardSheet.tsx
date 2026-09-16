@@ -1,7 +1,7 @@
 'use client';
 
 import { toast } from '@heroui/react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronUp, FiPlus } from 'react-icons/fi';
 import {
@@ -31,6 +31,42 @@ const STATUS_STYLES: Record<string, string> = {
   in_progress: 'bg-[#FFF3D6] text-[#8A5A00]',
   done: 'bg-[#E4F7E8] text-[#1F7A34]',
 };
+
+/**
+ * El detalle recortado a tres líneas, con un "Ver más" SOLO si de verdad no
+ * entra. Se mide el desborde real (`scrollHeight > clientHeight`) y no el largo
+ * del texto: tres líneas son pocas o muchas palabras según el ancho de la
+ * pantalla y cuántos saltos de línea escribió el autor.
+ */
+function ClampedDetails({ text, onReadMore }: { text: string; onReadMore: () => void }) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [clamped, setClamped] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setClamped(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    // El ancho cambia al rotar o al abrir el sheet en desktop: se vuelve a medir.
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text]);
+
+  return (
+    <>
+      <p ref={ref} className="line-clamp-3 text-xs break-words whitespace-pre-wrap text-gray-600">
+        {text}
+      </p>
+      {clamped ? (
+        <button type="button" onClick={onReadMore} className="w-fit text-xs font-bold text-black underline">
+          {t('board.readMore', 'Read more')}
+        </button>
+      ) : null}
+    </>
+  );
+}
 
 const TAB_CLASSES = (active: boolean) =>
   `flex-1 rounded-full px-3 py-1.5 text-xs font-bold transition ${active ? 'bg-black text-white' : 'bg-black/5 text-black/60'}`;
@@ -63,6 +99,11 @@ export function FeedbackBoardSheet({ open, onOpenChange, initialKind = 'bug', on
   // índice: las miniaturas se tocan de a una y no hay carrusel que recorrer.
   const [preview, setPreview] = useState<string | null>(null);
 
+  // Id del reporte abierto en detalle. El id y no la entrada: así el detalle lee
+  // la entrada viva de la lista y un voto dado adentro se ve sin cerrar.
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detail = entries?.find((entry) => entry.id === detailId) ?? null;
+
   const handleVote = async (entry: FeedbackBoardEntry) => {
     try {
       await vote.mutateAsync(entry.id);
@@ -72,6 +113,51 @@ export function FeedbackBoardSheet({ open, onOpenChange, initialKind = 'bug', on
       });
     }
   };
+
+  const voteButton = (entry: FeedbackBoardEntry) => (
+    <button
+      type="button"
+      onClick={() => void handleVote(entry)}
+      disabled={vote.isPending || entry.isOwn}
+      aria-pressed={entry.hasVoted}
+      aria-label={entry.isOwn ? t('board.voteOwn', "You can't upvote your own report") : t('board.vote', 'Upvote')}
+      title={entry.isOwn ? t('board.voteOwn', "You can't upvote your own report") : undefined}
+      className={`flex h-fit w-11 shrink-0 flex-col items-center rounded-lg border px-1 py-1.5 transition disabled:opacity-60 ${
+        entry.isOwn ? 'cursor-default' : ''
+      } ${entry.hasVoted ? 'border-black bg-primary text-black' : 'border-black/20 bg-white text-black/70'}`}
+    >
+      <FiChevronUp className="h-4 w-4" />
+      <span className="text-sm font-bold tabular-nums">{entry.voteCount}</span>
+    </button>
+  );
+
+  const statusChip = (entry: FeedbackBoardEntry) =>
+    STATUS_STYLES[entry.status] ? (
+      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLES[entry.status]}`}>
+        {t(`board.status.${entry.status}`, entry.status)}
+      </span>
+    ) : null;
+
+  const attachments = (entry: FeedbackBoardEntry, size: string) =>
+    entry.attachmentIds.length > 0 ? (
+      <div className="flex flex-wrap gap-1.5 pt-0.5">
+        {entry.attachmentIds.map((id) => (
+          // Botón y no un enlace a la imagen: abrir una pestaña con el
+          // PNG suelto saca al usuario de la app, y en mobile lo deja
+          // fuera de la PWA. El visor se abre encima del board.
+          <button
+            key={id}
+            type="button"
+            onClick={() => setPreview(id)}
+            aria-label={t('board.openImage', 'Open image')}
+            className={`${size} shrink-0 overflow-hidden rounded-md border border-black/10`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- lo sirve la API, no pasa por el optimizador */}
+            <img src={feedbackAttachmentUrl(id)} alt="" loading="lazy" className="h-full w-full object-cover" />
+          </button>
+        ))}
+      </div>
+    ) : null;
 
   return (
     <>
@@ -133,60 +219,49 @@ export function FeedbackBoardSheet({ open, onOpenChange, initialKind = 'bug', on
               es lo que ordena la lista, y un voto propio lo convierte en otra
               cosa distinta de "a otros también les pasa". El backend igual lo
               rechaza (403) —esto es la explicación visual, no la regla. */}
-            <button
-              type="button"
-              onClick={() => void handleVote(entry)}
-              disabled={vote.isPending || entry.isOwn}
-              aria-pressed={entry.hasVoted}
-              aria-label={entry.isOwn ? t('board.voteOwn', "You can't upvote your own report") : t('board.vote', 'Upvote')}
-              title={entry.isOwn ? t('board.voteOwn', "You can't upvote your own report") : undefined}
-              className={`flex h-fit w-11 shrink-0 flex-col items-center rounded-lg border px-1 py-1.5 transition disabled:opacity-60 ${
-                entry.isOwn ? 'cursor-default' : ''
-              } ${entry.hasVoted ? 'border-black bg-primary text-black' : 'border-black/20 bg-white text-black/70'}`}
-            >
-              <FiChevronUp className="h-4 w-4" />
-              <span className="text-sm font-bold tabular-nums">{entry.voteCount}</span>
-            </button>
+            {voteButton(entry)}
 
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-sm font-bold break-words text-black">{entry.title}</h3>
-                {STATUS_STYLES[entry.status] ? (
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_STYLES[entry.status]}`}>
-                    {t(`board.status.${entry.status}`, entry.status)}
-                  </span>
-                ) : null}
+                {statusChip(entry)}
               </div>
 
-              {entry.details ? (
-                <p className="line-clamp-3 text-xs break-words whitespace-pre-wrap text-gray-600">{entry.details}</p>
-              ) : null}
+              {entry.details ? <ClampedDetails text={entry.details} onReadMore={() => setDetailId(entry.id)} /> : null}
 
-              {entry.attachmentIds.length > 0 ? (
-                <div className="flex gap-1.5 pt-0.5">
-                  {entry.attachmentIds.map((id) => (
-                    // Botón y no un enlace a la imagen: abrir una pestaña con el
-                    // PNG suelto saca al usuario de la app, y en mobile lo deja
-                    // fuera de la PWA. El visor se abre encima del board.
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setPreview(id)}
-                      aria-label={t('board.openImage', 'Open image')}
-                      className="h-12 w-12 shrink-0 overflow-hidden rounded-md border border-black/10"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- lo sirve la API, no pasa por el optimizador */}
-                      <img src={feedbackAttachmentUrl(id)} alt="" loading="lazy" className="h-full w-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              ) : null}
+              {attachments(entry, 'h-12 w-12')}
 
               {entry.authorNickname ? <span className="text-[11px] text-gray-400">@{entry.authorNickname}</span> : null}
             </div>
           </article>
         ))}
       </AppModal>
+
+      {/* El reporte completo: el texto sin recortar y las capturas en grande.
+        Hermano del board, como el visor, que se sigue apilando encima de este
+        al tocar una captura. */}
+      {detail ? (
+        <AppModal
+          open={Boolean(detail)}
+          onOpenChange={() => setDetailId(null)}
+          title={t('board.detailTitle', 'Report')}
+          size="md"
+          bodyClassName="flex flex-col gap-3 pb-4"
+        >
+          <div className="flex items-start gap-3">
+            {voteButton(detail)}
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-base font-bold break-words text-black">{detail.title}</h3>
+                {statusChip(detail)}
+              </div>
+              {detail.authorNickname ? <span className="text-xs text-gray-400">@{detail.authorNickname}</span> : null}
+            </div>
+          </div>
+          {detail.details ? <p className="text-sm break-words whitespace-pre-wrap text-gray-700">{detail.details}</p> : null}
+          {attachments(detail, 'h-24 w-24')}
+        </AppModal>
+      ) : null}
 
       {/* El visor va como hermano del board, no adentro: así se apila encima
         —igual que el formulario de reporte— y cerrarlo devuelve al board en el

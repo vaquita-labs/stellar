@@ -3,7 +3,7 @@
 import { getBlendUsdcBalance } from '@/networks/stellar/blendDirect';
 import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { passiveDeposit } from '@/networks/stellar/vaultDirect';
-import { Popover, PopoverContent, PopoverTrigger, Spinner } from '@heroui/react';
+import { Popover, PopoverContent, PopoverTrigger } from '@heroui/react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { usePollar } from '@pollar/react';
@@ -26,6 +26,7 @@ import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { PressableButton } from '../../molecules/PressableButton';
+import { ProcessingSteps } from '../../molecules/ProcessingSteps';
 
 interface DepositMethodModalProps {
   open: boolean;
@@ -321,18 +322,10 @@ export function DepositMethodModal({
   // mismo lenguaje de "stepper" que el resto de los flujos (Invest/Withdraw):
   // una fila con el círculo + spinner, y el hint anclado abajo en el footer.
   const processingStep = (
-    <div className="flex flex-col gap-4 py-3">
-      <div className="flex flex-col px-1">
-        <div className="flex gap-3">
-          <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-black bg-white">
-            <Spinner size="sm" color="current" />
-          </span>
-          <span className="pt-1.5 text-sm font-bold text-black">
-            {t('deposit.blend.processingStep', 'Depositing to your savings')}
-          </span>
-        </div>
-      </div>
-    </div>
+    <ProcessingSteps
+      steps={[{ key: 'depositing', label: t('deposit.blend.processingStep', 'Depositing to your savings') }]}
+      activeKey="depositing"
+    />
   );
 
   const successStep = (

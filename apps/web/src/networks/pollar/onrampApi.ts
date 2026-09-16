@@ -67,6 +67,30 @@ export async function fetchPendingPurchase(
   return { state, purchase: data.data.purchase };
 }
 
+export interface OpenPurchase {
+  id: string;
+  providerTxId: string;
+  amountFiat: string;
+  currency: string;
+  status: string;
+  createdAt: string;
+}
+
+/**
+ * Las compras recientes todavía abiertas, para preguntarle al proveedor al
+ * abrir la app si alguna se acreditó. Una lista vacía también cubre el fallo:
+ * no poder preguntar es lo mismo que no tener nada que avisar.
+ */
+export async function listOpenPurchases(walletAddress: string): Promise<OpenPurchase[]> {
+  try {
+    const response = await authFetch(`${base()}/purchases/open`, { method: 'GET' }, walletAddress);
+    const data = (await response.json().catch(() => null)) as { data?: { purchases?: OpenPurchase[] } } | null;
+    return data?.data?.purchases ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /** Cómo terminó una compra, tal como lo guarda el servidor. */
 export type TerminalPurchaseStatus = 'settled' | 'expired' | 'failed' | 'cancelled';
 
@@ -82,13 +106,15 @@ export async function markPurchaseTerminal(
   id: string,
   status: TerminalPurchaseStatus,
   errorReason?: string | null,
+  /** The USDC that landed, when known; only used to word the "deposit complete" notice. */
+  usdcAmount?: number | null,
 ): Promise<boolean> {
   const response = await authFetch(
     `${base()}/purchases/${encodeURIComponent(id)}/terminal`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, errorReason: errorReason ?? null }),
+      body: JSON.stringify({ status, errorReason: errorReason ?? null, usdcAmount: usdcAmount ?? null }),
     },
     walletAddress,
   );

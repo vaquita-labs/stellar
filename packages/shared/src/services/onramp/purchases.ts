@@ -42,6 +42,8 @@ export interface OnrampPurchaseRepository {
   getById(id: string): Promise<OnrampPurchaseRecord | null>;
   /** La compra sin terminar de esa wallet, si hay alguna. */
   findOpenForWallet(walletAddress: string): Promise<OnrampPurchaseRecord | null>;
+  /** Las compras sin terminar de esa wallet, la más reciente primero. */
+  listOpenForWallet(walletAddress: string, limit: number): Promise<OnrampPurchaseRecord[]>;
   update(id: string, patch: Partial<OnrampPurchaseRecord>): Promise<OnrampPurchaseRecord>;
 }
 
@@ -146,12 +148,59 @@ export async function markOnrampPurchaseTerminal(
   repository: OnrampPurchaseRepository,
   input: MarkOnrampPurchaseTerminalInput,
 ): Promise<OnrampPurchaseRecord | null> {
+  return (await closeOnrampPurchase(repository, input))?.purchase ?? null;
+}
+
+/**
+ * {@link markOnrampPurchaseTerminal}, diciendo además si este llamado fue el que
+ * la cerró. Es lo que permite avisarle al usuario una sola vez: el modal y el
+ * chequeo al abrir la app pueden cerrar la misma compra, y sólo el primero
+ * cambia algo.
+ */
+export async function closeOnrampPurchase(
+  repository: OnrampPurchaseRepository,
+  input: MarkOnrampPurchaseTerminalInput,
+): Promise<{ purchase: OnrampPurchaseRecord; changed: boolean } | null> {
   const current = await repository.getById(input.id);
   if (!current || current.walletAddress !== input.walletAddress) return null;
-  if (TERMINAL_ONRAMP_STATUSES.includes(current.status)) return current;
+  if (TERMINAL_ONRAMP_STATUSES.includes(current.status)) return { purchase: current, changed: false };
 
-  return repository.update(input.id, {
+  const purchase = await repository.update(input.id, {
     status: input.status,
     errorReason: input.errorReason ?? null,
   });
+  return { purchase, changed: true };
+}
+
+/**
+ * Las compras recientes que siguen abiertas, para preguntarle al proveedor al
+ * abrir la app si alguna se acreditó mientras el usuario estaba en su banco.
+ *
+ * Las que vencieron hace más de {@link ONRAMP_ABANDON_GRACE_MS} no se devuelven:
+ * se cierran como vencidas, igual que en {@link findPendingOnrampPurchase}.
+ */
+export async function listOpenOnrampPurchases(
+  repository: OnrampPurchaseRepository,
+  walletAddress: string,
+  limit = 5,
+  now: Date = new Date(),
+): Promise<OnrampPurchaseRecord[]> {
+  const rows = await repository.listOpenForWallet(walletAddress, limit);
+  const open: OnrampPurchaseRecord[] = [];
+  for (const purchase of rows) {
+    const abandoned =
+      purchase.status === 'pending' &&
+      !!purchase.expiresAt &&
+      now.getTime() - purchase.expiresAt.getTime() > ONRAMP_ABANDON_GRACE_MS;
+    if (!abandoned) {
+      open.push(purchase);
+      continue;
+    }
+    try {
+      await markOnrampPurchaseTerminal(repository, { walletAddress, id: purchase.id, status: 'expired' });
+    } catch {
+      // Se reintenta en la próxima lectura; mientras tanto no se ofrece.
+    }
+  }
+  return open;
 }

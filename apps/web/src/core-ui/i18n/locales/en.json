@@ -520,7 +520,13 @@
       "lockDescription": "The funds will be lock in the vault during the selected period.",
       "lockSeconds": "{{count}} seconds",
       "lockTime": "Lock time",
-      "title": "Deposit"
+      "title": "Deposit",
+      "steps": {
+        "preparing": "Preparing your deposit",
+        "sending": "Sending it to the network",
+        "confirming": "Confirming your deposit"
+      },
+      "processingHint": "This may take up to a minute. Please don't close the app."
     },
     "panel": {
       "paused": "Deposits are temporarily paused",
@@ -880,6 +886,8 @@
     "vote": "Upvote",
     "voteOwn": "You can't upvote your own report",
     "openImage": "Open image",
+    "readMore": "Read more",
+    "detailTitle": "Report",
     "imageTitle": "Screenshot",
     "voteError": "Could not register your vote",
     "error": "Could not load the board.",
@@ -948,6 +956,18 @@
       "withdrawalCompleted": {
         "body": "${{amount}} USDC sent to your wallet.",
         "title": "Withdrawal completed"
+      },
+      "transferReceived": {
+        "body": "{{name}} sent you {{amount}} USDC.",
+        "title": "You received money"
+      },
+      "onrampSettled": {
+        "title": "Deposit complete",
+        "body": "{{amount}} {{currency}} landed in your wallet."
+      },
+      "offrampSettled": {
+        "title": "Withdrawal complete",
+        "body": "{{amount}} {{currency}} were sent to your bank."
       }
     },
     "time": {
@@ -1890,7 +1910,11 @@
         "working": "Preparing your purchase…",
         "youPay": "You pay",
         "youReceive": "You receive",
-        "maxAmount": "The maximum purchase is {{amount}} {{currency}}."
+        "maxAmount": "The maximum purchase is {{amount}} {{currency}}.",
+        "waitingPayment": "Waiting for your payment…",
+        "checkingPayment": "Checking your payment…",
+        "checkingTitle": "Checking whether your payment arrived",
+        "checkingBody": "Your code expired. If you already paid, we are looking for it — this takes a moment."
       },
       "rail": {
         "ach": "Bank Transfer"
@@ -2457,6 +2481,32 @@
     "success": {
       "subtitle": "Your USDC is now locked and earning.",
       "title": "Invested!"
+    },
+    "fundsInWallet": "Your money is safe: it left your savings and is in your wallet balance. You can lock it from there."
+  },
+  "transferReceived": {
+    "modal": {
+      "title": "You received money",
+      "single": "{{name}} sent you",
+      "several": "You received {{count}} payments while you were away.",
+      "total": "Total",
+      "inBalance": "It is already in your balance.",
+      "viewWallet": "View wallet",
+      "gotIt": "Got it"
+    }
+  },
+  "rampSettled": {
+    "modal": {
+      "titleDeposit": "Your deposit is complete",
+      "titleWithdrawal": "Your withdrawal is complete",
+      "titleSeveral": "Your bank transactions are complete",
+      "paid": "You paid {{amount}}",
+      "inBalance": "It is already in your balance.",
+      "sentToBank": "Sent to your bank account.",
+      "deposit": "Deposit",
+      "withdrawal": "Withdrawal",
+      "viewWallet": "View wallet",
+      "gotIt": "Got it"
     }
   }
 }

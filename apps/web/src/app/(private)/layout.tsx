@@ -7,8 +7,10 @@ import {
   PullToRefresh,
   PushSubscriptionSync,
   PwaInstallReporter,
+  RampSettledGate,
   ReleaseNotesGate,
   RequireAuth,
+  TransferReceivedGate,
   TutorialGate,
   UsernameGate,
 } from '@/core-ui/components';
@@ -58,6 +60,12 @@ export default function PrivateLayout({
                     que el prompt de dinero ocioso se resuelva (lo coordina
                     [[auto-modals]]): un anuncio no puede taparle a nadie la
                     decisión de depositar. */}
+                {/* Money another user sent while the app was closed. Queued ahead
+                    of the release notes by [[auto-modals]]. */}
+                <TransferReceivedGate />
+                {/* A bank purchase or withdrawal that completed while the app was
+                    closed — the user left for the bank app and came back. */}
+                <RampSettledGate />
                 <ReleaseNotesGate />
                 {/* The app's scroll region, and the only place a pull-to-refresh
                     can live: `html`/`body` are pinned to the viewport, so the

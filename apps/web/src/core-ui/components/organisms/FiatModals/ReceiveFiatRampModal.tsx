@@ -18,11 +18,11 @@ import {
 import { isKycRequiredError, kycNeededBy, waitForKycApproval } from '@/networks/pollar/kycWait';
 import { fieldsAreValid, type RampField, rampErrorMessage, selectDefaults } from '@/networks/pollar/rampFields';
 import { type OnrampCorridor, type OnrampCorridorCode, useRampOnramp, usdcOutOf } from '@/networks/pollar/rampsOnramp';
-import type { RampQuote, RampTxStatus } from '@pollar/core';
+import type { RampQuote, RampsTransactionResponse, RampTxStatus } from '@pollar/core';
 import { usePollar } from '@pollar/react';
 import { Spinner } from '@heroui/react';
 import { FiChevronDown } from 'react-icons/fi';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { railLabel } from '../../../helpers/rampRail';
 import { FIAT_DECIMALS, formatTokenFine, formatTokenPrecise } from '../../../helpers/numbers';
@@ -59,6 +59,16 @@ const SETTLE_HASH_WAIT_MS = 90_000;
 
 /** El reloj del modal: un tick por segundo alcanza para la cuenta regresiva. */
 const TICK_MS = 1000;
+
+/**
+ * How long a purchase that settled straight from the QR stays on the processing
+ * screen. Without it a fast provider jumps from the code to "done" and the user
+ * never sees that their payment was received and was being worked on.
+ */
+const PROCESSING_HOLD_MS = 1500;
+
+/** How long closing a settled purchase waits on the ledger for the credited USDC. */
+const CLOSE_CREDIT_WAIT_MS = 20_000;
 
 /**
  * Elegir cuánto gastar, los datos que pida el proveedor, y pagar el QR.
@@ -124,6 +134,11 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // Horizon, which is the only place it exists.
   const [settleHash, setSettleHash] = useState<string | null>(null);
   const [creditedUsdc, setCreditedUsdc] = useState<number | null>(null);
+  // An immediate provider check is running because the user came back to the
+  // app — most likely from the bank app, having just paid.
+  const [checkingNow, setCheckingNow] = useState(false);
+  // Until when a purchase that settled straight from the QR stays on processing.
+  const [holdUntil, setHoldUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => new Date());
   const closed = useRef<string | null>(null);
   // Se incrementa para forzar una cotización nueva sobre el MISMO monto, que es
@@ -371,7 +386,8 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // Qué pantalla corresponde sale de una sola función pura sobre lo que dijo el
   // proveedor y el reloj: acá no se decide nada.
   const expiresAt = instructions?.expiresAt ?? null;
-  const screen: OnrampScreen = screenFor({ providerStatus, expiresAt, now });
+  const holdProcessing = holdUntil != null && now.getTime() < holdUntil;
+  const screen: OnrampScreen = screenFor({ providerStatus, expiresAt, now, holdProcessing });
 
   // El pago ya está confirmado y la pantalla lo dice, pero el USDC entra
   // después: hasta que llegue, el saldo del header muestra un número que
@@ -386,6 +402,18 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     startPendingCredit();
   }, [open, phase, screen, startPendingCredit]);
   const receivedUsdc = providerAmount ? receivedUsdcFrom(providerAmount, creditedUsdc) : creditedUsdc;
+
+  // Lo que dijo el proveedor, venga del sondeo o del chequeo al volver a la app.
+  // A `completed` that arrives while the user was still looking at the code is
+  // held on processing for a moment, so that step is never skipped.
+  const absorbTx = useCallback((tx: RampsTransactionResponse, fromScreen: OnrampScreen) => {
+    if (tx.status === 'completed' && (fromScreen === 'paying' || fromScreen === 'checking')) {
+      setHoldUntil(Date.now() + PROCESSING_HOLD_MS);
+    }
+    setProviderStatus(tx.status);
+    setProviderAmount({ amount: tx.amount, currency: tx.currency });
+    setSettleHash(tx.stellarTxHash ?? null);
+  }, []);
 
   // Mientras la compra pueda cambiar sola se le pregunta al proveedor. Un error
   // de red no rompe nada: la vuelta siguiente reintenta, y el usuario sigue
@@ -407,9 +435,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         try {
           const tx = await readOnrampTransaction(txId);
           if (cancelled) return;
-          setProviderStatus(tx.status);
-          setProviderAmount({ amount: tx.amount, currency: tx.currency });
-          setSettleHash(tx.stellarTxHash ?? null);
+          absorbTx(tx, screen);
         } catch {
           // Reintenta en la próxima vuelta.
         }
@@ -419,7 +445,34 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       cancelled = true;
       clearInterval(timer);
     };
-  }, [phase, txId, screen, settleHash, readOnrampTransaction]);
+  }, [phase, txId, screen, settleHash, readOnrampTransaction, absorbTx]);
+
+  // Paying a QR means leaving for the bank app. When the user comes back, ask
+  // the provider right away instead of up to one poll interval later, and say
+  // so on screen: the first thing they look at is whether it went through.
+  useEffect(() => {
+    if (phase !== 'paying' || !txId || !shouldPoll(screen, !!settleHash)) return;
+    let cancelled = false;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      setCheckingNow(true);
+      void readOnrampTransaction(txId)
+        .then((tx) => {
+          if (!cancelled) absorbTx(tx, screen);
+        })
+        .catch(() => {
+          // The regular poll tries again.
+        })
+        .finally(() => {
+          if (!cancelled) setCheckingNow(false);
+        });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [phase, txId, screen, settleHash, readOnrampTransaction, absorbTx]);
 
   // What the purchase actually credited, read off the ledger as soon as it
   // settles. It runs once per hash: the payment is in a closed ledger and the
@@ -456,12 +509,21 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
 
     if (terminal === 'settled') void refreshAssets();
     if (walletAddress && purchaseId) {
-      void markPurchaseTerminal(walletAddress, purchaseId, terminal).catch(() => {
-        // Que no se pueda cerrar sólo deja el registro pendiente de más; el
-        // usuario ya tiene su USDC.
-      });
+      // Closing a settled purchase is what notifies the user, so it carries the
+      // USDC that landed when the ledger can say it quickly; otherwise the
+      // notice names the local amount paid.
+      const credited =
+        terminal === 'settled' && settleHash
+          ? readCreditedUsdc(settleHash, walletAddress, { timeoutMs: CLOSE_CREDIT_WAIT_MS }).catch(() => null)
+          : Promise.resolve(null);
+      void credited
+        .then((usdc) => markPurchaseTerminal(walletAddress, purchaseId, terminal, null, usdc))
+        .catch(() => {
+          // Que no se pueda cerrar sólo deja el registro pendiente de más; el
+          // usuario ya tiene su USDC.
+        });
     }
-  }, [screen, phase, walletAddress, purchaseId, refreshAssets]);
+  }, [screen, phase, walletAddress, purchaseId, settleHash, refreshAssets, readCreditedUsdc]);
 
   // Sólo vale el resultado del monto que está escrito ahora; el de cualquier
   // otro es de una tecla anterior y todavía se está recotizando.
@@ -647,6 +709,8 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     setPaid(null);
     setSettleHash(null);
     setCreditedUsdc(null);
+    setCheckingNow(false);
+    setHoldUntil(null);
     closed.current = null;
     setInstructions(null);
     setUnrecorded(false);
@@ -681,7 +745,13 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         onClick={() => void handleBuy()}
         disabled={!fieldsValid || !usable || busy || !walletAddress}
       >
-        {busy ? t('wallet.fiat.onramp.working', 'Preparing your purchase…') : t('wallet.fiat.onramp.cta', 'Buy USDC')}
+        {busy ? (
+          <span className="flex items-center justify-center gap-2">
+            <Spinner size="sm" color="current" /> {t('wallet.fiat.onramp.working', 'Preparing your purchase…')}
+          </span>
+        ) : (
+          t('wallet.fiat.onramp.cta', 'Buy USDC')
+        )}
       </PressableButton>
     );
 
@@ -884,20 +954,22 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           now={now}
           onRestart={restart}
           onCancel={cancel}
+          checking={checkingNow}
         />
       )}
 
       {/* --- Después de pagar: acreditando, acreditada o rechazada. --- */}
-      {phase === 'paying' && (screen === 'processing' || screen === 'settled' || screen === 'failed') && (
-        <OnrampStatusScreen
-          screen={screen}
-          receivedUsdc={receivedUsdc}
-          amountFiat={paid?.amount ?? amountFiat}
-          currency={paid?.currency ?? currency}
-          onDone={onOpenChange}
-          onRestart={restart}
-        />
-      )}
+      {phase === 'paying' &&
+        (screen === 'checking' || screen === 'processing' || screen === 'settled' || screen === 'failed') && (
+          <OnrampStatusScreen
+            screen={screen}
+            receivedUsdc={receivedUsdc}
+            amountFiat={paid?.amount ?? amountFiat}
+            currency={paid?.currency ?? currency}
+            onDone={onOpenChange}
+            onRestart={restart}
+          />
+        )}
 
       {unrecorded && (
         <p className="rounded-md border border-black border-b-2 bg-[#FFF4DD] px-3 py-2 text-xs font-semibold text-black">

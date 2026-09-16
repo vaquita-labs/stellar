@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  closeOnrampPurchase,
   findPendingOnrampPurchase,
+  listOpenOnrampPurchases,
   markOnrampPurchaseTerminal,
   ONRAMP_ABANDON_GRACE_MS,
   recordOnrampPurchase,
@@ -30,6 +32,13 @@ class MemoryOnrampPurchaseRepository implements OnrampPurchaseRepository {
         .filter((row) => row.walletAddress === walletAddress && ['pending', 'paid'].includes(row.status))
         .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0] ?? null
     );
+  }
+
+  async listOpenForWallet(walletAddress: string, limit: number) {
+    return [...this.rows.values()]
+      .filter((row) => row.walletAddress === walletAddress && ['pending', 'paid'].includes(row.status))
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .slice(0, limit);
   }
 
   async update(id: string, patch: Partial<OnrampPurchaseRecord>) {
@@ -230,5 +239,49 @@ describe('a purchase nobody came back for', () => {
     // No poder cerrarla no puede romper la lectura: la compra sigue abierta, así
     // que decir que sigue abierta es lo honesto.
     expect((await findPendingOnrampPurchase(repo, 'GABC', MUCH_LATER)).state).toBe('expired');
+  });
+});
+
+describe('open purchases checked when the app opens', () => {
+  const EXPIRED_AT = new Date('2026-08-26T12:30:00.000Z');
+  const MUCH_LATER = new Date('2026-08-28T12:30:00.000Z');
+
+  it('lists every recent open purchase, newest first, and none of the closed ones', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    const first = await recordOnrampPurchase(repo, PURCHASE);
+    await recordOnrampPurchase(repo, { ...PURCHASE, providerTxId: 'tx-2' });
+    const closed = await recordOnrampPurchase(repo, { ...PURCHASE, providerTxId: 'tx-3' });
+    await markOnrampPurchaseTerminal(repo, { walletAddress: 'GABC', id: closed.id, status: 'settled' });
+    // El fake sella cada update como más reciente que cualquier alta.
+    await repo.update(first.id, {});
+
+    const open = await listOpenOnrampPurchases(repo, 'GABC');
+    expect(open.map((p) => p.providerTxId)).toEqual(['tx-1', 'tx-2']);
+  });
+
+  it('closes, instead of offering, a purchase that expired far too long ago', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    await recordOnrampPurchase(repo, { ...PURCHASE, expiresAt: EXPIRED_AT });
+
+    expect(await listOpenOnrampPurchases(repo, 'GABC', 5, MUCH_LATER)).toEqual([]);
+    expect((await findPendingOnrampPurchase(repo, 'GABC', MUCH_LATER)).state).toBe('none');
+  });
+});
+
+describe('closeOnrampPurchase', () => {
+  it('says only the first close changed the purchase, so the user is told once', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    const purchase = await recordOnrampPurchase(repo, PURCHASE);
+    const args = { walletAddress: 'GABC', id: purchase.id, status: 'settled' } as const;
+
+    expect((await closeOnrampPurchase(repo, args))?.changed).toBe(true);
+    expect((await closeOnrampPurchase(repo, args))?.changed).toBe(false);
+  });
+
+  it('touches nothing of another wallet', async () => {
+    const repo = new MemoryOnrampPurchaseRepository();
+    const purchase = await recordOnrampPurchase(repo, PURCHASE);
+
+    expect(await closeOnrampPurchase(repo, { walletAddress: 'GXYZ', id: purchase.id, status: 'settled' })).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { receivedUsdcFrom, resumeActionFor, screenFor, shouldPoll, terminalStatusFor } from './onrampFlow';
+import { EXPIRY_GRACE_MS, receivedUsdcFrom, resumeActionFor, screenFor, shouldPoll, terminalStatusFor } from './onrampFlow';
 
 const now = new Date('2026-08-27T12:00:00Z');
 const soon = new Date('2026-08-27T12:05:00Z');
@@ -34,9 +34,34 @@ describe('screenFor', () => {
   it('sin vencimiento publicado el código no se da por muerto', () => {
     expect(screenFor({ providerStatus: 'pending', expiresAt: null, now })).toBe('paying');
   });
+
+  it('sigue buscando el pago durante la gracia en vez de decir "vencido" en el acto', () => {
+    const justExpired = new Date(now.getTime() - 60_000);
+    expect(screenFor({ providerStatus: 'pending', expiresAt: justExpired, now })).toBe('checking');
+    expect(screenFor({ providerStatus: null, expiresAt: justExpired, now })).toBe('checking');
+  });
+
+  it('da el código por vencido pasada la gracia', () => {
+    const longAgo = new Date(now.getTime() - EXPIRY_GRACE_MS);
+    expect(screenFor({ providerStatus: 'pending', expiresAt: longAgo, now })).toBe('expired');
+  });
+
+  it('lo que diga el proveedor manda sobre la gracia', () => {
+    const justExpired = new Date(now.getTime() - 60_000);
+    expect(screenFor({ providerStatus: 'processing', expiresAt: justExpired, now })).toBe('processing');
+    expect(screenFor({ providerStatus: 'completed', expiresAt: justExpired, now })).toBe('settled');
+  });
+
+  it('retiene la compra acreditada en "procesando" mientras dura la pausa', () => {
+    expect(screenFor({ providerStatus: 'completed', expiresAt: soon, now, holdProcessing: true })).toBe('processing');
+  });
 });
 
 describe('terminalStatusFor', () => {
+  it('no cierra una compra que todavía se está buscando', () => {
+    expect(terminalStatusFor('checking')).toBeNull();
+  });
+
   it('traduce a estado guardable sólo las pantallas de las que no se vuelve', () => {
     expect(terminalStatusFor('settled')).toBe('settled');
     expect(terminalStatusFor('failed')).toBe('failed');
@@ -50,6 +75,7 @@ describe('shouldPoll', () => {
   it('sigue preguntando mientras la compra pueda cambiar sola', () => {
     expect(shouldPoll('paying')).toBe(true);
     expect(shouldPoll('processing')).toBe(true);
+    expect(shouldPoll('checking')).toBe(true);
     expect(shouldPoll('paying', true)).toBe(true);
   });
 

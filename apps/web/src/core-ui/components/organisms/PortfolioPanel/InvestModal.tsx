@@ -1,5 +1,6 @@
 'use client';
 
+import { isTxPendingError } from '@/networks/stellar/pollarError';
 import {
   AMOUNT_DECIMALS,
   MONEY_INPUT_DECIMALS,
@@ -21,7 +22,6 @@ import {
 } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
-import { Spinner } from '@heroui/react';
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +32,7 @@ import { AmountStep, DESTINATION_ROW, useAmountShake } from '../../molecules/Amo
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { PressableButton } from '../../molecules/PressableButton';
+import { ProcessingSteps } from '../../molecules/ProcessingSteps';
 import { PoolMeta } from './PoolMeta';
 
 type Step = 'amount' | 'term' | 'review' | 'processing' | 'success';
@@ -82,6 +83,9 @@ export function InvestModal({
   // Salto en curso durante "processing" (para el stepper). 'preparing' = retiro
   // de Blend; 'locking' = depósito al tramo.
   const [activeStep, setActiveStep] = useState<'preparing' | 'locking' | null>(null);
+  // The first leg already moved the money out of savings when the lock failed:
+  // it is sitting in the wallet, not lost, and the notice has to say so.
+  const [fundsInWallet, setFundsInWallet] = useState(false);
   const { controls: amountControls, shake } = useAmountShake();
 
   useEffect(() => {
@@ -99,6 +103,7 @@ export function InvestModal({
       setOverBalance(false);
       setIsMax(false);
       setActiveStep(null);
+      setFundsInWallet(false);
     }
   }, [open, lockPeriods, initialLockPeriod]);
 
@@ -140,6 +145,8 @@ export function InvestModal({
     setStep('processing');
     setActiveStep('preparing');
     setError(null);
+    setFundsInWallet(false);
+    let movedToWallet = false;
     try {
       // 1) Posición pasiva → wallet (mismo USDC/issuer que acepta el Vaquita pool).
       // Con el flag on sale del vault DeFindex; si no, del retiro directo de Blend.
@@ -153,6 +160,7 @@ export function InvestModal({
         // gets credit for.
         flowKind: 'internal_out',
       });
+      movedToWallet = true;
 
       // 2) Depósito al Vaquita pool (crea la posición con lock).
       setActiveStep('locking');
@@ -178,12 +186,15 @@ export function InvestModal({
       if (success) {
         await confirmDeposit({ id: newDeposit.id, txHash, depositIdHex, transactionRaw: raw(transaction) });
       } else {
-        await failDeposit({
+        // Still confirming is not failed: the lock may land, so the row is not
+        // marked failed under it.
+        if (!isTxPendingError(txError))
+          await failDeposit({
           id: newDeposit.id,
-          txHash: txHash || 'fail_' + v4(),
-          depositIdHex,
-          transactionRaw: raw({ transaction, error: txError }),
-        });
+            txHash: txHash || 'fail_' + v4(),
+            depositIdHex,
+            transactionRaw: raw({ transaction, error: txError }),
+          }).catch(() => undefined);
         throw (txError as Error) ?? new Error(t('withdraw.error.generic', 'Something went wrong'));
       }
 
@@ -192,11 +203,22 @@ export function InvestModal({
       setStep('success');
     } catch (e) {
       setError(e ?? new Error(t('withdraw.error.generic', 'Something went wrong')));
+      if (movedToWallet) {
+        setFundsInWallet(true);
+        void refetchBlend();
+        void invalidateAfterMoneyMove();
+      }
       setStep('amount');
     }
   };
 
   // --- Paso: monto -----------------------------------------------------------
+  // Invertir es un depósito: el piso se dice como mínimo de depósito, no de
+  // retiro, y se pinta en rojo por debajo, igual que en el retiro.
+  const belowMinimum = numericAmount > 0 && numericAmount < MIN_USDC;
+  const minimumHint = t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
+    amount: formatTokenPrecise(MIN_USDC, 2),
+  });
   const amountStep = (
     <div className="flex flex-col gap-2.5">
       <AmountStep
@@ -211,11 +233,15 @@ export function InvestModal({
         // "Available" = invertir todo lo pasivo: el retiro previo de Blend usa el
         // sentinel, no el monto tecleado.
         onMax={() => setIsMax(true)}
-        error={overBalance ? t('withdraw.exceedsBalance', "That's more than you have available.") : null}
+        error={
+          overBalance
+            ? t('withdraw.exceedsBalance', "That's more than you have available.")
+            : belowMinimum
+              ? minimumHint
+              : null
+        }
         onErrorClear={() => setOverBalance(false)}
-        hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {
-          amount: formatTokenPrecise(MIN_USDC, 2),
-        })}
+        hint={minimumHint}
       >
         {/* Selector de PLAZO/APY: cambiás con swipe vertical (o rueda), o tap para
             la lista completa. El ⇅ lo sugiere. Texto corto: plazo + APY. */}
@@ -257,6 +283,14 @@ export function InvestModal({
       </AmountStep>
 
       {error ? <ErrorNotice error={error} /> : null}
+      {fundsInWallet ? (
+        <p className="rounded-xl border border-black/20 bg-black/5 p-3 text-left text-sm font-semibold text-black">
+          {t(
+            'invest.fundsInWallet',
+            "Your money is safe: it left your savings and is in your wallet balance. You can lock it from there.",
+          )}
+        </p>
+      ) : null}
     </div>
   );
 
@@ -364,51 +398,7 @@ export function InvestModal({
       }),
     },
   ];
-  const activeIdx = investSteps.findIndex((s) => s.key === activeStep);
-  const processingStep = (
-    <div className="flex flex-col gap-4 py-3">
-      <div className="flex flex-col px-1">
-        {investSteps.map((s, i) => {
-          const isActive = s.key === activeStep;
-          const isDone = activeIdx > i;
-          const isLast = i === investSteps.length - 1;
-          return (
-            <div key={s.key} className="flex gap-3">
-              <div className="flex flex-col items-center">
-                <span
-                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-black transition-colors ${
-                    isDone ? 'bg-success' : isActive ? 'bg-white' : 'bg-black/5'
-                  }`}
-                >
-                  {isDone ? (
-                    <FiCheck className="w-4 h-4 text-black" strokeWidth={3} />
-                  ) : isActive ? (
-                    <Spinner size="sm" color="current" />
-                  ) : (
-                    <span className="text-xs font-bold text-gray-400">{i + 1}</span>
-                  )}
-                </span>
-                {!isLast ? (
-                  <span
-                    className={`w-0.5 flex-1 min-h-5 my-1 rounded-full transition-colors ${
-                      isDone ? 'bg-success' : 'bg-black/15'
-                    }`}
-                  />
-                ) : null}
-              </div>
-              <span
-                className={`pt-1.5 text-sm ${
-                  isActive ? 'font-bold text-black' : isDone ? 'text-gray-500' : 'text-gray-400'
-                }`}
-              >
-                {s.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  const processingStep = <ProcessingSteps steps={investSteps} activeKey={activeStep} />;
 
   const successStep = (
     <div className="flex flex-col items-center justify-center gap-4 py-10">
