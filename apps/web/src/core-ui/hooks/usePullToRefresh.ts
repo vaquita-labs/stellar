@@ -75,11 +75,17 @@ const buzz = (ms: number) => {
 /**
  * Pull-to-refresh for the whole app.
  *
- * The browser's own gesture never fires here: `html` and `body` are pinned to
- * the viewport height with `overflow: hidden`, so the document never scrolls
- * and never overscrolls, and an installed (standalone) window drops the gesture
- * regardless. This reproduces the gesture and hands the refresh itself to the
- * caller, which decides what refreshing means.
+ * The browser's own gesture is kept out of the way: `html` and `body` are pinned
+ * to the viewport height with `overflow: hidden`, and everything that scrolls
+ * carries `overscroll-behavior` so a pull past the top does not chain out to the
+ * viewport. That last part is load-bearing on iOS — an installed window does
+ * *not* drop the gesture, it runs its own pull-to-refresh, and once the platform
+ * has claimed the touch sequence the `preventDefault` below is skipped because
+ * the event is no longer cancelable. Both reloads then run, and one pull of the
+ * header loads the document twice.
+ *
+ * This reproduces the gesture and hands the refresh itself to the caller, which
+ * decides what refreshing means.
  *
  * The listeners live on the document rather than on one container, because the
  * surfaces that need the gesture are not all in the same subtree: pages render

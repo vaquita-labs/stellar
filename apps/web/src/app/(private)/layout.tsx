@@ -71,8 +71,12 @@ export default function PrivateLayout({
                     can live: `html`/`body` are pinned to the viewport, so the
                     document never overscrolls and the browser gesture never
                     fires. Excluded on the home map, which pans with the same
-                    drag (see PullToRefresh). */}
-                <PullToRefresh className="flex-1 min-h-0 overflow-auto">{children}</PullToRefresh>
+                    drag (see PullToRefresh).
+                    `overscroll-contain` keeps a pull past the top from chaining
+                    out to the viewport: an installed iOS window answers that
+                    with its own pull-to-refresh, which reloads the document a
+                    second time behind ours. */}
+                <PullToRefresh className="flex-1 min-h-0 overflow-auto overscroll-contain">{children}</PullToRefresh>
                 {/* Dentro de los gates: el overlay solo se pinta para usuarios
                     autenticados y onboarded, igual que el contenido. */}
                 {modal}
