@@ -8,12 +8,27 @@ import { useRampOnramp } from '@/networks/pollar/rampsOnramp';
 import { Spinner } from '@heroui/react';
 import { usePollar } from '@pollar/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiArrowDownLeft, FiArrowUpRight } from 'react-icons/fi';
 import { formatTokenPrecise } from '../../../helpers/numbers';
 import { useInvalidateAfterMoneyMove, useMarkNotificationRead, useNotifications } from '../../../hooks';
-import { useAutoModalSlot, useRampActiveStore } from '../../../stores';
+import {
+  addRampSettledItems,
+  claimRampCheck,
+  clearRampPending,
+  clearRampSettledItems,
+  finishRampCheck,
+  isRampCheckRunning,
+  markRampPendingShown,
+  raiseRampPending,
+  setRampCheckRunning,
+  setRampOpenRows,
+  useAutoModalSlot,
+  useRampActiveStore,
+  useRampNewsStore,
+  type RampSettledItem,
+} from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 
@@ -22,39 +37,6 @@ const MESSAGE_KEYS = new Set(['onrampSettled', 'offrampSettled']);
 const CREDIT_WAIT_MS = 8_000;
 /** How often to ask again while a row is open. */
 const POLL_MS = 30_000;
-
-interface SettledItem {
-  kind: 'onramp' | 'offramp';
-  id: string;
-  amountFiat: number;
-  currency: string;
-  /** Credited USDC of a purchase, when the ledger said it in time. */
-  usdc: number | null;
-}
-
-/** The deposit the "still in process" notice is about. */
-interface PendingNotice {
-  amountFiat: number;
-  currency: string;
-}
-
-/**
- * Whether the "still in process" notice has already been shown on this page
- * load. Not per purchase: the notice says a deposit of the user's has not been
- * credited yet, which is one piece of news however many rows are still open.
- * Keyed by row it reopened for whoever had two of them — the check shows the
- * first open purchase, and a second run that saw them in the other order
- * treated the other row as news the user had not been told.
- *
- * Module level rather than a ref inside the component, because "once per load"
- * has to survive a remount: this gate hangs under the auth, legal and onboarding
- * gates, and each of those swaps the whole private tree out for a screen of its
- * own while it decides. A remount gives the component fresh state and runs the
- * first check again — which put a notice the user had just dismissed straight
- * back on screen. Both paths are why the notice comes back on a refresh (a new
- * document, so a new module) but never twice within one.
- */
-let pendingAnnounced = false;
 
 /**
  * What happened to the bank purchases and withdrawals the server still has open.
@@ -70,6 +52,13 @@ let pendingAnnounced = false;
  * notification and sends the push — and announced here. A deposit the provider
  * has not credited yet gets the "still in process" notice once per load, so the
  * user is not left thinking their money vanished.
+ *
+ * None of that is component state. Everything this gate learns lives in
+ * {@link useRampNewsStore}, because the gate is remounted more often than it
+ * looks: the legal and onboarding gates above it decide from the persisted query
+ * cache, then decide again when their refetch lands, swapping the private tree
+ * out in between. Fresh state there means the news is either repeated or, for a
+ * row this gate already closed on the server, lost.
  */
 export function RampSettledGate() {
   const { t } = useTranslation();
@@ -82,19 +71,19 @@ export function RampSettledGate() {
   const isRampActive = useRampActiveStore((state) => state.isRampActive);
   const walletAddress = wallet?.address ?? null;
 
-  const started = useRef<string | null>(null);
-  const inFlight = useRef(false);
-  const [checked, setChecked] = useState(false);
-  const [settledItems, setSettledItems] = useState<SettledItem[]>([]);
-  const [openRows, setOpenRows] = useState<{ createdAt: string }[]>([]);
-  const [pending, setPending] = useState<PendingNotice | null>(null);
+  const checked = useRampNewsStore((state) => state.checked);
+  const settledItems = useRampNewsStore((state) => state.items);
+  const openRows = useRampNewsStore((state) => state.openRows);
+  const pending = useRampNewsStore((state) => state.pending);
+  const pendingShown = useRampNewsStore((state) => state.pendingShown);
 
   const runCheck = useCallback(
     async (address: string, first: boolean) => {
       // One check at a time, and a check is never cancelled: it closes rows on
       // the server, so dropping its answer would lose the modal for good.
-      if (inFlight.current) return;
-      inFlight.current = true;
+      if (isRampCheckRunning()) return;
+      setRampCheckRunning(true);
+      let succeeded = false;
 
       const readStatuses = async (txIds: string[]) => {
         const entries = await Promise.all(
@@ -120,13 +109,13 @@ export function RampSettledGate() {
         const settledWithdrawals = settledOnReopen<OpenWithdrawal>(withdrawals, statuses);
 
         const items = await Promise.all([
-          ...settledPurchases.map(async (p): Promise<SettledItem> => {
+          ...settledPurchases.map(async (p): Promise<RampSettledItem> => {
             const hash = reads.get(p.providerTxId)?.hash ?? null;
             const usdc = hash ? await readCreditedUsdc(hash, address, { timeoutMs: CREDIT_WAIT_MS }).catch(() => null) : null;
             await markPurchaseTerminal(address, p.id, 'settled', null, usdc).catch(() => false);
             return { kind: 'onramp', id: p.id, amountFiat: Number(p.amountFiat), currency: p.currency, usdc };
           }),
-          ...settledWithdrawals.map(async (w): Promise<SettledItem> => {
+          ...settledWithdrawals.map(async (w): Promise<RampSettledItem> => {
             await markWithdrawalTerminal(address, w.id, 'settled');
             return { kind: 'offramp', id: w.id, amountFiat: Number(w.amountFiat), currency: w.currency, usdc: null };
           }),
@@ -135,35 +124,32 @@ export function RampSettledGate() {
         if (items.length) {
           void invalidateMoney();
           void queryClient.invalidateQueries({ queryKey: ['notifications'] });
-          // Added, not replaced: a row that settles on a later check is news of
-          // its own, even if the user already dismissed an earlier one.
-          setSettledItems((prev) => [...prev, ...items.filter((item) => !prev.some((p) => p.id === item.id))]);
+          addRampSettledItems(items);
         }
 
         const openPurchases = openAfterCheck<OpenPurchase>(purchases, statuses);
-        setOpenRows([...openPurchases, ...openAfterCheck<OpenWithdrawal>(withdrawals, statuses)]);
+        setRampOpenRows([...openPurchases, ...openAfterCheck<OpenWithdrawal>(withdrawals, statuses)]);
 
         // Only the first check raises the notice: after that the user has been
         // told, and what is worth interrupting them for again is the deposit
         // landing. Withdrawals stay silent, as they were.
         const stillOpen = openPurchases[0];
-        if (first && !items.length && stillOpen && !pendingAnnounced) {
-          pendingAnnounced = true;
-          setPending({ amountFiat: Number(stillOpen.amountFiat), currency: stillOpen.currency });
+        if (first && !items.length && stillOpen) {
+          raiseRampPending({ amountFiat: Number(stillOpen.amountFiat), currency: stillOpen.currency });
         }
+        succeeded = true;
       } catch {
         // A check we could not finish says nothing; the next one tries again.
       } finally {
-        inFlight.current = false;
-        setChecked(true);
+        setRampCheckRunning(false);
+        finishRampCheck(succeeded);
       }
     },
     [getClient, readCreditedUsdc, invalidateMoney, queryClient],
   );
 
   useEffect(() => {
-    if (!walletAddress || started.current === walletAddress) return;
-    started.current = walletAddress;
+    if (!walletAddress || !claimRampCheck(walletAddress)) return;
     void runCheck(walletAddress, true);
   }, [walletAddress, runCheck]);
 
@@ -176,7 +162,7 @@ export function RampSettledGate() {
       // Nothing while the tab is hidden, and nothing while the deposit modal is
       // up: it polls the same transaction itself, and neither modal here may
       // open behind it.
-      if (inFlight.current || isRampActive || document.visibilityState === 'hidden') return;
+      if (isRampCheckRunning() || isRampActive || document.visibilityState === 'hidden') return;
       void runCheck(walletAddress, false);
     };
     const id = window.setInterval(tick, POLL_MS);
@@ -195,8 +181,20 @@ export function RampSettledGate() {
   const showPending = !showSettled && pending !== null;
   const onScreen = !isRampActive && (showSettled || showPending);
   // No wallet yet means nothing to check, and nothing to hold the queue for.
-  const settled = !walletAddress || (checked && !onScreen);
+  // News the deposit sheet is merely covering still holds it, though: released
+  // there, the next auto-modal opens and this one pops up over it afterwards.
+  const settled = !walletAddress || (checked && !showSettled && !showPending);
   const isMyTurn = useAutoModalSlot('ramp-settled', settled);
+
+  // The notice is news, and news is delivered once. Everything above decides
+  // whether it renders and can flip back — the queue turn, the deposit sheet, a
+  // gate swapping the tree — and it is mounted rather than opened, so a return
+  // replays the entering animation and reads as a second pop-up.
+  const showingPending = isMyTurn && onScreen && showPending;
+  useEffect(() => {
+    if (showingPending) markRampPendingShown();
+    else if (pendingShown) clearRampPending();
+  }, [showingPending, pendingShown]);
 
   if (!isMyTurn || !onScreen) return null;
 
@@ -206,11 +204,11 @@ export function RampSettledGate() {
     return (
       <AppModal
         open
-        onOpenChange={() => setPending(null)}
+        onOpenChange={() => clearRampPending()}
         title={t('rampSettled.pending.title', 'Your deposit is still being processed')}
         size="sm"
         footer={
-          <PressableButton variant="primary" size="cta" onClick={() => setPending(null)}>
+          <PressableButton variant="primary" size="cta" onClick={() => clearRampPending()}>
             {t('rampSettled.modal.gotIt', 'Got it')}
           </PressableButton>
         }
@@ -239,7 +237,8 @@ export function RampSettledGate() {
   }
 
   const close = () => {
-    setSettledItems([]);
+    clearRampSettledItems();
+    clearRampPending();
     // Best effort: the notifications written by these closes are the same news,
     // so they are marked read when the feed already has them.
     for (const n of data?.notifications ?? []) {
@@ -248,7 +247,7 @@ export function RampSettledGate() {
   };
 
   const single = settledItems.length === 1 ? settledItems[0]! : null;
-  const headline = (item: SettledItem) =>
+  const headline = (item: RampSettledItem) =>
     item.kind === 'onramp' && item.usdc != null
       ? `+${formatTokenPrecise(item.usdc, 2)} USDC`
       : fiat(item.amountFiat, item.currency);

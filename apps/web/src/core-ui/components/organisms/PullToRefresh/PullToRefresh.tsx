@@ -22,6 +22,12 @@ const INDICATOR_HIDDEN_PX = 44;
 const INDICATOR_Z = 60;
 
 /**
+ * Whether this document has already asked to be replaced. Module level, so it
+ * outlives any remount for the rest of the document's short life.
+ */
+let reloadRequested = false;
+
+/**
  * The app's main scroll region, plus the pull-to-refresh indicator for the
  * whole app.
  *
@@ -40,6 +46,13 @@ export function PullToRefresh({ className, children }: { className?: string; chi
   // down, and until it does the indicator should keep spinning rather than snap
   // back as if the refresh had finished.
   const onRefresh = useCallback(() => {
+    // A reload already asked for is not asked for twice. An installed iOS window
+    // runs its own pull-to-refresh on the same gesture, and once the platform has
+    // claimed the touch sequence our `touchmove` is no longer cancelable, so the
+    // native reload happens whether we prevent it or not. Reloading again on top
+    // of it is a second document for one pull.
+    if (reloadRequested) return new Promise<void>(() => {});
+    reloadRequested = true;
     window.location.reload();
     return new Promise<void>(() => {});
   }, []);
