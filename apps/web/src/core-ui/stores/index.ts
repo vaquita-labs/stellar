@@ -14,3 +14,4 @@ export * from './visibility';
 export * from './auto-modals';
 export * from './modal-open';
 export * from './ramp-news';
+export * from './vault-prompt';
