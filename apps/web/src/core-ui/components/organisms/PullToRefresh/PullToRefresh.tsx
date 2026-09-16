@@ -1,6 +1,7 @@
 'use client';
 
 import { PULL_TO_REFRESH_THRESHOLD_PX, usePullToRefresh } from '@/core-ui/hooks';
+import { useIsAnyModalOpen } from '@/core-ui/stores/modal-open';
 import { ReactNode, useCallback } from 'react';
 import { FiRefreshCw } from 'react-icons/fi';
 
@@ -43,16 +44,31 @@ export function PullToRefresh({ className, children }: { className?: string; chi
     return new Promise<void>(() => {});
   }, []);
 
+  // While a modal is on screen the page underneath takes no input at all — see
+  // `stores/modal-open`. The gesture goes with it: it listens on the document,
+  // so it would otherwise claim a pull that starts inside a sheet's scrollable
+  // body, and its refresh is a full page reload — in the middle of a deposit.
+  const modalOpen = useIsAnyModalOpen();
+
   const { distance, pulling, armed, refreshing, anchor } = usePullToRefresh({
     onRefresh,
     ignoreSelector: PULL_IGNORE_SELECTOR,
+    enabled: !modalOpen,
   });
 
   const visible = distance > 0 || refreshing;
 
   return (
     <>
-      <main className={className}>{children}</main>
+      {/*
+        `inert` is the barrier; `pointer-events-none` is the belt to its braces,
+        because React Aria's own `inert` degrades to a useless `aria-hidden` on
+        a browser without it. Every modal is portalled to `body`, so nothing
+        that must stay interactive is inside here.
+      */}
+      <main className={modalOpen ? `${className ?? ''} pointer-events-none` : className} inert={modalOpen}>
+        {children}
+      </main>
       <div
         className="pointer-events-none fixed flex justify-center"
         style={{

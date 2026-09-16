@@ -87,14 +87,17 @@ const buzz = (ms: number) => {
  * end of `body`. Each gesture resolves its own surface from the element under
  * the finger.
  *
- * `ignoreSelector` marks the subtrees the pull must never claim.
+ * `ignoreSelector` marks the subtrees the pull must never claim, and `enabled`
+ * turns the gesture off entirely — it defaults to on.
  */
 export const usePullToRefresh = ({
   onRefresh,
   ignoreSelector,
+  enabled = true,
 }: {
   onRefresh: () => Promise<unknown> | unknown;
   ignoreSelector: string;
+  enabled?: boolean;
 }): PullToRefreshState => {
   const [distance, setDistance] = useState(0);
   const [pulling, setPulling] = useState(false);
@@ -107,6 +110,13 @@ export const usePullToRefresh = ({
   useEffect(() => {
     onRefreshRef.current = onRefresh;
   }, [onRefresh]);
+
+  // Also read at gesture time rather than in the dependencies: a modal opening
+  // mid-pull must not re-bind the listeners and strand the gesture in progress.
+  const enabledRef = useRef(enabled);
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
 
   useEffect(() => {
     let tracking = false;
@@ -127,7 +137,7 @@ export const usePullToRefresh = ({
     };
 
     const onTouchStart = (event: TouchEvent) => {
-      if (refreshingNow || event.touches.length !== 1) return;
+      if (!enabledRef.current || refreshingNow || event.touches.length !== 1) return;
       const resolved = resolvePullSurface(event.target, ignoreSelector);
       if (!resolved.allowed) return;
       surface = resolved.surface;
@@ -141,6 +151,11 @@ export const usePullToRefresh = ({
 
     const onTouchMove = (event: TouchEvent) => {
       if (!tracking) return;
+      // Turned off mid-gesture — a modal opened over the surface being pulled.
+      if (!enabledRef.current) {
+        reset();
+        return;
+      }
       const dy = event.touches[0].clientY - startY;
       const dx = event.touches[0].clientX - startX;
 
