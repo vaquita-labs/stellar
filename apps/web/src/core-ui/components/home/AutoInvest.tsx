@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { MIN_IDLE_USDC } from '../../helpers/numbers';
+import { useEffect, useState } from 'react';
 import { useIdleFunds } from '../../hooks/useAutoInvest';
 import { useModalOnScreen } from '../../hooks/useModalOnScreen';
-import { useAutoModalSlot, usePendingCreditStore } from '../../stores';
+import {
+  dismissVaultPrompt,
+  markVaultInvestSettling,
+  observeVaultIdle,
+  useAutoModalSlot,
+  usePendingCreditStore,
+  useVaultPromptStore,
+} from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { IdleFundsModal } from './IdleFundsModal';
 
@@ -19,13 +25,12 @@ export function AutoInvest() {
   const [open, setOpen] = useState(false);
   // Si el usuario cerró (o la inversión falló y cerró), no volvemos a abrir hasta
   // que entre dinero NUEVO (idle sube) — así no lo atrapamos en loop ni lo forzamos.
-  const [dismissed, setDismissed] = useState(false);
-  const prevIdle = useRef(0);
-  // Se invirtió y el saldo todavía no lo refleja. La lectura de la wallet va por
-  // detrás de la transacción, así que durante unos segundos vuelve el monto de
-  // antes: eso NO es plata nueva, es el saldo que no se enteró, y tomarlo por
-  // tal reabría la pantalla sola un rato después de invertir.
-  const settlingInvest = useRef(false);
+  //
+  // Vive fuera del componente ([[vault-prompt]]) porque "ya contestó" tiene que
+  // sobrevivir a un remontaje: este árbol se rearma solo en un refresh tibio, y
+  // con estado propio la pantalla que el usuario acababa de cerrar volvía a
+  // abrirse al instante.
+  const dismissed = useVaultPromptStore((state) => state.dismissed);
 
   // Que el saldo ocioso suba es LA señal de que el dinero en vuelo aterrizó, así
   // que acá también se apaga el parpadeo del header. No alcanza con apagarlo al
@@ -45,17 +50,15 @@ export function AutoInvest() {
   const settled = !open && (dismissed || (decided && !shouldPrompt));
   const ourTurn = useAutoModalSlot('vault-prompt', settled);
 
+  // Solo se miran saldos SABIDOS. `idle` colapsa "todavía no se sabe" a 0
+  // (`useWalletUsdc` devuelve null y acá vale 0), así que cada refresco del
+  // balance lo hace caer a 0 y volver: leído como plata nueva, eso reabría la
+  // pantalla sola. Y el refresco lo dispara el propio toque del usuario —cerrar
+  // la pantalla es un `pointerdown`—, por eso reaparecía justo al cerrarla.
   useEffect(() => {
-    // Recién cuando el saldo baja del piso sabemos que la inversión ya está
-    // reflejada; desde ahí una subida vuelve a significar plata nueva.
-    if (settlingInvest.current) {
-      if (idle < MIN_IDLE_USDC) settlingInvest.current = false;
-    } else if (idle > prevIdle.current + 0.01) {
-      setDismissed(false);
-      clearPendingCredit();
-    }
-    prevIdle.current = idle;
-  }, [idle, clearPendingCredit]);
+    if (!decided) return;
+    if (observeVaultIdle(idle)) clearPendingCredit();
+  }, [decided, idle, clearPendingCredit]);
 
   // This screen is a full-screen interruption, so it may not land on top of what
   // the user is already doing. That rule also settles the serious case: every
@@ -90,7 +93,7 @@ export function AutoInvest() {
 
   const handleClose = () => {
     setOpen(false);
-    setDismissed(true);
+    dismissVaultPrompt();
     clearError();
   };
 
@@ -102,8 +105,8 @@ export function AutoInvest() {
       // sola al instante: `shouldPrompt` sigue en true hasta que el refresco del
       // saldo aterriza, y el efecto de abajo la vuelve a abrir en cuanto el
       // diálogo sale del DOM. Vuelve a ofrecerse cuando entre plata nueva.
-      setDismissed(true);
-      settlingInvest.current = true;
+      dismissVaultPrompt();
+      markVaultInvestSettling();
     } catch {
       // El error ya quedó en `error` y se muestra en la pantalla; permanece abierta
       // (ahora dismissable) para reintentar o cerrar.
