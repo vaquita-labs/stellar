@@ -39,6 +39,19 @@ interface PendingNotice {
 }
 
 /**
+ * The purchases whose "still in process" notice has already been shown, for as
+ * long as the page is loaded.
+ *
+ * Module level rather than a ref inside the component, because "once per load"
+ * has to survive a remount: this gate hangs under the auth, legal and onboarding
+ * gates, and each of those swaps the whole private tree out for a screen of its
+ * own while it decides. A remount gives the component fresh state and runs the
+ * first check again — which put a notice the user had just dismissed straight
+ * back on screen.
+ */
+const announcedPending = new Set<string>();
+
+/**
  * What happened to the bank purchases and withdrawals the server still has open.
  *
  * Paying a bank QR means leaving for the bank app, and ramp rows only move from
@@ -129,7 +142,8 @@ export function RampSettledGate() {
         // told, and what is worth interrupting them for again is the deposit
         // landing. Withdrawals stay silent, as they were.
         const stillOpen = openPurchases[0];
-        if (first && !items.length && stillOpen) {
+        if (first && !items.length && stillOpen && !announcedPending.has(stillOpen.id)) {
+          announcedPending.add(stillOpen.id);
           setPending({ amountFiat: Number(stillOpen.amountFiat), currency: stillOpen.currency });
         }
       } catch {

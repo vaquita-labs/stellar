@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { MIN_IDLE_USDC } from '../../helpers/numbers';
 import { useIdleFunds } from '../../hooks/useAutoInvest';
 import { useModalOnScreen } from '../../hooks/useModalOnScreen';
 import { useAutoModalSlot, usePendingCreditStore } from '../../stores';
@@ -20,6 +21,11 @@ export function AutoInvest() {
   // que entre dinero NUEVO (idle sube) — así no lo atrapamos en loop ni lo forzamos.
   const [dismissed, setDismissed] = useState(false);
   const prevIdle = useRef(0);
+  // Se invirtió y el saldo todavía no lo refleja. La lectura de la wallet va por
+  // detrás de la transacción, así que durante unos segundos vuelve el monto de
+  // antes: eso NO es plata nueva, es el saldo que no se enteró, y tomarlo por
+  // tal reabría la pantalla sola un rato después de invertir.
+  const settlingInvest = useRef(false);
 
   // Que el saldo ocioso suba es LA señal de que el dinero en vuelo aterrizó, así
   // que acá también se apaga el parpadeo del header. No alcanza con apagarlo al
@@ -40,7 +46,11 @@ export function AutoInvest() {
   const ourTurn = useAutoModalSlot('vault-prompt', settled);
 
   useEffect(() => {
-    if (idle > prevIdle.current + 0.01) {
+    // Recién cuando el saldo baja del piso sabemos que la inversión ya está
+    // reflejada; desde ahí una subida vuelve a significar plata nueva.
+    if (settlingInvest.current) {
+      if (idle < MIN_IDLE_USDC) settlingInvest.current = false;
+    } else if (idle > prevIdle.current + 0.01) {
       setDismissed(false);
       clearPendingCredit();
     }
@@ -88,6 +98,12 @@ export function AutoInvest() {
     try {
       await invest();
       setOpen(false);
+      // El usuario ya decidió sobre ESTA plata. Sin esto la pantalla se reabría
+      // sola al instante: `shouldPrompt` sigue en true hasta que el refresco del
+      // saldo aterriza, y el efecto de abajo la vuelve a abrir en cuanto el
+      // diálogo sale del DOM. Vuelve a ofrecerse cuando entre plata nueva.
+      setDismissed(true);
+      settlingInvest.current = true;
     } catch {
       // El error ya quedó en `error` y se muestra en la pantalla; permanece abierta
       // (ahora dismissable) para reintentar o cerrar.
