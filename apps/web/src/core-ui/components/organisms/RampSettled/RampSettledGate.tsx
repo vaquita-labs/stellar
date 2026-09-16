@@ -39,17 +39,22 @@ interface PendingNotice {
 }
 
 /**
- * The purchases whose "still in process" notice has already been shown, for as
- * long as the page is loaded.
+ * Whether the "still in process" notice has already been shown on this page
+ * load. Not per purchase: the notice says a deposit of the user's has not been
+ * credited yet, which is one piece of news however many rows are still open.
+ * Keyed by row it reopened for whoever had two of them — the check shows the
+ * first open purchase, and a second run that saw them in the other order
+ * treated the other row as news the user had not been told.
  *
  * Module level rather than a ref inside the component, because "once per load"
  * has to survive a remount: this gate hangs under the auth, legal and onboarding
  * gates, and each of those swaps the whole private tree out for a screen of its
  * own while it decides. A remount gives the component fresh state and runs the
  * first check again — which put a notice the user had just dismissed straight
- * back on screen.
+ * back on screen. Both paths are why the notice comes back on a refresh (a new
+ * document, so a new module) but never twice within one.
  */
-const announcedPending = new Set<string>();
+let pendingAnnounced = false;
 
 /**
  * What happened to the bank purchases and withdrawals the server still has open.
@@ -142,8 +147,8 @@ export function RampSettledGate() {
         // told, and what is worth interrupting them for again is the deposit
         // landing. Withdrawals stay silent, as they were.
         const stillOpen = openPurchases[0];
-        if (first && !items.length && stillOpen && !announcedPending.has(stillOpen.id)) {
-          announcedPending.add(stillOpen.id);
+        if (first && !items.length && stillOpen && !pendingAnnounced) {
+          pendingAnnounced = true;
           setPending({ amountFiat: Number(stillOpen.amountFiat), currency: stillOpen.currency });
         }
       } catch {
