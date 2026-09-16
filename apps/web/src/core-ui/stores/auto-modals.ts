@@ -28,7 +28,7 @@ export const AUTO_MODAL_ORDER = [
   'badge-claim',
   /** `TransferReceivedGate` — another user sent money; news, not a decision. */
   'transfer-received',
-  /** `RampSettledGate` — a bank purchase or withdrawal finished while away; news. */
+  /** `RampSettledGate` — a bank purchase or withdrawal finished while away, or is still in process; news. */
   'ramp-settled',
   /** `ReleaseNotesGate` — an announcement, so it goes last. */
   'release-notes',

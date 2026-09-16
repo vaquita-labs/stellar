@@ -2505,8 +2505,11 @@
       "sentToBank": "Enviado a tu cuenta bancaria.",
       "deposit": "Depósito",
       "withdrawal": "Retiro",
-      "viewWallet": "Ver billetera",
       "gotIt": "Entendido"
+    },
+    "pending": {
+      "title": "Tu depósito sigue en proceso",
+      "body": "Seguimos esperando la confirmación de tu pago de {{amount}}. Apenas se acredite te avisamos."
     }
   }
 }

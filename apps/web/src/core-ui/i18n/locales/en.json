@@ -2505,8 +2505,11 @@
       "sentToBank": "Sent to your bank account.",
       "deposit": "Deposit",
       "withdrawal": "Withdrawal",
-      "viewWallet": "View wallet",
       "gotIt": "Got it"
+    },
+    "pending": {
+      "title": "Your deposit is still being processed",
+      "body": "We are still waiting for the bank to confirm your {{amount}} payment. We will let you know as soon as it lands."
     }
   }
 }
