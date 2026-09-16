@@ -12,3 +12,4 @@ export * from './vaquita-positions';
 export * from './pending-credit';
 export * from './visibility';
 export * from './auto-modals';
+export * from './modal-open';

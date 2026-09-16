@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ReactNode, useEffect, useState } from 'react';
 import { FiChevronLeft, FiX } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
+import { claimModalOpen, isAnyModalOpen } from '../../stores/modal-open';
 import { CircleIconButton } from './CircleIconButton';
 
 export type AppModalSize = 'sm' | 'md' | 'lg';
@@ -170,6 +171,26 @@ export function AppModal({
   overlay,
 }: AppModalProps) {
   const { t } = useTranslation();
+  // Mientras el sheet se ve —no solo mientras `open`— la app de atrás queda
+  // inerte. React Aria suelta su propio `inert` apenas `open` pasa a false, y
+  // durante los ~250ms de salida el modal sigue tapando los botones: un toque
+  // ahí cerraba el modal y además apretaba lo que había debajo. Ver
+  // {@link claimModalOpen}.
+  const present = useModalPresence(open);
+  useEffect(() => {
+    if (!present) return;
+    const trigger = document.activeElement;
+    const release = claimModalOpen();
+    return () => {
+      release();
+      // React Aria devuelve el foco un frame después de desmontar el diálogo,
+      // o sea TODAVÍA dentro de la barrera, donde focus() no hace nada. Si se
+      // perdió (quedó en el body) y el disparador sigue en el DOM, se repone.
+      if (isAnyModalOpen() || document.activeElement !== document.body) return;
+      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus();
+    };
+  }, [present]);
+
   return (
     <Modal.Backdrop
       isOpen={open}
