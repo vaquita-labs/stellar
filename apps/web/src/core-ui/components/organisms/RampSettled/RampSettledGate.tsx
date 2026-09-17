@@ -22,6 +22,7 @@ import {
   isRampCheckRunning,
   markRampPendingShown,
   raiseRampPending,
+  setOnrampWaiting,
   setRampCheckRunning,
   setRampOpenRows,
   useAutoModalSlot,
@@ -129,6 +130,10 @@ export function RampSettledGate() {
 
         const openPurchases = openAfterCheck<OpenPurchase>(purchases, statuses);
         setRampOpenRows([...openPurchases, ...openAfterCheck<OpenWithdrawal>(withdrawals, statuses)]);
+        // This is the only place that asks the server which purchases are still
+        // open, so it is also what carries the deposit button's shortcut back to
+        // one across a reload.
+        setOnrampWaiting(openPurchases.length > 0);
 
         // Only the first check raises the notice: after that the user has been
         // told, and what is worth interrupting them for again is the deposit

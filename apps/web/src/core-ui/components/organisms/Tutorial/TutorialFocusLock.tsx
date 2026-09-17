@@ -35,8 +35,10 @@ interface TutorialFocusLockProps {
    * that ask the user to tap the real element need the hole to stay open.
    */
   blockTarget?: boolean;
-  /** Actions rendered inside the guide card (e.g. next / skip). */
+  /** Actions rendered inside the guide card (e.g. back / next). */
   footer?: ReactNode;
+  /** Close action in the card's top-right corner (e.g. leaving the tour). */
+  close?: { label: string; onClick: () => void };
 }
 
 const REMEASURE_MS = 200;
@@ -67,6 +69,7 @@ export function TutorialFocusLock({
   pinTop,
   blockTarget,
   footer,
+  close,
 }: TutorialFocusLockProps) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -92,6 +95,9 @@ export function TutorialFocusLock({
   // card is in the DOM. Read in a layout effect so the first paint already uses
   // it: with a guessed height the card would flash in one spot and then jump.
   const hasRect = rect !== null;
+  // `hasClose` and not `close` itself: callers build that object inline, so a
+  // new identity every render would tear down the observer on every render.
+  const hasClose = !!close;
   useLayoutEffect(() => {
     const el = cardRef.current;
     if (!el) return;
@@ -100,7 +106,7 @@ export function TutorialFocusLock({
     const observer = new ResizeObserver(read);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [hasRect, message, footer]);
+  }, [hasRect, message, footer, hasClose]);
 
   if (!rect || typeof document === 'undefined') return null;
 
@@ -132,6 +138,10 @@ export function TutorialFocusLock({
   const maxTop = Math.max(CARD_TOP_OFFSET, vh - CARD_TOP_OFFSET - cardH);
   const cardStyle = { left: cardLeft, top: Math.min(Math.max(wantedTop, CARD_TOP_OFFSET), maxTop), width: cardW };
 
+  // Only a card that carries buttons takes clicks; a purely narrative one lets
+  // them through to whatever it floats over.
+  const interactive = !!footer || hasClose;
+
   // Se portalea a <body> para quedar por encima del portal del modal de HeroUI
   // (`.modal__backdrop` es `fixed inset-0 z-50`) y, sobre todo, para escapar del
   // subárbol que react-aria marca como `inert`. Al abrir un modal, react-aria
@@ -151,7 +161,7 @@ export function TutorialFocusLock({
     // the card it holds focusable buttons, and hiding those from assistive
     // tech would leave the tour with no way out.
     <div
-      aria-hidden={footer ? undefined : true}
+      aria-hidden={interactive ? undefined : true}
       data-react-aria-top-layer="true"
       className="pointer-events-none fixed inset-0 z-[9998]"
     >
@@ -184,13 +194,13 @@ export function TutorialFocusLock({
       {message && (
         <motion.div
           ref={cardRef}
-          className={`fixed z-[10000] -translate-x-1/2 ${footer ? 'pointer-events-auto' : 'pointer-events-none'}`}
+          className={`fixed z-[10000] -translate-x-1/2 ${interactive ? 'pointer-events-auto' : 'pointer-events-none'}`}
           style={cardStyle}
           initial={{ opacity: 0, y: placeAbove ? 6 : -6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
         >
-          <TutorialCard dotIndex={dotIndex} dotCount={dotCount} title={title} body={message} footer={footer} />
+          <TutorialCard dotIndex={dotIndex} dotCount={dotCount} title={title} body={message} footer={footer} close={close} />
         </motion.div>
       )}
     </div>,

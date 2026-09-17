@@ -2,6 +2,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FiChevronLeft } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { useProfileData, useRestProfile } from '../../../hooks';
 import { useAutoModalSlot } from '../../../stores';
@@ -33,7 +34,7 @@ const MIN_STEPS = 2;
  * Every step is explanatory, not an instruction: the element is dimmed into a
  * cutout and made *unclickable* (`blockTarget`), because a tap on the real
  * profile button would navigate away and lose the tour. The user moves with the
- * card's own button.
+ * card's own buttons, forwards and back, and leaves by the card's close.
  *
  * Steps whose anchor is not on screen are dropped before the tour starts, so the
  * progress dots always match what the user is actually going to see. That covers
@@ -121,13 +122,22 @@ export function HomeTour() {
 
   const step = steps && index < steps.length ? steps[index] : null;
   const isLast = !!steps && index === steps.length - 1;
+  const isFirst = index === 0;
 
   const footer = useMemo(
     () => (
       <div className="flex items-center gap-2">
-        {!isLast && (
-          <PressableButton variant="ghost" size="md" onClick={finish} className="px-3">
-            <span className="text-sm text-black/60">{t('homeTour.skip', 'Skip')}</span>
+        {/* Icon only: next to a full-width next button, a worded one would
+            squeeze the card's only primary action on a phone. */}
+        {!isFirst && (
+          <PressableButton
+            variant="ghost"
+            size="md"
+            onClick={() => setIndex((i) => Math.max(0, i - 1))}
+            ariaLabel={t('homeTour.back', 'Back')}
+            className="px-3"
+          >
+            <FiChevronLeft className="h-5 w-5 text-black/60" />
           </PressableButton>
         )}
         <PressableButton
@@ -142,8 +152,13 @@ export function HomeTour() {
         </PressableButton>
       </div>
     ),
-    [isLast, finish, t],
+    [isFirst, isLast, finish, t],
   );
+
+  // Leaving the tour is the card's close button, not a step action: it is the
+  // same gesture in every step, including the last, and keeping it out of the
+  // footer leaves that row to what moves between steps.
+  const close = useMemo(() => ({ label: t('homeTour.skip', 'Skip'), onClick: finish }), [finish, t]);
 
   if (!showing || !step) return null;
 
@@ -157,6 +172,7 @@ export function HomeTour() {
       title={t(step.titleKey)}
       message={t(step.bodyKey)}
       footer={footer}
+      close={close}
       dotIndex={index}
       dotCount={steps.length}
     />

@@ -780,6 +780,7 @@
     }
   },
   "homeTour": {
+    "back": "Back",
     "done": "Got it",
     "next": "Next",
     "skip": "Skip",
@@ -1859,6 +1860,7 @@
           "anchorError": "The provider rejected the request. Try again in a moment.",
           "assetNotEnabled": "This currency is not available for that route right now.",
           "buyFailed": "We could not start your purchase. Try again.",
+          "closeFailed": "We could not close your previous purchase. Check your connection and try again.",
           "generic": "The purchase could not be quoted.",
           "kycRequired": "The provider needs to verify your identity before continuing.",
           "network": "We couldn't reach the network. Check your connection and try again.",
@@ -1901,11 +1903,11 @@
         "rateLabel": "Rate",
         "receiveEstimate": "You get ≈ {{amount}} USDC",
         "restart": "Start a new purchase",
-        "cancel": "Cancel and start over",
-        "cancelTitle": "Cancel this payment code?",
-        "cancelBody": "Only if you have not paid it yet. If you already paid from your bank, your USDC is on its way — cancelling now and buying again would charge you twice.",
-        "cancelConfirm": "I have not paid — cancel it",
-        "cancelKeep": "Keep this code",
+        "leaveTitle": "Your payment code is still open",
+        "leaveBody": "You can close this and come back whenever you want — the code will be waiting. If you already paid it, your USDC is on its way and it is only a matter of waiting a moment. Only cancel it if you have not paid yet.",
+        "leaveClose": "Close and come back later",
+        "leaveStay": "Keep waiting here",
+        "leaveCancel": "I have not paid — cancel it",
         "resuming": "Checking for a purchase in progress…",
         "routeLabel": "Payment method",
         "save": "Save QR to my phone",
@@ -2281,7 +2283,8 @@
       "unfunded": "That account isn't active on Stellar yet, so it can't receive USDC.",
       "noTrustline": "This account hasn't enabled USDC yet. Ask them to open the app once, then try again.",
       "checkFailed": "We couldn't check that account. You can still try withdrawing."
-    }
+    },
+    "positions": "Positions"
   },
   "transactions": {
     "title": "Transactions",

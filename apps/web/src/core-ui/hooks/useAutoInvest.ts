@@ -44,16 +44,18 @@ const IDLE_POLL_MS = 5_000;
 const ACTIVITY_REFRESH_MS = 60_000;
 
 /**
- * Detecta USDC ocioso en la wallet CUSTODIAL (social login) y expone la acción
- * para invertirlo en la posición pasiva (el vault de DeFindex con el flag on, si
- * no el supply directo a Blend). Ya NO firma en silencio: la firma custodial de Pollar
- * necesita salir de un gesto del usuario (si no, tira `SDK_AUTH_DPOP_USE_NONCE`),
- * y además mover plata ajena debe confirmarse. Por eso el disparo real es el botón
- * de la pantalla de "plata ociosa" (`IdleFundsModal`), y este hook solo decide
- * cuándo mostrarla y hace el supply cuando el usuario aprueba.
+ * Detects idle USDC in the CUSTODIAL wallet (social login) and exposes the
+ * action that puts it into the passive position (the DeFindex vault when the
+ * flag is on, a direct supply to Blend otherwise). It does not sign on its own:
+ * Pollar's custodial signature has to come out of a user gesture, or it throws
+ * `SDK_AUTH_DPOP_USE_NONCE`, and moving someone's money is theirs to confirm.
+ * So the real trigger is the button on the idle-funds screen
+ * (`IdleFundsModal`); this hook only decides when to show it, and performs the
+ * supply once the user approves.
  *
- * Guardas: solo custodial, opt-out por wallet (ON por default), umbral mínimo,
- * lock in-flight, y gate en `usePollarReadyStore` (sesión/DPoP restaurada).
+ * Guards: custodial only, per-wallet opt-out (ON by default), a minimum
+ * threshold, an in-flight lock, and the `usePollarReadyStore` gate (session and
+ * DPoP restored).
  */
 export const useIdleFunds = () => {
   const { t } = useTranslation();
@@ -63,44 +65,47 @@ export const useIdleFunds = () => {
   const ready = usePollarReadyStore((s) => s.ready);
   const awaitingFunds = useAwaitingFundsStore((s) => s.isAwaitingFunds);
   const rampActive = useRampActiveStore((s) => s.isRampActive);
-  // Hay plata comprada que todavía no aterrizó. Se selecciona como booleano
-  // a propósito: `pendingUntil` es un timestamp nuevo en cada compra y
-  // remontaría el poll al azar; lo único que importa acá es si hay o no.
+  // Money has been bought and has not landed yet. Selected as a boolean on
+  // purpose: `pendingUntil` is a fresh timestamp on every purchase and would
+  // remount the poll at random, and all that matters here is whether there is
+  // one at all.
   const pendingCredit = usePendingCreditStore((s) => s.pendingUntil != null);
 
   const [isInvesting, setIsInvesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
-  // Solo custodial (social login). `external` = Freighter/xBull: no se toca.
+  // Custodial only (social login). `external` = Freighter/xBull: left alone.
   const isCustodial = !!wallet && wallet.custody !== 'external';
   // "Not known yet" collapses to 0 here because `decided` below is what tells
   // the two apart, and a caller that sees a 0 while `decided` is false knows
   // not to act on it.
   const idle = useWalletUsdc() ?? 0;
 
-  // (1) Fetch ÚNICO al montar/recargar el home: el home no pide el balance solo,
-  // así que lo traemos una vez para detectar plata ociosa apenas entra el usuario
-  // (nudge de `IdleFundsModal`). Espera a que la wallet custodial esté lista.
+  // (1) A SINGLE fetch when the home mounts or reloads: the home does not ask
+  // for the balance by itself, so it is fetched once to spot idle money as soon
+  // as the user walks in (the `IdleFundsModal` nudge). Waits for the custodial
+  // wallet to be ready.
   useEffect(() => {
     if (!ready || !isCustodial || !walletAddress) return;
     void refreshWalletBalance();
   }, [ready, isCustodial, walletAddress, refreshWalletBalance]);
 
-  // (2) Poll REPETIDO: solo mientras el usuario está esperando que le entre la
-  // plata —mirando su dirección en "Receive USDC", o el QR de una compra con
-  // moneda local—, porque ahí llega por fuera de la app y nadie nos avisa.
+  // (2) The REPEATING poll: only while the user is waiting for money to come in
+  // — watching their address on "Receive USDC", or the QR of a local-currency
+  // purchase — because there it arrives from outside the app and nobody tells
+  // us.
   //
-  // Sigue corriendo con la rampa YA CERRADA mientras haya un crédito en vuelo
-  // (`pendingCredit`): el proveedor da la compra por hecha antes de que el USDC
-  // aterrice, y si el poll se apaga al cerrar el modal nadie vuelve a mirar el
-  // saldo. Esa era la falla: la plata llegaba, el saldo seguía en 0 para la app,
-  // el prompt del vault no salía y el header parpadeaba hasta el timeout; sólo
-  // un reload —que dispara el fetch (1)— lo destrababa.
+  // It keeps running with the ramp ALREADY CLOSED as long as a credit is in
+  // flight (`pendingCredit`). The provider calls the purchase done before the
+  // USDC lands, so a poll that stopped when the modal closed left nobody
+  // looking: the money arrives, the app still reads 0, the vault prompt never
+  // opens and the header blinks until the timeout, with only a reload — which
+  // fires fetch (1) — to break it out.
   //
-  // El resto del tiempo no le pegamos al RPC en loop. Guardas:
-  // custodial + sesión Pollar restaurada; pausa con la pestaña oculta y mientras
-  // hay un supply in-flight. Al volver a la pestaña refrescamos enseguida.
+  // The rest of the time the RPC is left alone. Guards: custodial plus a
+  // restored Pollar session; paused while the tab is hidden and while a supply
+  // is in flight. Coming back to the tab refreshes at once.
   useEffect(() => {
     if ((!awaitingFunds && !pendingCredit) || !ready || !isCustodial || !walletAddress) return;
 
@@ -123,7 +128,7 @@ export const useIdleFunds = () => {
   // (3) Refresh on the user's own rhythm, outside the two windows above: coming
   // back to the tab, and the first tap or key of each minute. It covers the
   // arrival no event in the app announces — someone sends USDC while the user
-  // is on the map — which until now only showed up on the next home load.
+  // is on the map — which otherwise waits for the next home load.
   //
   // Throttled because every refresh is an RPC call: without it, dragging the
   // map would be dozens a minute to catch something that happens once a day.
@@ -135,6 +140,15 @@ export const useIdleFunds = () => {
 
     const maybeRefresh = () => {
       if (document.visibilityState !== 'visible') return;
+      // Never from inside a sheet. Every tap and key there is aimed at the sheet,
+      // and Pollar blanks its balance for the length of the read: the idle-funds
+      // button goes disabled between `pointerdown` and `click`, and
+      // `WalletSendModal` reads zero available — MAX dead, Send off, "Available:
+      // 0.00" — while the user is typing an amount. The two screens that sit and
+      // WAIT for money keep their own 5s poll above, which this does not touch.
+      // Asked of the DOM like `useModalOnScreen`, so a sheet written later is
+      // covered without anyone signing it up.
+      if (document.querySelector('[role="dialog"]')) return;
       const now = Date.now();
       if (now - lastActivityRefresh.current < ACTIVITY_REFRESH_MS) return;
       lastActivityRefresh.current = now;
@@ -158,28 +172,41 @@ export const useIdleFunds = () => {
     inFlight.current = true;
     setIsInvesting(true);
     setError(null);
-    // El error de leer el saldo no es un error de transacción: `humanizeTxError`
-    // lo mandaría al genérico y el usuario leería "no pudimos completar la
-    // transacción" cuando en realidad no se intentó ninguna.
+    // Failing to read the balance is not a transaction error: `humanizeTxError`
+    // would send it to the generic one, and the user would read "we could not
+    // complete the transaction" when none was ever attempted.
     let readFailed = false;
     try {
-      // El monto sale de la cadena, no del balance cacheado de Pollar. Ese
-      // cache es un float que ya perdió precisión y puede estar viejo, y acá el
-      // usuario no elige cuánto: apretó "poner a trabajar TODO", así que el
-      // número tiene que ser exactamente el que tiene la cuenta. `formatBaseUnits`
-      // lo lleva a string sin float en el medio.
+      // HARD RULE: this moves the ENTIRE balance, down to the last decimal,
+      // never rounded in either direction. Nobody typed an amount — the button
+      // says "put it ALL to work" — so a figure rounded DOWN strands the
+      // remainder in the wallet, where it reads as idle money and opens this
+      // same screen again, and a figure rounded UP is a deposit the account
+      // cannot cover, which fails at the contract.
+      //
+      // That is why the whole path is integers and exact strings, with no
+      // `Number` anywhere in it: `readUsdcBalanceRaw` returns the i128 the token
+      // contract holds, `formatBaseUnits` writes it out with every one of
+      // `token.decimals` digits, and `toBaseUnits` inside `passiveDeposit`
+      // parses that back to the same i128. The round trip is lossless.
+      //
+      // So: never source the amount from Pollar's cached `walletBalance` (a
+      // float that has already lost precision, and may be stale), never send it
+      // through `Number`, and never format it before it ships. The display
+      // helpers — `formatTokenPrecise` and friends — are for the screen only;
+      // the toast below is the one place a rounded figure belongs.
       let raw: bigint;
       try {
         raw = await readUsdcBalanceRaw(walletAddress);
       } catch (e) {
-        // Nunca caemos al número cacheado: depositar un monto viejo es peor que
-        // no depositar nada.
+        // Never fall back to the cached figure: depositing a stale amount is
+        // worse than depositing nothing.
         readFailed = true;
         throw e;
       }
-      // El saldo de la cadena puede haber bajado del mínimo desde que se abrió la
-      // pantalla. Antes se cortaba en silencio y el botón quedaba muerto sin
-      // decir nada; ahora dice cuál es el piso.
+      // The on-chain balance can have dropped below the floor since the screen
+      // opened. Naming the floor is what keeps the button from looking dead:
+      // stopping here without a word is indistinguishable from a broken button.
       if (raw < toBaseUnits(MIN_IDLE_USDC_STR, token.decimals)) {
         setError(
           t('deposit.receive.minDeposit', 'Minimum deposit: {{amount}} USDC.', {
@@ -198,23 +225,25 @@ export const useIdleFunds = () => {
         flowKind: 'external_in',
       });
       console.info('[idle-funds] invested', { hash, amount });
-      // Destino-agnóstico a propósito: el router elige vault o Blend según el
-      // flag, y el usuario no tiene por qué conocer el protocolo de abajo.
+      // Destination-agnostic on purpose: the router picks vault or Blend from
+      // the flag, and the user has no reason to know the protocol underneath.
+      // Two decimals and a float: this is the only reader of `amount` allowed to
+      // round it, because it is a sentence, not a transaction.
       toast.success(
         t('idleFunds.toast', 'We put ${{amount}} to work', {
           amount: formatTokenPrecise(Number(amount), 2),
         }),
       );
       await invalidateAfterMoneyMove();
-      // El snapshot on-chain que alimenta la XP del vault: este flujo se firma
-      // entero en el browser, así que no hay handler del server que lo note.
+      // The on-chain snapshot that feeds the vault's XP: this flow is signed
+      // entirely in the browser, so there is no server handler to notice it.
       void requestWalletBalanceRefresh(walletAddress, { force: true });
     } catch (e) {
-      // La firma custodial puede fallar por sesión (nonce) o falta de gas (XLM),
-      // y el vault puede rechazar por su propio piso de polvo. Mostramos el
-      // error en la pantalla y dejamos reintentar; no barremos solos.
-      // Logueamos el crudo además del título: cuando Pollar se come el error de
-      // contrato es lo único que queda para saber qué pasó.
+      // The custodial signature can fail on the session (nonce) or on missing
+      // gas (XLM), and the vault can reject on its own dust floor. The error
+      // goes on the screen and the user may retry; nothing is swept away here.
+      // The raw error is logged beside the title: when Pollar swallows the
+      // contract error, it is the only thing left to say what happened.
       console.warn('[idle-funds] invest failed', humanizeTxError(e, t).raw, e);
       setError(
         readFailed
@@ -228,15 +257,16 @@ export const useIdleFunds = () => {
     }
   }, [walletAddress, token, idle, invalidateAfterMoneyMove, t]);
 
-  // ¿Mostrar la pantalla de plata ociosa? Custodial + sesión lista + hay USDC
-  // ocioso sobre el umbral. Es un nudge cerrable, así que no hace falta opt-out.
+  // Show the idle-funds screen? Custodial, session ready, and idle USDC over
+  // the threshold. It is a closable nudge, so it needs no opt-out.
   //
-  // Con una rampa en curso NO se promptea. En el off-ramp ese USDC acaba de
-  // salir del vault para pagarle a la rampa: devolverlo deja al proveedor sin
-  // nada que cobrar y el retiro colgado. En el on-ramp la compra puede
-  // acreditarse con la pantalla de pago todavía abierta, y taparla con el prompt
-  // interrumpe algo que el usuario está haciendo. Al cerrarse la pantalla la
-  // marca se apaga y el prompt se ofrece como después de cualquier depósito.
+  // With a ramp in progress it does NOT prompt. On the off-ramp that USDC has
+  // just left the vault to pay the ramp, and sending it back leaves the
+  // provider with nothing to collect and the withdrawal hanging. On the on-ramp
+  // the purchase can settle with the payment screen still open, and covering
+  // that screen interrupts something the user is in the middle of. Once the
+  // ramp closes the flag goes off and the prompt is offered as it is after any
+  // other deposit.
   const shouldPrompt = ready && isCustodial && idle >= MIN_IDLE_USDC && !rampActive;
 
   // Is it KNOWN yet whether there is idle money? While the Pollar session is

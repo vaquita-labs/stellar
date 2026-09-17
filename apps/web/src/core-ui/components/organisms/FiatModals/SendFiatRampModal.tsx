@@ -23,7 +23,7 @@ import { HiOutlineSelector } from 'react-icons/hi';
 import { railLabel, truncateMiddle } from '../../../helpers';
 import { AMOUNT_DECIMALS, FIAT_DECIMALS, floorAmount, formatTokenPrecise } from '../../../helpers/numbers';
 import { formatRampEta } from '../../../helpers/time';
-import { useCryptoMode, useLivePassiveUsdc } from '../../../hooks';
+import { useCryptoMode, useLivePassiveUsdc, usePositionsChip } from '../../../hooks';
 import {
   type SavedBankAccount,
   SavedBankApiError,
@@ -300,6 +300,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     isLoading: balanceIsLoading,
     refetch: refreshBalance,
   } = useLivePassiveUsdc(walletAddress ?? undefined);
+  const positionsChip = usePositionsChip();
   const balance = floorAmount(liveUsdc, AMOUNT_DECIMALS);
 
   useEffect(() => {
@@ -1112,6 +1113,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           // exacto no entra. Tope duro del teclado por lo mismo.
           available={maxUsdc}
           availableDecimals={2}
+          positions={positionsChip}
           availableLoading={balanceIsLoading}
           // Sin saldo leído todavía el techo sería 0 y no respondería ninguna
           // tecla, que se siente como una pantalla rota. El tope entra recién

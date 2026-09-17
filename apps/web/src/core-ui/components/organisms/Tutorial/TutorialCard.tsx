@@ -1,6 +1,8 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { FiX } from 'react-icons/fi';
+import { CircleIconButton } from '../../molecules/CircleIconButton';
 
 interface TutorialCardProps {
   /** Índice del paso actual (para los dots de progreso). */
@@ -15,6 +17,11 @@ interface TutorialCardProps {
   children?: ReactNode;
   /** Footer accionable (CTA). */
   footer?: ReactNode;
+  /**
+   * Close action in the card's top-right corner. Label and handler travel
+   * together so the button can never end up on screen unnamed.
+   */
+  close?: { label: string; onClick: () => void };
   /** Clases extra del contenedor (ancho/posición las pone quien la usa). */
   className?: string;
 }
@@ -59,9 +66,19 @@ export function TutorialProgressDots({ dotIndex = 0, dotCount = 0 }: { dotIndex?
  * Centraliza el chrome (borde, radio, padding, dots y tipografía) para que todo
  * se vea como una sola pieza. El ancho y la posición los define quien la monta.
  */
-export function TutorialCard({ dotIndex, dotCount, title, body, children, footer, className }: TutorialCardProps) {
+export function TutorialCard({ dotIndex, dotCount, title, body, children, footer, close, className }: TutorialCardProps) {
   return (
-    <div className={`w-full rounded-2xl border-2 border-black bg-white p-5 shadow-2xl sm:p-6 ${className ?? ''}`}>
+    <div className={`relative w-full rounded-2xl border-2 border-black bg-white p-5 shadow-2xl sm:p-6 ${className ?? ''}`}>
+      {close && (
+        // Sits level with the progress dots, which never reach this far right.
+        <CircleIconButton
+          icon={<FiX className="h-3.5 w-3.5" />}
+          ariaLabel={close.label}
+          size="sm"
+          onClick={close.onClick}
+          className="absolute right-3 top-3"
+        />
+      )}
       <TutorialProgressDots dotIndex={dotIndex} dotCount={dotCount} />
       {title && <h2 className="text-xl font-bold text-black sm:text-2xl">{title}</h2>}
       <p className={`text-sm leading-relaxed text-black/70 sm:text-base ${title ? 'mt-2' : ''}`}>

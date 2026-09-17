@@ -111,22 +111,39 @@ describe('receivedUsdcFrom', () => {
 
 describe('resumeActionFor', () => {
   it('sends the user back to the amount step when the code expired unpaid', () => {
-    // Vencido y el proveedor confirma que nunca vio un pago: mostrarle el QR
-    // muerto sólo lo obliga a apretar "empezar de nuevo" a mano.
-    expect(resumeActionFor({ state: 'expired', providerStatus: 'pending' })).toBe('restart');
+    // Expired, and the provider confirms it never saw a payment: showing the
+    // dead QR only makes the user press "start over" by hand.
+    expect(resumeActionFor({ state: 'expired', providerStatus: 'pending' })).toEqual({
+      action: 'restart',
+      closeAs: 'expired',
+    });
+  });
+
+  it('never reopens on a rejection the user was not there to see', () => {
+    // The rejection belongs to the session that was watching it. On reopen a
+    // rejected purchase is closed and the user starts theirs: otherwise they
+    // tap "Buy USDC" and the first thing they see is a purchase that failed.
+    expect(resumeActionFor({ state: 'pending', providerStatus: 'failed' })).toEqual({
+      action: 'restart',
+      closeAs: 'failed',
+    });
+    expect(resumeActionFor({ state: 'expired', providerStatus: 'failed' })).toEqual({
+      action: 'restart',
+      closeAs: 'failed',
+    });
   });
 
   it('keeps the expired screen when the provider could not be reached', () => {
-    // Sin respuesta no hay confirmación de que nadie pagó, y cerrar a ciegas es
-    // cómo una compra acreditada pierde su pantalla de éxito.
-    expect(resumeActionFor({ state: 'expired', providerStatus: null })).toBe('resume');
+    // With no answer there is no confirmation that nobody paid, and closing
+    // blind is how a credited purchase loses its success screen.
+    expect(resumeActionFor({ state: 'expired', providerStatus: null })).toEqual({ action: 'resume' });
   });
 
   it('still restores a purchase that got credited after its code expired', () => {
-    expect(resumeActionFor({ state: 'expired', providerStatus: 'completed' })).toBe('resume');
+    expect(resumeActionFor({ state: 'expired', providerStatus: 'completed' })).toEqual({ action: 'resume' });
   });
 
   it('leaves a live code alone', () => {
-    expect(resumeActionFor({ state: 'pending', providerStatus: 'pending' })).toBe('resume');
+    expect(resumeActionFor({ state: 'pending', providerStatus: 'pending' })).toEqual({ action: 'resume' });
   });
 });

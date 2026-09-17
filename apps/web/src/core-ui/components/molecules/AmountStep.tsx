@@ -9,6 +9,9 @@ import { AmountKeypad } from './AmountKeypad';
 
 type AmountControls = ReturnType<typeof useAnimationControls>;
 
+const CHIP_CLASSES =
+  'inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10 disabled:opacity-60';
+
 /**
  * El temblor del número cuando el monto no entra. Vive acá y no en cada pantalla
  * porque los keyframes son parte de "cómo se siente equivocarse" en esta app, y
@@ -74,6 +77,12 @@ interface AmountStepProps {
    */
   availableDecimals?: number;
   availableLoading?: boolean;
+  /**
+   * Money sitting in locked positions, as a chip left of the balance one. It
+   * does not type anything: the tap leaves for the positions list, since a
+   * position is withdrawn from there, not from this keypad.
+   */
+  positions?: { amount: number; onPress: () => void } | null;
   /** Aviso de que se tecleó el máximo, para los flujos que retiran "todo". */
   onMax?: (prefilled: string) => void;
 
@@ -112,6 +121,7 @@ export function AmountStep({
   available,
   availableDecimals,
   availableLoading = false,
+  positions,
   onMax,
   controls,
   children,
@@ -147,19 +157,23 @@ export function AmountStep({
           controls={controls}
         />
 
-        {available != null && (
-          <button
-            type="button"
-            onClick={fillMax}
-            disabled={disabled || availableLoading}
-            className="mt-1 inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 text-xs font-semibold text-gray-500 transition active:translate-y-0.5 hover:bg-black/10 disabled:opacity-60"
-          >
-            {availableLoading ? (
-              <span className="h-3 w-20 rounded bg-black/10 animate-pulse" />
-            ) : (
-              `${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available, chipDecimals)}`
+        {(available != null || positions) && (
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+            {positions && (
+              <button type="button" onClick={positions.onPress} disabled={disabled} className={CHIP_CLASSES}>
+                {`${t('withdraw.positions', 'Positions')}: ${formatUsdPrecise(positions.amount, 2)}`}
+              </button>
             )}
-          </button>
+            {available != null && (
+              <button type="button" onClick={fillMax} disabled={disabled || availableLoading} className={CHIP_CLASSES}>
+                {availableLoading ? (
+                  <span className="h-3 w-20 rounded bg-black/10 animate-pulse" />
+                ) : (
+                  `${t('withdraw.available', 'Available')}: ${formatUsdPrecise(available, chipDecimals)}`
+                )}
+              </button>
+            )}
+          </div>
         )}
 
         {(error || hint) && (
