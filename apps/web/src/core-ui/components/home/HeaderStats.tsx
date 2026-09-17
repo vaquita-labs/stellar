@@ -28,6 +28,7 @@ import { MapClock } from './MapClock';
 import { MapQuickActions } from './MapQuickActions';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
 import { AccrualTerm, LiveBalance } from './LiveBalance';
+import { BalanceEye } from '../molecules/BalanceEye';
 import { PressableButton } from '../molecules/PressableButton';
 import {
   HOME_TOUR_ANCHOR_BALANCE,
@@ -255,9 +256,16 @@ export const HeaderStats = () => {
             {/* Saludo traducido + el username con @ en negrita. Si todavía no
                 hay perfil no se renderiza para no reservar una línea vacía. */}
             {displayName && (
-              <p className="text-xs text-black/80 leading-none truncate">
-                {t('home.stats.greeting', 'Hi,')} <span className="font-bold text-black">@{displayName}</span>
-              </p>
+              <div className="flex items-center gap-1 min-w-0">
+                <p className="text-xs text-black/80 leading-none truncate">
+                  {t('home.stats.greeting', 'Hi,')} <span className="font-bold text-black">@{displayName}</span>
+                </p>
+                {/* El ojo GLOBAL, pegado al nombre. Es el mismo interruptor que
+                    Ajustes → Privacidad, no una preferencia parecida: acá está
+                    a un toque de la plata que tapa. El `-my-1` le come el padding
+                    al botón para que no estire la línea del saludo. */}
+                <BalanceEye className="-my-1" />
+              </div>
             )}
             {/* El saldo es la puerta al portafolio: se pinta como botón (crema
                 sobre el naranja del header + borde negro, el idioma de botones

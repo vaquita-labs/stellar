@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { EditProfilePage } from './EditProfilePage';
 import { NotificationsPage } from './NotificationsPage';
 import { PreferencesPage } from './PreferencesPage';
+import { PrivacySettingsPage } from './PrivacySettingsPage';
 import { SettingsPage, type SettingsSubKey } from './SettingsPage';
 import { StackedPanelModal } from './StackedPanelModal';
 import { WalletPage } from './WalletPage';
@@ -23,6 +24,7 @@ const SUB_URL: Record<SettingsSubKey, string> = {
   profile: '/profile/edit',
   notifications: '/profile/notifications',
   wallet: '/profile/wallet',
+  privacy: '/profile/privacy-settings',
 };
 
 export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -81,6 +83,15 @@ export function SettingsModal({ open, onClose }: { open: boolean; onClose: () =>
         title={t('wallet.page.title')}
       >
         <WalletPage onBack={closeSub} />
+      </StackedPanelModal>
+
+      <StackedPanelModal
+        open={sub === 'privacy'}
+        onClose={closeSub}
+        url={SUB_URL.privacy}
+        title={t('profilePages.privacy.title', 'Privacy settings')}
+      >
+        <PrivacySettingsPage onBack={closeSub} />
       </StackedPanelModal>
     </>
   );

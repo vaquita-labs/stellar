@@ -1048,6 +1048,10 @@
       "title": "Escolha seu vaquitag"
     }
   },
+  "privacy": {
+    "hideBalanceAria": "Ocultar saldo",
+    "showBalanceAria": "Mostrar saldo"
+  },
   "profile": {
     "preferences": {
       "autoplaySounds": "Tocar efeitos sonoros",
@@ -2377,6 +2381,7 @@
     "invest": "Investir",
     "savings": "Poupança",
     "distributed": "Distribuído em {{funded}} de {{total}} opções",
+    "distribution": "Distribuição",
     "ofTotal": "{{pct}}% do seu total",
     "noFunds": "Sem fundos",
     "sum": "Total",

@@ -1,6 +1,6 @@
 import { formatAmount, formatTimeDeposit, getInterestData } from '@/core-ui/helpers';
 import { useApyByLockPeriod } from '@/core-ui/hooks';
-import { useConfigStore } from '@/core-ui/stores';
+import { maskAmount, useConfigStore, useIsHidden } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
 import { Card } from '@heroui/react';
 import { useEffect, useState } from 'react';
@@ -36,6 +36,7 @@ export const VaquitaDepositCard = ({
 }) => {
   const { t } = useTranslation();
   const { network, token } = useConfigStore();
+  const hideBalance = useIsHidden();
   const { data: dataApy } = useApyByLockPeriod(deposit.lockPeriod, token?.symbol ?? '');
 
   const { totalInterest } = getInterestData(
@@ -83,7 +84,7 @@ export const VaquitaDepositCard = ({
       <Card.Content className="px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-bold text-black leading-tight truncate">
-            {formatAmount(deposit.amount, deposit.tokenSymbol)}
+            {maskAmount(formatAmount(deposit.amount, deposit.tokenSymbol), hideBalance)}
           </p>
           {isLocked ? (
             <span className="inline-flex items-center gap-1 shrink-0 bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded-[6px] border border-black border-b-2">
@@ -125,7 +126,7 @@ export const VaquitaDepositCard = ({
         <div className="mt-1.5 pt-1.5 border-t border-black/10 flex items-center justify-between">
           <span className="text-xs text-gray-600">{t('home.depositCard.earnings', 'Earnings')}</span>
           <span className="text-sm font-bold text-success">
-            +{totalInterest.toFixed(2)} {deposit.tokenSymbol}
+            {maskAmount(`+${totalInterest.toFixed(2)} ${deposit.tokenSymbol}`, hideBalance)}
           </span>
         </div>
       </Card.Content>

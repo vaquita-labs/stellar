@@ -1,5 +1,6 @@
 'use client';
 
+import { BalanceEye } from '@/core-ui/components/molecules/BalanceEye';
 import { CircleIconButton } from '@/core-ui/components/molecules/CircleIconButton';
 import {
   FilterChip,
@@ -132,12 +133,17 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
       onBack={onBack ?? (() => router.back())}
       headerGap="gap-3"
       rightSlot={
-        <CircleIconButton
-          variant={hasActivePortfolioFilters(filters, lockPeriods) ? 'primary' : 'white'}
-          ariaLabel={t('transactions.filters.title', 'Filter')}
-          onClick={() => setFiltersOpen(true)}
-          icon={<FiFilter className="h-4 w-4" />}
-        />
+        <div className="flex items-center gap-2">
+          {/* Redondo como el filtro: en el header de una página los controles son
+              todos del mismo botón, no uno redondo y otro suelto al lado. */}
+          <BalanceEye scope="positions" variant="circle" />
+          <CircleIconButton
+            variant={hasActivePortfolioFilters(filters, lockPeriods) ? 'primary' : 'white'}
+            ariaLabel={t('transactions.filters.title', 'Filter')}
+            onClick={() => setFiltersOpen(true)}
+            icon={<FiFilter className="h-4 w-4" />}
+          />
+        </div>
       }
     >
       <WithHydrated fallback={<div className="h-24" />}>
@@ -170,12 +176,16 @@ export function PortfolioPage({ onBack }: { onBack?: () => void } = {}) {
           </div>
         ) : (
           <>
-            <TransactionMonthCard label={t('portfolio.positionsTitle', 'Your positions')}>
+            <TransactionMonthCard
+              label={t('portfolio.positionsTitle', 'Your positions')}
+              labelRight={<BalanceEye scope="positions.list" />}
+            >
               <TransactionList align="grouped">
                 {visiblePositions.map((deposit) => (
                   <PositionRow
                     key={deposit.id}
                     deposit={deposit}
+                    scope="positions.list"
                     onPress={() => {
                       setSelected(deposit);
                       // Activas → hoja de retiro; retiradas/con error → detalle
