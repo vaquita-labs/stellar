@@ -780,6 +780,7 @@
     }
   },
   "homeTour": {
+    "back": "Voltar",
     "done": "Entendi",
     "next": "Próximo",
     "skip": "Pular",

@@ -780,6 +780,7 @@
     }
   },
   "homeTour": {
+    "back": "Back",
     "done": "Got it",
     "next": "Next",
     "skip": "Skip",
