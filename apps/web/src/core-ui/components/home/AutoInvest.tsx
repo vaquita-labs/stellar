@@ -15,28 +15,29 @@ import { useModalPresence } from '../molecules/AppModal';
 import { IdleFundsModal } from './IdleFundsModal';
 
 /**
- * Orquestador (sin UI propia) del gate de dinero ocioso. Corre `useIdleFunds` en
- * el home: cuando detecta USDC ocioso en una wallet custodial, abre la pantalla
- * completa `IdleFundsModal` para que el usuario lo invierta. Al invertir, el
- * ocioso cae a 0 y la pantalla se cierra sola.
+ * The idle-money gate's orchestrator, with no UI of its own. It runs
+ * `useIdleFunds` on the home: when idle USDC turns up in a custodial wallet, it
+ * opens the full-screen `IdleFundsModal` for the user to invest it. Investing
+ * drops the idle figure to 0 and the screen closes on its own.
  */
 export function AutoInvest() {
   const { idle, shouldPrompt, decided, invest, isInvesting, error, clearError } = useIdleFunds();
   const [open, setOpen] = useState(false);
-  // Si el usuario cerró (o la inversión falló y cerró), no volvemos a abrir hasta
-  // que entre dinero NUEVO (idle sube) — así no lo atrapamos en loop ni lo forzamos.
+  // Once the user has closed it — or the investment failed and they closed it —
+  // it does not open again until NEW money comes in (the idle figure rises), so
+  // nobody is caught in a loop or pushed into a decision.
   //
-  // Vive fuera del componente ([[vault-prompt]]) porque "ya contestó" tiene que
-  // sobrevivir a un remontaje: este árbol se rearma solo en un refresh tibio, y
-  // con estado propio la pantalla que el usuario acababa de cerrar volvía a
-  // abrirse al instante.
+  // It lives outside the component ([[vault-prompt]]) because "they already
+  // answered" has to survive a remount: this tree rebuilds itself on a warm
+  // refresh, and with the flag in component state the screen the user had just
+  // closed opened straight back up.
   const dismissed = useVaultPromptStore((state) => state.dismissed);
 
-  // Que el saldo ocioso suba es LA señal de que el dinero en vuelo aterrizó, así
-  // que acá también se apaga el parpadeo del header. No alcanza con apagarlo al
-  // abrir esta pantalla: una compra chica (por debajo del mínimo para invertir)
-  // acredita igual y nunca abre nada, y el saldo quedaba parpadeando hasta el
-  // vencimiento de 15 minutos aunque el dinero ya estuviera a la vista.
+  // The idle balance rising is THE signal that money in flight has landed, so
+  // the header's blink is turned off from here too. Turning it off when this
+  // screen opens is not enough: a small purchase — under the floor for
+  // investing — still settles and never opens anything, leaving the balance
+  // blinking until the 15-minute expiry with the money already in plain sight.
   const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
 
   // The place in the queue is given back once the user has closed the screen
@@ -86,8 +87,8 @@ export function AutoInvest() {
     else if (decided && !shouldPrompt) setOpen(false);
   }, [shouldPrompt, dismissed, ourTurn, modalOnScreen, decided]);
 
-  // Y también al abrir la pantalla, que es el desenlace esperado: para entonces
-  // la rampa hace rato que se cerró y no puede apagarlo ella.
+  // And when the screen opens, which is the expected ending: by then the ramp
+  // closed long ago and cannot turn the blink off itself.
   useEffect(() => {
     if (open) clearPendingCredit();
   }, [open, clearPendingCredit]);
@@ -104,15 +105,15 @@ export function AutoInvest() {
     try {
       await invest();
       setOpen(false);
-      // El usuario ya decidió sobre ESTA plata. Sin esto la pantalla se reabría
-      // sola al instante: `shouldPrompt` sigue en true hasta que el refresco del
-      // saldo aterriza, y el efecto de abajo la vuelve a abrir en cuanto el
-      // diálogo sale del DOM. Vuelve a ofrecerse cuando entre plata nueva.
+      // The user has answered for THIS money. Without it the screen reopens
+      // instantly: `shouldPrompt` stays true until the balance refresh lands,
+      // and the effect above puts the screen back the moment the dialog leaves
+      // the DOM. It is offered again when new money comes in.
       dismissVaultPrompt();
       markVaultInvestSettling();
     } catch {
-      // El error ya quedó en `error` y se muestra en la pantalla; permanece abierta
-      // (ahora dismissable) para reintentar o cerrar.
+      // The failure is already in `error` and shown on the screen, which stays
+      // open — dismissable now — to retry or close.
     }
   };
 
@@ -126,8 +127,8 @@ export function AutoInvest() {
       onInvest={handleInvest}
       investing={isInvesting}
       error={error}
-      // Nudge cerrable: siempre puede cerrar. Al cerrar, la plata queda en su
-      // wallet (disponible, sin invertir) — NO la movemos ni la forzamos.
+      // A closable nudge: they can always close it. On close the money stays in
+      // their wallet, available and uninvested — it is not moved or forced.
       dismissable
     />
   );
