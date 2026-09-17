@@ -34,7 +34,7 @@ const MIN_STEPS = 2;
  * Every step is explanatory, not an instruction: the element is dimmed into a
  * cutout and made *unclickable* (`blockTarget`), because a tap on the real
  * profile button would navigate away and lose the tour. The user moves with the
- * card's own buttons, forwards and back.
+ * card's own buttons, forwards and back, and leaves by the card's close.
  *
  * Steps whose anchor is not on screen are dropped before the tour starts, so the
  * progress dots always match what the user is actually going to see. That covers
@@ -127,8 +127,8 @@ export function HomeTour() {
   const footer = useMemo(
     () => (
       <div className="flex items-center gap-2">
-        {/* Icon only: on the middle steps this row also carries skip and next,
-            and a third worded button would not fit the card on a phone. */}
+        {/* Icon only: next to a full-width next button, a worded one would
+            squeeze the card's only primary action on a phone. */}
         {!isFirst && (
           <PressableButton
             variant="ghost"
@@ -138,11 +138,6 @@ export function HomeTour() {
             className="px-3"
           >
             <FiChevronLeft className="h-5 w-5 text-black/60" />
-          </PressableButton>
-        )}
-        {!isLast && (
-          <PressableButton variant="ghost" size="md" onClick={finish} className="px-3">
-            <span className="text-sm text-black/60">{t('homeTour.skip', 'Skip')}</span>
           </PressableButton>
         )}
         <PressableButton
@@ -160,6 +155,11 @@ export function HomeTour() {
     [isFirst, isLast, finish, t],
   );
 
+  // Leaving the tour is the card's close button, not a step action: it is the
+  // same gesture in every step, including the last, and keeping it out of the
+  // footer leaves that row to what moves between steps.
+  const close = useMemo(() => ({ label: t('homeTour.skip', 'Skip'), onClick: finish }), [finish, t]);
+
   if (!showing || !step) return null;
 
   return (
@@ -172,6 +172,7 @@ export function HomeTour() {
       title={t(step.titleKey)}
       message={t(step.bodyKey)}
       footer={footer}
+      close={close}
       dotIndex={index}
       dotCount={steps.length}
     />
