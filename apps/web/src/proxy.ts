@@ -42,7 +42,11 @@ const BLOCKED_COUNTRIES = new Set(
 // esto es inerte, pero apenas el proxy de arriba empiece a mandar el header, los
 // POST de eventos de un país bloqueado se reescribirían a `/blocked` y la
 // librería recibiría HTML donde espera JSON.
-const ALWAYS_ALLOWED = ['/privacy', '/terms', '/risk', '/blocked', '/ingest'];
+// `/api/version` es el sello de build que lee el chequeo de versión nueva: no es
+// una pantalla ni tiene nada que geo-limitar (devuelve una cadena opaca). Mismo
+// caso que `/ingest`: reescrito a `/blocked` contestaría HTML con status 200 y el
+// cliente lo parsearía como JSON.
+const ALWAYS_ALLOWED = ['/privacy', '/terms', '/risk', '/blocked', '/ingest', '/api/version'];
 
 const readCountry = (request: NextRequest): string | null => {
   for (const header of COUNTRY_HEADERS) {

@@ -11,8 +11,27 @@ const e2eSignerAlias: Pick<NextConfig, 'turbopack'> =
     ? { turbopack: { resolveAlias: { '@pollar/react': './e2e/shim/pollar-react.tsx' } } }
     : {};
 
+// Build stamp. It changes on every build and with nothing else: not with a git
+// SHA (`.git` is in `.dockerignore`), not with a tag, not with a variable
+// someone has to remember to set by hand in Dokploy. Production is redeployed
+// by hand, so "merged to main" and "live in prod" are different events — only
+// the build itself moves at exactly the right moment.
+//
+// It goes through `env` rather than the real environment because Next injects
+// this from THIS object: unlike every NEXT_PUBLIC_ in clientEnv.ts, it needs no
+// entry there, no line in .env.example and no ARG/ENV pair in the Dockerfile.
+//
+// Careful: this file is evaluated SEVERAL times per build (main process plus the
+// Turbopack worker), so these values differ between processes. The client bundle
+// and the route handler both come out of the worker's single `createDefineEnv`
+// call, so they always agree — but `.next/BUILD_ID` is generated in the main
+// process and does NOT match this. Never compare one against the other, and do
+// not add `generateBuildId` here.
+const BUILD_STAMP = Date.now().toString(36);
+
 const nextConfig: NextConfig = {
   ...e2eSignerAlias,
+  env: { NEXT_PUBLIC_BUILD_STAMP: BUILD_STAMP },
   output: 'standalone',
   // Dev-only: Next 16 blocks requests to its internal dev assets (/_next/*,
   // HMR websocket) coming from any origin other than localhost. When the app is

@@ -406,6 +406,11 @@
     "continue": "Continuar",
     "done": "Listo",
     "loading": "Cargando…",
+    "newVersion": {
+      "action": "Recargar",
+      "dismissAria": "Cerrar",
+      "title": "Hay una versión nueva de la app"
+    },
     "next": "Siguiente",
     "off": "Desactivado",
     "on": "Activado",

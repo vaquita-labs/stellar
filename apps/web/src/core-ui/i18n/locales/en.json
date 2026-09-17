@@ -406,6 +406,11 @@
     "continue": "Continue",
     "done": "Done",
     "loading": "Loading…",
+    "newVersion": {
+      "action": "Reload",
+      "dismissAria": "Dismiss",
+      "title": "There's a new version of the app"
+    },
     "next": "Next",
     "off": "Off",
     "on": "On",

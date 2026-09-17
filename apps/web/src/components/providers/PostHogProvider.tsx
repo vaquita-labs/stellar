@@ -1,5 +1,6 @@
 'use client';
 
+import { BUILD_STAMP } from '@/core-ui/config/buildStamp';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { isPostHogEnabled, isSessionReplayEnabled, posthogHost } from '@/core-ui/config/featureFlags';
 import { usePathname } from 'next/navigation';
@@ -60,6 +61,12 @@ const start = () => {
     // Un anónimo que nunca se loguea no genera un perfil de persona.
     person_profiles: 'identified_only',
   });
+  // Qué build está corriendo cada usuario, pegado a TODOS sus eventos. Es la
+  // pregunta que había detrás de "guardemos en la base el último build que usó":
+  // una super-property la contesta sin columna, sin migración y sin un endpoint
+  // que escriba nada. Ojo que NO sirve para decidir si la pestaña está vieja —
+  // eso lo compara el cliente contra /api/version (ver useAppUpdate).
+  posthog.register({ app_build: BUILD_STAMP });
 };
 
 /**

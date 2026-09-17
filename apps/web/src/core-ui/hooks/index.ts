@@ -1,5 +1,6 @@
 export * from './useAdminDeposits';
 export * from './useAnalytics';
+export * from './useAppUpdate';
 export * from './useApyByLockPeriod';
 export * from './useBlendPosition';
 export * from './useBridge';
