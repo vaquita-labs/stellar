@@ -10,6 +10,7 @@ import { useVisibility } from '@/core-ui/stores/visibility';
 import { getNetworkEnum, getStellarNetwork } from '@/networks/stellar/kit';
 import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
 import { Toast } from '@heroui/react';
+import type { WalletAdapter, WalletId } from '@pollar/core';
 import { PollarProvider } from '@pollar/react';
 import '@pollar/react/styles.css';
 import { stellarWalletsKitAdapters } from '@pollar/stellar-wallets-kit-adapter';
@@ -29,12 +30,38 @@ import { useViewportVh } from './useViewportVh';
 const POLLAR_API_KEY = clientEnv.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY;
 const POLLAR_NETWORK = getStellarNetwork();
 
+// Pollar registers its own Freighter and Albedo adapters in the client
+// constructor, before it ever reads `walletAdapters`, and a configured adapter
+// only displaces one of them when it carries the same `type`. Under the kit's
+// own ids both wallets reach the login modal twice: once as Pollar's iconless
+// native button, once as the kit's.
+const NATIVE_IDS: Record<string, WalletId> = {
+  freighter: 'freighter-native',
+  albedo: 'albedo-native',
+};
+
+// The kit picks its module with `setWallet(String(this.type))`, so the id can
+// only change on the way out. Binding every method to the adapter itself keeps
+// those internal reads on the original id.
+function asNativeId(adapter: WalletAdapter, type: WalletId): WalletAdapter {
+  return new Proxy(adapter, {
+    get(target, prop) {
+      if (prop === 'type') return type;
+      const value = Reflect.get(target, prop, target);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+}
+
 // One `WalletAdapter` per kit module (xBull, Lobstr, Freighter, …), registered
 // on the client so Pollar's own login modal renders them as wallet buttons.
 // Returns `[]` during SSR — the adapters are browser-only.
 const walletAdapters = stellarWalletsKitAdapters({
   network: getNetworkEnum(),
   // picker: { wallets: ['xbull', 'lobstr', 'freighter'] },
+}).map((adapter) => {
+  const nativeId = NATIVE_IDS[String(adapter.type)];
+  return nativeId ? asNativeId(adapter, nativeId) : adapter;
 });
 
 export function Providers({ children }: { children: ReactNode }) {
