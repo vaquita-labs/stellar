@@ -50,11 +50,9 @@ export function AutoInvest() {
   const settled = !open && (dismissed || (decided && !shouldPrompt));
   const ourTurn = useAutoModalSlot('vault-prompt', settled);
 
-  // Solo se miran saldos SABIDOS. `idle` colapsa "todavía no se sabe" a 0
-  // (`useWalletUsdc` devuelve null y acá vale 0), así que cada refresco del
-  // balance lo hace caer a 0 y volver: leído como plata nueva, eso reabría la
-  // pantalla sola. Y el refresco lo dispara el propio toque del usuario —cerrar
-  // la pantalla es un `pointerdown`—, por eso reaparecía justo al cerrarla.
+  // Only KNOWN balances are folded in. `idle` collapses "not known yet" to 0, and
+  // a rise is what re-arms the prompt, so a reading taken before the balance has
+  // ever loaded would read as money arriving and open the screen on its own.
   useEffect(() => {
     if (!decided) return;
     if (observeVaultIdle(idle)) clearPendingCredit();
@@ -78,10 +76,15 @@ export function AutoInvest() {
   // dialog and close itself on the next tick.
   const modalOnScreen = useModalOnScreen(waitingToOpen);
 
+  // Closing waits for a KNOWN balance. `shouldPrompt` drops both when the idle
+  // money is really gone — invested, spent, a ramp claiming it — and while a
+  // re-read is in flight, and `decided` is the only thing that tells those
+  // apart. Drop it and the screen shuts itself on every refresh and comes
+  // straight back when the reading lands.
   useEffect(() => {
     if (shouldPrompt && !dismissed && ourTurn && !modalOnScreen) setOpen(true);
-    else if (!shouldPrompt) setOpen(false);
-  }, [shouldPrompt, dismissed, ourTurn, modalOnScreen]);
+    else if (decided && !shouldPrompt) setOpen(false);
+  }, [shouldPrompt, dismissed, ourTurn, modalOnScreen, decided]);
 
   // Y también al abrir la pantalla, que es el desenlace esperado: para entonces
   // la rampa hace rato que se cerró y no puede apagarlo ella.

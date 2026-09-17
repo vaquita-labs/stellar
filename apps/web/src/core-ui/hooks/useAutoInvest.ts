@@ -135,6 +135,15 @@ export const useIdleFunds = () => {
 
     const maybeRefresh = () => {
       if (document.visibilityState !== 'visible') return;
+      // Never from inside a sheet. Every tap and key there is aimed at the sheet,
+      // and Pollar blanks its balance for the length of the read: the idle-funds
+      // button goes disabled between `pointerdown` and `click`, and
+      // `WalletSendModal` reads zero available — MAX dead, Send off, "Available:
+      // 0.00" — while the user is typing an amount. The two screens that sit and
+      // WAIT for money keep their own 5s poll above, which this does not touch.
+      // Asked of the DOM like `useModalOnScreen`, so a sheet written later is
+      // covered without anyone signing it up.
+      if (document.querySelector('[role="dialog"]')) return;
       const now = Date.now();
       if (now - lastActivityRefresh.current < ACTIVITY_REFRESH_MS) return;
       lastActivityRefresh.current = now;
@@ -163,11 +172,24 @@ export const useIdleFunds = () => {
     // transacción" cuando en realidad no se intentó ninguna.
     let readFailed = false;
     try {
-      // El monto sale de la cadena, no del balance cacheado de Pollar. Ese
-      // cache es un float que ya perdió precisión y puede estar viejo, y acá el
-      // usuario no elige cuánto: apretó "poner a trabajar TODO", así que el
-      // número tiene que ser exactamente el que tiene la cuenta. `formatBaseUnits`
-      // lo lleva a string sin float en el medio.
+      // HARD RULE: this moves the ENTIRE balance, down to the last decimal,
+      // never rounded in either direction. Nobody typed an amount — the button
+      // says "put it ALL to work" — so a figure rounded DOWN strands the
+      // remainder in the wallet, where it reads as idle money and opens this
+      // same screen again, and a figure rounded UP is a deposit the account
+      // cannot cover, which fails at the contract.
+      //
+      // That is why the whole path is integers and exact strings, with no
+      // `Number` anywhere in it: `readUsdcBalanceRaw` returns the i128 the token
+      // contract holds, `formatBaseUnits` writes it out with every one of
+      // `token.decimals` digits, and `toBaseUnits` inside `passiveDeposit`
+      // parses that back to the same i128. The round trip is lossless.
+      //
+      // So: never source the amount from Pollar's cached `walletBalance` (a
+      // float that has already lost precision, and may be stale), never send it
+      // through `Number`, and never format it before it ships. The display
+      // helpers — `formatTokenPrecise` and friends — are for the screen only;
+      // the toast below is the one place a rounded figure belongs.
       let raw: bigint;
       try {
         raw = await readUsdcBalanceRaw(walletAddress);
@@ -200,6 +222,8 @@ export const useIdleFunds = () => {
       console.info('[idle-funds] invested', { hash, amount });
       // Destino-agnóstico a propósito: el router elige vault o Blend según el
       // flag, y el usuario no tiene por qué conocer el protocolo de abajo.
+      // Two decimals and a float: this is the only reader of `amount` allowed to
+      // round it, because it is a sentence, not a transaction.
       toast.success(
         t('idleFunds.toast', 'We put ${{amount}} to work', {
           amount: formatTokenPrecise(Number(amount), 2),
