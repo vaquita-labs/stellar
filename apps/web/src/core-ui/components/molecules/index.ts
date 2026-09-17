@@ -12,6 +12,7 @@ export * from './ProfileDataProvider';
 export * from './toast';
 export * from './ConfirmDialog';
 export * from './AppModal';
+export * from './BalanceEye';
 export * from './DateWheelPicker';
 export * from './EarningsBreakdown';
 export * from './PressableButton';

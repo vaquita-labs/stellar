@@ -1,3 +1,4 @@
+import { BUILD_STAMP } from './buildStamp';
 import { clientEnv } from './clientEnv';
 
 /**
@@ -38,6 +39,17 @@ export const isPostHogEnabled = (): boolean =>
 const DEFAULT_SUPPORT_EMAIL = 'support@vaquita.fi';
 
 export const supportEmail = (): string => clientEnv.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || DEFAULT_SUPPORT_EMAIL;
+
+/**
+ * The "a new version is available" check. Production only: in dev the stamp
+ * changes on EVERY dev-server restart (next.config.ts is re-evaluated) while the
+ * open tab keeps its old bundle through Fast Refresh, so the banner would be up
+ * permanently.
+ *
+ * It also demands that the stamp exist at all: with nothing to compare, the
+ * check turns itself off instead of guessing.
+ */
+export const isVersionCheckEnabled = (): boolean => clientEnv.NODE_ENV === 'production' && BUILD_STAMP !== '';
 
 /** Host al que posthog-js manda los eventos. Ver NEXT_PUBLIC_POSTHOG_HOST. */
 export const posthogHost = (): string => clientEnv.NEXT_PUBLIC_POSTHOG_HOST || '/ingest';

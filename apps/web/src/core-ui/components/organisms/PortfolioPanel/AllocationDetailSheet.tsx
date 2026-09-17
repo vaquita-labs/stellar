@@ -3,6 +3,7 @@
 import { formatUsd, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { estimateRewardShare } from '@/core-ui/helpers/rewards';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
+import { maskAmount, useIsHidden } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
@@ -44,6 +45,9 @@ export function AllocationDetailSheet({
   onOpenPositions,
 }: AllocationDetailSheetProps) {
   const { t } = useTranslation();
+  // Esta hoja es el detalle de UNA fila de la distribución, así que responde al
+  // ojo de la distribución (y, por la cadena, al del portafolio entero).
+  const hidden = useIsHidden('portfolio.allocation');
 
   return (
     <AppModal
@@ -64,7 +68,9 @@ export function AllocationDetailSheet({
       }
     >
       <div className="flex min-w-0 items-center gap-3">
-        <p className="min-w-0 truncate text-4xl font-bold text-black tabular-nums">{formatUsdAdaptive(allocation.amount)}</p>
+        <p className="min-w-0 truncate text-4xl font-bold text-black tabular-nums">
+          {maskAmount(formatUsdAdaptive(allocation.amount), hidden)}
+        </p>
         <span className={`w-10 h-10 rounded-full shrink-0 ${style.solid}`} />
       </div>
       <p className="-mt-3 text-sm text-black tabular-nums">
@@ -105,8 +111,14 @@ export function AllocationDetailSheet({
             que el denominador va tal cual. */}
         <div className="flex items-center justify-between gap-3 py-2.5 text-sm">
           <span className="text-gray-500 truncate">{t('portfolio.detail.yourShareEstimate', 'Your estimated share')}</span>
+          {/* La única fila del bloque que habla de PLATA DEL USUARIO, así que la
+              única que se tapa: el pozo y el TVL son del plazo, iguales para
+              todos, y esconderlos no protegería nada de nadie. */}
           <span className="font-bold text-success tabular-nums shrink-0">
-            {formatUsd(estimateRewardShare(allocation.rewardPool, allocation.totalDeposits, allocation.amount))}
+            {maskAmount(
+              formatUsd(estimateRewardShare(allocation.rewardPool, allocation.totalDeposits, allocation.amount)),
+              hidden,
+            )}
           </span>
         </div>
       </div>
@@ -122,7 +134,7 @@ export function AllocationDetailSheet({
         <TransactionMonthCard label={t('portfolio.positionsTitle', 'Your positions')}>
           <TransactionList align="grouped">
             {positions.map((deposit) => (
-              <PositionRow key={deposit.id} deposit={deposit} onPress={onOpenTerm} />
+              <PositionRow key={deposit.id} deposit={deposit} onPress={onOpenTerm} scope="portfolio.allocation" />
             ))}
           </TransactionList>
         </TransactionMonthCard>

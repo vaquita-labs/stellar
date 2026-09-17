@@ -406,6 +406,11 @@
     "continue": "Continuar",
     "done": "Listo",
     "loading": "Cargando…",
+    "newVersion": {
+      "action": "Recargar",
+      "dismissAria": "Cerrar",
+      "title": "Hay una versión nueva de la app"
+    },
     "next": "Siguiente",
     "off": "Desactivado",
     "on": "Activado",
@@ -1042,6 +1047,10 @@
       "subtitle": "Este es tu vaquitag: el nombre que ven los demás ahorradores y el código que compartes para invitar. Puedes cambiarlo más tarde en tu perfil.",
       "title": "Elige tu vaquitag"
     }
+  },
+  "privacy": {
+    "hideBalanceAria": "Ocultar saldo",
+    "showBalanceAria": "Mostrar saldo"
   },
   "profile": {
     "preferences": {
@@ -2372,6 +2381,7 @@
     "invest": "Invertir",
     "savings": "Ahorros",
     "distributed": "Repartido en {{funded}} de {{total}} opciones",
+    "distribution": "Distribución",
     "ofTotal": "{{pct}}% de tu total",
     "noFunds": "Sin fondos",
     "sum": "Total",

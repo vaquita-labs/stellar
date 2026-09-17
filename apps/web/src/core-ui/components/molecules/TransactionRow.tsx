@@ -141,10 +141,24 @@ export function TransactionList({
 }
 
 /** Tarjeta blanca de un mes: cabecera + sus filas, como una sola pieza. */
-export function TransactionMonthCard({ label, children }: { label: string; children: React.ReactNode }) {
+export function TransactionMonthCard({
+  label,
+  labelRight,
+  children,
+}: {
+  label: string;
+  /** Control al ras del título, a la derecha (hoy: el ojo de ocultar saldos). */
+  labelRight?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="rounded-2xl bg-white p-2">
-      <h2 className="px-2 pt-1 pb-1.5 text-sm font-bold text-black">{label}</h2>
+      {/* El control va al lado del <h2>, nunca adentro: el encabezado sigue
+          siendo sólo texto para un lector de pantalla. */}
+      <div className="flex items-center justify-between gap-2 px-2 pt-1 pb-1.5">
+        <h2 className="text-sm font-bold text-black">{label}</h2>
+        {labelRight}
+      </div>
       {children}
     </section>
   );

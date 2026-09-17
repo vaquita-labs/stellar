@@ -1,4 +1,5 @@
 import { formatAmount, formatTimeDeposit } from '@/core-ui/helpers';
+import { maskAmount, useIsHidden } from '@/core-ui/stores';
 import { DepositResponseDTO, DepositWithdrawalState } from '@/core-ui/types';
 import { Card } from '@heroui/react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +16,7 @@ export const WithdrawnDepositCard = ({
   onPress?: () => void;
 }) => {
   const { t } = useTranslation();
+  const hideBalance = useIsHidden();
   const isEarly = deposit.state === DepositWithdrawalState.WITHDRAW_SUCCESS_EARLY;
   const earnings =
     (deposit.vaquitaInterest ?? 0) + (deposit.protocolInterest ?? 0) + (deposit.blendInterest ?? 0);
@@ -30,7 +32,7 @@ export const WithdrawnDepositCard = ({
       <Card.Content className="px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-bold text-black leading-tight truncate">
-            {formatAmount(deposit.amount, deposit.tokenSymbol)}
+            {maskAmount(formatAmount(deposit.amount, deposit.tokenSymbol), hideBalance)}
           </p>
           <span
             className={
@@ -48,11 +50,14 @@ export const WithdrawnDepositCard = ({
           </span>
           <span
             className={
-              'text-sm font-bold tabular-nums ' + (isEarly ? 'text-default-500 line-through' : 'text-success')
+              'text-sm font-bold tabular-nums ' +
+              (isEarly ? 'text-default-500' : 'text-success') +
+              // El tachado sólo sobre un número: encima de `••••` se lee como un
+              // glitch de render y no como "esto se perdió".
+              (isEarly && !hideBalance ? ' line-through' : '')
             }
           >
-            {isEarly ? '−' : '+'}
-            {earnings.toFixed(2)} {deposit.tokenSymbol}
+            {maskAmount(`${isEarly ? '−' : '+'}${earnings.toFixed(2)} ${deposit.tokenSymbol}`, hideBalance)}
           </span>
         </div>
       </Card.Content>

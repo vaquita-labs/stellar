@@ -5,12 +5,13 @@ import { sortPositionsByEnd } from '@/core-ui/helpers/positions';
 import { formatTokenPrecise, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useDepositsComplete, useLivePassiveUsdc } from '@/core-ui/hooks';
-import { useConfigStore } from '@/core-ui/stores';
+import { maskAmount, useConfigStore, useIsHidden } from '@/core-ui/stores';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiChevronRight, FiPocket } from 'react-icons/fi';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
+import { BalanceEye } from '../../molecules/BalanceEye';
 import { AllocationDetailSheet } from './AllocationDetailSheet';
 import { BlendDetailSheet } from './BlendDetailSheet';
 import { PoolMeta } from './PoolMeta';
@@ -221,6 +222,11 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
   // Número del centro del donut, partido en enteros + centavos (los centavos van
   // en superíndice, estilo "$722·⁰¹"). Con ≥1 lo mostramos a 2 decimales para que
   // quepa limpio; los micro-saldos (<1) conservan la precisión fina.
+  // Los dos bloques de plata del panel se tapan por separado, y el ojo del
+  // título los tapa a los dos (la cadena vive en el store de privacidad).
+  const hideTotal = useIsHidden('portfolio.total');
+  const hideAllocation = useIsHidden('portfolio.allocation');
+
   const donutStr = displayTotal >= 1 ? `$${formatTokenPrecise(displayTotal, 2)}` : formatUsdAdaptive(displayTotal);
   const donutDot = donutStr.lastIndexOf('.');
   const donutInt = donutDot >= 0 ? donutStr.slice(0, donutDot) : donutStr;
@@ -244,7 +250,14 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
       <AppModal
         open={open}
         onOpenChange={onOpenChange}
-        title={t('portfolio.title', 'Portfolio')}
+        title={
+          <span className="inline-flex items-center gap-1.5">
+            {t('portfolio.title', 'Portfolio')}
+            {/* Tapa TODO el panel: el total del donut y la distribución de abajo.
+                Los ojos de cada bloque desaparecen mientras éste está cerrado. */}
+            <BalanceEye scope="portfolio" />
+          </span>
+        }
         size="lg"
         fullScreen
         slideFrom="right"
@@ -266,33 +279,48 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
             y cuántas opciones se están usando (las vacías son la oportunidad de
             rendir más). El desglose vive en la lista de abajo; tocar el donut
             abre el historial de transacciones. */}
-        <button
-          type="button"
-          onClick={goToTransactions}
-          aria-label={t('transactions.title', 'Transactions')}
-          className="flex flex-col items-center gap-1.5 self-center rounded-2xl px-4 py-1 transition active:scale-[0.98] hover:bg-black/[0.03]"
-        >
-          <PortfolioDonut
-            segments={rows.map((row) => ({ key: row.key, color: row.style.hex, value: row.amount }))}
-            total={totalAmount}
-            label={t('portfolio.total', 'Total')}
-            syncing={isSyncing}
-            amount={
-              <>
-                {donutInt}
-                {donutCents ? <span className="align-super text-[0.5em] font-bold ml-0.5">{donutCents}</span> : null}
-              </>
-            }
-          />
-          {totalAmount > 0 ? (
-            <p className="text-xs text-gray-500">
-              {t('portfolio.distributed', 'Spread across {{funded}} of {{total}} options', {
-                funded: fundedCount,
-                total: rows.length,
-              })}
-            </p>
-          ) : null}
-        </button>
+        {/* El ojo va AFUERA del botón del donut, no adentro: el donut entero ya
+            es un botón que abre el historial, y un botón dentro de otro es HTML
+            inválido —el navegador reordena el árbol y el toque termina en
+            cualquiera de los dos—. Los arcos siguen dibujándose con el total
+            tapado: muestran proporciones, no importes, igual que el "% de tu
+            total" de cada fila. */}
+        <div className="relative flex justify-center">
+          <button
+            type="button"
+            onClick={goToTransactions}
+            aria-label={t('transactions.title', 'Transactions')}
+            className="flex flex-col items-center gap-1.5 rounded-2xl px-4 py-1 transition active:scale-[0.98] hover:bg-black/[0.03]"
+          >
+            <PortfolioDonut
+              segments={rows.map((row) => ({ key: row.key, color: row.style.hex, value: row.amount }))}
+              total={totalAmount}
+              label={t('portfolio.total', 'Total')}
+              syncing={isSyncing}
+              amount={
+                hideTotal ? (
+                  '••••'
+                ) : (
+                  <>
+                    {donutInt}
+                    {donutCents ? <span className="align-super text-[0.5em] font-bold ml-0.5">{donutCents}</span> : null}
+                  </>
+                )
+              }
+            />
+            {totalAmount > 0 ? (
+              <p className="text-xs text-gray-500">
+                {t('portfolio.distributed', 'Spread across {{funded}} of {{total}} options', {
+                  funded: fundedCount,
+                  total: rows.length,
+                })}
+              </p>
+            ) : null}
+          </button>
+          {/* Absoluto para que el donut siga centrado: puesto en la fila, su
+              ancho correría el anillo unos píxeles a la izquierda. */}
+          <BalanceEye scope="portfolio.total" className="absolute right-0 top-1" />
+        </div>
 
         {/* Distribución: una fila por opción (Ahorros + cada plazo), plana sobre el
             fondo, sin card. Con fondos → toca para ver el detalle; vacía → "Sin
@@ -302,6 +330,13 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
           <p className="py-4 text-center text-sm text-gray-500">{t('portfolio.empty', 'No saving terms available yet.')}</p>
         ) : (
           <div className="flex flex-col">
+            {/* La lista no tenía encabezado. Se agrega uno para que su ojo tenga
+                un título al lado del cual vivir, igual que "Tus posiciones" en
+                la pantalla de posiciones. */}
+            <div className="flex items-center justify-between gap-2 pb-1">
+              <h3 className="text-sm font-bold text-black">{t('portfolio.distribution', 'Distribution')}</h3>
+              <BalanceEye scope="portfolio.allocation" />
+            </div>
             {displayRows.map((row) => {
               const empty = row.amount <= 0;
               const investable = row.kind === 'lock' && row.lockPeriod != null;
@@ -365,7 +400,7 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
                     >
                       <span className="flex flex-col items-end">
                         <span className="text-sm font-bold text-black tabular-nums leading-tight">
-                          {formatUsdAdaptive(row.amount)}
+                          {maskAmount(formatUsdAdaptive(row.amount), hideAllocation)}
                         </span>
                         <span className="text-xs text-gray-500 tabular-nums leading-tight">
                           {t('portfolio.ofTotal', '{{pct}}% of your total', {
@@ -384,7 +419,9 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
             {fundedCount > 0 ? (
               <div className="flex items-center justify-between border-t border-black/15 mt-1 pt-3">
                 <span className="text-sm font-semibold text-gray-500">{t('portfolio.sum', 'Total')}</span>
-                <span className="text-sm font-bold text-black tabular-nums">{formatUsdAdaptive(displayTotal)}</span>
+                <span className="text-sm font-bold text-black tabular-nums">
+                  {maskAmount(formatUsdAdaptive(displayTotal), hideAllocation)}
+                </span>
               </div>
             ) : null}
           </div>

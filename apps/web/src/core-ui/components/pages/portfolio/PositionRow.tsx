@@ -2,7 +2,7 @@
 
 import { formatTimeDeposit } from '@/core-ui/helpers';
 import { useWithdrawalTime } from '@/core-ui/hooks';
-import { useConfigStore } from '@/core-ui/stores';
+import { maskAmount, PrivacySection, useConfigStore, useIsHidden } from '@/core-ui/stores';
 import { DepositResponseDTO, DepositWithdrawalState } from '@/core-ui/types';
 import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiCheck, FiClock } from 'react-icons/fi';
@@ -30,12 +30,21 @@ const coarseRemaining = (secs: number) => {
 export function PositionRow({
   deposit,
   onPress,
+  scope,
 }: {
   deposit: DepositResponseDTO;
   onPress?: () => void;
+  /**
+   * Qué ojo tapa los importes de esta fila. Obligatorio porque la misma fila se
+   * usa en dos pantallas distintas —la lista de posiciones y el detalle de un
+   * plazo dentro del portafolio— y cada una cuelga de un ojo distinto; un
+   * default acá haría que una de las dos respondiera al ojo equivocado.
+   */
+  scope: PrivacySection;
 }) {
   const { t } = useTranslation();
   const { token } = useConfigStore();
+  const hidden = useIsHidden(scope);
   const symbol = token?.symbol ?? 'USDC';
   const { canWithdraw, timeRemaining } = useWithdrawalTime(deposit);
 
@@ -71,7 +80,7 @@ export function PositionRow({
 
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-bold text-black tabular-nums truncate">
-            {deposit.amount.toFixed(2)} {symbol}
+            {maskAmount(`${deposit.amount.toFixed(2)} ${symbol}`, hidden)}
           </p>
           <p className="text-[11px] text-gray-600 truncate">{formatTimeDeposit(deposit.lockPeriod)}</p>
         </div>
@@ -84,7 +93,7 @@ export function PositionRow({
           ) : isWithdrawn ? (
             <>
               <p className="text-[13px] font-bold tabular-nums text-success">
-                +{realizedEarned.toFixed(2)} {symbol}
+                {maskAmount(`+${realizedEarned.toFixed(2)} ${symbol}`, hidden)}
               </p>
               <p className="text-[10px] text-gray-500">
                 {early

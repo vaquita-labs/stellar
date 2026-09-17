@@ -38,7 +38,11 @@ function ToggleCard({
   );
 }
 
-export function PrivacySettingsPage() {
+/**
+ * `onBack` la vuelve un panel apilado dentro de <SettingsModal>, igual que sus
+ * hermanas; sin él sigue siendo la ruta suelta y vuelve a Ajustes por href.
+ */
+export function PrivacySettingsPage({ onBack }: { onBack?: () => void } = {}) {
   const { t } = useTranslation();
   const hideBalance = usePrivacyStore((s) => s.hideBalance);
   const setHideBalance = usePrivacyStore((s) => s.setHideBalance);
@@ -48,7 +52,10 @@ export function PrivacySettingsPage() {
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 py-5 sm:py-6 flex flex-col gap-6 pb-16">
         {/* Header */}
         <header className="flex flex-col gap-2">
-          <PageHeader title={t('profilePages.privacy.title', 'Privacy settings')} backHref="/profile/settings" />
+          <PageHeader
+            title={t('profilePages.privacy.title', 'Privacy settings')}
+            {...(onBack ? { onBack } : { backHref: '/profile/settings' })}
+          />
           <p className="text-sm text-gray-600 text-center">
             {t('profilePages.privacy.subtitle', 'Decide how much of your activity is visible on this device.')}
           </p>

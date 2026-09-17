@@ -406,6 +406,11 @@
     "continue": "Continue",
     "done": "Done",
     "loading": "Loading…",
+    "newVersion": {
+      "action": "Reload",
+      "dismissAria": "Dismiss",
+      "title": "There's a new version of the app"
+    },
     "next": "Next",
     "off": "Off",
     "on": "On",
@@ -1042,6 +1047,10 @@
       "subtitle": "This is your vaquitag: the name other savers see, and the invite code you share. You can change it later in your profile.",
       "title": "Choose your vaquitag"
     }
+  },
+  "privacy": {
+    "hideBalanceAria": "Hide balance",
+    "showBalanceAria": "Show balance"
   },
   "profile": {
     "preferences": {
@@ -2372,6 +2381,7 @@
     "invest": "Invest",
     "savings": "Savings",
     "distributed": "Spread across {{funded}} of {{total}} options",
+    "distribution": "Distribution",
     "ofTotal": "{{pct}}% of your total",
     "noFunds": "No funds",
     "sum": "Total",

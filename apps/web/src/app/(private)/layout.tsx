@@ -1,4 +1,5 @@
 import {
+  AppUpdateBanner,
   AttributionFlush,
   ClaimGate,
   FollowLinkCapture,
@@ -67,6 +68,11 @@ export default function PrivateLayout({
                     closed — the user left for the bank app and came back. */}
                 <RampSettledGate />
                 <ReleaseNotesGate />
+                {/* Above the scroll region, not over it: a newer build being
+                    served is ambient state, not an interruption, so it takes a
+                    bar of its own height and pushes the page down instead of
+                    covering the header the user was reading. */}
+                <AppUpdateBanner />
                 {/* The app's scroll region, and the only place a pull-to-refresh
                     can live: `html`/`body` are pinned to the viewport, so the
                     document never overscrolls and the browser gesture never

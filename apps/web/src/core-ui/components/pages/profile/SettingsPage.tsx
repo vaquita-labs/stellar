@@ -167,7 +167,7 @@ const formatDate = (iso: string) => {
 };
 
 /** Sub-pantallas de Ajustes que <SettingsModal> puede apilar como panel. */
-export type SettingsSubKey = 'preferences' | 'profile' | 'notifications' | 'wallet';
+export type SettingsSubKey = 'preferences' | 'profile' | 'notifications' | 'wallet' | 'privacy';
 
 /**
  * `onBack` lo pasa <SettingsModal> cuando la pantalla se abre como panel sobre
@@ -253,9 +253,7 @@ export function SettingsPage({ onBack, onOpenSub }: { onBack?: () => void; onOpe
       description: hideBalance
         ? t('profilePages.settings.privacyDescHidden', 'Balance hidden on this device.')
         : t('profilePages.settings.privacyDesc', 'Hide your balance on the profile and home screens.'),
-      // Not built yet: the badge says "soon", so the row shouldn't navigate.
-      disabled: true,
-      badge: t('common.soon'),
+      ...nav('privacy', '/profile/privacy-settings'),
     },
   ];
 
