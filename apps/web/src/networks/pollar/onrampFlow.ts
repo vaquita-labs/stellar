@@ -76,17 +76,29 @@ export function receivedUsdcFrom(tx: { amount: number; currency: string }, credi
   return credited != null && Number.isFinite(credited) ? credited : null;
 }
 
-/** Qué hacer al reabrir el modal sobre una compra que quedó registrada. */
-export type ResumeAction = 'restart' | 'resume';
+/**
+ * What to do when the modal reopens over a recorded purchase: put it back on
+ * screen, or close it and leave the user on the amount step. When it is closed,
+ * how it goes into the record.
+ */
+export type ResumeDecision =
+  | { action: 'resume' }
+  | { action: 'restart'; closeAs: Extract<TerminalOnrampStatus, 'expired' | 'failed'> };
 
 /**
- * Si la compra registrada se retoma en pantalla o se descarta y se vuelve al
- * monto.
+ * A recorded purchase is dropped only when there is nothing left to tell about
+ * it here.
  *
- * Se descarta sólo cuando las dos fuentes coinciden: el servidor la da por
- * vencida y el proveedor confirma que nunca vio el pago. Con el estado del
- * proveedor desconocido —la consulta falló— se retoma: cerrar una compra que no
- * se pudo verificar es cómo una compra acreditada pierde su pantalla de éxito.
+ * The provider calling it `failed` is exactly that: the money never moved, and
+ * the rejection belongs to the session that was watching it. Resuming it on
+ * open means the user taps "Buy USDC" and the first thing they see is that
+ * their purchase did not go through — last week's, with nothing on that screen
+ * to say so.
+ *
+ * An expired code is dropped only when the provider confirms it never saw the
+ * payment. With its status unknown —the read failed— the purchase is resumed:
+ * closing one that could not be verified is how a credited purchase loses its
+ * success screen.
  */
 export function resumeActionFor({
   state,
@@ -94,6 +106,8 @@ export function resumeActionFor({
 }: {
   state: 'pending' | 'expired';
   providerStatus: RampTxStatus | null;
-}): ResumeAction {
-  return state === 'expired' && providerStatus === 'pending' ? 'restart' : 'resume';
+}): ResumeDecision {
+  if (providerStatus === 'failed') return { action: 'restart', closeAs: 'failed' };
+  if (state === 'expired' && providerStatus === 'pending') return { action: 'restart', closeAs: 'expired' };
+  return { action: 'resume' };
 }

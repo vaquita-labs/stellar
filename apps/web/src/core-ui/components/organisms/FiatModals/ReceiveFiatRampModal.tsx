@@ -27,10 +27,11 @@ import { useTranslation } from 'react-i18next';
 import { railLabel } from '../../../helpers/rampRail';
 import { FIAT_DECIMALS, formatTokenFine, formatTokenPrecise } from '../../../helpers/numbers';
 import { formatRampEta } from '../../../helpers/time';
-import { useAwaitingFundsStore, usePendingCreditStore, useRampActiveStore } from '../../../stores';
+import { setOnrampWaiting, useAwaitingFundsStore, usePendingCreditStore, useRampActiveStore } from '../../../stores';
 import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
+import { OnrampLeaveSheet } from './OnrampLeaveSheet';
 import { OnrampQrScreen } from './OnrampQrScreen';
 import { OnrampStatusScreen } from './OnrampStatusScreen';
 import { OnrampVerifyScreen } from './OnrampVerifyScreen';
@@ -137,6 +138,10 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   // An immediate provider check is running because the user came back to the
   // app — most likely from the bank app, having just paid.
   const [checkingNow, setCheckingNow] = useState(false);
+  // The server is being asked to close the purchase right now, and the question
+  // the X asks before letting go of a live code is on screen.
+  const [closingPurchase, setClosingPurchase] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   // Until when a purchase that settled straight from the QR stays on processing.
   const [holdUntil, setHoldUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => new Date());
@@ -268,17 +273,17 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [corridor, amountFiat, requote]);
 
-  // Retomar una compra a medias. El servidor guarda el id de transacción, y con
-  // ese id el proveedor devuelve el QR, los datos y el vencimiento: por eso esto
-  // funciona en un teléfono que nunca vio la compra, no hace falta nada guardado
-  // acá. Si el pago se acreditó mientras el usuario no estaba, el estado del
-  // proveedor manda y la pantalla que aparece es la de compra acreditada.
+  // Picking a half-finished purchase back up. The server keeps the transaction
+  // id, and with that id the provider returns the QR, the fields and the expiry:
+  // that is why this works on a phone that never saw the purchase, with nothing
+  // stored here. If the payment was credited while the user was away, the
+  // provider's status wins and what appears is the settled screen.
   //
-  // Un código vencido que el proveedor confirma sin pagar no se muestra: se
-  // cierra acá y el usuario aparece en el monto, con el suyo ya escrito y la
-  // cotización de ahora cargando. La compra nueva NO se crea sola —un código
-  // vencido no prueba que nadie lo pagó, y el que pagó sobre la hora pagaría dos
-  // veces con bolivianos de verdad—, así que el último paso lo da él.
+  // What `resumeActionFor` drops is not shown at all: the row is closed here and
+  // the user lands on the amount step with theirs already typed and today's
+  // quote loading. The new purchase is NOT created on its own —an expired code
+  // does not prove nobody paid it, and whoever paid on the buzzer would pay
+  // twice in real bolivianos— so the last step is theirs.
   useEffect(() => {
     if (!open || !walletAddress) return;
     let cancelled = false;
@@ -292,8 +297,9 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
         const tx = await readOnrampTransaction(found.purchase.providerTxId).catch(() => null);
         if (cancelled) return;
 
-        if (resumeActionFor({ state: found.state, providerStatus: tx?.status ?? null }) === 'restart') {
-          void markPurchaseTerminal(walletAddress, found.purchase.id, 'expired').catch(() => {
+        const decision = resumeActionFor({ state: found.state, providerStatus: tx?.status ?? null });
+        if (decision.action === 'restart') {
+          void markPurchaseTerminal(walletAddress, found.purchase.id, decision.closeAs).catch(() => {
             // Que no cierre sólo deja la fila abierta un rato más; el barrido de
             // la lectura la termina cerrando.
           });
@@ -675,6 +681,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
 
       setInstructions(read);
       setNow(new Date());
+      setLeaving(false);
       setPhase('paying');
     } catch (e) {
       // Pollar contesta lo mismo de dos formas: un 200 con `kycRequired` o este
@@ -687,21 +694,40 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   };
 
   /**
-   * Vuelve al monto para pedir un código nuevo, con cotización fresca.
+   * Back to the amount step for a new code, with a fresh quote.
    *
-   * Acá SÍ se cierra la compra vieja: pedir un código nuevo es abandonar el
-   * anterior, y dejarlo abierto haría que la próxima vez que el usuario entre le
-   * aparezca un QR que ya decidió no pagar.
+   * Here the old purchase IS closed: asking for a new code is giving up the
+   * previous one, and leaving it open is how the next time the user comes in
+   * they get a QR they already decided not to pay.
    *
-   * `closing` es con qué queda registrada la que se abandona, y no sale siempre
-   * de la pantalla: el usuario que cancela un código todavía vivo no lo dejó
-   * vencer, y contar las dos cosas juntas taparía cuál de los dos problemas
-   * tenemos.
+   * The screen waits for the server to confirm that close instead of firing and
+   * forgetting. A close that silently failed brings the abandoned purchase back
+   * on the next open, which is the same purchase the user believes they
+   * cancelled — so if it fails they are told, and nothing is reset.
+   *
+   * `closeAs` is what the abandoned one is recorded as, and it does not always
+   * come from the screen: a user cancelling a code that was still alive did not
+   * let it expire, and counting both as the same thing would hide which of the
+   * two problems we have.
    */
-  const restartWith = (closing: TerminalPurchaseStatus) => {
+  const restartWith = async (closeAs: TerminalPurchaseStatus) => {
+    if (closingPurchase) return;
     if (walletAddress && purchaseId) {
-      void markPurchaseTerminal(walletAddress, purchaseId, closing).catch(() => {});
+      setClosingPurchase(true);
+      const ok = await markPurchaseTerminal(walletAddress, purchaseId, closeAs).catch(() => false);
+      setClosingPurchase(false);
+      if (!ok) {
+        setFailure(
+          t(
+            'wallet.fiat.onramp.err.closeFailed',
+            'We could not close your previous purchase. Check your connection and try again.',
+          ),
+        );
+        return;
+      }
     }
+    setLeaving(false);
+    setOnrampWaiting(false);
     setTxId(null);
     setPurchaseId(null);
     setProviderStatus(null);
@@ -723,10 +749,52 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   };
 
   /** Abandonar por donde venía la pantalla: vencida, rechazada o acreditada. */
-  const restart = () => restartWith(terminalStatusFor(screen) ?? 'expired');
+  const restart = () => void restartWith(terminalStatusFor(screen) ?? 'expired');
 
   /** Abandonar un código que todavía servía, porque el usuario lo pidió. */
-  const cancel = () => restartWith('cancelled');
+  const cancel = () => void restartWith('cancelled');
+
+  /**
+   * Closing the modal over a live code is not the same as giving the code up —
+   * the purchase stays open and the user comes back to it — and which of the two
+   * they meant is the one thing we cannot guess from a tap on the X. So the X
+   * asks, and only while there is a live code to ask about: on every other
+   * screen there is nothing left to cancel and it closes straight away.
+   */
+  /**
+   * Closes the modal saying what is left behind: a purchase the user is meant to
+   * come back to, or nothing. That is what sends them straight back here the
+   * next time they tap Deposit, instead of through the sheet and the picker.
+   *
+   * An expired code is NOT one of them. Its row stays open on the server on
+   * purpose —the payment could have landed on the buzzer— but what the user has
+   * to do with it is ask for a new one, and that starts at the amount step like
+   * any other purchase.
+   */
+  const closeModal = () => {
+    const leftOpen =
+      phase === 'paying' && !!purchaseId && (screen === 'paying' || screen === 'checking' || screen === 'processing');
+    setOnrampWaiting(leftOpen);
+    onOpenChange();
+  };
+
+  const codeLive = phase === 'paying' && screen === 'paying' && !!instructions;
+  const requestClose = () => {
+    if (!codeLive) {
+      closeModal();
+      return;
+    }
+    // A close that failed a moment ago left its message on the sheet. Asking
+    // again is a new attempt, and it starts without the previous answer.
+    setFailure(null);
+    setLeaving(true);
+  };
+
+  // The payment can land while the question is on screen, so what is asked is
+  // derived and not just the flag: leaving "I have not paid it" in front of a
+  // user whose USDC just arrived offers them a button that no longer means
+  // anything.
+  const askingToLeave = leaving && codeLive;
 
   // El formulario (monto, cotización, campos) es de los dos primeros pasos; en la
   // verificación y en el pago la pantalla es otra y no debe quedar nada suyo
@@ -859,7 +927,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
   return (
     <AppModal
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={requestClose}
       title={t('wallet.fiat.onramp.title', 'Buy USDC in {{country}} ({{currency}})', {
         country: countryName,
         currency: currency || country,
@@ -868,8 +936,8 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       // Regla de todos los flujos de plata: no se cierran tocando afuera en
       // NINGÚN paso. Con el QR en pantalla pesa doble — el usuario está yendo y
       // viniendo a la app del banco con el código a la vista, y un toque al
-      // borde le tapa la pantalla justo cuando la necesita. La X y "volver a
-      // empezar" siguen ahí, que son cierres deliberados.
+      // borde le tapa la pantalla justo cuando la necesita. La X sigue ahí, que
+      // es un cierre deliberado.
       isDismissable={false}
       // Con el QR en pantalla no hay vuelta atrás: el código ya existe del lado
       // del proveedor y "volver" sólo llevaría a crear otro sobre el mismo pago.
@@ -889,6 +957,16 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
       // sheet en pantallas chicas y lo primero que se corta es el monto.
       bodyClassName={`flex flex-col pb-2 ${phase === 'amount' ? 'gap-2.5' : 'gap-4'}`}
       footer={footer}
+      overlay={
+        <OnrampLeaveSheet
+          show={askingToLeave}
+          busy={closingPurchase}
+          error={failure}
+          onClose={closeModal}
+          onStay={() => setLeaving(false)}
+          onCancel={cancel}
+        />
+      }
     >
       {showForm && corridorOff && (
         <p className="rounded-md border border-black border-b-2 bg-[#FFF4DD] px-3 py-2 text-xs font-semibold text-black">
@@ -953,7 +1031,6 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
           expiresAt={instructions.expiresAt}
           now={now}
           onRestart={restart}
-          onCancel={cancel}
           checking={checkingNow}
         />
       )}
@@ -966,7 +1043,7 @@ export function ReceiveFiatRampModal({ open, onOpenChange, country, onBack }: Re
             receivedUsdc={receivedUsdc}
             amountFiat={paid?.amount ?? amountFiat}
             currency={paid?.currency ?? currency}
-            onDone={onOpenChange}
+            onDone={closeModal}
             onRestart={restart}
           />
         )}

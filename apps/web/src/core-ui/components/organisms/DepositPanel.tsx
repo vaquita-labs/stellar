@@ -16,7 +16,7 @@ import { usePollar } from '@pollar/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnalytics, useInvalidateAfterMoneyMove, useIsPoolPaused } from '../../hooks';
-import { useMapStore, useConfigStore, useAwaitingFundsStore } from '../../stores';
+import { useMapStore, useConfigStore, useAwaitingFundsStore, useOnrampWaitingStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
 import { ReceiveModal } from './DepositModal/ReceiveModal';
@@ -52,6 +52,9 @@ export function DepositPanel() {
   // Anclap: modal propio.
   const [isOnrampOpen, setIsOnrampOpen] = useState(false);
   const isOnrampMounted = useModalPresence(isOnrampOpen);
+  // A purchase left open: the user went off to pay the QR from their bank app
+  // and is coming back for it, not starting another one.
+  const hasOpenPurchase = useOnrampWaitingStore((s) => s.hasOpenPurchase);
   // Quién habilita Bolivia es el proveedor, no un flag de build. La lista se pide
   // recién cuando el usuario abre alguna puerta de fiat —no en cada home— y se
   // arranca desde el modal de método/retiro, un paso antes del picker, para que
@@ -125,6 +128,15 @@ export function DepositPanel() {
           onClick={() => {
             if (!walletAddress) {
               trackUserAction('deposit_attempted_no_wallet');
+            } else if (hasOpenPurchase) {
+              // Depositing over an open purchase means going back to it. The
+              // method and the country were chosen when it was created, and
+              // walking them again to reach the code they already have is an
+              // invitation to start a second purchase over the same payment.
+              trackUserAction('deposit_onramp_resumed', {
+                network: network?.networkName || null,
+              });
+              setIsOnrampOpen(true);
             } else {
               trackUserAction('deposit_modal_opened', {
                 token: token?.symbol || null,
