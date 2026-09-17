@@ -2281,7 +2281,8 @@
       "unfunded": "Esa cuenta todavía no está activa en Stellar, así que no puede recibir USDC.",
       "noTrustline": "Esta cuenta todavía no habilitó USDC. Pídele que abra la app una vez e intenta de nuevo.",
       "checkFailed": "No pudimos verificar esa cuenta. Puedes intentar el retiro igual."
-    }
+    },
+    "positions": "Posiciones"
   },
   "transactions": {
     "title": "Transacciones",

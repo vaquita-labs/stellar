@@ -12,7 +12,7 @@ import { FiExternalLink } from 'react-icons/fi';
 import { truncateDecimals } from '../../../helpers';
 import { AMOUNT_DECIMALS, floorAmount, formatTokenPrecise, MIN_USDC, MONEY_INPUT_DECIMALS } from '../../../helpers/numbers';
 import { humanizeTxError } from '../../../helpers/txError';
-import { useLivePassiveUsdc } from '../../../hooks';
+import { useLivePassiveUsdc, usePositionsChip } from '../../../hooks';
 import { useConfigStore, useRampActiveStore } from '../../../stores';
 import { AmountStep } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
@@ -121,6 +121,7 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
     isLoading: balanceIsLoading,
     refetch: refreshBalance,
   } = useLivePassiveUsdc(walletAddress ?? undefined);
+  const positionsChip = usePositionsChip(onOpenChange);
   const balanceFormatted = floorAmount(blendLiveUsdc, AMOUNT_DECIMALS);
 
   const amountNum = Number(amount);
@@ -417,6 +418,7 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
         disabled={busy}
         available={balanceFormatted}
         availableDecimals={2}
+        positions={positionsChip}
         availableLoading={balanceIsLoading}
         error={overBalance ? t('wallet.fiat.send.insufficient', 'Insufficient USDC balance.') : null}
         hint={t('withdraw.minWithdraw', 'Minimum withdrawal: {{amount}} USDC.', {

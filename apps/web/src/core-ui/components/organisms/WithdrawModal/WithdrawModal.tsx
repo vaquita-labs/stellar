@@ -9,7 +9,7 @@ import {
   MIN_USDC,
   MONEY_INPUT_DECIMALS,
 } from '@/core-ui/helpers/numbers';
-import { useLivePassiveUsdc, usePassiveLabel, usePassiveMigration } from '@/core-ui/hooks';
+import { useLivePassiveUsdc, usePassiveLabel, usePassiveMigration, usePositionsChip } from '@/core-ui/hooks';
 import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
 import { blendConfigForToken } from '@/networks/stellar/blendDirect';
 import { isTxPendingError } from '@/networks/stellar/pollarError';
@@ -65,6 +65,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
   // (funds migrated out of Blend), else the legacy Blend position. The withdraw
   // action itself routes accordingly via passiveWithdraw.
   const { live: primaryLiveUsdc, vaultOn } = useLivePassiveUsdc(walletAddress);
+  const positionsChip = usePositionsChip(onOpenChange);
   const passiveLabel = usePassiveLabel();
   // Leftover legacy Blend balance (should be 0 after migration): surfaced with its
   // own withdraw button so a user who still holds Blend can pull it out.
@@ -336,9 +337,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       <PressableButton variant="white" size="row" onClick={onOfframp}>
         <BsBank2 className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
-          <span className="block text-sm font-bold text-black">
-            {t('withdraw.method.bank.title', 'Bank')}
-          </span>
+          <span className="block text-sm font-bold text-black">{t('withdraw.method.bank.title', 'Bank')}</span>
           <span className="block text-xs text-gray-500">
             {t('withdraw.method.bank.subtitle', 'Withdraw to your bank account')}
           </span>
@@ -354,9 +353,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       >
         <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
-          <span className="block text-sm font-bold text-black">
-            {t('withdraw.method.wallet.title', 'Wallet')}
-          </span>
+          <span className="block text-sm font-bold text-black">{t('withdraw.method.wallet.title', 'Wallet')}</span>
           <span className="block text-xs text-gray-500">
             {t('withdraw.method.wallet.subtitle', 'Withdraw to a crypto wallet')}
           </span>
@@ -383,9 +380,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       >
         <FiAtSign className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
-          <span className="block text-sm font-bold text-black">
-            {t('withdraw.method.username.title', 'Username')}
-          </span>
+          <span className="block text-sm font-bold text-black">{t('withdraw.method.username.title', 'Username')}</span>
           <span className="block text-xs text-gray-500">
             {t('withdraw.method.username.subtitle', 'Send to a Vaquita user')}
           </span>
@@ -409,15 +404,12 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       controls={amountControls}
       available={available}
       availableDecimals={2}
+      positions={positionsChip}
       // Tocar "Available" es pedir retirar TODO: el sentinel i128 de blendDirect
       // depende de esta bandera, no del monto tecleado.
       onMax={() => setIsMax(true)}
       error={
-        overBalance
-          ? t('withdraw.exceedsBalance', "That's more than you have available.")
-          : belowMinimum
-            ? minimumHint
-            : null
+        overBalance ? t('withdraw.exceedsBalance', "That's more than you have available.") : belowMinimum ? minimumHint : null
       }
       onErrorClear={() => setOverBalance(false)}
       hint={minimumHint}
@@ -434,9 +426,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
               disabled={hasBorrow || blendBusy}
               onClick={() => void handleBlendWithdraw()}
             >
-              {blendBusy
-                ? t('withdraw.withdrawing', 'Withdrawing…')
-                : t('withdraw.withdrawFromBlend', 'Withdraw from Blend')}
+              {blendBusy ? t('withdraw.withdrawing', 'Withdrawing…') : t('withdraw.withdrawFromBlend', 'Withdraw from Blend')}
             </PressableButton>
             {hasBorrow && (
               <span className="mt-1 text-[11px] text-warning">
@@ -453,18 +443,13 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
         // usuario sí hay a quién elegir, y ahí va el mismo selector que la social.
         <div
           className={
-            'w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 ' +
-            DESTINATION_ROW
+            'w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 ' + DESTINATION_ROW
           }
         >
           <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
           <span className="flex-1 min-w-0">
-            <span className="block text-sm font-bold text-black truncate">
-              {t('withdraw.ownWallet', 'Your wallet')}
-            </span>
-            <span className="block text-xs text-gray-500">
-              {ownAddress ? truncateMiddle(ownAddress, 6, 5) : '—'}
-            </span>
+            <span className="block text-sm font-bold text-black truncate">{t('withdraw.ownWallet', 'Your wallet')}</span>
+            <span className="block text-xs text-gray-500">{ownAddress ? truncateMiddle(ownAddress, 6, 5) : '—'}</span>
           </span>
         </div>
       ) : (
@@ -517,9 +502,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
                 <span className="mt-1.5 block h-3 w-32 rounded bg-black/10" />
               </span>
             ) : (
-              <span className="block text-sm font-bold text-black">
-                {t('withdraw.addWallet.cta', 'Add a wallet')}
-              </span>
+              <span className="block text-sm font-bold text-black">{t('withdraw.addWallet.cta', 'Add a wallet')}</span>
             )}
           </span>
           {walletsLoading ? (
@@ -534,10 +517,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
 
   // Placeholder de carga, igual para las dos listas de destino.
   const walletSkeleton = Array.from({ length: 2 }).map((_, i) => (
-    <div
-      key={i}
-      className="w-full flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3 animate-pulse"
-    >
+    <div key={i} className="w-full flex items-center gap-3 rounded-lg border border-black/10 bg-white px-4 py-3 animate-pulse">
       <span className="w-6 h-6 shrink-0 rounded bg-black/10" />
       <span className="flex-1">
         <span className="block h-3.5 w-24 rounded bg-black/10" />
@@ -567,18 +547,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       {(walletsLoading || nicknamesLoading) && addressWallets.length === 0 ? walletSkeleton : null}
 
       {addressWallets.length === 0 && !walletsLoading && !nicknamesLoading ? (
-        <p className="text-sm text-gray-500 text-center py-4">
-          {t('withdraw.noWallets', 'You have no saved wallets yet')}
-        </p>
+        <p className="text-sm text-gray-500 text-center py-4">{t('withdraw.noWallets', 'You have no saved wallets yet')}</p>
       ) : null}
 
       <div className="border-t border-black/10 my-1" />
 
       <PressableButton variant="white" size="row" onClick={() => setStep('addWallet')}>
         <FiPlus className="w-6 h-6 text-black shrink-0" />
-        <span className="flex-1 text-sm font-bold text-black">
-          {t('withdraw.addMethod', 'Add method')}
-        </span>
+        <span className="flex-1 text-sm font-bold text-black">{t('withdraw.addMethod', 'Add method')}</span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
     </div>
@@ -608,18 +584,14 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       {(walletsLoading || nicknamesLoading) && usernameWallets.length === 0 ? walletSkeleton : null}
 
       {usernameWallets.length === 0 && !walletsLoading && !nicknamesLoading ? (
-        <p className="text-sm text-gray-500 text-center py-4">
-          {t('withdraw.noUsernames', 'You have no saved users yet')}
-        </p>
+        <p className="text-sm text-gray-500 text-center py-4">{t('withdraw.noUsernames', 'You have no saved users yet')}</p>
       ) : null}
 
       <div className="border-t border-black/10 my-1" />
 
       <PressableButton variant="white" size="row" onClick={() => setStep('addNickname')}>
         <FiAtSign className="w-6 h-6 text-black shrink-0" />
-        <span className="flex-1 text-sm font-bold text-black">
-          {t('withdraw.addNickname.cta', 'Add username')}
-        </span>
+        <span className="flex-1 text-sm font-bold text-black">{t('withdraw.addNickname.cta', 'Add username')}</span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />
       </PressableButton>
     </div>
@@ -790,8 +762,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
     // rehacer, el retiro ya pasó.
     confirm: txPending ? undefined : 'amount',
   };
-  const backTarget: WithdrawStep | undefined =
-    step === 'username' ? usernameOrigin : BACK_TARGET[step];
+  const backTarget: WithdrawStep | undefined = step === 'username' ? usernameOrigin : BACK_TARGET[step];
 
   const footer =
     step === 'amount' ? (
@@ -827,9 +798,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
         </PressableButton>
       )
     ) : step === 'processing' ? (
-      <p className="w-full text-center text-xs text-gray-500">
-        {t('withdraw.processingHint', 'This may take a few seconds.')}
-      </p>
+      <p className="w-full text-center text-xs text-gray-500">{t('withdraw.processingHint', 'This may take a few seconds.')}</p>
     ) : step === 'success' ? (
       <PressableButton variant="success" size="cta" className="py-2.5!" onClick={onOpenChange}>
         {t('common.done', 'Done')}
