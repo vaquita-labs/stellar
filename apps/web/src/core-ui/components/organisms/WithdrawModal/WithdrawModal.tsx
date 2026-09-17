@@ -65,7 +65,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
   // (funds migrated out of Blend), else the legacy Blend position. The withdraw
   // action itself routes accordingly via passiveWithdraw.
   const { live: primaryLiveUsdc, vaultOn } = useLivePassiveUsdc(walletAddress);
-  const positionsChip = usePositionsChip(onOpenChange);
+  const positionsChip = usePositionsChip();
   const passiveLabel = usePassiveLabel();
   // Leftover legacy Blend balance (should be 0 after migration): surfaced with its
   // own withdraw button so a user who still holds Blend can pull it out.

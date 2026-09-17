@@ -121,7 +121,7 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
     isLoading: balanceIsLoading,
     refetch: refreshBalance,
   } = useLivePassiveUsdc(walletAddress ?? undefined);
-  const positionsChip = usePositionsChip(onOpenChange);
+  const positionsChip = usePositionsChip();
   const balanceFormatted = floorAmount(blendLiveUsdc, AMOUNT_DECIMALS);
 
   const amountNum = Number(amount);

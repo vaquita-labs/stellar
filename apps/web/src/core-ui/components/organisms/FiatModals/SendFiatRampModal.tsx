@@ -300,7 +300,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
     isLoading: balanceIsLoading,
     refetch: refreshBalance,
   } = useLivePassiveUsdc(walletAddress ?? undefined);
-  const positionsChip = usePositionsChip(onOpenChange);
+  const positionsChip = usePositionsChip();
   const balance = floorAmount(liveUsdc, AMOUNT_DECIMALS);
 
   useEffect(() => {
