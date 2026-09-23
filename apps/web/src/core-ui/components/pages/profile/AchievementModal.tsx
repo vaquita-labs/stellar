@@ -3,7 +3,6 @@
 import { Modal, toast } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
-import { getBlurProps } from '@/core-ui/data/blur-placeholders.generated';
 import { useEffect, useRef, useState } from 'react';
 import { FiAward, FiCopy, FiDownload, FiShare2, FiX } from 'react-icons/fi';
 import { FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
@@ -556,7 +555,7 @@ export function AchievementModal({
             className="absolute inset-0 rounded-full blur-2xl opacity-60"
             style={{ background: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)' }}
           />
-          <Image src="/icons/global/coin.png" alt="" width={160} height={160} {...getBlurProps('/icons/global/coin.png')} className="relative drop-shadow-xl" />
+          <Image src="/icons/global/coin.png" alt="" width={160} height={160} className="relative drop-shadow-xl" />
         </motion.div>
         <motion.h2
           initial={{ y: 12, opacity: 0 }}
