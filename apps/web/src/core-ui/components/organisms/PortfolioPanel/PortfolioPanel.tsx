@@ -2,7 +2,7 @@
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { sortPositionsByEnd } from '@/core-ui/helpers/positions';
-import { formatTokenPrecise, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
+import { formatUsdAdaptive, formatUsdPrecise } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useDepositsComplete, useLivePassiveUsdc } from '@/core-ui/hooks';
 import { maskAmount, useConfigStore, useIsHidden } from '@/core-ui/stores';
@@ -220,14 +220,15 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
   const pctOf = (amount: number) => (totalAmount > 0 ? (amount / totalAmount) * 100 : 0);
 
   // Número del centro del donut, partido en enteros + centavos (los centavos van
-  // en superíndice, estilo "$722·⁰¹"). Con ≥1 lo mostramos a 2 decimales para que
-  // quepa limpio; los micro-saldos (<1) conservan la precisión fina.
+  // en superíndice, estilo "$722·⁰¹"). Siempre a 2 decimales: es el total que la
+  // suma de abajo tiene que repetir, y dos números iguales con distinta cantidad
+  // de decimales se leen como dos números distintos.
   // Los dos bloques de plata del panel se tapan por separado, y el ojo del
   // título los tapa a los dos (la cadena vive en el store de privacidad).
   const hideTotal = useIsHidden('portfolio.total');
   const hideAllocation = useIsHidden('portfolio.allocation');
 
-  const donutStr = displayTotal >= 1 ? `$${formatTokenPrecise(displayTotal, 2)}` : formatUsdAdaptive(displayTotal);
+  const donutStr = formatUsdPrecise(displayTotal, 2);
   const donutDot = donutStr.lastIndexOf('.');
   const donutInt = donutDot >= 0 ? donutStr.slice(0, donutDot) : donutStr;
   const donutCents = donutDot >= 0 ? donutStr.slice(donutDot + 1) : '';
@@ -420,7 +421,7 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
               <div className="flex items-center justify-between border-t border-black/15 mt-1 pt-3">
                 <span className="text-sm font-semibold text-gray-500">{t('portfolio.sum', 'Total')}</span>
                 <span className="text-sm font-bold text-black tabular-nums">
-                  {maskAmount(formatUsdAdaptive(displayTotal), hideAllocation)}
+                  {maskAmount(formatUsdPrecise(displayTotal, 2), hideAllocation)}
                 </span>
               </div>
             ) : null}

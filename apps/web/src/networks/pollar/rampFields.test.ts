@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { RAMP_NETWORK, RampError } from './ramps';
-import { fieldsAreValid, placeholderFor, rampErrorMessage, selectDefaults, type RampField } from './rampFields';
+import {
+  distinctOptions,
+  fieldsAreValid,
+  placeholderFor,
+  rampErrorMessage,
+  selectDefaults,
+  type RampField,
+} from './rampFields';
 
 const field = (over: Partial<RampField> = {}): RampField => ({ key: 'taxId', label: 'CI', type: 'text', ...over }) as RampField;
 
@@ -101,5 +108,36 @@ describe('selectDefaults', () => {
 
   it('ignores text fields and selects the provider sent with no options', () => {
     expect(selectDefaults([field(), select({ options: [] })], {})).toBeNull();
+  });
+});
+
+describe('distinctOptions', () => {
+  it('joins the wallet and the bank that share a code into one option', () => {
+    const options = [
+      { value: 'BCP', label: 'YAPE' },
+      { value: 'BANECO', label: 'BANCO ECONOMICO S.A.' },
+      { value: 'BCP', label: 'BANCO DE CREDITO DE BOLIVIA S.A.' },
+    ];
+    expect(distinctOptions(options)).toEqual([
+      { value: 'BCP', label: 'YAPE / BANCO DE CREDITO DE BOLIVIA S.A.' },
+      { value: 'BANECO', label: 'BANCO ECONOMICO S.A.' },
+    ]);
+  });
+
+  it('keeps the first placeholder a shared code carries', () => {
+    const options = [
+      { value: 'BCP', label: 'YAPE' },
+      { value: 'BCP', label: 'BANCO DE CREDITO', placeholder: '201-5' },
+    ];
+    expect(distinctOptions(options)[0].placeholder).toBe('201-5');
+  });
+
+  it('leaves the provider list untouched', () => {
+    const options = [
+      { value: 'BCP', label: 'YAPE' },
+      { value: 'BCP', label: 'BANCO DE CREDITO' },
+    ];
+    distinctOptions(options);
+    expect(options[0].label).toBe('YAPE');
   });
 });

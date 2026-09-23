@@ -3,7 +3,6 @@
 import { Modal, toast } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
-import { getBlurProps } from '@/core-ui/data/blur-placeholders.generated';
 import { useEffect, useRef, useState } from 'react';
 import { FiAward, FiCopy, FiDownload, FiShare2, FiX } from 'react-icons/fi';
 import { FaWhatsapp, FaXTwitter } from 'react-icons/fa6';
@@ -468,7 +467,7 @@ export function AchievementModal({
               background: achievement.accent ?? 'linear-gradient(180deg, #FFD64A 0%, #F5A161 100%)',
             }}
           />
-          <Image src={achievement.icon} alt={title} fill sizes="160px" {...getBlurProps(achievement.icon)} className="relative object-contain drop-shadow-md" />
+          <Image src={achievement.icon} alt={title} fill sizes="160px" className="relative object-contain drop-shadow-md" />
         </div>
 
         {achievement.date && (
@@ -556,7 +555,7 @@ export function AchievementModal({
             className="absolute inset-0 rounded-full blur-2xl opacity-60"
             style={{ background: 'linear-gradient(180deg, #FFE082 0%, #F5A161 100%)' }}
           />
-          <Image src="/icons/global/coin.png" alt="" width={160} height={160} {...getBlurProps('/icons/global/coin.png')} className="relative drop-shadow-xl" />
+          <Image src="/icons/global/coin.png" alt="" width={160} height={160} className="relative drop-shadow-xl" />
         </motion.div>
         <motion.h2
           initial={{ y: 12, opacity: 0 }}
@@ -612,7 +611,7 @@ export function AchievementModal({
       className="flex-1 flex flex-col items-center justify-center gap-6 px-6"
     >
       <div className="relative h-32 w-32">
-        <Image src={achievement.icon} alt="" fill sizes="128px" {...getBlurProps(achievement.icon)} className="object-contain grayscale animate-pulse" />
+        <Image src={achievement.icon} alt="" fill sizes="128px" className="object-contain grayscale animate-pulse" />
       </div>
       <VaquitaDots />
       <p className="text-sm font-bold uppercase tracking-wider text-gray-500">{t('achievements.minting.waitingForWallet', 'Waiting for wallet…')}</p>

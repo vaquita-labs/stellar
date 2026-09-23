@@ -3,7 +3,6 @@
 import { Button } from '@heroui/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
-import { getBlurProps } from '@/core-ui/data/blur-placeholders.generated';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppModal } from '../../molecules/AppModal';
@@ -182,7 +181,6 @@ export function DailyRewardModal({
                 alt={t('rewards.daily.chestOpenAlt', 'Open chest')}
                 width={chestPx}
                 height={chestPx}
-                {...getBlurProps('/icons/global/shiny_chest_open.webp')}
                 draggable={false}
                 className="relative pointer-events-none"
                 style={{ filter: 'drop-shadow(0 0 14px rgba(251, 191, 36, 0.9))' }}
@@ -350,7 +348,6 @@ export function DailyRewardModal({
                   alt={t('rewards.daily.chestClosedAlt', 'Closed chest')}
                   width={chestPx}
                   height={chestPx}
-                  {...getBlurProps('/icons/global/shiny_chest.webp')}
                   draggable={false}
                   className="relative pointer-events-none"
                   style={{ filter: 'drop-shadow(0 0 10px rgba(251, 191, 36, 0.85))' }}

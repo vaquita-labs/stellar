@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 import type { Badge } from '../../../data/profile-badges';
-import { getBlurProps } from '../../../data/blur-placeholders.generated';
 
 type BadgeSize = 'sm' | 'md' | 'lg';
 
@@ -115,7 +114,6 @@ export function BadgeTile({
           alt={title}
           width={s.img.w}
           height={s.img.h}
-          {...getBlurProps(badge.icon)}
           className={`relative h-full w-full object-contain drop-shadow-md ${
             fullyEarned ? '' : 'grayscale opacity-70'
           }`}

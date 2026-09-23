@@ -15,8 +15,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "format": "prettier --write .",
-    "gen:blur": "node scripts/gen-blur-placeholders.mjs"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@blend-capital/blend-sdk": "^3.2.2",

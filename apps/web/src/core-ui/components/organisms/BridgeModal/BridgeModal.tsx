@@ -18,7 +18,7 @@ import {
 } from '@/core-ui/hooks/useBridge';
 import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
 import { blendConfigForToken, resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
-import { truncatedAmountString } from '../../../helpers/numbers';
+import { formatTokenPrecise, truncatedAmountString } from '../../../helpers/numbers';
 import { truncateMiddle } from '../../../helpers/strings';
 import { humanizeTxError } from '../../../helpers/txError';
 import { useConfigStore } from '../../../stores';
@@ -506,7 +506,9 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
           </label>
           {!inbound && (
             <button type="button" onClick={handleMax} className="text-xs font-semibold text-[#0072B5]">
-              {t('wallet.bridge.available', 'Available: {{amount}} USDC', { amount: available.toFixed(2) })}
+              {t('wallet.bridge.available', 'Available: {{amount}} USDC', {
+                amount: formatTokenPrecise(available, 2),
+              })}
             </button>
           )}
         </div>

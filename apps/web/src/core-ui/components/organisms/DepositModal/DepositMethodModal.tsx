@@ -18,6 +18,7 @@ import {
   formatTokenPrecise,
   formatUsdPrecise,
   MIN_USDC,
+  MONEY_INPUT_DECIMALS,
   truncateMiddle,
 } from '../../../helpers';
 import { useAnalytics, useBlendPosition, useInvalidateAfterMoneyMove, useProfileData } from '../../../hooks';
@@ -228,7 +229,7 @@ export function DepositMethodModal({
     <AmountStep
       value={amount}
       onValueChange={setAmount}
-      decimals={AMOUNT_DECIMALS}
+      decimals={MONEY_INPUT_DECIMALS}
       controls={amountControls}
       available={available}
       availableLoading={balanceIsLoading}

@@ -71,13 +71,14 @@ test.describe('home tour', () => {
     await expect(deposit).toBeVisible();
     expect(await isClickable(deposit)).toBe(false);
 
-    // Every step, in order. Only the last one drops `Skip` and closes the tour.
+    // Every step, in order. `Skip` is the card's close button, so it rides every
+    // step, the last one included; only the footer's primary action changes.
     // The card lives inside the layer, and scoping to it keeps the walk off the
     // dev-tools button the local server injects, whose name also starts with "Next".
     for (const [index, title] of STEPS.entries()) {
       await expect(overlay.getByRole('heading', { name: title })).toBeVisible({ timeout: 30_000 });
       const last = index === STEPS.length - 1;
-      await expect(overlay.getByRole('button', { name: 'Skip' })).toHaveCount(last ? 0 : 1);
+      await expect(overlay.getByRole('button', { name: 'Skip' })).toHaveCount(1);
       await overlay.getByRole('button', { name: last ? 'Got it' : 'Next' }).click();
     }
 

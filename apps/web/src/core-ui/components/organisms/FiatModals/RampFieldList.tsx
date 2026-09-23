@@ -1,6 +1,6 @@
 'use client';
 
-import { placeholderFor, type RampField } from '@/networks/pollar/rampFields';
+import { distinctOptions, placeholderFor, type RampField } from '@/networks/pollar/rampFields';
 
 /** Estilo de todos los inputs de los modales de fiat, para que no deriven. */
 export const RAMP_FIELD_CLASS =
@@ -48,7 +48,7 @@ export function RampFieldList({ fields, values, onChange, disabled, idPrefix = '
               {field.optional === true || !values[field.key] ? (
                 <option value="">{field.placeholder ?? field.label}</option>
               ) : null}
-              {(field.options ?? []).map((option) => (
+              {distinctOptions(field.options ?? []).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toBaseUnits } from '@/networks/stellar/sorobanTx';
 import {
+  AMOUNT_DECIMALS,
   floorAmount,
   formatTokenAdaptive,
   formatTokenPrecise,
@@ -48,7 +49,17 @@ describe('formatUsdPrecise / formatTokenPrecise', () => {
 describe('formatTokenAdaptive', () => {
   it('recorta a 2 decimales arriba de 100 y conserva la precisión abajo', () => {
     expect(formatTokenAdaptive(722.0121232)).toBe('722.01');
-    expect(formatTokenAdaptive(10.4699999)).toBe('10.4699999');
+    expect(formatTokenAdaptive(10.4699999)).toBe('10.469999');
+  });
+});
+
+describe('DISPLAY_DECIMALS', () => {
+  // El séptimo decimal se muestra sólo cuando lo pide quien formatea; por
+  // defecto se corta uno antes, que es donde termina el dígito y empieza el
+  // ruido de las cuentas que la app hace sobre el saldo.
+  it('corta en seis decimales sin tocar el séptimo del valor', () => {
+    expect(formatTokenPrecise(5.9999995)).toBe('5.999999');
+    expect(formatTokenPrecise(5.9999995, AMOUNT_DECIMALS)).toBe('5.9999995');
   });
 });
 

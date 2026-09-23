@@ -21,6 +21,32 @@ export function placeholderFor(field: RampField, fields: RampField[], values: Re
   return field.placeholder ?? field.label;
 }
 
+type RampOption = NonNullable<RampField['options']>[number];
+
+/**
+ * The options of a select, one per `value`, with the labels that share it joined.
+ *
+ * Stereum's Bolivian bank list sends a wallet and the bank behind it under the
+ * same code: YAPE and BANCO DE CREDITO are both `BCP`, and the same goes for
+ * `BGA`, `BSO` and `BUN`. A controlled `<select>` shows the first option whose
+ * value matches, so offering them apart makes picking the bank display the
+ * wallet. The provider pays both identically, so they are offered as the single
+ * choice they really are.
+ */
+export function distinctOptions(options: RampOption[]): RampOption[] {
+  const byValue = new Map<string, RampOption>();
+  for (const option of options) {
+    const seen = byValue.get(option.value);
+    if (!seen) {
+      byValue.set(option.value, { ...option });
+      continue;
+    }
+    seen.label = `${seen.label} / ${option.label}`;
+    seen.placeholder ??= option.placeholder;
+  }
+  return [...byValue.values()];
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Un campo suelto: vacío sólo vale si es opcional; el email además tiene forma. */
