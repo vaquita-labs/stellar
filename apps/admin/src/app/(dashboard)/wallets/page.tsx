@@ -29,7 +29,21 @@ const adminHeaders = (): HeadersInit => ({
   ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
-const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 7 });
+/**
+ * Montos truncados, nunca redondeados: un panel de tesorería que redondea hacia
+ * arriba reporta más fondos de los que hay en la cadena.
+ *
+ * El epsilon absorbe el ruido binario del float —un saldo llega como
+ * `0.2899999999` y un truncado pelado lo bajaría a `0.289999`— y es demasiado
+ * chico para subir un dígito genuino. Mismo criterio que `floorAmount` en
+ * apps/web.
+ */
+const fmt = (n: number) => {
+  if (!Number.isFinite(n)) return '—';
+  const scaled = n * 1e7;
+  const eps = Math.sign(scaled) * (Math.abs(scaled) * 2 ** -44 + 1e-9);
+  return (Math.trunc(scaled + eps) / 1e7).toLocaleString(undefined, { maximumFractionDigits: 7 });
+};
 const shortWallet = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-5)}` : a);
 const shortTime = (iso: string) => new Date(iso).toLocaleString();
 

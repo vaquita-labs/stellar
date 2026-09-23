@@ -1,6 +1,6 @@
 'use client';
 
-import { AMOUNT_DECIMALS, floorAmount } from '@/core-ui/helpers/numbers';
+import { DISPLAY_DECIMALS, floorAmount } from '@/core-ui/helpers/numbers';
 import { subscribeLiveTick } from '@/core-ui/hooks';
 import { useEffect, useRef, useState } from 'react';
 
@@ -21,19 +21,19 @@ export const accruedAt = (terms: AccrualTerm[], now: number) =>
   terms.reduce((acc, term) => acc + Math.min(term.maxInterest, term.ratePerMs * Math.max(0, now - term.anchor)), 0);
 
 /**
- * Con plata NUNCA redondeamos hacia arriba: `floorAmount` PISA a los 7 decimales
- * nativos de USDC (nunca $6.0000000 con $5.9999995 reales), igual que el
- * "Available" del retiro y el total del portfolio.
+ * Con plata NUNCA redondeamos hacia arriba: `floorAmount` PISA a `DISPLAY_DECIMALS`
+ * (nunca $6.000000 con $5.999999 reales), igual que el "Available" del retiro y
+ * el total del portfolio.
  *
  * El saldo se parte en dos para que el layout sea ESTABLE mientras tickea: los
  * dólares y centavos van grandes (solo cambian de ancho al sumar un dígito
  * entero, algo rarísimo) y la precisión sub-centavo va chica y tenue al lado.
- * Los 5 decimales restantes SIEMPRE se muestran, incluso en ceros ($0.00 →
- * "00000"): así el saldo no queda "pelado" cuando es redondo y el ancho es casi
+ * Los 4 decimales restantes SIEMPRE se muestran, incluso en ceros ($0.00 →
+ * "0000"): así el saldo no queda "pelado" cuando es redondo y el ancho es casi
  * constante, que es lo que hace que la pastilla no salte.
  */
 export const formatLiveBalance = (value: number) => {
-  const [int, dec = ''] = floorAmount(value, AMOUNT_DECIMALS).toFixed(AMOUNT_DECIMALS).split('.');
+  const [int, dec = ''] = floorAmount(value, DISPLAY_DECIMALS).toFixed(DISPLAY_DECIMALS).split('.');
   return { big: `$${Number(int).toLocaleString()}.${dec.slice(0, 2)}`, sub: dec.slice(2) };
 };
 

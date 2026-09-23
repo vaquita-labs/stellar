@@ -46,6 +46,18 @@ export const AMOUNT_DECIMALS = 7;
 export const MONEY_INPUT_DECIMALS = 2;
 
 /**
+ * Decimales MÁXIMOS que llega a ver el usuario. Uno menos que `AMOUNT_DECIMALS`
+ * a propósito: el séptimo dígito de un saldo casi nunca es un dígito, es el
+ * error de las cuentas que la app hace encima —sumar posiciones, proyectar
+ * interés por milisegundo— y mostrarlo es mostrar ruido.
+ *
+ * No toca lo que se TECLEA ni lo que se firma: `truncatedAmountString` y el
+ * gate de ejecución siguen trabajando a `AMOUNT_DECIMALS`, que es la precisión
+ * que la cadena entiende.
+ */
+export const DISPLAY_DECIMALS = 6;
+
+/**
  * Decimales del monto en MONEDA LOCAL (los ramps). No es `AMOUNT_DECIMALS`: acá
  * el usuario teclea pesos/bolivianos, y ningún proveedor de fiat cotiza más allá
  * del centavo. Es el mismo 2 para tipear el monto y para mostrar la cotización.
@@ -111,16 +123,16 @@ export const floorAmount = (num: number, digits = AMOUNT_DECIMALS): number => {
 };
 
 /**
- * Dólares con TODA la precisión que tenga el saldo (hasta 6 decimales), sin
+ * Dólares con TODA la precisión que se muestra (hasta `DISPLAY_DECIMALS`), sin
  * redondear hacia arriba: mínimo 2 decimales ($4.00) y hasta 6 cuando el saldo
  * los tiene ($3.001234). Pisamos con `floorAmount` (nunca hacia arriba) antes de
  * formatear, mismo criterio que el header y el "Available" del retiro.
  */
-export const formatUsdPrecise = (amount: number, maxDecimals = AMOUNT_DECIMALS) =>
+export const formatUsdPrecise = (amount: number, maxDecimals = DISPLAY_DECIMALS) =>
   `$${formatTokenPrecise(amount, maxDecimals)}`;
 
 /** Igual que `formatUsdPrecise` pero sin el `$` (para pegarle un símbolo de token al lado). */
-export const formatTokenPrecise = (amount: number, maxDecimals = AMOUNT_DECIMALS) =>
+export const formatTokenPrecise = (amount: number, maxDecimals = DISPLAY_DECIMALS) =>
   floorAmount(amount, maxDecimals).toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: maxDecimals,
@@ -129,15 +141,15 @@ export const formatTokenPrecise = (amount: number, maxDecimals = AMOUNT_DECIMALS
 /**
  * Decimales adaptados a la magnitud, para SALDOS que se muestran en grande (el
  * titular del portfolio, el número del detalle de Blend). Un saldo de tres o más
- * cifras con los 7 decimales de USDC (`722.0121232`) no cabe en un número gigante
- * y rompe el layout con scroll horizontal; ahí 2 decimales alcanzan y se leen de
+ * cifras con todos sus decimales (`722.012123`) no cabe en un número gigante y
+ * rompe el layout con scroll horizontal; ahí 2 decimales alcanzan y se leen de
  * un vistazo. Los saldos chicos conservan la precisión fina, que es justo donde
  * importa (micro-ganancias, centavos). Umbral en 100: por debajo se ve completo
- * (`10.4699999`), por encima se redondea a 2 (`722.01`). Nunca redondea hacia
+ * (`10.469999`), por encima se corta a 2 (`722.01`). Nunca redondea hacia
  * arriba (usa el mismo piso que el resto).
  */
 export const formatTokenAdaptive = (amount: number) =>
-  formatTokenPrecise(amount, Math.abs(amount) >= 100 ? 2 : AMOUNT_DECIMALS);
+  formatTokenPrecise(amount, Math.abs(amount) >= 100 ? 2 : DISPLAY_DECIMALS);
 
 /** Igual que `formatTokenAdaptive` pero con el `$` delante. */
 export const formatUsdAdaptive = (amount: number) => `$${formatTokenAdaptive(amount)}`;
