@@ -24,6 +24,11 @@ const sections: { href: string; title: string; description: string }[] = [
     description: 'Per-user Blend, DeFindex vault and locked-pool balances, read on-chain.',
   },
   {
+    href: '/ramps',
+    title: 'Ramps',
+    description: 'Fiat on/off-ramp rows, with the stuck and inconsistent ones flagged and checked on-chain.',
+  },
+  {
     href: '/badges',
     title: 'Badges',
     description: 'Manage achievement badges and their rewards.',
