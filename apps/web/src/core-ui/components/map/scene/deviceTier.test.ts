@@ -42,10 +42,15 @@ describe('getDeviceTier', () => {
     expect(getDeviceTier()).toBe('low');
   });
 
-  it('downgrades a coarse pointer even when memory and cores look generous', async () => {
+  it('reads a coarse pointer as mobile even when memory and cores look generous', async () => {
     // A phone shares the die and the thermal budget between GPU and CPU, so a
     // healthy core count says nothing about the frame budget.
     const { getDeviceTier } = await loadTier({ memory: 32, cores: 12, coarsePointer: true });
+    expect(getDeviceTier()).toBe('mobile');
+  });
+
+  it('keeps a coarse pointer at low tier when the core count is the one that is short', async () => {
+    const { getDeviceTier } = await loadTier({ memory: undefined, cores: 4, coarsePointer: true });
     expect(getDeviceTier()).toBe('low');
   });
 
@@ -91,9 +96,22 @@ describe('rendering settings per tier', () => {
     expect(getShadowMapSize()).toBe(512);
   });
 
+  it('gives mobile the resolution its screen shows, without antialias or the larger shadow map', async () => {
+    // The phone's canvas is a fraction of a desktop's, so the pixels it draws
+    // at 2x cost less than a laptop's at 1x; what it cannot hide is the blur.
+    const { getMaxDpr, getShadowMapSize, prefersAntialias } = await loadTier({
+      memory: undefined,
+      cores: 6,
+      coarsePointer: true,
+    });
+    expect(getMaxDpr()).toBe(2);
+    expect(prefersAntialias()).toBe(false);
+    expect(getShadowMapSize()).toBe(512);
+  });
+
   it('allows high tier the full resolution, antialias and shadow map', async () => {
     const { getMaxDpr, getShadowMapSize, prefersAntialias } = await loadTier({ memory: 32, cores: 12 });
-    expect(getMaxDpr()).toBe(1.5);
+    expect(getMaxDpr()).toBe(2);
     expect(prefersAntialias()).toBe(true);
     expect(getShadowMapSize()).toBe(1024);
   });

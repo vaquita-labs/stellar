@@ -2,34 +2,44 @@
 
 import { PerformanceMonitor } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
+import { useRef } from 'react';
 import { getMaxDpr } from './deviceTier';
 
-// El fill-rate escala con el CUADRADO del dpr (ver el comentario del Canvas en
-// WorldMap): pasar de 1.5 a 1 recorta ~55% de los píxeles. En máquinas con GPU
-// integrada eso es la diferencia entre 20 y 60 fps, y en máquinas rápidas no
-// queremos pagar el costo visual. Por eso la resolución es adaptativa y no un
-// valor fijo más bajo.
-
-/** Piso: nunca renderizar por debajo de la resolución CSS. */
+/** Floor: never render below CSS resolution. */
 const MIN_DPR = 1;
 /** Ceiling: the device tier's own cap, the same one the Canvas is created with. */
 const maxDpr = () => Math.min(Math.max(window.devicePixelRatio, MIN_DPR), getMaxDpr());
 
+/** Granularity of the dpr, in steps: each setDpr reallocates the framebuffer. */
+const DPR_STEPS = 20;
+
 /**
- * Arranca al tope y deja que drei mida el FPS real: si se sostiene bajo
- * (umbral por defecto ~50 fps sobre rondas de ~2.5s, tolerante al jank de
- * carga), baja a MIN_DPR; si vuelve a sobrar GPU, sube. Tras `flipflops`
- * oscilaciones queda clavado abajo (onFallback) para no parpadear en máquinas
- * que quedan justo en el borde.
+ * The dpr rides drei's own 0..1 `factor`, which moves one `step` per round of
+ * ~2.5s, so a device that is merely busy loses a little sharpness and only one
+ * that cannot keep up walks all the way down to 1x.
+ *
+ * `bounds` is fixed instead of derived from the measured refresh rate: drei's
+ * default asks a 120 Hz screen for 100 fps before it returns any resolution,
+ * which no phone sustains, and the scene would never climb back out of MIN_DPR.
+ *
+ * `flipflops` is generous and there is no `onFallback`: reaching it stops the
+ * sampling and leaves the dpr wherever it settled, instead of pinning the rest
+ * of the session to the floor over a few rounds of load-time jank.
  */
 export const AdaptiveResolution = () => {
   const setDpr = useThree((state) => state.setDpr);
+  const applied = useRef(-1);
+
+  // drei resets its own `lastFactor` on every render, so `onChange` also fires
+  // for a factor that did not move; quantising and comparing absorbs that.
+  const apply = (factor: number) => {
+    const next = Math.round((MIN_DPR + factor * (maxDpr() - MIN_DPR)) * DPR_STEPS) / DPR_STEPS;
+    if (next === applied.current) return;
+    applied.current = next;
+    setDpr(next);
+  };
+
   return (
-    <PerformanceMonitor
-      onDecline={() => setDpr(MIN_DPR)}
-      onIncline={() => setDpr(maxDpr())}
-      flipflops={2}
-      onFallback={() => setDpr(MIN_DPR)}
-    />
+    <PerformanceMonitor factor={1} step={0.15} bounds={() => [45, 58]} onChange={({ factor }) => apply(factor)} flipflops={8} />
   );
 };
