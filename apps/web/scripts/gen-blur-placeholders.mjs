@@ -29,7 +29,12 @@ const OUT = path.join(WEB, 'src/core-ui/data/blur-placeholders.generated.ts');
 // Directories whose raster images should get a placeholder, plus loose files.
 // Everything here is served through next/image at a visible size, where the
 // blur-up matters; tiny 18px chrome icons are skipped (they load instantly).
-const DIRS = ['icons/achievements', 'world'];
+//
+// icons/achievements is deliberately absent: next/image's blur SVG saturates
+// alpha and fills it with feFlood, so the transparent medals came out as
+// opaque blurred squares that then snapped to the real silhouette. The tiles
+// render them without a placeholder instead.
+const DIRS = ['world'];
 const GLOBAL_FILES = [
   'shiny_chest.webp',
   'shiny_chest_open.webp',
