@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   findLeaderboardRowForWallet,
   getEnrichedLeaderboard,
+  getFollowingWallets,
   getMapLikeCountsByWallet,
   getLastClosedCycleId,
   getLeaderboardRankForWallet,
@@ -47,7 +48,7 @@ router.get('/rank', async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /api/v1/leaderboard?cycle=current|last_closed|YYYYMM
 //   &limit=20&offset=0&search=&sort=rank|level|streak|badges&direction=asc|desc
-//   &me=G...
+//   &me=G...&scope=all|following
 // ---------------------------------------------------------------------------
 
 /**
@@ -66,6 +67,10 @@ router.get('/rank', async (req, res) => {
  * paging down to it. Slicing at a deep offset is free here — the board is
  * already materialised in memory.
  *
+ * `scope=following` (requires `me`) narrows the board to that wallet and the
+ * profiles it follows before search/sort/slice, so `total`, `hasMore` and
+ * `meViewIndex` all describe the friends view. `me` keeps its true global rank.
+ *
  * The enriched board is cached ~30s per cycle (shared across all viewers and
  * pages), so scrolling through pages costs one DB computation per window, not
  * one per request. Filtering/sorting/slicing happen per-request on the cached
@@ -78,11 +83,21 @@ router.get('/', async (req, res) => {
     const { cycleId, cycleStatus } = await parseLeaderboardCycleQuery(req.query.cycle);
     const pageParams = parseLeaderboardPageQuery(req.query);
     const meWallet = typeof req.query.me === 'string' ? req.query.me.trim() : '';
-    req.log.info({ cycleId, cycleStatus, ...pageParams }, 'GET /leaderboard');
+    const scope = req.query.scope === 'following' ? 'following' : 'all';
+    if (scope === 'following' && !meWallet) {
+      return sendError(res, 'scope=following requires the me query param', null, 400);
+    }
+    req.log.info({ cycleId, cycleStatus, scope, ...pageParams }, 'GET /leaderboard');
 
     const enriched = await getEnrichedLeaderboard(cycleId, cycleStatus);
 
-    const page = paginateLeaderboardRows(enriched, { ...pageParams, me: meWallet });
+    let view = enriched;
+    if (scope === 'following') {
+      const circle = new Set([meWallet, ...(await getFollowingWallets(meWallet))].map((w) => w.toLowerCase()));
+      view = enriched.filter((row) => circle.has(row.walletAddress.toLowerCase()));
+    }
+
+    const page = paginateLeaderboardRows(view, { ...pageParams, me: meWallet });
     if (meWallet) page.me = findLeaderboardRowForWallet(enriched, meWallet);
 
     // Heart counts bypass the 30s enrichment cache: the heart is the card's

@@ -839,6 +839,16 @@
     "error": {
       "title": "Não foi possível carregar o ranking"
     },
+    "following": {
+      "caption": "Você e as pessoas que você segue",
+      "empty": {
+        "description": "Abra o perfil de alguém no ranking completo e siga essa pessoa para vê-la aqui.",
+        "title": "Compita com seus amigos"
+      },
+      "showAll": "Ver todos",
+      "toggleOff": "Mostrar todos",
+      "toggleOn": "Mostrar só quem você segue"
+    },
     "pinned": {
       "goToPosition": "Ir para a sua posição"
     },
