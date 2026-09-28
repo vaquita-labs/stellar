@@ -96,6 +96,15 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
   }, [open, setRampActive, refreshWalletBalance]);
 
   const [amount, setAmount] = useState('');
+  /**
+   * El saldo entero, cuando el monto salió del chip de "Disponible".
+   *
+   * En pantalla queda redondeado al centavo, y esto es lo que se retira y se
+   * swapea. El retiro de Blend ya tenía su sentinel, pero el swap manda la cifra
+   * tal cual: con el número corto sacaba la posición entera de Blend y dejaba el
+   * resto en la wallet, sin convertir. Vuelve a `null` al tocar una tecla.
+   */
+  const [maxExact, setMaxExact] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [waitStatus, setWaitStatus] = useState<string | null>(null);
@@ -124,7 +133,8 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
   const positionsChip = usePositionsChip();
   const balanceFormatted = floorAmount(blendLiveUsdc, AMOUNT_DECIMALS);
 
-  const amountNum = Number(amount);
+  const sendAmount = maxExact ?? amount;
+  const amountNum = Number(sendAmount);
   const overBalance = amountNum > balanceFormatted;
   const belowMin = amountNum < MIN_USDC;
   const isDisabled = !amount || Number.isNaN(amountNum) || belowMin || overBalance || !walletAddress || !token;
@@ -137,6 +147,7 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
   useEffect(() => {
     if (!open) {
       setAmount('');
+      setMaxExact(null);
       setError(null);
       setShowReconnect(false);
       setJwt(null);
@@ -212,7 +223,7 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
       mark('blend', 'running');
       await passiveWithdraw({
         address: walletAddress,
-        amount,
+        amount: sendAmount,
         decimals: token.decimals,
         withdrawAll: amountNum >= balanceFormatted,
         // On its way out to local currency.
@@ -232,7 +243,7 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
       const { quotedOut: arsAmount } = await swap({
         account: walletAddress,
         send: assetParam(USDC, ASSETS[USDC].issuer),
-        sendAmount: amount,
+        sendAmount,
         dest: assetParam(ARS, ASSETS[ARS].issuer),
       });
       // Anclap opera fiat con 2 decimales: mandamos el retiro truncado a 2
@@ -413,11 +424,15 @@ export function SendFiatModal({ open, onOpenChange, onBack }: SendFiatModalProps
           mínimo en cuanto se borra un dígito: no hace falta `onErrorClear`. */}
       <AmountStep
         value={amount}
-        onValueChange={setAmount}
+        onValueChange={(next) => {
+          setAmount(next);
+          setMaxExact(null);
+        }}
         decimals={MONEY_INPUT_DECIMALS}
         disabled={busy}
         available={balanceFormatted}
         availableDecimals={2}
+        onMax={setMaxExact}
         positions={positionsChip}
         availableLoading={balanceIsLoading}
         error={overBalance ? t('wallet.fiat.send.insufficient', 'Insufficient USDC balance.') : null}
