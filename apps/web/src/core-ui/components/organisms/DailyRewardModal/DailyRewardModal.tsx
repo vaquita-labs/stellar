@@ -61,19 +61,24 @@ export function DailyRewardModal({
     return stopRaf;
   }, [open, stopRaf]);
 
-  // Al completar el hold pasamos AL INSTANTE a la pantalla de premio: el monto
-  // ya lo conocemos (coinsToCollect), así que no esperamos a la red. El collect
-  // corre en segundo plano; si falla, volvemos al cofre cerrado para reintentar.
+  // The reward screen waits for the collect to resolve. Without a cached wallet
+  // session the request first needs a login signature; showing the reward
+  // before that let the user tap through to "Done" while the signature was
+  // still pending (or never came), so nothing was saved and the chest could be
+  // "opened" again. Until it resolves the chest stays in its "Opening…" state.
   const completeHold = useCallback(() => {
     stopRaf();
-    setIsHolding(false);
-    setStep('reward');
-    onCollect().catch((err) => {
-      console.error('DailyRewardModal collect', err);
-      setStep('confirm');
-      setHoldProgress(0);
-      completingRef.current = false;
-    });
+    onCollect()
+      .then(() => {
+        setIsHolding(false);
+        setStep('reward');
+      })
+      .catch((err) => {
+        console.error('DailyRewardModal collect', err);
+        setIsHolding(false);
+        setHoldProgress(0);
+        completingRef.current = false;
+      });
   }, [onCollect, stopRaf]);
 
   const startHold = useCallback(() => {

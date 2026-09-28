@@ -50,6 +50,19 @@ export function clearWalletSession(): void {
   window.localStorage.removeItem(STORAGE_KEY);
 }
 
+// An extension prompt that never shows up (blocked, hidden behind the window,
+// locked wallet) leaves signTx pending forever. Because login is single-flight,
+// that one hung promise would stall every authenticated request until a reload.
+const SIGN_TIMEOUT_MS = 2 * 60 * 1000;
+
+function withSignTimeout<T>(promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('The wallet did not respond to the signature request')), SIGN_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function loginWithWallet(walletAddress: string): Promise<string> {
   const base = clientEnv.NEXT_PUBLIC_SERVICES_URL;
 
@@ -68,7 +81,7 @@ async function loginWithWallet(walletAddress: string): Promise<string> {
   if (!binding) {
     throw new Error('Wallet is not connected');
   }
-  const outcome = await binding.client.signTx(transaction);
+  const outcome = await withSignTimeout(binding.client.signTx(transaction));
   if (outcome.status !== 'signed' || !outcome.signedXdr) {
     throw new Error(('details' in outcome && outcome.details) || 'The wallet did not sign the authentication challenge');
   }
