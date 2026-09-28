@@ -2,7 +2,7 @@
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { sortPositionsByEnd } from '@/core-ui/helpers/positions';
-import { formatUsdAdaptive, formatUsdPrecise } from '@/core-ui/helpers/numbers';
+import { formatUsdPrecise } from '@/core-ui/helpers/numbers';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriods, useDepositsComplete, useLivePassiveUsdc } from '@/core-ui/hooks';
 import { maskAmount, useConfigStore, useIsHidden } from '@/core-ui/stores';
@@ -401,7 +401,7 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
                     >
                       <span className="flex flex-col items-end">
                         <span className="text-sm font-bold text-black tabular-nums leading-tight">
-                          {maskAmount(formatUsdAdaptive(row.amount), hideAllocation)}
+                          {maskAmount(formatUsdPrecise(row.amount, 2), hideAllocation)}
                         </span>
                         <span className="text-xs text-gray-500 tabular-nums leading-tight">
                           {t('portfolio.ofTotal', '{{pct}}% of your total', {

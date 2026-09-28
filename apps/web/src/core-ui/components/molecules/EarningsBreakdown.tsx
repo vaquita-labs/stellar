@@ -1,5 +1,6 @@
 'use client';
 
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { useTranslation } from 'react-i18next';
 
 export interface EarningsBreakdownProps {
@@ -44,7 +45,7 @@ export function EarningsBreakdown({
             </span>
           </div>
           <span className="text-sm font-bold text-black tabular-nums shrink-0">
-            +{vaquitaEarnings.toFixed(2)} {tokenSymbol}
+            +{formatTokenPrecise(vaquitaEarnings, 2)} {tokenSymbol}
           </span>
         </div>
         <p className="text-xs text-gray-600 ml-[18px] mt-0.5">
@@ -64,7 +65,7 @@ export function EarningsBreakdown({
             </span>
           </div>
           <span className="text-sm font-bold text-black tabular-nums shrink-0">
-            +{protocolEarnings.toFixed(2)} {tokenSymbol}
+            +{formatTokenPrecise(protocolEarnings, 2)} {tokenSymbol}
           </span>
         </div>
         <p className="text-xs text-gray-600 ml-[18px] mt-0.5">

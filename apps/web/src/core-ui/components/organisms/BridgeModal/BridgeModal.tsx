@@ -251,7 +251,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
     const received = Number(quote.amountOut);
     if (!Number.isFinite(sent) || !Number.isFinite(received) || sent <= 0 || received > sent) return null;
     const cost = sent - received;
-    return { amount: cost.toFixed(4), percent: ((cost / sent) * 100).toFixed(2) };
+    return { amount: formatTokenPrecise(cost, 4), percent: ((cost / sent) * 100).toFixed(2) };
   }, [quote]);
 
   const handleMax = () => {

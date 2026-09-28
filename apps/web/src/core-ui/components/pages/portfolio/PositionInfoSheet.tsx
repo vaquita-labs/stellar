@@ -1,6 +1,7 @@
 'use client';
 
 import { formatTimeDeposit } from '@/core-ui/helpers';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { useConfigStore } from '@/core-ui/stores';
 import { DepositResponseDTO, DepositWithdrawalState } from '@/core-ui/types';
 import { useTranslation } from 'react-i18next';
@@ -69,7 +70,7 @@ export function PositionInfoSheet({
     >
       <div className="flex flex-col items-center gap-1.5 text-center">
         <p className="text-3xl font-bold text-black tabular-nums">
-          {(deposit?.amount ?? 0).toFixed(2)} <span className="text-xl font-semibold">{symbol}</span>
+          {formatTokenPrecise(deposit?.amount ?? 0, 2)} <span className="text-xl font-semibold">{symbol}</span>
         </p>
         <span
           className={
@@ -93,7 +94,7 @@ export function PositionInfoSheet({
         {!isFailed ? (
           <InfoRow
             label={t('portfolio.info.earned', 'Earned')}
-            value={`+${earned.toFixed(2)} ${symbol}`}
+            value={`+${formatTokenPrecise(earned, 2)} ${symbol}`}
             valueClass="text-success"
           />
         ) : null}

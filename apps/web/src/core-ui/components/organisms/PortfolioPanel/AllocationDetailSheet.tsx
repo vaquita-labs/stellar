@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUsd, formatUsdAdaptive } from '@/core-ui/helpers/numbers';
+import { formatUsd, formatUsdPrecise } from '@/core-ui/helpers/numbers';
 import { estimateRewardShare } from '@/core-ui/helpers/rewards';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { maskAmount, useIsHidden } from '@/core-ui/stores';
@@ -69,7 +69,7 @@ export function AllocationDetailSheet({
     >
       <div className="flex min-w-0 items-center gap-3">
         <p className="min-w-0 truncate text-4xl font-bold text-black tabular-nums">
-          {maskAmount(formatUsdAdaptive(allocation.amount), hidden)}
+          {maskAmount(formatUsdPrecise(allocation.amount, 2), hidden)}
         </p>
         <span className={`w-10 h-10 rounded-full shrink-0 ${style.solid}`} />
       </div>

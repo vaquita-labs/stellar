@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiRefreshCw } from 'react-icons/fi';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { AppModal } from '../../molecules/AppModal';
 
 interface WalletBalanceModalProps {
@@ -12,11 +13,11 @@ interface WalletBalanceModalProps {
   onOpenChange: () => void;
 }
 
-/** Formatea el saldo (7 decimales de Stellar) recortando ceros sobrantes. */
+/** El saldo de la wallet, con la misma precisión y el mismo piso que el header. */
 function formatUsdc(raw: string | null): string {
   const n = Number(raw ?? 0);
   if (!Number.isFinite(n)) return '0';
-  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 7 });
+  return formatTokenPrecise(n);
 }
 
 /**

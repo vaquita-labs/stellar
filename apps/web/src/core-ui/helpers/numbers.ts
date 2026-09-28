@@ -11,8 +11,13 @@ export async function toHexFromAny(input: number, size: number): Promise<string>
     .join('');
 }
 
+/**
+ * Monto de una operación con su token al lado: `10.00 USDC`. Dos decimales, que
+ * es la unidad en la que se pactó —nadie depositó `10.000000`—; los saldos, que
+ * sí llevan la precisión fina, van por `formatTokenPrecise`.
+ */
 export const formatAmount = (amount: number, tokenSymbol: string) => {
-  return `${formatTokenPrecise(amount)} ${tokenSymbol}`;
+  return `${formatTokenPrecise(amount, 2)} ${tokenSymbol}`;
 };
 
 /**
@@ -138,22 +143,6 @@ export const formatTokenPrecise = (amount: number, maxDecimals = DISPLAY_DECIMAL
     maximumFractionDigits: maxDecimals,
   });
 
-/**
- * Decimales adaptados a la magnitud, para SALDOS que se muestran en grande (el
- * titular del portfolio, el número del detalle de Blend). Un saldo de tres o más
- * cifras con todos sus decimales (`722.012123`) no cabe en un número gigante y
- * rompe el layout con scroll horizontal; ahí 2 decimales alcanzan y se leen de
- * un vistazo. Los saldos chicos conservan la precisión fina, que es justo donde
- * importa (micro-ganancias, centavos). Umbral en 100: por debajo se ve completo
- * (`10.469999`), por encima se corta a 2 (`722.01`). Nunca redondea hacia
- * arriba (usa el mismo piso que el resto).
- */
-export const formatTokenAdaptive = (amount: number) =>
-  formatTokenPrecise(amount, Math.abs(amount) >= 100 ? 2 : DISPLAY_DECIMALS);
-
-/** Igual que `formatTokenAdaptive` pero con el `$` delante. */
-export const formatUsdAdaptive = (amount: number) => `$${formatTokenAdaptive(amount)}`;
-
 /** Decimales para un monto por debajo de 1: ver `formatTokenFine`. */
 const FINE_DECIMALS = 4;
 
@@ -170,6 +159,9 @@ const FINE_DECIMALS = 4;
  * reads, and trailing digits only make the figure harder to take in.
  */
 export const formatTokenFine = (amount: number) => formatTokenPrecise(amount, Math.abs(amount) < 1 ? FINE_DECIMALS : 2);
+
+/** Igual que `formatTokenFine` pero con el `$` delante. */
+export const formatUsdFine = (amount: number) => `$${formatTokenFine(amount)}`;
 
 /**
  * Pisa a `digits` decimales y devuelve un string limpio para prellenar el

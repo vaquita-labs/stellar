@@ -3,7 +3,7 @@ import { toBaseUnits } from '@/networks/stellar/sorobanTx';
 import {
   AMOUNT_DECIMALS,
   floorAmount,
-  formatTokenAdaptive,
+  formatTokenFine,
   formatTokenPrecise,
   formatUsdPrecise,
   MIN_USDC,
@@ -46,10 +46,13 @@ describe('formatUsdPrecise / formatTokenPrecise', () => {
   });
 });
 
-describe('formatTokenAdaptive', () => {
-  it('recorta a 2 decimales arriba de 100 y conserva la precisión abajo', () => {
-    expect(formatTokenAdaptive(722.0121232)).toBe('722.01');
-    expect(formatTokenAdaptive(10.4699999)).toBe('10.469999');
+describe('formatTokenFine', () => {
+  // El rol de los montos que pueden ser polvo: dos decimales como cualquier
+  // otro importe, y sólo se estira cuando cortar ahí diría cero.
+  it('se lee como dos decimales salvo abajo de 1', () => {
+    expect(formatTokenFine(722.0121232)).toBe('722.01');
+    expect(formatTokenFine(10.4699999)).toBe('10.46');
+    expect(formatTokenFine(0.079976)).toBe('0.0799');
   });
 });
 

@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { FiAlertTriangle, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { getInterestData } from '../../../helpers';
 import { estimateRewardShare } from '../../../helpers/rewards';
-import { formatUsd } from '../../../helpers/numbers';
+import { formatTokenPrecise, formatUsd } from '../../../helpers/numbers';
 import { useApyByLockPeriod, useProfileData, useTransactions, useWithdrawalTime } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
 import { DepositResponseDTO, DepositStatus, DepositWithdrawalState } from '../../../types';
@@ -353,7 +353,7 @@ export const useVaquitaDetail = ({
           <span className="text-2xl font-bold text-success tabular-nums break-all leading-tight">
             {/* Real: capital garantizado (el premio lo liquida el contrato al retirar
                 y no se puede calcular antes). Tutorial: el monto demo de siempre. */}
-            {(simulate ? finalAmount : deposit.amount).toFixed(2)} <span className="text-base">{token?.symbol}</span>
+            {formatTokenPrecise(simulate ? finalAmount : deposit.amount, 2)} <span className="text-base">{token?.symbol}</span>
           </span>
         </div>
 
@@ -363,7 +363,7 @@ export const useVaquitaDetail = ({
           <div className="flex flex-col gap-1 bg-white border border-black border-b-2 rounded-md px-4 py-3">
             <span className="text-xs font-medium text-default-600 uppercase tracking-wide">{t('deposit.confirm.youWillLose', 'You will lose')}</span>
             <span className="text-xl font-bold text-danger tabular-nums break-all leading-tight line-through decoration-2">
-              ±{totalInterest.toFixed(2)} <span className="text-base">{token?.symbol}</span>
+              ±{formatTokenPrecise(totalInterest, 2)} <span className="text-base">{token?.symbol}</span>
             </span>
           </div>
         )}
@@ -407,13 +407,13 @@ export const useVaquitaDetail = ({
 
       <div className="flex flex-col items-center gap-1">
         <span className="text-3xl font-bold text-black tabular-nums">
-          {deposit.amount.toFixed(2)} {token?.symbol}
+          {formatTokenPrecise(deposit.amount, 2)} {token?.symbol}
         </span>
         {/* La ganancia estimada en USD solo en el tutorial (número demo). En real
             no se puede prometer un monto: varía con la gente del pool. */}
         {simulate && (
           <span className="text-sm font-semibold text-success tabular-nums">
-            +{totalInterest.toFixed(2)} {token?.symbol} {t('deposit.detail.estAbbrev', 'est.')}
+            +{formatTokenPrecise(totalInterest, 2)} {token?.symbol} {t('deposit.detail.estAbbrev', 'est.')}
           </span>
         )}
       </div>
@@ -452,19 +452,19 @@ export const useVaquitaDetail = ({
             <div className="flex items-center justify-between text-xs">
               <span className="text-default-500">{t('deposit.detail.vaquitaInterest', 'Vaquita interest')}</span>
               <span className="font-semibold text-primary tabular-nums">
-                +{vaquitaInterest.toFixed(2)} {token?.symbol}
+                +{formatTokenPrecise(vaquitaInterest, 2)} {token?.symbol}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-default-500">{t('deposit.detail.protocolInterest', 'Protocol interest')}</span>
               <span className="font-semibold text-primary tabular-nums">
-                +{protocolInterest.toFixed(2)} {token?.symbol}
+                +{formatTokenPrecise(protocolInterest, 2)} {token?.symbol}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs border-t border-black/10 pt-1.5 mt-0.5">
               <span className="font-medium text-black">{t('deposit.detail.totalEstEarnings', 'Total est. earnings')}</span>
               <span className="font-bold text-success tabular-nums">
-                +{totalInterest.toFixed(2)} {token?.symbol}
+                +{formatTokenPrecise(totalInterest, 2)} {token?.symbol}
               </span>
             </div>
           </>
@@ -528,13 +528,13 @@ export const useVaquitaDetail = ({
 
       <div className="flex flex-col items-center gap-1">
         <span className="text-3xl font-bold text-black tabular-nums">
-          {deposit.amount.toFixed(2)} {token?.symbol}
+          {formatTokenPrecise(deposit.amount, 2)} {token?.symbol}
         </span>
         {isEarlyWithdrawn ? (
           <span className="text-xs text-default-500">{t('deposit.withdrawn.amountReturned', 'Deposited amount returned')}</span>
         ) : (
           <span className="text-sm font-semibold text-success tabular-nums">
-            +{storedTotal.toFixed(2)} {token?.symbol} {t('deposit.withdrawn.earnedSuffix', 'earned')}
+            +{formatTokenPrecise(storedTotal, 2)} {token?.symbol} {t('deposit.withdrawn.earnedSuffix', 'earned')}
           </span>
         )}
       </div>
