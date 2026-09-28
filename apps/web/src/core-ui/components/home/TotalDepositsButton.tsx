@@ -1,5 +1,6 @@
 import { BankAPYModal } from '@/core-ui/components';
 import { getDepositsData } from '@/core-ui/helpers/deposits';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { useDepositsComplete } from '@/core-ui/hooks';
 import { useModalPresence } from '@/core-ui/components/molecules/AppModal';
 import { useConfigStore } from '@/core-ui/stores';
@@ -36,7 +37,7 @@ export const TotalDepositsButton = () => {
               priority
             />
             <span className="text-xs font-semibold text-black">
-              {activeDepositsTotalAmount.toFixed(2)} {token?.symbol}
+              {formatTokenPrecise(activeDepositsTotalAmount, 2)} {token?.symbol}
             </span>
           </>
         )}

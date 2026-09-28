@@ -35,11 +35,16 @@ export interface WeeklyLeagueDTO {
   me: LeagueMemberDTO | null;
 }
 
+/** `following` narrows the board to the viewer and the people they follow;
+ *  ranks are then 1..N inside that circle. */
+export type LeagueScope = 'all' | 'following';
+
 export const weeklyLeagueQueryKey = (
   networkName: string | undefined,
   weekId: string,
   viewerWallet: string,
-) => ['weekly-league', 'network', networkName, weekId, viewerWallet] as const;
+  scope: LeagueScope,
+) => ['weekly-league', 'network', networkName, weekId, viewerWallet, scope] as const;
 
 /**
  * Weekly league board.
@@ -58,7 +63,7 @@ export const weeklyLeagueQueryKey = (
  * Until then the shape returned here is exactly the shape the API should ship,
  * so swapping the source is a change to `queryFn` alone.
  */
-export const useWeeklyLeague = () => {
+export const useWeeklyLeague = (scope: LeagueScope = 'all') => {
   const { network, walletAddress } = useConfigStore();
   const viewerWallet = walletAddress ?? '';
   // Pinned per render-pass, not per render: the week id is part of the query
@@ -66,14 +71,22 @@ export const useWeeklyLeague = () => {
   const week = useMemo(() => leagueWeekAt(Date.now()), []);
 
   const query = useQuery({
-    queryKey: weeklyLeagueQueryKey(network?.networkName, week.id, viewerWallet),
-    enabled: !!network?.networkName,
+    queryKey: weeklyLeagueQueryKey(network?.networkName, week.id, viewerWallet, scope),
+    enabled: !!network?.networkName && (scope === 'all' || !!viewerWallet),
     queryFn: async (): Promise<{ rows: LeaderboardResponseDTO[]; me: LeaderboardResponseDTO | null }> => {
       const url = new URL(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/leaderboard`);
       url.searchParams.set('cycle', 'current');
       url.searchParams.set('limit', String(COHORT_SIZE));
       url.searchParams.set('offset', '0');
       if (viewerWallet) url.searchParams.set('me', viewerWallet);
+      if (scope === 'following') {
+        url.searchParams.set('scope', 'following');
+        // The page is cut server-side before the XP sort below, so it has to be
+        // cut by XP too: someone following more than COHORT_SIZE people would
+        // otherwise get the top by deposit rank and lose higher-XP friends.
+        url.searchParams.set('sort', 'level');
+        url.searchParams.set('direction', 'desc');
+      }
 
       const response = await fetch(url);
       const body = await response.json();

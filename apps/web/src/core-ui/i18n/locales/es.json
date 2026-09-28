@@ -839,6 +839,16 @@
     "error": {
       "title": "No pudimos cargar la tabla de posiciones"
     },
+    "following": {
+      "caption": "Tú y las personas que sigues",
+      "empty": {
+        "description": "Abre el perfil de alguien desde la tabla completa y síguelo para verlo aquí.",
+        "title": "Compite con tus amigos"
+      },
+      "showAll": "Ver a todos",
+      "toggleOff": "Mostrar a todos",
+      "toggleOn": "Mostrar solo a quienes sigues"
+    },
     "pinned": {
       "goToPosition": "Ir a tu posición"
     },

@@ -7,7 +7,7 @@ import {
   MONEY_INPUT_DECIMALS,
   floorAmount,
   formatTokenPrecise,
-  formatUsdAdaptive,
+  formatUsdFine,
   MIN_USDC,
 } from '@/core-ui/helpers/numbers';
 import { usePassiveMigration } from '@/core-ui/hooks/usePassiveMigration';
@@ -92,11 +92,11 @@ export function PassiveMigrationSheet({ walletAddress }: { walletAddress?: strin
               'migration.bodyExternal',
               'You have {{amount}} in Blend. Move part or all of it into the Vault to earn with Vaquita.',
               {
-                amount: formatUsdAdaptive(blendBalance),
+                amount: formatUsdFine(blendBalance),
               },
             )
           : t('migration.body', 'You have {{amount}} in Blend. To continue you need to move it.', {
-              amount: formatUsdAdaptive(blendBalance),
+              amount: formatUsdFine(blendBalance),
             })}
       </p>
 

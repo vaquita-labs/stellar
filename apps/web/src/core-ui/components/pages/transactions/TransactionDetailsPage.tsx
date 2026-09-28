@@ -2,6 +2,7 @@
 
 import { addSuccessToast, PageLayout, WithHydrated, formatTransactionTime } from '@/core-ui/components/molecules';
 import { formatTimeDeposit } from '@/core-ui/helpers';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { AppTransaction, buildTransactions, TransactionStatus } from '@/core-ui/helpers/transactions';
 import { useCryptoMode, useDepositsComplete } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
@@ -148,7 +149,7 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
               }
             >
               {transaction.status === 'failed' ? '' : sign}
-              {transaction.amount.toFixed(2)}
+              {formatTokenPrecise(transaction.amount, 2)}
               <span className="ml-1 text-lg font-semibold">{transaction.tokenSymbol}</span>
             </p>
             <p className="text-sm text-gray-600">{title}</p>
@@ -164,14 +165,14 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
 
           <DataBlock>
             <DataRow label={t('transactions.details.amount', 'Transaction amount')}>
-              {transaction.amount.toFixed(2)} {transaction.tokenSymbol}
+              {formatTokenPrecise(transaction.amount, 2)} {transaction.tokenSymbol}
             </DataRow>
             {kind === 'withdraw' && (
               <DataRow label={t('transactions.details.rewards', 'Rewards')}>
                 <span className={transaction.early ? 'text-gray-400' : 'text-success'}>
                   {transaction.early
                     ? t('transactions.details.forfeited', 'Forfeited')
-                    : `+${transaction.interest.toFixed(2)} ${transaction.tokenSymbol}`}
+                    : `+${formatTokenPrecise(transaction.interest, 2)} ${transaction.tokenSymbol}`}
                 </span>
               </DataRow>
             )}
@@ -225,7 +226,7 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
                       <p className="text-xs text-gray-500">{formatTransactionTime(entry.timestamp, i18n.language)}</p>
                     </div>
                     <span className="shrink-0 text-sm font-semibold tabular-nums text-gray-600">
-                      {transaction.amount.toFixed(2)} {transaction.tokenSymbol}
+                      {formatTokenPrecise(transaction.amount, 2)} {transaction.tokenSymbol}
                     </span>
                   </li>
                 ))}

@@ -839,6 +839,16 @@
     "error": {
       "title": "Couldn't load the leaderboard"
     },
+    "following": {
+      "caption": "You and the people you follow",
+      "empty": {
+        "description": "Open someone's profile from the full board and follow them to see them here.",
+        "title": "Compete with your friends"
+      },
+      "showAll": "See everyone",
+      "toggleOff": "Show everyone",
+      "toggleOn": "Show only people you follow"
+    },
     "pinned": {
       "goToPosition": "Go to your position"
     },

@@ -62,6 +62,15 @@ export function DepositMethodModal({
   const { trackUserAction, trackConversion, trackError } = useAnalytics();
   const [step, setStep] = useState<Step>('method');
   const [amount, setAmount] = useState('');
+  /**
+   * El saldo entero, cuando el monto salió del chip de "Disponible".
+   *
+   * En pantalla queda redondeado al centavo —es lo que se lee y se aprueba— y
+   * esto es lo que se deposita: este flujo manda el número tal cual, sin
+   * sentinel de "todo", así que mandar el corto dejaría el resto encerrado en la
+   * wallet. Vuelve a `null` al tocar una tecla.
+   */
+  const [maxExact, setMaxExact] = useState<string | null>(null);
   // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
   // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
   const [error, setError] = useState<unknown>(null);
@@ -93,6 +102,7 @@ export function DepositMethodModal({
     if (open) {
       setStep('method');
       setAmount('');
+      setMaxExact(null);
       setError(null);
       setOverBalance(false);
     }
@@ -125,7 +135,8 @@ export function DepositMethodModal({
 
   const accountName =
     profile?.nickname || (walletAddress ? truncateMiddle(walletAddress, 6, 5) : '—');
-  const numericAmount = Number(amount || '0');
+  const depositAmount = maxExact ?? amount;
+  const numericAmount = Number(depositAmount || '0');
   // Mínimo 1 USDC para depositar (mismo piso que valida el backend). Por debajo
   // el CTA queda gris, pero el aviso de mínimo bajo el saldo explica por qué —no
   // es un botón muerto sin contexto. Exceder el saldo se resuelve al presionar
@@ -157,7 +168,7 @@ export function DepositMethodModal({
     try {
       await passiveDeposit({
         address: walletAddress,
-        amount,
+        amount: depositAmount,
         decimals: token.decimals,
         // Money the user is adding from their own wallet.
         flowKind: 'external_in',
@@ -228,10 +239,14 @@ export function DepositMethodModal({
   const amountStep = (
     <AmountStep
       value={amount}
-      onValueChange={setAmount}
+      onValueChange={(next) => {
+        setAmount(next);
+        setMaxExact(null);
+      }}
       decimals={MONEY_INPUT_DECIMALS}
       controls={amountControls}
       available={available}
+      onMax={setMaxExact}
       availableLoading={balanceIsLoading}
       error={overBalance ? t('withdraw.exceedsBalance', "That's more than you have available.") : null}
       onErrorClear={() => setOverBalance(false)}

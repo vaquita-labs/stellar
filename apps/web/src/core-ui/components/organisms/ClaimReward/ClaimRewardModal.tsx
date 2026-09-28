@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheckCircle } from 'react-icons/fi';
 import { Button } from '../../atoms';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { AppModal } from '../../molecules/AppModal';
 
 interface ClaimRewardModalProps {
@@ -19,8 +20,7 @@ interface Reward {
   asset: string;
 }
 
-const formatAmount = (amount: string) =>
-  Number(amount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const formatAmount = (amount: string) => formatTokenPrecise(Number(amount), 2);
 
 /**
  * Regalo de bienvenida estilo Vaquita: ofrece reclamar el bono one-time de

@@ -3,8 +3,11 @@
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useWeeklyLeague } from '../../../hooks/useWeeklyLeague';
+import { FiUsers } from 'react-icons/fi';
+import { LeagueScope, useWeeklyLeague } from '../../../hooks/useWeeklyLeague';
+import { useConfigStore } from '../../../stores';
 import { PageLayout } from '../../molecules';
+import { CircleIconButton } from '../../molecules/CircleIconButton';
 import { getLeaderboardUsername } from './LeaderboardCard';
 import { LeagueBoard, LeagueBoardSkeleton } from './LeagueBoard';
 import { LeagueHeader, useDivisionName } from './LeagueHeader';
@@ -70,6 +73,32 @@ function EmptyState() {
           'Save this week to earn XP — your first deposit already puts you on the board.',
         )}
       </p>
+    </div>
+  );
+}
+
+/** Friends view with nobody but the viewer in it. Follows happen on a
+ *  player's profile, which is one tap away from any row of the full board. */
+function FollowingHint({ onShowAll }: { onShowAll: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-3xl border border-black/10 bg-white p-6 text-center">
+      <p className="text-base font-extrabold text-black">
+        {t('leaderboard.following.empty.title', 'Compete with your friends')}
+      </p>
+      <p className="max-w-xs text-xs text-gray-500">
+        {t(
+          'leaderboard.following.empty.description',
+          "Open someone's profile from the full board and follow them to see them here.",
+        )}
+      </p>
+      <button
+        type="button"
+        onClick={onShowAll}
+        className="rounded-full border border-black border-b-2 bg-primary px-4 py-1.5 text-xs font-extrabold text-black transition hover:-translate-y-0.5"
+      >
+        {t('leaderboard.following.showAll', 'See everyone')}
+      </button>
     </div>
   );
 }
@@ -152,7 +181,11 @@ function LeagueRules({ division }: { division: Division }) {
 export const LeaderboardPage = () => {
   const { t } = useTranslation();
   const now = useClock();
-  const { league, isLoading, error } = useWeeklyLeague();
+  const { walletAddress } = useConfigStore();
+  const [scope, setScope] = useState<LeagueScope>('all');
+  const following = scope === 'following';
+  const { league, isLoading, error } = useWeeklyLeague(scope);
+  const showAll = useCallback(() => setScope('all'), []);
 
   // Which division the header is previewing. `null` means "mine" — storing the
   // id rather than the division keeps it valid across a promotion landing
@@ -206,6 +239,21 @@ export const LeaderboardPage = () => {
             locked={selectedDivision.index > currentDivision.index}
             onBack={clearPreview}
           />
+        ) : following ? (
+          <>
+            <p className="px-2 text-center text-xs font-bold text-black/60">
+              {t('leaderboard.following.caption', 'You and the people you follow')}
+            </p>
+            {league.members.length > 0 && (
+              <LeagueBoard
+                members={league.members}
+                division={currentDivision}
+                showZones={false}
+                ownRowRef={ownRowRef}
+              />
+            )}
+            {league.members.length <= 1 && <FollowingHint onShowAll={showAll} />}
+          </>
         ) : league.members.length === 0 ? (
           <EmptyState />
         ) : (
@@ -227,6 +275,20 @@ export const LeaderboardPage = () => {
       title={t('leaderboard.title', 'Leaderboard')}
       backHref="/home"
       contentClassName="!gap-4"
+      rightSlot={
+        walletAddress ? (
+          <CircleIconButton
+            variant={following ? 'primary' : 'white'}
+            ariaLabel={
+              following
+                ? t('leaderboard.following.toggleOff', 'Show everyone')
+                : t('leaderboard.following.toggleOn', 'Show only people you follow')
+            }
+            onClick={() => setScope(following ? 'all' : 'following')}
+            icon={<FiUsers className="w-4 h-4" />}
+          />
+        ) : undefined
+      }
     >
       {renderBody()}
 

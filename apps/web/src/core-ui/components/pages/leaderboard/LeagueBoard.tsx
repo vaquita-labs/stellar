@@ -48,16 +48,18 @@ function LeagueRow({
   member,
   division,
   cohortSize,
+  showZones,
   rowRef,
 }: {
   member: LeagueMemberDTO;
   division: Division;
   cohortSize: number;
+  showZones: boolean;
   rowRef?: (node: HTMLLIElement | null) => void;
 }) {
   const { t } = useTranslation();
   const username = getLeaderboardUsername(member.nickname, member.walletAddress);
-  const zone = zoneForRank(member.rank, cohortSize, division);
+  const zone = showZones ? zoneForRank(member.rank, cohortSize, division) : null;
 
   const rankTone = zone === 'promotion' ? 'text-[#3f9a00]' : zone === 'demotion' ? 'text-error' : 'text-black/50';
 
@@ -123,14 +125,18 @@ function LeagueRow({
  * The cohort, in order, with the promotion line under the last promotable rank
  * and the demotion line above the bottom slots. Both lines only appear when
  * the division actually has that zone — a beginner never sees a red line.
+ * `showZones={false}` drops both lines and the rank colours, for boards that
+ * nobody gets promoted out of (the friends view).
  */
 export function LeagueBoard({
   members,
   division,
+  showZones = true,
   ownRowRef,
 }: {
   members: LeagueMemberDTO[];
   division: Division;
+  showZones?: boolean;
   ownRowRef?: (node: HTMLLIElement | null) => void;
 }) {
   const cohortSize = members.length;
@@ -144,10 +150,12 @@ export function LeagueBoard({
         // Dividers sit *after* the row that closes a zone, so the line always
         // reads as "everything above this moves up / below this drops".
         const closesPromotion =
+          showZones &&
           member.rank === PROMOTION_SLOTS &&
           zoneForRank(member.rank, cohortSize, division) === 'promotion' &&
           nextRank <= cohortSize;
         const opensDemotion =
+          showZones &&
           nextRank === demotionStart && zoneForRank(demotionStart, cohortSize, division) === 'demotion' && zone !== 'demotion';
 
         return (
@@ -156,6 +164,7 @@ export function LeagueBoard({
               member={member}
               division={division}
               cohortSize={cohortSize}
+              showZones={showZones}
               rowRef={member.isCurrentUser ? ownRowRef : undefined}
             />
             {closesPromotion && <ZoneDivider kind="promotion" />}

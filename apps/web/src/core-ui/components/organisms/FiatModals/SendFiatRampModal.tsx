@@ -217,6 +217,16 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
   // confirmation is what the "Change" link is for.
   const [detailsFrom, setDetailsFrom] = useState<Extract<Phase, 'amount' | 'bank'>>('bank');
   const [amountUsdc, setAmountUsdc] = useState('');
+  /**
+   * El saldo entero, cuando el monto salió del chip de "Disponible".
+   *
+   * En pantalla queda el saldo redondeado al centavo, que es lo que se lee y se
+   * aprueba; lo que se cotiza y se cobra sale de acá. Sin esto, un retiro total
+   * pedía los bolivianos de `689.26` teniendo `689.2611345` y el resto quedaba
+   * encerrado en el vault. Vuelve a `null` en cuanto se toca una tecla: ahí el
+   * número de la pantalla otra vez es el monto.
+   */
+  const [maxUsdcExact, setMaxUsdcExact] = useState<string | null>(null);
   const [quote, setQuote] = useState<RampQuote | null>(null);
   // Monto con el que se pidió la cotización que está guardada. Cambiar el monto
   // no la borra —el destino elegido sigue valiendo— pero la marca vieja: la
@@ -407,8 +417,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
    * without it there is nothing to ask the provider for.
    */
   const rate = probe?.country === country ? probe.rate : null;
-  const usdcNum = Number(amountUsdc);
-  const usdcValid = !!amountUsdc && Number.isFinite(usdcNum) && usdcNum > 0;
+  // Lo que se cotiza es el exacto si lo hay, no el que quedó en pantalla.
+  const usdcTyped = maxUsdcExact ?? amountUsdc;
+  const usdcNum = Number(usdcTyped);
+  const usdcValid = !!usdcTyped && Number.isFinite(usdcNum) && usdcNum > 0;
 
   /**
    * What is REQUESTED from the provider, in local currency. Still the figure
@@ -429,7 +441,7 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
    * top of the charge. Typing more than this cannot produce a withdrawal that
    * fits, so the keys stop instead of letting it fail at the quote.
    */
-  const maxUsdc = Math.max(0, floorAmount(balance - FUNDING_DUST, 2));
+  const maxUsdc = Math.max(0, floorAmount(balance - FUNDING_DUST, AMOUNT_DECIMALS));
 
   /**
    * Replaces the probe's rate with one measured on a real quote.
@@ -1100,7 +1112,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
       {phase === 'amount' && (
         <AmountStep
           value={amountUsdc}
-          onValueChange={setAmountUsdc}
+          onValueChange={(next) => {
+            setAmountUsdc(next);
+            setMaxUsdcExact(null);
+          }}
           // Dos decimales y no los 7 de USDC: la moneda local se cotiza al
           // centavo, así que todo lo que se teclee más fino se pierde igual al
           // convertir.
@@ -1113,6 +1128,10 @@ export function SendFiatRampModal({ open, onOpenChange, country, onBack }: SendF
           // exacto no entra. Tope duro del teclado por lo mismo.
           available={maxUsdc}
           availableDecimals={2}
+          // Acá no hay sentinel de "retirar todo" —lo que se pide es una cifra
+          // en moneda local y el proveedor la tarifa—, así que el techo entero
+          // se guarda aparte y es el que cotiza.
+          onMax={setMaxUsdcExact}
           positions={positionsChip}
           availableLoading={balanceIsLoading}
           // Sin saldo leído todavía el techo sería 0 y no respondería ninguna

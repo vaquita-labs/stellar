@@ -1,4 +1,5 @@
 import { formatAmount, formatTimeDeposit, getInterestData } from '@/core-ui/helpers';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { useApyByLockPeriod } from '@/core-ui/hooks';
 import { maskAmount, useConfigStore, useIsHidden } from '@/core-ui/stores';
 import { DepositResponseDTO } from '@/core-ui/types';
@@ -126,7 +127,7 @@ export const VaquitaDepositCard = ({
         <div className="mt-1.5 pt-1.5 border-t border-black/10 flex items-center justify-between">
           <span className="text-xs text-gray-600">{t('home.depositCard.earnings', 'Earnings')}</span>
           <span className="text-sm font-bold text-success">
-            {maskAmount(`+${totalInterest.toFixed(2)} ${deposit.tokenSymbol}`, hideBalance)}
+            {maskAmount(`+${formatTokenPrecise(totalInterest, 2)} ${deposit.tokenSymbol}`, hideBalance)}
           </span>
         </div>
       </Card.Content>

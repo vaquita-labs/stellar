@@ -1,6 +1,7 @@
 'use client';
 
 import { formatTimeDeposit } from '@/core-ui/helpers';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { useWithdrawalTime } from '@/core-ui/hooks';
 import { maskAmount, PrivacySection, useConfigStore, useIsHidden } from '@/core-ui/stores';
 import { DepositResponseDTO, DepositWithdrawalState } from '@/core-ui/types';
@@ -80,7 +81,7 @@ export function PositionRow({
 
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-bold text-black tabular-nums truncate">
-            {maskAmount(`${deposit.amount.toFixed(2)} ${symbol}`, hidden)}
+            {maskAmount(`${formatTokenPrecise(deposit.amount, 2)} ${symbol}`, hidden)}
           </p>
           <p className="text-[11px] text-gray-600 truncate">{formatTimeDeposit(deposit.lockPeriod)}</p>
         </div>
@@ -93,7 +94,7 @@ export function PositionRow({
           ) : isWithdrawn ? (
             <>
               <p className="text-[13px] font-bold tabular-nums text-success">
-                {maskAmount(`+${realizedEarned.toFixed(2)} ${symbol}`, hidden)}
+                {maskAmount(`+${formatTokenPrecise(realizedEarned, 2)} ${symbol}`, hidden)}
               </p>
               <p className="text-[10px] text-gray-500">
                 {early

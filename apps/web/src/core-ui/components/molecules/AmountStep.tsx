@@ -3,7 +3,7 @@
 import { useAnimationControls } from 'framer-motion';
 import { ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
+import { AMOUNT_DECIMALS, formatUsdPrecise, truncatedAmountString } from '@/core-ui/helpers/numbers';
 import { AmountDisplay } from './AmountDisplay';
 import { AmountKeypad } from './AmountKeypad';
 
@@ -67,13 +67,13 @@ interface AmountStepProps {
   /** Saldo disponible: dibuja el chip que teclea el máximo. `null` = sin chip. */
   available?: number | null;
   /**
-   * Decimales del chip de saldo: los que muestra y los que teclea. Por defecto,
-   * los del teclado.
+   * Decimales del chip de saldo: los que MUESTRA y los que deja en el teclado.
+   * Por defecto, los del teclado.
    *
-   * El retiro lo baja a 2: el saldo trae los 7 de USDC y nadie los lee, y ahí
-   * recortar no deja plata atrás porque tocar el chip retira TODO sin mirar el
-   * número. Una pantalla que necesite mover el saldo exacto —la migración de
-   * Blend, que no se cierra hasta que la posición queda en cero— no lo toca.
+   * Sólo afecta lo que se lee. El monto exacto viaja igual por `onMax`, así que
+   * bajarlo a 2 —que es lo que hacen casi todas las pantallas, porque nadie lee
+   * los 7 decimales de USDC— no deja plata atrás. La migración de Blend sí los
+   * muestra: ahí el número ES la posición que hay que vaciar.
    */
   availableDecimals?: number;
   availableLoading?: boolean;
@@ -83,8 +83,17 @@ interface AmountStepProps {
    * position is withdrawn from there, not from this keypad.
    */
   positions?: { amount: number; onPress: () => void } | null;
-  /** Aviso de que se tecleó el máximo, para los flujos que retiran "todo". */
-  onMax?: (prefilled: string) => void;
+  /**
+   * Se tocó el chip de saldo. Recibe el saldo EXACTO, con todos sus decimales,
+   * que casi nunca es el número que quedó en pantalla.
+   *
+   * Esa diferencia es el punto: el teclado muestra el saldo redondeado a lo que
+   * se puede leer y aprobar, y el flujo manda esto. Los que retiran "todo" por
+   * sentinel lo ignoran y encienden su bandera; los que mandan una cifra —el
+   * off-ramp, el depósito directo— lo guardan y firman con él, o cada retiro
+   * total deja un resto encerrado.
+   */
+  onMax?: (exact: string) => void;
 
   /** De `useAmountShake()`. */
   controls?: AmountControls;
@@ -137,13 +146,20 @@ export function AmountStep({
 
   const fillMax = () => {
     if (available == null) return;
+    // Dos números, a propósito: el de la pantalla y el que se manda.
+    //
+    // Arriba queda el saldo con los decimales que se leen ($689.26); por debajo
+    // viaja la posición entera (689.2611345). Teclear el largo sería honesto y
+    // también ilegible —el usuario aprueba un número que no puede repetir— y
+    // mandar el corto deja hasta un centavo encerrado en cada retiro total.
+    //
     // Siempre por `truncatedAmountString`: `String(saldo)` deja colgando el ruido
     // del float (10.4699999) y el usuario lo ve tecleado como si lo hubiera
     // escrito él.
-    const prefilled = truncatedAmountString(available, chipDecimals);
-    onValueChange(prefilled);
+    const shown = truncatedAmountString(available, chipDecimals);
+    onValueChange(shown);
     if (error) onErrorClear?.();
-    onMax?.(prefilled);
+    onMax?.(truncatedAmountString(available, AMOUNT_DECIMALS));
   };
 
   return (

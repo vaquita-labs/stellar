@@ -1,6 +1,6 @@
 'use client';
 
-import { formatUsd } from '@/core-ui/helpers/numbers';
+import { formatTokenPrecise, formatUsd } from '@/core-ui/helpers/numbers';
 import { estimateRewardShare } from '@/core-ui/helpers/rewards';
 import { formatTimeDeposit } from '@/core-ui/helpers/time';
 import { useApyByLockPeriod, useInvalidateAfterMoneyMove, useRestWithdrawal, useTransactions } from '@/core-ui/hooks';
@@ -193,7 +193,7 @@ export function PositionWithdrawSheet({
     <div className="flex flex-col gap-3">
       <div className="flex flex-col items-center gap-0.5 text-center">
         <p className="text-3xl font-bold text-black tabular-nums">
-          {amount.toFixed(2)} <span className="text-xl font-semibold">{token?.symbol}</span>
+          {formatTokenPrecise(amount, 2)} <span className="text-xl font-semibold">{token?.symbol}</span>
         </p>
       </div>
 
@@ -262,7 +262,7 @@ export function PositionWithdrawSheet({
           {t('deposit.confirm.youWillReceive', 'You will receive')}
         </p>
         <p className={`text-4xl font-bold tabular-nums ${inLock ? 'text-black' : 'text-success'}`}>
-          {amount.toFixed(2)} <span className="text-2xl font-semibold">{token?.symbol}</span>
+          {formatTokenPrecise(amount, 2)} <span className="text-2xl font-semibold">{token?.symbol}</span>
         </p>
       </div>
 

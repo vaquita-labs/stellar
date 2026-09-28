@@ -1,6 +1,7 @@
 'use client';
 
 import { formatTimeDeposit } from '@/core-ui/helpers';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { AppTransaction, TransactionStatus } from '@/core-ui/helpers/transactions';
 import { useTranslation } from 'react-i18next';
 import { FiArrowDownLeft, FiArrowUpRight, FiRepeat } from 'react-icons/fi';
@@ -96,7 +97,7 @@ export function TransactionRow({ transaction, onPress }: { transaction: AppTrans
         <div className="shrink-0 text-right">
           <p className={`text-[13px] font-bold tabular-nums ${amountColor}`}>
             {sign}
-            {transaction.amount.toFixed(2)} {transaction.tokenSymbol}
+            {formatTokenPrecise(transaction.amount, 2)} {transaction.tokenSymbol}
           </p>
           <p className="text-[10px] text-gray-500">{formatTransactionTime(transaction.timestamp, i18n.language)}</p>
         </div>

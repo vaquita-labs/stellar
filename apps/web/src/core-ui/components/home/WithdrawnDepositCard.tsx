@@ -1,4 +1,5 @@
 import { formatAmount, formatTimeDeposit } from '@/core-ui/helpers';
+import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import { maskAmount, useIsHidden } from '@/core-ui/stores';
 import { DepositResponseDTO, DepositWithdrawalState } from '@/core-ui/types';
 import { Card } from '@heroui/react';
@@ -57,7 +58,7 @@ export const WithdrawnDepositCard = ({
               (isEarly && !hideBalance ? ' line-through' : '')
             }
           >
-            {maskAmount(`${isEarly ? '−' : '+'}${earnings.toFixed(2)} ${deposit.tokenSymbol}`, hideBalance)}
+            {maskAmount(`${isEarly ? '−' : '+'}${formatTokenPrecise(earnings, 2)} ${deposit.tokenSymbol}`, hideBalance)}
           </span>
         </div>
       </Card.Content>

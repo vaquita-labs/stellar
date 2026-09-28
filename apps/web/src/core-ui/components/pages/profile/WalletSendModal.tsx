@@ -188,7 +188,7 @@ export function WalletSendModal({
       });
       toast.success(
         t('wallet.send.success', 'Sent {{amount}} {{symbol}}', {
-          amount: amountNum.toFixed(2),
+          amount: formatTokenPrecise(amountNum, 2),
           symbol,
         }),
       );
