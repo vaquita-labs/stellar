@@ -4,10 +4,13 @@ import { formatTokenPrecise, formatUsdPrecise, MIN_IDLE_USDC, MIN_IDLE_USDC_DECI
 import { truncateMiddle } from '@/core-ui/helpers/strings';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertCircle, FiCheck, FiCopy } from 'react-icons/fi';
+import { FiAlertCircle, FiCheck, FiCopy, FiExternalLink } from 'react-icons/fi';
 import QRCode from 'react-qr-code';
+import { useCloseDepositIntent, useOpenDepositIntentMutation } from '../../../hooks/useDepositIntents';
 import { useWalletUsdc } from '../../../hooks/useWalletUsdc';
+import type { DepositPlatformDTO } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
+import { PressableButton } from '../../molecules/PressableButton';
 
 /**
  * How much the balance has to rise to count as an arrival rather than the noise
@@ -24,6 +27,14 @@ interface ReceiveModalProps {
   onOpenChange: () => void;
   /** Dirección Stellar del usuario a la que recibir USDC (su wallet custodial). */
   address: string;
+  /**
+   * La app desde la que el usuario dice que va a mandar ("Depositar desde otra
+   * app"). Suma el checklist de esa app y el botón para abrirla, y deja abierta
+   * la espera que respalda la tarjeta del home hasta que la plata llegue.
+   */
+  platform?: DepositPlatformDTO | null;
+  /** Back al tutorial de la plataforma. */
+  onBack?: () => void;
 }
 
 /**
@@ -32,7 +43,7 @@ interface ReceiveModalProps {
  * custodial es su vía de fondeo: comparte su dirección (QR o texto), le entra USDC
  * y de ahí se pone a invertir.
  */
-export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps) {
+export function ReceiveModal({ open, onOpenChange, address, platform, onBack }: ReceiveModalProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
@@ -44,6 +55,19 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
   // `useModalPresence`, so the component unmounts once the exit animation ends
   // and the next open starts from nothing.
   const walletUsdc = useWalletUsdc();
+
+  // Mostrar la dirección de una plataforma ES lo que abre la espera: a partir de
+  // acá el usuario se va a su app a retirar, y la tarjeta del home tiene que
+  // estar cuando vuelva. Una por montaje: el sheet se desmonta al cerrar.
+  const openIntent = useOpenDepositIntentMutation();
+  const closeIntent = useCloseDepositIntent();
+  const platformId = platform?.id ?? null;
+  const intentOpened = useRef(false);
+  useEffect(() => {
+    if (!open || !platformId || intentOpened.current) return;
+    intentOpened.current = true;
+    openIntent.mutate(platformId);
+  }, [open, platformId, openIntent]);
   const baseline = useRef<number | null>(null);
   const [received, setReceived] = useState<number | null>(null);
 
@@ -68,6 +92,17 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
     if (delta >= ARRIVAL_FLOOR) setReceived(delta);
   }, [open, walletUsdc, received]);
 
+  // Llegó: la espera se cierra acá mismo, sin esperar a que la tarjeta del home
+  // lo note por su cuenta.
+  const intentId = openIntent.data?.id ?? null;
+  const closeIntentRef = useRef(closeIntent.mutate);
+  useEffect(() => {
+    closeIntentRef.current = closeIntent.mutate;
+  });
+  useEffect(() => {
+    if (received !== null && intentId) closeIntentRef.current({ id: intentId, action: 'arrived' });
+  }, [received, intentId]);
+
   // Arrived: say so, then get out of the way — the prompt to put the money to
   // work takes the screen this one frees.
   useEffect(() => {
@@ -87,13 +122,34 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
     }
   };
 
+  // Abrir la app de origen: el usuario copió la dirección y lo siguiente es ir
+  // a retirar. Sin `appUrl` en el catálogo no hay botón.
+  const footer =
+    platform?.appUrl && received === null ? (
+      <PressableButton
+        variant="success"
+        size="cta"
+        className="py-2.5!"
+        onClick={() => window.open(platform.appUrl!, '_blank', 'noopener,noreferrer')}
+      >
+        {t('deposit.otherApp.receive.openApp', 'Open {{name}}', { name: platform.name })}
+        <FiExternalLink className="h-4 w-4" />
+      </PressableButton>
+    ) : undefined;
+
   return (
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      title={t('deposit.receive.title', 'Deposit')}
+      title={
+        platform
+          ? t('deposit.otherApp.receive.title', 'Send from {{name}}', { name: platform.name })
+          : t('deposit.receive.title', 'Deposit')
+      }
       size="md"
-      bodyClassName="flex flex-col gap-4 pb-6"
+      onBack={received === null ? onBack : undefined}
+      bodyClassName={'flex flex-col gap-4 ' + (footer ? 'pb-2' : 'pb-6')}
+      footer={footer}
     >
       {received !== null ? (
         <div className="flex flex-col items-center gap-3 py-6 text-center">
@@ -149,6 +205,31 @@ export function ReceiveModal({ open, onOpenChange, address }: ReceiveModalProps)
               {copied ? t('deposit.receive.copied', 'Copied') : t('deposit.receive.copy', 'Copy')}
             </button>
           </div>
+
+          {platform ? (
+            // Lo que el usuario tiene que elegir del lado de su app. Cada línea es
+            // un error que cuesta la plata o la demora: otra moneda, otra red, un
+            // memo que la app pide aunque la dirección no lo necesita.
+            <div className="rounded-lg border border-black border-b-2 bg-white px-4 py-2 text-sm">
+              {[
+                [t('deposit.otherApp.receive.coin', 'Coin'), platform.asset],
+                [
+                  t('deposit.otherApp.receive.network', 'Network'),
+                  t(`deposit.otherApp.networks.${platform.network}`, platform.network),
+                ],
+                [t('deposit.otherApp.receive.memo', 'MEMO'), t('deposit.otherApp.receive.memoEmpty', 'Leave it empty')],
+                ...(platform.fee ? [[t('deposit.otherApp.receive.fee', 'Fee'), platform.fee]] : []),
+                ...(platform.minAmount
+                  ? [[t('deposit.otherApp.tutorial.min', 'Minimum'), `${platform.minAmount} ${platform.asset}`]]
+                  : []),
+              ].map(([label, value]) => (
+                <div key={label} className="flex justify-between border-b border-black/10 py-1.5 last:border-b-0">
+                  <span className="text-gray-500">{label}</span>
+                  <span className="font-bold text-black">{value}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           <div className="flex items-start justify-center gap-1.5 text-xs text-gray-400">
             <FiAlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />

@@ -37,6 +37,32 @@ export interface LanguageDTO {
   hint?: string;
 }
 
+/** A row of the "Deposit from another app" catalog (`config.deposit_platforms`). */
+export interface DepositPlatformDTO {
+  id: string;
+  name: string;
+  /** 'direct' withdraws USDC on Stellar; 'bridge' goes through 1Click. */
+  tier: 'direct' | 'bridge';
+  network: string;
+  asset: string;
+  fee: string | null;
+  minAmount: number | null;
+  appUrl: string | null;
+  /** Labels live in i18n under `deposit.otherApp.platforms.<id>.links.<link id>`. */
+  helpLinks: { id: string; url: string }[];
+}
+
+export type DepositIntentStatus = 'open' | 'arrived' | 'cancelled' | 'expired';
+
+export interface DepositIntentDTO {
+  id: string;
+  platformId: string;
+  status: DepositIntentStatus;
+  createdTimestamp: number;
+  expiresTimestamp: number;
+  arrivedTimestamp: number | null;
+}
+
 export interface NetworkResponseDTO {
   networkName: string;
   type: string;
@@ -61,6 +87,8 @@ export interface NetworkResponseDTO {
   }[];
   currencies: CurrencyDTO[];
   languages: LanguageDTO[];
+  /** Enabled platforms for "Deposit from another app", already sorted. */
+  depositPlatforms: DepositPlatformDTO[];
   /** Bundle version of the Privacy Policy / Terms / Risk Disclosure the user
    *  must currently have accepted. Served from the API so a revision re-gates
    *  everyone without a frontend deploy. */

@@ -591,6 +591,86 @@
         "subtitle": "Deposita desde una wallet cripto",
         "title": "Billetera",
         "receiveSubtitle": "Recibe USDC en tu dirección"
+      },
+      "otherApp": {
+        "title": "Desde otra app",
+        "new": "Nuevo",
+        "subtitle": "Binance, Meru y más"
+      }
+    },
+    "otherApp": {
+      "picker": {
+        "title": "Desde otra app",
+        "subtitle": "¿Dónde está tu dinero ahora?",
+        "rail": "{{asset}} en {{network}}",
+        "otherTitle": "Otra app o billetera",
+        "otherSubtitle": "Envía USDC desde cualquier lugar"
+      },
+      "networks": {
+        "stellar": "Stellar",
+        "polygon": "Polygon"
+      },
+      "other": {
+        "title": "Otra app",
+        "subtitle": "¿En qué red puede enviar USDC tu app?",
+        "stellarTitle": "USDC en Stellar",
+        "stellarSubtitle": "Envíalo directo a tu dirección",
+        "baseTitle": "USDC en Base",
+        "baseSubtitle": "Lo convertimos a Stellar con el bridge",
+        "warning": "Si lo envías por otra red, el dinero se pierde. Si no estás seguro, pregúntale a tu app qué redes acepta."
+      },
+      "trustline": {
+        "title": "Activar USDC",
+        "subtitle": "Antes de que {{name}} pueda enviarte USDC, tu billetera tiene que aceptarlo. Se hace una sola vez y es gratis.",
+        "notice": "Tu billetera todavía no puede recibir USDC."
+      },
+      "tutorial": {
+        "title": "Depositar desde {{name}}",
+        "fee": "Comisión de {{name}}",
+        "min": "Mínimo",
+        "help": "Ayuda de {{name}}",
+        "cta": "Mostrar mi dirección"
+      },
+      "platforms": {
+        "binance": {
+          "steps": {
+            "open": "Abre Binance y ve a Activos → Retirar.",
+            "coin": "Elige USDC como moneda y Stellar (XLM) como red.",
+            "address": "Pega tu dirección de Vaquita. Deja el MEMO vacío.",
+            "amount": "Ingresa el monto y confirma el retiro."
+          },
+          "links": {
+            "withdraw": "Cómo retirar de Binance",
+            "stellarUsdc": "USDC en la red Stellar"
+          }
+        },
+        "meru": {
+          "steps": {
+            "open": "Abre Meru y toca Enviar.",
+            "coin": "Elige USDC en la red Stellar.",
+            "address": "Pega tu dirección de Vaquita.",
+            "amount": "Ingresa el monto y confirma."
+          },
+          "links": {
+            "fees": "Comisiones de Meru",
+            "app": "Sitio de Meru"
+          }
+        }
+      },
+      "receive": {
+        "title": "Enviar desde {{name}}",
+        "openApp": "Abrir {{name}}",
+        "coin": "Moneda",
+        "network": "Red",
+        "memo": "MEMO",
+        "memoEmpty": "Déjalo vacío",
+        "fee": "Comisión"
+      },
+      "pending": {
+        "title": "Esperando tu depósito de {{name}}",
+        "address": "Ver dirección",
+        "steps": "Ver los pasos",
+        "dismiss": "Descartar"
       }
     }
   },

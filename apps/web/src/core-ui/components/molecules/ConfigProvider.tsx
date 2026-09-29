@@ -23,6 +23,7 @@ type ProjectConfigResponse = {
   tokens: NetworkResponseDTO['tokens'];
   currencies?: NetworkResponseDTO['currencies'];
   languages?: NetworkResponseDTO['languages'];
+  depositPlatforms?: NetworkResponseDTO['depositPlatforms'];
   legalPolicyVersion?: string;
 };
 
@@ -40,6 +41,7 @@ const transformConfig = (data: unknown): NetworkResponseDTO | null => {
     tokens,
     currencies: config.currencies ?? [],
     languages: config.languages ?? [],
+    depositPlatforms: config.depositPlatforms ?? [],
     // Falls back to the bundled constant: an empty required version would make
     // every acceptance check pass, silently disabling the gate.
     legalPolicyVersion: config.legalPolicyVersion || LEGAL_POLICY_VERSION,

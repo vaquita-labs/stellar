@@ -23,6 +23,7 @@ export * from './useInstallDismissed';
 export * from './useInvalidateAfterMoneyMove';
 export * from './useModalOnScreen';
 export * from './useWalletUsdc';
+export * from './useDepositIntents';
 export * from './useIntroSeen';
 export * from './useExploreData';
 export * from './useLeaderboardData';

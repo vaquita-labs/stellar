@@ -15,11 +15,13 @@ import { PassiveMigrationSheet } from './PassiveMigrationSheet';
 import { usePollar } from '@pollar/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAnalytics, useInvalidateAfterMoneyMove, useIsPoolPaused } from '../../hooks';
+import { useAnalytics, useInvalidateAfterMoneyMove, useIsPoolPaused, useOpenDepositIntent } from '../../hooks';
 import { useMapStore, useConfigStore, useAwaitingFundsStore, useOnrampWaitingStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
 import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
 import { ReceiveModal } from './DepositModal/ReceiveModal';
+import { OtherAppDepositModal, PendingPlatformDepositCard } from './OtherAppDeposit';
+import type { DepositPlatformDTO } from '../../types';
 import { WalletSendModal } from '../pages/profile/WalletSendModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
 import { ReceiveFiatRampModal } from './FiatModals/ReceiveFiatRampModal';
@@ -64,6 +66,16 @@ export function DepositPanel() {
   // Modal nativo de recibir (fondeo del usuario social a su dirección custodial).
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const isReceiveMounted = useModalPresence(isReceiveOpen);
+  // "Desde otra app": el selector/tutorial, y la plataforma con la que se abre
+  // el recibir. La plataforma va aparte del abierto/cerrado para que no se
+  // pierda mientras el sheet corre su animación de salida.
+  const [isOtherAppOpen, setIsOtherAppOpen] = useState(false);
+  const isOtherAppMounted = useModalPresence(isOtherAppOpen);
+  const [otherAppInitial, setOtherAppInitial] = useState<string | null>(null);
+  const [receivePlatform, setReceivePlatform] = useState<DepositPlatformDTO | null>(null);
+  // La espera que dejó abierta un "Mostrar mi dirección". Respaldada en la base
+  // para que la tarjeta siga ahí al volver de la app de origen.
+  const { data: openIntent } = useOpenDepositIntent();
   // El pago que dejó pendiente un retiro: el salto 1 sacó la plata del ahorro y
   // el salto 2 no llegó a pagarla, así que queda en la wallet. Sostenerlo acá
   // abre el Send con la transferencia ya cargada, que es la única salida que no
@@ -73,10 +85,13 @@ export function DepositPanel() {
   // Publicamos que el usuario está esperando plata para que el poll de ociosa
   // (`useIdleFunds`, en otro subárbol) sepa cuándo pollear el balance custodial.
   const setAwaitingFunds = useAwaitingFundsStore((s) => s.setAwaitingFunds);
+  // Con una espera abierta también: la plata sale de otra app en cualquier
+  // momento y la tarjeta del home necesita ver subir el saldo.
+  const awaitingFunds = isReceiveOpen || !!openIntent;
   useEffect(() => {
-    setAwaitingFunds(isReceiveOpen);
+    setAwaitingFunds(awaitingFunds);
     return () => setAwaitingFunds(false);
-  }, [isReceiveOpen, setAwaitingFunds]);
+  }, [awaitingFunds, setAwaitingFunds]);
   const [isDepositing, setIsDepositing] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
   const { wallet: pollarWallet } = usePollar();
@@ -86,6 +101,9 @@ export function DepositPanel() {
   const isStellar = network?.networkName ? isStellarNetwork(network.networkName) : false;
   const { isPaused } = useIsPoolPaused();
   const disabled = lockPeriod < 0 || (isStellar && isPaused);
+  const pendingPlatform = openIntent
+    ? ((network?.depositPlatforms ?? []).find((p) => p.id === openIntent.platformId) ?? null)
+    : null;
 
   // Hide Save button when in edit mode
   if (editMode !== null) {
@@ -99,6 +117,22 @@ export function DepositPanel() {
     >
       {isStellar && isPaused && (
         <p className="text-sm text-warning font-semibold">{t('deposit.panel.paused', 'Deposits are temporarily paused')}</p>
+      )}
+      {/* Se esconde mientras el sheet de recibir o el tutorial están arriba: los
+          dos muestran lo mismo, y el sheet es el que marca la llegada. */}
+      {openIntent && pendingPlatform && !isReceiveOpen && !isOtherAppOpen && (
+        <PendingPlatformDepositCard
+          intent={openIntent}
+          platform={pendingPlatform}
+          onShowAddress={() => {
+            setReceivePlatform(pendingPlatform);
+            setIsReceiveOpen(true);
+          }}
+          onShowSteps={() => {
+            setOtherAppInitial(pendingPlatform.id);
+            setIsOtherAppOpen(true);
+          }}
+        />
       )}
       <div data-tutorial={HOME_TOUR_ANCHOR_ACTIONS} className="w-full max-w-xl px-1 flex gap-1">
         <PressableButton
@@ -165,9 +199,36 @@ export function DepositPanel() {
         }}
         onReceive={() => {
           setIsMethodOpen(false);
+          setReceivePlatform(null);
           setIsReceiveOpen(true);
         }}
+        onOtherApp={() => {
+          trackUserAction('deposit_other_app_opened', { network: network?.networkName || null });
+          setIsMethodOpen(false);
+          setOtherAppInitial(null);
+          setIsOtherAppOpen(true);
+        }}
       />
+      {isOtherAppMounted && (
+        <OtherAppDepositModal
+          open={isOtherAppOpen}
+          initialPlatformId={otherAppInitial}
+          onOpenChange={() => setIsOtherAppOpen(false)}
+          onBack={() => {
+            setIsOtherAppOpen(false);
+            setIsMethodOpen(true);
+          }}
+          onShowAddress={(platform) => {
+            trackUserAction('deposit_other_app_address_shown', {
+              platform: platform?.id ?? 'other',
+              network: network?.networkName || null,
+            });
+            setIsOtherAppOpen(false);
+            setReceivePlatform(platform);
+            setIsReceiveOpen(true);
+          }}
+        />
+      )}
       <CountryPickerModal
         open={countryFlow !== null}
         onOpenChange={() => setCountryFlow(null)}
@@ -466,6 +527,16 @@ export function DepositPanel() {
           open={isReceiveOpen}
           onOpenChange={() => setIsReceiveOpen(false)}
           address={pollarWallet?.address ?? walletAddress ?? ''}
+          platform={receivePlatform}
+          onBack={
+            receivePlatform
+              ? () => {
+                  setIsReceiveOpen(false);
+                  setOtherAppInitial(receivePlatform.id);
+                  setIsOtherAppOpen(true);
+                }
+              : undefined
+          }
         />
       )}
       {/* Blocking legacy-Blend migration prompt: self-opens (and self-closes)

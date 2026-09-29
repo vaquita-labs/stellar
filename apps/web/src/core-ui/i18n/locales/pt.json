@@ -591,6 +591,86 @@
         "subtitle": "Deposite de uma wallet cripto",
         "title": "Carteira",
         "receiveSubtitle": "Receba USDC no seu endereço"
+      },
+      "otherApp": {
+        "title": "De outro app",
+        "new": "Novo",
+        "subtitle": "Binance, Meru e mais"
+      }
+    },
+    "otherApp": {
+      "picker": {
+        "title": "De outro app",
+        "subtitle": "Onde está seu dinheiro agora?",
+        "rail": "{{asset}} na {{network}}",
+        "otherTitle": "Outro app ou carteira",
+        "otherSubtitle": "Envie USDC de qualquer lugar"
+      },
+      "networks": {
+        "stellar": "Stellar",
+        "polygon": "Polygon"
+      },
+      "other": {
+        "title": "Outro app",
+        "subtitle": "Em qual rede seu app pode enviar USDC?",
+        "stellarTitle": "USDC na Stellar",
+        "stellarSubtitle": "Envie direto para o seu endereço",
+        "baseTitle": "USDC na Base",
+        "baseSubtitle": "Convertemos para a Stellar com a ponte",
+        "warning": "Se você enviar por outra rede, o dinheiro se perde. Se não tiver certeza, pergunte ao seu app quais redes ele aceita."
+      },
+      "trustline": {
+        "title": "Ativar USDC",
+        "subtitle": "Antes que {{name}} possa te enviar USDC, sua carteira precisa aceitá-lo. É feito uma única vez e é grátis.",
+        "notice": "Sua carteira ainda não pode receber USDC."
+      },
+      "tutorial": {
+        "title": "Depositar de {{name}}",
+        "fee": "Taxa da {{name}}",
+        "min": "Mínimo",
+        "help": "Ajuda da {{name}}",
+        "cta": "Mostrar meu endereço"
+      },
+      "platforms": {
+        "binance": {
+          "steps": {
+            "open": "Abra a Binance e vá em Ativos → Sacar.",
+            "coin": "Escolha USDC como moeda e Stellar (XLM) como rede.",
+            "address": "Cole seu endereço da Vaquita. Deixe o MEMO vazio.",
+            "amount": "Digite o valor e confirme o saque."
+          },
+          "links": {
+            "withdraw": "Como sacar da Binance",
+            "stellarUsdc": "USDC na rede Stellar"
+          }
+        },
+        "meru": {
+          "steps": {
+            "open": "Abra a Meru e toque em Enviar.",
+            "coin": "Escolha USDC na rede Stellar.",
+            "address": "Cole seu endereço da Vaquita.",
+            "amount": "Digite o valor e confirme."
+          },
+          "links": {
+            "fees": "Taxas da Meru",
+            "app": "Site da Meru"
+          }
+        }
+      },
+      "receive": {
+        "title": "Enviar da {{name}}",
+        "openApp": "Abrir {{name}}",
+        "coin": "Moeda",
+        "network": "Rede",
+        "memo": "MEMO",
+        "memoEmpty": "Deixe vazio",
+        "fee": "Taxa"
+      },
+      "pending": {
+        "title": "Aguardando seu depósito da {{name}}",
+        "address": "Ver endereço",
+        "steps": "Ver os passos",
+        "dismiss": "Dispensar"
       }
     }
   },

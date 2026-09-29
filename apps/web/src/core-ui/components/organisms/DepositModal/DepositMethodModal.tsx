@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
 import { FiAlertCircle, FiCheck, FiInfo } from 'react-icons/fi';
-import { IoWalletOutline } from 'react-icons/io5';
+import { IoApps, IoWalletOutline } from 'react-icons/io5';
 import {
   AMOUNT_DECIMALS,
   floorAmount,
@@ -38,6 +38,8 @@ interface DepositMethodModalProps {
   onOnramp: () => void;
   /** Social/custodial: cierra este modal y abre el modal de recibir a su dirección. */
   onReceive: () => void;
+  /** "Desde otra app": cierra este modal y abre el selector de Binance, Meru, etc. */
+  onOtherApp: () => void;
 }
 
 type Step = 'method' | 'amount' | 'confirm' | 'processing' | 'success';
@@ -55,6 +57,7 @@ export function DepositMethodModal({
   onOpenChange,
   onOnramp,
   onReceive,
+  onOtherApp,
 }: DepositMethodModalProps) {
   const { t } = useTranslation();
   const { walletAddress, token, network } = useConfigStore();
@@ -88,6 +91,8 @@ export function DepositMethodModal({
   // "mueve" USDC que ya tiene: fondea RECIBIENDO a su dirección custodia, así que
   // su rama "Wallet" abre el modal de recibir NATIVO (no el de Pollar) vía onReceive.
   const isExternalWallet = wallet?.custody === 'external';
+  // Sin ninguna plataforma en el catálogo la fila no tiene a dónde llevar.
+  const hasOtherApps = (network?.depositPlatforms ?? []).some((p) => p.tier === 'direct');
   // Techo del depósito = saldo del USDC QUE ACEPTA BLEND, leído on-chain. NO el
   // walletBalance de Pollar: en testnet hay varios USDC con el mismo código
   // "USDC" de emisores distintos, y Pollar puede reportar el de otro emisor. Si
@@ -205,6 +210,24 @@ export function DepositMethodModal({
           </span>
         </span>
       </PressableButton>
+      {/* Entre banco y wallet: el que tiene dólares en Binance o Meru no se
+          piensa como alguien "con una wallet cripto", y ahí no lo buscaría. */}
+      {hasOtherApps && (
+        <PressableButton variant="white" size="row" onClick={onOtherApp}>
+          <IoApps className="w-6 h-6 text-black shrink-0" />
+          <span className="flex-1 min-w-0">
+            <span className="flex items-center gap-2 text-sm font-bold text-black">
+              {t('deposit.method.otherApp.title', 'From another app')}
+              <span className="rounded bg-[#FFF1E6] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#9a4a12]">
+                {t('deposit.method.otherApp.new', 'New')}
+              </span>
+            </span>
+            <span className="block text-xs text-gray-500">
+              {t('deposit.method.otherApp.subtitle', 'Binance, Meru and more')}
+            </span>
+          </span>
+        </PressableButton>
+      )}
       <PressableButton
         variant="white"
         size="row"
