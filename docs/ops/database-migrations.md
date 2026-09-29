@@ -3,10 +3,11 @@
 The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are in `CLAUDE.md` →
 **Database migrations**. This file is the log: what has been applied where, and how.
 
-**Known-pending as of 2026-09-10:**
+**Known-pending as of 2026-09-29:**
 
 | Migration | dev | staging | prod |
 |-----------|-----|---------|------|
+| `20260929_deposit_from_app.sql` | ✅ | ✅ | ✅ |
 | `20260911_vaquitatag.sql` | ✅ | ✅ | ✅ |
 | `20260910_wallet_transfers.sql` | ✅ | ✅ | ✅ |
 | `20260910_pwa_installs.sql` | ✅ | ✅ | ✅ |
@@ -27,6 +28,16 @@ The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are
 | `20260820_vault_apy_snapshots.sql` | ❌ | ❌ | ❌ |
 
 (`?` = not verified — re-check with a diff script in `apps/api/tmp/` before trusting the row.)
+
+Apply `20260929_deposit_from_app.sql` with `apps/api/tmp/2026-09-29-apply-deposit-from-app.ts`
+(same `check` / `apply` shape; it also re-applies `packages/db/sql/deposit_intents_checks.sql`).
+Applied to dev, staging and prod on 2026-09-29. It adds `config.deposit_platforms` (the "Deposit from another app"
+catalog, seeded with Binance and Meru enabled, Takenos and Wallbit disabled until the bridge takes
+Polygon USDT) and the `deposit_intents` table behind the waiting card on Home. **Apply before the
+API deploys anywhere new**: `prisma.config.findFirst()` names every column in the model, so a
+missing `deposit_platforms` fails the boot config read with P2022, which takes the whole app down,
+not just this feature. The seed only fills a column that is still `'[]'`, so re-running never
+overwrites an edit.
 
 Apply `20260911_vaquitatag.sql` with `apps/api/tmp/2026-09-11-apply-vaquitatag.ts` (same
 `check` / `apply` shape; it also re-applies `packages/db/sql/profiles_nickname_format.sql`).
