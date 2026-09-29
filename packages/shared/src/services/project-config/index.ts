@@ -1,8 +1,8 @@
 import { prisma } from '@vaquita/db';
-import type { ProjectConfigResponseDTO } from '../../types';
-import { toProjectConfig } from './helpers';
+import type { DepositPlatformDTO, ProjectConfigResponseDTO } from '../../types';
+import { toDepositPlatforms, toProjectConfig } from './helpers';
 
-export { toProjectConfig };
+export { toDepositPlatforms, toProjectConfig };
 export { isTokenUsable, tokenReadiness, type TokenReadiness, type TokenReadinessGap } from './readiness';
 
 /**
@@ -85,4 +85,14 @@ export const getProjectConfig = async (): Promise<ProjectConfigResponseDTO | nul
   });
 
   return toProjectConfig(config, tokens);
+};
+
+/**
+ * The enabled "Deposit from another app" platforms, in display order. A narrow
+ * read of one column for handlers that validate a platform id and need nothing
+ * else from the config row.
+ */
+export const getDepositPlatforms = async (): Promise<DepositPlatformDTO[]> => {
+  const config = await prisma.config.findFirst({ select: { depositPlatforms: true } });
+  return toDepositPlatforms(config?.depositPlatforms);
 };

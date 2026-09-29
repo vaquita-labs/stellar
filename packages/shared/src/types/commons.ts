@@ -82,6 +82,37 @@ export interface ProjectConfigLanguageDTO {
 }
 
 /**
+ * One app in the "Deposit from another app" catalog (`config.deposit_platforms`).
+ * `tier` is what the UI routes on: 'direct' apps withdraw USDC natively on
+ * Stellar and only need the user's G… address; 'bridge' apps go through the
+ * 1Click bridge. Tutorial prose lives in the web i18n bundles, keyed by `id`.
+ */
+export interface DepositPlatformDTO {
+  id: string;
+  name: string;
+  tier: 'direct' | 'bridge';
+  network: string;
+  asset: string;
+  /** Display string, e.g. "1 USDC" or "1% + 1 USD"; null when unknown. */
+  fee: string | null;
+  /** Smallest amount the app lets you send, in `asset` units. */
+  minAmount: number | null;
+  appUrl: string | null;
+  /** The app's own help pages. The label is i18n, keyed by platform and `id`. */
+  helpLinks: { id: string; url: string }[];
+}
+
+/** A "Deposit from another app" waiting card (`deposit_intents` row). */
+export interface DepositIntentResponseDTO {
+  id: string;
+  platformId: string;
+  status: 'open' | 'arrived' | 'cancelled' | 'expired';
+  createdTimestamp: number;
+  expiresTimestamp: number;
+  arrivedTimestamp: number | null;
+}
+
+/**
  * Single-network project configuration (replaces the per-network NetworkResponseDTO).
  * `chainId` (EVM leftover) is replaced by `networkPassphrase` (Stellar).
  */
@@ -96,6 +127,8 @@ export interface ProjectConfigResponseDTO {
    *  must currently have accepted. Served from config so a revision re-gates
    *  everyone without a frontend deploy. */
   legalPolicyVersion: string;
+  /** Enabled "Deposit from another app" platforms, in display order. */
+  depositPlatforms: DepositPlatformDTO[];
 }
 
 export interface DepositSummaryResponseDTO {

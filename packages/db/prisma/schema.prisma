@@ -220,6 +220,33 @@ model WalletTransfer {
   @@map("wallet_transfers")
 }
 
+/// "The user said they are sending money from X" — backs the waiting card on
+/// Home for "Deposit from another app". A UI marker only: it never moves or
+/// credits money, so a client-reported `arrived` is acceptable here. Arrival is
+/// the wallet's USDC balance going up, the same signal the Receive sheet uses.
+///
+/// `status`: open | arrived | cancelled | expired (CHECK in
+/// packages/db/sql/deposit_intents_checks.sql, which also holds the partial
+/// unique index that allows one `open` row per profile).
+model DepositIntent {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Always the session's profile, never a request field.
+  profileId        Int       @map("profile_id")
+  walletAddress    String    @map("wallet_address") @db.VarChar(100)
+  /// An `id` from `config.deposit_platforms`. Deliberately unconstrained.
+  platformId       String    @map("platform_id") @db.VarChar(32)
+  status           String    @default("open") @db.VarChar(16)
+  /// Set on the bridge path once a 1Click transfer exists for this deposit.
+  bridgeTransferId String?   @map("bridge_transfer_id") @db.Uuid
+  expiresAt        DateTime  @default(dbgenerated("(now() + '24:00:00'::interval)")) @map("expires_at") @db.Timestamptz(6)
+  arrivedAt        DateTime? @map("arrived_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([profileId], map: "idx_deposit_intents_profile_id")
+  @@map("deposit_intents")
+}
+
 /// Compra de USDC con moneda local (on-ramp). Existe por una sola razón: la API
 /// de ramps no tiene endpoint de listado, así que el `providerTxId` que devuelve
 /// la creación es el ÚNICO handle sobre una compra en curso. Perderlo deja al
@@ -584,6 +611,12 @@ model Config {
   // UI languages offered in the Preferences page. Each entry is
   // `{ id, label, hint? }`, e.g. `{ "id": "en", "label": "English", "hint": "United States" }`.
   languages             Json     @default("[]")
+  // Catalog for "Deposit from another app" (Binance, Meru, Takenos, Wallbit).
+  // Each entry is `{ id, name, tier: 'direct'|'bridge', network, asset, fee,
+  // minAmount, appUrl, helpLinks: [{ id, url }], enabled, order }`. Here rather
+  // than in the bundle so a platform can be switched off or a fee corrected
+  // without a deploy; the tutorial prose stays in the i18n files, keyed by `id`.
+  depositPlatforms      Json     @default("[]") @map("deposit_platforms")
   // Reconciliation cursors and last-run summaries keyed by job and contract ID.
   // Used by mainnet chain-event repair workflows; dry runs must not advance it.
   reconciliationState    Json     @default("{}") @map("reconciliation_state")

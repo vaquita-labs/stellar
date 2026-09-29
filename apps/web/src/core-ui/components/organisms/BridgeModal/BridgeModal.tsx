@@ -24,6 +24,7 @@ import { humanizeTxError } from '../../../helpers/txError';
 import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
+import { UsdcTrustlineGate } from '../../molecules/UsdcTrustlineGate';
 
 interface BridgeModalProps {
   open: boolean;
@@ -121,7 +122,7 @@ export const formatElapsed = (ms: number): string => {
 export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalProps) {
   const { t } = useTranslation();
   const { token } = useConfigStore();
-  const { walletBalance, refreshWalletBalance, setTrustline } = usePollar();
+  const { walletBalance, refreshWalletBalance } = usePollar();
 
   const [direction, setDirection] = useState<BridgeDirection>('evm_to_stellar');
   const [amount, setAmount] = useState('');
@@ -136,7 +137,6 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
   } | null>(null);
   const [transferId, setTransferId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [activating, setActivating] = useState(false);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [payNotice, setPayNotice] = useState<string | null>(null);
@@ -256,20 +256,6 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
 
   const handleMax = () => {
     if (available > 0) setAmount(truncatedAmountString(available, decimals));
-  };
-
-  const handleActivateTrustline = async () => {
-    if (!usdcIssuer) return;
-    setActivating(true);
-    try {
-      const outcome = await setTrustline({ code: 'USDC', issuer: usdcIssuer });
-      if (outcome.status === 'error') throw new Error(outcome.details ?? 'trustline failed');
-      await trustline.refetch();
-    } catch {
-      toast.danger(t('wallet.bridge.trustlineError', 'Could not activate USDC. Please try again.'));
-    } finally {
-      setActivating(false);
-    }
   };
 
   /**
@@ -481,23 +467,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
 
       {/* La wallet necesita trustline ANTES de cotizar: 1Click rechaza el quote
           sin ella, y el usuario no tiene por qué leer ese error crudo. */}
-      {needsTrustline && (
-        <div className="flex flex-col gap-2 rounded-lg border border-[#F0B429] bg-[#FFF7E6] px-4 py-3">
-          <p className="text-sm text-black">
-            {t('wallet.bridge.trustlineNeeded', 'Your wallet needs to activate USDC before it can receive it.')}
-          </p>
-          <PressableButton variant="primary" size="md" onClick={handleActivateTrustline} disabled={activating}>
-            {activating ? (
-              <>
-                <Spinner size="sm" color="current" />
-                {t('wallet.bridge.activating', 'Activating…')}
-              </>
-            ) : (
-              t('wallet.bridge.activateTrustline', 'Activate USDC')
-            )}
-          </PressableButton>
-        </div>
-      )}
+      <UsdcTrustlineGate address={inbound ? stellarWallet : null} issuer={usdcIssuer} />
 
       <div>
         <div className="mb-1.5 flex items-center justify-between">

@@ -591,6 +591,86 @@
         "subtitle": "Deposit from a crypto wallet",
         "title": "Wallet",
         "receiveSubtitle": "Receive USDC to your address"
+      },
+      "otherApp": {
+        "title": "From another app",
+        "new": "New",
+        "subtitle": "Binance, Meru and more"
+      }
+    },
+    "otherApp": {
+      "picker": {
+        "title": "From another app",
+        "subtitle": "Where is your money now?",
+        "rail": "{{asset}} on {{network}}",
+        "otherTitle": "Another app or wallet",
+        "otherSubtitle": "Send USDC from anywhere"
+      },
+      "networks": {
+        "stellar": "Stellar",
+        "polygon": "Polygon"
+      },
+      "other": {
+        "title": "Another app",
+        "subtitle": "Which network can your app send USDC on?",
+        "stellarTitle": "USDC on Stellar",
+        "stellarSubtitle": "Send it straight to your address",
+        "baseTitle": "USDC on Base",
+        "baseSubtitle": "We convert it to Stellar with the bridge",
+        "warning": "Sending on any other network loses the money. If you are not sure, ask your app which networks it supports."
+      },
+      "trustline": {
+        "title": "Activate USDC",
+        "subtitle": "Before {{name}} can send you USDC, your wallet has to accept it. It is a one-time step and it is free.",
+        "notice": "Your wallet cannot receive USDC yet."
+      },
+      "tutorial": {
+        "title": "Deposit from {{name}}",
+        "fee": "{{name}} fee",
+        "min": "Minimum",
+        "help": "Help from {{name}}",
+        "cta": "Show my address"
+      },
+      "platforms": {
+        "binance": {
+          "steps": {
+            "open": "Open Binance and go to Assets → Withdraw.",
+            "coin": "Pick USDC as the coin and Stellar (XLM) as the network.",
+            "address": "Paste your Vaquita address. Leave MEMO empty.",
+            "amount": "Enter the amount and confirm the withdrawal."
+          },
+          "links": {
+            "withdraw": "How to withdraw from Binance",
+            "stellarUsdc": "USDC on the Stellar network"
+          }
+        },
+        "meru": {
+          "steps": {
+            "open": "Open Meru and tap Send.",
+            "coin": "Choose USDC on the Stellar network.",
+            "address": "Paste your Vaquita address.",
+            "amount": "Enter the amount and confirm."
+          },
+          "links": {
+            "fees": "Meru fees",
+            "app": "Meru website"
+          }
+        }
+      },
+      "receive": {
+        "title": "Send from {{name}}",
+        "openApp": "Open {{name}}",
+        "coin": "Coin",
+        "network": "Network",
+        "memo": "MEMO",
+        "memoEmpty": "Leave it empty",
+        "fee": "Fee"
+      },
+      "pending": {
+        "title": "Waiting for your {{name}} deposit",
+        "address": "Show address",
+        "steps": "See the steps",
+        "dismiss": "Dismiss"
       }
     }
   },
