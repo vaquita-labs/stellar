@@ -629,15 +629,40 @@
         "fee": "Comisión de {{name}}",
         "min": "Mínimo",
         "help": "Ayuda de {{name}}",
-        "cta": "Mostrar mi dirección"
+        "cta": "Mostrar mi dirección",
+        "intro": "Envía {{asset}} desde {{name}} directo a tu cuenta de Vaquita.",
+        "network": "Red",
+        "coin": "Moneda",
+        "inApp": "En la app de {{name}}",
+        "screenshot": "App de {{name}}"
       },
       "platforms": {
         "binance": {
           "steps": {
-            "open": "Abre Binance y ve a Activos → Retirar.",
-            "coin": "Elige USDC como moneda y Stellar (XLM) como red.",
-            "address": "Pega tu dirección de Vaquita. Deja el MEMO vacío.",
-            "amount": "Ingresa el monto y confirma el retiro."
+            "open": {
+              "title": "Abre Binance y toca Enviar",
+              "body": "Ve a Activos abajo, luego Resumen → Enviar."
+            },
+            "method": {
+              "title": "Elige Retirar activo",
+              "body": "Envía cripto desde Binance a otra billetera, como tu cuenta de Vaquita."
+            },
+            "coin": {
+              "title": "Elige USDC",
+              "body": "Busca USDC. No USDT: Binance no puede enviar USDT en Stellar."
+            },
+            "address": {
+              "title": "Elige la red Stellar (XLM) y pega tu dirección",
+              "body": "En Seleccionar red elige Stellar (XLM); con cualquier otra red se pierde el dinero. Pega la dirección que vas a copiar en la siguiente pantalla (empieza con G) y deja el MEMO vacío."
+            },
+            "amount": {
+              "title": "Ingresa el monto",
+              "body": "Binance se queda con 1 USDC de comisión, así que envía al menos 2 USDC."
+            },
+            "confirm": {
+              "title": "Revisa y confirma",
+              "body": "Verifica que la red diga Stellar, desliza para confirmar e ingresa tu código de seguridad."
+            }
           },
           "links": {
             "withdraw": "Cómo retirar de Binance",
@@ -646,10 +671,30 @@
         },
         "meru": {
           "steps": {
-            "open": "Abre Meru y toca Enviar.",
-            "coin": "Elige USDC en la red Stellar.",
-            "address": "Pega tu dirección de Vaquita.",
-            "amount": "Ingresa el monto y confirma."
+            "open": {
+              "title": "Toca Enviar",
+              "body": "En el inicio de Meru, toca Enviar y elige “A una billetera cripto”."
+            },
+            "coin": {
+              "title": "Elige USDC",
+              "body": "Tus dólares de Meru salen como USDC."
+            },
+            "network": {
+              "title": "Elige la red Stellar",
+              "body": "Con cualquier otra red el dinero va a un lugar que Vaquita no ve."
+            },
+            "address": {
+              "title": "Pega tu dirección de Vaquita",
+              "body": "La que vas a copiar en la siguiente pantalla. Empieza con G."
+            },
+            "memo": {
+              "title": "Deja el Memo vacío",
+              "body": "Vaquita no usa memo."
+            },
+            "amount": {
+              "title": "Ingresa el monto y confirma",
+              "body": "Meru te muestra su comisión antes de confirmar: 1% más 1 USD."
+            }
           },
           "links": {
             "fees": "Comisiones de Meru",
@@ -671,6 +716,31 @@
         "address": "Ver dirección",
         "steps": "Ver los pasos",
         "dismiss": "Descartar"
+      },
+      "illustration": {
+        "screens": {
+          "home": "Inicio",
+          "asset": "Activo",
+          "network": "Red",
+          "recipient": "Destinatario",
+          "review": "Revisión"
+        },
+        "add": "Agregar",
+        "send": "Enviar",
+        "card": "Tarjeta",
+        "toCryptoWallet": "A una billetera cripto",
+        "toBank": "A una cuenta bancaria",
+        "walletAddress": "Dirección de billetera",
+        "memo": "Memo (opcional)",
+        "youSend": "Envías",
+        "fee": "Comisión",
+        "theyReceive": "Recibe",
+        "chips": {
+          "pick": "Esta",
+          "paste": "Pega",
+          "blank": "Déjalo vacío",
+          "tap": "Toca"
+        }
       }
     }
   },
