@@ -629,15 +629,40 @@
         "fee": "{{name}} fee",
         "min": "Minimum",
         "help": "Help from {{name}}",
-        "cta": "Show my address"
+        "cta": "Show my address",
+        "intro": "Send {{asset}} from {{name}} straight to your Vaquita account.",
+        "network": "Network",
+        "coin": "Coin",
+        "inApp": "In the {{name}} app",
+        "screenshot": "{{name}} app"
       },
       "platforms": {
         "binance": {
           "steps": {
-            "open": "Open Binance and go to Assets → Withdraw.",
-            "coin": "Pick USDC as the coin and Stellar (XLM) as the network.",
-            "address": "Paste your Vaquita address. Leave MEMO empty.",
-            "amount": "Enter the amount and confirm the withdrawal."
+            "open": {
+              "title": "Open Binance and tap Send",
+              "body": "Go to Assets at the bottom, then Overview → Send."
+            },
+            "method": {
+              "title": "Choose Withdraw Asset",
+              "body": "It sends crypto from Binance to another wallet, like your Vaquita account."
+            },
+            "coin": {
+              "title": "Pick USDC",
+              "body": "Search for USDC. Not USDT: Binance can’t send USDT on Stellar."
+            },
+            "address": {
+              "title": "Set the network to Stellar (XLM) and paste your address",
+              "body": "In Select Network pick Stellar (XLM); any other network loses the money. Paste the address you’ll copy on the next screen (it starts with G) and leave MEMO empty."
+            },
+            "amount": {
+              "title": "Enter the amount",
+              "body": "Binance keeps 1 USDC as its fee, so send at least 2 USDC."
+            },
+            "confirm": {
+              "title": "Check and confirm",
+              "body": "Make sure the network says Stellar, then slide to confirm and enter your security code."
+            }
           },
           "links": {
             "withdraw": "How to withdraw from Binance",
@@ -646,10 +671,30 @@
         },
         "meru": {
           "steps": {
-            "open": "Open Meru and tap Send.",
-            "coin": "Choose USDC on the Stellar network.",
-            "address": "Paste your Vaquita address.",
-            "amount": "Enter the amount and confirm."
+            "open": {
+              "title": "Tap Send",
+              "body": "On Meru’s home screen, tap Send and pick “To a crypto wallet”."
+            },
+            "coin": {
+              "title": "Choose USDC",
+              "body": "Your Meru dollars go out as USDC."
+            },
+            "network": {
+              "title": "Pick the Stellar network",
+              "body": "Any other network sends the money somewhere Vaquita can’t see."
+            },
+            "address": {
+              "title": "Paste your Vaquita address",
+              "body": "The one you’ll copy on the next screen. It starts with G."
+            },
+            "memo": {
+              "title": "Leave Memo empty",
+              "body": "Vaquita doesn’t use a memo."
+            },
+            "amount": {
+              "title": "Enter the amount and confirm",
+              "body": "Meru shows its fee before you confirm: 1% plus 1 USD."
+            }
           },
           "links": {
             "fees": "Meru fees",
@@ -671,6 +716,31 @@
         "address": "Show address",
         "steps": "See the steps",
         "dismiss": "Dismiss"
+      },
+      "illustration": {
+        "screens": {
+          "home": "Home",
+          "asset": "Asset",
+          "network": "Network",
+          "recipient": "Recipient",
+          "review": "Review"
+        },
+        "add": "Add",
+        "send": "Send",
+        "card": "Card",
+        "toCryptoWallet": "To a crypto wallet",
+        "toBank": "To a bank account",
+        "walletAddress": "Wallet address",
+        "memo": "Memo (optional)",
+        "youSend": "You send",
+        "fee": "Fee",
+        "theyReceive": "They receive",
+        "chips": {
+          "pick": "This one",
+          "paste": "Paste",
+          "blank": "Leave blank",
+          "tap": "Tap"
+        }
       }
     }
   },

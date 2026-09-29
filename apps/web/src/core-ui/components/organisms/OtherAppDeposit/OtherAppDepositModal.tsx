@@ -5,7 +5,7 @@ import { usePollar } from '@pollar/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight, FiExternalLink, FiInfo } from 'react-icons/fi';
+import { FiArrowRight, FiChevronRight, FiExternalLink, FiInfo } from 'react-icons/fi';
 import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
 import { blendConfigForToken } from '@/networks/stellar/blendDirect';
 import { useConfigStore } from '../../../stores';
@@ -13,6 +13,7 @@ import type { DepositPlatformDTO } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { UsdcTrustlineGate } from '../../molecules/UsdcTrustlineGate';
+import { StepIllustration } from './StepIllustration';
 import { TUTORIALS } from './tutorials';
 
 type Step = 'picker' | 'other' | 'trustline' | 'tutorial';
@@ -188,46 +189,92 @@ export function OtherAppDepositModal({
   );
 
   const steps = platform ? (TUTORIALS[platform.id] ?? []) : [];
+  const facts = platform
+    ? [
+        {
+          label: t('deposit.otherApp.tutorial.network', 'Network'),
+          value: t(`deposit.otherApp.networks.${platform.network}`, platform.network),
+        },
+        { label: t('deposit.otherApp.tutorial.coin', 'Coin'), value: platform.asset },
+        platform.fee
+          ? { label: t('deposit.otherApp.tutorial.fee', '{{name}} fee', { name: platform.name }), value: platform.fee }
+          : null,
+        platform.minAmount
+          ? {
+              label: t('deposit.otherApp.tutorial.min', 'Minimum'),
+              value: `${platform.minAmount} ${platform.asset}`,
+            }
+          : null,
+      ].filter((f): f is { label: string; value: string } => f !== null)
+    : [];
+
   const tutorialStep = platform ? (
-    <div className="flex flex-col gap-4">
-      <ol className="flex flex-col gap-3">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 rounded-xl border border-black border-b-[3px] bg-white p-3.5">
+        <div className="flex items-center gap-2.5">
+          <PlatformMark name={platform.name} />
+          <FiArrowRight className="h-4 w-4 shrink-0 text-black" />
+          <PlatformMark name="Vaquita" />
+          <p className="text-xs leading-snug text-gray-600">
+            {t('deposit.otherApp.tutorial.intro', 'Send {{asset}} from {{name}} straight to your Vaquita account.', {
+              asset: platform.asset,
+              name: platform.name,
+            })}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {facts.map((f) => (
+            <div key={f.label} className="flex flex-col gap-0.5 rounded-lg border border-[#cfe3f2] bg-[#F5FBFF] px-2.5 py-2">
+              <span className="text-[10px] uppercase tracking-wider text-[#5c6b75]">{f.label}</span>
+              <span className="text-[13px] font-bold text-black">{f.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+        {t('deposit.otherApp.tutorial.inApp', 'In the {{name}} app', { name: platform.name })}
+      </p>
+
+      <ol className="flex flex-col gap-5">
         {steps.map((s, i) => (
-          <li key={s.key} className="flex items-start gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black text-xs font-bold text-white">
-              {i + 1}
-            </span>
-            <span className="flex-1 pt-0.5 text-sm text-black">
-              {t(`deposit.otherApp.platforms.${platform.id}.steps.${s.key}`, s.fallback)}
+          <li key={s.key} className="flex flex-col gap-2.5">
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black text-xs font-bold text-white">
+                {i + 1}
+              </span>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold leading-snug text-black">
+                  {t(`deposit.otherApp.platforms.${platform.id}.steps.${s.key}.title`, s.title)}
+                </p>
+                {s.body ? (
+                  <p className="mt-0.5 text-[13px] leading-snug text-gray-600">
+                    {t(`deposit.otherApp.platforms.${platform.id}.steps.${s.key}.body`, s.body)}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <div className="ml-8.5">
               {s.image ? (
-                // Captura de la app, cuando exista (ver `tutorials.ts`).
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={s.image} alt="" className="mt-2 w-full rounded-lg border border-black/10" />
+                <figure className="overflow-hidden rounded-xl border border-black/15 bg-white">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- captura estática de public/ */}
+                  <img
+                    src={s.image}
+                    alt={t(`deposit.otherApp.platforms.${platform.id}.steps.${s.key}.title`, s.title)}
+                    loading="lazy"
+                    className="block max-h-90 w-full object-contain object-top"
+                  />
+                  <figcaption className="border-t border-black/10 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-wider text-gray-400">
+                    {t('deposit.otherApp.tutorial.screenshot', '{{name}} app', { name: platform.name })}
+                  </figcaption>
+                </figure>
+              ) : s.illustration ? (
+                <StepIllustration appName={platform.name} illustration={s.illustration} address={receiver} />
               ) : null}
-            </span>
+            </div>
           </li>
         ))}
       </ol>
-
-      {platform.fee || platform.minAmount ? (
-        <div className="rounded-lg border border-black border-b-2 bg-white px-4 py-2.5 text-sm">
-          {platform.fee ? (
-            <div className="flex justify-between py-1">
-              <span className="text-gray-500">
-                {t('deposit.otherApp.tutorial.fee', '{{name}} fee', { name: platform.name })}
-              </span>
-              <span className="font-bold text-black">{platform.fee}</span>
-            </div>
-          ) : null}
-          {platform.minAmount ? (
-            <div className="flex justify-between py-1">
-              <span className="text-gray-500">{t('deposit.otherApp.tutorial.min', 'Minimum')}</span>
-              <span className="font-bold text-black">
-                {platform.minAmount} {platform.asset}
-              </span>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
 
       {platform.helpLinks.length > 0 ? (
         <div className="flex flex-col gap-1.5">
