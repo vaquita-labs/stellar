@@ -3,10 +3,11 @@
 The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are in `CLAUDE.md` →
 **Database migrations**. This file is the log: what has been applied where, and how.
 
-**Known-pending as of 2026-09-29:**
+**Known-pending as of 2026-10-01:**
 
 | Migration | dev | staging | prod |
 |-----------|-----|---------|------|
+| `20261001_bridge_enabled.sql` | ✅ | ✅ | ✅ |
 | `20260929_deposit_from_app.sql` | ✅ | ✅ | ✅ |
 | `20260911_vaquitatag.sql` | ✅ | ✅ | ✅ |
 | `20260910_wallet_transfers.sql` | ✅ | ✅ | ✅ |
@@ -28,6 +29,13 @@ The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are
 | `20260820_vault_apy_snapshots.sql` | ❌ | ❌ | ❌ |
 
 (`?` = not verified — re-check with a diff script in `apps/api/tmp/` before trusting the row.)
+
+Apply `20261001_bridge_enabled.sql` with `apps/api/tmp/2026-10-01-apply-bridge-enabled.ts` (same
+`check` / `apply` shape). Applied to dev, staging and prod on 2026-10-01. It adds
+`config.bridge_enabled` (boolean, default `true`), the switch for the 1Click bridge as a whole: off,
+`POST /bridge/quote` and `/bridge/transfers` answer 503 and the web hides every way in. Flip it with
+`apps/api/tmp/2026-10-01-toggle-bridge.ts check|on|off <envFile>`. Same P2022 caveat as below:
+apply before the API deploys.
 
 Apply `20260929_deposit_from_app.sql` with `apps/api/tmp/2026-09-29-apply-deposit-from-app.ts`
 (same `check` / `apply` shape; it also re-applies `packages/db/sql/deposit_intents_checks.sql`).
