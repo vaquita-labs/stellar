@@ -1102,10 +1102,22 @@
     "title": "Centro de ayuda",
     "buttonAria": "Centro de ayuda",
     "chat": "Chatea con nosotros",
+    "privateChat": "Escríbele al equipo",
     "email": "Email",
     "feedback": "Enviar feedback",
     "bug": "Reportar un error",
     "board": "Mira lo que pidieron otros"
+  },
+  "supportChat": {
+    "title": "Equipo Vaquita",
+    "subtitle": "Chat privado. Solo tú y el equipo pueden verlo.",
+    "teamName": "Equipo Vaquita",
+    "today": "Hoy",
+    "empty": "Escríbenos lo que necesites. Solemos responder en unas pocas horas.",
+    "placeholder": "Escribe un mensaje…",
+    "send": "Enviar",
+    "sendError": "No pudimos enviar tu mensaje",
+    "loadError": "No pudimos cargar la conversación. Reintentando…"
   },
   "board": {
     "title": "Tablero",
