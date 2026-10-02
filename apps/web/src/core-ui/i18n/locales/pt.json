@@ -1038,10 +1038,22 @@
     "title": "Central de ajuda",
     "buttonAria": "Central de ajuda",
     "chat": "Fale conosco",
+    "whatsapp": "Entre no grupo do WhatsApp",
     "email": "Email",
     "feedback": "Enviar feedback",
     "bug": "Relatar um erro",
     "board": "Veja o que outros pediram"
+  },
+  "supportChat": {
+    "title": "Equipe Vaquita",
+    "subtitle": "Chat privado. Só você e a equipe podem ver.",
+    "teamName": "Equipe Vaquita",
+    "today": "Hoje",
+    "empty": "Escreva o que precisar. Costumamos responder em poucas horas.",
+    "placeholder": "Escreva uma mensagem…",
+    "send": "Enviar",
+    "sendError": "Não foi possível enviar sua mensagem",
+    "loadError": "Não foi possível carregar a conversa. Tentando de novo…"
   },
   "board": {
     "title": "Quadro",

@@ -1038,10 +1038,22 @@
     "title": "Help Center",
     "buttonAria": "Help Center",
     "chat": "Chat with us",
+    "whatsapp": "Join the WhatsApp group",
     "email": "Email",
     "feedback": "Send feedback",
     "bug": "Report a bug",
     "board": "See what others asked"
+  },
+  "supportChat": {
+    "title": "Vaquita team",
+    "subtitle": "Private chat. Only you and the team can see it.",
+    "teamName": "Vaquita team",
+    "today": "Today",
+    "empty": "Write us whatever you need. We usually reply within a few hours.",
+    "placeholder": "Write a message…",
+    "send": "Send",
+    "sendError": "Could not send your message",
+    "loadError": "We could not load the conversation. Retrying…"
   },
   "board": {
     "title": "Board",

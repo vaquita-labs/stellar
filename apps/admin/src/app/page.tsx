@@ -59,6 +59,11 @@ const sections: { href: string; title: string; description: string }[] = [
     description: 'Triage bug reports and feedback sent from inside the app.',
   },
   {
+    href: '/support',
+    title: 'Support chat',
+    description: 'Read and answer the private conversations users start from the Help Center.',
+  },
+  {
     href: '/onboarding',
     title: 'Onboarding',
     description: 'See which first-run experiences each user finished, and re-open one for them.',
