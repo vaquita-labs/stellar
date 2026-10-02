@@ -1,8 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertTriangle, FiHeadphones, FiMail, FiMessageSquare, FiTrendingUp } from 'react-icons/fi';
+import { FiAlertTriangle, FiHeadphones, FiMail, FiMessageCircle, FiMessageSquare, FiTrendingUp } from 'react-icons/fi';
 import { IconType } from 'react-icons';
 import { supportEmail } from '../../../config/featureFlags';
 import { PageLayout } from '../../molecules';
@@ -48,6 +49,12 @@ export function ConciergePage() {
   }[] = [
     // El chat vive en el grupo oficial de Telegram.
     { key: 'chat', icon: FiHeadphones, label: t('concierge.chat', 'Chat with us'), href: TELEGRAM_URL, external: true },
+    {
+      key: 'private-chat',
+      icon: FiMessageCircle,
+      label: t('concierge.privateChat', 'Message the team'),
+      href: '/concierge/chat',
+    },
     // Abre el cliente de correo del dispositivo contra la casilla de soporte.
     { key: 'email', icon: FiMail, label: t('concierge.email', 'Email'), href: `mailto:${supportEmail()}` },
     {
@@ -75,7 +82,12 @@ export function ConciergePage() {
     <PageLayout title={t('concierge.title', 'Help Center')} backHref="/home" contentGap="gap-4">
       <div className="grid grid-cols-2 gap-3">
         {items.map(({ key, icon: Icon, label, href, external, onPress, wide }) =>
-          href ? (
+          href?.startsWith('/') ? (
+            <Link key={key} href={href} className={CARD_CLASSES}>
+              <Icon className="h-6 w-6 text-black" />
+              <span className="text-sm font-bold text-black">{label}</span>
+            </Link>
+          ) : href ? (
             <a
               key={key}
               href={href}

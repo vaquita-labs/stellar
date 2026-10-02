@@ -481,6 +481,47 @@ model FeedbackPost {
   @@map("feedback_posts")
 }
 
+/// The private chat between one user and the team (Help Center → "Message the
+/// team"). One per wallet: the user sees a single ongoing thread, not tickets.
+/// Keyed by wallet rather than profile for the same reason as `FeedbackPost` —
+/// it has to work, and survive, when the profile row does not.
+model SupportConversation {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId         Int?      @map("profile_id")
+  walletAddress     String    @unique(map: "support_conversations_wallet_unique") @map("wallet_address") @db.VarChar(64)
+  /// Set when an admin resolves the thread, cleared by any new message. The
+  /// admin inbox filters on it together with `lastMessageAuthor`.
+  resolvedAt        DateTime? @map("resolved_at") @db.Timestamptz(6)
+  /// Denormalized from the newest `support_messages` row, written in the same
+  /// transaction as the message, so the inbox can sort and split "waiting on
+  /// us" from "answered" without scanning every thread.
+  lastMessageAt     DateTime  @default(now()) @map("last_message_at") @db.Timestamptz(6)
+  /// 'user' | 'team' — enforced by a CHECK in packages/db/sql/support_enums.sql.
+  lastMessageAuthor String    @default("user") @map("last_message_author") @db.VarChar(8)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile  Profile?         @relation(fields: [profileId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  messages SupportMessage[]
+
+  @@index([lastMessageAt(sort: Desc)], map: "idx_support_conversations_last_message")
+  @@map("support_conversations")
+}
+
+model SupportMessage {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  /// 'user' | 'team' — enforced by a CHECK in packages/db/sql/support_enums.sql.
+  author         String   @db.VarChar(8)
+  body           String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([conversationId, createdAt], map: "idx_support_messages_conversation_created")
+  @@map("support_messages")
+}
+
 /// A screenshot attached to a report. The bytes live in Postgres because the
 /// project has no object store: the client downscales and recompresses before
 /// upload and the API caps each file at 2 MB, which keeps that honest. Moving to
@@ -757,6 +798,10 @@ model Profile {
   // side: a report outlives the profile that filed it.
   feedbackPosts FeedbackPost[]
   feedbackVotes FeedbackVote[]
+
+  // The private Help Center chat. Nullable on the other side, like feedback:
+  // the conversation outlives the profile.
+  supportConversations SupportConversation[]
 
   campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
