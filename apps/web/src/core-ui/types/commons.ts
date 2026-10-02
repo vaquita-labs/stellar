@@ -89,6 +89,8 @@ export interface NetworkResponseDTO {
   languages: LanguageDTO[];
   /** Enabled platforms for "Deposit from another app", already sorted. */
   depositPlatforms: DepositPlatformDTO[];
+  /** `config.bridge_enabled`: false hides every way into the 1Click bridge. */
+  bridgeEnabled: boolean;
   /** Bundle version of the Privacy Policy / Terms / Risk Disclosure the user
    *  must currently have accepted. Served from the API so a revision re-gates
    *  everyone without a frontend deploy. */

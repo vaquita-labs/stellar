@@ -7,29 +7,37 @@
 //   - A dated, idempotent file in apps/supabase/migrations/: the reviewed
 //     record of the DDL that ran, and what brings an environment up to date.
 //     Write one for every change, `IF NOT EXISTS` so re-running is harmless.
-//   - packages/db/sql/ for what the Prisma schema language cannot express —
-//     CHECK constraints, and partial indexes it does not model. `prisma db
-//     push` DROPS those while it reconciles, so scripts/apply-sql.mjs replays
-//     every file in that directory after each push. That is why each one has
-//     to be idempotent: they all run again, every time, whether or not
-//     anything about them changed.
+//   - packages/db/sql/ for what the Prisma schema language cannot express:
+//     CHECK constraints. `prisma db push` DROPS those while it reconciles, so
+//     scripts/apply-sql.mjs replays every file in that directory after each
+//     push. That is why each one has to be idempotent: they all run again,
+//     every time, whether or not anything about them changed.
+//
+// Indexes do NOT go in packages/db/sql/, partial ones included: declare them on
+// the model with `where: raw("…")` (the `partialIndexes` preview feature). An
+// index that exists only as SQL is surplus to `db push`, which drops it — and
+// for a unique index, the gap until apply-sql re-creates it is a window with
+// the rule not enforced.
 //
 // DO NOT run `prisma db pull`. It rewrites this file from whatever the live
 // database looks like, which flattens the @map naming below and drops every
 // comment in it.
 //
-// `prisma migrate diff` never comes back empty against a healthy database, and
-// neither leftover means anything is out of sync:
+// `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma
+// --script` comes back empty against a database that is in sync, and anything
+// it prints is real: either a migration that has not been applied there, or
+// this file disagreeing with the DDL that ran. Three things keep it empty:
 //
-//   - Every index from packages/db/sql/ shows up as a DROP INDEX. They are not
-//     in this file, so the diff reads them as surplus. `pnpm db:push` drops and
-//     re-creates them within the one command, which is the arrangement above.
-//   - `wallet_balances.vaquita_positions` shows up as a SET DEFAULT that is
-//     already set. Prisma does not compare a `dbgenerated()` default against
-//     what it introspects, so it proposes it every time; applying it is a
-//     no-op.
+//   - `updatedAt` carries `@default(now())` next to `@updatedAt` wherever the
+//     migration gave the column a DEFAULT. Without it the diff proposes a DROP
+//     DEFAULT.
+//   - A default is written as a literal (`@default("[]")`), not `dbgenerated()`.
+//     Prisma does not compare a `dbgenerated()` default against what it
+//     introspects, so it proposes a SET DEFAULT on every run.
+//   - A relation names its `onUpdate`. An inline `REFERENCES` in SQL is ON
+//     UPDATE NO ACTION, and Prisma's default is CASCADE.
 //
-// Anything else in that diff is real. `db push` needs to OWN every table it
+// `db push` needs to OWN every table it
 // touches — a table owned by another role fails with `must be owner of table
 // …` and stops the whole push, so check `pg_tables.tableowner` before assuming
 // the schema is at fault.
@@ -119,6 +127,11 @@ model Deposit {
   token       Token        @relation(fields: [tokenId], references: [id], onUpdate: NoAction)
   withdrawals Withdrawal[]
 
+  // Guards the one race that matters for the client-supplied nonce: two
+  // concurrent deposits from the same wallet computing the same next value —
+  // the second insert fails and the client retries. Partial so a soft-deleted
+  // row does not block reusing its (wallet, nonce) pair.
+  @@unique([walletAddress, nonce], map: "deposits_wallet_nonce_unique", where: raw("((nonce IS NOT NULL) AND (deleted_at IS NULL))"))
   @@index([status], map: "idx_deposits_status")
   @@index([tokenId], map: "idx_deposits_token_id")
   @@index([walletAddress], map: "idx_deposits_wallet_address")
@@ -166,7 +179,7 @@ model VaultFlow {
   transactionHash String    @map("transaction_hash") @db.VarChar(100)
   confirmedAt     DateTime  @map("confirmed_at") @db.Timestamptz(6)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   @@unique([transactionHash], map: "vault_flows_transaction_hash_unique")
@@ -211,12 +224,15 @@ model WalletTransfer {
   transactionHash      String    @map("transaction_hash") @db.VarChar(100)
   confirmedAt          DateTime  @map("confirmed_at") @db.Timestamptz(6)
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   @@unique([transactionHash], map: "wallet_transfers_transaction_hash_unique")
   @@index([walletAddress], map: "idx_wallet_transfers_wallet_address")
   @@index([confirmedAt], map: "idx_wallet_transfers_confirmed_at")
+  // The receiving side of a peer-to-peer payment. Partial: the column is NULL
+  // for every external send.
+  @@index([destinationProfileId], map: "idx_wallet_transfers_destination_profile_id", where: raw("(destination_profile_id IS NOT NULL)"))
   @@map("wallet_transfers")
 }
 
@@ -226,8 +242,7 @@ model WalletTransfer {
 /// the wallet's USDC balance going up, the same signal the Receive sheet uses.
 ///
 /// `status`: open | arrived | cancelled | expired (CHECK in
-/// packages/db/sql/deposit_intents_checks.sql, which also holds the partial
-/// unique index that allows one `open` row per profile).
+/// packages/db/sql/deposit_intents_checks.sql).
 model DepositIntent {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Always the session's profile, never a request field.
@@ -241,8 +256,11 @@ model DepositIntent {
   expiresAt        DateTime  @default(dbgenerated("(now() + '24:00:00'::interval)")) @map("expires_at") @db.Timestamptz(6)
   arrivedAt        DateTime? @map("arrived_at") @db.Timestamptz(6)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  // One `open` row per profile. Partial, so `profileId` is NOT unique across
+  // the table: never look a row up by it alone with findUnique.
+  @@unique([profileId], map: "deposit_intents_one_open_per_profile", where: raw("((status)::text = 'open'::text)"))
   @@index([profileId], map: "idx_deposit_intents_profile_id")
   @@map("deposit_intents")
 }
@@ -419,6 +437,9 @@ model SavedBankAccount {
 
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  // Two accounts with the same name in the same country are a typo, not two
+  // accounts. Partial so a soft-deleted row does not hold the name.
+  @@unique([profileId, country, label], map: "saved_bank_accounts_unique_label", where: raw("(deleted_at IS NULL)"))
   @@index([profileId], map: "idx_saved_bank_accounts_profile_id")
   @@map("saved_bank_accounts")
 }
@@ -479,6 +500,47 @@ model FeedbackPost {
   @@index([kind, moderationStatus, voteCount(sort: Desc), createdAt(sort: Desc)], map: "idx_feedback_posts_public")
   @@index([moderationStatus, createdAt(sort: Desc)], map: "idx_feedback_posts_moderation")
   @@map("feedback_posts")
+}
+
+/// The private chat between one user and the team (Help Center → "Message the
+/// team"). One per wallet: the user sees a single ongoing thread, not tickets.
+/// Keyed by wallet rather than profile for the same reason as `FeedbackPost` —
+/// it has to work, and survive, when the profile row does not.
+model SupportConversation {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId         Int?      @map("profile_id")
+  walletAddress     String    @unique(map: "support_conversations_wallet_unique") @map("wallet_address") @db.VarChar(64)
+  /// Set when an admin resolves the thread, cleared by any new message. The
+  /// admin inbox filters on it together with `lastMessageAuthor`.
+  resolvedAt        DateTime? @map("resolved_at") @db.Timestamptz(6)
+  /// Denormalized from the newest `support_messages` row, written in the same
+  /// transaction as the message, so the inbox can sort and split "waiting on
+  /// us" from "answered" without scanning every thread.
+  lastMessageAt     DateTime  @default(now()) @map("last_message_at") @db.Timestamptz(6)
+  /// 'user' | 'team' — enforced by a CHECK in packages/db/sql/support_enums.sql.
+  lastMessageAuthor String    @default("user") @map("last_message_author") @db.VarChar(8)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile  Profile?         @relation(fields: [profileId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  messages SupportMessage[]
+
+  @@index([lastMessageAt(sort: Desc)], map: "idx_support_conversations_last_message")
+  @@map("support_conversations")
+}
+
+model SupportMessage {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  /// 'user' | 'team' — enforced by a CHECK in packages/db/sql/support_enums.sql.
+  author         String   @db.VarChar(8)
+  body           String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([conversationId, createdAt], map: "idx_support_messages_conversation_created")
+  @@map("support_messages")
 }
 
 /// A screenshot attached to a report. The bytes live in Postgres because the
@@ -571,6 +633,10 @@ model MapObject {
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
+  // The catalog is keyed in practice by (type, variants). A duplicate pair
+  // makes the shop render the same item twice and makes the seed script insert
+  // where it meant to update.
+  @@unique([type, variants], map: "map_objects_type_variants_uq")
   @@map("map_objects")
 }
 
@@ -617,6 +683,12 @@ model Config {
   // than in the bundle so a platform can be switched off or a fee corrected
   // without a deploy; the tutorial prose stays in the i18n files, keyed by `id`.
   depositPlatforms      Json     @default("[]") @map("deposit_platforms")
+  // Kill switch for the 1Click bridge (Base USDC and Polygon USDT ↔ Stellar
+  // USDC). When false the API refuses new quotes and transfers and the web hides
+  // every way into the bridge; transfers already in flight keep refreshing so
+  // they can finish or refund. For 1Click outages, like the NEAR Intents pause
+  // of 2026-10-01.
+  bridgeEnabled         Boolean  @default(true) @map("bridge_enabled")
   // Reconciliation cursors and last-run summaries keyed by job and contract ID.
   // Used by mainnet chain-event repair workflows; dry runs must not advance it.
   reconciliationState    Json     @default("{}") @map("reconciliation_state")
@@ -758,6 +830,10 @@ model Profile {
   feedbackPosts FeedbackPost[]
   feedbackVotes FeedbackVote[]
 
+  // The private Help Center chat. Nullable on the other side, like feedback:
+  // the conversation outlives the profile.
+  supportConversations SupportConversation[]
+
   campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([campaignId, createdAt], map: "idx_profiles_campaign_created")
@@ -886,7 +962,7 @@ model PwaInstall {
   lastSeenAt  DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([profileId, platform], map: "pwa_installs_profile_platform_unique")
   @@index([installedAt], map: "idx_pwa_installs_installed_at")
@@ -1080,7 +1156,7 @@ model WalletBalance {
   vaultUsdcHours Decimal  @default(0) @map("vault_usdc_hours") @db.Decimal
   // Locked Vaquita-pool deposits by lock period: [{ period, amount }] (from the
   // deposits table). Persisted so the snapshot row is a self-contained record.
-  vaquitaPositions Json   @default(dbgenerated("'[]'::jsonb")) @map("vaquita_positions")
+  vaquitaPositions Json   @default("[]") @map("vaquita_positions")
   scrapedAt     DateTime  @map("scraped_at") @db.Timestamptz(6)
   // When the balance was last read SUCCESSFULLY — deliberately not `scrapedAt`,
   // which is bumped on failures too and so cannot bound an integration window.

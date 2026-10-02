@@ -11,13 +11,13 @@
  * pretending otherwise on a testnet deploy.
  */
 
-export type BridgeChain = 'base' | 'stellar';
+export type BridgeChain = 'base' | 'polygon' | 'stellar';
 
 export type BridgeAsset = {
   /** 1Click asset id, sent verbatim as originAsset / destinationAsset. */
   assetId: string;
   chain: BridgeChain;
-  symbol: 'USDC';
+  symbol: 'USDC' | 'USDT';
   decimals: number;
 };
 
@@ -35,7 +35,30 @@ export const STELLAR_USDC: BridgeAsset = {
   decimals: 7,
 };
 
-/** 'evm_to_stellar' brings USDC in from Base; 'stellar_to_evm' sends it out. */
+/**
+ * USDT on Polygon, what Takenos and Wallbit withdraw. 1Click swaps it into
+ * Stellar USDC on the way. Inbound only: the Stellar → Polygon leg has never
+ * been quoted (1Click was paused when this was added), so the API refuses it.
+ */
+export const POLYGON_USDT: BridgeAsset = {
+  assetId: 'nep245:v2_1.omni.hot.tg:137_3hpYoaLtt8MP1Z2GH1U473DMRKgr',
+  chain: 'polygon',
+  symbol: 'USDT',
+  decimals: 6,
+};
+
+/** The EVM side of a transfer. Defaults to Base USDC, the original bridge. */
+export type EvmSource = 'base-usdc' | 'polygon-usdt';
+
+export const EVM_SOURCES: Record<EvmSource, BridgeAsset> = {
+  'base-usdc': BASE_USDC,
+  'polygon-usdt': POLYGON_USDT,
+};
+
+export const isEvmSource = (value: unknown): value is EvmSource =>
+  typeof value === 'string' && Object.prototype.hasOwnProperty.call(EVM_SOURCES, value);
+
+/** 'evm_to_stellar' brings funds in from the EVM side; 'stellar_to_evm' sends them out. */
 export type BridgeDirection = 'evm_to_stellar' | 'stellar_to_evm';
 
 export const BRIDGE_DIRECTIONS: readonly BridgeDirection[] = ['evm_to_stellar', 'stellar_to_evm'];
@@ -45,10 +68,13 @@ export const isBridgeDirection = (value: unknown): value is BridgeDirection =>
 
 export const assetsForDirection = (
   direction: BridgeDirection,
-): { origin: BridgeAsset; destination: BridgeAsset } =>
-  direction === 'evm_to_stellar'
-    ? { origin: BASE_USDC, destination: STELLAR_USDC }
-    : { origin: STELLAR_USDC, destination: BASE_USDC };
+  evmSource: EvmSource = 'base-usdc',
+): { origin: BridgeAsset; destination: BridgeAsset } => {
+  const evm = EVM_SOURCES[evmSource];
+  return direction === 'evm_to_stellar'
+    ? { origin: evm, destination: STELLAR_USDC }
+    : { origin: STELLAR_USDC, destination: evm };
+};
 
 /**
  * Human USDC ("12.5") to the base-unit integer string 1Click expects.

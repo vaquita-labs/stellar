@@ -111,4 +111,5 @@ export const toProjectConfig = (
   languages: toLanguages(config.languages),
   legalPolicyVersion: config.legalPolicyVersion || DEFAULT_LEGAL_POLICY_VERSION,
   depositPlatforms: toDepositPlatforms(config.depositPlatforms),
+  bridgeEnabled: config.bridgeEnabled !== false,
 });

@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FaWhatsapp } from 'react-icons/fa';
 import { FiAlertTriangle, FiHeadphones, FiMail, FiMessageSquare, FiTrendingUp } from 'react-icons/fi';
 import { IconType } from 'react-icons';
 import { supportEmail } from '../../../config/featureFlags';
@@ -10,9 +12,8 @@ import { FeedbackBoardSheet } from '../../organisms/FeedbackBoard';
 import { ReportSheet } from '../../organisms/ReportSheet';
 import { FeedbackKind } from '../../../hooks/useSubmitFeedback';
 
-/** Grupo oficial de Telegram: los dos canales en vivo del Concierge son el grupo
- *  y la casilla de soporte (`NEXT_PUBLIC_SUPPORT_EMAIL`). */
-const TELEGRAM_URL = 'https://t.me/+uk-ngP7gRZBkNzdh';
+/** Invite link to the community WhatsApp group. */
+const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/Gke3pHEdVLT6WsUi8kV3cD?mode=gi_t';
 
 const CARD_CLASSES =
   'flex flex-col items-center gap-2 rounded-2xl border border-black border-b-2 bg-white px-4 py-6 text-center transition active:translate-y-[2px] active:border-b hover:bg-[#FFF7E6]';
@@ -21,11 +22,10 @@ const CARD_CLASSES =
  * Reemplaza al viejo centro de notificaciones detrás del botón del header: una
  * pantalla de contacto (Concierge) con todas las formas de hablar con el equipo.
  *
- * Dos son canales en vivo (grupo de Telegram, casilla de soporte) y dos son
- * formularios que quedan registrados (feedback y bug). Los formularios viven acá
- * y no en Ajustes → Soporte, que es donde estaban antes como un link al sitio y
- * un "pronto" deshabilitado: el Concierge ya es la pantalla a la que el usuario
- * viene cuando quiere contarnos algo.
+ * Three are live channels (the private chat with the team, the WhatsApp group
+ * and the support inbox, `NEXT_PUBLIC_SUPPORT_EMAIL`), two are forms that stay
+ * on record (feedback and bug), and the last one is the public board of what
+ * other users sent.
  */
 export function ConciergePage() {
   const { t } = useTranslation();
@@ -43,11 +43,15 @@ export function ConciergePage() {
     href?: string;
     external?: boolean;
     onPress?: () => void;
-    /** Ocupa las dos columnas: es una lista, no un canal de contacto. */
-    wide?: boolean;
   }[] = [
-    // El chat vive en el grupo oficial de Telegram.
-    { key: 'chat', icon: FiHeadphones, label: t('concierge.chat', 'Chat with us'), href: TELEGRAM_URL, external: true },
+    { key: 'chat', icon: FiHeadphones, label: t('concierge.chat', 'Chat with us'), href: '/concierge/chat' },
+    {
+      key: 'whatsapp',
+      icon: FaWhatsapp,
+      label: t('concierge.whatsapp', 'Join the WhatsApp group'),
+      href: WHATSAPP_GROUP_URL,
+      external: true,
+    },
     // Abre el cliente de correo del dispositivo contra la casilla de soporte.
     { key: 'email', icon: FiMail, label: t('concierge.email', 'Email'), href: `mailto:${supportEmail()}` },
     {
@@ -67,15 +71,19 @@ export function ConciergePage() {
       icon: FiTrendingUp,
       label: t('concierge.board', 'See what others asked'),
       onPress: () => setBoardKind('bug'),
-      wide: true,
     },
   ];
 
   return (
     <PageLayout title={t('concierge.title', 'Help Center')} backHref="/home" contentGap="gap-4">
       <div className="grid grid-cols-2 gap-3">
-        {items.map(({ key, icon: Icon, label, href, external, onPress, wide }) =>
-          href ? (
+        {items.map(({ key, icon: Icon, label, href, external, onPress }) =>
+          href?.startsWith('/') ? (
+            <Link key={key} href={href} className={CARD_CLASSES}>
+              <Icon className="h-6 w-6 text-black" />
+              <span className="text-sm font-bold text-black">{label}</span>
+            </Link>
+          ) : href ? (
             <a
               key={key}
               href={href}
@@ -86,12 +94,7 @@ export function ConciergePage() {
               <span className="text-sm font-bold text-black">{label}</span>
             </a>
           ) : (
-            <button
-              key={key}
-              type="button"
-              onClick={onPress}
-              className={wide ? `${CARD_CLASSES} col-span-2 py-4!` : CARD_CLASSES}
-            >
+            <button key={key} type="button" onClick={onPress} className={CARD_CLASSES}>
               <Icon className="h-6 w-6 text-black" />
               <span className="text-sm font-bold text-black">{label}</span>
             </button>

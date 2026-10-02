@@ -53,3 +53,5 @@ export * from './services/vaultFlows';
 export * from './services/walletTransfers';
 export * from './services/depositIntents';
 export * from './services/pwaInstalls';
+export * from './services/support';
+export * from './services/telegram';

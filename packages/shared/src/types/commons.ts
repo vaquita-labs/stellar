@@ -129,6 +129,8 @@ export interface ProjectConfigResponseDTO {
   legalPolicyVersion: string;
   /** Enabled "Deposit from another app" platforms, in display order. */
   depositPlatforms: DepositPlatformDTO[];
+  /** `config.bridge_enabled`: false hides every way into the 1Click bridge. */
+  bridgeEnabled: boolean;
 }
 
 export interface DepositSummaryResponseDTO {

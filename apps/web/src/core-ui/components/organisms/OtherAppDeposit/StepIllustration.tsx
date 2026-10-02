@@ -27,6 +27,7 @@ function Chip({ chip }: { chip: IllustrationChip }) {
     paste: t('deposit.otherApp.illustration.chips.paste', 'Paste'),
     blank: t('deposit.otherApp.illustration.chips.blank', 'Leave blank'),
     tap: t('deposit.otherApp.illustration.chips.tap', 'Tap'),
+    copy: t('deposit.otherApp.illustration.chips.copy', 'Copy'),
   };
   return (
     <span className="shrink-0 rounded border border-black bg-[#F5A161] px-1.5 py-px text-[10px] font-bold text-black">

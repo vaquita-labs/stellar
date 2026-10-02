@@ -3,10 +3,13 @@
 The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are in `CLAUDE.md` →
 **Database migrations**. This file is the log: what has been applied where, and how.
 
-**Known-pending as of 2026-09-29:**
+**Known-pending as of 2026-10-02:**
 
 | Migration | dev | staging | prod |
 |-----------|-----|---------|------|
+| `20261002_schema_parity_defaults_fk.sql` | ❌ | ❌ | ❌ |
+| `20261002_support_chat.sql` | ❌ | ❌ | ❌ |
+| `20261001_bridge_enabled.sql` | ✅ | ✅ | ✅ |
 | `20260929_deposit_from_app.sql` | ✅ | ✅ | ✅ |
 | `20260911_vaquitatag.sql` | ✅ | ✅ | ✅ |
 | `20260910_wallet_transfers.sql` | ✅ | ✅ | ✅ |
@@ -28,6 +31,26 @@ The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are
 | `20260820_vault_apy_snapshots.sql` | ❌ | ❌ | ❌ |
 
 (`?` = not verified — re-check with a diff script in `apps/api/tmp/` before trusting the row.)
+
+Apply the two 2026-10-02 ones with `cd packages/db && node scripts/apply-migration.mjs <file.sql>`
+(it prints the host and database before writing; both files are idempotent), then
+`node scripts/apply-sql.mjs` for the CHECKs in `packages/db/sql/support_enums.sql`.
+`20261002_support_chat.sql` adds `support_conversations` and `support_messages`, the tables behind
+the Help Center's private chat and the admin Support chat section. **Apply before the API deploys
+anywhere new**: `/support/messages` 500s without them.
+`20261002_schema_parity_defaults_fk.sql` restores two things earlier migrations declare and some
+environments lack: the `DEFAULT now()` on `wallet_balances.updated_at` and the
+`pwa_installs → profiles` foreign key. The FK step fails if the table holds orphan rows; the file
+has the query to list them. With both applied, `prisma migrate diff --from-config-datasource
+--to-schema prisma/schema.prisma --script` prints nothing — check that on each environment after
+applying, since it is what says a later `db:push` there would be a no-op.
+
+Apply `20261001_bridge_enabled.sql` with `apps/api/tmp/2026-10-01-apply-bridge-enabled.ts` (same
+`check` / `apply` shape). Applied to dev, staging and prod on 2026-10-01. It adds
+`config.bridge_enabled` (boolean, default `true`), the switch for the 1Click bridge as a whole: off,
+`POST /bridge/quote` and `/bridge/transfers` answer 503 and the web hides every way in. Flip it with
+`apps/api/tmp/2026-10-01-toggle-bridge.ts check|on|off <envFile>`. Same P2022 caveat as below:
+apply before the API deploys.
 
 Apply `20260929_deposit_from_app.sql` with `apps/api/tmp/2026-09-29-apply-deposit-from-app.ts`
 (same `check` / `apply` shape; it also re-applies `packages/db/sql/deposit_intents_checks.sql`).
@@ -109,5 +132,4 @@ Apply the saved-bank one with `apps/api/tmp/2026-09-03-apply-saved-banks-migrati
 (`NODE_ENV=development pnpm exec tsx tmp/2026-09-03-apply-saved-banks-migration.ts apply .env.staging`);
 it prints host + database before writing so you can confirm the target. After pulling a schema
 change, run `pnpm db:generate` — the `SavedBankAccount` model will not exist on the client
-otherwise. `packages/db/sql/saved_bank_accounts_label_unique.sql` holds that partial unique index
-because `prisma db push` would drop it.
+otherwise. Its partial unique index on the label is declared on the model in `schema.prisma`.
