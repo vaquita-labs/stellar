@@ -356,7 +356,7 @@ export function DepositModal({
                     })
               }
             />
-            {!simulate && (
+            {!simulate && network?.bridgeEnabled !== false && (
               <Link
                 href="/profile/wallet?bridge=1"
                 className="text-center text-xs font-semibold text-black underline underline-offset-2"

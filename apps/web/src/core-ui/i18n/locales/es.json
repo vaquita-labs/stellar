@@ -634,7 +634,12 @@
         "network": "Red",
         "coin": "Moneda",
         "inApp": "En la app de {{name}}",
-        "screenshot": "App de {{name}}"
+        "screenshot": "App de {{name}}",
+        "introBridge": "Envía {{asset}} desde {{name}}; lo convertimos en USDC en Stellar para tu cuenta de Vaquita.",
+        "ctaBridge": "Obtener mi dirección de Polygon",
+        "arrives": "Llega",
+        "arrivesBridge": "En unos minutos",
+        "refundNote": "Si la transferencia no se puede completar, el dinero vuelve a tu dirección de Polygon en {{name}}."
       },
       "platforms": {
         "binance": {
@@ -700,6 +705,60 @@
             "fees": "Comisiones de Meru",
             "app": "Sitio de Meru"
           }
+        },
+        "takenos": {
+          "steps": {
+            "refund": {
+              "title": "Copia tu dirección de Polygon en {{name}}",
+              "body": "En {{name}}, ve a Recibir → USDT → Polygon y cópiala. Si la transferencia no se puede completar, el dinero vuelve ahí."
+            },
+            "coin": {
+              "title": "Ve a Enviar y elige USDT",
+              "body": "Envíalo como USDT, no como dólares a una cuenta bancaria."
+            },
+            "network": {
+              "title": "Elige la red Polygon",
+              "body": "Solo Polygon. Con cualquier otra red el dinero se pierde."
+            },
+            "address": {
+              "title": "Pega la dirección de depósito que te da Vaquita",
+              "body": "Toca “Obtener mi dirección de Polygon” abajo, pega ahí tu dirección de {{name}} e ingresa el monto. Vaquita te muestra una dirección que empieza con 0x: pega esa aquí."
+            },
+            "amount": {
+              "title": "Envía exactamente ese monto y confirma",
+              "body": "Llega a Vaquita como USDC en unos minutos."
+            }
+          },
+          "links": {
+            "sendUsdt": "Cómo enviar USDT desde {{name}}"
+          }
+        },
+        "wallbit": {
+          "steps": {
+            "refund": {
+              "title": "Copia tu dirección de Polygon en {{name}}",
+              "body": "En {{name}}, ve a Recibir → USDT → Polygon y cópiala. Si la transferencia no se puede completar, el dinero vuelve ahí."
+            },
+            "coin": {
+              "title": "Ve a Enviar y elige USDT",
+              "body": "Envíalo como USDT, no como dólares a una cuenta bancaria."
+            },
+            "network": {
+              "title": "Elige la red Polygon",
+              "body": "Solo Polygon. Con cualquier otra red el dinero se pierde."
+            },
+            "address": {
+              "title": "Pega la dirección de depósito que te da Vaquita",
+              "body": "Toca “Obtener mi dirección de Polygon” abajo, pega ahí tu dirección de {{name}} e ingresa el monto. Vaquita te muestra una dirección que empieza con 0x: pega esa aquí."
+            },
+            "amount": {
+              "title": "Envía exactamente ese monto y confirma",
+              "body": "Llega a Vaquita como USDC en unos minutos."
+            }
+          },
+          "links": {
+            "sendUsdt": "Cómo enviar USDT desde {{name}}"
+          }
         }
       },
       "receive": {
@@ -723,7 +782,8 @@
           "asset": "Activo",
           "network": "Red",
           "recipient": "Destinatario",
-          "review": "Revisión"
+          "review": "Revisión",
+          "receive": "Recibir"
         },
         "add": "Agregar",
         "send": "Enviar",
@@ -739,8 +799,12 @@
           "pick": "Esta",
           "paste": "Pega",
           "blank": "Déjalo vacío",
-          "tap": "Toca"
-        }
+          "tap": "Toca",
+          "copy": "Copia"
+        },
+        "polygonAddress": "Dirección de Polygon",
+        "depositAddress": "Dirección de depósito",
+        "network": "Red"
       }
     }
   },
@@ -2261,9 +2325,9 @@
       "activateTrustline": "Activar USDC",
       "activating": "Activando…",
       "amount": "Monto",
-      "amountRange": "Ingresa un monto entre {{min}} y {{max}} USDC.",
+      "amountRange": "Ingresa un monto entre {{min}} y {{max}} {{asset}}.",
       "available": "Disponible: {{amount}} USDC",
-      "baseOnlyWarning": "Solo red Base y solo USDC. Cualquier otra cosa enviada a esta dirección se pierde.",
+      "baseOnlyWarning": "Solo red {{network}} y solo {{asset}}. Cualquier otra cosa enviada a esta dirección se pierde.",
       "close": "Cerrar",
       "confirmingDeposit": "Depósito recibido — confirmando en la red…",
       "continue": "Continuar",
@@ -2271,7 +2335,7 @@
       "copy": "Copiar",
       "creating": "Preparando…",
       "depositHelper": "¿Necesitas USDC en Stellar? Tráelo desde Base",
-      "depositInstructions": "Envía exactamente {{amount}} USDC por la red Base a esta dirección, desde cualquier wallet o exchange.",
+      "depositInstructions": "Envía exactamente {{amount}} {{asset}} por la red {{network}} a esta dirección, desde cualquier wallet o exchange.",
       "destinationAddress": "Dirección de destino en Base",
       "directionIn": "Base → Stellar",
       "directionOut": "Stellar → Base",
@@ -2281,12 +2345,12 @@
       "failedTitle": "La transferencia falló",
       "fee": "Costo de red",
       "feeValue": "{{amount}} USDC ({{percent}}%)",
-      "incompleteBody": "El puente esperaba {{amount}} USDC y recibió menos, así que el canje no arrancó.",
+      "incompleteBody": "El puente esperaba {{amount}} {{asset}} y recibió menos, así que el canje no arrancó.",
       "incompleteRefund": "El puente va a devolver lo que recibió cuando venza la cotización. Escríbenos a soporte si no llega.",
       "incompleteTitle": "Llegó menos de lo esperado",
-      "incompleteTopUp": "Envía la diferencia a la misma dirección antes de que venza la cotización. Si vence primero, el puente devuelve lo que recibió a tu dirección de Base.",
+      "incompleteTopUp": "Envía la diferencia a la misma dirección antes de que venza la cotización. Si vence primero, el puente devuelve lo que recibió a tu dirección de {{network}}.",
       "insufficient": "No te alcanza el USDC.",
-      "invalidEvmAddress": "Ingresa una dirección de Base válida (0x…).",
+      "invalidEvmAddress": "Ingresa una dirección de {{network}} válida (0x…).",
       "keepsGoing": "Esto sigue aunque cierres esta ventana. Vuelve a abrirla cuando quieras para ver cómo va.",
       "missingMemo": "El puente no devolvió un memo válido. Intenta de nuevo.",
       "newQuote": "Pedir una nueva cotización",
@@ -2295,7 +2359,7 @@
       "processing": "Moviendo tu USDC…",
       "quoteExpired": "Esta cotización venció antes de pagarse. Pide una nueva: enviar a la dirección anterior perdería los fondos.",
       "quoting": "Cotizando…",
-      "refundAddress": "Tu dirección de Base (para devoluciones)",
+      "refundAddress": "Tu dirección de {{network}} (para devoluciones)",
       "refundedBody": "El puente devolvió los fondos a tu dirección de devolución.",
       "refundedTitle": "Transferencia devuelta",
       "send": "Enviar {{amount}} USDC",
@@ -2308,7 +2372,11 @@
       "trustlineError": "No se pudo activar el USDC. Intenta de nuevo.",
       "trustlineNeeded": "Tu wallet necesita activar el USDC antes de poder recibirlo.",
       "waitingDeposit": "Esperando tu depósito…",
-      "youReceive": "Recibes"
+      "youReceive": "Recibes",
+      "refundAddressFrom": "Tu dirección de {{network}} en {{name}} (para devoluciones)",
+      "fromApp": "Desde {{name}}: {{asset}} en {{network}} → USDC en Stellar",
+      "refundedTo": "Dirección de devolución: {{address}}",
+      "titleFrom": "Depositar desde {{name}}"
     }
   },
   "referrals": {

@@ -634,7 +634,12 @@
         "network": "Network",
         "coin": "Coin",
         "inApp": "In the {{name}} app",
-        "screenshot": "{{name}} app"
+        "screenshot": "{{name}} app",
+        "introBridge": "Send {{asset}} from {{name}}; we turn it into USDC on Stellar for your Vaquita account.",
+        "ctaBridge": "Get my Polygon address",
+        "arrives": "Arrives",
+        "arrivesBridge": "In a few minutes",
+        "refundNote": "If the transfer cannot complete, the money goes back to your {{name}} Polygon address."
       },
       "platforms": {
         "binance": {
@@ -700,6 +705,60 @@
             "fees": "Meru fees",
             "app": "Meru website"
           }
+        },
+        "takenos": {
+          "steps": {
+            "refund": {
+              "title": "Copy your {{name}} Polygon address",
+              "body": "In {{name}}, go to Receive → USDT → Polygon and copy it. If the transfer can’t complete, the money comes back there."
+            },
+            "coin": {
+              "title": "Go to Send and pick USDT",
+              "body": "Send it as USDT, not as dollars to a bank account."
+            },
+            "network": {
+              "title": "Pick the Polygon network",
+              "body": "Only Polygon. Any other network loses the money."
+            },
+            "address": {
+              "title": "Paste the deposit address Vaquita gives you",
+              "body": "Tap “Get my Polygon address” below, paste your {{name}} address there and enter the amount. Vaquita shows an address that starts with 0x: paste that one here."
+            },
+            "amount": {
+              "title": "Send exactly that amount and confirm",
+              "body": "It arrives in Vaquita as USDC in a few minutes."
+            }
+          },
+          "links": {
+            "sendUsdt": "How to send USDT from {{name}}"
+          }
+        },
+        "wallbit": {
+          "steps": {
+            "refund": {
+              "title": "Copy your {{name}} Polygon address",
+              "body": "In {{name}}, go to Receive → USDT → Polygon and copy it. If the transfer can’t complete, the money comes back there."
+            },
+            "coin": {
+              "title": "Go to Send and pick USDT",
+              "body": "Send it as USDT, not as dollars to a bank account."
+            },
+            "network": {
+              "title": "Pick the Polygon network",
+              "body": "Only Polygon. Any other network loses the money."
+            },
+            "address": {
+              "title": "Paste the deposit address Vaquita gives you",
+              "body": "Tap “Get my Polygon address” below, paste your {{name}} address there and enter the amount. Vaquita shows an address that starts with 0x: paste that one here."
+            },
+            "amount": {
+              "title": "Send exactly that amount and confirm",
+              "body": "It arrives in Vaquita as USDC in a few minutes."
+            }
+          },
+          "links": {
+            "sendUsdt": "How to send USDT from {{name}}"
+          }
         }
       },
       "receive": {
@@ -723,7 +782,8 @@
           "asset": "Asset",
           "network": "Network",
           "recipient": "Recipient",
-          "review": "Review"
+          "review": "Review",
+          "receive": "Receive"
         },
         "add": "Add",
         "send": "Send",
@@ -739,8 +799,12 @@
           "pick": "This one",
           "paste": "Paste",
           "blank": "Leave blank",
-          "tap": "Tap"
-        }
+          "tap": "Tap",
+          "copy": "Copy"
+        },
+        "polygonAddress": "Polygon address",
+        "depositAddress": "Deposit address",
+        "network": "Network"
       }
     }
   },
@@ -2261,9 +2325,9 @@
       "activateTrustline": "Activate USDC",
       "activating": "Activating…",
       "amount": "Amount",
-      "amountRange": "Enter an amount between {{min}} and {{max}} USDC.",
+      "amountRange": "Enter an amount between {{min}} and {{max}} {{asset}}.",
       "available": "Available: {{amount}} USDC",
-      "baseOnlyWarning": "Base network only, USDC only. Anything else sent to this address is lost.",
+      "baseOnlyWarning": "{{network}} network only, {{asset}} only. Anything else sent to this address is lost.",
       "close": "Close",
       "confirmingDeposit": "Deposit received — confirming on the network…",
       "continue": "Continue",
@@ -2271,7 +2335,7 @@
       "copy": "Copy",
       "creating": "Preparing…",
       "depositHelper": "Need Stellar USDC? Bridge it from Base",
-      "depositInstructions": "Send exactly {{amount}} USDC on the Base network to this address, from any wallet or exchange.",
+      "depositInstructions": "Send exactly {{amount}} {{asset}} on the {{network}} network to this address, from any wallet or exchange.",
       "destinationAddress": "Destination address on Base",
       "directionIn": "Base → Stellar",
       "directionOut": "Stellar → Base",
@@ -2281,12 +2345,12 @@
       "failedTitle": "Transfer failed",
       "fee": "Network fee",
       "feeValue": "{{amount}} USDC ({{percent}}%)",
-      "incompleteBody": "The bridge expected {{amount}} USDC and received less, so the swap has not started.",
+      "incompleteBody": "The bridge expected {{amount}} {{asset}} and received less, so the swap has not started.",
       "incompleteRefund": "The bridge will refund what it received once the quote expires. Contact support if it does not arrive.",
       "incompleteTitle": "The amount received is short",
-      "incompleteTopUp": "Send the difference to the same address before the quote expires. If it expires first, the bridge refunds what it received to your Base address.",
+      "incompleteTopUp": "Send the difference to the same address before the quote expires. If it expires first, the bridge refunds what it received to your {{network}} address.",
       "insufficient": "Not enough USDC.",
-      "invalidEvmAddress": "Enter a valid Base address (0x…).",
+      "invalidEvmAddress": "Enter a valid {{network}} address (0x…).",
       "keepsGoing": "This keeps going if you close this window. Reopen it any time to check.",
       "missingMemo": "The bridge did not return a valid memo. Try again.",
       "newQuote": "Get a new quote",
@@ -2295,7 +2359,7 @@
       "processing": "Bridging your USDC…",
       "quoteExpired": "This quote expired before it was paid. Get a new one — sending to the old address would lose the funds.",
       "quoting": "Getting quote…",
-      "refundAddress": "Your Base address (for refunds)",
+      "refundAddress": "Your {{network}} address (for refunds)",
       "refundedBody": "The bridge sent the funds back to your refund address.",
       "refundedTitle": "Transfer refunded",
       "send": "Send {{amount}} USDC",
@@ -2308,7 +2372,11 @@
       "trustlineError": "Could not activate USDC. Please try again.",
       "trustlineNeeded": "Your wallet needs to activate USDC before it can receive it.",
       "waitingDeposit": "Waiting for your deposit…",
-      "youReceive": "You receive"
+      "youReceive": "You receive",
+      "refundAddressFrom": "Your {{name}} {{network}} address (for refunds)",
+      "fromApp": "From {{name}}: {{asset}} on {{network}} → USDC on Stellar",
+      "refundedTo": "Refund address: {{address}}",
+      "titleFrom": "Deposit from {{name}}"
     }
   },
   "referrals": {

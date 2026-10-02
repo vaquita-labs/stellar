@@ -15,6 +15,7 @@ import {
   type BridgeDirection,
   type BridgeQuote,
   type BridgeTransfer,
+  type EvmSource,
 } from '@/core-ui/hooks/useBridge';
 import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
 import { blendConfigForToken, resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
@@ -31,6 +32,10 @@ interface BridgeModalProps {
   onOpenChange: () => void;
   /** Dirección Stellar del usuario. Es SIEMPRE una de las dos puntas. */
   stellarWallet: string | null;
+  /** Lado EVM. Polygon USDT es sólo de entrada: con él no hay pestañas. */
+  source?: EvmSource;
+  /** La app desde la que viene el usuario (Takenos, Wallbit), si vino de una. */
+  origin?: { id: string; name: string } | null;
 }
 
 /** Límites del endpoint (`routes/bridge/route.ts`): repetirlos evita un viaje. */
@@ -38,6 +43,16 @@ const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 100_000;
 
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+
+/** Red y activo del lado EVM, para interpolar en los textos. */
+const SOURCES: Record<EvmSource, { network: string; asset: string }> = {
+  'base-usdc': { network: 'Base', asset: 'USDC' },
+  'polygon-usdt': { network: 'Polygon', asset: 'USDT' },
+};
+
+/** De qué lado EVM es una fila ya creada: lo dice la red que guardó el server. */
+const rowSource = (row: BridgeTransfer): EvmSource =>
+  row.sourceNetwork === 'polygon' || row.destinationNetwork === 'polygon' ? 'polygon-usdt' : 'base-usdc';
 
 /** Decimales del USDC que RECIBE cada dirección: Stellar 7, Base 6. */
 const DESTINATION_DECIMALS: Record<BridgeDirection, number> = {
@@ -119,7 +134,7 @@ export const formatElapsed = (ms: number): string => {
  *
  * El estado lo sigue el servidor en cada lectura; acá sólo se consulta la fila.
  */
-export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalProps) {
+export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-usdc', origin = null }: BridgeModalProps) {
   const { t } = useTranslation();
   const { token } = useConfigStore();
   const { walletBalance, refreshWalletBalance } = usePollar();
@@ -156,6 +171,8 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
   const { data: transfer } = useBridgeTransfer(transferId);
 
   const inbound = direction === 'evm_to_stellar';
+  // Polygon sólo entra: si el modal vino con esa fuente, no hay dirección que elegir.
+  const inboundOnly = source === 'polygon-usdt';
   const usdcIssuer = blendConfigForToken(token)?.usdcIssuer;
   const decimals = inbound ? 6 : 7;
 
@@ -179,9 +196,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
   // varios "USDC" y matchear sólo por código resuelve el que no es.
   const available = useMemo(() => {
     const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
-    const usdc = usdcIssuer
-      ? balances.find((b) => b.code?.toUpperCase() === 'USDC' && b.issuer === usdcIssuer)
-      : undefined;
+    const usdc = usdcIssuer ? balances.find((b) => b.code?.toUpperCase() === 'USDC' && b.issuer === usdcIssuer) : undefined;
     return usdc ? Number(usdc.available) : 0;
   }, [walletBalance, usdcIssuer]);
 
@@ -201,7 +216,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
   const evmValid = EVM_ADDRESS_RE.test(evmWallet.trim());
   const inputsReady = amountInRange && evmValid && !overBalance && !!stellarWallet;
 
-  const quoteKey = `${direction}|${amount}|${evmWallet.trim()}`;
+  const quoteKey = `${direction}|${source}|${amount}|${evmWallet.trim()}`;
   const currentQuote = quoteState?.key === quoteKey ? quoteState : null;
   const quote = currentQuote?.quote ?? null;
   const quoteError = currentQuote?.error ?? null;
@@ -214,7 +229,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
     let active = true;
     const timer = setTimeout(() => {
       quoteMutation.mutate(
-        { direction, amount, evmWallet: evmWallet.trim() },
+        { direction, evmSource: source, amount, evmWallet: evmWallet.trim() },
         {
           onSuccess: (data) => {
             if (active) setQuoteState({ key: quoteKey, quote: data, error: null });
@@ -265,7 +280,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
   const handleContinue = () => {
     if (!inputsReady) return;
     createTransfer.mutate(
-      { direction, amount, evmWallet: evmWallet.trim() },
+      { direction, evmSource: source, amount, evmWallet: evmWallet.trim() },
       {
         onSuccess: (row) => setTransferId(row.id),
         onError: (error) => toast.danger(error.message),
@@ -357,9 +372,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
   // Render
   // -------------------------------------------------------------------------
 
-  const receivedAmount = transfer
-    ? formatBaseUnits(transfer.amountOut, DESTINATION_DECIMALS[transfer.direction])
-    : null;
+  const receivedAmount = transfer ? formatBaseUnits(transfer.amountOut, DESTINATION_DECIMALS[transfer.direction]) : null;
 
   /** El pago de salida ya salió, lo sepa el server o no. */
   const alreadySent = !!transfer?.sourceTxHash || !!sentHash;
@@ -373,8 +386,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
    * en el vencimiento, así que el botón desaparece en ese instante y no hay
    * ventana para pagar una cotización ya vencida.
    */
-  const watchDeadline =
-    !!transfer && transfer.direction === 'stellar_to_evm' && !alreadySent && !!transfer.deadline;
+  const watchDeadline = !!transfer && transfer.direction === 'stellar_to_evm' && !alreadySent && !!transfer.deadline;
   const deadlineAt = watchDeadline ? transfer.deadline : null;
   const quoteExpired = deadlineAt !== null && expiredDeadline === deadlineAt;
 
@@ -423,10 +435,16 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
       );
     }
     if (transfer.status === 'REFUNDED') {
+      // La dirección se muestra: con Takenos o Wallbit es la del usuario EN esa
+      // app, y es ahí donde tiene que ir a buscar la plata.
+      const refundTo = transfer.direction === 'evm_to_stellar' ? transfer.sourceWallet : transfer.destinationWallet;
       return outcomeStep(
         'error',
         t('wallet.bridge.refundedTitle', 'Transfer refunded'),
         t('wallet.bridge.refundedBody', 'The bridge sent the funds back to your refund address.'),
+        refundTo
+          ? t('wallet.bridge.refundedTo', 'Refund address: {{address}}', { address: truncateMiddle(refundTo, 8, 6) })
+          : undefined,
       );
     }
     if (transfer.status === 'FAILED') {
@@ -444,26 +462,37 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
 
   const formStep = () => (
     <>
+      {origin && (
+        <p className="rounded-lg border border-black border-b-2 bg-[#F5FBFF] px-4 py-2.5 text-sm font-semibold text-black">
+          {t('wallet.bridge.fromApp', 'From {{name}}: {{asset}} on {{network}} → USDC on Stellar', {
+            name: origin.name,
+            ...SOURCES[source],
+          })}
+        </p>
+      )}
+
       {/* Dirección: dos pestañas, no un selector de redes. Sólo hay un par. */}
-      <div className="grid grid-cols-2 gap-2">
-        {(['evm_to_stellar', 'stellar_to_evm'] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => {
-              setDirection(value);
-              setAmount('');
-            }}
-            className={`rounded-lg border border-black px-3 py-2.5 text-sm font-semibold transition ${
-              direction === value ? 'border-b-2 bg-[#DDF4FF] text-black' : 'bg-white text-gray-500 hover:bg-[#F5FBFF]'
-            }`}
-          >
-            {value === 'evm_to_stellar'
-              ? t('wallet.bridge.directionIn', 'Base → Stellar')
-              : t('wallet.bridge.directionOut', 'Stellar → Base')}
-          </button>
-        ))}
-      </div>
+      {!inboundOnly && (
+        <div className="grid grid-cols-2 gap-2">
+          {(['evm_to_stellar', 'stellar_to_evm'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => {
+                setDirection(value);
+                setAmount('');
+              }}
+              className={`rounded-lg border border-black px-3 py-2.5 text-sm font-semibold transition ${
+                direction === value ? 'border-b-2 bg-[#DDF4FF] text-black' : 'bg-white text-gray-500 hover:bg-[#F5FBFF]'
+              }`}
+            >
+              {value === 'evm_to_stellar'
+                ? t('wallet.bridge.directionIn', 'Base → Stellar')
+                : t('wallet.bridge.directionOut', 'Stellar → Base')}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* La wallet necesita trustline ANTES de cotizar: 1Click rechaza el quote
           sin ella, y el usuario no tiene por qué leer ese error crudo. */}
@@ -491,16 +520,15 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
             placeholder="0.00"
             className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-black outline-none"
           />
-          <span className="shrink-0 text-sm font-semibold text-gray-500">USDC</span>
+          <span className="shrink-0 text-sm font-semibold text-gray-500">{inbound ? SOURCES[source].asset : 'USDC'}</span>
         </div>
-        {overBalance && (
-          <p className="mt-1.5 text-xs text-danger">{t('wallet.bridge.insufficient', 'Not enough USDC.')}</p>
-        )}
+        {overBalance && <p className="mt-1.5 text-xs text-danger">{t('wallet.bridge.insufficient', 'Not enough USDC.')}</p>}
         {amount !== '' && !amountInRange && !overBalance && (
           <p className="mt-1.5 text-xs text-danger">
-            {t('wallet.bridge.amountRange', 'Enter an amount between {{min}} and {{max}} USDC.', {
+            {t('wallet.bridge.amountRange', 'Enter an amount between {{min}} and {{max}} {{asset}}.', {
               min: MIN_AMOUNT,
               max: MAX_AMOUNT.toLocaleString(),
+              asset: inbound ? SOURCES[source].asset : 'USDC',
             })}
           </p>
         )}
@@ -508,9 +536,14 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
 
       <div>
         <label htmlFor="bridge-evm" className="mb-1.5 block text-xs font-semibold text-gray-600">
-          {inbound
-            ? t('wallet.bridge.refundAddress', 'Your Base address (for refunds)')
-            : t('wallet.bridge.destinationAddress', 'Destination address on Base')}
+          {!inbound
+            ? t('wallet.bridge.destinationAddress', 'Destination address on Base')
+            : origin
+              ? t('wallet.bridge.refundAddressFrom', 'Your {{name}} {{network}} address (for refunds)', {
+                  name: origin.name,
+                  network: SOURCES[source].network,
+                })
+              : t('wallet.bridge.refundAddress', 'Your {{network}} address (for refunds)', SOURCES[source])}
         </label>
         <input
           id="bridge-evm"
@@ -523,7 +556,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
         />
         {evmWallet.trim() !== '' && !evmValid && (
           <p className="mt-1.5 text-xs text-danger">
-            {t('wallet.bridge.invalidEvmAddress', 'Enter a valid Base address (0x…).')}
+            {t('wallet.bridge.invalidEvmAddress', 'Enter a valid {{network}} address (0x…).', SOURCES[source])}
           </p>
         )}
       </div>
@@ -580,8 +613,8 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
       <p className="text-sm text-gray-600">
         {t(
           'wallet.bridge.depositInstructions',
-          'Send exactly {{amount}} USDC on the Base network to this address, from any wallet or exchange.',
-          { amount: row.amount },
+          'Send exactly {{amount}} {{asset}} on the {{network}} network to this address, from any wallet or exchange.',
+          { amount: row.amount, ...SOURCES[rowSource(row)] },
         )}
       </p>
 
@@ -604,7 +637,8 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
         <p>
           {t(
             'wallet.bridge.baseOnlyWarning',
-            'Base network only, USDC only. Anything else sent to this address is lost.',
+            '{{network}} network only, {{asset}} only. Anything else sent to this address is lost.',
+            SOURCES[rowSource(row)],
           )}
         </p>
       </div>
@@ -687,15 +721,10 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
         <div className="flex items-center justify-center gap-2">
           <Spinner size="sm" color="current" />
           <span>{t(phase.key, phase.fallback)}</span>
-          <span className="font-mono tabular-nums text-gray-400">
-            {formatElapsed(now - row.createdTimestamp)}
-          </span>
+          <span className="font-mono tabular-nums text-gray-400">{formatElapsed(now - row.createdTimestamp)}</span>
         </div>
         <p className="text-center text-gray-400">
-          {t(
-            'wallet.bridge.keepsGoing',
-            'This keeps going if you close this window. Reopen it any time to check.',
-          )}
+          {t('wallet.bridge.keepsGoing', 'This keeps going if you close this window. Reopen it any time to check.')}
         </p>
       </div>
     );
@@ -727,8 +756,8 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
         <p className="text-sm text-gray-600">
           {t(
             'wallet.bridge.incompleteBody',
-            'The bridge expected {{amount}} USDC and received less, so the swap has not started.',
-            { amount: row.amount },
+            'The bridge expected {{amount}} {{asset}} and received less, so the swap has not started.',
+            { amount: row.amount, asset: row.direction === 'evm_to_stellar' ? SOURCES[rowSource(row)].asset : 'USDC' },
           )}
         </p>
       </div>
@@ -742,7 +771,8 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
           <p className="text-sm text-gray-600">
             {t(
               'wallet.bridge.incompleteTopUp',
-              'Send the difference to the same address before the quote expires. If it expires first, the bridge refunds what it received to your Base address.',
+              'Send the difference to the same address before the quote expires. If it expires first, the bridge refunds what it received to your {{network}} address.',
+              SOURCES[rowSource(row)],
             )}
           </p>
           {addressRow(row.depositAddress)}
@@ -758,7 +788,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
     </>
   );
 
-  const outcomeStep = (kind: 'success' | 'error', title: string, description: string) => (
+  const outcomeStep = (kind: 'success' | 'error', title: string, description: string, detail?: string) => (
     <div className="flex flex-col items-center gap-3 py-4 text-center">
       <span
         className={`flex h-14 w-14 items-center justify-center rounded-full border ${
@@ -769,6 +799,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
       </span>
       <p className="text-base font-semibold text-black">{title}</p>
       <p className="text-sm text-gray-600">{description}</p>
+      {detail && <p className="font-mono text-xs text-gray-500">{detail}</p>}
     </div>
   );
 
@@ -842,7 +873,11 @@ export function BridgeModal({ open, onOpenChange, stellarWallet }: BridgeModalPr
     <AppModal
       open={open}
       onOpenChange={onOpenChange}
-      title={t('wallet.bridge.title', 'Bridge USDC')}
+      title={
+        origin
+          ? t('wallet.bridge.titleFrom', 'Deposit from {{name}}', { name: origin.name })
+          : t('wallet.bridge.title', 'Bridge USDC')
+      }
       size="md"
       // Igual que el resto de los flujos de plata: no se cierra tocando afuera.
       isDismissable={false}

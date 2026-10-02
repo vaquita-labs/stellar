@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiArrowRight, FiChevronRight, FiExternalLink, FiInfo } from 'react-icons/fi';
+import { useOpenDepositIntentMutation } from '@/core-ui/hooks/useDepositIntents';
 import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
 import { blendConfigForToken } from '@/networks/stellar/blendDirect';
 import { useConfigStore } from '../../../stores';
@@ -13,6 +14,7 @@ import type { DepositPlatformDTO } from '../../../types';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { UsdcTrustlineGate } from '../../molecules/UsdcTrustlineGate';
+import { bridgeHref, routablePlatforms } from './platforms';
 import { StepIllustration } from './StepIllustration';
 import { TUTORIALS } from './tutorials';
 
@@ -48,9 +50,10 @@ function PlatformMark({ name }: { name: string }) {
  * recibir USDC la activa (E4); después ve cómo se retira desde esa app y pasa a
  * su dirección.
  *
- * Sólo las plataformas 'direct' (USDC en Stellar) tienen camino en esta fase.
- * Las 'bridge' (USDT en Polygon) necesitan el bridge nuevo y se filtran acá
- * aunque alguien las prenda en el catálogo antes de tiempo.
+ * Las plataformas 'direct' (USDC en Stellar) terminan en la dirección del
+ * usuario. Las 'bridge' (Takenos, Wallbit: USDT en Polygon) terminan en el
+ * puente, abierto en Polygon con la app de origen arriba, y sólo aparecen con
+ * `config.bridge_enabled` prendido (ver `routablePlatforms`).
  */
 export function OtherAppDepositModal({
   open,
@@ -63,7 +66,9 @@ export function OtherAppDepositModal({
   const router = useRouter();
   const { network, token, walletAddress } = useConfigStore();
   const { wallet } = usePollar();
-  const platforms = (network?.depositPlatforms ?? []).filter((p) => p.tier === 'direct');
+  const openIntent = useOpenDepositIntentMutation();
+  const platforms = routablePlatforms(network);
+  const bridgeEnabled = network?.bridgeEnabled !== false;
   const initialPlatform = platforms.find((p) => p.id === initialPlatformId) ?? null;
 
   const [rawStep, setStep] = useState<Step>(initialPlatform ? 'tutorial' : 'picker');
@@ -135,22 +140,24 @@ export function OtherAppDepositModal({
         </span>
         <FiChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
       </PressableButton>
-      <PressableButton
-        variant="white"
-        size="row"
-        onClick={() => {
-          onOpenChange();
-          router.push('/profile/wallet?bridge=1');
-        }}
-      >
-        <span className="flex-1 min-w-0">
-          <span className="block text-sm font-bold text-black">{t('deposit.otherApp.other.baseTitle', 'USDC on Base')}</span>
-          <span className="block text-xs text-gray-500">
-            {t('deposit.otherApp.other.baseSubtitle', 'We convert it to Stellar with the bridge')}
+      {bridgeEnabled && (
+        <PressableButton
+          variant="white"
+          size="row"
+          onClick={() => {
+            onOpenChange();
+            router.push('/profile/wallet?bridge=1');
+          }}
+        >
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-bold text-black">{t('deposit.otherApp.other.baseTitle', 'USDC on Base')}</span>
+            <span className="block text-xs text-gray-500">
+              {t('deposit.otherApp.other.baseSubtitle', 'We convert it to Stellar with the bridge')}
+            </span>
           </span>
-        </span>
-        <FiChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
-      </PressableButton>
+          <FiChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
+        </PressableButton>
+      )}
       <div className="flex items-start gap-1.5 pt-1 text-xs text-gray-500">
         <FiInfo className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <p>
@@ -189,6 +196,7 @@ export function OtherAppDepositModal({
   );
 
   const steps = platform ? (TUTORIALS[platform.id] ?? []) : [];
+  const viaBridge = platform?.tier === 'bridge';
   const facts = platform
     ? [
         {
@@ -205,6 +213,13 @@ export function OtherAppDepositModal({
               value: `${platform.minAmount} ${platform.asset}`,
             }
           : null,
+        // El puente suma su propia espera; la de una 'direct' es la de la app.
+        viaBridge
+          ? {
+              label: t('deposit.otherApp.tutorial.arrives', 'Arrives'),
+              value: t('deposit.otherApp.tutorial.arrivesBridge', 'In a few minutes'),
+            }
+          : null,
       ].filter((f): f is { label: string; value: string } => f !== null)
     : [];
 
@@ -216,10 +231,16 @@ export function OtherAppDepositModal({
           <FiArrowRight className="h-4 w-4 shrink-0 text-black" />
           <PlatformMark name="Vaquita" />
           <p className="text-xs leading-snug text-gray-600">
-            {t('deposit.otherApp.tutorial.intro', 'Send {{asset}} from {{name}} straight to your Vaquita account.', {
-              asset: platform.asset,
-              name: platform.name,
-            })}
+            {viaBridge
+              ? t(
+                  'deposit.otherApp.tutorial.introBridge',
+                  'Send {{asset}} from {{name}}; we turn it into USDC on Stellar for your Vaquita account.',
+                  { asset: platform.asset, name: platform.name },
+                )
+              : t('deposit.otherApp.tutorial.intro', 'Send {{asset}} from {{name}} straight to your Vaquita account.', {
+                  asset: platform.asset,
+                  name: platform.name,
+                })}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
@@ -231,6 +252,21 @@ export function OtherAppDepositModal({
           ))}
         </div>
       </div>
+
+      {/* La devolución va a la dirección del usuario EN la app: si el puente no
+          puede completar el canje, la plata vuelve ahí y no a Vaquita. */}
+      {viaBridge && (
+        <div className="flex items-start gap-1.5 rounded-lg border border-[#F0B429] bg-[#FFF7E6] px-3 py-2 text-xs text-black">
+          <FiInfo className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <p>
+            {t(
+              'deposit.otherApp.tutorial.refundNote',
+              'If the transfer cannot complete, the money goes back to your {{name}} Polygon address.',
+              { name: platform.name },
+            )}
+          </p>
+        </div>
+      )}
 
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
         {t('deposit.otherApp.tutorial.inApp', 'In the {{name}} app', { name: platform.name })}
@@ -245,11 +281,11 @@ export function OtherAppDepositModal({
               </span>
               <div className="flex-1">
                 <p className="text-[15px] font-bold leading-snug text-black">
-                  {t(`deposit.otherApp.platforms.${platform.id}.steps.${s.key}.title`, s.title)}
+                  {t(`deposit.otherApp.platforms.${platform.id}.steps.${s.key}.title`, s.title, { name: platform.name })}
                 </p>
                 {s.body ? (
                   <p className="mt-0.5 text-[13px] leading-snug text-gray-600">
-                    {t(`deposit.otherApp.platforms.${platform.id}.steps.${s.key}.body`, s.body)}
+                    {t(`deposit.otherApp.platforms.${platform.id}.steps.${s.key}.body`, s.body, { name: platform.name })}
                   </p>
                 ) : null}
               </div>
@@ -289,7 +325,7 @@ export function OtherAppDepositModal({
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-sm font-semibold text-black underline underline-offset-2"
             >
-              {t(`deposit.otherApp.platforms.${platform.id}.links.${link.id}`, link.id)}
+              {t(`deposit.otherApp.platforms.${platform.id}.links.${link.id}`, link.id, { name: platform.name })}
               <FiExternalLink className="h-3.5 w-3.5 shrink-0" />
             </a>
           ))}
@@ -319,11 +355,29 @@ export function OtherAppDepositModal({
   };
   const backTarget = BACK_TARGET[step];
 
+  /**
+   * 'bridge': deja abierta la espera (la tarjeta del home detecta la llegada por
+   * el saldo de USDC, igual que con una 'direct', porque el puente acredita a la
+   * misma wallet) y lleva al puente en Polygon. La espera es un marcador de UI:
+   * si el POST falla, el puente igual se abre.
+   */
+  const goToBridge = (next: DepositPlatformDTO) => {
+    openIntent.mutate(next.id);
+    onOpenChange();
+    router.push(bridgeHref(next));
+  };
+
   const footer =
     step === 'tutorial' && platform ? (
-      <PressableButton variant="success" size="cta" className="py-2.5!" onClick={() => onShowAddress(platform)}>
-        {t('deposit.otherApp.tutorial.cta', 'Show my address')}
-      </PressableButton>
+      viaBridge ? (
+        <PressableButton variant="success" size="cta" className="py-2.5!" onClick={() => goToBridge(platform)}>
+          {t('deposit.otherApp.tutorial.ctaBridge', 'Get my Polygon address')}
+        </PressableButton>
+      ) : (
+        <PressableButton variant="success" size="cta" className="py-2.5!" onClick={() => onShowAddress(platform)}>
+          {t('deposit.otherApp.tutorial.cta', 'Show my address')}
+        </PressableButton>
+      )
     ) : undefined;
 
   return (

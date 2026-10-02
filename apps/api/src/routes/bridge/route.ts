@@ -5,9 +5,11 @@ import {
   assetsForDirection,
   attachSourceTxHash,
   createBridgeTransfer,
+  getBridgeEnabled,
   getBridgeTransfer,
   humanToBaseUnits,
   isBridgeDirection,
+  isEvmSource,
   isValidEvmAddress,
   isValidStellarAddress,
   listBridgeTransfers,
@@ -19,6 +21,7 @@ import {
   submitDepositTx,
   toBridgeTransferDTO,
   type BridgeDirection,
+  type EvmSource,
   type OneClickConfig,
   type StatusReadFailure,
 } from '@vaquita/shared';
@@ -63,13 +66,23 @@ const oneClickConfig = (): OneClickConfig => ({
 const logStatusReadError = (req: Request) => (failure: StatusReadFailure) =>
   req.log.warn(failure, '1Click status read failed');
 
+/**
+ * `config.bridge_enabled` gates new quotes and transfers only. Reads and the
+ * deposit-tx call stay open so a transfer already in flight can still finish,
+ * or show its refund, while the switch is off.
+ */
+const BRIDGE_OFF_MESSAGE = 'The bridge is temporarily unavailable.';
+
+const NETWORK_NAME: Record<EvmSource, string> = { 'base-usdc': 'Base', 'polygon-usdt': 'Polygon' };
+
 type QuoteInput = {
   direction: BridgeDirection;
+  evmSource: EvmSource;
   amount: string;
   amountRaw: string;
   /** The user's Stellar address, from the session. */
   stellarWallet: string;
-  /** The counterparty address on Base, supplied by the user. */
+  /** The counterparty address on Base or Polygon, supplied by the user. */
   evmWallet: string;
 };
 
@@ -80,29 +93,39 @@ type QuoteInput = {
  * caller cannot quote a transfer that pays out to someone else's account.
  */
 function validate(body: unknown, stellarWallet: string): { ok: true; value: QuoteInput } | { ok: false; message: string } {
-  const raw = (body ?? {}) as { direction?: unknown; amount?: unknown; evmWallet?: unknown };
+  const raw = (body ?? {}) as { direction?: unknown; evmSource?: unknown; amount?: unknown; evmWallet?: unknown };
 
   if (!isBridgeDirection(raw.direction)) return { ok: false, message: 'Unsupported bridge direction.' };
   const direction = raw.direction;
 
+  if (raw.evmSource !== undefined && !isEvmSource(raw.evmSource)) return { ok: false, message: 'Unsupported bridge source.' };
+  const evmSource: EvmSource = raw.evmSource ?? 'base-usdc';
+  // Stellar → Polygon has never been quoted live; inbound only until it has.
+  if (evmSource === 'polygon-usdt' && direction === 'stellar_to_evm') {
+    return { ok: false, message: 'Sending to Polygon is not supported.' };
+  }
+
   const evmWallet = typeof raw.evmWallet === 'string' ? raw.evmWallet.trim() : '';
-  if (!isValidEvmAddress(evmWallet)) return { ok: false, message: 'A valid Base address is required.' };
+  if (!isValidEvmAddress(evmWallet)) {
+    return { ok: false, message: `A valid ${NETWORK_NAME[evmSource]} address is required.` };
+  }
 
   if (!isValidStellarAddress(stellarWallet)) return { ok: false, message: 'The session wallet is not a valid Stellar address.' };
+
+  // Decimals differ per side (Base USDC and Polygon USDT 6, Stellar USDC 7),
+  // so the scale comes from whichever asset the user is sending.
+  const { origin } = assetsForDirection(direction, evmSource);
 
   const amount = typeof raw.amount === 'string' ? raw.amount.trim() : String(raw.amount ?? '');
   const numeric = Number(amount);
   if (!Number.isFinite(numeric) || numeric < MIN_AMOUNT || numeric > MAX_AMOUNT) {
-    return { ok: false, message: `Enter an amount between ${MIN_AMOUNT} and ${MAX_AMOUNT} USDC.` };
+    return { ok: false, message: `Enter an amount between ${MIN_AMOUNT} and ${MAX_AMOUNT} ${origin.symbol}.` };
   }
 
-  // Decimals differ per side (Base USDC 6, Stellar USDC 7), so the scale comes
-  // from whichever asset the user is sending.
-  const { origin } = assetsForDirection(direction);
   const amountRaw = humanToBaseUnits(amount, origin.decimals);
   if (!amountRaw || amountRaw === '0') return { ok: false, message: 'Enter a valid amount.' };
 
-  return { ok: true, value: { direction, amount, amountRaw, stellarWallet, evmWallet } };
+  return { ok: true, value: { direction, evmSource, amount, amountRaw, stellarWallet, evmWallet } };
 }
 
 /** Who receives, and who gets a refund, for each direction. */
@@ -121,9 +144,12 @@ router.post('/quote', requireSessionWallet, async (req, res) => {
   if (!validation.ok) return sendError(res, validation.message, null, 400);
 
   try {
+    if (!(await getBridgeEnabled())) return sendError(res, BRIDGE_OFF_MESSAGE, null, 503);
+
     const result = await requestQuote(oneClickConfig(), {
       ...routing(validation.value),
       direction: validation.value.direction,
+      evmSource: validation.value.evmSource,
       amountRaw: validation.value.amountRaw,
       dry: true,
     });
@@ -156,9 +182,12 @@ router.post('/transfers', requireSessionWallet, async (req, res) => {
   if (!validation.ok) return sendError(res, validation.message, null, 400);
 
   try {
+    if (!(await getBridgeEnabled())) return sendError(res, BRIDGE_OFF_MESSAGE, null, 503);
+
     const result = await requestQuote(oneClickConfig(), {
       ...routing(validation.value),
       direction: validation.value.direction,
+      evmSource: validation.value.evmSource,
       amountRaw: validation.value.amountRaw,
       dry: false,
     });
@@ -180,6 +209,7 @@ router.post('/transfers', requireSessionWallet, async (req, res) => {
 
     const row = await createBridgeTransfer({
       direction: validation.value.direction,
+      evmSource: validation.value.evmSource,
       stellarWallet: validation.value.stellarWallet,
       evmWallet: validation.value.evmWallet,
       amount: validation.value.amount,
@@ -188,7 +218,7 @@ router.post('/transfers', requireSessionWallet, async (req, res) => {
     });
 
     req.log.info(
-      { bridgeTransferId: row.id, direction: row.direction, amount: row.amount },
+      { bridgeTransferId: row.id, direction: row.direction, sourceNetwork: row.sourceNetwork, amount: row.amount },
       'Bridge transfer created',
     );
     return sendSuccess(res, toBridgeTransferDTO(row));

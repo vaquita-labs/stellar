@@ -22,12 +22,18 @@
  *   step-5  public.bnbstatic.com/image/cms/content/body/202609/dbe9b24fda29144dc45042a2b55b0ee6.png
  *   step-6  public.bnbstatic.com/image/cms/content/body/202608/43cafb48189afea0981897ac551ed396.png
  * Meru no tiene capturas públicas de sus pantallas; por eso va dibujado.
+ *
+ * Takenos y Wallbit ('bridge') mandan USDT por Polygon al puente, no a la
+ * dirección del usuario: el paso de la dirección pega el 0x… que da el puente, y
+ * el primero copia la dirección Polygon propia, que es a donde vuelve la plata
+ * si el canje no se completa. Los dibujos son genéricos (no hay capturas
+ * públicas) y los textos interpolan `{{name}}`.
  */
 
 /** Texto fijo (nombres propios: USDC, Stellar) o una key de i18n con su fallback. */
 export type Copy = string | { key: string; fallback: string };
 
-export type IllustrationChip = 'pick' | 'paste' | 'blank' | 'tap' | 'check';
+export type IllustrationChip = 'pick' | 'paste' | 'blank' | 'tap' | 'copy' | 'check';
 
 export interface IllustrationRow {
   label: Copy;
@@ -62,6 +68,68 @@ export interface TutorialStep {
 }
 
 const il = (key: string, fallback: string): Copy => ({ key: `deposit.otherApp.illustration.${key}`, fallback });
+
+/** Los pasos de una app que deposita por el puente (USDT en Polygon). */
+const polygonUsdtSteps = (): TutorialStep[] => [
+  {
+    key: 'refund',
+    title: 'Copy your {{name}} Polygon address',
+    body: 'In {{name}}, go to Receive → USDT → Polygon and copy it. If the transfer can’t complete, the money comes back there.',
+    illustration: {
+      screen: il('screens.receive', 'Receive'),
+      rows: [
+        { label: 'USDT', sub: 'Tether', highlight: true, chip: 'check' },
+        { label: il('polygonAddress', 'Polygon address'), value: '0x…', highlight: true, chip: 'copy' },
+      ],
+    },
+  },
+  {
+    key: 'coin',
+    title: 'Go to Send and pick USDT',
+    body: 'Send it as USDT, not as dollars to a bank account.',
+    illustration: {
+      screen: il('screens.asset', 'Asset'),
+      rows: [
+        { label: 'USDT', sub: 'Tether', highlight: true, chip: 'pick' },
+        { label: il('toBank', 'To a bank account'), off: true },
+      ],
+    },
+  },
+  {
+    key: 'network',
+    title: 'Pick the Polygon network',
+    body: 'Only Polygon. Any other network loses the money.',
+    illustration: {
+      screen: il('screens.network', 'Network'),
+      rows: [
+        { label: 'Polygon', sub: 'MATIC', highlight: true, chip: 'check' },
+        { label: 'Ethereum', off: true },
+        { label: 'Tron', off: true },
+      ],
+    },
+  },
+  {
+    key: 'address',
+    title: 'Paste the deposit address Vaquita gives you',
+    body: 'Tap “Get my Polygon address” below, paste your {{name}} address there and enter the amount. Vaquita shows an address that starts with 0x: paste that one here.',
+    illustration: {
+      screen: il('screens.recipient', 'Recipient'),
+      rows: [{ label: il('depositAddress', 'Deposit address'), value: '0x…', highlight: true, chip: 'paste' }],
+    },
+  },
+  {
+    key: 'amount',
+    title: 'Send exactly that amount and confirm',
+    body: 'It arrives in Vaquita as USDC in a few minutes.',
+    illustration: {
+      screen: il('screens.review', 'Review'),
+      rows: [
+        { label: il('youSend', 'You send'), value: '50.00 USDT', highlight: true },
+        { label: il('network', 'Network'), value: 'Polygon' },
+      ],
+    },
+  },
+];
 
 export const TUTORIALS: Record<string, TutorialStep[]> = {
   binance: [
@@ -170,4 +238,6 @@ export const TUTORIALS: Record<string, TutorialStep[]> = {
       },
     },
   ],
+  takenos: polygonUsdtSteps(),
+  wallbit: polygonUsdtSteps(),
 };
