@@ -20,6 +20,7 @@ export * from './services/network';
 export * from './services/project-config';
 export * from './services/deposit';
 export * from './services/deposit/helpers';
+export * from './services/deposit/onchainVerify';
 export * from './services/profile';
 export * from './services/profile/constants';
 export * from './services/profile/depositCoins';
