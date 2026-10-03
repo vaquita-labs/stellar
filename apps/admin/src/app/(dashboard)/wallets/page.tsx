@@ -1,7 +1,6 @@
 'use client';
 
 import { addDangerToast } from '@/core-ui/components';
-import { clientEnv } from '@/core-ui/config/clientEnv';
 import { Button, Card, Checkbox, Input } from '@vaquita/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
@@ -26,7 +25,6 @@ const BATCH = 10;
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 /**

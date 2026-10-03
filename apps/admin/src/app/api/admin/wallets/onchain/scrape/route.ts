@@ -15,7 +15,7 @@ const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden
 const DEFAULT_BATCH = Number(process.env.SCRAPE_BATCH_SIZE ?? 10);
 
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const body = (await req.json().catch(() => ({}))) as { offset?: number; limit?: number; wallets?: string[] };
   // Capped at 50 here and not in the service: a browser waits on this response,

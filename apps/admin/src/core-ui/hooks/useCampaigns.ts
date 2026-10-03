@@ -43,7 +43,6 @@ const CAMPAIGNS_URL = '/api/admin/campaigns';
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 /** Read every live campaign. */

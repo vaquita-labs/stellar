@@ -1,4 +1,3 @@
-import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useQuery } from '@tanstack/react-query';
 
 /**
@@ -88,7 +87,6 @@ export const feedbackAttachmentUrl = (id: string) => `/api/admin/feedback/attach
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 /** Read the triage inbox, optionally narrowed by kind and/or status. */

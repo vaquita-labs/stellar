@@ -1,13 +1,10 @@
-import { clientEnv } from '@/core-ui/config/clientEnv';
-
 // Same-origin route handler inside this admin app (see
-// src/app/api/admin/contract-events/route.ts). We still echo the admin secret so
-// the server-side guard passes when ADMIN_SECRET is configured.
+// src/app/api/admin/contract-events/route.ts). The browser sends its passcode session
+// cookie, which is what the server-side guard checks.
 const CONTRACT_EVENTS_URL = '/api/admin/contract-events';
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 /** One on-chain contract event, flattened for the GenericTable. */

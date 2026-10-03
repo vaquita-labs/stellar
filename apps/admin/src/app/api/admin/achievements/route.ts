@@ -27,7 +27,7 @@ export const dynamic = 'force-dynamic';
 
 // GET /api/admin/achievements — full catalog incl. disabled/hidden rows.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
   const achievements = await prisma.achievement.findMany({
     where: { deletedAt: null },
     orderBy: { id: 'asc' },
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/achievements — create a new badge. `key` is immutable once created.
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   let body: unknown;
   try {

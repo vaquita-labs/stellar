@@ -43,7 +43,7 @@ const assetLabel = (t: HorizonTransfer) => (t.asset_type === 'native' ? 'XLM' : 
  * built but never submitted, or submitted and failed, still has one.
  */
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) {
+  if (!(await adminSecretOk(req))) {
     return NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
   }
 

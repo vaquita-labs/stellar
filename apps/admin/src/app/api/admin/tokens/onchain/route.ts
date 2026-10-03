@@ -206,7 +206,7 @@ async function readLivePositions(server: rpc.Server, pool: string, depositIdHexe
 
 // GET /api/admin/tokens/onchain?id=123 — on-chain snapshot for one token's pool.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
   const id = Number(idParam);

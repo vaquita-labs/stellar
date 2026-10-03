@@ -34,7 +34,7 @@ const toRangeMs = (value: string, edge: 'start' | 'end'): number => {
 };
 
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   let body: unknown;
   try {

@@ -38,7 +38,7 @@ const updateSchema = z.object({
 const flagSelect = Object.fromEntries(ONBOARDING_FLAGS.map((f) => [f.key, true]));
 
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const parsed = listSchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));
   if (!parsed.success) {
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const parsed = updateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

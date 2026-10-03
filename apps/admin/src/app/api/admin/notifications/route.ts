@@ -34,7 +34,7 @@ const sendSchema = z.object({
 
 // GET /api/admin/notifications — historial de campañas (últimas 50).
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
   const campaigns = await prisma.pushCampaign.findMany({
     orderBy: { createdAt: 'desc' },
     take: 50,
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/notifications — proxea el envío al servicio API.
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   let json: unknown;
   try {
