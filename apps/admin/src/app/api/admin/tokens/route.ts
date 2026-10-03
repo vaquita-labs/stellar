@@ -90,7 +90,7 @@ const serializeToken = (token: TokenRow) => ({
 
 // GET /api/admin/tokens — list every non-deleted token, ordered by id.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
   const tokens = await prisma.token.findMany({
     where: { deletedAt: null },
     orderBy: { id: 'asc' },
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/tokens — create a new token.
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/admin/tokens — update an existing token (id in the body).
 export async function PATCH(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -189,7 +189,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/admin/tokens?id=123 — soft-delete (sets deleted_at).
 export async function DELETE(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
   const id = Number(idParam);

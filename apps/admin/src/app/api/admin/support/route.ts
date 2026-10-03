@@ -13,7 +13,7 @@ const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden
 // status filters and the search run on the client: the inbox is small, and the
 // "Waiting on us" count has to be right whichever filter is open.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const conversations = await listSupportConversations({ limit: 200 });
   return NextResponse.json({ data: { conversations } });

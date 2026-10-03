@@ -1,4 +1,3 @@
-import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useQuery } from '@tanstack/react-query';
 
 /** The languages a note can be translated into. `es` lives in `title`/`body`. */
@@ -60,7 +59,6 @@ export const releaseNoteImageUrl = (id: string) => `${NOTES_URL}/images/${id}`;
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 /** Read every live note, drafts included, newest first. */

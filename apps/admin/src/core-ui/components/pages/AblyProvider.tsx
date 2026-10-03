@@ -4,24 +4,22 @@ import * as Ably from 'ably';
 import { AblyProvider as Provider, ChannelProvider, useChannel, useConnectionStateListener } from 'ably/react';
 import { ReactNode, useEffect, useState } from 'react';
 import { v4 } from 'uuid';
-import { clientEnv } from '../../config/clientEnv';
 
 let client: Ably.Realtime | null = null;
 
 /**
  * Lazily creates a single Ably Realtime client using token auth against the
  * admin-scoped endpoint (`GET /api/v1/ably/admin-token`, gated by the admin
- * secret). The Ably API key stays on the server; created lazily so importing
+ * secret) through the same-origin `/api/admin/ably-token` proxy. The Ably API key stays on the server; created lazily so importing
  * this module never opens a realtime connection (and never runs under SSR).
  */
 function getAblyClient(): Ably.Realtime {
   if (!client) {
     client = new Ably.Realtime({
-      authUrl: `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/ably/admin-token`,
+      // Same-origin proxy: it adds ADMIN_SECRET server-side, so the browser
+      // only needs its passcode session cookie.
+      authUrl: '/api/admin/ably-token',
       authMethod: 'GET',
-      ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET
-        ? { authHeaders: { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } }
-        : {}),
     });
   }
   return client;

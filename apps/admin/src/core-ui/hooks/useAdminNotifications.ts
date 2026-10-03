@@ -1,4 +1,3 @@
-import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useQuery } from '@tanstack/react-query';
 
 /**
@@ -39,7 +38,6 @@ const NOTIFICATIONS_URL = '/api/admin/notifications';
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 /** Historial de campañas (últimas 50, más reciente primero). */

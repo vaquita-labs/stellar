@@ -19,7 +19,7 @@ const isValidWallet = (a: string) => StrKey.isValidEd25519PublicKey(a) || StrKey
 
 // GET /api/admin/wallets/onchain?wallet=<G…|C…>
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const wallet = req.nextUrl.searchParams.get('wallet')?.trim() ?? '';
   if (!wallet || !isValidWallet(wallet)) {

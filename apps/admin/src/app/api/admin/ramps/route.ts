@@ -17,7 +17,7 @@ const DEFAULT_DAYS = 30;
 const MAX_DAYS = 365;
 
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) {
+  if (!(await adminSecretOk(req))) {
     return NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
   }
 

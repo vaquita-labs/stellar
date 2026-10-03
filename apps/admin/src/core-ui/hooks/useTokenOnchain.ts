@@ -1,13 +1,10 @@
-import { clientEnv } from '@/core-ui/config/clientEnv';
-
 // Same-origin route handler inside this admin app (see
-// src/app/api/admin/tokens/onchain/route.ts). We still echo the admin secret so
-// the server-side guard passes when ADMIN_SECRET is configured.
+// src/app/api/admin/tokens/onchain/route.ts). The browser sends its passcode session
+// cookie, which is what the server-side guard checks.
 const TOKEN_ONCHAIN_URL = '/api/admin/tokens/onchain';
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 export interface OnchainPosition {

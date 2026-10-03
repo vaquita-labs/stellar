@@ -1,7 +1,6 @@
 'use client';
 
 import { addDangerToast } from '@/core-ui/components';
-import { clientEnv } from '@/core-ui/config/clientEnv';
 import { SEVERITY_RANK, worstSeverity, type RampRow, type Severity } from '@/lib/rampIssues';
 import type { VerifiedTransfer } from '@/app/api/admin/ramps/verify/route';
 import { Modal } from '@heroui/react';
@@ -57,7 +56,6 @@ const STATUS_CLS: Record<string, string> = {
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 const shortId = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-5)}` : a);

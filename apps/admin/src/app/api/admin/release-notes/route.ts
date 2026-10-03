@@ -82,14 +82,14 @@ const decodeImages = (input: z.infer<typeof imageSchema>[]): DecodedImages => {
 
 // GET /api/admin/release-notes — every live note, newest first, drafts included.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
   const notes = await listReleaseNotes();
   return NextResponse.json({ data: { notes } });
 }
 
 // POST /api/admin/release-notes — create (optionally publishing straight away).
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
 // PATCH /api/admin/release-notes — update (id in the body). Omitting `images`
 // leaves the carousel untouched; sending it replaces the whole set.
 export async function PATCH(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -150,7 +150,7 @@ export async function PATCH(req: NextRequest) {
 // `profiles` keep pointing at the row, so removing a note never re-pops an
 // older one for everyone who had already caught up.
 export async function DELETE(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
   const id = Number(idParam);

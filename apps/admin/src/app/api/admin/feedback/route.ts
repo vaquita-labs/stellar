@@ -80,7 +80,7 @@ const serializePost = (post: FeedbackPostWithAttachments) => ({
 // `moderationStatus=review` is the one alias: pending + flagged, which is the
 // queue somebody actually has to work through and the screen's default view.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const kind = kindSchema.safeParse(req.nextUrl.searchParams.get('kind'));
   const status = statusSchema.safeParse(req.nextUrl.searchParams.get('status'));
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/admin/feedback — move one report along the lifecycle (id in body).
 export async function PATCH(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -148,7 +148,7 @@ export async function PATCH(req: NextRequest) {
 // be able to pull back out of the table, and the FK cascades take the bytes with
 // it. The screen puts it behind a confirm.
 export async function DELETE(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   const id = req.nextUrl.searchParams.get('id') ?? '';
   if (!z.string().uuid().safeParse(id).success) {

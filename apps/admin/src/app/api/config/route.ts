@@ -100,7 +100,7 @@ const updateSchema = z.object({
 // GET /api/config — read the singleton config. Returns the empty-values shape
 // (id: null) when the `config` table has no row yet, never null.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
   const config = await prisma.config.findFirst({ orderBy: { id: 'asc' } });
   return NextResponse.json({ data: { config: serializeConfig(config ?? emptyConfig) } });
 }
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
 // PATCH /api/config — upsert the singleton. Creates the row if it
 // doesn't exist yet (the table starts empty), otherwise updates the existing one.
 export async function PATCH(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminSecretOk(req))) return forbidden();
 
   let body: unknown;
   try {
