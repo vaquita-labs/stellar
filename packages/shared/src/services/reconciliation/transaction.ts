@@ -79,10 +79,11 @@ const contractEventsOf = (transaction: unknown): xdr.ContractEvent[] => {
  * parser already decodes, so no field is interpreted twice here — this decides
  * only which events belong to a pool.
  */
-const poolEventsFrom = (
+export const poolEventsFrom = (
   transaction: unknown,
   txHash: string,
   contractIds: string[],
+  eventNames: ReadonlySet<string> = RECONCILABLE_EVENTS,
 ): RawReconciliationEvent[] => {
   const ledger = Number((transaction as { ledger?: number }).ledger ?? 0);
   const createdAt = Number((transaction as { createdAt?: number | string }).createdAt ?? 0);
@@ -105,7 +106,7 @@ const poolEventsFrom = (
     } catch {
       return;
     }
-    if (typeof eventName !== 'string' || !RECONCILABLE_EVENTS.has(eventName)) return;
+    if (typeof eventName !== 'string' || !eventNames.has(eventName)) return;
 
     out.push({
       id: `${txHash}-${index}`,
