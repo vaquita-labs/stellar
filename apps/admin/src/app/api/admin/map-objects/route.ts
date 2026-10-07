@@ -1,7 +1,7 @@
 import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 
 // Server-side admin API for the `map_objects` catalog (placeable map elements).
 // Runs in the Next.js Node server and talks to Postgres via the shared
@@ -112,7 +112,7 @@ const activeTypeExists = async (type: string, excludeId?: bigint) => {
 
 // GET /api/admin/map-objects — list every non-deleted catalog row, ordered by id.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
   const mapObjects = await prisma.mapObject.findMany({
     where: { deletedAt: null },
     orderBy: { id: 'asc' },
@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/map-objects — create a new catalog row.
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/admin/map-objects — update an existing catalog row (id in the body).
 export async function PATCH(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -205,7 +205,7 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/map-objects?id=123 — soft-delete (sets deleted_at), which
 // removes the row from the user-facing catalog.
 export async function DELETE(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
   const id = Number(idParam);

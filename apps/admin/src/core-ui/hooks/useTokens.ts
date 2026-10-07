@@ -1,4 +1,3 @@
-import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useQuery } from '@tanstack/react-query';
 
 /** One field the app needs before it will offer a token, and what it breaks. */
@@ -66,11 +65,9 @@ export interface TokenUpdatePayload extends Partial<TokenCreatePayload> {
 // Same-origin route handler inside this admin app — no NEXT_PUBLIC_SERVICES_URL.
 const TOKENS_URL = '/api/admin/tokens';
 
-// The admin secret guard lives server-side in the route handler; we still echo
-// the secret header so the check passes when ADMIN_SECRET is configured.
+// The route handler authenticates the session cookie; same-origin fetches send it.
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 /** Read the full list of (non-deleted) tokens. */

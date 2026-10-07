@@ -1,7 +1,7 @@
 import { Networks } from '@stellar/stellar-sdk';
 import { prisma } from '@vaquita/db';
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,7 +43,7 @@ const assetLabel = (t: HorizonTransfer) => (t.asset_type === 'native' ? 'XLM' : 
  * built but never submitted, or submitted and failed, still has one.
  */
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) {
+  if (!(await adminRequestOk(req))) {
     return NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
   }
 

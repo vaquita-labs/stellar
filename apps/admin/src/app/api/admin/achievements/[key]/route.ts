@@ -9,7 +9,7 @@ import {
 
 import {
   achievementWriteToPrisma,
-  adminSecretOk,
+  adminRequestOk,
   fail,
   forbidden,
   invalidJson,
@@ -23,7 +23,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ key: string }> }) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
   const { key } = await params;
 
   let body: unknown;
