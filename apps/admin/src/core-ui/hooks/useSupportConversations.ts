@@ -1,4 +1,3 @@
-import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   SupportConversationDetail,
@@ -25,7 +24,6 @@ const threadKey = (id: string) => ['admin', 'support', id] as const;
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 const request = async <T>(url: string, init: RequestInit, fallback: string): Promise<T> => {

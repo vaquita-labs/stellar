@@ -1,6 +1,6 @@
 import { prisma } from '@vaquita/db';
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 import { getVaquitaPositionsByWalletToken, positionKey } from '@vaquita/shared/services/wallets/vaquitaPositions';
 import { getSupportedTokenIds } from '@vaquita/shared/services/wallets/onchainBalances';
 
@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) {
+  if (!(await adminRequestOk(req))) {
     return NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
   }
 

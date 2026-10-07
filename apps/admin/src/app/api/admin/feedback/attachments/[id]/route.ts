@@ -1,5 +1,6 @@
 import { getFeedbackAttachmentForReview } from '@vaquita/shared/services/feedback/index';
 import { type NextRequest, NextResponse } from 'next/server';
+import { adminRequestOk } from '@/lib/adminSecret';
 
 // Screenshot bytes for the review screen.
 //
@@ -8,16 +9,15 @@ import { type NextRequest, NextResponse } from 'next/server';
 // row with no visibility filter — the whole point is seeing the picture before
 // deciding whether anyone else may.
 //
-// It is not behind `adminSecretOk` like the sibling routes, because an <img src>
-// cannot send a header. It is behind the passcode middleware instead: the
-// matcher in src/middleware.ts covers /api/admin/*, and the session cookie rides
-// along on an image request the way the header cannot.
+// Behind `adminRequestOk` like the sibling routes: an <img src> cannot send a
+// header, but it does send the session cookie, which the guard accepts.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await adminRequestOk(req))) return new NextResponse(null, { status: 403 });
   const { id } = await params;
   if (!UUID_RE.test(id)) return new NextResponse(null, { status: 404 });
 

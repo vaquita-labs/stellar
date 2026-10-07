@@ -1,5 +1,6 @@
 import { getReleaseNoteImageForReview } from '@vaquita/shared/services/releaseNotes/index';
 import { type NextRequest, NextResponse } from 'next/server';
+import { adminRequestOk } from '@/lib/adminSecret';
 
 // Carousel bytes for the release-notes editor.
 //
@@ -8,15 +9,16 @@ import { type NextRequest, NextResponse } from 'next/server';
 // route reads the row with no visibility filter so the editor can preview a
 // draft before it goes live.
 //
-// Like the feedback thumbnails, it is behind the passcode middleware rather
-// than `adminSecretOk`: an <img src> cannot send a header, but the session
-// cookie rides along.
+// Like the feedback thumbnails, it is behind `adminRequestOk`: an <img src>
+// cannot send a header, but it does send the session cookie, which the guard
+// accepts.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await adminRequestOk(req))) return new NextResponse(null, { status: 403 });
   const { id } = await params;
   if (!UUID_RE.test(id)) return new NextResponse(null, { status: 404 });
 

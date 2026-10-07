@@ -1,7 +1,7 @@
 import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 import { ONBOARDING_FLAGS, ONBOARDING_KEYS } from '@/core-ui/config/onboardings';
 
 // Which first-run experiences each profile has completed, and the switch to
@@ -38,7 +38,7 @@ const updateSchema = z.object({
 const flagSelect = Object.fromEntries(ONBOARDING_FLAGS.map((f) => [f.key, true]));
 
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   const parsed = listSchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));
   if (!parsed.success) {
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   const parsed = updateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

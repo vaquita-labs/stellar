@@ -3,7 +3,7 @@ import { prisma } from '@vaquita/db';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { formatUnits, rpcUrlFor, scanPoolEvents, type ParsedPoolEvent } from '@/lib/contractEvents';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,7 +34,7 @@ const toRangeMs = (value: string, edge: 'start' | 'end'): number => {
 };
 
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
   try {
