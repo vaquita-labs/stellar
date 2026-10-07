@@ -1,6 +1,5 @@
 'use client';
 
-import { clientEnv } from '@/core-ui/config/clientEnv';
 import { DEVICE_LOCAL_ONBOARDINGS, ONBOARDING_FLAGS, type OnboardingKey } from '@/core-ui/config/onboardings';
 import { Button, Input, Select } from '@vaquita/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,7 +18,6 @@ const PAGE = 50;
 
 const adminHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
-  ...(clientEnv.NEXT_PUBLIC_ADMIN_SECRET ? { 'x-admin-secret': clientEnv.NEXT_PUBLIC_ADMIN_SECRET } : {}),
 });
 
 const shortWallet = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-5)}` : a);

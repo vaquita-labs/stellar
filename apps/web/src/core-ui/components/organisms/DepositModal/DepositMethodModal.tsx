@@ -27,6 +27,7 @@ import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
 import { ErrorNotice } from '../../molecules/ErrorNotice';
 import { PressableButton } from '../../molecules/PressableButton';
+import { routablePlatforms } from '../OtherAppDeposit/platforms';
 import { ProcessingSteps } from '../../molecules/ProcessingSteps';
 
 interface DepositMethodModalProps {
@@ -92,7 +93,7 @@ export function DepositMethodModal({
   // su rama "Wallet" abre el modal de recibir NATIVO (no el de Pollar) vía onReceive.
   const isExternalWallet = wallet?.custody === 'external';
   // Sin ninguna plataforma en el catálogo la fila no tiene a dónde llevar.
-  const hasOtherApps = (network?.depositPlatforms ?? []).some((p) => p.tier === 'direct');
+  const hasOtherApps = routablePlatforms(network).length > 0;
   // Techo del depósito = saldo del USDC QUE ACEPTA BLEND, leído on-chain. NO el
   // walletBalance de Pollar: en testnet hay varios USDC con el mismo código
   // "USDC" de emisores distintos, y Pollar puede reportar el de otro emisor. Si

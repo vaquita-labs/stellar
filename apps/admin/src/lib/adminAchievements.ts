@@ -8,7 +8,7 @@ import type { AchievementWriteFields } from '@vaquita/shared/services/profile/in
 // the behaviour of apps/api's admin router so the migration is contract-neutral:
 // same auth gate, same response envelope, same snake_case row shape.
 
-export { adminSecretOk } from './adminSecret';
+export { adminRequestOk } from './adminSecret';
 
 export const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden' }, { status: 403 });
 

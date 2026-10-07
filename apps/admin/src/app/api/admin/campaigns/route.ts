@@ -10,7 +10,7 @@ import {
 import type { Campaign } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 
 // Marketing campaigns: the codes and default UTM parameters the attribution
 // endpoint resolves against. Same runtime/auth conventions as the rewards route.
@@ -75,14 +75,14 @@ const badPayload = (details: unknown) =>
 
 // GET /api/admin/campaigns — every live campaign, newest first.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
   const campaigns = await listCampaigns();
   return NextResponse.json({ data: { campaigns: campaigns.map(serializeCampaign) } });
 }
 
 // POST /api/admin/campaigns — create.
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/admin/campaigns — update (id in the body).
 export async function PATCH(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -134,7 +134,7 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/campaigns?id=123 — soft-delete. Profiles already attributed
 // keep pointing at the row, so retiring a campaign never rewrites history.
 export async function DELETE(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
   const id = Number(idParam);

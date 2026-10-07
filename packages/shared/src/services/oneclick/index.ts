@@ -1,4 +1,4 @@
-import { assetsForDirection, type BridgeDirection } from './assets';
+import { assetsForDirection, type BridgeDirection, type EvmSource } from './assets';
 
 export * from './assets';
 
@@ -93,6 +93,8 @@ export type OneClickResult<T> = { ok: true; data: T } | { ok: false; reason: str
 
 type RequestQuoteParams = {
   direction: BridgeDirection;
+  /** The EVM asset on the far side. Defaults to Base USDC. */
+  evmSource?: EvmSource;
   /** Base units of the ORIGIN asset, as an integer string. */
   amountRaw: string;
   /** Where the swapped funds land: a G… for Stellar, a 0x… for Base. */
@@ -164,7 +166,7 @@ export async function requestQuote(
   config: OneClickConfig,
   params: RequestQuoteParams,
 ): Promise<OneClickResult<OneClickQuoteResponse>> {
-  const { origin, destination } = assetsForDirection(params.direction);
+  const { origin, destination } = assetsForDirection(params.direction, params.evmSource);
   const deadline = params.deadline ?? new Date(Date.now() + QUOTE_VALIDITY_MS);
 
   const body = {

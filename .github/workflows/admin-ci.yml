@@ -52,5 +52,4 @@ jobs:
       - name: Build admin
         env:
           NEXT_PUBLIC_SERVICES_URL: https://api.example.invalid
-          NEXT_PUBLIC_ADMIN_SECRET: ci-placeholder-secret
         run: pnpm --filter @vaquita/admin build

@@ -6,7 +6,7 @@ import {
 } from '@vaquita/shared/services/support/index';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 
 // One thread of the private Help Center chat: read it, reply to it, resolve it.
 export const runtime = 'nodejs';
@@ -31,7 +31,7 @@ const readJson = async (req: NextRequest): Promise<unknown> => {
 
 // GET /api/admin/support/:id — the thread, oldest message first.
 export async function GET(req: NextRequest, { params }: Params) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
   const { id } = await params;
   if (!idSchema.safeParse(id).success) return notFound();
 
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 
 // POST /api/admin/support/:id  { body } — a reply from the team.
 export async function POST(req: NextRequest, { params }: Params) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
   const { id } = await params;
   if (!idSchema.safeParse(id).success) return notFound();
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
 // PATCH /api/admin/support/:id  { resolved } — resolve or reopen.
 export async function PATCH(req: NextRequest, { params }: Params) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
   const { id } = await params;
   if (!idSchema.safeParse(id).success) return notFound();
 

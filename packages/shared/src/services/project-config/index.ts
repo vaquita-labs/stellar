@@ -96,3 +96,12 @@ export const getDepositPlatforms = async (): Promise<DepositPlatformDTO[]> => {
   const config = await prisma.config.findFirst({ select: { depositPlatforms: true } });
   return toDepositPlatforms(config?.depositPlatforms);
 };
+
+/**
+ * `config.bridge_enabled`, the 1Click bridge kill switch. A missing config row
+ * counts as enabled, matching the column default.
+ */
+export const getBridgeEnabled = async (): Promise<boolean> => {
+  const config = await prisma.config.findFirst({ select: { bridgeEnabled: true } });
+  return config?.bridgeEnabled !== false;
+};

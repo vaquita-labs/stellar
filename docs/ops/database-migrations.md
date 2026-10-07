@@ -9,6 +9,7 @@ The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are
 |-----------|-----|---------|------|
 | `20261002_schema_parity_defaults_fk.sql` | ❌ | ❌ | ❌ |
 | `20261002_support_chat.sql` | ❌ | ❌ | ❌ |
+| `20261001_bridge_enabled.sql` | ✅ | ✅ | ✅ |
 | `20260929_deposit_from_app.sql` | ✅ | ✅ | ✅ |
 | `20260911_vaquitatag.sql` | ✅ | ✅ | ✅ |
 | `20260910_wallet_transfers.sql` | ✅ | ✅ | ✅ |
@@ -43,6 +44,13 @@ environments lack: the `DEFAULT now()` on `wallet_balances.updated_at` and the
 has the query to list them. With both applied, `prisma migrate diff --from-config-datasource
 --to-schema prisma/schema.prisma --script` prints nothing — check that on each environment after
 applying, since it is what says a later `db:push` there would be a no-op.
+
+Apply `20261001_bridge_enabled.sql` with `apps/api/tmp/2026-10-01-apply-bridge-enabled.ts` (same
+`check` / `apply` shape). Applied to dev, staging and prod on 2026-10-01. It adds
+`config.bridge_enabled` (boolean, default `true`), the switch for the 1Click bridge as a whole: off,
+`POST /bridge/quote` and `/bridge/transfers` answer 503 and the web hides every way in. Flip it with
+`apps/api/tmp/2026-10-01-toggle-bridge.ts check|on|off <envFile>`. Same P2022 caveat as below:
+apply before the API deploys.
 
 Apply `20260929_deposit_from_app.sql` with `apps/api/tmp/2026-09-29-apply-deposit-from-app.ts`
 (same `check` / `apply` shape; it also re-applies `packages/db/sql/deposit_intents_checks.sql`).

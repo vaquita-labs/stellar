@@ -1,7 +1,7 @@
 import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 import { getServerEnv } from '@/core-ui/config/serverEnv';
 
 // Admin API for notification campaigns.
@@ -34,7 +34,7 @@ const sendSchema = z.object({
 
 // GET /api/admin/notifications — historial de campañas (últimas 50).
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
   const campaigns = await prisma.pushCampaign.findMany({
     orderBy: { createdAt: 'desc' },
     take: 50,
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/notifications — proxea el envío al servicio API.
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   let json: unknown;
   try {

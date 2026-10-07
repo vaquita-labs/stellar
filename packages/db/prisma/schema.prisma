@@ -683,6 +683,12 @@ model Config {
   // than in the bundle so a platform can be switched off or a fee corrected
   // without a deploy; the tutorial prose stays in the i18n files, keyed by `id`.
   depositPlatforms      Json     @default("[]") @map("deposit_platforms")
+  // Kill switch for the 1Click bridge (Base USDC and Polygon USDT ↔ Stellar
+  // USDC). When false the API refuses new quotes and transfers and the web hides
+  // every way into the bridge; transfers already in flight keep refreshing so
+  // they can finish or refund. For 1Click outages, like the NEAR Intents pause
+  // of 2026-10-01.
+  bridgeEnabled         Boolean  @default(true) @map("bridge_enabled")
   // Reconciliation cursors and last-run summaries keyed by job and contract ID.
   // Used by mainnet chain-event repair workflows; dry runs must not advance it.
   reconciliationState    Json     @default("{}") @map("reconciliation_state")

@@ -16,6 +16,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export type BridgeDirection = 'evm_to_stellar' | 'stellar_to_evm';
 
+/** Lado EVM del puente: USDC en Base (el original) o USDT en Polygon (Takenos, Wallbit). */
+export type EvmSource = 'base-usdc' | 'polygon-usdt';
+
 export interface BridgeQuote {
   amountIn: string;
   amountOut: string;
@@ -50,6 +53,8 @@ export interface BridgeTransfer {
 
 export interface BridgeQuoteInput {
   direction: BridgeDirection;
+  /** Sin él el server asume Base USDC. */
+  evmSource?: EvmSource;
   amount: string;
   evmWallet: string;
 }

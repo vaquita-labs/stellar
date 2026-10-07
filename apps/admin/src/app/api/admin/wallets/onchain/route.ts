@@ -3,7 +3,7 @@ import { Prisma, prisma } from '@vaquita/db';
 import { getWalletPositions, type WalletPositionConfig } from '@vaquita/shared/services/stellar/wallet-positions';
 import { NextResponse, type NextRequest } from 'next/server';
 import { rpcUrlFor } from '@/lib/contractEvents';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 import { getVaquitaPositionsByWalletToken, positionKey } from '@vaquita/shared/services/wallets/vaquitaPositions';
 
 // One wallet's on-chain USDC positions across every supported token — a snapshot
@@ -19,7 +19,7 @@ const isValidWallet = (a: string) => StrKey.isValidEd25519PublicKey(a) || StrKey
 
 // GET /api/admin/wallets/onchain?wallet=<G…|C…>
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   const wallet = req.nextUrl.searchParams.get('wallet')?.trim() ?? '';
   if (!wallet || !isValidWallet(wallet)) {

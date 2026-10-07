@@ -1,7 +1,7 @@
 import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 
 // Server-side admin API for the `rewards` collection. Runs in the Next.js Node
 // server (never the browser) and talks to the same Postgres DB as apps/api via
@@ -55,7 +55,7 @@ const serializeReward = (reward: RewardRow) => ({
 
 // GET /api/admin/rewards — list every non-deleted reward, ordered by id.
 export async function GET(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
   const rewards = await prisma.reward.findMany({
     where: { deletedAt: null },
     orderBy: { id: 'asc' },
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/rewards — create a new reward.
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/admin/rewards — update an existing reward (id in the body).
 export async function PATCH(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
   try {
@@ -131,7 +131,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/admin/rewards?id=123 — soft-delete (sets deleted_at).
 export async function DELETE(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
   const id = Number(idParam);

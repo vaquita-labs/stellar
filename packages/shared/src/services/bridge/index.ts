@@ -6,6 +6,7 @@ import {
   isTerminalStatus,
   requestQuote,
   type BridgeDirection,
+  type EvmSource,
   type OneClickConfig,
   type OneClickQuoteResponse,
   type OneClickStatus,
@@ -96,9 +97,11 @@ export const getBridgeTransfer = async (id: string, wallet: string): Promise<Bri
 
 type CreateParams = {
   direction: BridgeDirection;
+  /** The EVM asset on the far side; its chain is what `sourceNetwork` records. */
+  evmSource?: EvmSource;
   /** The user's Stellar address — their end of the transfer, whichever way it goes. */
   stellarWallet: string;
-  /** The user's Base address — where funds go out to, or come back to on refund. */
+  /** The user's EVM address (Base or Polygon) — where funds go out to, or come back to on refund. */
   evmWallet: string;
   /** Human units, as typed. */
   amount: string;
@@ -107,7 +110,7 @@ type CreateParams = {
 };
 
 export const createBridgeTransfer = async (params: CreateParams): Promise<BridgeTransfer> => {
-  const { origin, destination } = assetsForDirection(params.direction);
+  const { origin, destination } = assetsForDirection(params.direction, params.evmSource);
   const inbound = params.direction === 'evm_to_stellar';
   const { quote } = params.quote;
 

@@ -9,6 +9,7 @@ import { FiCheck, FiCopy, FiDownload, FiEye, FiSend, FiShield, FiRepeat} from 'r
 import { truncateMiddle } from '../../../helpers';
 import { useProfileData } from '../../../hooks';
 import { useConfigStore } from '../../../stores';
+import type { EvmSource } from '../../../hooks/useBridge';
 import { BridgeModal } from '../../organisms/BridgeModal';
 import { PageLayout } from '../../molecules';
 import { WalletBalanceModal } from './WalletBalanceModal';
@@ -25,7 +26,18 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
   const { walletAddress, network, token } = useConfigStore();
   const { data: profile } = useProfileData();
   const cryptoMode = profile?.cryptoSavvy ?? false;
-  const [bridgeOpen, setBridgeOpen] = useState(searchParams.get('bridge') === '1');
+  // `config.bridge_enabled` apagado: ni el tile ni `?bridge=1` abren el puente.
+  const bridgeEnabled = network?.bridgeEnabled !== false;
+  const [bridgeOpen, setBridgeOpen] = useState(bridgeEnabled && searchParams.get('bridge') === '1');
+  // `?source=polygon-usdt&from=takenos` llega desde el tutorial de Takenos/Wallbit.
+  const [bridgeSource, setBridgeSource] = useState<EvmSource>(
+    searchParams.get('source') === 'polygon-usdt' ? 'polygon-usdt' : 'base-usdc',
+  );
+  const fromId = searchParams.get('from');
+  const [bridgeOrigin, setBridgeOrigin] = useState(() => {
+    const platform = fromId ? network?.depositPlatforms.find((p) => p.id === fromId) : undefined;
+    return platform ? { id: platform.id, name: platform.name } : null;
+  });
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -112,9 +124,14 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
             <span className="text-sm font-semibold">{t('wallet.page.send')}</span>
             <span className="text-xs text-gray-500">{t('wallet.page.transferAssets')}</span>
           </button>
+          {bridgeEnabled && (
           <button
             type="button"
-            onClick={() => setBridgeOpen(true)}
+            onClick={() => {
+              setBridgeSource('base-usdc');
+              setBridgeOrigin(null);
+              setBridgeOpen(true);
+            }}
             className="relative col-span-2 w-full flex flex-col items-center justify-center gap-2 rounded-lg border border-black border-b-2 bg-white px-3 py-6 text-black hover:bg-[#F5FBFF] transition"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EAFBEA] border border-[#018222]">
@@ -123,6 +140,7 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
             <span className="text-sm font-semibold">{t('wallet.bridge.title', 'Bridge USDC')}</span>
             <span className="text-xs text-gray-500">{t('wallet.bridge.subtitle', 'Move USDC between Base and Stellar')}</span>
           </button>
+          )}
         </section>
         )}
 
@@ -141,6 +159,8 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
           open={bridgeOpen}
           onOpenChange={() => setBridgeOpen(false)}
           stellarWallet={walletAddress}
+          source={bridgeSource}
+          origin={bridgeOrigin}
         />
         <WalletBalanceModal open={balanceOpen} onOpenChange={() => setBalanceOpen(false)} />
         <WalletReceiveModal

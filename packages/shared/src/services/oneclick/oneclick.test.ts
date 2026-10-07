@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   BASE_USDC,
+  POLYGON_USDT,
   STELLAR_USDC,
   assetsForDirection,
   getStatus,
   humanToBaseUnits,
+  isEvmSource,
   isTerminalStatus,
   requestQuote,
   submitDepositTx,
@@ -54,6 +56,22 @@ describe('assetsForDirection', () => {
   it('maps each direction to its origin and destination', () => {
     expect(assetsForDirection('evm_to_stellar')).toEqual({ origin: BASE_USDC, destination: STELLAR_USDC });
     expect(assetsForDirection('stellar_to_evm')).toEqual({ origin: STELLAR_USDC, destination: BASE_USDC });
+  });
+
+  it('swaps the EVM side for Polygon USDT when asked', () => {
+    expect(assetsForDirection('evm_to_stellar', 'polygon-usdt')).toEqual({
+      origin: POLYGON_USDT,
+      destination: STELLAR_USDC,
+    });
+  });
+});
+
+describe('isEvmSource', () => {
+  it('accepts only the known sources', () => {
+    expect(isEvmSource('base-usdc')).toBe(true);
+    expect(isEvmSource('polygon-usdt')).toBe(true);
+    expect(isEvmSource('toString')).toBe(false);
+    expect(isEvmSource(undefined)).toBe(false);
   });
 });
 
@@ -118,6 +136,23 @@ describe('requestQuote', () => {
       dry: true,
     });
     expect(JSON.parse(String(inbound[0]?.init.body)).depositMode).toBe('SIMPLE');
+  });
+
+  it('quotes Polygon USDT into Stellar USDC as a plain deposit', async () => {
+    const calls = captureFetch(json({ quote: {} }));
+    await requestQuote(config, {
+      direction: 'evm_to_stellar',
+      evmSource: 'polygon-usdt',
+      amountRaw: '10000000',
+      recipient: 'GDEST',
+      refundTo: '0xrefund',
+      dry: true,
+    });
+    const body = JSON.parse(String(calls[0]?.init.body));
+    expect(body.originAsset).toBe(POLYGON_USDT.assetId);
+    expect(body.destinationAsset).toBe(STELLAR_USDC.assetId);
+    expect(body.depositMode).toBe('SIMPLE');
+    expect(body.refundTo).toBe('0xrefund');
   });
 
   it('surfaces the 4xx message instead of swallowing it', async () => {

@@ -13,6 +13,7 @@ import type { PendingWithdrawPayment } from '@/networks/stellar/withdrawError';
 import { WithdrawPaymentError } from '@/networks/stellar/withdrawError';
 import { PassiveMigrationSheet } from './PassiveMigrationSheet';
 import { usePollar } from '@pollar/react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnalytics, useInvalidateAfterMoneyMove, useIsPoolPaused, useOpenDepositIntent } from '../../hooks';
@@ -20,7 +21,7 @@ import { useMapStore, useConfigStore, useAwaitingFundsStore, useOnrampWaitingSto
 import { useModalPresence } from '../molecules/AppModal';
 import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
 import { ReceiveModal } from './DepositModal/ReceiveModal';
-import { OtherAppDepositModal, PendingPlatformDepositCard } from './OtherAppDeposit';
+import { bridgeHref, OtherAppDepositModal, PendingPlatformDepositCard } from './OtherAppDeposit';
 import type { DepositPlatformDTO } from '../../types';
 import { WalletSendModal } from '../pages/profile/WalletSendModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
@@ -33,6 +34,7 @@ import { HOME_TOUR_ANCHOR_ACTIONS } from './Tutorial/homeTourConfig';
 
 export function DepositPanel() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isMethodOpen, setIsMethodOpen] = useState(false);
   // El picker de país lo comparten depósito (on-ramp) y retiro (off-ramp): el
@@ -125,6 +127,11 @@ export function DepositPanel() {
           intent={openIntent}
           platform={pendingPlatform}
           onShowAddress={() => {
+            // Una 'bridge' no tiene "mi dirección": su dirección es la del puente.
+            if (pendingPlatform.tier === 'bridge') {
+              router.push(bridgeHref(pendingPlatform));
+              return;
+            }
             setReceivePlatform(pendingPlatform);
             setIsReceiveOpen(true);
           }}

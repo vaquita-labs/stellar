@@ -2,7 +2,7 @@ import { Networks } from '@stellar/stellar-sdk';
 import { refreshWalletBalances } from '@vaquita/shared/services/wallets/onchainBalances';
 import { NextResponse, type NextRequest } from 'next/server';
 import { rpcUrlFor } from '@/lib/contractEvents';
-import { adminSecretOk } from '@/lib/adminSecret';
+import { adminRequestOk } from '@/lib/adminSecret';
 
 // Throttled batch scrape for the Wallets tab. The work itself lives in
 // @vaquita/shared so the scheduled refresh job and this button cannot drift
@@ -15,7 +15,7 @@ const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden
 const DEFAULT_BATCH = Number(process.env.SCRAPE_BATCH_SIZE ?? 10);
 
 export async function POST(req: NextRequest) {
-  if (!adminSecretOk(req)) return forbidden();
+  if (!(await adminRequestOk(req))) return forbidden();
 
   const body = (await req.json().catch(() => ({}))) as { offset?: number; limit?: number; wallets?: string[] };
   // Capped at 50 here and not in the service: a browser waits on this response,
