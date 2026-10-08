@@ -2,6 +2,7 @@ import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 import { ONBOARDING_FLAGS, ONBOARDING_KEYS } from '@/core-ui/config/onboardings';
 
 // Which first-run experiences each profile has completed, and the switch to
@@ -87,7 +88,7 @@ export async function GET(req: NextRequest) {
   });
 }
 
-export async function PATCH(req: NextRequest) {
+async function PATCHHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   const parsed = updateSchema.safeParse(await req.json().catch(() => null));
@@ -105,3 +106,5 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ status: 'success', data: { walletAddress, key, value } });
 }
+
+export const PATCH = audited('onboarding.update', PATCHHandler);

@@ -11,6 +11,7 @@ import type { Campaign } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 
 // Marketing campaigns: the codes and default UTM parameters the attribution
 // endpoint resolves against. Same runtime/auth conventions as the rewards route.
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/campaigns — create.
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
 }
 
 // PATCH /api/admin/campaigns — update (id in the body).
-export async function PATCH(req: NextRequest) {
+async function PATCHHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -133,7 +134,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/admin/campaigns?id=123 — soft-delete. Profiles already attributed
 // keep pointing at the row, so retiring a campaign never rewrites history.
-export async function DELETE(req: NextRequest) {
+async function DELETEHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
@@ -147,3 +148,9 @@ export async function DELETE(req: NextRequest) {
   }
   return NextResponse.json({ data: { id } });
 }
+
+export const POST = audited('campaigns.create', POSTHandler);
+
+export const PATCH = audited('campaigns.update', PATCHHandler);
+
+export const DELETE = audited('campaigns.delete', DELETEHandler);

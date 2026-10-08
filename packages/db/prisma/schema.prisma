@@ -1327,3 +1327,39 @@ model ReleaseNoteImage {
   @@index([releaseNoteId, displayOrder], map: "idx_release_note_images_note")
   @@map("release_note_images")
 }
+
+/// Role of one admin-console email. Entry to the console is decided by
+/// Cloudflare Access (see docs/ops/admin-access.md); this table only says
+/// whether the person may write. An email Access admits that has no row here
+/// is read-only. While the table is EMPTY every admitted email is an operator,
+/// so the first person can add the team (bootstrap).
+model AdminUser {
+  /// Lower-cased; enforced by a CHECK in packages/db/sql/admin_enums.sql.
+  email      String    @id @db.VarChar(254)
+  /// 'operator' | 'read-only' — enforced by a CHECK in packages/db/sql/admin_enums.sql.
+  role       String    @default("read-only") @db.VarChar(16)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// The email that added the row, or 'service' for the x-admin-secret path.
+  createdBy  String    @map("created_by") @db.VarChar(254)
+  /// Set to lock this one person out of the app without touching anyone else.
+  disabledAt DateTime? @map("disabled_at") @db.Timestamptz(6)
+
+  @@map("admin_users")
+}
+
+/// One row per admin-console write: who did what to which thing, with which
+/// validated payload, from where. Append-only by convention.
+model AdminAuditLog {
+  id         BigInt   @id @default(autoincrement())
+  actorEmail String   @map("actor_email") @db.VarChar(254)
+  /// '<area>.<verb>', e.g. 'rewards.update'.
+  action     String   @db.VarChar(64)
+  target     String?  @db.VarChar(128)
+  payload    Json?
+  ip         String?  @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt(sort: Desc)], map: "idx_admin_audit_log_created")
+  @@index([actorEmail, createdAt(sort: Desc)], map: "idx_admin_audit_log_actor_created")
+  @@map("admin_audit_log")
+}

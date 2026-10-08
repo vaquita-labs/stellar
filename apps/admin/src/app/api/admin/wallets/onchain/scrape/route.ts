@@ -3,6 +3,7 @@ import { refreshWalletBalances } from '@vaquita/shared/services/wallets/onchainB
 import { NextResponse, type NextRequest } from 'next/server';
 import { rpcUrlFor } from '@/lib/contractEvents';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 
 // Throttled batch scrape for the Wallets tab. The work itself lives in
 // @vaquita/shared so the scheduled refresh job and this button cannot drift
@@ -14,7 +15,7 @@ const forbidden = () => NextResponse.json({ status: 'error', message: 'Forbidden
 
 const DEFAULT_BATCH = Number(process.env.SCRAPE_BATCH_SIZE ?? 10);
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   const body = (await req.json().catch(() => ({}))) as { offset?: number; limit?: number; wallets?: string[] };
@@ -39,3 +40,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'error', message }, { status: notConfigured ? 404 : 500 });
   }
 }
+
+export const POST = audited('wallets.scrape', POSTHandler);

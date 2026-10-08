@@ -1,5 +1,6 @@
 import { type Prisma, prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
+import { audited } from '@/lib/audit';
 
 import {
   type AchievementAdminPayload,
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/achievements — create a new badge. `key` is immutable once created.
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -65,3 +66,5 @@ export async function POST(req: NextRequest) {
   });
   return NextResponse.json({ status: 'success', data: { achievement: serializeAchievement(achievement) } });
 }
+
+export const POST = audited('achievements.create', POSTHandler);

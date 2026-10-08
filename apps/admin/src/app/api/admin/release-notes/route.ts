@@ -12,6 +12,7 @@ import {
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 
 // Release notes: the "what's new" popup the app shows once per user. Same
 // runtime/auth conventions as the campaigns route.
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/release-notes — create (optionally publishing straight away).
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/admin/release-notes — update (id in the body). Omitting `images`
 // leaves the carousel untouched; sending it replaces the whole set.
-export async function PATCH(req: NextRequest) {
+async function PATCHHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -149,7 +150,7 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/release-notes?id=123 — soft-delete. The seen-id markers on
 // `profiles` keep pointing at the row, so removing a note never re-pops an
 // older one for everyone who had already caught up.
-export async function DELETE(req: NextRequest) {
+async function DELETEHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
@@ -163,3 +164,9 @@ export async function DELETE(req: NextRequest) {
   }
   return NextResponse.json({ data: { id } });
 }
+
+export const POST = audited('release-notes.create', POSTHandler);
+
+export const PATCH = audited('release-notes.update', PATCHHandler);
+
+export const DELETE = audited('release-notes.delete', DELETEHandler);

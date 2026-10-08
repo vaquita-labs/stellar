@@ -13,6 +13,7 @@ import {
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 
 // Triage inbox for the in-app "Report a bug" / "Send feedback" forms. Reads the
 // same Postgres DB as apps/api through @vaquita/shared, so no admin auth has to
@@ -105,7 +106,7 @@ export async function GET(req: NextRequest) {
 }
 
 // PATCH /api/admin/feedback — move one report along the lifecycle (id in body).
-export async function PATCH(req: NextRequest) {
+async function PATCHHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -147,7 +148,7 @@ export async function PATCH(req: NextRequest) {
 // action and keeps the audit trail; this one exists for content nobody should
 // be able to pull back out of the table, and the FK cascades take the bytes with
 // it. The screen puts it behind a confirm.
-export async function DELETE(req: NextRequest) {
+async function DELETEHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   const id = req.nextUrl.searchParams.get('id') ?? '';
@@ -160,3 +161,7 @@ export async function DELETE(req: NextRequest) {
   }
   return NextResponse.json({ data: { id } });
 }
+
+export const PATCH = audited('feedback.moderate', PATCHHandler);
+
+export const DELETE = audited('feedback.delete', DELETEHandler);
