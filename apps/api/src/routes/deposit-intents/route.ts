@@ -6,6 +6,7 @@ import {
   getOpenDepositIntent,
   getProfile,
   openDepositIntent,
+  reportDepositIntentArrived,
   sendError,
   sendSuccess,
   toDepositIntentResponseDTO,
@@ -15,8 +16,11 @@ import {
  * "Deposit from another app" waiting cards (`/deposit-intents`).
  *
  * An intent is a UI marker: it never moves or credits money, so the client is
- * allowed to report arrival itself (it sees the balance go up). The profile
- * still always comes from the session, never from the URL or the body.
+ * allowed to report arrival itself (it sees the balance go up). The server
+ * also checks Horizon on `GET /open` and on `arrived` — and the API's deposit
+ * intent watcher does so every minute — closing the intent and notifying the
+ * user once the USDC lands. The profile always comes from the session, never
+ * from the URL or the body.
  */
 const router = Router();
 
@@ -42,7 +46,7 @@ router.get('/open', requireSessionWallet, async (req, res) => {
     const profileId = await resolveProfileId(res, req);
     if (profileId === null) return;
 
-    const row = await getOpenDepositIntent(profileId);
+    const row = await getOpenDepositIntent(profileId, { detect: true });
     return sendSuccess(res, { intent: row ? toDepositIntentResponseDTO(row) : null });
   } catch (err) {
     req.log.error({ err }, 'Failed to read the open deposit intent');
@@ -88,7 +92,10 @@ for (const [action, status] of [
       const profileId = await resolveProfileId(res, req);
       if (profileId === null) return;
 
-      const row = await closeDepositIntent({ id, profileId, status });
+      const row =
+        status === 'arrived'
+          ? await reportDepositIntentArrived({ id, profileId })
+          : await closeDepositIntent({ id, profileId, status });
       if (!row) return sendError(res, 'Deposit intent not found.', null, 404);
 
       req.log.info({ profileId, depositIntentId: id, status }, 'Deposit intent closed');

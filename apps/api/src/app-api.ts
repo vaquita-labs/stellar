@@ -13,6 +13,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import pinoHttp from 'pino-http';
 import { tryParsePoolError } from '@vaquita/shared';
 import { logger, serializeReq } from './lib/logger';
+import { startDepositIntentWatcher } from './lib/depositIntentWatcher';
 import { httpMetricsMiddleware, isMetricsEnabled } from './lib/metrics';
 import {
   createPrismaProductStatsRepository,
@@ -98,5 +99,13 @@ app.listen(PORT, () => {
     const refreshMs = apiEnv.OBSERVABILITY_METRICS_REFRESH_MS;
     startProductMetricsCollector(createPrismaProductStatsRepository(), refreshMs);
     logger.info({ refreshMs }, 'product metrics collector started');
+  }
+
+  // Closes "Deposit from another app" waits whose USDC landed on chain and
+  // notifies the user (in-app + push), also when the app is closed.
+  const watchMs = apiEnv.DEPOSIT_INTENT_WATCH_MS;
+  if (watchMs > 0) {
+    startDepositIntentWatcher(watchMs);
+    logger.info({ watchMs }, 'deposit intent watcher started');
   }
 });

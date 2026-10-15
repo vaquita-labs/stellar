@@ -36,6 +36,10 @@ const apiEnvSchema = z.object({
   OBSERVABILITY_METRICS_ENABLED: z.enum(['true', 'false']),
   // Refresh interval (ms) for the product metrics collector.
   OBSERVABILITY_METRICS_REFRESH_MS: z.string().regex(/^\d+$/).transform(Number),
+  // Interval (ms) of the deposit intent watcher, which checks open "Deposit
+  // from another app" waits against Horizon and notifies when the USDC lands.
+  // Optional (default 60000); '0' turns the watcher off.
+  DEPOSIT_INTENT_WATCH_MS: z.string().regex(/^\d+$/).default('60000').transform(Number),
 });
 
 const parsed = apiEnvSchema.safeParse(process.env);

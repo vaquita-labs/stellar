@@ -22,9 +22,10 @@ interface PendingPlatformDepositCardProps {
  *
  * Mientras está a la vista, `DepositPanel` deja prendido el poll de saldo, y una
  * subida desde que apareció cuenta como llegada (mismo criterio que el sheet de
- * recibir). La base es el saldo al montarse, no al abrir la espera: si la plata
- * entró con la app cerrada no hay forma de distinguirla, y la tarjeta se va sola
- * a las 24 h o con la X.
+ * recibir). La base es el saldo al montarse, no al abrir la espera, así que una
+ * plata que entró con la app cerrada (o con la tarjeta desmontada) no se ve
+ * desde acá: de ésa se encarga el servidor, que mira Horizon y cierra la espera
+ * (ver `useOpenDepositIntent`). Esto queda como el camino rápido mientras mira.
  */
 export function PendingPlatformDepositCard({ intent, platform, onShowAddress, onShowSteps }: PendingPlatformDepositCardProps) {
   const { t } = useTranslation();
