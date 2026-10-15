@@ -2,6 +2,7 @@ import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 
 // Server-side admin API for the `rewards` collection. Runs in the Next.js Node
 // server (never the browser) and talks to the same Postgres DB as apps/api via
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/rewards — create a new reward.
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
 }
 
 // PATCH /api/admin/rewards — update an existing reward (id in the body).
-export async function PATCH(req: NextRequest) {
+async function PATCHHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -130,7 +131,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 // DELETE /api/admin/rewards?id=123 — soft-delete (sets deleted_at).
-export async function DELETE(req: NextRequest) {
+async function DELETEHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
@@ -148,3 +149,8 @@ export async function DELETE(req: NextRequest) {
   await prisma.reward.update({ where: { id: rewardId }, data: { deletedAt: new Date() } });
   return NextResponse.json({ data: { id } });
 }
+export const POST = audited('rewards.create', POSTHandler);
+
+export const PATCH = audited('rewards.update', PATCHHandler);
+
+export const DELETE = audited('rewards.delete', DELETEHandler);

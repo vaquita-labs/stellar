@@ -2,6 +2,7 @@ import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 
 // Server-side admin API for the singleton `config` row. Runs in the
 // Next.js Node server (never the browser) and talks to the same Postgres DB as
@@ -107,7 +108,7 @@ export async function GET(req: NextRequest) {
 
 // PATCH /api/config — upsert the singleton. Creates the row if it
 // doesn't exist yet (the table starts empty), otherwise updates the existing one.
-export async function PATCH(req: NextRequest) {
+async function PATCHHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -174,3 +175,5 @@ export async function PATCH(req: NextRequest) {
   });
   return NextResponse.json({ data: { config: serializeConfig(config) } });
 }
+
+export const PATCH = audited('config.update', PATCHHandler);

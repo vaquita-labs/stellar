@@ -3,6 +3,7 @@ import { tokenReadiness } from '@vaquita/shared/services/project-config/index';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 
 // Server-side admin API for the `tokens` collection. Runs in the Next.js Node
 // server (never the browser) and talks to the same Postgres DB as apps/api via
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/tokens — create a new token.
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
 }
 
 // PATCH /api/admin/tokens — update an existing token (id in the body).
-export async function PATCH(req: NextRequest) {
+async function PATCHHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -188,7 +189,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 // DELETE /api/admin/tokens?id=123 — soft-delete (sets deleted_at).
-export async function DELETE(req: NextRequest) {
+async function DELETEHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   const idParam = req.nextUrl.searchParams.get('id');
@@ -205,3 +206,9 @@ export async function DELETE(req: NextRequest) {
   await prisma.token.update({ where: { id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ data: { id } });
 }
+
+export const POST = audited('tokens.create', POSTHandler);
+
+export const PATCH = audited('tokens.update', PATCHHandler);
+
+export const DELETE = audited('tokens.delete', DELETEHandler);

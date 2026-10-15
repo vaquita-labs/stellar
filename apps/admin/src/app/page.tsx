@@ -74,6 +74,11 @@ const sections: { href: string; title: string; description: string }[] = [
     description: 'Send in-app + push notifications to everyone or specific users.',
   },
   {
+    href: '/users',
+    title: 'Users',
+    description: 'Who may change things in this console: operators and read-only people, and the audit trail behind them.',
+  },
+  {
     href: '/listening',
     title: 'Listening',
     description: 'Live on-chain event listener and transactions.',

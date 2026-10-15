@@ -2,6 +2,7 @@ import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 import { getServerEnv } from '@/core-ui/config/serverEnv';
 
 // Admin API for notification campaigns.
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/admin/notifications — proxea el envío al servicio API.
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let json: unknown;
@@ -81,3 +82,5 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ data: data?.data ?? data });
 }
+
+export const POST = audited('notifications.send', POSTHandler);

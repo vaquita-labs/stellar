@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { formatUnits, rpcUrlFor, scanPoolEvents, type ParsedPoolEvent } from '@/lib/contractEvents';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,7 @@ const toRangeMs = (value: string, edge: 'start' | 'end'): number => {
   return Date.parse(value);
 };
 
-export async function POST(req: NextRequest) {
+async function POSTHandler(req: NextRequest) {
   if (!(await adminRequestOk(req))) return forbidden();
 
   let body: unknown;
@@ -213,3 +214,5 @@ export async function POST(req: NextRequest) {
     },
   });
 }
+
+export const POST = audited('contract-events.scan', POSTHandler);

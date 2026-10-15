@@ -7,6 +7,7 @@ The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are
 
 | Migration | dev | staging | prod |
 |-----------|-----|---------|------|
+| `20261008_admin_identity.sql` | ❌ | ❌ | ❌ |
 | `20261002_schema_parity_defaults_fk.sql` | ❌ | ❌ | ❌ |
 | `20261002_support_chat.sql` | ❌ | ❌ | ❌ |
 | `20261001_bridge_enabled.sql` | ✅ | ✅ | ✅ |
@@ -31,6 +32,13 @@ The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are
 | `20260820_vault_apy_snapshots.sql` | ❌ | ❌ | ❌ |
 
 (`?` = not verified — re-check with a diff script in `apps/api/tmp/` before trusting the row.)
+
+Apply `20261008_admin_identity.sql` with `scripts/db-migrate.sh <env> apply 20261008_admin_identity.sql`
+(production needs `--yes-production`), then `scripts/db-migrate.sh <env> sql` for the CHECKs in
+`packages/db/sql/admin_enums.sql`. It adds `admin_users` and `admin_audit_log`, the role table and
+audit trail behind personal sign-in on the admin console (`docs/ops/admin-access.md`). **Apply before
+the admin deploys anywhere new**: every admin write looks up `admin_users` and inserts an audit row,
+so without the tables every write 500s. Additive; no data moves.
 
 Apply the two 2026-10-02 ones with `cd packages/db && node scripts/apply-migration.mjs <file.sql>`
 (it prints the host and database before writing; both files are idempotent), then

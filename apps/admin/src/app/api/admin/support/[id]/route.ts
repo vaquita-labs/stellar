@@ -7,6 +7,7 @@ import {
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminRequestOk } from '@/lib/adminSecret';
+import { audited } from '@/lib/audit';
 
 // One thread of the private Help Center chat: read it, reply to it, resolve it.
 export const runtime = 'nodejs';
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 }
 
 // POST /api/admin/support/:id  { body } — a reply from the team.
-export async function POST(req: NextRequest, { params }: Params) {
+async function POSTHandler(req: NextRequest, { params }: Params) {
   if (!(await adminRequestOk(req))) return forbidden();
   const { id } = await params;
   if (!idSchema.safeParse(id).success) return notFound();
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 }
 
 // PATCH /api/admin/support/:id  { resolved } — resolve or reopen.
-export async function PATCH(req: NextRequest, { params }: Params) {
+async function PATCHHandler(req: NextRequest, { params }: Params) {
   if (!(await adminRequestOk(req))) return forbidden();
   const { id } = await params;
   if (!idSchema.safeParse(id).success) return notFound();
@@ -73,3 +74,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (!(await setSupportConversationResolved(id, parsed.data.resolved))) return notFound();
   return NextResponse.json({ data: { id, resolved: parsed.data.resolved } });
 }
+
+export const POST = audited('support.reply', POSTHandler);
+
+export const PATCH = audited('support.update', PATCHHandler);

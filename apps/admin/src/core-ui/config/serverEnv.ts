@@ -21,6 +21,16 @@ const envServerSchema = z.object({
   // notifications route proxies campaign sends there). Same value the browser
   // uses; listed here because server code must not import clientEnv.
   SERVICES_URL: z.url(),
+  // Cloudflare Access in front of the console (docs/ops/admin-access.md).
+  // Both or neither: with both set, every request must carry a valid Access
+  // token and the person's email is the identity in the audit log. With
+  // neither, the passcode gate is the only identity and the actor is recorded
+  // as 'passcode' — the rollout state, not the destination.
+  CF_ACCESS_TEAM_DOMAIN: z
+    .string()
+    .regex(/^[a-z0-9-]+\.cloudflareaccess\.com$/, 'CF_ACCESS_TEAM_DOMAIN looks like <team>.cloudflareaccess.com')
+    .optional(),
+  CF_ACCESS_AUD: z.string().min(16).optional(),
 });
 
 type ServerEnv = z.infer<typeof envServerSchema>;
@@ -42,6 +52,8 @@ export function getServerEnv(): ServerEnv {
     ADMIN_SECRET: process.env.ADMIN_SECRET,
     ADMIN_PASSCODE: process.env.ADMIN_PASSCODE,
     SERVICES_URL: process.env.NEXT_PUBLIC_SERVICES_URL,
+    CF_ACCESS_TEAM_DOMAIN: process.env.CF_ACCESS_TEAM_DOMAIN || undefined,
+    CF_ACCESS_AUD: process.env.CF_ACCESS_AUD || undefined,
   });
 
   if (!parsed.success) {
@@ -49,7 +61,18 @@ export function getServerEnv(): ServerEnv {
     console.error(parsed.error.format());
     throw new Error('Invalid environment variables');
   }
+  if (!!parsed.data.CF_ACCESS_TEAM_DOMAIN !== !!parsed.data.CF_ACCESS_AUD) {
+    throw new Error('CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD must be set together');
+  }
 
   cached = parsed.data;
   return cached;
+}
+
+/** The Access settings when the console is behind Cloudflare Access, else null. */
+export function getAccessConfig(): { teamDomain: string; aud: string } | null {
+  const env = getServerEnv();
+  return env.CF_ACCESS_TEAM_DOMAIN && env.CF_ACCESS_AUD
+    ? { teamDomain: env.CF_ACCESS_TEAM_DOMAIN, aud: env.CF_ACCESS_AUD }
+    : null;
 }

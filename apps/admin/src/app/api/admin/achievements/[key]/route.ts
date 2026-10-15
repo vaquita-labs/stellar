@@ -1,5 +1,6 @@
 import { prisma } from '@vaquita/db';
 import { type NextRequest, NextResponse } from 'next/server';
+import { audited } from '@/lib/audit';
 
 import {
   type AchievementAdminPayload,
@@ -22,7 +23,7 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ key: string }> }) {
+async function PATCHHandler(req: NextRequest, { params }: { params: Promise<{ key: string }> }) {
   if (!(await adminRequestOk(req))) return forbidden();
   const { key } = await params;
 
@@ -62,3 +63,5 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ke
   });
   return NextResponse.json({ status: 'success', data: { achievement: serializeAchievement(achievement) } });
 }
+
+export const PATCH = audited('achievements.update', PATCHHandler);
