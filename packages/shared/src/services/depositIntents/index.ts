@@ -1,6 +1,10 @@
 import { prisma } from '@vaquita/db';
 import type { DepositIntent } from '@vaquita/db';
 import type { DepositIntentResponseDTO } from '../../types';
+import { findIntentArrival, settleArrivedIntent } from './arrival';
+
+export * from './arrival';
+export * from './depositReceivedNotice';
 
 /**
  * "The user said they are sending money from X" — the row behind the waiting
@@ -8,7 +12,9 @@ import type { DepositIntentResponseDTO } from '../../types';
  *
  * A UI marker and nothing else: it never moves or credits money. That is why a
  * client-reported `arrived` is fine here when it would not be on a ledger. The
- * worst a wrong status can do is show or hide a card.
+ * worst a wrong status can do is show or hide a card. The server also closes
+ * it on its own when Horizon shows the USDC landing (`./arrival`), which is
+ * what tells the user — in-app and by push — that the deposit arrived.
  *
  * Every read and write is keyed on (id, profileId), with the profile taken
  * from the session, so a guessed id never reaches another user's row.
@@ -63,18 +69,31 @@ export const openDepositIntent = async ({
 
 /**
  * The profile's open intent, if any. Rows past `expires_at` are flipped to
- * `expired` on the way, so there is no job to run and no card that outlives
- * its 24 hours.
+ * `expired` on the way, so no card outlives its 24 hours.
+ *
+ * With `detect`, the chain is asked first: an intent whose USDC already landed
+ * is closed as `arrived` (and the user notified) and null comes back. This is
+ * what clears the card after a reload, when the client's own before/after
+ * balance comparison can no longer see the deposit.
  */
-export const getOpenDepositIntent = async (profileId: number): Promise<DepositIntent | null> => {
+export const getOpenDepositIntent = async (
+  profileId: number,
+  { detect = false }: { detect?: boolean } = {},
+): Promise<DepositIntent | null> => {
   await prisma.depositIntent.updateMany({
     where: { profileId, status: 'open', expiresAt: { lte: new Date() } },
     data: { status: 'expired' },
   });
-  return prisma.depositIntent.findFirst({
+  const row = await prisma.depositIntent.findFirst({
     where: { profileId, status: 'open' },
     orderBy: { createdAt: 'desc' },
   });
+  if (!row || !detect) return row;
+
+  const payment = await findIntentArrival(row);
+  if (!payment) return row;
+  await settleArrivedIntent(row, payment);
+  return null;
 };
 
 /**
@@ -97,4 +116,28 @@ export const closeDepositIntent = async ({
   });
   if (count === 0) return null;
   return prisma.depositIntent.findFirst({ where: { id, profileId } });
+};
+
+/**
+ * The client saw its balance go up and reports the intent as arrived. The
+ * chain is checked first so the arrival is announced (notification + push)
+ * with the real amount; when Horizon has not indexed the payment yet the card
+ * is still closed as the client asked, just without a notice. Null when there
+ * is no open intent with that id for this profile.
+ */
+export const reportDepositIntentArrived = async ({
+  id,
+  profileId,
+}: {
+  id: string;
+  profileId: number;
+}): Promise<DepositIntent | null> => {
+  const row = await prisma.depositIntent.findFirst({ where: { id, profileId, status: 'open' } });
+  if (!row) return null;
+
+  const payment = await findIntentArrival(row);
+  if (payment && (await settleArrivedIntent(row, payment))) {
+    return prisma.depositIntent.findFirst({ where: { id, profileId } });
+  }
+  return closeDepositIntent({ id, profileId, status: 'arrived' });
 };

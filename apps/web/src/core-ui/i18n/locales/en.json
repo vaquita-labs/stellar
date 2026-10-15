@@ -1199,6 +1199,10 @@
         "body": "${{amount}} USDC sent to your wallet.",
         "title": "Withdrawal completed"
       },
+      "depositReceived": {
+        "body": "You received {{amount}} USDC from {{platform}}.",
+        "title": "Your deposit arrived"
+      },
       "transferReceived": {
         "body": "{{name}} sent you {{amount}} USDC.",
         "title": "You received money"

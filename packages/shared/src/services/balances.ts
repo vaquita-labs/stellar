@@ -9,6 +9,10 @@ const stellarServers: { [key: string]: any } = {
   ['Stellar']: new StellarSdk.Horizon.Server('https://horizon.stellar.org'),
 };
 
+/** The Horizon server for a config `networkName`, or null for an unknown one. */
+export const getHorizonServer = (networkName: string): StellarSdk.Horizon.Server | null =>
+  stellarServers[networkName] ?? null;
+
 export async function getBalances(address: string, config: ProjectConfigResponseDTO | null) {
 
   const results: {
