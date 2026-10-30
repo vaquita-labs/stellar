@@ -8,7 +8,6 @@ import {
   PullToRefresh,
   PushSubscriptionSync,
   PwaInstallReporter,
-  RampSettledGate,
   ReleaseNotesGate,
   RequireAuth,
   TransferReceivedGate,
@@ -64,9 +63,6 @@ export default function PrivateLayout({
                 {/* Money another user sent while the app was closed. Queued ahead
                     of the release notes by [[auto-modals]]. */}
                 <TransferReceivedGate />
-                {/* A bank purchase or withdrawal that completed while the app was
-                    closed — the user left for the bank app and came back. */}
-                <RampSettledGate />
                 <ReleaseNotesGate />
                 {/* Above the scroll region, not over it: a newer build being
                     served is ambient state, not an interruption, so it takes a

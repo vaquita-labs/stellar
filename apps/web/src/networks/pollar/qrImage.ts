@@ -100,6 +100,31 @@ export function pngFileFromDataUrl(src: string, filename: string): File | null {
   }
 }
 
+/** What the user is offered to take the QR with them. */
+export type SaveAffordance = 'save' | 'longPress' | 'none';
+
+/**
+ * What to show under the QR, by device.
+ *
+ * The code is used in ANOTHER app (the bank's, or the scanner of whoever is
+ * invited), so on a phone it has to be able to leave this one: first the save
+ * button, and when the browser can neither download nor share files, at least
+ * the long-press hint. On desktop nothing is offered: the QR is scanned off the
+ * screen with the phone, and a download there only leaves a stray PNG behind.
+ *
+ * Being able to download is enough to show the button: it is what
+ * `saveQrImage` tries first, and tying it to sharing hid the button in browsers
+ * that save fine but cannot open the share sheet.
+ */
+export function saveAffordanceFor(device: {
+  coarsePointer: boolean;
+  canDownload: boolean;
+  canShareFiles: boolean;
+}): SaveAffordance {
+  if (!device.coarsePointer) return 'none';
+  return device.canDownload || device.canShareFiles ? 'save' : 'longPress';
+}
+
 /** Qué terminó pasando al intentar guardar. */
 export type SaveOutcome = 'shared' | 'downloaded' | 'manual';
 
