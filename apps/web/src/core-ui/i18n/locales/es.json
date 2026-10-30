@@ -2288,7 +2288,9 @@
       "selfCustodyTitle": "Wallet de autocustodia",
       "send": "Enviar",
       "title": "Billetera",
-      "transferAssets": "Transfiere activos"
+      "transferAssets": "Transfiere activos",
+      "card": "Tarjeta",
+      "cardSubtitle": "Gasta tus USDC en cualquier lugar"
     },
     "profile": {
       "addFriends": "Agregar amigos",
@@ -2389,6 +2391,157 @@
       "fromApp": "Desde {{name}}: {{asset}} en {{network}} → USDC en Stellar",
       "refundedTo": "Dirección de devolución: {{address}}",
       "titleFrom": "Depositar desde {{name}}"
+    },
+    "card": {
+      "title": "Pide tu tarjeta",
+      "yourCard": "Tu tarjeta",
+      "providerCard": "una tarjeta {{name}}",
+      "start": "Empezar",
+      "continue": "Continuar",
+      "unavailable": "Las tarjetas no están disponibles en esta app.",
+      "unavailableNow": "Las tarjetas no están disponibles en este momento. Inténtalo más tarde.",
+      "intro": "Obtén {{card}} que se recarga desde tu billetera. Primero verificas tu identidad; toma unos minutos.",
+      "stepsProgress": "{{done}} de {{total}} pasos completados",
+      "blocked": {
+        "registry-review": "Tus datos están en revisión.",
+        "kyc-review": "Tu verificación está en revisión.",
+        "kyc-rejected": "Tu verificación no fue aprobada."
+      },
+      "kyc": {
+        "aboutYou": "Sobre ti",
+        "firstName": "Nombre",
+        "lastName": "Apellido",
+        "birthDate": "Fecha de nacimiento",
+        "nationalId": "Número de documento",
+        "countryOfIssue": "País del documento (2 letras)",
+        "occupation": "Ocupación",
+        "select": "Elige…",
+        "phoneCountryCode": "Código de país",
+        "phoneNumber": "Número de celular",
+        "annualSalary": "Ingreso anual",
+        "expectedMonthlyVolume": "Gasto mensual esperado",
+        "accountPurpose": "¿Para qué usarás la tarjeta?",
+        "accountPurposePlaceholder": "Gastos personales",
+        "termsPrefix": "Leí y acepto los",
+        "termsLink": "términos de servicio de {{name}}"
+      },
+      "income": {
+        "0-1000": "Hasta 1.000 USD",
+        "1000-5000": "De 1.000 a 5.000 USD",
+        "5000-10000": "De 5.000 a 10.000 USD",
+        "10000+": "Más de 10.000 USD"
+      },
+      "address": {
+        "title": "Dirección",
+        "line1": "Calle y número",
+        "line2": "Departamento, piso (opcional)",
+        "city": "Ciudad",
+        "region": "Departamento o provincia",
+        "postalCode": "Código postal",
+        "countryCode": "País (2 letras)"
+      },
+      "verification": {
+        "PENDING": "Estamos revisando tu información.",
+        "NEEDS_ACTION": "Termina de verificar tu identidad con el emisor de la tarjeta: te pedirá una foto de tu documento y una selfie.",
+        "IN_REVIEW": "Tu verificación está en revisión manual. Puede tardar un poco.",
+        "DENIED": "Tu verificación fue rechazada.",
+        "LOCKED": "Tu cuenta está bloqueada.",
+        "CANCELED": "Tu verificación fue cancelada.",
+        "verify": "Verificar mi identidad",
+        "done": "Ya terminé",
+        "autoUpdate": "Esta pantalla se actualiza sola cuando llegue el resultado."
+      },
+      "issue": {
+        "body": "Tu identidad está verificada. Emite tu tarjeta virtual para empezar.",
+        "nickname": "Nombre de la tarjeta (opcional)",
+        "nicknamePlaceholder": "Tarjeta del día a día",
+        "cta": "Emitir mi tarjeta"
+      },
+      "status": {
+        "PENDING": "Pendiente",
+        "ACTIVE": "Activa",
+        "FROZEN": "Congelada",
+        "TERMINATED": "Cancelada"
+      },
+      "type": {
+        "VIRTUAL": "Virtual",
+        "PHYSICAL": "Física"
+      },
+      "expires": "Vence",
+      "balance": {
+        "available": "Disponible",
+        "limit": "Límite",
+        "due": "Por pagar"
+      },
+      "showDetails": "Ver datos",
+      "hideDetails": "Ocultar datos",
+      "detailsHint": "Los datos se ocultan solos en 30 segundos. No los compartas.",
+      "activity": "Movimientos recientes",
+      "refresh": "Actualizar",
+      "noActivity": "Todavía no hay movimientos.",
+      "txType": {
+        "deposit": "Recarga",
+        "transactionTransfer": "Depósito bancario",
+        "spend": "Compra",
+        "spend_adjustment": "Ajuste",
+        "fee": "Comisión",
+        "fee_refund": "Devolución de comisión",
+        "withdrawal": "Retiro",
+        "card_insurance": "Emisión de tarjeta"
+      },
+      "fund": {
+        "title": "Recargar",
+        "open": "Recargar",
+        "body": "Pasa {{assets}} de tu billetera a tu tarjeta. Toma unos minutos en llegar a la red de la tarjeta.",
+        "amount": "Monto (USDC)",
+        "cta": "Recargar desde mi billetera",
+        "history": "Tus recargas",
+        "canClose": "Puedes cerrar esta ventana: la recarga sigue su curso y se acredita en tu tarjeta al terminar.",
+        "showAddress": "¿Prefieres enviar desde otra billetera? Ver la dirección de depósito",
+        "hideAddress": "Ocultar la dirección de depósito",
+        "addressWarning": "Envía solo {{tokens}} en {{network}}; cualquier otra cosa se puede perder.",
+        "noAddress": "El emisor no devolvió ninguna dirección de depósito."
+      },
+      "funding": {
+        "step": "Paso {{step}} de {{total}}",
+        "CREATED": {
+          "title": "Confirmando tu pago",
+          "hint": "Tu pago en USDC se está confirmando en Stellar. Toma unos segundos."
+        },
+        "BURNED": {
+          "title": "Enviando a la red de la tarjeta",
+          "hint": "Tus USDC salieron de Stellar. Circle está confirmando la transferencia, normalmente en un minuto."
+        },
+        "ATTESTED": {
+          "title": "Cruzando a la red de la tarjeta",
+          "hint": "Transferencia confirmada. Entregando los USDC a la red de la tarjeta."
+        },
+        "MINTED": {
+          "title": "Llegó, acreditando tu tarjeta",
+          "hint": "Los USDC llegaron al emisor, que los está sumando a tu tarjeta. Puede tardar unos minutos."
+        },
+        "CREDITED": {
+          "title": "Acreditado en tu tarjeta"
+        },
+        "FAILED": {
+          "title": "Falló"
+        }
+      },
+      "errors": {
+        "SDK_CARDS_PROVIDER_ERROR": "El emisor de la tarjeta no responde en este momento. Inténtalo en unos minutos.",
+        "SDK_CARDS_IP_NOT_SUPPORTED": "El emisor de la tarjeta no acepta tu conexión actual (IPv6). Inténtalo desde otra red, por ejemplo Wi-Fi.",
+        "SDK_CARDS_PROVIDER_USER_TAKEN": "Este correo ya está registrado con el emisor de la tarjeta desde otra app. Usa otro correo para pedir tu tarjeta aquí.",
+        "load": "No se pudo cargar tu tarjeta.",
+        "start": "No se pudo iniciar tu solicitud.",
+        "kyc": "No se pudo enviar tu información.",
+        "issue": "No se pudo emitir tu tarjeta.",
+        "refresh": "No se pudo actualizar tu tarjeta.",
+        "reveal": "No se pudieron mostrar los datos de la tarjeta.",
+        "fundings": "No se pudieron cargar tus recargas.",
+        "fund": "No se pudo recargar la tarjeta.",
+        "notSigned": "El pago no se firmó.",
+        "depositAddress": "No se pudo cargar la dirección de depósito."
+      }
     }
   },
   "referrals": {

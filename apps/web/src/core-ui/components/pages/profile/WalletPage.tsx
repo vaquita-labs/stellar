@@ -5,12 +5,14 @@ import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import React, { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiCheck, FiCopy, FiDownload, FiEye, FiSend, FiShield, FiRepeat} from 'react-icons/fi';
+import { FiCheck, FiCopy, FiCreditCard, FiDownload, FiEye, FiSend, FiShield, FiRepeat} from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { useProfileData } from '../../../hooks';
+import { useCardsEnabled } from '../../../hooks/useCardsEnabled';
 import { useConfigStore } from '../../../stores';
 import type { EvmSource } from '../../../hooks/useBridge';
 import { BridgeModal } from '../../organisms/BridgeModal';
+import { CardModal } from '../../organisms/CardModal';
 import { PageLayout } from '../../molecules';
 import { WalletBalanceModal } from './WalletBalanceModal';
 import { WalletReceiveModal } from './WalletReceiveModal';
@@ -41,6 +43,8 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [cardOpen, setCardOpen] = useState(false);
+  const cardsEnabled = useCardsEnabled();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -144,6 +148,22 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
         </section>
         )}
 
+        {cardsEnabled && (
+          <button
+            type="button"
+            onClick={() => setCardOpen(true)}
+            className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-4 text-left text-black hover:bg-[#F5FBFF] transition"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FFF7E6] border border-primary">
+              <FiCreditCard className="w-6 h-6" />
+            </span>
+            <span className="flex flex-col">
+              <span className="text-sm font-semibold">{t('wallet.page.card')}</span>
+              <span className="text-xs text-gray-500">{t('wallet.page.cardSubtitle')}</span>
+            </span>
+          </button>
+        )}
+
         <section className="rounded-lg border border-black border-b-2 bg-white p-4 sm:p-5 flex items-start gap-3">
           <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#FFF7E6] border border-primary text-black shrink-0">
             <FiShield />
@@ -174,6 +194,7 @@ export function WalletPage({ onBack }: { onBack?: () => void } = {}) {
           address={walletAddress ?? ''}
           token={token}
         />
+        <CardModal open={cardOpen} onOpenChange={() => setCardOpen(false)} />
     </PageLayout>
   );
 }
