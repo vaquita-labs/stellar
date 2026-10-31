@@ -2,7 +2,6 @@
 
 import { RampWidget, usePollar } from '@pollar/react';
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { usePendingCreditStore, useRampActiveStore } from '../../../stores';
 
 interface PollarBuyWidgetProps {
@@ -51,8 +50,5 @@ export function PollarBuyWidget({ country, onClose }: PollarBuyWidgetProps) {
       });
   };
 
-  return createPortal(
-    <RampWidget onClose={handleClose} initial={{ direction: 'buy', country, asset: 'USDC' }} />,
-    document.body,
-  );
+  return <RampWidget onClose={handleClose} initial={{ direction: 'buy', country, asset: 'USDC' }} />;
 }

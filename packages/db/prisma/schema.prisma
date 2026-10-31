@@ -1327,3 +1327,19 @@ model ReleaseNoteImage {
   @@index([releaseNoteId, displayOrder], map: "idx_release_note_images_note")
   @@map("release_note_images")
 }
+
+/// Wallet-login challenges already redeemed. The challenge itself carries its
+/// own HMAC, so any API instance can check it was minted by us; this row is
+/// what makes it single-use across instances. The primary key is the rule: a
+/// second redeem of the same nonce fails the insert, whichever instance runs it.
+/// Rows past `expiresAt` prove nothing (the challenge is rejected as expired
+/// before this table is read) and are deleted on later redeems.
+model AuthChallengeNonce {
+  nonce         String   @id @db.VarChar(32)
+  walletAddress String   @map("wallet_address") @db.VarChar(64)
+  expiresAt     DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([expiresAt], map: "idx_auth_challenge_nonces_expires")
+  @@map("auth_challenge_nonces")
+}

@@ -1,7 +1,6 @@
 'use client';
 
 import { Modal } from '@heroui/react';
-import { usePollar } from '@pollar/react';
 import Image from 'next/image';
 import { ReactNode, useEffect, useState } from 'react';
 import { FiChevronLeft, FiX } from 'react-icons/fi';
@@ -178,14 +177,6 @@ export function AppModal({
   // ahí cerraba el modal y además apretaba lo que había debajo. Ver
   // {@link claimModalOpen}.
   const present = useModalPresence(open);
-  // Pollar renders its signature confirmation inline in the app tree, and React
-  // Aria marks everything outside an open modal `inert`: the prompt shows on top
-  // of the sheet but takes no clicks, and the signing call waits on it forever.
-  // So the sheet steps aside while a confirmation is pending and comes back once
-  // it is answered. Only the dialog hides; whoever owns `open` keeps its state.
-  // Remove once @pollar/react portals its overlays out of the app root.
-  const { confirmations } = usePollar();
-  const shown = open && confirmations.length === 0;
   useEffect(() => {
     if (!present) return;
     const trigger = document.activeElement;
@@ -202,7 +193,7 @@ export function AppModal({
 
   return (
     <Modal.Backdrop
-      isOpen={shown}
+      isOpen={open}
       isDismissable={isDismissable}
       onOpenChange={(o) => { if (!o) onOpenChange(); }}
       className={SHEET_BACKDROP_ANIMATION}
