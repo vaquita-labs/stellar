@@ -24,6 +24,7 @@ import { bridgeHref, OtherAppDepositModal, PendingPlatformDepositCard } from './
 import type { DepositPlatformDTO } from '../../types';
 import { WalletSendModal } from '../pages/profile/WalletSendModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
+import { PollarBuyWidget } from './FiatModals/PollarBuyWidget';
 import { PollarSellModal } from './FiatModals/PollarSellModal';
 import { SendFiatModal } from './FiatModals/SendFiatModal';
 import { WithdrawModal } from './WithdrawModal';
@@ -47,6 +48,7 @@ export function DepositPanel() {
   const isWithdrawMounted = useModalPresence(isWithdrawOpen);
   const [isSendFiatOpen, setIsSendFiatOpen] = useState(false);
   const isSendFiatMounted = useModalPresence(isSendFiatOpen);
+  const [buyCountry, setBuyCountry] = useState<CountryCode | null>(null);
   // The country lives apart from open/closed so it survives the exit animation.
   const [sellCountry, setSellCountry] = useState<CountryCode>('BO');
   const [isPollarSellOpen, setIsPollarSellOpen] = useState(false);
@@ -88,7 +90,7 @@ export function DepositPanel() {
   }, [awaitingFunds, setAwaitingFunds]);
   const [isDepositing, setIsDepositing] = useState(false);
   const { walletAddress, lockPeriod, network, token } = useConfigStore();
-  const { wallet: pollarWallet, openRampModal } = usePollar();
+  const { wallet: pollarWallet } = usePollar();
   const invalidateAfterMoneyMove = useInvalidateAfterMoneyMove();
   const { trackUserAction, trackError } = useAnalytics();
   const editMode = useMapStore((store) => store.editMode);
@@ -239,12 +241,13 @@ export function DepositPanel() {
           });
           setCountryFlow(null);
           // Every country but Argentina goes through Pollar's widget, opened on the
-          // chosen country. Selling first takes the amount out of savings.
+          // chosen country. Selling first takes the amount out of savings; buying
+          // offers what was bought for savings once it lands.
           if (countryCode !== 'AR') {
             if (flow === 'withdraw') {
               setSellCountry(countryCode);
               setIsPollarSellOpen(true);
-            } else openRampModal({ direction: 'buy', country: countryCode });
+            } else setBuyCountry(countryCode);
           } else if (flow === 'withdraw') setIsSendFiatOpen(true);
           else setIsReceiveFiatOpen(true);
         }}
@@ -467,6 +470,7 @@ export function DepositPanel() {
           initialMemo={unpaidWithdraw?.memo}
         />
       )}
+      {buyCountry && <PollarBuyWidget country={buyCountry} onClose={() => setBuyCountry(null)} />}
       {isPollarSellMounted && (
         <PollarSellModal
           open={isPollarSellOpen}
