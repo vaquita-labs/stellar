@@ -47,3 +47,4 @@ export * from './useWithdrawalTime';
 export * from './usePullToRefresh';
 export * from './usePushNotifications';
 export * from './useNowEverySecond';
+export * from './useDefiEarnings';

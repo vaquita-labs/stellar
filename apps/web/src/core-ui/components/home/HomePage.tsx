@@ -20,6 +20,7 @@ import { BackgroundMusic } from './BackgroundMusic';
 import { BadgeClaimGate } from './BadgeClaimGate';
 import { EditPanels } from './edit';
 import { HeaderStats } from './HeaderStats';
+import { HomeDashboard } from './HomeDashboard';
 import { HomeSkeleton } from './HomeSkeleton';
 import { PlaceModeHint } from './PlaceModeHint';
 
@@ -121,15 +122,15 @@ export function HomePage() {
                 {HOME_MAP_ENABLED ? (
                   <WorldMap walletAddress={walletAddress} worldType={WorldType.FOREST} isAvailable={true} />
                 ) : (
-                  // Sin el mundo 3D queda el cielo de fondo, para que los
-                  // botones laterales y la barra de acciones sigan en su lugar.
-                  <div aria-hidden className="h-full w-full bg-gradient-to-b from-[#9fd6f5] to-[#cfeaf7]" />
+                  // Sin el mundo 3D, el tablero de la plata (ver HomeDashboard),
+                  // con Retirar y Depositar debajo del saldo en vez de flotando.
+                  <HomeDashboard actions={<DepositPanel inline />} />
                 )}
               </div>
             </div>
           </div>
 
-          <DepositPanel />
+          {HOME_MAP_ENABLED && <DepositPanel />}
 
           <EditPanels open={isEditingMap} onOpenChange={handleEditPanelsClose} />
         </div>

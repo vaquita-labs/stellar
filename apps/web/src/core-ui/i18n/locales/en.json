@@ -1032,7 +1032,8 @@
     "cta": "Start earning ${{amount}}",
     "processing": "Investing...",
     "toast": "We put ${{amount}} to work",
-    "balanceUnavailable": "We couldn't read your balance right now. Try again in a moment."
+    "balanceUnavailable": "We couldn't read your balance right now. Try again in a moment.",
+    "timedOut": "It is taking too long. Check that your wallet is set up and try again."
   },
   "leaderboard": {
     "card": {
@@ -1665,7 +1666,9 @@
       "soon": "Soon",
       "dailyReward": "Daily reward",
       "shopWithItems": "{{count}} items to place",
-      "primaryAriaLabel": "Primary"
+      "primaryAriaLabel": "Primary",
+      "qr": "QR",
+      "cards": "Cards"
     },
     "notFound": {
       "backHome": "Go back to home",
@@ -3154,6 +3157,91 @@
     "rampStep": {
       "title": "Continue your operation",
       "body": "A step of your deposit or withdrawal needs your approval to go on."
+    }
+  },
+  "dashboard": {
+    "apy": "{{apy}}% APY",
+    "perDay": "{{amount}} per day",
+    "periodAria": "Period",
+    "period": {
+      "daily": "Daily",
+      "monthly": "Monthly",
+      "yearly": "Yearly"
+    },
+    "invite": {
+      "title": "Invite and earn",
+      "body": "Your friends save, your APY grows."
+    },
+    "earnedTotal": "{{amount}} so far",
+    "earningsFailed": "We could not read your earnings. Pull to refresh."
+  },
+  "qrPay": {
+    "title": "Pay with QR",
+    "tabsAria": "Get paid or pay",
+    "tab": {
+      "receive": "Get paid",
+      "pay": "Pay"
+    },
+    "receive": {
+      "hint": "Show this code to whoever pays you. It works from any Stellar wallet.",
+      "amountLabel": "Amount to charge, optional",
+      "amountPlaceholder": "0.00 {{symbol}}",
+      "copy": "Copy address"
+    },
+    "pay": {
+      "hint": "Scan the code of whoever you pay. You confirm the amount before anything is sent.",
+      "scan": "Scan a code",
+      "stop": "Stop"
+    },
+    "scan": {
+      "idle": "Point the camera at the code",
+      "requesting": "Opening the camera…",
+      "invalid": "That code is not a payment. Keep pointing.",
+      "denied": "The camera is blocked. Allow it in your browser settings.",
+      "noQr": "No code found. Try again."
+    }
+  },
+  "confirmTx": {
+    "title": "Confirm",
+    "confirm": "Confirm",
+    "reject": "Not now",
+    "signedHere": "Signed from this device. Nothing is sent until you confirm.",
+    "signedInWallet": "Your wallet will ask you to sign next.",
+    "flexibleDeposit": {
+      "title": "Put your money to work",
+      "body": "Your USDC goes into your flexible savings and starts earning. You can take it out any time."
+    },
+    "lockedDeposit": {
+      "title": "Save for a term",
+      "body": "Your USDC goes into a term with its agreed rate until it matures."
+    },
+    "withdraw": {
+      "title": "Take money out of your savings",
+      "body": "Your USDC comes back to your wallet."
+    },
+    "badge": {
+      "title": "Claim your badge",
+      "body": "The badge is written to your wallet. It moves no money."
+    },
+    "send": {
+      "title": "Send money",
+      "body": "The amount leaves your wallet once you confirm."
+    },
+    "trust": {
+      "title": "Enable an asset in your wallet",
+      "body": "Your wallet accepts it once, so it can receive it. It moves no funds."
+    },
+    "swap": {
+      "title": "Exchange",
+      "body": "One asset in your wallet becomes another once you confirm."
+    },
+    "auth": {
+      "title": "Authorize this operation",
+      "body": "A permission your wallet gives for one operation."
+    },
+    "generic": {
+      "title": "Confirm this operation",
+      "body": "Your wallet signs it only once you confirm."
     }
   }
 }

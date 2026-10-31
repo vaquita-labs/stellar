@@ -26,6 +26,7 @@ export * from './MoodMessageModal';
 export * from './SavingsStats';
 export * from './RequireAuth';
 export * from './LegalGate';
+export * from './CardHost';
 export * from './Cosign';
 export * from './CustodyMigration';
 export * from './WalletRecovery';

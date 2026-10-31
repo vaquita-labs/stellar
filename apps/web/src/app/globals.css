@@ -91,11 +91,14 @@ body {
     --pollar-logo-on-dark-display: none;
 }
 
-/* The SDK opens three modals by itself and has no option to leave them out:
-   the co-sign approval, the wallet recovery and the custody migration (the
-   last two share `pollar-recovery-modal`). Vaquita renders its own sheets for
-   those (`CosignHost`, `WalletRecoveryHost`, `CustodyMigrationGate`) from the
-   same state, so the SDK's stay mounted but out of sight. The overlay is a
+/* The SDK opens four modals by itself and has no option to leave them out:
+   the transaction confirmation and the co-sign approval (both carry
+   `pollar-cosign-modal`), the wallet recovery and the custody migration (both
+   `pollar-recovery-modal`). Vaquita renders its own sheets for those
+   (`ConfirmHost`, `CosignHost`, `WalletRecoveryHost`, `CustodyMigrationGate`)
+   from the same state, so the SDK's stay mounted but out of sight. Every
+   signal the SDK opens one on must have its Vaquita counterpart, or a signing
+   call waits on a prompt nobody can see. The overlay is a
    plain portal with no other effect, so hiding it hides the whole thing. The
    modals the app opens on purpose (KYC, forms, the sell widget) keep showing. */
 .pollar-overlay:has(> .pollar-cosign-modal),

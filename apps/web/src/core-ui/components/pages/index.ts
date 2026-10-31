@@ -13,3 +13,4 @@ export * from './notifications';
 export * from './portfolio';
 export * from './profile';
 export * from './transactions';
+export * from './qr';

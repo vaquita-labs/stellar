@@ -1032,7 +1032,8 @@
     "cta": "Comece a ganhar ${{amount}}",
     "processing": "Investindo...",
     "toast": "Colocamos ${{amount}} para trabalhar",
-    "balanceUnavailable": "Não conseguimos ler seu saldo agora. Tente de novo em um instante."
+    "balanceUnavailable": "Não conseguimos ler seu saldo agora. Tente de novo em um instante.",
+    "timedOut": "Está demorando demais. Confira se sua carteira está pronta e tente de novo."
   },
   "leaderboard": {
     "card": {
@@ -1665,7 +1666,9 @@
       "soon": "Em breve",
       "dailyReward": "Recompensa",
       "shopWithItems": "{{count}} objetos para colocar",
-      "primaryAriaLabel": "Principal"
+      "primaryAriaLabel": "Principal",
+      "qr": "QR",
+      "cards": "Cartões"
     },
     "notFound": {
       "backHome": "Voltar para o início",
@@ -3154,6 +3157,91 @@
     "rampStep": {
       "title": "Continue sua operação",
       "body": "Um passo do seu depósito ou saque precisa da sua aprovação para seguir."
+    }
+  },
+  "dashboard": {
+    "apy": "{{apy}}% APY",
+    "perDay": "{{amount}} por dia",
+    "periodAria": "Período",
+    "period": {
+      "daily": "Diário",
+      "monthly": "Mensal",
+      "yearly": "Anual"
+    },
+    "invite": {
+      "title": "Convide e ganhe",
+      "body": "Seus amigos poupam, seu APY cresce."
+    },
+    "earnedTotal": "{{amount}} até hoje",
+    "earningsFailed": "Não conseguimos ler seus ganhos. Puxe para atualizar."
+  },
+  "qrPay": {
+    "title": "Pagar com QR",
+    "tabsAria": "Receber ou pagar",
+    "tab": {
+      "receive": "Receber",
+      "pay": "Pagar"
+    },
+    "receive": {
+      "hint": "Mostre este código a quem vai te pagar. Funciona em qualquer carteira Stellar.",
+      "amountLabel": "Valor a cobrar, opcional",
+      "amountPlaceholder": "0.00 {{symbol}}",
+      "copy": "Copiar endereço"
+    },
+    "pay": {
+      "hint": "Escaneie o código de quem você paga. Você confirma o valor antes de enviar qualquer coisa.",
+      "scan": "Escanear um código",
+      "stop": "Parar"
+    },
+    "scan": {
+      "idle": "Aponte a câmera para o código",
+      "requesting": "Abrindo a câmera…",
+      "invalid": "Esse código não é um pagamento. Continue apontando.",
+      "denied": "A câmera está bloqueada. Permita nas configurações do navegador.",
+      "noQr": "Nenhum código encontrado. Tente de novo."
+    }
+  },
+  "confirmTx": {
+    "title": "Confirmar",
+    "confirm": "Confirmar",
+    "reject": "Agora não",
+    "signedHere": "Assinado neste aparelho. Nada é enviado até você confirmar.",
+    "signedInWallet": "Sua carteira vai pedir a assinatura em seguida.",
+    "flexibleDeposit": {
+      "title": "Coloque seu dinheiro para trabalhar",
+      "body": "Seu USDC vai para suas economias flexíveis e começa a render. Você pode tirar quando quiser."
+    },
+    "lockedDeposit": {
+      "title": "Poupe a prazo",
+      "body": "Seu USDC entra em um prazo com a taxa combinada até o vencimento."
+    },
+    "withdraw": {
+      "title": "Tire dinheiro das suas economias",
+      "body": "Seu USDC volta para sua carteira."
+    },
+    "badge": {
+      "title": "Resgate sua insígnia",
+      "body": "A insígnia é registrada na sua carteira. Não move dinheiro."
+    },
+    "send": {
+      "title": "Enviar dinheiro",
+      "body": "O valor sai da sua carteira quando você confirmar."
+    },
+    "trust": {
+      "title": "Habilite um ativo na sua carteira",
+      "body": "Sua carteira o aceita uma única vez para poder recebê-lo. Não move fundos."
+    },
+    "swap": {
+      "title": "Trocar",
+      "body": "Um ativo da sua carteira vira outro quando você confirmar."
+    },
+    "auth": {
+      "title": "Autorize esta operação",
+      "body": "Uma permissão que sua carteira dá para uma única operação."
+    },
+    "generic": {
+      "title": "Confirme esta operação",
+      "body": "Sua carteira só assina quando você confirmar."
     }
   }
 }

@@ -57,6 +57,15 @@ const ACTIVITY_REFRESH_MS = 60_000;
  * threshold, an in-flight lock, and the `usePollarReadyStore` gate (session and
  * DPoP restored).
  */
+/** How long a single idle-funds investment may take before it is called off. */
+const INVEST_DEADLINE_MS = 120_000;
+class InvestTimeoutError extends Error {
+  constructor() {
+    super('idle-funds investment timed out');
+    this.name = 'InvestTimeoutError';
+  }
+}
+
 export const useIdleFunds = () => {
   const { t } = useTranslation();
   const { wallet, walletBalance, refreshWalletBalance } = usePollar();
@@ -196,6 +205,7 @@ export const useIdleFunds = () => {
       // helpers — `formatTokenPrecise` and friends — are for the screen only;
       // the toast below is the one place a rounded figure belongs.
       let raw: bigint;
+      console.info('[idle-funds] reading balance', { walletAddress });
       try {
         raw = await readUsdcBalanceRaw(walletAddress);
       } catch (e) {
@@ -217,13 +227,24 @@ export const useIdleFunds = () => {
       }
 
       const amount = formatBaseUnits(raw, token.decimals);
-      const { hash } = await passiveDeposit({
-        address: walletAddress,
-        amount,
-        decimals: token.decimals,
-        // Idle USDC already sitting in the user's wallet: new money to savings.
-        flowKind: 'external_in',
-      });
+      console.info('[idle-funds] depositing', { amount });
+      // This screen is a gate (it only closes on an error), so a signature that
+      // never answers must become one: the button read "Investing…" for good
+      // when the SDK went quiet (a request stuck behind a hidden prompt). The
+      // deadline is generous because a co-signed signature can take a minute.
+      let deadline: ReturnType<typeof setTimeout> | undefined;
+      const { hash } = await Promise.race([
+        passiveDeposit({
+          address: walletAddress,
+          amount,
+          decimals: token.decimals,
+          // Idle USDC already sitting in the user's wallet: new money to savings.
+          flowKind: 'external_in',
+        }),
+        new Promise<never>((_, reject) => {
+          deadline = setTimeout(() => reject(new InvestTimeoutError()), INVEST_DEADLINE_MS);
+        }),
+      ]).finally(() => clearTimeout(deadline));
       console.info('[idle-funds] invested', { hash, amount });
       // Destination-agnostic on purpose: the router picks vault or Blend from
       // the flag, and the user has no reason to know the protocol underneath.
@@ -248,7 +269,9 @@ export const useIdleFunds = () => {
       setError(
         readFailed
           ? t('idleFunds.balanceUnavailable', "We couldn't read your balance right now. Try again in a moment.")
-          : humanizeTxError(e, t).title,
+          : e instanceof InvestTimeoutError
+            ? t('idleFunds.timedOut', 'It is taking too long. Check that your wallet is set up and try again.')
+            : humanizeTxError(e, t).title,
       );
       throw e;
     } finally {

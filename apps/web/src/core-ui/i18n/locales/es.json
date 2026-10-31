@@ -1032,7 +1032,8 @@
     "cta": "Empieza a ganar ${{amount}}",
     "processing": "Invirtiendo...",
     "toast": "Pusimos ${{amount}} a trabajar",
-    "balanceUnavailable": "No pudimos leer tu saldo ahora mismo. Inténtalo de nuevo en un momento."
+    "balanceUnavailable": "No pudimos leer tu saldo ahora mismo. Inténtalo de nuevo en un momento.",
+    "timedOut": "Está tardando demasiado. Revisa que tu billetera esté lista y vuelve a intentar."
   },
   "leaderboard": {
     "card": {
@@ -1665,7 +1666,9 @@
       "soon": "Pronto",
       "dailyReward": "Recompensa",
       "shopWithItems": "{{count}} objetos por colocar",
-      "primaryAriaLabel": "Principal"
+      "primaryAriaLabel": "Principal",
+      "qr": "QR",
+      "cards": "Tarjetas"
     },
     "notFound": {
       "backHome": "Volver al inicio",
@@ -3154,6 +3157,91 @@
     "rampStep": {
       "title": "Continúa tu operación",
       "body": "Un paso de tu depósito o retiro necesita tu aprobación para seguir."
+    }
+  },
+  "dashboard": {
+    "apy": "{{apy}}% APY",
+    "perDay": "{{amount}} por día",
+    "periodAria": "Período",
+    "period": {
+      "daily": "Diario",
+      "monthly": "Mensual",
+      "yearly": "Anual"
+    },
+    "invite": {
+      "title": "Invita y gana",
+      "body": "Tus amigos ahorran, tu APY crece."
+    },
+    "earnedTotal": "{{amount}} hasta hoy",
+    "earningsFailed": "No pudimos leer tus ganancias. Desliza para actualizar."
+  },
+  "qrPay": {
+    "title": "Pagar con QR",
+    "tabsAria": "Cobrar o pagar",
+    "tab": {
+      "receive": "Cobrar",
+      "pay": "Pagar"
+    },
+    "receive": {
+      "hint": "Muestra este código a quien te paga. Funciona desde cualquier billetera Stellar.",
+      "amountLabel": "Monto a cobrar, opcional",
+      "amountPlaceholder": "0.00 {{symbol}}",
+      "copy": "Copiar dirección"
+    },
+    "pay": {
+      "hint": "Escanea el código de quien le pagas. Confirmas el monto antes de que salga nada.",
+      "scan": "Escanear un código",
+      "stop": "Detener"
+    },
+    "scan": {
+      "idle": "Apunta la cámara al código",
+      "requesting": "Abriendo la cámara…",
+      "invalid": "Ese código no es un pago. Sigue apuntando.",
+      "denied": "La cámara está bloqueada. Permítela en los ajustes del navegador.",
+      "noQr": "No se encontró ningún código. Intenta de nuevo."
+    }
+  },
+  "confirmTx": {
+    "title": "Confirmar",
+    "confirm": "Confirmar",
+    "reject": "Ahora no",
+    "signedHere": "Se firma desde este dispositivo. No sale nada hasta que confirmes.",
+    "signedInWallet": "Tu billetera te va a pedir la firma a continuación.",
+    "flexibleDeposit": {
+      "title": "Pon tu dinero a trabajar",
+      "body": "Tu USDC pasa a tus ahorros flexibles y empieza a ganar. Lo puedes sacar cuando quieras."
+    },
+    "lockedDeposit": {
+      "title": "Ahorra a plazo",
+      "body": "Tu USDC entra a un plazo con su tasa pactada hasta el vencimiento."
+    },
+    "withdraw": {
+      "title": "Saca dinero de tus ahorros",
+      "body": "Tu USDC vuelve a tu billetera."
+    },
+    "badge": {
+      "title": "Reclama tu insignia",
+      "body": "La insignia se registra en tu billetera. No mueve dinero."
+    },
+    "send": {
+      "title": "Enviar dinero",
+      "body": "El monto sale de tu billetera cuando confirmes."
+    },
+    "trust": {
+      "title": "Habilita un activo en tu billetera",
+      "body": "Tu billetera lo acepta una sola vez para poder recibirlo. No mueve fondos."
+    },
+    "swap": {
+      "title": "Cambiar",
+      "body": "Un activo de tu billetera se convierte en otro cuando confirmes."
+    },
+    "auth": {
+      "title": "Autoriza esta operación",
+      "body": "Un permiso que da tu billetera para una sola operación."
+    },
+    "generic": {
+      "title": "Confirma esta operación",
+      "body": "Tu billetera la firma solo cuando confirmes."
     }
   }
 }
