@@ -64,6 +64,33 @@ body {
     }
 }
 
+/* Pollar's modals (ramp, KYC, cards) dressed as AppModal sheets. The SDK maps
+   its dashboard Branding onto these public variables inside a zero-specificity
+   `:where()`, so setting them on the card's class wins over both the Branding
+   and the SDK's own `html.dark` palette. Inline `--pollar-*` styles would not
+   be overridable from here; keep these in a stylesheet. */
+.pollar-modal-card {
+    --pollar-font-family: Rubik, sans-serif;
+    --pollar-accent: #F5A161;
+    --pollar-btn-primary-fg: #262626;
+    --pollar-btn-secondary-bg: #ffffff;
+    --pollar-btn-secondary-fg: #262626;
+    --pollar-bg: #fef5e4;
+    --pollar-border: #262626;
+    --pollar-text: #262626;
+    --pollar-muted: #6b7280;
+    --pollar-input-bg: #ffffff;
+    --pollar-error-bg: #fdecee;
+    --pollar-error-border: #f3616f;
+    --pollar-error-text: #B3261E;
+    --pollar-success-text: #018222;
+    --pollar-modal-border-radius: 16px;
+    --pollar-buttons-border-radius: 6px;
+    --pollar-card-border-radius: 8px;
+    --pollar-logo-on-light-display: block;
+    --pollar-logo-on-dark-display: none;
+}
+
 /* Onboarding slide fade-in */
 @keyframes fadeIn {
     from {

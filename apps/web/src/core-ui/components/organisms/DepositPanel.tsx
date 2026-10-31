@@ -1,7 +1,6 @@
 'use client';
 
 import { useRampCountries } from '@/networks/pollar/rampCountries';
-import type { CorridorCode } from '@/networks/pollar/ramps';
 import { isStellarNetwork } from '@/networks/stellar';
 import { isTxPendingError } from '@/networks/stellar/pollarError';
 import { recordWalletTransferInBackground } from '@/networks/pollar/walletTransfersApi';
@@ -17,20 +16,23 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnalytics, useInvalidateAfterMoneyMove, useIsPoolPaused, useOpenDepositIntent } from '../../hooks';
-import { useMapStore, useConfigStore, useAwaitingFundsStore, useOnrampWaitingStore } from '../../stores';
+import { useMapStore, useConfigStore, useAwaitingFundsStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
-import { CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
+import { type CountryCode, CountryPickerModal, DepositMethodModal, DepositModal } from './DepositModal';
 import { ReceiveModal } from './DepositModal/ReceiveModal';
 import { bridgeHref, OtherAppDepositModal, PendingPlatformDepositCard } from './OtherAppDeposit';
 import type { DepositPlatformDTO } from '../../types';
 import { WalletSendModal } from '../pages/profile/WalletSendModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
-import { ReceiveFiatRampModal } from './FiatModals/ReceiveFiatRampModal';
+import { PollarBuyWidget } from './FiatModals/PollarBuyWidget';
+import { PollarSellModal } from './FiatModals/PollarSellModal';
 import { SendFiatModal } from './FiatModals/SendFiatModal';
-import { SendFiatRampModal } from './FiatModals/SendFiatRampModal';
 import { WithdrawModal } from './WithdrawModal';
 import { PressableButton } from '../molecules/PressableButton';
 import { HOME_TOUR_ANCHOR_ACTIONS } from './Tutorial/homeTourConfig';
+
+/** Every country in the picker but Argentina, which is Anclap's. */
+const POLLAR_COUNTRIES: CountryCode[] = ['BR', 'BO', 'MX', 'CO', 'PE'];
 
 export function DepositPanel() {
   const { t } = useTranslation();
@@ -46,25 +48,17 @@ export function DepositPanel() {
   const isWithdrawMounted = useModalPresence(isWithdrawOpen);
   const [isSendFiatOpen, setIsSendFiatOpen] = useState(false);
   const isSendFiatMounted = useModalPresence(isSendFiatOpen);
-  // Brasil y Colombia salen por los ramps de Pollar, no por Anclap: mismo modal
-  // para los dos, parametrizado por corredor. El corredor va aparte del abierto/
-  // cerrado para que no se pierda mientras el modal corre su animación de salida.
-  const [rampCountry, setRampCountry] = useState<CorridorCode>('BR');
-  const [isRampOpen, setIsRampOpen] = useState(false);
-  const isRampMounted = useModalPresence(isRampOpen);
-  // Bolivia entra por los ramps de Pollar (compra de USDC pagando un QR), no por
-  // Anclap: modal propio.
-  const [isOnrampOpen, setIsOnrampOpen] = useState(false);
-  const isOnrampMounted = useModalPresence(isOnrampOpen);
-  // A purchase left open: the user went off to pay the QR from their bank app
-  // and is coming back for it, not starting another one.
-  const hasOpenPurchase = useOnrampWaitingStore((s) => s.hasOpenPurchase);
-  // Quién habilita Bolivia es el proveedor, no un flag de build. La lista se pide
-  // recién cuando el usuario abre alguna puerta de fiat —no en cada home— y se
-  // arranca desde el modal de método/retiro, un paso antes del picker, para que
-  // llegue a tiempo y el país no aparezca apagado un instante.
-  const { supports: rampSupports } = useRampCountries(isMethodOpen || isWithdrawOpen || countryFlow !== null);
-  const bolivia = rampSupports('BO');
+  const [buyCountry, setBuyCountry] = useState<CountryCode | null>(null);
+  // The country lives apart from open/closed so it survives the exit animation.
+  const [sellCountry, setSellCountry] = useState<CountryCode>('BO');
+  const [isPollarSellOpen, setIsPollarSellOpen] = useState(false);
+  const isPollarSellMounted = useModalPresence(isPollarSellOpen);
+  // Which countries Pollar routes is the provider's call, not a build flag. The
+  // lists are fetched only once the user opens a fiat door —not on every home—
+  // and from the method/withdraw modal, one step before the picker, so they
+  // arrive in time and a country does not flash as unavailable.
+  const onramp = useRampCountries('ONRAMP', isMethodOpen || countryFlow === 'deposit');
+  const offramp = useRampCountries('OFFRAMP', isWithdrawOpen || countryFlow === 'withdraw');
   // Modal nativo de recibir (fondeo del usuario social a su dirección custodial).
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const isReceiveMounted = useModalPresence(isReceiveOpen);
@@ -169,15 +163,6 @@ export function DepositPanel() {
           onClick={() => {
             if (!walletAddress) {
               trackUserAction('deposit_attempted_no_wallet');
-            } else if (hasOpenPurchase) {
-              // Depositing over an open purchase means going back to it. The
-              // method and the country were chosen when it was created, and
-              // walking them again to reach the code they already have is an
-              // invitation to start a second purchase over the same payment.
-              trackUserAction('deposit_onramp_resumed', {
-                network: network?.networkName || null,
-              });
-              setIsOnrampOpen(true);
             } else {
               trackUserAction('deposit_modal_opened', {
                 token: token?.symbol || null,
@@ -239,23 +224,9 @@ export function DepositPanel() {
       <CountryPickerModal
         open={countryFlow !== null}
         onOpenChange={() => setCountryFlow(null)}
-        // El depósito entra por Anclap (ARS) y, si el proveedor lo tiene
-        // habilitado, por el corredor de Pollar de Bolivia (BOB); el retiro suma
-        // los de Brasil y Colombia.
-        //
-        // Argentina no se consulta porque no es de Pollar —es Anclap— y Brasil y
-        // Colombia tampoco: la lista no trae dirección, así que un país que sólo
-        // figure para compra apagaría un retiro que hoy funciona. Bolivia sí,
-        // que es la que se está habilitando.
-        available={
-          countryFlow === 'withdraw'
-            ? bolivia
-              ? ['AR', 'BR', 'CO', 'BO']
-              : ['AR', 'BR', 'CO']
-            : bolivia
-              ? ['AR', 'BO']
-              : ['AR']
-        }
+        // Argentina goes through Anclap and is always offered; every other
+        // country is Pollar's, offered only when it routes that direction.
+        available={['AR', ...POLLAR_COUNTRIES.filter((code) => (countryFlow === 'withdraw' ? offramp : onramp).supports(code))]}
         onBack={() => {
           const flow = countryFlow;
           setCountryFlow(null);
@@ -269,13 +240,15 @@ export function DepositPanel() {
             network: network?.networkName || null,
           });
           setCountryFlow(null);
-          if (flow === 'withdraw') {
-            // Los corredores de Pollar comparten modal; Argentina sigue por Anclap.
-            if (countryCode === 'BR' || countryCode === 'CO' || countryCode === 'BO') {
-              setRampCountry(countryCode);
-              setIsRampOpen(true);
-            } else setIsSendFiatOpen(true);
-          } else if (countryCode === 'BO') setIsOnrampOpen(true);
+          // Every country but Argentina goes through Pollar's widget, opened on the
+          // chosen country. Selling first takes the amount out of savings; buying
+          // offers what was bought for savings once it lands.
+          if (countryCode !== 'AR') {
+            if (flow === 'withdraw') {
+              setSellCountry(countryCode);
+              setIsPollarSellOpen(true);
+            } else setBuyCountry(countryCode);
+          } else if (flow === 'withdraw') setIsSendFiatOpen(true);
           else setIsReceiveFiatOpen(true);
         }}
       />
@@ -497,14 +470,15 @@ export function DepositPanel() {
           initialMemo={unpaidWithdraw?.memo}
         />
       )}
-      {isOnrampMounted && (
-        <ReceiveFiatRampModal
-          open={isOnrampOpen}
-          country="BO"
-          onOpenChange={() => setIsOnrampOpen(false)}
+      {buyCountry && <PollarBuyWidget country={buyCountry} onClose={() => setBuyCountry(null)} />}
+      {isPollarSellMounted && (
+        <PollarSellModal
+          open={isPollarSellOpen}
+          country={sellCountry}
+          onOpenChange={() => setIsPollarSellOpen(false)}
           onBack={() => {
-            setIsOnrampOpen(false);
-            setCountryFlow('deposit');
+            setIsPollarSellOpen(false);
+            setCountryFlow('withdraw');
           }}
         />
       )}
@@ -514,17 +488,6 @@ export function DepositPanel() {
           onOpenChange={() => setIsSendFiatOpen(false)}
           onBack={() => {
             setIsSendFiatOpen(false);
-            setCountryFlow('withdraw');
-          }}
-        />
-      )}
-      {isRampMounted && (
-        <SendFiatRampModal
-          open={isRampOpen}
-          country={rampCountry}
-          onOpenChange={() => setIsRampOpen(false)}
-          onBack={() => {
-            setIsRampOpen(false);
             setCountryFlow('withdraw');
           }}
         />

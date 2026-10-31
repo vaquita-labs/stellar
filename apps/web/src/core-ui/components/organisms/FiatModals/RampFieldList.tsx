@@ -1,5 +1,9 @@
 'use client';
 
+// Not in use: buying and selling open Pollar's RampWidget (`openRampModal`) instead
+// of this flow. Kept outside the type check (see tsconfig.json) because it is
+// written against the 0.11 ramps API, which @pollar/core 0.12 replaced.
+
 import { distinctOptions, placeholderFor, type RampField } from '@/networks/pollar/rampFields';
 
 /** Estilo de todos los inputs de los modales de fiat, para que no deriven. */

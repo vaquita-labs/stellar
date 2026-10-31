@@ -1,5 +1,9 @@
 'use client';
 
+// Not in use: buying and selling open Pollar's RampWidget (`openRampModal`) instead
+// of this flow. Kept outside the type check (see tsconfig.json) because it is
+// written against the 0.11 ramps API, which @pollar/core 0.12 replaced.
+
 import {
   isPollarApiError,
   type RampQuote as PollarRampQuote,
@@ -227,7 +231,8 @@ export function useRampOfframp() {
     async (txId: string, pending: RampsPendingSignature): Promise<RampResult> => {
       const outcome = await signTx(pending.unsignedXdr);
       if (outcome.status !== 'signed') {
-        throw new RampError(outcome.message ?? outcome.details ?? 'No se pudo firmar el retiro.');
+        const reason = outcome.status === 'error' ? (outcome.message ?? outcome.details) : undefined;
+        throw new RampError(reason ?? 'No se pudo firmar el retiro.');
       }
       try {
         return await getClient().submitRampSignature(txId, {

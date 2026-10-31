@@ -2272,6 +2272,12 @@
         "groupConvert": "Convert to ARS",
         "groupConnect": "Connect with Anclap",
         "groupSend": "Send ARS to Anclap"
+      },
+      "pollarSell": {
+        "title": "Withdraw to your bank",
+        "hint": "First we move this amount from your savings to your wallet. Then you choose how to receive it.",
+        "cta": "Continue",
+        "moving": "Moving it out of your savings…"
       }
     },
     "page": {
@@ -2288,7 +2294,9 @@
       "selfCustodyTitle": "Self-custody wallet",
       "send": "Send",
       "title": "Wallet",
-      "transferAssets": "Transfer assets"
+      "transferAssets": "Transfer assets",
+      "card": "Card",
+      "cardSubtitle": "Spend your USDC anywhere"
     },
     "profile": {
       "addFriends": "Add friends",
@@ -2389,6 +2397,157 @@
       "fromApp": "From {{name}}: {{asset}} on {{network}} → USDC on Stellar",
       "refundedTo": "Refund address: {{address}}",
       "titleFrom": "Deposit from {{name}}"
+    },
+    "card": {
+      "title": "Get a card",
+      "yourCard": "Your card",
+      "providerCard": "a {{name}} card",
+      "start": "Start",
+      "continue": "Continue",
+      "unavailable": "Cards are not available in this app.",
+      "unavailableNow": "Cards are not available right now. Try again later.",
+      "intro": "Get {{card}} funded from your wallet. First you verify your identity; it takes a few minutes.",
+      "stepsProgress": "{{done}} of {{total}} steps done",
+      "blocked": {
+        "registry-review": "Your details are under review.",
+        "kyc-review": "Your verification is under review.",
+        "kyc-rejected": "Your verification was not approved."
+      },
+      "kyc": {
+        "aboutYou": "About you",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "birthDate": "Birth date",
+        "nationalId": "ID number",
+        "countryOfIssue": "ID country (2 letters)",
+        "occupation": "Occupation",
+        "select": "Select…",
+        "phoneCountryCode": "Phone country code",
+        "phoneNumber": "Phone number",
+        "annualSalary": "Annual income",
+        "expectedMonthlyVolume": "Expected monthly spend",
+        "accountPurpose": "What will you use the card for?",
+        "accountPurposePlaceholder": "Personal expenses",
+        "termsPrefix": "I have read and accept the",
+        "termsLink": "{{name}} terms of service"
+      },
+      "income": {
+        "0-1000": "Up to 1,000 USD",
+        "1000-5000": "1,000 to 5,000 USD",
+        "5000-10000": "5,000 to 10,000 USD",
+        "10000+": "More than 10,000 USD"
+      },
+      "address": {
+        "title": "Address",
+        "line1": "Street and number",
+        "line2": "Apartment, floor (optional)",
+        "city": "City",
+        "region": "State or province",
+        "postalCode": "Postal code",
+        "countryCode": "Country (2 letters)"
+      },
+      "verification": {
+        "PENDING": "Your information is being reviewed.",
+        "NEEDS_ACTION": "Finish verifying your identity with the card provider: you will be asked for a photo of your ID and a selfie.",
+        "IN_REVIEW": "Your verification is under manual review. This can take a while.",
+        "DENIED": "Your verification was denied.",
+        "LOCKED": "Your account is locked.",
+        "CANCELED": "Your verification was canceled.",
+        "verify": "Verify my identity",
+        "done": "I'm done",
+        "autoUpdate": "This screen updates on its own once the verification comes back."
+      },
+      "issue": {
+        "body": "Your identity is verified. Issue your virtual card to start.",
+        "nickname": "Card name (optional)",
+        "nicknamePlaceholder": "Everyday card",
+        "cta": "Issue my card"
+      },
+      "status": {
+        "PENDING": "Pending",
+        "ACTIVE": "Active",
+        "FROZEN": "Frozen",
+        "TERMINATED": "Terminated"
+      },
+      "type": {
+        "VIRTUAL": "Virtual",
+        "PHYSICAL": "Physical"
+      },
+      "expires": "Expires",
+      "balance": {
+        "available": "Available",
+        "limit": "Limit",
+        "due": "To pay"
+      },
+      "showDetails": "Show details",
+      "hideDetails": "Hide details",
+      "detailsHint": "The details hide on their own in 30 seconds. Do not share them.",
+      "activity": "Recent activity",
+      "refresh": "Refresh",
+      "noActivity": "No movements yet.",
+      "txType": {
+        "deposit": "Deposit",
+        "transactionTransfer": "Bank deposit",
+        "spend": "Purchase",
+        "spend_adjustment": "Adjustment",
+        "fee": "Fee",
+        "fee_refund": "Fee refund",
+        "withdrawal": "Withdrawal",
+        "card_insurance": "Card issuance"
+      },
+      "fund": {
+        "title": "Add funds",
+        "open": "Add funds",
+        "body": "Move {{assets}} from your wallet to your card. It takes a few minutes to reach the card network.",
+        "amount": "Amount (USDC)",
+        "cta": "Fund from my wallet",
+        "history": "Your top-ups",
+        "canClose": "You can close this window: the top-up keeps going and your card is credited when it finishes.",
+        "showAddress": "Prefer to send from another wallet? Show the deposit address",
+        "hideAddress": "Hide the deposit address",
+        "addressWarning": "Send only {{tokens}} on {{network}}; anything else can be lost.",
+        "noAddress": "The provider returned no deposit address."
+      },
+      "funding": {
+        "step": "Step {{step}} of {{total}}",
+        "CREATED": {
+          "title": "Confirming your payment",
+          "hint": "Your USDC payment is being confirmed on Stellar. This takes a few seconds."
+        },
+        "BURNED": {
+          "title": "Sending it to the card network",
+          "hint": "Your USDC left Stellar. Circle is confirming the transfer, usually in about a minute."
+        },
+        "ATTESTED": {
+          "title": "Crossing to the card network",
+          "hint": "Transfer confirmed. Delivering the USDC to the card network."
+        },
+        "MINTED": {
+          "title": "Arrived, crediting your card",
+          "hint": "The USDC reached the card provider, which is adding it to your card. This can take a few minutes."
+        },
+        "CREDITED": {
+          "title": "Credited to your card"
+        },
+        "FAILED": {
+          "title": "Failed"
+        }
+      },
+      "errors": {
+        "SDK_CARDS_PROVIDER_ERROR": "The card provider is not responding right now. Try again in a few minutes.",
+        "SDK_CARDS_IP_NOT_SUPPORTED": "The card provider cannot accept your current connection (IPv6). Try again from another network, for example Wi-Fi.",
+        "SDK_CARDS_PROVIDER_USER_TAKEN": "This email is already registered with the card provider through another app. Use a different email to get a card here.",
+        "load": "Could not load your card.",
+        "start": "Could not start your card application.",
+        "kyc": "Could not submit your information.",
+        "issue": "Could not issue your card.",
+        "refresh": "Could not refresh your card.",
+        "reveal": "Could not show the card details.",
+        "fundings": "Could not load your top-ups.",
+        "fund": "Could not fund the card.",
+        "notSigned": "The payment was not signed.",
+        "depositAddress": "Could not load the deposit address."
+      }
     }
   },
   "referrals": {

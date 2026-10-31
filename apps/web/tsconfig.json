@@ -36,6 +36,26 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    // Vaquita's own Pollar ramp flow, switched off: it is written against the
+    // 0.11 ramps API, which @pollar/core 0.12 replaced with routes and orders,
+    // and buying/selling opens Pollar's RampWidget instead. Nothing in the app
+    // imports these files; importing one pulls it back into the type check.
+    "src/networks/pollar/ramps.ts",
+    "src/networks/pollar/rampsOnramp.ts",
+    "src/networks/pollar/rampsOnramp.test.ts",
+    "src/networks/pollar/rampFields.ts",
+    "src/networks/pollar/rampFields.test.ts",
+    "src/networks/pollar/onrampFlow.ts",
+    "src/networks/pollar/onrampFlow.test.ts",
+    "src/networks/pollar/onrampPayment.ts",
+    "src/networks/pollar/onrampPayment.test.ts",
+    "src/core-ui/components/organisms/FiatModals/SendFiatRampModal.tsx",
+    "src/core-ui/components/organisms/FiatModals/ReceiveFiatRampModal.tsx",
+    "src/core-ui/components/organisms/FiatModals/OnrampQrScreen.tsx",
+    "src/core-ui/components/organisms/FiatModals/RampFieldList.tsx",
+    "src/core-ui/components/organisms/FiatModals/SavedBankList.tsx",
+    "src/core-ui/components/organisms/FiatModals/SavedBankList.test.ts",
+    "src/core-ui/components/organisms/RampSettled"
   ]
 }

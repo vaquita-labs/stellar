@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Spinner } from '@heroui/react';
-import { saveAffordanceFor, type SaveAffordance } from '@/networks/pollar/onrampPayment';
-import { renderQrPngFile, saveQrImage } from '@/networks/pollar/qrImage';
+import { renderQrPngFile, saveAffordanceFor, type SaveAffordance, saveQrImage } from '@/networks/pollar/qrImage';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 

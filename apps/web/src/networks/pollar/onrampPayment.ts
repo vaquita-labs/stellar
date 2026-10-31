@@ -1,3 +1,7 @@
+// Not in use: buying and selling open Pollar's RampWidget (`openRampModal`) instead
+// of this flow. Kept outside the type check (see tsconfig.json) because it is
+// written against the 0.11 ramps API, which @pollar/core 0.12 replaced.
+
 import type { RampDepositInstructions, RampInstructionField, RampScannable } from '@pollar/core';
 
 /** Lo que hace falta para dibujar la pantalla de pago. */
@@ -81,28 +85,4 @@ export function countdownFrom(expiresAt: Date | null, now: Date): Countdown {
   return { expired: left <= 0, label: `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}` };
 }
 
-/** Qué se le ofrece al usuario para llevarse el QR. */
-export type SaveAffordance = 'save' | 'longPress' | 'none';
-
-/**
- * Qué mostrar debajo del QR según el dispositivo.
- *
- * El pago ocurre en OTRA app (la del banco), así que en el teléfono el código
- * tiene que poder salir de acá: primero el botón de guardar, y si el navegador
- * no sabe ni descargar ni compartir archivos, al menos la instrucción de
- * mantener apretado. En escritorio no se ofrece nada porque el QR se escanea de
- * la pantalla con el teléfono, y un botón de descarga ahí sólo deja un PNG
- * suelto que nadie usa.
- *
- * Descargar alcanza para mostrar el botón: es lo que `saveQrImage` intenta
- * primero, y atarlo a poder compartir escondía el botón en navegadores que
- * guardan perfecto pero no abren la hoja de compartir.
- */
-export function saveAffordanceFor(device: {
-  coarsePointer: boolean;
-  canDownload: boolean;
-  canShareFiles: boolean;
-}): SaveAffordance {
-  if (!device.coarsePointer) return 'none';
-  return device.canDownload || device.canShareFiles ? 'save' : 'longPress';
-}
+export { saveAffordanceFor, type SaveAffordance } from './qrImage';

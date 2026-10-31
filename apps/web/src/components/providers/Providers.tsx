@@ -19,12 +19,14 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 import { PersistQueryClientProvider, removeOldestQuery } from '@tanstack/react-query-persist-client';
 import { ChannelProvider } from 'ably/react';
 import { ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppShell } from './AppShell';
 import { GameClockSync } from './GameClockSync';
 import { PostHogProvider } from './PostHogProvider';
 import { useAuthGate } from './useAuthGate';
 import { useWalletBalanceRefreshOnMount } from '@/core-ui/hooks/useWalletBalanceRefresh';
 import { useConsoleToAbly } from './useConsoleToAbly';
+import { usePollarOverlayGuard } from './usePollarOverlayGuard';
 import { useViewportVh } from './useViewportVh';
 
 const POLLAR_API_KEY = clientEnv.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY;
@@ -67,11 +69,15 @@ const walletAdapters = stellarWalletsKitAdapters({
 export function Providers({ children }: { children: ReactNode }) {
   useVisibility();
   useViewportVh();
+  usePollarOverlayGuard();
   useConsoleToAbly();
   // Refresca el snapshot on-chain de la wallet al abrir la app. El server tiene
   // su propio TTL, así que recargar seguido no dispara lecturas RPC de más.
   useWalletBalanceRefreshOnMount();
   const { isPublicRoute, showLoader } = useAuthGate();
+  // Read from the i18next instance directly, since I18nProvider renders below this
+  // component; it re-renders here on every language change.
+  const { i18n } = useTranslation();
 
   // Single QueryClient per app session — created lazily so it isn't shared
   // across requests/StrictMode remounts, and lifted to the top so react-query
@@ -151,6 +157,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <I18nProvider>
       <PostHogProvider>
       <PollarProvider
+        language={i18n.language}
         client={{
           baseUrl: 'https://sdk.api.pollar.xyz',
           apiKey: POLLAR_API_KEY,

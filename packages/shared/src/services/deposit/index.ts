@@ -216,6 +216,24 @@ export const getNextDepositNonce = async (walletAddress: string) => {
   }
 };
 
+/** Largest nonce the `deposits.nonce` column (Postgres BIGINT) can hold. */
+export const MAX_DEPOSIT_NONCE = (1n << 63n) - 1n;
+
+/**
+ * Whether `nonce` is one a wallet may open a deposit with right now: a decimal
+ * u64 no larger than the wallet's next nonce.
+ *
+ * The next nonce is `MAX(nonce) + 1`, and `POST /deposit` carries no session, so
+ * an unbounded value let anyone park a row at the column's ceiling for somebody
+ * else's wallet. Every later deposit of that wallet then computed a next nonce
+ * the column cannot store and failed — locked deposits blocked for good.
+ */
+export const isAcceptableDepositNonce = (nonce: string, nextNonce: string): boolean => {
+  if (!/^\d{1,20}$/.test(nonce)) return false;
+  const value = BigInt(nonce);
+  return value <= MAX_DEPOSIT_NONCE && value <= BigInt(nextNonce);
+};
+
 export const createDepositByNames = async (depositIdHex: string, amount: number, walletAddress: string, networkName: string, tokenSymbol: string, lockPeriod: number, vaquitaContract: string, nonce?: string | number | bigint | null) => {
 
   const config = await prisma.config.findFirst({ select: { networkName: true } });
@@ -261,7 +279,7 @@ export const confirmDepositWithTx = async (depositId: number, depositIdHex: stri
   try {
     const claimed = await prisma.deposit.updateMany({
       where: { id: depositId, status: { not: DepositStatus.CONFIRMED } },
-      data: { status: DepositStatus.CONFIRMED },
+      data: { status: DepositStatus.CONFIRMED, confirmedAt: new Date() },
     });
 
     const data = await prisma.deposit.update({
@@ -302,10 +320,18 @@ export const _updateDeposit = async (depositId: number, update: any) => {
   }
 };
 
+/**
+ * Mark a deposit that never landed as failed.
+ *
+ * Only an `initiated` row can fail. The endpoint behind this carries no session,
+ * so an unconditional write let anyone flip a confirmed position — real money on
+ * chain — to failed, which hides it from its owner's portfolio and from the
+ * withdraw screen. `notInitiated` tells the caller the row was left alone.
+ */
 export const failDepositWithTx = async (depositId: number, depositIdHex: string, txHash: string, transactionRaw: string) => {
   try {
-    const data = await prisma.deposit.update({
-      where: { id: depositId },
+    const { count } = await prisma.deposit.updateMany({
+      where: { id: depositId, status: DepositStatus.INITIATED, deletedAt: null },
       data: {
         status: DepositStatus.FAILED,
         depositIdHex,
@@ -313,12 +339,13 @@ export const failDepositWithTx = async (depositId: number, depositIdHex: string,
         transactionEventRaw: transactionRaw,
       },
     });
+    if (count === 0) return { data: null, error: null, notInitiated: true };
 
     await broadcastDepositsChange('failDepositWithTx');
 
-    return { data, error: null };
+    return { data: { id: depositId }, error: null, notInitiated: false };
   } catch (error) {
-    return { data: null, error: error as Error };
+    return { data: null, error: error as Error, notInitiated: false };
   }
 };
 

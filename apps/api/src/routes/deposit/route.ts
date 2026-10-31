@@ -15,6 +15,8 @@ import {
   getDummyApyData,
   getNextDepositNonce,
   getNetworkById,
+  getWithdrawalByTransactionHash,
+  isAcceptableDepositNonce,
   getNetworkByName,
   grantDepositCoinsForWallet,
   getStellarApyData,
@@ -30,8 +32,14 @@ import {
   verifyTxSucceeded,
   toDepositResponseDTO,
   tryParsePoolError,
+  verifyDepositTransactionForRow,
+  verifyWithdrawTransactionForRow,
 } from '@vaquita/shared';
+import { isValidWalletAddress } from '../../lib/walletAuth';
 import { refreshWalletBalanceAfterEvent } from '../../lib/walletBalanceRefresh';
+
+const TX_HASH_RE = /^[0-9a-f]{64}$/i;
+const isTxHash = (value: unknown): value is string => typeof value === 'string' && TX_HASH_RE.test(value);
 
 /**
  * Returns a typed VaquitaPoolError response when `err` is a recognised contract
@@ -76,6 +84,22 @@ router.post('/', asyncHandler(async (req, res) => {
     return sendError(res, 'Payload inválido', error, 400);
   }
 
+  if (!isValidWalletAddress(data.walletAddress)) {
+    return sendError(res, 'walletAddress must be a valid Stellar account', null, 400);
+  }
+  if (data.nonce != null) {
+    // Bounded by the wallet's next nonce: see isAcceptableDepositNonce.
+    const { data: next, error: nextError } = await getNextDepositNonce(data.walletAddress);
+    if (nextError || !next) {
+      req.log.error({ err: nextError, walletAddress: data.walletAddress }, 'Failed to compute next deposit nonce');
+      return sendError(res, 'Failed to validate nonce', nextError, 500);
+    }
+    if (!isAcceptableDepositNonce(data.nonce, next.nonce)) {
+      req.log.warn({ walletAddress: data.walletAddress, nonce: data.nonce, next: next.nonce }, 'Rejected deposit nonce');
+      return sendError(res, 'Invalid nonce', { nextNonce: next.nonce }, 400);
+    }
+  }
+
   const childLog = req.log.child({
     walletAddress: data.walletAddress,
     networkName: data.networkName,
@@ -114,9 +138,9 @@ router.post('/confirm', asyncHandler(async (req, res) => {
   const { id, txHash, depositIdHex, transactionRaw } = req.body ?? {};
   req.log.info({ id, txHash, depositIdHex }, 'POST /deposit/confirm');
 
-  if (!id || !txHash) {
-    req.log.warn({ id, txHash }, 'Missing id or txHash');
-    return sendError(res, 'Missing id or txHash', null, 400);
+  if (!id || !isTxHash(txHash)) {
+    req.log.warn({ id, txHash }, 'Missing id or malformed txHash');
+    return sendError(res, 'Missing id or malformed txHash', null, 400);
   }
 
   // A deposit row marked confirmed is the position the user sees and withdraws
@@ -128,7 +152,20 @@ router.post('/confirm', asyncHandler(async (req, res) => {
     return sendError(res, 'Deposit transaction is not confirmed on chain', { verdict }, 409);
   }
 
-  const result = await confirmDepositWithTx(id, depositIdHex, txHash, transactionRaw);
+  // Landing is not enough: this route has no session, so the transaction must be
+  // THIS row's deposit (pool, owner, nonce, amount). Otherwise any successful
+  // hash on the network confirmed any row.
+  const check = await verifyDepositTransactionForRow(Number(id), txHash);
+  if (!check.ok) {
+    req.log.warn({ id, txHash, reason: check.reason }, 'Deposit transaction does not match the row');
+    return sendError(res, check.reason, null, check.status);
+  }
+  if (depositIdHex && String(depositIdHex).toLowerCase() !== check.event.depositId) {
+    req.log.warn({ id, depositIdHex, chainDepositId: check.event.depositId }, 'Client depositIdHex differs from chain');
+  }
+
+  // The position id comes from the event, never from the request body.
+  const result = await confirmDepositWithTx(Number(id), check.event.depositId, txHash, transactionRaw);
 
   if (result.error) {
     req.log.error({ err: result.error, id, txHash }, 'Failed to confirm deposit');
@@ -165,25 +202,59 @@ router.post('/fail', asyncHandler(async (req, res) => {
     return sendError(res, 'Missing id', null, 400);
   }
 
-  const result = await failDepositWithTx(id, depositIdHex, txHash, transactionRaw);
+  const result = await failDepositWithTx(Number(id), depositIdHex, txHash, transactionRaw);
 
   if (result.error) {
     req.log.error({ err: result.error, id, txHash }, 'Failed to mark deposit as failed');
     return sendError(res, 'Error on failing deposit', result.error, 500);
+  }
+  if (result.notInitiated) {
+    req.log.warn({ id, txHash }, 'Refused to fail a deposit that is not initiated');
+    return sendError(res, 'Only an initiated deposit can be marked as failed', null, 409);
   }
 
   req.log.info({ id, txHash }, 'Deposit marked as failed');
   return sendSuccess(res, true, 'success confirmed');
 }));
 
+/**
+ * Gate for the two withdrawal writers. Like `/confirm`, they carry no session,
+ * so the hash must be a landed transaction whose pool `withdraw` event closes
+ * this row's position — otherwise anyone could close anybody's position in the
+ * app (and the owner would lose the screen they withdraw from). Sends the error
+ * response itself and returns false when the claim does not hold.
+ */
+const verifyWithdrawClaim = async (
+  req: Request,
+  res: Response,
+  depositId: unknown,
+  txHash: unknown,
+): Promise<boolean> => {
+  if (!depositId || !isTxHash(txHash)) {
+    req.log.warn({ depositId, txHash }, 'Missing depositId or malformed txHash');
+    sendError(res, 'Missing depositId or malformed txHash', null, 400);
+    return false;
+  }
+  const verdict = await verifyTxSucceeded(txHash);
+  if (verdict !== 'SUCCESS') {
+    req.log.warn({ depositId, txHash, verdict }, 'Withdraw transaction not confirmed on chain');
+    sendError(res, 'Withdraw transaction is not confirmed on chain', { verdict }, 409);
+    return false;
+  }
+  const check = await verifyWithdrawTransactionForRow(Number(depositId), txHash);
+  if (!check.ok) {
+    req.log.warn({ depositId, txHash, reason: check.reason }, 'Withdraw transaction does not match the row');
+    sendError(res, check.reason, null, check.status);
+    return false;
+  }
+  return true;
+};
+
 router.post('/withdraw', asyncHandler(async (req, res) => {
   const { depositId, txHash, transactionRaw } = req.body ?? {};
   req.log.info({ depositId, txHash }, 'POST /deposit/withdraw');
 
-  if (!depositId) {
-    req.log.warn({ depositId }, 'Missing depositId');
-    return sendError(res, 'Missing depositId', null, 400);
-  }
+  if (!(await verifyWithdrawClaim(req, res, depositId, txHash))) return;
 
   // Mínimo 1 USDC: no se retira una posición por debajo del mínimo (mismo piso que
   // el depósito). El retiro saca la posición entera, así que validamos su monto.
@@ -197,7 +268,7 @@ router.post('/withdraw', asyncHandler(async (req, res) => {
   }
 
   const result = await creteWithdrawal({
-    depositId,
+    depositId: Number(depositId),
     transactionHash: txHash,
     transactionEventRaw: transactionRaw,
   });
@@ -215,13 +286,17 @@ router.post('/withdraw-confirm', asyncHandler(async (req, res) => {
   const { depositId, txHash, transactionRaw } = req.body ?? {};
   req.log.info({ depositId, txHash }, 'POST /deposit/withdraw-confirm');
 
-  if (!depositId) {
-    req.log.warn({ depositId }, 'Missing depositId');
-    return sendError(res, 'Missing depositId', null, 400);
+  if (!(await verifyWithdrawClaim(req, res, depositId, txHash))) return;
+
+  // A retry of the same hash is not a second withdrawal.
+  const { data: existing } = await getWithdrawalByTransactionHash(txHash);
+  if (existing && existing.depositId === Number(depositId)) {
+    req.log.info({ depositId, txHash }, 'Withdrawal already recorded');
+    return sendSuccess(res, true, 'success confirmed');
   }
 
   const result = await creteConfirmWithdrawal({
-    depositId,
+    depositId: Number(depositId),
     transactionHash: txHash,
     transactionEventRaw: transactionRaw,
   });
