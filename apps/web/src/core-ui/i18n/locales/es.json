@@ -2272,6 +2272,12 @@
         "groupConvert": "Convertir a ARS",
         "groupConnect": "Conectar con Anclap",
         "groupSend": "Enviar ARS a Anclap"
+      },
+      "pollarSell": {
+        "title": "Retirar a tu banco",
+        "hint": "Primero pasamos este monto de tus ahorros a tu wallet. Después eliges cómo recibirlo.",
+        "cta": "Continuar",
+        "moving": "Sacándolo de tus ahorros…"
       }
     },
     "page": {

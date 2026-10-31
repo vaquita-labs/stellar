@@ -24,6 +24,7 @@ import { bridgeHref, OtherAppDepositModal, PendingPlatformDepositCard } from './
 import type { DepositPlatformDTO } from '../../types';
 import { WalletSendModal } from '../pages/profile/WalletSendModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
+import { PollarSellModal } from './FiatModals/PollarSellModal';
 import { SendFiatModal } from './FiatModals/SendFiatModal';
 import { WithdrawModal } from './WithdrawModal';
 import { PressableButton } from '../molecules/PressableButton';
@@ -46,6 +47,10 @@ export function DepositPanel() {
   const isWithdrawMounted = useModalPresence(isWithdrawOpen);
   const [isSendFiatOpen, setIsSendFiatOpen] = useState(false);
   const isSendFiatMounted = useModalPresence(isSendFiatOpen);
+  // The country lives apart from open/closed so it survives the exit animation.
+  const [sellCountry, setSellCountry] = useState<CountryCode>('BO');
+  const [isPollarSellOpen, setIsPollarSellOpen] = useState(false);
+  const isPollarSellMounted = useModalPresence(isPollarSellOpen);
   // Which countries Pollar routes is the provider's call, not a build flag. The
   // lists are fetched only once the user opens a fiat door —not on every home—
   // and from the method/withdraw modal, one step before the picker, so they
@@ -233,9 +238,14 @@ export function DepositPanel() {
             network: network?.networkName || null,
           });
           setCountryFlow(null);
-          // Pollar's widget opens on the chosen country and direction; the user can still change both there.
-          if (countryCode !== 'AR') openRampModal({ direction: flow === 'withdraw' ? 'sell' : 'buy', country: countryCode });
-          else if (flow === 'withdraw') setIsSendFiatOpen(true);
+          // Every country but Argentina goes through Pollar's widget, opened on the
+          // chosen country. Selling first takes the amount out of savings.
+          if (countryCode !== 'AR') {
+            if (flow === 'withdraw') {
+              setSellCountry(countryCode);
+              setIsPollarSellOpen(true);
+            } else openRampModal({ direction: 'buy', country: countryCode });
+          } else if (flow === 'withdraw') setIsSendFiatOpen(true);
           else setIsReceiveFiatOpen(true);
         }}
       />
@@ -455,6 +465,17 @@ export function DepositPanel() {
           initialDestination={unpaidWithdraw?.address}
           initialAmount={unpaidWithdraw?.amount}
           initialMemo={unpaidWithdraw?.memo}
+        />
+      )}
+      {isPollarSellMounted && (
+        <PollarSellModal
+          open={isPollarSellOpen}
+          country={sellCountry}
+          onOpenChange={() => setIsPollarSellOpen(false)}
+          onBack={() => {
+            setIsPollarSellOpen(false);
+            setCountryFlow('withdraw');
+          }}
         />
       )}
       {isSendFiatMounted && (

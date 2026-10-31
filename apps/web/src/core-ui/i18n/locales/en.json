@@ -2272,6 +2272,12 @@
         "groupConvert": "Convert to ARS",
         "groupConnect": "Connect with Anclap",
         "groupSend": "Send ARS to Anclap"
+      },
+      "pollarSell": {
+        "title": "Withdraw to your bank",
+        "hint": "First we move this amount from your savings to your wallet. Then you choose how to receive it.",
+        "cta": "Continue",
+        "moving": "Moving it out of your savings…"
       }
     },
     "page": {

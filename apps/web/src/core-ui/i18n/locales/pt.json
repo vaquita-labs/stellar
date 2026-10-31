@@ -2302,6 +2302,12 @@
         "title": "Enviar fiat (ARS)",
         "waitingHint": "Conclua o saque na Anclap. Estamos aguardando a confirmação…",
         "withdrawStarted": "Saque iniciado. Continue na Anclap."
+      },
+      "pollarSell": {
+        "title": "Sacar para o seu banco",
+        "hint": "Primeiro movemos este valor da sua poupança para a sua carteira. Depois você escolhe como receber.",
+        "cta": "Continuar",
+        "moving": "Tirando da sua poupança…"
       }
     },
     "receive": {
