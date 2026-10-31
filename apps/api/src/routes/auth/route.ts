@@ -21,7 +21,7 @@ router.post('/challenge', (req, res) => {
 });
 
 // Step 2: the wallet signed the challenge → issue a session token.
-router.post('/verify', (req, res) => {
+router.post('/verify', async (req, res) => {
   const { walletAddress, signedXdr } = (req.body ?? {}) as {
     walletAddress?: unknown;
     signedXdr?: unknown;
@@ -30,7 +30,7 @@ router.post('/verify', (req, res) => {
     return sendError(res, 'walletAddress and signedXdr are required.', null, 400);
   }
   try {
-    const wallet = verifyAuthChallenge(signedXdr, walletAddress);
+    const wallet = await verifyAuthChallenge(signedXdr, walletAddress);
     const { token, expiresAt } = issueSessionToken(wallet);
     req.log.info({ walletAddress: wallet }, 'Wallet session issued');
     return sendSuccess(res, { token, expiresAt, walletAddress: wallet });

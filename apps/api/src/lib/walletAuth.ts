@@ -9,6 +9,7 @@ import {
 } from '@stellar/stellar-sdk';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import type { RequestHandler } from 'express';
+import { prisma } from '@vaquita/db';
 import { resolveNetworkPassphrase, sendError } from '@vaquita/shared';
 import { apiEnv } from '../config/env';
 import { logger } from './logger';
@@ -20,10 +21,11 @@ import { logger } from './logger';
  * which let anyone mutate anyone else's profile. This module closes that hole:
  *
  *  1. POST /auth/challenge  → we build a challenge transaction for the claimed
- *     wallet and remember its one-shot nonce server-side.
+ *     wallet, its nonce sealed with an HMAC so any API instance can check it.
  *  2. The client signs it with the wallet's key (Pollar signTx routes this to
  *     Freighter/xBull for external wallets or to Pollar's custodial signer).
- *  3. POST /auth/verify     → we check the wallet's signature + the nonce and
+ *  3. POST /auth/verify     → we check the nonce's HMAC and expiry, the
+ *     wallet's signature, redeem the nonce once (auth_challenge_nonces) and
  *     issue a short-lived HMAC session token (JWT, HS256).
  *  4. Mutating routes use `requireWalletSession`, which matches the token's
  *     wallet against the `:walletAddress` route param.
@@ -34,14 +36,15 @@ import { logger } from './logger';
  * challenge uses the USER's wallet as source with sequence number 0 — real
  * account sequences start at ledgerSeq<<32, so a seq-0 transaction can never
  * be executed on-chain; it is only ever a signature carrier. Authenticity of
- * the challenge comes from the server-side nonce store (we only accept
- * challenges we minted, once), which is what the server signature provides in
- * stock SEP-10.
+ * the challenge comes from the nonce's HMAC (we only accept challenges we
+ * minted) and its redeem row (once), which is what the server signature
+ * provides in stock SEP-10.
  *
  * Env (all required, validated at startup):
- *  - AUTH_SESSION_SECRET     HMAC key for session tokens (apiEnv, min 32
- *                            chars). Fixed across PM2 instances so tokens
- *                            issued by one instance verify on another.
+ *  - AUTH_SESSION_SECRET     HMAC key for session tokens and challenge
+ *                            nonces (apiEnv, min 32 chars). Fixed across PM2
+ *                            instances so what one instance issues verifies
+ *                            on another.
  *  - AUTH_HOME_DOMAIN        manage_data key label (apiEnv).
  *  - STELLAR_NETWORK         mainnet|testnet; the passphrase is derived from
  *                            it. The API refuses to start if it is unset (see
@@ -71,23 +74,61 @@ export function isValidWalletAddress(value: unknown): value is string {
 
 const MANAGE_DATA_KEY = `${HOME_DOMAIN} auth`;
 
-// One-shot nonces: a challenge is only accepted if WE minted it, for THAT
-// wallet, within its lifetime — and verifying consumes it, so a captured
-// signed challenge can't be replayed to mint a second token. In-memory is
-// enough for a single API process.
-const pendingNonces = new Map<string, { walletAddress: string; expiresAt: number }>();
+// The API runs as several PM2 instances and /challenge and /verify can land on
+// different ones, so the nonce cannot live in one process's memory: a Map here
+// fails every login whose two calls hit different instances. The nonce is
+// `<id>.<expiry>.<tag>`, the tag an HMAC over the wallet, id and expiry, so any
+// instance can tell it was minted here, for that wallet, and when it expires.
+// It fits manage_data's 64-byte value: 16 + 1 + 10 + 1 + 22 characters.
+const NONCE_TAG_BYTES = 16;
 
-function pruneNonces(): void {
-  const now = Date.now();
-  for (const [nonce, entry] of pendingNonces) {
-    if (entry.expiresAt <= now) pendingNonces.delete(nonce);
+function nonceTag(walletAddress: string, id: string, expiresAt: number): Buffer {
+  return createHmac('sha256', sessionSecret)
+    .update(`challenge:${walletAddress}.${id}.${expiresAt}`)
+    .digest()
+    .subarray(0, NONCE_TAG_BYTES);
+}
+
+function sealNonce(walletAddress: string, expiresAt: number): string {
+  const id = randomBytes(12).toString('base64url');
+  return `${id}.${expiresAt}.${nonceTag(walletAddress, id, expiresAt).toString('base64url')}`;
+}
+
+/** The nonce's id and expiry (unix seconds) when its tag is ours for this wallet, else null. */
+function openNonce(nonce: string, walletAddress: string): { id: string; expiresAt: number } | null {
+  const [id = '', expiry = '', tag = '', ...rest] = nonce.split('.');
+  if (rest.length > 0 || !id || !/^\d+$/.test(expiry)) return null;
+  const expiresAt = Number(expiry);
+  const provided = Buffer.from(tag, 'base64url');
+  const expected = nonceTag(walletAddress, id, expiresAt);
+  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) return null;
+  return { id, expiresAt };
+}
+
+const isUniqueViolation = (err: unknown): boolean =>
+  typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2002';
+
+/**
+ * Redeem the nonce once. The insert is the single-use rule on every instance:
+ * the second redeem of the same id fails the primary key.
+ */
+async function redeemNonce(id: string, walletAddress: string, expiresAt: number): Promise<void> {
+  try {
+    await prisma.authChallengeNonce.create({
+      data: { nonce: id, walletAddress, expiresAt: new Date(expiresAt * 1000) },
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) throw new Error('Challenge was already used');
+    throw err;
   }
+  void prisma.authChallengeNonce
+    .deleteMany({ where: { expiresAt: { lt: new Date() } } })
+    .catch((err: unknown) => logger.warn({ err }, 'Could not prune expired auth challenge nonces'));
 }
 
 export function buildAuthChallenge(walletAddress: string): { transaction: string; networkPassphrase: string } {
-  pruneNonces();
-  const nonce = randomBytes(32).toString('base64');
   const now = Math.floor(Date.now() / 1000);
+  const nonce = sealNonce(walletAddress, now + CHALLENGE_TIMEOUT_SECONDS);
 
   // Sequence "-1" makes the transaction's own sequence 0: no Stellar account
   // can ever reach it (sequences start at ledgerSeq<<32), so the signed result
@@ -101,15 +142,11 @@ export function buildAuthChallenge(walletAddress: string): { transaction: string
     .addOperation(Operation.manageData({ name: MANAGE_DATA_KEY, value: nonce }))
     .build();
 
-  pendingNonces.set(nonce, {
-    walletAddress,
-    expiresAt: (now + CHALLENGE_TIMEOUT_SECONDS) * 1000,
-  });
   return { transaction: transaction.toXDR(), networkPassphrase: NETWORK_PASSPHRASE };
 }
 
 /** Verify a signed challenge and return the authenticated wallet, or throw. */
-export function verifyAuthChallenge(signedXdr: string, expectedWallet: string): string {
+export async function verifyAuthChallenge(signedXdr: string, expectedWallet: string): Promise<string> {
   const tx = new Transaction(signedXdr, NETWORK_PASSPHRASE);
 
   if (tx.source !== expectedWallet) {
@@ -123,11 +160,9 @@ export function verifyAuthChallenge(signedXdr: string, expectedWallet: string): 
   if (tx.operations.length !== 1 || !op || op.type !== 'manageData' || op.name !== MANAGE_DATA_KEY) {
     throw new Error('Challenge has an unexpected shape');
   }
-  const nonce = op.value?.toString('utf8') ?? '';
-  const entry = pendingNonces.get(nonce);
-  if (!entry || entry.walletAddress !== expectedWallet || entry.expiresAt <= Date.now()) {
-    throw new Error('Unknown, expired or already-used challenge');
-  }
+  const nonce = openNonce(op.value?.toString('utf8') ?? '', expectedWallet);
+  if (!nonce) throw new Error('Challenge was not issued here for this wallet');
+  if (nonce.expiresAt <= Math.floor(Date.now() / 1000)) throw new Error('Challenge expired');
 
   const hash = tx.hash();
   const keypair = Keypair.fromPublicKey(expectedWallet);
@@ -136,7 +171,8 @@ export function verifyAuthChallenge(signedXdr: string, expectedWallet: string): 
     throw new Error('Challenge is not signed by the wallet');
   }
 
-  pendingNonces.delete(nonce); // consume only after every check passed
+  // Redeemed only after every check passed: a bad signature must not burn it.
+  await redeemNonce(nonce.id, expectedWallet, nonce.expiresAt);
   return expectedWallet;
 }
 
