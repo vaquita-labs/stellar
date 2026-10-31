@@ -18,6 +18,8 @@ export interface SegmentedTabsProps<T extends string> {
    * su mitad de borde a borde.
    */
   spaced?: boolean;
+  /** Pestañas más bajas y con letra más chica, para un control secundario (ej. el período de un gráfico). */
+  compact?: boolean;
   className?: string;
 }
 
@@ -27,6 +29,7 @@ export function SegmentedTabs<T extends string>({
   tabs,
   ariaLabel,
   spaced = false,
+  compact = false,
   className = '',
 }: SegmentedTabsProps<T>) {
   return (
@@ -46,7 +49,7 @@ export function SegmentedTabs<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.key)}
-            className={`flex-1 rounded-md py-3 text-xs font-extrabold uppercase tracking-wider transition-colors ${
+            className={`flex-1 rounded-md ${compact ? 'py-1.5 text-[11px]' : 'py-3 text-xs'} font-extrabold uppercase tracking-wider transition-colors ${
               active ? 'border border-black bg-primary text-black' : 'text-default-500 hover:bg-black/5 hover:text-black'
             }`}
           >

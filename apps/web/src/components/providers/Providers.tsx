@@ -100,7 +100,7 @@ export function Providers({ children }: { children: ReactNode }) {
             refetchOnMount: false,
           },
         },
-      })
+      }),
   );
 
   // Persist the cache to localStorage so reloads show the last known values
@@ -111,9 +111,7 @@ export function Providers({ children }: { children: ReactNode }) {
     createSyncStoragePersister({
       key: 'vaquita-rq-cache',
       storage:
-        typeof window !== 'undefined'
-          ? window.localStorage
-          : { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+        typeof window !== 'undefined' ? window.localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} },
       // Without a `retry` the persister is silently all-or-nothing: its
       // `setItem` is wrapped in a bare try/catch that returns the error, and
       // with nothing to retry the write is simply abandoned — nothing stored,
@@ -127,7 +125,7 @@ export function Providers({ children }: { children: ReactNode }) {
         }
         return removeOldestQuery(props);
       },
-    })
+    }),
   );
 
   return (
@@ -155,37 +153,43 @@ export function Providers({ children }: { children: ReactNode }) {
       }}
     >
       <I18nProvider>
-      <PostHogProvider>
-      <PollarProvider
-        language={i18n.language}
-        client={{
-          baseUrl: 'https://sdk.api.pollar.xyz',
-          apiKey: POLLAR_API_KEY,
-          walletAdapters,
-          stellarNetwork: POLLAR_NETWORK,
-          // El SDK aborta cada request a los 10s por defecto, y crear un ramp
-          // tarda más que eso: el proveedor cotiza, emite el QR y —con wallet
-          // custodial— Pollar arma, firma y ENVÍA el pago on-chain dentro del
-          // mismo POST. Cortarlo a los 10s deja la operación viva del lado del
-          // servidor y al usuario con un "Request timed out" y sin QR. Un minuto
-          // es el techo con sentido: es lo que vive la cotización del proveedor.
-          requestTimeoutMs: 60_000,
-        }}
-      >
-        <PollarBridge />
-        <GameClockSync />
-        <AblyProvider>
-          <Toast.Provider placement="top" />
-          <ChannelProvider channelName="deposits-changes">
-            <ChannelProvider channelName="notifications-changes">
-              <AppShell isPublicRoute={isPublicRoute} showLoader={showLoader}>
-                {children}
-              </AppShell>
-            </ChannelProvider>
-          </ChannelProvider>
-        </AblyProvider>
-      </PollarProvider>
-      </PostHogProvider>
+        <PostHogProvider>
+          <PollarProvider
+            language={i18n.language}
+            // Los modales que el SDK abre solo (migración de custodia, recuperación
+            // de la billetera, aprobación de firma compartida) se reemplazan por
+            // los de Vaquita: `CustodyMigrationGate`, `WalletRecoveryHost` y
+            // `CosignHost` leen el mismo estado de `usePollar()`. El SDK no tiene
+            // opción para no abrir los suyos, así que se esconden desde
+            // globals.css (ver `.pollar-overlay:has(...)`).
+            client={{
+              baseUrl: 'https://sdk.api.pollar.xyz',
+              apiKey: POLLAR_API_KEY,
+              walletAdapters,
+              stellarNetwork: POLLAR_NETWORK,
+              // El SDK aborta cada request a los 10s por defecto, y crear un ramp
+              // tarda más que eso: el proveedor cotiza, emite el QR y —con wallet
+              // custodial— Pollar arma, firma y ENVÍA el pago on-chain dentro del
+              // mismo POST. Cortarlo a los 10s deja la operación viva del lado del
+              // servidor y al usuario con un "Request timed out" y sin QR. Un minuto
+              // es el techo con sentido: es lo que vive la cotización del proveedor.
+              requestTimeoutMs: 60_000,
+            }}
+          >
+            <PollarBridge />
+            <GameClockSync />
+            <AblyProvider>
+              <Toast.Provider placement="top" />
+              <ChannelProvider channelName="deposits-changes">
+                <ChannelProvider channelName="notifications-changes">
+                  <AppShell isPublicRoute={isPublicRoute} showLoader={showLoader}>
+                    {children}
+                  </AppShell>
+                </ChannelProvider>
+              </ChannelProvider>
+            </AblyProvider>
+          </PollarProvider>
+        </PostHogProvider>
       </I18nProvider>
     </PersistQueryClientProvider>
   );

@@ -20,8 +20,18 @@ import { BackgroundMusic } from './BackgroundMusic';
 import { BadgeClaimGate } from './BadgeClaimGate';
 import { EditPanels } from './edit';
 import { HeaderStats } from './HeaderStats';
+import { HomeDashboard } from './HomeDashboard';
 import { HomeSkeleton } from './HomeSkeleton';
 import { PlaceModeHint } from './PlaceModeHint';
+
+/**
+ * Whether /home monta el mundo 3D (`WorldMap`: Canvas WebGL, carga de objetos
+ * del mapa, vaquita, reloj de día). Apagado a pedido (2026-10-31) porque
+ * consume demasiados recursos; todo el código del mapa sigue intacto y vuelve
+ * con solo cambiar esta constante. Lo demás de la pantalla (header, botones
+ * laterales, depositar/retirar, cofre diario) no depende del mapa.
+ */
+const HOME_MAP_ENABLED = false;
 
 export function HomePage() {
   const { walletAddress, lockPeriod, network } = useConfigStore();
@@ -109,12 +119,18 @@ export function HomePage() {
                 not a panel that slides in and out. */}
             <div className="h-full w-full flex flex-row">
               <div className="h-full w-full shrink-0">
-                <WorldMap walletAddress={walletAddress} worldType={WorldType.FOREST} isAvailable={true} />
+                {HOME_MAP_ENABLED ? (
+                  <WorldMap walletAddress={walletAddress} worldType={WorldType.FOREST} isAvailable={true} />
+                ) : (
+                  // Sin el mundo 3D, el tablero de la plata (ver HomeDashboard),
+                  // con Retirar y Depositar debajo del saldo en vez de flotando.
+                  <HomeDashboard actions={<DepositPanel inline />} />
+                )}
               </div>
             </div>
           </div>
 
-          <DepositPanel />
+          {HOME_MAP_ENABLED && <DepositPanel />}
 
           <EditPanels open={isEditingMap} onOpenChange={handleEditPanelsClose} />
         </div>

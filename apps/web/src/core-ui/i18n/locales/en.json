@@ -1032,7 +1032,8 @@
     "cta": "Start earning ${{amount}}",
     "processing": "Investing...",
     "toast": "We put ${{amount}} to work",
-    "balanceUnavailable": "We couldn't read your balance right now. Try again in a moment."
+    "balanceUnavailable": "We couldn't read your balance right now. Try again in a moment.",
+    "timedOut": "It is taking too long. Check that your wallet is set up and try again."
   },
   "leaderboard": {
     "card": {
@@ -1102,11 +1103,14 @@
     "title": "Help Center",
     "buttonAria": "Help Center",
     "chat": "Chat with us",
-    "whatsapp": "Join the WhatsApp group",
-    "email": "Email",
-    "feedback": "Send feedback",
+    "whatsapp": "WhatsApp group",
+    "feedback": "Tell us something",
     "bug": "Report a bug",
-    "board": "See what others asked"
+    "board": "What others asked for",
+    "chatHint": "A private chat with the Vaquita team. We answer the same day.",
+    "whatsappHint": "The savers community, with the team inside.",
+    "feedbackHint": "An idea, a complaint or something that broke.",
+    "boardHint": "Ideas and bugs from other users, and their status."
   },
   "supportChat": {
     "title": "Vaquita team",
@@ -1117,7 +1121,17 @@
     "placeholder": "Write a message…",
     "send": "Send",
     "sendError": "Could not send your message",
-    "loadError": "We could not load the conversation. Retrying…"
+    "loadError": "We could not load the conversation. Retrying…",
+    "listTitle": "Your conversations",
+    "new": "New conversation",
+    "listEmpty": "Nothing yet. Start a conversation and it stays here, so you can always come back.",
+    "listError": "We could not load your conversations. Pull to refresh.",
+    "resolvedNote": "This one was resolved. Write again and it reopens.",
+    "status": {
+      "waiting": "Waiting for reply",
+      "answered": "Answered",
+      "resolved": "Resolved"
+    }
   },
   "board": {
     "title": "Board",
@@ -1665,7 +1679,9 @@
       "soon": "Soon",
       "dailyReward": "Daily reward",
       "shopWithItems": "{{count}} items to place",
-      "primaryAriaLabel": "Primary"
+      "primaryAriaLabel": "Primary",
+      "cards": "Cards",
+      "support": "Help"
     },
     "notFound": {
       "backHome": "Go back to home",
@@ -2131,7 +2147,7 @@
         "minAmount": "The minimum purchase is {{amount}} {{currency}}.",
         "outUsdc": "≈ {{amount}} USDC",
         "payHint": "Pay this QR from your bank app. The USDC arrives on its own.",
-        "processingBody": "Your USDC usually arrives in a few minutes, and can take up to 15. You can close this — it lands in your wallet on its own.",
+        "processingBody": "Your USDC usually arrives in a few minutes, and can take up to 15. You can close this. It lands in your wallet on its own.",
         "processingHelp": "If it hasn't arrived after 15 minutes, keep your bank receipt and write to us:",
         "processingTitle": "Payment received",
         "qrAlt": "Payment QR code",
@@ -2278,6 +2294,93 @@
         "hint": "First we move this amount from your savings to your wallet. Then you choose how to receive it.",
         "cta": "Continue",
         "moving": "Moving it out of your savings…"
+      },
+      "pollarBuy": {
+        "title": "Deposit from your bank",
+        "reviewTitle": "Confirm your deposit",
+        "detailsTitle": "A few details",
+        "orderTitle": "Your deposit",
+        "doneTitle": "Deposit received",
+        "amountHint": "How much do you want to deposit, in {{currency}}?",
+        "amountInvalid": "Enter an amount greater than zero.",
+        "continue": "Continue",
+        "confirm": "Confirm deposit",
+        "changeAmount": "Change amount",
+        "quoting": "Getting the best price…",
+        "noRoute": "There is no way to deposit this amount right now.",
+        "noCountryRoute": "Deposits from this country are not available right now.",
+        "loadFailed": "Could not load the payment options. Try again later.",
+        "quoteFailed": "Could not get a price. Please try again.",
+        "startFailed": "Could not start the purchase. Please try again.",
+        "readFailed": "Could not read the purchase. Close and open it again.",
+        "checkFailed": "Could not check the payment. Please try again.",
+        "retryFailed": "Could not try again. Please try again in a moment.",
+        "routeGone": "That option is no longer available. Pick another one.",
+        "approveAccount": "Approve the new account on your device, then try again.",
+        "approveTrustline": "Approve adding {{code}} on your device, then try again.",
+        "trustFailed": "Could not enable {{code}}. Please try again.",
+        "enableAsset": "Enable {{code}}",
+        "walletFailed": "Could not prepare the wallet. Please try again.",
+        "detailsHint": "The payment provider needs these details to process your deposit.",
+        "select": "Choose one",
+        "optional": "optional",
+        "paid": "I already paid",
+        "transferHint": "Make the transfer from your bank with these details. The USDC arrives on its own.",
+        "hostedHint": "The payment is completed on the provider’s page.",
+        "openPayment": "Open payment",
+        "codeMissing": "The payment code could not be shown. Close and open the purchase again.",
+        "serverTrouble": "Having trouble reaching the server. Retrying…",
+        "heldTitle": "Your purchase needs something from you",
+        "setUpRecovery": "Protect my wallet",
+        "newQuote": "Get a new price",
+        "tryAgain": "Try again",
+        "orderRef": "Order {{id}}",
+        "authorize": "Authorize",
+        "approveOnDevice": "Approve on this device",
+        "connectWallet": "Connect the wallet this purchase was built for.",
+        "signingCancelled": "Signing was cancelled.",
+        "stepTitle": "Before you deposit",
+        "gotIt": "Got it",
+        "formBody": "The payment provider needs a few details about you before you continue.",
+        "registrationTitle": "Sign up with the provider",
+        "registrationBody": "To deposit this way you need an account with the payment provider. It only takes a moment.",
+        "registryPendingTitle": "We are confirming your details",
+        "registryPendingBody": "This can take a moment. Try again in a little while.",
+        "registryTitle": "Confirm your details",
+        "registryBody": "The payment provider needs to confirm your details before you continue.",
+        "registryConfirm": "Confirm",
+        "verifyTitle": "We need to verify you",
+        "verifyBody": "To deposit from your bank, the payment provider needs to verify your identity. It takes a few minutes and you only do it once.",
+        "verifyAction": "Verify my identity",
+        "verifyExpiredTitle": "Your verification expired",
+        "verifyExpiredBody": "You need to verify your identity again to keep going.",
+        "verifyAgain": "Verify again",
+        "verifyContinueTitle": "Finish your verification",
+        "verifyContinueBody": "You started verifying your identity and a few steps are left.",
+        "verifyReviewTitle": "Your verification is under review",
+        "verifyReviewBody": "The provider is checking your details. It usually takes little time and we will let you know when it is ready.",
+        "verifyDuplicateTitle": "That document is already in use",
+        "verifyDuplicateBody": "It is linked to another account with the provider. Write to us and we will sort it out.",
+        "verifyRejectedTitle": "We could not verify you",
+        "verifyRejectedBody": "The provider could not approve your verification. Write to us and we will look into it with you.",
+        "recoveryTitle": "Protect your wallet",
+        "recoveryBody": "Before it signs a deposit, your wallet needs a way to recover it if you lose this device. It is quick and you do it once.",
+        "moveTitle": "Move your wallet to this device",
+        "moveBody": "To deposit, your keys move to this device and every signature comes from here. The wallet moves with everything in it.",
+        "moveAction": "Move my wallet",
+        "walletTitle": "Get your wallet ready",
+        "walletBody": "Your wallet needs one more step before it can receive this deposit.",
+        "trustTitle": "Enable {{code}} in your wallet",
+        "trustBody": "Your wallet accepts {{code}} once, and from then on it can receive it.",
+        "noRouteTitle": "Not right now",
+        "priceValidFor": "Price valid for {{time}}",
+        "priceRefreshing": "Updating the price…",
+        "leg": {
+          "onramp": "Your payment arrived",
+          "swap": "Converting to USDC",
+          "bridge": "Moving it to your wallet",
+          "offramp": "Paying your bank"
+        }
       }
     },
     "page": {
@@ -2922,6 +3025,237 @@
     "pending": {
       "title": "Your deposit is still being processed",
       "body": "We are still waiting for the bank to confirm your {{amount}} payment. We will let you know as soon as it lands."
+    }
+  },
+  "custodyMigration": {
+    "title": "Move your wallets to this device",
+    "intro": "To better protect your account, your wallets now live on this device and every signature starts here with your keys. They move with everything they hold.",
+    "whatMoves": "What moves",
+    "newAddress": "New address",
+    "sameAddress": "Same address",
+    "and": " and ",
+    "addressChanges": "Your {{chains}} address changes. Every token and the balance go to a new address on this device. Stop sharing the old one, because anything sent there later will need help from support to recover.",
+    "chooseSigning": "Choose how your wallet signs",
+    "cosignedTitle": "Co-signed",
+    "cosignedBody": "You and the app approve every signature together, and the wallet can be recovered with help.",
+    "selfCustodyTitle": "Self-custody",
+    "selfCustodyBody": "Only your device signs. Nobody else can move or recover your funds.",
+    "selfCustodyRisks": "In a self-custody wallet only your device can sign. If you lose this device and every recovery method, nobody can recover the wallet or its funds, not even Vaquita or Pollar. A transaction you sign cannot be undone or frozen either.",
+    "acceptRisks": "I understand and accept these risks",
+    "lastAttemptFailed": "The last attempt did not finish. What did not move is still where it was, so you can try again.",
+    "blocked": "Something still in progress is using your wallet. Let it finish and try again.",
+    "moving": "Moving your wallets…",
+    "move": "Move my wallets",
+    "later": "Continue for now",
+    "logout": "Log out"
+  },
+  "walletRecovery": {
+    "title": "Protect your wallet",
+    "getBackIn": "Get back into your wallet",
+    "working": "One moment…",
+    "codePlaceholder": "Code from the email",
+    "loading": "Loading your recovery methods…",
+    "notRequired": "This wallet is not secured by your device, so it needs no recovery methods.",
+    "notEnrolled": "This device is not part of your wallet yet. Get back in with one of your recovery methods, or ask a device that already has the wallet to add this one.",
+    "usePasskey": "Use a passkey",
+    "emailCodeTo": "Email a code to {{address}}",
+    "yourEmail": "your email",
+    "askAnotherDevice": "Ask another device to add this one",
+    "selfCustodyWarning": "This is a self-custody wallet, so only your device can sign. If you lose this device and every recovery method, nobody can recover the wallet or its funds, not even Vaquita or Pollar. A transaction you sign cannot be undone or frozen either.",
+    "acceptRisks": "I understand and accept these risks",
+    "recoverEmailIntro": "We will email a code to {{address}}. The code goes straight to the wallet provider, encrypted on this device.",
+    "sendCode": "Send code",
+    "recover": "Recover",
+    "emailIntro": "Confirm an email you control. If you lose this device, a code sent there lets you add a new one. Anyone who controls this inbox could do the same, so use one that is well protected.",
+    "codeSentTo": "We sent a code to {{address}}.",
+    "emailPlaceholder": "you@example.com",
+    "email": "Email",
+    "emailHelp": "A code sent there lets you add a new device.",
+    "confirm": "Confirm",
+    "phraseWarning": "Anyone with these words controls every account in this wallet. Write them down offline and never share them.",
+    "hide": "Hide",
+    "exportIntro": "Your recovery phrase lets you take this wallet to another app. It is decrypted only on this device, so neither Vaquita nor Pollar ever see it.",
+    "exportAccept": "I understand that whoever sees the phrase controls the wallet",
+    "showPhrase": "Show recovery phrase",
+    "locked": "Your wallet has no way to be recovered yet. Add a passkey, your email or a second device, so losing this device never means losing your funds.",
+    "recoverable": "Your wallet can be recovered if you lose this device.",
+    "passkeys": "Passkeys",
+    "passkeysHelp": "Face ID, fingerprint or the lock of your device.",
+    "remove": "Remove",
+    "addPasskey": "Add a passkey",
+    "passkeysUnavailableDevice": "Passkeys are not available on this device.",
+    "confirmed": "Confirmed",
+    "confirmEmail": "Confirm an email",
+    "devices": "Devices",
+    "devicesHelp": "Every device that can sign with this wallet.",
+    "thisDevice": "This device",
+    "aDevice": "A device",
+    "wantsToJoin": "{{label}} wants to join this wallet",
+    "approve": "Approve",
+    "reject": "Reject",
+    "addDeviceHelp": "To add another device, sign in there and choose \"Ask another device to add this one\". It will show up here for you to approve. Only approve a device you are holding.",
+    "recoveryPhrase": "Recovery phrase",
+    "phraseHelp": "Take this wallet to another app.",
+    "exportPhrase": "Show recovery phrase",
+    "passkeyAdded": "Passkey added.",
+    "emailConfirmed": "Email confirmed.",
+    "deviceAdded": "Device added.",
+    "requestSent": "Request sent. Approve it from a device that already has this wallet within 15 minutes.",
+    "recovered": "This device is part of your wallet again."
+  },
+  "cosign": {
+    "title": "Confirm on this device",
+    "oneOf": "{{index}} of {{count}}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "verifying": "Checking on this device…",
+    "verified": "Checked on this device. This is exactly what gets signed.",
+    "notVerified": "This device could not verify the request, so it will not be approved. {{reason}}",
+    "deviceNotLinked": "This device is not part of your wallet yet, so it cannot approve. Add it from a device that is, with your passkey or your email.",
+    "linkDevice": "Link this device",
+    "expired": "This request expired. Start the operation again.",
+    "timeLeft": "You have {{time}} to decide.",
+    "hoursMinutes": "{{h}} h {{m}} min",
+    "minutes": "{{m}} min",
+    "approved": "Approved",
+    "approvedPending": "Approved. It finishes processing in a few seconds.",
+    "rejected": "Rejected. Nothing was signed.",
+    "failed": "It could not be completed. {{reason}}",
+    "nothingWaiting": "Nothing waits for your approval",
+    "nothingWaitingBody": "Whatever your wallet had to sign is already done.",
+    "account": {
+      "title": "Get your wallet ready",
+      "body": "To receive this way, your wallet needs one more setup step. It happens once and moves no funds."
+    },
+    "identity": {
+      "title": "Confirm it is you",
+      "body": "A signature that proves this wallet is yours. It moves no funds."
+    },
+    "trust": {
+      "title": "Enable {{asset}} in your wallet",
+      "body": "Your wallet accepts {{asset}} once, so it can receive it. It moves no funds."
+    },
+    "send": {
+      "title": "Confirm this transfer",
+      "body": "Money leaves your wallet once you approve."
+    },
+    "swap": {
+      "title": "Confirm this exchange",
+      "body": "One asset in your wallet becomes another once you approve."
+    },
+    "rampPayment": {
+      "title": "Send to the payment provider",
+      "body": "The USDC of your withdrawal goes to the provider, who pays your bank."
+    },
+    "moveUsdc": {
+      "title": "Move your USDC",
+      "body": "Your USDC moves to another network once you approve."
+    },
+    "generic": {
+      "title": "Confirm this operation",
+      "body": "Your wallet signs it only once you approve from this device."
+    },
+    "rampBridge": {
+      "title": "Finish your deposit",
+      "body": "Your money is already USDC. One approval moves it into your Vaquita wallet. It costs you nothing."
+    },
+    "rampApprove": {
+      "title": "Allow your deposit to move",
+      "body": "A permission so your deposit can reach your wallet. It moves no funds by itself."
+    },
+    "rampSwap": {
+      "title": "Convert to USDC",
+      "body": "What you received becomes USDC inside your wallet."
+    },
+    "rampStep": {
+      "title": "Continue your operation",
+      "body": "A step of your deposit or withdrawal needs your approval to go on."
+    }
+  },
+  "dashboard": {
+    "apy": "{{apy}}% APY",
+    "perDay": "{{amount}} per day",
+    "periodAria": "Period",
+    "period": {
+      "daily": "Daily",
+      "monthly": "Monthly",
+      "yearly": "Yearly"
+    },
+    "invite": {
+      "title": "Invite and earn",
+      "body": "Your friends save, your APY grows."
+    },
+    "earnedTotal": "{{amount}} so far",
+    "earningsFailed": "We could not read your earnings. Pull to refresh.",
+    "earningsSoon": "Soon you will see here what your savings earn, day by day."
+  },
+  "qrPay": {
+    "title": "Scan to pay",
+    "paste": "Paste a code",
+    "methods": {
+      "stellar": "Stellar",
+      "bolivia": "Bolivia QR",
+      "soon": "Soon"
+    },
+    "scan": {
+      "idle": "Point the camera at the code",
+      "requesting": "Opening the camera…",
+      "invalid": "That code is not a Stellar payment yet. Keep pointing.",
+      "denied": "The camera is blocked.",
+      "noQr": "No code found.",
+      "retry": "Try again"
+    },
+    "permission": {
+      "title": "Camera access needed",
+      "heading": "Vaquita needs the camera to scan a code",
+      "body": "Allow the camera for Vaquita in your browser or phone settings, then come back.",
+      "step1": "Open your settings and find Vaquita or your browser.",
+      "step2": "Turn on Camera.",
+      "retry": "Try again",
+      "dismiss": "Not now"
+    }
+  },
+  "confirmTx": {
+    "title": "Confirm",
+    "confirm": "Confirm",
+    "reject": "Not now",
+    "signedHere": "Signed from this device. Nothing is sent until you confirm.",
+    "signedInWallet": "Your wallet will ask you to sign next.",
+    "flexibleDeposit": {
+      "title": "Put your money to work",
+      "body": "Your USDC goes into your flexible savings and starts earning. You can take it out any time."
+    },
+    "lockedDeposit": {
+      "title": "Save for a term",
+      "body": "Your USDC goes into a term with its agreed rate until it matures."
+    },
+    "withdraw": {
+      "title": "Take money out of your savings",
+      "body": "Your USDC comes back to your wallet."
+    },
+    "badge": {
+      "title": "Claim your badge",
+      "body": "The badge is written to your wallet. It moves no money."
+    },
+    "send": {
+      "title": "Send money",
+      "body": "The amount leaves your wallet once you confirm."
+    },
+    "trust": {
+      "title": "Enable an asset in your wallet",
+      "body": "Your wallet accepts it once, so it can receive it. It moves no funds."
+    },
+    "swap": {
+      "title": "Exchange",
+      "body": "One asset in your wallet becomes another once you confirm."
+    },
+    "auth": {
+      "title": "Authorize this operation",
+      "body": "A permission your wallet gives for one operation."
+    },
+    "generic": {
+      "title": "Confirm this operation",
+      "body": "Your wallet signs it only once you confirm."
     }
   }
 }

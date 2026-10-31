@@ -29,11 +29,15 @@ interface Country {
   flag: string;
 }
 
-/** El orden fija primero los países operativos y después los que vienen. */
+/**
+ * El orden de la lista: Bolivia primero (a pedido, 2026-10-31), después el
+ * resto de los operativos y al final los que vienen. Los operativos se filtran
+ * por flujo, pero el orden relativo es este.
+ */
 const COUNTRIES: Country[] = [
+  { code: 'BO', name: 'Bolivia', flag: '🇧🇴' },
   { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
   { code: 'BR', name: 'Brasil', flag: '🇧🇷' },
-  { code: 'BO', name: 'Bolivia', flag: '🇧🇴' },
   { code: 'MX', name: 'México', flag: '🇲🇽' },
   { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
   { code: 'PE', name: 'Perú', flag: '🇵🇪' },
@@ -57,13 +61,7 @@ const normalize = (value: string) =>
  * alguien de viaje, y acá elegir mal es entrar a un corredor de fiat con la
  * plata adentro. Es una sugerencia, y el toque sigue siendo del usuario.
  */
-export function CountryPickerModal({
-  open,
-  onOpenChange,
-  onBack,
-  onSelect,
-  available = ['AR'],
-}: CountryPickerModalProps) {
+export function CountryPickerModal({ open, onOpenChange, onBack, onSelect, available = ['AR'] }: CountryPickerModalProps) {
   const { t } = useTranslation();
   const { trackUserAction } = useAnalytics();
   const [query, setQuery] = useState('');
@@ -71,8 +69,7 @@ export function CountryPickerModal({
   const detected = useDetectedCountry();
   // Sólo es una sugerencia si es uno de los países de la lista: detectar Chile
   // no cambia nada de lo que se muestra.
-  const suggested =
-    detected && COUNTRIES.some((c) => c.code === detected.country) ? (detected.country as CountryCode) : null;
+  const suggested = detected && COUNTRIES.some((c) => c.code === detected.country) ? (detected.country as CountryCode) : null;
   const suggestedIsAvailable = suggested !== null && available.includes(suggested);
 
   useEffect(() => {
@@ -103,12 +100,12 @@ export function CountryPickerModal({
     const q = normalize(query);
     const matches = q ? COUNTRIES.filter((c) => normalize(c.name).includes(q)) : COUNTRIES;
     // Los operativos arriba: cuáles lo son depende del flujo, así que el orden
-    // se arma acá y no en la constante. Dentro de cada grupo, el país detectado
-    // primero — un país que no opera no sube por encima de uno que sí, ni
-    // siquiera siendo el del usuario, porque no lo dejaría avanzar.
-    const rank = (code: CountryCode) => (available.includes(code) ? 2 : 0) + (code === suggested ? 1 : 0);
+    // se arma acá y no en la constante. Dentro de cada grupo se respeta el
+    // orden de COUNTRIES; el país detectado ya no sube ni se pinta distinto,
+    // todas las filas se ven iguales.
+    const rank = (code: CountryCode) => (available.includes(code) ? 1 : 0);
     return [...matches].sort((a, b) => rank(b.code) - rank(a.code));
-  }, [query, available, suggested]);
+  }, [query, available]);
 
   const handleSelect = (code: CountryCode) => {
     if (suggested) {
@@ -148,14 +145,7 @@ export function CountryPickerModal({
       <div className="flex flex-col gap-2">
         {results.map((country) =>
           available.includes(country.code) ? (
-            <PressableButton
-              // La fila del país detectado va en celeste contra el blanco de las
-              // demás: se ve de un vistazo sin animar nada ni ganarle al CTA.
-              variant={country.code === suggested ? 'info' : 'white'}
-              size="row"
-              key={country.code}
-              onClick={() => handleSelect(country.code)}
-            >
+            <PressableButton variant="white" size="row" key={country.code} onClick={() => handleSelect(country.code)}>
               <span className="text-2xl leading-none shrink-0">{country.flag}</span>
               <span className="flex-1 min-w-0 text-sm font-bold text-black">{country.name}</span>
               <FiChevronRight className="w-5 h-5 text-black shrink-0" />

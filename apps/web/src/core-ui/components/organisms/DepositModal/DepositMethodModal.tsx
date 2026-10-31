@@ -53,13 +53,10 @@ type Step = 'method' | 'amount' | 'confirm' | 'processing' | 'success';
  * (monto → confirmación → estado), pero los fondos salen del USDC que ya está
  * en la cuenta del usuario y van al pool de Blend sin lock de Vaquita.
  */
-export function DepositMethodModal({
-  open,
-  onOpenChange,
-  onOnramp,
-  onReceive,
-  onOtherApp,
-}: DepositMethodModalProps) {
+/** Whether the "from another app" row is offered in the method picker. */
+const OTHER_APP_DEPOSIT_ENABLED = false;
+
+export function DepositMethodModal({ open, onOpenChange, onOnramp, onReceive, onOtherApp }: DepositMethodModalProps) {
   const { t } = useTranslation();
   const { walletAddress, token, network } = useConfigStore();
   const { data: profile } = useProfileData();
@@ -93,7 +90,10 @@ export function DepositMethodModal({
   // su rama "Wallet" abre el modal de recibir NATIVO (no el de Pollar) vía onReceive.
   const isExternalWallet = wallet?.custody === 'external';
   // Sin ninguna plataforma en el catálogo la fila no tiene a dónde llevar.
-  const hasOtherApps = routablePlatforms(network).length > 0;
+  // Oculta a pedido (2026-10-31) mientras el depósito desde otra app no se
+  // ofrece; el flujo entero (`OtherAppDepositModal`) queda listo para volver
+  // a prenderlo cambiando esta constante.
+  const hasOtherApps = OTHER_APP_DEPOSIT_ENABLED && routablePlatforms(network).length > 0;
   // Techo del depósito = saldo del USDC QUE ACEPTA BLEND, leído on-chain. NO el
   // walletBalance de Pollar: en testnet hay varios USDC con el mismo código
   // "USDC" de emisores distintos, y Pollar puede reportar el de otro emisor. Si
@@ -139,8 +139,7 @@ export function DepositMethodModal({
   const { data: blendPosition } = useBlendPosition(walletAddress ?? undefined);
   const blendApy = blendPosition?.apy ?? 0;
 
-  const accountName =
-    profile?.nickname || (walletAddress ? truncateMiddle(walletAddress, 6, 5) : '—');
+  const accountName = profile?.nickname || (walletAddress ? truncateMiddle(walletAddress, 6, 5) : '—');
   const depositAmount = maxExact ?? amount;
   const numericAmount = Number(depositAmount || '0');
   // Mínimo 1 USDC para depositar (mismo piso que valida el backend). Por debajo
@@ -203,9 +202,7 @@ export function DepositMethodModal({
       <PressableButton variant="white" size="row" onClick={onOnramp}>
         <BsBank2 className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
-          <span className="block text-sm font-bold text-black">
-            {t('deposit.method.onramp.title', 'Bank')}
-          </span>
+          <span className="block text-sm font-bold text-black">{t('deposit.method.onramp.title', 'Bank')}</span>
           <span className="block text-xs text-gray-500">
             {t('deposit.method.onramp.subtitle', 'Deposit with your local currency')}
           </span>
@@ -246,9 +243,7 @@ export function DepositMethodModal({
       >
         <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 min-w-0">
-          <span className="block text-sm font-bold text-black">
-            {t('deposit.method.wallet.title', 'Wallet')}
-          </span>
+          <span className="block text-sm font-bold text-black">{t('deposit.method.wallet.title', 'Wallet')}</span>
           <span className="block text-xs text-gray-500">
             {isExternalWallet
               ? t('deposit.method.wallet.subtitle', 'Deposit from a crypto wallet')
@@ -281,20 +276,12 @@ export function DepositMethodModal({
       {/* Origen de los fondos: la cuenta Vaquita del usuario. A diferencia del
           retiro no hay selector — el USDC solo puede salir de acá. */}
       <div className="w-full flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-2.5">
-        <Image
-          src="/vaquita/vaquita_isotipo.svg"
-          alt="Vaquita"
-          width={22}
-          height={22}
-          className="shrink-0"
-        />
+        <Image src="/vaquita/vaquita_isotipo.svg" alt="Vaquita" width={22} height={22} className="shrink-0" />
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-bold text-black truncate">
             {profile?.nickname ? `@${accountName}` : accountName}
           </span>
-          <span className="block text-xs text-gray-500">
-            {t('deposit.blend.accountLabel', 'Vaquita account')}
-          </span>
+          <span className="block text-xs text-gray-500">{t('deposit.blend.accountLabel', 'Vaquita account')}</span>
         </span>
       </div>
     </AmountStep>
@@ -322,9 +309,7 @@ export function DepositMethodModal({
           </PopoverTrigger>
           <PopoverContent placement="top" offset={8} className="max-w-[240px]">
             <div className="px-1 py-2">
-              <p className="text-xs font-bold text-black mb-1">
-                {t('deposit.blend.whatIsTitle', 'What is Blend?')}
-              </p>
+              <p className="text-xs font-bold text-black mb-1">{t('deposit.blend.whatIsTitle', 'What is Blend?')}</p>
               <p className="text-xs text-gray-600">
                 {t(
                   'deposit.blend.whatIs',
@@ -338,9 +323,7 @@ export function DepositMethodModal({
 
       <div className="flex items-center justify-between text-sm border-b border-black/10 pb-2">
         <span className="text-gray-500">{t('deposit.blend.apyLabel', 'Estimated APY')}</span>
-        <span className="font-bold text-success">
-          {blendApy > 0 ? `${blendApy.toFixed(2)}%` : '—'}
-        </span>
+        <span className="font-bold text-success">{blendApy > 0 ? `${blendApy.toFixed(2)}%` : '—'}</span>
       </div>
 
       <div className="flex items-start gap-2 text-xs text-gray-600">
@@ -378,9 +361,7 @@ export function DepositMethodModal({
       >
         <FiCheck className="w-10 h-10 text-black" strokeWidth={3} />
       </motion.div>
-      <p className="text-lg font-bold text-black">
-        {t('deposit.blend.success.title', 'Deposit sent!')}
-      </p>
+      <p className="text-lg font-bold text-black">{t('deposit.blend.success.title', 'Deposit sent!')}</p>
       <p className="text-sm text-gray-500 text-center">
         {t('deposit.blend.success.subtitle', 'Your USDC is now earning in your savings.')}
       </p>
@@ -416,13 +397,7 @@ export function DepositMethodModal({
       // empuja fuera de la vista: pegado al CTA se lee justo cuando el usuario
       // descubre que el botón no responde.
       <div className="flex w-full flex-col gap-2">
-        <PressableButton
-          variant="success"
-          size="cta"
-          className="py-2.5!"
-          onClick={handleReview}
-          disabled={!canReview}
-        >
+        <PressableButton variant="success" size="cta" className="py-2.5!" onClick={handleReview} disabled={!canReview}>
           {t('withdraw.review', 'Review')}
         </PressableButton>
       </div>
@@ -441,9 +416,7 @@ export function DepositMethodModal({
         </PressableButton>
       )
     ) : step === 'processing' ? (
-      <p className="w-full text-center text-xs text-gray-500">
-        {t('withdraw.processingHint', 'This may take a few seconds.')}
-      </p>
+      <p className="w-full text-center text-xs text-gray-500">{t('withdraw.processingHint', 'This may take a few seconds.')}</p>
     ) : step === 'success' ? (
       <PressableButton variant="success" size="cta" className="py-2.5!" onClick={onOpenChange}>
         {t('common.done', 'Done')}
@@ -456,9 +429,10 @@ export function DepositMethodModal({
       onOpenChange={onOpenChange}
       title={STEP_TITLE[step]}
       size="md"
-      // Los flujos de plata no se cierran tocando afuera en ningún paso (ver
-      // WithdrawModal): sólo la X.
-      isDismissable={false}
+      // Elegir el método no tiene nada que perder, así que se cierra tocando
+      // afuera como cualquier hoja. Desde el monto en adelante rige la regla de
+      // los flujos de plata (ver WithdrawModal): sólo la X.
+      isDismissable={step === 'method'}
       // Durante la transacción tampoco se puede cerrar ni volver atrás.
       hideClose={step === 'processing'}
       onBack={backTarget ? () => setStep(backTarget) : undefined}

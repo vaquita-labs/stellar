@@ -15,6 +15,7 @@ import { usePollar } from '@pollar/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FiArrowDownLeft, FiArrowUpRight } from 'react-icons/fi';
 import { useAnalytics, useInvalidateAfterMoneyMove, useIsPoolPaused, useOpenDepositIntent } from '../../hooks';
 import { useMapStore, useConfigStore, useAwaitingFundsStore } from '../../stores';
 import { useModalPresence } from '../molecules/AppModal';
@@ -24,7 +25,7 @@ import { bridgeHref, OtherAppDepositModal, PendingPlatformDepositCard } from './
 import type { DepositPlatformDTO } from '../../types';
 import { WalletSendModal } from '../pages/profile/WalletSendModal';
 import { ReceiveFiatModal } from './FiatModals/ReceiveFiatModal';
-import { PollarBuyWidget } from './FiatModals/PollarBuyWidget';
+import { PollarBuyModal } from './FiatModals/PollarBuyModal';
 import { PollarSellModal } from './FiatModals/PollarSellModal';
 import { SendFiatModal } from './FiatModals/SendFiatModal';
 import { WithdrawModal } from './WithdrawModal';
@@ -34,7 +35,13 @@ import { HOME_TOUR_ANCHOR_ACTIONS } from './Tutorial/homeTourConfig';
 /** Every country in the picker but Argentina, which is Anclap's. */
 const POLLAR_COUNTRIES: CountryCode[] = ['BR', 'BO', 'MX', 'CO', 'PE'];
 
-export function DepositPanel() {
+/**
+ * `inline`: the two buttons sit in the page's flow where the caller puts them
+ * (the dashboard, under the balance) instead of floating over the bottom of
+ * the map. Everything else, the modals and the pending-platform card, is the
+ * same.
+ */
+export function DepositPanel({ inline = false }: { inline?: boolean } = {}) {
   const { t } = useTranslation();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -48,7 +55,10 @@ export function DepositPanel() {
   const isWithdrawMounted = useModalPresence(isWithdrawOpen);
   const [isSendFiatOpen, setIsSendFiatOpen] = useState(false);
   const isSendFiatMounted = useModalPresence(isSendFiatOpen);
-  const [buyCountry, setBuyCountry] = useState<CountryCode | null>(null);
+  // The country lives apart from open/closed so it survives the exit animation.
+  const [buyCountry, setBuyCountry] = useState<CountryCode>('BO');
+  const [isPollarBuyOpen, setIsPollarBuyOpen] = useState(false);
+  const isPollarBuyMounted = useModalPresence(isPollarBuyOpen);
   // The country lives apart from open/closed so it survives the exit animation.
   const [sellCountry, setSellCountry] = useState<CountryCode>('BO');
   const [isPollarSellOpen, setIsPollarSellOpen] = useState(false);
@@ -109,7 +119,11 @@ export function DepositPanel() {
   return (
     <div
       style={{ filter: disabled ? 'grayscale(100%)' : 'none' }}
-      className="absolute bottom-4 left-0 flex flex-col items-center justify-center w-full gap-1"
+      className={
+        inline
+          ? 'flex w-full flex-col items-center justify-center gap-2'
+          : 'absolute bottom-4 left-0 flex flex-col items-center justify-center w-full gap-1'
+      }
     >
       {isStellar && isPaused && (
         <p className="text-sm text-warning font-semibold">{t('deposit.panel.paused', 'Deposits are temporarily paused')}</p>
@@ -135,11 +149,11 @@ export function DepositPanel() {
           }}
         />
       )}
-      <div data-tutorial={HOME_TOUR_ANCHOR_ACTIONS} className="w-full max-w-xl px-1 flex gap-1">
+      <div data-tutorial={HOME_TOUR_ANCHOR_ACTIONS} className={'w-full max-w-xl flex gap-2 ' + (inline ? '' : 'px-1')}>
         <PressableButton
           variant="white"
           size="cta"
-          className="flex-1 h-14 py-0"
+          className={inline ? 'flex-1 h-12 py-0' : 'flex-1 h-14 py-0'}
           disabled={disabled}
           onClick={() => {
             if (!walletAddress) {
@@ -153,12 +167,16 @@ export function DepositPanel() {
             }
           }}
         >
-          <span className="text-xl text-black capitalize font-normal">{t('deposit.withdraw.button', 'Withdraw')}</span>
+          <span className={'flex items-center gap-2 text-black capitalize font-normal ' + (inline ? 'text-base' : 'text-xl')}>
+            <FiArrowUpRight aria-hidden className="h-5 w-5" />
+            {t('deposit.withdraw.button', 'Withdraw')}
+          </span>
         </PressableButton>
         <PressableButton
           variant="success"
           size="cta"
-          className="flex-1 h-14 py-0"
+          // Under the balance, the action that brings money in comes first.
+          className={inline ? 'flex-1 h-12 py-0 order-first' : 'flex-1 h-14 py-0'}
           disabled={disabled}
           onClick={() => {
             if (!walletAddress) {
@@ -173,7 +191,8 @@ export function DepositPanel() {
             }
           }}
         >
-          <span className="text-xl text-black capitalize font-medium">
+          <span className={'flex items-center gap-2 text-black capitalize font-medium ' + (inline ? 'text-base' : 'text-xl')}>
+            <FiArrowDownLeft aria-hidden className="h-5 w-5" />
             {isDepositing ? t('deposit.processing', 'Processing...') : t('deposit.panel.deposit', 'Deposit')}
           </span>
         </PressableButton>
@@ -240,14 +259,17 @@ export function DepositPanel() {
             network: network?.networkName || null,
           });
           setCountryFlow(null);
-          // Every country but Argentina goes through Pollar's widget, opened on the
-          // chosen country. Selling first takes the amount out of savings; buying
-          // offers what was bought for savings once it lands.
+          // Every country but Argentina goes through Pollar's ramps, on the chosen
+          // country: buying in Vaquita's own sheet, selling through Pollar's widget
+          // after taking the amount out of savings.
           if (countryCode !== 'AR') {
             if (flow === 'withdraw') {
               setSellCountry(countryCode);
               setIsPollarSellOpen(true);
-            } else setBuyCountry(countryCode);
+            } else {
+              setBuyCountry(countryCode);
+              setIsPollarBuyOpen(true);
+            }
           } else if (flow === 'withdraw') setIsSendFiatOpen(true);
           else setIsReceiveFiatOpen(true);
         }}
@@ -470,7 +492,17 @@ export function DepositPanel() {
           initialMemo={unpaidWithdraw?.memo}
         />
       )}
-      {buyCountry && <PollarBuyWidget country={buyCountry} onClose={() => setBuyCountry(null)} />}
+      {isPollarBuyMounted && (
+        <PollarBuyModal
+          open={isPollarBuyOpen}
+          country={buyCountry}
+          onOpenChange={() => setIsPollarBuyOpen(false)}
+          onBack={() => {
+            setIsPollarBuyOpen(false);
+            setCountryFlow('deposit');
+          }}
+        />
+      )}
       {isPollarSellMounted && (
         <PollarSellModal
           open={isPollarSellOpen}

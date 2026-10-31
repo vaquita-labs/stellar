@@ -1,24 +1,43 @@
 'use client';
 
 import { toast } from '@heroui/react';
+import { useRouter } from 'next/navigation';
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiSend } from 'react-icons/fi';
 import { PageHeader } from '../../molecules/PageHeader';
-import { SUPPORT_MESSAGE_MAX, SupportChatMessage, useSupportChat } from '../../../hooks/useSupportChat';
+import {
+  SUPPORT_MESSAGE_MAX,
+  SupportChatMessage,
+  useSendSupportMessage,
+  useSupportTicket,
+} from '../../../hooks/useSupportChat';
 
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 /**
- * Private thread between the user and the Vaquita team. Laid out as a fixed
- * column instead of PageLayout: the composer has to stay pinned to the bottom
- * while only the message list scrolls.
+ * One conversation with the Vaquita team: an existing ticket, or a new one
+ * (`ticketId` null) that comes to exist with the first message, after which
+ * the URL moves to it. Laid out as a fixed column instead of PageLayout: the
+ * composer has to stay pinned to the bottom while only the message list scrolls.
+ * A resolved ticket still takes messages; writing reopens it.
  */
-export function SupportChatPage() {
+export function SupportChatPage({ ticketId }: { ticketId: string | null }) {
   const { t, i18n } = useTranslation();
-  const { messages, isLoading, isError, send, isSending } = useSupportChat();
+  const router = useRouter();
+  const ticket = useSupportTicket(ticketId);
+  const sendMessage = useSendSupportMessage();
+  // What was sent from this screen before it has a ticket to read from (a new
+  // conversation, or a server that does not hand back the ticket yet).
+  const [sent, setSent] = useState<SupportChatMessage[]>([]);
+  const fromServer = ticket.data?.messages ?? [];
+  const messages = [...fromServer, ...sent.filter((m) => !fromServer.some((s) => s.id === m.id))];
+  const isLoading = ticketId !== null && ticket.isPending;
+  const isError = ticketId !== null && ticket.isError && !ticket.data;
+  const isSending = sendMessage.isPending;
+  const resolved = ticket.data?.status === 'resolved';
   const [draft, setDraft] = useState('');
   const listEndRef = useRef<HTMLDivElement>(null);
 
@@ -31,10 +50,18 @@ export function SupportChatPage() {
     if (!draft.trim() || isSending) return;
     // The draft is cleared only once the message is stored: a failed send must
     // not eat what the user just typed.
-    send(draft.trim(), {
-      onSuccess: () => setDraft(''),
-      onError: (err) => toast.danger(t('supportChat.sendError', 'Could not send your message'), { description: err.message }),
-    });
+    sendMessage.mutate(
+      { body: draft.trim(), ticketId },
+      {
+        onSuccess: ({ message, ticketId: landedIn }) => {
+          setDraft('');
+          setSent((list) => [...list, message]);
+          // The first message of a new conversation gives it its id: from here on the screen is that ticket's.
+          if (ticketId === null) router.replace(`/concierge/chat/${landedIn}`);
+        },
+        onError: (err) => toast.danger(t('supportChat.sendError', 'Could not send your message'), { description: err.message }),
+      },
+    );
   };
 
   // Enter sends and Shift+Enter breaks the line, but only with a physical
@@ -55,9 +82,11 @@ export function SupportChatPage() {
 
   return (
     <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-4 pt-6 sm:pt-8">
-      <PageHeader title={t('supportChat.title', 'Vaquita team')} backHref="/concierge" />
+      <PageHeader title={t('supportChat.title', 'Vaquita team')} backHref="/concierge/chat" />
       <p className="text-center text-xs text-gray-500">
-        {t('supportChat.subtitle', 'Private chat. Only you and the team can see it.')}
+        {resolved
+          ? t('supportChat.resolvedNote', 'This one was resolved. Write again and it reopens.')
+          : t('supportChat.subtitle', 'Private chat. Only you and the team can see it.')}
       </p>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto py-4">

@@ -32,8 +32,8 @@ export const accruedAt = (terms: AccrualTerm[], now: number) =>
  * "0000"): así el saldo no queda "pelado" cuando es redondo y el ancho es casi
  * constante, que es lo que hace que la pastilla no salte.
  */
-export const formatLiveBalance = (value: number) => {
-  const [int, dec = ''] = floorAmount(value, DISPLAY_DECIMALS).toFixed(DISPLAY_DECIMALS).split('.');
+export const formatLiveBalance = (value: number, decimals: number = DISPLAY_DECIMALS) => {
+  const [int, dec = ''] = floorAmount(value, decimals).toFixed(decimals).split('.');
   return { big: `$${Number(int).toLocaleString()}.${dec.slice(0, 2)}`, sub: dec.slice(2) };
 };
 
@@ -53,16 +53,29 @@ export const formatLiveBalance = (value: number) => {
  * escribimos por ref. Si alguna vez hay que meter el saldo en el render, hay que
  * rehacer esto entero, no "arreglar" el children.
  */
-export const LiveBalance = ({ base, terms }: { base: number; terms: AccrualTerm[] }) => {
+export const LiveBalance = ({
+  base,
+  terms,
+  decimals = DISPLAY_DECIMALS,
+  bigClassName = 'text-xl',
+  subClassName = 'text-sm text-black/40',
+}: {
+  base: number;
+  terms: AccrualTerm[];
+  /** Decimales en total; los dos primeros van grandes y el resto chicos y tenues. */
+  decimals?: number;
+  bigClassName?: string;
+  subClassName?: string;
+}) => {
   const bigRef = useRef<HTMLSpanElement>(null);
   const subRef = useRef<HTMLSpanElement>(null);
   // Solo para el primer paint (y el HTML del server): así la pastilla nace con
   // el número correcto en vez de vacía y con el ancho saltando en el frame 2.
-  const [initial] = useState(() => formatLiveBalance(base + accruedAt(terms, Date.now())));
+  const [initial] = useState(() => formatLiveBalance(base + accruedAt(terms, Date.now()), decimals));
 
   useEffect(() => {
     const paint = () => {
-      const { big, sub } = formatLiveBalance(base + accruedAt(terms, Date.now()));
+      const { big, sub } = formatLiveBalance(base + accruedAt(terms, Date.now()), decimals);
       if (bigRef.current) bigRef.current.textContent = big;
       if (subRef.current) subRef.current.textContent = sub;
     };
@@ -70,14 +83,14 @@ export const LiveBalance = ({ base, terms }: { base: number; terms: AccrualTerm[
     // congelado del render inicial quedó viejo.
     paint();
     return subscribeLiveTick(paint);
-  }, [base, terms]);
+  }, [base, terms, decimals]);
 
   return (
     <>
-      <span ref={bigRef} className="text-xl">
+      <span ref={bigRef} className={bigClassName}>
         {initial.big}
       </span>
-      <span ref={subRef} className="text-sm text-black/40">
+      <span ref={subRef} className={subClassName}>
         {initial.sub}
       </span>
     </>

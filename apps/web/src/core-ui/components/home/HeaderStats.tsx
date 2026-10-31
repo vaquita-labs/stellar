@@ -36,6 +36,16 @@ import {
   HOME_TOUR_ANCHOR_PROFILE,
 } from '../organisms/Tutorial/homeTourConfig';
 
+/**
+ * The parts of the header that belong to the game and the map: the balance
+ * pill (the dashboard shows the balance now), the streak/coins/stars row and
+ * the floating column of quick actions with the daily chest. Off at the
+ * user's request (2026-10-31) while /home is the money dashboard; everything
+ * stays wired and comes back by flipping this. What remains is the avatar,
+ * the greeting, install, notifications and help.
+ */
+const SHOW_GAME_HEADER = false;
+
 export const HeaderStats = () => {
   const { t } = useTranslation();
   const [showStreakModal, setShowStreakModal] = useState(false);
@@ -230,7 +240,7 @@ export const HeaderStats = () => {
       {activeDeposits.map((d) => (
         <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
       ))}
-      <div className="w-full px-4 pt-3 pb-3 bg-primary rounded-g">
+      <div className="w-full px-4 pt-2 pb-2 bg-primary rounded-g">
         <div className="max-w-xl mx-auto flex items-center gap-3">
           {/* Avatar y campana llevan el mismo borde negro con la base más
               gruesa que <PressableButton>, y se hunden al presionarse: son
@@ -248,7 +258,7 @@ export const HeaderStats = () => {
               config={profileData?.avatarConfig}
               seed={profileData?.walletAddress || walletAddress || ''}
               alt={t('home.stats.profileAlt', 'Profile')}
-              className="h-16 w-16 border-2 border-black border-b-[6px] transition group-active:border-b-2"
+              className="h-12 w-12 border-2 border-black border-b-4 transition group-active:border-b-2"
             />
           </Link>
 
@@ -257,14 +267,12 @@ export const HeaderStats = () => {
                 hay perfil no se renderiza para no reservar una línea vacía. */}
             {displayName && (
               <div className="flex items-center gap-1 min-w-0">
-                <p className="text-xs text-black/80 leading-none truncate">
+                <p className="text-base text-black/80 leading-none truncate">
                   {t('home.stats.greeting', 'Hi,')} <span className="font-bold text-black">@{displayName}</span>
                 </p>
-                {/* El ojo GLOBAL, pegado al nombre. Es el mismo interruptor que
-                    Ajustes → Privacidad, no una preferencia parecida: acá está
-                    a un toque de la plata que tapa. El `-my-1` le come el padding
-                    al botón para que no estire la línea del saludo. */}
-                <BalanceEye className="-my-1" />
+                {/* El ojo global vive junto al saldo del tablero (HomeDashboard),
+                    que es la plata que tapa; acá, sin saldo, no tiene sentido. */}
+                {SHOW_GAME_HEADER && <BalanceEye className="-my-1" />}
               </div>
             )}
             {/* El saldo es la puerta al portafolio: se pinta como botón (crema
@@ -272,47 +280,53 @@ export const HeaderStats = () => {
                 de la app) para que se lea como algo que se toca, no como un
                 dato. Antes abría el historial de movimientos; ese sigue
                 accesible desde TotalDepositsButton y SavingsStats. */}
-            <div className="flex items-center gap-1.5 self-start max-w-full">
-              <PressableButton
-                variant="cream"
-                onClick={openPortfolioPanel}
-                ariaLabel={t('home.stats.apyAria', 'Portfolio')}
-                dataTutorial={HOME_TOUR_ANCHOR_BALANCE}
-                // w-fit: la pastilla ABRAZA el número (no llena todo el ancho, que
-                // dejaba un vacío enorme adentro con saldos cortos). Como ahora
-                // SIEMPRE mostramos los 7 decimales, el número es más largo y de
-                // ancho casi constante, así que la pastilla queda snug y estable.
-                // Alineada a la izquierda, mismo borde que el saludo.
-                className={`w-fit max-w-full self-start justify-start min-w-0 py-2${balancePending ? ' animate-pulse' : ''}`}
-              >
-                {balanceLoading ? (
-                  <Spinner size="sm" color="current" />
-                ) : (
-                  <span data-tutorial="tutorial-balance" className="font-bold text-black tabular-nums leading-none truncate">
-                    {hideBalance ? <span className="text-xl">••••</span> : <LiveBalance base={balanceBase} terms={liveTerms} />}
-                  </span>
-                )}
-                {/* La pastilla es crema clara con un número adentro: sin esto se
+            {SHOW_GAME_HEADER && (
+              <div className="flex items-center gap-1.5 self-start max-w-full">
+                <PressableButton
+                  variant="cream"
+                  onClick={openPortfolioPanel}
+                  ariaLabel={t('home.stats.apyAria', 'Portfolio')}
+                  dataTutorial={HOME_TOUR_ANCHOR_BALANCE}
+                  // w-fit: la pastilla ABRAZA el número (no llena todo el ancho, que
+                  // dejaba un vacío enorme adentro con saldos cortos). Como ahora
+                  // SIEMPRE mostramos los 7 decimales, el número es más largo y de
+                  // ancho casi constante, así que la pastilla queda snug y estable.
+                  // Alineada a la izquierda, mismo borde que el saludo.
+                  className={`w-fit max-w-full self-start justify-start min-w-0 py-2${balancePending ? ' animate-pulse' : ''}`}
+                >
+                  {balanceLoading ? (
+                    <Spinner size="sm" color="current" />
+                  ) : (
+                    <span data-tutorial="tutorial-balance" className="font-bold text-black tabular-nums leading-none truncate">
+                      {hideBalance ? (
+                        <span className="text-xl">••••</span>
+                      ) : (
+                        <LiveBalance base={balanceBase} terms={liveTerms} />
+                      )}
+                    </span>
+                  )}
+                  {/* La pastilla es crema clara con un número adentro: sin esto se
                     lee como un campo de texto, no como el acceso al portafolio.
                     El chevron es la señal de "esto abre algo". */}
-                <FiChevronRight aria-hidden className="h-5 w-5 shrink-0 text-black/60" />
-              </PressableButton>
-              {/* Nunca ocultamos que un saldo no se pudo confirmar: si Blend
+                  <FiChevronRight aria-hidden className="h-5 w-5 shrink-0 text-black/60" />
+                </PressableButton>
+                {/* Nunca ocultamos que un saldo no se pudo confirmar: si Blend
                   falló y no hay valor en cache, el total mostrado NO incluye esa
                   parte, así que lo avisamos y dejamos reintentar en el acto en
                   vez de mentir con un número menor. */}
-              {blendFailed ? (
-                <button
-                  type="button"
-                  onClick={() => void refetchBlend()}
-                  aria-label={t('home.stats.balanceRetry', 'Retry loading balance')}
-                  title={t('home.stats.balanceSyncError', "Couldn't load your Blend balance. Tap to retry.")}
-                  className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-white/80 border border-black/20 text-amber-600 transition active:translate-y-[1px]"
-                >
-                  <FiAlertCircle className="w-4 h-4" />
-                </button>
-              ) : null}
-            </div>
+                {blendFailed ? (
+                  <button
+                    type="button"
+                    onClick={() => void refetchBlend()}
+                    aria-label={t('home.stats.balanceRetry', 'Retry loading balance')}
+                    title={t('home.stats.balanceSyncError', "Couldn't load your Blend balance. Tap to retry.")}
+                    className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-white/80 border border-black/20 text-amber-600 transition active:translate-y-[1px]"
+                  >
+                    <FiAlertCircle className="w-4 h-4" />
+                  </button>
+                ) : null}
+              </div>
+            )}
 
             {/* OCULTOS A PROPÓSITO (2026-07-21): acá vivían dos chips bajo el
                 saldo. El verde mostraba el APY base y abría <PortfolioPanel>;
@@ -379,65 +393,67 @@ export const HeaderStats = () => {
           Offsets en px fijos (no las clases rem de Tailwind) para que la
           distancia al bloque naranja sea la misma en todos los dispositivos,
           aunque el usuario tenga el tamaño de fuente del sistema agrandado. */}
-      <div className="absolute left-0 right-0 -bottom-[36px] z-20 pointer-events-none">
-        <div className="bg-white/40 backdrop-blur-md pointer-events-auto">
-          <div className="max-w-xl mx-auto flex items-center justify-between gap-2 px-2 py-1.5">
-            <PressableButton
-              variant="white"
-              size="chip"
-              onClick={() => setShowStreakModal(true)}
-              ariaLabel={t('home.stats.streakAlt', 'Streak')}
-              className="flex-1"
-            >
-              {streakLoading && !streakData ? (
-                <Spinner size="sm" color="current" />
-              ) : (
-                <>
-                  <Image
-                    src="/icons/global/streak_face.png"
-                    alt=""
-                    width={20}
-                    height={20}
-                    className="object-contain"
-                    priority
-                    style={hasActiveStreak ? {} : { filter: 'grayscale(100%)' }}
-                  />
-                  <span className="text-xs font-bold text-black tabular-nums">{totalStreak}</span>
-                </>
-              )}
-            </PressableButton>
+      {SHOW_GAME_HEADER && (
+        <div className="absolute left-0 right-0 -bottom-[36px] z-20 pointer-events-none">
+          <div className="bg-white/40 backdrop-blur-md pointer-events-auto">
+            <div className="max-w-xl mx-auto flex items-center justify-between gap-2 px-2 py-1.5">
+              <PressableButton
+                variant="white"
+                size="chip"
+                onClick={() => setShowStreakModal(true)}
+                ariaLabel={t('home.stats.streakAlt', 'Streak')}
+                className="flex-1"
+              >
+                {streakLoading && !streakData ? (
+                  <Spinner size="sm" color="current" />
+                ) : (
+                  <>
+                    <Image
+                      src="/icons/global/streak_face.png"
+                      alt=""
+                      width={20}
+                      height={20}
+                      className="object-contain"
+                      priority
+                      style={hasActiveStreak ? {} : { filter: 'grayscale(100%)' }}
+                    />
+                    <span className="text-xs font-bold text-black tabular-nums">{totalStreak}</span>
+                  </>
+                )}
+              </PressableButton>
 
-            <PressableButton
-              variant="white"
-              size="chip"
-              onClick={() => setShowCoinsModal(true)}
-              ariaLabel={t('home.stats.goldCoinAlt', 'Gold Coin')}
-              className="flex-1"
-            >
-              {/* La ref del destino de la animación de monedas va en el contenido,
+              <PressableButton
+                variant="white"
+                size="chip"
+                onClick={() => setShowCoinsModal(true)}
+                ariaLabel={t('home.stats.goldCoinAlt', 'Gold Coin')}
+                className="flex-1"
+              >
+                {/* La ref del destino de la animación de monedas va en el contenido,
                   no en el botón: <PressableButton> no reenvía refs y el centro del
                   ícono es mejor blanco que el centro del chip entero. */}
-              <span ref={setGoldCoinRef} className="flex items-center gap-2">
-                <Image src="/icons/global/coin.png" alt="" width={20} height={20} className="object-contain" priority />
-                <span className="text-xs font-bold text-black tabular-nums">{goldCoins}</span>
-              </span>
-            </PressableButton>
+                <span ref={setGoldCoinRef} className="flex items-center gap-2">
+                  <Image src="/icons/global/coin.png" alt="" width={20} height={20} className="object-contain" priority />
+                  <span className="text-xs font-bold text-black tabular-nums">{goldCoins}</span>
+                </span>
+              </PressableButton>
 
-            <PressableButton
-              variant="white"
-              size="chip"
-              onClick={() => setShowExperienceModal(true)}
-              ariaLabel={t('home.stats.experienceAlt', 'Experience')}
-              className="flex-1"
-            >
-              <Image src="/icons/global/star.png" alt="" width={20} height={20} className="object-contain" priority />
-              <span className="text-xs font-bold text-black tabular-nums">
-                {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </span>
-            </PressableButton>
+              <PressableButton
+                variant="white"
+                size="chip"
+                onClick={() => setShowExperienceModal(true)}
+                ariaLabel={t('home.stats.experienceAlt', 'Experience')}
+                className="flex-1"
+              >
+                <Image src="/icons/global/star.png" alt="" width={20} height={20} className="object-contain" priority />
+                <span className="text-xs font-bold text-black tabular-nums">
+                  {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </span>
+              </PressableButton>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Fila flotante sobre el cielo, anclada al borde inferior del bloque
           naranja (top-full) con un offset en px fijos: 36px que ocupa el pill
@@ -446,17 +462,19 @@ export const HeaderStats = () => {
           en el mismo contenedor centrado max-w-xl para que arranquen a la misma
           altura y a la misma distancia del naranja en cualquier pantalla.
           La columna derecha es solo móvil: en escritorio vive en el sidebar. */}
-      <div className="absolute left-0 right-0 top-full mt-[40px] px-1 z-20 pointer-events-none">
-        <div className="max-w-xl mx-auto flex items-start justify-between gap-2">
-          <div className="pointer-events-auto">
-            <MapClock />
-          </div>
-          <div className="flex flex-col items-center gap-2 pointer-events-auto md:hidden">
-            <MapQuickActions />
-            <DailyRewardChest />
+      {SHOW_GAME_HEADER && (
+        <div className="absolute left-0 right-0 top-full mt-[40px] px-1 z-20 pointer-events-none">
+          <div className="max-w-xl mx-auto flex items-start justify-between gap-2">
+            <div className="pointer-events-auto">
+              <MapClock />
+            </div>
+            <div className="flex flex-col items-center gap-2 pointer-events-auto md:hidden">
+              <MapQuickActions />
+              <DailyRewardChest />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {streakModalMounted && <StreakModal open={showStreakModal} onOpenChange={() => setShowStreakModal(false)} />}
       {coinsModalMounted && (

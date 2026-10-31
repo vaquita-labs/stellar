@@ -811,12 +811,13 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       onOpenChange={onOpenChange}
       title={STEP_TITLE[step]}
       size="md"
-      // Regla de todos los flujos de plata: no se cierran tocando afuera en
-      // NINGÚN paso. Un toque al borde a mitad de tipear el monto o de elegir
-      // destino borra todo lo hecho, y el borde es lo más fácil de tocar sin
-      // querer con el sheet ocupando media pantalla. La X es el único cierre, y
-      // ahí sí es deliberado.
-      isDismissable={false}
+      // Regla de todos los flujos de plata: desde el monto en adelante no se
+      // cierran tocando afuera. Un toque al borde a mitad de tipear el monto o
+      // de elegir destino borra todo lo hecho, y el borde es lo más fácil de
+      // tocar sin querer con el sheet ocupando media pantalla. Ahí la X es el
+      // único cierre. Elegir el método todavía no tiene nada que perder, así
+      // que esa primera hoja sí se cierra tocando afuera.
+      isDismissable={step === 'method'}
       // Durante la transacción tampoco se puede cerrar ni volver atrás.
       hideClose={step === 'processing'}
       onBack={backTarget ? () => setStep(backTarget) : undefined}
