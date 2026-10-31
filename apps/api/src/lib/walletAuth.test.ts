@@ -17,7 +17,10 @@ vi.mock('@vaquita/db', () => ({
   },
 }));
 
-const { buildAuthChallenge, verifyAuthChallenge } = await import('./walletAuth');
+const { buildAuthChallenge, verifyAuthChallenge, walletAuthDeps } = await import('./walletAuth');
+// Horizon stays out of unit tests: by default the account is not on the ledger
+// yet, so its master key is its only signer.
+const notOnLedger = async () => null;
 
 // STELLAR_NETWORK is 'testnet' in vitest.config.ts.
 const PASSPHRASE = Networks.TESTNET;
@@ -46,8 +49,12 @@ function nonceOf(xdr: string): string {
   return op?.type === 'manageData' ? (op.value?.toString('utf8') ?? '') : '';
 }
 
+beforeEach(() => {
+  redeemed.clear();
+  walletAuthDeps.accountSigners = notOnLedger;
+});
+
 describe('wallet challenge nonces', () => {
-  beforeEach(() => redeemed.clear());
 
   it('fits the nonce in a manage_data value', () => {
     const wallet = Keypair.random();
@@ -101,6 +108,78 @@ describe('wallet challenge nonces', () => {
     const { transaction } = buildAuthChallenge(wallet.publicKey());
     await expect(verifyAuthChallenge(signed(transaction, Keypair.random()), wallet.publicKey())).rejects.toThrow();
     expect(redeemed.size).toBe(0);
+    await expect(verifyAuthChallenge(signed(transaction, wallet), wallet.publicKey())).resolves.toBe(wallet.publicKey());
+  });
+});
+
+describe('wallet challenge signers', () => {
+  it('accepts the signer of a co-signed wallet whose master key weighs 0', async () => {
+    const wallet = Keypair.random();
+    const turnkey = Keypair.random();
+    walletAuthDeps.accountSigners = async () => ({
+      signers: [
+        { key: turnkey.publicKey(), weight: 1 },
+        { key: wallet.publicKey(), weight: 0 },
+      ],
+      threshold: 1,
+    });
+    const xdr = signed(buildAuthChallenge(wallet.publicKey()).transaction, turnkey);
+    await expect(verifyAuthChallenge(xdr, wallet.publicKey())).resolves.toBe(wallet.publicKey());
+  });
+
+  it('refuses the master key once it weighs 0', async () => {
+    const wallet = Keypair.random();
+    walletAuthDeps.accountSigners = async () => ({
+      signers: [
+        { key: Keypair.random().publicKey(), weight: 1 },
+        { key: wallet.publicKey(), weight: 0 },
+      ],
+      threshold: 1,
+    });
+    const xdr = signed(buildAuthChallenge(wallet.publicKey()).transaction, wallet);
+    await expect(verifyAuthChallenge(xdr, wallet.publicKey())).rejects.toThrow('not signed by the wallet');
+  });
+
+  it('refuses a key that is not one of the account signers', async () => {
+    const wallet = Keypair.random();
+    walletAuthDeps.accountSigners = async () => ({ signers: [{ key: wallet.publicKey(), weight: 1 }], threshold: 1 });
+    const xdr = signed(buildAuthChallenge(wallet.publicKey()).transaction, Keypair.random());
+    await expect(verifyAuthChallenge(xdr, wallet.publicKey())).rejects.toThrow('not signed by the wallet');
+  });
+
+  it('needs the signatures of a multisig wallet to reach its threshold', async () => {
+    const wallet = Keypair.random();
+    const a = Keypair.random();
+    const b = Keypair.random();
+    walletAuthDeps.accountSigners = async () => ({
+      signers: [
+        { key: a.publicKey(), weight: 1 },
+        { key: b.publicKey(), weight: 1 },
+        { key: wallet.publicKey(), weight: 0 },
+      ],
+      threshold: 2,
+    });
+    const { transaction } = buildAuthChallenge(wallet.publicKey());
+    await expect(verifyAuthChallenge(signed(transaction, a), wallet.publicKey())).rejects.toThrow('not signed by the wallet');
+    await expect(verifyAuthChallenge(signed(transaction, a, b), wallet.publicKey())).resolves.toBe(wallet.publicKey());
+  });
+
+  it('accepts the master key of an account with its default signers', async () => {
+    const wallet = Keypair.random();
+    walletAuthDeps.accountSigners = async () => ({ signers: [{ key: wallet.publicKey(), weight: 1 }], threshold: 0 });
+    const xdr = signed(buildAuthChallenge(wallet.publicKey()).transaction, wallet);
+    await expect(verifyAuthChallenge(xdr, wallet.publicKey())).resolves.toBe(wallet.publicKey());
+  });
+
+  it('refuses the login and keeps the challenge when Horizon fails', async () => {
+    const wallet = Keypair.random();
+    walletAuthDeps.accountSigners = async () => {
+      throw new Error('Horizon unavailable');
+    };
+    const { transaction } = buildAuthChallenge(wallet.publicKey());
+    await expect(verifyAuthChallenge(signed(transaction, wallet), wallet.publicKey())).rejects.toThrow('Horizon unavailable');
+    expect(redeemed.size).toBe(0);
+    walletAuthDeps.accountSigners = notOnLedger;
     await expect(verifyAuthChallenge(signed(transaction, wallet), wallet.publicKey())).resolves.toBe(wallet.publicKey());
   });
 });

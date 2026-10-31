@@ -1,7 +1,10 @@
 import {
   Account,
   BASE_FEE,
+  Horizon,
   Keypair,
+  Networks,
+  NotFoundError,
   Operation,
   StrKey,
   Transaction,
@@ -22,8 +25,9 @@ import { logger } from './logger';
  *
  *  1. POST /auth/challenge  → we build a challenge transaction for the claimed
  *     wallet, its nonce sealed with an HMAC so any API instance can check it.
- *  2. The client signs it with the wallet's key (Pollar signTx routes this to
- *     Freighter/xBull for external wallets or to Pollar's custodial signer).
+ *  2. The client signs it with a key the wallet's account accepts (Pollar
+ *     signTx routes this to Freighter/xBull for external wallets, to Pollar's
+ *     custodial signer, or to the Turnkey signer of a co-signed wallet).
  *  3. POST /auth/verify     → we check the nonce's HMAC and expiry, the
  *     wallet's signature, redeem the nonce once (auth_challenge_nonces) and
  *     issue a short-lived HMAC session token (JWT, HS256).
@@ -126,6 +130,35 @@ async function redeemNonce(id: string, walletAddress: string, expiresAt: number)
     .catch((err: unknown) => logger.warn({ err }, 'Could not prune expired auth challenge nonces'));
 }
 
+const horizon = new Horizon.Server(
+  NETWORK_PASSPHRASE === Networks.PUBLIC ? 'https://horizon.stellar.org' : 'https://horizon-testnet.stellar.org',
+);
+
+type AccountSigners = { signers: { key: string; weight: number }[]; threshold: number };
+
+export const walletAuthDeps = {
+  /**
+   * The account's ed25519 signers and the weight a login needs (its medium
+   * threshold), or null when the account is not on the ledger yet. Any other
+   * Horizon failure throws: a login is refused rather than decided without
+   * the signers.
+   */
+  accountSigners: async (walletAddress: string): Promise<AccountSigners | null> => {
+    try {
+      const account = await horizon.loadAccount(walletAddress);
+      return {
+        signers: account.signers
+          .filter((s) => s.type === 'ed25519_public_key')
+          .map((s) => ({ key: s.key, weight: s.weight })),
+        threshold: account.thresholds.med_threshold,
+      };
+    } catch (err) {
+      if (err instanceof NotFoundError) return null;
+      throw err;
+    }
+  },
+};
+
 export function buildAuthChallenge(walletAddress: string): { transaction: string; networkPassphrase: string } {
   const now = Math.floor(Date.now() / 1000);
   const nonce = sealNonce(walletAddress, now + CHALLENGE_TIMEOUT_SECONDS);
@@ -164,10 +197,20 @@ export async function verifyAuthChallenge(signedXdr: string, expectedWallet: str
   if (!nonce) throw new Error('Challenge was not issued here for this wallet');
   if (nonce.expiresAt <= Math.floor(Date.now() / 1000)) throw new Error('Challenge expired');
 
+  // The account's signers decide, not its master key: a co-signed or multisig
+  // wallet signs with another key while its master key weighs 0, so checking
+  // the master key alone refuses every login of those wallets.
   const hash = tx.hash();
-  const keypair = Keypair.fromPublicKey(expectedWallet);
-  const signedByWallet = tx.signatures.some((sig) => keypair.verify(hash, sig.signature()));
-  if (!signedByWallet) {
+  const signedBy = (key: string) => {
+    const keypair = Keypair.fromPublicKey(key);
+    return tx.signatures.some((sig) => keypair.verify(hash, sig.signature()));
+  };
+  const account = await walletAuthDeps.accountSigners(expectedWallet);
+  // An account not on the ledger yet has its master key as its only signer.
+  const signers = account?.signers ?? [{ key: expectedWallet, weight: 1 }];
+  const threshold = Math.max(account?.threshold ?? 0, 1);
+  const weight = signers.filter((s) => s.weight > 0 && signedBy(s.key)).reduce((sum, s) => sum + s.weight, 0);
+  if (weight < threshold) {
     throw new Error('Challenge is not signed by the wallet');
   }
 
