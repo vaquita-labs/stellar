@@ -26,6 +26,7 @@ import { PostHogProvider } from './PostHogProvider';
 import { useAuthGate } from './useAuthGate';
 import { useWalletBalanceRefreshOnMount } from '@/core-ui/hooks/useWalletBalanceRefresh';
 import { useConsoleToAbly } from './useConsoleToAbly';
+import { usePollarOverlayGuard } from './usePollarOverlayGuard';
 import { useViewportVh } from './useViewportVh';
 
 const POLLAR_API_KEY = clientEnv.NEXT_PUBLIC_POLLAR_PUBLISHABLE_KEY;
@@ -68,6 +69,7 @@ const walletAdapters = stellarWalletsKitAdapters({
 export function Providers({ children }: { children: ReactNode }) {
   useVisibility();
   useViewportVh();
+  usePollarOverlayGuard();
   useConsoleToAbly();
   // Refresca el snapshot on-chain de la wallet al abrir la app. El server tiene
   // su propio TTL, así que recargar seguido no dispara lecturas RPC de más.
