@@ -1103,11 +1103,14 @@
     "title": "Help Center",
     "buttonAria": "Help Center",
     "chat": "Chat with us",
-    "whatsapp": "Join the WhatsApp group",
-    "email": "Email",
-    "feedback": "Send feedback",
+    "whatsapp": "WhatsApp group",
+    "feedback": "Tell us something",
     "bug": "Report a bug",
-    "board": "See what others asked"
+    "board": "What others asked for",
+    "chatHint": "A private chat with the Vaquita team. We answer the same day.",
+    "whatsappHint": "The savers community, with the team inside.",
+    "feedbackHint": "An idea, a complaint or something that broke.",
+    "boardHint": "Ideas and bugs from other users, and their status."
   },
   "supportChat": {
     "title": "Vaquita team",
@@ -1118,7 +1121,17 @@
     "placeholder": "Write a message…",
     "send": "Send",
     "sendError": "Could not send your message",
-    "loadError": "We could not load the conversation. Retrying…"
+    "loadError": "We could not load the conversation. Retrying…",
+    "listTitle": "Your conversations",
+    "new": "New conversation",
+    "listEmpty": "Nothing yet. Start a conversation and it stays here, so you can always come back.",
+    "listError": "We could not load your conversations. Pull to refresh.",
+    "resolvedNote": "This one was resolved. Write again and it reopens.",
+    "status": {
+      "waiting": "Waiting for reply",
+      "answered": "Answered",
+      "resolved": "Resolved"
+    }
   },
   "board": {
     "title": "Board",
@@ -1667,8 +1680,8 @@
       "dailyReward": "Daily reward",
       "shopWithItems": "{{count}} items to place",
       "primaryAriaLabel": "Primary",
-      "qr": "QR",
-      "cards": "Cards"
+      "cards": "Cards",
+      "support": "Help"
     },
     "notFound": {
       "backHome": "Go back to home",
@@ -3173,32 +3186,33 @@
       "body": "Your friends save, your APY grows."
     },
     "earnedTotal": "{{amount}} so far",
-    "earningsFailed": "We could not read your earnings. Pull to refresh."
+    "earningsFailed": "We could not read your earnings. Pull to refresh.",
+    "earningsSoon": "Soon you will see here what your savings earn, day by day."
   },
   "qrPay": {
-    "title": "Pay with QR",
-    "tabsAria": "Get paid or pay",
-    "tab": {
-      "receive": "Get paid",
-      "pay": "Pay"
-    },
-    "receive": {
-      "hint": "Show this code to whoever pays you. It works from any Stellar wallet.",
-      "amountLabel": "Amount to charge, optional",
-      "amountPlaceholder": "0.00 {{symbol}}",
-      "copy": "Copy address"
-    },
-    "pay": {
-      "hint": "Scan the code of whoever you pay. You confirm the amount before anything is sent.",
-      "scan": "Scan a code",
-      "stop": "Stop"
+    "title": "Scan to pay",
+    "paste": "Paste a code",
+    "methods": {
+      "stellar": "Stellar",
+      "bolivia": "Bolivia QR",
+      "soon": "Soon"
     },
     "scan": {
       "idle": "Point the camera at the code",
       "requesting": "Opening the camera…",
-      "invalid": "That code is not a payment. Keep pointing.",
-      "denied": "The camera is blocked. Allow it in your browser settings.",
-      "noQr": "No code found. Try again."
+      "invalid": "That code is not a Stellar payment yet. Keep pointing.",
+      "denied": "The camera is blocked.",
+      "noQr": "No code found.",
+      "retry": "Try again"
+    },
+    "permission": {
+      "title": "Camera access needed",
+      "heading": "Vaquita needs the camera to scan a code",
+      "body": "Allow the camera for Vaquita in your browser or phone settings, then come back.",
+      "step1": "Open your settings and find Vaquita or your browser.",
+      "step2": "Turn on Camera.",
+      "retry": "Try again",
+      "dismiss": "Not now"
     }
   },
   "confirmTx": {

@@ -27,6 +27,14 @@ export interface DefiEarningsDTO {
   asOf: string;
 }
 
+/** The server has no earnings route yet (404): the screen says so instead of calling it a failure. */
+export class EarningsUnavailableError extends Error {
+  constructor() {
+    super('earnings endpoint not available');
+    this.name = 'EarningsUnavailableError';
+  }
+}
+
 /**
  * What the flexible (DeFi) savings earned, per calendar bucket in the user's
  * time zone, measured by the server from its balance readings. Fresh for five
@@ -42,6 +50,7 @@ export const useDefiEarnings = (period: EarningsPeriod) => {
       const response = await fetch(
         `${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/earnings/network/${network?.networkName}/wallet/${walletAddress}?${params}`,
       );
+      if (response.status === 404) throw new EarningsUnavailableError();
       if (!response.ok) throw new Error(`earnings ${response.status}`);
       const body = (await response.json()) as { data?: DefiEarningsDTO };
       if (!body.data) throw new Error('earnings: empty');
@@ -51,6 +60,6 @@ export const useDefiEarnings = (period: EarningsPeriod) => {
     staleTime: 5 * 60_000,
     gcTime: 60 * 60_000,
     refetchOnMount: true,
-    retry: 1,
+    retry: (count, error) => !(error instanceof EarningsUnavailableError) && count < 1,
   });
 };

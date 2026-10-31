@@ -2,7 +2,13 @@
 
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
-import { type EarningsPeriod, useDefiEarnings, useDepositsComplete, usePassiveUsdc } from '@/core-ui/hooks';
+import {
+  EarningsUnavailableError,
+  type EarningsPeriod,
+  useDefiEarnings,
+  useDepositsComplete,
+  usePassiveUsdc,
+} from '@/core-ui/hooks';
 import { maskAmount, useConfigStore, useHideBalance } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import { motion } from 'framer-motion';
@@ -172,8 +178,10 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
             <Spinner size="lg" color="current" />
           </div>
         ) : earnings.isError ? (
-          <p className="flex min-h-[15rem] flex-1 items-center justify-center text-center text-xs text-gray-500">
-            {t('dashboard.earningsFailed', 'We could not read your earnings. Pull to refresh.')}
+          <p className="flex min-h-[15rem] flex-1 items-center justify-center px-6 text-center text-sm text-gray-500">
+            {earnings.error instanceof EarningsUnavailableError
+              ? t('dashboard.earningsSoon', 'Soon you will see here what your savings earn, day by day.')
+              : t('dashboard.earningsFailed', 'We could not read your earnings. Pull to refresh.')}
           </p>
         ) : (
           <div

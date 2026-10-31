@@ -1103,11 +1103,14 @@
     "title": "Centro de ayuda",
     "buttonAria": "Centro de ayuda",
     "chat": "Chatea con nosotros",
-    "whatsapp": "Únete al grupo de WhatsApp",
-    "email": "Email",
-    "feedback": "Enviar feedback",
+    "whatsapp": "Grupo de WhatsApp",
+    "feedback": "Cuéntanos algo",
     "bug": "Reportar un error",
-    "board": "Mira lo que pidieron otros"
+    "board": "Lo que pidieron otros",
+    "chatHint": "Un chat privado con el equipo de Vaquita. Respondemos el mismo día.",
+    "whatsappHint": "La comunidad de ahorradores, con el equipo adentro.",
+    "feedbackHint": "Una idea, una queja o algo que se rompió.",
+    "boardHint": "Ideas y errores de otros usuarios, y en qué están."
   },
   "supportChat": {
     "title": "Equipo Vaquita",
@@ -1118,7 +1121,17 @@
     "placeholder": "Escribe un mensaje…",
     "send": "Enviar",
     "sendError": "No pudimos enviar tu mensaje",
-    "loadError": "No pudimos cargar la conversación. Reintentando…"
+    "loadError": "No pudimos cargar la conversación. Reintentando…",
+    "listTitle": "Tus conversaciones",
+    "new": "Nueva conversación",
+    "listEmpty": "Todavía nada. Empieza una conversación y queda aquí, para que siempre puedas volver.",
+    "listError": "No pudimos cargar tus conversaciones. Desliza para actualizar.",
+    "resolvedNote": "Esta quedó resuelta. Si escribes de nuevo, se vuelve a abrir.",
+    "status": {
+      "waiting": "Esperando respuesta",
+      "answered": "Respondida",
+      "resolved": "Resuelta"
+    }
   },
   "board": {
     "title": "Tablero",
@@ -1667,8 +1680,8 @@
       "dailyReward": "Recompensa",
       "shopWithItems": "{{count}} objetos por colocar",
       "primaryAriaLabel": "Principal",
-      "qr": "QR",
-      "cards": "Tarjetas"
+      "cards": "Tarjetas",
+      "support": "Ayuda"
     },
     "notFound": {
       "backHome": "Volver al inicio",
@@ -3173,32 +3186,33 @@
       "body": "Tus amigos ahorran, tu APY crece."
     },
     "earnedTotal": "{{amount}} hasta hoy",
-    "earningsFailed": "No pudimos leer tus ganancias. Desliza para actualizar."
+    "earningsFailed": "No pudimos leer tus ganancias. Desliza para actualizar.",
+    "earningsSoon": "Muy pronto verás aquí lo que ganan tus ahorros, día a día."
   },
   "qrPay": {
-    "title": "Pagar con QR",
-    "tabsAria": "Cobrar o pagar",
-    "tab": {
-      "receive": "Cobrar",
-      "pay": "Pagar"
-    },
-    "receive": {
-      "hint": "Muestra este código a quien te paga. Funciona desde cualquier billetera Stellar.",
-      "amountLabel": "Monto a cobrar, opcional",
-      "amountPlaceholder": "0.00 {{symbol}}",
-      "copy": "Copiar dirección"
-    },
-    "pay": {
-      "hint": "Escanea el código de quien le pagas. Confirmas el monto antes de que salga nada.",
-      "scan": "Escanear un código",
-      "stop": "Detener"
+    "title": "Escanea para pagar",
+    "paste": "Pegar un código",
+    "methods": {
+      "stellar": "Stellar",
+      "bolivia": "QR Bolivia",
+      "soon": "Pronto"
     },
     "scan": {
       "idle": "Apunta la cámara al código",
       "requesting": "Abriendo la cámara…",
-      "invalid": "Ese código no es un pago. Sigue apuntando.",
-      "denied": "La cámara está bloqueada. Permítela en los ajustes del navegador.",
-      "noQr": "No se encontró ningún código. Intenta de nuevo."
+      "invalid": "Ese código todavía no es un pago en Stellar. Sigue apuntando.",
+      "denied": "La cámara está bloqueada.",
+      "noQr": "No se encontró ningún código.",
+      "retry": "Intentar de nuevo"
+    },
+    "permission": {
+      "title": "Necesitamos la cámara",
+      "heading": "Vaquita necesita la cámara para leer un código",
+      "body": "Permite la cámara para Vaquita en los ajustes de tu navegador o de tu teléfono y vuelve.",
+      "step1": "Abre los ajustes y busca Vaquita o tu navegador.",
+      "step2": "Activa la cámara.",
+      "retry": "Intentar de nuevo",
+      "dismiss": "Ahora no"
     }
   },
   "confirmTx": {

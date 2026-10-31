@@ -1,5 +1,5 @@
-import { SupportChatPage } from '@/core-ui/components';
+import { SupportTicketsPage } from '@/core-ui/components';
 
 export default function Page() {
-  return <SupportChatPage />;
+  return <SupportTicketsPage />;
 }

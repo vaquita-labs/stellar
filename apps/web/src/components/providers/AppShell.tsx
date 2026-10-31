@@ -62,6 +62,9 @@ export function AppShell({
   // (`BottomNav`); shop and leaderboard stay as floating actions on the home.
   // Desktop keeps the sidebar. Both hide while editing the map or on /shop.
   const isShopRoute = pathname?.startsWith('/shop') ?? false;
+  // Screens that are a destination of their own, left with their back arrow:
+  // the scanner (camera and all) and the help center with its chat.
+  const isScanRoute = (pathname?.startsWith('/qr') || pathname?.startsWith('/concierge')) ?? false;
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const hideNavigation = isShopRoute || isEditingMap;
 
@@ -72,7 +75,7 @@ export function AppShell({
   return (
     <div className="flex bg-background" style={{ overflow: 'hidden' }} ref={ref}>
       {!isPublicRoute && !hideNavigation && <DesktopSidebar />}
-      <Main withSidebar={!isPublicRoute && !hideNavigation} withBottomNav={!isPublicRoute && !hideNavigation}>
+      <Main withSidebar={!isPublicRoute && !hideNavigation} withBottomNav={!isPublicRoute && !hideNavigation && !isScanRoute}>
         {children}
       </Main>
     </div>

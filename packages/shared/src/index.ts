@@ -51,7 +51,6 @@ export * from './services/offramp';
 export * from './services/onramp';
 export * from './services/ramps';
 export * from './services/vaultFlows';
-export * from './services/earnings';
 export * from './services/walletTransfers';
 export * from './services/depositIntents';
 export * from './services/pwaInstalls';

@@ -1102,12 +1102,15 @@
   "concierge": {
     "title": "Central de ajuda",
     "buttonAria": "Central de ajuda",
-    "chat": "Fale conosco",
-    "whatsapp": "Entre no grupo do WhatsApp",
-    "email": "Email",
-    "feedback": "Enviar feedback",
+    "chat": "Fale com a gente",
+    "whatsapp": "Grupo de WhatsApp",
+    "feedback": "Conte algo para nós",
     "bug": "Relatar um erro",
-    "board": "Veja o que outros pediram"
+    "board": "O que outros pediram",
+    "chatHint": "Um chat privado com a equipe da Vaquita. Respondemos no mesmo dia.",
+    "whatsappHint": "A comunidade de poupadores, com a equipe dentro.",
+    "feedbackHint": "Uma ideia, uma reclamação ou algo que quebrou.",
+    "boardHint": "Ideias e erros de outros usuários, e como estão."
   },
   "supportChat": {
     "title": "Equipe Vaquita",
@@ -1118,7 +1121,17 @@
     "placeholder": "Escreva uma mensagem…",
     "send": "Enviar",
     "sendError": "Não foi possível enviar sua mensagem",
-    "loadError": "Não foi possível carregar a conversa. Tentando de novo…"
+    "loadError": "Não foi possível carregar a conversa. Tentando de novo…",
+    "listTitle": "Suas conversas",
+    "new": "Nova conversa",
+    "listEmpty": "Nada ainda. Comece uma conversa e ela fica aqui, para você sempre poder voltar.",
+    "listError": "Não conseguimos carregar suas conversas. Puxe para atualizar.",
+    "resolvedNote": "Esta foi resolvida. Se você escrever de novo, ela reabre.",
+    "status": {
+      "waiting": "Aguardando resposta",
+      "answered": "Respondida",
+      "resolved": "Resolvida"
+    }
   },
   "board": {
     "title": "Quadro",
@@ -1667,8 +1680,8 @@
       "dailyReward": "Recompensa",
       "shopWithItems": "{{count}} objetos para colocar",
       "primaryAriaLabel": "Principal",
-      "qr": "QR",
-      "cards": "Cartões"
+      "cards": "Cartões",
+      "support": "Ajuda"
     },
     "notFound": {
       "backHome": "Voltar para o início",
@@ -3173,32 +3186,33 @@
       "body": "Seus amigos poupam, seu APY cresce."
     },
     "earnedTotal": "{{amount}} até hoje",
-    "earningsFailed": "Não conseguimos ler seus ganhos. Puxe para atualizar."
+    "earningsFailed": "Não conseguimos ler seus ganhos. Puxe para atualizar.",
+    "earningsSoon": "Em breve você verá aqui o que suas economias rendem, dia a dia."
   },
   "qrPay": {
-    "title": "Pagar com QR",
-    "tabsAria": "Receber ou pagar",
-    "tab": {
-      "receive": "Receber",
-      "pay": "Pagar"
-    },
-    "receive": {
-      "hint": "Mostre este código a quem vai te pagar. Funciona em qualquer carteira Stellar.",
-      "amountLabel": "Valor a cobrar, opcional",
-      "amountPlaceholder": "0.00 {{symbol}}",
-      "copy": "Copiar endereço"
-    },
-    "pay": {
-      "hint": "Escaneie o código de quem você paga. Você confirma o valor antes de enviar qualquer coisa.",
-      "scan": "Escanear um código",
-      "stop": "Parar"
+    "title": "Escaneie para pagar",
+    "paste": "Colar um código",
+    "methods": {
+      "stellar": "Stellar",
+      "bolivia": "QR Bolívia",
+      "soon": "Em breve"
     },
     "scan": {
       "idle": "Aponte a câmera para o código",
       "requesting": "Abrindo a câmera…",
-      "invalid": "Esse código não é um pagamento. Continue apontando.",
-      "denied": "A câmera está bloqueada. Permita nas configurações do navegador.",
-      "noQr": "Nenhum código encontrado. Tente de novo."
+      "invalid": "Esse código ainda não é um pagamento na Stellar. Continue apontando.",
+      "denied": "A câmera está bloqueada.",
+      "noQr": "Nenhum código encontrado.",
+      "retry": "Tentar de novo"
+    },
+    "permission": {
+      "title": "Precisamos da câmera",
+      "heading": "A Vaquita precisa da câmera para ler um código",
+      "body": "Permita a câmera para a Vaquita nas configurações do navegador ou do telefone e volte.",
+      "step1": "Abra as configurações e procure a Vaquita ou seu navegador.",
+      "step2": "Ative a câmera.",
+      "retry": "Tentar de novo",
+      "dismiss": "Agora não"
     }
   },
   "confirmTx": {
