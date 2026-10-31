@@ -28,13 +28,17 @@ export interface KycSheetProps {
 const DEFAULT_COUNTRY = 'MX';
 const POLL_INTERVAL_MS = 3_000;
 const POLL_TIMEOUT_MS = 120_000;
+/** How often the sheet asks, on its own, whether the verification finished. */
+const WATCH_INTERVAL_MS = 5_000;
+/** What the provider's page may use: camera and mic for the ID and selfie, fullscreen for its camera view. */
+const IFRAME_ALLOW = 'camera; microphone; fullscreen; autoplay; encrypted-media; clipboard-write';
 
 type Session = { sessionId: string; kycUrl?: string };
 
 type Phase =
   | { kind: 'starting' }
   | { kind: 'failed'; message: string }
-  | { kind: 'verifying'; session: Session; flow: KycProvider['flow']; notConfirmed: boolean }
+  | { kind: 'verifying'; session: Session; flow: KycProvider['flow'] }
   | { kind: 'polling' }
   | { kind: 'done'; status: 'approved' | 'processing' | 'review' | 'duplicate' | 'rejected' | 'expired' };
 
@@ -52,6 +56,12 @@ function outcomeOf(read: StatusRead): Extract<Phase, { kind: 'done' }>['status']
   if (read.decisionStatus === 'expired' || read.status === 'expired') return 'expired';
   if (read.status === 'rejected') return 'rejected';
   return 'review';
+}
+
+/** True once a read says the user is done with the provider: a decision, or a review. */
+function isSettled(read: StatusRead): boolean {
+  if (read.status === 'none') return false;
+  return !(read.status === 'pending' && (!read.decisionStatus || read.decisionStatus === 'pending'));
 }
 
 /**
@@ -107,7 +117,6 @@ export function KycSheet({ onClose, onApproved, providerId, country, corridorId,
         kind: 'verifying',
         session: { sessionId: result.sessionId, ...(result.kycUrl ? { kycUrl: result.kycUrl } : {}) },
         flow: target.flow,
-        notConfirmed: false,
       });
     } catch (e) {
       const code = isPollarApiError(e) ? e.code : undefined;
@@ -155,7 +164,6 @@ export function KycSheet({ onClose, onApproved, providerId, country, corridorId,
   const check = async () => {
     const target = provider.current;
     if (!target) return;
-    const before = phase;
     setPhase({ kind: 'polling' });
     try {
       const read = await getClient().pollKycDecision(target.id, {
@@ -166,9 +174,49 @@ export function KycSheet({ onClose, onApproved, providerId, country, corridorId,
       });
       finishWith(read);
     } catch {
-      setPhase(before.kind === 'verifying' ? { ...before, notConfirmed: true } : { kind: 'done', status: 'review' });
+      setPhase({ kind: 'done', status: 'review' });
     }
   };
+
+  // While the user is with the provider, the sheet watches on its own: every
+  // few seconds, when the provider's page posts a message (it does at the end
+  // of its flow) and when the user comes back from the provider's tab. There is
+  // no "I am done" button: the decision shows as soon as there is one.
+  const verifying = phase.kind === 'verifying';
+  useEffect(() => {
+    if (!verifying) return;
+    const target = provider.current;
+    if (!target) return;
+    let cancelled = false;
+    let inFlight = false;
+    const look = async () => {
+      if (inFlight || cancelled) return;
+      inFlight = true;
+      try {
+        const read = await readStatus(target.id);
+        if (!cancelled && isSettled(read)) finishWith(read);
+      } catch {
+        // A failed read is just a missed tick; the next one tries again.
+      } finally {
+        inFlight = false;
+      }
+    };
+    const timer = setInterval(() => void look(), WATCH_INTERVAL_MS);
+    const onMessage = () => void look();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void look();
+    };
+    window.addEventListener('message', onMessage);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener('message', onMessage);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+    // readStatus/finishWith close over props that do not change while mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verifying]);
 
   const startAgain = () => {
     const target = provider.current;
@@ -217,23 +265,15 @@ export function KycSheet({ onClose, onApproved, providerId, country, corridorId,
             className="min-h-[60vh] w-full flex-1 rounded-2xl bg-white"
             src={url}
             title={t('kyc.title', 'Verify your identity')}
-            allow="camera; microphone"
+            allow={IFRAME_ALLOW}
+            allowFullScreen
           />
-          {phase.notConfirmed && (
-            <p className="text-center text-sm text-gray-600">
-              {t('kyc.notConfirmed', 'We could not confirm it yet. Finish the steps and try again.')}
-            </p>
-          )}
         </div>
       ) : (
         <ModalMessage
           icon={FiShield}
           title={t('kyc.openTitle', 'Verify in a new tab')}
-          body={
-            phase.notConfirmed
-              ? t('kyc.notConfirmed', 'We could not confirm it yet. Finish the steps and try again.')
-              : t('kyc.openBody', 'Have your ID at hand. When you finish, come back here and tap "I am done".')
-          }
+          body={t('kyc.openBody', 'Have your ID at hand. When you finish, come back here: we pick it up on our own.')}
         >
           {url && (
             <a
@@ -248,14 +288,8 @@ export function KycSheet({ onClose, onApproved, providerId, country, corridorId,
           )}
         </ModalMessage>
       );
-      footer = (
-        <div className="flex w-full gap-2">
-          {closeButton}
-          <PressableButton variant="primary" size="md" fullWidth onClick={() => void check()}>
-            {t('kyc.done', 'I am done')}
-          </PressableButton>
-        </div>
-      );
+      // No footer: the provider's page has its own buttons, the X closes the
+      // sheet, and the result shows by itself (see the watcher above).
       break;
     }
     case 'polling':

@@ -67,31 +67,43 @@ describe('KycSheet', () => {
     expect(document.querySelector('iframe')?.getAttribute('src')).toBe('https://verify.example/x');
   });
 
-  it('reports approval after the user says they finished', async () => {
+  it('shows no footer while verifying and picks up the approval on its own', async () => {
     h.resolveKyc.mockResolvedValue({ alreadyApproved: false, sessionId: 's1', kycUrl: 'https://verify.example/x' });
-    h.pollKycDecision.mockResolvedValue({ status: 'approved' });
+    h.getKycStatus.mockResolvedValue({ status: 'pending', decisionStatus: 'pending' });
     const onApproved = vi.fn();
     render(<KycSheet providerId="p1" cardProviderId="cards" onClose={() => {}} onApproved={onApproved} />);
     await flush();
-    await act(async () => screen.getByText('I am done').click());
-    expect(h.pollKycDecision).toHaveBeenCalledWith('p1', { intervalMs: 3000, timeoutMs: 120000, cardProviderId: 'cards' });
+    expect(screen.queryByText('I am done')).toBeNull();
+    expect(screen.queryByText('Close')).toBeNull();
+    // Still in progress: a message from the provider's page reads the status but nothing changes.
+    await act(async () => window.dispatchEvent(new MessageEvent('message', { data: 'step' })));
+    expect(h.getKycStatus).toHaveBeenCalledWith(undefined, undefined, 'cards');
+    expect(onApproved).not.toHaveBeenCalled();
+    // The provider finishes: the next look shows the result.
+    h.getKycStatus.mockResolvedValue({ status: 'approved' });
+    await act(async () => window.dispatchEvent(new MessageEvent('message', { data: 'done' })));
     expect(onApproved).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Identity verified')).toBeTruthy();
   });
 
-  it('shows review when the decision is manual review', async () => {
-    h.resolveKyc.mockResolvedValue({ alreadyApproved: false, sessionId: 's1', kycUrl: 'https://verify.example/x' });
-    h.pollKycDecision.mockResolvedValue({
-      status: 'pending',
-      decisionStatus: 'manual_review',
-      reviewReason: 'DUPLICATE_DOCUMENT',
-    });
-    const onApproved = vi.fn();
-    render(<KycSheet providerId="p1" cardProviderId="cards" onClose={() => {}} onApproved={onApproved} />);
-    await flush();
-    await act(async () => screen.getByText('I am done').click());
-    expect(onApproved).not.toHaveBeenCalled();
-    expect(screen.getByText('That document is already in use')).toBeTruthy();
+  it('checks every few seconds without any message', async () => {
+    vi.useFakeTimers();
+    try {
+      h.resolveKyc.mockResolvedValue({ alreadyApproved: false, sessionId: 's1', kycUrl: 'https://verify.example/x' });
+      h.getKycStatus.mockResolvedValue({
+        status: 'pending',
+        decisionStatus: 'manual_review',
+        reviewReason: 'DUPLICATE_DOCUMENT',
+      });
+      render(<KycSheet providerId="p1" cardProviderId="cards" onClose={() => {}} onApproved={() => {}} />);
+      await flush();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000);
+      });
+      expect(screen.getByText('That document is already in use')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('treats an already approved start as done', async () => {
