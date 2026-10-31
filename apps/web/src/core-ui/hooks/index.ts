@@ -48,3 +48,4 @@ export * from './usePullToRefresh';
 export * from './usePushNotifications';
 export * from './useNowEverySecond';
 export * from './useDefiEarnings';
+export * from './useRecentActivity';

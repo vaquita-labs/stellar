@@ -63,7 +63,8 @@ export function AppShell({
   // Desktop keeps the sidebar. Both hide while editing the map or on /shop.
   const isShopRoute = pathname?.startsWith('/shop') ?? false;
   // Screens that are a destination of their own, left with their back arrow:
-  // the scanner (camera and all) and the help center with its chat.
+  // the scanner (camera and all) and the help center with its chat. Cards is a
+  // tab of the bar, so the bar stays there.
   const isScanRoute = (pathname?.startsWith('/qr') || pathname?.startsWith('/concierge')) ?? false;
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const hideNavigation = isShopRoute || isEditingMap;

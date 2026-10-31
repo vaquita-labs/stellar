@@ -14,3 +14,5 @@ export * from './portfolio';
 export * from './profile';
 export * from './transactions';
 export * from './qr';
+export * from './cards';
+export * from './apps';

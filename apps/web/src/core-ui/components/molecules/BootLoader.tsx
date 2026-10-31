@@ -48,6 +48,10 @@ export const BootLoader = () => {
   if (isExactly('/explore')) return <PageSkeleton variant="cards" />;
   if (isUnder('/explore')) return <PageSkeleton variant="map" />;
 
+  // Tarjetas y Apps: su propio contenido, no una lista de filas.
+  if (isExactly('/tarjetas')) return <PageSkeleton variant="card" />;
+  if (isExactly('/apps')) return <PageSkeleton variant="apps" />;
+
   // Resto (leaderboard, notificaciones, transacciones, sub-pantallas de
   // perfil…): el chrome de <PageLayout> con una lista de filas.
   return <PageSkeleton variant="rows" />;

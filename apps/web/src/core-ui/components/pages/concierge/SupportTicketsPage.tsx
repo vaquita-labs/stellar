@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight, FiPlus } from 'react-icons/fi';
+import { FiChevronRight, FiHeadphones, FiMessageCircle, FiPlus } from 'react-icons/fi';
 import { type SupportTicket, type SupportTicketStatus, useSupportTickets } from '../../../hooks/useSupportChat';
+import { ModalMessage } from '../../molecules/ModalMessage';
 import { PageLayout } from '../../molecules/PageLayout';
 import { PressableButton } from '../../molecules/PressableButton';
 
@@ -39,53 +40,77 @@ export function SupportTicketsPage() {
       : date.toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' });
   };
 
-  const row = (ticket: SupportTicket) => (
-    <Link
-      key={ticket.id}
-      href={`/concierge/chat/${ticket.id}`}
-      className="flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 transition active:translate-y-[1px] active:border-b"
-    >
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="truncate text-sm font-bold text-black">{ticket.subject}</span>
-        {ticket.lastMessage && (
-          <span className="truncate text-xs text-gray-500">
-            {ticket.lastMessage.author === 'team' ? `${t('supportChat.teamName', 'Vaquita team')}: ` : ''}
-            {ticket.lastMessage.body}
+  const row = (ticket: SupportTicket) => {
+    const fromTeam = ticket.lastMessage?.author === 'team';
+    return (
+      <Link
+        key={ticket.id}
+        href={`/concierge/chat/${ticket.id}`}
+        className="flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-3 transition active:translate-y-[1px] active:border-b"
+      >
+        {/* Who spoke last: the team's headphones, or the user's own bubble. */}
+        <span
+          className={
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full ' +
+            (fromTeam ? 'bg-[#E8F5D6] text-[#3F9102]' : 'bg-background text-black')
+          }
+        >
+          {fromTeam ? <FiHeadphones className="h-5 w-5" /> : <FiMessageCircle className="h-5 w-5" />}
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="flex items-baseline justify-between gap-2">
+            <span className="truncate text-sm font-bold text-black">{ticket.subject}</span>
+            <span className="shrink-0 text-[11px] text-gray-400">{when(ticket.lastMessageAt)}</span>
           </span>
-        )}
-        <span className="flex items-center gap-2 text-[11px]">
-          <span className={`rounded px-1.5 py-0.5 font-semibold ${STATUS_CLASSES[ticket.status]}`}>
+          {ticket.lastMessage && (
+            <span className="truncate text-xs text-gray-500">
+              {fromTeam ? `${t('supportChat.teamName', 'Vaquita team')}: ` : ''}
+              {ticket.lastMessage.body}
+            </span>
+          )}
+          <span className={`mt-1 w-fit rounded px-1.5 py-0.5 text-[11px] font-semibold ${STATUS_CLASSES[ticket.status]}`}>
             {statusLabel(ticket.status)}
           </span>
-          <span className="text-gray-400">{when(ticket.lastMessageAt)}</span>
         </span>
-      </span>
-      <FiChevronRight className="h-5 w-5 shrink-0 text-black/40" />
-    </Link>
-  );
+        <FiChevronRight className="h-5 w-5 shrink-0 text-black/30" />
+      </Link>
+    );
+  };
 
   return (
-    <PageLayout title={t('supportChat.listTitle', 'Your conversations')} backHref="/concierge" contentGap="gap-3">
-      <Link href="/concierge/chat/new" className="block">
-        <PressableButton variant="success" size="md" fullWidth onClick={() => undefined}>
-          <span className="flex items-center gap-2">
-            <FiPlus className="h-5 w-5" />
-            {t('supportChat.new', 'New conversation')}
-          </span>
-        </PressableButton>
-      </Link>
-
+    <PageLayout
+      title={t('supportChat.listTitle', 'Your conversations')}
+      backHref="/concierge"
+      contentGap="gap-3"
+      contentClassName="flex-1"
+      bottomPadding="pb-6"
+    >
       {tickets.isPending ? null : tickets.isError ? (
         <p className="py-10 text-center text-sm text-gray-500">
           {t('supportChat.listError', 'We could not load your conversations. Pull to refresh.')}
         </p>
       ) : tickets.data.length === 0 ? (
-        <p className="py-10 text-center text-sm text-gray-500">
-          {t('supportChat.listEmpty', 'Nothing yet. Start a conversation and it stays here, so you can always come back.')}
-        </p>
+        <ModalMessage
+          icon={FiMessageCircle}
+          title={t('supportChat.listEmptyTitle', 'No conversations yet')}
+          body={t('supportChat.listEmpty', 'Start one and it stays here, so you can always come back.')}
+          className="py-10"
+        />
       ) : (
         <div className="flex flex-col gap-2">{tickets.data.map(row)}</div>
       )}
+
+      {/* The way to start a new one, where the thumb is. */}
+      <div className="mt-auto pt-4">
+        <Link href="/concierge/chat/new" className="block">
+          <PressableButton variant="success" size="md" fullWidth onClick={() => undefined}>
+            <span className="flex items-center gap-2">
+              <FiPlus className="h-5 w-5" />
+              {t('supportChat.new', 'New conversation')}
+            </span>
+          </PressableButton>
+        </Link>
+      </div>
     </PageLayout>
   );
 }

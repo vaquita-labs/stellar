@@ -1124,14 +1124,15 @@
     "loadError": "We could not load the conversation. Retrying…",
     "listTitle": "Your conversations",
     "new": "New conversation",
-    "listEmpty": "Nothing yet. Start a conversation and it stays here, so you can always come back.",
+    "listEmpty": "Start one and it stays here, so you can always come back.",
     "listError": "We could not load your conversations. Pull to refresh.",
     "resolvedNote": "This one was resolved. Write again and it reopens.",
     "status": {
       "waiting": "Waiting for reply",
       "answered": "Answered",
       "resolved": "Resolved"
-    }
+    },
+    "listEmptyTitle": "No conversations yet"
   },
   "board": {
     "title": "Board",
@@ -1681,7 +1682,8 @@
       "shopWithItems": "{{count}} items to place",
       "primaryAriaLabel": "Primary",
       "cards": "Cards",
-      "support": "Help"
+      "support": "Help",
+      "apps": "Apps"
     },
     "notFound": {
       "backHome": "Go back to home",
@@ -3187,7 +3189,28 @@
     },
     "earnedTotal": "{{amount}} so far",
     "earningsFailed": "We could not read your earnings. Pull to refresh.",
-    "earningsSoon": "Soon you will see here what your savings earn, day by day."
+    "earningsSoon": "Soon you will see here what your savings earn, day by day.",
+    "activity": {
+      "title": "Latest activity",
+      "all": "See all",
+      "received": "Received",
+      "sent": "Sent",
+      "flexibleIn": "Into flexible savings",
+      "flexibleOut": "Out of flexible savings",
+      "lockedIn": "Saved for a term",
+      "lockedOut": "Term withdrawn",
+      "badge": "Badge claimed",
+      "other": "Operation",
+      "pending": "Pending",
+      "failedTx": "Failed",
+      "failed": "We could not read your latest activity.",
+      "empty": "Your movements will show up here.",
+      "from": "From {{who}}",
+      "to": "To {{who}}",
+      "flexible": "Flexible savings",
+      "locked": "Term savings",
+      "badges": "Badges"
+    }
   },
   "qrPay": {
     "title": "Scan to pay",
@@ -3256,6 +3279,70 @@
     "generic": {
       "title": "Confirm this operation",
       "body": "Your wallet signs it only once you confirm."
+    }
+  },
+  "cardsPage": {
+    "title": "Cards",
+    "cta": "Get my card",
+    "note": "If you already have one, this opens your card.",
+    "perks": {
+      "anywhere": {
+        "title": "Pay anywhere",
+        "body": "Shops, apps and subscriptions that take cards."
+      },
+      "topUp": {
+        "title": "Top up from your wallet",
+        "body": "Move USDC to the card whenever you need it."
+      },
+      "fast": {
+        "title": "Ready in minutes",
+        "body": "Verify your identity once and the card is yours."
+      }
+    }
+  },
+  "kyc": {
+    "title": "Verify your identity",
+    "startingTitle": "Getting your verification ready",
+    "startingBody": "It only takes a moment.",
+    "startFailed": "We could not start your verification. Try again in a moment.",
+    "unavailable": "Verification is not available right now. Try again later.",
+    "failedTitle": "Something went wrong",
+    "tryAgain": "Try again",
+    "openTitle": "Verify in a new tab",
+    "openBody": "Have your ID at hand. When you finish, come back here and tap \"I am done\".",
+    "openVerification": "Open verification",
+    "notConfirmed": "We could not confirm it yet. Finish the steps and try again.",
+    "done": "I am done",
+    "checkingTitle": "Checking your verification",
+    "checkingBody": "This can take up to a couple of minutes.",
+    "approvedTitle": "Identity verified",
+    "approvedBody": "You are all set to keep going.",
+    "processingTitle": "Almost there",
+    "processingBody": "Your verification was approved and is being finalized. Check again in a moment.",
+    "reviewTitle": "Your verification is under review",
+    "reviewBody": "It usually takes little time. We will let you know when it is ready.",
+    "duplicateTitle": "That document is already in use",
+    "duplicateBody": "It is linked to another account. Write to us and we will sort it out.",
+    "rejectedTitle": "We could not verify your identity",
+    "rejectedBody": "Write to us from Help and we will look into it with you.",
+    "expiredTitle": "Your verification expired",
+    "expiredBody": "Start again whenever you want. It only takes a few minutes.",
+    "startAgain": "Start again",
+    "checkAgain": "Check again"
+  },
+  "appsPage": {
+    "title": "Apps",
+    "heroTitle": "More to do with Vaquita",
+    "heroBody": "We are building fun things around your savings. They will show up here.",
+    "soon": {
+      "groups": {
+        "title": "Save with friends",
+        "body": "A shared goal, everyone chips in."
+      },
+      "rewards": {
+        "title": "Rewards",
+        "body": "Little prizes for keeping your savings going."
+      }
     }
   }
 }

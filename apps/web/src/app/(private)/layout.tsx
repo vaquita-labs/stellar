@@ -1,7 +1,6 @@
 import {
   AppUpdateBanner,
   AttributionFlush,
-  CardHost,
   ClaimGate,
   ConfirmHost,
   CosignHost,
@@ -46,7 +45,6 @@ export default function PrivateLayout({
           <WalletRecoveryHost />
           <CosignHost />
           <ConfirmHost />
-          <CardHost />
           {/* El empujón de instalar la app vive en /login (antes de autenticarse):
               así el usuario instala primero y se loguea UNA sola vez dentro de la
               app — en iOS el storage de la app instalada no comparte la sesión
