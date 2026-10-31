@@ -23,6 +23,15 @@ import { HeaderStats } from './HeaderStats';
 import { HomeSkeleton } from './HomeSkeleton';
 import { PlaceModeHint } from './PlaceModeHint';
 
+/**
+ * Whether /home monta el mundo 3D (`WorldMap`: Canvas WebGL, carga de objetos
+ * del mapa, vaquita, reloj de día). Apagado a pedido (2026-10-31) porque
+ * consume demasiados recursos; todo el código del mapa sigue intacto y vuelve
+ * con solo cambiar esta constante. Lo demás de la pantalla (header, botones
+ * laterales, depositar/retirar, cofre diario) no depende del mapa.
+ */
+const HOME_MAP_ENABLED = false;
+
 export function HomePage() {
   const { walletAddress, lockPeriod, network } = useConfigStore();
   const { isLoading } = useDeposits(walletAddress);
@@ -109,7 +118,13 @@ export function HomePage() {
                 not a panel that slides in and out. */}
             <div className="h-full w-full flex flex-row">
               <div className="h-full w-full shrink-0">
-                <WorldMap walletAddress={walletAddress} worldType={WorldType.FOREST} isAvailable={true} />
+                {HOME_MAP_ENABLED ? (
+                  <WorldMap walletAddress={walletAddress} worldType={WorldType.FOREST} isAvailable={true} />
+                ) : (
+                  // Sin el mundo 3D queda el cielo de fondo, para que los
+                  // botones laterales y la barra de acciones sigan en su lugar.
+                  <div aria-hidden className="h-full w-full bg-gradient-to-b from-[#9fd6f5] to-[#cfeaf7]" />
+                )}
               </div>
             </div>
           </div>

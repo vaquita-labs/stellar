@@ -2,6 +2,8 @@ import {
   AppUpdateBanner,
   AttributionFlush,
   ClaimGate,
+  CosignHost,
+  CustodyMigrationGate,
   FollowLinkCapture,
   LegalGate,
   PendingFollowConsumer,
@@ -13,6 +15,7 @@ import {
   TransferReceivedGate,
   TutorialGate,
   UsernameGate,
+  WalletRecoveryHost,
 } from '@/core-ui/components';
 
 export default function PrivateLayout({
@@ -34,6 +37,12 @@ export default function PrivateLayout({
         {/* Primer gate del árbol privado: sin una aceptación registrada de la
             política vigente no se monta NADA, ni siquiera el onboarding. */}
         <LegalGate>
+          {/* Una wallet que Pollar todavía custodia no firma nada hasta moverse
+              a este dispositivo: la hoja es obligatoria y va antes que cualquier
+              otro modal. Reemplaza a la del SDK (ver `modals` en Providers). */}
+          <CustodyMigrationGate />
+          <WalletRecoveryHost />
+          <CosignHost />
           {/* El empujón de instalar la app vive en /login (antes de autenticarse):
               así el usuario instala primero y se loguea UNA sola vez dentro de la
               app — en iOS el storage de la app instalada no comparte la sesión
