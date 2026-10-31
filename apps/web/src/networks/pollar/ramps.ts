@@ -231,7 +231,8 @@ export function useRampOfframp() {
     async (txId: string, pending: RampsPendingSignature): Promise<RampResult> => {
       const outcome = await signTx(pending.unsignedXdr);
       if (outcome.status !== 'signed') {
-        throw new RampError(outcome.message ?? outcome.details ?? 'No se pudo firmar el retiro.');
+        const reason = outcome.status === 'error' ? (outcome.message ?? outcome.details) : undefined;
+        throw new RampError(reason ?? 'No se pudo firmar el retiro.');
       }
       try {
         return await getClient().submitRampSignature(txId, {

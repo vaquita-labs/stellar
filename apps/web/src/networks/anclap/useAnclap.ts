@@ -354,7 +354,7 @@ export function useAnclap() {
 
       const signed = await signTx(xdr);
       if (signed.status !== 'signed') {
-        throw new AnclapError(signed.details ?? 'No se pudo firmar el pago al anchor.');
+        throw new AnclapError((signed.status === 'error' && signed.details) || 'No se pudo firmar el pago al anchor.');
       }
       // El anchor acredita el fiat mirando el pago EN EL LEDGER, así que no
       // seguimos al paso de espera hasta que la red lo confirmó.
