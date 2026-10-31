@@ -233,8 +233,8 @@ export function DepositPanel() {
             network: network?.networkName || null,
           });
           setCountryFlow(null);
-          // Pollar's widget picks country, direction and route on its own.
-          if (countryCode !== 'AR') openRampModal();
+          // Pollar's widget opens on the chosen country and direction; the user can still change both there.
+          if (countryCode !== 'AR') openRampModal({ direction: flow === 'withdraw' ? 'sell' : 'buy', country: countryCode });
           else if (flow === 'withdraw') setIsSendFiatOpen(true);
           else setIsReceiveFiatOpen(true);
         }}

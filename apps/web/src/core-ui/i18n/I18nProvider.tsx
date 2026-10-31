@@ -29,9 +29,6 @@ const readBrowserLanguage = (): AppLanguage | null => {
   return null;
 };
 
-/** The locale the app opens in, before the profile preference arrives. */
-export const initialLanguage = (): AppLanguage => readStoredLanguage() ?? readBrowserLanguage() ?? DEFAULT_LANGUAGE;
-
 /** Apply a locale to i18next, the persisted store and `<html lang>`. */
 const applyLanguage = (language: AppLanguage) => {
   if (i18n.language !== language) void i18n.changeLanguage(language);
