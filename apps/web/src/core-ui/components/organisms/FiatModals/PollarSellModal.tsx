@@ -6,7 +6,6 @@ import { payableAmount, withdrawRequestAmount } from '@/networks/stellar/withdra
 import { Spinner } from '@heroui/react';
 import { RampWidget, usePollar } from '@pollar/react';
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { AMOUNT_DECIMALS, floorAmount, formatTokenPrecise, MIN_USDC, MONEY_INPUT_DECIMALS } from '../../../helpers/numbers';
 import { humanizeTxError } from '../../../helpers/txError';
@@ -189,15 +188,12 @@ export function PollarSellModal({ open, country, onOpenChange, onBack }: PollarS
           })}
         />
       </AppModal>
-      {open &&
-        stage === 'widget' &&
-        createPortal(
-          <RampWidget
-            onClose={onOpenChange}
-            initial={{ direction: 'sell', country, asset: 'USDC', ...(widgetAmount ? { amount: widgetAmount } : {}) }}
-          />,
-          document.body,
-        )}
+      {open && stage === 'widget' && (
+        <RampWidget
+          onClose={onOpenChange}
+          initial={{ direction: 'sell', country, asset: 'USDC', ...(widgetAmount ? { amount: widgetAmount } : {}) }}
+        />
+      )}
     </>
   );
 }
