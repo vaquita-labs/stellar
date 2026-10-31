@@ -5,7 +5,7 @@ import { clientEnv } from '@/core-ui/config/clientEnv';
 // Side-effect import: registers the `beforeinstallprompt` listener at bundle
 // evaluation, before the browser fires the (single) install event.
 import '@/core-ui/hooks/useInstallApp';
-import { I18nProvider } from '@/core-ui/i18n/I18nProvider';
+import { I18nProvider, initialLanguage } from '@/core-ui/i18n/I18nProvider';
 import { useVisibility } from '@/core-ui/stores/visibility';
 import { getNetworkEnum, getStellarNetwork } from '@/networks/stellar/kit';
 import { PollarBridge } from '@/networks/stellar/wallet/PollarBridge';
@@ -156,6 +156,10 @@ export function Providers({ children }: { children: ReactNode }) {
           apiKey: POLLAR_API_KEY,
           walletAdapters,
           stellarNetwork: POLLAR_NETWORK,
+          // The provider locks the client at its first render and the client has
+          // no setter, so a language changed later in the session reaches
+          // Pollar's modals only after a reload.
+          locale: initialLanguage(),
           // El SDK aborta cada request a los 10s por defecto, y crear un ramp
           // tarda más que eso: el proveedor cotiza, emite el QR y —con wallet
           // custodial— Pollar arma, firma y ENVÍA el pago on-chain dentro del
