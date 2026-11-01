@@ -14,6 +14,8 @@ const HEADLINES: Record<SupportMessageKind, string> = {
 export type SupportAlertInput = {
   kind: SupportMessageKind;
   conversationId: string;
+  /** Ticket the message landed in; kept for logs / future deep links. */
+  ticketId?: string | undefined;
   walletAddress: string;
   nickname: string | null;
   body: string;
@@ -34,6 +36,8 @@ export function buildSupportAlert({
   const preview = body.length > PREVIEW_MAX ? `${body.slice(0, PREVIEW_MAX)}…` : body;
   const lines = [HEADLINES[kind], `${who}${wallet}`, `<blockquote>${escapeTelegramHtml(preview)}</blockquote>`];
   if (adminUrl) {
+    // Inbox is still keyed by conversation; ticketId is available on the input
+    // for callers that log or deep-link later.
     const link = `${adminUrl.replace(/\/$/, '')}/support?c=${encodeURIComponent(conversationId)}`;
     lines.push(`<a href="${escapeTelegramHtml(link)}">Open in admin</a>`);
   }
@@ -59,7 +63,10 @@ export function notifySupportMessage(input: Omit<SupportAlertInput, 'adminUrl'>,
     html,
   ).then((result) => {
     if (!result.ok) {
-      log.warn({ conversationId: input.conversationId, reason: result.reason }, 'Support Telegram alert failed');
+      log.warn(
+        { conversationId: input.conversationId, ticketId: input.ticketId, reason: result.reason },
+        'Support Telegram alert failed',
+      );
     }
   });
 }
