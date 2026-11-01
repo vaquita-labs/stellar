@@ -1,23 +1,22 @@
 'use client';
 
-import { useCardsStore } from '@/core-ui/stores';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import type { IconType } from 'react-icons';
-import { FiCreditCard, FiHeadphones, FiHome } from 'react-icons/fi';
+import { FiCreditCard, FiGrid, FiHome } from 'react-icons/fi';
 
-type Item = { id: 'home' | 'cards' | 'support'; icon: IconType; label: string } & ({ href: string } | { action: 'cards' });
+type Item = { id: 'home' | 'cards' | 'apps'; icon: IconType; label: string; href: string };
 
 const ITEMS: Item[] = [
   { id: 'home', href: '/home', icon: FiHome, label: 'Home' },
-  // The card screen is a sheet, not a route: it opens over whatever is on screen.
-  { id: 'cards', action: 'cards', icon: FiCreditCard, label: 'Cards' },
-  { id: 'support', href: '/concierge', icon: FiHeadphones, label: 'Help' },
+  { id: 'cards', href: '/tarjetas', icon: FiCreditCard, label: 'Cards' },
+  { id: 'apps', href: '/apps', icon: FiGrid, label: 'Apps' },
 ];
 
 /**
- * The three places of the app on a phone: home, the card and help. Part of the
+ * The three places of the app on a phone: home, the card and apps (the fun
+ * things to do with Vaquita; help is a header button). Part of the
  * shell's column (not fixed over the page), so every screen ends above it and
  * nothing is covered. A plain tab bar: icon over label, the active one in the
  * app's orange. Desktop keeps the sidebar.
@@ -25,8 +24,6 @@ const ITEMS: Item[] = [
 export function BottomNav() {
   const { t } = useTranslation();
   const pathname = usePathname() ?? '';
-  const cardsOpen = useCardsStore((s) => s.open);
-  const openCards = useCardsStore((s) => s.openCards);
   return (
     <nav
       aria-label={t('shell.nav.primaryAriaLabel', 'Primary')}
@@ -36,8 +33,7 @@ export function BottomNav() {
       <ul className="mx-auto flex h-[3.75rem] max-w-xl items-stretch">
         {ITEMS.map((item) => {
           const { id, icon: Icon, label } = item;
-          const active =
-            'href' in item ? !cardsOpen && (pathname === item.href || pathname.startsWith(`${item.href}/`)) : cardsOpen;
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const className = 'flex flex-1 items-center justify-center transition active:translate-y-[1px]';
           // The active place is a small Vaquita chip around icon and label: soft
           // orange, black hairline, the thicker base the app's buttons carry.
@@ -57,15 +53,9 @@ export function BottomNav() {
           );
           return (
             <li key={id} className="flex flex-1">
-              {'href' in item ? (
-                <Link href={item.href} aria-current={active ? 'page' : undefined} className={className}>
-                  {inner}
-                </Link>
-              ) : (
-                <button type="button" onClick={openCards} aria-pressed={active} className={className}>
-                  {inner}
-                </button>
-              )}
+              <Link href={item.href} aria-current={active ? 'page' : undefined} className={className}>
+                {inner}
+              </Link>
             </li>
           );
         })}

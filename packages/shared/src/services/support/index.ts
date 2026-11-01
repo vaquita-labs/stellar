@@ -4,8 +4,11 @@ import { prisma } from '@vaquita/db';
  * The private chat between a user and the team, opened from the app's Help
  * Center and answered from apps/admin. No realtime transport: both sides poll.
  *
+ * One conversation per wallet (admin inbox). Topics the user opens are tickets
+ * under that conversation.
+ *
  * SECURITY: on the user side the wallet always comes from the session token, so
- * a user can only ever read or write their own thread.
+ * a user can only ever read or write their own tickets.
  */
 
 export const SUPPORT_AUTHORS = ['user', 'team'] as const;
@@ -20,11 +23,13 @@ export const SUPPORT_MESSAGE_MAX = 2000;
  */
 export const SUPPORT_HOURLY_LIMIT = 60;
 
-/** Newest messages returned per thread. Older ones are kept, just not sent. */
+/** Newest messages returned per ticket/thread. Older ones are kept, just not sent. */
 const THREAD_LIMIT = 200;
 
 /** User messages counted for the inbox badge; the screen shows anything above as "9+". */
 const PENDING_SCAN = 10;
+
+const SUBJECT_MAX = 120;
 
 export type SupportMessageDTO = {
   id: string;
@@ -34,6 +39,22 @@ export type SupportMessageDTO = {
 };
 
 export type SupportConversationStatus = 'waiting' | 'answered' | 'resolved';
+
+export type SupportTicketStatus = SupportConversationStatus;
+
+export type SupportTicketSummary = {
+  id: string;
+  subject: string;
+  status: SupportTicketStatus;
+  openedAt: string;
+  resolvedAt: string | null;
+  lastMessageAt: string;
+  lastMessage: SupportMessageDTO | null;
+};
+
+export type SupportTicketDetail = SupportTicketSummary & {
+  messages: SupportMessageDTO[];
+};
 
 export type SupportConversationSummary = {
   id: string;
@@ -67,6 +88,12 @@ const statusOf = (row: { resolvedAt: Date | null; lastMessageAuthor: string }): 
 
 const newestFirst = { createdAt: 'desc' } as const;
 
+/** First line of a ticket: collapse whitespace and cap at SUBJECT_MAX. */
+export const subjectFromBody = (body: string): string => {
+  const trimmed = body.replace(/\s+/g, ' ').trim().slice(0, SUBJECT_MAX);
+  return trimmed.length > 0 ? trimmed : '…';
+};
+
 /** The user's own thread, oldest message first. Empty when they never wrote. */
 export const getSupportThreadForWallet = async (walletAddress: string): Promise<SupportMessageDTO[]> => {
   const conversation = await prisma.supportConversation.findUnique({
@@ -94,40 +121,127 @@ export const countRecentSupportMessages = async (walletAddress: string): Promise
 /**
  * What a user message did to its thread, for the team's alert:
  * - `new`      — the first message ever from this wallet.
- * - `reopened` — the thread had been resolved.
- * - `followup` — an ongoing thread.
+ * - `reopened` — the conversation or the ticket had been resolved.
+ * - `followup` — an ongoing open ticket.
  */
 export type SupportMessageKind = 'new' | 'reopened' | 'followup';
 
 export type CreatedUserSupportMessage = {
   message: SupportMessageDTO;
   conversationId: string;
+  ticketId: string;
   kind: SupportMessageKind;
 };
 
+type TicketRow = {
+  id: string;
+  resolvedAt: Date | null;
+  lastMessageAt: Date;
+  lastMessageAuthor: string;
+  subject: string;
+  openedAt: Date;
+};
+
+const ticketSelect = {
+  id: true,
+  subject: true,
+  openedAt: true,
+  resolvedAt: true,
+  lastMessageAt: true,
+  lastMessageAuthor: true,
+} as const;
+
+const toTicketSummary = (
+  row: TicketRow & { messages?: { id: string; author: string; body: string; createdAt: Date }[] },
+): SupportTicketSummary => ({
+  id: row.id,
+  subject: row.subject,
+  status: statusOf(row),
+  openedAt: row.openedAt.toISOString(),
+  resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
+  lastMessageAt: row.lastMessageAt.toISOString(),
+  lastMessage: row.messages?.[0] ? toMessageDTO(row.messages[0]) : null,
+});
+
+/** The caller's tickets, most recent activity first. */
+export const listSupportTicketsForWallet = async (walletAddress: string): Promise<SupportTicketSummary[]> => {
+  const rows = await prisma.supportTicket.findMany({
+    where: { walletAddress },
+    orderBy: { lastMessageAt: 'desc' },
+    select: {
+      ...ticketSelect,
+      messages: {
+        orderBy: newestFirst,
+        take: 1,
+        select: { id: true, author: true, body: true, createdAt: true },
+      },
+    },
+  });
+  return rows.map(toTicketSummary);
+};
+
+/** One ticket with its messages, oldest first. Null when missing or not theirs. */
+export const getSupportTicketForWallet = async (
+  walletAddress: string,
+  ticketId: string,
+): Promise<SupportTicketDetail | null> => {
+  const row = await prisma.supportTicket.findFirst({
+    where: { id: ticketId, walletAddress },
+    select: {
+      ...ticketSelect,
+      messages: {
+        orderBy: newestFirst,
+        take: THREAD_LIMIT,
+        select: { id: true, author: true, body: true, createdAt: true },
+      },
+    },
+  });
+  if (!row) return null;
+  const messages = [...row.messages].reverse().map(toMessageDTO);
+  return {
+    id: row.id,
+    subject: row.subject,
+    status: statusOf(row),
+    openedAt: row.openedAt.toISOString(),
+    resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
+    lastMessageAt: row.lastMessageAt.toISOString(),
+    lastMessage: messages.length > 0 ? messages[messages.length - 1]! : null,
+    messages,
+  };
+};
+
 /**
- * Appends a user message, creating the conversation on the first one. The
- * denormalized columns move in the same transaction so the inbox never shows a
- * thread whose summary disagrees with its messages.
+ * Appends a user message. With `ticketId`, the ticket must belong to the wallet
+ * (otherwise null). Without it, uses the open ticket of most recent activity or
+ * creates a new one. Always updates the parent conversation denormalized cols.
  */
 export const createUserSupportMessage = async ({
   walletAddress,
   profileId,
   body,
+  ticketId,
 }: {
   walletAddress: string;
   profileId: number | null;
   body: string;
-}): Promise<CreatedUserSupportMessage> => {
+  ticketId?: string | null;
+}): Promise<CreatedUserSupportMessage | null> => {
   const now = new Date();
   return prisma.$transaction(async (tx) => {
-    // Read only to classify the message. The upsert below still decides the
-    // write, so two simultaneous first messages end in one thread, both
-    // reported as `new` — harmless for an alert.
     const previous = await tx.supportConversation.findUnique({
       where: { walletAddress },
-      select: { resolvedAt: true },
+      select: { id: true, resolvedAt: true },
     });
+
+    let ownedTicket: { id: string; resolvedAt: Date | null } | null = null;
+    if (ticketId) {
+      ownedTicket = await tx.supportTicket.findFirst({
+        where: { id: ticketId, walletAddress },
+        select: { id: true, resolvedAt: true },
+      });
+      if (!ownedTicket) return null;
+    }
+
     const conversation = await tx.supportConversation.upsert({
       where: { walletAddress },
       create: { walletAddress, profileId, lastMessageAt: now, lastMessageAuthor: 'user' },
@@ -135,48 +249,178 @@ export const createUserSupportMessage = async ({
         lastMessageAt: now,
         lastMessageAuthor: 'user',
         resolvedAt: null,
-        // Backfills a thread started before the profile existed.
         ...(profileId !== null ? { profileId } : {}),
       },
       select: { id: true },
     });
+
+    let finalTicketId: string;
+    let kind: SupportMessageKind;
+
+    if (ownedTicket) {
+      finalTicketId = ownedTicket.id;
+      kind = !previous
+        ? 'new'
+        : ownedTicket.resolvedAt || previous.resolvedAt
+          ? 'reopened'
+          : 'followup';
+      await tx.supportTicket.update({
+        where: { id: finalTicketId },
+        data: { lastMessageAt: now, lastMessageAuthor: 'user', resolvedAt: null },
+      });
+    } else {
+      const open = await tx.supportTicket.findFirst({
+        where: { conversationId: conversation.id, resolvedAt: null },
+        orderBy: { lastMessageAt: 'desc' },
+        select: { id: true },
+      });
+      if (open) {
+        finalTicketId = open.id;
+        kind = !previous ? 'new' : previous.resolvedAt ? 'reopened' : 'followup';
+        await tx.supportTicket.update({
+          where: { id: finalTicketId },
+          data: { lastMessageAt: now, lastMessageAuthor: 'user', resolvedAt: null },
+        });
+      } else {
+        const created = await tx.supportTicket.create({
+          data: {
+            conversationId: conversation.id,
+            walletAddress,
+            subject: subjectFromBody(body),
+            openedAt: now,
+            lastMessageAt: now,
+            lastMessageAuthor: 'user',
+          },
+          select: { id: true },
+        });
+        finalTicketId = created.id;
+        kind = !previous ? 'new' : previous.resolvedAt ? 'reopened' : 'followup';
+      }
+    }
+
     const message = await tx.supportMessage.create({
-      data: { conversationId: conversation.id, author: 'user', body, createdAt: now },
+      data: {
+        conversationId: conversation.id,
+        ticketId: finalTicketId,
+        author: 'user',
+        body,
+        createdAt: now,
+      },
     });
+
     return {
       message: toMessageDTO(message),
       conversationId: conversation.id,
-      kind: !previous ? 'new' : previous.resolvedAt ? 'reopened' : 'followup',
+      ticketId: finalTicketId,
+      kind,
     };
   });
 };
 
-/** Appends a team reply. Null when the conversation does not exist. */
+/** Appends a team reply onto the open ticket (or the latest if all resolved). Null when missing. */
 export const createTeamSupportMessage = async (
   conversationId: string,
   body: string,
 ): Promise<SupportMessageDTO | null> => {
   const now = new Date();
   return prisma.$transaction(async (tx) => {
-    const updated = await tx.supportConversation.updateMany({
+    const conversation = await tx.supportConversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true, walletAddress: true },
+    });
+    if (!conversation) return null;
+
+    let ticket = await tx.supportTicket.findFirst({
+      where: { conversationId, resolvedAt: null },
+      orderBy: { lastMessageAt: 'desc' },
+      select: { id: true },
+    });
+    if (!ticket) {
+      ticket = await tx.supportTicket.findFirst({
+        where: { conversationId },
+        orderBy: { lastMessageAt: 'desc' },
+        select: { id: true },
+      });
+    }
+    // Pre-ticket row or empty conversation: create a shell ticket so the reply
+    // is still attributable when the user opens the list.
+    if (!ticket) {
+      ticket = await tx.supportTicket.create({
+        data: {
+          conversationId,
+          walletAddress: conversation.walletAddress,
+          subject: subjectFromBody(body),
+          openedAt: now,
+          lastMessageAt: now,
+          lastMessageAuthor: 'team',
+        },
+        select: { id: true },
+      });
+    }
+
+    await tx.supportConversation.update({
       where: { id: conversationId },
       data: { lastMessageAt: now, lastMessageAuthor: 'team', resolvedAt: null },
     });
-    if (updated.count === 0) return null;
+    await tx.supportTicket.update({
+      where: { id: ticket.id },
+      data: { lastMessageAt: now, lastMessageAuthor: 'team', resolvedAt: null },
+    });
     const message = await tx.supportMessage.create({
-      data: { conversationId, author: 'team', body, createdAt: now },
+      data: {
+        conversationId,
+        ticketId: ticket.id,
+        author: 'team',
+        body,
+        createdAt: now,
+      },
     });
     return toMessageDTO(message);
   });
 };
 
-/** False when the conversation does not exist. */
+/**
+ * Resolve closes the conversation and every open ticket. Un-resolve clears the
+ * conversation and reopens the most recently active ticket.
+ */
 export const setSupportConversationResolved = async (conversationId: string, resolved: boolean): Promise<boolean> => {
-  const updated = await prisma.supportConversation.updateMany({
-    where: { id: conversationId },
-    data: { resolvedAt: resolved ? new Date() : null },
+  return prisma.$transaction(async (tx) => {
+    const conversation = await tx.supportConversation.findUnique({
+      where: { id: conversationId },
+      select: { id: true },
+    });
+    if (!conversation) return false;
+
+    if (resolved) {
+      const now = new Date();
+      await tx.supportConversation.update({
+        where: { id: conversationId },
+        data: { resolvedAt: now },
+      });
+      await tx.supportTicket.updateMany({
+        where: { conversationId, resolvedAt: null },
+        data: { resolvedAt: now },
+      });
+      return true;
+    }
+
+    await tx.supportConversation.update({
+      where: { id: conversationId },
+      data: { resolvedAt: null },
+    });
+    const last = await tx.supportTicket.findFirst({
+      where: { conversationId },
+      orderBy: { lastMessageAt: 'desc' },
+      select: { id: true },
+    });
+    if (last) {
+      await tx.supportTicket.update({
+        where: { id: last.id },
+        data: { resolvedAt: null },
+      });
+    }
+    return true;
   });
-  return updated.count > 0;
 };
 
 /** The admin inbox, most recent activity first. */

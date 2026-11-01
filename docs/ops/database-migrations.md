@@ -3,10 +3,11 @@
 The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are in `CLAUDE.md` →
 **Database migrations**. This file is the log: what has been applied where, and how.
 
-**Known-pending as of 2026-10-02:**
+**Known-pending as of 2026-10-31:**
 
 | Migration | dev | staging | prod |
 |-----------|-----|---------|------|
+| `20261031_support_tickets.sql` | ❌ | ❌ | ❌ |
 | `20261002_schema_parity_defaults_fk.sql` | ❌ | ❌ | ❌ |
 | `20261002_support_chat.sql` | ❌ | ❌ | ❌ |
 | `20261001_bridge_enabled.sql` | ✅ | ✅ | ✅ |
@@ -31,6 +32,12 @@ The rules (no tracking table, `db:push` never on prod, hand-edit the schema) are
 | `20260820_vault_apy_snapshots.sql` | ❌ | ❌ | ❌ |
 
 (`?` = not verified — re-check with a diff script in `apps/api/tmp/` before trusting the row.)
+
+Apply `20261031_support_tickets.sql` with `cd packages/db && node scripts/apply-migration.mjs 20261031_support_tickets.sql`
+(after `20261002_support_chat.sql` is in place), then `node scripts/apply-sql.mjs` so the
+`support_tickets_last_message_author_check` lands. It adds `support_tickets`, `support_messages.ticket_id`,
+and backfills one ticket per existing conversation. **Apply before the API that serves
+`GET /support/tickets` deploys**: without it those routes 500.
 
 Apply the two 2026-10-02 ones with `cd packages/db && node scripts/apply-migration.mjs <file.sql>`
 (it prints the host and database before writing; both files are idempotent), then

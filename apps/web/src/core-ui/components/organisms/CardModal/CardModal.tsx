@@ -16,7 +16,7 @@ import {
   type CardSecrets,
   type CardTransaction,
 } from '@pollar/core';
-import { KycModal, ProviderRegistrationModal, RegistryCheckModal, RequirementFormModal, usePollar } from '@pollar/react';
+import { ProviderRegistrationModal, RegistryCheckModal, RequirementFormModal, usePollar } from '@pollar/react';
 import type { TFunction } from 'i18next';
 import { InputHTMLAttributes, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +29,7 @@ import {
   type PendingCardStep,
 } from '@/networks/pollar/cardSteps';
 import { AppModal } from '../../molecules/AppModal';
+import { KycSheet } from '../Kyc/KycSheet';
 import { PressableButton } from '../../molecules/PressableButton';
 
 interface CardModalProps {
@@ -532,7 +533,7 @@ export function CardModal({ open, onOpenChange }: CardModalProps) {
       );
     } else {
       stepModal = (
-        <KycModal
+        <KycSheet
           cardProviderId={pendingStep.cardProviderId}
           providerId={pendingStep.optionId}
           onClose={close}

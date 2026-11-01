@@ -347,7 +347,7 @@ export const HeaderStats = () => {
               que está en la pantalla de inicio), así que es la acción que más
               queremos que se vea. Se borra solo cuando ya está instalada —
               adentro de la app instalada un botón de instalar se lee roto. */}
-          <div className="flex shrink-0 self-start flex-col items-end gap-2">
+          <div className="flex shrink-0 self-center flex-col items-end gap-2">
             <InstallButton />
 
             <div className="flex items-center gap-2">

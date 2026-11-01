@@ -1124,14 +1124,15 @@
     "loadError": "No pudimos cargar la conversación. Reintentando…",
     "listTitle": "Tus conversaciones",
     "new": "Nueva conversación",
-    "listEmpty": "Todavía nada. Empieza una conversación y queda aquí, para que siempre puedas volver.",
+    "listEmpty": "Empieza una y queda aquí, para que siempre puedas volver.",
     "listError": "No pudimos cargar tus conversaciones. Desliza para actualizar.",
     "resolvedNote": "Esta quedó resuelta. Si escribes de nuevo, se vuelve a abrir.",
     "status": {
       "waiting": "Esperando respuesta",
       "answered": "Respondida",
       "resolved": "Resuelta"
-    }
+    },
+    "listEmptyTitle": "Todavía no hay conversaciones"
   },
   "board": {
     "title": "Tablero",
@@ -1681,7 +1682,8 @@
       "shopWithItems": "{{count}} objetos por colocar",
       "primaryAriaLabel": "Principal",
       "cards": "Tarjetas",
-      "support": "Ayuda"
+      "support": "Ayuda",
+      "apps": "Apps"
     },
     "notFound": {
       "backHome": "Volver al inicio",
@@ -3187,7 +3189,28 @@
     },
     "earnedTotal": "{{amount}} hasta hoy",
     "earningsFailed": "No pudimos leer tus ganancias. Desliza para actualizar.",
-    "earningsSoon": "Muy pronto verás aquí lo que ganan tus ahorros, día a día."
+    "earningsSoon": "Muy pronto verás aquí lo que ganan tus ahorros, día a día.",
+    "activity": {
+      "title": "Últimos movimientos",
+      "all": "Ver todos",
+      "received": "Recibido",
+      "sent": "Enviado",
+      "flexibleIn": "A tus ahorros flexibles",
+      "flexibleOut": "De tus ahorros flexibles",
+      "lockedIn": "Ahorro a plazo",
+      "lockedOut": "Retiro de plazo",
+      "badge": "Insignia reclamada",
+      "other": "Operación",
+      "pending": "Pendiente",
+      "failedTx": "Falló",
+      "failed": "No pudimos leer tus últimos movimientos.",
+      "empty": "Tus movimientos van a aparecer aquí.",
+      "from": "De {{who}}",
+      "to": "A {{who}}",
+      "flexible": "Ahorros flexibles",
+      "locked": "Ahorro a plazo",
+      "badges": "Insignias"
+    }
   },
   "qrPay": {
     "title": "Escanea para pagar",
@@ -3256,6 +3279,69 @@
     "generic": {
       "title": "Confirma esta operación",
       "body": "Tu billetera la firma solo cuando confirmes."
+    }
+  },
+  "cardsPage": {
+    "title": "Tarjetas",
+    "cta": "Pedir mi tarjeta",
+    "note": "Si ya tienes una, aquí se abre tu tarjeta.",
+    "perks": {
+      "anywhere": {
+        "title": "Paga donde quieras",
+        "body": "Tiendas, apps y suscripciones que acepten tarjeta."
+      },
+      "topUp": {
+        "title": "Recárgala desde tu billetera",
+        "body": "Pasa USDC a la tarjeta cuando lo necesites."
+      },
+      "fast": {
+        "title": "Lista en minutos",
+        "body": "Verificas tu identidad una vez y la tarjeta es tuya."
+      }
+    }
+  },
+  "kyc": {
+    "title": "Verifica tu identidad",
+    "startingTitle": "Preparando tu verificación",
+    "startingBody": "Solo toma un momento.",
+    "startFailed": "No pudimos iniciar tu verificación. Intenta de nuevo en un momento.",
+    "unavailable": "La verificación no está disponible ahora. Intenta más tarde.",
+    "failedTitle": "Algo salió mal",
+    "tryAgain": "Intentar de nuevo",
+    "openTitle": "Verifica en una pestaña nueva",
+    "openBody": "Ten tu documento a mano. Cuando termines, vuelve aquí: lo vemos solos.",
+    "openVerification": "Abrir verificación",
+    "notConfirmed": "Todavía no pudimos confirmarla. Termina los pasos e intenta de nuevo.",
+    "checkingTitle": "Revisando tu verificación",
+    "checkingBody": "Puede tardar hasta un par de minutos.",
+    "approvedTitle": "Identidad verificada",
+    "approvedBody": "Ya puedes seguir.",
+    "processingTitle": "Ya casi",
+    "processingBody": "Tu verificación fue aprobada y se está terminando de procesar. Revisa de nuevo en un momento.",
+    "reviewTitle": "Tu verificación está en revisión",
+    "reviewBody": "Suele tomar poco tiempo. Te avisamos cuando esté lista.",
+    "duplicateTitle": "Ese documento ya está en uso",
+    "duplicateBody": "Está vinculado a otra cuenta. Escríbenos y lo resolvemos.",
+    "rejectedTitle": "No pudimos verificar tu identidad",
+    "rejectedBody": "Escríbenos desde Ayuda y lo revisamos contigo.",
+    "expiredTitle": "Tu verificación venció",
+    "expiredBody": "Empieza de nuevo cuando quieras. Solo toma unos minutos.",
+    "startAgain": "Empezar de nuevo",
+    "checkAgain": "Revisar de nuevo"
+  },
+  "appsPage": {
+    "title": "Apps",
+    "heroTitle": "Más cosas para hacer con Vaquita",
+    "heroBody": "Estamos armando cosas divertidas alrededor de tus ahorros. Van a aparecer aquí.",
+    "soon": {
+      "groups": {
+        "title": "Ahorra con amigos",
+        "body": "Una meta en común, todos ponen."
+      },
+      "rewards": {
+        "title": "Recompensas",
+        "body": "Premios chiquitos por mantener tus ahorros."
+      }
     }
   }
 }

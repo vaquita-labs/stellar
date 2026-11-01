@@ -1,24 +1,30 @@
-// Applies every file in packages/db/sql/ (sorted by name) against DIRECT_URL.
+// Applies every file in packages/db/sql/ (sorted by name) against a direct
+// Postgres URL (port 5432).
 // These files hold schema DDL the Prisma schema language cannot express
 // (partial indexes, etc.). Every file MUST be idempotent (IF NOT EXISTS /
 // CREATE OR REPLACE): the runner re-executes all of them after each
 // `db push`, which also re-creates anything a push reconciliation dropped.
+//
+// Uses DIRECT_URL when set; otherwise rewrites DATABASE_URL from pooler :6543
+// to session :5432 (same host). See resolve-direct-url.mjs.
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import pg from 'pg';
+import { resolveDirectUrl } from './resolve-direct-url.mjs';
 
 const packageRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // .env.local takes precedence over .env, matching the rest of the monorepo.
 dotenv.config({ path: [path.join(packageRoot, '.env.local'), path.join(packageRoot, '.env')] });
 
-const url = process.env.DIRECT_URL;
-if (!url) {
-  console.error('❌ DIRECT_URL is required to apply the raw SQL files (direct Postgres connection, port 5432)');
+const resolved = resolveDirectUrl();
+if (resolved.error) {
+  console.error(`❌ ${resolved.error}`);
   process.exit(1);
 }
+const { url, source } = resolved;
 
 const sqlDir = path.join(packageRoot, 'sql');
 const files = readdirSync(sqlDir)
@@ -48,6 +54,7 @@ async function connect() {
 
 const client = await connect();
 try {
+  console.log(`📍 via=${source}  host=${new URL(url).hostname}`);
   for (const file of files) {
     process.stdout.write(`sql/${file}... `);
     await client.query(readFileSync(path.join(sqlDir, file), 'utf8'));

@@ -1,4 +1,5 @@
-// Applies one SQL migration from apps/supabase/migrations against DIRECT_URL.
+// Applies one SQL migration from apps/supabase/migrations against a direct
+// Postgres URL (port 5432).
 //
 // Those migrations have no runner — they were applied by hand — so this exists
 // to run one deliberately, naming the target by connection host so the
@@ -8,21 +9,26 @@
 //
 //   cd packages/db && node scripts/apply-migration.mjs <file.sql>
 //
+// Uses DIRECT_URL when set; otherwise rewrites DATABASE_URL from pooler :6543
+// to session :5432 (same host). See resolve-direct-url.mjs.
+//
 // The file is expected to carry its own BEGIN/COMMIT.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import pg from 'pg';
+import { resolveDirectUrl } from './resolve-direct-url.mjs';
 
 const packageRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 dotenv.config({ path: [path.join(packageRoot, '.env.local'), path.join(packageRoot, '.env')] });
 
-const url = process.env.DIRECT_URL;
-if (!url) {
-  console.error('❌ DIRECT_URL is required (direct Postgres connection, port 5432)');
+const resolved = resolveDirectUrl();
+if (resolved.error) {
+  console.error(`❌ ${resolved.error}`);
   process.exit(1);
 }
+const { url, source } = resolved;
 
 const name = process.argv[2];
 if (!name) {
@@ -49,7 +55,7 @@ async function connect() {
 const client = await connect();
 try {
   const { rows: [who] } = await client.query('SELECT current_database() AS db');
-  console.log(`\n📍 host=${new URL(url).hostname}  database=${who.db}`);
+  console.log(`\n📍 host=${new URL(url).hostname}  database=${who.db}  via=${source}`);
   console.log(`📄 ${name}\n`);
 
   await client.query(sql);

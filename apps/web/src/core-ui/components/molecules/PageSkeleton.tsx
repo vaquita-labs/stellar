@@ -8,6 +8,8 @@
  *
  *   'rows'  filas finas (leaderboard, notificaciones, transacciones)
  *   'cards' tarjetas altas con preview del mapa y stats (explorar)
+ *   'card'  la tarjeta Vaquita, sus beneficios y el botón de pedirla (/tarjetas)
+ *   'apps'  el bloque naranja de bienvenida y la lista de "pronto" (/apps)
  *
  * La variante importa: si el arranque muestra filas y la página después pinta
  * tarjetas, la carga se ve como dos pantallas distintas encadenadas. Cada
@@ -21,7 +23,7 @@
  * importa los skeletons reales de pages/: arrastrarían medio árbol de la
  * página al bundle inicial de TODAS las rutas.
  */
-export type PageSkeletonVariant = 'rows' | 'cards' | 'map';
+export type PageSkeletonVariant = 'rows' | 'cards' | 'map' | 'card' | 'apps';
 
 export function PageSkeleton({
   variant = 'rows',
@@ -46,11 +48,17 @@ export function PageSkeleton({
           <div className="h-4 w-32 rounded bg-black/10 animate-pulse" />
         </div>
 
-        <div className={`flex flex-col ${variant === 'cards' ? 'gap-3' : 'gap-1.5'}`}>
-          {Array.from({ length: rows }).map((_, i) =>
-            variant === 'cards' ? <CardPlaceholder key={i} /> : <RowPlaceholder key={i} />,
-          )}
-        </div>
+        {variant === 'card' ? (
+          <VaquitaCardPlaceholder />
+        ) : variant === 'apps' ? (
+          <AppsPlaceholder />
+        ) : (
+          <div className={`flex flex-col ${variant === 'cards' ? 'gap-3' : 'gap-1.5'}`}>
+            {Array.from({ length: rows }).map((_, i) =>
+              variant === 'cards' ? <CardPlaceholder key={i} /> : <RowPlaceholder key={i} />,
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -59,12 +67,7 @@ export function PageSkeleton({
 /** Perfil ajeno: cabecera con avatar + stats y el mapa ocupando el resto. */
 function UserMapPlaceholder() {
   return (
-    <div
-      className="h-full w-full flex flex-col overflow-hidden min-h-0"
-      role="status"
-      aria-busy="true"
-      aria-live="polite"
-    >
+    <div className="h-full w-full flex flex-col overflow-hidden min-h-0" role="status" aria-busy="true" aria-live="polite">
       <div className="w-full shrink-0 flex flex-col gap-2 pb-2">
         <header className="bg-primary px-3 sm:px-6 py-3 rounded-b-3xl border-b-2 border-black/10">
           <div className="flex items-center gap-2.5">
@@ -118,6 +121,58 @@ function CardPlaceholder() {
       <div className="flex gap-2">
         <div className="h-6 w-14 rounded-full bg-black/5" />
         <div className="h-6 w-14 rounded-full bg-black/5" />
+      </div>
+    </div>
+  );
+}
+
+/** Tarjetas: la tarjeta oscura, los beneficios en una tarjeta blanca y el botón abajo. */
+function VaquitaCardPlaceholder() {
+  return (
+    <div className="flex flex-1 flex-col gap-5">
+      <div className="mx-auto aspect-[1.586] w-full max-w-sm rounded-2xl bg-[#262626]/15 animate-pulse" />
+      <div className="divide-y divide-black/10 rounded-2xl bg-white px-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-3 py-3.5">
+            <span className="h-10 w-10 shrink-0 rounded-full bg-black/10 animate-pulse" />
+            <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <span className="h-3.5 w-36 rounded bg-black/10 animate-pulse" />
+              <span className="h-3 w-52 max-w-full rounded bg-black/10 animate-pulse" />
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* El arranque no dibuja la barra de abajo: se deja su alto libre en
+          mobile para que el botón no salte cuando aparece. */}
+      <div className="mt-auto flex flex-col items-center gap-2 pt-2 mb-[3.75rem] md:mb-0">
+        <div className="h-12 w-full rounded-md border border-black/10 border-b-4 bg-success/30 animate-pulse" />
+        <div className="h-2.5 w-48 rounded bg-black/10 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+/** Apps: bloque naranja con ícono, título y texto, y la lista de lo que viene. */
+function AppsPlaceholder() {
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col items-center gap-3 rounded-2xl bg-primary/30 px-5 py-7">
+        <span className="h-14 w-14 rounded-full bg-white/70 animate-pulse" />
+        <span className="h-5 w-56 max-w-full rounded bg-black/10 animate-pulse" />
+        <span className="h-3 w-64 max-w-full rounded bg-black/10 animate-pulse" />
+        <span className="h-3 w-40 rounded bg-black/10 animate-pulse" />
+      </div>
+      <div className="divide-y divide-black/5 rounded-2xl bg-white px-4">
+        {[0, 1].map((i) => (
+          <div key={i} className="flex items-center gap-4 py-4">
+            <span className="h-12 w-12 shrink-0 rounded-full bg-black/10 animate-pulse" />
+            <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <span className="h-4 w-36 rounded bg-black/10 animate-pulse" />
+              <span className="h-3 w-44 max-w-full rounded bg-black/10 animate-pulse" />
+            </span>
+            <span className="h-6 w-14 shrink-0 rounded-full bg-black/5 animate-pulse" />
+          </div>
+        ))}
       </div>
     </div>
   );

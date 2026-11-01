@@ -21,7 +21,7 @@ import {
   rampTrustlineErrorText,
   rampWalletStep,
 } from '@pollar/core';
-import { KycModal, ProviderRegistrationModal, RegistryCheckModal, RequirementFormModal, usePollar } from '@pollar/react';
+import { ProviderRegistrationModal, RegistryCheckModal, RequirementFormModal, usePollar } from '@pollar/react';
 import { Spinner } from '@heroui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +40,7 @@ import {
 } from '../../../stores';
 import { AmountStep, useAmountShake } from '../../molecules/AmountStep';
 import { AppModal } from '../../molecules/AppModal';
+import { KycSheet } from '../Kyc/KycSheet';
 import { ModalMessage } from '../../molecules/ModalMessage';
 import { PressableButton } from '../../molecules/PressableButton';
 import { countdown, PollarBuyOrderScreen } from './PollarBuyOrderScreen';
@@ -596,11 +597,10 @@ export function PollarBuyModal({ open, country, onOpenChange, onBack }: PollarBu
         />
       );
     return (
-      <KycModal
+      <KycSheet
         country={country}
         corridorId={verifying.corridorId}
         providerId={verifying.optionId}
-        language={language}
         onClose={close}
         onApproved={done}
       />

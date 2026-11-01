@@ -1124,14 +1124,15 @@
     "loadError": "Não foi possível carregar a conversa. Tentando de novo…",
     "listTitle": "Suas conversas",
     "new": "Nova conversa",
-    "listEmpty": "Nada ainda. Comece uma conversa e ela fica aqui, para você sempre poder voltar.",
+    "listEmpty": "Comece uma e ela fica aqui, para você sempre poder voltar.",
     "listError": "Não conseguimos carregar suas conversas. Puxe para atualizar.",
     "resolvedNote": "Esta foi resolvida. Se você escrever de novo, ela reabre.",
     "status": {
       "waiting": "Aguardando resposta",
       "answered": "Respondida",
       "resolved": "Resolvida"
-    }
+    },
+    "listEmptyTitle": "Ainda não há conversas"
   },
   "board": {
     "title": "Quadro",
@@ -1681,7 +1682,8 @@
       "shopWithItems": "{{count}} objetos para colocar",
       "primaryAriaLabel": "Principal",
       "cards": "Cartões",
-      "support": "Ajuda"
+      "support": "Ajuda",
+      "apps": "Apps"
     },
     "notFound": {
       "backHome": "Voltar para o início",
@@ -3187,7 +3189,28 @@
     },
     "earnedTotal": "{{amount}} até hoje",
     "earningsFailed": "Não conseguimos ler seus ganhos. Puxe para atualizar.",
-    "earningsSoon": "Em breve você verá aqui o que suas economias rendem, dia a dia."
+    "earningsSoon": "Em breve você verá aqui o que suas economias rendem, dia a dia.",
+    "activity": {
+      "title": "Últimas movimentações",
+      "all": "Ver todas",
+      "received": "Recebido",
+      "sent": "Enviado",
+      "flexibleIn": "Para suas economias flexíveis",
+      "flexibleOut": "Das suas economias flexíveis",
+      "lockedIn": "Poupança a prazo",
+      "lockedOut": "Resgate de prazo",
+      "badge": "Insígnia resgatada",
+      "other": "Operação",
+      "pending": "Pendente",
+      "failedTx": "Falhou",
+      "failed": "Não conseguimos ler suas últimas movimentações.",
+      "empty": "Suas movimentações vão aparecer aqui.",
+      "from": "De {{who}}",
+      "to": "Para {{who}}",
+      "flexible": "Economias flexíveis",
+      "locked": "Poupança a prazo",
+      "badges": "Insígnias"
+    }
   },
   "qrPay": {
     "title": "Escaneie para pagar",
@@ -3256,6 +3279,69 @@
     "generic": {
       "title": "Confirme esta operação",
       "body": "Sua carteira só assina quando você confirmar."
+    }
+  },
+  "cardsPage": {
+    "title": "Cartões",
+    "cta": "Pedir meu cartão",
+    "note": "Se você já tem um, aqui abre o seu cartão.",
+    "perks": {
+      "anywhere": {
+        "title": "Pague onde quiser",
+        "body": "Lojas, apps e assinaturas que aceitam cartão."
+      },
+      "topUp": {
+        "title": "Recarregue pela sua carteira",
+        "body": "Passe USDC para o cartão quando precisar."
+      },
+      "fast": {
+        "title": "Pronto em minutos",
+        "body": "Verifique sua identidade uma vez e o cartão é seu."
+      }
+    }
+  },
+  "kyc": {
+    "title": "Verifique sua identidade",
+    "startingTitle": "Preparando sua verificação",
+    "startingBody": "Leva só um momento.",
+    "startFailed": "Não conseguimos iniciar sua verificação. Tente de novo em instantes.",
+    "unavailable": "A verificação não está disponível agora. Tente mais tarde.",
+    "failedTitle": "Algo deu errado",
+    "tryAgain": "Tentar de novo",
+    "openTitle": "Verifique em uma nova aba",
+    "openBody": "Tenha seu documento em mãos. Quando terminar, volte aqui: a gente percebe sozinho.",
+    "openVerification": "Abrir verificação",
+    "notConfirmed": "Ainda não conseguimos confirmar. Conclua as etapas e tente de novo.",
+    "checkingTitle": "Conferindo sua verificação",
+    "checkingBody": "Pode levar até alguns minutos.",
+    "approvedTitle": "Identidade verificada",
+    "approvedBody": "Você já pode continuar.",
+    "processingTitle": "Quase lá",
+    "processingBody": "Sua verificação foi aprovada e está sendo finalizada. Confira de novo em instantes.",
+    "reviewTitle": "Sua verificação está em análise",
+    "reviewBody": "Costuma levar pouco tempo. Avisamos quando estiver pronta.",
+    "duplicateTitle": "Esse documento já está em uso",
+    "duplicateBody": "Está vinculado a outra conta. Fale com a gente e resolvemos.",
+    "rejectedTitle": "Não conseguimos verificar sua identidade",
+    "rejectedBody": "Fale com a gente pela Ajuda e analisamos com você.",
+    "expiredTitle": "Sua verificação expirou",
+    "expiredBody": "Comece de novo quando quiser. Leva só alguns minutos.",
+    "startAgain": "Começar de novo",
+    "checkAgain": "Conferir de novo"
+  },
+  "appsPage": {
+    "title": "Apps",
+    "heroTitle": "Mais coisas para fazer com a Vaquita",
+    "heroBody": "Estamos criando coisas divertidas em torno das suas economias. Elas vão aparecer aqui.",
+    "soon": {
+      "groups": {
+        "title": "Economize com amigos",
+        "body": "Uma meta em comum, todo mundo contribui."
+      },
+      "rewards": {
+        "title": "Recompensas",
+        "body": "Pequenos prêmios por manter suas economias."
+      }
     }
   }
 }

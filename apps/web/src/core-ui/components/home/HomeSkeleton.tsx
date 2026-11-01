@@ -2,9 +2,10 @@
 
 /**
  * Pantalla de carga de la home: en vez de tapar todo con un modal (la vaquita
- * de <LoaderScreen>), dibuja el ESQUELETO de la propia home — header naranja,
- * fila de stats, cielo con la isla, accesos flotantes y la botonera de abajo —
- * con las mismas medidas y colores que los componentes reales.
+ * de <LoaderScreen>), dibuja el ESQUELETO del tablero — header naranja con
+ * avatar y saludo, tarjeta del saldo, botonera, franja del gráfico y últimos
+ * movimientos — con las mismas medidas y colores que <HeaderStats> y
+ * <HomeDashboard>.
  *
  * Se ve como la pantalla que está por aparecer, así que la carga se entiende
  * sin leer nada y no hay salto de layout cuando llegan los datos: los bloques
@@ -26,67 +27,72 @@ export function HomeSkeleton() {
     >
       {/* Header naranja: mismas clases que <HeaderStats> para que el bloque de
           color no se mueva ni un píxel al cambiar al real. */}
-      <div className="w-full relative shrink-0">
-        <div className="w-full px-4 pt-3 pb-3 bg-primary rounded-g">
-          <div className="max-w-xl mx-auto flex items-center gap-3">
-            <div className="h-14 w-14 shrink-0 rounded-full bg-black/10 animate-pulse" />
-
-            <div className="flex flex-col min-w-0 flex-1 gap-1">
-              <div className="h-3 w-28 rounded bg-black/10 animate-pulse" />
-              {/* Pastilla del saldo: mismo borde inferior grueso que el botón
-                  real, para que no “engorde” al aparecer el número. */}
-              <div className="w-40 max-w-full self-start rounded-md border border-black/20 border-b-3 bg-background/60 px-4 py-2">
-                <div className="h-5 w-full rounded bg-black/10 animate-pulse" />
-              </div>
-            </div>
-
-            <div className="h-8 w-8 shrink-0 self-start rounded-full bg-black/10 animate-pulse" />
+      <div className="w-full px-4 pt-2 pb-2 bg-primary rounded-g shrink-0">
+        <div className="max-w-xl mx-auto flex items-center gap-3">
+          <div className="h-12 w-12 shrink-0 rounded-full bg-black/10 animate-pulse" />
+          <div className="flex min-w-0 flex-1">
+            <div className="h-4 w-32 rounded bg-black/10 animate-pulse" />
+          </div>
+          {/* Campana y ayuda. */}
+          <div className="flex shrink-0 items-center gap-2 self-center">
+            <div className="h-8 w-8 rounded-full bg-black/10 animate-pulse" />
+            <div className="h-8 w-8 rounded-full bg-black/10 animate-pulse" />
           </div>
         </div>
+      </div>
 
-        {/* Fila de stats (racha / monedas / experiencia), flotando sobre el
-            borde del naranja con el mismo offset en px que la real. */}
-        <div className="absolute left-0 right-0 -bottom-[36px] px-1 z-20">
-          <div className="max-w-xl mx-auto flex items-center justify-between gap-2 bg-white/60 backdrop-blur-md rounded-lg px-3 py-1.5">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-1.5 flex-1 justify-center">
-                <div className="h-5 w-5 rounded-full bg-black/10 animate-pulse" />
-                <div className="h-3 w-8 rounded bg-black/10 animate-pulse" />
+      {/* Tablero: mismo padding y separación que <HomeDashboard>. */}
+      <div className="flex h-full w-full flex-col gap-3 overflow-hidden px-4 pb-6 pt-4">
+        {/* Tarjeta del saldo. */}
+        <div className="flex items-center gap-2 rounded-lg border border-black/20 border-b-2 bg-white px-4 py-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="h-9 w-44 rounded bg-black/10 animate-pulse" />
+            <div className="h-4 w-36 rounded bg-black/10 animate-pulse" />
+          </div>
+          <div className="h-5 w-5 rounded bg-black/10 animate-pulse" />
+        </div>
+
+        {/* Depositar / Retirar. */}
+        <div className="flex w-full max-w-xl gap-2">
+          <div className="h-12 flex-1 rounded-md border border-black/20 border-b-4 bg-black/10 animate-pulse" />
+          <div className="h-12 flex-1 rounded-md border border-black/20 border-b-4 bg-white/70 animate-pulse" />
+        </div>
+
+        {/* Gráfico de ganancias: barras del mismo ancho, alineadas abajo, y las
+            pestañas del período. */}
+        <div className="flex flex-col gap-3 py-2">
+          <div className="flex h-72 items-end gap-2 overflow-hidden">
+            {[35, 50, 42, 60, 48, 70].map((h, i) => (
+              <div key={i} className="flex h-full w-[calc((100%-2.5rem)/6)] shrink-0 flex-col items-center justify-end gap-1">
+                <div
+                  style={{ height: `${h}%` }}
+                  className="w-full rounded-md border border-black/10 bg-black/10 animate-pulse"
+                />
+                <div className="h-2.5 w-7 rounded bg-black/10 animate-pulse" />
               </div>
             ))}
           </div>
+          <div className="mx-auto h-8 w-56 rounded-lg bg-black/10 animate-pulse" />
         </div>
-      </div>
 
-      {/* Cielo + isla. El degradado es el del ciclo diurno a media mañana: el
-          mapa real arranca con su propia hora, así que este es un punto de
-          partida neutro y no un flash blanco. */}
-      <div className="relative flex-1 min-h-0 bg-linear-to-b from-[#8fc7e3] to-[#cfeaf7] overflow-hidden">
-        {/* Accesos rápidos, en la misma posición que en <HeaderStats>.
-            A la izquierda NO va un placeholder del reloj: <MapClock> es un ítem
-            de la tienda y sólo se muestra a quien lo compró, así que dibujarlo
-            acá le prometería un cartel que a la mayoría nunca le aparece. */}
-        <div className="absolute left-0 right-0 top-0 mt-[40px] px-1 z-20">
-          <div className="max-w-xl mx-auto flex items-start justify-end gap-2">
-            <div className="flex flex-col items-center gap-2 md:hidden">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="h-10 w-10 rounded-lg bg-white/40 animate-pulse" />
-              ))}
-            </div>
+        {/* Últimos movimientos. */}
+        <div className="rounded-2xl bg-white px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-36 rounded bg-black/10 animate-pulse" />
+            <div className="h-3 w-12 rounded bg-black/10 animate-pulse" />
           </div>
-        </div>
-
-        {/* A propósito NO se dibuja una silueta de la isla: cualquier forma que
-            la insinúe se lee como un objeto raro del mapa, no como "esto está
-            cargando". El cielo vacío ya deja claro dónde va a aparecer. */}
-      </div>
-
-      {/* Botonera inferior (Withdraw / Deposit): mismo alto, redondeo y borde
-          <DepositPanel>, así el pulgar no ve saltar los botones. */}
-      <div className="absolute bottom-4 left-0 w-full flex justify-center">
-        <div className="w-full max-w-xl px-1 flex gap-1">
-          <div className="h-14 flex-1 rounded-md border border-black/20 border-b-5 bg-white/70 animate-pulse" />
-          <div className="h-14 flex-1 rounded-md border border-black/20 border-b-5 bg-black/10 animate-pulse" />
+          <div className="mt-3 flex flex-col gap-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-black/10 animate-pulse" />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div className="h-3.5 w-28 rounded bg-black/10 animate-pulse" />
+                  <div className="h-3 w-20 rounded bg-black/10 animate-pulse" />
+                </div>
+                <div className="h-3.5 w-14 rounded bg-black/10 animate-pulse" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
