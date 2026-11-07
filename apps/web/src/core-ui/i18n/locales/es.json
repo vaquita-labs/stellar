@@ -1297,7 +1297,8 @@
       "saveErrorToast": "No pudimos guardar el vaquitag",
       "savedToast": "Vaquitag guardado",
       "subtitle": "Este es tu vaquitag: el nombre que ven los demás ahorradores y el código que compartes para invitar. Puedes cambiarlo más tarde en tu perfil.",
-      "title": "Elige tu vaquitag"
+      "title": "Elige tu vaquitag",
+      "walletPreparing": "Tu billetera todavía se está creando. Puedes elegir el vaquitag ahora; lo guardamos en cuanto la cuenta esté lista."
     }
   },
   "privacy": {

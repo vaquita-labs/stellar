@@ -1,6 +1,7 @@
 'use client';
 
 import { toast } from '@heroui/react';
+import { usePollar } from '@pollar/react';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,10 +20,15 @@ type AvailabilityStatus = 'idle' | 'short' | 'checking' | 'available' | 'taken' 
 
 export function UsernamePrompt({ onDone }: UsernamePromptProps) {
   const { t } = useTranslation();
+  const { wallet } = usePollar();
   const { saveNickname, checkNicknameAvailability } = useRestProfile();
   const [nickname, setNickname] = useState('');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<AvailabilityStatus>('idle');
+  // A new email login returns before the Stellar account exists. Saving now
+  // would sign a challenge the network refuses, and the sheet would report
+  // "Authentication required" as if the vaquitag itself had failed.
+  const walletPreparing = wallet?.provisioning === 'CREATING';
 
   // Para descartar respuestas de checks viejos (race conditions)
   const requestIdRef = useRef(0);
@@ -74,7 +80,10 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
           description: message,
           timeout: 4000,
         });
-        setStatus('taken');
+        // Only a real collision marks the name taken. An auth or provisioning
+        // failure used to land here too, so a brand-new account looked like
+        // the vaquitag was unavailable.
+        if (/already in use/i.test(message ?? '')) setStatus('taken');
       }
     } catch (error) {
       toast.danger(t('onboarding.username.saveErrorToast', 'Could not save username'), {
@@ -141,7 +150,7 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
         : 'border-black';
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 py-10">
+    <div className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-background px-6 py-10">
       <div className="w-full max-w-md flex flex-col items-center text-center gap-5">
         <div className="relative w-28 h-28">
           <Image src="/vaquita/vaquita_isotipo.svg" alt="Vaquita" fill sizes="112px" className="object-contain" priority />
@@ -194,6 +203,14 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
             </div>
           </div>
           <p className={`text-xs pl-2 mt-1 ${helper.className}`}>{helper.text}</p>
+          {walletPreparing ? (
+            <p className="text-xs pl-2 mt-2 text-black/70">
+              {t(
+                'onboarding.username.walletPreparing',
+                'Your wallet is still being created. You can pick a vaquitag now; we save it as soon as the account is ready.',
+              )}
+            </p>
+          ) : null}
         </div>
 
         <Button type="primary" wFull onPress={handleSubmit} isDisabled={!canSave} isLoading={saving} className="mt-2">

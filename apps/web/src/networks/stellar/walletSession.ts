@@ -1,5 +1,7 @@
+import { isWalletNotReady } from '@pollar/core';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
+import { ensureWalletAddress, waitForWalletReady } from './walletReady';
 
 /**
  * Wallet-session tokens for the Vaquita API.
@@ -65,44 +67,61 @@ function withSignTimeout<T>(promise: Promise<T>): Promise<T> {
 
 async function loginWithWallet(walletAddress: string): Promise<string> {
   const base = clientEnv.NEXT_PUBLIC_SERVICES_URL;
-
-  const challengeRes = await fetch(`${base}/api/v1/auth/challenge`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ walletAddress }),
-  });
-  const challengeData = await challengeRes.json();
-  const transaction = challengeData?.data?.transaction as string | undefined;
-  if (!challengeRes.ok || !transaction) {
-    throw new Error(challengeData?.message || 'Could not get an authentication challenge');
-  }
-
   const binding = getPollarBinding();
   if (!binding) {
     throw new Error('Wallet is not connected');
   }
-  const outcome = await withSignTimeout(binding.client.signTx(transaction));
-  if (outcome.status !== 'signed' || !outcome.signedXdr) {
+  const client = binding.client;
+
+  // A new email account can exist in Pollar before its Stellar account does
+  // (`NONE` with no address, or `CREATING`). Signing then returns
+  // SDK_WALLET_NOT_READY, the nickname call goes out with no token, and the
+  // API answers "Authentication required."
+  await ensureWalletAddress(client);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+
+    const challengeRes = await fetch(`${base}/api/v1/auth/challenge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ walletAddress }),
+    });
+    const challengeData = await challengeRes.json();
+    const transaction = challengeData?.data?.transaction as string | undefined;
+    if (!challengeRes.ok || !transaction) {
+      throw new Error(challengeData?.message || 'Could not get an authentication challenge');
+    }
+
+    const outcome = await withSignTimeout(client.signTx(transaction));
+    if (outcome.status === 'signed' && outcome.signedXdr) {
+      const verifyRes = await fetch(`${base}/api/v1/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress, signedXdr: outcome.signedXdr }),
+      });
+      const verifyData = await verifyRes.json();
+      const token = verifyData?.data?.token as string | undefined;
+      const expiresAt = verifyData?.data?.expiresAt as number | undefined;
+      if (!verifyRes.ok || !token || !expiresAt) {
+        throw new Error(verifyData?.message || 'Could not verify the wallet signature');
+      }
+
+      if (typeof window !== 'undefined') {
+        const session: StoredSession = { walletAddress, token, expiresAt };
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+      }
+      return token;
+    }
+
+    if (attempt === 0 && isWalletNotReady(outcome)) {
+      await waitForWalletReady(client);
+      continue;
+    }
+
     throw new Error(('details' in outcome && outcome.details) || 'The wallet did not sign the authentication challenge');
   }
 
-  const verifyRes = await fetch(`${base}/api/v1/auth/verify`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ walletAddress, signedXdr: outcome.signedXdr }),
-  });
-  const verifyData = await verifyRes.json();
-  const token = verifyData?.data?.token as string | undefined;
-  const expiresAt = verifyData?.data?.expiresAt as number | undefined;
-  if (!verifyRes.ok || !token || !expiresAt) {
-    throw new Error(verifyData?.message || 'Could not verify the wallet signature');
-  }
-
-  if (typeof window !== 'undefined') {
-    const session: StoredSession = { walletAddress, token, expiresAt };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  }
-  return token;
+  throw new Error('The wallet did not sign the authentication challenge');
 }
 
 // Single-flight: concurrent mutations while logged out trigger ONE challenge

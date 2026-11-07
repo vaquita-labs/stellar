@@ -1297,7 +1297,8 @@
       "saveErrorToast": "Could not save vaquitag",
       "savedToast": "Vaquitag saved",
       "subtitle": "This is your vaquitag: the name other savers see, and the invite code you share. You can change it later in your profile.",
-      "title": "Choose your vaquitag"
+      "title": "Choose your vaquitag",
+      "walletPreparing": "Your wallet is still being created. You can pick a vaquitag now; we save it as soon as the account is ready."
     }
   },
   "privacy": {

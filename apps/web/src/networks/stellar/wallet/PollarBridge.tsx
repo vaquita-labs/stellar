@@ -3,6 +3,7 @@
 import { useConfigStore } from '@/core-ui/stores';
 import { usePollar } from '@pollar/react';
 import { useEffect, useState } from 'react';
+import { ensureWalletAddress } from '@/networks/stellar/walletReady';
 import { pollarAdapter, setPollarBinding } from './adapters/pollar-adapter';
 import { usePollarReadyStore } from './pollarReady';
 import { getActiveAdapter, setActiveAdapter } from './registry';
@@ -39,6 +40,24 @@ export function PollarBridge() {
       cancelled = true;
     };
   }, [getClient]);
+
+  // A signed-in user with no address never flips `pollarReady` (the gate waits
+  // for one), so the home skeleton stays up and the vaquitag screen never
+  // opens. Ask Pollar for the wallet; the effect below binds it once the
+  // address arrives. A failure releases the gate instead of spinning forever.
+  useEffect(() => {
+    if (!restored || !isAuthenticated || walletAddress) return;
+    const client = getClient();
+    let cancelled = false;
+    void ensureWalletAddress(client).catch((err) => {
+      if (cancelled) return;
+      console.warn('[pollar-bridge] could not prepare the wallet', err);
+      setPollarReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [restored, isAuthenticated, walletAddress, getClient, setPollarReady]);
 
   useEffect(() => {
     if (isAuthenticated && walletAddress) {
