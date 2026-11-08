@@ -1,7 +1,13 @@
 import { isWalletNotReady } from '@pollar/core';
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { getPollarBinding } from './wallet/adapters/pollar-adapter';
-import { ensureWalletAddress, waitForWalletReady } from './walletReady';
+import {
+  ensureWalletAddress,
+  isWalletRecoveryRequired,
+  waitForWalletReady,
+  WalletNotReadyError,
+  WalletRecoveryRequiredError,
+} from './walletReady';
 
 /**
  * Wallet-session tokens for the Vaquita API.
@@ -118,6 +124,10 @@ async function loginWithWallet(walletAddress: string): Promise<string> {
       continue;
     }
 
+    // A first account has no recovery method yet. Signing is refused on purpose
+    // and the recovery screen is the next step, not a failed vaquitag.
+    if (isWalletRecoveryRequired(outcome)) throw new WalletRecoveryRequiredError();
+
     throw new Error(('details' in outcome && outcome.details) || 'The wallet did not sign the authentication challenge');
   }
 
@@ -167,6 +177,15 @@ export async function authFetch(url: string, init: RequestInit, walletAddress: s
     console.warn('[walletSession] could not obtain a session token:', err);
   }
 
+  // The recovery screen is already opening. Posting the nickname without a
+  // session only produces "Authentication required."
+  if (loginError instanceof WalletRecoveryRequiredError) {
+    return new Response(JSON.stringify({ status: 'error', message: loginError.message }), {
+      status: 409,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   let response = await attempt(token);
 
   // The request went out without a token because the login flow itself failed
@@ -174,7 +193,12 @@ export async function authFetch(url: string, init: RequestInit, walletAddress: s
   // required." hides the real cause — surface it in the JSON the caller toasts.
   if (!token && loginError && (response.status === 401 || response.status === 403)) {
     const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    const message = `${typeof body.message === 'string' ? body.message : 'Authentication required.'} — ${loginError.message}`;
+    // A wallet that is still being created has not failed authentication. The
+    // server's "Authentication required." hides that, and the vaquitag screen
+    // was reporting it as if the name could not be saved.
+    const serverMessage = typeof body.message === 'string' ? body.message : 'Authentication required.';
+    const message =
+      loginError instanceof WalletNotReadyError ? loginError.message : `${serverMessage} — ${loginError.message}`;
     return new Response(JSON.stringify({ ...body, message }), {
       status: response.status,
       headers: { 'Content-Type': 'application/json' },
