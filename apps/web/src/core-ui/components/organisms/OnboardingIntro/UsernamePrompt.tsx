@@ -6,8 +6,15 @@ import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiCheck, FiX } from 'react-icons/fi';
+import {
+  isWalletRecoveryRequired,
+  waitForWalletReady,
+  WALLET_READY_WAIT_MS,
+  WalletNotReadyError,
+} from '@/networks/stellar/walletReady';
 import { NICKNAME_MIN_LENGTH, NICKNAME_NEW_MAX_LENGTH, sanitizeNewNickname } from '../../../helpers';
 import { useRestProfile } from '../../../hooks';
+import { openCosign } from '../../../stores';
 import { Button } from '../../atoms';
 
 interface UsernamePromptProps {
@@ -20,7 +27,7 @@ type AvailabilityStatus = 'idle' | 'short' | 'checking' | 'available' | 'taken' 
 
 export function UsernamePrompt({ onDone }: UsernamePromptProps) {
   const { t } = useTranslation();
-  const { wallet } = usePollar();
+  const { wallet, getClient, recoveryLocked } = usePollar();
   const { saveNickname, checkNicknameAvailability } = useRestProfile();
   const [nickname, setNickname] = useState('');
   const [saving, setSaving] = useState(false);
@@ -32,8 +39,52 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
 
   // Para descartar respuestas de checks viejos (race conditions)
   const requestIdRef = useRef(0);
+  // The name the user already accepted, held while they add the first recovery
+  // method. Signing is refused until that exists, and the recovery screen is
+  // the next step, so the refusal is not a failed save.
+  const heldForRecovery = useRef<string | null>(null);
+  const wasRecoveryLocked = useRef(recoveryLocked);
+  const saveNicknameRef = useRef(saveNickname);
+  const onDoneRef = useRef(onDone);
+  saveNicknameRef.current = saveNickname;
+  onDoneRef.current = onDone;
 
   const trimmed = nickname.trim();
+
+  useEffect(() => {
+    const unlocked = wasRecoveryLocked.current && !recoveryLocked;
+    wasRecoveryLocked.current = recoveryLocked;
+    const held = heldForRecovery.current;
+    if (!unlocked || !held) return;
+    heldForRecovery.current = null;
+    let cancelled = false;
+    setSaving(true);
+    void (async () => {
+      try {
+        const { success, message } = await saveNicknameRef.current({ nickname: held });
+        if (cancelled) return;
+        if (success) {
+          toast.success(t('onboarding.username.savedToast', 'Username saved'), { timeout: 3000 });
+          onDoneRef.current();
+          return;
+        }
+        if (isWalletRecoveryRequired(message)) {
+          heldForRecovery.current = held;
+          return;
+        }
+        toast.danger(t('onboarding.username.saveErrorToast', 'Could not save username'), {
+          description: message,
+          timeout: 4000,
+        });
+        if (/already in use/i.test(message ?? '')) setStatus('taken');
+      } finally {
+        if (!cancelled) setSaving(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [recoveryLocked, t]);
 
   // Debounce de la verificación de disponibilidad contra el backend
   useEffect(() => {
@@ -71,10 +122,30 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
     if (!canSave) return;
     setSaving(true);
     try {
+      const client = getClient();
+      const provisioning = client.getWallet()?.provisioning;
+      // The nickname endpoint needs a signature. A co-signed account cannot
+      // sign until this device approves its creation, and that request is easy
+      // to miss: Pollar only lists it once, at login. Surface it and wait,
+      // instead of posting the name with no session.
+      if (provisioning === 'CREATING' || provisioning === 'NONE') {
+        let pending = await client.cosign.pending().catch(() => []);
+        if (pending.length === 0 && provisioning === 'CREATING') {
+          await client.createWallet().catch(() => undefined);
+          pending = await client.cosign.pending().catch(() => []);
+        }
+        if (pending.length > 0) openCosign();
+        await waitForWalletReady(client, pending.length > 0 ? 180_000 : WALLET_READY_WAIT_MS, {
+          refresh: () => client.refreshWalletState(),
+        });
+      }
+
       const { success, message } = await saveNickname({ nickname: trimmed });
       if (success) {
         toast.success(t('onboarding.username.savedToast', 'Username saved'), { timeout: 3000 });
         onDone();
+      } else if (isWalletRecoveryRequired(message)) {
+        heldForRecovery.current = trimmed;
       } else {
         toast.danger(t('onboarding.username.saveErrorToast', 'Could not save username'), {
           description: message,
@@ -86,12 +157,23 @@ export function UsernamePrompt({ onDone }: UsernamePromptProps) {
         if (/already in use/i.test(message ?? '')) setStatus('taken');
       }
     } catch (error) {
+      if (isWalletRecoveryRequired(error)) {
+        heldForRecovery.current = trimmed;
+        return;
+      }
+      const preparing = error instanceof WalletNotReadyError;
       toast.danger(t('onboarding.username.saveErrorToast', 'Could not save username'), {
-        description: (error as { message?: string })?.message ?? '',
-        timeout: 4000,
+        description: preparing
+          ? t(
+              'onboarding.username.walletPreparing',
+              'Your wallet is still being created. You can pick a vaquitag now; we save it as soon as the account is ready.',
+            )
+          : ((error as { message?: string })?.message ?? ''),
+        timeout: 5000,
       });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const helper = (() => {
