@@ -20,7 +20,7 @@ import { motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BsBank2 } from 'react-icons/bs';
-import { FiAtSign, FiCheck, FiChevronRight, FiPlus, FiX } from 'react-icons/fi';
+import { FiAtSign, FiCheck, FiChevronRight, FiPlus, FiSearch, FiX } from 'react-icons/fi';
 import { HiOutlineSelector } from 'react-icons/hi';
 import { IoWalletOutline } from 'react-icons/io5';
 import { useProfileData } from '../../../hooks';
@@ -36,6 +36,15 @@ import { WalletRow } from './WalletRow';
 import { WithdrawModalProps, WithdrawProgressStep, WithdrawStep } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
 import { ProcessingSteps } from '../../molecules/ProcessingSteps';
+
+// Cuántos usuarios guardados entran sin scroll en "Elegir usuario".
+const USERNAME_VISIBLE_ROWS = 3;
+// Caja de la lista cuando hay más: tres filas (63px c/u + 8px de separación) y
+// media más asomando.
+const USERNAME_LIST_BOX =
+  'h-[240px] overflow-y-auto overflow-x-hidden overscroll-contain pr-1 -mr-1 ' +
+  '[scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.3)_transparent] ' +
+  '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-black/30 [&::-webkit-scrollbar-thumb]:rounded-full';
 
 /**
  * Flujo de retiro del home. Retira de BLEND (nivel líquido normal), y lo que
@@ -94,6 +103,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
   // de tipear nada, y desde el selector de destino del paso del monto—, así que
   // el back se guarda al entrar en vez de adivinarlo desde el estado.
   const [usernameOrigin, setUsernameOrigin] = useState<WithdrawStep>('method');
+  const [usernameQuery, setUsernameQuery] = useState('');
   // Guardamos el error TAL CUAL: `ErrorNotice` lo humaniza, y aplastarlo a
   // `.message` acá descartaría los errores tipados que ese mapeo reconoce.
   const [error, setError] = useState<unknown>(null);
@@ -162,9 +172,23 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
   // dos listas en lugar de caer en la equivocada; el esqueleto de carga cubre
   // ese rato.
   const savedAddresses = useMemo(() => savedWallets.map((w) => w.address), [savedWallets]);
-  const { nicknames, isLoading: nicknamesLoading } = useNicknamesByAddress(savedAddresses);
+  const { nicknames, avatars, isLoading: nicknamesLoading } = useNicknamesByAddress(savedAddresses);
 
   const usernameWallets = savedWallets.filter((w) => !!nicknames.get(w.address));
+  // Con más de `USERNAME_VISIBLE_ROWS` guardados la lista deja de crecer: pasa
+  // a una caja de alto fijo con scroll y aparece el buscador. Se busca por el
+  // nickname de ahora y también por la dirección, que es lo otro que la fila
+  // muestra.
+  const usernameListScrolls = usernameWallets.length > USERNAME_VISIBLE_ROWS;
+  const usernameNeedle = usernameQuery.trim().replace(/^@/, '').toLowerCase();
+  const visibleUsernameWallets =
+    usernameListScrolls && usernameNeedle
+      ? usernameWallets.filter(
+          (w) =>
+            (nicknames.get(w.address) ?? '').toLowerCase().includes(usernameNeedle) ||
+            w.address.toLowerCase().includes(usernameNeedle),
+        )
+      : usernameWallets;
   const addressWallets = savedWallets.filter((w) => nicknames.get(w.address) === null);
 
   // El nombre que se muestra: el nickname de ahora si la dirección es de un
@@ -231,6 +255,7 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
       setStep('method');
       setDestinationKind('wallet');
       setUsernameOrigin('method');
+      setUsernameQuery('');
       setAmount('');
       setError(null);
       setOverBalance(false);
@@ -564,22 +589,68 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
   // Misma forma que la lista de wallets, con lo que corresponde a una persona:
   // el alta pide un `@usuario` y no una dirección, y el vacío no habla de
   // wallets guardadas.
+  const usernameRows = visibleUsernameWallets.map((w) => (
+    <WalletRow
+      key={w.id}
+      wallet={w}
+      displayLabel={labelFor(w)}
+      isUser
+      avatarConfig={avatars.get(w.address)}
+      // Marcado solo cuando se llegó desde el monto, que es cuando hay un
+      // destino elegido y se lo está cambiando. Entrando desde el método
+      // todavía no se eligió a nadie en este retiro: `selectedWalletId`
+      // sobrevive entre aperturas, y pintar esa fila de azul señalaba a la
+      // última persona a la que se le mandó como si ya estuviera elegida.
+      selected={usernameOrigin === 'amount' && w.id === selectedWalletId}
+      deleting={deleteWallet.isPending && pendingDeleteId === w.id}
+      onSelect={() => {
+        setSelectedWalletId(w.id);
+        setUsernameQuery('');
+        setStep('amount');
+      }}
+      onDelete={() => handleDeleteWallet(w.id)}
+    />
+  ));
+
   const usernameStep = (
     <div className="flex flex-col gap-2">
-      {usernameWallets.map((w) => (
-        <WalletRow
-          key={w.id}
-          wallet={w}
-          displayLabel={labelFor(w)}
-          selected={w.id === selectedWalletId}
-          deleting={deleteWallet.isPending && pendingDeleteId === w.id}
-          onSelect={() => {
-            setSelectedWalletId(w.id);
-            setStep('amount');
-          }}
-          onDelete={() => handleDeleteWallet(w.id)}
-        />
-      ))}
+      {usernameListScrolls ? (
+        <>
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
+            <input
+              type="search"
+              inputMode="search"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder={t('withdraw.searchUsername', 'Search vaquitag')}
+              aria-label={t('withdraw.searchUsername', 'Search vaquitag')}
+              value={usernameQuery}
+              onChange={(e) => setUsernameQuery(e.target.value)}
+              className="w-full h-12 pl-10 pr-3 rounded-md bg-white border border-black border-b-2 text-sm font-medium text-black placeholder:text-gray-400 outline-none focus:border-b-3"
+            />
+          </div>
+
+          {/* Alto FIJO (no máximo): filtrar achica la lista, y si la caja se
+              achicara con ella la hoja entera saltaría con cada tecla. Entran
+              tres filas y asoma la cuarta, que es lo que avisa que hay scroll
+              en un celular, donde la barra no se ve hasta tocar.
+              `overflow-x-hidden` porque la fila se arrastra de costado para
+              borrar y sin eso el arrastre abriría un scroll horizontal. */}
+          <div className={USERNAME_LIST_BOX}>
+            {usernameRows.length > 0 ? (
+              <div className="flex flex-col gap-2 pb-0.5">{usernameRows}</div>
+            ) : (
+              <p className="flex h-full items-center justify-center text-sm text-gray-500 text-center">
+                {t('withdraw.noUsernameMatches', 'No matches')}
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        usernameRows
+      )}
 
       {(walletsLoading || nicknamesLoading) && usernameWallets.length === 0 ? walletSkeleton : null}
 
@@ -589,7 +660,10 @@ export function WithdrawModal({ open, onOpenChange, onSubmit, onOfframp, onResum
 
       <div className="border-t border-black/10 my-1" />
 
-      <PressableButton variant="white" size="row" onClick={() => setStep('addNickname')}>
+      {/* `primary` y no blanco: es la acción de la pantalla y tiene que
+          notarse al lado de filas que van pintadas con el pastel de cada
+          avatar, donde un botón blanco o celeste claro era una fila más. */}
+      <PressableButton variant="primary" size="row" onClick={() => setStep('addNickname')}>
         <FiAtSign className="w-6 h-6 text-black shrink-0" />
         <span className="flex-1 text-sm font-bold text-black">{t('withdraw.addNickname.cta', 'Add username')}</span>
         <FiChevronRight className="w-5 h-5 text-black shrink-0" />

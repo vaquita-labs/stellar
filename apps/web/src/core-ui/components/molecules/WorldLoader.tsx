@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const FRAMES = [
@@ -15,6 +15,38 @@ const FRAME_MS = 150;
 // a row (boot → route → clock → map), and each mount picks the walk up where
 // the last one left it instead of restarting from the first frame.
 const frameRef = { current: 0 };
+
+// The bar fills like a thermometer, from empty to full, for the whole boot.
+// There is no real percentage to read (the stages are a bundle, a few fetches
+// and a WebGL context), so it eases towards FILL_CEILING with time and only
+// reaches the end when the owner says the world is ready (`leaving`). Module
+// scope for the same reason as the frame: each gate's loader continues the
+// fill of the previous one instead of starting over.
+const fill = { startedAt: 0, seenAt: -Infinity, value: 0 };
+const FILL_CEILING = 0.92;
+const FILL_TAU_MS = 2600;
+const FILL_TICK_MS = 150;
+/** The last stretch to 100% once ready, before the screen fades out. */
+const FILL_FINISH_MS = 300;
+/** A loader mounting later than this after the last one is a new load. */
+const FILL_RESUME_MS = 1000;
+
+const resumeFill = (now: number) => {
+  if (now - fill.seenAt <= FILL_RESUME_MS) return;
+  fill.startedAt = now;
+  fill.value = 0;
+};
+
+const advanceFill = (now: number) => {
+  fill.seenAt = now;
+  const eased = FILL_CEILING * (1 - Math.exp(-(now - fill.startedAt) / FILL_TAU_MS));
+  fill.value = Math.max(fill.value, eased);
+  return fill.value;
+};
+
+const paintFill = (bar: HTMLElement, value: number) => {
+  bar.style.transform = `translateX(${(value - 1) * 100}%)`;
+};
 
 /** Soft CSS clouds (no image to wait for: a loader has to be there at once). */
 const CLOUDS = [
@@ -43,7 +75,7 @@ interface WorldLoaderProps {
  * empty sea, then the island popping in. Every stage of that boot renders THIS
  * instead (see <BootLoader>, the route's `loading.tsx` and <HomePage>), so what
  * the user sees is one screen from the tap until the map is drawn: the sky,
- * the vaquita walking and a bar that says it is working.
+ * the vaquita walking and a bar that fills up until the world is ready.
  */
 export function WorldLoader({ overlay = false, leaving = false, onGone }: WorldLoaderProps) {
   const { t } = useTranslation();
@@ -57,6 +89,34 @@ export function WorldLoader({ overlay = false, leaving = false, onGone }: WorldL
     return () => clearInterval(id);
   }, []);
 
+  // The bar is painted straight on the element: the value lives outside React
+  // (shared by every loader of the boot) and the server's markup starts empty.
+  const barRef = useRef<HTMLSpanElement>(null);
+  // Ready: the bar runs to the end first, and only then the screen fades.
+  const [filled, setFilled] = useState(false);
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    if (!bar) return;
+    if (leaving) {
+      // The load is over: the next loader starts from empty.
+      fill.seenAt = -Infinity;
+      paintFill(bar, 1);
+      const id = setTimeout(() => setFilled(true), FILL_FINISH_MS);
+      return () => clearTimeout(id);
+    }
+    resumeFill(performance.now());
+    const tick = () => paintFill(bar, advanceFill(performance.now()));
+    tick();
+    const id = setInterval(tick, FILL_TICK_MS);
+    return () => {
+      clearInterval(id);
+      // Stamped on the way out too: the next gate's loader mounts in this same
+      // commit, however long the main thread was busy since the last tick.
+      fill.seenAt = performance.now();
+    };
+  }, [leaving]);
+  const fading = leaving && filled;
+
   return (
     <div
       role="status"
@@ -69,10 +129,10 @@ export function WorldLoader({ overlay = false, leaving = false, onGone }: WorldL
         'flex w-full flex-col items-center justify-center overflow-hidden px-6 text-center ' +
         'bg-gradient-to-b from-[#7FC0D6] to-[#B4D6DF] transition-opacity duration-500 ' +
         (overlay ? 'absolute inset-0 z-40 ' : 'relative ') +
-        (leaving ? 'pointer-events-none opacity-0' : 'opacity-100')
+        (fading ? 'pointer-events-none opacity-0' : 'opacity-100')
       }
       onTransitionEnd={(event) => {
-        if (leaving && event.target === event.currentTarget) onGone?.();
+        if (fading && event.target === event.currentTarget) onGone?.();
       }}
     >
       {CLOUDS.map((cloud) => (
@@ -112,7 +172,11 @@ export function WorldLoader({ overlay = false, leaving = false, onGone }: WorldL
         aria-hidden
         className="relative mt-5 h-3.5 w-52 overflow-hidden rounded-full border border-black border-b-2 bg-white"
       >
-        <span className="world-loader-bar absolute inset-y-0 left-0 w-2/5 rounded-full bg-primary" />
+        <span
+          ref={barRef}
+          className="absolute inset-0 rounded-full bg-primary transition-transform duration-300 ease-out"
+          style={{ transform: 'translateX(-100%)' }}
+        />
       </div>
     </div>
   );

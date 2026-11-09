@@ -143,6 +143,24 @@ export const formatTokenPrecise = (amount: number, maxDecimals = DISPLAY_DECIMAL
     maximumFractionDigits: maxDecimals,
   });
 
+/** From here up a list row tells the figure in millions instead of digit by digit. */
+const COMPACT_FROM = 1_000_000;
+
+/**
+ * An amount for a list row, where the column is narrow: the usual figure below
+ * a million, "1.25M" / "3.4B" from there up (in the reader's locale). Cut, not
+ * rounded, same as everything else — 1,999,999 reads "1.99M", never "2M". The
+ * movement's own page keeps the full figure.
+ */
+export const formatTokenCompact = (amount: number, maxDecimals = 2) =>
+  Math.abs(amount) < COMPACT_FROM
+    ? formatTokenPrecise(amount, maxDecimals)
+    : new Intl.NumberFormat(undefined, {
+        notation: 'compact',
+        maximumFractionDigits: 2,
+        roundingMode: 'trunc',
+      } as Intl.NumberFormatOptions).format(amount);
+
 /** Decimales para un monto por debajo de 1: ver `formatTokenFine`. */
 const FINE_DECIMALS = 4;
 

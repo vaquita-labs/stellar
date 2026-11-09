@@ -3,6 +3,7 @@ import { toBaseUnits } from '@/networks/stellar/sorobanTx';
 import {
   AMOUNT_DECIMALS,
   floorAmount,
+  formatTokenCompact,
   formatTokenFine,
   formatTokenPrecise,
   formatUsdPrecise,
@@ -97,5 +98,18 @@ describe('MIN_USDC', () => {
   it('queda por encima del piso de polvo de la cadena', () => {
     expect(MIN_USDC).toBeGreaterThan(0.0001);
     expect(formatUsdPrecise(MIN_USDC, 2)).toBe('$0.10');
+  });
+});
+
+describe('formatTokenCompact', () => {
+  it('leaves the figure whole below a million', () => {
+    expect(formatTokenCompact(999_999.999)).toBe('999,999.99');
+    expect(formatTokenCompact(2)).toBe('2.00');
+  });
+
+  it('tells millions and up in short, cut and never rounded up', () => {
+    expect(formatTokenCompact(1_250_000)).toBe('1.25M');
+    expect(formatTokenCompact(1_999_999)).toBe('1.99M');
+    expect(formatTokenCompact(3_400_000_000)).toBe('3.4B');
   });
 });

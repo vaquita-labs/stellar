@@ -5,9 +5,11 @@ import { Spinner } from '@heroui/react';
 import { motion, useAnimationControls } from 'framer-motion';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiTrash2 } from 'react-icons/fi';
+import { FiCheck, FiTrash2 } from 'react-icons/fi';
 import { IoWalletOutline } from 'react-icons/io5';
+import type { AvatarConfig } from '@vaquita/avatar';
 import { SavedWallet } from '../../../hooks/useSavedWallets';
+import { avatarBackgroundColor, VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
 
 interface WalletRowProps {
   wallet: SavedWallet;
@@ -17,6 +19,18 @@ interface WalletRowProps {
    * tipeó al guardarlo. Sin esto cae al label guardado.
    */
   displayLabel?: string;
+  /**
+   * El destino es una persona: en lugar del ícono de billetera va su avatar,
+   * y la fila entera se tiñe con una versión pálida del color de fondo de ese
+   * avatar.
+   * `avatarConfig` es el que devolvió su perfil; si falta se usa el sembrado
+   * con la dirección, igual que en el resto de la app.
+   *
+   * Como el fondo ya es de la persona, el seleccionado no puede ser el celeste
+   * de las wallets: se marca con un check a la derecha.
+   */
+  isUser?: boolean;
+  avatarConfig?: AvatarConfig;
   selected: boolean;
   deleting: boolean;
   onSelect: () => void;
@@ -32,7 +46,16 @@ const SWIPE_THRESHOLD = 72;
  * fila, sin abrir otro modal. El color de seleccionado es un celeste marcado
  * para que se distinga a simple vista.
  */
-export function WalletRow({ wallet, displayLabel, selected, deleting, onSelect, onDelete }: WalletRowProps) {
+export function WalletRow({
+  wallet,
+  displayLabel,
+  isUser,
+  avatarConfig,
+  selected,
+  deleting,
+  onSelect,
+  onDelete,
+}: WalletRowProps) {
   const { t } = useTranslation();
   const shownLabel = displayLabel ?? wallet.label;
   const [confirming, setConfirming] = useState(false);
@@ -90,10 +113,26 @@ export function WalletRow({ wallet, displayLabel, selected, deleting, onSelect, 
         onClick={onSelect}
         className={
           'relative w-full flex items-center gap-3 rounded-lg border border-black border-b-2 px-4 py-3 text-left transition touch-pan-y select-none ' +
-          (selected ? 'bg-[#CFE3FF]' : 'bg-white hover:bg-[#F5FBFF]')
+          (isUser ? 'hover:brightness-[0.97]' : selected ? 'bg-[#CFE3FF]' : 'bg-white hover:bg-[#F5FBFF]')
+        }
+        // El color del avatar mezclado a la mitad con blanco: entero, una lista
+        // de varias filas pesaba demasiado y competía con el botón de agregar.
+        // Así tiñe la fila y el círculo del avatar, que va con el color pleno,
+        // sigue destacándose adentro.
+        style={
+          isUser
+            ? { backgroundColor: `color-mix(in srgb, ${avatarBackgroundColor(avatarConfig, wallet.address)} 50%, white)` }
+            : undefined
         }
       >
-        <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
+        {isUser ? (
+          // h-9 y no más: es el alto de las dos líneas de texto, así la fila
+          // mide lo mismo que la de una wallet y la caja con scroll de "Elegir
+          // usuario" sigue mostrando tres filas justas.
+          <VaquitaAvatarCircle config={avatarConfig} seed={wallet.address} className="h-9 w-9" />
+        ) : (
+          <IoWalletOutline className="w-6 h-6 text-black shrink-0" />
+        )}
         <span className="flex-1 min-w-0">
           <span className="block text-sm font-bold text-black truncate">{shownLabel}</span>
           <span className="block text-xs text-gray-500">{truncateMiddle(wallet.address, 6, 5)}</span>
@@ -103,6 +142,7 @@ export function WalletRow({ wallet, displayLabel, selected, deleting, onSelect, 
             </span>
           ) : null}
         </span>
+        {isUser && selected ? <FiCheck className="w-5 h-5 text-black shrink-0" strokeWidth={3} aria-hidden /> : null}
         <span
           role="button"
           tabIndex={0}
@@ -112,7 +152,11 @@ export function WalletRow({ wallet, displayLabel, selected, deleting, onSelect, 
             askConfirm();
           }}
           onPointerDownCapture={(e) => e.stopPropagation()}
-          className="shrink-0 flex items-center justify-center w-8 h-8 -mr-2 rounded-md text-gray-400 hover:text-error hover:bg-error/10 transition"
+          className={
+            'shrink-0 flex items-center justify-center w-8 h-8 -mr-2 rounded-md hover:text-error hover:bg-error/10 transition ' +
+            // Sobre un fondo de color el gris claro de la basura casi no se ve.
+            (isUser ? 'text-gray-500' : 'text-gray-400')
+          }
         >
           <FiTrash2 className="w-4 h-4" />
         </span>

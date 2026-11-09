@@ -85,6 +85,18 @@ describe('describeRecord', () => {
     expect(describeRecord(submit(3), WALLET, context)).toMatchObject({ kind: 'flexibleOut', amount: 0.5 });
   });
 
+  // Emptying the savings asks Blend for i128::MAX ("everything"). Read as a
+  // figure it printed 17,014,118,346,047,890,000,000,000,000,000 USDC in the list.
+  it('does not take the withdraw-everything marker for an amount', () => {
+    const everything = call('CBLEND', 'submit', [
+      WALLET,
+      WALLET,
+      WALLET,
+      [{ amount: '170141183460469231731687303715884105727', address: 'CTOKEN', request_type: 3 }],
+    ]);
+    expect(describeRecord(everything, WALLET, context)).toMatchObject({ kind: 'flexibleOut', amount: null });
+  });
+
   it('names a badge and an enabled asset', () => {
     expect(describeRecord(call('CBADGES', 'mint_badge', [WALLET, 'second_deposit', 0, '1', 'sig']), WALLET, context)?.kind).toBe(
       'badge',

@@ -1,7 +1,7 @@
 'use client';
 
 import { formatTimeDeposit } from '@/core-ui/helpers';
-import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
+import { formatTokenCompact } from '@/core-ui/helpers/numbers';
 import { AppTransaction, TransactionStatus } from '@/core-ui/helpers/transactions';
 import { useTranslation } from 'react-i18next';
 import { FiArrowDownLeft, FiArrowUpRight, FiRepeat } from 'react-icons/fi';
@@ -35,19 +35,19 @@ export function TransactionRow({ transaction, onPress }: { transaction: AppTrans
 
   const title =
     kind === 'deposit'
-      ? t('transactions.kind.deposit', 'Deposit')
+      ? t('transactions.kind.deposit', 'Added to savings')
       : kind === 'move'
-        ? t('transactions.kind.move', 'Transfer to position')
+        ? t('transactions.kind.move', 'Invested for a term')
         : transaction.early
-          ? t('transactions.kind.withdrawEarly', 'Early withdrawal')
-          : t('transactions.kind.withdraw', 'Withdrawal');
+          ? t('transactions.kind.withdrawEarly', 'Withdrawn early')
+          : t('transactions.kind.withdraw', 'Withdrawn from a term');
 
   const subtitle =
     kind === 'deposit'
       ? t('transactions.row.toSavings', 'To savings')
       : kind === 'move'
-        ? t('transactions.row.toPosition', 'To your {{term}} position', { term })
-        : t('transactions.row.fromPosition', 'From your {{term}} position', { term });
+        ? t('transactions.row.toPosition', 'For {{term}}', { term })
+        : t('transactions.row.fromPosition', '{{term}} term', { term });
 
   // A transfer keeps the money inside Vaquita: no sign, neutral color.
   const sign = failed || kind === 'move' ? '' : kind === 'deposit' ? '−' : '+';
@@ -97,7 +97,7 @@ export function TransactionRow({ transaction, onPress }: { transaction: AppTrans
         <div className="shrink-0 text-right">
           <p className={`text-[13px] font-bold tabular-nums ${amountColor}`}>
             {sign}
-            {formatTokenPrecise(transaction.amount, 2)} {transaction.tokenSymbol}
+            {formatTokenCompact(transaction.amount, 2)} {transaction.tokenSymbol}
           </p>
           <p className="text-[10px] text-gray-500">{formatTransactionTime(transaction.timestamp, i18n.language)}</p>
         </div>

@@ -3,16 +3,22 @@
 import { Spinner } from '@heroui/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FiCheckCircle } from 'react-icons/fi';
 import { truncateMiddle } from '../../../helpers';
 import { nicknameSegment } from '../../../helpers/nickname';
 import { useWalletByUsername } from '../../../hooks';
 import { SavedWallet, useCreateSavedWallet } from '../../../hooks/useSavedWallets';
 import { useConfigStore } from '../../../stores';
+import { Notice } from '../../molecules/Notice';
 import { PressableButton } from '../../molecules/PressableButton';
+import { avatarBackgroundColor, VaquitaAvatarCircle } from '../../avatar/VaquitaAvatar';
 
 interface AddNicknameFormProps {
   onCreated: (wallet: SavedWallet) => void;
 }
+
+/** Caja del estado de la búsqueda: mismo alto y forma que `Notice`. */
+const STATUS_CARD = 'flex min-h-14 items-center gap-2.5 rounded-xl border px-4 py-1.5 text-sm';
 
 /** Mismo criterio que `AddWalletForm`: el backend valida el slug canónico. */
 const toNetworkSlug = (networkName: string) => networkName.trim().toLowerCase().replace(/\s+/g, '-');
@@ -93,31 +99,54 @@ export function AddNicknameForm({ onCreated }: AddNicknameFormProps) {
         </div>
       </label>
 
-      {/* Un solo renglón de estado abajo del campo, para que la pantalla no
-          salte entre "buscando" y el resultado. */}
-      <div className="min-h-10">
-        {resolving ? (
-          <p className="flex items-center gap-2 text-sm text-gray-500">
-            <Spinner size="sm" color="current" />
-            {t('wallet.send.resolving', 'Looking up…')}
-          </p>
-        ) : isSelf ? (
-          <p className="text-sm text-error font-semibold">
-            {t('wallet.send.sameAddress', "You can't send to your own address.")}
-          </p>
-        ) : notFound ? (
-          <p className="text-sm text-error font-semibold">
-            {t('wallet.send.handleNotFound', "We couldn't find that user.")}
-          </p>
-        ) : destAddress ? (
-          <div className="rounded-lg border border-black border-b-2 bg-white px-3 py-2">
+      {/* Un solo lugar de estado abajo del campo, y en los tres casos lo ocupa
+          una tarjeta del MISMO alto: buscando, no existe, encontrado. Así la
+          pantalla no salta entre uno y otro, y tampoco queda un renglón suelto
+          con un hueco abajo, que era lo que pasaba cuando el aviso era solo
+          texto dentro de un espacio reservado para la tarjeta. Con el campo
+          vacío no hay estado que mostrar y no se reserva nada. */}
+      {!segment ? null : resolving ? (
+        <div className={`${STATUS_CARD} border-black/10 bg-white/60 text-gray-500`} role="status">
+          <Spinner size="sm" color="current" />
+          {t('wallet.send.resolving', 'Looking up…')}
+        </div>
+      ) : isSelf ? (
+        <Notice tone="warn" className="min-h-14 items-center!">
+          {t('wallet.send.sameAddress', "You can't send to your own address.")}
+        </Notice>
+      ) : notFound ? (
+        <Notice tone="warn" className="min-h-14 items-center!">
+          {t('wallet.send.handleNotFound', "We couldn't find that user.")}
+        </Notice>
+      ) : destAddress ? (
+        // El fondo es el del avatar de esa persona, no un verde de "ok": la
+        // tarjeta es SU tarjeta. El borde va en negro suave porque uno de los
+        // fondos de la paleta es casi el crema de la hoja y sin borde la
+        // tarjeta se perdería.
+        <div
+          className={`${STATUS_CARD} border-black/15`}
+          style={{ backgroundColor: avatarBackgroundColor(lookup.avatarConfig, destAddress) }}
+          role="status"
+        >
+          {/* La cara de la persona, no un ícono genérico: es lo que deja
+              confirmar de un vistazo que el vaquitag es de quien uno cree. Sin
+              config guardada sale el avatar sembrado con su dirección, el mismo
+              que ve el resto de la app. */}
+          <VaquitaAvatarCircle
+            config={lookup.avatarConfig}
+            seed={destAddress}
+            alt={`@${segment}`}
+            className="h-10 w-10 shrink-0"
+          />
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-black truncate">@{segment}</p>
             {/* La dirección se muestra siempre: es lo que se guarda y lo que va
                 a recibir la plata. */}
-            <p className="font-mono text-xs text-gray-500">{truncateMiddle(destAddress, 6, 5)}</p>
+            <p className="font-mono text-xs text-gray-600">{truncateMiddle(destAddress, 6, 5)}</p>
           </div>
-        ) : null}
-      </div>
+          <FiCheckCircle className="h-4 w-4 shrink-0 text-[#3F9102]" />
+        </div>
+      ) : null}
 
       {error ? <p className="text-sm text-error font-semibold">{error}</p> : null}
 

@@ -16,6 +16,7 @@ export * from './useDefindexVaultPosition';
 export * from './useVaultApy';
 export * from './usePassiveMigration';
 export * from './useFont';
+export * from './useGoBack';
 export * from './useHasHydrated';
 export * from './useHudHint';
 export * from './useInstallApp';

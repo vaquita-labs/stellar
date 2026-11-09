@@ -2,6 +2,7 @@
 
 import { clientEnv } from '@/core-ui/config/clientEnv';
 import { useQueries } from '@tanstack/react-query';
+import type { AvatarConfig } from '@vaquita/avatar';
 import { useMemo } from 'react';
 
 /**
@@ -21,6 +22,9 @@ import { useMemo } from 'react';
  * (offline, 500) resolves to `null` for that address, so the caller keeps
  * showing the stored label instead of dropping a destination off the screen.
  */
+/** What is kept of a profile lookup: who it is and what they look like. */
+type AddressProfile = { nickname: string; avatarConfig?: AvatarConfig };
+
 export const useNicknamesByAddress = (addresses: string[]) => {
   // Ordered + deduped so the query set is stable across renders: the same saved
   // wallets in a different order would otherwise remount every query.
@@ -28,14 +32,19 @@ export const useNicknamesByAddress = (addresses: string[]) => {
 
   const results = useQueries({
     queries: unique.map((address) => ({
-      queryKey: ['nickname-by-address', address],
-      queryFn: async (): Promise<string | null> => {
+      // `profile` in the key because the cached value changed shape (it used to
+      // be the bare nickname): under the old key a string persisted in the
+      // localStorage cache would be read as if it were this object.
+      queryKey: ['nickname-by-address', address, 'profile'],
+      queryFn: async (): Promise<AddressProfile | null> => {
         const response = await fetch(`${clientEnv.NEXT_PUBLIC_SERVICES_URL}/api/v1/profile/wallet/${address}`);
         if (response.status === 404) return null;
         if (!response.ok) throw new Error(`Profile lookup failed (${response.status})`);
         const data = await response.json();
         const nickname = data?.data?.nickname;
-        return typeof nickname === 'string' && nickname ? nickname : null;
+        if (typeof nickname !== 'string' || !nickname) return null;
+        // Same response, so showing the person's face costs no extra request.
+        return { nickname, avatarConfig: data?.data?.avatarConfig as AvatarConfig | undefined };
       },
       // Renames are rare but the whole point here is not serving a stale name,
       // so this revalidates on mount rather than trusting the persisted cache.
@@ -57,12 +66,17 @@ export const useNicknamesByAddress = (addresses: string[]) => {
     // unique on (profile, address, network) with a 409. The stored label is a
     // good enough name to fall back on until the lookup answers.
     const byAddress = new Map<string, string | null>();
+    const avatarByAddress = new Map<string, AvatarConfig>();
     unique.forEach((address, i) => {
       const result = results[i];
-      if (result?.isSuccess) byAddress.set(address, result.data ?? null);
-      else if (result?.isError) byAddress.set(address, null);
+      if (result?.isSuccess) {
+        byAddress.set(address, result.data?.nickname ?? null);
+        if (result.data?.avatarConfig) avatarByAddress.set(address, result.data.avatarConfig);
+      } else if (result?.isError) byAddress.set(address, null);
     });
     return {
+      /** address → avatar of the profile behind it; absent when it is not a user. */
+      avatars: avatarByAddress,
       /** address → nickname; `null` when it is not a user or the lookup failed, absent while it loads. */
       nicknames: byAddress,
       isLoading: results.some((r) => r.isLoading),
