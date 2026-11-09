@@ -239,10 +239,9 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
   // en superíndice, estilo "$722·⁰¹"). Siempre a 2 decimales: es el total que la
   // suma de abajo tiene que repetir, y dos números iguales con distinta cantidad
   // de decimales se leen como dos números distintos.
-  // Los dos bloques de plata del panel se tapan por separado, y el ojo del
-  // título los tapa a los dos (la cadena vive en el store de privacidad).
-  const hideTotal = useIsHidden('portfolio.total');
-  const hideAllocation = useIsHidden('portfolio.allocation');
+  // Un solo ojo para todo el panel, y es el GLOBAL: el mismo interruptor que el
+  // ojo del saldo en el home y el switch de Ajustes → Privacidad.
+  const hideAmounts = useIsHidden();
 
   const donutStr = formatUsdPrecise(displayTotal, 2);
   const donutDot = donutStr.lastIndexOf('.');
@@ -281,13 +280,9 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
             y cuántas opciones se están usando (las vacías son la oportunidad de
             rendir más). El desglose vive en la lista de abajo; tocar el donut
             abre el historial de transacciones. */}
-        {/* El ojo va AFUERA del botón del donut, no adentro: el donut entero ya
-            es un botón que abre el historial, y un botón dentro de otro es HTML
-            inválido —el navegador reordena el árbol y el toque termina en
-            cualquiera de los dos—. Los arcos siguen dibujándose con el total
-            tapado: muestran proporciones, no importes, igual que el "% de tu
-            total" de cada fila. */}
-        <div className="relative flex justify-center">
+        {/* Los arcos siguen dibujándose con el total tapado: muestran
+            proporciones, no importes, igual que el "% de tu total" de cada fila. */}
+        <div className="flex justify-center">
           <button
             type="button"
             onClick={goToTransactions}
@@ -300,7 +295,7 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
               label={t('portfolio.total', 'Total')}
               syncing={isSyncing}
               amount={
-                hideTotal ? (
+                hideAmounts ? (
                   '••••'
                 ) : (
                   <>
@@ -319,9 +314,6 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
               </p>
             ) : null}
           </button>
-          {/* Absoluto para que el donut siga centrado: puesto en la fila, su
-              ancho correría el anillo unos píxeles a la izquierda. */}
-          <BalanceEye scope="portfolio.total" className="absolute right-0 top-1" />
         </div>
 
         {/* Distribución: una fila por opción (Ahorros + cada plazo), plana sobre el
@@ -332,13 +324,7 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
           <p className="py-4 text-center text-sm text-gray-500">{t('portfolio.empty', 'No saving terms available yet.')}</p>
         ) : (
           <div className="flex flex-col">
-            {/* La lista no tenía encabezado. Se agrega uno para que su ojo tenga
-                un título al lado del cual vivir, igual que "Tus posiciones" en
-                la pantalla de posiciones. */}
-            <div className="flex items-center justify-between gap-2 pb-1">
-              <h3 className="text-sm font-bold text-black">{t('portfolio.distribution', 'Distribution')}</h3>
-              <BalanceEye scope="portfolio.allocation" />
-            </div>
+            <h3 className="pb-1 text-sm font-bold text-black">{t('portfolio.distribution', 'Distribution')}</h3>
             {displayRows.map((row) => {
               const empty = row.amount <= 0;
               const investable = row.kind === 'lock' && row.lockPeriod != null;
@@ -402,7 +388,7 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
                     >
                       <span className="flex flex-col items-end">
                         <span className="text-sm font-bold text-black tabular-nums leading-tight">
-                          {maskAmount(formatUsdPrecise(row.amount, 2), hideAllocation)}
+                          {maskAmount(formatUsdPrecise(row.amount, 2), hideAmounts)}
                         </span>
                         <span className="text-xs text-gray-500 tabular-nums leading-tight">
                           {t('portfolio.ofTotal', '{{pct}}% of your total', {
@@ -422,7 +408,7 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
               <div className="flex items-center justify-between border-t border-black/15 mt-1 pt-3">
                 <span className="text-sm font-semibold text-gray-500">{t('portfolio.sum', 'Total')}</span>
                 <span className="text-sm font-bold text-black tabular-nums">
-                  {maskAmount(formatUsdPrecise(displayTotal, 2), hideAllocation)}
+                  {maskAmount(formatUsdPrecise(displayTotal, 2), hideAmounts)}
                 </span>
               </div>
             ) : null}
@@ -442,8 +428,9 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
         <PageLayout
           title={t('portfolio.title', 'Portfolio')}
           onBack={onOpenChange}
-          // Tapa TODO el panel: el total del donut y la distribución de abajo.
-          rightSlot={<BalanceEye scope="portfolio" variant="circle" />}
+          // El único ojo de la página. Sin `scope` = interruptor global, así
+          // que queda conectado al ojo del saldo en el home.
+          rightSlot={<BalanceEye variant="circle" />}
           headerGap="gap-4"
           contentGap="gap-4"
           bottomPadding="pb-0"
@@ -461,9 +448,8 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
           title={
             <span className="inline-flex items-center gap-1.5">
               {t('portfolio.title', 'Portfolio')}
-              {/* Tapa TODO el panel: el total del donut y la distribución de abajo.
-                  Los ojos de cada bloque desaparecen mientras éste está cerrado. */}
-              <BalanceEye scope="portfolio" />
+              {/* El único ojo del panel: el interruptor global, el mismo del home. */}
+              <BalanceEye />
             </span>
           }
           size="lg"

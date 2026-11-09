@@ -2764,11 +2764,13 @@
     "methodLabel": "Method",
     "minWithdraw": "Minimum withdrawal: {{amount}} USDC.",
     "noUsernames": "You have no saved users yet",
+    "noUsernameMatches": "No matches",
     "noWallets": "You have no saved wallets yet",
     "processingHint": "This may take a few seconds.",
     "review": "Review",
     "selectAccount": "Select account",
     "selectUsername": "Select user",
+    "searchUsername": "Search vaquitag",
     "success": {
       "subtitle": "Your funds are on their way to {{label}}.",
       "title": "Withdrawal sent!"
@@ -2802,20 +2804,20 @@
     "emptyFiltered": "Try changing the filters to see more.",
     "emptyHint": "Your deposits and withdrawals will show up here.",
     "kind": {
-      "deposit": "Deposit",
-      "withdraw": "Withdrawal",
-      "withdrawEarly": "Early withdrawal",
-      "move": "Transfer to position"
+      "deposit": "Added to savings",
+      "withdraw": "Withdrawn from a term",
+      "withdrawEarly": "Withdrawn early",
+      "move": "Invested for a term"
     },
     "row": {
       "toSavings": "To savings",
-      "toPosition": "To your {{term}} position",
-      "fromPosition": "From your {{term}} position"
+      "toPosition": "For {{term}}",
+      "fromPosition": "{{term}} term"
     },
     "status": {
       "completed": "Completed",
       "pending": "Pending",
-      "failed": "Failed"
+      "failed": "Not completed"
     },
     "chips": {
       "from": "From {{date}}",
@@ -2833,20 +2835,20 @@
       "kinds": {
         "deposit": "Deposits",
         "withdraw": "Withdrawals",
-        "move": "Transfers to a position",
-        "payment": "Payments",
+        "move": "Term investments",
+        "payment": "Sent and received",
         "other": "Other"
       },
       "statuses": {
         "completed": "Completed",
         "pending": "Pending",
-        "failed": "Failed"
+        "failed": "Not completed"
       }
     },
     "history": {
-      "moveRequested": "Transfer requested",
-      "moveConfirmed": "Transfer confirmed",
-      "moveFailed": "Transfer failed",
+      "moveRequested": "Investment requested",
+      "moveConfirmed": "Investment confirmed",
+      "moveFailed": "Investment failed",
       "withdrawRequested": "Withdrawal requested",
       "withdrawConfirmed": "Withdrawal confirmed",
       "withdrawFailed": "Withdrawal failed"
@@ -2871,7 +2873,7 @@
       "share": "Share",
       "hashCopied": "Transaction ID copied",
       "linkCopied": "Link copied",
-      "position": "{{term}} position"
+      "position": "{{term}} term"
     }
   },
   "explore": {
@@ -3202,20 +3204,22 @@
       "all": "See all",
       "received": "Received",
       "sent": "Sent",
-      "flexibleIn": "Deposit to flexible savings",
-      "flexibleOut": "Withdrawal from flexible savings",
-      "lockedIn": "Deposit to term savings",
-      "lockedOut": "Withdrawal from term savings",
+      "flexibleIn": "Added to savings",
+      "flexibleOut": "Withdrawn from savings",
+      "lockedIn": "Invested for a term",
+      "lockedOut": "Withdrawn from a term",
       "badge": "Badge claimed",
       "trust": "Asset enabled",
       "other": "Operation",
       "pending": "Pending",
-      "failedTx": "Failed",
+      "failedTx": "Not completed",
       "failed": "We could not read your latest activity.",
       "empty": "Your movements will show up here.",
       "from": "From {{who}}",
       "to": "To {{who}}",
-      "flexible": "Flexible savings",
+      "toWallet": "To your wallet",
+      "fromWallet": "From your wallet",
+      "flexible": "Savings",
       "locked": "Term savings",
       "badges": "Badges"
     }

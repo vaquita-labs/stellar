@@ -45,9 +45,8 @@ export function AllocationDetailSheet({
   onOpenPositions,
 }: AllocationDetailSheetProps) {
   const { t } = useTranslation();
-  // Esta hoja es el detalle de UNA fila de la distribución, así que responde al
-  // ojo de la distribución (y, por la cadena, al del portafolio entero).
-  const hidden = useIsHidden('portfolio.allocation');
+  // Responde al ojo global, el único que tiene el portafolio (y el del home).
+  const hidden = useIsHidden();
 
   return (
     <AppModal
@@ -134,7 +133,7 @@ export function AllocationDetailSheet({
         <TransactionMonthCard label={t('portfolio.positionsTitle', 'Your positions')}>
           <TransactionList align="grouped">
             {positions.map((deposit) => (
-              <PositionRow key={deposit.id} deposit={deposit} onPress={onOpenTerm} scope="portfolio.allocation" />
+              <PositionRow key={deposit.id} deposit={deposit} onPress={onOpenTerm} />
             ))}
           </TransactionList>
         </TransactionMonthCard>

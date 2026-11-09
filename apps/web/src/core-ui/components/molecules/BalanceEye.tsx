@@ -23,8 +23,8 @@ interface BalanceEyeProps {
  * está tapado), igual que el switch de `PrivacySettingsPage`, no la acción.
  *
  * No se renderiza si algo por encima ya está tapando: un ojo que no cambia nada
- * de lo que se ve es peor que no tener ojo. Por eso el del donut y el de la
- * distribución desaparecen mientras el del portafolio entero está cerrado.
+ * de lo que se ve es peor que no tener ojo. Por eso el de la lista de
+ * posiciones desaparece mientras el de la página entera está cerrado.
  */
 export function BalanceEye({ scope, variant = 'inline', className = '' }: BalanceEyeProps) {
   const { t } = useTranslation();

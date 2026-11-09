@@ -206,18 +206,9 @@ body {
     }
 }
 
-/* Pantalla de carga del mundo 3D (ver <WorldLoader>): una barra que va y viene
-   —no hay porcentaje real que mostrar— y nubes que cruzan el cielo. Las nubes
-   son puro CSS para estar desde el primer frame, sin esperar ninguna imagen. */
-@keyframes world-loader-bar {
-    0% { transform: translateX(-110%); }
-    100% { transform: translateX(260%); }
-}
-
-.world-loader-bar {
-    animation: world-loader-bar 1.3s ease-in-out infinite;
-}
-
+/* Pantalla de carga del mundo 3D (ver <WorldLoader>): nubes que cruzan el
+   cielo, puro CSS para estar desde el primer frame, sin esperar ninguna imagen.
+   La barra que se llena la pinta el propio componente. */
 @keyframes world-loader-cloud {
     from { transform: translateX(-180px); }
     to { transform: translateX(100vw); }
@@ -253,13 +244,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .world-loader-bar {
-        animation: none;
-        transform: none;
-        width: 100%;
-        opacity: 0.5;
-    }
-
     .world-loader-cloud {
         animation: none;
         transform: translateX(20vw);

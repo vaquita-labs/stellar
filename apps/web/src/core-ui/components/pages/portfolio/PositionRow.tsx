@@ -36,12 +36,11 @@ export function PositionRow({
   deposit: DepositResponseDTO;
   onPress?: () => void;
   /**
-   * Qué ojo tapa los importes de esta fila. Obligatorio porque la misma fila se
-   * usa en dos pantallas distintas —la lista de posiciones y el detalle de un
-   * plazo dentro del portafolio— y cada una cuelga de un ojo distinto; un
-   * default acá haría que una de las dos respondiera al ojo equivocado.
+   * Qué ojo tapa los importes de esta fila. La lista de posiciones pasa el
+   * suyo; el detalle de un plazo dentro del portafolio no pasa ninguno y
+   * responde sólo al ojo global, el único que tiene esa pantalla.
    */
-  scope: PrivacySection;
+  scope?: PrivacySection;
 }) {
   const { t } = useTranslation();
   const { token } = useConfigStore();

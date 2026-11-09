@@ -6,22 +6,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
  * global. Los nombres con punto NO son una ruta: son sólo el nombre del bloque,
  * y quién cuelga de quién lo dice `PRIVACY_PARENT` y nada más.
  */
-export type PrivacySection =
-  | 'portfolio'
-  | 'portfolio.total'
-  | 'portfolio.allocation'
-  | 'positions'
-  | 'positions.list';
+export type PrivacySection = 'positions' | 'positions.list';
 
 /**
- * Tapar un bloque tapa todo lo que tiene adentro. Cerrar el ojo del portafolio
- * entero y que el donut siguiera mostrando el total sería exactamente lo que el
- * usuario pidió que no pasara.
+ * Tapar un bloque tapa todo lo que tiene adentro. El portafolio (/portafolio) no
+ * tiene bloques propios: su único ojo es el global, el mismo del home.
  */
 const PRIVACY_PARENT: Record<PrivacySection, PrivacySection | null> = {
-  portfolio: null,
-  'portfolio.total': 'portfolio',
-  'portfolio.allocation': 'portfolio',
   positions: null,
   'positions.list': 'positions',
 };
@@ -29,9 +20,6 @@ const PRIVACY_PARENT: Record<PrivacySection, PrivacySection | null> = {
 type Sections = Record<PrivacySection, boolean>;
 
 const NO_SECTIONS_HIDDEN: Sections = {
-  portfolio: false,
-  'portfolio.total': false,
-  'portfolio.allocation': false,
   positions: false,
   'positions.list': false,
 };
@@ -96,8 +84,8 @@ export const useIsHidden = (scope?: PrivacySection): boolean =>
 
 /**
  * Si algo POR ENCIMA de `scope` ya está tapando. Con esto el ojo de un bloque
- * hijo desaparece en vez de quedarse ahí sin hacer nada visible: con el
- * portafolio entero tapado, el ojo del donut no tiene nada que tapar ni destapar.
+ * hijo desaparece en vez de quedarse ahí sin hacer nada visible: con las
+ * posiciones enteras tapadas, el ojo de la lista no tiene nada que tapar ni destapar.
  *
  * Sin `scope` es siempre `false`: el interruptor global no tiene a nadie encima,
  * y contarlo a él mismo escondería para siempre el único ojo que puede destapar.

@@ -3,6 +3,7 @@
 import {
   AVATAR_VIEWBOX,
   composeAvatarSvg,
+  PALETTES,
   resolveAvatarConfig,
   type AvatarConfig,
 } from '@vaquita/avatar';
@@ -22,6 +23,17 @@ interface VaquitaAvatarProps {
   className?: string;
   /** Screen-reader label. Decorative by default (the name is always next to it). */
   alt?: string;
+}
+
+/**
+ * The background color the avatar is drawn on, as a hex. For a surface that
+ * should read as belonging to that person (a card around their avatar) without
+ * drawing the character again. Resolved exactly like the avatar itself, so a
+ * profile with no saved config gets the color of its wallet-seeded one.
+ */
+export function avatarBackgroundColor(config: AvatarConfig | null | undefined, seed = ''): string {
+  const index = Number(resolveAvatarConfig(config, seed).backgroundColor);
+  return PALETTES.background[index] ?? PALETTES.background[0];
 }
 
 /**

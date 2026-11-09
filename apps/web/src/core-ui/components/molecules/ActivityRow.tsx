@@ -1,7 +1,7 @@
 'use client';
 
 import type { ActivityItem } from '@/core-ui/helpers/activity';
-import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
+import { formatTokenCompact } from '@/core-ui/helpers/numbers';
 import { useNicknamesByAddress } from '@/core-ui/hooks/profile/useNicknamesByAddress';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -35,18 +35,18 @@ export function useActivityMeta() {
     sent: { icon: FiArrowUpRight, label: t('dashboard.activity.sent', 'Sent'), sign: '-', box: 'bg-primary/30' },
     flexibleIn: {
       icon: FiTrendingUp,
-      label: t('dashboard.activity.flexibleIn', 'Deposit to flexible savings'),
+      label: t('dashboard.activity.flexibleIn', 'Added to savings'),
       sign: '-',
       box: 'bg-primary/30',
     },
     flexibleOut: {
       icon: FiTrendingUp,
-      label: t('dashboard.activity.flexibleOut', 'Withdrawal from flexible savings'),
+      label: t('dashboard.activity.flexibleOut', 'Withdrawn from savings'),
       sign: '+',
       box: 'bg-success/25',
     },
-    lockedIn: { icon: FiPocket, label: t('dashboard.activity.lockedIn', 'Deposit to term savings'), sign: '-', box: 'bg-primary/30' },
-    lockedOut: { icon: FiPocket, label: t('dashboard.activity.lockedOut', 'Withdrawal from term savings'), sign: '+', box: 'bg-success/25' },
+    lockedIn: { icon: FiPocket, label: t('dashboard.activity.lockedIn', 'Invested for a term'), sign: '-', box: 'bg-primary/30' },
+    lockedOut: { icon: FiPocket, label: t('dashboard.activity.lockedOut', 'Withdrawn from a term'), sign: '+', box: 'bg-success/25' },
     badge: { icon: FiAward, label: t('dashboard.activity.badge', 'Badge claimed'), sign: '', box: 'bg-[#FFF7E6]' },
     trust: { icon: FiCheckCircle, label: t('dashboard.activity.trust', 'Asset enabled'), sign: '', box: 'bg-[#FFF7E6]' },
     other: { icon: FiFileText, label: t('dashboard.activity.other', 'Operation'), sign: '', box: 'bg-background' },
@@ -121,7 +121,7 @@ export function ActivityRow({
               >
                 {item.status === 'PENDING'
                   ? t('dashboard.activity.pending', 'Pending')
-                  : t('dashboard.activity.failedTx', 'Failed')}
+                  : t('dashboard.activity.failedTx', 'Not completed')}
               </span>
             )}
           </div>
@@ -134,7 +134,7 @@ export function ActivityRow({
             <p className={`truncate text-[13px] font-bold tabular-nums ${amountColor}`}>
               {hideBalance
                 ? '••••'
-                : `${failed ? '' : sign}${formatTokenPrecise(item.amount, 2)} ${item.asset ?? ''}`.trim()}
+                : `${failed ? '' : sign}${formatTokenCompact(item.amount, 2)} ${item.asset ?? ''}`.trim()}
             </p>
           )}
           <p className="text-[10px] text-gray-500">{formatTransactionTime(item.timestamp, i18n.language)}</p>

@@ -160,17 +160,17 @@ export function TransactionDetailsPage({ transactionId }: { transactionId: strin
   const title = !transaction
     ? t('transactions.details.title', 'Transaction details')
     : kind === 'deposit'
-      ? t('transactions.kind.deposit', 'Deposit')
+      ? t('transactions.kind.deposit', 'Added to savings')
       : kind === 'move'
-        ? t('transactions.kind.move', 'Transfer to position')
+        ? t('transactions.kind.move', 'Invested for a term')
         : transaction.early
-          ? t('transactions.kind.withdrawEarly', 'Early withdrawal')
-          : t('transactions.kind.withdraw', 'Withdrawal');
+          ? t('transactions.kind.withdrawEarly', 'Withdrawn early')
+          : t('transactions.kind.withdraw', 'Withdrawn from a term');
   // A transfer keeps the money inside Vaquita: no sign, neutral color.
   const sign = kind === 'withdraw' ? '+' : kind === 'deposit' ? '−' : '';
   const walletLabel = t('transactions.details.wallet', 'Your wallet');
   const savingsLabel = t('transactions.details.savings', 'Savings');
-  const positionLabel = t('transactions.details.position', '{{term}} position', { term });
+  const positionLabel = t('transactions.details.position', '{{term}} term', { term });
   const from = kind === 'deposit' ? walletLabel : kind === 'move' ? savingsLabel : positionLabel;
   const to = kind === 'move' ? positionLabel : savingsLabel;
 
@@ -226,7 +226,7 @@ export function TransactionDetailsPage({ transactionId }: { transactionId: strin
   const activityView = (item: ActivityItem) => {
     const { Icon, title: name, subtitle, sign: itemSign, box } = describeActivity(item, counterpartyName);
     const failed = item.status === 'FAILED';
-    const flexibleLabel = t('dashboard.activity.flexible', 'Flexible savings');
+    const flexibleLabel = t('dashboard.activity.flexible', 'Savings');
     const lockedLabel = t('dashboard.activity.locked', 'Term savings');
     const other = counterpartyName ?? '';
     const route: [string, string] | null =

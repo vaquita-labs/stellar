@@ -23,7 +23,7 @@ import {
   TRANSACTION_STATUSES,
   TransactionFilters,
 } from '@/core-ui/helpers/transactions';
-import { useDepositsComplete, useWalletActivity } from '@/core-ui/hooks';
+import { useDepositsComplete, useGoBack, useWalletActivity } from '@/core-ui/hooks';
 import { useConfigStore, useTransactionFiltersStore } from '@/core-ui/stores';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -69,6 +69,10 @@ export function TransactionsPage() {
     useTransactionFiltersStore.getState().hold(filters);
     router.push(`/transactions/${transactionId}`);
   };
+
+  // Se llega desde el home, una notificación o el detalle de un movimiento: el
+  // back vuelve a donde se estaba.
+  const goBack = useGoBack('/home');
 
   const movements = useMemo(
     () => buildMovements(buildTransactions(data?.deposits ?? []), activity.data ?? []),
@@ -117,7 +121,7 @@ export function TransactionsPage() {
   return (
     <PageLayout
       title={t('transactions.title', 'Transactions')}
-      backHref="/home"
+      onBack={goBack}
       headerGap="gap-3"
       rightSlot={
         <CircleIconButton

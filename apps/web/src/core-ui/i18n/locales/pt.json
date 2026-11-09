@@ -2764,11 +2764,13 @@
     "methodLabel": "Método",
     "minWithdraw": "Saque mínimo: {{amount}} USDC.",
     "noUsernames": "Você ainda não salvou usuários",
+    "noUsernameMatches": "Sem resultados",
     "noWallets": "Você ainda não tem carteiras salvas",
     "processingHint": "Isso pode levar alguns segundos.",
     "review": "Revisar",
     "selectAccount": "Selecionar conta",
     "selectUsername": "Selecionar usuário",
+    "searchUsername": "Buscar vaquitag",
     "success": {
       "subtitle": "Seu dinheiro está a caminho de {{label}}.",
       "title": "Saque enviado!"
@@ -2802,20 +2804,20 @@
     "emptyFiltered": "Tente mudar os filtros para ver mais.",
     "emptyHint": "Seus depósitos e saques vão aparecer aqui.",
     "kind": {
-      "deposit": "Depósito",
-      "withdraw": "Saque",
-      "withdrawEarly": "Saque antecipado",
-      "move": "Transferência para posição"
+      "deposit": "Depositado nas economias",
+      "withdraw": "Sacado do prazo",
+      "withdrawEarly": "Sacado antes do prazo",
+      "move": "Investido a prazo"
     },
     "row": {
       "toSavings": "Para a poupança",
-      "toPosition": "Para sua posição de {{term}}",
-      "fromPosition": "Da sua posição de {{term}}"
+      "toPosition": "Por {{term}}",
+      "fromPosition": "Prazo de {{term}}"
     },
     "status": {
       "completed": "Concluída",
       "pending": "Pendente",
-      "failed": "Falhou"
+      "failed": "Não concluída"
     },
     "chips": {
       "from": "De {{date}}",
@@ -2833,20 +2835,20 @@
       "kinds": {
         "deposit": "Depósitos",
         "withdraw": "Saques",
-        "move": "Transferências para posição",
-        "payment": "Envios e pagamentos",
+        "move": "Investimentos a prazo",
+        "payment": "Enviados e recebidos",
         "other": "Outros"
       },
       "statuses": {
         "completed": "Concluídas",
         "pending": "Pendentes",
-        "failed": "Falhas"
+        "failed": "Não concluídas"
       }
     },
     "history": {
-      "moveRequested": "Transferência solicitada",
-      "moveConfirmed": "Transferência confirmada",
-      "moveFailed": "Transferência falhou",
+      "moveRequested": "Investimento solicitado",
+      "moveConfirmed": "Investimento confirmado",
+      "moveFailed": "Investimento falhou",
       "withdrawRequested": "Saque solicitado",
       "withdrawConfirmed": "Saque confirmado",
       "withdrawFailed": "Saque falhou"
@@ -2871,7 +2873,7 @@
       "share": "Compartilhar",
       "hashCopied": "ID da transação copiado",
       "linkCopied": "Link copiado",
-      "position": "Posição de {{term}}"
+      "position": "Prazo de {{term}}"
     }
   },
   "explore": {
@@ -3202,20 +3204,22 @@
       "all": "Ver todas",
       "received": "Recebido",
       "sent": "Enviado",
-      "flexibleIn": "Depósito na poupança flexível",
-      "flexibleOut": "Saque da poupança flexível",
-      "lockedIn": "Depósito na poupança a prazo",
-      "lockedOut": "Saque da poupança a prazo",
+      "flexibleIn": "Depositado nas economias",
+      "flexibleOut": "Sacado das economias",
+      "lockedIn": "Investido a prazo",
+      "lockedOut": "Sacado do prazo",
       "badge": "Insígnia resgatada",
       "trust": "Ativo habilitado",
       "other": "Operação",
       "pending": "Pendente",
-      "failedTx": "Falhou",
+      "failedTx": "Não concluída",
       "failed": "Não conseguimos ler suas últimas movimentações.",
       "empty": "Suas movimentações vão aparecer aqui.",
       "from": "De {{who}}",
       "to": "Para {{who}}",
-      "flexible": "Economias flexíveis",
+      "toWallet": "Para sua carteira",
+      "fromWallet": "Da sua carteira",
+      "flexible": "Economias",
       "locked": "Poupança a prazo",
       "badges": "Insígnias"
     }

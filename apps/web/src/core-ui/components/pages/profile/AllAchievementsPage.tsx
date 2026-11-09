@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { FiGift } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,7 @@ import {
   useClaimedAchievements,
   useDepositsComplete,
   useFollowCounts,
+  useGoBack,
   useProfileAchievements,
   useProfileExperience,
   useProfileRewards,
@@ -39,6 +41,13 @@ export function AllAchievementsPage() {
   // and never offer its Claim button.
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [redeemOpen, setRedeemOpen] = useState(false);
+  // A notification ("Trophy unlocked!") lands here with `?badge=`: the badge it
+  // is about opens on arrival, instead of leaving the user to guess which tile
+  // of the grid it was. Once closed it stays closed.
+  const badgeParam = useSearchParams().get('badge');
+  const [deepLinkDismissed, setDeepLinkDismissed] = useState(false);
+  // Reached from the profile or from a notification: back returns to either.
+  const goBack = useGoBack('/profile');
 
   const { walletAddress } = useConfigStore();
   const { data: streakData } = useProfileStreak();
@@ -80,7 +89,21 @@ export function AllAchievementsPage() {
 
   // Resolved on every render from the list above, so the open sheet shows the
   // badge as it is now rather than as it was when the tile was tapped.
-  const selected = selectedId ? (achievements.find((b) => b.id === selectedId) ?? null) : null;
+  // `badgeParam` is the badge key, or its name when the notification only
+  // carries that (the feed stored a plain /profile/achievements before the key
+  // was added to the link). It resolves against the live list too, so a badge
+  // that only exists in the server catalog opens as soon as that loads.
+  const deepLinkedId = useMemo(() => {
+    if (!badgeParam || deepLinkDismissed) return null;
+    const wanted = badgeParam.trim().toLowerCase();
+    const byName = achievementsData?.achievements?.find((a) => a.name.toLowerCase() === wanted)?.key;
+    return (
+      achievements.find((b) => b.id.toLowerCase() === wanted || b.id === byName || b.title.toLowerCase() === wanted)?.id ??
+      null
+    );
+  }, [badgeParam, deepLinkDismissed, achievements, achievementsData?.achievements]);
+  const openId = selectedId ?? deepLinkedId;
+  const selected = openId ? (achievements.find((b) => b.id === openId) ?? null) : null;
 
   const earned = achievements.filter((b) => b.unlocked && isClaimed(b.id)).length;
   const today = useMemo(() => formatDate(new Date().toISOString()), []);
@@ -91,7 +114,7 @@ export function AllAchievementsPage() {
         {/* Header estándar (PageHeader) con el botón de canjear código a la derecha. */}
         <PageHeader
           title={t('achievements.page.title', 'Achievements')}
-          backHref="/profile"
+          onBack={goBack}
           className="border-b border-black/10 pb-3"
           rightSlot={
             <CircleIconButton
@@ -144,9 +167,12 @@ export function AllAchievementsPage() {
       <AchievementModal
         achievement={selected ?? null}
         unlocked={selected?.unlocked ?? false}
-        open={!!selectedId}
+        open={!!openId}
         onOpenChange={(o) => {
-          if (!o) setSelectedId(null);
+          if (!o) {
+            setSelectedId(null);
+            setDeepLinkDismissed(true);
+          }
         }}
       />
 

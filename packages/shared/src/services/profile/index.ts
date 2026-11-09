@@ -1278,7 +1278,8 @@ export const claimAchievement = async (profileId: number, key: Achievement) => {
             type: 'reward',
             messageKey: 'achievementUnlocked',
             params: { name: achievement?.name ?? key },
-            link: '/profile/achievements',
+            // `?badge=` opens that badge on arrival instead of the whole grid.
+            link: `/profile/achievements?badge=${encodeURIComponent(key)}`,
             dedupeKey: `achievement-${profileId}-${key}`,
           });
         }

@@ -24,7 +24,11 @@ import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
+  useDepositsComplete,
 } from '../../../hooks';
+import { AppTransaction, buildTransactions } from '../../../helpers/transactions';
+import { notificationMovementId } from '../../../helpers/notificationMovement';
+import { useConfigStore } from '../../../stores';
 import { PageLayout, WithHydrated } from '../../molecules';
 
 type DateFilter = 'all' | 'today' | 'week' | 'month';
@@ -56,14 +60,26 @@ const notificationIcon = (n: AppNotification): React.ReactNode =>
   MESSAGE_ICONS[n.messageKey] ?? TYPE_ICONS[n.type] ?? <FiBell />;
 
 /** Los movimientos de plata (depósito, retiro, desbloqueo) abren el detalle de
- *  su movimiento: el feed ya resuelve ese link (/transactions/<id>). Si llega
- *  cualquier otra cosa —una ruta más vieja guardada en la base, o un movimiento
- *  que el feed no pudo ubicar— caen en el historial. */
+ *  su movimiento. El feed resuelve ese link (/transactions/<id>); si llega sin
+ *  resolver —un API que todavía sirve el /transactions pelado, o una ruta más
+ *  vieja guardada en la base— se ubica acá contra los movimientos del usuario
+ *  (ver `notificationMovementId`). Sólo si tampoco aparece cae en el historial. */
 const MONEY_MESSAGE_KEYS = new Set(['depositConfirmed', 'withdrawalCompleted', 'depositUnlocked']);
 
-const notificationLink = (n: AppNotification) => {
+/** Un trofeo abre su insignia, no la grilla entera. El feed manda la clave en
+ *  el link (?badge=<key>); las notificaciones guardadas antes llegan con el
+ *  /profile/achievements pelado y sólo traen el nombre, así que va el nombre y
+ *  la pantalla de logros lo ubica. */
+const ACHIEVEMENTS_PATH = '/profile/achievements';
+
+const notificationLink = (n: AppNotification, transactions: AppTransaction[]) => {
+  if (n.messageKey === 'achievementUnlocked' && n.link === ACHIEVEMENTS_PATH && n.params.name) {
+    return `${ACHIEVEMENTS_PATH}?badge=${encodeURIComponent(String(n.params.name))}`;
+  }
   if (!MONEY_MESSAGE_KEYS.has(n.messageKey)) return n.link;
-  return n.link.startsWith('/transactions') ? n.link : '/transactions';
+  if (n.link.startsWith('/transactions/')) return n.link;
+  const movementId = notificationMovementId(n, transactions);
+  return movementId ? `/transactions/${movementId}` : '/transactions';
 };
 
 const MINUTE = 60_000;
@@ -129,10 +145,17 @@ function FilterSelect<T extends string>({
   );
 }
 
-function NotificationItem({ notification, onPress }: { notification: AppNotification; onPress: () => void }) {
+function NotificationItem({
+  notification,
+  link,
+  onPress,
+}: {
+  notification: AppNotification;
+  link: string;
+  onPress: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const { messageKey, params, createdAt, read } = notification;
-  const link = notificationLink(notification);
 
   const elapsed = Date.now() - createdAt;
   let timeLabel: string;
@@ -163,7 +186,7 @@ function NotificationItem({ notification, onPress }: { notification: AppNotifica
         type="button"
         onClick={onPress}
         className={`w-full flex items-start gap-3 px-4 py-3.5 text-left transition-colors ${
-          read ? 'bg-white' : 'bg-[#FFF4E5]'
+          read ? 'bg-background' : 'bg-white'
         } ${link ? 'cursor-pointer hover:bg-[#FFF7E6]' : 'cursor-default'}`}
       >
         <span className="flex h-9 w-9 items-center justify-center text-black shrink-0">
@@ -223,6 +246,11 @@ export function NotificationsCenterPage() {
   const { mutate: markAllRead } = useMarkAllNotificationsRead();
 
   const notifications = useMemo(() => data?.notifications ?? [], [data]);
+  // La misma query del home (ya en caché): con qué ubicar el movimiento de una
+  // notificación de plata que llega sin su link al detalle.
+  const { walletAddress } = useConfigStore();
+  const { data: depositsData } = useDepositsComplete(walletAddress);
+  const transactions = useMemo(() => buildTransactions(depositsData?.deposits ?? []), [depositsData]);
   const unreadCount = data?.unread ?? 0;
 
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
@@ -263,7 +291,7 @@ export function NotificationsCenterPage() {
     if (!n.read) {
       markRead(n.id);
     }
-    const link = notificationLink(n);
+    const link = notificationLink(n, transactions);
     if (link) {
       router.push(link);
     }
@@ -325,7 +353,12 @@ export function NotificationsCenterPage() {
               <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 px-1">{label}</h2>
               <ul className="rounded-lg bg-white overflow-hidden divide-y divide-gray-200">
                 {items.map((n) => (
-                  <NotificationItem key={n.id} notification={n} onPress={() => onNotificationPress(n)} />
+                  <NotificationItem
+                    key={n.id}
+                    notification={n}
+                    link={notificationLink(n, transactions)}
+                    onPress={() => onNotificationPress(n)}
+                  />
                 ))}
               </ul>
             </section>

@@ -72,6 +72,8 @@ export function AppShell({
     (pathname?.startsWith('/qr') ||
       pathname?.startsWith('/portafolio') ||
       pathname?.startsWith('/concierge') ||
+      pathname?.startsWith('/notifications') ||
+      pathname?.startsWith('/transactions') ||
       pathname?.startsWith('/world') ||
       pathname?.startsWith('/explore/')) ??
     false;

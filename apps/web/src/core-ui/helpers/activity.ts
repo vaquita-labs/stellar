@@ -64,6 +64,13 @@ const fromBaseUnits = (v: unknown, decimals: number): number | null => {
   if (!raw || !/^\d+$/.test(raw)) return null;
   return Number(raw) / 10 ** decimals;
 };
+/**
+ * i128::MAX. Blend reads it as "everything there is", and the app passes it to
+ * empty the savings, so in a record it is not a figure: the amount that came
+ * out is simply not written there.
+ */
+const EVERYTHING = ((1n << 127n) - 1n).toString();
+const isEverything = (v: unknown) => (typeof v === 'number' ? String(v) : asString(v)) === EVERYTHING;
 const shortAddress = (address: string | null) => (address ? `${address.slice(0, 4)}…${address.slice(-4)}` : null);
 
 /**
@@ -151,7 +158,7 @@ export function describeRecord(
         // 0 supply, 2 supply collateral; 1 withdraw, 3 withdraw collateral.
         if (requestType === 0 || requestType === 2) kind = 'flexibleIn';
         else if (requestType === 1 || requestType === 3) kind = 'flexibleOut';
-        if (kind !== 'other') amount = fromBaseUnits(raw, decimals);
+        if (kind !== 'other') amount = isEverything(raw) ? null : fromBaseUnits(raw, decimals);
       }
     }
   }
