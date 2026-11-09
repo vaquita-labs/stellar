@@ -59,10 +59,9 @@ function DetailsSkeleton() {
   );
 }
 
-/** `onBack` lo pasa quien la muestra sobre otra cosa (el panel de la lista o el
- *  modal del home) para cerrarla en vez de navegar; en la ruta a pantalla
- *  completa (entrada directa o refresh) se vuelve sin más. */
-export function TransactionDetailsPage({ transactionId, onBack }: { transactionId: string; onBack?: () => void }) {
+/** Pantalla propia en /transactions/[id]: no es una capa sobre la lista ni un
+ *  modal, así que se llega igual desde la lista, una notificación o un link. */
+export function TransactionDetailsPage({ transactionId }: { transactionId: string }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { walletAddress, network } = useConfigStore();
@@ -104,6 +103,17 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
     }
     await navigator.clipboard.writeText(explorerUrl);
     addSuccessToast(t('transactions.details.linkCopied', 'Link copied'));
+  };
+
+  // Se llega desde la lista, desde una notificación o desde el home, así que el
+  // back vuelve por el historial. Con un link directo (pestaña nueva) no hay a
+  // dónde volver: ahí cae en la lista en vez de salir de la app.
+  const goBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace('/transactions');
+    }
   };
 
   const kind = transaction?.kind;
@@ -265,7 +275,7 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
   return (
     <PageLayout
       title={t('transactions.details.title', 'Transaction details')}
-      onBack={onBack ?? (() => router.back())}
+      onBack={goBack}
       headerGap="gap-2"
       contentGap="gap-3"
       // flex-1: el contenido ocupa el alto disponible para que el mt-auto de los

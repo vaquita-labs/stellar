@@ -4,8 +4,8 @@ import { expect, test } from './fixtures';
  * What the auth gate hands to `/login` is where the visitor gets sent back to
  * after signing in, and it has to carry the query string.
  *
- * Private routes keep state there — `?tx=` opens a transaction's detail,
- * `?period=` picks the portfolio's window. Someone opening a shared link
+ * Private routes keep state there — `?period=` picks the portfolio's window.
+ * Someone opening a shared link
  * without a session meets the gate first, and `redirect` is the only record of
  * where they were going: a path without its query lands them on the plain screen
  * with no way back to the thing the link was for.
@@ -15,7 +15,10 @@ import { expect, test } from './fixtures';
  * the URL is never rebuilt and a dropped query would go unnoticed. Same trick as
  * `onboarding.spec.ts` — prime the locale, never the secret.
  */
-const DEEP_LINK = '/transactions?tx=e2e-deep-link-probe';
+// Not `/transactions?tx=…`: that one is redirected server-side to the detail's
+// own route before the gate ever sees it, so it would no longer prove anything
+// about the query string.
+const DEEP_LINK = '/portafolio?period=2592000000';
 
 test.describe('deep link', () => {
   test('the auth gate sends the whole URL to the login screen, query included', async ({ page }) => {

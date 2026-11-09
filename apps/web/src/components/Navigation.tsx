@@ -96,8 +96,9 @@ function useShopNavHandler() {
 
   return (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    if (pathname !== '/home') {
-      router.push('/home');
+    // The shop edits the 3D world, which lives on /apps.
+    if (pathname !== '/apps') {
+      router.push('/apps');
     }
     setIsEditingMap(true);
     setEditMode(EditionMode.SELECT);

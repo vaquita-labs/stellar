@@ -3,6 +3,7 @@
 import type { TxHistoryRecord } from '@pollar/core';
 import { usePollar } from '@pollar/react';
 import { useQuery } from '@tanstack/react-query';
+import { assetCode } from '../helpers/strings';
 import { useConfigStore } from '../stores';
 
 export type ActivityKind = 'sent' | 'received' | 'flexibleIn' | 'flexibleOut' | 'lockedIn' | 'lockedOut' | 'badge' | 'other';
@@ -42,7 +43,9 @@ export function describeRecord(
 ): ActivityItem {
   const details = record.details ?? {};
   const amount = asNumber(details.amount) ?? asNumber(details.value);
-  const asset = asString(details.assetCode) ?? asString(details.asset) ?? asString(details.symbol);
+  // `details.asset` is the full `CODE:ISSUER` name; a row only has room for the code.
+  const rawAsset = asString(details.assetCode) ?? asString(details.asset) ?? asString(details.symbol);
+  const asset = rawAsset ? assetCode(rawAsset) : null;
   const method = asString(details.method);
   const contractId = asString(details.contractId) ?? asString(details.contract);
   const from = asString(details.from) ?? asString(details.source);

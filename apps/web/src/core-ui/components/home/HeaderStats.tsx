@@ -1,24 +1,20 @@
 'use client';
 
-import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { useMapStore, useConfigStore } from '@/core-ui/stores';
 import { Spinner } from '@heroui/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiAlertCircle, FiBell, FiChevronRight, FiHeadphones } from 'react-icons/fi';
+import { FiBell, FiHeadphones } from 'react-icons/fi';
 import {
-  usePassiveUsdc,
-  useDepositsComplete,
   useProfileData,
   useProfileExperience,
   useProfileRewards,
   useProfileStreak,
   useUnreadNotificationsCount,
 } from '../../hooks';
-import { GOLD_COIN, useElementPositionsStore, useHideBalance, usePendingCreditStore } from '../../stores';
+import { GOLD_COIN, useElementPositionsStore } from '../../stores';
 import { PageHeader } from '../molecules';
 import { useModalPresence } from '../molecules/AppModal';
 import { CoinsModal, ExperienceModal, InstallButton, StreakModal } from '../organisms';
@@ -26,74 +22,33 @@ import { VaquitaAvatarCircle } from '../avatar/VaquitaAvatar';
 import { DailyRewardChest } from './DailyRewardChest';
 import { MapClock } from './MapClock';
 import { MapQuickActions } from './MapQuickActions';
-import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
-import { AccrualTerm, LiveBalance } from './LiveBalance';
-import { BalanceEye } from '../molecules/BalanceEye';
 import { PressableButton } from '../molecules/PressableButton';
 import {
-  HOME_TOUR_ANCHOR_BALANCE,
   HOME_TOUR_ANCHOR_HELP,
   HOME_TOUR_ANCHOR_PROFILE,
 } from '../organisms/Tutorial/homeTourConfig';
 
 /**
- * The parts of the header that belong to the game and the map: the balance
- * pill (the dashboard shows the balance now), the streak/coins/stars row and
- * the floating column of quick actions with the daily chest. Off at the
- * user's request (2026-10-31) while /home is the money dashboard; everything
- * stays wired and comes back by flipping this. What remains is the avatar,
- * the greeting, install, notifications and help.
+ * `game` turns on the parts of the header that belong to the game and the map:
+ * the balance pill, the streak/coins/stars row and the floating column with the
+ * clock, quick actions and the daily chest. On over the 3D world (/apps); off on
+ * the money dashboard (/home), which shows the balance itself. What is always
+ * there is the avatar, the greeting, install, notifications and help.
  */
-const SHOW_GAME_HEADER = false;
-
-export const HeaderStats = () => {
+export const HeaderStats = ({ game = false }: { game?: boolean }) => {
   const { t } = useTranslation();
   const [showStreakModal, setShowStreakModal] = useState(false);
   const [showCoinsModal, setShowCoinsModal] = useState(false);
   const [showExperienceModal, setShowExperienceModal] = useState(false);
-  // El saldo abre el portafolio navegando a /portafolio: esa ruta la intercepta
-  // el slot `@modal` y se pinta como overlay sobre /home (el mundo 3D queda
-  // montado detrás, no se recarga). El panel y las posiciones viven ahí, en
-  // <PortfolioFlow>. Ver [[portfolio-overlay-flow]].
-  const router = useRouter();
-  // Normalmente estamos en /home y esto navega (la ruta la intercepta @modal y
-  // se pinta el overlay). Red de seguridad: si por una desincronización previa
-  // del historial la URL ya quedó parada en /portafolio con el overlay cerrado,
-  // un push idéntico Next lo deduplica a no-op y el botón "no abre". En ese caso
-  // (el saldo solo es visible/tocable si el overlay NO está encima) forzamos una
-  // navegación real con un query distinto para re-disparar la ruta interceptora.
-  const openPortfolioPanel = () => {
-    if (window.location.pathname === '/portafolio') {
-      router.push(`/portafolio?r=${Date.now()}`);
-    } else {
-      router.push('/portafolio');
-    }
-  };
   // Mantienen el modal montado mientras corre la animación de salida.
   const streakModalMounted = useModalPresence(showStreakModal);
   const coinsModalMounted = useModalPresence(showCoinsModal);
   const experienceModalMounted = useModalPresence(showExperienceModal);
-  const { walletAddress, token } = useConfigStore();
+  const { walletAddress } = useConfigStore();
   // El contador del badge de la campana. La query ya la refresca
   // <ListenNotificationsChanges> con el evento de Ably, así que el número se
   // actualiza solo.
   const unreadNotifications = useUnreadNotificationsCount();
-  const hideBalance = useHideBalance();
-  // Después de comprar con moneda local la plata tarda en acreditarse, y hasta
-  // que entra, el saldo de acá muestra un número que ya sabemos viejo. Mientras
-  // dura esa espera la pastilla parpadea: no es un error ni un saldo cargando,
-  // es plata en camino. Se apaga cuando la plata llega y `AutoInvest` ofrece
-  // invertirla, o al vencer la ventana del proveedor: ese final feliz puede no
-  // pasar nunca (wallet externa, prompt en opt-out, un pago que nadie acredita)
-  // y un saldo titilando para siempre sería peor que uno quieto.
-  const pendingUntil = usePendingCreditStore((s) => s.pendingUntil);
-  const clearPendingCredit = usePendingCreditStore((s) => s.clearPendingCredit);
-  const balancePending = pendingUntil != null;
-  useEffect(() => {
-    if (pendingUntil == null) return;
-    const timer = setTimeout(clearPendingCredit, Math.max(0, pendingUntil - Date.now()));
-    return () => clearTimeout(timer);
-  }, [pendingUntil, clearPendingCredit]);
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
   const setEditMode = useMapStore((s) => s.setEditMode);
@@ -102,80 +57,8 @@ export const HeaderStats = () => {
 
   const { data: profileData } = useProfileData();
   const { data: streakData, isLoading: streakLoading } = useProfileStreak();
-  const { data: depositsData, isLoading: depositsLoading } = useDepositsComplete(walletAddress);
-  // Posición de depósito directo a Blend (on-chain). Es el nivel base del
-  // portafolio: entra al total junto con los locks de Vaquita. Acá se usa la
-  // versión que NO tickea: el saldo se proyecta en vivo dentro de <LiveBalance>,
-  // fuera del render (ver el comentario del saldo más abajo).
-  const {
-    data: blendPosition,
-    isLoading: blendLoading,
-    isError: blendError,
-    refetch: refetchBlend,
-    settled: blendSettled,
-    ratePerMs: blendRatePerMs,
-    updatedAt: blendUpdatedAt,
-  } = usePassiveUsdc(walletAddress);
   const { data: profileRewards } = useProfileRewards();
   const { data: experienceData } = useProfileExperience();
-  const { activeDeposits, activeDepositsTotalAmount } = getDepositsData(depositsData?.deposits ?? []);
-
-  // Ganancia estimada (proyección a vencimiento) sumada desde cada depósito,
-  // que reporta su estimación según el APY de su propio lock period.
-  const [earningsById, setEarningsById] = useState<Record<number, DepositEarnings>>({});
-  const reportEarnings = useCallback((id: number, earnings: DepositEarnings) => {
-    setEarningsById((prev) => {
-      const current = prev[id];
-      if (
-        current &&
-        current.vaquita === earnings.vaquita &&
-        current.protocol === earnings.protocol &&
-        current.ratePerMs === earnings.ratePerMs
-      ) {
-        return prev;
-      }
-      return { ...prev, [id]: earnings };
-    });
-  }, []);
-  // Total = locks (capital + interés devengado en vivo) + la posición pasiva
-  // (nivel base, líquido: vault de DeFindex o Blend según el flag). Se parte en
-  // dos: lo QUIETO va en `balanceBase` y lo que avanza solo en `liveTerms`, que
-  // <LiveBalance> proyecta y pinta en cada tick sin re-renderizar el header. El
-  // término pasivo sale de la MISMA tasa que usa el "Available" del retiro, así
-  // ambos corren juntos y muestran el mismo número (ver `usePassiveUsdc`).
-  const balanceBase = activeDepositsTotalAmount + blendSettled;
-  const liveTerms = useMemo<AccrualTerm[]>(() => {
-    // Cada depósito reporta cuánto rinde por milisegundo, así que el contador
-    // avanza en el cliente sin volver a pedirle nada al servidor.
-    const terms = activeDeposits.flatMap<AccrualTerm>((d) => {
-      const earnings = earningsById[d.id];
-      if (!earnings) return [];
-      // Igual que en la card: la lista viene cacheada, así que el "ahora" real
-      // se deriva del reloj del servidor + lo transcurrido desde el fetch. Ese
-      // desfasaje se hornea en el ancla, y así el contador puede leer el reloj
-      // del cliente y nada más.
-      const skew = d.serverTimestamp && d.fetchedAtTimestamp ? d.fetchedAtTimestamp - d.serverTimestamp : 0;
-      return [{ ratePerMs: earnings.ratePerMs, maxInterest: earnings.maxInterest, anchor: d.createdTimestamp + skew }];
-    });
-    // Blend devenga desde el momento del fetch y no tiene vencimiento: sin tope.
-    if (blendUpdatedAt) {
-      terms.push({ ratePerMs: blendRatePerMs, maxInterest: Infinity, anchor: blendUpdatedAt });
-    }
-    return terms;
-  }, [activeDeposits, earningsById, blendRatePerMs, blendUpdatedAt]);
-
-  // Reglas para NO asustar con la plata:
-  // - `blendPending`: primer load sin valor en cache todavía. No mostramos un
-  //   total parcial (locks sin Blend) que después pega un salto: mostramos el
-  //   spinner del saldo hasta saber el número completo.
-  // - `blendFailed`: se agotaron los reintentos y no hay valor. En vez de
-  //   mostrar un total MENOR al real en silencio, avisamos y ofrecemos
-  //   reintentar. Si hay valor en cache (aunque viejo), se muestra ese y no se
-  //   considera "failed".
-  const blendPending = blendLoading && !blendPosition;
-  const blendFailed = blendError && !blendPosition;
-  const balanceLoading = (depositsLoading && !depositsData) || blendPending;
-
   const displayName = profileData?.nickname || profileData?.fullName || '';
 
   const totalStreak = (streakData?.yesterdayStreak || 0) + (streakData?.todayStreak ? 1 : 0);
@@ -236,10 +119,10 @@ export const HeaderStats = () => {
 
   return (
     <div className="w-full relative">
-      {/* Reporta la ganancia estimada de cada depósito activo para el desglose. */}
-      {activeDeposits.map((d) => (
-        <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
-      ))}
+      {/* The orange bar (avatar, greeting, notifications, help) belongs to the
+          dashboard. Over the world (/apps) it would repeat /home, so the world
+          keeps only the game row and the floating column below it. */}
+      {!game && (
       <div className="w-full px-4 pt-2 pb-2 bg-primary rounded-g">
         <div className="max-w-xl mx-auto flex items-center gap-3">
           {/* Avatar y campana llevan el mismo borde negro con la base más
@@ -270,64 +153,8 @@ export const HeaderStats = () => {
                 <p className="text-base text-black/80 leading-none truncate">
                   {t('home.stats.greeting', 'Hi,')} <span className="font-bold text-black">@{displayName}</span>
                 </p>
-                {/* El ojo global vive junto al saldo del tablero (HomeDashboard),
-                    que es la plata que tapa; acá, sin saldo, no tiene sentido. */}
-                {SHOW_GAME_HEADER && <BalanceEye className="-my-1" />}
               </div>
             )}
-            {/* El saldo es la puerta al portafolio: se pinta como botón (crema
-                sobre el naranja del header + borde negro, el idioma de botones
-                de la app) para que se lea como algo que se toca, no como un
-                dato. Antes abría el historial de movimientos; ese sigue
-                accesible desde TotalDepositsButton y SavingsStats. */}
-            {SHOW_GAME_HEADER && (
-              <div className="flex items-center gap-1.5 self-start max-w-full">
-                <PressableButton
-                  variant="cream"
-                  onClick={openPortfolioPanel}
-                  ariaLabel={t('home.stats.apyAria', 'Portfolio')}
-                  dataTutorial={HOME_TOUR_ANCHOR_BALANCE}
-                  // w-fit: la pastilla ABRAZA el número (no llena todo el ancho, que
-                  // dejaba un vacío enorme adentro con saldos cortos). Como ahora
-                  // SIEMPRE mostramos los 7 decimales, el número es más largo y de
-                  // ancho casi constante, así que la pastilla queda snug y estable.
-                  // Alineada a la izquierda, mismo borde que el saludo.
-                  className={`w-fit max-w-full self-start justify-start min-w-0 py-2${balancePending ? ' animate-pulse' : ''}`}
-                >
-                  {balanceLoading ? (
-                    <Spinner size="sm" color="current" />
-                  ) : (
-                    <span data-tutorial="tutorial-balance" className="font-bold text-black tabular-nums leading-none truncate">
-                      {hideBalance ? (
-                        <span className="text-xl">••••</span>
-                      ) : (
-                        <LiveBalance base={balanceBase} terms={liveTerms} />
-                      )}
-                    </span>
-                  )}
-                  {/* La pastilla es crema clara con un número adentro: sin esto se
-                    lee como un campo de texto, no como el acceso al portafolio.
-                    El chevron es la señal de "esto abre algo". */}
-                  <FiChevronRight aria-hidden className="h-5 w-5 shrink-0 text-black/60" />
-                </PressableButton>
-                {/* Nunca ocultamos que un saldo no se pudo confirmar: si Blend
-                  falló y no hay valor en cache, el total mostrado NO incluye esa
-                  parte, así que lo avisamos y dejamos reintentar en el acto en
-                  vez de mentir con un número menor. */}
-                {blendFailed ? (
-                  <button
-                    type="button"
-                    onClick={() => void refetchBlend()}
-                    aria-label={t('home.stats.balanceRetry', 'Retry loading balance')}
-                    title={t('home.stats.balanceSyncError', "Couldn't load your Blend balance. Tap to retry.")}
-                    className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-white/80 border border-black/20 text-amber-600 transition active:translate-y-[1px]"
-                  >
-                    <FiAlertCircle className="w-4 h-4" />
-                  </button>
-                ) : null}
-              </div>
-            )}
-
             {/* OCULTOS A PROPÓSITO (2026-07-21): acá vivían dos chips bajo el
                 saldo. El verde mostraba el APY base y abría <PortfolioPanel>;
                 ese punto de entrada se mudó al propio saldo (arriba), así que
@@ -376,6 +203,12 @@ export const HeaderStats = () => {
           </div>
         </div>
       </div>
+      )}
+      {/* Over the world there is no orange bar for the game row to hang from, so
+          this spacer is what keeps it off the top edge (and below the notch in
+          the installed app). The row and the floating column are positioned
+          from the bottom of this wrapper, so both move down together. */}
+      {game && <div aria-hidden className="h-[calc(env(safe-area-inset-top)+12px)]" />}
 
       {/* Racha, monedas y experiencia ABREN cada uno su modal. Como fila de
           números sueltos se leían como un panel de datos, así que cada uno es
@@ -393,7 +226,7 @@ export const HeaderStats = () => {
           Offsets en px fijos (no las clases rem de Tailwind) para que la
           distancia al bloque naranja sea la misma en todos los dispositivos,
           aunque el usuario tenga el tamaño de fuente del sistema agrandado. */}
-      {SHOW_GAME_HEADER && (
+      {game && (
         <div className="absolute left-0 right-0 -bottom-[36px] z-20 pointer-events-none">
           <div className="bg-white/40 backdrop-blur-md pointer-events-auto">
             <div className="max-w-xl mx-auto flex items-center justify-between gap-2 px-2 py-1.5">
@@ -462,7 +295,7 @@ export const HeaderStats = () => {
           en el mismo contenedor centrado max-w-xl para que arranquen a la misma
           altura y a la misma distancia del naranja en cualquier pantalla.
           La columna derecha es solo móvil: en escritorio vive en el sidebar. */}
-      {SHOW_GAME_HEADER && (
+      {game && (
         <div className="absolute left-0 right-0 top-full mt-[40px] px-1 z-20 pointer-events-none">
           <div className="max-w-xl mx-auto flex items-start justify-between gap-2">
             <div className="pointer-events-auto">

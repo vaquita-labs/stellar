@@ -4,6 +4,7 @@ import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import {
   type ActivityItem,
+  EARNINGS_BARS,
   EarningsUnavailableError,
   type EarningsPeriod,
   useDefiEarnings,
@@ -16,7 +17,7 @@ import { Spinner } from '@heroui/react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type PointerEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { IconType } from 'react-icons';
 import { FiArrowDownLeft, FiArrowUpRight, FiAward, FiChevronRight, FiFileText, FiPocket, FiTrendingUp } from 'react-icons/fi';
@@ -35,6 +36,59 @@ function barLabel(start: string, period: EarningsPeriod, language: string): stri
   if (period === 'daily') return date.toLocaleDateString(language, { day: 'numeric', month: 'short' }).replace('.', '');
   if (period === 'monthly') return date.toLocaleDateString(language, { month: 'short' });
   return String(date.getFullYear());
+}
+
+/** Bars the strip shows at once; the rest are a swipe away. */
+const VISIBLE_BARS = 6;
+/** Years drawn after the current one, so "this year" sits mid-strip with what is still to come beside it. */
+const FUTURE_YEARS = 3;
+/** The first year the yearly strip draws: nothing was saved before it, so earlier years are not offered. */
+const FIRST_YEAR = 2024;
+/** How long the scroll bar under the strip stays after the last movement, in ms. */
+const SCROLL_HINT_MS = 900;
+/** The tallest bar in view, as a share of the column: the rest is the figure above it. */
+const FULL_BAR = 90;
+
+interface ChartBar {
+  key: string;
+  label: string;
+  earned: number;
+  estimated: boolean;
+  /** Nothing earned in it (or it has not happened yet): drawn as an outline, without a figure. */
+  ghost: boolean;
+}
+
+/** A steady height (30–75%) for a bar with nothing in it, so the outlines read as a skyline and never jump between renders. */
+function ghostHeight(seed: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i++) hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619);
+  hash ^= hash >>> 15;
+  return 30 + ((hash >>> 0) % 46);
+}
+
+/** The calendar buckets a period would bring, ending on today: what the strip draws while there is nothing earned to show. */
+function emptyBuckets(period: EarningsPeriod): { start: string; earned: number; estimated: boolean }[] {
+  const now = new Date();
+  const count = EARNINGS_BARS[period];
+  return Array.from({ length: count }, (_, i) => {
+    const back = count - 1 - i;
+    const start =
+      period === 'daily'
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - back)
+        : period === 'monthly'
+          ? new Date(now.getFullYear(), now.getMonth() - back, 1)
+          : new Date(now.getFullYear() - back, 0, 1);
+    return { start: start.toISOString(), earned: 0, estimated: false };
+  });
+}
+
+/** Where the strip is, drawn on the bar under it: the thumb is as wide as the share of the bars in view. */
+function syncThumb(strip: HTMLElement | null, thumb: HTMLElement | null) {
+  if (!strip || !thumb) return;
+  const overflow = strip.scrollWidth - strip.clientWidth;
+  const share = strip.scrollWidth > 0 ? Math.min(1, strip.clientWidth / strip.scrollWidth) : 1;
+  thumb.style.width = `${share * 100}%`;
+  thumb.style.left = `${overflow > 0 ? (strip.scrollLeft / overflow) * (1 - share) * 100 : 0}%`;
 }
 
 /** Two decimals, with a third and fourth while the figure is under a cent, so a small projection still shows something. */
@@ -105,9 +159,34 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
   const balanceBase = activeDepositsTotalAmount + passiveSettled;
   const perDay = terms.reduce((sum, term) => sum + term.ratePerMs, 0) * 86_400_000;
   const earnings = useDefiEarnings(period);
-  const bars = earnings.data?.buckets ?? [];
-  const max = Math.max(...bars.map((b) => b.earned), 0);
+  const buckets = earnings.data?.buckets;
+  const pending = earnings.isPending;
   const language = i18n.language;
+  const bars = useMemo<ChartBar[]>(() => {
+    // No reading at all (nothing saved yet, or no earnings route): the same
+    // calendar, empty, so the strip still shows its outlines instead of a void.
+    // Not while the reading is on its way: the strip is not on screen then,
+    // and its bars must arrive with it so it opens parked on today.
+    const all = buckets?.length ? buckets : pending ? [] : emptyBuckets(period);
+    const source = period === 'yearly' ? all.filter((b) => new Date(b.start).getFullYear() >= FIRST_YEAR) : all;
+    const list = source.map<ChartBar>((b) => ({
+      key: b.start,
+      label: barLabel(b.start, period, language),
+      earned: b.earned,
+      estimated: b.estimated,
+      ghost: b.earned <= 0,
+    }));
+    // By year the strip does not end on today: the years still to come follow
+    // as outlines, which leaves the current one in the middle of the six.
+    const last = source[source.length - 1];
+    if (period === 'yearly' && last) {
+      const year = new Date(last.start).getFullYear();
+      for (let i = 1; i <= FUTURE_YEARS; i++) {
+        list.push({ key: `future-${year + i}`, label: String(year + i), earned: 0, estimated: false, ghost: true });
+      }
+    }
+    return list;
+  }, [buckets, pending, period, language]);
   const activity = useRecentActivity(3);
 
   // Money that comes back to the wallet is green with a plus, like the
@@ -171,9 +250,11 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
           </div>
           <p className="truncate text-[11px] text-gray-600">{subtitleOf(item)}</p>
         </div>
-        <div className="shrink-0 text-right">
+        {/* Capped and truncated: whatever the record brings as amount or asset,
+            this column can never push the title out or widen the card. */}
+        <div className="min-w-0 max-w-[60%] shrink-0 text-right">
           {item.amount !== null && (
-            <p className={`text-[13px] font-bold tabular-nums ${green ? 'text-success' : 'text-black'}`}>
+            <p className={`truncate text-[13px] font-bold tabular-nums ${green ? 'text-success' : 'text-black'}`}>
               {hideBalance ? '••••' : `${meta.sign}${formatTokenPrecise(item.amount, 2)} ${item.asset ?? ''}`.trim()}
             </p>
           )}
@@ -183,16 +264,56 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
     );
   };
 
-  // The strip opens on today and scrolls back into the past.
+  // The strip opens on its latest bars and scrolls back into the past.
   const stripRef = useRef<HTMLDivElement>(null);
-  const barsKey = bars.length ? `${period}:${bars[bars.length - 1]!.start}` : '';
+  const thumbRef = useRef<HTMLDivElement>(null);
+  const barsKey = bars.length ? `${period}:${bars[bars.length - 1]!.key}` : '';
   useEffect(() => {
     const el = stripRef.current;
     if (el) el.scrollLeft = el.scrollWidth;
+    syncThumb(el, thumbRef.current);
   }, [barsKey]);
 
+  // The scale belongs to the stretch travelled: from the first bar in view up
+  // to the latest one. Parked on today it is set by the last six bars alone,
+  // whatever happened before; swiping back brings older bars into the stretch
+  // and, when one of them is taller, everything resizes to it.
+  // Until the strip reports a scroll for these bars, it is parked at the end.
+  const lastWindow = Math.max(0, bars.length - VISIBLE_BARS);
+  const [scrolled, setScrolled] = useState({ key: '', first: 0 });
+  const firstVisible = scrolled.key === barsKey ? Math.min(scrolled.first, lastWindow) : lastWindow;
+  // The bar under the strip behaves like a phone's scroll bar: it shows while
+  // the strip moves and fades out once it rests.
+  const [scrolling, setScrolling] = useState(false);
+  const scrollIdle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(scrollIdle.current), []);
+  const onStripScroll = () => {
+    const el = stripRef.current;
+    if (!el || !bars.length) return;
+    syncThumb(el, thumbRef.current);
+    setScrolling(true);
+    clearTimeout(scrollIdle.current);
+    scrollIdle.current = setTimeout(() => setScrolling(false), SCROLL_HINT_MS);
+    // One step is a bar plus its gap: the distance between two neighbours.
+    const [a, b] = [el.children[0] as HTMLElement | undefined, el.children[1] as HTMLElement | undefined];
+    const step = a && b ? b.offsetLeft - a.offsetLeft : el.scrollWidth / bars.length;
+    const first = Math.max(0, Math.min(lastWindow, Math.round(el.scrollLeft / step)));
+    setScrolled((prev) => (prev.key === barsKey && prev.first === first ? prev : { key: barsKey, first }));
+  };
+  const max = Math.max(...bars.slice(firstVisible).map((b) => b.earned), 0);
+  // With a mouse the bar is a handle too (it shows on hover): pressing or
+  // dragging it moves the strip so the thumb ends up under the pointer.
+  const seekStrip = (event: PointerEvent<HTMLDivElement>) => {
+    const el = stripRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    const track = event.currentTarget.getBoundingClientRect();
+    const share = el.clientWidth / el.scrollWidth;
+    const ratio = ((event.clientX - track.left) / track.width - share / 2) / (1 - share);
+    el.scrollLeft = Math.max(0, Math.min(1, ratio)) * (el.scrollWidth - el.clientWidth);
+  };
+
   return (
-    <div className="flex h-full w-full flex-col gap-3 overflow-y-auto px-4 pb-6 pt-4">
+    <div className="flex h-full w-full flex-col gap-3 overflow-y-auto overflow-x-hidden px-4 pb-6 pt-4">
       {activeDeposits.map((d) => (
         <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
       ))}
@@ -245,7 +366,7 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
           latest on the right, and earlier ones by swiping left. No card around
           it: the strip runs edge to edge so there is nothing to bump into. */}
       <section className="flex flex-col gap-3 py-2">
-        {earnings.data && (
+        {earnings.data && earnings.data.totalEarned > 0 && (
           <p className="text-right text-xs font-semibold text-[#018222]">
             {t('dashboard.earnedTotal', '{{amount}} so far', {
               amount: maskAmount(money(earnings.data.totalEarned), hideBalance),
@@ -256,44 +377,79 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
           <div className="flex h-72 items-center justify-center">
             <Spinner size="lg" color="current" />
           </div>
-        ) : earnings.isError ? (
+        ) : earnings.isError && !(earnings.error instanceof EarningsUnavailableError) ? (
           <p className="flex h-72 items-center justify-center px-6 text-center text-sm text-gray-500">
-            {earnings.error instanceof EarningsUnavailableError
-              ? t('dashboard.earningsSoon', 'Soon you will see here what your savings earn, day by day.')
-              : t('dashboard.earningsFailed', 'We could not read your earnings. Pull to refresh.')}
+            {t('dashboard.earningsFailed', 'We could not read your earnings. Pull to refresh.')}
           </p>
         ) : (
-          <div
-            ref={stripRef}
-            className="flex h-72 snap-x snap-mandatory items-end gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {bars.map((bar) => {
-              const height = max > 0 ? Math.max(4, (bar.earned / max) * 85) : 4;
-              return (
-                <div
-                  key={bar.start}
-                  // Six bars fill the strip exactly (five gaps of 0.5rem), so
-                  // none is cut at an edge; earlier ones are a swipe away.
-                  className="flex h-full w-[calc((100%-2.5rem)/6)] shrink-0 snap-end flex-col items-center gap-1"
-                >
-                  <div className="flex w-full flex-1 flex-col items-center justify-end gap-1">
-                    <span className="whitespace-nowrap text-[9px] font-semibold text-black tabular-nums">
-                      {hideBalance ? '••' : money(bar.earned)}
+          <div className="relative">
+            <div
+              ref={stripRef}
+              onScroll={onStripScroll}
+              // `no-scrollbar`: the global orange scrollbar would sit on top of
+              // the labels; the bar below the strip takes its place while it moves.
+              className="no-scrollbar flex h-72 snap-x snap-mandatory items-end gap-2 overflow-x-auto"
+            >
+              {bars.map((bar) => {
+                // A bar off screen can be taller than the one that sets the
+                // scale: it is capped until it comes into view and takes over.
+                const height = bar.ghost ? ghostHeight(bar.key) : Math.max(4, Math.min(1, bar.earned / max) * FULL_BAR);
+                return (
+                  <div
+                    key={bar.key}
+                    // Six bars fill the strip exactly (five gaps of 0.5rem), so
+                    // none is cut at an edge; earlier ones are a swipe away.
+                    className="flex h-full w-[calc((100%-2.5rem)/6)] shrink-0 snap-end flex-col items-center gap-1"
+                  >
+                    <div className="flex w-full flex-1 flex-col items-center justify-end gap-1">
+                      {!bar.ghost && (
+                        <span className="whitespace-nowrap text-[9px] font-semibold text-black tabular-nums">
+                          {hideBalance ? '••' : money(bar.earned)}
+                        </span>
+                      )}
+                      <motion.div
+                        initial={false}
+                        animate={{ height: `${height}%` }}
+                        transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+                        className={
+                          'w-full rounded-md border ' +
+                          (bar.ghost
+                            ? 'border-dashed border-black/25 bg-black/[0.03]'
+                            : 'border-black border-b-2 ' + (bar.estimated ? 'bg-success/40' : 'bg-success'))
+                        }
+                      />
+                    </div>
+                    <span className={`whitespace-nowrap text-[10px] ${bar.ghost ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {bar.label}
                     </span>
-                    <motion.div
-                      initial={false}
-                      animate={{ height: `${height}%` }}
-                      transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-                      className={
-                        'w-full rounded-md border border-black border-b-2 ' +
-                        (bar.earned <= 0 ? 'bg-black/10' : bar.estimated ? 'bg-success/40' : 'bg-success')
-                      }
-                    />
                   </div>
-                  <span className="whitespace-nowrap text-[10px] text-gray-500">{barLabel(bar.start, period, language)}</span>
+                );
+              })}
+            </div>
+            {/* Where the strip is, clear of the labels and out of the layout
+                (it floats in the gap above the tabs): a thumb as wide as the
+                bars in view, there only while the strip moves. */}
+            {bars.length > VISIBLE_BARS && (
+              <div
+                aria-hidden
+                onPointerDown={(event) => {
+                  if (event.pointerType !== 'mouse') return;
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  seekStrip(event);
+                }}
+                onPointerMove={(event) => {
+                  if (event.currentTarget.hasPointerCapture(event.pointerId)) seekStrip(event);
+                }}
+                className={
+                  'absolute inset-x-0 top-full py-[3px] transition-opacity duration-300 hover:opacity-100 ' +
+                  (scrolling ? 'opacity-100' : 'opacity-0')
+                }
+              >
+                <div className="relative h-1.5 w-full rounded-full bg-black/10">
+                  <div ref={thumbRef} className="absolute inset-y-0 rounded-full border border-black bg-primary" />
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
         )}
         <SegmentedTabs

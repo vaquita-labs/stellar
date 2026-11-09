@@ -37,7 +37,7 @@ export const BootLoader = () => {
   if (isExactly('/login')) return null;
 
   // Home: header naranja + cielo + botonera.
-  if (isExactly('/') || isExactly('/home') || isUnder('/home')) return <HomeSkeleton />;
+  if (isExactly('/') || isExactly('/home') || isUnder('/home') || isExactly('/apps')) return <HomeSkeleton />;
 
   // Perfil: banner con avatar, stats y tarjetas. Sus sub-pantallas
   // (/profile/settings, /profile/friends…) son listas dentro de <PageLayout>.

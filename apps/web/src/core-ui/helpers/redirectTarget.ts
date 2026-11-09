@@ -15,7 +15,7 @@
  *
  * The path is rebuilt from the parsed URL, so what comes back is normalised and
  * always relative: no scheme, no host, and the query and hash kept — the query
- * is the point, since it carries `?tx=` and the like through the auth gate.
+ * is the point, since it carries `?period=` and the like through the auth gate.
  */
 export function internalRedirect(raw: string | null | undefined, origin: string): string | null {
   if (!raw) return null;
