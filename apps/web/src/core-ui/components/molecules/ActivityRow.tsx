@@ -2,10 +2,24 @@
 
 import type { ActivityItem } from '@/core-ui/helpers/activity';
 import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
+import { useNicknamesByAddress } from '@/core-ui/hooks/profile/useNicknamesByAddress';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { IconType } from 'react-icons';
 import { FiArrowDownLeft, FiArrowUpRight, FiAward, FiCheckCircle, FiFileText, FiPocket, FiTrendingUp } from 'react-icons/fi';
 import { formatTransactionTime } from './TransactionRow';
+
+/**
+ * Who the other side of a payment is: `@username` when the address belongs to
+ * a Vaquita profile, the shortened address otherwise (and while it loads).
+ */
+export function useCounterpartyName(item: ActivityItem | null | undefined): string | null {
+  const address = item?.counterpartyAddress ?? null;
+  const addresses = useMemo(() => (address ? [address] : []), [address]);
+  const { nicknames } = useNicknamesByAddress(addresses);
+  const nickname = address ? nicknames.get(address) : null;
+  return nickname ? `@${nickname}` : (item?.counterparty ?? null);
+}
 
 /**
  * How a movement read from the wallet's history is told to the user: its
@@ -37,21 +51,22 @@ export function useActivityMeta() {
     trust: { icon: FiCheckCircle, label: t('dashboard.activity.trust', 'Asset enabled'), sign: '', box: 'bg-[#FFF7E6]' },
     other: { icon: FiFileText, label: t('dashboard.activity.other', 'Operation'), sign: '', box: 'bg-background' },
   };
-  const subtitleOf = (item: ActivityItem) => {
-    if (item.kind === 'received') return t('dashboard.activity.from', 'From {{who}}', { who: item.counterparty ?? '' });
-    if (item.kind === 'sent') return t('dashboard.activity.to', 'To {{who}}', { who: item.counterparty ?? '' });
+  const subtitleOf = (item: ActivityItem, who: string) => {
+    if (item.kind === 'received') return t('dashboard.activity.from', 'From {{who}}', { who });
+    if (item.kind === 'sent') return t('dashboard.activity.to', 'To {{who}}', { who });
     if (item.kind === 'flexibleIn' || item.kind === 'flexibleOut') return t('dashboard.activity.flexible', 'Flexible savings');
     if (item.kind === 'lockedIn' || item.kind === 'lockedOut') return t('dashboard.activity.locked', 'Term savings');
     if (item.kind === 'badge') return t('dashboard.activity.badges', 'Badges');
     if (item.kind === 'trust') return item.asset ?? item.summary;
     return item.summary;
   };
-  return (item: ActivityItem) => {
+  /** `who`: the counterparty's name from `useCounterpartyName`, else its short address. */
+  return (item: ActivityItem, who?: string | null) => {
     const meta = META[item.kind];
     return {
       Icon: meta.icon,
       title: item.kind === 'other' ? item.summary : meta.label,
-      subtitle: subtitleOf(item),
+      subtitle: subtitleOf(item, who ?? item.counterparty ?? ''),
       sign: meta.sign,
       box: meta.box,
     };
@@ -72,7 +87,8 @@ export function ActivityRow({
   hideBalance?: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const { Icon, title, subtitle, sign, box } = useActivityMeta()(item);
+  const who = useCounterpartyName(item);
+  const { Icon, title, subtitle, sign, box } = useActivityMeta()(item, who);
   const failed = item.status === 'FAILED';
   // Nothing moved: no sign, struck through, like a failed row of the list.
   const amountColor = failed ? 'text-gray-400 line-through' : sign === '+' ? 'text-success' : 'text-black';

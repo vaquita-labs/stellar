@@ -23,6 +23,8 @@ export interface ActivityItem {
   asset: string | null;
   /** The other address of a payment, shortened; null for anything else. */
   counterparty: string | null;
+  /** The same address in full, to look up whose it is. */
+  counterpartyAddress: string | null;
   status: 'PENDING' | 'SUCCESS' | 'FAILED';
   timestamp: number;
   hash: string;
@@ -97,12 +99,14 @@ export function describeRecord(
   const rawAsset = asString(details.assetCode) ?? asString(details.asset) ?? asString(details.symbol);
   let asset = rawAsset ? assetCode(rawAsset) : null;
   let counterparty: string | null = null;
+  let counterpartyAddress: string | null = null;
   let nonce: string | null = null;
 
   const payment = (from: string | null, to: string | null) => {
     const received = !!to && to === walletAddress && from !== walletAddress;
     kind = received ? 'received' : 'sent';
-    counterparty = shortAddress(received ? from : to);
+    counterpartyAddress = received ? from : to;
+    counterparty = shortAddress(counterpartyAddress);
   };
 
   if (record.operation === 'payment' || record.operation === 'transfer' || record.operation === 'path_payment_strict_send') {
@@ -162,6 +166,7 @@ export function describeRecord(
     amount,
     asset,
     counterparty,
+    counterpartyAddress,
     status: record.status,
     timestamp: Date.parse(record.createdAt),
     hash: record.hash,
@@ -170,8 +175,35 @@ export function describeRecord(
   };
 }
 
+/** How far apart the two legs of a send out of savings can land. */
+const SEND_LEG_WINDOW_MS = 5 * 60_000;
+
+/**
+ * Sending money that sits in flexible savings takes two transactions: one
+ * pulls it out of the vault into the wallet, the next pays it out. To the user
+ * that is one thing they did — a send — so the withdrawal that only fed it is
+ * left out. It is told apart by landing just before a send of about the same
+ * amount (the withdrawal asks for a hair more, and its amount is read back
+ * from a slippage floor, so the two never match to the unit).
+ */
+const isSendLeg = (item: ActivityItem, items: ActivityItem[]) => {
+  if (item.kind !== 'flexibleOut' || item.status !== 'SUCCESS' || item.amount === null) return false;
+  const out = item.amount;
+  return items.some(
+    (send) =>
+      send.kind === 'sent' &&
+      send.status === 'SUCCESS' &&
+      send.amount !== null &&
+      send.timestamp >= item.timestamp &&
+      send.timestamp - item.timestamp <= SEND_LEG_WINDOW_MS &&
+      Math.abs(out - send.amount) <= Math.max(0.01, send.amount * 0.02),
+  );
+};
+
 /** The movements in a page of history, in the order the history gives them. */
-export const describeRecords = (records: TxHistoryRecord[], walletAddress: string, context: ActivityContext) =>
-  records
+export const describeRecords = (records: TxHistoryRecord[], walletAddress: string, context: ActivityContext) => {
+  const items = records
     .map((record) => describeRecord(record, walletAddress, context))
     .filter((item): item is ActivityItem => item !== null);
+  return items.filter((item) => !isSendLeg(item, items));
+};

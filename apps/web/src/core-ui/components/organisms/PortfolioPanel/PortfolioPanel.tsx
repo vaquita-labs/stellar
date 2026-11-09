@@ -20,6 +20,7 @@ import { PortfolioDonut } from './PortfolioDonut';
 import { AllocationStyle, getAllocationStyle } from './allocationStyles';
 import { Allocation, PortfolioPanelProps } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
+import { PageLayout } from '../../molecules/PageLayout';
 
 /**
  * Pantalla completa de inversión que abre el chip de APY del header. Muestra la
@@ -47,7 +48,7 @@ interface PortfolioRow {
   style: AllocationStyle;
 }
 
-export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: PortfolioPanelProps) {
+export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', variant = 'modal' }: PortfolioPanelProps) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
   const { data: depositsData, isFetching: depositsFetching, refetch: refetchDeposits } = useDepositsComplete(walletAddress);
@@ -246,34 +247,19 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
     [depositsData, detailView?.allocation.lockPeriod],
   );
 
-  return (
+  const footer = (
+    <div className="flex w-full gap-2">
+      <PressableButton variant="white" size="cta" className="flex-1 py-2.5!" onClick={goToPositions}>
+        {t('portfolio.seePositions', 'My positions')}
+      </PressableButton>
+      <PressableButton variant="success" size="cta" className="flex-1 py-2.5!" onClick={() => openInvest(null)}>
+        {t('portfolio.invest', 'Invest')}
+      </PressableButton>
+    </div>
+  );
+
+  const body = (
     <>
-      <AppModal
-        open={open}
-        onOpenChange={onOpenChange}
-        title={
-          <span className="inline-flex items-center gap-1.5">
-            {t('portfolio.title', 'Portfolio')}
-            {/* Tapa TODO el panel: el total del donut y la distribución de abajo.
-                Los ojos de cada bloque desaparecen mientras éste está cerrado. */}
-            <BalanceEye scope="portfolio" />
-          </span>
-        }
-        size="lg"
-        fullScreen
-        slideFrom="right"
-        bodyClassName="flex flex-col gap-4 pb-10 overflow-x-hidden"
-        footer={
-          <div className="flex w-full gap-2">
-            <PressableButton variant="white" size="cta" className="flex-1 py-2.5!" onClick={goToPositions}>
-              {t('portfolio.seePositions', 'My positions')}
-            </PressableButton>
-            <PressableButton variant="success" size="cta" className="flex-1 py-2.5!" onClick={() => openInvest(null)}>
-              {t('portfolio.invest', 'Invest')}
-            </PressableButton>
-          </div>
-        }
-      >
         {/* Donut de distribución con el total al centro: reemplaza el número
             grande y la barra horizontal. Cada opción con fondos es un arco de su
             color (mismos colores que los íconos de la lista). Debajo, la ganancia
@@ -427,7 +413,51 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC' }: Por
             ) : null}
           </div>
         )}
-      </AppModal>
+    </>
+  );
+
+  return (
+    <>
+      {variant === 'page' ? (
+        // /portafolio es una página normal (no un modal sobre /home): mismo
+        // contenido, con el header de página (back) y la barra de acciones
+        // pegada abajo mientras la distribución hace scroll.
+        <PageLayout
+          title={t('portfolio.title', 'Portfolio')}
+          onBack={onOpenChange}
+          // Tapa TODO el panel: el total del donut y la distribución de abajo.
+          rightSlot={<BalanceEye scope="portfolio" variant="circle" />}
+          headerGap="gap-4"
+          contentGap="gap-4"
+          bottomPadding="pb-0"
+          contentClassName="flex-1"
+        >
+          {body}
+          <div className="sticky bottom-0 -mx-4 mt-auto px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-background border-t border-black/10">
+            {footer}
+          </div>
+        </PageLayout>
+      ) : (
+        <AppModal
+          open={open}
+          onOpenChange={onOpenChange}
+          title={
+            <span className="inline-flex items-center gap-1.5">
+              {t('portfolio.title', 'Portfolio')}
+              {/* Tapa TODO el panel: el total del donut y la distribución de abajo.
+                  Los ojos de cada bloque desaparecen mientras éste está cerrado. */}
+              <BalanceEye scope="portfolio" />
+            </span>
+          }
+          size="lg"
+          fullScreen
+          slideFrom="right"
+          bodyClassName="flex flex-col gap-4 pb-10 overflow-x-hidden"
+          footer={footer}
+        >
+          {body}
+        </AppModal>
+      )}
 
       {detailMounted && detailView ? (
         <AllocationDetailSheet
