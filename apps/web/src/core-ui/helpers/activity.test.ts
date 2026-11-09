@@ -119,6 +119,24 @@ describe('describeRecords', () => {
     expect(items.map((item) => item.id)).toEqual(['send', 'own']);
     expect(items[0]).toMatchObject({ kind: 'sent', counterpartyAddress: OTHER });
   });
+
+  it('folds the move into flexible that follows a term withdrawal', () => {
+    const at = Date.parse('2026-10-31T17:40:00.000Z');
+    const iso = (ms: number) => new Date(ms).toISOString();
+    const items = describeRecords(
+      [
+        record({
+          id: 'in',
+          createdAt: iso(at + 60_000),
+          details: { contractId: 'CVAULT', method: 'deposit', args: [['10100000'], ['10100000'], WALLET, true] },
+        }),
+        record({ id: 'term', createdAt: iso(at), details: { contractId: 'CLOCKS', method: 'withdraw', args: [WALLET, '2'] } }),
+      ],
+      WALLET,
+      context,
+    );
+    expect(items.map((item) => item.id)).toEqual(['term']);
+  });
 });
 
 describe('buildMovements', () => {

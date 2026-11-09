@@ -21,6 +21,7 @@ import { AllocationStyle, getAllocationStyle } from './allocationStyles';
 import { Allocation, PortfolioPanelProps } from './types';
 import { PressableButton } from '../../molecules/PressableButton';
 import { PageLayout } from '../../molecules/PageLayout';
+import { PortfolioSkeleton } from '../../molecules/PageSkeleton';
 
 /**
  * Pantalla completa de inversión que abre el chip de APY del header. Muestra la
@@ -51,7 +52,12 @@ interface PortfolioRow {
 export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', variant = 'modal' }: PortfolioPanelProps) {
   const { t } = useTranslation();
   const { walletAddress, token } = useConfigStore();
-  const { data: depositsData, isFetching: depositsFetching, refetch: refetchDeposits } = useDepositsComplete(walletAddress);
+  const {
+    data: depositsData,
+    isFetching: depositsFetching,
+    isLoading: depositsLoading,
+    refetch: refetchDeposits,
+  } = useDepositsComplete(walletAddress);
 
   // Abrir el panel revalida los depósitos. El caché persistido pinta al toque
   // los últimos valores conocidos y este refetch los corrige si otra sesión
@@ -68,7 +74,16 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
   // `live`: saldo proyectado en vivo, la MISMA fuente que el header y el
   // "Available" del retiro, así el total del portfolio corre igual y coincide
   // con ellos.
-  const { apy: passiveApy, isFetching: passiveFetching, live: passiveBalance } = useLivePassiveUsdc(walletAddress);
+  const {
+    apy: passiveApy,
+    isFetching: passiveFetching,
+    live: passiveBalance,
+    isLoading: passiveLoading,
+  } = useLivePassiveUsdc(walletAddress);
+  // Primera carga (sin caché): ni depósitos ni saldo flexible todavía. En vez de
+  // pintar un $0 que después salta, la página muestra su skeleton.
+  // isLoading = sin datos Y pidiendo: si una consulta falla, no queda trabado.
+  const firstLoad = depositsLoading || passiveLoading;
 
   const router = useRouter();
   // Detalle de Blend (qué es + números).
@@ -418,7 +433,9 @@ export function PortfolioPanel({ open, onOpenChange, tokenSymbol = 'USDC', varia
 
   return (
     <>
-      {variant === 'page' ? (
+      {variant === 'page' && firstLoad ? (
+        <PortfolioSkeleton />
+      ) : variant === 'page' ? (
         // /portafolio es una página normal (no un modal sobre /home): mismo
         // contenido, con el header de página (back) y la barra de acciones
         // pegada abajo mientras la distribución hace scroll.

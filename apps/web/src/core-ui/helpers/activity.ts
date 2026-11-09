@@ -175,29 +175,41 @@ export function describeRecord(
   };
 }
 
-/** How far apart the two legs of a send out of savings can land. */
-const SEND_LEG_WINDOW_MS = 5 * 60_000;
+/** How far apart the two legs of one thing the user did can land. */
+const LEG_WINDOW_MS = 5 * 60_000;
+
+/** Same money, give or take the margin a withdrawal asks for and the dust that rides along. */
+const sameAmount = (a: number | null, b: number | null) =>
+  a === null || b === null || Math.abs(a - b) <= Math.max(0.01, Math.max(a, b) * 0.02);
 
 /**
- * Sending money that sits in flexible savings takes two transactions: one
- * pulls it out of the vault into the wallet, the next pays it out. To the user
- * that is one thing they did — a send — so the withdrawal that only fed it is
- * left out. It is told apart by landing just before a send of about the same
- * amount (the withdrawal asks for a hair more, and its amount is read back
- * from a slippage floor, so the two never match to the unit).
+ * The user's money lives in their savings — the balance they see is term plus
+ * flexible — and the wallet is only where it changes hands. So one thing they
+ * did often takes two transactions: a send out of savings pulls the money out
+ * of the vault and then pays it; a term withdrawal lands in the wallet and is
+ * then moved into flexible savings; money received is put to work. The move in
+ * or out of flexible savings that only fed the other half is left out, and the
+ * row that remains says what happened.
+ *
+ * It is told apart by landing right next to that other half, for about the
+ * same amount (a term withdrawal's amount is not in its record, so there only
+ * the timing counts).
  */
-const isSendLeg = (item: ActivityItem, items: ActivityItem[]) => {
-  if (item.kind !== 'flexibleOut' || item.status !== 'SUCCESS' || item.amount === null) return false;
-  const out = item.amount;
-  return items.some(
-    (send) =>
-      send.kind === 'sent' &&
-      send.status === 'SUCCESS' &&
-      send.amount !== null &&
-      send.timestamp >= item.timestamp &&
-      send.timestamp - item.timestamp <= SEND_LEG_WINDOW_MS &&
-      Math.abs(out - send.amount) <= Math.max(0.01, send.amount * 0.02),
-  );
+const isTransitLeg = (item: ActivityItem, items: ActivityItem[]) => {
+  if (item.status !== 'SUCCESS') return false;
+  const near = (other: ActivityItem, after: boolean) => {
+    const gap = after ? other.timestamp - item.timestamp : item.timestamp - other.timestamp;
+    return other.status === 'SUCCESS' && gap >= 0 && gap <= LEG_WINDOW_MS && sameAmount(item.amount, other.amount);
+  };
+  // Out of flexible, then on its way: paid out or locked for a term.
+  if (item.kind === 'flexibleOut') {
+    return items.some((other) => (other.kind === 'sent' || other.kind === 'lockedIn') && near(other, true));
+  }
+  // Into flexible, right after it came in: received or back from a term.
+  if (item.kind === 'flexibleIn') {
+    return items.some((other) => (other.kind === 'received' || other.kind === 'lockedOut') && near(other, false));
+  }
+  return false;
 };
 
 /** The movements in a page of history, in the order the history gives them. */
@@ -205,5 +217,5 @@ export const describeRecords = (records: TxHistoryRecord[], walletAddress: strin
   const items = records
     .map((record) => describeRecord(record, walletAddress, context))
     .filter((item): item is ActivityItem => item !== null);
-  return items.filter((item) => !isSendLeg(item, items));
+  return items.filter((item) => !isTransitLeg(item, items));
 };

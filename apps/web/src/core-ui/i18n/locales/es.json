@@ -1686,7 +1686,8 @@
       "cards": "Tarjetas",
       "support": "Ayuda",
       "apps": "Apps",
-      "world": "Mundo"
+      "world": "Mundo",
+      "portfolio": "Portafolio"
     },
     "notFound": {
       "backHome": "Volver al inicio",
@@ -3201,10 +3202,10 @@
       "all": "Ver todos",
       "received": "Recibido",
       "sent": "Enviado",
-      "flexibleIn": "A tus ahorros flexibles",
-      "flexibleOut": "De tus ahorros flexibles",
-      "lockedIn": "Ahorro a plazo",
-      "lockedOut": "Retiro de plazo",
+      "flexibleIn": "Depósito en ahorro flexible",
+      "flexibleOut": "Retiro de ahorro flexible",
+      "lockedIn": "Depósito en ahorro a plazo",
+      "lockedOut": "Retiro de ahorro a plazo",
       "badge": "Insignia reclamada",
       "trust": "Activo habilitado",
       "other": "Operación",

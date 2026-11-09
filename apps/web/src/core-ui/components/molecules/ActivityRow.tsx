@@ -35,18 +35,18 @@ export function useActivityMeta() {
     sent: { icon: FiArrowUpRight, label: t('dashboard.activity.sent', 'Sent'), sign: '-', box: 'bg-primary/30' },
     flexibleIn: {
       icon: FiTrendingUp,
-      label: t('dashboard.activity.flexibleIn', 'Into flexible savings'),
+      label: t('dashboard.activity.flexibleIn', 'Deposit to flexible savings'),
       sign: '-',
       box: 'bg-primary/30',
     },
     flexibleOut: {
       icon: FiTrendingUp,
-      label: t('dashboard.activity.flexibleOut', 'Out of flexible savings'),
+      label: t('dashboard.activity.flexibleOut', 'Withdrawal from flexible savings'),
       sign: '+',
       box: 'bg-success/25',
     },
-    lockedIn: { icon: FiPocket, label: t('dashboard.activity.lockedIn', 'Saved for a term'), sign: '-', box: 'bg-primary/30' },
-    lockedOut: { icon: FiPocket, label: t('dashboard.activity.lockedOut', 'Term withdrawn'), sign: '+', box: 'bg-success/25' },
+    lockedIn: { icon: FiPocket, label: t('dashboard.activity.lockedIn', 'Deposit to term savings'), sign: '-', box: 'bg-primary/30' },
+    lockedOut: { icon: FiPocket, label: t('dashboard.activity.lockedOut', 'Withdrawal from term savings'), sign: '+', box: 'bg-success/25' },
     badge: { icon: FiAward, label: t('dashboard.activity.badge', 'Badge claimed'), sign: '', box: 'bg-[#FFF7E6]' },
     trust: { icon: FiCheckCircle, label: t('dashboard.activity.trust', 'Asset enabled'), sign: '', box: 'bg-[#FFF7E6]' },
     other: { icon: FiFileText, label: t('dashboard.activity.other', 'Operation'), sign: '', box: 'bg-background' },
@@ -54,8 +54,9 @@ export function useActivityMeta() {
   const subtitleOf = (item: ActivityItem, who: string) => {
     if (item.kind === 'received') return t('dashboard.activity.from', 'From {{who}}', { who });
     if (item.kind === 'sent') return t('dashboard.activity.to', 'To {{who}}', { who });
-    if (item.kind === 'flexibleIn' || item.kind === 'flexibleOut') return t('dashboard.activity.flexible', 'Flexible savings');
-    if (item.kind === 'lockedIn' || item.kind === 'lockedOut') return t('dashboard.activity.locked', 'Term savings');
+    // The title already says which savings; the line under it says where the money came from or went.
+    if (item.kind === 'flexibleIn' || item.kind === 'lockedIn') return t('dashboard.activity.fromWallet', 'From your wallet');
+    if (item.kind === 'flexibleOut' || item.kind === 'lockedOut') return t('dashboard.activity.toWallet', 'To your wallet');
     if (item.kind === 'badge') return t('dashboard.activity.badges', 'Badges');
     if (item.kind === 'trust') return item.asset ?? item.summary;
     return item.summary;

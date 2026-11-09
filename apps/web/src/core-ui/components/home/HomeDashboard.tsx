@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type PointerEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight, FiTrendingUp } from 'react-icons/fi';
+import { FiTrendingUp } from 'react-icons/fi';
 import { ActivityRow } from '../molecules/ActivityRow';
 import { BalanceEye } from '../molecules/BalanceEye';
 import { SegmentedTabs } from '../molecules/SegmentedTabs';
@@ -262,7 +262,7 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
         {/* The money at work, live, and at what pace it grows. The whole card
             opens the portfolio: the button is a layer over it, not a wrapper,
             because the eye inside is a button too and one cannot nest in another. */}
-        <section className="relative flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-4">
+        <section className="relative flex items-center gap-3 rounded-lg border border-black border-b-5 bg-white px-4 py-4 transition has-[>button:active]:translate-y-[3px] has-[>button:active]:border-b-2">
           <button
             type="button"
             onClick={openPortfolio}
@@ -271,7 +271,7 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
           />
           {/* `pointer-events-none`: being a container puts this column in a layer
               of its own, above the card's button, and it would swallow the tap. */}
-          <div className="pointer-events-none flex min-w-0 flex-1 flex-col gap-1 transition [container-type:inline-size] peer-active:translate-y-0.5">
+          <div className="pointer-events-none flex min-w-0 flex-1 flex-col gap-1 [container-type:inline-size]">
             <div className="flex items-center gap-2">
               {/* The six digits that tick go lighter and at 3/4 the size. */}
               <span
@@ -312,10 +312,6 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
               </span>
             </span>
           </div>
-          <FiChevronRight
-            aria-hidden
-            className="pointer-events-none h-5 w-5 shrink-0 text-black/50 transition peer-active:translate-y-0.5"
-          />
         </section>
 
         {/* Withdraw and deposit, right under the money they move. */}

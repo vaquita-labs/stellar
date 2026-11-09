@@ -10,6 +10,7 @@
  *   'cards' tarjetas altas con preview del mapa y stats (explorar)
  *   'card'  la tarjeta Vaquita, sus beneficios y el botón de pedirla (/cards)
  *   'apps'  el bloque naranja de bienvenida y la lista de "pronto" (/world)
+ *   'portfolio' donut del total + distribución + botonera fija abajo (/portafolio)
  *
  * La variante importa: si el arranque muestra filas y la página después pinta
  * tarjetas, la carga se ve como dos pantallas distintas encadenadas. Cada
@@ -23,7 +24,7 @@
  * importa los skeletons reales de pages/: arrastrarían medio árbol de la
  * página al bundle inicial de TODAS las rutas.
  */
-export type PageSkeletonVariant = 'rows' | 'cards' | 'map' | 'card' | 'apps';
+export type PageSkeletonVariant = 'rows' | 'cards' | 'map' | 'card' | 'apps' | 'portfolio';
 
 export function PageSkeleton({
   variant = 'rows',
@@ -37,6 +38,7 @@ export function PageSkeleton({
   // completa. Tiene su propio esqueleto porque no comparte el chrome de
   // <PageLayout>.
   if (variant === 'map') return <UserMapPlaceholder />;
+  if (variant === 'portfolio') return <PortfolioSkeleton />;
 
   return (
     <div className="h-full overflow-hidden" role="status" aria-busy="true" aria-live="polite">
@@ -173,6 +175,61 @@ function AppsPlaceholder() {
             <span className="h-6 w-14 shrink-0 rounded-full bg-black/5 animate-pulse" />
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * /portafolio: mismas medidas que <PortfolioPanel variant="page"> — header con
+ * back y ojo redondo, donut de 184px con el total, la lista de distribución y
+ * la botonera pegada abajo. Lo usa el arranque y la propia página mientras
+ * llegan los depósitos y el saldo flexible, así la carga es una sola pantalla.
+ */
+export function PortfolioSkeleton() {
+  return (
+    <div className="h-full overflow-hidden" role="status" aria-busy="true" aria-live="polite">
+      <div className="mx-auto w-full h-full max-w-2xl px-4 pt-6 sm:pt-8 flex flex-col gap-4">
+        <div className="relative flex items-center justify-center min-h-8 px-11">
+          <div className="absolute left-0 h-8 w-8 rounded-full bg-black/10 animate-pulse" />
+          <div className="h-4 w-28 rounded bg-black/10 animate-pulse" />
+          <div className="absolute right-0 h-8 w-8 rounded-full bg-black/10 animate-pulse" />
+        </div>
+
+        <div className="flex flex-col flex-1 min-h-0 gap-4">
+          <div className="flex flex-col items-center gap-1.5 py-1">
+            <div className="h-[184px] w-[184px] rounded-full border-16 border-black/10 animate-pulse flex flex-col items-center justify-center gap-2">
+              <div className="h-2.5 w-12 rounded bg-black/10" />
+              <div className="h-7 w-24 rounded bg-black/10" />
+            </div>
+            <div className="h-3 w-44 rounded bg-black/10 animate-pulse" />
+          </div>
+
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between pb-1">
+              <div className="h-3.5 w-24 rounded bg-black/10 animate-pulse" />
+              <div className="h-4 w-4 rounded-full bg-black/10 animate-pulse" />
+            </div>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 border-t border-black/[0.07] first:border-t-0 py-3">
+                <span className="w-9 h-9 rounded-full shrink-0 bg-black/10 animate-pulse" />
+                <span className="flex flex-1 min-w-0 flex-col gap-1.5">
+                  <span className="h-3.5 w-20 rounded bg-black/10 animate-pulse" />
+                  <span className="h-3 w-40 max-w-full rounded bg-black/10 animate-pulse" />
+                </span>
+                <span className="flex flex-col items-end gap-1.5">
+                  <span className="h-3.5 w-14 rounded bg-black/10 animate-pulse" />
+                  <span className="h-3 w-20 rounded bg-black/10 animate-pulse" />
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="-mx-4 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-black/10 flex gap-2">
+          <div className="h-12 flex-1 rounded-xl border border-black/10 bg-white animate-pulse" />
+          <div className="h-12 flex-1 rounded-xl bg-black/10 animate-pulse" />
+        </div>
       </div>
     </div>
   );

@@ -70,6 +70,7 @@ export function AppShell({
   // Cards is a tab of the bar, so the bar stays there.
   const isScanRoute =
     (pathname?.startsWith('/qr') ||
+      pathname?.startsWith('/portafolio') ||
       pathname?.startsWith('/concierge') ||
       pathname?.startsWith('/world') ||
       pathname?.startsWith('/explore/')) ??
