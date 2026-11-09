@@ -144,8 +144,7 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
   const currentStreakDays = (streak?.yesterdayStreak ?? 0) + (streak?.todayStreak ? 1 : 0);
 
   // Granero y banco abren la lista de posiciones (todos los plazos y estados)
-  // navegando a /portafolio: la ruta la intercepta @modal y se pinta como
-  // overlay sobre el mundo 3D, que queda montado detrás.
+  // navegando a la página /portafolio.
   const openPositions = () => {
     if (interactionsDisabled) return;
     if (userWalletAddress) {

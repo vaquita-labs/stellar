@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type PointerEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiChevronRight, FiTrendingUp } from 'react-icons/fi';
+import { FiTrendingUp } from 'react-icons/fi';
 import { ActivityRow } from '../molecules/ActivityRow';
 import { BalanceEye } from '../molecules/BalanceEye';
 import { SegmentedTabs } from '../molecules/SegmentedTabs';
@@ -105,14 +105,8 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
   const { t, i18n } = useTranslation();
   const { walletAddress } = useConfigStore();
   const router = useRouter();
-  // The card opens the portfolio the way the header's pill does: a soft
-  // navigation to /portafolio, which the `@modal` slot paints as an overlay
-  // (see [[portfolio-overlay-flow]]). Same safety net as the header for a URL
-  // already parked on /portafolio with the overlay closed.
-  const openPortfolio = () => {
-    if (window.location.pathname === '/portafolio') router.push(`/portafolio?r=${Date.now()}`);
-    else router.push('/portafolio');
-  };
+  // The card opens the portfolio page.
+  const openPortfolio = () => router.push('/portafolio');
   const hideBalance = useHideBalance();
   const [period, setPeriod] = useState<EarningsPeriod>('daily');
 
@@ -163,12 +157,14 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
   // half a digit for the dot and each comma), a digit being 0.62em wide; the
   // 2rem set aside is the eye and its gap. `cqw` is the width of the column.
   const wholeDigits = String(Math.floor(balanceBase)).length;
-  const balanceUnits = 9 + wholeDigits + (Math.floor((wholeDigits - 1) / 3) + 1) * 0.45;
-  const balanceFontSize = `min(1.875rem, calc((100cqw - 2rem) / ${(balanceUnits * 0.62).toFixed(2)}))`;
+  const balanceUnits = 7.5 + wholeDigits + (Math.floor((wholeDigits - 1) / 3) + 1) * 0.45;
+  const balanceFontSize = `min(1.625rem, calc((100cqw - 2rem) / ${(balanceUnits * 0.62).toFixed(2)}))`;
   // The figure's shape with nothing of its value: every digit a zero. What the
   // hidden balance is drawn over, so it is as wide and as long as the real one.
   const { big: maskBig, sub: maskSub } = formatLiveBalance(balanceBase, 8);
   const balanceMask = (maskBig + maskSub).replace(/\d/g, '0');
+  const maskBigZeros = maskBig.replace(/\d/g, '0');
+  const maskSubZeros = maskSub.replace(/\d/g, '0');
   const perDay = terms.reduce((sum, term) => sum + term.ratePerMs, 0) * 86_400_000;
   const earnings = useDefiEarnings(period);
   const buckets = earnings.data?.buckets;
@@ -266,7 +262,7 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
         {/* The money at work, live, and at what pace it grows. The whole card
             opens the portfolio: the button is a layer over it, not a wrapper,
             because the eye inside is a button too and one cannot nest in another. */}
-        <section className="relative flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-4">
+        <section className="relative flex items-center gap-3 rounded-lg border border-black border-b-5 bg-white px-4 py-4 transition has-[>button:active]:translate-y-[3px] has-[>button:active]:border-b-2">
           <button
             type="button"
             onClick={openPortfolio}
@@ -275,11 +271,11 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
           />
           {/* `pointer-events-none`: being a container puts this column in a layer
               of its own, above the card's button, and it would swallow the tap. */}
-          <div className="pointer-events-none flex min-w-0 flex-1 flex-col gap-1 transition [container-type:inline-size] peer-active:translate-y-0.5">
+          <div className="pointer-events-none flex min-w-0 flex-1 flex-col gap-1 [container-type:inline-size]">
             <div className="flex items-center gap-2">
-              {/* Every digit the same size; the six that tick only go lighter. */}
+              {/* The six digits that tick go lighter and at 3/4 the size. */}
               <span
-                className="whitespace-nowrap font-bold leading-9 text-black tabular-nums"
+                className="whitespace-nowrap font-bold leading-8 text-black tabular-nums"
                 style={{ fontSize: balanceFontSize }}
               >
                 {hideBalance ? (
@@ -287,7 +283,10 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
                   // width it takes: the zeros hold that width unseen (tabular
                   // digits are all as wide), so the eye stays where it was.
                   <span aria-hidden className="relative inline-block">
-                    <span className="invisible">{balanceMask}</span>
+                    <span className="invisible">
+                      {maskBigZeros}
+                      <span className="text-[0.75em]">{maskSubZeros}</span>
+                    </span>
                     <span className="absolute inset-0 flex items-center justify-around">
                       {Array.from(balanceMask, (_, i) => (
                         <span key={i} className="h-[0.3em] w-[0.3em] rounded-full bg-black" />
@@ -295,7 +294,7 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
                     </span>
                   </span>
                 ) : (
-                  <LiveBalance base={balanceBase} terms={terms} decimals={8} bigClassName="" subClassName="text-black/40" />
+                  <LiveBalance base={balanceBase} terms={terms} decimals={8} bigClassName="" subClassName="text-[0.75em] text-black/40" />
                 )}
               </span>
               {/* The app's global hide-money switch, beside the money it hides.
@@ -313,10 +312,6 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
               </span>
             </span>
           </div>
-          <FiChevronRight
-            aria-hidden
-            className="pointer-events-none h-5 w-5 shrink-0 text-black/50 transition peer-active:translate-y-0.5"
-          />
         </section>
 
         {/* Withdraw and deposit, right under the money they move. */}

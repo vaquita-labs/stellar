@@ -94,6 +94,51 @@ describe('describeRecord', () => {
   });
 });
 
+describe('describeRecords', () => {
+  it('folds the withdrawal that fed a send into the send', () => {
+    const at = Date.parse('2026-11-08T23:44:00.000Z');
+    const iso = (ms: number) => new Date(ms).toISOString();
+    const items = describeRecords(
+      [
+        record({ id: 'send', operation: 'payment', createdAt: iso(at + 5_000), details: { amount: '260', destination: OTHER } }),
+        record({
+          id: 'out',
+          createdAt: iso(at),
+          details: { contractId: 'CVAULT', method: 'withdraw', args: ['1', ['2587001000'], WALLET] },
+        }),
+        // A withdrawal of its own, hours before, stays.
+        record({
+          id: 'own',
+          createdAt: iso(at - 3_600_000),
+          details: { contractId: 'CVAULT', method: 'withdraw', args: ['1', ['2587001000'], WALLET] },
+        }),
+      ],
+      WALLET,
+      context,
+    );
+    expect(items.map((item) => item.id)).toEqual(['send', 'own']);
+    expect(items[0]).toMatchObject({ kind: 'sent', counterpartyAddress: OTHER });
+  });
+
+  it('folds the move into flexible that follows a term withdrawal', () => {
+    const at = Date.parse('2026-10-31T17:40:00.000Z');
+    const iso = (ms: number) => new Date(ms).toISOString();
+    const items = describeRecords(
+      [
+        record({
+          id: 'in',
+          createdAt: iso(at + 60_000),
+          details: { contractId: 'CVAULT', method: 'deposit', args: [['10100000'], ['10100000'], WALLET, true] },
+        }),
+        record({ id: 'term', createdAt: iso(at), details: { contractId: 'CLOCKS', method: 'withdraw', args: [WALLET, '2'] } }),
+      ],
+      WALLET,
+      context,
+    );
+    expect(items.map((item) => item.id)).toEqual(['term']);
+  });
+});
+
 describe('buildMovements', () => {
   it('keeps one row for a term movement both sources know', () => {
     const activity = describeRecords(

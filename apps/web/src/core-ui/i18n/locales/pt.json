@@ -1686,7 +1686,8 @@
       "cards": "Cartões",
       "support": "Ajuda",
       "apps": "Apps",
-      "world": "Mundo"
+      "world": "Mundo",
+      "portfolio": "Portfólio"
     },
     "notFound": {
       "backHome": "Voltar para o início",
@@ -3201,10 +3202,10 @@
       "all": "Ver todas",
       "received": "Recebido",
       "sent": "Enviado",
-      "flexibleIn": "Para suas economias flexíveis",
-      "flexibleOut": "Das suas economias flexíveis",
-      "lockedIn": "Poupança a prazo",
-      "lockedOut": "Resgate de prazo",
+      "flexibleIn": "Depósito na poupança flexível",
+      "flexibleOut": "Saque da poupança flexível",
+      "lockedIn": "Depósito na poupança a prazo",
+      "lockedOut": "Saque da poupança a prazo",
       "badge": "Insígnia resgatada",
       "trust": "Ativo habilitado",
       "other": "Operação",

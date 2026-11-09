@@ -1686,7 +1686,8 @@
       "cards": "Cards",
       "support": "Help",
       "apps": "Apps",
-      "world": "World"
+      "world": "World",
+      "portfolio": "Portfolio"
     },
     "notFound": {
       "backHome": "Go back to home",
@@ -3201,10 +3202,10 @@
       "all": "See all",
       "received": "Received",
       "sent": "Sent",
-      "flexibleIn": "Into flexible savings",
-      "flexibleOut": "Out of flexible savings",
-      "lockedIn": "Saved for a term",
-      "lockedOut": "Term withdrawn",
+      "flexibleIn": "Deposit to flexible savings",
+      "flexibleOut": "Withdrawal from flexible savings",
+      "lockedIn": "Deposit to term savings",
+      "lockedOut": "Withdrawal from term savings",
       "badge": "Badge claimed",
       "trust": "Asset enabled",
       "other": "Operation",

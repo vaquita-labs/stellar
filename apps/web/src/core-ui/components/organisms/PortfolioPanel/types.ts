@@ -27,6 +27,8 @@ export interface PortfolioPanelProps {
   open: boolean;
   onOpenChange: () => void;
   tokenSymbol?: string;
+  /** `page` = /portafolio como página (header con back), `modal` = hoja a pantalla completa. */
+  variant?: 'modal' | 'page';
 }
 
 export type MoveFundsStep = 'amount' | 'confirm' | 'processing' | 'success';

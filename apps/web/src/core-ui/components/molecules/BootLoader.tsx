@@ -56,6 +56,9 @@ export const BootLoader = () => {
   // Tarjetas: su propio contenido, no una lista de filas.
   if (isExactly('/cards')) return <PageSkeleton variant="card" />;
 
+  // Portafolio: donut + distribución + botonera, no una lista de filas.
+  if (isExactly('/portafolio')) return <PageSkeleton variant="portfolio" />;
+
   // Resto (leaderboard, notificaciones, transacciones, sub-pantallas de
   // perfil…): el chrome de <PageLayout> con una lista de filas.
   return <PageSkeleton variant="rows" />;

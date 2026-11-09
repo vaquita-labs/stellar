@@ -6,6 +6,7 @@ import {
   WithHydrated,
   formatTransactionTime,
   useActivityMeta,
+  useCounterpartyName,
 } from '@/core-ui/components/molecules';
 import { formatTimeDeposit } from '@/core-ui/helpers';
 import type { ActivityItem } from '@/core-ui/helpers/activity';
@@ -107,6 +108,7 @@ export function TransactionDetailsPage({ transactionId }: { transactionId: strin
     : activityItem
       ? findTransactionFor(transactions, activityItem)
       : undefined;
+  const counterpartyName = useCounterpartyName(activityItem);
 
   const depositsLoading = isLoading && !data;
   const loading = fromApp
@@ -222,11 +224,11 @@ export function TransactionDetailsPage({ transactionId }: { transactionId: strin
   // Un movimiento del historial on-chain que la API no conoce: envíos, ahorros
   // flexibles, insignias. Se cuenta con lo que el registro trae.
   const activityView = (item: ActivityItem) => {
-    const { Icon, title: name, subtitle, sign: itemSign, box } = describeActivity(item);
+    const { Icon, title: name, subtitle, sign: itemSign, box } = describeActivity(item, counterpartyName);
     const failed = item.status === 'FAILED';
     const flexibleLabel = t('dashboard.activity.flexible', 'Flexible savings');
     const lockedLabel = t('dashboard.activity.locked', 'Term savings');
-    const other = item.counterparty ?? '';
+    const other = counterpartyName ?? '';
     const route: [string, string] | null =
       item.kind === 'sent'
         ? [walletLabel, other]
