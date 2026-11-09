@@ -1,10 +1,23 @@
 'use client';
 
-import { addSuccessToast, PageLayout, WithHydrated, formatTransactionTime } from '@/core-ui/components/molecules';
+import {
+  addSuccessToast,
+  PageLayout,
+  WithHydrated,
+  formatTransactionTime,
+  useActivityMeta,
+} from '@/core-ui/components/molecules';
 import { formatTimeDeposit } from '@/core-ui/helpers';
+import type { ActivityItem } from '@/core-ui/helpers/activity';
 import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
-import { AppTransaction, buildTransactions, TransactionStatus } from '@/core-ui/helpers/transactions';
-import { useCryptoMode, useDepositsComplete } from '@/core-ui/hooks';
+import {
+  activityStatus,
+  AppTransaction,
+  buildTransactions,
+  findTransactionFor,
+  TransactionStatus,
+} from '@/core-ui/helpers/transactions';
+import { useCryptoMode, useDepositsComplete, useWalletActivity } from '@/core-ui/hooks';
 import { useConfigStore } from '@/core-ui/stores';
 import { stellarExpertTxUrl } from '@/networks/stellar/helpers';
 import { useRouter } from 'next/navigation';
@@ -59,10 +72,15 @@ function DetailsSkeleton() {
   );
 }
 
-/** `onBack` lo pasa quien la muestra sobre otra cosa (el panel de la lista o el
- *  modal del home) para cerrarla en vez de navegar; en la ruta a pantalla
- *  completa (entrada directa o refresh) se vuelve sin más. */
-export function TransactionDetailsPage({ transactionId, onBack }: { transactionId: string; onBack?: () => void }) {
+/** Los ids de la API (`d-12`, `w-12-3`); cualquier otro es del historial on-chain. */
+const isAppTransactionId = (id: string) => /^[dw]-\d/.test(id);
+
+/** Pantalla propia en /transactions/[id]: no es una capa sobre la lista ni un
+ *  modal, así que se llega igual desde la lista, una notificación o un link.
+ *  El id es el de un movimiento de la API o el de un registro del historial
+ *  on-chain de la billetera; si ese registro es una posición a plazo que la API
+ *  conoce, se muestra con el detalle de la API (plazo, recompensas). */
+export function TransactionDetailsPage({ transactionId }: { transactionId: string }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const { walletAddress, network } = useConfigStore();
@@ -76,18 +94,36 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
   // Colapsado por defecto: la mayoría de las veces alcanza con el estado.
   const [showHistory, setShowHistory] = useState(false);
 
-  const transaction: AppTransaction | undefined = useMemo(
-    () => buildTransactions(data?.deposits ?? []).find((item) => item.id === transactionId),
-    [data, transactionId],
-  );
+  const activity = useWalletActivity();
+  const describeActivity = useActivityMeta();
+  const fromApp = isAppTransactionId(transactionId);
 
-  const showHash = cryptoMode && !!transaction?.transactionHash;
-  const explorerUrl =
-    showHash && transaction?.transactionHash ? stellarExpertTxUrl(transaction.transactionHash, network?.type) : '';
+  const transactions = useMemo(() => buildTransactions(data?.deposits ?? []), [data]);
+  const activityItem: ActivityItem | undefined = fromApp
+    ? undefined
+    : activity.data?.find((item) => item.id === transactionId);
+  const transaction: AppTransaction | undefined = fromApp
+    ? transactions.find((item) => item.id === transactionId)
+    : activityItem
+      ? findTransactionFor(transactions, activityItem)
+      : undefined;
+
+  const depositsLoading = isLoading && !data;
+  const loading = fromApp
+    ? depositsLoading
+    : activityItem
+      ? // A term movement may still turn out to be one the API knows in full.
+        depositsLoading && (activityItem.kind === 'lockedIn' || activityItem.kind === 'lockedOut')
+      : // Not among what is loaded so far: it may be further back in the history.
+        !activity.isError && (activity.isPending || activity.isPlaceholderData);
+
+  const hash = transaction?.transactionHash || activityItem?.hash || '';
+  const showHash = cryptoMode && !!hash;
+  const explorerUrl = showHash ? stellarExpertTxUrl(hash, network?.type) : '';
 
   const copyHash = async () => {
-    if (!transaction?.transactionHash) return;
-    await navigator.clipboard.writeText(transaction.transactionHash);
+    if (!hash) return;
+    await navigator.clipboard.writeText(hash);
     addSuccessToast(t('transactions.details.hashCopied', 'Transaction ID copied'));
   };
 
@@ -104,6 +140,17 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
     }
     await navigator.clipboard.writeText(explorerUrl);
     addSuccessToast(t('transactions.details.linkCopied', 'Link copied'));
+  };
+
+  // Se llega desde la lista, desde una notificación o desde el home, así que el
+  // back vuelve por el historial. Con un link directo (pestaña nueva) no hay a
+  // dónde volver: ahí cae en la lista en vez de salir de la app.
+  const goBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace('/transactions');
+    }
   };
 
   const kind = transaction?.kind;
@@ -125,10 +172,135 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
   const from = kind === 'deposit' ? walletLabel : kind === 'move' ? savingsLabel : positionLabel;
   const to = kind === 'move' ? positionLabel : savingsLabel;
 
+  const hashRow = showHash && (
+    <DataRow label={t('transactions.details.transactionId', 'Transaction ID')}>
+      <span className="inline-flex items-center gap-2">
+        <span className="font-mono text-xs">{shortHash(hash)}</span>
+        <button type="button" onClick={copyHash} aria-label={t('transactions.details.transactionId', 'Transaction ID')}>
+          <FiCopy className="h-4 w-4 text-gray-500 hover:text-black" />
+        </button>
+      </span>
+    </DataRow>
+  );
+
+  const statusBlock = (status: TransactionStatus) => (
+    <DataBlock>
+      <DataRow label={t('transactions.details.status', 'Status')}>
+        <span
+          className={'inline-block rounded-full border border-b-2 px-2.5 py-0.5 text-xs font-bold ' + STATUS_CLASSES[status]}
+        >
+          {t(`transactions.status.${status}`)}
+        </span>
+      </DataRow>
+    </DataBlock>
+  );
+
+  // mt-auto: explorador y compartir son el pie de la pantalla, no un bloque más
+  // de la lista; con poco contenido quedan abajo igual.
+  const explorerFooter = explorerUrl && (
+    <div className="mt-auto flex gap-2 pt-2">
+      <a
+        href={explorerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-black border-b-3 bg-white px-3 py-2 text-xs font-semibold text-black transition hover:-translate-y-0.5"
+      >
+        <FiExternalLink className="h-3.5 w-3.5 shrink-0" />
+        {t('transactions.details.viewOnExplorer', 'View on explorer')}
+      </a>
+      <button
+        type="button"
+        onClick={share}
+        className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-black border-b-3 bg-primary px-3 py-2 text-xs font-semibold text-black transition hover:-translate-y-0.5 hover:bg-primary/80"
+      >
+        <FiShare2 className="h-3.5 w-3.5 shrink-0" />
+        {t('transactions.details.share', 'Share')}
+      </button>
+    </div>
+  );
+
+  // Un movimiento del historial on-chain que la API no conoce: envíos, ahorros
+  // flexibles, insignias. Se cuenta con lo que el registro trae.
+  const activityView = (item: ActivityItem) => {
+    const { Icon, title: name, subtitle, sign: itemSign, box } = describeActivity(item);
+    const failed = item.status === 'FAILED';
+    const flexibleLabel = t('dashboard.activity.flexible', 'Flexible savings');
+    const lockedLabel = t('dashboard.activity.locked', 'Term savings');
+    const other = item.counterparty ?? '';
+    const route: [string, string] | null =
+      item.kind === 'sent'
+        ? [walletLabel, other]
+        : item.kind === 'received'
+          ? [other, walletLabel]
+          : item.kind === 'flexibleIn'
+            ? [walletLabel, flexibleLabel]
+            : item.kind === 'flexibleOut'
+              ? [flexibleLabel, walletLabel]
+              : item.kind === 'lockedIn'
+                ? [walletLabel, lockedLabel]
+                : item.kind === 'lockedOut'
+                  ? [lockedLabel, walletLabel]
+                  : null;
+    return (
+      <>
+        <div className="flex flex-col items-center gap-1.5 py-7 text-center">
+          {item.amount !== null ? (
+            <p
+              className={
+                'text-4xl font-bold tabular-nums leading-tight ' +
+                (failed ? 'text-gray-400 line-through' : itemSign === '+' ? 'text-success' : 'text-black')
+              }
+            >
+              {failed ? '' : itemSign === '-' ? '−' : itemSign}
+              {formatTokenPrecise(item.amount, 2)}
+              {item.asset && <span className="ml-1 text-lg font-semibold">{item.asset}</span>}
+            </p>
+          ) : (
+            <span className={`flex h-14 w-14 items-center justify-center rounded-xl border border-black border-b-2 text-black ${box}`}>
+              <Icon className="h-6 w-6" />
+            </span>
+          )}
+          <p className="text-sm text-gray-600">{name}</p>
+          {!route && subtitle !== name && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
+
+        {route && (
+          <DataBlock>
+            <DataRow label={t('transactions.details.from', 'From')}>{route[0]}</DataRow>
+            <DataRow label={t('transactions.details.to', 'To')}>{route[1]}</DataRow>
+          </DataBlock>
+        )}
+
+        <DataBlock>
+          {item.amount !== null && (
+            <DataRow label={t('transactions.details.amount', 'Transaction amount')}>
+              {formatTokenPrecise(item.amount, 2)} {item.asset}
+            </DataRow>
+          )}
+          {cryptoMode && item.fee && (
+            <DataRow label={t('transactions.details.networkFee', 'Network fee')}>
+              {item.fee.amount} {item.fee.unit}
+            </DataRow>
+          )}
+          {hashRow}
+          <DataRow label={t('transactions.details.time', 'Transaction time')}>
+            {formatTransactionTime(item.timestamp, i18n.language)}
+          </DataRow>
+        </DataBlock>
+
+        {statusBlock(activityStatus(item.status))}
+
+        {explorerFooter}
+      </>
+    );
+  };
+
   const content = (
     <WithHydrated fallback={<DetailsSkeleton />}>
-      {isLoading && !data ? (
+      {loading ? (
         <DetailsSkeleton />
+      ) : !transaction && activityItem ? (
+        activityView(activityItem)
       ) : !transaction ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-10 text-center">
           <p className="text-sm font-semibold text-black">{t('transactions.details.notFound', 'Transaction not found')}</p>
@@ -176,37 +348,13 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
                 </span>
               </DataRow>
             )}
-            {showHash && transaction.transactionHash && (
-              <DataRow label={t('transactions.details.transactionId', 'Transaction ID')}>
-                <span className="inline-flex items-center gap-2">
-                  <span className="font-mono text-xs">{shortHash(transaction.transactionHash)}</span>
-                  <button
-                    type="button"
-                    onClick={copyHash}
-                    aria-label={t('transactions.details.transactionId', 'Transaction ID')}
-                  >
-                    <FiCopy className="h-4 w-4 text-gray-500 hover:text-black" />
-                  </button>
-                </span>
-              </DataRow>
-            )}
+            {hashRow}
             <DataRow label={t('transactions.details.time', 'Transaction time')}>
               {formatTransactionTime(transaction.timestamp, i18n.language)}
             </DataRow>
           </DataBlock>
 
-          <DataBlock>
-            <DataRow label={t('transactions.details.status', 'Status')}>
-              <span
-                className={
-                  'inline-block rounded-full border border-b-2 px-2.5 py-0.5 text-xs font-bold ' +
-                  STATUS_CLASSES[transaction.status]
-                }
-              >
-                {t(`transactions.status.${transaction.status}`)}
-              </span>
-            </DataRow>
-          </DataBlock>
+          {statusBlock(transaction.status)}
 
           <div className="overflow-hidden rounded-lg border border-black border-b-2 bg-white">
             <button
@@ -234,29 +382,7 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
             )}
           </div>
 
-          {/* mt-auto: explorador y compartir son el pie de la pantalla, no un
-                bloque más de la lista; con poco contenido quedan abajo igual. */}
-          {explorerUrl && (
-            <div className="mt-auto flex gap-2 pt-2">
-              <a
-                href={explorerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-black border-b-3 bg-white px-3 py-2 text-xs font-semibold text-black transition hover:-translate-y-0.5"
-              >
-                <FiExternalLink className="h-3.5 w-3.5 shrink-0" />
-                {t('transactions.details.viewOnExplorer', 'View on explorer')}
-              </a>
-              <button
-                type="button"
-                onClick={share}
-                className="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-black border-b-3 bg-primary px-3 py-2 text-xs font-semibold text-black transition hover:-translate-y-0.5 hover:bg-primary/80"
-              >
-                <FiShare2 className="h-3.5 w-3.5 shrink-0" />
-                {t('transactions.details.share', 'Share')}
-              </button>
-            </div>
-          )}
+          {explorerFooter}
         </>
       )}
     </WithHydrated>
@@ -265,7 +391,7 @@ export function TransactionDetailsPage({ transactionId, onBack }: { transactionI
   return (
     <PageLayout
       title={t('transactions.details.title', 'Transaction details')}
-      onBack={onBack ?? (() => router.back())}
+      onBack={goBack}
       headerGap="gap-2"
       contentGap="gap-3"
       // flex-1: el contenido ocupa el alto disponible para que el mt-auto de los

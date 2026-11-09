@@ -121,6 +121,10 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
     [achievementsData?.achievements],
   );
 
+  // While badges load, use the count the list already knows so the number
+  // doesn't flash 0 → N.
+  const badgeCount = achievementsData ? unlockedBadges.length : (listRow?.badges ?? 0);
+
   // Detalle read-only del logro clickeado. El hash del mint sale de la misma
   // respuesta de achievements de ESTE perfil (campo transactionHash).
   const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
@@ -172,11 +176,13 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
             queda como chip flotante en la esquina para no gastar una fila
             entera y que las vaquitas suban. */}
         <div className="relative rounded-2xl bg-white shadow-sm py-2">
-          <span className="absolute right-2.5 top-1.5 z-10 rounded-full bg-white/85 px-1.5 text-[11px] font-extrabold text-black tabular-nums shadow-sm">
-            {/* While badges load, show the count the list already knows so the
-                number doesn't flash 0 → N. */}
-            {achievementsData ? unlockedBadges.length : (listRow?.badges ?? 0)}
-          </span>
+          {/* Solo con logros: un "0" suelto en la esquina parecía un botón
+              perdido, y el estado vacío ya lo dice con su texto. */}
+          {badgeCount > 0 && (
+            <span className="absolute right-2.5 top-1.5 z-10 rounded-full bg-white/85 px-1.5 text-[11px] font-extrabold text-black tabular-nums shadow-sm">
+              {badgeCount}
+            </span>
+          )}
           {/* Fixed h-14 row in every state (loading / badges / empty) so the
               strip never resizes and the map below doesn't jump. La fila sangra
               hasta los bordes de la card (sin padding lateral) y las vaquitas de
@@ -203,7 +209,7 @@ export function LeaderboardUserHeader({ walletAddress }: { walletAddress: string
               ))}
             </div>
           ) : (
-            <p className="flex h-14 items-center text-xs font-medium text-gray-500 px-3">
+            <p className="flex h-14 items-center justify-center px-3 text-center text-xs font-medium text-gray-500">
               {t('leaderboard.user.noAchievements', 'No achievements unlocked yet')}
             </p>
           )}

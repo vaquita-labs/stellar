@@ -1,5 +1,6 @@
-import { CardsPage } from '@/core-ui/components';
+import { redirect } from 'next/navigation';
 
+// Old address of the Cards tab; it lives on /cards now.
 export default function Page() {
-  return <CardsPage />;
+  redirect('/cards');
 }

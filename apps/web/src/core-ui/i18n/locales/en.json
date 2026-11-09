@@ -949,6 +949,7 @@
     },
     "map": {
       "reload": "Reload map",
+      "loadingTitle": "Loading world…",
       "unavailable": "The map could not be loaded."
     },
     "music": {
@@ -1684,7 +1685,8 @@
       "primaryAriaLabel": "Primary",
       "cards": "Cards",
       "support": "Help",
-      "apps": "Apps"
+      "apps": "Apps",
+      "world": "World"
     },
     "notFound": {
       "backHome": "Go back to home",
@@ -2830,7 +2832,9 @@
       "kinds": {
         "deposit": "Deposits",
         "withdraw": "Withdrawals",
-        "move": "Transfers to a position"
+        "move": "Transfers to a position",
+        "payment": "Payments",
+        "other": "Other"
       },
       "statuses": {
         "completed": "Completed",
@@ -2854,6 +2858,7 @@
       "savings": "Savings",
       "lockPeriod": "Lock period",
       "amount": "Transaction amount",
+      "networkFee": "Network fee",
       "rewards": "Rewards",
       "forfeited": "Forfeited",
       "transactionId": "Transaction ID",
@@ -3201,6 +3206,7 @@
       "lockedIn": "Saved for a term",
       "lockedOut": "Term withdrawn",
       "badge": "Badge claimed",
+      "trust": "Asset enabled",
       "other": "Operation",
       "pending": "Pending",
       "failedTx": "Failed",
@@ -3284,6 +3290,7 @@
   },
   "cardsPage": {
     "title": "Cards",
+    "comingSoon": "Coming soon",
     "cta": "Get my card",
     "note": "If you already have one, this opens your card.",
     "perks": {

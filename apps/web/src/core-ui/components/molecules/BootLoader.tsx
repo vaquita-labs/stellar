@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { HomeSkeleton } from '../home/HomeSkeleton';
 import { PageSkeleton } from './PageSkeleton';
 import { ProfileSkeleton } from './ProfileSkeleton';
+import { WorldLoader } from './WorldLoader';
 
 /**
  * Pantalla de carga del arranque. El arranque encadena varios gates (hidratación
@@ -36,7 +37,11 @@ export const BootLoader = () => {
   // leaderboard sobre la pantalla de login (se leía como otra pantalla).
   if (isExactly('/login')) return null;
 
-  // Home: header naranja + cielo + botonera.
+  // Mundo 3D: su propia pantalla de carga (cielo + vaquita), la misma que
+  // sigue en pie mientras se arma el mapa — ver <WorldLoader>.
+  if (isExactly('/world')) return <WorldLoader />;
+
+  // Home: header naranja + tablero.
   if (isExactly('/') || isExactly('/home') || isUnder('/home')) return <HomeSkeleton />;
 
   // Perfil: banner con avatar, stats y tarjetas. Sus sub-pantallas
@@ -48,9 +53,8 @@ export const BootLoader = () => {
   if (isExactly('/explore')) return <PageSkeleton variant="cards" />;
   if (isUnder('/explore')) return <PageSkeleton variant="map" />;
 
-  // Tarjetas y Apps: su propio contenido, no una lista de filas.
-  if (isExactly('/tarjetas')) return <PageSkeleton variant="card" />;
-  if (isExactly('/apps')) return <PageSkeleton variant="apps" />;
+  // Tarjetas: su propio contenido, no una lista de filas.
+  if (isExactly('/cards')) return <PageSkeleton variant="card" />;
 
   // Resto (leaderboard, notificaciones, transacciones, sub-pantallas de
   // perfil…): el chrome de <PageLayout> con una lista de filas.

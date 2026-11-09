@@ -205,3 +205,63 @@ body {
         animation: none;
     }
 }
+
+/* Pantalla de carga del mundo 3D (ver <WorldLoader>): una barra que va y viene
+   —no hay porcentaje real que mostrar— y nubes que cruzan el cielo. Las nubes
+   son puro CSS para estar desde el primer frame, sin esperar ninguna imagen. */
+@keyframes world-loader-bar {
+    0% { transform: translateX(-110%); }
+    100% { transform: translateX(260%); }
+}
+
+.world-loader-bar {
+    animation: world-loader-bar 1.3s ease-in-out infinite;
+}
+
+@keyframes world-loader-cloud {
+    from { transform: translateX(-180px); }
+    to { transform: translateX(100vw); }
+}
+
+.world-loader-cloud {
+    height: 34px;
+    border-radius: 9999px;
+    background: #fff;
+    animation: world-loader-cloud linear infinite;
+}
+
+.world-loader-cloud::before,
+.world-loader-cloud::after {
+    content: '';
+    position: absolute;
+    border-radius: 9999px;
+    background: #fff;
+}
+
+.world-loader-cloud::before {
+    left: 16%;
+    bottom: 40%;
+    width: 42%;
+    height: 130%;
+}
+
+.world-loader-cloud::after {
+    right: 14%;
+    bottom: 35%;
+    width: 34%;
+    height: 95%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .world-loader-bar {
+        animation: none;
+        transform: none;
+        width: 100%;
+        opacity: 0.5;
+    }
+
+    .world-loader-cloud {
+        animation: none;
+        transform: translateX(20vw);
+    }
+}

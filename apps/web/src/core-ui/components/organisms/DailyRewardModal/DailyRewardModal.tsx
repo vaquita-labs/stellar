@@ -31,9 +31,10 @@ export function DailyRewardModal({
   experienceToCollect,
   streakDays,
   onCollect,
+  startAt = 'confirm',
 }: DailyRewardModalProps) {
   const { t } = useTranslation();
-  const [step, setStep] = useState<Step>('confirm');
+  const [step, setStep] = useState<Step>(startAt);
   const [isHolding, setIsHolding] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0); // 0..100
   const rafRef = useRef<number | null>(null);
@@ -50,16 +51,16 @@ export function DailyRewardModal({
   }, []);
 
   // Reinicia todo el estado cada vez que se abre el modal, para que la próxima
-  // apertura empiece siempre con el cofre cerrado.
+  // apertura empiece siempre en su primera pantalla (`startAt`).
   useEffect(() => {
     if (open) {
-      setStep('confirm');
+      setStep(startAt);
       setIsHolding(false);
       setHoldProgress(0);
       completingRef.current = false;
     }
     return stopRaf;
-  }, [open, stopRaf]);
+  }, [open, startAt, stopRaf]);
 
   // The reward screen waits for the collect to resolve. Without a cached wallet
   // session the request first needs a login signature; showing the reward

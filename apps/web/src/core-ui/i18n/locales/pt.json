@@ -949,6 +949,7 @@
     },
     "map": {
       "reload": "Recarregar mapa",
+      "loadingTitle": "Carregando mundo…",
       "unavailable": "Não foi possível carregar o mapa."
     },
     "music": {
@@ -1684,7 +1685,8 @@
       "primaryAriaLabel": "Principal",
       "cards": "Cartões",
       "support": "Ajuda",
-      "apps": "Apps"
+      "apps": "Apps",
+      "world": "Mundo"
     },
     "notFound": {
       "backHome": "Voltar para o início",
@@ -2830,7 +2832,9 @@
       "kinds": {
         "deposit": "Depósitos",
         "withdraw": "Saques",
-        "move": "Transferências para posição"
+        "move": "Transferências para posição",
+        "payment": "Envios e pagamentos",
+        "other": "Outros"
       },
       "statuses": {
         "completed": "Concluídas",
@@ -2854,6 +2858,7 @@
       "savings": "Poupança",
       "lockPeriod": "Período de bloqueio",
       "amount": "Valor da transação",
+      "networkFee": "Taxa de rede",
       "rewards": "Recompensas",
       "forfeited": "Perdidas",
       "transactionId": "ID da transação",
@@ -3201,6 +3206,7 @@
       "lockedIn": "Poupança a prazo",
       "lockedOut": "Resgate de prazo",
       "badge": "Insígnia resgatada",
+      "trust": "Ativo habilitado",
       "other": "Operação",
       "pending": "Pendente",
       "failedTx": "Falhou",
@@ -3284,6 +3290,7 @@
   },
   "cardsPage": {
     "title": "Cartões",
+    "comingSoon": "Em breve",
     "cta": "Pedir meu cartão",
     "note": "Se você já tem um, aqui abre o seu cartão.",
     "perks": {

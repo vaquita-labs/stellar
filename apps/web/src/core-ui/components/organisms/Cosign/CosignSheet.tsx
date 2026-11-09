@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { IconType } from 'react-icons';
 import { FiCheckCircle, FiFileText, FiRepeat, FiSend, FiShield, FiSmartphone } from 'react-icons/fi';
+import { assetCode } from '../../../helpers/strings';
 import { useNowEverySecond } from '../../../hooks/useNowEverySecond';
 import { openWalletRecovery } from '../../../stores';
 import { AppModal, useModalPresence } from '../../molecules/AppModal';
@@ -169,7 +170,7 @@ function CosignScreen({ open, onClose }: CosignSheetProps) {
     const flowKind = flow && typeof flow === 'object' && 'kind' in flow && typeof flow.kind === 'string' ? flow.kind : null;
     switch (request.operation) {
       case 'change_trust': {
-        const asset = asString(details.assetCode) ?? asString(details.asset) ?? asString(details.symbol) ?? 'USDC';
+        const asset = assetCode(asString(details.assetCode) ?? asString(details.asset) ?? asString(details.symbol) ?? 'USDC');
         return {
           icon: FiCheckCircle,
           title: t('cosign.trust.title', 'Enable {{asset}} in your wallet', { asset }),

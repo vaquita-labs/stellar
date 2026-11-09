@@ -2,6 +2,7 @@ import { Prisma, prisma } from '@vaquita/db';
 import { DepositStatus, type NotificationDTO, type NotificationsResponseDTO } from '../../types';
 import { ably } from '../ably';
 import { getNetworkName } from '../project-config';
+import { movementLink, parseMovementRef, type MovementRef } from './movementLink';
 
 /**
  * In-app notifications feed (bell in the home header → /notifications).
@@ -103,23 +104,52 @@ const ensureDepositUnlockedNotifications = async (walletAddress: string) => {
   }
 };
 
-const toNotificationDTO = (n: {
-  id: bigint;
-  type: string;
-  messageKey: string;
-  params: Prisma.JsonValue;
-  link: string | null;
-  readAt: Date | null;
-  createdAt: Date;
-}): NotificationDTO => ({
+const toNotificationDTO = (
+  n: {
+    id: bigint;
+    type: string;
+    messageKey: string;
+    params: Prisma.JsonValue;
+    link: string | null;
+    readAt: Date | null;
+    createdAt: Date;
+  },
+  link: string | null | undefined,
+): NotificationDTO => ({
   id: String(n.id),
   type: n.type as NotificationDTO['type'],
   messageKey: n.messageKey,
   params: (n.params ?? {}) as Record<string, string | number>,
-  link: n.link ?? '',
+  link: link ?? n.link ?? '',
   read: !!n.readAt,
   createdAt: n.createdAt.getTime(),
 });
+
+/**
+ * Money notifications open the movement they are about instead of the plain
+ * history (see `movementLink`). One query for the whole page, and only when it
+ * has withdrawals: their key doesn't say which deposit they belong to.
+ */
+const resolveMovementLinks = async (rows: { id: bigint; dedupeKey: string | null }[]): Promise<Map<bigint, string>> => {
+  const refs: { id: bigint; ref: MovementRef }[] = [];
+  for (const row of rows) {
+    const ref = parseMovementRef(row.dedupeKey);
+    if (ref) refs.push({ id: row.id, ref });
+  }
+
+  const withdrawalIds = refs.flatMap(({ ref }) => (ref.kind === 'withdrawal' ? [ref.withdrawalId] : []));
+  const withdrawals = withdrawalIds.length
+    ? await prisma.withdrawal.findMany({ where: { id: { in: withdrawalIds } }, select: { id: true, depositId: true } })
+    : [];
+  const depositIdByWithdrawalId = new Map(withdrawals.map((w) => [w.id, w.depositId]));
+
+  const links = new Map<bigint, string>();
+  for (const { id, ref } of refs) {
+    const link = movementLink(ref, depositIdByWithdrawalId);
+    if (link) links.set(id, link);
+  }
+  return links;
+};
 
 export const listNotifications = async (walletAddress: string): Promise<NotificationsResponseDTO> => {
   const profile = await prisma.profile.upsert({
@@ -141,10 +171,18 @@ export const listNotifications = async (walletAddress: string): Promise<Notifica
     take: MAX_FEED,
   });
 
+  let movementLinks = new Map<bigint, string>();
+  try {
+    movementLinks = await resolveMovementLinks(rows);
+  } catch (error) {
+    // Non-fatal: those notifications fall back to the link they were stored with.
+    console.error('Error on resolveMovementLinks', { walletAddress }, error);
+  }
+
   return {
     networkName: await getNetworkName(),
     walletAddress,
-    notifications: rows.map(toNotificationDTO),
+    notifications: rows.map((row) => toNotificationDTO(row, movementLinks.get(row.id))),
     unread: rows.reduce((acc, n) => acc + (n.readAt ? 0 : 1), 0),
   };
 };

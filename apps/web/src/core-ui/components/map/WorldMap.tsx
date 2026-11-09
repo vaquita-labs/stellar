@@ -4,7 +4,7 @@ import { Billboard, Text } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 import { useAnalytics, useProfileStreak, useRestProfile, useVaquitaMood } from '../../hooks';
@@ -46,9 +46,19 @@ interface MapProps {
   isAvailable: boolean;
   /** Tutorial: solo mover/ver el mapa; los clicks de objetos se ignoran. */
   interactionsDisabled?: boolean;
+  /**
+   * Fires once the scene is worth looking at: the map data arrived, the WebGL
+   * context exists and the first frames were drawn. Whoever covers the map
+   * while it boots (the world's loading screen) lifts the cover on it. Pass a
+   * stable callback.
+   */
+  onReady?: () => void;
 }
 
-export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDisabled = false }: MapProps) => {
+/** Margin after the first frames, so the objects and the camera have settled. */
+const READY_SETTLE_MS = 250;
+
+export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDisabled = false, onReady }: MapProps) => {
   const router = useRouter();
   const isEditMode = useMapStore((store) => store.editMode);
   const currentTiles = useMapStore((store) => store.currentTiles);
@@ -58,6 +68,24 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
   // Con walletAddress (vista de leaderboard) se carga el mapa de ESE perfil;
   // sin él, el del usuario logueado.
   const { isLoaded: mapLoaded } = useSyncMapObjects(walletAddress);
+  const [rendererReady, setRendererReady] = useState(false);
+  useEffect(() => {
+    if (!onReady || !mapLoaded || !rendererReady) return;
+    // Two frames so the first full render is on screen (the first one is where
+    // the shaders compile), then a short margin for the map objects.
+    let raf2 = 0;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        timeout = setTimeout(onReady, READY_SETTLE_MS);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(timeout);
+    };
+  }, [onReady, mapLoaded, rendererReady]);
   const [showDailyRewardModal, setShowDailyRewardModal] = useState(false);
   const [dailyRewardCoins, setDailyRewardCoins] = useState(0);
   const [dailyRewardExperience, setDailyRewardExperience] = useState(0);
@@ -179,6 +207,7 @@ export const WorldMap = ({ walletAddress, isAvailable, worldType, interactionsDi
         frameloop={isTabVisible ? 'always' : 'never'}
         onCreated={({ gl }) => {
           registerRenderer(gl);
+          setRendererReady(true);
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFShadowMap;
           // El shadow map no se re-renderiza solo cada frame: DayCycleSky lo

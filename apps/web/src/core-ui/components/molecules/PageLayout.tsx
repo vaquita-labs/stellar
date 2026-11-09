@@ -28,6 +28,10 @@ interface PageLayoutProps {
   bottomPadding?: string;
   /** Overrides the header title size (e.g. "text-lg" for long titles). */
   titleClassName?: string;
+  /** Max width class of the page column, header included. Narrow it on screens
+   *  built around one fixed-ratio piece (the card on Cards) that would grow
+   *  past the fold on a wide window. Defaults to "max-w-2xl". */
+  maxWidth?: string;
   /** Pins the header to the top while the content scrolls under it. Opt-in:
    *  only worth it on endless feeds, where the title would otherwise be gone
    *  forever after the first swipe. */
@@ -46,6 +50,7 @@ export function PageLayout({
   contentGap = 'gap-6',
   titleClassName,
   bottomPadding = 'pb-10',
+  maxWidth = 'max-w-2xl',
   stickyHeader = false,
 }: PageLayoutProps) {
   return (
@@ -56,7 +61,7 @@ export function PageLayout({
       {/* min-h-full: el contenido puede repartirse en todo el alto (p. ej. un
           bloque con mt-auto que se pega al fondo) sin dejar de crecer y hacer
           scroll cuando sobra. */}
-      <div className={`mx-auto w-full min-h-full max-w-2xl px-4 py-6 sm:py-8 flex flex-col ${headerGap} ${bottomPadding}`}>
+      <div className={`mx-auto w-full min-h-full ${maxWidth} px-4 py-6 sm:py-8 flex flex-col ${headerGap} ${bottomPadding}`}>
         {/* Wrapped rather than styled through PageHeader's className: the sticky
             bar needs its own horizontal padding, which would collide with the
             header's own px-11 (same specificity, order decides the winner).

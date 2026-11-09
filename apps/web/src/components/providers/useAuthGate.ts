@@ -46,8 +46,8 @@ export function useAuthGate() {
   useEffect(() => {
     if (showAuthGate) {
       // The query string travels with the path. Private routes carry state
-      // there — `?tx=` opens a transaction's detail, `?period=` picks the
-      // portfolio's window — and `redirect` is the only record of where the
+      // there — `?period=` picks the portfolio's window, for one — and
+      // `redirect` is the only record of where the
       // visitor was going, so a path without its query sends them to the plain
       // screen after signing in, silently dropping what the link was for.
       //

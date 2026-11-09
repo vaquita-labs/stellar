@@ -55,11 +55,16 @@ const MESSAGE_ICONS: Record<string, React.ReactNode> = {
 const notificationIcon = (n: AppNotification): React.ReactNode =>
   MESSAGE_ICONS[n.messageKey] ?? TYPE_ICONS[n.type] ?? <FiBell />;
 
-/** Los movimientos de plata (depósito, retiro, desbloqueo) llevan al historial,
- *  aunque la notificación guardada en la base apunte a otra ruta más vieja. */
+/** Los movimientos de plata (depósito, retiro, desbloqueo) abren el detalle de
+ *  su movimiento: el feed ya resuelve ese link (/transactions/<id>). Si llega
+ *  cualquier otra cosa —una ruta más vieja guardada en la base, o un movimiento
+ *  que el feed no pudo ubicar— caen en el historial. */
 const MONEY_MESSAGE_KEYS = new Set(['depositConfirmed', 'withdrawalCompleted', 'depositUnlocked']);
 
-const notificationLink = (n: AppNotification) => (MONEY_MESSAGE_KEYS.has(n.messageKey) ? '/transactions' : n.link);
+const notificationLink = (n: AppNotification) => {
+  if (!MONEY_MESSAGE_KEYS.has(n.messageKey)) return n.link;
+  return n.link.startsWith('/transactions') ? n.link : '/transactions';
+};
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;

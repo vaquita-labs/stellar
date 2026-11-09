@@ -1,5 +1,6 @@
-import { AppsPage } from '@/core-ui/components';
+import { redirect } from 'next/navigation';
 
+// Old address of the 3D world; it lives on /world now.
 export default function Page() {
-  return <AppsPage />;
+  redirect('/world');
 }

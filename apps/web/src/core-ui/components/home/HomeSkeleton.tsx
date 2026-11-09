@@ -14,6 +14,39 @@
  * Es puramente visual: no consulta datos ni gatea nada. Lo usan los gates del
  * arranque (auth → config → perfil → reloj de juego) a través de <BootLoader>.
  */
+/**
+ * El renglón del total ganado ("$0.05 hasta hoy") mientras carga. Mismo alto
+ * (h-4) que el renglón real de <HomeDashboard>, que lo reserva siempre: si
+ * apareciera recién con los datos, empujaría las barras hacia abajo.
+ */
+export function EarningsTotalSkeleton() {
+  return (
+    <div className="flex h-4 items-center justify-end">
+      <div className="h-3 w-24 rounded bg-black/10 animate-pulse" />
+    </div>
+  );
+}
+
+/**
+ * Las barras del gráfico de ganancias mientras cargan: seis columnas del mismo
+ * ancho que las reales, alineadas abajo. La usa el arranque (<HomeSkeleton>) y
+ * también <HomeDashboard> cuando vuelve a pedir las ganancias (al volver de
+ * /world, por ejemplo), así la carga es la misma pantalla en los dos casos y
+ * las barras reales no aparecen de la nada.
+ */
+export function EarningsBarsSkeleton() {
+  return (
+    <div className="flex h-72 items-end gap-2 overflow-hidden">
+      {[35, 50, 42, 60, 48, 70].map((h, i) => (
+        <div key={i} className="flex h-full w-[calc((100%-2.5rem)/6)] shrink-0 flex-col items-center justify-end gap-1">
+          <div style={{ height: `${h}%` }} className="w-full rounded-md border border-black/10 bg-black/10 animate-pulse" />
+          <div className="h-2.5 w-7 rounded bg-black/10 animate-pulse" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function HomeSkeleton() {
   return (
     <div
@@ -41,57 +74,49 @@ export function HomeSkeleton() {
         </div>
       </div>
 
-      {/* Tablero: mismo padding y separación que <HomeDashboard>. */}
-      <div className="flex h-full w-full flex-col gap-3 overflow-hidden px-4 pb-6 pt-4">
-        {/* Tarjeta del saldo. */}
-        <div className="flex items-center gap-2 rounded-lg border border-black/20 border-b-2 bg-white px-4 py-4">
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <div className="h-9 w-44 rounded bg-black/10 animate-pulse" />
-            <div className="h-4 w-36 rounded bg-black/10 animate-pulse" />
+      {/* Tablero: misma columna (max-w-xl), padding y separación que <HomeDashboard>. */}
+      <div className="h-full w-full overflow-hidden px-4 pb-6 pt-4">
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-3">
+          {/* Tarjeta del saldo. */}
+          <div className="flex items-center gap-2 rounded-lg border border-black/20 border-b-2 bg-white px-4 py-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="h-9 w-44 rounded bg-black/10 animate-pulse" />
+              <div className="h-4 w-36 rounded bg-black/10 animate-pulse" />
+            </div>
+            <div className="h-5 w-5 rounded bg-black/10 animate-pulse" />
           </div>
-          <div className="h-5 w-5 rounded bg-black/10 animate-pulse" />
-        </div>
 
-        {/* Depositar / Retirar. */}
-        <div className="flex w-full max-w-xl gap-2">
-          <div className="h-12 flex-1 rounded-md border border-black/20 border-b-4 bg-black/10 animate-pulse" />
-          <div className="h-12 flex-1 rounded-md border border-black/20 border-b-4 bg-white/70 animate-pulse" />
-        </div>
-
-        {/* Gráfico de ganancias: barras del mismo ancho, alineadas abajo, y las
-            pestañas del período. */}
-        <div className="flex flex-col gap-3 py-2">
-          <div className="flex h-72 items-end gap-2 overflow-hidden">
-            {[35, 50, 42, 60, 48, 70].map((h, i) => (
-              <div key={i} className="flex h-full w-[calc((100%-2.5rem)/6)] shrink-0 flex-col items-center justify-end gap-1">
-                <div
-                  style={{ height: `${h}%` }}
-                  className="w-full rounded-md border border-black/10 bg-black/10 animate-pulse"
-                />
-                <div className="h-2.5 w-7 rounded bg-black/10 animate-pulse" />
-              </div>
-            ))}
+          {/* Depositar / Retirar. */}
+          <div className="flex w-full max-w-xl gap-2">
+            <div className="h-12 flex-1 rounded-md border border-black/20 border-b-4 bg-black/10 animate-pulse" />
+            <div className="h-12 flex-1 rounded-md border border-black/20 border-b-4 bg-white/70 animate-pulse" />
           </div>
-          <div className="mx-auto h-8 w-56 rounded-lg bg-black/10 animate-pulse" />
-        </div>
 
-        {/* Últimos movimientos. */}
-        <div className="rounded-2xl bg-white px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="h-4 w-36 rounded bg-black/10 animate-pulse" />
-            <div className="h-3 w-12 rounded bg-black/10 animate-pulse" />
+          {/* Gráfico de ganancias: el total, las barras y las pestañas del período. */}
+          <div className="flex flex-col gap-3 py-2">
+            <EarningsTotalSkeleton />
+            <EarningsBarsSkeleton />
+            <div className="mx-auto h-8 w-56 rounded-lg bg-black/10 animate-pulse" />
           </div>
-          <div className="mt-3 flex flex-col gap-3">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="h-10 w-10 shrink-0 rounded-full bg-black/10 animate-pulse" />
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <div className="h-3.5 w-28 rounded bg-black/10 animate-pulse" />
-                  <div className="h-3 w-20 rounded bg-black/10 animate-pulse" />
+
+          {/* Últimos movimientos. */}
+          <div className="rounded-2xl bg-white px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-36 rounded bg-black/10 animate-pulse" />
+              <div className="h-3 w-12 rounded bg-black/10 animate-pulse" />
+            </div>
+            <div className="mt-3 flex flex-col gap-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-black/10 animate-pulse" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <div className="h-3.5 w-28 rounded bg-black/10 animate-pulse" />
+                    <div className="h-3 w-20 rounded bg-black/10 animate-pulse" />
+                  </div>
+                  <div className="h-3.5 w-14 rounded bg-black/10 animate-pulse" />
                 </div>
-                <div className="h-3.5 w-14 rounded bg-black/10 animate-pulse" />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
