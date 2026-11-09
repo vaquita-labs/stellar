@@ -38,12 +38,10 @@ const MIN_STEPS = 2;
  *
  * Steps whose anchor is not on screen are dropped before the tour starts, so the
  * progress dots always match what the user is actually going to see. That covers
- * the map's edit mode, where the action row is unmounted entirely.
- *
- * The chest and the side rail carry the same anchor in both layouts: over the
- * map on a phone, inside the sidebar on a desktop. Only the copy the current
- * breakpoint lays out counts (see `findSpotlightTarget`), so the desktop walks
- * the full tour too, with the coach marks on the sidebar.
+ * the map's edit mode, where the action row is unmounted entirely, and the
+ * chest and the quick actions, which live in the world (/world) and not here.
+ * An anchor hidden by the current breakpoint does not count either (see
+ * `findSpotlightTarget`).
  */
 export function HomeTour() {
   const { t } = useTranslation();

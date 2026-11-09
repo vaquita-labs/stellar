@@ -151,7 +151,7 @@ export const ExplorePage = () => {
   return (
     <PageLayout
       title={t('explore.title', 'Explore')}
-      backHref="/home"
+      backHref="/world"
       contentClassName="!gap-3"
       stickyHeader
     >

@@ -1,184 +1,55 @@
 'use client';
 
-import { DailyRewardChest } from '@/core-ui/components/home/DailyRewardChest';
-import { HOME_TOUR_ANCHOR_QUICK_ACTIONS } from '@/core-ui/components/organisms/Tutorial/homeTourConfig';
-import { EditionMode, useMapStore } from '@/core-ui/stores';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { MouseEvent } from 'react';
+import { usePathname } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { Logo } from './Logo';
+import { isNavItemActive, NAV_ITEMS } from './navItems';
 
-const navItems = [
-  { id: 'home', href: '/home', icon: '/icons/navigation/home.png', label: 'Home' },
-  { id: 'shop', href: '/shop', icon: '/icons/navigation/shop.png', label: 'Shop' },
-  { id: 'leaderboard', href: '/leaderboard', icon: '/icons/navigation/leaderboard.png', label: 'Leaderboard' },
-  { id: 'explore', href: '/explore', icon: '/icons/navigation/world.webp', label: 'Explore' },
-  // { href: "/pools", icon: "/icons/pools.svg", label: "Pools" },
-];
-
-function NavLink({
-  href,
-  icon,
-  label,
-  isActive,
-  isMobile = false,
-  onClick,
-  locked = false,
-  soonLabel,
-}: {
-  href: string;
-  icon: string;
-  label: string;
-  isActive: boolean;
-  isMobile?: boolean;
-  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
-  /** Bloquea el ítem: no navega y se muestra atenuado con un badge "Soon". */
-  locked?: boolean;
-  soonLabel?: string;
-}) {
-  // Mobile uses a tighter, padding-light pill so the whole nav can be shorter.
-  const baseStyle = isMobile
-    ? 'flex font-medium rounded-lg px-2 py-1'
-    : 'flex font-medium rounded-lg px-3 py-2';
-  const activeStyle = 'bg-[#DDF4FF] border-2 border-[#84D8FF]';
-  const inactiveStyle = 'text-black hover:text-primary';
-
-  const inner = (
-    <div className={`relative flex ${isMobile ? 'flex-col items-center gap-0.5' : 'flex-row items-center gap-2'}`}>
-      <Image
-        src={icon}
-        alt={label}
-        width={isMobile ? 40 : 40}
-        height={isMobile ? 40 : 40}
-        className={locked ? 'opacity-40 grayscale' : undefined}
-      />
-      {!isMobile && <span className={locked ? 'opacity-40' : undefined}>{label}</span>}
-      {locked && (
-        <span
-          className={`pointer-events-none absolute rounded-full bg-black px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white shadow ${
-            isMobile ? '-top-1 left-1/2 -translate-x-1/2' : '-top-1 -right-2'
-          }`}
-        >
-          {soonLabel}
-        </span>
-      )}
-    </div>
-  );
-
-  // Ítem bloqueado: no es un enlace, no navega y deshabilita el puntero.
-  if (locked) {
-    return (
-      <div
-        aria-disabled
-        title={soonLabel}
-        className={`${baseStyle} ${inactiveStyle} cursor-not-allowed`}
-      >
-        {inner}
-      </div>
-    );
-  }
-
-  const combinedStyles = `${baseStyle} ${isActive ? activeStyle : inactiveStyle}`;
-  return (
-    <Link href={href} className={combinedStyles} onClick={onClick}>
-      {inner}
-    </Link>
-  );
-}
-
-function useShopNavHandler() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const setIsEditingMap = useMapStore((s) => s.setIsEditingMap);
-  const setEditMode = useMapStore((s) => s.setEditMode);
-
-  return (event: MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    // The shop edits the 3D world, which lives on /apps.
-    if (pathname !== '/apps') {
-      router.push('/apps');
-    }
-    setIsEditingMap(true);
-    setEditMode(EditionMode.SELECT);
-  };
-}
-
+/**
+ * The desktop side of `BottomNav`: the same three places (home, the 3D world
+ * and the card) with the same look, laid out as rows instead of tabs. The
+ * active place is the Vaquita chip (soft orange, black hairline, thicker base);
+ * the others are just icon and label. Shop, leaderboard, explore and the daily
+ * chest live inside the world, like on a phone.
+ */
 export function DesktopSidebar() {
   const { t } = useTranslation();
-  const pathname = usePathname();
-  const handleShopClick = useShopNavHandler();
-  const isEditingMap = useMapStore((s) => s.isEditingMap);
-
-  const renderItem = ({ id, href, icon, label }: (typeof navItems)[number]) => {
-    const isShop = href === '/shop';
-    // La tienda no navega: abre el modo edición del mapa en /home,
-    // así que se marca activa mientras se está editando.
-    const isActive = isShop ? isEditingMap : pathname.startsWith(href);
-    return (
-      <li key={href}>
-        <NavLink
-          href={href}
-          icon={icon}
-          label={t(`shell.nav.${id}`, label)}
-          isActive={isActive}
-          onClick={isShop ? handleShopClick : undefined}
-        />
-      </li>
-    );
-  };
+  const pathname = usePathname() ?? '';
 
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 border-r-2 border-[#B97204] z-10">
+    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 border-r border-black/10 bg-white z-10">
       <div className="flex flex-col w-full h-full">
         <div className="h-24 flex items-center px-6">
           <Logo />
         </div>
 
-        <nav
-          aria-label={t('shell.nav.primaryAriaLabel', 'Primary')}
-          className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-2"
-        >
-          <ul className="flex flex-col gap-2">{navItems.filter((item) => item.id === 'home').map(renderItem)}</ul>
-          {/* The places that are not the map, in one element: the home tour rings
-              them together here, the way it rings the quick actions over the map
-              on a phone. */}
-          <ul data-tutorial={HOME_TOUR_ANCHOR_QUICK_ACTIONS} className="flex flex-col gap-2">
-            {navItems.filter((item) => item.id !== 'home').map(renderItem)}
+        <nav aria-label={t('shell.nav.primaryAriaLabel', 'Primary')} className="flex-1 overflow-y-auto px-4 py-2">
+          <ul className="flex flex-col gap-1.5">
+            {NAV_ITEMS.map(({ id, href, icon, label }) => {
+              const active = isNavItemActive(pathname, href);
+              return (
+                <li key={id}>
+                  <Link
+                    href={href}
+                    aria-current={active ? 'page' : undefined}
+                    className={
+                      'flex items-center gap-3 rounded-xl px-3 py-2 text-base transition active:translate-y-[1px] ' +
+                      (active
+                        ? 'border border-black border-b-[3px] bg-primary/40 font-bold text-black'
+                        : 'border border-transparent border-b-[3px] font-semibold text-black/50 hover:bg-black/5 hover:text-black')
+                    }
+                  >
+                    <Image src={icon} alt="" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
+                    <span>{t(`shell.nav.${id}`, label)}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
-          <DailyRewardChest variant="sidebar" />
         </nav>
       </div>
     </aside>
-  );
-}
-
-export function MobileNavigation() {
-  const { t } = useTranslation();
-  const pathname = usePathname();
-  const handleShopClick = useShopNavHandler();
-  const isEditingMap = useMapStore((s) => s.isEditingMap);
-
-  return (
-    <nav className="md:hidden fixed bottom-0 left-0 h-16 flex justify-around items-center z-10 bg-background w-full rounded-t-lg backdrop-blur-xl shadow-[0_-10px_30px_rgba(15,23,42,0.18)]">
-      {navItems.map(({ id, href, icon, label }) => {
-        const isShop = href === '/shop';
-        // La tienda no navega: abre el modo edición del mapa en /home,
-        // así que se marca activa mientras se está editando.
-        const isActive = isShop ? isEditingMap : pathname.startsWith(href);
-        return (
-          <NavLink
-            key={href}
-            href={href}
-            icon={icon}
-            label={t(`shell.nav.${id}`, label)}
-            isActive={isActive}
-            isMobile
-            onClick={isShop ? handleShopClick : undefined}
-          />
-        );
-      })}
-    </nav>
   );
 }

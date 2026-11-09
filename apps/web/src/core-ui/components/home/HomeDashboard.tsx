@@ -3,7 +3,6 @@
 import { getDepositsData } from '@/core-ui/helpers/deposits';
 import { formatTokenPrecise } from '@/core-ui/helpers/numbers';
 import {
-  type ActivityItem,
   EARNINGS_BARS,
   EarningsUnavailableError,
   type EarningsPeriod,
@@ -13,19 +12,19 @@ import {
   useRecentActivity,
 } from '@/core-ui/hooks';
 import { maskAmount, useConfigStore, useHideBalance } from '@/core-ui/stores';
-import { Spinner } from '@heroui/react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { type PointerEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type PointerEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { IconType } from 'react-icons';
-import { FiArrowDownLeft, FiArrowUpRight, FiAward, FiChevronRight, FiFileText, FiPocket, FiTrendingUp } from 'react-icons/fi';
+import { FiChevronRight, FiTrendingUp } from 'react-icons/fi';
+import { ActivityRow } from '../molecules/ActivityRow';
 import { BalanceEye } from '../molecules/BalanceEye';
 import { SegmentedTabs } from '../molecules/SegmentedTabs';
-import { formatTransactionTime, TransactionList, TransactionRowSkeleton } from '../molecules/TransactionRow';
+import { TransactionList, TransactionRowSkeleton } from '../molecules/TransactionRow';
 import { DepositEarnings, DepositEarningsReporter } from './DepositEarningsReporter';
-import { AccrualTerm, LiveBalance } from './LiveBalance';
+import { EarningsBarsSkeleton, EarningsTotalSkeleton } from './HomeSkeleton';
+import { AccrualTerm, formatLiveBalance, LiveBalance } from './LiveBalance';
 
 const PERIODS: EarningsPeriod[] = ['daily', 'monthly', 'yearly'];
 
@@ -157,6 +156,19 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
   // The still part of the balance; what moves is projected by <LiveBalance>
   // on every tick without re-rendering this screen, like the header does.
   const balanceBase = activeDepositsTotalAmount + passiveSettled;
+  // Every digit of the figure shares one size, so that size has to give way
+  // when the figure would not fit beside the eye: 30px at most, less on a
+  // narrow phone or with a long whole part. The figure is measured in digit
+  // widths (the dollar sign, the whole part, the eight decimals, and about
+  // half a digit for the dot and each comma), a digit being 0.62em wide; the
+  // 2rem set aside is the eye and its gap. `cqw` is the width of the column.
+  const wholeDigits = String(Math.floor(balanceBase)).length;
+  const balanceUnits = 9 + wholeDigits + (Math.floor((wholeDigits - 1) / 3) + 1) * 0.45;
+  const balanceFontSize = `min(1.875rem, calc((100cqw - 2rem) / ${(balanceUnits * 0.62).toFixed(2)}))`;
+  // The figure's shape with nothing of its value: every digit a zero. What the
+  // hidden balance is drawn over, so it is as wide and as long as the real one.
+  const { big: maskBig, sub: maskSub } = formatLiveBalance(balanceBase, 8);
+  const balanceMask = (maskBig + maskSub).replace(/\d/g, '0');
   const perDay = terms.reduce((sum, term) => sum + term.ratePerMs, 0) * 86_400_000;
   const earnings = useDefiEarnings(period);
   const buckets = earnings.data?.buckets;
@@ -189,86 +201,15 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
   }, [buckets, pending, period, language]);
   const activity = useRecentActivity(3);
 
-  // Money that comes back to the wallet is green with a plus, like the
-  // Transactions screen; money that leaves it carries a minus.
-  const ACTIVITY: Record<ActivityItem['kind'], { icon: IconType; label: string; sign: '+' | '-' | ''; box: string }> = {
-    received: { icon: FiArrowDownLeft, label: t('dashboard.activity.received', 'Received'), sign: '+', box: 'bg-success/25' },
-    sent: { icon: FiArrowUpRight, label: t('dashboard.activity.sent', 'Sent'), sign: '-', box: 'bg-primary/30' },
-    flexibleIn: {
-      icon: FiTrendingUp,
-      label: t('dashboard.activity.flexibleIn', 'Into flexible savings'),
-      sign: '-',
-      box: 'bg-primary/30',
-    },
-    flexibleOut: {
-      icon: FiTrendingUp,
-      label: t('dashboard.activity.flexibleOut', 'Out of flexible savings'),
-      sign: '+',
-      box: 'bg-success/25',
-    },
-    lockedIn: { icon: FiPocket, label: t('dashboard.activity.lockedIn', 'Saved for a term'), sign: '-', box: 'bg-primary/30' },
-    lockedOut: { icon: FiPocket, label: t('dashboard.activity.lockedOut', 'Term withdrawn'), sign: '+', box: 'bg-success/25' },
-    badge: { icon: FiAward, label: t('dashboard.activity.badge', 'Badge claimed'), sign: '', box: 'bg-[#FFF7E6]' },
-    other: { icon: FiFileText, label: t('dashboard.activity.other', 'Operation'), sign: '', box: 'bg-background' },
-  };
-  const subtitleOf = (item: ActivityItem) => {
-    if (item.kind === 'received') return t('dashboard.activity.from', 'From {{who}}', { who: item.counterparty ?? '' });
-    if (item.kind === 'sent') return t('dashboard.activity.to', 'To {{who}}', { who: item.counterparty ?? '' });
-    if (item.kind === 'flexibleIn' || item.kind === 'flexibleOut') return t('dashboard.activity.flexible', 'Flexible savings');
-    if (item.kind === 'lockedIn' || item.kind === 'lockedOut') return t('dashboard.activity.locked', 'Term savings');
-    if (item.kind === 'badge') return t('dashboard.activity.badges', 'Badges');
-    return item.summary;
-  };
-  const activityRow = (item: ActivityItem) => {
-    const meta = ACTIVITY[item.kind];
-    const Icon = meta.icon;
-    const green = meta.sign === '+';
-    return (
-      <li key={item.id} className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5">
-        <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-black text-black ${meta.box}`}
-        >
-          <Icon className="h-3.5 w-3.5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="truncate text-[13px] font-bold text-black">{item.kind === 'other' ? item.summary : meta.label}</p>
-            {item.status !== 'SUCCESS' && (
-              <span
-                className={
-                  'shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-bold ' +
-                  (item.status === 'PENDING'
-                    ? 'border-black/20 bg-primary/20 text-black'
-                    : 'border-red-300 bg-red-100 text-red-700')
-                }
-              >
-                {item.status === 'PENDING'
-                  ? t('dashboard.activity.pending', 'Pending')
-                  : t('dashboard.activity.failedTx', 'Failed')}
-              </span>
-            )}
-          </div>
-          <p className="truncate text-[11px] text-gray-600">{subtitleOf(item)}</p>
-        </div>
-        {/* Capped and truncated: whatever the record brings as amount or asset,
-            this column can never push the title out or widen the card. */}
-        <div className="min-w-0 max-w-[60%] shrink-0 text-right">
-          {item.amount !== null && (
-            <p className={`truncate text-[13px] font-bold tabular-nums ${green ? 'text-success' : 'text-black'}`}>
-              {hideBalance ? '••••' : `${meta.sign}${formatTokenPrecise(item.amount, 2)} ${item.asset ?? ''}`.trim()}
-            </p>
-          )}
-          <p className="text-[10px] text-gray-500">{formatTransactionTime(item.timestamp, language)}</p>
-        </div>
-      </li>
-    );
-  };
-
   // The strip opens on its latest bars and scrolls back into the past.
+  // A layout effect, not a plain one: it has to park the strip on today BEFORE
+  // the first paint. After it, one frame showed the oldest six bars (shorter,
+  // scaled against the latest ones) and the next jumped to today, which read
+  // as the bars growing every time the screen was opened with its data cached.
   const stripRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
   const barsKey = bars.length ? `${period}:${bars[bars.length - 1]!.key}` : '';
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = stripRef.current;
     if (el) el.scrollLeft = el.scrollWidth;
     syncThumb(el, thumbRef.current);
@@ -313,36 +254,55 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
   };
 
   return (
-    <div className="flex h-full w-full flex-col gap-3 overflow-y-auto overflow-x-hidden px-4 pb-6 pt-4">
-      {activeDeposits.map((d) => (
-        <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
-      ))}
+    // The scroll is the whole screen (its bar stays on the edge); the board is
+    // one column as wide as the header above it (max-w-xl), so on a desktop it
+    // stays the size of a tablet instead of stretching to the window.
+    <div className="h-full w-full overflow-y-auto overflow-x-hidden px-4 pb-6 pt-4">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-3">
+        {activeDeposits.map((d) => (
+          <DepositEarningsReporter key={d.id} deposit={d} onReport={reportEarnings} />
+        ))}
 
-      {/* The money at work, live, and at what pace it grows. The figure opens
-          the portfolio; the eye beside the label is the app's global hide-money
-          switch, the same one as in Settings. */}
-      <section className="flex items-center gap-2 rounded-lg border border-black border-b-2 bg-white px-4 py-4">
-        <button
-          type="button"
-          onClick={openPortfolio}
-          aria-label={t('home.stats.apyAria', 'Portfolio')}
-          className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left transition active:translate-y-0.5"
-        >
-          <span className="flex min-w-0 flex-col gap-1">
-            <span className="font-bold text-black tabular-nums">
-              {hideBalance ? (
-                <span className="text-4xl">••••</span>
-              ) : (
-                // Eight decimals: the two of the cents, big, and six small ones that tick.
-                <LiveBalance
-                  base={balanceBase}
-                  terms={terms}
-                  decimals={8}
-                  bigClassName="text-4xl"
-                  subClassName="text-base text-black/40"
-                />
-              )}
-            </span>
+        {/* The money at work, live, and at what pace it grows. The whole card
+            opens the portfolio: the button is a layer over it, not a wrapper,
+            because the eye inside is a button too and one cannot nest in another. */}
+        <section className="relative flex items-center gap-3 rounded-lg border border-black border-b-2 bg-white px-4 py-4">
+          <button
+            type="button"
+            onClick={openPortfolio}
+            aria-label={t('home.stats.apyAria', 'Portfolio')}
+            className="peer absolute inset-0 rounded-lg"
+          />
+          {/* `pointer-events-none`: being a container puts this column in a layer
+              of its own, above the card's button, and it would swallow the tap. */}
+          <div className="pointer-events-none flex min-w-0 flex-1 flex-col gap-1 transition [container-type:inline-size] peer-active:translate-y-0.5">
+            <div className="flex items-center gap-2">
+              {/* Every digit the same size; the six that tick only go lighter. */}
+              <span
+                className="whitespace-nowrap font-bold leading-9 text-black tabular-nums"
+                style={{ fontSize: balanceFontSize }}
+              >
+                {hideBalance ? (
+                  // A dot per character of the figure, spread over the exact
+                  // width it takes: the zeros hold that width unseen (tabular
+                  // digits are all as wide), so the eye stays where it was.
+                  <span aria-hidden className="relative inline-block">
+                    <span className="invisible">{balanceMask}</span>
+                    <span className="absolute inset-0 flex items-center justify-around">
+                      {Array.from(balanceMask, (_, i) => (
+                        <span key={i} className="h-[0.3em] w-[0.3em] rounded-full bg-black" />
+                      ))}
+                    </span>
+                  </span>
+                ) : (
+                  <LiveBalance base={balanceBase} terms={terms} decimals={8} bigClassName="" subClassName="text-black/40" />
+                )}
+              </span>
+              {/* The app's global hide-money switch, beside the money it hides.
+                  The one thing in the column that takes taps, with a wider touch
+                  area than its icon: a miss here would open the portfolio instead. */}
+              <BalanceEye className="pointer-events-auto relative after:absolute after:-inset-2 after:content-['']" />
+            </div>
             <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
               <span className="flex items-center gap-1 text-[#018222]">
                 <FiTrendingUp className="h-4 w-4" />
@@ -352,145 +312,164 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
                 {t('dashboard.perDay', '{{amount}} per day', { amount: maskAmount(money(perDay), hideBalance) })}
               </span>
             </span>
-          </span>
-          <FiChevronRight aria-hidden className="h-5 w-5 shrink-0 text-black/50" />
-        </button>
-        {/* The app's global hide-money switch, beside the money it hides. */}
-        <BalanceEye />
-      </section>
-
-      {/* Withdraw and deposit, right under the money they move. */}
-      {actions}
-
-      {/* What the flexible savings earned: a bar per day, month or year, the
-          latest on the right, and earlier ones by swiping left. No card around
-          it: the strip runs edge to edge so there is nothing to bump into. */}
-      <section className="flex flex-col gap-3 py-2">
-        {earnings.data && earnings.data.totalEarned > 0 && (
-          <p className="text-right text-xs font-semibold text-[#018222]">
-            {t('dashboard.earnedTotal', '{{amount}} so far', {
-              amount: maskAmount(money(earnings.data.totalEarned), hideBalance),
-            })}
-          </p>
-        )}
-        {earnings.isPending ? (
-          <div className="flex h-72 items-center justify-center">
-            <Spinner size="lg" color="current" />
           </div>
-        ) : earnings.isError && !(earnings.error instanceof EarningsUnavailableError) ? (
-          <p className="flex h-72 items-center justify-center px-6 text-center text-sm text-gray-500">
-            {t('dashboard.earningsFailed', 'We could not read your earnings. Pull to refresh.')}
-          </p>
-        ) : (
-          <div className="relative">
-            <div
-              ref={stripRef}
-              onScroll={onStripScroll}
-              // `no-scrollbar`: the global orange scrollbar would sit on top of
-              // the labels; the bar below the strip takes its place while it moves.
-              className="no-scrollbar flex h-72 snap-x snap-mandatory items-end gap-2 overflow-x-auto"
-            >
-              {bars.map((bar) => {
-                // A bar off screen can be taller than the one that sets the
-                // scale: it is capped until it comes into view and takes over.
-                const height = bar.ghost ? ghostHeight(bar.key) : Math.max(4, Math.min(1, bar.earned / max) * FULL_BAR);
-                return (
-                  <div
-                    key={bar.key}
-                    // Six bars fill the strip exactly (five gaps of 0.5rem), so
-                    // none is cut at an edge; earlier ones are a swipe away.
-                    className="flex h-full w-[calc((100%-2.5rem)/6)] shrink-0 snap-end flex-col items-center gap-1"
-                  >
-                    <div className="flex w-full flex-1 flex-col items-center justify-end gap-1">
-                      {!bar.ghost && (
-                        <span className="whitespace-nowrap text-[9px] font-semibold text-black tabular-nums">
-                          {hideBalance ? '••' : money(bar.earned)}
-                        </span>
-                      )}
-                      <motion.div
-                        initial={false}
-                        animate={{ height: `${height}%` }}
-                        transition={{ type: 'spring', stiffness: 220, damping: 24 }}
-                        className={
-                          'w-full rounded-md border ' +
-                          (bar.ghost
-                            ? 'border-dashed border-black/25 bg-black/[0.03]'
-                            : 'border-black border-b-2 ' + (bar.estimated ? 'bg-success/40' : 'bg-success'))
-                        }
-                      />
-                    </div>
-                    <span className={`whitespace-nowrap text-[10px] ${bar.ghost ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {bar.label}
-                    </span>
-                  </div>
-                );
-              })}
+          <FiChevronRight
+            aria-hidden
+            className="pointer-events-none h-5 w-5 shrink-0 text-black/50 transition peer-active:translate-y-0.5"
+          />
+        </section>
+
+        {/* Withdraw and deposit, right under the money they move. */}
+        {actions}
+
+        {/* What the flexible savings earned: a bar per day, month or year, the
+            latest on the right, and earlier ones by swiping left. No card around
+            it: the strip runs edge to edge so there is nothing to bump into. */}
+        <section className="flex flex-col gap-3 py-2">
+          {/* The total keeps its line whether or not there is a figure to put in
+              it: showing up with the data, it pushed the bars down. */}
+          {earnings.isPending ? (
+            <EarningsTotalSkeleton />
+          ) : (
+            <p className="h-4 text-right text-xs font-semibold text-[#018222]">
+              {earnings.data && earnings.data.totalEarned > 0
+                ? t('dashboard.earnedTotal', '{{amount}} so far', {
+                    amount: maskAmount(money(earnings.data.totalEarned), hideBalance),
+                  })
+                : null}
+            </p>
+          )}
+          {earnings.isPending ? (
+            // The same bars the boot skeleton draws (<HomeSkeleton>), so the
+            // chart loads in place instead of a spinner the bars then pop out of.
+            <div role="status" aria-busy="true">
+              <EarningsBarsSkeleton />
             </div>
-            {/* Where the strip is, clear of the labels and out of the layout
-                (it floats in the gap above the tabs): a thumb as wide as the
-                bars in view, there only while the strip moves. */}
-            {bars.length > VISIBLE_BARS && (
+          ) : earnings.isError && !(earnings.error instanceof EarningsUnavailableError) ? (
+            <p className="flex h-72 items-center justify-center px-6 text-center text-sm text-gray-500">
+              {t('dashboard.earningsFailed', 'We could not read your earnings. Pull to refresh.')}
+            </p>
+          ) : (
+            <div className="relative">
               <div
-                aria-hidden
-                onPointerDown={(event) => {
-                  if (event.pointerType !== 'mouse') return;
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  seekStrip(event);
-                }}
-                onPointerMove={(event) => {
-                  if (event.currentTarget.hasPointerCapture(event.pointerId)) seekStrip(event);
-                }}
-                className={
-                  'absolute inset-x-0 top-full py-[3px] transition-opacity duration-300 hover:opacity-100 ' +
-                  (scrolling ? 'opacity-100' : 'opacity-0')
-                }
+                ref={stripRef}
+                onScroll={onStripScroll}
+                // `no-scrollbar`: the global orange scrollbar would sit on top of
+                // the labels; the bar below the strip takes its place while it moves.
+                className="no-scrollbar flex h-72 snap-x snap-mandatory items-end gap-2 overflow-x-auto"
               >
-                <div className="relative h-1.5 w-full rounded-full bg-black/10">
-                  <div ref={thumbRef} className="absolute inset-y-0 rounded-full border border-black bg-primary" />
-                </div>
+                {bars.map((bar) => {
+                  // A bar off screen can be taller than the one that sets the
+                  // scale: it is capped until it comes into view and takes over.
+                  const height = bar.ghost ? ghostHeight(bar.key) : Math.max(4, Math.min(1, bar.earned / max) * FULL_BAR);
+                  return (
+                    <div
+                      key={bar.key}
+                      // Six bars fill the strip exactly (five gaps of 0.5rem), so
+                      // none is cut at an edge; earlier ones are a swipe away.
+                      className="flex h-full w-[calc((100%-2.5rem)/6)] shrink-0 snap-end flex-col items-center gap-1"
+                    >
+                      <div className="flex w-full flex-1 flex-col items-center justify-end gap-1">
+                        {!bar.ghost && (
+                          <span className="whitespace-nowrap text-[9px] font-semibold text-black tabular-nums">
+                            {hideBalance ? '••' : money(bar.earned)}
+                          </span>
+                        )}
+                        <motion.div
+                          initial={false}
+                          animate={{ height: `${height}%` }}
+                          transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+                          className={
+                            'w-full rounded-md border ' +
+                            (bar.ghost
+                              ? 'border-dashed border-black/25 bg-black/[0.03]'
+                              : 'border-black border-b-2 bg-success/40')
+                          }
+                        />
+                      </div>
+                      <span className={`whitespace-nowrap text-[10px] ${bar.ghost ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {bar.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+              {/* Where the strip is, clear of the labels and out of the layout
+                  (it floats in the gap above the tabs): a thumb as wide as the
+                  bars in view, there only while the strip moves. */}
+              {bars.length > VISIBLE_BARS && (
+                <div
+                  aria-hidden
+                  onPointerDown={(event) => {
+                    if (event.pointerType !== 'mouse') return;
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    seekStrip(event);
+                  }}
+                  onPointerMove={(event) => {
+                    if (event.currentTarget.hasPointerCapture(event.pointerId)) seekStrip(event);
+                  }}
+                  className={
+                    'absolute inset-x-0 top-full py-[3px] transition-opacity duration-300 hover:opacity-100 ' +
+                    (scrolling ? 'opacity-100' : 'opacity-0')
+                  }
+                >
+                  <div className="relative h-1.5 w-full rounded-full bg-black/10">
+                    <div ref={thumbRef} className="absolute inset-y-0 rounded-full border border-black bg-primary" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <SegmentedTabs
+            value={period}
+            onChange={setPeriod}
+            ariaLabel={t('dashboard.periodAria', 'Period')}
+            tabs={PERIODS.map((key) => ({ key, label: t(`dashboard.period.${key}`, key) }))}
+            compact
+          />
+        </section>
+
+        {/* The last few movements of the wallet, in the same card the
+            Transactions screen uses: payments in and out, money into and out of
+            the savings, read from the SDK's on-chain history. */}
+        <section className="rounded-2xl bg-white px-4 py-3">
+          <div className="flex items-center justify-between">
+            <p className="text-base font-bold text-black">{t('dashboard.activity.title', 'Latest activity')}</p>
+            <Link href="/transactions" className="text-xs font-semibold text-gray-500 underline underline-offset-2">
+              {t('dashboard.activity.all', 'See all')}
+            </Link>
           </div>
-        )}
-        <SegmentedTabs
-          value={period}
-          onChange={setPeriod}
-          ariaLabel={t('dashboard.periodAria', 'Period')}
-          tabs={PERIODS.map((key) => ({ key, label: t(`dashboard.period.${key}`, key) }))}
-          compact
-        />
-      </section>
+          {activity.isLoading ? (
+            <TransactionList align="grouped">
+              {[0, 1, 2].map((i) => (
+                <TransactionRowSkeleton key={i} />
+              ))}
+            </TransactionList>
+          ) : activity.isError || !activity.data || activity.data.length === 0 ? (
+            <p className="py-6 text-center text-xs text-gray-500">
+              {activity.isError
+                ? t('dashboard.activity.failed', 'We could not read your latest activity.')
+                : t('dashboard.activity.empty', 'Your movements will show up here.')}
+            </p>
+          ) : (
+            <TransactionList align="grouped">
+              {activity.data.map((item) => (
+                // Straight to the movement's own page, not through the list.
+                <ActivityRow
+                  key={item.id}
+                  item={item}
+                  hideBalance={hideBalance}
+                  onPress={() => router.push(`/transactions/${item.id}`)}
+                />
+              ))}
+            </TransactionList>
+          )}
+        </section>
 
-      {/* The last few movements of the wallet, in the same card the
-          Transactions screen uses: payments in and out, money into and out of
-          the savings, read from the SDK's on-chain history. */}
-      <section className="rounded-2xl bg-white px-4 py-3">
-        <div className="flex items-center justify-between">
-          <p className="text-base font-bold text-black">{t('dashboard.activity.title', 'Latest activity')}</p>
-          <Link href="/transactions" className="text-xs font-semibold text-gray-500 underline underline-offset-2">
-            {t('dashboard.activity.all', 'See all')}
-          </Link>
-        </div>
-        {activity.isLoading ? (
-          <TransactionList align="grouped">
-            {[0, 1, 2].map((i) => (
-              <TransactionRowSkeleton key={i} />
-            ))}
-          </TransactionList>
-        ) : activity.isError || !activity.data || activity.data.length === 0 ? (
-          <p className="py-6 text-center text-xs text-gray-500">
-            {activity.isError
-              ? t('dashboard.activity.failed', 'We could not read your latest activity.')
-              : t('dashboard.activity.empty', 'Your movements will show up here.')}
-          </p>
-        ) : (
-          <TransactionList align="grouped">{activity.data.map(activityRow)}</TransactionList>
-        )}
-      </section>
-
-      {/* Hidden for now (2026-10-31): the invite card. The screen it opened,
-          /profile/invite, still exists. Markup kept here to bring it back:
-          <Link href="/profile/invite" ...> FiUsers + dashboard.invite.title / .body </Link> */}
+        {/* Hidden for now (2026-10-31): the invite card. The screen it opened,
+            /profile/invite, still exists. Markup kept here to bring it back:
+            <Link href="/profile/invite" ...> FiUsers + dashboard.invite.title / .body </Link> */}
+      </div>
     </div>
   );
 }

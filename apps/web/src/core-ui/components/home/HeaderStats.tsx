@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiBell, FiHeadphones } from 'react-icons/fi';
+import { FiBell, FiChevronLeft, FiHeadphones } from 'react-icons/fi';
 import {
   useProfileData,
   useProfileExperience,
@@ -16,24 +16,29 @@ import {
 } from '../../hooks';
 import { GOLD_COIN, useElementPositionsStore } from '../../stores';
 import { PageHeader } from '../molecules';
+import { CircleIconButton } from '../molecules/CircleIconButton';
 import { useModalPresence } from '../molecules/AppModal';
-import { CoinsModal, ExperienceModal, InstallButton, StreakModal } from '../organisms';
+import { CoinsModal, ExperienceModal, StreakModal } from '../organisms';
 import { VaquitaAvatarCircle } from '../avatar/VaquitaAvatar';
-import { DailyRewardChest } from './DailyRewardChest';
 import { MapClock } from './MapClock';
 import { MapQuickActions } from './MapQuickActions';
-import { PressableButton } from '../molecules/PressableButton';
+import { FOCUS_RING_CLASSES } from '../molecules/PressableButton';
 import {
   HOME_TOUR_ANCHOR_HELP,
   HOME_TOUR_ANCHOR_PROFILE,
 } from '../organisms/Tutorial/homeTourConfig';
 
+/** Un tramo de la pastilla de racha/monedas/experiencia del header del mundo. */
+const STAT_SEGMENT_CLASSES =
+  'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-black tabular-nums transition ' +
+  'hover:bg-[#F5FBFF] active:bg-black/10 ' +
+  FOCUS_RING_CLASSES;
+
 /**
- * `game` turns on the parts of the header that belong to the game and the map:
- * the balance pill, the streak/coins/stars row and the floating column with the
- * clock, quick actions and the daily chest. On over the 3D world (/apps); off on
- * the money dashboard (/home), which shows the balance itself. What is always
- * there is the avatar, the greeting, install, notifications and help.
+ * `game` is the header of the 3D world (/world): back, the
+ * streak/coins/stars pill and the quick actions row (explore, ranking, shop),
+ * with the clock hanging under it. Off on the money dashboard (/home), which
+ * shows the orange bar instead: avatar, greeting, notifications and help.
  */
 export const HeaderStats = ({ game = false }: { game?: boolean }) => {
   const { t } = useTranslation();
@@ -120,7 +125,7 @@ export const HeaderStats = ({ game = false }: { game?: boolean }) => {
   return (
     <div className="w-full relative">
       {/* The orange bar (avatar, greeting, notifications, help) belongs to the
-          dashboard. Over the world (/apps) it would repeat /home, so the world
+          dashboard. Over the world (/world) it would repeat /home, so the world
           keeps only the game row and the floating column below it. */}
       {!game && (
       <div className="w-full px-4 pt-2 pb-2 bg-primary rounded-g">
@@ -168,15 +173,9 @@ export const HeaderStats = ({ game = false }: { game?: boolean }) => {
                 en Perfil → Ajustes → Invitar amigos (<InviteFriendsPage>). */}
           </div>
 
-          {/* Instalar + campana + soporte, en columna. El botón de instalar va
-              ARRIBA de los dos redondos a propósito: instalar la app es lo que
-              habilita las notificaciones push (en iOS no llega ninguna hasta
-              que está en la pantalla de inicio), así que es la acción que más
-              queremos que se vea. Se borra solo cuando ya está instalada —
-              adentro de la app instalada un botón de instalar se lee roto. */}
+          {/* Campana + soporte. El botón de instalar que iba arriba de estos
+              dos se sacó del header; instalar la app sigue en Perfil → Ajustes. */}
           <div className="flex shrink-0 self-center flex-col items-end gap-2">
-            <InstallButton />
-
             <div className="flex items-center gap-2">
               <Link
                 href="/notifications"
@@ -204,106 +203,97 @@ export const HeaderStats = ({ game = false }: { game?: boolean }) => {
         </div>
       </div>
       )}
-      {/* Over the world there is no orange bar for the game row to hang from, so
-          this spacer is what keeps it off the top edge (and below the notch in
-          the installed app). The row and the floating column are positioned
-          from the bottom of this wrapper, so both move down together. */}
-      {game && <div aria-hidden className="h-[calc(env(safe-area-inset-top)+12px)]" />}
+      {/* El mundo es una pantalla propia (sin barra inferior): se entra desde
+          el tablero y se sale con el back. Un solo bloque naranja (bg-primary),
+          el mismo del header del perfil de otro usuario, con dos filas:
 
-      {/* Racha, monedas y experiencia ABREN cada uno su modal. Como fila de
-          números sueltos se leían como un panel de datos, así que cada uno es
-          un <PressableButton> chip: el mismo borde, el mismo hundido y el mismo
-          anillo de foco que cualquier otro botón de la app.
+          1. back + racha/monedas/experiencia. Los tres números van
+             juntos en UNA pastilla partida en tres, cada tramo un botón que
+             abre su modal; como tres chips sueltos más la fila de accesos de
+             abajo, el header se comía el mapa.
+          2. explorar, ranking y tienda.
 
-          La banda va de borde a borde, igual que el bloque naranja de arriba:
-          el FONDO ocupa todo el ancho y solo el contenido se centra en
-          `max-w-xl`. En móvil da lo mismo (la pantalla es más angosta que ese
-          tope), pero en escritorio la barra dejaba de tocar los bordes y
-          quedaba como una isla flotante en medio del mapa. Sigue translúcida
-          porque es de donde cuelga el cartel del reloj (ver <MapClockCard>,
-          cuyas cuerdas suben hasta este borde inferior).
-
-          Offsets en px fijos (no las clases rem de Tailwind) para que la
-          distancia al bloque naranja sea la misma en todos los dispositivos,
-          aunque el usuario tenga el tamaño de fuente del sistema agrandado. */}
+          El padding de arriba suma el safe-area para quedar debajo del notch
+          en la app instalada. */}
       {game && (
-        <div className="absolute left-0 right-0 -bottom-[36px] z-20 pointer-events-none">
-          <div className="bg-white/40 backdrop-blur-md pointer-events-auto">
-            <div className="max-w-xl mx-auto flex items-center justify-between gap-2 px-2 py-1.5">
-              <PressableButton
-                variant="white"
-                size="chip"
-                onClick={() => setShowStreakModal(true)}
-                ariaLabel={t('home.stats.streakAlt', 'Streak')}
-                className="flex-1"
-              >
-                {streakLoading && !streakData ? (
-                  <Spinner size="sm" color="current" />
-                ) : (
-                  <>
-                    <Image
-                      src="/icons/global/streak_face.png"
-                      alt=""
-                      width={20}
-                      height={20}
-                      className="object-contain"
-                      priority
-                      style={hasActiveStreak ? {} : { filter: 'grayscale(100%)' }}
-                    />
-                    <span className="text-xs font-bold text-black tabular-nums">{totalStreak}</span>
-                  </>
-                )}
-              </PressableButton>
+        <div className="relative z-20 border-b border-black/10 bg-primary px-4 pb-2.5 pt-[calc(env(safe-area-inset-top)+12px)]">
+          <div className="max-w-xl mx-auto flex flex-col gap-2.5">
+            {/* Sin título: back a la izquierda, pastilla a la derecha. */}
+            <div className="flex items-center justify-between gap-2.5">
+              <div>
+                <CircleIconButton
+                  href="/home"
+                  variant="white"
+                  ariaLabel={t('common.back', 'Back')}
+                  icon={<FiChevronLeft className="w-4 h-4" />}
+                />
+              </div>
+              <div className="flex shrink-0 items-stretch divide-x divide-black/15 overflow-hidden rounded-full border border-black border-b-2 bg-white">
+                <button
+                  type="button"
+                  onClick={() => setShowStreakModal(true)}
+                  aria-label={t('home.stats.streakAlt', 'Streak')}
+                  className={STAT_SEGMENT_CLASSES + ' pl-3'}
+                >
+                  {streakLoading && !streakData ? (
+                    <Spinner size="sm" color="current" />
+                  ) : (
+                    <>
+                      <Image
+                        src="/icons/global/streak_face.png"
+                        alt=""
+                        width={18}
+                        height={18}
+                        className="object-contain"
+                        priority
+                        style={hasActiveStreak ? {} : { filter: 'grayscale(100%)' }}
+                      />
+                      <span>{totalStreak}</span>
+                    </>
+                  )}
+                </button>
 
-              <PressableButton
-                variant="white"
-                size="chip"
-                onClick={() => setShowCoinsModal(true)}
-                ariaLabel={t('home.stats.goldCoinAlt', 'Gold Coin')}
-                className="flex-1"
-              >
-                {/* La ref del destino de la animación de monedas va en el contenido,
-                  no en el botón: <PressableButton> no reenvía refs y el centro del
-                  ícono es mejor blanco que el centro del chip entero. */}
-                <span ref={setGoldCoinRef} className="flex items-center gap-2">
-                  <Image src="/icons/global/coin.png" alt="" width={20} height={20} className="object-contain" priority />
-                  <span className="text-xs font-bold text-black tabular-nums">{goldCoins}</span>
-                </span>
-              </PressableButton>
+                <button
+                  type="button"
+                  onClick={() => setShowCoinsModal(true)}
+                  aria-label={t('home.stats.goldCoinAlt', 'Gold Coin')}
+                  className={STAT_SEGMENT_CLASSES}
+                >
+                  {/* La ref del destino de la animación de monedas va en el
+                      contenido: el centro del ícono es mejor blanco que el del
+                      tramo entero. */}
+                  <span ref={setGoldCoinRef} className="flex items-center gap-1.5">
+                    <Image src="/icons/global/coin.png" alt="" width={18} height={18} className="object-contain" priority />
+                    <span>{goldCoins}</span>
+                  </span>
+                </button>
 
-              <PressableButton
-                variant="white"
-                size="chip"
-                onClick={() => setShowExperienceModal(true)}
-                ariaLabel={t('home.stats.experienceAlt', 'Experience')}
-                className="flex-1"
-              >
-                <Image src="/icons/global/star.png" alt="" width={20} height={20} className="object-contain" priority />
-                <span className="text-xs font-bold text-black tabular-nums">
-                  {Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </span>
-              </PressableButton>
+                <button
+                  type="button"
+                  onClick={() => setShowExperienceModal(true)}
+                  aria-label={t('home.stats.experienceAlt', 'Experience')}
+                  className={STAT_SEGMENT_CLASSES + ' pr-3'}
+                >
+                  <Image src="/icons/global/star.png" alt="" width={18} height={18} className="object-contain" priority />
+                  <span>{Math.floor(experience).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </button>
+              </div>
             </div>
+
+            <MapQuickActions />
           </div>
         </div>
       )}
 
-      {/* Fila flotante sobre el cielo, anclada al borde inferior del bloque
-          naranja (top-full) con un offset en px fijos: 36px que ocupa el pill
-          de stats + 4px de aire. Reloj a la izquierda (el ciclo de luz del mapa
-          sigue esta misma hora) y accesos rápidos + cofre a la derecha, ambos
-          en el mismo contenedor centrado max-w-xl para que arranquen a la misma
-          altura y a la misma distancia del naranja en cualquier pantalla.
-          La columna derecha es solo móvil: en escritorio vive en el sidebar. */}
+      {/* El reloj cuelga del borde inferior del header: sus cuerdas miden 9px
+          (ver <MapClockCard>), así que ese es exactamente el offset. El cofre
+          diario ya no vive acá: en móvil es el botón grande de abajo a la
+          derecha (lo monta <HomePage>), también en escritorio. */}
       {game && (
-        <div className="absolute left-0 right-0 top-full mt-[40px] px-1 z-20 pointer-events-none">
-          <div className="max-w-xl mx-auto flex items-start justify-between gap-2">
+        <div className="absolute left-0 right-0 top-full mt-[9px] px-3 z-20 pointer-events-none">
+          <div className="max-w-xl mx-auto flex items-start">
             <div className="pointer-events-auto">
               <MapClock />
-            </div>
-            <div className="flex flex-col items-center gap-2 pointer-events-auto md:hidden">
-              <MapQuickActions />
-              <DailyRewardChest />
             </div>
           </div>
         </div>

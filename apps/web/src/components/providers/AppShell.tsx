@@ -58,14 +58,22 @@ export function AppShell({
   const { ref } = useResize();
   const pathname = usePathname();
 
-  // On a phone the three places of the app (home, QR, help) are a bottom bar
-  // (`BottomNav`); shop and leaderboard stay as floating actions on the home.
-  // Desktop keeps the sidebar. Both hide while editing the map or on /shop.
+  // The three places of the app (home, world, cards) are a bottom bar on a phone
+  // (`BottomNav`) and the same three as a sidebar on a desktop.
+  // Both hide while editing the map or on /shop.
   const isShopRoute = pathname?.startsWith('/shop') ?? false;
   // Screens that are a destination of their own, left with their back arrow:
-  // the scanner (camera and all) and the help center with its chat. Cards is a
-  // tab of the bar, so the bar stays there.
-  const isScanRoute = (pathname?.startsWith('/qr') || pathname?.startsWith('/concierge')) ?? false;
+  // the scanner (camera and all), the help center with its chat and the 3D
+  // world (slow to boot, so it is entered on purpose and shown full screen).
+  // Someone else's world (/explore/<username>) is the same full-screen 3D
+  // scene, so it hides the bar too; the /explore list keeps it.
+  // Cards is a tab of the bar, so the bar stays there.
+  const isScanRoute =
+    (pathname?.startsWith('/qr') ||
+      pathname?.startsWith('/concierge') ||
+      pathname?.startsWith('/world') ||
+      pathname?.startsWith('/explore/')) ??
+    false;
   const isEditingMap = useMapStore((s) => s.isEditingMap);
   const hideNavigation = isShopRoute || isEditingMap;
 

@@ -1,11 +1,14 @@
 import { DepositResponseDTO, DepositWithdrawalState, WithdrawalStatus } from '../types';
+import type { ActivityItem, ActivityKind } from './activity';
 
 /**
  * Historial de movimientos del usuario. No hay un endpoint de "transacciones":
- * la lista se deriva de la misma query de depósitos que ya usa el home (sin
- * fetch extra ni cache nueva). Cada depósito con lock es un traspaso de los
- * ahorros (Blend) a una posición, y cada retiro asociado devuelve la plata a
- * los ahorros.
+ * la lista sale de dos lecturas que ya existen. Los depósitos (la misma query
+ * que usa el home) dan las posiciones a plazo con su detalle: cada depósito con
+ * lock es un traspaso de los ahorros a una posición, y cada retiro asociado
+ * devuelve la plata a los ahorros. El historial on-chain de la billetera (ver
+ * `activity.ts`) da todo lo demás: envíos, ahorros flexibles, insignias.
+ * `buildMovements` los junta en una sola lista.
  */
 
 /**
@@ -27,6 +30,8 @@ export interface AppTransaction {
   /** Estable y URL-safe: es el segmento de /transactions/[id]. */
   id: string;
   depositId: number;
+  /** Número de la posición en el contrato de ahorro a plazo. */
+  nonce: string | null;
   kind: TransactionKind;
   status: TransactionStatus;
   /** Retiro anticipado: se pierden las recompensas. */
@@ -75,6 +80,7 @@ export const buildTransactions = (deposits: DepositResponseDTO[]): AppTransactio
     transactions.push({
       id: `d-${deposit.id}`,
       depositId: deposit.id,
+      nonce: deposit.nonce ?? null,
       kind: 'move',
       status,
       early: false,
@@ -107,6 +113,7 @@ export const buildTransactions = (deposits: DepositResponseDTO[]): AppTransactio
       transactions.push({
         id: `w-${deposit.id}-${withdrawal.id}`,
         depositId: deposit.id,
+        nonce: deposit.nonce ?? null,
         kind: 'withdraw',
         status: wStatus,
         early,
@@ -124,7 +131,89 @@ export const buildTransactions = (deposits: DepositResponseDTO[]): AppTransactio
   return transactions.sort((a, b) => b.timestamp - a.timestamp);
 };
 
-export const TRANSACTION_KINDS: TransactionKind[] = ['deposit', 'withdraw', 'move'];
+/**
+ * Una fila del historial: un movimiento que la API conoce con su detalle
+ * (`app`) o uno leído del historial on-chain de la billetera (`chain`).
+ */
+export type MovementCategory = 'deposit' | 'withdraw' | 'move' | 'payment' | 'other';
+export type Movement = {
+  /** Estable y URL-safe: es el segmento de /transactions/[id]. */
+  id: string;
+  category: MovementCategory;
+  status: TransactionStatus;
+  timestamp: number;
+} & ({ source: 'app'; transaction: AppTransaction } | { source: 'chain'; activity: ActivityItem });
+
+const ACTIVITY_CATEGORY: Record<ActivityKind, MovementCategory> = {
+  flexibleIn: 'deposit',
+  flexibleOut: 'withdraw',
+  lockedIn: 'move',
+  lockedOut: 'withdraw',
+  sent: 'payment',
+  received: 'payment',
+  badge: 'other',
+  trust: 'other',
+  other: 'other',
+};
+
+export const activityStatus = (status: ActivityItem['status']): TransactionStatus =>
+  status === 'SUCCESS' ? 'completed' : status === 'PENDING' ? 'pending' : 'failed';
+
+const sameHash = (a: string, b: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase();
+
+/** Cuánto pueden distar el pedido que guarda la API y la transacción on-chain de un mismo movimiento. */
+const SAME_MOVEMENT_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * El movimiento de la API que corresponde a un registro on-chain, si lo hay.
+ * Es la misma transacción, así que normalmente comparten hash. Cuando la API
+ * guardó otro (pasa con algunos retiros), un movimiento a plazo todavía se
+ * reconoce por el número de su posición, el mismo estado y la hora.
+ */
+export const findTransactionFor = (transactions: AppTransaction[], item: ActivityItem) => {
+  const byHash = transactions.find((transaction) => sameHash(transaction.transactionHash, item.hash));
+  if (byHash) return byHash;
+  const kind = item.kind === 'lockedIn' ? 'move' : item.kind === 'lockedOut' ? 'withdraw' : null;
+  if (!kind || !item.nonce) return undefined;
+  const status = activityStatus(item.status);
+  return transactions.find(
+    (transaction) =>
+      transaction.kind === kind &&
+      transaction.nonce === item.nonce &&
+      transaction.status === status &&
+      Math.abs(transaction.timestamp - item.timestamp) <= SAME_MOVEMENT_WINDOW_MS,
+  );
+};
+
+/**
+ * Todo lo que pasó, del más nuevo al más viejo. Una posición a plazo figura en
+ * las dos lecturas (es la misma transacción): se queda la de la API, que sabe el
+ * plazo y las recompensas.
+ */
+export const buildMovements = (transactions: AppTransaction[], activity: ActivityItem[]): Movement[] => {
+  const movements: Movement[] = transactions.map((transaction) => ({
+    id: transaction.id,
+    category: transaction.kind,
+    status: transaction.status,
+    timestamp: transaction.timestamp,
+    source: 'app',
+    transaction,
+  }));
+  for (const item of activity) {
+    if (findTransactionFor(transactions, item)) continue;
+    movements.push({
+      id: item.id,
+      category: ACTIVITY_CATEGORY[item.kind],
+      status: activityStatus(item.status),
+      timestamp: item.timestamp,
+      source: 'chain',
+      activity: item,
+    });
+  }
+  return movements.sort((a, b) => b.timestamp - a.timestamp);
+};
+
+export const TRANSACTION_KINDS: MovementCategory[] = ['deposit', 'withdraw', 'move', 'payment', 'other'];
 export const TRANSACTION_STATUSES: TransactionStatus[] = ['completed', 'pending', 'failed'];
 
 export interface TransactionFilters {
@@ -133,7 +222,7 @@ export interface TransactionFilters {
   /** Fin del rango, inclusive (ms; se compara contra el final del día). */
   endDate: number | null;
   /** Kinds to show (checkboxes). Every kind checked is the default; none checked shows nothing. */
-  kinds: TransactionKind[];
+  kinds: MovementCategory[];
   /** Statuses to show (checkboxes). Same rule as `kinds`. */
   statuses: TransactionStatus[];
 }
@@ -158,26 +247,26 @@ const endOfDay = (timestamp: number) => {
   return date.getTime();
 };
 
-export const filterTransactions = (transactions: AppTransaction[], filters: TransactionFilters) =>
-  transactions.filter((transaction) => {
-    if (filters.startDate !== null && transaction.timestamp < filters.startDate) return false;
-    if (filters.endDate !== null && transaction.timestamp > endOfDay(filters.endDate)) return false;
-    if (!filters.kinds.includes(transaction.kind)) return false;
-    if (!filters.statuses.includes(transaction.status)) return false;
+export const filterMovements = (movements: Movement[], filters: TransactionFilters) =>
+  movements.filter((movement) => {
+    if (filters.startDate !== null && movement.timestamp < filters.startDate) return false;
+    if (filters.endDate !== null && movement.timestamp > endOfDay(filters.endDate)) return false;
+    if (!filters.kinds.includes(movement.category)) return false;
+    if (!filters.statuses.includes(movement.status)) return false;
     return true;
   });
 
-/** Agrupa por mes (ya vienen ordenadas desc) para las cabeceras de la lista. */
-export const groupTransactionsByMonth = (transactions: AppTransaction[]) => {
-  const groups: { key: string; timestamp: number; items: AppTransaction[] }[] = [];
-  for (const transaction of transactions) {
-    const date = new Date(transaction.timestamp);
+/** Agrupa por mes (ya vienen ordenados desc) para las cabeceras de la lista. */
+export const groupMovementsByMonth = (movements: Movement[]) => {
+  const groups: { key: string; timestamp: number; items: Movement[] }[] = [];
+  for (const movement of movements) {
+    const date = new Date(movement.timestamp);
     const key = `${date.getFullYear()}-${date.getMonth()}`;
     const last = groups[groups.length - 1];
     if (last && last.key === key) {
-      last.items.push(transaction);
+      last.items.push(movement);
     } else {
-      groups.push({ key, timestamp: transaction.timestamp, items: [transaction] });
+      groups.push({ key, timestamp: movement.timestamp, items: [movement] });
     }
   }
   return groups;

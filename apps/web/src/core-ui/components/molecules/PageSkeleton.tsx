@@ -8,8 +8,8 @@
  *
  *   'rows'  filas finas (leaderboard, notificaciones, transacciones)
  *   'cards' tarjetas altas con preview del mapa y stats (explorar)
- *   'card'  la tarjeta Vaquita, sus beneficios y el botón de pedirla (/tarjetas)
- *   'apps'  el bloque naranja de bienvenida y la lista de "pronto" (/apps)
+ *   'card'  la tarjeta Vaquita, sus beneficios y el botón de pedirla (/cards)
+ *   'apps'  el bloque naranja de bienvenida y la lista de "pronto" (/world)
  *
  * La variante importa: si el arranque muestra filas y la página después pinta
  * tarjetas, la carga se ve como dos pantallas distintas encadenadas. Cada

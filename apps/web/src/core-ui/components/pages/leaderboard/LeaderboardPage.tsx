@@ -273,7 +273,7 @@ export const LeaderboardPage = () => {
   return (
     <PageLayout
       title={t('leaderboard.title', 'Leaderboard')}
-      backHref="/home"
+      backHref="/world"
       contentClassName="!gap-4"
       rightSlot={
         walletAddress ? (

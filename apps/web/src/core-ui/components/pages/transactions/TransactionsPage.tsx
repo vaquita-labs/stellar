@@ -2,6 +2,7 @@
 
 import { CircleIconButton } from '@/core-ui/components/molecules/CircleIconButton';
 import {
+  ActivityRow,
   FilterChip,
   multiSelectChips,
   PageLayout,
@@ -12,16 +13,17 @@ import {
   WithHydrated,
 } from '@/core-ui/components/molecules';
 import {
+  buildMovements,
   buildTransactions,
   DEFAULT_TRANSACTION_FILTERS,
-  filterTransactions,
-  groupTransactionsByMonth,
+  filterMovements,
+  groupMovementsByMonth,
   hasActiveFilters,
   TRANSACTION_KINDS,
   TRANSACTION_STATUSES,
   TransactionFilters,
 } from '@/core-ui/helpers/transactions';
-import { useDepositsComplete } from '@/core-ui/hooks';
+import { useDepositsComplete, useWalletActivity } from '@/core-ui/hooks';
 import { useConfigStore, useTransactionFiltersStore } from '@/core-ui/stores';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -48,6 +50,8 @@ export function TransactionsPage() {
   const router = useRouter();
   const { walletAddress } = useConfigStore();
   const { data, isLoading } = useDepositsComplete(walletAddress);
+  // Everything else the wallet did on chain: payments, flexible savings, badges.
+  const activity = useWalletActivity();
 
   // El detalle es otra página, así que abrirlo desmonta esta lista: los filtros
   // se dejan en el store al salir y se retoman al volver (ver el store).
@@ -66,8 +70,11 @@ export function TransactionsPage() {
     router.push(`/transactions/${transactionId}`);
   };
 
-  const transactions = useMemo(() => buildTransactions(data?.deposits ?? []), [data]);
-  const groups = useMemo(() => groupTransactionsByMonth(filterTransactions(transactions, filters)), [transactions, filters]);
+  const movements = useMemo(
+    () => buildMovements(buildTransactions(data?.deposits ?? []), activity.data ?? []),
+    [data, activity.data],
+  );
+  const groups = useMemo(() => groupMovementsByMonth(filterMovements(movements, filters)), [movements, filters]);
 
   const formatDate = (timestamp: number) =>
     new Date(timestamp).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -105,7 +112,7 @@ export function TransactionsPage() {
 
   // Solo la primera carga muestra placeholders; con la lista ya cacheada
   // (staleTime Infinity + localStorage) la pantalla entra pintada.
-  const showSkeleton = isLoading && !data;
+  const showSkeleton = (isLoading && !data) || (activity.isLoading && !activity.data);
 
   return (
     <PageLayout
@@ -151,13 +158,21 @@ export function TransactionsPage() {
               })}
             >
               <TransactionList align="grouped">
-                {group.items.map((transaction) => (
-                  <TransactionRow
-                    key={transaction.id}
-                    transaction={transaction}
-                    onPress={() => openTransaction(transaction.id)}
-                  />
-                ))}
+                {group.items.map((movement) =>
+                  movement.source === 'app' ? (
+                    <TransactionRow
+                      key={movement.id}
+                      transaction={movement.transaction}
+                      onPress={() => openTransaction(movement.id)}
+                    />
+                  ) : (
+                    <ActivityRow
+                      key={movement.id}
+                      item={movement.activity}
+                      onPress={() => openTransaction(movement.id)}
+                    />
+                  ),
+                )}
               </TransactionList>
             </TransactionMonthCard>
           ))
