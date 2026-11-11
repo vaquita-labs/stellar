@@ -80,11 +80,12 @@ const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
  */
 export const useBlendUsdc = (walletAddress?: string) => {
   const query = useBlendPosition(walletAddress);
+  const hasBalance = query.data != null || query.isError;
   const settled = query.data?.usdc ?? 0;
   const apy = query.data?.apy ?? 0;
   const ratePerMs = (settled * (apy / 100)) / MS_PER_YEAR;
 
-  return { ...query, settled, apy, ratePerMs, updatedAt: query.dataUpdatedAt };
+  return { ...query, settled, hasBalance, apy, ratePerMs, updatedAt: query.dataUpdatedAt };
 };
 
 /** Snapshot + lo devengado desde el fetch hasta `now`. */

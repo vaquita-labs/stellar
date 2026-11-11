@@ -117,6 +117,7 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
     ratePerMs: passiveRatePerMs,
     updatedAt: passiveUpdatedAt,
     settled: passiveSettled,
+    hasBalance: passiveReady,
   } = usePassiveUsdc(walletAddress);
 
   // Each active deposit reports its own rate (its APY is a hook per lock
@@ -278,7 +279,12 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
                 className="whitespace-nowrap font-bold leading-8 text-black tabular-nums"
                 style={{ fontSize: balanceFontSize }}
               >
-                {hideBalance ? (
+                {!passiveReady ? (
+                  // No reading yet, including the one restored from the last
+                  // visit. A zero here is what a reload showed for a second
+                  // before the vault simulation came back.
+                  <span className="inline-block h-8 w-40 rounded bg-black/10 animate-pulse" />
+                ) : hideBalance ? (
                   // A dot per character of the figure, spread over the exact
                   // width it takes: the zeros hold that width unseen (tabular
                   // digits are all as wide), so the eye stays where it was.
@@ -294,7 +300,13 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
                     </span>
                   </span>
                 ) : (
-                  <LiveBalance base={balanceBase} terms={terms} decimals={8} bigClassName="" subClassName="text-[0.75em] text-black/40" />
+                  <LiveBalance
+                    base={balanceBase}
+                    terms={terms}
+                    decimals={8}
+                    bigClassName=""
+                    subClassName="text-[0.75em] text-black/40"
+                  />
                 )}
               </span>
               {/* The app's global hide-money switch, beside the money it hides.
@@ -303,13 +315,19 @@ export function HomeDashboard({ actions }: { actions?: ReactNode }) {
               <BalanceEye className="pointer-events-auto relative after:absolute after:-inset-2 after:content-['']" />
             </div>
             <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
-              <span className="flex items-center gap-1 text-[#018222]">
-                <FiTrendingUp className="h-4 w-4" />
-                {t('dashboard.apy', '{{apy}}% APY', { apy: passiveApy.toFixed(2) })}
-              </span>
-              <span className="text-gray-500">
-                {t('dashboard.perDay', '{{amount}} per day', { amount: maskAmount(money(perDay), hideBalance) })}
-              </span>
+              {!passiveReady ? (
+                <span className="inline-block h-4 w-36 rounded bg-black/10 animate-pulse" />
+              ) : (
+                <>
+                  <span className="flex items-center gap-1 text-[#018222]">
+                    <FiTrendingUp className="h-4 w-4" />
+                    {t('dashboard.apy', '{{apy}}% APY', { apy: passiveApy.toFixed(2) })}
+                  </span>
+                  <span className="text-gray-500">
+                    {t('dashboard.perDay', '{{amount}} per day', { amount: maskAmount(money(perDay), hideBalance) })}
+                  </span>
+                </>
+              )}
             </span>
           </div>
         </section>

@@ -14,7 +14,7 @@ import type { WalletAdapter, WalletId } from '@pollar/core';
 import { PollarProvider } from '@pollar/react';
 import '@pollar/react/styles.css';
 import { stellarWalletsKitAdapters } from '@pollar/stellar-wallets-kit-adapter';
-import { defaultShouldDehydrateQuery, QueryClient } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { PersistQueryClientProvider, removeOldestQuery } from '@tanstack/react-query-persist-client';
 import { ChannelProvider } from 'ably/react';
@@ -140,16 +140,6 @@ export function Providers({ children }: { children: ReactNode }) {
         persister,
         maxAge: 1000 * 60 * 60 * 24,
         buster: clientEnv.NEXT_PUBLIC_QUERY_CACHE_VERSION,
-        dehydrateOptions: {
-          // The on-chain vault position keeps its share balance as a `bigint`,
-          // which `JSON.stringify` refuses to serialize. Persisting it threw on
-          // every write, and the persister swallows that error the same way it
-          // swallows a full disk, so the whole snapshot stopped being updated.
-          // It is a live money read that revalidates on mount anyway, so it has
-          // nothing to gain from a day-old copy — leave it out of the snapshot.
-          shouldDehydrateQuery: (query) =>
-            defaultShouldDehydrateQuery(query) && query.queryKey[0] !== 'defindex-vault-position',
-        },
       }}
     >
       <I18nProvider>

@@ -1,9 +1,5 @@
 import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
-import {
-  recordVaultFlowInBackground,
-  type VaultDepositFlowKind,
-  type VaultWithdrawFlowKind,
-} from '@/networks/pollar/vaultFlowsApi';
+import { recordVaultFlow, type VaultDepositFlowKind, type VaultWithdrawFlowKind } from '@/networks/pollar/vaultFlowsApi';
 import { directBlendSupply, directBlendWithdraw } from './blendDirect';
 import { invokeViaPollar, requirePollarClient, toBaseUnits } from './sorobanTx';
 import {
@@ -210,10 +206,13 @@ export const passiveDeposit = async ({
 }: PassiveDepositFlowInput): Promise<{ hash: string }> => {
   const result =
     isPassiveVaultEnabled() && getDefindexVaultConfig() ? await vaultDeposit(input) : await directBlendSupply(input);
-  // Recorded whichever backend served it: from the user's side both are the
-  // same flexible product, and a ledger that skipped the legacy Blend path
-  // would lose exactly the wallets that have not migrated yet.
-  recordVaultFlowInBackground(input.address, {
+  // Awaited, not fired off. The balance snapshot is written by whoever runs
+  // next (the caller's refresh, and the server's own refresh at the end of
+  // this POST). A snapshot taken before the row exists counts the deposit as
+  // yield and spreads it over every day since the previous sample. The chain
+  // transaction has already succeeded; a bookkeeping failure still returns the
+  // hash, it just does not invent a second chance to order the two writes.
+  await recordVaultFlow(input.address, {
     flowKind,
     amount: input.amount,
     transactionHash: result.hash,
@@ -247,6 +246,8 @@ export const passiveWithdraw = async ({
   // knows what actually moved, so the requested figure is the fallback, not the
   // default.
   const amount = result.amount || input.amount;
-  recordVaultFlowInBackground(input.address, { flowKind, amount, transactionHash: result.hash });
+  // Same ordering as the deposit: the flow row exists before any snapshot of
+  // the balance it explains. See `passiveDeposit`.
+  await recordVaultFlow(input.address, { flowKind, amount, transactionHash: result.hash });
   return { hash: result.hash, amount };
 };

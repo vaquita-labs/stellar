@@ -2,7 +2,7 @@ import { usePollar } from '@pollar/react';
 import { useCallback } from 'react';
 import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
 import { useConfigStore } from '@/core-ui/stores';
-import { recordVaultFlowInBackground } from '@/networks/pollar/vaultFlowsApi';
+import { recordVaultFlow } from '@/networks/pollar/vaultFlowsApi';
 import { awaitUsdcCredit, directBlendWithdraw, readUsdcBalance } from '@/networks/stellar/blendDirect';
 import { vaultDeposit } from '@/networks/stellar/vaultDirect';
 import { defindexVaultConfigForToken, formatBaseUnits } from '@/networks/stellar/vaultQueries';
@@ -75,7 +75,9 @@ export const usePassiveMigration = (walletAddress?: string) => {
       // net to zero — a migration is not new savings and must not read as any.
       // The withdraw-all case has no amount in its arguments, so the live
       // position is the best figure available before the credit is measured.
-      recordVaultFlowInBackground(walletAddress, {
+      // Awaited so the row exists before the deposit leg, and before any
+      // balance snapshot that would otherwise read the withdraw as yield.
+      await recordVaultFlow(walletAddress, {
         flowKind: 'internal_out',
         amount: (partial ?? blendBalance).toFixed(decimals),
         transactionHash: hash,
@@ -90,7 +92,7 @@ export const usePassiveMigration = (walletAddress?: string) => {
         // the vault, never the Blend path it is migrating away from — so this
         // one call site records its own flow.
         const deposit = await vaultDeposit({ address: walletAddress, amount: depositAmount, decimals });
-        recordVaultFlowInBackground(walletAddress, {
+        await recordVaultFlow(walletAddress, {
           flowKind: 'internal_in',
           // A measured wallet delta, not a figure anyone typed: the most
           // trustworthy amount in the whole set.
@@ -115,7 +117,7 @@ export const usePassiveMigration = (walletAddress?: string) => {
     });
     // Unlike the migration, this one really does leave: the user asked for the
     // money back in their wallet and nothing reinvests it.
-    recordVaultFlowInBackground(walletAddress, {
+    await recordVaultFlow(walletAddress, {
       flowKind: 'external_out',
       amount: blendBalance.toFixed(decimals),
       transactionHash: hash,
