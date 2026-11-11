@@ -4,12 +4,20 @@ import { useTranslation } from 'react-i18next';
 import { isPassiveVaultEnabled } from '@/core-ui/config/featureFlags';
 import { useConfigStore } from '@/core-ui/stores';
 import { getStellarNetwork } from '@/networks/stellar/kit';
-import { defindexVaultConfigForToken, getVaultPosition, type DefindexVaultPosition } from '@/networks/stellar/vaultQueries';
+import { defindexVaultConfigForToken, getVaultPosition } from '@/networks/stellar/vaultQueries';
 import { projectBlendUsdc, useBlendUsdc, useLiveBlendUsdc } from './useBlendPosition';
 import { useLiveTick } from './useLiveTick';
 import { useVaultApy } from './useVaultApy';
 
-const EMPTY: DefindexVaultPosition = { shares: 0n, usdc: 0 };
+/**
+ * What the balance query caches. Shares stay out: a `bigint` cannot be
+ * persisted, and persisting the whole position used to throw and freeze the
+ * snapshot. The headline only needs the USDC figure, and a number survives a
+ * reload so the card does not open at zero while the next simulation runs.
+ */
+interface VaultUsdcReading {
+  usdc: number;
+}
 
 /**
  * Reads the user's DeFindex vault position on-chain and live: the df-token
@@ -29,16 +37,21 @@ const EMPTY: DefindexVaultPosition = { shares: 0n, usdc: 0 };
  * during refetches, background refetch keeps it fresh without a spinner, and
  * `getVaultPosition` throws (rather than returning 0) on a simulation error so
  * these retries actually kick in instead of persisting a false zero.
+ *
+ * The cached value is the USDC number alone, so the persisted query client can
+ * restore it on the next open. Until that number exists the card shows a
+ * skeleton (`hasBalance` is false) instead of a zero.
  */
 export const useDefindexVaultPosition = (walletAddress?: string) => {
   const token = useConfigStore((s) => s.token);
   const config = defindexVaultConfigForToken(token);
 
-  return useQuery<DefindexVaultPosition>({
+  return useQuery<VaultUsdcReading>({
     queryKey: ['defindex-vault-position', getStellarNetwork(), config?.vaultId, walletAddress],
     queryFn: async () => {
-      if (!walletAddress || !config) return EMPTY;
-      return getVaultPosition(config, walletAddress);
+      if (!walletAddress || !config) return { usdc: 0 };
+      const position = await getVaultPosition(config, walletAddress);
+      return { usdc: position.usdc };
     },
     enabled: isPassiveVaultEnabled() && !!walletAddress && !!config,
     // It's money: never a $0 flash mid-refetch, never a dip on an RPC blip.
@@ -69,11 +82,15 @@ const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
 export const useVaultUsdc = (walletAddress?: string) => {
   const query = useDefindexVaultPosition(walletAddress);
   const vaultApy = useVaultApy();
+  // Absent data is "not read yet", not a balance of zero. Callers that paint
+  // the figure wait on `hasBalance`; substituting 0 here is what made a reload
+  // open on a lower number for as long as the simulation took.
+  const hasBalance = query.data != null || query.isError;
   const settled = query.data?.usdc ?? 0;
   const apy = vaultApy.data?.protocolApy ?? 0;
   const ratePerMs = (settled * (apy / 100)) / MS_PER_YEAR;
 
-  return { ...query, settled, apy, ratePerMs, updatedAt: query.dataUpdatedAt };
+  return { ...query, settled, hasBalance, apy, ratePerMs, updatedAt: query.dataUpdatedAt };
 };
 
 /**
@@ -131,6 +148,7 @@ export const usePassiveUsdc = (walletAddress?: string) => {
   const src = vaultOn ? vault : blend;
   return {
     settled: src.settled,
+    hasBalance: src.hasBalance,
     apy: src.apy,
     ratePerMs: src.ratePerMs,
     updatedAt: src.updatedAt,
@@ -153,6 +171,7 @@ export const useLivePassiveUsdc = (walletAddress?: string) => {
   return {
     live: src.live,
     settled: src.settled,
+    hasBalance: src.hasBalance,
     apy: src.apy,
     ratePerMs: src.ratePerMs,
     updatedAt: src.updatedAt,

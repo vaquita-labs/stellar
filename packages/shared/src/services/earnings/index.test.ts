@@ -142,6 +142,28 @@ describe('earningStretches', () => {
     expect(earningStretches([], [], DAY)).toEqual([]);
     expect(earningStretches([{ observedAt: 0, balance: 5 }], [], DAY)).toEqual([{ from: 0, to: DAY, rate: 0 }]);
   });
+
+  it('zeros a stretch that outruns the vault and does not carry that pace', () => {
+    // A deposit the ledger missed: 260 USDC over eight days on a few dollars.
+    const samples = [
+      { observedAt: 0, balance: 3 },
+      { observedAt: 8 * DAY, balance: 263 },
+    ];
+    const s = earningStretches(samples, [], 9 * DAY, { apyPercent: 5.5, margin: 4 });
+    expect(s).toHaveLength(2);
+    expect(s[0]!.rate).toBe(0);
+    expect(s[1]!.rate).toBe(0);
+  });
+
+  it('keeps yield under the ceiling, including the day a deposit funds an empty vault', () => {
+    const samples = [
+      { observedAt: 0, balance: 0 },
+      { observedAt: DAY, balance: 100.02 },
+    ];
+    const flows = [{ confirmedAt: DAY / 2, direction: 'deposit' as const, amount: 100 }];
+    const s = earningStretches(samples, flows, DAY, { apyPercent: 5.5, margin: 4 });
+    expect(s[0]!.rate * DAY).toBeCloseTo(0.02, 9);
+  });
 });
 
 describe('computePassiveEarnings', () => {
@@ -183,7 +205,7 @@ describe('getPassiveEarnings', () => {
     const t1 = new Date(now - DAY);
     prisma.walletBalanceHistory.findMany.mockResolvedValue([
       { observedAt: t0, blendUsdc: 40, vaultUsdc: 60 },
-      { observedAt: t1, blendUsdc: 0, vaultUsdc: 110.5 },
+      { observedAt: t1, blendUsdc: 0, vaultUsdc: 110.02 },
     ]);
     prisma.vaultFlow.findMany.mockResolvedValue([
       { confirmedAt: new Date(now - DAY * 1.5), direction: 'deposit', amount: 10 },
@@ -213,8 +235,9 @@ describe('getPassiveEarnings', () => {
         }),
       }),
     );
-    // 110.5 - 100 - 10 deposit = 0.5 earned over one day, then carried forward another day.
-    expect(out.totalEarned).toBeCloseTo(1, 6);
+    // 110.02 - 100 - 10 deposit = 0.02 earned over one day, then carried forward another day.
+    // Small on purpose: the ceiling refuses a deposit-sized gain, and 0.02/day on ~100 fits under it.
+    expect(out.totalEarned).toBeCloseTo(0.04, 6);
     expect(out.firstSampleAt).toBe(t0.toISOString());
   });
 
@@ -234,5 +257,27 @@ describe('getPassiveEarnings', () => {
     expect(out.totalEarned).toBe(0);
     expect(out.firstSampleAt).toBeNull();
     expect(out.buckets).toHaveLength(2);
+  });
+
+  it('does not book an unrecorded deposit as earnings', async () => {
+    const t0 = new Date(now - 9 * DAY);
+    const t1 = new Date(now - DAY);
+    prisma.walletBalanceHistory.findMany.mockResolvedValue([
+      { observedAt: t0, blendUsdc: 0, vaultUsdc: 3 },
+      { observedAt: t1, blendUsdc: 0, vaultUsdc: 263 },
+    ]);
+    prisma.vaultFlow.findMany.mockResolvedValue([]);
+
+    const out = await getPassiveEarnings({
+      walletAddress: WALLET,
+      tokenId: 2,
+      period: 'daily',
+      count: 10,
+      timeZone: TZ,
+      now,
+    });
+
+    expect(out.totalEarned).toBe(0);
+    expect(out.buckets.every((b) => b.earned === 0)).toBe(true);
   });
 });

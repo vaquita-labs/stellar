@@ -1,4 +1,6 @@
 import { prisma } from '@vaquita/db';
+import { stellarNetworkNameToDefindexHttpNetwork } from '../stellar/defindexApy';
+import { readVaultApySnapshot } from '../stellar/vaultApySnapshot';
 
 /**
  * What the flexible (DeFi) savings earned, per day, month or year.
@@ -18,6 +20,12 @@ import { prisma } from '@vaquita/db';
  * to `now`, estimated too. Before the first sample there is nothing to say,
  * and `firstSampleAt` tells the client how far back the figures go.
  *
+ * A stretch that outruns the vault's APY is not yield. A deposit whose ledger
+ * row landed after the balance sample (or never landed) shows up as the whole
+ * increase, and that pace would otherwise be painted onto every day of the gap
+ * and carried forward until the next sample. The ceiling zeros that stretch,
+ * so the days stay at nothing instead of at the size of the deposit.
+ *
  * Locked positions (the 1, 3 and 6 month terms) are not part of this on
  * purpose: their interest is a contract figure known at deposit time, not
  * something measured.
@@ -29,6 +37,30 @@ export const EARNINGS_PERIODS: EarningsPeriod[] = ['daily', 'monthly', 'yearly']
 /** Bars per period when the client does not say. */
 export const DEFAULT_BUCKETS: Record<EarningsPeriod, number> = { daily: 7, monthly: 6, yearly: 3 };
 export const MAX_BUCKETS = 60;
+
+/**
+ * How far above the vault's APY a stretch may run and still count as yield.
+ *
+ * Four times the rate leaves room for a strategy that moves during the day.
+ * It does not leave room for a deposit: that pace is hundreds of times the
+ * APY, and the ceiling sends the stretch to zero rather than trimming it.
+ */
+export const YIELD_RATE_MARGIN = 4;
+
+/**
+ * The ceiling when the vault's own APY is not on hand.
+ *
+ * Twenty percent is already several times the flexible rate. Times the margin
+ * above, a missing snapshot still refuses a deposit counted as earnings, and
+ * still lets a real day through.
+ */
+export const YIELD_APY_FALLBACK_PERCENT = 20;
+
+/** Annual percent and the multiple of it a stretch is allowed to reach. */
+export interface YieldCeiling {
+  apyPercent: number;
+  margin: number;
+}
 
 export interface BalanceSample {
   /** Epoch ms. */
@@ -159,9 +191,17 @@ interface Stretch {
  * The stretches between consecutive samples, each with the pace the balance
  * grew at once the flows in it are taken out, plus one carried forward from
  * the last sample to `now` at the previous stretch's pace. A negative gain (a
- * movement nobody recorded) counts as zero rather than as money lost.
+ * movement nobody recorded) counts as zero rather than as money lost. So does
+ * a gain that outruns `ceiling`: that is a deposit or a withdrawal the ledger
+ * did not put in this stretch, and carrying it forward would bill every later
+ * day at the size of the movement.
  */
-export function earningStretches(samples: BalanceSample[], flows: BalanceFlow[], now: number): Stretch[] {
+export function earningStretches(
+  samples: BalanceSample[],
+  flows: BalanceFlow[],
+  now: number,
+  ceiling?: YieldCeiling,
+): Stretch[] {
   const sorted = [...samples].sort((a, b) => a.observedAt - b.observedAt);
   const stretches: Stretch[] = [];
   for (let i = 1; i < sorted.length; i++) {
@@ -175,7 +215,8 @@ export function earningStretches(samples: BalanceSample[], flows: BalanceFlow[],
         net += flow.direction === 'deposit' ? flow.amount : -flow.amount;
     }
     const gain = Math.max(0, curr.balance - prev.balance - net);
-    stretches.push({ from: prev.observedAt, to: curr.observedAt, rate: gain / span });
+    const rate = yieldRate(gain, span, prev.balance, curr.balance, ceiling);
+    stretches.push({ from: prev.observedAt, to: curr.observedAt, rate });
   }
   const last = sorted[sorted.length - 1];
   if (last && now > last.observedAt) {
@@ -210,6 +251,24 @@ export function bucketEarnings(
   });
 }
 
+const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+
+/**
+ * Earnings per ms, or zero when the pace cannot be yield.
+ *
+ * The base is the larger of the two balances. The smaller one would put a
+ * ceiling of zero on the stretch that starts from an empty vault, and the
+ * real yield of that first day would disappear with the deposit. A deposit
+ * counted as earnings still clears the ceiling on the larger balance.
+ */
+function yieldRate(gain: number, span: number, prev: number, curr: number, ceiling?: YieldCeiling): number {
+  const rate = gain / span;
+  if (!ceiling || ceiling.apyPercent <= 0 || ceiling.margin <= 0) return rate;
+  const base = Math.max(prev, curr, 0);
+  const maxRate = (base * (ceiling.apyPercent / 100) * ceiling.margin) / YEAR_MS;
+  return rate > maxRate ? 0 : rate;
+}
+
 const round = (value: number) => Math.round(value * 1e7) / 1e7;
 
 export function computePassiveEarnings(input: {
@@ -219,9 +278,10 @@ export function computePassiveEarnings(input: {
   count: number;
   timeZone: string;
   now: number;
+  ceiling?: YieldCeiling;
 }): PassiveEarnings {
-  const { samples, flows, period, count, timeZone, now } = input;
-  const stretches = earningStretches(samples, flows, now);
+  const { samples, flows, period, count, timeZone, now, ceiling } = input;
+  const stretches = earningStretches(samples, flows, now, ceiling);
   const buckets = bucketEarnings(bucketsEndingNow(period, count, now, timeZone), stretches, samples, now);
   const totalEarned = round(stretches.reduce((sum, s) => sum + s.rate * (s.to - s.from), 0));
   const first = samples.length ? Math.min(...samples.map((s) => s.observedAt)) : null;
@@ -237,6 +297,31 @@ export function computePassiveEarnings(input: {
 }
 
 // --- Reading the trail ----------------------------------------------------------
+
+/**
+ * The APY the ceiling is measured against.
+ *
+ * The snapshot is the vault's own rate. When it is missing, stale, or the
+ * read fails, the fallback still refuses a deposit-sized stretch: earnings
+ * must not depend on the APY cache being warm.
+ */
+async function flexibleYieldApyPercent(tokenId: number): Promise<number> {
+  try {
+    const token = await prisma.token.findFirst({
+      where: { id: tokenId, deletedAt: null },
+      select: { defindexVaultContractAddress: true },
+    });
+    const vaultAddress = token?.defindexVaultContractAddress;
+    if (!vaultAddress) return YIELD_APY_FALLBACK_PERCENT;
+    const config = await prisma.config.findFirst({ select: { networkName: true } });
+    const network = stellarNetworkNameToDefindexHttpNetwork(config?.networkName ?? '');
+    if (!network) return YIELD_APY_FALLBACK_PERCENT;
+    const apy = await readVaultApySnapshot(network, vaultAddress);
+    return apy != null && apy > 0 ? apy : YIELD_APY_FALLBACK_PERCENT;
+  } catch {
+    return YIELD_APY_FALLBACK_PERCENT;
+  }
+}
 
 /** The wallet's flexible earnings from the stored samples and flows. */
 export async function getPassiveEarnings(input: {
@@ -275,5 +360,6 @@ export async function getPassiveEarnings(input: {
     direction: f.direction === 'withdraw' ? 'withdraw' : 'deposit',
     amount: Number(f.amount),
   }));
-  return computePassiveEarnings({ samples, flows, period: input.period, count: input.count, timeZone: input.timeZone, now });
+  const ceiling = { apyPercent: await flexibleYieldApyPercent(input.tokenId), margin: YIELD_RATE_MARGIN };
+  return computePassiveEarnings({ samples, flows, period: input.period, count: input.count, timeZone: input.timeZone, now, ceiling });
 }
