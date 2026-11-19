@@ -29,6 +29,15 @@ const apiEnvSchema = z.object({
   // Never empty: there is no "open mode".
   // Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
   ADMIN_SECRET: z.string().min(16, 'ADMIN_SECRET is required (min 16 chars) — admin endpoints are never open'),
+  // Key the external partner app sends in `x-api-key` to resolve a vaquitag to a
+  // wallet (GET /api/v1/partners/resolve/:tag, see lib/partnerAuth.ts).
+  // OPTIONAL: unset or empty leaves that endpoint closed (503) and the rest of
+  // the API boots normally. When set it must be long enough not to be guessable.
+  // Generate: openssl rand -hex 32
+  PARTNER_API_KEY: z
+    .string()
+    .refine((v) => v === '' || v.length >= 32, 'PARTNER_API_KEY must be at least 32 chars (generate with `openssl rand -hex 32`)')
+    .optional(),
   // Pino log level.
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']),
   // 'true' registers GET /api/v1/metrics (Prometheus exposition, private-only

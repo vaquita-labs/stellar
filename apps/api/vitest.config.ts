@@ -19,6 +19,7 @@ const testEnv = {
   AUTH_HOME_DOMAIN: 'vaquita.app',
   WALLET_AUTH_ENFORCE: 'true',
   ADMIN_SECRET: 'test-admin-secret-0123456789abcdef',
+  PARTNER_API_KEY: 'test-partner-api-key-0123456789abcdef',
   LOG_LEVEL: 'error',
   OBSERVABILITY_METRICS_ENABLED: 'false',
   OBSERVABILITY_METRICS_REFRESH_MS: '60000',
