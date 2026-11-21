@@ -2,7 +2,7 @@
 
 import { Spinner, toast } from '@heroui/react';
 import { usePollar } from '@pollar/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FiAlertCircle, FiArrowDown, FiCheck, FiCheckCircle, FiCopy, FiXCircle } from 'react-icons/fi';
 import QRCode from 'react-qr-code';
@@ -17,8 +17,12 @@ import {
   type BridgeTransfer,
   type EvmSource,
 } from '@/core-ui/hooks/useBridge';
+import { useInvalidateAfterMoneyMove } from '@/core-ui/hooks/useInvalidateAfterMoneyMove';
+import { useLivePassiveUsdc } from '@/core-ui/hooks/useDefindexVaultPosition';
 import { useUsdcTrustline } from '@/core-ui/hooks/useUsdcTrustline';
-import { blendConfigForToken, resolveMemo, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
+import { awaitUsdcCredit, blendConfigForToken, readUsdcBalance, sponsoredUsdcPayment } from '@/networks/stellar/blendDirect';
+import { passiveWithdraw } from '@/networks/stellar/vaultDirect';
+import { WithdrawPaymentError, type PendingWithdrawPayment } from '@/networks/stellar/withdrawError';
 import { formatTokenPrecise, truncatedAmountString } from '../../../helpers/numbers';
 import { truncateMiddle } from '../../../helpers/strings';
 import { humanizeTxError } from '../../../helpers/txError';
@@ -26,6 +30,7 @@ import { useConfigStore } from '../../../stores';
 import { AppModal } from '../../molecules/AppModal';
 import { PressableButton } from '../../molecules/PressableButton';
 import { UsdcTrustlineGate } from '../../molecules/UsdcTrustlineGate';
+import { gateOutboundPay, outboundAvailableUsdc, payOutboundFromSavings } from './outboundBridge';
 
 interface BridgeModalProps {
   open: boolean;
@@ -127,17 +132,20 @@ export const formatElapsed = (ms: number): string => {
  * - **Base → Stellar**: se muestra la `0x…` con QR y el usuario la fondea desde
  *   la wallet o el exchange que ya usa. No hay wallet de EVM que conectar, ni
  *   firma, ni librería de EVM en el bundle.
- * - **Stellar → Base**: 1Click devuelve una `G…` CON MEMO, y se paga con
- *   `sponsoredUsdcPayment` — pago clásico patrocinado, así funciona con 0 XLM.
- *   El memo es lo que identifica el depósito: sin él la plata llega sin dueño,
- *   por eso el envío se bloquea si no resuelve.
+ * - **Stellar → Base**: 1Click returns a `G…` WITH a memo. The USDC is in
+ *   savings, so the pay click withdraws it (`passiveWithdraw`) and then sends
+ *   it with `sponsoredUsdcPayment` — a sponsored classic payment, which works
+ *   with 0 XLM. The memo is what identifies the deposit: without it the funds
+ *   arrive with no owner, so the send is blocked when it does not resolve.
  *
  * El estado lo sigue el servidor en cada lectura; acá sólo se consulta la fila.
  */
 export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-usdc', origin = null }: BridgeModalProps) {
   const { t } = useTranslation();
   const { token } = useConfigStore();
-  const { walletBalance, refreshWalletBalance } = usePollar();
+  const { refreshWalletBalance } = usePollar();
+  const invalidateAfterMoneyMove = useInvalidateAfterMoneyMove();
+  const { live: passiveLiveUsdc } = useLivePassiveUsdc(stellarWallet ?? undefined);
 
   const [direction, setDirection] = useState<BridgeDirection>('evm_to_stellar');
   const [amount, setAmount] = useState('');
@@ -162,6 +170,19 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
    * `sourceTxHash` y la UI ofrecería mandarlo de nuevo.
    */
   const [sentHash, setSentHash] = useState<string | null>(null);
+  /**
+   * True only when the user tapped Available. A typed amount that happens to
+   * equal the balance is still a partial withdraw: the vault sentinel that
+   * empties the position is this flag, not a string compare.
+   */
+  const [isMax, setIsMax] = useState(false);
+  /** Payment left unpaid after the withdraw. The next Send finishes it and does not withdraw again. */
+  const [unpaid, setUnpaid] = useState<PendingWithdrawPayment | null>(null);
+  /**
+   * Written by the deadline timer, read by the pay click. The click's closure
+   * would otherwise keep the `quoteExpired` value from the render that created it.
+   */
+  const quoteExpiredRef = useRef(false);
   /** Vencimiento ya cumplido, puesto por el timer de abajo (ver `quoteExpired`). */
   const [expiredDeadline, setExpiredDeadline] = useState<number | null>(null);
 
@@ -189,16 +210,19 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
     setPayNotice(null);
     setSentHash(null);
     setExpiredDeadline(null);
+    setIsMax(false);
+    setUnpaid(null);
     setDirection('evm_to_stellar');
   }
 
-  // Saldo del MISMO USDC que acepta Blend (mismo issuer): en testnet conviven
-  // varios "USDC" y matchear sólo por código resuelve el que no es.
-  const available = useMemo(() => {
-    const balances = walletBalance.step === 'loaded' ? walletBalance.data.balances : [];
-    const usdc = usdcIssuer ? balances.find((b) => b.code?.toUpperCase() === 'USDC' && b.issuer === usdcIssuer) : undefined;
-    return usdc ? Number(usdc.available) : 0;
-  }, [walletBalance, usdcIssuer]);
+  // Outbound spends the passive position, not idle classic USDC (that balance is
+  // 0 once funds are swept back into savings). Inbound returns null and the
+  // Available line stays hidden. `usdcIssuer` is still the trustline check.
+  const available = outboundAvailableUsdc({
+    direction,
+    passiveLiveUsdc,
+    classicIdleUsdc: 0,
+  });
 
   useEffect(() => {
     if (open) void refreshWalletBalance();
@@ -212,7 +236,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
 
   const amountNum = Number(amount);
   const amountInRange = amount !== '' && amountNum >= MIN_AMOUNT && amountNum <= MAX_AMOUNT;
-  const overBalance = !inbound && amountInRange && amountNum > available;
+  const overBalance = !inbound && available !== null && amountInRange && amountNum > available;
   const evmValid = EVM_ADDRESS_RE.test(evmWallet.trim());
   const inputsReady = amountInRange && evmValid && !overBalance && !!stellarWallet;
 
@@ -270,7 +294,9 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
   }, [quote]);
 
   const handleMax = () => {
-    if (available > 0) setAmount(truncatedAmountString(available, decimals));
+    if (available === null || available <= 0) return;
+    setIsMax(true);
+    setAmount(truncatedAmountString(available, decimals));
   };
 
   /**
@@ -289,38 +315,75 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
   };
 
   /**
-   * Pata de salida: paga la dirección de depósito de 1Click con el memo que
-   * vino con ella. Sin memo NO se envía — un depósito sin memo entra al puente
-   * sin forma de saber a quién acreditarle, y recuperarlo es un ticket manual.
+   * Outbound leg. The gate still refuses a missing memo or an expired quote
+   * before anything is signed. A fresh pay withdraws from savings and then pays
+   * the deposit address; a pay that already withdrew only signs the payment.
    */
   const handlePayFromStellar = async (row: BridgeTransfer) => {
-    const memo = resolveMemo(row.depositMemo);
-    if (!row.depositAddress || !memo) {
-      setPayError(t('wallet.bridge.missingMemo', 'The bridge did not return a valid memo. Try again.'));
+    const depositAddress = row.depositAddress;
+    const gate = gateOutboundPay({
+      depositAddress,
+      depositMemo: row.depositMemo,
+      // The ref, not the render value: the timer may have fired since this
+      // click handler was created.
+      quoteExpired: quoteExpiredRef.current,
+    });
+    if (!gate.ok || !depositAddress) {
+      const reason = gate.ok ? 'missing_memo' : gate.reason;
+      setPayError(
+        reason === 'quote_expired'
+          ? t(
+              'wallet.bridge.quoteExpired',
+              'This quote expired before it was paid. Get a new one — sending to the old address would lose the funds.',
+            )
+          : t('wallet.bridge.missingMemo', 'The bridge did not return a valid memo. Try again.'),
+      );
       return;
     }
-    // Segunda reja, por si el footer alcanzó a renderizarse con el botón viejo:
-    // la dirección de depósito de una cotización vencida ya no vale nada.
-    if (quoteExpired) {
-      setPayError(
-        t(
-          'wallet.bridge.quoteExpired',
-          'This quote expired before it was paid. Get a new one — sending to the old address would lose the funds.',
-        ),
-      );
+    if (!stellarWallet || !token) {
+      setPayError(t('txError.generic', "We couldn't complete the transaction. Please try again in a moment."));
       return;
     }
     setPaying(true);
     setPayError(null);
     setPayNotice(null);
     try {
-      const { hash } = await sponsoredUsdcPayment({ to: row.depositAddress, amount: row.amount, memo });
+      const { hash } = await payOutboundFromSavings(
+        {
+          direction: row.direction,
+          amount: row.amount,
+          decimals: token.decimals,
+          withdrawAll: isMax,
+          walletAddress: stellarWallet,
+          depositAddress,
+          memo: gate.memo,
+          rawMemo: row.depositMemo ?? null,
+          destinationLabel: depositAddress,
+          unpaid,
+        },
+        {
+          readUsdcBalance,
+          passiveWithdraw,
+          awaitUsdcCredit,
+          sponsoredUsdcPayment,
+          invalidateAfterWithdraw: () => invalidateAfterMoneyMove(),
+          isQuoteExpired: () => quoteExpiredRef.current,
+        },
+      );
       // Antes de avisarle al server: a partir de acá la plata ya salió, pase lo
       // que pase con el POST de abajo.
       setSentHash(hash);
+      setUnpaid(null);
       await attachDepositTx.mutateAsync({ id: row.id, txHash: hash });
       await refreshWalletBalance();
     } catch (e) {
+      // The withdraw already landed and the payment did not. Keep the payment
+      // so the next Send does not withdraw a second time. The Send button stays.
+      if (e instanceof WithdrawPaymentError) {
+        setUnpaid(e.payment);
+        setPayError(humanizeTxError(e, t).title);
+        return;
+      }
       const { title, pending, hash } = humanizeTxError(e, t);
       // La tx salió a la red y todavía puede confirmar. No es un fallo: volver a
       // ofrecer "Enviar" mandaría la misma plata dos veces a la misma dirección
@@ -356,6 +419,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
     setPayNotice(null);
     setSentHash(null);
     setExpiredDeadline(null);
+    setUnpaid(null);
   };
 
   const handleCopy = async (value: string) => {
@@ -391,10 +455,22 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
   const quoteExpired = deadlineAt !== null && expiredDeadline === deadlineAt;
 
   useEffect(() => {
-    if (deadlineAt === null) return;
+    if (deadlineAt === null) {
+      quoteExpiredRef.current = false;
+      return;
+    }
+    // Not expired until this deadline's timer fires. A previous deadline must
+    // not keep the flag set for a quote that replaced it.
+    quoteExpiredRef.current = false;
     // Si ya venció, el timeout de 0 ms igual corre después del render, así que
     // nunca se llama a setState en el cuerpo del efecto.
-    const timer = setTimeout(() => setExpiredDeadline(deadlineAt), Math.max(0, deadlineAt - Date.now()));
+    const timer = setTimeout(
+      () => {
+        quoteExpiredRef.current = true;
+        setExpiredDeadline(deadlineAt);
+      },
+      Math.max(0, deadlineAt - Date.now()),
+    );
     return () => clearTimeout(timer);
   }, [deadlineAt]);
 
@@ -481,6 +557,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
               onClick={() => {
                 setDirection(value);
                 setAmount('');
+                setIsMax(false);
               }}
               className={`rounded-lg border border-black px-3 py-2.5 text-sm font-semibold transition ${
                 direction === value ? 'border-b-2 bg-[#DDF4FF] text-black' : 'bg-white text-gray-500 hover:bg-[#F5FBFF]'
@@ -503,7 +580,7 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
           <label htmlFor="bridge-amount" className="text-xs font-semibold text-gray-600">
             {t('wallet.bridge.amount', 'Amount')}
           </label>
-          {!inbound && (
+          {!inbound && available !== null && (
             <button type="button" onClick={handleMax} className="text-xs font-semibold text-[#0072B5]">
               {t('wallet.bridge.available', 'Available: {{amount}} USDC', {
                 amount: formatTokenPrecise(available, 2),
@@ -516,7 +593,10 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
             id="bridge-amount"
             inputMode="decimal"
             value={amount}
-            onChange={(e) => setAmount(sanitizeAmount(e.target.value, decimals))}
+            onChange={(e) => {
+              setAmount(sanitizeAmount(e.target.value, decimals));
+              setIsMax(false);
+            }}
             placeholder="0.00"
             className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-black outline-none"
           />
@@ -847,7 +927,11 @@ export function BridgeModal({ open, onOpenChange, stellarWallet, source = 'base-
         <PressableButton
           variant="success"
           size="cta"
-          onClick={() => handlePayFromStellar(transfer)}
+          onClick={() => {
+            // Read on click and again after the withdraw, not during render.
+            // eslint-disable-next-line react-hooks/refs -- PressableButton's onClick is not a host listener
+            handlePayFromStellar(transfer);
+          }}
           disabled={paying || attachDepositTx.isPending}
         >
           {paying || attachDepositTx.isPending ? (
